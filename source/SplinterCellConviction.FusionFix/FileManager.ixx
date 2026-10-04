@@ -375,12 +375,45 @@ namespace FFileManagerArc
 
 namespace FFileManagerLinear
 {
+    // A linear archive streams its recorded reads in order (active table: manager +2Ch + 4 * [+18Ch]; reads at +18h, 20 bytes each starting
+    // with the path hash, count +1Ch, current one +30h). A reader (FArchiveFileReaderLoadLinear, path hash +40h) skips the stream forward to
+    // its file, a file read again or out of the recorded order is only behind it and the reader never gets its data. Such a file is read from
+    // disk when it's there.
+    uintptr_t LinearReaderVTable = 0;
+
+    bool IsBehindStream(void* fileManager, uint32_t hash)
+    {
+        auto manager = static_cast<uint8_t*>(fileManager);
+        auto table = *reinterpret_cast<uint8_t**>(manager + 0x2C + 4 * *reinterpret_cast<int32_t*>(manager + 0x18C));
+        if (!table)
+            return false;
+        auto reads = *reinterpret_cast<uint8_t**>(table + 0x18);
+        auto count = *reinterpret_cast<int32_t*>(table + 0x1C);
+        for (auto i = std::max(*reinterpret_cast<int32_t*>(table + 0x30), 0); i < count; i++)
+        {
+            if (*reinterpret_cast<uint32_t*>(reads + 20 * i) == hash)
+                return false;
+        }
+        return true;
+    }
+
     SafetyHookInline shCreateFileReader{};
     FArchive* __fastcall CreateFileReader(void* fileManager, void* edx, const char* path, int32_t flags, void* error, int32_t bufferSize)
     {
         if (auto overridePath = FileLoader::ResolveOverride(path))
             return FileLoader::Inner(fileManager)->CreateFileReader(overridePath, flags, error, bufferSize);
-        return shCreateFileReader.fastcall<FArchive*>(fileManager, edx, path, flags, error, bufferSize);
+
+        auto reader = shCreateFileReader.fastcall<FArchive*>(fileManager, edx, path, flags, error, bufferSize);
+        if (reader && LinearReaderVTable && *reinterpret_cast<uintptr_t*>(reader) == LinearReaderVTable &&
+            IsBehindStream(fileManager, *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(reader) + 0x40)))
+        {
+            if (auto diskReader = FileLoader::Inner(fileManager)->CreateFileReader(path, flags, error, bufferSize))
+            {
+                reader->Release();
+                return diskReader;
+            }
+        }
+        return reader;
     }
 
     SafetyHookInline shFileSize{};
@@ -1010,6 +1043,11 @@ export void InitFileManager()
 
         pattern = hook::pattern("56 FF 74 24 08 8B F1 E8 ? ? ? ? 85 C0 74 07 33 C0 40 5E C2 04 00");
         FFileManagerArc::shIsAvailable = safetyhook::create_inline(pattern.get_first(), FFileManagerArc::IsAvailable);
+
+        // FArchiveFileReaderLoadLinear constructor
+        pattern = hook::pattern("89 46 1C 89 46 10 C7 06 ? ? ? ? 8B C6 5E C2 10 00");
+        if (!pattern.empty())
+            FFileManagerLinear::LinearReaderVTable = *pattern.get_first<uintptr_t>(8);
 
         pattern = hook::pattern("55 8B EC 83 EC 30 53 56 57 FF 75 08 8B F1 8D 4D E4 33 DB 33 FF E8");
         FFileManagerLinear::shCreateFileReader = safetyhook::create_inline(pattern.get_first(), FFileManagerLinear::CreateFileReader);
