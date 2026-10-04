@@ -5,7 +5,6 @@ module;
 #include <d3d9.h>
 #include <d3dx9.h>
 #include <wrl/client.h>
-#include <fstream>
 
 export module CharacterBlood;
 
@@ -41,15 +40,8 @@ namespace
         return *reinterpret_cast<const T*>(static_cast<const uint8_t*>(object) + offset);
     }
 
-    void Log(std::string_view message)
-    {
-        std::ofstream(GetExeModulePath() / "Scarface.CharacterBlood.log", std::ios::app) << message << '\n';
-    }
-
     int __fastcall DrawPrimitiveGroup(void* self, void*)
     {
-        static bool reported = false;
-        if (!reported) { Log("Entered skinned primitive draw."); reported = true; }
         // PrimGroupSkinnedOptimized::Display (0x6A4E00), slot 8.
         // Read the source bytes, not the averaged m[15] produced by 0x6A45A0.
         Palette palette;
@@ -82,8 +74,6 @@ namespace
 
     int __fastcall DrawHardwareSkin(void* self, void*, void* material, void* buffer)
     {
-        static bool reported = false;
-        if (!reported) { Log("Entered hardware skin draw."); reported = true; }
         // d3dExtHardwareSkinning::Draw (0x650E10), slot 6.
         const auto previous = std::exchange(currentMaterial,
             material && Field<uintptr_t>(material, 0) == characterVtable ? material : nullptr);
@@ -94,11 +84,10 @@ namespace
 
     ComPtr<ID3DXBuffer> Assemble(const std::string& source)
     {
-        ComPtr<ID3DXBuffer> code, errors;
+        ComPtr<ID3DXBuffer> code;
         if (FAILED(assemble(source.c_str(), UINT(source.size()), nullptr, nullptr, 0,
-                            code.GetAddressOf(), errors.GetAddressOf())))
+                            code.GetAddressOf(), nullptr)))
         {
-            Log(errors ? static_cast<const char*>(errors->GetBufferPointer()) : "Shader assembly failed.");
             return {};
         }
         return code;
@@ -151,7 +140,6 @@ namespace
                     if (SUCCEEDED(disassemble(bytes.data(), FALSE, nullptr, text.GetAddressOf())))
                         if (auto code = Assemble(BloodVertexSource(static_cast<const char*>(text->GetBufferPointer()))))
                             device->CreateVertexShader(static_cast<const DWORD*>(code->GetBufferPointer()), entry.blood.GetAddressOf());
-                    Log(entry.blood ? "Skin vertex shader ready." : "Skin vertex shader unavailable; original rendering retained.");
                 }
             }
         }
@@ -206,7 +194,6 @@ export namespace CharacterBlood
         CIniReader iniReader("");
         const bool bRestoreCharacterBlood = iniReader.ReadInteger("GRAPHICS", "RestoreCharacterBlood", 0) != 0;
         if (!bRestoreCharacterBlood) return false;
-        std::ofstream(GetExeModulePath() / "Scarface.CharacterBlood.log") << "Character blood restoration\n";
         d3dx = LoadLibraryW(L"d3dx9_43.dll");
         if (d3dx)
         {
@@ -224,7 +211,6 @@ export namespace CharacterBlood
         }
         enabled = primitiveHook && hardwareHook;
         if (!enabled) { primitiveHook.reset(); hardwareHook.reset(); }
-        Log(enabled ? "RTTI hooks installed." : "Initialization failed; original rendering retained.");
         return enabled;
     }
 
@@ -272,8 +258,6 @@ export namespace CharacterBlood
         device->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
         device->SetRenderState(D3DRS_COLORWRITEENABLE, saved.values[7] & 7); // Preserve target alpha.
         draw();
-        static bool reported = false;
-        if (!reported) { Log("Blood pass submitted using the material's TTEX and front/back joint damage."); reported = true; }
     }
 
     void Shutdown()

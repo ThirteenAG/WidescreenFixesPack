@@ -172,25 +172,11 @@ export namespace SkinCapture
         const auto vtable = ScarfaceRTTI::FindVtable(".?AVd3dExtHardwareSkinning@pure3d@@");
         if (vtable)
             matrixHook = safetyhook::create_inline(injector::ReadMemory<void*>(vtable + 5 * sizeof(void*), true), SetMatrix);
-        std::ofstream info(capturePath / "status.txt");
-        info << "Character-only material capture; limit=" << captureLimit << " draws/textures.\n"
-             << "Texture exporter=" << bool(saveTexture) << " matrix hook=" << bool(matrixHook) << '\n'
-             << "One snapshot per shader/texture/blend combination and zero/nonzero joint damage.\n"
-             << "Texture ID 0=unbound, 4294967295=capture limit. DDS preserves alpha/mipmaps.\n";
     }
 
     bool IsEnabled() { return enabled; }
     bool IsCapturing() { return capturing; }
     void CaptureDraw(IDirect3DDevice9* device) { Capture(device); }
-
-    void ReportDrawHooks(bool draw, bool indexed, bool up, bool indexedUp)
-    {
-        if (enabled)
-        {
-            std::ofstream info(capturePath / "status.txt", std::ios::app);
-            info << "Draw hooks=" << draw << ',' << indexed << ',' << up << ',' << indexedUp << '\n';
-        }
-    }
 
     void Shutdown()
     {
