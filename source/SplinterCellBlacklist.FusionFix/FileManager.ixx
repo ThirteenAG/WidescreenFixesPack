@@ -322,12 +322,82 @@ namespace FFileManagerLinear
         return reinterpret_cast<R(__thiscall*)(void*, const char*, Args...)>(inner->vtable()[Offset / 4])(inner, path, args...);
     }
 
+    // A linear archive streams its recorded reads in order (active table: manager +2Ch + 4 * [+14Ch]; reads at +18h, 16 bytes each starting
+    // with the path hash, count +1Ch, current one +2Ch, +44h seekable). A reader (path hash +10h) skips the stream forward to its file, a file
+    // read again or out of the recorded order (a mission that loads another map changes which score files are read at startup) is only
+    // behind it: the reader skips to the end and waits for the stream forever. Such a file is read from disk when it's there.
+    uintptr_t LinearReaderVTable = 0;
+
+    // the archive each table was mounted from, a file behind the stream is rebuilt from it (Dumper::ExtractLinearFile)
+    std::mutex tablesMutex;
+    std::unordered_map<void*, std::string> tableArchives;
+    std::string(*ExtractLinearFile)(const std::string& archive, uint32_t hash, const char* path) = nullptr;
+
+    void* ActiveTable(void* fileManager)
+    {
+        auto manager = static_cast<uint8_t*>(fileManager);
+        return *reinterpret_cast<void**>(manager + 0x2C + 4 * *reinterpret_cast<int32_t*>(manager + 0x14C));
+    }
+
+    // FFileManagerLinear::Mount(path, ...) (virtual 88h) pushes a table for the archive, Mount(nullptr) pops it
+    SafetyHookInline shMount{};
+    void* __fastcall Mount(void* fileManager, void* edx, const char* path, int32_t a3, int32_t a4)
+    {
+        auto result = shMount.fastcall<void*>(fileManager, edx, path, a3, a4);
+        if (path && *path)
+        {
+            if (auto table = ActiveTable(fileManager))
+            {
+                std::lock_guard lock(tablesMutex);
+                tableArchives[table] = path;
+            }
+        }
+        return result;
+    }
+
+    bool IsBehindStream(void* fileManager, uint32_t hash)
+    {
+        auto manager = static_cast<uint8_t*>(fileManager);
+        auto table = static_cast<uint8_t*>(ActiveTable(manager));
+        if (!table || *reinterpret_cast<int32_t*>(table + 0x44) != 0)
+            return false;
+        auto reads = *reinterpret_cast<uint8_t**>(table + 0x18);
+        auto count = *reinterpret_cast<int32_t*>(table + 0x1C);
+        for (auto i = std::max(*reinterpret_cast<int32_t*>(table + 0x2C), 0); i < count; i++)
+        {
+            if (*reinterpret_cast<uint32_t*>(reads + 16 * i) == hash)
+                return false;
+        }
+        return true;
+    }
+
     SafetyHookInline shCreateFileReader{};
     FArchive* __fastcall CreateFileReader(void* fileManager, void* edx, const char* path, int32_t flags, void* error, int32_t bufferSize)
     {
         if (auto overridePath = FileLoader::ResolveOverride(path))
             return CallInner<0x10, FArchive*>(fileManager, overridePath, flags, error, bufferSize);
-        return shCreateFileReader.fastcall<FArchive*>(fileManager, edx, path, flags, error, bufferSize);
+
+        auto reader = shCreateFileReader.fastcall<FArchive*>(fileManager, edx, path, flags, error, bufferSize);
+        if (!reader || !LinearReaderVTable || *reinterpret_cast<uintptr_t*>(reader) != LinearReaderVTable)
+            return reader;
+
+        auto hash = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(reader) + 0x10);
+        if (!IsBehindStream(fileManager, hash))
+            return reader;
+
+        // the file rebuilt from its archive, or a copy on disk
+        std::string archive;
+        {
+            std::lock_guard lock(tablesMutex);
+            if (auto it = tableArchives.find(ActiveTable(fileManager)); it != tableArchives.end())
+                archive = it->second;
+        }
+        auto rebuilt = !archive.empty() && ExtractLinearFile ? ExtractLinearFile(archive, hash, path) : std::string();
+        auto diskReader = CallInner<0x10, FArchive*>(fileManager, rebuilt.empty() ? path : rebuilt.c_str(), flags, error, bufferSize);
+        if (!diskReader)
+            return reader;
+        reader->Release();
+        return diskReader;
     }
 
     SafetyHookInline shFileSize{};
@@ -749,6 +819,102 @@ namespace Dumper
         return true;
     }
 
+    // A file of a linear archive rebuilt from its recorded reads (the format DumpLinearArchive reads) into a cache file, for a read the
+    // archive's stream already passed. Returns the cache file's path, or an empty string.
+    std::string ExtractLinearFile(const std::string& archive, uint32_t hash, const char* path)
+    {
+        static std::mutex mutex;
+        static std::unordered_map<uint64_t, std::string> extracted;
+        std::lock_guard lock(mutex);
+
+        auto key = (static_cast<uint64_t>(std::hash<std::string>{}(archive)) << 32) ^ hash;
+        if (auto it = extracted.find(key); it != extracted.end())
+            return it->second;
+
+        auto reader = OpenArchive(archive.c_str(), 0x440);
+        if (!reader)
+            return {};
+
+        std::vector<uint8_t> data;
+        std::vector<bool> filled;
+        bool found = false;
+        std::string version;
+        if (ReadString(reader, version) && !version.empty() && version.size() <= 64)
+        {
+            auto count = ReadCompact(reader);
+            for (int32_t i = 0; i >= 0 && i < count && i < 1000000; i++)
+            {
+                auto entryHash = static_cast<uint32_t>(ReadInt(reader));
+                std::string name, alias;
+                if (!ReadString(reader, name) || !ReadString(reader, alias))
+                    break;
+                auto size = ReadCompact(reader);
+                if (entryHash == hash && size >= 0)
+                {
+                    data.assign(size, 0);
+                    filled.assign(size, false);
+                    found = true;
+                }
+            }
+
+            struct Chunk { int32_t offset, size; bool wanted; };
+            std::vector<Chunk> chunks;
+            auto sequenceCount = ReadCompact(reader);
+            for (int32_t s = 0; found && s >= 0 && s < sequenceCount && s < 1000000; s++)
+            {
+                auto sequenceHash = static_cast<uint32_t>(ReadInt(reader));
+                auto chunkCount = ReadCompact(reader);
+                for (int32_t c = 0; c >= 0 && c < chunkCount && c < 1000000; c++)
+                {
+                    Chunk chunk;
+                    chunk.offset = ReadCompact(reader);
+                    ReadCompact(reader);
+                    chunk.size = ReadCompact(reader);
+                    chunk.wanted = sequenceHash == hash;
+                    chunks.push_back(chunk);
+                }
+            }
+
+            // the data follows at the next 128 KB boundary in record order
+            auto position = reader->Tell();
+            std::vector<uint8_t> buffer(((position + 0x1FFFF) / 0x20000 << 17) - position);
+            if (found && !buffer.empty())
+                reader->Serialize(buffer.data(), static_cast<int32_t>(buffer.size()));
+            auto totalSize = reader->TotalSize();
+            for (auto& chunk : chunks)
+            {
+                if (chunk.size < 0 || reader->Tell() + chunk.size > totalSize)
+                    break;
+                buffer.resize(chunk.size);
+                if (chunk.size)
+                    reader->Serialize(buffer.data(), chunk.size);
+                if (chunk.wanted && chunk.offset >= 0 && chunk.offset + chunk.size <= static_cast<int32_t>(data.size()))
+                {
+                    std::copy(buffer.begin(), buffer.end(), data.begin() + chunk.offset);
+                    std::fill(filled.begin() + chunk.offset, filled.begin() + chunk.offset + chunk.size, true);
+                    if (std::all_of(filled.begin(), filled.end(), [](bool b) { return b; }))
+                        break;
+                }
+            }
+        }
+        reader->Release();
+
+        // only a complete file (the archive may hold just the parts that were read when it was recorded)
+        std::string result;
+        if (found && std::all_of(filled.begin(), filled.end(), [](bool b) { return b; }))
+        {
+            std::error_code ec;
+            auto cachePath = std::filesystem::temp_directory_path(ec) / "BlacklistFusionFix";
+            std::filesystem::create_directories(cachePath, ec);
+            cachePath /= std::format("{:08X}{}", hash, std::filesystem::path(path ? path : "").extension().string());
+            std::ofstream file(cachePath, std::ios::binary | std::ios::trunc);
+            if (file.write(reinterpret_cast<const char*>(data.data()), data.size()))
+                result = cachePath.string();
+        }
+        extracted[key] = result;
+        return result;
+    }
+
     void DumpArchive(const std::filesystem::path& relativePath)
     {
         auto path = relativePath.string();
@@ -948,6 +1114,16 @@ export void InitFileManager()
     auto arcVTable = *pattern.get_first<uintptr_t*>(2);
     Dumper::FFileManagerArcVTable = reinterpret_cast<uintptr_t>(arcVTable);
 
+    // FFileManagerArc init: GError, the PACK reader and its precache, GFileManager (archives read by the dumper and ExtractLinearFile)
+    pattern = hook::pattern("8B 3D ? ? ? ? 8B 4E 04 8B 11 68 00 00 01 00 57 6A 00 50 8B 42 10 FF D0");
+    Dumper::GError = *pattern.get_first<void**>(2);
+    pattern = hook::pattern("6A 00 51 6A 00 8B F8 6A 01 57 E8");
+    Dumper::CreatePackReader = (decltype(Dumper::CreatePackReader))injector::GetBranchDestination(pattern.get_first(10)).as_int();
+    pattern = hook::pattern("68 FF FF FF 7F E8 ? ? ? ? 8B 4E 48 8B 11 8B 42 48");
+    Dumper::PackReaderPrecache = (decltype(Dumper::PackReaderPrecache))injector::GetBranchDestination(pattern.get_first(5)).as_int();
+    pattern = hook::pattern("8B 0D ? ? ? ? 8B 11 8B 82 88 00 00 00 56 56 68 ? ? ? ? FF D0 E8 ? ? ? ? 84 C0");
+    Dumper::GFileManager = *pattern.get_first<FFileManager**>(2);
+
     // Load files from the loader's overload folder instead of the archives
     if (GetOverloadedFilePathA)
     {
@@ -958,26 +1134,23 @@ export void InitFileManager()
         // FFileManagerLinear constructor
         pattern = hook::pattern("C7 06 ? ? ? ? 89 7E 0C 89 4D 08");
         auto linearVTable = *pattern.get_first<uintptr_t*>(2);
+        // linear archive file reader constructor
+        pattern = hook::pattern("89 4E 0C 8B 4D 14 89 56 10 8B 55 0C C7 06 ? ? ? ? 89 4E 14");
+        if (!pattern.empty())
+            FFileManagerLinear::LinearReaderVTable = *pattern.get_first<uintptr_t>(14);
         FFileManagerLinear::shCreateFileReader = safetyhook::create_inline(linearVTable[0x10 / 4], FFileManagerLinear::CreateFileReader);
         FFileManagerLinear::shFileSize = safetyhook::create_inline(linearVTable[0x18 / 4], FFileManagerLinear::FileSize);
         FFileManagerLinear::shResolveAlias = safetyhook::create_inline(linearVTable[0x4C / 4], FFileManagerLinear::ResolveAlias);
         FFileManagerLinear::shFileExists = safetyhook::create_inline(linearVTable[0x5C / 4], FFileManagerLinear::FileExists);
         FFileManagerLinear::shFileTime = safetyhook::create_inline(linearVTable[0x8C / 4], FFileManagerLinear::FileTime);
+        FFileManagerLinear::shMount = safetyhook::create_inline(linearVTable[0x88 / 4], FFileManagerLinear::Mount);
+        FFileManagerLinear::ExtractLinearFile = Dumper::ExtractLinearFile;
     }
 
     // Unpack all archives to 'unpacked' once they're mounted, after GFileManager->Mount("UMDs\Blacklist.umd")
     if (bDumpPackedFiles)
     {
-        // FFileManagerArc init: GError, the PACK reader and its precache
-        pattern = hook::pattern("8B 3D ? ? ? ? 8B 4E 04 8B 11 68 00 00 01 00 57 6A 00 50 8B 42 10 FF D0");
-        Dumper::GError = *pattern.get_first<void**>(2);
-        pattern = hook::pattern("6A 00 51 6A 00 8B F8 6A 01 57 E8");
-        Dumper::CreatePackReader = (decltype(Dumper::CreatePackReader))injector::GetBranchDestination(pattern.get_first(10)).as_int();
-        pattern = hook::pattern("68 FF FF FF 7F E8 ? ? ? ? 8B 4E 48 8B 11 8B 42 48");
-        Dumper::PackReaderPrecache = (decltype(Dumper::PackReaderPrecache))injector::GetBranchDestination(pattern.get_first(5)).as_int();
-
         pattern = hook::pattern("8B 0D ? ? ? ? 8B 11 8B 82 88 00 00 00 56 56 68 ? ? ? ? FF D0 E8 ? ? ? ? 84 C0");
-        Dumper::GFileManager = *pattern.get_first<FFileManager**>(2);
         static auto AfterMount = safetyhook::create_mid(pattern.get_first(23), [](SafetyHookContext& regs)
         {
             static std::once_flag flag;

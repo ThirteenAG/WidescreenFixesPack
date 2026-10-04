@@ -118,6 +118,7 @@ namespace RestoredFeatures
         size_t texture, scale, matrix, origin, dimensions, center, speed;
     };
     static RadarLayout radar;
+    static bool radarMap;
     static void** graphics;
     static SafetyHookInline radarUpdateHook, radarDrawHook;
 
@@ -151,12 +152,15 @@ namespace RestoredFeatures
 
     uint32_t __fastcall DrawRadar(uintptr_t hud, void*)
     {
-        float zoom = GetRadarZoom(hud);
+        float zoom = radarMap ? GetRadarZoom(hud) : Field<float>(hud, radar.scale);
         // Xbox initializes its renderer to 640x480. Its 0.3..0.6 projection
         // is in pixels, so scale it with HUD height on PC. All native blips
         // and the map read the same field during this draw. Restore it after
         // drawing so repeated draws/resolution changes cannot compound zoom.
-        Field<float>(hud, radar.scale) = zoom * Screen.fHeight / 480.0f;
+        // The original PC radar uses an 800x600 reference and fixed zoom.
+        // Its filled car/model footprints need this correction too, even
+        // with RadarMap disabled; the generic UI line hook cannot scale them.
+        Field<float>(hud, radar.scale) = zoom * Screen.fHeight / (radarMap ? 480.0f : 600.0f);
         auto result = radarDrawHook.thiscall<uint32_t>(hud);
         Field<float>(hud, radar.scale) = zoom;
         return result;
@@ -342,8 +346,7 @@ namespace RestoredFeatures
     export void InitRadar()
     {
         CIniReader ini("");
-        if (!ini.ReadInteger("HUD", "RadarMap", 0))
-            return;
+        radarMap = ini.ReadInteger("HUD", "RadarMap", 0) != 0;
 
         // Same HUD draw sequence in all three PC versions, with different layout
         // and stack frame sizes in 1.0. Match the native radar's car-list fields.
@@ -352,30 +355,37 @@ namespace RestoredFeatures
         if (old.size() + newer.size() != 1)
             return;
         auto pDraw = find_pattern("A1 ? ? ? ? 81 EC ? ? ? ? 53 55 56 57 33 FF 8B E9 8B 08 6A 01 57 50 FF 51 44");
+        if (pDraw.size() != 1)
+            return;
+        radar = old.size() == 1 ? RadarLayout{ 37008, 38072, 0xAF4, 0x18, 0x4C, 0x64, 37228 }
+            : RadarLayout{ 16528, 17600, 0xB04, 0x20, 0x6C, 0x74, 16756 };
+        radarDrawHook = safetyhook::create_inline(pDraw.get_first(), DrawRadar);
+        if (!radarDrawHook || !radarMap)
+            return;
         auto pUpdate = find_pattern("83 EC 24 53 55 56 57 8B 7C 24 38 33 DB 89 7C 24 2C 89 5C 24 30 DF 6C 24 2C 8B E9");
         auto pCars = find_pattern("D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 8C 24 ? ? ? ? 8D 54 24 ? 51 52");
         auto pModels = find_pattern<2>(
             "D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 94 24 ? ? ? ? 8D 44 24 ? 52 50 D9 5C 24 ? 56 E8",
             "D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 94 24 ? ? ? ? 8D 84 24 ? ? ? ? 52 50 D9 5C 24 ? 56 E8");
-        if (pDraw.size() != 1 || pUpdate.size() != 1 || pCars.size() != 1 || pModels.size() != 2)
+        if (pUpdate.size() != 1 || pCars.size() != 1 || pModels.size() != 2)
+        {
+            radarMap = false;
             return;
+        }
         void* target;
         if (old.size() == 1)
         {
-            radar = { 37008, 38072, 0xAF4, 0x18, 0x4C, 0x64, 37228 };
             graphics = *old.get_first<void**>(1);
             target = old.get_first(15);
         }
         else
         {
-            radar = { 16528, 17600, 0xB04, 0x20, 0x6C, 0x74, 16756 };
             graphics = *newer.get_first<void**>(1);
             target = newer.get_first(15);
         }
         // The second model sequence is a redundant legacy transform before
         // the player marker. Only enlarge the actual model-list footprints.
         radarUpdateHook = safetyhook::create_inline(pUpdate.get_first(), UpdateRadar);
-        radarDrawHook = safetyhook::create_inline(pDraw.get_first(), DrawRadar);
         static auto CarsHook = safetyhook::create_mid(pCars.get_first(), ScaleRadarBlip);
         static auto ModelsHook = safetyhook::create_mid(pModels.get(0).get<void>(), ScaleRadarBlip);
         static auto MapHook = safetyhook::create_mid(target, DrawRadarMap);
@@ -384,7 +394,7 @@ namespace RestoredFeatures
             MapHook.reset();
             ModelsHook.reset();
             CarsHook.reset();
-            radarDrawHook.reset();
+            radarMap = false;
             radarUpdateHook.reset();
             return;
         }

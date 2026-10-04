@@ -71,6 +71,8 @@ ExtractionWaveConfigs = NewConfig
 
 Demo: https://youtu.be/su47XbCcVyw
 
+`EnableKobinAndGrimMaps` (off by default) adds Charlie versions of Kobin's and Grim's 8 missions to the SMI map, next to the originals: Opium Farm, Fish Market, Blood Diamond Mine, Dead Coast, Hawkins Seafort, Border Crossing, Hackers' Den and Billionaire's Yacht. They play the 20 waves of a random Charlie map (or a config named after the map, e.g. `D_OpiumFarm.xml`), with the starting wave selectable from the start. They're cosmetic only: not saved in the profile, not counted in the stat bars, mastery or progression, and the original missions are unaffected.
+
 # Hunter Mode and Coop
 
 Plugin adds an ability to modify the number of reinforcements for the Hunter game mode and coop campaign with `ReinforcementsEnemyMultiplier` option.
