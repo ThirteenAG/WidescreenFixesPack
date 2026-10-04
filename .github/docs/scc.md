@@ -30,7 +30,7 @@
 
 ### Split screen
 
-- **Split screen** — Restore the original split screen co-op in one game window (Co-op → Split Screen). Player 1 uses the keyboard and mouse or a gamepad, player 2 a gamepad. Player 2 has their own profile (`Guest` by default) for uniform and loadout, changed in the lobby with Teammate Settings.
+- **Split screen** — Restore the original split screen co-op in one game window (Co-op → Split Screen). Player 1 uses the keyboard and mouse or a gamepad, player 2 a gamepad. Player 2 has their own profile (`Guest` by default) for uniform and loadout, changed in the lobby with Teammate Settings. The game's invert look option is player 1's, player 2's is `InvertYPlayer2`.
 - **Two instance split screen** — Launch a second game instance, with each window taking half the screen (top and bottom or side by side). The two instances connect over LAN. Each window uses its own gamepad and the second one uses its own profile.
 
 ### Display and effects

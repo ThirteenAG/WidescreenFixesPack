@@ -32,13 +32,17 @@ namespace RawMouse
         auto y = RawInput::RawMouseDeltaY.exchange(0);
         if (viewport && captured && IsCapturingInput(viewport))
         {
+            // split screen: the window's mouse messages may go to player 2's viewport, the mouse is player 1's
+            auto target = GetMouseViewport ? GetMouseViewport() : nullptr;
+            if (!target)
+                target = viewport;
             // UWindowsViewport::CauseInputEvent(key, IST_Axis, delta, 0, 0), like the WM_MOUSEMOVE handler
-            auto CauseInputEvent = reinterpret_cast<int(__thiscall*)(void*, int, int, int, float, int, int)>((*reinterpret_cast<uintptr_t**>(viewport))[0x78 / 4]);
-            auto input = *reinterpret_cast<int*>(reinterpret_cast<uintptr_t>(viewport) + 0x5C);
+            auto CauseInputEvent = reinterpret_cast<int(__thiscall*)(void*, int, int, int, float, int, int)>((*reinterpret_cast<uintptr_t**>(target))[0x78 / 4]);
+            auto input = *reinterpret_cast<int*>(reinterpret_cast<uintptr_t>(target) + 0x5C);
             if (x)
-                CauseInputEvent(viewport, input, 0xE4, 4, static_cast<float>(x), 0, 0); // IK_MouseX
+                CauseInputEvent(target, input, 0xE4, 4, static_cast<float>(x), 0, 0); // IK_MouseX
             if (y)
-                CauseInputEvent(viewport, input, 0xE5, 4, static_cast<float>(y), 0, 0); // IK_MouseY
+                CauseInputEvent(target, input, 0xE5, 4, static_cast<float>(y), 0, 0); // IK_MouseY
         }
         return ret;
     }

@@ -22,6 +22,7 @@ export bool bBlacklistControlScheme = true;
 export int BackBufferWidth = 0;
 export int BackBufferHeight = 0;
 export bool bEnableSplitscreen = false;
+export void* (*GetMouseViewport)() = nullptr; // split screen: the viewport the mouse is player 1's in, null for the usual one
 export bool bInstance1 = true;
 
 export constexpr float fDefaultAspectRatio = 16.0f / 9.0f;
