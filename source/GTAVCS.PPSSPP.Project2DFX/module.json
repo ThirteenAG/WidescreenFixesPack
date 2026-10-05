@@ -1,0 +1,7 @@
+{
+  "sources": ["main.c", "lodl.c", "../../includes/psp/injector.c", "../../includes/psp/log.c", "../../includes/psp/patterns.c", "../../includes/psp/rini.c", "../../includes/psp/inireader.c", "../../includes/psp/gvm.c", "../../includes/psp/mips.c", "../../includes/psp/memalloc.c"],
+  "output": "../../data/GTAVCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.prx",
+  "exports": "exports.exp",
+  "startup": "module_start",
+  "libraries": ["-lpspsystemctrl_user", "-lm"]
+}
