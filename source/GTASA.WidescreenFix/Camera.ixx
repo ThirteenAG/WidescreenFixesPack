@@ -571,18 +571,9 @@ enum eVehicleType
     VEHICLE_TRAILER
 };
 
-bool IsHeli(int m_nVehicleType) { return m_nVehicleType == VEHICLE_HELI; }
-bool IsPlane(int m_nVehicleType) { return m_nVehicleType == VEHICLE_PLANE; }
-bool IsBoat(int m_nVehicleType) { return m_nVehicleType == VEHICLE_BOAT; }
-bool IsTrain(int m_nVehicleType) { return m_nVehicleType == VEHICLE_TRAIN; }
-bool IsFakeAircraft(int m_nVehicleType) { return m_nVehicleType == VEHICLE_FHELI || m_nVehicleType == VEHICLE_FPLANE; }
-bool IsBike(int m_nVehicleType) { return m_nVehicleType == VEHICLE_BIKE; }
-bool IsBMX(int m_nVehicleType) { return m_nVehicleType == VEHICLE_BMX; }
-bool IsTrailer(int m_nVehicleType) { return m_nVehicleType == VEHICLE_TRAILER; }
-
 void CCamera::UpdatePlayerVehicleSpeedBlur(CCamera* camera)
 {
-    if (camera->m_pTargetEntity->nType == ENTITY_TYPE_PED)
+    if (!camera->m_pTargetEntity || camera->m_pTargetEntity->nType != ENTITY_TYPE_VEHICLE)
         return;
 
     if (camera->m_aCams[camera->m_nActiveCam].Mode != eCamMode::MODE_CAM_ON_A_STRING)
@@ -593,18 +584,16 @@ void CCamera::UpdatePlayerVehicleSpeedBlur(CCamera* camera)
     if (!playerVehicle)
         return;
 
-    float speed = playerVehicle->m_vecMoveSpeed.Magnitude();
-    int m_nVehicleType = *(int*)((uintptr_t)playerVehicle + 0x590);
+    // Aircraft inherit the automobile base class at 0x590; the subtype
+    // at 0x594 distinguishes them from cars, monster trucks and quads.
+    const int vehicleSubType = *(int*)((uintptr_t)playerVehicle + 0x594);
+    if (vehicleSubType != VEHICLE_AUTOMOBILE &&
+        vehicleSubType != VEHICLE_MTRUCK &&
+        vehicleSubType != VEHICLE_QUAD)
+        return;
 
-    if (speed <= 0.65f ||
-        IsBoat(m_nVehicleType) ||
-        IsHeli(m_nVehicleType) ||
-        IsPlane(m_nVehicleType) ||
-        IsTrain(m_nVehicleType) ||
-        IsFakeAircraft(m_nVehicleType) ||
-        IsBMX(m_nVehicleType) ||
-        IsTrailer(m_nVehicleType) ||
-        IsBike(m_nVehicleType))
+    float speed = playerVehicle->m_vecMoveSpeed.Magnitude();
+    if (speed <= 0.65f)
         return;
 
 

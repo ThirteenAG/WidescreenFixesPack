@@ -1,4 +1,5 @@
 .module-objects/
+/tests/
 ## Releases data
 data/Archives
 data/**/*.asi

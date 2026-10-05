@@ -219,6 +219,7 @@ namespace Splitscreen
 
     // player 2's pad read by player 1's input, its events (pad keys from 196 on) get player 2's controller
     bool sharedUpdate = false;
+    ULONGLONG sharedUpdateTime = 0;
 
     // the menus show the prompts of the last used device: player 2's pad or the keyboard and mouse
     bool lastInputPad = false;
@@ -514,10 +515,11 @@ namespace Splitscreen
             // Player 1 without a pad stays in keyboard and mouse mode from the split screen lobby on (the profile's gamepad setting
             // switches to gamepad mode, a pad would also press player 2's START). In the menus after player 2 joined, this input also
             // reads player 2's pad (events with their controller), the lobby gives the screen to whoever pressed a button, so player 2
-            // customizes their own loadout
+            // customizes their own loadout. In the mission it does on player 2's screens: the menus take the first viewport's input
+            // only, player 2's loadout at a supply crate (locked to their controller) got no input from anyone.
             if (singleController == INT32_MIN)
                 singleController = GetInputController(input);
-            auto shared = IsPlaying() && !GetSplitViewport();
+            auto shared = IsPlaying() && (!GetSplitViewport() || IsPlayer2Screen());
             auto controller = shared ? controllerPlayer2 : -1;
             if (GetInputController(input) != controller)
             {
@@ -559,12 +561,16 @@ namespace Splitscreen
                 auto mode = *pGamepadMode;
                 *pGamepadMode = 1;
                 sharedUpdate = true;
+                sharedUpdateTime = GetTickCount64();
                 shUpdateInput.thiscall<void>(viewport, input, delta1, delta2, a4);
                 sharedUpdate = false;
                 *pGamepadMode = mode;
                 return;
             }
         }
+        // player 2's own input waits while player 1's reads their pad for their screen (the screen got every button twice)
+        if (!padPlayer1 && viewport == GetSplitViewport() && IsPlayer2Screen() && GetTickCount64() - sharedUpdateTime < 250)
+            return;
         WithGamepadMode(IsPlaying() && GetInputController(input) == controllerPlayer2, [&] { shUpdateInput.thiscall<void>(viewport, input, delta1, delta2, a4); return 0; });
     }
 
@@ -583,8 +589,8 @@ namespace Splitscreen
         else if (!player2Pad && (args[2] == 1 || ((args[1] == 228 || args[1] == 229) && *reinterpret_cast<float*>(&args[3]) != 0.0f)))
             lastInputPad = false;
 
-        // player 2's events, keyboard and mouse also work on a screen owned by player 2 in the menus
-        if ((sharedUpdate && args[1] >= 196) || (IsPlaying() && (viewport == GetSplitViewport() || (!GetSplitViewport() && IsPlayer2Screen()))))
+        // player 2's events, keyboard and mouse also work on a screen owned by player 2 (either player can close it)
+        if ((sharedUpdate && args[1] >= 196) || (IsPlaying() && (viewport == GetSplitViewport() || IsPlayer2Screen())))
             args[4] = controllerPlayer2;
     }
 
@@ -737,7 +743,10 @@ namespace Splitscreen
         lastScene = scene;
         lastTime = now;
 
+        // player 1's input reads player 2's pad on their screens while it updates, START then reaches the menu the usual way
         auto pressed = PollPlayer2(previous);
+        if (GetTickCount64() - sharedUpdateTime < 250)
+            return;
         if ((pressed & XINPUT_GAMEPAD_START) && IsPlayer2Screen())
             reinterpret_cast<void(__thiscall*)(void*)>((*reinterpret_cast<void***>(scene))[0x60 / 4])(scene);
     }

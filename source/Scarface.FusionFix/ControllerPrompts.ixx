@@ -42,14 +42,25 @@ namespace
         // ControllerConfigActionMap binds Start to PauseMenuAction(0), just like Esc.
         {nullptr,15,-1,L"ESC"},
         // Context-specific variants: map marker, map zoom, and the sniper modifier.
-        {nullptr,10,-1},{nullptr,-1,2},{nullptr,12,-1}
+        {nullptr,10,-1},{nullptr,-1,2},{nullptr,12,-1},
+        // Vehicle-only PC tokens have different actions from the same keys on foot.
+        {nullptr,5,-1},{nullptr,8,-1},{nullptr,14,-1}
     };
     constexpr wchar_t markerBase = 0xE100;
-    constexpr size_t controllerExitToken = std::size(tokens)-4;
+    constexpr wchar_t gameplayMarkerBase = 0xE200;
+    constexpr size_t controllerExitToken = std::size(tokens)-7;
+    constexpr size_t mapMarkerToken = controllerExitToken+1, mapZoomToken = controllerExitToken+2;
+    constexpr size_t sniperModifierToken = controllerExitToken+3;
+    constexpr size_t accelerateToken = controllerExitToken+4, brakeToken = controllerExitToken+5;
+    constexpr size_t hornToken = controllerExitToken+6;
     constexpr wchar_t glyphs[20] = {0xAB,0xAB,0xAC,0xAC,0xA4,0xA5,0xA6,0xA7,0xAF,0xB1,0xBC,0xBE,0xBD,0xB9,0xB2,0xB3,0xA3,0xA2,0xB4,0xB5};
     constexpr int pagePhysical[24] = {-1,-1,17,16,4,5,6,7,-1,-1,0,2,8,9,14,15,18,19,-1,-1,13,10,12,11};
     SafetyHookInline lookupHook, widthHook, lineWidthHook, wrapWidthHook, maskHook, drawHook, wrapDrawHook, beginHook, endHook;
     SafetyHookInline setTextHook;
+    SafetyHookInline glyphHook;
+    SafetyHookInline lookTutorialUpdateHook;
+    const char* (__cdecl* evaluateScript)(const char*,int,const char*,int,int) = nullptr;
+    void* boundTutorialMap = nullptr;
     std::mutex tokenMutex;
     std::map<std::pair<uintptr_t,int>,std::wstring> expandedBible;
     const wchar_t* (__cdecl* lookupText)(const char*) = nullptr;
@@ -63,12 +74,39 @@ namespace
     QueryButton queryButton = nullptr;
     using QueryActivity = uint64_t(__cdecl*)(unsigned);
     QueryActivity queryActivity = nullptr;
+    using QueryProfileButton = uint32_t(__cdecl*)(unsigned,unsigned,const wchar_t*);
+    QueryProfileButton queryProfileButton = nullptr;
+    void** mainCharacter = nullptr;
+    bool modernControls = false;
     IDirect3DDevice9* device = nullptr;
     std::array<ComPtr<IDirect3DTexture9>,20> icons;
+    std::array<float,20> iconHeightPerWidth{};
     ComPtr<IDirect3DBaseTexture9> savedTexture;
     bool textureChanged = false;
+    int iconPage = -1;
     std::array<int,17> bindingPhysical{};
+    std::array<int,17> gameplayPhysical{};
     injector::hook_back<const char* (__cdecl*)(const char*,int)> hbControlButtonLabel;
+
+    void __fastcall UpdateLookTutorial(void* self,void*,const void* time)
+    {
+        const auto state=static_cast<const uint8_t*>(self);
+        // mActionMap is assigned by StartTutorial; don't read it while inactive.
+        const bool active=(state[0x60]&8) && *reinterpret_cast<const int*>(state+0x68)>0;
+        auto map=active ? *reinterpret_cast<void* const*>(state+0x6C) : nullptr;
+        if(!map)boundTutorialMap=nullptr;
+        if(map && map!=boundTutorialMap)
+        {
+            // tutorial.cso binds Start to Options on PC, but only binds the
+            // Triangle exit action on consoles. Add that missing PC binding
+            // through the game's own ActionMap; its Pressed(1) retains the
+            // original stage, pause and opening-mission restrictions.
+            evaluateScript("HUDLookTutorialActionMap.bindCmd(\"Joystick\", \"Triangle\", \"LookTutorialInput( 1 );\", \"\");",
+                0,nullptr,0,-1);
+            boundTutorialMap=map;
+        }
+        lookTutorialUpdateHook.thiscall<void>(self,time);
+    }
 
     int __fastcall SetText(void* self,void*,const char* text,int index,int literal)
     {
@@ -98,6 +136,24 @@ namespace
         uint32_t hash=0;
         for(unsigned char c:text)hash=((65599u*hash)&0x7FFFFFFF)^(c<97?c+32:c);
         return hash|0x80000000;
+    }
+
+    bool GameplayText(uint32_t key)
+    {
+        // Text-bible IDs of gameplay instructions. Dialog actions (Close, Load,
+        // Create, etc.) continue to use the effective menu mapping.
+        constexpr uint32_t keys[] = {
+            0x96F55CA2,0x804C113A,0x918065F2,0x91826670,0x947C2E03,0x96D11874,
+            0xA02D2959,0xA02D295B,0xA02D295D,0xA02D295F,0xD0E218A8,0xC4810877,
+            0xE4381519,0xE4401720,0x83FB4E1A,0x83FC4EDB,0xB76262C5,0xB76262C6,
+            0xB5F86DE5,0xB5F86DE6,0xBA4AF1CF,0xD50139A4,0xD50139A7,0x9470D95D,
+            0xA1776B24,0xDFA0EE4C,0xDFD9A106,0xDEDA0E00,0xDAFC5700,0xDAFC5702,
+            0xDAFC5703,0xDAFC5704,0xDAFC5705,0xDAFC5706,0xDAFC5707,0xDAFC5709,
+            0xD11DD512,0x824F575E,0xAC803364,0xD3D8B600,0xDAE6E623,0xDC67F847,
+            0xEA55AB3E,0xD50B3C3D,0xBB4799AC,0xF5EEDE2D,0xF5EEDE2F,
+            0xC4810871,0xC4810874,0xE43213AD
+        };
+        return std::find(std::begin(keys),std::end(keys),key)!=std::end(keys);
     }
 
     const wchar_t* __fastcall Lookup(void* self,void*,int index)
@@ -134,7 +190,8 @@ namespace
         if (!wcschr(original,L'[')) return original;
         std::wstring result=original;
         bool changed=false;
-        for (size_t i=0;i<std::size(tokens)-3;++i)
+        const bool gameplayText=GameplayText(keys[index]);
+        for (size_t i=0;i<controllerExitToken;++i)
         {
             auto& token=tokens[i];
             if(!token.name)continue;
@@ -145,18 +202,27 @@ namespace
             if(!lookupText(token.name))continue;
             size_t replacement=i;
             if(keys[index]==0x88D871B9 && strcmp(token.name,"BUTTON_GRAPHIC_LMB")==0)
-                replacement=std::size(tokens)-3;
+                replacement=mapMarkerToken;
             if(strcmp(token.name,"BUTTON_GRAPHIC_SNIPER_ZOOM")==0)
             {
-                if(keys[index]==0xDFED7AFE)replacement=std::size(tokens)-2;
-                if(keys[index]==0xCBF8481D)replacement=std::size(tokens)-1;
+                if(keys[index]==0xDFED7AFE)replacement=mapZoomToken;
+                if(keys[index]==0xCBF8481D)replacement=sniperModifierToken;
             }
+            // PC acceleration/braking tokens name keyboard arrows; the vehicle
+            // action maps bind these to controller X/Square (slots 5/8).
+            if((keys[index]==0xB76262C5 || keys[index]==0xDAFC5700 || keys[index]==0xDAFC5706) &&
+                strcmp(token.name,"BUTTON_GRAPHIC_DPAD_UP")==0)replacement=accelerateToken;
+            if((keys[index]==0xDAFC5702 || keys[index]==0xDAFC5705) &&
+                strcmp(token.name,"BUTTON_GRAPHIC_DPAD_DOWN")==0)replacement=brakeToken;
+            if((keys[index]==0x96D11874 || keys[index]==0xA02D295D) &&
+                (strcmp(token.name,"BUTTON_GRAPHIC_CIRCLE")==0 || strcmp(token.name,"BUTTON_TEXT_CIRCLE")==0))
+                replacement=hornToken;
             std::scoped_lock lock(tokenMutex);
             if(replacement!=i)tokens[replacement].keyboard=token.keyboard;
             size_t pos=0;
             while((pos=result.find(name,pos))!=std::wstring::npos)
             {
-                result.replace(pos,name.size(),tokens[replacement].marker);
+                result.replace(pos,name.size(),1,(gameplayText?gameplayMarkerBase:markerBase)+wchar_t(replacement));
                 ++pos;
             }
             changed=true;
@@ -186,13 +252,28 @@ namespace
     {
         if (!text) return {};
         std::wstring output;
+        int tutorialSlot=-1;
+        if(lookupText && (*text==markerBase || *text==markerBase+10))
+        {
+            // tutorial.p3d authors these as two separate substitutions, e.g.
+            // [BUTTON_GRAPHIC_X]  [LOOK_TUTORIAL_START]. Match the localized
+            // label rather than changing the shared X/Start tokens globally.
+            std::wstring_view suffix=text+1;
+            while(!suffix.empty() && iswspace(suffix.front()))suffix.remove_prefix(1);
+            const auto label=lookupText(*text==markerBase ? "LOOK_TUTORIAL_START" : "LOOK_TUTORIAL_EXIT");
+            if(label && suffix==label)
+                tutorialSlot=*text==markerBase ? 15 : (lookTutorialUpdateHook ? 7 : -1);
+        }
+        const auto first=text;
         std::scoped_lock lock(tokenMutex);
         for (; *text; ++text)
         {
-            const unsigned index = unsigned(*text)-markerBase;
+            const bool gameplayText=*text>=gameplayMarkerBase;
+            const unsigned index = unsigned(*text)-(gameplayText?gameplayMarkerBase:markerBase);
             if(index>=std::size(tokens)) {output+=*text;continue;}
             const auto& token=tokens[index];
-            int physical = token.slot>=0 ? bindingPhysical[token.slot] : token.physical;
+            const int slot=text==first && tutorialSlot>=0 ? tutorialSlot : token.slot;
+            int physical = slot>=0 ? (gameplayText?gameplayPhysical:bindingPhysical)[slot] : token.physical;
             if(gamepad.load(std::memory_order_relaxed) && physical>=0 && physical<20 && icons[physical] &&
                 HasIconGlyph(font,physical) && (token.secondPhysical<0 ||
                     (icons[token.secondPhysical] && HasIconGlyph(font,token.secondPhysical))))
@@ -222,7 +303,7 @@ namespace
             std::scoped_lock lock(tokenMutex);
             if(text)for(auto p=text;*p;++p)
             {
-                const unsigned index=unsigned(*p)-markerBase;
+                const unsigned index=unsigned(*p)-(*p>=gameplayMarkerBase?gameplayMarkerBase:markerBase);
                 if(index<std::size(tokens))
                 {
                     s+=tokens[index].keyboard;
@@ -245,14 +326,42 @@ namespace
         return text ? text+wcslen(text) : nullptr;
     }
 
+    int __stdcall EmitGlyph(void* primitive,const uint8_t* glyph,float x,float y,float width,float height,int color)
+    {
+        // TextureFont derives icon height from UV span * the original font page's
+        // pixel height (699FB0/69A140). HD font pages can change that height without
+        // changing the glyph width. Use our replacement texture's aspect instead.
+        if(textureChanged && iconPage>=0 && glyph)
+        {
+            const int physical=pagePhysical[iconPage];
+            const auto page=*reinterpret_cast<const uint32_t*>(glyph+20);
+            if((page&0x80000000) && (page&0x7FFFFFFF)==unsigned(iconPage) &&
+                *reinterpret_cast<const uint16_t*>(glyph+16)==glyphs[physical])
+            {
+                std::array<uint32_t,12> replacement;
+                memcpy(replacement.data(),glyph,sizeof(replacement));
+                // Our DDS contains one complete icon, independently of font atlas UVs.
+                const std::array<float,4> uv{0.0f,0.0f,1.0f,1.0f};
+                memcpy(replacement.data()+6,uv.data(),sizeof(uv));
+                return glyphHook.stdcall<int>(primitive,replacement.data(),x,y,width,
+                    width*iconHeightPerWidth[physical],color);
+            }
+        }
+        return glyphHook.stdcall<int>(primitive,glyph,x,y,width,height,color);
+    }
+
     int __fastcall Begin(void* self,void*,int page)
     {
         auto result=beginHook.thiscall<int>(self,page);
+        iconPage=-1;
         if(device && gamepad.load(std::memory_order_relaxed) && page>=0 && page<int(std::size(pagePhysical)))
         {
             const int id=pagePhysical[page];
             if(id>=0 && icons[id] && HasIconGlyph(self,id) && SUCCEEDED(device->GetTexture(0,savedTexture.ReleaseAndGetAddressOf())))
+            {
                 textureChanged=SUCCEEDED(device->SetTexture(0,icons[id].Get()));
+                if(textureChanged)iconPage=page;
+            }
         }
         return result;
     }
@@ -262,7 +371,7 @@ namespace
         // primitive argument remains on the stack and must be forwarded/consumed.
         auto result=endHook.thiscall<int>(self,primitive);
         if(textureChanged && device)device->SetTexture(0,savedTexture.Get());
-        savedTexture.Reset();textureChanged=false;return result;
+        savedTexture.Reset();textureChanged=false;iconPage=-1;return result;
     }
 
     void UpdateInputMode()
@@ -312,18 +421,30 @@ export namespace ControllerPrompts
         if(device!=d)
         {
             for(auto& icon:icons)icon.Reset();device=d;
-            for(unsigned i=0;i<icons.size();++i)icons[i]=ScarfaceButtons::CreateIcon(d,i,gamepadIcons);
+            for(unsigned i=0;i<icons.size();++i)
+            {
+                icons[i]=ScarfaceButtons::CreateIcon(d,i,gamepadIcons);
+                D3DSURFACE_DESC desc{};
+                iconHeightPerWidth[i]=icons[i] && SUCCEEDED(icons[i]->GetLevelDesc(0,&desc)) && desc.Width
+                    ? float(desc.Height)/float(desc.Width) : 1.0f;
+            }
         }
         if(!queryButton || !queryActivity)
             if(auto module=GetModuleHandleW(L"Xidi.32.dll"))
             {
                 queryButton=reinterpret_cast<QueryButton>(GetProcAddress(module,"XidiGetPhysicalButtonMask"));
                 queryActivity=reinterpret_cast<QueryActivity>(GetProcAddress(module,"XidiGetLastControllerActivity"));
+                queryProfileButton=reinterpret_cast<QueryProfileButton>(GetProcAddress(module,"XidiGetPhysicalButtonMaskForProfile"));
             }
         DWORD foregroundPid=0;GetWindowThreadProcessId(GetForegroundWindow(),&foregroundPid);
         if(foregroundPid!=GetCurrentProcessId())return;
         UpdateInputMode();
         bindingPhysical.fill(-1);
+        gameplayPhysical.fill(-1);
+        const wchar_t* gameplayProfile=nullptr;
+        if(modernControls && mainCharacter && *mainCharacter)
+            gameplayProfile=*reinterpret_cast<const uintptr_t*>(static_cast<const uint8_t*>(*mainCharacter)+0x2E8)
+                ? L"InCar" : L"OnFoot";
         if(queryButton && controllerDescription && *controllerDescription)
         {
             auto names=*reinterpret_cast<const char***>(*controllerDescription+4);
@@ -337,6 +458,9 @@ export namespace ControllerPrompts
                     const auto mask=queryButton(controller,unsigned(button-1));
                     // An ambiguous binding must not pretend that one particular button is required.
                     if(mask && !(mask&(mask-1)))bindingPhysical[slot]=int(std::countr_zero(mask));
+                    const auto gameplayMask=queryProfileButton && gameplayProfile
+                        ? queryProfileButton(controller,unsigned(button-1),gameplayProfile) : mask;
+                    if(gameplayMask && !(gameplayMask&(gameplayMask-1)))gameplayPhysical[slot]=int(std::countr_zero(gameplayMask));
                 }
             }
         }
@@ -348,6 +472,7 @@ export namespace ControllerPrompts
         const bool bControllerPrompts=iniReader.ReadInteger("MAIN","ControllerPrompts",1)!=0;
         if(!bControllerPrompts)return;
         gamepadIcons=unsigned(std::clamp(iniReader.ReadInteger("MAIN","GamepadIcons",0),0,int(std::size(ScarfaceButtons::Names))-1));
+        modernControls=iniReader.ReadInteger("MAIN","ModernControlScheme",1)!=0;
         auto font=ScarfaceRTTI::FindVtable(".?AVTextureFont@pure3d@@");
         auto pattern=hook::pattern("8B 44 24 04 83 F8 FF 74 11 8B 51 1C 8B 04 82 8B 49 20 D1 E8 8D 04 41 C2 04 00"); // 0x6A41E0
         if(!font || pattern.size()!=1)return;
@@ -369,6 +494,11 @@ export namespace ControllerPrompts
             controllerDescription=*pattern.get_first<uintptr_t*>(2);
         }
         else return;
+        pattern=hook::pattern("A1 ? ? ? ? 85 C0 74 50"); // MainCharacter: operand at +1.
+        if(pattern.size()==1)mainCharacter=*pattern.get_first<void**>(1);
+        pattern=hook::pattern("83 EC 10 8B 44 24 18 8B 48 1C 8B 50 24 53 8B 58 18 55 8B 68 20"); // 0x699DF0, font quad submission.
+        if(pattern.size()!=1)return;
+        glyphHook=safetyhook::create_inline(pattern.get_first(),EmitGlyph);
         for(unsigned i=0;i<std::size(tokens);++i)tokens[i].marker[0]=markerBase+wchar_t(i);
         bindingPhysical.fill(-1);
         auto slot=[font](unsigned i){return injector::ReadMemory<void*>(font+i*sizeof(void*),true);};
@@ -380,11 +510,18 @@ export namespace ControllerPrompts
         wrapDrawHook=safetyhook::create_inline(slot(15),WrapDraw);
         beginHook=safetyhook::create_inline(slot(14),Begin);
         endHook=safetyhook::create_inline(slot(17),End);
-        if(widthHook&&lineWidthHook&&wrapWidthHook&&maskHook&&drawHook&&wrapDrawHook&&beginHook&&endHook)
+        if(glyphHook&&widthHook&&lineWidthHook&&wrapWidthHook&&maskHook&&drawHook&&wrapDrawHook&&beginHook&&endHook)
             lookupHook=safetyhook::create_inline(lookup,Lookup);
         enabled=bool(lookupHook);
         if(enabled)
         {
+            auto tutorial=ScarfaceRTTI::FindVtable(".?AVLookTutorialHUD@@");
+            pattern=hook::pattern("6A FF 6A 00 6A 00 6A 00 68 ? ? ? ? E8 ? ? ? ? 83 C4 14 C2 04 00 83 F8 01 75"); // 0x5B6380, Con::evaluate call at +13.
+            if(tutorial && pattern.size()==1)
+            {
+                evaluateScript=reinterpret_cast<decltype(evaluateScript)>(injector::GetBranchDestination(pattern.get_first(13)).as_int());
+                lookTutorialUpdateHook=safetyhook::create_inline(injector::ReadMemory<void*>(tutorial+54*sizeof(void*),true),UpdateLookTutorial);
+            }
             auto text=ScarfaceRTTI::FindVtable(".?AVFETextObject@@");
             pattern=hook::pattern("53 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 EB 05 B8 ? ? ? ? 8B 4E 38"); // 0x5E27D4 + 6
             if(text && pattern.size()==1)
@@ -400,7 +537,9 @@ export namespace ControllerPrompts
         lookupHook.reset();widthHook.reset();lineWidthHook.reset();wrapWidthHook.reset();maskHook.reset();
         drawHook.reset();wrapDrawHook.reset();beginHook.reset();endHook.reset();
         setTextHook.reset();
+        glyphHook.reset();
+        lookTutorialUpdateHook.reset();evaluateScript=nullptr;boundTutorialMap=nullptr;
         savedTexture.Reset();for(auto& icon:icons)icon.Reset();device=nullptr;
-        queryActivity=nullptr;queryButton=nullptr;enabled=false;
+        queryActivity=nullptr;queryButton=nullptr;queryProfileButton=nullptr;enabled=false;
     }
 }

@@ -1,4 +1,10 @@
 {
-  "sources": ["main.c", "../../includes/pcsx2/memalloc.c", "../../includes/pcsx2/patterns.c", "../../includes/pcsx2/injector.c", "../../includes/pcsx2/rini.c", "../../includes/pcsx2/inireader.c", "../../includes/pcsx2/mips.c"],
-  "output": "../../data/GTAVCS.PCSX2F.ImVehLM/PLUGINS/GTAVCS.PCSX2F.ImVehLM.elf"
+  "sources": [
+    "main.cpp",
+    "../../external/injector/include/ps2/patterns.c"
+  ],
+  "output": "../../data/GTAVCS.PCSX2F.ImVehLM/PLUGINS/GTAVCS.PCSX2F.ImVehLM.elf",
+  "cxx_flags": [
+    "-fno-threadsafe-statics"
+  ]
 }

@@ -612,22 +612,21 @@ export GameRef<CCamera> TheCamera([]() -> CCamera*
 
 void CCamera::UpdatePlayerVehicleSpeedBlur(CCamera* camera)
 {
-    if (camera->pTargetEntity->GetType() == ENTITY_TYPE_PED)
+    if (!camera->pTargetEntity || !camera->pTargetEntity->IsVehicle())
         return;
 
     if (camera->Cams[camera->ActiveCam].Mode != CCam::MODE_CAM_ON_A_STRING)
         return;
 
-    if (!FindPlayerVehicle())
+    CVehicle* playerVehicle = FindPlayerVehicle();
+    // Flyable aircraft can be automobiles in VC. Their handling flags
+    // distinguish them from road cars, unlike the vehicle class alone.
+    if (!playerVehicle || !playerVehicle->IsCar() || !playerVehicle->pHandling ||
+        playerVehicle->IsRealHeli() || playerVehicle->IsRealPlane())
         return;
 
-    float speed = FindPlayerVehicle()->GetMoveSpeed().Magnitude();
-
-    if (speed <= 0.65f ||
-        FindPlayerVehicle()->IsBoat() ||
-        FindPlayerVehicle()->IsHeli() ||
-        FindPlayerVehicle()->IsPlane() ||
-        FindPlayerVehicle()->IsBike())
+    float speed = playerVehicle->GetMoveSpeed().Magnitude();
+    if (speed <= 0.65f)
         return;
 
 

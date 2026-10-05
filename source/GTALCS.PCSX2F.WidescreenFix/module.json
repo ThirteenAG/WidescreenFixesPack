@@ -1,4 +1,22 @@
 {
-  "sources": ["main.c", "lodl.c", "cpad.c", "../../includes/pcsx2/log.c", "../../includes/pcsx2/memalloc.c", "../../includes/pcsx2/patterns.c", "../../includes/pcsx2/injector.c", "../../includes/pcsx2/rini.c", "../../includes/pcsx2/inireader.c", "../../includes/pcsx2/mips.c"],
-  "output": "../../data/GTALCS.PCSX2F.WidescreenFix/PLUGINS/GTALCS.PCSX2F.WidescreenFix.elf"
+  "sources": [
+    "main.cpp",
+    "lodl.cpp",
+    "cpad.cpp",
+    "../../external/injector/include/ps2/log.c",
+    "../../external/injector/include/ps2/memalloc.c",
+    "../../external/injector/include/ps2/patterns.c",
+    "../../external/injector/include/ps2/injector.c",
+    "../../external/injector/include/ps2/rini.c",
+    "../../external/injector/include/ps2/inireader.c",
+    "../../external/injector/include/ps2/mips.c"
+  ],
+  "output": "../../data/GTALCS.PCSX2F.WidescreenFix/PLUGINS/GTALCS.PCSX2F.WidescreenFix.elf",
+  "cxx_flags": [
+    "-std=gnu++17",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-strict-aliasing",
+    "-fno-threadsafe-statics"
+  ]
 }

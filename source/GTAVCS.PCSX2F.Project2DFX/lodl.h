@@ -1,8 +1,8 @@
 #ifndef H_LODLIGHTS
 #define H_LODLIGHTS
 #include <stdlib.h>
-#include "../../includes/pcsx2/injector.h"
-#include "../../includes/pcsx2/patterns.h"
+#include "../../external/injector/include/ps2/injector.hpp"
+#include "../../external/injector/include/ps2/patterns.h"
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -55,8 +55,8 @@ extern uintptr_t CurrentTimeHoursOffset;
 extern uintptr_t CurrentTimeMinutesOffset;
 extern uintptr_t CTimer__m_snTimeInMillisecondsPauseModeOffset;
 extern uintptr_t CTimer__ms_fTimeStepOffset;
-extern void (*CSprite__FlushSpriteBuffer)();
-extern void (*CCoronas__Render)();
+extern injector::hook_back<void()> CSprite__FlushSpriteBuffer;
+extern injector::hook_back<void()> CCoronas__Render;
 extern void (*RslRenderStateSet)(int, int);
 extern int (*CSprite__CalcScreenCoors)(CVector* in, CVector* out, float* outW, float* outH, uint8_t farClip);
 extern void (*CSprite__RenderBufferedOneXLUSprite)();

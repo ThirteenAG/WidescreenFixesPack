@@ -1,7 +1,25 @@
 {
-  "sources": ["main.c", "../../includes/psp/injector.c", "../../includes/psp/log.c", "../../includes/psp/patterns.c", "../../includes/psp/rini.c", "../../includes/psp/inireader.c", "../../includes/psp/gvm.c", "../../includes/psp/mips.c", "../../includes/psp/memalloc.c"],
+  "sources": [
+    "main.cpp",
+    "../../external/injector/include/psp/log.c",
+    "../../external/injector/include/psp/patterns.c",
+    "../../external/injector/include/psp/memalloc.c"
+  ],
   "output": "../../data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/GTAVCS.PPSSPP.ImVehLM.prx",
   "exports": "exports.exp",
   "startup": "module_start",
-  "libraries": ["-lpspsystemctrl_user", "-lm"]
+  "defines": [
+    "PSP_HOOK_RAM_END=0x0DD00000",
+    "MEM_CUSTOM_TOTAL_SIZE=4096"
+  ],
+  "libraries": [
+    "-lpspsystemctrl_user",
+    "-lm"
+  ],
+  "cxx_flags": [
+    "-std=gnu++17",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-threadsafe-statics"
+  ]
 }
