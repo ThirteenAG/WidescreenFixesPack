@@ -172,6 +172,20 @@ public:
                     LODDistMultiplier = 1.0f;
             });
 
+            // The native code copies the LOD multiplier to the population
+            // multiplier. Its aspect-ratio factor sends traffic to a larger
+            // spawn/despawn ring without increasing the local traffic budget.
+            // Keep the wider rendering range, but use the original zoom-based
+            // population range after that copy and before renderer LOD scaling.
+            static auto GenerationDistFix = safetyhook::create_mid(pattern.get_first(12), [](SafetyHookContext& regs)
+            {
+                auto& GenerationDistMultiplier = *(float*)(regs.ebx + 0xF0);
+                if (!CCutsceneMgr::IsRunning() || CCutsceneMgr::ms_useLodMultiplier)
+                    GenerationDistMultiplier = std::min(70.0f / CDraw::GetFOV(), 2.2f);
+                else
+                    GenerationDistMultiplier = 1.0f;
+            });
+
             //CCam::Process_WheelCam
             pattern = hook::pattern("C7 83 ? ? ? ? ? ? ? ? 8B 93 ? ? ? ? 8A 42 ? 24 ? 3C ? 0F 85");
             injector::MakeNOP(pattern.get_first(), 10, true);
