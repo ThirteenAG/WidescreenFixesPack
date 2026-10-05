@@ -1,7 +1,7 @@
 #ifndef H_PAD
 #define H_PAD
 #include <stdint.h>
-#include "../../includes/pcsx2/pcsx2f_api.h"
+#include "../../external/injector/include/ps2/pcsx2f_api.h"
 
 enum KeyCodes
 {

@@ -236,6 +236,15 @@ namespace
             Shift(offset, -1.0f);
         }
         ShiftCallouts(manager, offset);
+        if (auto prompt = Element(manager, 55)) // EHE_PROMPT_HUD
+        {
+            // PromptHUD::RelinkResources (5D8830): contextual action text,
+            // triangle/circle button labels and the selection rectangle.
+            // Move the whole prompt together, independently of centered tutorials.
+            for (size_t member : { 0x6C, 0x70, 0x74, 0x78, 0x7C, 0x80, 0x84, 0x88 })
+                Collect(Game::Field<void*>(prompt, member));
+            Shift(offset, -1.0f);
+        }
 
         // HUDMeterWithIcon::RelinkResources: select the meter's own layer, never the shared HUD page.
         for (int id : { 1, 2, 3, 4 }) // Health, balls, gang heat, cop heat.
@@ -248,18 +257,28 @@ namespace
                 Shift(offset);
             }
         }
+        for (int id : { 5, 6, 7, 8 }) // NPC health and pursuit-distance readouts.
+        {
+            if (auto element = Element(manager, id))
+            {
+                // Each NPCHealthN.pag owns its meter, backing, distance text
+                // and both object icons. Move the complete dedicated page.
+                Collect(Game::Field<void*>(element, 0x44));
+                Shift(offset, 1.0f);
+            }
+        }
         if (auto weapon = Element(manager, 14))
         {
             for (size_t member : { 0x80, 0x84, 0x88, 0x8C })
                 Collect(Game::Field<void*>(weapon, member));
             Shift(offset);
         }
-        for (int id : { 15, 16, 17 }) // HUDTrackable: dirty cash, clean cash, product.
+        for (int id : { 15, 16, 17, 18, 19 }) // Cash, product and both mission counters.
         {
             if (auto element = Element(manager, id))
             {
                 // Each trackable page also owns a gradient sprite, alongside its text and icon.
-                // MoneyLayer, CleanMoneyLayer and ProductLayer are separate pages in ingame.prj.
+                // Cash/product and MissionTrackables/2 have separate pages in ingame.prj.
                 Collect(Game::Field<void*>(element, 0x44));
                 Shift(offset);
             }

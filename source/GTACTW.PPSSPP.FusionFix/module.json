@@ -1,7 +1,30 @@
 {
-  "sources": ["main.c", "../../includes/psp/injector.c", "../../includes/psp/log.c", "../../includes/psp/patterns.c", "../../includes/psp/rini.c", "../../includes/psp/inireader.c", "../../includes/psp/gvm.c", "../../includes/psp/mips.c", "../../includes/psp/memalloc.c"],
+  "sources": [
+    "main.cpp",
+    "../../external/injector/include/psp/injector.c",
+    "../../external/injector/include/psp/log.c",
+    "../../external/injector/include/psp/patterns.c",
+    "../../external/injector/include/psp/rini.c",
+    "../../external/injector/include/psp/inireader.c",
+    "../../external/injector/include/psp/gvm.c",
+    "../../external/injector/include/psp/mips.c",
+    "../../external/injector/include/psp/memalloc.c"
+  ],
   "output": "../../data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.prx",
   "exports": "exports.exp",
   "startup": "module_start",
-  "libraries": ["-lpspsystemctrl_user", "-lm"]
+  "defines": [
+    "PSP_HOOK_RAM_END=0x0DD00000"
+  ],
+  "libraries": [
+    "-lpspsystemctrl_user",
+    "-lm"
+  ],
+  "cxx_flags": [
+    "-std=gnu++17",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-strict-aliasing",
+    "-fno-threadsafe-statics"
+  ]
 }

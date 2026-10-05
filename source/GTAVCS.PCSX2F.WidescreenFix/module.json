@@ -1,4 +1,21 @@
 {
-  "sources": ["main.c", "cpad.c", "ckey.c", "../../includes/pcsx2/memalloc.c", "../../includes/pcsx2/patterns.c", "../../includes/pcsx2/injector.c", "../../includes/pcsx2/rini.c", "../../includes/pcsx2/inireader.c", "../../includes/pcsx2/mips.c"],
-  "output": "../../data/GTAVCS.PCSX2F.WidescreenFix/PLUGINS/GTAVCS.PCSX2F.WidescreenFix.elf"
+  "sources": [
+    "main.cpp",
+    "cpad.cpp",
+    "ckey.cpp",
+    "../../external/injector/include/ps2/memalloc.c",
+    "../../external/injector/include/ps2/patterns.c",
+    "../../external/injector/include/ps2/injector.c",
+    "../../external/injector/include/ps2/rini.c",
+    "../../external/injector/include/ps2/inireader.c",
+    "../../external/injector/include/ps2/mips.c"
+  ],
+  "output": "../../data/GTAVCS.PCSX2F.WidescreenFix/PLUGINS/GTAVCS.PCSX2F.WidescreenFix.elf",
+  "cxx_flags": [
+    "-std=gnu++17",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-strict-aliasing",
+    "-fno-threadsafe-statics"
+  ]
 }

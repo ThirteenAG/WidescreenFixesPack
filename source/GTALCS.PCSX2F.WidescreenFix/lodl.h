@@ -2,8 +2,8 @@
 #define H_LODLIGHTS
 #include <stdlib.h>
 //#include <math.h>
-#include "../../includes/pcsx2/injector.h"
-#include "../../includes/pcsx2/patterns.h"
+#include "../../external/injector/include/ps2/injector.hpp"
+#include "../../external/injector/include/ps2/patterns.h"
 
 #define corona_struct_size 144
 #define CoronaLimitMax 10000
