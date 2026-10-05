@@ -1,14 +1,5 @@
-TARGET = ../../data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/GTAVCS.PPSSPP.ImVehLM
-OBJS = main.o exports.o ../../includes/psp/injector.o ../../includes/psp/log.o ../../includes/psp/patterns.o ../../includes/psp/rini.o ../../includes/psp/inireader.o ../../includes/psp/gvm.o ../../includes/psp/mips.o ../../includes/psp/memalloc.o
-
-CFLAGS = -O2 -Os -G0 -Wall -fshort-wchar -fno-pic -mno-check-zero-division -mpreferred-stack-boundary=4 -fpack-struct=16
-CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
-ASFLAGS = $(CFLAGS)
-
-BUILD_PRX = 1
-PRX_EXPORTS = exports.exp
-
-LIBS = -lpspsystemctrl_user -lm
-
-PSPSDK = $(shell psp-config --pspsdk-path)
-include $(PSPSDK)/lib/build_prx.mak
+.PHONY: all clean
+all:
+	powershell -NoProfile -ExecutionPolicy Bypass -File "../../external/pspsdk/plugins/build-module.ps1" -Project module.json
+clean:
+	powershell -NoProfile -ExecutionPolicy Bypass -File "../../external/pspsdk/plugins/build-module.ps1" -Project module.json -Clean

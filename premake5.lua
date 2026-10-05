@@ -48,86 +48,39 @@ function setpaths(key, exepath, scriptspath)
 end
 
 function setbuildpaths_psp(key, exepath, scriptspath, pspsdkpath, sourcepath, prj_name)
+   local command = 'powershell -NoProfile -ExecutionPolicy Bypass -File "%{wks.location}/../external/pspsdk/plugins/build-module.ps1" -Project "' .. sourcepath .. 'module.json"'
    local gamepath = envdir(key)
-   if (gamepath) then
-     buildcommands {"setlocal EnableDelayedExpansion"}
-     rebuildcommands {"setlocal EnableDelayedExpansion"}
-     buildcommands {"set _PPSSPPMemstick=" .. gamepath .. "\\memstick\\PSP"}
-     rebuildcommands {"set _PPSSPPMemstick=" .. gamepath .. "\\memstick\\PSP"}
-
-     buildcommands {
-     "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
-     "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
-     "if not defined _PPSSPPMemstick goto :eof\r\n" ..
-     "if not exist !_PPSSPPMemstick! goto :eof\r\n" ..
-     "if not exist !_PPSSPPMemstick!/PLUGINS/ mkdir !_PPSSPPMemstick!/PLUGINS/\r\n" ..
-     "set target=!_PPSSPPMemstick!/PLUGINS/$(ProjectName)\r\n" ..
-     "copy /y $(NMakeOutput) \"!target!\"\r\n"
-     }
-     rebuildcommands {
-     "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
-     "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
-     "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
-     "if not defined _PPSSPPMemstick goto :eof\r\n" ..
-     "if not exist !_PPSSPPMemstick! goto :eof\r\n" ..
-     "set target=!_PPSSPPMemstick!/PLUGINS/$(ProjectName)\r\n" ..
-     "copy /y $(NMakeOutput) \"!target!\"\r\n"
-     }
-     cleancommands {
-     "setlocal EnableDelayedExpansion\r\n" ..
-     "powershell -ExecutionPolicy Bypass -File \"" .. pspsdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
-     "if !errorlevel! neq 0 exit /b !errorlevel!\r\n"
-     }
-      debugdir (gamepath)
-      if (exepath) then
-         debugcommand (gamepath .. "\\" .. path.translate(exepath))
-         local dir = exepath:match'(.*/)(.*)'
-         debugdir (gamepath .. "\\" .. path.translate(dir or ""))
-      end
+   local deploy = {}
+   if gamepath then
+      local target = path.join(gamepath, "memstick/PSP/PLUGINS/", prj_name)
+      deploy = { 'if not exist "' .. target .. '" mkdir "' .. target .. '"',
+         'copy /y "$(NMakeOutput)" "' .. target .. '"' }
+      debugdir(gamepath)
+      debugcommand(path.join(gamepath, exepath))
    end
-   targetdir ("data/%{prj.name}/" .. scriptspath)
+   buildcommands { command, 'if errorlevel 1 exit /b %errorlevel%', deploy }
+   rebuildcommands { command .. ' -Clean', 'if errorlevel 1 exit /b %errorlevel%', command,
+      'if errorlevel 1 exit /b %errorlevel%', deploy }
+   cleancommands { command .. ' -Clean' }
+   targetdir("data/%{prj.name}/" .. scriptspath)
 end
 
 function setbuildpaths_ps2(key, exepath, scriptspath, ps2sdkpath, sourcepath, prj_name)
+   local command = 'powershell -NoProfile -ExecutionPolicy Bypass -File "%{wks.location}/../external/ps2sdk/plugins/build-module.ps1" -Project "' .. sourcepath .. 'module.json"'
    local gamepath = envdir(key)
-   if (gamepath) then
-     buildcommands {"setlocal EnableDelayedExpansion"}
-     rebuildcommands {"setlocal EnableDelayedExpansion"}
-     buildcommands {"set _PCSX2FDir=" .. gamepath}
-     rebuildcommands {"set _PCSX2FDir=" .. gamepath}
-     buildcommands {
-     "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
-     "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
-     "if not defined _PCSX2FDir goto :eof\r\n" ..
-     "if not exist !_PCSX2FDir! goto :eof\r\n" ..
-     "if not exist !_PCSX2FDir!/PLUGINS mkdir !_PCSX2FDir!/PLUGINS\r\n" ..
-     "set target=!_PCSX2FDir!/PLUGINS/\r\n" ..
-     "copy /y $(NMakeOutput) \"!target!\"\r\n"
-     }
-     rebuildcommands {
-     "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
-     "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\"\r\n" ..
-     "if !errorlevel! neq 0 exit /b !errorlevel!\r\n" ..
-     "if not defined _PCSX2FDir goto :eof\r\n" ..
-     "if not exist !_PCSX2FDir! goto :eof\r\n" ..
-     "if not exist !_PCSX2FDir!/PLUGINS mkdir !_PCSX2FDir!/PLUGINS\r\n" ..
-     "set target=!_PCSX2FDir!/PLUGINS/\r\n" ..
-     "copy /y $(NMakeOutput) \"!target!\"\r\n"
-     }
-     cleancommands {
-     "setlocal EnableDelayedExpansion\r\n" ..
-     "powershell -ExecutionPolicy Bypass -File \"" .. ps2sdkpath .. "\" -C \"" .. sourcepath .. "\" clean\r\n" ..
-     "if !errorlevel! neq 0 exit /b !errorlevel!"
-     }
-
-      debugdir (gamepath)
-      if (exepath) then
-         debugcommand (gamepath .. "\\" .. path.translate(exepath))
-         local dir = exepath:match'(.*/)(.*)'
-         debugdir (gamepath .. "\\" .. path.translate(dir or ""))
-      end
+   local deploy = {}
+   if gamepath then
+      local target = path.join(gamepath, scriptspath)
+      deploy = { 'if not exist "' .. target .. '" mkdir "' .. target .. '"',
+         'copy /y "$(NMakeOutput)" "' .. target .. '"' }
+      debugdir(gamepath)
+      debugcommand(path.join(gamepath, os.isfile(path.join(gamepath, "pcsx2-qtx64.exe")) and "pcsx2-qtx64.exe" or "pcsx2-qt.exe"))
    end
-   targetdir ("data/%{prj.name}/" .. scriptspath)
+   buildcommands { command, 'if errorlevel 1 exit /b %errorlevel%', deploy }
+   rebuildcommands { command .. ' -Clean', 'if errorlevel 1 exit /b %errorlevel%', command,
+      'if errorlevel 1 exit /b %errorlevel%', deploy }
+   cleancommands { command .. ' -Clean' }
+   targetdir("data/%{prj.name}/" .. scriptspath)
 end
 
 function add_kananlib()
@@ -189,12 +142,12 @@ end
 function add_pspsdk()
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile" }
+   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile", "source/%{prj.name}/module.json", "source/%{prj.name}/exports.exp" }
 end
 
 function add_ps2sdk()
    includedirs { "external/ps2sdk/ps2sdk/ee" }
-   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile" }
+   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile", "source/%{prj.name}/module.json" }
 end
 
 function writeghaction(tag, prj_name)
@@ -657,7 +610,7 @@ project "Burnout3.PCSX2F.WidescreenFix"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "Burnout3.PCSX2F.WidescreenFix")
-   writemakefile_ps2("Burnout3.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
+   writemakefile_ps2("Burnout3.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("Burnout3.PCSX2F.WidescreenFix")
@@ -669,7 +622,7 @@ project "GTALCS.PCSX2F.WidescreenFix"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.WidescreenFix")
-   writemakefile_ps2("GTALCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "lodl.o", "cpad.o", "../../includes/pcsx2/log.o",
+   writemakefile_ps2("GTALCS.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "lodl.o", "cpad.o", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("GTALCS.PCSX2F.WidescreenFix")
@@ -680,7 +633,7 @@ project "GTAVCS.PCSX2F.WidescreenFix"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.WidescreenFix")
-   writemakefile_ps2("GTAVCS.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a", "cpad.o", "ckey.o", "../../includes/pcsx2/memalloc.o",
+   writemakefile_ps2("GTAVCS.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a", "cpad.o", "ckey.o", "../../includes/pcsx2/memalloc.o",
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("GTAVCS.PCSX2F.WidescreenFix")
@@ -691,7 +644,7 @@ project "GTAVCS.PCSX2F.Project2DFX"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.Project2DFX")
-   writemakefile_ps2("GTAVCS.PCSX2F.Project2DFX", "PLUGINS/", "0x03100000", "-l:libc.a", "lodl.o", "../../includes/pcsx2/memalloc.o",
+   writemakefile_ps2("GTAVCS.PCSX2F.Project2DFX", "PLUGINS/", "-l:libc.a", "lodl.o", "../../includes/pcsx2/memalloc.o",
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("GTAVCS.PCSX2F.Project2DFX")
@@ -702,7 +655,7 @@ project "GTAVCS.PCSX2F.ImVehLM"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.ImVehLM")
-   writemakefile_ps2("GTAVCS.PCSX2F.ImVehLM", "PLUGINS/", "0x06000000", "-l:libc.a", "../../includes/pcsx2/memalloc.o",
+   writemakefile_ps2("GTAVCS.PCSX2F.ImVehLM", "PLUGINS/", "-l:libc.a", "../../includes/pcsx2/memalloc.o",
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("GTAVCS.PCSX2F.ImVehLM")
@@ -714,7 +667,7 @@ project "KnightRider.PCSX2F.WidescreenFix"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "KnightRider.PCSX2F.WidescreenFix")
-   writemakefile_ps2("KnightRider.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
+   writemakefile_ps2("KnightRider.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("KnightRider.PCSX2F.WidescreenFix")
@@ -725,7 +678,7 @@ project "PCSX2F.XboxRainDroplets"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PCSX2F.XboxRainDroplets")
-   writemakefile_ps2("PCSX2F.XboxRainDroplets", "PLUGINS/", "0x03F00000", "-l:libc.a", "../../includes/pcsx2/memalloc.o",
+   writemakefile_ps2("PCSX2F.XboxRainDroplets", "PLUGINS/", "-l:libc.a", "../../includes/pcsx2/memalloc.o",
    "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o","../../includes/pcsx2/inireader.o",
    "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("PCSX2F.XboxRainDroplets")
@@ -736,7 +689,7 @@ project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
-   writemakefile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
+   writemakefile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
@@ -747,7 +700,7 @@ project "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix")
-   writemakefile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix", "PLUGINS/", "0x02100000", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
+   writemakefile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../includes/pcsx2/log.o",
    "../../includes/pcsx2/memalloc.o", "../../includes/pcsx2/patterns.o", "../../includes/pcsx2/injector.o", "../../includes/pcsx2/rini.o",
    "../../includes/pcsx2/inireader.o", "../../includes/pcsx2/mips.o")
    writelinkfile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix")

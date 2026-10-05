@@ -1,0 +1,4 @@
+{
+  "sources": ["main.c", "../../includes/pcsx2/memalloc.c", "../../includes/pcsx2/patterns.c", "../../includes/pcsx2/injector.c", "../../includes/pcsx2/rini.c", "../../includes/pcsx2/inireader.c", "../../includes/pcsx2/mips.c"],
+  "output": "../../data/PCSX2F.XboxRainDroplets/PLUGINS/PCSX2F.XboxRainDroplets.elf"
+}

@@ -1,0 +1,4 @@
+{
+  "sources": ["main.c", "../../includes/pcsx2/log.c", "../../includes/pcsx2/memalloc.c", "../../includes/pcsx2/patterns.c", "../../includes/pcsx2/injector.c", "../../includes/pcsx2/rini.c", "../../includes/pcsx2/inireader.c", "../../includes/pcsx2/mips.c"],
+  "output": "../../data/Burnout3.PCSX2F.WidescreenFix/PLUGINS/Burnout3.PCSX2F.WidescreenFix.elf"
+}
