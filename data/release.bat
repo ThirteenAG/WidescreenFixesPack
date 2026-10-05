@@ -1,5 +1,6 @@
 echo off
 setlocal enabledelayedexpansion
+pushd "%~dp0" || exit /b 1
 RD /S /Q ".\Archives"
 
 rem Embedding PDBs
@@ -133,31 +134,44 @@ if errorlevel 1 goto packaging_failed
 
 rem Creating archives
 
-FOR /D /r %%G in ("*PPSSPP*") DO (
- cd %%~nxG
- del /S *.elf
- cd ..
-)
-
 rem Additional texture archives
 7za a "GTALCS.PPSSPP.ImVehLM\memstick\PSP\TEXTURES\ULUS10041\textures.zip" -mx=0 "..\textures\GTALCS\*" -x^^!buildps2.bat -x^^!texture_dump_alpha_scaler.py
+if errorlevel 1 goto packaging_failed
 7za a "GTAVCS.PPSSPP.ImVehLM\memstick\PSP\TEXTURES\ULUS10160\textures.zip" -mx=0 "..\textures\GTAVCS\*" -x^^!buildps2.bat -x^^!texture_dump_alpha_scaler.py
+if errorlevel 1 goto packaging_failed
 7za a "GTAVCS.PPSSPP.GamepadIcons\memstick\PSP\TEXTURES\ULUS10160\textures.zip" -mx=0 "..\textures\GTAVCS\*" -x^^!buildps2.bat -x^^!texture_dump_alpha_scaler.py
+if errorlevel 1 goto packaging_failed
 
 FOR /d %%X IN (*) DO (
-7za a -tzip "Archives\%%X.zip" ".\%%X\*" -r -xr^^!Archives -x^^!*.pdb -x^^!*.db -x^^!*.ipdb -x^^!*.iobj -x^^!*.tmp -x^^!*.iobj -x^^!*.ual -x^^!*.x64ual -x^^!*.iobj -x^^!*.wrapper -x^^!*.lib -x^^!*.exp -x^^!*.ilk -xr^^!*.objects -x^^!*.map -x^^!*.gitkeep
+if /I not "%%X"=="Archives" (
+call :package_directory "%%X"
 if errorlevel 1 goto packaging_failed
+)
 )
 
 rem Creating texture archives
 if exist "..\textures\GTA3.WidescreenFrontend" 7za a "Archives\GTA3.WidescreenFrontend.zip" "..\textures\GTA3.WidescreenFrontend"
+if errorlevel 1 goto packaging_failed
 if exist "..\textures\GTAVC.WidescreenFrontend" 7za a "Archives\GTAVC.WidescreenFrontend.zip" "..\textures\GTAVC.WidescreenFrontend"
+if errorlevel 1 goto packaging_failed
 if exist "..\textures\Manhunt.WidescreenFrontend" 7za a "Archives\Manhunt.WidescreenFrontend.zip" "..\textures\Manhunt.WidescreenFrontend"
+if errorlevel 1 goto packaging_failed
+popd
 exit /b 0
 
 :packaging_failed
 echo ERROR: Packaging failed. No release should be uploaded.
+popd
 exit /b 1
+
+:package_directory
+rem 7-Zip exclusion markers contain !, so expand them without delayed expansion.
+setlocal DisableDelayedExpansion
+set "elf_exclusion="
+echo "%~1" | findstr /I /C:"PPSSPP" >nul
+if not errorlevel 1 set "elf_exclusion=-x!*.elf"
+7za a -tzip "Archives\%~1.zip" ".\%~1\*" -r -xr!Archives -x!*.pdb -x!*.db -x!*.ipdb -x!*.iobj -x!*.tmp -x!*.ual -x!*.x64ual -x!*.wrapper -x!*.lib -x!*.exp -x!*.ilk -xr!*.objects -x!*.map -x!*.gitkeep %elf_exclusion%
+exit /b %errorlevel%
 
 7-Zip Extra
 ~~~~~~~~~~~
