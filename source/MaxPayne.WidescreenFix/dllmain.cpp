@@ -605,6 +605,111 @@ void InitSettingsFile()
     CWinApp::shSetRegistryKey = safetyhook::create_inline(GetProcAddress(GetModuleHandleA("mfc42.dll"), MAKEINTRESOURCEA(6117)), CWinApp::SetRegistryKey); // CWinApp::SetRegistryKey(LPCTSTR)
 }
 
+// The display modes the startup dialog's options list, in the order the adapter enumerates them:
+// smallest first. They're listed largest first instead.
+// 16-bit modes are left out where the same size is there in 32-bit, P_Driver::setFullscreenMode
+// opens those instead anyway.
+namespace DisplayModeList
+{
+    enum
+    {
+        IDC_DISPLAY_MODE = 1002,
+        CWND_HWND = 0x20, // CWnd::m_hWnd
+    };
+
+    // What the items point to, the game reads the choice back from it
+    struct Mode
+    {
+        uint32_t nWidth;
+        uint32_t nHeight;
+        uint32_t nBitsPerPixel;
+    };
+
+    void Sort(HWND hComboBox)
+    {
+        struct Item
+        {
+            std::string text;
+            const Mode* pMode;
+        };
+
+        std::vector<Item> Items;
+        const Mode* pSelected = nullptr;
+        auto nCount = (int)SendMessageA(hComboBox, CB_GETCOUNT, 0, 0);
+        auto nSelected = (int)SendMessageA(hComboBox, CB_GETCURSEL, 0, 0);
+        for (int i = 0; i < nCount; ++i)
+        {
+            auto pMode = (const Mode*)SendMessageA(hComboBox, CB_GETITEMDATA, i, 0);
+            auto nLength = (int)SendMessageA(hComboBox, CB_GETLBTEXTLEN, i, 0);
+            if (!pMode || pMode == (const Mode*)CB_ERR || nLength == CB_ERR)
+                return;
+
+            std::string text(nLength, '\0');
+            SendMessageA(hComboBox, CB_GETLBTEXT, i, (LPARAM)text.data());
+            if (i == nSelected)
+                pSelected = pMode;
+            Items.push_back({ std::move(text), pMode });
+        }
+
+        auto Is32Bit = [](const Item& item) { return item.pMode->nBitsPerPixel >= 32; };
+        auto IsLeftOut = [&](const Item& item)
+        {
+            return !Is32Bit(item) && std::ranges::any_of(Items, [&](const Item& other)
+            {
+                return Is32Bit(other) && other.pMode->nWidth == item.pMode->nWidth && other.pMode->nHeight == item.pMode->nHeight;
+            });
+        };
+        std::vector<Item> Kept;
+        for (auto& item : Items)
+        {
+            if (!IsLeftOut(item))
+                Kept.push_back(item);
+        }
+        Items = std::move(Kept);
+
+        std::stable_sort(Items.begin(), Items.end(), [](const Item& a, const Item& b)
+        {
+            return std::tie(a.pMode->nWidth, a.pMode->nHeight, a.pMode->nBitsPerPixel) > std::tie(b.pMode->nWidth, b.pMode->nHeight, b.pMode->nBitsPerPixel);
+        });
+
+        SendMessageA(hComboBox, CB_RESETCONTENT, 0, 0);
+        auto nNewSelected = CB_ERR;
+        for (auto& item : Items)
+        {
+            // unlike CB_ADDSTRING, keeps the order even if the list sorts itself
+            auto nIndex = (int)SendMessageA(hComboBox, CB_INSERTSTRING, -1, (LPARAM)item.text.c_str());
+            SendMessageA(hComboBox, CB_SETITEMDATA, nIndex, (LPARAM)item.pMode);
+            if (item.pMode == pSelected)
+                nNewSelected = nIndex;
+        }
+
+        // a 16-bit mode picked before, its 32-bit one
+        if (nNewSelected == CB_ERR && pSelected)
+        {
+            for (int i = 0; i < (int)Items.size(); ++i)
+            {
+                if (Items[i].pMode->nWidth == pSelected->nWidth && Items[i].pMode->nHeight == pSelected->nHeight)
+                {
+                    nNewSelected = i;
+                    break;
+                }
+            }
+        }
+
+        SendMessageA(hComboBox, CB_SETCURSEL, nNewSelected == CB_ERR ? 0 : nNewSelected, 0);
+    }
+
+    // Fills the dialog's lists for the adapter picked
+    SafetyHookInline shFill = {};
+    int __fastcall Fill(uint8_t* _this, void* edx)
+    {
+        auto result = shFill.unsafe_fastcall<int>(_this, edx);
+        if (auto hComboBox = GetDlgItem(*(HWND*)(_this + CWND_HWND), IDC_DISPLAY_MODE))
+            Sort(hComboBox);
+        return result;
+    }
+}
+
 void ReadSettings()
 {
     CIniReader iniReader("");
@@ -810,6 +915,10 @@ void Init()
     });
 
     InitPostFX();
+
+    // Startup dialog, see DisplayModeList
+    pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 4C 53 55 56 57 8B D9 68 E8 03 00 00 89 5C 24 20 E8");
+    DisplayModeList::shFill = safetyhook::create_inline(pattern.get_first(), DisplayModeList::Fill); //0x4078E0
 
     pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 81 EC 14 02 00 00 53 55 33 DB 56 57 8B E9"); // MaxPayne_GameMode::load
     AdaptiveDifficulty::shLoad = safetyhook::create_inline(pattern.get_first(), AdaptiveDifficulty::load); //0x454230
