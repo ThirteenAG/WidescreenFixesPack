@@ -343,12 +343,19 @@ public:
     }
 };
 
-std::array<SafetyHookInline, 8> HudDrawHooks;
+std::array<SafetyHookInline, 7> HudDrawHooks;
 template<size_t Index, bool Left>
 void __cdecl DrawHudElement()
 {
     HudDrawScope scope(Left ? -fWidescreenHudOffset : fWidescreenHudOffset);
     HudDrawHooks[Index].unsafe_ccall();
+}
+
+injector::hook_back<void(__cdecl*)()> hbDrawTripSkip;
+void __cdecl DrawTripSkip()
+{
+    HudDrawScope scope(-fWidescreenHudOffset);
+    hbDrawTripSkip.fun();
 }
 
 struct ScriptMenu
@@ -520,8 +527,11 @@ public:
             HudDrawHooks[5] = safetyhook::create_inline(pattern.get_first(), DrawHudElement<5, false>);
             pattern = hook::pattern("A0 ? ? ? ? 81 EC F0 00 00 00 84 C0 74 0D A0");
             HudDrawHooks[6] = safetyhook::create_inline(pattern.get_first(), DrawHudElement<6, false>);
-            pattern = hook::pattern("83 EC 1C DB 05 ? ? ? ? 68 FF 00 00 00 68 FF 00 00 00");
-            HudDrawHooks[7] = safetyhook::create_inline(pattern.get_first(), DrawHudElement<7, true>);
+            // SkyUI replaces DrawTripSkip's entry. Hook its caller instead,
+            // preserving the live callee without requiring the original prologue.
+            pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? 84 C0 75 ? 6A 00 6A 00 6A 01 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? 50 E8");
+            if (pattern.size() == 1)
+                hbDrawTripSkip.fun = injector::MakeCALL(pattern.get_first(), DrawTripSkip, true).get();
 
             pattern = hook::pattern("81 EC D8 01 00 00 DB 05 ? ? ? ? C6 44 24 14 00");
             ScriptMenuDrawHooks[0] = safetyhook::create_inline(pattern.get_first(), DisplayScriptMenu<0>);
