@@ -11,7 +11,7 @@ export module ControllerPrompts;
 namespace
 {
     using Microsoft::WRL::ComPtr;
-    struct Token { const char* name; int slot; int physical; std::wstring keyboard; wchar_t marker[2]{}; int secondPhysical = -1; };
+    struct Token { const char* name; int slot; int physical; std::wstring keyboard; wchar_t marker[2]{}; int secondPhysical = -1; int gameplayContext = -1; };
     // Logical slots in Scarface's selected controller description, not XInput button numbers.
     Token tokens[] = {
         {"BUTTON_GRAPHIC_X",5,-1},{"BUTTON_GRAPHIC_CIRCLE",6,-1},{"BUTTON_GRAPHIC_TRIANGLE",7,-1},
@@ -44,15 +44,20 @@ namespace
         // Context-specific variants: map marker, map zoom, and the sniper modifier.
         {nullptr,10,-1},{nullptr,-1,2},{nullptr,12,-1},
         // Vehicle-only PC tokens have different actions from the same keys on foot.
-        {nullptr,5,-1},{nullptr,8,-1},{nullptr,14,-1}
+        {nullptr,5,-1,{}, {},-1,1},{nullptr,8,-1,{}, {},-1,1},{nullptr,14,-1,{}, {},-1,1},
+        // Context is independent of the paused menu and of MainCharacter's lifetime.
+        // 0 = OnFoot, 1 = InCar. Keep the original keyboard text on each variant.
+        {nullptr,6,-1,{}, {},-1,1},{nullptr,12,-1,{}, {},-1,0},{nullptr,9,-1,{}, {},-1,1}
     };
     constexpr wchar_t markerBase = 0xE100;
     constexpr wchar_t gameplayMarkerBase = 0xE200;
-    constexpr size_t controllerExitToken = std::size(tokens)-7;
+    constexpr size_t controllerExitToken = std::size(tokens)-10;
     constexpr size_t mapMarkerToken = controllerExitToken+1, mapZoomToken = controllerExitToken+2;
     constexpr size_t sniperModifierToken = controllerExitToken+3;
     constexpr size_t accelerateToken = controllerExitToken+4, brakeToken = controllerExitToken+5;
     constexpr size_t hornToken = controllerExitToken+6;
+    constexpr size_t handbrakeToken = controllerExitToken+7, lockOnToken = controllerExitToken+8;
+    constexpr size_t hardTurnToken = controllerExitToken+9;
     constexpr wchar_t glyphs[20] = {0xAB,0xAB,0xAC,0xAC,0xA4,0xA5,0xA6,0xA7,0xAF,0xB1,0xBC,0xBE,0xBD,0xB9,0xB2,0xB3,0xA3,0xA2,0xB4,0xB5};
     constexpr int pagePhysical[24] = {-1,-1,17,16,4,5,6,7,-1,-1,0,2,8,9,14,15,18,19,-1,-1,13,10,12,11};
     SafetyHookInline lookupHook, widthHook, lineWidthHook, wrapWidthHook, maskHook, drawHook, wrapDrawHook, beginHook, endHook;
@@ -86,17 +91,23 @@ namespace
     int iconPage = -1;
     std::array<int,17> bindingPhysical{};
     std::array<int,17> gameplayPhysical{};
+    std::array<std::array<int,17>,2> actionPhysical{};
     injector::hook_back<const char* (__cdecl*)(const char*,int)> hbControlButtonLabel;
 
     void __fastcall UpdateLookTutorial(void* self,void*,const void* time)
     {
         const auto state=static_cast<const uint8_t*>(self);
         // mActionMap is assigned by StartTutorial; don't read it while inactive.
-        const bool active=(state[0x60]&8) && *reinterpret_cast<const int*>(state+0x68)>0;
+        const int stage=*reinterpret_cast<const int*>(state+0x68);
+        const bool active=(state[0x60]&8) && (stage==-1 || stage>0);
         auto map=active ? *reinterpret_cast<void* const*>(state+0x6C) : nullptr;
         if(!map)boundTutorialMap=nullptr;
         if(map && map!=boundTutorialMap)
         {
+            // PC binds Enter to this action but omits the controller binding at
+            // the initial stage (-1). Use the same native action/state transition.
+            evaluateScript("HUDLookTutorialActionMap.bind(\"Joystick\", \"X\", \"LookTutorial_InputX\");",
+                0,nullptr,0,-1);
             // tutorial.cso binds Start to Options on PC, but only binds the
             // Triangle exit action on consoles. Add that missing PC binding
             // through the game's own ActionMap; its Pressed(1) retains the
@@ -217,6 +228,15 @@ namespace
             if((keys[index]==0x96D11874 || keys[index]==0xA02D295D) &&
                 (strcmp(token.name,"BUTTON_GRAPHIC_CIRCLE")==0 || strcmp(token.name,"BUTTON_TEXT_CIRCLE")==0))
                 replacement=hornToken;
+            // The vehicle's EBrake action is Circle, although the old tutorial
+            // names R1. Resolve Circle through InCar, preserving custom mappings.
+            if((keys[index]==0xDAFC5704 || keys[index]==0xDAFC5709) &&
+                (strcmp(token.name,"BUTTON_GRAPHIC_R1")==0 || strcmp(token.name,"BUTTON_TEXT_R1")==0))
+                replacement=handbrakeToken;
+            if(keys[index]==0xBB4799AC && strcmp(token.name,"BUTTON_GRAPHIC_L1")==0)
+                replacement=lockOnToken;
+            if(keys[index]==0x83FB4E1A && strcmp(token.name,"BUTTON_GRAPHIC_R1")==0)
+                replacement=hardTurnToken;
             std::scoped_lock lock(tokenMutex);
             if(replacement!=i)tokens[replacement].keyboard=token.keyboard;
             size_t pos=0;
@@ -274,6 +294,8 @@ namespace
             const auto& token=tokens[index];
             const int slot=text==first && tutorialSlot>=0 ? tutorialSlot : token.slot;
             int physical = slot>=0 ? (gameplayText?gameplayPhysical:bindingPhysical)[slot] : token.physical;
+            if(gameplayText && slot>=0 && token.gameplayContext>=0)
+                physical=actionPhysical[token.gameplayContext][slot];
             if(gamepad.load(std::memory_order_relaxed) && physical>=0 && physical<20 && icons[physical] &&
                 HasIconGlyph(font,physical) && (token.secondPhysical<0 ||
                     (icons[token.secondPhysical] && HasIconGlyph(font,token.secondPhysical))))
@@ -441,6 +463,7 @@ export namespace ControllerPrompts
         UpdateInputMode();
         bindingPhysical.fill(-1);
         gameplayPhysical.fill(-1);
+        for(auto& bindings:actionPhysical)bindings.fill(-1);
         const wchar_t* gameplayProfile=nullptr;
         if(modernControls && mainCharacter && *mainCharacter)
             gameplayProfile=*reinterpret_cast<const uintptr_t*>(static_cast<const uint8_t*>(*mainCharacter)+0x2E8)
@@ -461,6 +484,13 @@ export namespace ControllerPrompts
                     const auto gameplayMask=queryProfileButton && gameplayProfile
                         ? queryProfileButton(controller,unsigned(button-1),gameplayProfile) : mask;
                     if(gameplayMask && !(gameplayMask&(gameplayMask-1)))gameplayPhysical[slot]=int(std::countr_zero(gameplayMask));
+                    constexpr const wchar_t* profiles[]={L"OnFoot",L"InCar"};
+                    for(size_t context=0;context<actionPhysical.size();++context)
+                    {
+                        const auto actionMask=modernControls && queryProfileButton
+                            ? queryProfileButton(controller,unsigned(button-1),profiles[context]) : mask;
+                        if(actionMask && !(actionMask&(actionMask-1)))actionPhysical[context][slot]=int(std::countr_zero(actionMask));
+                    }
                 }
             }
         }
@@ -501,6 +531,8 @@ export namespace ControllerPrompts
         glyphHook=safetyhook::create_inline(pattern.get_first(),EmitGlyph);
         for(unsigned i=0;i<std::size(tokens);++i)tokens[i].marker[0]=markerBase+wchar_t(i);
         bindingPhysical.fill(-1);
+        gameplayPhysical.fill(-1);
+        for(auto& bindings:actionPhysical)bindings.fill(-1);
         auto slot=[font](unsigned i){return injector::ReadMemory<void*>(font+i*sizeof(void*),true);};
         widthHook=safetyhook::create_inline(slot(13),Width);
         lineWidthHook=safetyhook::create_inline(slot(26),LineWidth);
