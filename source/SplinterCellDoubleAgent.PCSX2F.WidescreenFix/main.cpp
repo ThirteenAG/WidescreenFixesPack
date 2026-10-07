@@ -1,308 +1,52 @@
-#include "../../external/injector/include/ps2/runtime.hpp"
-using namespace mips_asm;
-
+#include "Game.hpp"
+#include <cstdio>
 extern "C" {
-#include <stdio.h>
-#include <stdint.h>
-#include <math.h>
-
-#include "../../external/injector/include/ps2/pcsx2f_api.h"
-#include "../../external/injector/include/ps2/log.h"
-#include "../../external/injector/include/ps2/inireader.h"
-#include "../../external/injector/include/ps2/patterns.h"
-
-int CompatibleCRCList[] = { static_cast<int>(0xC0498D24), static_cast<int>(0xABE2FDE9) };
-int CompatibleElfCRCList[] = { static_cast<int>(0xC0498D24), static_cast<int>(0xABE2FDE9), 0x198F1AD, 0x6BD0E9C2 };
-int PCSX2Data[PCSX2Data_Size] = { 1 };
-char OSDText[OSDStringNum][OSDStringSize] = { {1} };
-char PluginData[MaxIniSize] = { 1 };
-
-struct ScreenX
-{
-    int32_t nWidth;
-    int32_t nHeight;
-    float fWidth;
-    float fHeight;
-    float fAspectRatio;
-    float f3DScale;
-    float fHudScale;
-    float fHudOffset;
-} Screen;
-
-void __attribute__((naked)) sub_197100()
-{
-    asm volatile ("" :: "r"(Screen.f3DScale));
-    asm volatile ("mtc1    $v0, $f31\n");
-    asm volatile ("mul.s   $f12, $f12, $f31\n");
-
-    //original code
-    asm volatile ("swc1    $f12, 0($a0)\n");
-    asm volatile ("move    $v0, $a0\n");
-    asm volatile ("swc1    $f13, 4($a0)\n");
-    asm volatile ("swc1    $f14, 8($a0)\n");
-    asm volatile ("swc1    $f15, 0xC($a0)\n");
-    asm volatile ("jr      $ra\n");
-    asm volatile ("nop\n");
+int CompatibleCRCList[] = {static_cast<int>(0xC0498D24), static_cast<int>(0xABE2FDE9)};
+int CompatibleElfCRCList[] = {static_cast<int>(0xC0498D24), static_cast<int>(0xABE2FDE9), 0x0198F1AD, 0x6BD0E9C2};
+int PCSX2Data[PCSX2Data_Size] = {1};
+char OSDText[OSDStringNum][OSDStringSize] = {{1}}, PluginData[MaxIniSize] = {1};
 }
-
-void init()
-{
-    if (injector::InitializeRuntime() != PCSX2_HOOK_OK) return;
-    logger.SetBuffer(OSDText, sizeof(OSDText) / sizeof(OSDText[0]), sizeof(OSDText[0]));
-    logger.Write("Loading SplinterCellDoubleAgent.PCSX2F.WidescreenFix...");
-
-    inireader.SetIniPath((char*)PluginData + sizeof(uint32_t), *(uint32_t*)PluginData);
-
-    int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
-
-    if (SkipIntro)
-    {
-        char ElfPattern[] = "00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 2D 28 00 00 ? ? ? ? 2D 30 00 00 2D 38 00 00";
-        uintptr_t ptr_222DB8 = pattern.get_first((const char*)&ElfPattern, -12);
-
-        if (ptr_222DB8 != 0)
-        {
-            logger.Write("Skipping intro...");
-            injector::WriteMemory<uint16_t>(ptr_222DB8 + 2, 0x1000); // beq -> b
-            uintptr_t ptr_223CBC = pattern.get(1, "00 00 45 8C ? ? ? ? B8 00 0B 24 ? ? ? ? 00 00 00 00", 20);
-            injector::MakeNOP(ptr_223CBC);
-            uintptr_t ptr_22312C = pattern.get(0, "00 00 00 00 02 00 02 24 ? ? ? ? 00 00 00 00 01 00 02 24 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 00 00 00 00 ? ? ? ? 00 00 00 00", -4);
-            uintptr_t ptr_2231F8 = pattern.get(0, "03 00 02 24 00 00 00 00 ? ? ? ? 00 00 00 00", 0);
-            injector::MakeJMP(ptr_22312C, ptr_2231F8);
-            return;
+namespace {
+SafetyMipsMid projection;
+void Rejected(pcsx2_hook_status status) {
+    std::snprintf(OSDText[0], OSDStringSize, "Double Agent fix disabled: patch validation failed (%u)", unsigned(status));
+}
+bool Launcher(bool skip) {
+    const auto branch = pattern.get_first("00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 2D 28 00 00 ? ? ? ? 2D 30 00 00 2D 38 00 00", -12);
+    if (!branch) return false;
+    if (skip) {
+        const auto check = pattern.get(1, "00 00 45 8C ? ? ? ? B8 00 0B 24 ? ? ? ? 00 00 00 00", 20);
+        const auto from = pattern.get_first("00 00 00 00 02 00 02 24 ? ? ? ? 00 00 00 00 01 00 02 24 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 00 00 00 00 ? ? ? ? 00 00 00 00", -4);
+        const auto to = pattern.get_first("03 00 02 24 00 00 00 00 ? ? ? ? 00 00 00 00", 0);
+        if (check && from && to) {
+            injector::WriteMemory<uint16_t>(branch + 2, 0x1000);
+            injector::MakeNOP(check);
+            injector::MakeJMP(from, to);
         }
     }
-
-    uint32_t DesktopSizeX = PCSX2Data[PCSX2Data_DesktopSizeX];
-    uint32_t DesktopSizeY = PCSX2Data[PCSX2Data_DesktopSizeY];
-    Screen.nWidth = PCSX2Data[PCSX2Data_WindowSizeX];
-    Screen.nHeight = PCSX2Data[PCSX2Data_WindowSizeY];
-    Screen.fWidth = (float)Screen.nWidth;
-    Screen.fHeight = (float)Screen.nHeight;
-    uint32_t IsFullscreen = PCSX2Data[PCSX2Data_IsFullscreen];
-    uint32_t AspectRatioSetting = PCSX2Data[PCSX2Data_AspectRatioSetting];
-
-    if (IsFullscreen || !Screen.nWidth || !Screen.nHeight)
-    {
-        Screen.nWidth = DesktopSizeX;
-        Screen.nHeight = DesktopSizeY;
-    }
-
-    switch (AspectRatioSetting)
-    {
-    case RAuto4_3_3_2: //not implemented
-        //if (GSgetDisplayMode() == GSVideoMode::SDTV_480P)
-        //    AspectRatio = 3.0f / 2.0f;
-        //else
-        Screen.fAspectRatio = 4.0f / 3.0f;
-        break;
-    case R4_3:
-        Screen.fAspectRatio = 4.0f / 3.0f;
-        break;
-    case R16_9:
-        Screen.fAspectRatio = 16.0f / 9.0f;
-        break;
-    case Stretch:
-    default:
-        Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
-        break;
-    }
-
-    logger.WriteF("Resolution: %dx%d", Screen.nWidth, Screen.nHeight);
-    logger.WriteF("Aspect Ratio: %f", Screen.fAspectRatio);
-
-    enum GameVersion
-    {
-        SLUS21356,
-        SLES53827
-    };
-
-    int gv = SLUS21356;
-    if (injector::ReadMemory<uint32_t>(0x25F55C) != 0x3C023F80)
-        gv = SLES53827;
-
-    float intResX = (gv == SLUS21356 ? 640.0f : 512.0f);
-    float intResY = (gv == SLUS21356 ? 480.0f : 384.0f);
-    Screen.fHudScale = (((intResX / intResY)) / (Screen.fAspectRatio));
-    Screen.fHudOffset = (((intResY * Screen.fAspectRatio) - intResX) / 2.0f) * Screen.fHudScale;
-    Screen.f3DScale = (((intResX / intResY)) / (Screen.fAspectRatio));
-
-    //3D Scaling
-    injector::MakeCALL(gv == SLUS21356 ? 0x25F5A4 : 0x25F614, sub_197100);
-
-    //Hud Scaling 1 X1
-    uint32_t i640 = 640;
-    injector::MakeNOP(gv == SLUS21356 ? 0x2EACE8 : 0x2EAD34);
-    injector::MakeInline(gv == SLUS21356 ? 0x2EACE4 : 0x2EAD30,
-        //filtering out 0-640 textures (fading etc)
-        move(k0, v0), //x
-        //move(k1, v1), //w
-        move(s7, s6), //?
-        lui(s6, injector::HighWord(i640)),
-        addiu(s6, s6, injector::LowWord(i640)),
-        lh(v0, sp, (gv == SLUS21356 ? 0x12E : 0x13E)),
-        muls(f0, f0, (gv == SLUS21356 ? f21 : f25)),
-        lui(t9, injector::HighWord(Screen.fHudScale)),
-        addiu(t9, t9, injector::LowWord(Screen.fHudScale)),
-        mtc1(t9, f30),
-        lui(t9, injector::HighWord(Screen.fHudOffset)),
-        addiu(t9, t9, injector::LowWord(Screen.fHudOffset)),
-        mtc1(t9, f31),
-        beq(k0, zero, 2),
-        nop(),
-        b(3), //-->
-        nop(),
-        beq(v1, s6, 3),
-        nop(),
-        muls(f0, f0, f30), //<--
-        adds(f0, f0, f31),
-        move(s6, s7)
-    );
-
-    //Hud Scaling 1 X2 = X2
-    injector::MakeInline(gv == SLUS21356 ? 0x2EAD10 : 0x2EAD5C,
-        muls(f0, f0, (gv == SLUS21356 ? f21 : f25)),
-        lui(t9, injector::HighWord(Screen.fHudScale)),
-        addiu(t9, t9, injector::LowWord(Screen.fHudScale)),
-        mtc1(t9, f30),
-        lui(t9, injector::HighWord(Screen.fHudOffset)),
-        addiu(t9, t9, injector::LowWord(Screen.fHudOffset)),
-        mtc1(t9, f31),
-        beq(k0, zero, 2),
-        nop(),
-        b(3), //-->
-        nop(),
-        beq(k1, s6, 3),
-        nop(),  
-        muls(f0, f0, f30), //<--
-        adds(f0, f0, f31)
-    );
-
-    //Hud Scaling 2 X1
-    uint32_t i96DAFAEC = 0x96DAFAEC;
-    uint32_t i96C3B081 = 0x96C3B081;
-    uint32_t i00C3B081 = 0x00C3B081;
-    injector::MakeInline(gv == SLUS21356 ? 0x2EADA0 : 0x2EAE10,
-        mtc1((gv == SLUS21356 ? t2 : a0), f0),
-        lui(t9, injector::HighWord(Screen.fHudScale)),
-        addiu(t9, t9, injector::LowWord(Screen.fHudScale)),
-        mtc1(t9, f30),
-        lui(t9, injector::HighWord(Screen.fHudOffset)),
-        addiu(t9, t9, injector::LowWord(Screen.fHudOffset)),
-        mtc1(t9, f31),
-        //coop goggles overlay check (FColor, animation still broken)
-        lui(t9, injector::HighWord(i96DAFAEC)),
-        addiu(t9, t9, injector::LowWord(i96DAFAEC)),
-        beq(a1, t9, 11),
-        nop(),
-        lui(t9, injector::HighWord(i96C3B081)),
-        addiu(t9, t9, injector::LowWord(i96C3B081)),
-        beq(a1, t9, 7),
-        nop(),
-        lui(t9, injector::HighWord(i00C3B081)),
-        addiu(t9, t9, injector::LowWord(i00C3B081)),
-        beq(a1, t9, 3),
-        nop(),
-
-        muls(f12, f12, f30),
-        adds(f12, f12, f31)
-    );
-
-    // Hud Scaling 2 X2 = X2
-    injector::MakeInline(gv == SLUS21356 ? 0x2EADD0 : 0x2EAE20,
-        lui(t9, injector::HighWord(Screen.fHudScale)),
-        addiu(t9, t9, injector::LowWord(Screen.fHudScale)),
-        mtc1(t9, f30),
-        lui(t9, injector::HighWord(Screen.fHudOffset)),
-        addiu(t9, t9, injector::LowWord(Screen.fHudOffset)),
-        mtc1(t9, f31),
-
-        //coop goggles overlay check (FColor, animation still broken)
-        lui(t9, injector::HighWord(i96DAFAEC)),
-        addiu(t9, t9, injector::LowWord(i96DAFAEC)),
-        beq(a1, t9, 11),
-        nop(),
-        lui(t9, injector::HighWord(i96C3B081)),
-        addiu(t9, t9, injector::LowWord(i96C3B081)),
-        beq(a1, t9, 7),
-        nop(),
-        lui(t9, injector::HighWord(i00C3B081)),
-        addiu(t9, t9, injector::LowWord(i00C3B081)),
-        beq(a1, t9, 3),
-        nop(),
-
-        muls(f16, f16, f30),
-        adds(f16, f16, f31),
-
-        swc1(f16, sp, 0)
-    );
-
-    //Hud Scaling 3
-    if (gv == SLES53827) //only for EU version
-    {
-        injector::MakeInline(0x2EAFD8,
-            lui(t9, injector::HighWord(Screen.fHudScale)),
-            addiu(t9, t9, injector::LowWord(Screen.fHudScale)),
-            mtc1(t9, f30),
-            lui(t9, injector::HighWord(Screen.fHudOffset)),
-            addiu(t9, t9, injector::LowWord(Screen.fHudOffset)),
-            mtc1(t9, f31),
-
-            muls(f12, f12, f30),
-            adds(f12, f12, f31),
-
-            muls(f16, f16, f30),
-            adds(f16, f16, f31),
-
-            lw(t9, sp, 0x00),
-            mtc1(t9, f7),
-            muls(f7, f7, f30),
-            adds(f7, f7, f31),
-            swc1(f7, sp, 0x00),
-
-            lw(t9, sp, 0x20),
-            mtc1(t9, f7),
-            muls(f7, f7, f30),
-            adds(f7, f7, f31),
-            swc1(f7, sp, 0x20),
-
-            sw(zero, sp, 0x48)
-        );
-    }
-
-    // Text Scaling
-    injector::MakeInline(gv == SLUS21356 ? 0x2EC52C : 0x2EC71C,
-        cvtsw(f1, f1),
-        lui(t9, injector::HighWord(Screen.fHudScale)),
-        addiu(t9, t9, injector::LowWord(Screen.fHudScale)),
-        mtc1(t9, f30),
-        divs(f1, f1, f30)
-    );
-
-    // Text Scaling 2
-    injector::MakeInline(gv == SLUS21356 ? 0x2EC830 : 0x2ECAF8,
-        lui(t9, injector::HighWord(Screen.fHudScale)),
-        addiu(t9, t9, injector::LowWord(Screen.fHudScale)),
-        mtc1(t9, f30),
-        //li2(buf, t9, Screen.fHudOffset);
-        //mtc1(buf, t9, f31);
-
-        //muls(buf, f26, f26, f30);
-        //muls(buf, f27, f27, f30);
-        adds(f26, f26, f31),
-        adds(f27, f27, f31),
-
-        swc1(f26, sp, 0x1A48),
-        swc1(f27, sp, 0x1A40)
-    );
-
-    logger.Write("SplinterCellDoubleAgent.PCSX2F.WidescreenFix loaded");
-    logger.ClearLog();
+    return true;
 }
-
-int main()
-{
-    return 0;
 }
-
-} // extern "C"
+extern "C" void init() {
+    using namespace scda;
+    if (injector::InitializeCheckedRuntime(Rejected) != PCSX2_HOOK_OK) return;
+    inireader.SetIniPath(PluginData + sizeof(uint32_t), Read<uint32_t>(uintptr_t(PluginData)));
+    if (Launcher(inireader.ReadInteger("MAIN", "SkipIntro", 1) != 0)) { injector::FlushCaches(); return; }
+    game = Read<uint32_t>(0x25F55C) == 0x3C023F80 ? US : EU;
+    if (injector::GetBranchDestination(game.projectionCaller - 8).as_int() != game.projection) {
+        Rejected(PCSX2_HOOK_CONFLICT); injector::FlushCaches(); return;
+    }
+    hudSize = console::bounded(inireader.ReadFloat("HUD", "HudScale", 1), 0.5f, 1.5f, 1);
+    widescreenHud = inireader.ReadInteger("HUD", "WidescreenHud", 1) != 0;
+#ifdef WFP_PS2_DEBUG // build-module.ps1 -Defines WFP_PS2_DEBUG
+    traceDraws = inireader.ReadInteger("DEBUG", "TraceDraws", 0) != 0;
+    logger.SetBuffer(OSDText, OSDStringNum, OSDStringSize);
+#endif
+    projection = safetymips::create_mid(game.projection, [](SafetyMipsContext& regs) {
+        if (uintptr_t(regs.ra) == game.projectionCaller)
+            regs.f12 *= (4.0f / 3.0f) / console::ps2Aspect(PCSX2Data);
+    });
+    InstallHud();
+    injector::FlushCaches();
+}
+extern "C" int main() { return 0; }

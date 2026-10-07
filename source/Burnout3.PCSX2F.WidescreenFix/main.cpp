@@ -1,335 +1,121 @@
 #include "../../external/injector/include/ps2/runtime.hpp"
-using namespace mips_asm;
-
+#include "../../external/injector/include/ps2/safetymips.hpp"
+#include "../../external/injector/include/ps2/game_abi.hpp"
+#include "../Shared/Console/PS2Display.hpp"
+#include <array>
+#include <cstdio>
 extern "C" {
-#include <stdio.h>
-#include <stdint.h>
-#include <math.h>
-
-#include "../../external/injector/include/ps2/pcsx2f_api.h"
-#include "../../external/injector/include/ps2/log.h"
-
-int CompatibleCRCList[] = { static_cast<int>(0xBEBF8793) };
-int PCSX2Data[PCSX2Data_Size] = { 1 };
-char OSDText[OSDStringNum][OSDStringSize] = { {1} };
-
-struct ScreenX
-{
-    int32_t nWidth;
-    int32_t nHeight;
-    float fWidth;
-    float fHeight;
-    float fFieldOfView;
-    float fAspectRatio;
-    float fAspectRatio2;
-    int32_t nWidth43;
-    float fWidth43;
-    float fHudScale;
-    float fHudScaleHalf;
-    float fHudOffset;
-    float fHudOffsetNeg;
-    float fHudOffsetReal;
-
-    float fHUDWidth;
-    float fHUDWidthInv;
-    float fHUDXPos;
-    float fHUDXPos2;
-    float fHUDRightXPos;
-    float fHUDLeftXPos;
-    float fMenuWidth;
-    float fTopBorderXPos;
-} Screen;
-
-#define li2(r, imm) lui(r, ((uint16_t)(((*(uint32_t*)(&imm)) >> 16) & 0xffff))), addiu(r, r, ((uint16_t)((*(uint32_t*)(&imm)) & 0xffff)))
-
-void WriteHudValues()
-{
-    injector::WriteMemory<float>(0x4E105C, Screen.fHUDWidthInv);  // HUD Width
-    injector::WriteMemory<float>(0x6682B0, Screen.fHUDXPos);      // HUD X Pos
-    injector::WriteMemory<float>(0x669B30, Screen.fHUDXPos);      // HUD X Pos
-    injector::WriteMemory<float>(0x4B7688, Screen.fHUDRightXPos); // HUD Top Right X Pos
-    injector::WriteMemory<float>(0x4B7678, Screen.fHUDRightXPos); // HUD Bottom Right X Pos
-    injector::WriteMemory<float>(0x4B7658, Screen.fHUDLeftXPos);  // HUD Top Left X Pos
-    injector::WriteMemory<float>(0x4B7668, Screen.fHUDLeftXPos);  // HUD Bottom Left X Pos
-    injector::WriteMemory<float>(0x4CA660, Screen.fHUDWidth);     // Crash Cam Border Width
-    injector::WriteMemory<float>(0x4CA640, Screen.fHUDWidth);     // Crash Cam Border Width
-    injector::WriteMemory<float>(0x4CA650, Screen.fHUDWidth);     // Crash Cam Border Width
-    injector::WriteMemory<float>(0x4CA638, Screen.fHudOffsetNeg); // Crash Cam Border X Pos
-    injector::WriteMemory<float>(0x4CA658, Screen.fHudOffsetNeg); // Crash Cam Border X Pos
+int CompatibleCRCList[] = {static_cast<int>(0xBEBF8793)};
+int PCSX2Data[PCSX2Data_Size] = {1};
+char OSDText[OSDStringNum][OSDStringSize] = {{1}};
 }
 
-void sub_4D5350()
-{
-    auto func_4D5350 = reinterpret_cast<void (*)()>(0x4D5350);
-    func_4D5350();
-    WriteHudValues();
+namespace {
+struct Layout {
+    float aspect = 0, width = 640, hudScale = 1, offset = 0;
+    float hudOrigin = 0, normalizedOrigin = 0, menuWidth = 640, rightAnchor = 1, leftAnchor = 0;
+} layout;
+std::array<SafetyMipsMid, 40> hooks;
+size_t hookCount;
+pcsx2::GameCallback<void()> hudReset1, hudReset2;
+
+void UpdateLayout() {
+    float aspect = console::ps2Aspect(PCSX2Data);
+    if (layout.aspect == aspect) return;
+    layout.aspect = aspect;
+    layout.width = 480.0f * aspect;
+    layout.hudScale = (4.0f / 3.0f) / aspect;
+    layout.offset = (640.0f - layout.width) * 0.5f;
+    layout.hudOrigin = 320.0f * (1.0f - layout.hudScale);
+    layout.normalizedOrigin = layout.hudOrigin / 640.0f;
+    layout.menuWidth = 640.0f * layout.hudScale;
+    float anchorExtension = (layout.width - 640.0f) / 1155.0f;
+    layout.rightAnchor = 1.0f + anchorExtension;
+    layout.leftAnchor = -anchorExtension;
+    injector::WriteMemory<float>(0x4E0A38, 1.0f / layout.hudScale);
+    injector::WriteMemory<float>(0x4E0C70, aspect);
+    injector::WriteMemory<float>(0x4E0C7C, aspect);
+    injector::WriteMemory<float>(0x4E0C80, aspect * 2.0f);
+}
+void ApplyHud() {
+    UpdateLayout();
+    for (uintptr_t address : {0x6682B0u, 0x669B30u}) injector::WriteMemory<float>(address, layout.hudOrigin);
+    for (uintptr_t address : {0x4B7688u, 0x4B7678u}) injector::WriteMemory<float>(address, layout.rightAnchor);
+    for (uintptr_t address : {0x4B7658u, 0x4B7668u}) injector::WriteMemory<float>(address, layout.leftAnchor);
+    for (uintptr_t address : {0x4CA660u, 0x4CA640u, 0x4CA650u}) injector::WriteMemory<float>(address, layout.width);
+    for (uintptr_t address : {0x4CA638u, 0x4CA658u}) injector::WriteMemory<float>(address, layout.offset);
+    injector::WriteMemory<float>(0x4E105C, 1.0f / layout.width);
+}
+void HudReset1() { reinterpret_cast<void (*)()>(0x4D5350)(); ApplyHud(); }
+void HudReset2() { reinterpret_cast<void (*)()>(0x4DB330)(); ApplyHud(); }
+void Store(uintptr_t address, float value) { *reinterpret_cast<float*>(address) = value; }
+void Rejected(pcsx2_hook_status status) {
+    std::snprintf(OSDText[0], OSDStringSize, "Burnout 3 fix disabled: patch validation failed (%u)", unsigned(status));
+}
+template<class Callback> void Mid(uintptr_t address, Callback callback, bool executeOriginal = true) {
+    safetymips::Options options;
+    options.execute_original = executeOriginal;
+    hooks[hookCount++] = safetymips::create_mid(address, callback, options);
+}
 }
 
-void sub_4DB330()
-{
-    auto func_4DB330 = reinterpret_cast<void (*)()>(0x4DB330);
-    func_4DB330();
-    WriteHudValues();
+extern "C" void init() {
+    if (injector::InitializeCheckedRuntime(Rejected) != PCSX2_HOOK_OK) return;
+    ApplyHud();
+    injector::WriteMemory<uint32_t>(0x228194, 0x24020001); // Select the native widescreen camera.
+    hudReset1.bind(HudReset1); hudReset2.bind(HudReset2);
+    injector::WriteMemory<uint32_t>(0x4DD840, hudReset1.address());
+    injector::WriteMemory<uint32_t>(0x4DD9E4, hudReset2.address());
+    Mid(0x1D475C, [](SafetyMipsContext&) { ApplyHud(); });
+    // Run after the native call and its SQ delay slot; no fabricated call ABI.
+    Mid(0x1D5188, [](SafetyMipsContext&) { ApplyHud(); });
+
+    // Change each value after its native LUI and before its first consumer.
+    // All displaced instructions and upper halves of the EE registers survive.
+    for (uintptr_t site : {0x3D723Cu, 0x134F30u, 0x38AE3Cu, 0x31D6E8u, 0x31D740u,
+                           0x31D7ECu, 0x31D794u, 0x31D844u, 0x31DA24u, 0x3A6988u, 0x3A69CCu})
+        Mid(site, [](SafetyMipsContext& regs) { regs.v0 = injector::WordBits(layout.width); });
+    Mid(0x31B184, [](SafetyMipsContext& regs) { regs.v1 = injector::WordBits(layout.width); });
+    Mid(0x30D7E8, [](SafetyMipsContext& regs) { regs.v1 = injector::WordBits(layout.menuWidth); });
+    Mid(0x3D70C0, [](SafetyMipsContext& regs) { regs.f1 = layout.offset; });
+    Mid(0x3D72F8, [](SafetyMipsContext& regs) { regs.f2 = layout.offset; });
+
+    // These two sites write width and origin together. Keeping each pair in a
+    // single callback avoids overlapping hooks in the adjacent native stores.
+    Mid(0x1A1770, [](SafetyMipsContext& regs) {
+        regs.v0 = injector::WordBits(layout.width);
+        Store(uintptr_t(regs.sp) + 0xA8, layout.offset);
+        Store(uintptr_t(regs.sp) + 0xA0, layout.width);
+    }, false);
+    Mid(0x1A17D4, [](SafetyMipsContext& regs) {
+        regs.v0 = injector::WordBits(layout.width);
+        Store(uintptr_t(regs.sp) + 0x98, layout.offset);
+        Store(uintptr_t(regs.sp) + 0x90, layout.width);
+    }, false);
+    Mid(0x134F74, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.sp) + 0x168, layout.hudScale * 0.5f); });
+    Mid(0x30D834, [](SafetyMipsContext& regs) {
+        Store(uintptr_t(regs.a0) + 8, regs.f3);
+        Store(uintptr_t(regs.a0), layout.hudOrigin);
+        Store(uintptr_t(regs.a0) + 12, regs.f0);
+        regs.f3 = layout.hudOrigin;
+    }, false);
+    Mid(0x4DC71C, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.v1) + 0x1568, layout.offset); });
+    Mid(0x4DC73C, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.v1) + 0x1570, layout.width); });
+    Mid(0x31B1F4, [](SafetyMipsContext& regs) { regs.f7 = 0.0f; Store(uintptr_t(regs.a0), 0.0f); });
+    Mid(0x38AE04, [](SafetyMipsContext& regs) {
+        regs.v0 = injector::WordBits(layout.width);
+        Store(uintptr_t(regs.sp) + 0x78, layout.normalizedOrigin);
+        Store(uintptr_t(regs.sp) + 0x70, layout.width);
+    }, false);
+    Mid(0x38AE50, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.sp) + 0x68, layout.offset); });
+    Mid(0x31D6FC, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.sp) + 0x110, layout.normalizedOrigin); });
+    Mid(0x31D754, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.sp) + 0xF8, layout.normalizedOrigin); });
+    Mid(0x31D800, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.sp) + 0xC8, layout.normalizedOrigin); });
+    Mid(0x31D7A8, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.sp) + 0xE0, layout.normalizedOrigin); });
+    Mid(0x31D858, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.sp) + 0xB0, layout.normalizedOrigin); });
+    Mid(0x31DA44, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.sp) + 0x1D8, layout.offset); });
+    Mid(0x3A699C, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.sp) + 0x78, layout.offset); });
+    Mid(0x3A69E0, [](SafetyMipsContext& regs) { Store(uintptr_t(regs.sp) + 0x60, layout.offset); });
+    injector::FlushCaches();
 }
-
-void init()
-{
-    if (injector::InitializeRuntime() != PCSX2_HOOK_OK) return;
-    logger.SetBuffer(OSDText, sizeof(OSDText) / sizeof(OSDText[0]), sizeof(OSDText[0]));
-    logger.Write("Loading Burnout3.PCSX2F.WidescreenFix...");
-
-    uint32_t DesktopSizeX = PCSX2Data[PCSX2Data_DesktopSizeX];
-    uint32_t DesktopSizeY = PCSX2Data[PCSX2Data_DesktopSizeY];
-    Screen.nWidth = PCSX2Data[PCSX2Data_WindowSizeX];
-    Screen.nHeight = PCSX2Data[PCSX2Data_WindowSizeY];
-    Screen.fWidth = (float)Screen.nWidth;
-    Screen.fHeight = (float)Screen.nHeight;
-    uint32_t IsFullscreen = PCSX2Data[PCSX2Data_IsFullscreen];
-    uint32_t AspectRatioSetting = PCSX2Data[PCSX2Data_AspectRatioSetting];
-
-    if (IsFullscreen || !Screen.nWidth || !Screen.nHeight)
-    {
-        Screen.nWidth = DesktopSizeX;
-        Screen.nHeight = DesktopSizeY;
-    }
-
-    switch (AspectRatioSetting)
-    {
-    case RAuto4_3_3_2: //not implemented
-        //if (GSgetDisplayMode() == GSVideoMode::SDTV_480P)
-        //    AspectRatio = 3.0f / 2.0f;
-        //else
-        Screen.fAspectRatio = 4.0f / 3.0f;
-        break;
-    case R4_3:
-        Screen.fAspectRatio = 4.0f / 3.0f;
-        break;
-    case R16_9:
-        Screen.fAspectRatio = 16.0f / 9.0f;
-        break;
-    case Stretch:
-    default:
-        Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
-        break;
-    }
-
-    logger.WriteF("Resolution: %dx%d", Screen.nWidth, Screen.nHeight);
-    logger.WriteF("Aspect Ratio: %f", Screen.fAspectRatio);
-
-    Screen.fAspectRatio2 = Screen.fAspectRatio * 2.0f;
-    Screen.nWidth43 = (uint32_t)(Screen.fHeight * (4.0f / 3.0f));
-    Screen.fWidth43 = (float)Screen.nWidth43;
-    Screen.fHudScale = (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-    Screen.fHudScaleHalf = Screen.fHudScale / 2.0f;
-    Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
-    Screen.fHudOffsetNeg = -Screen.fHudOffset;
-    Screen.fFieldOfView = 1.0f / Screen.fHudScale;
-    Screen.fHUDWidth = 480.0f * Screen.fAspectRatio; //853
-    Screen.fHUDWidthInv = 1.0f / Screen.fHUDWidth; // 1/853
-    Screen.fHUDXPos = (640.0f / 2.0f) - ((640.0f / 2.0f) * Screen.fHudScale);
-    Screen.fHUDXPos2 = Screen.fHUDXPos / 640.0f;
-    float f = ((Screen.fHUDWidth - 640.0f) / 1000.0f) / 1.155f;
-    Screen.fHUDRightXPos = 1.0f + f;
-    Screen.fHUDLeftXPos = 0.0f - f;
-    Screen.fMenuWidth = 640.0f * Screen.fHudScale;
-    Screen.fTopBorderXPos = 0.0f;
-
-    // FOV
-    injector::WriteInstr(0x228194, addiu(v0, zero, 1)); // enables widescreen FOV values
-    injector::WriteMemory<float>(0x4E0A38, Screen.fFieldOfView);  // FOV (Single Player)
-    injector::WriteMemory<float>(0x4E0C70, Screen.fAspectRatio);  // Aspect Ratio (Single Player)
-    injector::WriteMemory<float>(0x4E0C7C, Screen.fAspectRatio);  // FOV (Multiplayer)
-    injector::WriteMemory<float>(0x4E0C80, Screen.fAspectRatio2); // Aspect Ratio (Multiplayer)
-
-    // HUD
-    injector::MakeInline(0x1D475C,
-        jal((intptr_t)WriteHudValues),
-        nop(),
-        addu(v0, s1, s2)
-    );
-
-    injector::MakeInlineWithNOP(0x1D5180,
-        jal(0x2B6E20),
-        sq(v0, v1, 0x30),
-        jal((intptr_t)WriteHudValues),
-        nop()
-    );
-
-    injector::WriteMemory<uint32_t>(0x4DD840, (intptr_t)sub_4D5350);
-    injector::WriteMemory<uint32_t>(0x4DD9E4, (intptr_t)sub_4DB330);
-
-    injector::MakeInline(0x3D7238,
-        li2(v0, Screen.fHUDWidth)
-    ); // Crash Cam List Backing Width
-
-    injector::MakeInline(0x3D70BC,
-        li2(t0, Screen.fHudOffsetNeg),
-        mtc1(t0, f1)
-    ); // Crash Cam List Backing X Pos
-
-    injector::MakeInline(0x3D72F4,
-        li2(t9, Screen.fHudOffsetNeg),
-        mtc1(t9, f2)
-    ); // Crash Cam List Text X Pos
-
-    injector::MakeInline(0x1A176C,
-        li2(v0, Screen.fHUDWidth)
-    ); // HUD Render Width (Player 1)
-
-    injector::MakeInline(0x1A17D0,
-        li2(v0, Screen.fHUDWidth)
-    ); // HUD Render Width (Player 2)
-
-    injector::MakeInline(0x1A1774,
-        li2(v1, Screen.fHudOffsetNeg),
-        sw(v0, sp, 0xA0),
-        sw(v1, sp, 0xA8)
-    ); // HUD Render X Pos (Player 1)
-
-    injector::MakeInline(0x1A17D8,
-        li2(v1, Screen.fHudOffsetNeg),
-        sw(v0, sp, 0x90),
-        sw(v1, sp, 0x98)
-    ); // HUD Render X Pos (Player 2)
-
-    injector::MakeInline(0x134F2C,
-        li2(v0, Screen.fHUDWidth)
-    ); // Get Ready, GO! Width
-
-    injector::MakeInline(0x134F74,
-        li2(v1, Screen.fHudScaleHalf),
-        sw(v1, sp, 0x168),
-        sw(v0, sp, 0x174)
-    ); // Get Ready, GO! X Pos
-
-    // Menus
-    injector::MakeInline(0x30D7E4,
-        li2(v1, Screen.fMenuWidth)
-    ); // Menu Width
-
-    injector::MakeInline(0x30D834,
-        li2(t9, Screen.fHUDXPos),
-        swc1(f3, a0, 0x8),
-        mtc1(t9, f3),
-        swc1(f3, a0, 0x0)
-    ); // Menu X Pos
-
-    injector::MakeInline(0x4DC71C,
-        li2(t7, Screen.fHudOffsetNeg),
-        sw(t7, v1, 0x1568),
-        lui(a2, 0x4D)
-    ); // Car Select Overlay X Pos
-
-    injector::MakeInline(0x4DC738,
-        li2(t7, Screen.fHUDWidth),
-        sw(t7, v1, 0x1570)
-    ); // Car Select Overlay Width
-
-    injector::MakeInline(0x31B180,
-        li2(v1, Screen.fHUDWidth)
-    ); // Top Border Width
-
-    injector::MakeInline(0x31B1F4,
-        li2(t9, Screen.fTopBorderXPos),
-        mtc1(t9, f7),
-        swc1(f7, a0, 0x0),
-        swc1(f5, a0, 0x4)
-    ); // Top Border X Pos
-
-    injector::MakeInline(0x38AE04,
-        li2(v0, Screen.fHUDWidth), // Bottom Border Width
-        li2(t9, Screen.fHUDXPos2),
-        sw(t9, sp, 0x78)    // saves new x pos value
-    ); // Bottom Border X Pos
-
-    injector::MakeInline(0x38AE38,
-        li2(v0, Screen.fHUDWidth)
-    ); // Bottom Border Width
-
-    injector::MakeInline(0x38AE4C,
-        li2(t9, Screen.fHudOffsetNeg),
-        sw(t9, sp, 0x68)
-    ); // Bottom Border X Pos
-
-    injector::MakeInline(0x31D6E4,
-        li2(v0, Screen.fHUDWidth)
-    ); // Checkerboard Width
-
-    injector::MakeInline(0x31D73C,
-        li2(v0, Screen.fHUDWidth)
-    ); // Checkerboard Width
-
-    injector::MakeInline(0x31D7E8,
-        li2(v0, Screen.fHUDWidth)
-    ); // Checkerboard Width
-
-    injector::MakeInline(0x31D790,
-        li2(v0, Screen.fHUDWidth)
-    ); // Checkerboard Width
-
-    injector::MakeInline(0x31D840,
-        li2(v0, Screen.fHUDWidth)
-    ); // Checkerboard Width
-
-    injector::MakeInline(0x31D6F8,
-        li2(t9, Screen.fHUDXPos2),
-        sw(t9, sp, 0x110)
-    ); // Middle Checkerboard X Pos
-
-    injector::MakeInline(0x31D750,
-        li2(t9, Screen.fHUDXPos2),
-        sw(t9, sp, 0xF8)
-    ); // Top Checkerboard X Pos
-
-    injector::MakeInline(0x31D7FC,
-        li2(t9, Screen.fHUDXPos2),
-        sw(t9, sp, 0xC8)
-    ); // Top Middle Checkerboard X Pos
-
-    injector::MakeInline(0x31D7A4,
-        li2(t9, Screen.fHUDXPos2),
-        sw(t9, sp, 0xE0)
-    ); // Bottom Checkerboard X
-
-    injector::MakeInline(0x31D854,
-        li2(t9, Screen.fHUDXPos2),
-        sw(t9, sp, 0xB0)
-    ); // Bottom Middle Checkerboard X Pos
-
-    injector::MakeInline(0x31DA20,
-        li2(v0, Screen.fHUDWidth)
-    ); // Loading Background Width Pos
-
-    injector::MakeInline(0x31DA40,
-        li2(t9, Screen.fHudOffsetNeg),
-        sw(t9, sp, 0x1D8)
-    ); // Loading Background X Pos
-
-    injector::MakeInline(0x3A6984,
-        li2(v0, Screen.fHUDWidth)
-    ); // Replay Top Bar Width
-
-    injector::MakeInline(0x3A6998,
-        li2(t9, Screen.fHudOffsetNeg),
-        sw(t9, sp, 0x78)
-    ); // Replay Top Bar X Pos
-
-    injector::MakeInline(0x3A69C8,
-        li2(v0, Screen.fHUDWidth)
-    ); // Replay Bottom Bar Width
-
-    injector::MakeInline(0x3A69DC,
-        li2(t9, Screen.fHudOffsetNeg),
-        sw(t9, sp, 0x60)
-    ); // Replay Bottom Bar X Pos
-
-    logger.Write("Burnout3.PCSX2F.WidescreenFix loaded");
-    logger.ClearLog();
-}
-
-int main()
-{
-    return 0;
-}
-
-} // extern "C"
+extern "C" int main() { return 0; }

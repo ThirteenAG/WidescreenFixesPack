@@ -134,14 +134,6 @@ if errorlevel 1 goto packaging_failed
 
 rem Creating archives
 
-rem Additional texture archives
-7za a "GTALCS.PPSSPP.ImVehLM\memstick\PSP\TEXTURES\ULUS10041\textures.zip" -mx=0 "..\textures\GTALCS\*" -x^^!buildps2.bat -x^^!texture_dump_alpha_scaler.py
-if errorlevel 1 goto packaging_failed
-7za a "GTAVCS.PPSSPP.ImVehLM\memstick\PSP\TEXTURES\ULUS10160\textures.zip" -mx=0 "..\textures\GTAVCS\*" -x^^!buildps2.bat -x^^!texture_dump_alpha_scaler.py
-if errorlevel 1 goto packaging_failed
-7za a "GTAVCS.PPSSPP.GamepadIcons\memstick\PSP\TEXTURES\ULUS10160\textures.zip" -mx=0 "..\textures\GTAVCS\*" -x^^!buildps2.bat -x^^!texture_dump_alpha_scaler.py
-if errorlevel 1 goto packaging_failed
-
 FOR /d %%X IN (*) DO (
 if /I not "%%X"=="Archives" (
 call :package_directory "%%X"

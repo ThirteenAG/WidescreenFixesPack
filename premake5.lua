@@ -142,12 +142,12 @@ end
 function add_pspsdk()
    includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
    includedirs { "external/pspsdk/usr/local/pspdev/bin" }
-   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile", "source/%{prj.name}/module.json", "source/%{prj.name}/exports.exp" }
+   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.hpp", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile", "source/%{prj.name}/module.json", "source/%{prj.name}/exports.exp" }
 end
 
 function add_ps2sdk()
    includedirs { "external/ps2sdk/ps2sdk/ee" }
-   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile", "source/%{prj.name}/module.json" }
+   files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.hpp", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile", "source/%{prj.name}/module.json" }
 end
 
 function writeghaction(tag, prj_name)
@@ -578,13 +578,13 @@ project "FarCry64.WidescreenFix"
 
 group "GrandTheftAuto"
 project "GTA3DE.FusionFix"
-   add_kananlib()
+   files { "source/GTADE.FusionFix/*.ixx", "source/GTADE.FusionFix/*.h" }
    setpaths("GTA_III_DEFINITIVE_EDITION_DIR", "Gameface/Binaries/Win64/LibertyCity.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTAVCDE.FusionFix"
-   add_kananlib()
+   files { "source/GTADE.FusionFix/*.ixx", "source/GTADE.FusionFix/*.h" }
    setpaths("GTA_VICE_CITY_DEFINITIVE_EDITION_DIR", "Gameface/Binaries/Win64/ViceCity.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTASADE.FusionFix"
-   add_kananlib()
+   files { "source/GTADE.FusionFix/*.ixx", "source/GTADE.FusionFix/*.h" }
    setpaths("GTA_SAN_ANDREAS_DEFINITIVE_EDITION_DIR", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
 group ""
 
@@ -622,18 +622,29 @@ project "GTALCS.PCSX2F.WidescreenFix"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.WidescreenFix")
-   writemakefile_ps2("GTALCS.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "lodl.o", "cpad.o", "../../external/injector/include/ps2/log.o",
+   writemakefile_ps2("GTALCS.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "Camera.o", "Draw.o", "Hud.o", "../../external/injector/include/ps2/log.o",
    "../../external/injector/include/ps2/memalloc.o", "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o",
    "../../external/injector/include/ps2/inireader.o", "../../external/injector/include/ps2/mips.o")
    writelinkfile_ps2("GTALCS.PCSX2F.WidescreenFix")
 
-project "GTAVCS.PCSX2F.WidescreenFix"
+project "GTALCS.PCSX2F.Project2DFX"
    kind "Makefile"
    dependson { "GTALCS.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.Project2DFX")
+   writemakefile_ps2("GTALCS.PCSX2F.Project2DFX", "PLUGINS/", "-l:libc.a", "Renderer.o", "../../external/injector/include/ps2/memalloc.o",
+   "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o", "../../external/injector/include/ps2/inireader.o",
+   "../../external/injector/include/ps2/mips.o")
+   writelinkfile_ps2("GTALCS.PCSX2F.Project2DFX")
+
+project "GTAVCS.PCSX2F.WidescreenFix"
+   kind "Makefile"
+   dependson { "GTALCS.PCSX2F.Project2DFX" }
+   add_ps2sdk()
+   targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.WidescreenFix")
-   writemakefile_ps2("GTAVCS.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a", "cpad.o", "ckey.o", "../../external/injector/include/ps2/memalloc.o",
+   writemakefile_ps2("GTAVCS.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a", "Camera.o", "Cheats.o", "Controls.o", "Draw.o", "Hud.o", "Menu.o", "MouseCamera.o", "../../external/injector/include/ps2/memalloc.o",
    "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o","../../external/injector/include/ps2/inireader.o",
    "../../external/injector/include/ps2/mips.o")
    writelinkfile_ps2("GTAVCS.PCSX2F.WidescreenFix")
@@ -644,7 +655,7 @@ project "GTAVCS.PCSX2F.Project2DFX"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.Project2DFX")
-   writemakefile_ps2("GTAVCS.PCSX2F.Project2DFX", "PLUGINS/", "-l:libc.a", "lodl.o", "../../external/injector/include/ps2/memalloc.o",
+   writemakefile_ps2("GTAVCS.PCSX2F.Project2DFX", "PLUGINS/", "-l:libc.a", "Renderer.o", "../../external/injector/include/ps2/memalloc.o",
    "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o","../../external/injector/include/ps2/inireader.o",
    "../../external/injector/include/ps2/mips.o")
    writelinkfile_ps2("GTAVCS.PCSX2F.Project2DFX")
@@ -659,6 +670,17 @@ project "GTAVCS.PCSX2F.ImVehLM"
    "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o","../../external/injector/include/ps2/inireader.o",
    "../../external/injector/include/ps2/mips.o")
    writelinkfile_ps2("GTAVCS.PCSX2F.ImVehLM")
+
+project "GTALCS.PCSX2F.ImVehLM"
+   kind "Makefile"
+   dependson { "GTAVCS.PCSX2F.ImVehLM" }
+   add_ps2sdk()
+   targetextension ".elf"
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.ImVehLM")
+   writemakefile_ps2("GTALCS.PCSX2F.ImVehLM", "PLUGINS/", "-l:libc.a", "../../external/injector/include/ps2/memalloc.o",
+   "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o","../../external/injector/include/ps2/inireader.o",
+   "../../external/injector/include/ps2/mips.o")
+   writelinkfile_ps2("GTALCS.PCSX2F.ImVehLM")
 group ""
 
 project "KnightRider.PCSX2F.WidescreenFix"
@@ -690,6 +712,7 @@ project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
    writemakefile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../external/injector/include/ps2/log.o",
+   "Hud.o",
    "../../external/injector/include/ps2/memalloc.o", "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o",
    "../../external/injector/include/ps2/inireader.o", "../../external/injector/include/ps2/mips.o")
    writelinkfile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
@@ -700,7 +723,7 @@ project "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix"
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix")
-   writemakefile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../external/injector/include/ps2/log.o",
+   writemakefile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "Hud.o", "Timing.o",
    "../../external/injector/include/ps2/memalloc.o", "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o",
    "../../external/injector/include/ps2/inireader.o", "../../external/injector/include/ps2/mips.o")
    writelinkfile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix")

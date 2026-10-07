@@ -96,7 +96,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtalcs
-        artifacts: data/Archives/GTALCS.PCSX2F.WidescreenFix.zip
+        artifacts: data/Archives/GTALCS.PCSX2F.WidescreenFix.zip, data/Archives/GTALCS.PCSX2F.Project2DFX.zip, data/Archives/GTALCS.PCSX2F.ImVehLM.zip
 
     - name: Grand Theft Auto San Andreas Widescreen Fix
       uses: ./.github/workflows/release_tag

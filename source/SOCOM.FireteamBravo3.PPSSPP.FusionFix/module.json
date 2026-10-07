@@ -14,7 +14,8 @@
   "exports": "exports.exp",
   "startup": "module_start",
   "defines": [
-    "PSP_HOOK_RAM_END=0x0DD00000"
+    "PSP_HOOK_RAM_END=0x0DD00000",
+    "PSP_GAME_ABI_COMPAT"
   ],
   "libraries": [
     "-lpspsystemctrl_user",

@@ -1,356 +1,104 @@
-#include "../../external/injector/include/psp/runtime.hpp"
-using namespace mips_asm;
-
+#include "Sites.hpp"
+#include "Addresses.hpp"
+#include "Lights.hpp"
+#include "Traffic.hpp"
 extern "C" {
-#include <pspsdk.h>
 #include <pspkernel.h>
-#include <pspctrl.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include <math.h>
-#include <systemctrl.h>
-
-#include "../../external/injector/include/psp/log.h"
-
-#include "../../external/injector/include/psp/patterns.h"
-#include "../../external/injector/include/psp/inireader.h"
-#include "../../external/injector/include/psp/gvm.h"
-
-#include "lodl.h"
-
-#define MODULE_NAME_INTERNAL "GTA3"
-#define MODULE_NAME "GTAVCS.PPSSPP.Project2DFX"
-#define LOG_PATH "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.log"
-#define INI_PATH "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.ini"
-
-#ifndef __INTELLISENSE__
-PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
-static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 28 characters");
-#endif
-
-uint8_t align16 aCoronas[1024 * 112] = { 0 };  // Static array for 1024 coronas (112 bytes each)
-
-// https://github.com/AndroidModLoader/GTA_StarrySkies/blob/main/main.cpp
-#define AMOUNT_OF_STARS 100
-#define STAR_SKYBOX_SIDES 5
-float StarCoorsX[STAR_SKYBOX_SIDES][AMOUNT_OF_STARS], StarCoorsY[STAR_SKYBOX_SIDES][AMOUNT_OF_STARS], StarSizes[STAR_SKYBOX_SIDES][AMOUNT_OF_STARS];
-float fSmallStars, fMiddleStars, fBiggestStars, fBiggestStarsSpawnChance;
-CVector PositionsTable[5] =
-{
-    { 100.0f,  0.0f,   10.0f}, // Left
-    {-100.0f,  0.0f,   10.0f}, // Right
-    {   0.0f,  100.0f, 10.0f}, // Front
-    {   0.0f, -100.0f, 10.0f}, // Back
-    {   0.0f,  0.0f,   95.0f}, // Up
-};
-
-float clampf(float f, float min, float max)
-{
-    if (f > max) return max;
-    if (f < min) return min;
-    return f;
 }
-
-int (*base__Random)();
-float randf(float min, float max)
-{
-    return (((float)base__Random()) / (float)RAND_MAX) * (max - min) + min;
+PSP_MODULE_INFO("GTAVCS.PPSSPP.Project2DFX", PSP_MODULE_USER, 2, 0);
+namespace vcsfx {
+namespace {
+using namespace console::portable;
+StoryLights<sizeof(lights) / sizeof(lights[0])> lod(lights);
+StoryStars stars;
+DistantTraffic traffic;
+bool lightsEnabled;
+alignas(16) uint8_t coronaPool[1024 * 112]{};
+LightRenderer renderer{};
+SafetyMipsInline trafficDisplay, trafficType;
+unsigned activeGroup;
+bool learning;
+using Corona = void(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, const ProjectedPoint*,
+    uint32_t, uint32_t, float, float, float, float, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t);
+Corona* nativeCorona;
+void RegisterTraffic(uint32_t id, uint32_t r, uint32_t g, uint32_t b, uint32_t alpha,
+    const ProjectedPoint* position, uint32_t type, uint32_t flare, float radius, float range,
+    float angle, float pull, uint32_t reflection, uint32_t los, uint32_t streak, uint32_t flag, uint32_t flag2) {
+    lod.learnTraffic(position, activeGroup);
+    nativeCorona(id, r, g, b, alpha, position, type, flare, radius, range, angle, pull,
+                 reflection, los, streak, flag, flag2);
 }
-
-int16_t CWeather__Foggyness;
-int16_t CWeather__CloudCoverage;
-int** gpCoronaTexture;
-void CSprite__FlushSpriteBufferHook()
-{
-    CSprite__FlushSpriteBuffer.fun();
-
-    CVector align16 ScreenPos, WorldPos, WorldStarPos;
-    volatile float align16 SZ;
-    volatile float align16 SZX;
-    volatile float align16 SZY;
-
-    for (int side = 0; side < STAR_SKYBOX_SIDES; ++side)
-    {
-        WorldPos.x = PositionsTable[side].x + GetCamPos()->x;
-        WorldPos.y = PositionsTable[side].y + GetCamPos()->y;
-        WorldPos.z = PositionsTable[side].z + GetCamPos()->z;
-        for (int i = 0; i < AMOUNT_OF_STARS; ++i)
-        {
-            WorldStarPos = WorldPos;
-            SZ = StarSizes[side][i];
-            switch (side)
-            {
-            case 0:
-            case 1:
-                WorldStarPos.y -= StarCoorsX[side][i];
-                WorldStarPos.z += StarCoorsY[side][i];
-                break;
-
-            case 2:
-            case 3:
-                WorldStarPos.x -= StarCoorsX[side][i];
-                WorldStarPos.z += StarCoorsY[side][i];
-                break;
-
-            default:
-                WorldStarPos.x += StarCoorsX[side][i];
-                WorldStarPos.y += StarCoorsY[side][i];
-                break;
-            }
-
-            if (CSprite__CalcScreenCoors(&WorldStarPos, &ScreenPos, const_cast<float*>(&SZX), const_cast<float*>(&SZY), true))
-            {
-                int starintens = 0;
-                if (CurrentTimeHours() < 22 && CurrentTimeHours() > 5)
-                    starintens = 0;
-                else if (CurrentTimeHours() > 22 || CurrentTimeHours() < 5)
-                    starintens = 255;
-                else if (CurrentTimeHours() == 22)
-                    starintens = 255 * CurrentTimeMinutes() / 60.0f;
-                else if (CurrentTimeHours() == 5)
-                    starintens = 255 * (60 - CurrentTimeMinutes()) / 60.0f;
-                if (starintens != 0) {
-                    float coverage = MAX(*(float*)((uintptr_t)injector::GetGP() + CWeather__Foggyness), *(float*)((uintptr_t)injector::GetGP() + CWeather__CloudCoverage));
-                    int brightness = (1.0f - coverage) * starintens;
-
-                    brightness = 255;
-
-                    int a0 = brightness;
-                    int a1 = brightness;
-                    int a2 = brightness;
-                    int a3 = 255;
-                    int a4 = 255;
-                    float f12 = ScreenPos.x;
-                    float f13 = ScreenPos.y;
-                    float f14 = ScreenPos.z;
-                    float f15 = SZX * SZ;
-                    float f16 = SZY * SZ;
-                    float f17 = 1.0f / ScreenPos.z;
-
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (a0));
-                    asm volatile ("move $a0, $v0");
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (a1));
-                    asm volatile ("move $a1, $v0");
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (a2));
-                    asm volatile ("move $a2, $v0");
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (a3));
-                    asm volatile ("move $a3, $v0");
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (a4));
-                    asm volatile ("move $t0, $v0");
-
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f12));
-                    asm volatile ("mtc1 $v0, $f12");
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f13));
-                    asm volatile ("mtc1 $v0, $f13");
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f14));
-                    asm volatile ("mtc1 $v0, $f14");
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f15));
-                    asm volatile ("mtc1 $v0, $f15");
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f16));
-                    asm volatile ("mtc1 $v0, $f16");
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (f17));
-                    asm volatile ("mtc1 $v0, $f17");
-                    asm volatile ("lw $v0,  %[x]" ::[x] "m" (CSprite__RenderBufferedOneXLUSprite));
-                    asm volatile ("jalr $v0");
-                }
-            }
-        }
+void DisplayTraffic(void* entity) {
+    unsigned previousGroup = activeGroup;
+    bool previousLearning = learning;
+    activeGroup = 0; learning = true;
+    trafficDisplay.call<void>(entity);
+    activeGroup = previousGroup; learning = previousLearning;
+}
+int FindTrafficType(void* entity) {
+    int group = trafficType.call<int>(entity);
+    if (learning) activeGroup = unsigned(group);
+    return group;
+}
+int RenderLights(int state, uintptr_t data) {
+    traffic.render();
+    if(lightsEnabled)lod.render(SpriteBudget(Address<0x8BC7370>(),Address<0x8BC7370>()+12));
+    return renderer.state(state, data);
+}
+void RenderStars() { stars.render(SpriteBudget(Address<0x8BC7370>(),Address<0x8BC7370>()+12)); }
+void ExpandCoronas(unsigned limit) {
+    uintptr_t pool = reinterpret_cast<uintptr_t>(coronaPool);
+    for (const auto& pointer : poolPointers) {
+        uint32_t high = injector::ReadMemory<uint32_t>(Address(pointer[0]));
+        uint32_t low = injector::ReadMemory<uint32_t>(Address(pointer[1]));
+        bool signedLow = (low >> 26) == 9;
+        injector::WriteMemory<uint32_t>(Address(pointer[0]), (high & 0xFFFF0000u) | ((pool + (signedLow ? 0x8000u : 0u)) >> 16));
+        injector::WriteMemory<uint32_t>(Address(pointer[1]), (low & 0xFFFF0000u) | (pool & 0xFFFFu));
     }
+    for (uintptr_t address : poolLimits)
+        injector::WriteMemory<uint32_t>(Address(address), (injector::ReadMemory<uint32_t>(Address(address)) & 0xFFFF0000u) | limit);
 }
-
-void RslRenderStateSetHook(int a1, int a2)
-{
-    RslRenderStateSet(6, 0);
-    RslRenderStateSet(10, 1);
-    RslRenderStateSet(8, 2);
-    RslRenderStateSet(9, 2);
-    RslRenderStateSet(4, 1);
-    RslRenderStateSet(1, *gpCoronaTexture[0]);
-    RenderLODLightsBuffered();
-
-    RslRenderStateSet(a1, a2);
 }
-
-uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
-{
-    return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
 }
-
-int OnModuleStart() {
+extern "C" int module_start(SceSize, void*) {
+    using namespace vcsfx;
+    using namespace console::portable;
+    if (!Start("GTA3", "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.ini",
+        "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.log")) return -1;
+    // PPSSPP loads its plugin before the game's render objects are initialized.
     sceKernelDelayThread(250000);
-
-    int RenderLodLights = inireader.ReadInteger("PROJECT2DFX", "RenderLodLights", 1);
-    int CoronaLimit = inireader.ReadInteger("PROJECT2DFX", "CoronaLimit", 0);
-    fCoronaRadiusMultiplier = inireader.ReadFloat("PROJECT2DFX", "CoronaRadiusMultiplier", 1.0f);
-    fCoronaFarClip = inireader.ReadFloat("PROJECT2DFX", "CoronaFarClip", 1000.0f);
-
-    int SkyGfx = inireader.ReadInteger("PROJECT2DFX", "SkyGfx", 1);
-
-    uintptr_t ptr_3CF00 = pattern.get(0, "25 20 20 02 30 00 64 26 00 00 80 D8 00 00 41 D8", -16);
-    TheCamera = (uintptr_t)((uint32_t)(*(uint16_t*)(ptr_3CF00 + 0)) << 16) + *(int16_t*)(ptr_3CF00 + 4);
-    pCamPos = (CVector*)(TheCamera + 0x9B0); //0x9B0 at 0x218648
-    uintptr_t ptr_880D49C = pattern.get(0, "25 28 00 00 C0 1A 04 92", -4);
-    RslRenderStateSet = (void(*)(int, int))injector::GetBranchDestination(ptr_880D49C).as_int();
-    uintptr_t ptr_888D604 = pattern.get(0, "00 F0 84 44 ? ? ? ? 01 00 04 34", -4);
-    CSprite__FlushSpriteBuffer.fun = (void(*)())injector::GetBranchDestination(ptr_888D604).as_int();
-    uintptr_t ptr_8B20938 = pattern.get(0, "02 00 05 3C ? ? ? ? 1A 00 85 00", -4);
-    base__Random = (int(*)())ptr_8B20938;
-    uintptr_t ptr_8AA82D8 = pattern.get(0, "10 00 B4 E7 14 00 B6 E7 18 00 B0 AF 1C 00 B1 AF 20 00 B2 AF 24 00 B3 AF 28 00 BF AF", -4);
-    CSprite__CalcScreenCoors = (int(*)(CVector*, CVector*, float*, float*, uint8_t))ptr_8AA82D8;
-    uintptr_t ptr_8AA9B24 = pattern.get(0, "4C 00 B1 AF FF 00 B1 30", -4);
-    CSprite__RenderBufferedOneXLUSprite = (void(*)())ptr_8AA9B24;
-
-    if (CoronaLimit)
-    {
-        if (CoronaLimit > 1024)
-            CoronaLimit = 1024;
-
-        //SceUID block_id = 0;
-        //const int corona_struct_size = 112;
-        //uintptr_t aCoronas = injector::AllocMemBlock(corona_struct_size * CoronaLimit, &block_id);
-        
-        uintptr_t ptr_17D174 = pattern.get(0, "3C 68 0C 46 21 20 85 00", -4);
-        uintptr_t ptr_17D180 = pattern.get(0, "14 00 B1 AF 18 00 BF AF ? ? ? ? 06 6B 00 46", -4);
-        uintptr_t ptr_17D22C = pattern.get(0, "38 00 24 2A ? ? ? ? 70 00 10 26", 0);
-        uintptr_t ptr_17D2D4 = pattern.get(0, "00 00 05 34 ? ? ? ? C0 31 05 00 00 39 05 00", -4); // count = 3
-        uintptr_t ptr_17D2DC = pattern.get(0, "C0 31 05 00 00 39 05 00 23 30 C7 00 21 30 C4 00", -4);
-        uintptr_t ptr_17D2FC = pattern.get(0, "38 00 A6 28 ? ? ? ? 00 00 00 00", 0);
-        uintptr_t ptr_17D3DC = pattern.get(0, "00 00 07 34 01 00 08 34", -4);
-        uintptr_t ptr_17D3EC = pattern.get(0, "00 00 00 00 ? ? ? ? C0 41 07 00", -8);
-        uintptr_t ptr_17D424 = pattern.get(0, "38 00 E8 28", 0);
-        uintptr_t ptr_17D428 = pattern.get(0, "38 00 04 34 ? ? ? ? 00 00 00 00", 0);
-        uintptr_t ptr_17E410 = pattern.get(0, "44 00 A4 AF ? ? ? ? 00 00 17 34", -8);
-        uintptr_t ptr_17E42C = pattern.get(0, "EF FF 1E 24", -4);
-        uintptr_t ptr_17EAF0 = pattern.get(0, "38 00 E4 2A", 0);
-        uintptr_t ptr_17ED08 = pattern.get(0, "38 00 04 2A", 0);
-        uintptr_t ptr_17ED94 = pattern.get(2, "94 00 B4 E7 98 00 B6 E7 9C 00 B8 E7", -8); // count = 4
-        uintptr_t ptr_17EDD8 = pattern.get(0, "00 00 05 34 BF FF 04 24", -4);
-        uintptr_t ptr_17F218 = pattern.get(0, "38 00 24 2A ? ? ? ? 00 60 85 44", 0);
-        uintptr_t ptr_17FCB0 = pattern.get(0, "00 00 0F 34 01 00 19 34", -4);
-        uintptr_t ptr_17FCBC = pattern.get(0, "38 00 18 34", 0);
-        uintptr_t ptr_17FCC0 = pattern.get(0, "C0 C9 0F 00 00 81 0F 00 23 C8 30 03", -8); // count = 2
-        uintptr_t ptr_17FCF0 = pattern.get(0, "38 00 F9 29 ? ? ? ? 00 00 00 00", 0);
-        uintptr_t ptr_17FD44 = pattern.get(0, "38 00 F9 29 ? ? ? ? C0 C9 0F 00", 0);
-        
-        injector::WriteInstr(ptr_17D174, lui(s0, injector::HighWord(aCoronas)));
-        injector::WriteInstr(ptr_17D2D4, lui(a0, injector::HighWord(aCoronas)));
-        injector::WriteInstr(ptr_17D3DC, lui(a2, injector::HighWord(aCoronas)));
-        injector::WriteInstr(ptr_17E410, lui(s2, injector::HighWord(aCoronas)));
-        injector::WriteInstr(ptr_17ED94, lui(s5, injector::HighWord(aCoronas)));
-        injector::WriteInstr(ptr_17FCB0, lui(t6, injector::HighWord(aCoronas)));
-        injector::WriteInstr(ptr_17D180, ori(s0, s0, injector::LowWord(aCoronas)));
-        injector::WriteInstr(ptr_17D2DC, ori(a0, a0, injector::LowWord(aCoronas)));
-        injector::WriteInstr(ptr_17D3EC, ori(a2, a2, injector::LowWord(aCoronas)));
-        injector::WriteInstr(ptr_17E42C, ori(s2, s2, injector::LowWord(aCoronas)));
-        injector::WriteInstr(ptr_17EDD8, ori(s5, s5, injector::LowWord(aCoronas)));
-        injector::WriteInstr(ptr_17FCC0, ori(t6, t6, injector::LowWord(aCoronas)));
-        injector::WriteInstr(ptr_17D22C, slti(a0, s1, CoronaLimit));
-        injector::WriteInstr(ptr_17D2FC, slti(a2, a1, CoronaLimit));
-        injector::WriteInstr(ptr_17D424, slti(t0, a3, CoronaLimit));
-        injector::WriteInstr(ptr_17D428, li(a0, CoronaLimit));
-        injector::WriteInstr(ptr_17EAF0, slti(a0, s7, CoronaLimit));
-        injector::WriteInstr(ptr_17ED08, slti(a0, s0, CoronaLimit));
-        injector::WriteInstr(ptr_17F218, slti(a0, s1, CoronaLimit));
-        injector::WriteInstr(ptr_17FCF0, slti(t9, t7, CoronaLimit));
-        injector::WriteInstr(ptr_17FCBC, li(t8, CoronaLimit));
-        injector::WriteInstr(ptr_17FD44, slti(t9, t7, CoronaLimit));
+    if (!Begin()) return -1;
+    if (!InitializeAddresses()) return -1;
+    renderer = {
+        Address<0x8BC7E30>() + 0x9B0, Address<0x8BB3B40>(), Address<0x8BB3B41>(), Address<0x8BAFD90>(), Address<0x8BB3C3C>(), Address<0x8BB3E2C>(), Address<0x8BA10A8>(), Address<0x8BAFB38>(), Address<0x8BAFB3C>(),
+        reinterpret_cast<decltype(renderer.project)>(Address<0x8aa82d4>()),
+        reinterpret_cast<decltype(renderer.sprite)>(Address<0x8aa9b20>()),
+        reinterpret_cast<decltype(renderer.state)>(Address<0x8861668>()),
+        reinterpret_cast<decltype(renderer.flush)>(Address<0x8aa8bdc>()),
+        {reinterpret_cast<int (*)()>(Address<0x8a0f284>()), reinterpret_cast<int (*)()>(Address<0x8a0f2e0>())},
+        4, 6, 8, 9, 1.0f, 1000.0f, 1.0f / 3.0f, 900
+    };
+    renderer.radius = console::bounded(inireader.ReadFloat("PROJECT2DFX", "CoronaRadiusMultiplier", 1.0f), 0.01f, 10.0f, 1.0f);
+    renderer.range = console::bounded(inireader.ReadFloat("PROJECT2DFX", "CoronaFarClip", 1000.0f), 100.0f, 4000.0f, 1000.0f);
+    int visible = inireader.ReadInteger("PROJECT2DFX", "MaxVisibleLights", 900);
+    renderer.limit = unsigned(visible < 1 ? 1 : (visible > 2048 ? 2048 : visible));
+    int coronas = inireader.ReadInteger("PROJECT2DFX", "CoronaLimit", 0);
+    if (coronas > 0) ExpandCoronas(unsigned(coronas < 56 ? 56 : (coronas > 1024 ? 1024 : coronas)));
+    traffic.initialize(renderer);
+    injector::MakeCALL(Address<0x890243c>(), RenderLights);
+    lightsEnabled=inireader.ReadInteger("PROJECT2DFX", "RenderLodLights", 1)!=0;
+    if (lightsEnabled) {
+        lod.initialize(renderer, false);
+        nativeCorona = reinterpret_cast<Corona*>(Address<0x8981324>());
+        trafficDisplay = safetymips::create_inline(Address<0x8a0f9a4>(), DisplayTraffic);
+        trafficType = safetymips::create_inline(Address<0x8a0f384>(), FindTrafficType);
+        for (uintptr_t site : trafficCalls) injector::MakeCALL(Address(site), RegisterTraffic);
+        injector::WriteMemory<uint32_t>(Address<0x8B01D50>(), 0x3C044448);
+        injector::WriteMemory<uint32_t>(Address<0x8B01DA0>(), 0x3C044448);
     }
-    
-    if (RenderLodLights)
-    {
-        uintptr_t ptr_17D324 = pattern.get(0, "E0 FF BD 27 20 00 A2 8F", 0);
-        CCoronas__RegisterCorona = reinterpret_cast<decltype(CCoronas__RegisterCorona)>(ptr_17D324);
-        CDraw__ms_fNearClipZOffset = *(int16_t*)pattern.get(0, "25 90 A0 00 25 30 80 00 FF 00 13 31", 12);
-        CDraw__ms_fFarClipZOffset = *(int16_t*)pattern.get(0, "25 90 A0 00 25 30 80 00 FF 00 13 31", 24);
-        CurrentTimeHoursOffset = *(int16_t*)pattern.get(0, "0C 00 04 34 ? ? ? ? ? ? ? ? ? ? ? ? 80 3F 04 3C", 4);
-        CurrentTimeMinutesOffset = *(int16_t*)pattern.get(0, "0C 00 04 34 ? ? ? ? ? ? ? ? ? ? ? ? 80 3F 04 3C", 8);
-        CTimer__m_snTimeInMillisecondsPauseModeOffset = *(int16_t*)pattern.get(0, "34 00 B0 AE 00 60 84 44", -4);
-        CTimer__ms_fTimeStepOffset = *(int16_t*)pattern.get(0, "48 42 04 3C 00 68 84 44 C3 63 0D 46", -4);
-
-        // Coronas Render
-        //uintptr_t ptr_133F80 = pattern.get(0, "FF 00 04 34 ? ? ? ? ? ? ? ? 00 00 00 00", 16);
-        //injector::MakeCALL(ptr_133F80, RegisterLODLights).as_int();
-        uintptr_t ptr_8900008 = pattern.get(0, "00 00 84 8C ? ? ? ? ? ? ? ? 00 00 A5 8C ? ? ? ? ? ? ? ? ? ? ? ? 25 28 00 00", -24);
-        gpCoronaTexture = (int**)GetAbsoluteAddress(ptr_8900008, 0, 4);
-        uintptr_t ptr_890243C = pattern.get(0, "25 28 00 00 03 00 04 34 ? ? ? ? 01 00 05 34 0B 00 04 34", -4);
-        injector::MakeCALL(ptr_890243C, RslRenderStateSetHook);
-
-        // Heli Height Limit
-        uintptr_t ptr_2FDD50 = pattern.get(0, "A0 42 04 3C 00 70 84 44 3C 60 0E 46", 0);
-        uintptr_t ptr_2FDDA0 = pattern.get(0, "A0 42 04 3C 00 68 84 44 3C 60 0D 46", 0);
-        injector::MakeInlineLUIORI(ptr_2FDD50, 800.0f);
-        injector::MakeInlineLUIORI(ptr_2FDDA0, 800.0f);
+    if (inireader.ReadInteger("PROJECT2DFX", "SkyGfx", 1)) {
+        stars.initialize(renderer);
+        injector::MakeCALL(Address<0x888d604>(), RenderStars);
     }
-
-    if (SkyGfx)
-    {
-        fSmallStars = clampf(inireader.ReadFloat("STARS", "SmallestStarsSize", 0.15f), 0.03f, 2.5f);
-        fMiddleStars = clampf(inireader.ReadFloat("STARS", "MiddleStarsSize", 0.6f), 0.03f, 2.5f);
-        fBiggestStars = clampf(inireader.ReadFloat("STARS", "BiggestStarsSize", 1.2f), 0.03f, 2.5f);
-        fBiggestStarsSpawnChance = 1.0f - 0.01f * clampf(inireader.ReadFloat("STARS", "BiggestStarsChance", 20), 0.0f, 100.0f);
-
-        CWeather__CloudCoverage = *(int16_t*)pattern.get(0, "00 60 84 44 3C 70 0F 46", -4);
-        CWeather__Foggyness = *(int16_t*)pattern.get(0, "23 20 A4 00 ? ? ? ? 00 60 84 44", -4);
-
-        for (int side = 0; side < STAR_SKYBOX_SIDES; ++side)
-        {
-            for (int i = 0; i < AMOUNT_OF_STARS; ++i)
-            {
-                StarCoorsX[side][i] = 95.0f * randf(-1.0f, 1.0f);
-
-                // Side=4 is when rendering stars directly ABOVE us
-                if (side == 4) StarCoorsY[side][i] = 95.0f * randf(-1.0f, 1.0f);
-                else StarCoorsY[side][i] = 95.0f * randf(-0.35f, 1.0f);
-
-                // Smaller chances for a bigger star (this is more life-like)
-                if (randf(0.0f, 1.0f) > fBiggestStarsSpawnChance) StarSizes[side][i] = 0.8f * randf(fSmallStars, fBiggestStars);
-                else StarSizes[side][i] = 0.8f * randf(fSmallStars, fMiddleStars);
-            }
-        }
-        
-        CSprite__FlushSpriteBuffer.fun = injector::MakeCALL(ptr_888D604, CSprite__FlushSpriteBufferHook).get();
-    }
-
-    sceKernelDcacheWritebackAll();
-    sceKernelIcacheClearAll();
-
-    return 0;
+    return Finish();
 }
-
-int module_start(SceSize args, void* argp) {
-    if (injector::InitializeRuntime() != PSP_HOOK_OK) return -1;
-    if (sceIoDevctl("kemulator:", 0x00000003, NULL, 0, NULL, 0) == 0) {
-        SceUID modules[10];
-        int count = 0;
-        int result = 0;
-        if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0) {
-            int i;
-            SceKernelModuleInfo info;
-            for (i = 0; i < count; ++i) {
-                info.size = sizeof(SceKernelModuleInfo);
-                if (sceKernelQueryModuleInfo(modules[i], &info) < 0) {
-                    continue;
-                }
-
-                if (strcmp(info.name, MODULE_NAME_INTERNAL) == 0)
-                {
-                    injector::SetGameBaseAddress(info.text_addr, info.text_size);
-                    pattern.SetGameBaseAddress(info.text_addr, info.text_size);
-                    inireader.SetIniPath(INI_PATH);
-                    logger.SetPath(LOG_PATH);
-                    result = 1;
-                }
-                else if (strcmp(info.name, MODULE_NAME) == 0)
-                {
-                    injector::SetModuleBaseAddress(info.text_addr, info.text_size);
-                }
-            }
-
-            if (result)
-                OnModuleStart();
-        }
-    }
-    return 0;
-}
-} // extern "C"
