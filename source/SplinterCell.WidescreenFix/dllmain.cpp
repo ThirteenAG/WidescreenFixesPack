@@ -50,36 +50,47 @@ void Init()
 
     auto userIniPath = exePath / "SplinterCellUser.ini";
 
-    // Read the existing user INI file into a structure
+    // Only update the user INI when it exists and could be read; the game creates it on first run,
+    // and a file written from scratch here would be missing everything else (bindings etc.)
     mINI::INIStructure userIni;
     mINI::INIFile userIniFile(userIniPath);
-    userIniFile.read(userIni);
-
-    if (ini.has("Engine.Input"))
+    if (userIniFile.read(userIni))
     {
-        for (auto const& kv : ini["Engine.Input"])
+        if (ini.has("Engine.Input"))
         {
-            std::string key = std::get<0>(kv);
-            std::string value = std::get<1>(kv);
-            userIni["Engine.Input"].setAll(key, value);
+            for (auto const& kv : ini["Engine.Input"])
+            {
+                std::string key = std::get<0>(kv);
+                std::string value = std::get<1>(kv);
+                userIni["Engine.Input"].setAll(key, value);
+            }
         }
+        userIni["Engine.EPCGameOptions"]["Resolution"] = std::to_string(Screen.Width) + "x" + std::to_string(Screen.Height);
+        userIniFile.generate(userIni);
     }
-    userIni["Engine.EPCGameOptions"]["Resolution"] = std::to_string(Screen.Width) + "x" + std::to_string(Screen.Height);
-    userIniFile.generate(userIni);
 
     auto gameIniPath = exePath / "SplinterCell.ini";
-    CIniReader iniWriter(gameIniPath);
-    iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
-    iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
-    iniWriter.WriteString("WinDrv.WindowsClient", "UseJoystick", "True");
-    iniWriter.WriteString("D3DDrv.D3DRenderDevice", "FullScreenVideo", "True");
+    // The engine creates a missing game INI by copying Default.ini, but only when the file doesn't exist,
+    // so do the same here instead of letting the writes below create a file with only a few keys in it
+    std::error_code ec;
+    if (!std::filesystem::exists(gameIniPath, ec) && !ec)
+        CopyFileW((exePath / "Default.ini").c_str(), gameIniPath.c_str(), TRUE);
 
-    auto shadowMode = iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1);
-    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", shadowMode);
-    if (shadowMode == 1) // GF2 mode must be off to render shadow buffers
-        iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "EmulateGF2Mode", 0);
+    if (std::filesystem::exists(gameIniPath, ec))
+    {
+        CIniReader iniWriter(gameIniPath);
+        iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
+        iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
+        iniWriter.WriteString("WinDrv.WindowsClient", "UseJoystick", "True");
+        iniWriter.WriteString("D3DDrv.D3DRenderDevice", "FullScreenVideo", "True");
 
-    iniWriter.WriteString("Engine.GameInfo", "UseRumble", "True");
+        auto shadowMode = iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1);
+        iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", shadowMode);
+        if (shadowMode == 1) // GF2 mode must be off to render shadow buffers
+            iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "EmulateGF2Mode", 0);
+
+        iniWriter.WriteString("Engine.GameInfo", "UseRumble", "True");
+    }
 
     std::vector<std::string> list;
     GetResolutionsList(list);
