@@ -138,6 +138,80 @@ void InitSettingsFile()
     CWinApp::shSetRegistryKey = safetyhook::create_inline(GetProcAddress(GetModuleHandleA("mfc71.dll"), MAKEINTRESOURCEA(5975)), CWinApp::SetRegistryKey); // CWinApp::SetRegistryKey(LPCTSTR)
 }
 
+// The display modes the startup dialog's options list, in the order the adapter enumerates them:
+// smallest first. They're listed largest first instead.
+namespace DisplayModeList
+{
+    enum
+    {
+        IDC_DISPLAY_MODE = 1002,
+        CWND_HWND = 0x20, // CWnd::m_hWnd
+    };
+
+    // What the items point to, the game reads the choice back from it
+    struct Mode
+    {
+        uint32_t nWidth;
+        uint32_t nHeight;
+        uint32_t nBitsPerPixel;
+    };
+
+    void Sort(HWND hComboBox)
+    {
+        struct Item
+        {
+            std::string text;
+            const Mode* pMode;
+        };
+
+        std::vector<Item> Items;
+        const Mode* pSelected = nullptr;
+        auto nCount = (int)SendMessageA(hComboBox, CB_GETCOUNT, 0, 0);
+        auto nSelected = (int)SendMessageA(hComboBox, CB_GETCURSEL, 0, 0);
+        for (int i = 0; i < nCount; ++i)
+        {
+            auto pMode = (const Mode*)SendMessageA(hComboBox, CB_GETITEMDATA, i, 0);
+            auto nLength = (int)SendMessageA(hComboBox, CB_GETLBTEXTLEN, i, 0);
+            if (!pMode || pMode == (const Mode*)CB_ERR || nLength == CB_ERR)
+                return;
+
+            std::string text(nLength, '\0');
+            SendMessageA(hComboBox, CB_GETLBTEXT, i, (LPARAM)text.data());
+            if (i == nSelected)
+                pSelected = pMode;
+            Items.push_back({ std::move(text), pMode });
+        }
+
+        std::stable_sort(Items.begin(), Items.end(), [](const Item& a, const Item& b)
+        {
+            return std::tie(a.pMode->nWidth, a.pMode->nHeight, a.pMode->nBitsPerPixel) > std::tie(b.pMode->nWidth, b.pMode->nHeight, b.pMode->nBitsPerPixel);
+        });
+
+        SendMessageA(hComboBox, CB_RESETCONTENT, 0, 0);
+        auto nNewSelected = CB_ERR;
+        for (auto& item : Items)
+        {
+            // unlike CB_ADDSTRING, keeps the order even if the list sorts itself
+            auto nIndex = (int)SendMessageA(hComboBox, CB_INSERTSTRING, -1, (LPARAM)item.text.c_str());
+            SendMessageA(hComboBox, CB_SETITEMDATA, nIndex, (LPARAM)item.pMode);
+            if (item.pMode == pSelected)
+                nNewSelected = nIndex;
+        }
+
+        SendMessageA(hComboBox, CB_SETCURSEL, nNewSelected == CB_ERR ? 0 : nNewSelected, 0);
+    }
+
+    // Fills the dialog's lists for the adapter picked
+    SafetyHookInline shFill = {};
+    int __fastcall Fill(uint8_t* _this, void* edx)
+    {
+        auto result = shFill.unsafe_fastcall<int>(_this, edx);
+        if (auto hComboBox = GetDlgItem(*(HWND*)(_this + CWND_HWND), IDC_DISPLAY_MODE))
+            Sort(hComboBox);
+        return result;
+    }
+}
+
 void ReadSettings()
 {
     CIniReader iniReader("");
@@ -321,6 +395,10 @@ void Init()
     injector::MakeCALL(pattern.get_first(47), ClampCursorTop, true);
 
     InitPostFX();
+
+    // Startup dialog, see DisplayModeList
+    pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 50 53 55 56 57 8B F1 68 E8 03 00 00 89 74 24 1C E8");
+    DisplayModeList::shFill = safetyhook::create_inline(pattern.get_first(), DisplayModeList::Fill); //0x40C420
 
     // Post-processing (pain and bullet time): the scene is warped with a grid covering the render target
     pattern = hook::pattern("8B 8E 9C 00 00 00 52 68 ? ? ? ? E8");

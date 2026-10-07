@@ -16,6 +16,7 @@
 - **HUD** — Correct HUD scaling for widescreen.
 - **Field of view** — Adjust the field of view for widescreen.
 - **Videos** — Correct FMV scaling for widescreen.
+- **16-bit display modes** — Picking a 16-bit mode in the options no longer stops the game from starting ("creating the device failed: D3DERR_NOTAVAILABLE"), the 32-bit mode of that resolution is used. The startup dialog only lists the 32-bit modes, largest first.
 - **Adaptive difficulty** — Fugitive's adaptive difficulty counts deaths, health and play time over reloads, so it eases off again instead of climbing to the hardest settings and staying there.
 
 ## Options
