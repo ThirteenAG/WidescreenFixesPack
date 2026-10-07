@@ -1,8 +1,15 @@
 {
   "sources": [
     "main.cpp",
-    "lodl.cpp",
-    "cpad.cpp",
+    "Camera.cpp",
+    "Aim.cpp",
+    "Draw.cpp",
+    "Hud.cpp",
+    "Frontend.cpp",
+    "MouseCamera.cpp",
+    "Controls.cpp",
+    "ButtonIcons.cpp",
+    "Menu.cpp",
     "../../external/injector/include/ps2/log.c",
     "../../external/injector/include/ps2/memalloc.c",
     "../../external/injector/include/ps2/patterns.c",
@@ -18,5 +25,8 @@
     "-fno-rtti",
     "-fno-strict-aliasing",
     "-fno-threadsafe-statics"
+  ],
+  "cflags": [
+    "-ffp-contract=off"
   ]
 }

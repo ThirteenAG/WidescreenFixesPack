@@ -18,9 +18,6 @@ cd textures/NFS/NFSU
 call createtpk.bat
 cd ../../..
 
-cd textures/GTAVCS
-call buildps2.bat
-cd ../..
 
 if "%SCCOMPILE_PASSWORD%"=="" (
     echo SCCOMPILE_PASSWORD is empty, skipping sccompile.

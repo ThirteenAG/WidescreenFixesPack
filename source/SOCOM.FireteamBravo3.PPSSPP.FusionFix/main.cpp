@@ -1,449 +1,159 @@
-#include "../../external/injector/include/psp/runtime.hpp"
-using namespace mips_asm;
-
-extern "C" {
-#include <pspsdk.h>
-#include <pspkernel.h>
-#include <pspctrl.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include <systemctrl.h>
-#include <math.h>
-
-#include "../../external/injector/include/psp/log.h"
-
-#include "../../external/injector/include/psp/patterns.h"
-#include "../../external/injector/include/psp/inireader.h"
-#include "../../external/injector/include/psp/gvm.h"
-
-#define MODULE_NAME_INTERNAL "FireTeamBravo3"
-#define MODULE_NAME_INTERNAL2 "SocomTacticsLoader"
-#define MODULE_NAME "FireteamBravo3.FusionFix"
-#define LOG_PATH "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.log"
-#define INI_PATH "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.ini"
-
-#ifndef __INTELLISENSE__
-PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
-static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 28 characters");
-#endif
-
-enum
-{
-    EMULATOR_DEVCTL__TOGGLE_FASTFORWARD = 0x30,
-    EMULATOR_DEVCTL__GET_ASPECT_RATIO,
-    EMULATOR_DEVCTL__GET_SCALE
+#include "../Shared/Console/PSP.hpp"
+#include "Sites.hpp"
+extern "C" { PSP_MODULE_INFO("FireteamBravo3.FusionFix", PSP_MODULE_USER, 2, 0); }
+namespace {
+using namespace console::portable;
+console::Point rightStick, leftStick;
+bool cameraRelated, installed;
+uintptr_t preferences;
+float fovFactor;
+float* cameraParameters;
+SafetyMipsInline curve;
+SafetyMipsMid camera;
+injector::hook_back<int(int, float*, float)> process;
+injector::hook_back<void(int, float*)> movement;
+injector::hook_back<void(float*, float)> smooth;
+injector::hook_back<void(int, float*)> setParameters;
+injector::hook_back<float(int)> sensitivity;
+struct CameraScope {
+    bool previous;
+    explicit CameraScope(bool value) : previous(cameraRelated) { cameraRelated = value; }
+    ~CameraScope() { cameraRelated = previous; }
 };
-
-void UnthrottleEmuEnable()
-{
-    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)1, 0, NULL, 0);
+float Axis(uint8_t raw) {
+    const int value = int(raw) - 128;
+    return float(value < -127 ? -127 : value) / 127.0f;
 }
-
-void UnthrottleEmuDisable()
-{
-    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)0, 0, NULL, 0);
-}
-
-int bCameraMode = 0;
-int bCameraRelated = 0;
-float gRSx = 0.0f;
-float gRSy = 0.0f;
-float gLSx = 0.0f;
-float gLSy = 0.0f;
-int sceCtrlPeekBufferPositiveHook(SceCtrlData* pad_data, int count)
-{
-    int r = sceCtrlPeekBufferPositive(pad_data, count);
-    gRSx = (float)((float)pad_data->Rsrv[0] * 0.0078125f) - 1.0f;
-    gRSy = (float)((float)pad_data->Rsrv[1] * 0.0078125f) - 1.0f;
-
-    gLSx = (float)((float)pad_data->Lx * 0.0078125f) - 1.0f;
-    gLSy = (float)((float)pad_data->Ly * 0.0078125f) - 1.0f;
-
-    if (bCameraMode)
-    {
-        pad_data->Lx = pad_data->Rsrv[0];
-        pad_data->Ly = pad_data->Rsrv[1];
-    }
-
-    return r;
-}
-
-void GetStickData(int a1, float* outX, float* outY, int a4, int a5)
-{
-    float v6 = gRSx;
-    float v7 = -gRSy;
-
-    if (!bCameraRelated)
-    {
-        int v5 = *(uintptr_t*)(*(uintptr_t*)a1 + 104);
-        float v6 = *(float*)(v5 + 280);
-        float v7 = -*(float*)(v5 + 284);
-    }
-
-    float v8 = fabsf(v7) * 20.0f;
-    float v9 = fabsf(v6) * 20.0f;
-
-    // Clamp values between 0 and 19
-    int v10 = (int)v8;
-    v10 = (v10 < 0) ? 0 : (v10 > 19 ? 19 : v10);
-
-    int v11 = (int)v9;
-    v11 = (v11 < 0) ? 0 : (v11 > 19 ? 19 : v11);
-
-    // Clamp values between 0 and 19
-    int v14 = v10 + 1;
-    v14 = (v14 < 0) ? 0 : (v14 > 19 ? 19 : v14);
-
-    int v15 = v11 + 1;
-    v15 = (v15 < 0) ? 0 : (v15 > 19 ? 19 : v15);
-
-    // Clamp values between 0.0 and 1.0
-    float v16 = v8 - (float)v10;
-    v16 = (v16 < 0.0) ? 0.0 : (v16 > 1.0 ? 1.0 : v16);
-
-    float v17 = v8 - (float)v10;
-    v17 = (v17 < 0.0) ? 0.0 : (v17 > 1.0 ? 1.0 : v17);
-
-    int v18 = 4 * v10;
-
-    *outX = (float)(*(float*)(a5 + v18) * (float)(1.0 - v16)) + (float)(*(float*)(a5 + 4 * v14) * v16);
-    *outY = (float)(*(float*)(a4 + 4 * v11) * (float)(1.0 - v17)) + (float)(*(float*)(a4 + 4 * v15) * v17);
-
-    if (v7 < 0.0f)
-        *outX = -*outX;
-    if (v6 < 0.0f)
-        *outY = -*outY;
-}
-
-void GetStickData2(int a1, float* outX, float* outY, int a4, int a5)
-{
-    bCameraRelated = 1;
-    GetStickData(a1, outX, outY, a4, a5);
-    bCameraRelated = 0;
-}
-
-injector::hook_back<int(int, int, double)> sub_89DB34C;
-int sub_89DB34CHook(int a1, int a2, double a3)
-{
-    bCameraRelated = 1;
-    int r = sub_89DB34C.fun(a1, a2, a3);
-    bCameraRelated = 0;
-    bCameraMode = *(int*)(*(int*)(*(int*)(*(int*)(a1 + 4) + 60) + 660) + 1212);
-    return r;
-}
-
-int sub_89DB34CHook2(int a1, int a2, double a3)
-{
-    bCameraRelated = 0;
-    int r = sub_89DB34C.fun(a1, a2, a3);
-    bCameraRelated = 0;
-    bCameraMode = *(int*)(*(int*)(*(int*)(*(int*)(a1 + 4) + 60) + 660) + 1212);
-    return r;
-}
-
-injector::hook_back<void(int a1, float* a2)> sub_891A188;
-void sub_891A188Hook(int a1, float* a2)
-{
-    sub_891A188.fun(a1, a2);
-
-    //a2[0] = a2[0];
-    //a2[1] = gRSy;
-    a2[2] = gLSx;
-    a2[3] = -gRSx;
-}
-
-int UnthrottleEmuDuringLoading = 0;
-
-int sceKernelSetEventFlagHook(SceUID evid, u32 bits)
-{
-    UnthrottleEmuEnable();
-    return sceKernelSetEventFlag(evid, bits);
-}
-
-int sceKernelClearEventFlagHook(SceUID evid, u32 bits)
-{
-    UnthrottleEmuDisable();
-    return sceKernelClearEventFlag(evid, bits);
-}
-
-uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
-{
-    return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
-}
-
-int SkipIntro = 0;
-int DualAnalogPatch = 0;
-float fFOVFactor = 0.0f;
-
-uintptr_t dword_8C877CC;
-injector::hook_back<float(int a1)> sub_88851DC;
-float sub_88851DC_hook(int a1)
-{
-    return -(gRSy) * sub_88851DC.fun(a1);
-}
-injector::hook_back<float(int a1, float a2, float* a3, float* a4)> sub_888A12C;
-float sub_888A12C_hook(int a1, float a2, float* a3, float* a4)
-{
-    float fRSx = gRSx / 10.0f;
-    float fRSy = gRSy / 10.0f;
-
-    if (*(uint8_t*)(*(uint32_t*)dword_8C877CC + 49)) // y inv
-    {
-        fRSy = -fRSy;
-    }
-
-    float sens = sub_88851DC.fun(a1);
-
-    float y = *(float*)(a1 + 208) + -(fRSy * sens);
-
-
-    if (y > 0.921875f)
-        y = 0.921875f;
-    else if (y < -1.3f)
-        y = -1.3f;
-
-    float f26 = *(float*)(a1 + 212) + -(fRSx * sens);
-
-    asm volatile ("lw $a1,  %[x]" ::[x] "m" (f26));
-    asm volatile ("mtc1 $a1, $f26");
-
-    return y;
-}
-
-float sub_8A79B24(float* a1, float a2)
-{
-    float result = a1[3];
-    float diff1 = a1[4] - result;
-    float diff2 = a1[2] - result;
-    a1[4] = result;
-    float prod1 = a1[1] * diff1;
-    float prod2 = *a1 * diff2;
-    if (fabsf(prod1) < fabsf(prod2))
-    {
-        result += a2 * (prod1 + prod2);
-        a1[3] = result;
-    }
+int Sample(SceCtrlData* samples, int count) {
+    const int result = sceCtrlPeekBufferPositive(samples, count);
+    if (result > 0 && samples) {
+        const auto& pad = samples[0];
+        rightStick = {Axis(pad.Rsrv[0]), Axis(pad.Rsrv[1])};
+        leftStick = {Axis(pad.Lx), Axis(pad.Ly)};
+    } else { rightStick = {}; leftStick = {}; }
     return result;
 }
-
-injector::hook_back<void(float* a1, float a2)> sub_88871B4;
-void sub_88871B4_hook(float* a1, float a2)
-{
-    int i = 0;
-    float* v4 = a1;
-    do
-    {
-        if (i == 2) // smoothing for default cam
-            a1[198] = 1.0f;
-        else
-            a1[198] = sub_8A79B24(v4, a2);
-        ++i;
-        v4 += 6;
-        ++a1;
-    } while (i < 33);
+float Response(float value, const float* table) {
+    const float magnitude = console::bounded(std::fabs(value), 0, 1, 0) * 20;
+    unsigned index = unsigned(magnitude);
+    if (index > 19) index = 19;
+    const unsigned next = index < 19 ? index + 1 : 19;
+    const float fraction = console::bounded(magnitude - float(index), 0, 1, 0);
+    const float result = table[index] + (table[next] - table[index]) * fraction;
+    return value < 0 ? -result : result;
 }
-
-float* flt_8CCA2C0;
-void sub_888717C_hook(int a1, float* a2)
-{
-    if (fFOVFactor)
-    {
-        float* defCamData = &flt_8CCA2C0[33 * 0];
-        defCamData[1] = 22.0f * fFOVFactor;
+void Curve(int object, float* vertical, float* horizontal, const float* horizontalTable, const float* verticalTable) {
+    console::Point input = rightStick;
+    if (!cameraRelated) {
+        const auto device = *reinterpret_cast<const uintptr_t*>(*reinterpret_cast<const uintptr_t*>(object) + 104);
+        input = {*reinterpret_cast<const float*>(device + 280), *reinterpret_cast<const float*>(device + 284)};
     }
-
-    int v4 = 0;
-    float* v5 = a2;
-    do
-    {
-        ++v4;
-        *(float*)(a1 + 8) = *v5;
-        a1 += 24;
-        ++v5;
-    } while (v4 < 33);
+    *vertical = Response(-input.y, verticalTable);
+    *horizontal = Response(input.x, horizontalTable);
 }
-
-int OnModuleStart() 
-{
-    SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
-    DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
-    UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
-    fFOVFactor = inireader.ReadFloat("MAIN", "FOVFactor", 0.0f);
-    if (fFOVFactor < 0.0f)
-        fFOVFactor = 0.0f;
-    if (fFOVFactor > 2.5f)
-        fFOVFactor = 2.5f;
-
-    if (SkipIntro)
-    {
-        //"HealthWarningScreen"
-        uintptr_t ptr_88950F4 = pattern.get(0, "18 00 04 8E ? ? ? ? 01 00 06 34 ? ? ? ? ? ? ? ? ? ? ? ? 18 00 04 8E", -8);
-        injector::MakeNOP(ptr_88950F4);
-        //"SCEScreen"
-        uintptr_t ptr_8895108 = pattern.get(0, "18 00 04 8E 01 00 06 34 ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00", -12);
-        injector::MakeNOP(ptr_8895108);
-        //"MovieScreen"
-        uintptr_t ptr_889511C = pattern.get(0, "00 00 00 00 ? ? ? ? 18 00 04 8E ? ? ? ? 01 00 06 34 ? ? ? ? ? ? ? ? 18 00 04 8E ? ? ? ? 01 00 06 34 ? ? ? ? ? ? ? ? 80 3F 04 3C", -12);
-        injector::MakeNOP(ptr_889511C);
-        //"USNScreen"
-        uintptr_t ptr_889513C = pattern.get(0, "18 00 04 8E ? ? ? ? 01 00 06 34 ? ? ? ? ? ? ? ? 80 3F 04 3C", -8);
-        injector::MakeNOP(ptr_889513C);
-    }
-    
-    if (DualAnalogPatch)
-    {
-        // Grab Right Stick data
-        uintptr_t ptr_8A7A6F8 = pattern.get(0, "01 00 05 34 04 00 A5 8F 10 00 A4 30", -4);
-        injector::MakeCALL(ptr_8A7A6F8, sceCtrlPeekBufferPositiveHook);
-
-        uintptr_t ptr_8A7A834 = pattern.get(0, "08 00 A4 93 00 00 4C E6", -4);
-        injector::WriteInstr(ptr_8A7A834, b(5));
-
-        // Movement
-        uintptr_t ptr_89D9978 = pattern.get(0, "25 28 A0 03 25 20 00 02 06 A3 00 46", -4);
-        sub_89DB34C.fun = injector::MakeCALL(ptr_89D9978, sub_89DB34CHook2).get();
-        uintptr_t ptr_89DBB7C = pattern.get(0, "25 28 A0 03 04 00 05 8E", -4);
-
-        // Look
-        sub_89DB34C.fun = injector::MakeCALL(ptr_89DBB7C, sub_89DB34CHook).get();
-        uintptr_t ptr_89DAA64 = pattern.get(0, "25 28 A0 03 ? ? ? ? 00 00 00 00 04 00 04 8E", -4);
-        sub_89DB34C.fun = injector::MakeCALL(ptr_89DAA64, sub_89DB34CHook).get();
-
-        // Movement
-        uintptr_t ptr_89DB5BC = pattern.get(0, "25 28 00 02 03 00 15 34", -4);
-        sub_891A188.fun = injector::MakeCALL(ptr_89DB5BC, sub_891A188Hook).get();
-        uintptr_t ptr_89DB5D4 = pattern.get(0, "25 28 00 02 00 00 15 34", -4);
-        sub_891A188.fun = injector::MakeCALL(ptr_89DB5D4, sub_891A188Hook).get();
-
-        // DPadUP camera mode
-        uintptr_t ptr_89DBD4C = pattern.get(0, "25 40 40 00 ? ? ? ? 25 20 40 02", -4);
-        injector::MakeCALL(ptr_89DBD4C, GetStickData2);
-
-        // Custom camera movement
-        uintptr_t ptr_88877D4 = pattern.get(0, "00 00 BA E7 25 20 00 02", -4);
-        sub_888A12C.fun = injector::MakeCALL(ptr_88877D4 + 12, sub_888A12C_hook).get();
-
-        uintptr_t ptr_88877F0 = pattern.get(0, "00 00 BA C7 01 00 04 34", -0);
-        injector::WriteInstr(ptr_88877F0, swc1(f26, sp, 0));
-
-        // Cam smoothing disable
-        uintptr_t ptr_8887758 = pattern.get(0, "06 A3 00 46 38 04 11 26", -4);
-        sub_88871B4.fun = injector::MakeCALL(ptr_8887758, sub_88871B4_hook).get();
-
-        // FOV
-        uintptr_t ptr_888773C = pattern.get(0, "20 01 16 26", -8);
-        flt_8CCA2C0 = (float*)GetAbsoluteAddress(ptr_888773C, 0, 4);
-
-        uintptr_t ptr_888774C = pattern.get(0, "25 20 C0 02 25 20 C0 02 ? ? ? ? 06 A3 00 46", -4);
-        injector::MakeCALL(ptr_888774C, sub_888717C_hook);
-
-        // Binoculars cam RSy support
-        uintptr_t ptr_89DAA84 = pattern.get(0, "87 65 00 46", -4);
-        sub_88851DC.fun = injector::MakeCALL(ptr_89DAA84, sub_88851DC_hook).get();
-        injector::MakeNOP(ptr_89DAA84 + 8);
-
-        uintptr_t ptr_89DAA90 = pattern.get(0, "31 00 84 90 ? ? ? ? 02 A5 00 46", -8);
-        dword_8C877CC = (uintptr_t)GetAbsoluteAddress(ptr_89DAA90, 0, 4);
-    }
-
-    if (UnthrottleEmuDuringLoading)
-    {
-        uintptr_t ptr_881AB4C = pattern.get(0, "01 00 05 34 ? ? ? ? 25 20 40 00 ? ? ? ? ? ? ? ? ? ? ? ? 25 28 00 00", -4);
-        injector::MakeCALL(ptr_881AB4C, sceKernelSetEventFlagHook);
-        uintptr_t ptr_881AC38 = pattern.get(0, "01 00 05 34 ? ? ? ? 25 20 40 00 00 00 BF 8F", -4);
-        injector::MakeCALL(ptr_881AC38, sceKernelSetEventFlagHook);
-        uintptr_t ptr_881AD1C = pattern.get(0, "25 28 00 00 ? ? ? ? 25 20 40 00 ? ? ? ? ? ? ? ? ? ? ? ? 01 00 14 34", -4);
-        injector::MakeCALL(ptr_881AD1C, sceKernelClearEventFlagHook);
-    }
-
-    sceKernelDcacheWritebackAll();
-    sceKernelIcacheClearAll();
-
-    return 0;
+int ProcessMovement(int object, float* output, float delta) {
+    CameraScope scope(false); return process.fun(object, output, delta);
 }
-
-void SetModuleGP()
-{
-    SceUID modules[10];
-    int count = 0;
-    int result = 0;
-    if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0) {
-        int i;
-        SceKernelModuleInfo info;
-        for (i = 0; i < count; ++i) {
-            info.size = sizeof(SceKernelModuleInfo);
-            if (sceKernelQueryModuleInfo(modules[i], &info) < 0) {
-                continue;
-            }
-
-            if (strcmp(info.name, MODULE_NAME) == 0)
-            {
-                injector::SetGP((void*)info.text_addr);
-                injector::SetModuleBaseAddress(info.text_addr, info.text_size);
-            }
-        }
+int ProcessCamera(int object, float* output, float delta) {
+    CameraScope scope(true); return process.fun(object, output, delta);
+}
+void Movement(int object, float* output) {
+    movement.fun(object, output);
+    if (!cameraRelated) { output[2] = leftStick.x; output[3] = -rightStick.x; }
+}
+void CameraCurve(int object, float* vertical, float* horizontal, const float* horizontalTable, const float* verticalTable) {
+    CameraScope scope(true); Curve(object, vertical, horizontal, horizontalTable, verticalTable);
+}
+void Smooth(float* values, float delta) {
+    smooth.fun(values, delta);
+    values[200] = 1.0f; // Default camera's native smoothing coefficient, index 2.
+}
+void Parameters(int destination, float* values) {
+    if (fovFactor && cameraParameters) cameraParameters[1] = 22.0f * fovFactor;
+    setParameters.fun(destination, values);
+}
+int SetEvent(SceUID event, u32 bits) { Unthrottle(true); return sceKernelSetEventFlag(event, bits); }
+int ClearEvent(SceUID event, u32 bits) { Unthrottle(false); return sceKernelClearEventFlag(event, bits); }
+// Read on the plugin's own thread: Install also runs inside the loader's
+// sceKernelStartModule call, where newlib's number parsing (strtol/strtod) was
+// found to intermittently crash PPSSPP's JIT (SOCOM FTB2 EU loader).
+struct Options { float fov; bool skipIntro, dualAnalog, smoothing, unthrottle; } options;
+void ReadOptions() {
+    options.fov = inireader.ReadFloat("MAIN", "FOVFactor", 0);
+    options.skipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    options.dualAnalog = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1) != 0;
+    options.smoothing = inireader.ReadInteger("MAIN", "DisableCameraSmoothing", 1) != 0;
+    options.unthrottle = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1) != 0;
+}
+int Install() {
+    if (installed || !Begin()) return installed ? 0 : -1;
+    fovFactor = console::bounded(options.fov, 0, 2.5f, 0);
+    if (options.skipIntro)
+        for (auto site : {sites::ptr_88950F4(), sites::ptr_8895108(), sites::ptr_889511C(), sites::ptr_889513C()}) injector::MakeNOP(site);
+    if (options.dualAnalog) {
+        injector::MakeCALL(sites::ptr_8A7A6F8(), Sample);
+        injector::WriteMemory<uint32_t>(sites::ptr_8A7A834(), 0x10000005);
+        process.fun = injector::MakeCALL(sites::ptr_89D9978(), ProcessMovement).get();
+        process.fun = injector::MakeCALL(sites::ptr_89DBB7C(), ProcessCamera).get();
+        process.fun = injector::MakeCALL(sites::ptr_89DAA64(), ProcessCamera).get();
+        movement.fun = injector::MakeCALL(sites::ptr_89DB5BC(), Movement).get();
+        movement.fun = injector::MakeCALL(sites::ptr_89DB5D4(), Movement).get();
+        const auto curveCall = sites::ptr_89DBD4C();
+        const auto nativeCurve = injector::GetBranchDestination(curveCall).as_int();
+        curve = safetymips::create_inline(nativeCurve, Curve);
+        injector::MakeCALL(curveCall, CameraCurve);
+        const auto sensitivityCall = sites::ptr_89DAA84();
+        sensitivity.fun = injector::GetBranchDestination(sensitivityCall).get();
+        preferences = Absolute(sites::ptr_89DAA90());
+        // Keep binocular sensitivity native; substitute the actual camera axis
+        // after its original NEG.S, without touching the other stick's movement.
+        static SafetyMipsMid binocular;
+        // Neither callback nor the native sensitivity getter (a leaf without VFPU
+        // code) touches the VFPU. Saving VFPU state would restore the prefix
+        // registers before returning, making PPSSPP's JIT drop its default-prefix
+        // assumption for the whole session.
+        safetymips::Options scalar; scalar.preserve = PSP_HOOK_SAVE_FPU;
+        binocular = safetymips::create_mid(sensitivityCall + 8, [](SafetyMipsContext& regs) { regs.f22 = -rightStick.y; }, scalar);
+        const auto cameraSite = sites::ptr_88877D4();
+        camera = safetymips::create_mid(cameraSite + 48, [](SafetyMipsContext& regs) {
+            const auto object = uintptr_t(regs.s0);
+            if (*reinterpret_cast<const int*>(object + 1212) != 0 || *reinterpret_cast<const uint8_t*>(object + 1284)) return;
+            const float gain = sensitivity.fun(int(object)) * console::bounded(regs.f20, 0, 0.2f, 1.0f / 30.0f) * 3.0f;
+            float vertical = rightStick.y;
+            const auto options = preferences ? *reinterpret_cast<const uintptr_t*>(preferences) : 0;
+            if (options && *reinterpret_cast<const uint8_t*>(options + 49)) vertical = -vertical;
+            regs.f26 = *reinterpret_cast<const float*>(object + 212) - rightStick.x * gain;
+            const float pitch = console::bounded(*reinterpret_cast<const float*>(object + 208) - vertical * gain, -1.3f, 0.921875f, 0);
+            *reinterpret_cast<float*>(uintptr_t(regs.sp) + 4) = pitch;
+        }, scalar);
+        if (options.smoothing)
+            smooth.fun = injector::MakeCALL(sites::ptr_8887758(), Smooth).get();
+        cameraParameters = reinterpret_cast<float*>(Absolute(sites::ptr_888773C()));
+        setParameters.fun = injector::MakeCALL(sites::ptr_888774C(), Parameters).get();
     }
-}
-
-int sceKernelStartModuleHook(SceUID modid, SceSize argsize, void* argp, int* status, SceKernelSMOption* option)
-{
-    int r = sceKernelStartModule(modid, argsize, argp, status, option);
-    SceKernelModuleInfo info;
-    info.size = sizeof(SceKernelModuleInfo);
-    if (sceKernelQueryModuleInfo(modid, &info) >= 0)
-    {
-        if (strcmp(info.name, MODULE_NAME_INTERNAL) == 0)
-        {
-            SetModuleGP();
-            injector::SetGameBaseAddress(info.text_addr, info.text_size);
-            pattern.SetGameBaseAddress(info.text_addr, info.text_size);
-            inireader.SetIniPath(INI_PATH);
-            logger.SetPath(LOG_PATH);
-            OnModuleStart();
-        }
+    if (options.unthrottle) {
+        injector::MakeCALL(sites::ptr_881AB4C(), SetEvent);
+        injector::MakeCALL(sites::ptr_881AC38(), SetEvent);
+        injector::MakeCALL(sites::ptr_881AD1C(), ClearEvent);
     }
-    return r;
+    const int result = Finish(); installed = result == 0;
+    return result;
 }
-
-int PSPLoaderHandler()
-{
-    uintptr_t ptr_880438C = pattern.get(0, "25 40 00 00 ? ? ? ? 28 00 A2 AF", -4);
-    injector::MakeCALL(ptr_880438C, sceKernelStartModuleHook);
-    return 0;
-}
-
-int module_start(SceSize args, void* argp)
-{
-    if (injector::InitializeRuntime() != PSP_HOOK_OK) return -1;
-    if (sceIoDevctl("kemulator:", 0x00000003, NULL, 0, NULL, 0) == 0) {
-        SceUID modules[10];
-        int count = 0;
-        int result = 0;
-        if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0) {
-            int i;
-            SceKernelModuleInfo info;
-            for (i = 0; i < count; ++i) {
-                info.size = sizeof(SceKernelModuleInfo);
-                if (sceKernelQueryModuleInfo(modules[i], &info) < 0) {
-                    continue;
-                }
-
-                if (strcmp(info.name, MODULE_NAME_INTERNAL2) == 0)
-                {
-                    injector::SetGameBaseAddress(info.text_addr, info.text_size);
-                    pattern.SetGameBaseAddress(info.text_addr, info.text_size);
-                    //inireader.SetIniPath(INI_PATH);
-                    //logger.SetPath(LOG_PATH);
-                    return PSPLoaderHandler();
-                }
-                else if (strcmp(info.name, MODULE_NAME) == 0)
-                {
-                    injector::SetModuleBaseAddress(info.text_addr, info.text_size);
-                }
-            }
-        }
+int StartModule(SceUID id, SceSize size, void* args, int* status, SceKernelSMOption* start) {
+    // Patch the loaded (relocated) game before any of its threads run.
+    SceKernelModuleInfo info{}; info.size = sizeof(info);
+    if (sceKernelQueryModuleInfo(id, &info) >= 0 && std::strcmp(info.name, "FireTeamBravo3") == 0) {
+        Attach(info); Install();
     }
-    return 0;
+    return sceKernelStartModule(id, size, args, status, start);
 }
-} // extern "C"
+}
+extern "C" int module_start(SceSize, void*) {
+    constexpr auto ini = "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.ini";
+    constexpr auto log = "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.log";
+    if (Start("FireTeamBravo3", ini, log)) { ReadOptions(); return Install(); }
+    if (!Start("SocomTacticsLoader", ini, log) || !Begin()) return 0;
+    ReadOptions();
+    injector::MakeCALL(sites::ptr_880438C(), StartModule);
+    return Finish();
+}

@@ -1,6 +1,8 @@
 {
   "sources": [
     "main.cpp",
+    "Stories.cpp",
+    "TrueCrime.cpp",
     "../../external/injector/include/ps2/memalloc.c",
     "../../external/injector/include/ps2/patterns.c",
     "../../external/injector/include/ps2/injector.c",
@@ -12,6 +14,7 @@
     "-fno-exceptions",
     "-fno-rtti",
     "-fno-strict-aliasing",
-    "-fno-threadsafe-statics"
+    "-fno-threadsafe-statics",
+    "-ffp-contract=off"
   ]
 }

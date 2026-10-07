@@ -1,10 +1,20 @@
 {
   "sources": [
     "main.cpp",
-    "../../external/injector/include/ps2/patterns.c"
+    "../../external/injector/include/ps2/memalloc.c",
+    "../../external/injector/include/ps2/patterns.c",
+    "../../external/injector/include/ps2/injector.c",
+    "../../external/injector/include/ps2/mips.c"
   ],
   "output": "../../data/GTAVCS.PCSX2F.ImVehLM/PLUGINS/GTAVCS.PCSX2F.ImVehLM.elf",
   "cxx_flags": [
+    "-std=gnu++17",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-strict-aliasing",
     "-fno-threadsafe-statics"
+  ],
+  "cflags": [
+    "-ffp-contract=off"
   ]
 }

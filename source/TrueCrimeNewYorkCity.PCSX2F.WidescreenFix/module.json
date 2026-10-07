@@ -1,7 +1,8 @@
 {
   "sources": [
     "main.cpp",
-    "../../external/injector/include/ps2/log.c",
+    "Hud.cpp",
+    "Timing.cpp",
     "../../external/injector/include/ps2/memalloc.c",
     "../../external/injector/include/ps2/patterns.c",
     "../../external/injector/include/ps2/injector.c",
@@ -16,5 +17,8 @@
     "-fno-rtti",
     "-fno-strict-aliasing",
     "-fno-threadsafe-statics"
+  ],
+  "cflags": [
+    "-ffp-contract=off"
   ]
 }

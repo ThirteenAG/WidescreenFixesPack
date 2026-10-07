@@ -1,0 +1,97 @@
+#pragma once
+#include "Lights.hpp"
+
+namespace imvehlm {
+// Vehicle model ids and body textures match the PSP release (checked at runtime).
+inline constexpr int FirstModel = 130;
+inline constexpr unsigned CacheCount = 53;
+inline constexpr Model models[] = {
+    {"ferrarif3558bit128", 0}, // 130
+    {"landstal8bit128", 1}, // 131
+    {"idaho8bit128", 2}, // 132
+    {"stinger8bit128", 3}, // 133
+    {"linerun8bit128", 4}, // 134
+    {"peren8bit128", 5}, // 135
+    {"sentinel8bit128", 6}, // 136
+    {"patriot8bit128", 7}, // 137
+    {"firetruk8bit128", 8}, // 138
+    {"trash8bit128", 9}, // 139
+    {"stretch8bit128", 10}, // 140
+    {"mananab8bit128", 11}, // 141
+    {"infernus8bit128", 12}, // 142
+    {"blista8bit128", 13}, // 143
+    {"pony8bit128", 14}, // 144
+    {"mule8bit128", 15}, // 145
+    {"cheetah8bit128", 16}, // 146
+    {"ambulan8bit128", 17}, // 147
+    {"police8bit128", 18}, // 148
+    {"moonbeam8bit128", 19}, // 149
+    {"esperanto8bit128", 20}, // 150
+    {"taxi8bit128", 21}, // 151
+    {"kuruma8bit128", 22}, // 152
+    {"bobcat8bit128", 23}, // 153
+    {"mrwhoop8bit128", 24}, // 154
+    {"bfinject8bit128", 25}, // 155
+    {"peren8bit128", 5}, // 156
+    {"police8bit128", 18}, // 157
+    {"enforcer8bit128", 26}, // 158
+    {"securica8bit128", 27}, // 159
+    {"banshee8bit128", 28}, // 160
+    {"bus8bit128", 29}, // 161
+    {"NA", -1}, // 162
+    {"armytruk8bit128", 30}, // 163
+    {"NA", -1}, // 164
+    {"coach8bit128", 31}, // 165
+    {"cabbie8bit128", 32}, // 166
+    {"stallion8bit128", 33}, // 167
+    {"rumpo8bit128", 34}, // 168
+    {"NA", -1}, // 169
+    {"mule8bit128", 15}, // 170
+    {"mule8bit128", 15}, // 171
+    {"mafia8bit128", 35}, // 172
+    {"yardie8bit128", 36}, // 173
+    {"yakuza8bit128", 37}, // 174
+    {"diablos8bit128", 38}, // 175
+    {"columb8bit128", 39}, // 176
+    {"rumpo8bit128", 34}, // 177
+    {"pony8bit128", 14}, // 178
+    {"flatbed4bit128", 40}, // 179
+    {"yankee8bit128", 41}, // 180
+    {"IJB_brg", 42}, // 181
+    {"pony8bit128", 14}, // 182
+    {"rumpo8bit128", 34}, // 183
+    {"pony8bit128", 14}, // 184
+    {"typhoon_128_interior", 43}, // 185
+    {"jm_firebirdintertior1256", 44}, // 186
+    {"lotus8bit128", 45}, // 187
+    {"armytruk8bit128", 30}, // 188
+    {"hotrod8bit128", 46}, // 189
+    {"sindaccoi8bit128", 47}, // 190
+    {"kuruma8bit128", 22}, // 191
+    {"NA", -1}, // 192
+    {"NA", -1}, // 193
+    {"NA", -1}, // 194
+    {"NA", -1}, // 195
+    {"NA", -1}, // 196
+    {"NA", -1}, // 197
+    {"NA", -1}, // 198
+    {"NA", -1}, // 199
+    {"NA", -1}, // 200
+    {"NA", -1}, // 201
+    {"freeway8bit128", 48}, // 202
+    {"pizzaboy8bit128", 49}, // 203
+    {"pizzaboy8bit128", 49}, // 204
+    {"IJB_sportbike8bit128", 50}, // 205
+    {"faggio8bit128", 51}, // 206
+    {"freeway8bit128", 48}, // 207
+    {"freeway8bit128", 48}, // 208
+    {"sanchez8bit128", 52}, // 209
+    {"sanchez8bit128", 52}, // 210
+    {"NA", -1}, // 211
+    {"NA", -1}, // 212
+    {"NA", -1}, // 213
+    {"NA", -1}, // 214
+    {"NA", -1}, // 215
+    {"NA", -1}, // 216
+};
+}

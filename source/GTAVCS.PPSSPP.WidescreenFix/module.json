@@ -1,6 +1,13 @@
 {
   "sources": [
     "main.cpp",
+    "Camera.cpp",
+    "Controls.cpp",
+    "Drawing.cpp",
+    "Timing.cpp",
+    "Cheats.cpp",
+    "Menu.cpp",
+    "Aim.cpp",
     "../../external/injector/include/psp/injector.c",
     "../../external/injector/include/psp/log.c",
     "../../external/injector/include/psp/patterns.c",
@@ -14,7 +21,9 @@
   "exports": "exports.exp",
   "startup": "module_start",
   "defines": [
-    "PSP_HOOK_RAM_END=0x0DD00000"
+    "PSP_HOOK_RAM_END=0x0DD00000",
+    "MEM_CUSTOM_TOTAL_SIZE=131072",
+    "PSP_GAME_ABI_COMPAT"
   ],
   "libraries": [
     "-lpspsystemctrl_user",

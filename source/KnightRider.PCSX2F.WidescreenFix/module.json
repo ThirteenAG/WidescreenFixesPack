@@ -16,5 +16,8 @@
     "-fno-rtti",
     "-fno-strict-aliasing",
     "-fno-threadsafe-statics"
+  ],
+  "cflags": [
+    "-ffp-contract=off"
   ]
 }

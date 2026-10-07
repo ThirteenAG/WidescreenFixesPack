@@ -1,0 +1,1429 @@
+// Archived 2026-10-06 at the user's request. NOT A BUILD INPUT.
+// Extended vehicle-camera streaming/sky experiment: crashes, freezes and
+// poor frame time remain unresolved. This is a reference snapshot, not
+// release code. The active Camera.cpp retains the original camera toggle.
+// The .disabled suffix excludes this file from C++ source globs.
+
+// ===== SNAPSHOT: Streaming.cpp =====
+#include "Game.hpp"
+#include <algorithm>
+#include <cmath>
+#include <cstring>
+
+namespace ctw {
+namespace {
+// The PRX loader owns this memory. The game still manages its resource heap,
+// eviction, asynchronous reads and decompression; none of these buffers is
+// passed to a different allocator for disposal.
+constexpr unsigned cacheBytes = 32 * 1024 * 1024;
+constexpr unsigned loadingBufferBytes = 423936, loadingBuffers = 24;
+constexpr unsigned maxSectors = 169, modelSlots = 4096, nativeSlots = 2048;
+constexpr unsigned rendererLimit = 2048;
+alignas(1024) uint8_t resourceCache[cacheBytes];
+// Cached render geometry uses a different heap from compressed resources.
+// Keeping the original 1.8 MB heap defeats the larger streaming cache.
+alignas(1024) uint8_t geometryCache[12 * 1024 * 1024];
+// The stock 612 KB display lists sit immediately before other game data.
+// Extended scenery can overflow them even with free resource/geometry RAM.
+constexpr unsigned displayListBytes = 4 * 1024 * 1024;
+alignas(64) uint8_t displayLists[2][displayListBytes];
+injector::hook_back<int()> beginFrame;
+alignas(64) uint8_t loadingData[loadingBuffers][loadingBufferBytes];
+bool loadingUsed[loadingBuffers];
+alignas(16) uint8_t modelPool[modelSlots * 256], blockPool[192 * 104], proxies[4096 * 8];
+uintptr_t modelTable[modelSlots];
+struct alignas(4) Sector {
+    uint8_t native[1892];
+    uint16_t models[nativeSlots];
+    uint16_t visibility[nativeSlots];
+    unsigned boxCount;
+    bool assigned, mapped, ready;
+    unsigned blockedKeys;
+    uintptr_t address() { return reinterpret_cast<uintptr_t>(native); }
+    unsigned x() const { return native[14]; }
+    unsigned y() const { return native[15]; }
+};
+Sector sectors[maxSectors];
+struct ModelKey {
+    int x, y, z;
+    uint16_t resource, angle, attributes, users;
+};
+ModelKey keys[modelSlots - nativeSlots];
+constexpr unsigned hashBuckets = 4096;
+uint16_t hashHeads[hashBuckets], hashNext[modelSlots - nativeSlots];
+unsigned liveKeys, freeCursor, pollCursor, frame;
+Sector* currentSector;
+bool streaming;
+#ifndef NDEBUG
+bool diagnosticNativeGrid;
+#endif
+int drawDistance = 300;
+uintptr_t world;
+injector::hook_back<void(uintptr_t)> processWorld;
+injector::hook_back<int(uintptr_t)> unloadWorld, resetWorld, prepareWorld;
+injector::hook_back<uintptr_t(uintptr_t, unsigned)> modelLookup;
+injector::hook_back<int(uintptr_t, unsigned, unsigned)> modelRelease;
+SafetyMipsInline lookupHook, releaseHook;
+injector::hook_back<void(uintptr_t, uintptr_t)> releaseBuffer;
+injector::hook_back<void(uintptr_t)> linkModel;
+injector::hook_back<void(uintptr_t, uintptr_t)> addWaterModel;
+unsigned duplicateLinks;
+// The native swap manager has only 24 entries and no full-table check.
+// A streamed model can have several sector owners, so index its variant
+// state by the instance pool slot rather than registering each owner.
+struct Variant {
+    uintptr_t model;
+    uint8_t loading, active, group, mask;
+};
+Variant variants[modelSlots];
+uint16_t variantSlots[modelSlots];
+unsigned variantCount;
+using InitPool = int(*)(uintptr_t, const char*, void*, unsigned, unsigned);
+
+template<uintptr_t Site, class Function> Function Native() {
+    return reinterpret_cast<Function>(Address<Site>());
+}
+void LinkModel(uintptr_t model);
+bool ExtraModel(uintptr_t model) {
+    if (model < uintptr_t(modelPool) || model >= uintptr_t(modelPool) + sizeof(modelPool)) return false;
+    // Native and extra instances share the pool; ownership is identified by
+    // the expanded ID table, not the allocator's physical slot number.
+    for (unsigned i = nativeSlots; i < modelSlots; ++i) if (modelTable[i] == model) return true;
+    return false;
+}
+void AddWaterModel(uintptr_t manager, uintptr_t model) {
+    // This list feeds cached water intersections, not the main scenery
+    // buckets. Distant instances must not generate those expensive caches.
+    if (!ExtraModel(model)) addWaterModel.fun(manager, model);
+}
+Variant& ModelVariant(uintptr_t model) {
+    return variants[(model - reinterpret_cast<uintptr_t>(modelPool)) / 256];
+}
+bool VariantActive(uintptr_t manager, const Variant& entry) {
+    const auto selected = at<unsigned>(manager + 4 + 4 * entry.group);
+    return selected < 4 && (entry.mask & (1u << selected));
+}
+int RegisterVariant(uintptr_t manager, uintptr_t model) {
+    auto& entry = ModelVariant(model);
+    if (entry.model) return entry.active;
+    entry.model = model;
+    variantSlots[variantCount++] = uint16_t(&entry - variants);
+    const auto groups = at<uintptr_t>(manager);
+    const auto resource = at<unsigned>(model + 32);
+    for (unsigned group = 0; group < 24; ++group)
+        for (unsigned variant = 0; variant < 4; ++variant)
+            for (unsigned i = 0; i < 8; ++i)
+                if (at<uint16_t>(groups + group * 64 + variant * 16 + i * 2) == resource) {
+                    entry.group = uint8_t(group);
+                    entry.mask |= uint8_t(1u << variant);
+                }
+    if (VariantActive(manager, entry)) {
+        at<uint8_t>(manager + 292) = 1;
+        entry.loading = entry.active = 1;
+    } else {
+        auto& hidden = at<uint8_t>(model + 193);
+        if (!hidden++ && at<uintptr_t>(model)) Native<0x08AE51FC, void(*)(uintptr_t)>()(model);
+        Native<0x08A5E0F0, void(*)(uintptr_t, uintptr_t)>()(Address<0x08C1CDD0>(), model);
+    }
+    return entry.active;
+}
+void RemoveVariant(uintptr_t, uintptr_t model) {
+    auto& entry = ModelVariant(model);
+    if (!entry.model) return;
+    const auto slot = unsigned(&entry - variants);
+    for (unsigned i = 0; i < variantCount; ++i) if (variantSlots[i] == slot) {
+        variantSlots[i] = variantSlots[--variantCount];
+        break;
+    }
+    entry = {};
+}
+void ResetVariants(uintptr_t) {
+    for (unsigned i = 0; i < variantCount; ++i) variants[variantSlots[i]] = {};
+    variantCount = 0;
+}
+void SelectVariant(uintptr_t manager, unsigned group, unsigned selected) {
+    for (unsigned i = 0; i < variantCount; ++i) {
+        auto& entry = variants[variantSlots[i]];
+        if (entry.group == group && selected < 4 && (entry.mask & (1u << selected)) && !entry.active)
+            entry.loading = 1;
+    }
+    at<uint8_t>(manager + 292) = 1;
+    at<unsigned>(manager + 4 + group * 4) = selected;
+}
+void ProcessVariants(uintptr_t manager) {
+    if (!at<uint8_t>(manager + 292)) return;
+    bool pending = false;
+    for (unsigned i = 0; i < variantCount; ++i) {
+        auto& entry = variants[variantSlots[i]];
+        if (entry.loading) {
+            if (!Native<0x08AE50C4, int(*)(uintptr_t)>()(entry.model)) pending = true;
+            else entry.loading = 0;
+        }
+    }
+    if (pending) return;
+    at<uint8_t>(manager + 292) = 0;
+    for (unsigned i = 0; i < variantCount; ++i) {
+        auto& entry = variants[variantSlots[i]];
+        const bool active = VariantActive(manager, entry);
+        if (active == bool(entry.active)) continue;
+        entry.active = active;
+        auto& hidden = at<uint8_t>(entry.model + 193);
+        if (active) {
+            if (!--hidden) {
+                const auto resource = Native<0x089F72CC, uintptr_t(*)(uintptr_t, unsigned)>()(
+                    Address<0x08C109E0>(), at<unsigned>(entry.model + 32));
+                if (at<uint16_t>(at<uintptr_t>(resource) + 8) == 5) LinkModel(entry.model);
+            }
+            AddWaterModel(Address<0x08C1CDD0>(), entry.model);
+        } else {
+            if (!hidden++ && at<uintptr_t>(entry.model)) Native<0x08AE51FC, void(*)(uintptr_t)>()(entry.model);
+            Native<0x08A5E0F0, void(*)(uintptr_t, uintptr_t)>()(Address<0x08C1CDD0>(), entry.model);
+        }
+    }
+}
+void PollResources(uintptr_t manager) {
+    // The stock top-down camera drains all outstanding reads synchronously.
+    // Extra sectors must stay asynchronous so driving cannot wait for the
+    // entire distant resource queue in the middle of a frame.
+    if (!currentSector) Native<0x089F6E24, void(*)(uintptr_t)>()(manager);
+}
+void PollTextures(uintptr_t manager) {
+    if (!currentSector) Native<0x08A88CA8, void(*)(uintptr_t)>()(manager);
+}
+int ClipWaterGeometry(uintptr_t model, uintptr_t data) {
+    // The water pass has stack arrays for 3,096 triangle flags and 1,024
+    // crossing edges. Large distant meshes can exceed both limits when
+    // viewed from street level. Their normal scenery draw stays intact;
+    // omit only the unsafe cached water intersection.
+    if (at<uint16_t>(data + 6) > 3096 || at<uint16_t>(data + 18) > 1024) {
+#ifndef NDEBUG
+        static unsigned reports;
+        if (reports++ < 8) logger.WriteF("Oversize water mesh %08X resource %u triangles %u edges %u", unsigned(model),
+            at<unsigned>(model + 32), unsigned(at<uint16_t>(data + 6)), unsigned(at<uint16_t>(data + 18)));
+#endif
+        return 0;
+    }
+    return Native<0x089491A8, int(*)(uintptr_t, uintptr_t)>()(model, data);
+}
+void InitializeDisplayLists() {
+    const auto table = Address<0x08B58FBC>();
+    for (unsigned i = 0; i < 2; ++i) at<uintptr_t>(table + 4 * i) = uintptr_t(displayLists[i]);
+}
+int BeginFrame() {
+    const int result = beginFrame.fun();
+    const auto context = Address<0x08C11EC0>();
+    const auto base = at<uintptr_t>(context + 4);
+    // Native BeginFrame emits its initial commands and performs the normal
+    // double-buffer fence. Only the end of its command/vertex arena changes.
+    at<uintptr_t>(context + 8) = base + displayListBytes;
+    at<uintptr_t>(context + 12) = base + displayListBytes;
+    return result;
+}
+void LinkModel(uintptr_t model) {
+    if (at<uintptr_t>(model)) {
+        if (++duplicateLinks <= 8) logger.WriteF("Duplicate scenery link %08X refs %u/%u caller %08X extra %08X", unsigned(model),
+            unsigned(at<uint8_t>(model + 192)), unsigned(at<uint8_t>(model + 193)),
+            unsigned(uintptr_t(__builtin_return_address(0))), unsigned(uintptr_t(currentSector)));
+        return;
+    }
+    linkModel.fun(model);
+}
+struct Context {
+    Sector* previous;
+    Sector& sector;
+    unsigned resource = 0xFFFF;
+    uint16_t saved[nativeSlots];
+    uintptr_t Boxes() const {
+        // The resource heap can compact between calls, even while a sector
+        // owns a reference. Resolve the current data instead of retaining a
+        // pointer into the heap across frames or allocations.
+        const auto entry = Native<0x089F72CC, uintptr_t(*)(uintptr_t, unsigned)>()(Address<0x08C109E0>(), resource);
+        const auto data = at<uintptr_t>(at<uintptr_t>(entry) + 16);
+        const unsigned quadrant = sector.native[12];
+        return data + 72 + (quadrant ? at<unsigned>(data + 4 * quadrant - 4) : 0);
+    }
+    explicit Context(Sector& value) : previous(currentSector), sector(value) {
+        currentSector = &sector;
+        if (!sector.mapped) return;
+        // Native and extra sectors can share a decompressed resource. Their
+        // model instances differ, so their visibility refcounts must also
+        // remain independent, including while the native grid catches up.
+        resource = at<unsigned>(sector.address() + 8);
+        Native<0x089F7788, int(*)(uintptr_t, unsigned)>()(Address<0x08C109E0>(), resource);
+        const auto boxes = Boxes();
+        for (unsigned i = 0; i < sector.boxCount; ++i) {
+            auto& flag = at<uint16_t>(boxes + 16 * i + 14);
+            saved[i] = flag;
+            flag = sector.visibility[i];
+        }
+    }
+    ~Context() {
+        if (resource != 0xFFFF) {
+            const auto boxes = Boxes();
+            for (unsigned i = 0; i < sector.boxCount; ++i) {
+                auto& flag = at<uint16_t>(boxes + 16 * i + 14);
+                sector.visibility[i] = flag;
+                flag = saved[i];
+            }
+            // Keep the resource alive until its shared flags are restored.
+            Native<0x089F77F4, void(*)(uintptr_t, unsigned)>()(Address<0x08C109E0>(), resource);
+        }
+        currentSector = previous;
+    }
+};
+unsigned Hash(const ModelKey& key) {
+    unsigned h = unsigned(key.x) * 0x9E3779B1u ^ unsigned(key.y) * 0x85EBCA77u ^ unsigned(key.z);
+    h ^= unsigned(key.resource) * 0xC2B2AE3Du ^ unsigned(key.angle) * 31u ^ key.attributes;
+    return (h ^ (h >> 16)) & (hashBuckets - 1);
+}
+void DropMapping(Sector& sector) {
+    for (const auto slot : sector.models) {
+        if (slot < nativeSlots || slot >= modelSlots) continue;
+        const unsigned i = slot - nativeSlots;
+        auto& key = keys[i];
+        if (!key.users || --key.users) continue;
+        auto* link = &hashHeads[Hash(key)];
+        while (*link != 0xFFFF && *link != i) link = &hashNext[*link];
+        if (*link == i) *link = hashNext[i];
+        --liveKeys;
+    }
+    sector.mapped = false;
+}
+void Unlink(Sector& sector) {
+    const auto p = sector.address();
+    const auto next = at<uintptr_t>(p), previous = at<uintptr_t>(p + 4);
+    if (next) {
+        at<uintptr_t>(next + 4) = previous;
+        at<uintptr_t>(previous) = next;
+        at<uintptr_t>(p) = 0;
+    }
+}
+void Release(Sector& sector) {
+    if (!sector.assigned) return;
+    Unlink(sector);
+    {
+        Context context(sector);
+        Native<0x089F1F3C, void(*)(uintptr_t, unsigned)>()(sector.address(), 1);
+    }
+    if (sector.mapped) DropMapping(sector);
+    sector.assigned = sector.ready = false;
+}
+void ReleaseAll() {
+    for (auto& sector : sectors) Release(sector);
+    world = 0;
+}
+bool Equal(const ModelKey& a, const ModelKey& b) {
+    return a.x == b.x && a.y == b.y && a.z == b.z &&
+           a.resource == b.resource && a.angle == b.angle && a.attributes == b.attributes;
+}
+unsigned FindModel(const ModelKey& key) {
+    const auto bucket = Hash(key);
+    for (unsigned i = hashHeads[bucket]; i != 0xFFFF; i = hashNext[i])
+        if (Equal(keys[i], key)) return i + nativeSlots;
+    // Normal streaming can replace all nine nearby sectors after this call.
+    // Reserve the game's entire native instance pool, plus spare render slots,
+    // rather than checking only the current renderer count.
+    const auto header = at<uintptr_t>(world + 452);
+    const unsigned reserve = at<uint16_t>(header + 6) + 128u;
+    if (reserve >= rendererLimit || liveKeys >= rendererLimit - reserve) return modelSlots;
+    for (unsigned n = 0; n < modelSlots - nativeSlots; ++n) {
+        const unsigned i = (freeCursor + n) % (modelSlots - nativeSlots);
+        if (!keys[i].users && !modelTable[i + nativeSlots]) {
+            keys[i] = key;
+            hashNext[i] = hashHeads[bucket];
+            hashHeads[bucket] = uint16_t(i);
+            ++liveKeys;
+            freeCursor = (i + 1) % (modelSlots - nativeSlots);
+            return i + nativeSlots;
+        }
+    }
+    return modelSlots;
+}
+// Sector records reuse 11-bit instance IDs outside the original 3x3 window.
+// Give additional instances their own slots, keyed by their world transform.
+// Neighbouring sectors can retain the same object through native refcounts.
+bool MapModels(Sector& sector) {
+    if (sector.mapped) return true;
+    if (sector.blockedKeys && liveKeys >= sector.blockedKeys - 1) return false;
+    const auto resource = Native<0x089F72CC, uintptr_t(*)(uintptr_t, unsigned)>()(
+        Address<0x08C109E0>(), at<unsigned>(sector.address() + 8));
+    if (!Guest(resource, 12)) return false;
+    const auto block = at<uintptr_t>(resource);
+    if (!Guest(block, 104) || at<uint16_t>(block + 8) != 5) return false;
+    Native<0x089F18A4, int(*)(uintptr_t)>()(block);
+    if (!Native<0x08AE674C, int(*)(uintptr_t)>()(block + 24)) return false;
+    const auto data = at<uintptr_t>(block + 16);
+    if (!Guest(data, 60)) return false;
+    const unsigned quadrant = sector.native[12];
+    const auto header = data + 60 + (quadrant ? at<unsigned>(data + 4 * quadrant - 4) : 0);
+    if (!Guest(header, 12)) return false;
+    const unsigned count = at<uint16_t>(header), boxes = at<unsigned>(header + 4);
+    const auto records = header + 12 + 16 * boxes;
+    if (count > nativeSlots || boxes > nativeSlots || !Guest(header + 12, boxes * 16 + count * 12)) return false;
+    unsigned boxModels = 0;
+    for (unsigned i = 0; i < boxes; ++i) boxModels += at<uint16_t>(header + 12 + 16 * i + 12);
+    if (boxModels != count) return false;
+    std::fill(std::begin(sector.models), std::end(sector.models), uint16_t(0xFFFF));
+    std::fill(std::begin(sector.visibility), std::end(sector.visibility), uint16_t(0));
+    sector.boxCount = boxes;
+    sector.mapped = true; // Release also unwinds a partially built mapping.
+    for (unsigned i = 0; i < count; ++i) {
+        const auto record = records + 12 * i;
+        const unsigned encoded = at<uint16_t>(record), id = encoded & 0x7FF;
+        ModelKey key{
+            (int(sector.x()) * 60 - 3510) * 4096 + 32 * at<int16_t>(record + 6),
+            (int(sector.y()) * 60 - 2490) * 4096 + 32 * at<int16_t>(record + 8),
+            32 * at<int16_t>(record + 10), at<uint16_t>(record + 2),
+            at<uint16_t>(record + 4), uint16_t(encoded & 0xF800), 0
+        };
+        if (sector.models[id] != 0xFFFF) {
+            if (!Equal(keys[sector.models[id] - nativeSlots], key)) {
+                DropMapping(sector);
+                sector.blockedKeys = liveKeys + 1;
+                return false;
+            }
+            continue;
+        }
+        const auto slot = FindModel(key);
+        if (slot == modelSlots) {
+            DropMapping(sector);
+            sector.blockedKeys = liveKeys + 1;
+            return false;
+        }
+        ++keys[slot - nativeSlots].users;
+        sector.models[id] = uint16_t(slot);
+    }
+    return true;
+}
+unsigned Remap(unsigned id) {
+    if (currentSector && currentSector->mapped && id < nativeSlots)
+        if (currentSector->models[id] != 0xFFFF) return currentSector->models[id];
+    return id;
+}
+uintptr_t GetModel(uintptr_t object, unsigned id) { return modelLookup.fun(object, Remap(id)); }
+int ReleaseModel(uintptr_t object, unsigned id, unsigned visible) {
+    return modelRelease.fun(object, Remap(id), visible);
+}
+bool LoadingSlot() {
+    for (const auto used : loadingUsed) if (!used) return true;
+    return false;
+}
+bool NativeOwns(unsigned x, unsigned y) {
+    for (unsigned i = 0; i < 9; ++i) {
+        const auto p = world + 464 + 1892 * i;
+        if (at<uint16_t>(p + 16) != 0xFFFF && at<uint8_t>(p + 14) == x && at<uint8_t>(p + 15) == y)
+            return true;
+    }
+    return false;
+}
+bool ExtraOwns(unsigned x, unsigned y) {
+    for (const auto& sector : sectors)
+        if (sector.assigned && sector.x() == x && sector.y() == y) return true;
+    return false;
+}
+bool NativeReady(const Sector& sector) {
+    const auto p = world + 464 + 1892 * (3 * (sector.x() % 3) + sector.y() % 3);
+    if (at<uint8_t>(p + 13) != 1 || at<uint8_t>(p + 14) != sector.x() ||
+        at<uint8_t>(p + 15) != sector.y()) return false;
+    // A request or a decompressed sector is insufficient: the native model
+    // instances must actually hold their resources before removing extras.
+    for (unsigned id = 0; id < nativeSlots; ++id) {
+        const auto slot = sector.models[id];
+        if (slot == 0xFFFF) continue;
+        const auto model = modelTable[id];
+        const auto& key = keys[slot - nativeSlots];
+        if (!Guest(model, 256) || !at<uint8_t>(model + 192) ||
+            at<uint16_t>(model + 32) != key.resource ||
+            at<float>(model + 76) != key.x / 4096.0f ||
+            at<float>(model + 92) != key.y / 4096.0f ||
+            at<float>(model + 108) != key.z / 4096.0f) return false;
+    }
+    return true;
+}
+struct View {
+    float x, y, forwardX, forwardY, tangent;
+    explicit View(uintptr_t camera) {
+        x = at<int>(camera + 256) / 4096.0f;
+        y = at<int>(camera + 260) / 4096.0f;
+        forwardX = -at<int>(camera + 244) / 4096.0f;
+        forwardY = -at<int>(camera + 248) / 4096.0f;
+        const float length = std::hypot(forwardX, forwardY);
+        if (length > 0.01f) { forwardX /= length; forwardY /= length; }
+        tangent = std::clamp(float(at<int>(camera + 80)) / std::max(1, at<int>(camera + 84)) *
+                             at<int>(camera + 88) / 4096.0f, 0.2f, 4.0f);
+    }
+    float Distance(unsigned sx, unsigned sy) const {
+        const float dx = int(sx) * 60 - 3480 - x, dy = int(sy) * 60 - 2460 - y;
+        return dx * dx + dy * dy;
+    }
+    bool Contains(unsigned sx, unsigned sy, float margin) const {
+        const float dx = int(sx) * 60 - 3480 - x, dy = int(sy) * 60 - 2460 - y;
+        const float ahead = dx * forwardX + dy * forwardY;
+        const float side = std::abs(dx * forwardY - dy * forwardX);
+        return Distance(sx, sy) <= (drawDistance + margin) * (drawDistance + margin) &&
+               (Distance(sx, sy) < 90 * 90 || (ahead >= -margin && side <= ahead * tangent + margin));
+    }
+};
+void UpdateSectors(uintptr_t camera) {
+    const int cx = ((at<int>(camera + 256) + 3510 * 4096) / 4096) / 60;
+    const int cy = ((at<int>(camera + 260) + 2490 * 4096) / 4096) / 60;
+    const int radius = std::min(6, (drawDistance + 59) / 60);
+    const View view(camera);
+    for (auto& sector : sectors) {
+        if (sector.assigned && (std::abs(int(sector.x()) - cx) > radius ||
+            std::abs(int(sector.y()) - cy) > radius || !view.Contains(sector.x(), sector.y(), 90) ||
+            (sector.mapped && NativeReady(sector)))) Release(sector);
+    }
+    // Finish existing reads before adding more. Native ProcessWorld handles
+    // its nine sectors first; extra scenery cannot starve the nearby grid.
+    // Poll one unfinished sector per frame. Completed sectors never re-enter
+    // the native resource/texture loading loop.
+    for (unsigned n = 0; n < maxSectors; ++n) {
+        auto& sector = sectors[pollCursor++ % maxSectors];
+        if (!sector.assigned || sector.ready || (sector.blockedKeys && liveKeys >= sector.blockedKeys - 1)) continue;
+        if (MapModels(sector)) {
+            Context context(sector);
+            sector.ready = Native<0x089F3B90, int(*)(uintptr_t)>()(sector.address()) != 0;
+            if (sector.ready) Unlink(sector);
+        }
+        break;
+    }
+    for (unsigned i = 0; i < maxSectors; ++i) {
+        auto& sector = sectors[i];
+        if (!sector.assigned || !sector.mapped || sector.native[13] != 1) continue;
+        // Distant visibility work is spread over four frames.
+        if ((i & 3u) != (frame & 3u)) continue;
+        Context context(sector);
+        int offset[3]{(int(sector.x()) * 60 - 3510) * 4096 - at<int>(camera + 256),
+                      (int(sector.y()) * 60 - 2490) * 4096 - at<int>(camera + 260), -at<int>(camera + 264)};
+        Native<0x089F21D4, void(*)(uintptr_t, uintptr_t, const int*)>()(sector.address(), camera, offset);
+    }
+    // Reserve work for nearby and forward scenery rather than filling the
+    // renderer with sectors behind the camera. A wider retention margin
+    // avoids repeatedly unloading and reloading at the view edges.
+    if (++frame % 4) return;
+    unsigned pending = 0;
+    for (const auto& sector : sectors) if (sector.assigned && !sector.ready && !sector.blockedKeys) ++pending;
+    if (pending >= 4) return;
+    int bestX = -1, bestY = -1;
+    float bestDistance = 1.0e30f;
+    for (int dx = -radius; dx <= radius; ++dx) for (int dy = -radius; dy <= radius; ++dy) {
+            const int x = cx + dx, y = cy + dy;
+            if (x < 0 || x >= 118 || y < 0 || y >= 84 || NativeOwns(x, y) || ExtraOwns(x, y)) continue;
+            if (!view.Contains(x, y, 60) || view.Distance(x, y) >= bestDistance) continue;
+            if (Native<0x089F3B44, unsigned(*)(uintptr_t, unsigned, unsigned)>()(world, x, y) == 0xFFFF) continue;
+            bestX = x; bestY = y; bestDistance = view.Distance(x, y);
+    }
+    if (bestX >= 0) {
+            const unsigned x = unsigned(bestX), y = unsigned(bestY);
+            if (!LoadingSlot() || at<unsigned>(Address<0x08C1CDD0>() + 10260) >= rendererLimit) return;
+            const auto id = Native<0x089F3B44, unsigned(*)(uintptr_t, unsigned, unsigned)>()(world, x, y);
+            if (id == 0xFFFF) return;
+            for (auto& sector : sectors) if (!sector.assigned) {
+                std::memset(sector.native, 0, sizeof(sector.native));
+                at<unsigned>(sector.address() + 8) = 0xFFFF;
+                sector.assigned = true;
+                sector.ready = false;
+                sector.blockedKeys = 0;
+                Context context(sector);
+                Native<0x089F1D20, int(*)(uintptr_t, char, char, int16_t, uintptr_t, int)>()(
+                    sector.address(), char(x), char(y), int16_t(id), 0, 0);
+                // Do not put extra sectors on the native loading queue:
+                // their per-sector ID mapping must be active during loading.
+                return;
+            }
+            return;
+    }
+}
+void ProcessWorld(uintptr_t object) {
+    if (world && world != object) ReleaseAll();
+    if (!ThirdPersonCamera()) ReleaseAll();
+    world = object;
+    processWorld.fun(object);
+    const auto player = Player();
+    const auto camera = player ? at<uintptr_t>(player + 3624) : 0;
+    if (ThirdPersonCamera() && Guest(camera, 324) && at<uintptr_t>(object + 17492)) {
+#ifndef NDEBUG
+        if (diagnosticNativeGrid) return;
+#endif
+        UpdateSectors(camera);
+    }
+}
+int UnloadWorld(uintptr_t object) { ReleaseAll(); return unloadWorld.fun(object); }
+int ResetWorld(uintptr_t object) { ReleaseAll(); return resetWorld.fun(object); }
+int PrepareWorld(uintptr_t object) { ReleaseAll(); return prepareWorld.fun(object); }
+void InitializeCache(uintptr_t, unsigned) {
+    Native<0x0893850C, void(*)(uintptr_t, void*, unsigned, unsigned)>()(
+        Address<0x08C11110>(), resourceCache, sizeof(resourceCache), 0);
+    Native<0x08938EA0, void(*)(uintptr_t, uintptr_t)>()(Address<0x08C11110>(), Address<0x089F6694>());
+}
+void InitializeGeometry(uintptr_t heap, void*, unsigned, unsigned flags) {
+    Native<0x0893850C, void(*)(uintptr_t, void*, unsigned, unsigned)>()(
+        heap, geometryCache, sizeof(geometryCache), flags);
+}
+int InitializeBlocks(uintptr_t pool, const char* name, unsigned, unsigned size, unsigned) {
+    return Native<0x089D480C, InitPool>()(pool, name, blockPool, size, 192);
+}
+int InitializeProxies(uintptr_t pool, const char* name, unsigned, unsigned size, unsigned) {
+    return Native<0x089D480C, InitPool>()(pool, name, proxies, size, 4096);
+}
+void* AllocateModels(void*, unsigned, unsigned, uintptr_t) { return modelPool; }
+int InitializeModels(uintptr_t pool, const char* name, void*, unsigned size, unsigned) {
+    return Native<0x089D480C, InitPool>()(pool, name, modelPool, size, modelSlots);
+}
+void* AllocateModelTable(unsigned) { std::memset(modelTable, 0, sizeof(modelTable)); return modelTable; }
+uintptr_t LoadingBuffer(uintptr_t object) {
+    // Preserve the four native ownership flags: ProcessWorld relies on them
+    // when deciding whether it is safe to recenter its 3x3 grid.
+    if (!currentSector) {
+        for (unsigned i = 0; i < 4; ++i) {
+            if (!at<uint8_t>(object + 16 + i)) {
+                at<uint8_t>(object + 16 + i) = 1;
+                return at<uintptr_t>(object + 4 * i);
+            }
+        }
+        return 0;
+    }
+    for (unsigned i = 0; i < loadingBuffers; ++i) if (!loadingUsed[i]) {
+        loadingUsed[i] = true;
+        return reinterpret_cast<uintptr_t>(loadingData[i]);
+    }
+    return 0;
+}
+void ReleaseBuffer(uintptr_t object, uintptr_t buffer) {
+    const auto first = reinterpret_cast<uintptr_t>(loadingData);
+    if (buffer >= first && buffer < first + sizeof(loadingData) &&
+        (buffer - first) % loadingBufferBytes == 0) {
+        loadingUsed[(buffer - first) / loadingBufferBytes] = false;
+    } else releaseBuffer.fun(object, buffer);
+}
+}
+void UpdateDrawDistance(uintptr_t camera) {
+    if (!streaming) return;
+    // The stock camera's far plane is 150 world units. Its near plane stays
+    // intact. Switching back restores the native value on the same camera.
+    const int far = (ThirdPersonCamera() ? drawDistance : 150) * 4096;
+    if (at<int>(camera + 96) != far) {
+        at<int>(camera + 96) = far;
+        at<uint8_t>(camera + 106) = 1;
+    }
+}
+void InstallSky();
+void InstallStreaming() {
+    if (!inireader.ReadInteger("MAIN", "Enable3rdPersonCamera", 1)) return;
+    drawDistance = std::clamp(inireader.ReadInteger("MAIN", "ThirdPersonDrawDistance", 300), 180, 360);
+    streaming = true;
+#ifndef NDEBUG
+    diagnosticNativeGrid = inireader.ReadInteger("DIAGNOSTICS", "NativeGridOnly", 0) != 0;
+#endif
+    std::fill(std::begin(hashHeads), std::end(hashHeads), uint16_t(0xFFFF));
+    injector::MakeCALL(Address<0x088D0B6C>(), InitializeCache);
+    injector::MakeCALL(Address<0x088D0FAC>(), InitializeGeometry);
+    injector::MakeCALL(Address<0x089F468C>(), InitializeBlocks);
+    injector::MakeCALL(Address<0x088D0814>(), InitializeProxies);
+    injector::MakeCALL(Address<0x089F2EEC>(), AllocateModels);
+    injector::MakeCALL(Address<0x089F2F08>(), InitializeModels);
+    injector::MakeCALL(Address<0x089F2F24>(), AllocateModelTable);
+    injector::MakeCALL(Address<0x089F4064>(), PollResources);
+    injector::MakeCALL(Address<0x089F4070>(), PollTextures);
+    injector::MakeCALL(Address<0x08948AAC>(), ClipWaterGeometry);
+    static SafetyMipsInline waterAdd;
+    waterAdd = safetymips::create_inline(Address<0x08A5E0B4>(), AddWaterModel);
+    addWaterModel.fun = waterAdd.original<void(*)(uintptr_t, uintptr_t)>();
+    static SafetyMipsInline displayInitialize, displayBegin;
+    displayInitialize = safetymips::create_inline(Address<0x0890D17C>(), InitializeDisplayLists);
+    displayBegin = safetymips::create_inline(Address<0x0890D1A0>(), BeginFrame);
+    beginFrame.fun = displayBegin.original<int(*)()>();
+    static SafetyMipsInline variantRegister, variantRemove, variantReset, variantSelect, variantProcess;
+    variantRegister = safetymips::create_inline(Address<0x088696F8>(), RegisterVariant);
+    variantRemove = safetymips::create_inline(Address<0x08869888>(), RemoveVariant);
+    variantReset = safetymips::create_inline(Address<0x088694EC>(), ResetVariants);
+    variantSelect = safetymips::create_inline(Address<0x088698C8>(), SelectVariant);
+    variantProcess = safetymips::create_inline(Address<0x08869514>(), ProcessVariants);
+    for (const auto site : {0x088D200Cu, 0x088D2148u, 0x08950568u, 0x08954418u,
+                           0x08956664u, 0x0895FC00u, 0x0896270Cu, 0x089893B4u})
+        processWorld.fun = injector::MakeCALL(nativeProfile.get(site), ProcessWorld).get();
+    // These three entry points cover area unloads, menu resets and cache resets.
+    static SafetyMipsInline unloadHook, resetHook, prepareHook;
+    unloadHook = safetymips::create_inline(Address<0x089F2D80>(), UnloadWorld);
+    unloadWorld.fun = unloadHook.original<int(*)(uintptr_t)>();
+    resetHook = safetymips::create_inline(Address<0x089F2E90>(), ResetWorld);
+    resetWorld.fun = resetHook.original<int(*)(uintptr_t)>();
+    prepareHook = safetymips::create_inline(Address<0x089F3070>(), PrepareWorld);
+    prepareWorld.fun = prepareHook.original<int(*)(uintptr_t)>();
+    lookupHook = safetymips::create_inline(Address<0x089F357C>(), GetModel);
+    modelLookup.fun = lookupHook.original<uintptr_t(*)(uintptr_t, unsigned)>();
+    releaseHook = safetymips::create_inline(Address<0x089F35F0>(), ReleaseModel);
+    modelRelease.fun = releaseHook.original<int(*)(uintptr_t, unsigned, unsigned)>();
+    static SafetyMipsInline bufferHook, bufferReleaseHook;
+    bufferHook = safetymips::create_inline(Address<0x089F30FC>(), LoadingBuffer);
+    bufferReleaseHook = safetymips::create_inline(Address<0x089F314C>(), ReleaseBuffer);
+    releaseBuffer.fun = bufferReleaseHook.original<void(*)(uintptr_t, uintptr_t)>();
+    static SafetyMipsInline linkHook;
+    safetymips::Options caller; caller.preserve_game_callees = false;
+    linkHook = safetymips::create_inline(Address<0x08AE51B8>(), LinkModel, caller);
+    linkModel.fun = linkHook.original<void(*)(uintptr_t)>();
+    InstallSky();
+}
+}
+
+// ===== SNAPSHOT: Sky.cpp =====
+#include "Game.hpp"
+#include <algorithm>
+#include <cmath>
+
+namespace ctw {
+namespace {
+injector::hook_back<void(uintptr_t, uint8_t, uint8_t, uint8_t, uint32_t, uint32_t)> clearWorld;
+struct Vertex { uint32_t colour; int16_t x, y; uint32_t z; };
+static_assert(sizeof(Vertex) == 12);
+uint32_t Blend(uint32_t a, uint32_t b, float t) {
+    uint32_t colour = 0xFF000000;
+    for (unsigned shift = 0; shift < 24; shift += 8) {
+        const auto value = unsigned(float((a >> shift) & 255) * (1 - t) + float((b >> shift) & 255) * t);
+        colour |= std::min(value, 255u) << shift;
+    }
+    return colour;
+}
+void ClearWorld(uintptr_t context, uint8_t colour, uint8_t stencil, uint8_t depth,
+                uint32_t fog, uint32_t z) {
+    clearWorld.fun(context, colour, stencil, depth, fog, z);
+    if (!ThirdPersonCamera() || !colour) return;
+    const auto player = Player();
+    const auto camera = player ? at<uintptr_t>(player + 3624) : 0;
+    if (!Guest(camera, 324)) return;
+    const float forwardZ = -float(at<int>(camera + 252)) / 4096.0f;
+    const float horizontal = std::sqrt(std::max(0.001f, 1 - forwardZ * forwardZ));
+    // Project the horizon using the same vertical field of view as the camera.
+    const float focal = 136.0f * float(at<int>(camera + 84)) / std::max(1, at<int>(camera + 80));
+    const int horizon = std::clamp(int(136 + focal * forwardZ / horizontal), 0, 272);
+    if (!horizon) return;
+    const unsigned brightness = ((fog & 255) + ((fog >> 8) & 255) + ((fog >> 16) & 255)) / 3;
+    const auto top = Blend(0xFF201408, 0xFFD09058, float(brightness) / 255.0f);
+    constexpr unsigned bands = 32, strips = 8, vertexCount = 2 * bands * strips;
+    const auto end = at<uintptr_t>(context + 12);
+    const auto start = (end - sizeof(Vertex) * vertexCount) & ~uintptr_t(15);
+    if (!Guest(start, sizeof(Vertex) * vertexCount) || start <= at<uintptr_t>(context) + 64) return;
+    at<uintptr_t>(context + 12) = start;
+    auto* vertices = reinterpret_cast<Vertex*>(start);
+    unsigned n = 0;
+    for (unsigned band = 0; band < bands; ++band) {
+        const int topY = horizon * band / bands, bottomY = horizon * (band + 1) / bands;
+        const float t = float(band + 1) / bands;
+        const auto c = Blend(top, fog, t * t);
+        for (unsigned strip = 0; strip < strips; ++strip) {
+            const int left = int(strip) * 64, right = std::min(left + 64, 480);
+            vertices[n++] = {c, int16_t(left), int16_t(topY), z};
+            vertices[n++] = {c, int16_t(right), int16_t(bottomY), z};
+        }
+    }
+    // GE clear mode changes only RGB here, preserving depth and stencil.
+    // The native primitive writer maintains its cached vertex address state.
+    auto emit = [context](uint32_t command) {
+        at<uint32_t>(at<uintptr_t>(context)) = command;
+        at<uintptr_t>(context) += 4;
+    };
+    emit(0xD3000101);
+    reinterpret_cast<void(*)(uintptr_t, unsigned, unsigned, unsigned, uintptr_t, uintptr_t)>(
+        Address<0x089100C0>())(context, 6, 0x80011C, vertexCount, 0, start);
+    emit(0xD3000000);
+}
+}
+void InstallSky() {
+    if (inireader.ReadInteger("MAIN", "ThirdPersonSky", 1))
+        clearWorld.fun = injector::MakeCALL(Address<0x089EFB80>(), ClearWorld).get();
+}
+}
+
+// ===== SNAPSHOT: Addresses.hpp =====
+#pragma once
+#include "../Shared/Console/NativeProfile.hpp"
+#include "../Shared/Console/PSP.hpp"
+namespace ctw {
+namespace profile_data {
+inline constexpr uint32_t radarWords[]={0x27BDFEF0u,0xAFB000E0u,0x00808025u,0xAFB100E4u,0xAFB200E8u,0xAFB300ECu,0xAFB400F0u,0xAFB500F4u,0xAFB600F8u,0xAFB700FCu};
+inline constexpr uint8_t radarMasks[]={0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words0[]={0x8FB00004u,0x8FBF0008u,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0x3C040000u,0x8C840000u,0x3C050000u,0x00042080u,0x24A50000u,0x00852021u,0xAFBF0000u};
+inline constexpr uint8_t masks0[]={0,0,0,0,0,1,1,1,0,1,0,0};
+inline constexpr uint32_t words1[]={0x00A42023u,0x00042C00u,0x27B20030u,0x00052C03u,0x0C000000u,0x02402025u,0x27A40050u,0x02402825u,0x0C000000u,0x02203025u,0x87A40050u,0x87A50052u};
+inline constexpr uint8_t masks1[]={0,0,0,0,2,0,0,0,2,0,0,0};
+inline constexpr uint32_t words2[]={0x8CC70000u,0x0087402Au,0x11000004u,0x00000000u,0xA2050008u,0x10000007u,0x92050008u,0x00872023u,0x24A50001u,0x28A70005u,0x14E0FFF5u,0x24C60004u};
+inline constexpr uint8_t masks2[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words3[]={0x8FB10004u,0x8FBF0008u,0x03E00008u,0x27BD0010u,0x27BDFFE0u,0xAFB10014u,0x3C110000u,0xAFB00010u,0x00808025u,0x26310000u,0xAFB20018u,0xAFBF001Cu};
+inline constexpr uint8_t masks3[]={0,0,0,0,0,0,1,0,0,1,0,0};
+inline constexpr uint32_t words4[]={0x8FB20018u,0x8FBF001Cu,0x03E00008u,0x27BD0020u,0x27BDFDF0u,0x3C070000u,0x90E70000u,0xAFB001ECu,0xAFB101F0u,0x00808025u,0x00A08825u,0xAFB201F4u};
+inline constexpr uint8_t masks4[]={0,0,0,0,0,1,1,0,0,0,0,0};
+inline constexpr uint32_t words5[]={0x00000000u,0x02001025u,0x8FB00000u,0x8FBF0004u,0x03E00008u,0x27BD0010u,0x27BDFFE0u,0xAFB00000u,0x00A08025u,0xAFB10004u,0xAFB20008u,0xAFB3000Cu};
+inline constexpr uint8_t masks5[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words6[]={0x8FB3000Cu,0x8FBF0010u,0x03E00008u,0x27BD0020u,0x27BDFFE0u,0xAFB00000u,0x00A08025u,0xAFB10004u,0xAFB20008u,0xAFB3000Cu,0xAFBF0010u,0x0C000000u};
+inline constexpr uint8_t masks6[]={0,0,0,0,0,0,0,0,0,0,0,2};
+inline constexpr uint32_t words7[]={0x8FB3000Cu,0x8FBF0010u,0x03E00008u,0x27BD0020u,0x27BDFFF0u,0xAFB00000u,0x00A08025u,0xAFB10004u,0xAFBF0008u,0x0C000000u,0x00808825u,0x1440000Bu};
+inline constexpr uint8_t masks7[]={0,0,0,0,0,0,0,0,0,2,0,0};
+inline constexpr uint32_t words8[]={0x8C840074u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0x00853021u,0x80C60078u,0xAFB10004u,0xAFB20008u,0x34120000u,0x2407FFFFu,0x00808825u};
+inline constexpr uint8_t masks8[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words9[]={0x8FB0002Cu,0x8FBF0030u,0x03E00008u,0x27BD0040u,0x27BDFFE0u,0xAFB00000u,0xAFB10004u,0xAFB3000Cu,0x00A08025u,0x00808825u,0x30D300FFu,0xAFB20008u};
+inline constexpr uint8_t masks9[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words10[]={0x8FA400ACu,0x8FA400ACu,0x8FA500B0u,0xAEC40100u,0x8FA400B4u,0xAEC50104u,0xAEC40108u,0x34041000u,0x8FA60074u,0x34056000u,0xAFA400E0u,0x00C5202Au};
+inline constexpr uint8_t masks10[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words11[]={0xAFB20008u,0xAFB40010u,0xAFB50014u,0xAFBF0018u,0x0C000000u,0x00000000u,0x34150000u,0x02B0202Au,0x1080001Eu,0x3C140000u,0x3C120000u,0x26940000u};
+inline constexpr uint8_t masks11[]={0,0,0,0,2,0,0,0,0,1,1,1};
+inline constexpr uint32_t words12[]={0x00000000u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x27BDFF30u,0xAFB100ACu,0x00A08825u,0xAFB000A8u,0xAFB200B0u,0xAFB300B4u,0x8E330000u,0x00808025u};
+inline constexpr uint8_t masks12[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words13[]={0x8FBE00C8u,0x8FBF00CCu,0x03E00008u,0x27BD00D0u,0x34040008u,0x3C050000u,0xACA40000u,0x34060009u,0x24A40000u,0x03E00008u,0xAC860004u,0x27BDFFF0u};
+inline constexpr uint8_t masks13[]={0,0,0,0,0,1,1,0,1,0,0,0};
+inline constexpr uint32_t words14[]={0x8FBE0020u,0x8FBF0024u,0x03E00008u,0x27BD0030u,0x27BDFFE0u,0xAFB00000u,0x00808025u,0x8E04002Cu,0xAFB10004u,0x00A08825u,0x8C850000u,0xAFB20008u};
+inline constexpr uint8_t masks14[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words15[]={0x8FB3000Cu,0x8FBF0010u,0x03E00008u,0x27BD0020u,0x27BDFF60u,0xAFB00070u,0x01008025u,0xAFB60088u,0xAFB7008Cu,0x00E0B825u,0xA2000000u,0x0080B025u};
+inline constexpr uint8_t masks15[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words16[]={0x25080000u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x8C860000u,0x3C073E00u,0xACC70000u,0x8C860000u,0x3C073F00u,0x24C60004u,0xAC860000u,0xC4AC0000u};
+inline constexpr uint8_t masks16[]={1,0,0,0,1,0,0,1,0,0,1,1};
+inline constexpr uint32_t words17[]={0x8FBF0000u,0x03E00008u,0x27BD0010u,0x8C860000u,0x3C073E00u,0xACC70000u,0x8C860000u,0x3C073F00u,0x24C60004u,0xAC860000u,0xC4AC0000u,0x44086000u};
+inline constexpr uint8_t masks17[]={0,0,0,1,0,0,1,0,0,1,1,0};
+inline constexpr uint32_t words18[]={0x4600A306u,0x10000001u,0xC64C0C1Cu,0x8FA4004Cu,0x0C000000u,0x02602825u,0x12200010u,0x00000000u,0x8E041EC0u,0x3C052300u,0xAC9E0000u,0x8E041EC0u};
+inline constexpr uint8_t masks18[]={0,0,0,0,2,0,0,0,0,0,0,0};
+inline constexpr uint32_t words19[]={0x34040002u,0xAE0400B8u,0x1000001Bu,0x00000000u,0x8E0400A0u,0x24840000u,0x84850000u,0x8C860000u,0x00C0F809u,0x02052021u,0x10000013u,0x00000000u};
+inline constexpr uint8_t masks19[]={0,0,0,0,0,1,1,1,0,0,0,0};
+inline constexpr uint32_t words20[]={0x00C0F809u,0x02052021u,0x10000013u,0x00000000u,0x8E0400A0u,0x24840000u,0x84850000u,0x8C860000u,0x00C0F809u,0x02052021u,0x1000000Bu,0x00000000u};
+inline constexpr uint8_t masks20[]={0,0,0,0,0,1,1,1,0,0,0,0};
+inline constexpr uint32_t words21[]={0x03E00008u,0x27BD0010u,0x03E00008u,0x3402005Au,0x27BDFF70u,0xAFB00070u,0xAFB10074u,0xAFB20078u,0xAFB3007Cu,0xAFB40080u,0xAFBF0084u,0x0C000000u};
+inline constexpr uint8_t masks21[]={0,0,0,0,0,0,0,0,0,0,0,2};
+inline constexpr uint32_t words22[]={0x8FB40080u,0x8FBF0084u,0x03E00008u,0x27BD0090u,0x27BDFEE0u,0xAFB40100u,0x3C140000u,0xAFB300FCu,0x00809825u,0x26940000u,0xAFB000F0u,0xAFB100F4u};
+inline constexpr uint8_t masks22[]={0,0,0,0,0,0,1,0,0,1,0,0};
+inline constexpr uint32_t words23[]={0x8FB10004u,0x8FBF0008u,0x03E00008u,0x27BD0010u,0x27BDFFE0u,0xAFB10004u,0xAFB20008u,0x00808825u,0x00069400u,0x92260F1Au,0xAFB3000Cu,0x0006302Bu};
+inline constexpr uint8_t masks23[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words24[]={0x8FB40010u,0x8FBF0014u,0x03E00008u,0x27BD0020u,0x27BDFFF0u,0x8C850000u,0x03A02025u,0xAFBF0004u,0x0C000000u,0xAFA50000u,0x24420080u,0x8FBF0004u};
+inline constexpr uint8_t masks24[]={0,0,0,0,0,1,0,0,2,0,0,0};
+inline constexpr uint32_t words25[]={0xACA00000u,0x90840047u,0x03E00008u,0xACC40000u,0x27BDFFF0u,0xAFB00000u,0x00A08025u,0xAE000028u,0xAFB10004u,0xAE00002Cu,0x00808825u,0xAFBF0008u};
+inline constexpr uint8_t masks25[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words26[]={0x8FB10004u,0x8FBF0008u,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0xAFBF0000u,0x0C000000u,0x30A500FFu,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x27BDFFE0u};
+inline constexpr uint8_t masks26[]={0,0,0,0,0,0,2,0,0,0,0,0};
+inline constexpr uint32_t words27[]={0x8FBE015Cu,0x8FBF0160u,0x03E00008u,0x27BD0170u,0x27BDFCE0u,0xAFB70310u,0x00A0B825u,0xAEE00028u,0xAEE0002Cu,0xAFBE0314u,0x0080F025u,0xAEE00030u};
+inline constexpr uint8_t masks27[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words28[]={0x8FBE0314u,0x8FBF0318u,0x03E00008u,0x27BD0320u,0x27BDFD80u,0xAFB00268u,0x00808025u,0x8E070030u,0x00A02025u,0x8E050034u,0xAFA70018u,0x8E070038u};
+inline constexpr uint8_t masks28[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words29[]={0x8FB3000Cu,0x8FBF0010u,0x03E00008u,0x27BD0020u,0x27BDFE00u,0xAFB001D4u,0xAFB101D8u,0x00808025u,0x00A08825u,0xAFB201DCu,0x8E050EBCu,0x00C09025u};
+inline constexpr uint8_t masks29[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words30[]={0x8FBE01F4u,0x8FBF01F8u,0x03E00008u,0x27BD0200u,0x27BDFEA0u,0xAFB00138u,0xAFB1013Cu,0xAFB20140u,0xAFB30144u,0xAFB40148u,0xAFB5014Cu,0xAFB60150u};
+inline constexpr uint8_t masks30[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words31[]={0x8FB20008u,0x8FBF000Cu,0x03E00008u,0x27BD0010u,0x27BDFF30u,0xAFB300B0u,0x8CB30000u,0x8C870000u,0xAFB000A4u,0x8CE70000u,0xAFB100A8u,0xAFB400B4u};
+inline constexpr uint8_t masks31[]={0,0,0,0,0,0,0,1,0,0,0,0};
+inline constexpr uint32_t words32[]={0x8FB700C0u,0x8FBF00C4u,0x03E00008u,0x27BD00D0u,0x34040009u,0x3C050000u,0xACA40000u,0x34060011u,0x24A40000u,0x03E00008u,0xAC860004u,0x3C020000u};
+inline constexpr uint8_t masks32[]={0,0,0,0,0,1,1,0,1,0,0,1};
+inline constexpr uint32_t words33[]={0x86C40F16u,0x30840001u,0x10800004u,0x00000000u,0x02C02025u,0x0C000000u,0x02A02825u,0x92C40F1Cu,0x0004202Bu,0x308400FFu,0x10800058u,0x8E160008u};
+inline constexpr uint8_t masks33[]={0,0,0,0,0,2,0,0,0,0,0,0};
+inline constexpr uint32_t words34[]={0x8FBE0098u,0x8FBF009Cu,0x03E00008u,0x27BD00A0u,0x27BDFED0u,0xAFB20114u,0x8CB20000u,0xAFB0010Cu,0x00808025u,0xAFB10110u,0xAFB30118u,0xAFB4011Cu};
+inline constexpr uint8_t masks34[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words35[]={0x8FB4011Cu,0x8FBF0120u,0x03E00008u,0x27BD0130u,0x27BDFFE0u,0xAFB20008u,0x8CB20000u,0xAFB00000u,0x00A08025u,0xAFB10004u,0xAFB3000Cu,0xAFB40010u};
+inline constexpr uint8_t masks35[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words36[]={0x8FB50014u,0x8FBF0018u,0x03E00008u,0x27BD0020u,0x34040009u,0x3C050000u,0xACA40000u,0x34060012u,0x24A40000u,0x03E00008u,0xAC860004u,0x3C020000u};
+inline constexpr uint8_t masks36[]={0,0,0,0,0,1,1,0,1,0,0,1};
+inline constexpr uint32_t words37[]={0x8FB3000Cu,0x8FBF0010u,0x03E00008u,0x27BD0020u,0x27BDFFE0u,0xAFB10004u,0x00808825u,0xAFB00000u,0x00A08025u,0x00C02025u,0xAFB20008u,0xAFB3000Cu};
+inline constexpr uint8_t masks37[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words38[]={0x8FB40010u,0x8FBF0014u,0x03E00008u,0x27BD0020u,0x27BDFFD0u,0xAFB0000Cu,0xAFB30018u,0x00E09825u,0x00808025u,0xAFB10010u,0xAFB20014u,0x00A08825u};
+inline constexpr uint8_t masks38[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words39[]={0x8FB00000u,0x8FBF0004u,0x03E00008u,0x27BD0010u,0x27BDFFA0u,0xAFB00050u,0xAFB10054u,0x00A08825u,0x00808025u,0x02202025u,0xAFB20058u,0xAFBF005Cu};
+inline constexpr uint8_t masks39[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words40[]={0x8FB20058u,0x8FBF005Cu,0x03E00008u,0x27BD0060u,0x27BDFFA0u,0xAFB10040u,0x00A08825u,0xAFB0003Cu,0xAFB20044u,0xAFB30048u,0x8E330000u,0x00C09025u};
+inline constexpr uint8_t masks40[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words41[]={0x8FB60054u,0x8FBF0058u,0x03E00008u,0x27BD0060u,0x27BDFF60u,0xAFB3007Cu,0x8CD30000u,0x310800FFu,0xAFA8006Cu,0xAFB00070u,0x92700F26u,0xAFB20078u};
+inline constexpr uint8_t masks41[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words42[]={0x8FBE0090u,0x8FBF0094u,0x03E00008u,0x27BD00A0u,0x27BDFF70u,0xAFB3006Cu,0xAFB50074u,0x00809825u,0x8CB50000u,0xAFBE0080u,0x8E7E0028u,0x8E670030u};
+inline constexpr uint8_t masks42[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words43[]={0x8FBE0080u,0x8FBF0084u,0x03E00008u,0x27BD0090u,0x27BDFEE0u,0xAFB00100u,0xAFB40110u,0xAFB50114u,0x00A0A825u,0x00E08025u,0x0080A025u,0xAFB10104u};
+inline constexpr uint8_t masks43[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words44[]={0x8FB600C0u,0x8FBF00C4u,0x03E00008u,0x27BD00D0u,0x27BDFFD0u,0xAFB50014u,0xAFB60018u,0x8CB50000u,0x30F600FFu,0x8C870008u,0xAFB00000u,0xAFB10004u};
+inline constexpr uint8_t masks44[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words45[]={0x8FBE0020u,0x8FBF0024u,0x03E00008u,0x27BD0030u,0x27BDFF90u,0xAFB1004Cu,0x00A08825u,0xAFB00048u,0xAFB20050u,0xAFB30054u,0x8E330000u,0x00808025u};
+inline constexpr uint8_t masks45[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words46[]={0x3C040000u,0x24820000u,0x03E00008u,0x24420000u,0x3C040000u,0x24820000u,0x03E00008u,0x24420000u,0x3C040000u,0x24820000u,0x03E00008u,0x24420000u};
+inline constexpr uint8_t masks46[]={1,1,0,1,1,1,0,1,1,1,0,1};
+inline constexpr uint32_t words47[]={0x8C840000u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0x8C840000u,0x3C050000u,0x00042080u,0x24A50000u,0x00852021u,0xAFBF0000u,0x0C000000u};
+inline constexpr uint8_t masks47[]={0,0,0,0,0,0,1,0,1,0,0,2};
+inline constexpr uint32_t words48[]={0x34050018u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0x8C840000u,0x3C050000u,0x00042080u,0x24A50000u,0x00852021u,0xAFBF0000u,0x0C000000u};
+inline constexpr uint8_t masks48[]={0,0,0,0,0,0,1,0,1,0,0,2};
+inline constexpr uint32_t words49[]={0x34050019u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0x8C840000u,0x3C050000u,0x00042080u,0x24A50000u,0x00852021u,0xAFBF0000u,0x0C000000u};
+inline constexpr uint8_t masks49[]={0,0,0,0,0,0,1,0,1,0,0,2};
+inline constexpr uint32_t words50[]={0x90820000u,0x3C040000u,0x03E00008u,0x90820000u,0x27BDFFF0u,0xAFBF0000u,0x0C000000u,0x00000000u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x3C040000u};
+inline constexpr uint8_t masks50[]={1,1,0,1,0,0,2,0,0,0,0,1};
+inline constexpr uint32_t words51[]={0x00000000u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0xAFB10004u,0x30A500FFu,0x2411FFFFu,0xAFB00000u,0xAFB20008u,0xAFBF000Cu,0x14A00004u};
+inline constexpr uint8_t masks51[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words52[]={0x8FB20008u,0x8FBF000Cu,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0xAFB00000u,0xAFBF0004u,0x0C000000u,0x00A08025u,0x8E040000u,0x24840000u,0x2C85000Bu};
+inline constexpr uint8_t masks52[]={0,0,0,0,0,0,0,2,0,0,1,0};
+inline constexpr uint32_t words53[]={0x34050002u,0xA0850000u,0x03E00008u,0x00000000u,0x27BDFF80u,0x30A500FFu,0x3C060000u,0xAFB00060u,0x00052880u,0x24C60000u,0x00808025u,0x00A62021u};
+inline constexpr uint8_t masks53[]={0,0,0,0,0,0,1,0,0,1,0,0};
+inline constexpr uint32_t words54[]={0x8FB60078u,0x8FBF007Cu,0x03E00008u,0x27BD0080u,0x27BDFFF0u,0xAFB10004u,0x00808825u,0x30E400FFu,0x34070001u,0xA227004Au,0xAFB00000u,0xAFB20008u};
+inline constexpr uint8_t masks54[]={0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t words55[]={0x02202025u,0x8E040010u,0x1444001Bu,0x3C040000u,0x8C840000u,0x3C050000u,0x00042080u,0x24A50000u,0x00852021u,0x8C840000u,0x8C840000u,0x28840000u};
+inline constexpr uint8_t masks55[]={0,0,0,1,1,1,0,1,0,1,1,0};
+inline constexpr uint32_t words56[]={0x8C840000u,0x10000003u,0x00000000u,0x3C040000u,0x8C820000u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x3C060000u,0x8CC60000u,0x3405000Au,0x00C5001Bu};
+inline constexpr uint8_t masks56[]={0,0,0,1,1,0,0,0,1,1,0,0};
+inline constexpr uint32_t words57[]={0xAFB10004u,0x3C110000u,0xAFB00000u,0x00808025u,0x26310000u,0xAFBF0008u,0x0C000000u,0x02202025u,0x8E040010u,0x1444001Bu,0x3C040000u,0x8C840000u};
+inline constexpr uint8_t masks57[]={0,1,0,0,1,0,2,0,0,0,1,1};
+inline constexpr uint32_t words58[]={0x00073B03u,0x0C000000u,0x00078040u,0x3C110000u,0x8E240000u,0x3C054840u,0x24A58000u,0xAC850000u,0x8E240000u,0x3C054940u,0x24840004u,0xAE240000u};
+inline constexpr uint8_t masks58[]={0,2,0,1,1,0,0,0,1,0,0,1};
+inline constexpr uint32_t words59[]={0x27BDFE50u,0xAFB00194u,0x00808025u,0xAFB10198u,0x27B10010u,0x86050130u,0xAFB2019Cu,0xAFB301A0u,0xAFBF01A4u,0x0C000000u,0x02202025u,0x8604012Cu};
+inline constexpr uint8_t masks59[]={0,0,0,0,0,0,0,0,0,2,0,0};
+// Resolve native code and globals before installing any patches.
+inline constexpr uint32_t primitiveWords[]={0x3C0A0000u,0x8C8B0000u,0x00CA3025u,0xAD660000u,0x8C860000u,0x24C60004u,0x11000013u,0xAC860000u,0x00085202u,0x3C0B0000u,0x014B5024u,0x3C0B0000u};
+inline constexpr uint8_t primitiveMasks[]={1,1,0,1,1,0,0,1,0,1,0,1};
+inline constexpr uint32_t movie0Words[]={0x02403825u,0x02204025u,0x44026000u,0xAFA20000u,0x0C000000u,0xAFA00004u,0x8E041EC0u,0x3C05C900u,0x24A50003u,0xAC850000u,0x8E041EC0u,0x3C0508B5u};
+inline constexpr uint8_t movie0Masks[]={0,0,0,0,2,0,0,0,0,0,0,0};
+inline constexpr uint32_t movie1Words[]={0x02403825u,0x02204025u,0x44026000u,0xAFA20000u,0x0C000000u,0xAFA00004u,0x8E041EC0u,0x3C052100u,0x24A50001u,0xAC850000u,0x8E041EC0u,0x3C0508B5u};
+inline constexpr uint8_t movie1Masks[]={0,0,0,0,2,0,0,0,0,0,0,0};
+inline constexpr uint32_t movie2Words[]={0x02403825u,0x02204025u,0x44026000u,0xAFA20000u,0x0C000000u,0xAFA00004u,0x3C0408B5u,0x8C844300u,0x8E051EC0u,0x24841000u,0x00943024u,0x3C07B000u};
+inline constexpr uint8_t movie2Masks[]={0,0,0,0,2,0,0,0,0,0,0,0};
+inline constexpr uint32_t movie3Words[]={0x02403825u,0x02204025u,0x44026000u,0xAFA20000u,0x0C000000u,0xAFA00004u,0x3C0408B5u,0x8C844300u,0x8E051EC0u,0x24840400u,0x00943024u,0x3C07B000u};
+inline constexpr uint8_t movie3Masks[]={0,0,0,0,2,0,0,0,0,0,0,0};
+inline constexpr uint32_t movie4Words[]={0x02403825u,0x02204025u,0x44026000u,0xAFA20000u,0x0C000000u,0xAFA00004u,0x3C0408B5u,0x8C844300u,0x8E051EC0u,0x24840800u,0x00943024u,0x3C07B000u};
+inline constexpr uint8_t movie4Masks[]={0,0,0,0,2,0,0,0,0,0,0,0};
+inline constexpr uint32_t movie5Words[]={0x02403825u,0x02204025u,0x44026000u,0xAFA20000u,0x0C000000u,0xAFA00004u,0x8FA40010u,0x8FA5001Cu,0x24860100u,0x8E041EC0u,0x00C5382Bu,0x14E0FDA0u};
+inline constexpr uint8_t movie5Masks[]={0,0,0,0,2,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream088D0814Words[]={0x24840000u,0xAFB00000u,0xAFB10004u,0xAFBF0008u,0x0C000000u,0x24A50000u,0x3C040000u,0x24840000u,0x3C050000u,0xACA40000u,0x3C040000u,0x0C000000u,0x24840000u,0x3C040000u,0x3C050000u,0x34060004u,0x34070200u,0x00004025u,0x24840000u,0x0C000000u,0x24A50000u,0x3C040000u,0x3C050000u,0x34060008u};
+inline constexpr uint8_t stream088D0814Masks[]={1,0,0,0,2,1,1,1,1,1,1,2,1,1,1,0,0,0,1,2,1,1,1,0};
+inline constexpr uint32_t stream088D0B6CWords[]={0x1660FFF4u,0x00000000u,0x3C050000u,0x02A02025u,0x0C000000u,0x24A50000u,0x0C000000u,0x34130000u,0x00402025u,0x0C000000u,0x00002825u,0x00402025u,0x10800004u,0x00000000u,0x0C000000u,0x00000000u,0x34130001u,0x1660FFF4u,0x00000000u,0x0C000000u,0x34040001u,0x0C000000u,0x02C02025u,0x0C000000u};
+inline constexpr uint8_t stream088D0B6CMasks[]={0,0,1,0,2,1,2,0,0,2,0,0,0,0,2,0,0,0,0,2,0,2,0,2};
+inline constexpr uint32_t stream088D200CWords[]={0x24840000u,0x14400004u,0x00000000u,0x3C040000u,0x0C000000u,0x24840000u,0x34040000u,0x34100000u,0x00918821u,0x8E320000u,0x12400005u,0x00000000u,0x0C000000u,0x26440000u,0x0C000000u,0x26440000u,0x26100001u,0x2E040002u,0x1480FFF6u,0x26310004u,0x92840084u,0x0004202Bu,0x308400FFu,0x10800003u};
+inline constexpr uint8_t stream088D200CMasks[]={1,0,0,1,2,1,0,0,0,0,0,0,2,1,2,1,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream088D2148Words[]={0x02202025u,0x14400004u,0x00000000u,0x3C040000u,0x0C000000u,0x24840000u,0xAFB00080u,0x0C000000u,0x02002025u,0x0C000000u,0x00000000u,0x3C040000u,0x24840000u,0xAFA40074u,0x8FB30084u,0x34040000u,0x3C140000u,0x3C170000u,0x3C160000u,0x34110000u,0x341E0001u,0x34150003u,0x00939821u,0x26940000u};
+inline constexpr uint8_t stream088D2148Masks[]={0,0,0,1,2,1,0,2,0,2,0,1,1,0,0,0,1,1,1,0,0,0,0,1};
+inline constexpr uint32_t stream0893850CWords[]={0xAC800014u,0xAC800000u,0x03E00008u,0x00801025u,0x27BDFFF0u,0xAFB00000u,0xAFB10004u,0x00C08025u,0x00A08825u,0xAFB20008u,0xAFBF000Cu,0x0C000000u,0x00809025u,0xAE420020u,0x2646000Cu,0x02202025u,0x0C000000u,0x02002825u,0x00512023u,0xAE420010u,0x02042023u,0xAE440004u,0x8C440000u,0xAE400018u};
+inline constexpr uint8_t stream0893850CMasks[]={0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,2,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream08938EA0Words[]={0x00001025u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x10A00003u,0x00000000u,0x10000004u,0xAC850008u,0x3C050000u,0x24A50000u,0xAC850008u,0x03E00008u,0x00000000u,0x27BDFFF0u,0xAFBF0000u,0x0C000000u,0x00000000u,0x00001025u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x8C870010u,0x00A7382Bu,0x14E00006u};
+inline constexpr uint8_t stream08938EA0Masks[]={0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,2,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream08950568Words[]={0xAFB20008u,0xAFB3000Cu,0xAFBF0010u,0x3C040000u,0x0C000000u,0x24840000u,0x34040000u,0x34120000u,0x00918821u,0x8E330000u,0x1260000Au,0x00000000u,0x8E650224u,0x26640000u,0x34A50080u,0xAE650224u,0x0C000000u,0x3405000Fu,0x26640000u,0x0C000000u,0x3405000Fu,0x26520001u,0x2E440002u,0x1480FFF1u};
+inline constexpr uint8_t stream08950568Masks[]={0,0,0,1,2,1,0,0,0,0,0,0,0,1,0,0,2,0,1,2,0,0,0,0};
+inline constexpr uint32_t stream08954418Words[]={0x0C000000u,0x24840000u,0x3C040000u,0xA21100A4u,0x0C000000u,0x24840000u,0x3C040000u,0x34120000u,0x24840000u,0x34130000u,0x02449021u,0x8E510000u,0x12200007u,0x00000000u,0x26240000u,0x0C000000u,0x3405000Fu,0x26240000u,0x0C000000u,0x3405000Fu,0x26730001u,0x2E640002u,0x1480FFF4u,0x26520004u};
+inline constexpr uint8_t stream08954418Masks[]={2,1,1,0,2,1,1,0,1,0,0,0,0,0,1,2,0,1,2,0,0,0,0,0};
+inline constexpr uint32_t stream08956664Words[]={0xAFBF0010u,0x34040001u,0xA20400A4u,0x3C040000u,0x0C000000u,0x24840000u,0x34040000u,0x34120000u,0x00918821u,0x8E330000u,0x12600007u,0x00000000u,0x26640000u,0x0C000000u,0x3405000Fu,0x26640000u,0x0C000000u,0x3405000Fu,0x26520001u,0x2E440002u,0x1480FFF4u,0x26310004u,0x02002025u,0x0C000000u};
+inline constexpr uint8_t stream08956664Masks[]={0,0,0,1,2,1,0,0,0,0,0,0,1,2,0,1,2,0,0,0,0,0,0,2};
+inline constexpr uint32_t stream0895FC00Words[]={0x27C40584u,0x0C000000u,0x3405000Bu,0x3C040000u,0x0C000000u,0x24840000u,0x93C405BCu,0x34120000u,0x0244202Bu,0x1080006Cu,0x3C040000u,0x34160000u,0x24840000u,0x02C4B021u,0x3C050000u,0x3C040000u,0x24A50000u,0x34150000u,0x24840000u,0x27B10028u,0x27D400D0u,0x27B70030u,0xAFA502A0u,0x02A4A821u};
+inline constexpr uint8_t stream0895FC00Masks[]={0,2,0,1,2,1,0,0,0,0,1,0,1,0,1,1,1,0,1,0,0,0,0,0};
+inline constexpr uint32_t stream0896270CWords[]={0x02002025u,0x34040001u,0xA20400A4u,0x3C040000u,0x0C000000u,0x24840000u,0x34040000u,0x34120000u,0x00918821u,0x8E330000u,0x12600007u,0x00000000u,0x26640000u,0x0C000000u,0x3405000Fu,0x26640000u,0x0C000000u,0x3405000Fu,0x26520001u,0x2E440002u,0x1480FFF4u,0x26310004u,0x02002025u,0x0C000000u};
+inline constexpr uint8_t stream0896270CMasks[]={0,0,0,1,2,1,0,0,0,0,0,0,1,2,0,1,2,0,0,0,0,0,0,2};
+inline constexpr uint32_t stream089893B4Words[]={0x3C040000u,0x24930000u,0x0C000000u,0x02602025u,0x0C000000u,0x02602025u,0x0C000000u,0x02402025u,0x3C040000u,0x24920000u,0x02402025u,0x0C000000u,0x00002825u,0x02402025u,0x0C000000u,0x34050001u,0xAE300000u,0x8FB00000u,0x8FB10004u,0x8FB20008u,0x8FB3000Cu,0x8FB40010u,0x8FBF0014u,0x03E00008u};
+inline constexpr uint8_t stream089893B4Masks[]={1,1,2,0,2,0,2,0,1,1,0,2,0,0,2,0,1,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089D480CWords[]={0xAC800008u,0xA4800010u,0x03E00008u,0x00801025u,0x27BDFFF0u,0xAFB00000u,0x00808025u,0xA6070006u,0xA6080010u,0xAE060008u,0x3C040000u,0x8C850000u,0x8C840000u,0xAFBF0004u,0x0C000000u,0x00E03025u,0x34440000u,0xAE04000Cu,0x0C000000u,0x02002025u,0x8FB00000u,0x8FBF0004u,0x03E00008u,0x27BD0010u};
+inline constexpr uint8_t stream089D480CMasks[]={0,0,0,0,0,0,0,0,0,0,1,1,1,0,2,0,0,0,2,0,0,0,0,0};
+inline constexpr uint32_t stream089EFB80Words[]={0x02202025u,0x34050001u,0x34060001u,0x34070001u,0x0C000000u,0x00004825u,0x0C000000u,0x00000000u,0x8E440000u,0x3C050000u,0x24A50107u,0xAC850000u,0x8E440000u,0x3C050000u,0x24840004u,0xAE440000u,0x8CA40000u,0x3C060000u,0x8E450000u,0x00042200u,0x24C60006u,0x00862025u,0xACA40000u,0x8E440000u};
+inline constexpr uint8_t stream089EFB80Masks[]={0,0,0,0,2,0,2,0,1,1,0,0,1,1,0,1,1,1,1,0,0,0,0,1};
+inline constexpr uint32_t stream089F18A4Words[]={0x03E00008u,0x00000000u,0x03E00008u,0x00000000u,0x27BDFFF0u,0x94850018u,0xAFB10004u,0x24910018u,0xAFB00000u,0xAFB20008u,0xAFBF000Cu,0x14A0001Au,0x00808025u,0x8E120010u,0x3C040000u,0x8E450000u,0x24840000u,0x14A40014u,0x00000000u,0x8E440008u,0x2405FFFFu,0x10850010u,0x00000000u,0x8E04000Cu};
+inline constexpr uint8_t stream089F18A4Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089F1D20Words[]={0x8FB00000u,0x8FBF0004u,0x03E00008u,0x27BD0010u,0x27BDFFE0u,0xAFB00000u,0x00808025u,0xA205000Eu,0xAFB10004u,0xAFB20008u,0xA206000Fu,0x01209025u,0x01008825u,0xAFB3000Cu,0xAFBF0010u,0x0C000000u,0xA6070010u,0x12200062u,0x00000000u,0x3C040000u,0x8E250008u,0x0C000000u,0x24840000u,0x8C440000u};
+inline constexpr uint8_t stream089F1D20Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,1,0,2,1,0};
+inline constexpr uint32_t stream089F1F3CWords[]={0x8FB3000Cu,0x8FBF0010u,0x03E00008u,0x27BD0020u,0x27BDFFD0u,0xAFB00004u,0x30B000FFu,0xAFB10008u,0xAFB2000Cu,0xAFB30010u,0xAFB40014u,0xAFB50018u,0xAFB6001Cu,0xAFB70020u,0xAFBE0024u,0xAFBF0028u,0x12000003u,0x0080F025u,0x0C000000u,0x03C02025u,0x93C4000Du,0x14800015u,0x00000000u,0x12000011u};
+inline constexpr uint8_t stream089F1F3CMasks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0};
+inline constexpr uint32_t stream089F21D4Words[]={0x8FBE0024u,0x8FBF0028u,0x03E00008u,0x27BD0030u,0x27BDFFC0u,0x9087000Du,0xAFB0000Cu,0xAFB4001Cu,0xAFBE002Cu,0x34140000u,0x34080001u,0x00808025u,0x00A0F025u,0xAFB10010u,0xAFB20014u,0xAFB30018u,0xAFB50020u,0xAFB60024u,0xAFB70028u,0xAFBF0030u,0x10E80011u,0xAFA60008u,0x8E140018u,0x1280000Cu};
+inline constexpr uint8_t stream089F21D4Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089F2D80Words[]={0x8FB00000u,0x8FBF0004u,0x03E00008u,0x27BD0010u,0x27BDFFE0u,0xAFB00000u,0x00808025u,0xAFB10004u,0xAFB20008u,0xAFB3000Cu,0xAFB40010u,0xAFBF0014u,0x0C000000u,0x02002025u,0x3C040000u,0x0C000000u,0x24840000u,0x34140000u,0x34120003u,0x0292001Bu,0x2404162Cu,0x34130000u,0x00002810u,0x00000000u};
+inline constexpr uint8_t stream089F2D80Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,2,0,1,2,1,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089F2E90Words[]={0x8FB40010u,0x8FBF0014u,0x03E00008u,0x27BD0020u,0x27BDFFE0u,0xAFB00004u,0x00808025u,0x8E040000u,0xAFB10008u,0xAFB2000Cu,0xAFB30010u,0xAFB40014u,0xAFBF0018u,0x1480005Du,0x00000000u,0x3C110000u,0x26310000u,0x96250010u,0x14A00012u,0x00000000u,0x3C070000u,0x8E0501C4u,0x24F20000u,0x3C070000u};
+inline constexpr uint8_t stream089F2E90Masks[]={0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,1,0,0,0,1,0,1,1};
+inline constexpr uint32_t stream089F2EECWords[]={0x3C070000u,0x00002025u,0x94A50006u,0x34060100u,0x0C000000u,0x24E70000u,0x8E0501C4u,0x02202025u,0x94A80006u,0x02402825u,0x00403025u,0x0C000000u,0x34070100u,0x8E040000u,0x14800045u,0x00000000u,0x8E0401C4u,0x94840004u,0x0C000000u,0x00042080u,0xAE020000u,0x8E0401C4u,0x34120000u,0x94850006u};
+inline constexpr uint8_t stream089F2EECMasks[]={1,0,0,0,2,1,0,0,0,0,0,2,0,1,0,0,0,0,2,0,1,0,0,0};
+inline constexpr uint32_t stream089F2F08Words[]={0x02202025u,0x94A80006u,0x02402825u,0x00403025u,0x0C000000u,0x34070100u,0x8E040000u,0x14800045u,0x00000000u,0x8E0401C4u,0x94840004u,0x0C000000u,0x00042080u,0xAE020000u,0x8E0401C4u,0x34120000u,0x94850006u,0x0245302Au,0x10C00015u,0x34140000u,0x34040000u,0xAFA40000u,0x02202025u,0x0C000000u};
+inline constexpr uint8_t stream089F2F08Masks[]={0,0,0,0,2,0,1,0,0,0,0,2,0,1,0,0,0,0,0,0,0,0,0,2};
+inline constexpr uint32_t stream089F2F24Words[]={0x14800045u,0x00000000u,0x8E0401C4u,0x94840004u,0x0C000000u,0x00042080u,0xAE020000u,0x8E0401C4u,0x34120000u,0x94850006u,0x0245302Au,0x10C00015u,0x34140000u,0x34040000u,0xAFA40000u,0x02202025u,0x0C000000u,0x34050100u,0x00409825u,0x12600004u,0x8FA40000u,0x0C000000u,0x02602025u,0x02602025u};
+inline constexpr uint8_t stream089F2F24Masks[]={0,0,0,0,2,0,1,0,0,0,0,0,0,0,0,0,2,0,0,0,0,2,0,0};
+inline constexpr uint32_t stream089F3070Words[]={0xAC800000u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x27BDFFE0u,0xAFB0000Cu,0x00808025u,0xAFBF0010u,0x3C040000u,0x0C000000u,0x24840000u,0x3C060000u,0x3C050000u,0x34070000u,0x02002025u,0x24C60000u,0x24A50000u,0xAFA70008u,0xAFA60004u,0xAFA40000u,0x00C02025u,0x0C000000u,0x34060040u,0x8FA40000u};
+inline constexpr uint8_t stream089F3070Masks[]={1,0,0,0,0,0,0,0,1,2,1,1,1,0,0,1,1,0,0,0,0,2,0,0};
+inline constexpr uint32_t stream089F30FCWords[]={0x8FB0000Cu,0x8FBF0010u,0x03E00008u,0x27BD0020u,0x34060000u,0x00862821u,0x90A70010u,0x10E00007u,0x00000000u,0x24C60001u,0x28C50004u,0x14A0FFF9u,0x00000000u,0x10000007u,0x00000000u,0x00063080u,0x34070001u,0x00862021u,0xA0A70010u,0x10000002u,0x8C820000u,0x00001025u,0x03E00008u,0x00000000u};
+inline constexpr uint8_t stream089F30FCMasks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089F314CWords[]={0x8C820000u,0x00001025u,0x03E00008u,0x00000000u,0x34080000u,0x00803025u,0x00883821u,0x90E90010u,0x11200004u,0x00000000u,0x8CC90000u,0x10A90007u,0x00000000u,0x25080001u,0x29070004u,0x14E0FFF6u,0x24C60004u,0x10000003u,0x00000000u,0x10000001u,0xA0E00010u,0x03E00008u,0x00000000u,0x27BDFFF0u};
+inline constexpr uint8_t stream089F314CMasks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089F357CWords[]={0x24420000u,0x00002810u,0x03E00008u,0xAC850000u,0x27BDFFF0u,0xAFB10008u,0x8C910000u,0x00052080u,0x02248821u,0x8E240000u,0xAFB00004u,0xAFBF000Cu,0x1480000Eu,0x00000000u,0x34040000u,0xAFA40000u,0x3C040000u,0x34050100u,0x0C000000u,0x24840000u,0x00408025u,0x12000004u,0x8FA40000u,0x0C000000u};
+inline constexpr uint8_t stream089F357CMasks[]={1,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,1,0,2,1,0,0,0,2};
+inline constexpr uint32_t stream089F35F0Words[]={0x8FB10008u,0x8FBF000Cu,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0xAFB00000u,0x00808025u,0x8E040000u,0xAFB10004u,0x00058880u,0x00912021u,0x8C840000u,0xAFBF0008u,0x0C000000u,0x00C02825u,0x10400004u,0x00000000u,0x8E040000u,0x00912021u,0xAC800000u,0x8FB00000u,0x8FB10004u,0x8FBF0008u,0x03E00008u};
+inline constexpr uint8_t stream089F35F0Masks[]={0,0,0,0,0,0,0,1,0,0,0,0,0,2,0,0,0,1,0,0,0,0,0,0};
+inline constexpr uint32_t stream089F3B44Words[]={0x8FBE002Cu,0x8FBF0030u,0x03E00008u,0x27BD0040u,0x2CA70076u,0x10E0000Fu,0x3402FFFFu,0x2CC70054u,0x10E0000Cu,0x00063042u,0x000639C0u,0x00E63823u,0x00E63823u,0x8C8401C4u,0x000630C0u,0x00E63023u,0x00052842u,0x00862021u,0x00A52821u,0x00852021u,0x94820016u,0x03E00008u,0x00000000u,0x27BDFF40u};
+inline constexpr uint8_t stream089F3B44Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089F3B90Words[]={0x00852021u,0x94820016u,0x03E00008u,0x00000000u,0x27BDFF40u,0x9085000Du,0x34060002u,0xAFB00090u,0xAFB10094u,0xAFB20098u,0xAFB3009Cu,0xAFB400A0u,0xAFB500A4u,0xAFB600A8u,0xAFB700ACu,0xAFBE00B0u,0xAFBF00B4u,0x10A6000Fu,0x0080B025u,0x3C040000u,0x24940000u,0x8EC50008u,0x0C000000u,0x02802025u};
+inline constexpr uint8_t stream089F3B90Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,2,0};
+inline constexpr uint32_t stream089F468CWords[]={0x34060009u,0x34070068u,0x00004025u,0x24840000u,0x0C000000u,0x24A50000u,0x34040007u,0x28850011u,0x10A00013u,0x00000000u,0x000428C0u,0x00A53021u,0x00A62821u,0x26060024u,0x02052821u,0x00C03023u,0x24A5002Cu,0x8CC70004u,0xACA60000u,0xACA70004u,0x8CC70004u,0xACE50000u,0xACC50004u,0xACA4000Cu};
+inline constexpr uint8_t stream089F468CMasks[]={0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089F4CE8Words[]={0x001320C0u,0x03A42021u,0x8C850020u,0x8C860024u,0x0C000000u,0x02002025u,0x26730001u,0x2E640009u,0x1480FFECu,0x00000000u,0xAE110000u,0xAE120000u,0x260401D0u,0x26050000u,0x1085000Bu,0x34110000u,0x3405FFFFu,0x54800001u,0x94850010u,0x00113080u,0x03A63021u,0xACC50068u,0x24840764u,0x26050000u};
+inline constexpr uint8_t stream089F4CE8Masks[]={0,0,0,0,2,0,0,0,0,0,1,1,0,1,0,0,0,0,0,0,0,0,0,1};
+inline constexpr uint32_t stream089F6694Words[]={0x8FB3000Cu,0x8FBF0010u,0x03E00008u,0x27BD0020u,0x27BDFFF0u,0x3C070000u,0x8CE70000u,0xAFB10004u,0x34060002u,0x00808825u,0xAFB00000u,0xAFBF0008u,0x10E60003u,0x00A08025u,0x10000006u,0x00000000u,0x02202025u,0x0C000000u,0x02002825u,0x10000031u,0x00000000u,0x3C040000u,0x0C000000u,0x24840000u};
+inline constexpr uint8_t stream089F6694Masks[]={0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,2,0,0,0,1,2,1};
+inline constexpr uint32_t stream089F72CCWords[]={0x8FB00000u,0x8FBF0004u,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0xAFB00000u,0x00A08025u,0xAFB10004u,0xAFBF0008u,0x0C000000u,0x00808825u,0x50400003u,0x962500A4u,0x10000016u,0x00000000u,0x320407FFu,0x8E26009Cu,0x00A53821u,0x00842021u,0x8E2800A0u,0x00A73821u,0x00C43021u,0x00071080u,0x94C60000u};
+inline constexpr uint8_t stream089F72CCMasks[]={0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream08AE674CWords[]={0x8FB00000u,0x8FBF0004u,0x03E00008u,0x27BD0010u,0x94850000u,0x94840002u,0x00A4102Au,0x03E00008u,0x38420001u,0x27BDFFF0u,0xAFB00000u,0x00808025u,0x3C040000u,0x24840000u,0xAE040018u,0xAE000000u,0xA6000004u,0xAFBF0004u,0x0C000000u,0x02002025u,0x02001025u,0x8FB00000u,0x8FBF0004u,0x03E00008u};
+inline constexpr uint8_t stream08AE674CMasks[]={0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,2,0,0,0,0,0};
+inline constexpr uint32_t stream08C109E0Words[]={0x10800004u,0x3C040000u,0x02002825u,0x0C000000u,0x24840000u,0x8FB000A8u,0x8FB100ACu,0x8FB200B0u,0x8FB300B4u,0x8FB400B8u,0x8FB500BCu,0x8FB600C0u,0x8FB700C4u,0x8FBF00C8u,0x03E00008u,0x27BD00D0u,0x27BDFFA0u,0x3C060000u,0xAFA0000Cu,0x24C60000u,0xAFA60010u,0x27A5000Cu,0xAFA00014u,0x8CA50000u};
+inline constexpr uint8_t stream08C109E0Masks[]={0,1,0,2,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0};
+inline constexpr uint32_t stream08C11110Words[]={0x3C130000u,0x3C070000u,0x96A50000u,0x00002025u,0x34060004u,0x26730000u,0x0C000000u,0x24E70000u,0xAE220028u,0x96A40000u,0x00042080u,0x02A42021u,0x24840002u,0x1280000Cu,0x00922023u,0x0080A025u,0x02602025u,0x0C000000u,0x02802825u,0xAE220010u,0x00402025u,0x02402825u,0x0C000000u,0x02803025u};
+inline constexpr uint8_t stream08C11110Masks[]={1,1,0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,2,0,0,0,0,2,0};
+inline constexpr uint32_t stream08C1CDD0Words[]={0x02002025u,0x3C040000u,0x02002825u,0x0C000000u,0x24840000u,0xA2200005u,0xA2200004u,0x00001025u,0x8FB00000u,0x8FB10004u,0x8FBF0008u,0x03E00008u,0x27BD0010u,0x34060000u,0x8C870064u,0x14E50007u,0x00000000u,0xAC800064u,0xA080006Au,0xA080006Bu,0xA0800068u,0x10000005u,0xA0800069u,0x24C60001u};
+inline constexpr uint8_t stream08C1CDD0Masks[]={0,1,0,2,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream088D0F98Words[]={0x24B10000u,0x24D205F8u,0x02642021u,0x02202825u,0x00E0F809u,0x34060010u,0x02402025u,0x00402825u,0x02203025u,0x0C000000u,0x00003825u,0x3C050000u,0x02402025u,0x0C000000u,0x24A50000u,0x0C000000u,0x34040040u,0x0C000000u,0x02002025u,0x3C040000u,0x0C000000u,0x24840000u,0x3C040000u,0x0C000000u};
+inline constexpr uint8_t stream088D0F98Masks[]={1,0,0,0,0,0,0,0,0,2,0,1,0,2,1,2,0,2,0,1,2,1,1,2};
+inline constexpr uint32_t stream088D0FACWords[]={0x34060010u,0x02402025u,0x00402825u,0x02203025u,0x0C000000u,0x00003825u,0x3C050000u,0x02402025u,0x0C000000u,0x24A50000u,0x0C000000u,0x34040040u,0x0C000000u,0x02002025u,0x3C040000u,0x0C000000u,0x24840000u,0x3C040000u,0x0C000000u,0x24840000u,0x0C000000u,0x96840018u,0x9685001Au,0x02A02025u};
+inline constexpr uint8_t stream088D0FACMasks[]={0,0,0,0,2,0,1,0,2,1,2,0,2,0,1,2,1,1,2,1,2,0,0,0};
+inline constexpr uint32_t stream089F7788Words[]={0x8FB20008u,0x8FBF000Cu,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0xAFB00000u,0xAFBF0004u,0x0C000000u,0x00A08025u,0x8C440000u,0x8485000Au,0x30A5FFFFu,0x24068000u,0x30A77FFFu,0x24E80001u,0x00A62824u,0x31067FFFu,0x00A62825u,0x14E00008u,0xA485000Au,0x8C86000Cu,0x02002825u,0x24C60038u,0x84C70000u};
+inline constexpr uint8_t stream089F7788Masks[]={0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089F77F4Words[]={0x8FB00000u,0x8FBF0004u,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0xAFB00000u,0xAFBF0004u,0x0C000000u,0x00A08025u,0x8C440000u,0x1080000Fu,0x00000000u,0x8485000Au,0x24068000u,0x30A5FFFFu,0x30A77FFFu,0x24E70000u,0x00A62824u,0x30E67FFFu,0x00A62825u,0xA485000Au,0x30C5FFFFu,0x10A00005u,0x00000000u};
+inline constexpr uint8_t stream089F77F4Masks[]={0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream08AE51B8Words[]={0x8FB10004u,0x8FBF0008u,0x03E00008u,0x27BD0010u,0x908500C2u,0x3C060000u,0x000528C0u,0x00A53821u,0x24C60000u,0x00A72821u,0x24C6002Cu,0x00A62821u,0x24A50010u,0x00A02823u,0x8CA60004u,0xAC850000u,0xAC860004u,0x8CA60004u,0xACC40000u,0x03E00008u,0xACA40004u,0x8C850004u,0x8C860000u,0xACC50004u};
+inline constexpr uint8_t stream08AE51B8Masks[]={0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream088694ECWords[]={0x8FB00004u,0x8FBF0008u,0x03E00008u,0x27BD0010u,0x34050000u,0xAC800064u,0xA080006Au,0xA080006Bu,0x24A50001u,0x2CA60018u,0x14C0FFFAu,0x24840008u,0x03E00008u,0x00000000u,0x27BDFFD0u,0x90850124u,0xAFB00000u,0xAFB10004u,0xAFB20008u,0xAFB3000Cu,0xAFB40010u,0xAFB50014u,0xAFB60018u,0xAFB7001Cu};
+inline constexpr uint8_t stream088694ECMasks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream08869514Words[]={0x14C0FFFAu,0x24840008u,0x03E00008u,0x00000000u,0x27BDFFD0u,0x90850124u,0xAFB00000u,0xAFB10004u,0xAFB20008u,0xAFB3000Cu,0xAFB40010u,0xAFB50014u,0xAFB60018u,0xAFB7001Cu,0xAFBF0020u,0x14A00003u,0x00808025u,0x10000060u,0x00000000u,0x34110000u,0x34120000u,0x02009825u,0x92640068u,0x1080000Bu};
+inline constexpr uint8_t stream08869514Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream088696F8Words[]={0x8FB7001Cu,0x8FBF0020u,0x03E00008u,0x27BD0030u,0x27BDFFF0u,0xAFB00000u,0x00A08025u,0xAFB10004u,0xAFBF0008u,0x00803025u,0x34110000u,0x34050000u,0x24C80064u,0x8CC70064u,0x10F00005u,0x00000000u,0x10E00006u,0x00000000u,0x10000005u,0x00000000u,0x90C20069u,0x1000004Du,0x0002102Bu,0x01008825u};
+inline constexpr uint8_t stream088696F8Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream08869888Words[]={0x8FB10004u,0x8FBF0008u,0x03E00008u,0x27BD0010u,0x34060000u,0x8C870064u,0x14E50007u,0x00000000u,0xAC800064u,0xA080006Au,0xA080006Bu,0xA0800068u,0x10000005u,0xA0800069u,0x24C60001u,0x2CC70018u,0x14E0FFF4u,0x24840008u,0x03E00008u,0x00000000u,0x34070001u,0x34090000u,0x00804025u,0x8D0A0064u};
+inline constexpr uint8_t stream08869888Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream088698C8Words[]={0x14E0FFF4u,0x24840008u,0x03E00008u,0x00000000u,0x34070001u,0x34090000u,0x00804025u,0x8D0A0064u,0x1140000Du,0x00000000u,0x910A006Au,0x1545000Au,0x00000000u,0x910A006Bu,0x00CA5007u,0x314A0001u,0x11400005u,0x00000000u,0x910A0069u,0x15400002u,0x00000000u,0xA1070068u,0x25290001u,0x2D2A0018u};
+inline constexpr uint8_t stream088698C8Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089F4064Words[]={0x0C000000u,0x8CA50000u,0x14400006u,0x8FB50070u,0x0C000000u,0x8FA4008Cu,0x3C040000u,0x0C000000u,0x24840000u,0x8FA40080u,0x10950010u,0x34110001u,0x3C100000u,0x8FB20080u,0x26100000u,0x86450000u,0x02002025u,0x0C000000u,0x30A507FFu,0x0C000000u,0x00402025u,0x14400002u,0x00000000u,0x34110000u};
+inline constexpr uint8_t stream089F4064Masks[]={2,1,0,0,2,0,1,2,1,0,0,0,1,0,1,0,0,2,0,2,0,0,0,0};
+inline constexpr uint32_t stream089F4070Words[]={0x8FB50070u,0x0C000000u,0x8FA4008Cu,0x3C040000u,0x0C000000u,0x24840000u,0x8FA40080u,0x10950010u,0x34110001u,0x3C100000u,0x8FB20080u,0x26100000u,0x86450000u,0x02002025u,0x0C000000u,0x30A507FFu,0x0C000000u,0x00402025u,0x14400002u,0x00000000u,0x34110000u,0x2652000Cu,0x1655FFF5u,0x00000000u};
+inline constexpr uint8_t stream089F4070Masks[]={0,2,0,1,2,1,0,0,0,1,0,1,0,0,2,0,2,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089F6E24Words[]={0x8FBE0048u,0x8FBF004Cu,0x03E00008u,0x27BD0050u,0x27BDFFF0u,0xAFB00000u,0x00808025u,0xAFB10004u,0xAFBF0008u,0x34110000u,0x0C000000u,0x02002025u,0x26310001u,0x2E240003u,0x1480FFFBu,0x00000000u,0x8FB00000u,0x8FB10004u,0x8FBF0008u,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0xAFB00000u,0x00808025u};
+inline constexpr uint8_t stream089F6E24Masks[]={0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream08A5E0B4Words[]={0xD8800000u,0xF8A00000u,0x03E00008u,0x00000000u,0x8CA60010u,0x2407FFFFu,0x14C7000Au,0x00000000u,0x8C860000u,0x24870000u,0xACA60010u,0x8CE60000u,0x00064080u,0x24C60001u,0xACE60000u,0x00882021u,0xAC850000u,0x03E00008u,0x00000000u,0x8CA60010u,0x2407FFFFu,0x10C70011u,0x00000000u,0x8C870000u};
+inline constexpr uint8_t stream08A5E0B4Masks[]={0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,0,0,0,0,0,0,1};
+inline constexpr uint32_t stream08A5E0F0Words[]={0x00882021u,0xAC850000u,0x03E00008u,0x00000000u,0x8CA60010u,0x2407FFFFu,0x10C70011u,0x00000000u,0x8C870000u,0x24E70000u,0x00074080u,0x00884021u,0xAC870000u,0x8D070000u,0x00064080u,0x00884021u,0xAD070000u,0xACE60010u,0x8C860000u,0x2407FFFFu,0x00063080u,0x00862021u,0xAC800000u,0xACA70010u};
+inline constexpr uint8_t stream08A5E0F0Masks[]={0,1,0,0,0,0,0,0,1,1,0,0,1,1,0,0,1,0,1,0,0,0,1,0};
+inline constexpr uint32_t stream08A88CA8Words[]={0x1500FFFBu,0x24A50002u,0x03E00008u,0x00801025u,0x27BDFFF0u,0xAFBF0000u,0x0C000000u,0x00000000u,0x3C040000u,0x0C000000u,0x24840000u,0x8FBF0000u,0x03E00008u,0x27BD0010u,0x27BDFFE0u,0xAFB00000u,0xAFB10004u,0xAFB20008u,0xAFB3000Cu,0xAFB40010u,0xAFBF0014u,0x3C110000u,0x34140000u,0x3412FFFFu};
+inline constexpr uint8_t stream08A88CA8Masks[]={0,0,0,0,0,0,2,0,1,2,1,0,0,0,0,0,0,0,0,0,0,1,0,0};
+inline constexpr uint32_t stream08AE50C4Words[]={0x8FB10014u,0x8FBF0018u,0x03E00008u,0x27BD0020u,0x27BDFFF0u,0x8C850000u,0xAFB00000u,0xAFB10004u,0xAFBF0008u,0x14A00003u,0x00808025u,0x10000002u,0x34040000u,0x34040001u,0x1480002Cu,0x00000000u,0x920400C3u,0x0004202Bu,0x308400FFu,0x10800006u,0x3C040000u,0x02002825u,0x0C000000u,0x24840000u};
+inline constexpr uint8_t stream08AE50C4Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,2,1};
+inline constexpr uint32_t stream08AE51FCWords[]={0x8CA60004u,0xACC40000u,0x03E00008u,0xACA40004u,0x8C850004u,0x8C860000u,0xACC50004u,0x8C860000u,0xACA60000u,0x03E00008u,0xAC800000u,0x27BDFFF0u,0xAFB20008u,0x909200C0u,0xAFB00000u,0x26520000u,0x00808025u,0xA09200C0u,0xAFB10004u,0xAFBF000Cu,0x16400005u,0x00A08825u,0x3C040000u,0x02002825u};
+inline constexpr uint8_t stream08AE51FCMasks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0};
+inline constexpr uint32_t stream0890D17CWords[]={0x8FBE003Cu,0x8FBF0040u,0x03E00008u,0x27BD0050u,0x3C040000u,0x24840000u,0x3C050000u,0xACA40000u,0x24A40000u,0x3C050000u,0x24A50000u,0x03E00008u,0xAC850004u,0x27BDFFB0u,0xE7B40020u,0xE7B60024u,0xAFB00028u,0xAFB1002Cu,0xAFB20030u,0xAFB30034u,0xAFB40038u,0xAFB5003Cu,0xAFB60040u,0xAFB70044u};
+inline constexpr uint8_t stream0890D17CMasks[]={0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream0890D1A0Words[]={0x3C050000u,0x24A50000u,0x03E00008u,0xAC850004u,0x27BDFFB0u,0xE7B40020u,0xE7B60024u,0xAFB00028u,0xAFB1002Cu,0xAFB20030u,0xAFB30034u,0xAFB40038u,0xAFB5003Cu,0xAFB60040u,0xAFB70044u,0xAFBE0048u,0xAFBF004Cu,0x0C000000u,0x00000000u,0x3C170000u,0x26FE0000u,0x3C130000u,0x3C100000u,0x3C110000u};
+inline constexpr uint8_t stream0890D1A0Masks[]={1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,1,1,1,1,1};
+inline constexpr uint32_t stream08B58FBCWords[]={0x27BD0050u,0x3C040000u,0x24840000u,0x3C050000u,0xACA40000u,0x24A40000u,0x3C050000u,0x24A50000u,0x03E00008u,0xAC850004u,0x27BDFFB0u,0xE7B40020u,0xE7B60024u,0xAFB00028u,0xAFB1002Cu,0xAFB20030u,0xAFB30034u,0xAFB40038u,0xAFB5003Cu,0xAFB60040u,0xAFB70044u,0xAFBE0048u,0xAFBF004Cu,0x0C000000u};
+inline constexpr uint8_t stream08B58FBCMasks[]={0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2};
+inline constexpr uint32_t stream08948AACWords[]={0x00000000u,0x30840001u,0x1080000Bu,0x00000000u,0x0C000000u,0x02002025u,0x10000008u,0x00000000u,0x0C000000u,0x02002025u,0x10000004u,0x00000000u,0x10000002u,0x00001025u,0x00001025u,0x8FB00000u,0x8FBF0004u,0x03E00008u,0x27BD0010u,0x27BDFFB0u,0x8C850008u,0x24A50028u,0x84A60000u,0x8CA50004u};
+inline constexpr uint8_t stream08948AACMasks[]={0,0,0,0,2,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+inline constexpr uint32_t stream089491A8Words[]={0xF8A20000u,0xF8C30000u,0x03E00008u,0x00000000u,0x27BDF2D0u,0xE7B40D04u,0xAFB00D08u,0xAFB10D0Cu,0xAFB20D10u,0xAFB30D14u,0xAFB40D18u,0xAFB50D1Cu,0xAFB60D20u,0xAFB70D24u,0xAFBE0D28u,0xAFBF0D2Cu,0x00A08025u,0x00808825u,0x0C000000u,0x00000000u,0x46000506u,0x8E240008u,0x24850028u,0x84A40000u};
+inline constexpr uint8_t stream089491A8Masks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0};
+inline constexpr std::array<console::AddressRule,129> rules={{
+{0x0884F52Cu,0x0884F51Cu,words0,masks0,12,16,16,0,0,console::AddressKind::Code},
+    {0x088559ACu,0x088559ACu,words59,masks59,12,0,0,0,0,console::AddressKind::Code},
+    {0x088559F0u,0x088559E0u,words1,masks1,12,44,16,0,0,console::AddressKind::Code},
+    {0x08860650u,0x08860640u,movie0Words,movie0Masks,12,0,16,0,0,console::AddressKind::Code},
+    {0x08860870u,0x08860860u,movie1Words,movie1Masks,12,0,16,0,0,console::AddressKind::Code},
+    {0x08860A14u,0x08860A04u,movie2Words,movie2Masks,12,0,16,0,0,console::AddressKind::Code},
+    {0x08860B1Cu,0x08860B0Cu,movie3Words,movie3Masks,12,0,16,0,0,console::AddressKind::Code},
+    {0x08860CA8u,0x08860C98u,movie4Words,movie4Masks,12,0,16,0,0,console::AddressKind::Code},
+    {0x08860DB0u,0x08860DA0u,movie5Words,movie5Masks,12,0,16,0,0,console::AddressKind::Code},
+    {0x088694ECu,0x088694DCu,stream088694ECWords,stream088694ECMasks,24,24,16,0,0,console::AddressKind::Code},
+    {0x08869514u,0x08869504u,stream08869514Words,stream08869514Masks,24,0,16,0,0,console::AddressKind::Code},
+    {0x088696F8u,0x088696E8u,stream088696F8Words,stream088696F8Masks,24,84,16,0,0,console::AddressKind::Code},
+    {0x08869888u,0x08869878u,stream08869888Words,stream08869888Masks,24,36,16,0,0,console::AddressKind::Code},
+    {0x088698C8u,0x088698B8u,stream088698C8Words,stream088698C8Masks,24,40,16,0,0,console::AddressKind::Code},
+    {0x088704C8u,0x088704B8u,words2,masks2,12,40,16,0,0,console::AddressKind::Code},
+    {0x0888BCACu,0x0888BC9Cu,words3,masks3,12,38,16,0,0,console::AddressKind::Code},
+    {0x0888BF9Cu,0x0888BF8Cu,words4,masks4,12,17,16,0,0,console::AddressKind::Code},
+    {0x08890E68u,0x08890E50u,words5,masks5,12,46,24,0,0,console::AddressKind::Code},
+    {0x08890FE4u,0x08890FD4u,words6,masks6,12,2,16,0,0,console::AddressKind::Code},
+    {0x08891160u,0x08891150u,words7,masks7,12,44,16,0,0,console::AddressKind::Code},
+    {0x08891414u,0x08891404u,words8,masks8,12,24,16,0,0,console::AddressKind::Code},
+    {0x088915D4u,0x088915C4u,words9,masks9,12,42,16,0,0,console::AddressKind::Code},
+    {0x088CBFA8u,0x088CBF98u,words10,masks10,12,32,16,0,0,console::AddressKind::Code},
+    {0x088CFC1Cu,0x088CFC0Cu,words11,masks11,12,26,16,0,0,console::AddressKind::Code},
+    {0x088D0814u,0x088D0804u,stream088D0814Words,stream088D0814Masks,24,66,16,0,0,console::AddressKind::Code},
+    {0x088D0B6Cu,0x088D0B5Cu,stream088D0B6CWords,stream088D0B6CMasks,24,0,16,0,0,console::AddressKind::Code},
+    {0x088D0F98u,0x088D0F88u,stream088D0F98Words,stream088D0F98Masks,24,6,16,0,0,console::AddressKind::Code},
+    {0x088D0FACu,0x088D0F9Cu,stream088D0FACWords,stream088D0FACMasks,24,88,16,0,0,console::AddressKind::Code},
+    {0x088D200Cu,0x088D1FFCu,stream088D200CWords,stream088D200CMasks,24,72,16,0,0,console::AddressKind::Code},
+    {0x088D2148u,0x088D2138u,stream088D2148Words,stream088D2148Masks,24,70,16,0,0,console::AddressKind::Code},
+    {0x088D8C70u,0x088D8C60u,words12,masks12,12,42,16,0,0,console::AddressKind::Code},
+    {0x088D90E0u,0x088D90D0u,words13,masks13,12,4,16,0,0,console::AddressKind::Code},
+    {0x0890D17Cu,0x0890D16Cu,stream0890D17CWords,stream0890D17CMasks,24,2,16,0,0,console::AddressKind::Code},
+    {0x0890D1A0u,0x0890D190u,stream0890D1A0Words,stream0890D1A0Masks,24,82,16,0,0,console::AddressKind::Code},
+    {0x089100C0u,0x089100C0u,primitiveWords,primitiveMasks,12,0,0,0,0,console::AddressKind::Code},
+    {0x0893850Cu,0x089384FCu,stream0893850CWords,stream0893850CMasks,24,74,16,0,0,console::AddressKind::Code},
+    {0x08938EA0u,0x08938E90u,stream08938EA0Words,stream08938EA0Masks,24,86,16,0,0,console::AddressKind::Code},
+    {0x08948AACu,0x08948A9Cu,stream08948AACWords,stream08948AACMasks,24,8,16,0,0,console::AddressKind::Code},
+    {0x089491A8u,0x08949198u,stream089491A8Words,stream089491A8Masks,24,17,16,0,0,console::AddressKind::Code},
+    {0x08950568u,0x08950558u,stream08950568Words,stream08950568Masks,24,92,16,0,0,console::AddressKind::Code},
+    {0x08954418u,0x08954408u,stream08954418Words,stream08954418Masks,24,46,16,0,0,console::AddressKind::Code},
+    {0x08956664u,0x08956654u,stream08956664Words,stream08956664Masks,24,38,16,0,0,console::AddressKind::Code},
+    {0x0895FC00u,0x0895FBF0u,stream0895FC00Words,stream0895FC00Masks,24,27,16,0,0,console::AddressKind::Code},
+    {0x0896270Cu,0x089626FCu,stream0896270CWords,stream0896270CMasks,24,38,16,0,0,console::AddressKind::Code},
+    {0x0896E6F4u,0x0896E6E4u,words14,masks14,12,2,16,0,0,console::AddressKind::Code},
+    {0x0896EA44u,0x0896EA34u,words15,masks15,12,34,16,0,0,console::AddressKind::Code},
+    {0x08988CA4u,0x08988C94u,words16,masks16,12,21,16,0,0,console::AddressKind::Code},
+    {0x08988CA8u,0x08988C98u,words17,masks17,12,17,16,0,0,console::AddressKind::Code},
+    {0x089893B4u,0x089893A4u,stream089893B4Words,stream089893B4Masks,24,6,16,0,0,console::AddressKind::Code},
+    {0x0898D388u,0x0898D378u,words18,masks18,12,42,16,0,0,console::AddressKind::Code},
+    {0x08992490u,0x08992480u,words19,masks19,12,8,16,0,0,console::AddressKind::Code},
+    {0x089924B0u,0x089924A0u,words20,masks20,12,8,16,0,0,console::AddressKind::Code},
+    {0x089C052Cu,0x089C051Cu,words21,masks21,12,12,16,0,0,console::AddressKind::Code},
+    {0x089C0E18u,0x089C0E08u,words22,masks22,12,17,16,0,0,console::AddressKind::Code},
+    {0x089C650Cu,0x089C64FCu,words23,masks23,12,36,16,0,0,console::AddressKind::Code},
+    {0x089C66B0u,0x089C66A0u,words24,masks24,12,42,16,0,0,console::AddressKind::Code},
+    {0x089C8200u,0x089C81F0u,words25,masks25,12,4,16,0,0,console::AddressKind::Code},
+    {0x089C8274u,0x089C8264u,words26,masks26,12,16,16,0,0,console::AddressKind::Code},
+    {0x089CAE2Cu,0x089CAE1Cu,words27,masks27,12,2,16,0,0,console::AddressKind::Code},
+    {0x089CB77Cu,0x089CB76Cu,words28,masks28,12,17,16,0,0,console::AddressKind::Code},
+    {0x089CC124u,0x089CC114u,words29,masks29,12,17,16,0,0,console::AddressKind::Code},
+    {0x089CCA70u,0x089CCA60u,words30,masks30,12,17,16,0,0,console::AddressKind::Code},
+    {0x089CD7ECu,0x089CD7DCu,words31,masks31,12,38,16,0,0,console::AddressKind::Code},
+    {0x089CDB38u,0x089CDB28u,words32,masks32,12,2,16,0,0,console::AddressKind::Code},
+    {0x089CDDF8u,0x089CDDE8u,words33,masks33,12,0,16,0,0,console::AddressKind::Code},
+    {0x089CE2F0u,0x089CE2E0u,words34,masks34,12,17,16,0,0,console::AddressKind::Code},
+    {0x089CE8B8u,0x089CE8A8u,words35,masks35,12,0,16,0,0,console::AddressKind::Code},
+    {0x089CEC10u,0x089CEC00u,words36,masks36,12,2,16,0,0,console::AddressKind::Code},
+    {0x089CF94Cu,0x089CF93Cu,words37,masks37,12,2,16,0,0,console::AddressKind::Code},
+    {0x089CFA4Cu,0x089CFA3Cu,words38,masks38,12,16,16,0,0,console::AddressKind::Code},
+    {0x089CFCE8u,0x089CFCD8u,words39,masks39,12,44,16,0,0,console::AddressKind::Code},
+    {0x089CFE54u,0x089CFE44u,words40,masks40,12,42,16,0,0,console::AddressKind::Code},
+    {0x089D0340u,0x089D0330u,words41,masks41,12,26,16,0,0,console::AddressKind::Code},
+    {0x089D0D28u,0x089D0D18u,words42,masks42,12,42,16,0,0,console::AddressKind::Code},
+    {0x089D10E4u,0x089D10D4u,words43,masks43,12,17,16,0,0,console::AddressKind::Code},
+    {0x089D480Cu,0x089D47FCu,stream089D480CWords,stream089D480CMasks,24,16,16,0,0,console::AddressKind::Code},
+    {0x089E7270u,0x089E7270u,radarWords,radarMasks,10,0,0,0,0,console::AddressKind::Code},
+    {0x089EFB80u,0x089EFB70u,stream089EFB80Words,stream089EFB80Masks,24,74,16,0,0,console::AddressKind::Code},
+    {0x089F18A4u,0x089F1894u,stream089F18A4Words,stream089F18A4Masks,24,44,16,0,0,console::AddressKind::Code},
+    {0x089F1D20u,0x089F1D10u,stream089F1D20Words,stream089F1D20Masks,24,68,16,0,0,console::AddressKind::Code},
+    {0x089F1F3Cu,0x089F1F2Cu,stream089F1F3CWords,stream089F1F3CMasks,24,83,16,0,0,console::AddressKind::Code},
+    {0x089F21D4u,0x089F21C4u,stream089F21D4Words,stream089F21D4Masks,24,2,16,0,0,console::AddressKind::Code},
+    {0x089F2D80u,0x089F2D70u,stream089F2D80Words,stream089F2D80Masks,24,76,16,0,0,console::AddressKind::Code},
+    {0x089F2E90u,0x089F2E80u,stream089F2E90Words,stream089F2E90Masks,24,90,16,0,0,console::AddressKind::Code},
+    {0x089F2EECu,0x089F2EDCu,stream089F2EECWords,stream089F2EECMasks,24,22,16,0,0,console::AddressKind::Code},
+    {0x089F2F08u,0x089F2EF8u,stream089F2F08Words,stream089F2F08Masks,24,72,16,0,0,console::AddressKind::Code},
+    {0x089F2F24u,0x089F2F14u,stream089F2F24Words,stream089F2F24Masks,24,44,16,0,0,console::AddressKind::Code},
+    {0x089F3070u,0x089F3060u,stream089F3070Words,stream089F3070Masks,24,62,16,0,0,console::AddressKind::Code},
+    {0x089F30FCu,0x089F30ECu,stream089F30FCWords,stream089F30FCMasks,24,44,16,0,0,console::AddressKind::Code},
+    {0x089F314Cu,0x089F313Cu,stream089F314CWords,stream089F314CMasks,24,60,16,0,0,console::AddressKind::Code},
+    {0x089F357Cu,0x089F356Cu,stream089F357CWords,stream089F357CMasks,24,26,16,0,0,console::AddressKind::Code},
+    {0x089F35F0u,0x089F35E0u,stream089F35F0Words,stream089F35F0Masks,24,42,16,0,0,console::AddressKind::Code},
+    {0x089F3B44u,0x089F3B34u,stream089F3B44Words,stream089F3B44Masks,24,16,16,0,0,console::AddressKind::Code},
+    {0x089F3B90u,0x089F3B80u,stream089F3B90Words,stream089F3B90Masks,24,62,16,0,0,console::AddressKind::Code},
+    {0x089F4064u,0x089F4054u,stream089F4064Words,stream089F4064Masks,24,42,16,0,0,console::AddressKind::Code},
+    {0x089F4070u,0x089F4060u,stream089F4070Words,stream089F4070Masks,24,88,16,0,0,console::AddressKind::Code},
+    {0x089F468Cu,0x089F467Cu,stream089F468CWords,stream089F468CMasks,24,86,16,0,0,console::AddressKind::Code},
+    {0x089F4CE8u,0x089F4CD8u,stream089F4CE8Words,stream089F4CE8Masks,24,32,16,0,0,console::AddressKind::Code},
+    {0x089F6694u,0x089F6684u,stream089F6694Words,stream089F6694Masks,24,50,16,0,0,console::AddressKind::Code},
+    {0x089F6E24u,0x089F6E14u,stream089F6E24Words,stream089F6E24Masks,24,56,16,0,0,console::AddressKind::Code},
+    {0x089F72CCu,0x089F72BCu,stream089F72CCWords,stream089F72CCMasks,24,51,16,0,0,console::AddressKind::Code},
+    {0x089F7788u,0x089F7778u,stream089F7788Words,stream089F7788Masks,24,53,16,0,0,console::AddressKind::Code},
+    {0x089F77F4u,0x089F77E4u,stream089F77F4Words,stream089F77F4Masks,24,61,16,0,0,console::AddressKind::Code},
+    {0x089FC710u,0x089FC700u,words44,masks44,12,34,16,0,0,console::AddressKind::Code},
+    {0x089FC98Cu,0x089FC97Cu,words45,masks45,12,42,16,0,0,console::AddressKind::Code},
+    {0x08A05F28u,0x08A05F18u,words46,masks46,12,14,16,0,0,console::AddressKind::Code},
+    {0x08A2ACACu,0x08A2AC9Cu,words47,masks47,12,16,16,0,0,console::AddressKind::Code},
+    {0x08A2ACE8u,0x08A2ACD8u,words48,masks48,12,16,16,0,0,console::AddressKind::Code},
+    {0x08A2AD24u,0x08A2AD14u,words49,masks49,12,0,16,0,0,console::AddressKind::Code},
+    {0x08A36E2Cu,0x08A36E1Cu,words50,masks50,12,2,16,0,0,console::AddressKind::Code},
+    {0x08A5E0B4u,0x08A5E0A4u,stream08A5E0B4Words,stream08A5E0B4Masks,24,46,16,0,0,console::AddressKind::Code},
+    {0x08A5E0F0u,0x08A5E0E0u,stream08A5E0F0Words,stream08A5E0F0Masks,24,67,16,0,0,console::AddressKind::Code},
+    {0x08A6DD1Cu,0x08A6DD0Cu,words51,masks51,12,30,16,0,0,console::AddressKind::Code},
+    {0x08A6DE68u,0x08A6DE58u,words52,masks52,12,44,16,0,0,console::AddressKind::Code},
+    {0x08A88CA8u,0x08A88C98u,stream08A88CA8Words,stream08A88CA8Masks,24,0,16,0,0,console::AddressKind::Code},
+    {0x08AC79A4u,0x08AC7994u,words53,masks53,12,38,16,0,0,console::AddressKind::Code},
+    {0x08AC7C50u,0x08AC7C40u,words54,masks54,12,36,16,0,0,console::AddressKind::Code},
+    {0x08AE50C4u,0x08AE50B4u,stream08AE50C4Words,stream08AE50C4Masks,24,64,16,0,0,console::AddressKind::Code},
+    {0x08AE51B8u,0x08AE51A8u,stream08AE51B8Words,stream08AE51B8Masks,24,16,16,0,0,console::AddressKind::Code},
+    {0x08AE51FCu,0x08AE51ECu,stream08AE51FCWords,stream08AE51FCMasks,24,62,16,0,0,console::AddressKind::Code},
+    {0x08AE674Cu,0x08AE673Cu,stream08AE674CWords,stream08AE674CMasks,24,34,16,0,0,console::AddressKind::Code},
+    {0x08B58FBCu,0x0890D178u,stream08B58FBCWords,stream08B58FBCMasks,24,86,16,12,0,console::AddressKind::Absolute},
+    {0x08B5B238u,0x0883DEA8u,words55,masks55,12,8,16,12,0,console::AddressKind::Absolute},
+    {0x08C0D160u,0x08817150u,words56,masks56,12,44,16,12,0,console::AddressKind::Absolute},
+    {0x08C109E0u,0x08821D10u,stream08C109E0Words,stream08C109E0Masks,24,40,16,4,0,console::AddressKind::Absolute},
+    {0x08C11110u,0x08838774u,stream08C11110Words,stream08C11110Masks,24,11,20,0,0,console::AddressKind::Absolute},
+    {0x08C11258u,0x0883DE8Cu,words57,masks57,12,36,16,4,0,console::AddressKind::Absolute},
+    {0x08C11EC0u,0x0883E518u,words58,masks58,12,1,16,12,0,console::AddressKind::Absolute},
+    {0x08C1CDD0u,0x08869854u,stream08C1CDD0Words,stream08C1CDD0Masks,24,72,16,4,0,console::AddressKind::Absolute},
+}};
+}
+inline console::NativeProfile<profile_data::rules> nativeProfile;
+template<uintptr_t Reference> uintptr_t Address() { return nativeProfile.template get<Reference>(); }
+inline bool InitializeAddresses() {
+    sceKernelIcacheInvalidateRange(reinterpret_cast<void*>(pattern.text_addr),pattern.text_size);
+    return nativeProfile.initialize({pattern.text_addr,reinterpret_cast<const uint8_t*>(pattern.text_addr),pattern.text_size,console::portable::gameGP});
+}
+}
+
+// ===== SNAPSHOT: Game.hpp =====
+#pragma once
+#include "Addresses.hpp"
+#include "../Shared/Console/PSP.hpp"
+namespace ctw {
+using namespace console::portable;
+inline constexpr float nativeAspect = 480.0f / 272.0f;
+inline float targetAspect = nativeAspect;
+inline bool automaticAspect = true;
+inline float HorizontalScale() { return nativeAspect / targetAspect; }
+void RefreshAspect();
+template<class T> inline T& at(uintptr_t address) { return *reinterpret_cast<T*>(address); }
+inline bool Guest(uintptr_t address, unsigned size = 4) {
+    return address >= 0x08000000 && address <= 0x0DD00000 - size;
+}
+inline uintptr_t Player() {
+    const unsigned index = at<unsigned>(Address<0x08B5B238>());
+    if (index >= 2) return 0;
+    const auto player = at<uintptr_t>(Address<0x08C0D160>() + index * 4);
+    return Guest(player, 0x1000) ? player : 0;
+}
+inline uintptr_t Vehicle() {
+    const auto player = Player();
+    if (!player) return 0;
+    const auto handle = at<uintptr_t>(player + 0x1CC);
+    return Guest(handle) ? at<uintptr_t>(handle) : 0;
+}
+inline bool GameplayCamera() {
+    const auto player = Player();
+    return player && Vehicle() && !at<uint8_t>(player + 0xE31);
+}
+void InstallInput();
+void InstallCamera();
+void InstallAspect();
+void InstallReplay();
+void InstallHud();
+void InstallVideo();
+bool ThirdPersonCamera();
+void InstallStreaming();
+void UpdateDrawDistance(uintptr_t camera);
+}
+
+// ===== SNAPSHOT: Aspect.cpp =====
+#include "Game.hpp"
+#include <cstdlib>
+
+namespace ctw {
+namespace {
+SafetyMipsInline cameraBuilder;
+injector::hook_back<void(void*)> buildCamera;
+void BuildCamera(void* object) {
+    RefreshAspect();
+    const auto camera = reinterpret_cast<uintptr_t>(object);
+    UpdateDrawDistance(camera);
+    // This native camera owns both the GE matrix and fixed-point frustum
+    // limits. Changing its Q12 aspect lets the engine update them together.
+    const int aspect = int(targetAspect * 4096.0f + 0.5f);
+    if (at<int>(camera + 88) != aspect) {
+        at<int>(camera + 88) = aspect;
+        at<uint8_t>(camera + 106) = 1;
+    }
+    buildCamera.fun(object);
+}
+}
+void RefreshAspect() {
+    if (automaticAspect) targetAspect = console::portable::Aspect();
+}
+void InstallAspect() {
+    char ratio[64];
+    inireader.ReadString("MAIN", "ForceAspectRatio", "auto", ratio, sizeof(ratio));
+    char* separator = nullptr;
+    const float numerator = std::strtof(ratio, &separator);
+    if (separator && *separator == ':') {
+        char* end = nullptr;
+        const float denominator = std::strtof(separator + 1, &end);
+        if (end && !*end && numerator > 0 && denominator > 0) {
+            targetAspect = console::bounded(numerator / denominator, 0.5f, 8.0f, nativeAspect);
+            automaticAspect = false;
+        }
+    }
+    RefreshAspect();
+#ifndef NDEBUG
+    logger.WriteF("Camera builder %08X words %08X %08X previous %08X", unsigned(Address<0x088559AC>()), injector::ReadMemory<uint32_t>(Address<0x088559AC>()), injector::ReadMemory<uint32_t>(Address<0x088559AC>()+4), injector::ReadMemory<uint32_t>(Address<0x088559AC>()-4));
+#endif
+    cameraBuilder = safetymips::create_inline(Address<0x088559AC>(), BuildCamera);
+    buildCamera.fun = cameraBuilder.original<void(*)(void*)>();
+}
+}
+
+// ===== SNAPSHOT: Camera.cpp =====
+#include "Game.hpp"
+#include <cstdlib>
+extern "C" {
+#include "../../external/injector/include/psp/nanoprintf.h"
+}
+namespace ctw {
+namespace {
+constexpr auto path = "ms0:/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.dat";
+injector::hook_back<int(int16_t*, int16_t)> pitch;
+SafetyMipsMid height;
+bool enabled, dirty;
+int angle, elevation = 13464;
+uint32_t previous;
+void Save() {
+    const SceUID file = sceIoOpen(path, PSP_O_WRONLY | PSP_O_CREAT | PSP_O_TRUNC, 0777);
+    if (file < 0) return;
+    char buffer[64];
+    const int length = npf_snprintf(buffer, sizeof(buffer), "%d %d %d", int(enabled), angle, elevation);
+    const bool written = length > 0 && unsigned(length) < sizeof(buffer) &&
+                         sceIoWrite(file, buffer, length) == length;
+    const int closed = sceIoClose(file);
+    if (written && closed >= 0) dirty = false;
+}
+void Load() {
+    const SceUID file = sceIoOpen(path, PSP_O_RDONLY, 0777);
+    if (file < 0) return;
+    char buffer[64]{};
+    const int length = sceIoRead(file, buffer, sizeof(buffer) - 1);
+    sceIoClose(file);
+    if (length <= 0) return;
+    buffer[length] = 0;
+    char* next = buffer;
+    long values[3];
+    for (auto& value : values) {
+        char* end = nullptr; value = std::strtol(next, &end, 10);
+        if (end == next) return;
+        next = end;
+    }
+    if (values[0] < 0 || values[0] > 1 || values[1] < -10000 || values[1] > 0 || values[2] < 13464 || values[2] > 120000) return;
+    enabled = values[0] != 0; angle = int(values[1]); elevation = int(values[2]);
+}
+int Axis(uint8_t value) {
+    return value < 118 ? int(value) - 118 : value > 138 ? int(value) - 138 : 0;
+}
+int Pitch(int16_t* matrix, int16_t native) {
+    SceCtrlData pad{};
+    if (GameplayCamera() && sceCtrlPeekBufferPositive(&pad, 1) > 0) {
+        const uint32_t pressed = pad.Buttons & ~previous;
+        if (pressed & PSP_CTRL_RIGHT) { enabled = !enabled; dirty = true; }
+        if (enabled) {
+            if (pressed & PSP_CTRL_UP) { angle = 0; elevation = 13464; dirty = true; }
+            const int x = Axis(pad.Rsrv[0]), y = Axis(pad.Rsrv[1]);
+            if (x || y) {
+                angle = angle - x * 8; elevation = elevation - y * 8;
+                if (angle < -10000) angle = -10000;
+                if (angle > 0) angle = 0;
+                if (elevation < 13464) elevation = 13464;
+                if (elevation > 120000) elevation = 120000;
+                dirty = true;
+            } else if (dirty) Save(); // persist once when the stick settles
+            native = int16_t(-16384 - angle);
+        } else if (dirty) Save();
+        previous = pad.Buttons;
+    } else previous = 0;
+    return pitch.fun(matrix, native);
+}
+}
+bool ThirdPersonCamera() { return enabled && GameplayCamera(); }
+void InstallCamera() {
+    if (!inireader.ReadInteger("MAIN", "Enable3rdPersonCamera", 1)) return;
+    Load();
+    injector::MakeNOP(Address<0x088704C8>()); // retain the original cinematic-camera opt-out
+    pitch.fun = injector::MakeCALL(Address<0x088559F0>(), Pitch).get();
+    safetymips::Options replace; replace.execute_original = false;
+    height = safetymips::create_mid(Address<0x088CBFA8>(), [](SafetyMipsContext& regs) {
+        regs.a0 = at<uint32_t>(regs.sp + 0xB4);
+        at<uint32_t>(regs.s6 + 0x104) = regs.a1; // displaced native Y store
+        if (enabled && GameplayCamera()) regs.a0 = uint32_t(elevation);
+    }, replace);
+}
+}
+
+// ===== SNAPSHOT: main.cpp =====
+#include "Game.hpp"
+extern "C" { PSP_MODULE_INFO("GTACTW.FusionFix", PSP_MODULE_USER, 2, 0); }
+namespace ctw {
+namespace {
+SafetyMipsInline radio;
+SafetyMipsMid loading, loaded;
+injector::hook_back<void()> boot;
+int Radio() { return 1; }
+void Boot() { boot.fun(); Unthrottle(false); }
+int Install() {
+    if (!Begin()) return -1;
+    if (!InitializeAddresses()) return -1;
+    InstallAspect();
+#ifndef NDEBUG
+    logger.WriteF("Aspect patches: %u", unsigned(injector::detail::startup.error));
+#endif
+    InstallInput();
+    InstallCamera();
+    InstallStreaming();
+    InstallReplay();
+    InstallHud();
+    InstallVideo();
+#ifndef NDEBUG
+    logger.WriteF("HUD patches: %u", unsigned(injector::detail::startup.error));
+#endif
+    if (inireader.ReadInteger("MAIN", "RadioInAllVehicles", 1)) {
+        radio = safetymips::create_inline(Address<0x0884F52C>(), Radio);
+        // Remove the two conditional skip tests, retaining their delay slots.
+        const auto cycle = pattern.get_first("01 00 A5 24 2A 20 85 00", 8);
+        injector::MakeNOP(cycle); injector::MakeNOP(cycle + 16);
+    }
+    if (inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1)) {
+        boot.fun = injector::MakeCALL(Address<0x088CFC1C>(), Boot).get();
+        // Run before each virtual loading notification. The game still calls
+        // its original method with its own this adjustment and return value.
+        loading = safetymips::create_mid(Address<0x08992490>(), [](SafetyMipsContext&) { Unthrottle(true); });
+        loaded = safetymips::create_mid(Address<0x089924B0>(), [](SafetyMipsContext&) { Unthrottle(false); });
+    }
+    const int result = Finish();
+    if (result == 0 && inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1)) Unthrottle(true);
+    return result;
+}
+}
+}
+extern "C" int module_start(SceSize, void*) {
+    if (!ctw::Start("CTW", "ms0:/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.ini",
+                   "ms0:/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.log")) return 0;
+    return ctw::Install();
+}
+
+// ===== SNAPSHOT: module.json =====
+{
+  "sources": [
+    "main.cpp",
+    "Input.cpp",
+    "Camera.cpp",
+    "Streaming.cpp",
+    "Sky.cpp",
+    "Aspect.cpp",
+    "Replay.cpp",
+    "Hud.cpp",
+    "Video.cpp",
+    "../../external/injector/include/psp/injector.c",
+    "../../external/injector/include/psp/log.c",
+    "../../external/injector/include/psp/patterns.c",
+    "../../external/injector/include/psp/rini.c",
+    "../../external/injector/include/psp/inireader.c",
+    "../../external/injector/include/psp/gvm.c",
+    "../../external/injector/include/psp/mips.c",
+    "../../external/injector/include/psp/memalloc.c"
+  ],
+  "output": "../../data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.prx",
+  "exports": "exports.exp",
+  "startup": "module_start",
+  "defines": [
+    "PSP_HOOK_RAM_END=0x0DD00000",
+    "PSP_GAME_ABI_COMPAT"
+  ],
+  "libraries": [
+    "-lpspsystemctrl_user",
+    "-lm"
+  ],
+  "cxx_flags": [
+    "-std=gnu++17",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-strict-aliasing",
+    "-fno-threadsafe-statics"
+  ]
+}
+
+// ===== SNAPSHOT: shipped INI =====
+[MAIN]
+; Viewport aspect ratio: auto reads PPSSPP's stretch setting, or use e.g. 21:9 or 32:9.
+ForceAspectRatio = auto
+; R-button/Cross, L-button/Square swap, in vehicle, swap buttons with triggers in the emulator settings to drive with triggers
+SwapDrivingControls = 1
+; R-button/Circle swap, on foot, requires SwapDrivingControls to be enabled, to shoot with RB
+SwapRBCircle = 1
+; Press DPAD-RIGHT to switch between cameras. Use Right Stick to adjust position and angle. Original cinematic camera will be disabled
+Enable3rdPersonCamera = 1
+; Far plane in world units for the vehicle camera (180-360). The original is 150.
+; Scenery uses a 32 MB resource cache and 48 loading buffers in PPSSPP's extended RAM.
+ThirdPersonDrawDistance = 300
+; Draw a sky gradient above the horizon, using the current fog colour.
+ThirdPersonSky = 1
+; Enables radio in emergency vehicles
+RadioInAllVehicles = 1
+; Fast PDA Transitions and intro
+UnthrottleEmuDuringLoading = 1
+; Present Xin missions as available to the replay board without changing saved progress. Experimental, disabled by default.
+UnlockXinMissionsInReplayBoard = 0
+; Scale the complete gameplay HUD, including radar, around its screen-edge anchors (0.5 to 1.0). PDA apps retain their native proportions and size.
+HUDScale = 1.0

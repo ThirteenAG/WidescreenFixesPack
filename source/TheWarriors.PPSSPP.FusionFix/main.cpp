@@ -1,250 +1,87 @@
-#include "../../external/injector/include/psp/runtime.hpp"
-using namespace mips_asm;
-
-extern "C" {
-#include <pspsdk.h>
-#include <pspkernel.h>
-#include <pspctrl.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include <systemctrl.h>
-
-#include "../../external/injector/include/psp/log.h"
-
-#include "../../external/injector/include/psp/patterns.h"
-#include "../../external/injector/include/psp/inireader.h"
-#include "../../external/injector/include/psp/gvm.h"
-
-#define MODULE_NAME_INTERNAL "WARR"
-#define MODULE_NAME "TheWarriors.FusionFix"
-#define LOG_PATH "ms0:/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.log"
-#define INI_PATH "ms0:/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.ini"
-
-#ifndef __INTELLISENSE__
-PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_USER, 1, 0);
-static_assert(sizeof(MODULE_NAME) - 1 < 28, "MODULE_NAME can't have more than 28 characters");
-#endif
-
-enum
-{
-    EMULATOR_DEVCTL__TOGGLE_FASTFORWARD = 0x30,
-    EMULATOR_DEVCTL__GET_ASPECT_RATIO,
-    EMULATOR_DEVCTL__GET_SCALE
-};
-
-void UnthrottleEmuEnable()
-{
-    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)1, 0, NULL, 0);
+#include "../Shared/Console/PSP.hpp"
+#include <cstdlib>
+extern "C" { PSP_MODULE_INFO("TheWarriors.FusionFix", PSP_MODULE_USER, 2, 0); }
+namespace {
+using namespace console::portable;
+SafetyMipsInline input;
+SafetyMipsMid projection, hud, loading;
+injector::hook_back<int(int, char)> load;
+float aspect = 512.0f / 320.0f;
+bool automaticAspect;
+float ReadAspect() {
+    char buffer[64];
+    const char* value = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", buffer, sizeof(buffer));
+    automaticAspect = std::strcmp(value, "auto") == 0;
+    if (automaticAspect) return Aspect();
+    if (!*value || *value == '0') return 0;
+    char* end = nullptr;
+    const float width = std::strtof(value, &end);
+    if (end == value || *end != ':') return 512.0f / 320.0f;
+    const char* heightText = end + 1;
+    const float height = std::strtof(heightText, &end);
+    if (end == heightText || *end || !(width > 0 && height > 0)) return 512.0f / 320.0f;
+    return console::bounded(width / height, 0.5f, 8, 512.0f / 320.0f);
 }
-
-void UnthrottleEmuDisable()
-{
-    sceIoDevctl("kemulator:", EMULATOR_DEVCTL__TOGGLE_FASTFORWARD, (void*)0, 0, NULL, 0);
-}
-
-uintptr_t GetAbsoluteAddress(uintptr_t at, int32_t offs_hi, int32_t offs_lo)
-{
-    return (uintptr_t)((uint32_t)(*(uint16_t*)(at + offs_hi)) << 16) + *(int16_t*)(at + offs_lo);
-}
-
-uintptr_t byte_8E8C2FC;
-void GetRs(uintptr_t addr, char a1, char a2)
-{
-    SceCtrlData pad;
-    sceCtrlPeekBufferPositive(&pad, 1);
-
-    //*(int8_t*)(addr + 0x1A) = a1;//pad.Rsrv[0];
-    //*(int8_t*)(addr + 0x1B) = a2;//pad.Rsrv[1];
-
-    *(uint8_t*)(addr + 0x1A) = pad.Rsrv[0];
-    float Ry = -(((float)pad.Rsrv[1] - 255.0f) / 255.0f);
-    if (byte_8E8C2FC && *(uint8_t*)byte_8E8C2FC == 0)
-        *(uint8_t*)(addr + 0x1B) = Ry * 255.0f;
-    else
-        *(uint8_t*)(addr + 0x1B) = -pad.Rsrv[1] + -1;
-}
-
-uintptr_t sub_8834070 = 0;
-int sub_8834070_hook(int a1, char a2)
-{
-    UnthrottleEmuEnable();
-    return ((int(*)(int, char))sub_8834070)(a1, a2);
-}
-
-int OnModuleStart() 
-{
-    int SkipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1);
-    int DualAnalogPatch = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1);
-    int Enable60FPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0);
-    int UnthrottleEmuDuringLoading = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1);
-    
-    char szForceAspectRatio[100];
-    const char* ForceAspectRatio = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", szForceAspectRatio, sizeof(szForceAspectRatio));
-
-    if (SkipIntro)
-    {
-        uintptr_t ptr = pattern.get_first("10 00 A5 27 ? ? ? ? ? ? ? ? ? ? ? ? 21 28 00 00", 0);
-        injector::MakeNOP(ptr + 12);
-        injector::MakeNOP(ptr + 28);
-        injector::MakeNOP(ptr + 44);
+int Input(uintptr_t object, int controller) {
+    const int result = input.call<int>(object, controller);
+    if (automaticAspect) aspect = Aspect();
+    SceCtrlData pad{};
+    uint8_t x = 128, y = 128;
+    if (sceCtrlPeekBufferPositive(&pad, 1) > 0) {
+        x = pad.Rsrv[0];
+        // The native camera expects Y in the opposite direction. Its own
+        // inversion option remains responsible for the final camera direction.
+        y = uint8_t(255 - pad.Rsrv[1]);
     }
-    
-    if (DualAnalogPatch)
-    {
-        uintptr_t ptr = pattern.get_first("21 10 A2 00 FF 00 C6 30 21 28 A4 00 28 04 A6 A0 08 00 E0 03 00 00 46 A0", 0);
-        byte_8E8C2FC = GetAbsoluteAddress(ptr, -8, -4);
-        
-        ptr = pattern.get_first("21 10 51 00 ? ? ? ? 1C 00 50 A4", 4);
-
-        injector::MakeInline(ptr + 0x00,
-            sh(s0, v0, 0x1C),
-            lbu(a2, sp, 0x1B),
-            lbu(a1, sp, 0x1A)
-        );
-
-        injector::MakeNOP(ptr + 0x04);
-        injector::WriteInstr(ptr + 0x08, b(21));
-        injector::MakeNOP(ptr + 0x0C);
-
-        injector::MakeInlineWithNOP(ptr + 0x80,
-            sw(zero, s1, 0x10),
-            sw(zero, s1, 0x14),
-            move(a0, s1),
-            jal((intptr_t)GetRs),
-            nop()
-
-        );
-
-        //injector::WriteInstr(ptr + 0x6C, sb(a2, s1, 0x1B));
-        //injector::WriteInstr(ptr + 0x8C, sb(a1, s1, 0x1A));
-
-        injector::MakeNOP(ptr + 0x8C);
-
-        sceKernelIcacheInvalidateRange((const void*)ptr, 0x90);
-    }
-    
-    if (Enable60FPS)
-    {
-        uintptr_t ptr = pattern.get_first("02 00 42 2C ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 00 00 A2 8C", 4);
-        injector::MakeNOP(ptr);
-    }
-
-    if (strlen(ForceAspectRatio) && ForceAspectRatio[0] != '0')
-    {
-        // Default is 512/320 for some reason
-        int x = 512;
-        int y = 320;
-        float fAspectRatio = (float)x / (float)y;
-        
-        if (strcmp(ForceAspectRatio, "auto") != 0)
-        {
-            char* ch;
-            // A non-default value refers to our writable INI buffer.
-            ch = strtok(const_cast<char*>(ForceAspectRatio), ":");
-            if (ch)
-            {
-                x = str2int(ch, 10);
-                ch = strtok(NULL, ":");
-                if (ch)
-                {
-                    y = str2int(ch, 10);
-                    fAspectRatio = (float)x / (float)y;
-                }
-            }
-        }
-        else
-        {
-            float ar = 0.0f;
-            sceIoDevctl("kemulator:", EMULATOR_DEVCTL__GET_ASPECT_RATIO, NULL, 0, &ar, sizeof(ar));
-            if (ar)
-                fAspectRatio = ar;
-            else
-                fAspectRatio = 16.0f / 9.0f;
-        }
-
-        uintptr_t ptr_28C = pattern.get(0, "94 18 C1 E7 03 03 01 46", 4);
-        injector::MakeInline(ptr_28C,
-            lui(t9, injector::HighWord(fAspectRatio)),
-            ori(t9, t9, injector::LowWord(fAspectRatio)),
-            mtc1(t9, f12)
-        );
-
-        float fHudScale = fAspectRatio;
-        uintptr_t ptr_B90 = pattern.get(0, "02 00 02 46 00 00 C3 8F", -4);
-        injector::MakeInline(ptr_B90,
-            lui(t9, injector::HighWord(fHudScale)),
-            ori(t9, t9, injector::LowWord(fHudScale)),
-            mtc1(t9, f1)
-        );
-    }
-
-    //{
-    //    float fHudSize = 1.5f;
-    //    uintptr_t ptr_2FC = pattern.get(0, "CD 08 00 46 ? ? ? ? ? ? ? ? ? ? ? ? 05 00 63 34", 8);
-    //    injector::MakeInline(ptr_2FC,
-    //        lui(v0, injector::HighWord(fHudSize)),
-    //        ori(v0, v0, injector::LowWord(fHudSize)),
-    //        mtc1(v0, f4)
-    //    );
-    //}
-
-    if (UnthrottleEmuDuringLoading)
-    {
-        uintptr_t ptr = pattern.get_first("00 00 B0 AF ? ? ? ? ? ? ? ? 20 00 25 8E", 0);
-        sub_8834070 = injector::GetBranchDestination(ptr + 4).as_int();
-        injector::MakeCALL(ptr + 4, sub_8834070_hook);
-
-        ptr = pattern.get_first("08 00 BF AF 04 00 B1 AF ? ? ? ? 00 00 B0 AF 06 00 03 24", 0);
-        injector::MakeInlineWithNOP(ptr,
-            sw(ra, sp, 8),
-            sw(s1, sp, 4),
-            jal((uintptr_t)UnthrottleEmuDisable),
-            nop()
-        );
-    }
-
-    sceKernelDcacheWritebackAll();
-    sceKernelIcacheClearAll();
-
-    return 0;
+    *reinterpret_cast<uint8_t*>(object + 0x1A) = x;
+    *reinterpret_cast<uint8_t*>(object + 0x1B) = y;
+    return result;
 }
-
-int module_start(SceSize args, void* argp) 
-{
-    if (injector::InitializeRuntime() != PSP_HOOK_OK) return -1;
-    if (sceIoDevctl("kemulator:", 0x00000003, NULL, 0, NULL, 0) == 0) {
-        SceUID modules[10];
-        int count = 0;
-        int result = 0;
-        if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0) {
-            int i;
-            SceKernelModuleInfo info;
-            for (i = 0; i < count; ++i) {
-                info.size = sizeof(SceKernelModuleInfo);
-                if (sceKernelQueryModuleInfo(modules[i], &info) < 0) {
-                    continue;
-                }
-
-                if (strcmp(info.name, MODULE_NAME_INTERNAL) == 0)
-                {
-                    injector::SetGameBaseAddress(info.text_addr, info.text_size);
-                    pattern.SetGameBaseAddress(info.text_addr, info.text_size);
-                    inireader.SetIniPath(INI_PATH); //crashes on sceIoClose for some reason
-                    inireader.SetIniPath(INI_PATH); //but works if called twice (!?)
-                    logger.SetPath(LOG_PATH);
-                    result = 1;
-                }
-                else if (strcmp(info.name, MODULE_NAME) == 0)
-                {
-                    injector::SetModuleBaseAddress(info.text_addr, info.text_size);
-                }
-            }
-
-            if (result)
-                OnModuleStart();
-        }
+int Loading(int object, char state) { Unthrottle(true); return load.fun(object, state); }
+int Install() {
+    if (!Begin()) return -1;
+    if (inireader.ReadInteger("MAIN", "SkipIntro", 1)) {
+        const auto intro = pattern.get_first("10 00 A5 27 ? ? ? ? ? ? ? ? ? ? ? ? 21 28 00 00", 0);
+        for (unsigned offset : {12u, 28u, 44u}) injector::MakeNOP(intro + offset);
     }
-    return 0;
+    if (inireader.ReadInteger("MAIN", "DualAnalogPatch", 1)) {
+        const auto branch = pattern.get_first("21 10 51 00 ? ? ? ? 1C 00 50 A4", 4);
+        // Keep the left stick on movement, including while the native camera
+        // modifier is held. Preserve the target and the button-history delay slot.
+        const auto instruction = injector::ReadMemory<uint32_t>(branch);
+        injector::WriteMemory<uint32_t>(branch, 0x10000000u | (instruction & 0xFFFF));
+        input = safetymips::create_inline(branch - 0x310, Input);
+    }
+    if (inireader.ReadInteger("MAIN", "Enable60FPS", 0))
+        injector::MakeNOP(pattern.get_first("02 00 42 2C ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 00 00 A2 8C", 4));
+    aspect = ReadAspect();
+    if (aspect) {
+        const auto site = pattern.get_first("94 18 C1 E7 03 03 01 46", 4);
+        // DIV.S supplies the perspective aspect, followed by the native LUI.
+        // No VFPU use in these callbacks. Saving VFPU state would restore the prefix
+        // registers before returning, making PPSSPP's JIT drop its default-prefix assumption.
+        safetymips::Options replace; replace.execute_original = false; replace.preserve = PSP_HOOK_SAVE_FPU;
+        projection = safetymips::create_mid(site, [](SafetyMipsContext& regs) {
+            if (automaticAspect) aspect = Aspect();
+            regs.f12 = aspect; regs.s3 = 0x1C000000;
+        }, replace);
+        hud = safetymips::create_mid(pattern.get_first("02 00 02 46 00 00 C3 8F", -4),
+            [](SafetyMipsContext& regs) { regs.f1 = aspect; regs.f0 *= regs.f2; }, replace);
+    }
+    if (inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1)) {
+        safetymips::Options scalar; scalar.preserve = PSP_HOOK_SAVE_FPU;
+        load.fun = injector::MakeCALL(pattern.get_first("00 00 B0 AF ? ? ? ? ? ? ? ? 20 00 25 8E", 4), Loading).get();
+        loading = safetymips::create_mid(pattern.get_first("08 00 BF AF 04 00 B1 AF ? ? ? ? 00 00 B0 AF 06 00 03 24", 0),
+            [](SafetyMipsContext&) { Unthrottle(false); }, scalar);
+    }
+    return Finish();
 }
-} // extern "C"
+}
+extern "C" int module_start(SceSize, void*) {
+    constexpr auto ini = "ms0:/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.ini";
+    if (!Start("WARR", ini, "ms0:/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.log")) return 0;
+    // Retain the original game's initialization workaround until it can be
+    // checked on the emulator; it has no effect on normal INI contents.
+    inireader.SetIniPath(ini);
+    return Install();
+}
