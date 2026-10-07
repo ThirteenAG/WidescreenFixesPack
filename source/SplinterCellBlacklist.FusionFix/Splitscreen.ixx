@@ -256,10 +256,43 @@ namespace Splitscreen
         void*** lights = nullptr;
     };
     VisibilityJobs gameJobs{};
-    void* secondViewLights[3] = {};
-    VisibilityJobs secondViewJobs{ nullptr, reinterpret_cast<void***>(secondViewLights) };
     bool jobsSwapped = false;
     int32_t views[2] = { -1, -1 };
+
+    // A view's index is its slot in the renderer's view pool (10 a frame, RenderContext +24h, count +20CCh): player 2's view is prepared
+    // first, then its reflections and sun cascades, then player 1's view, its index moved with player 2's sun and reflections. The jobs and
+    // slots kept per index were another view's (player 1's view missed geometry: Voron Station, Kigali). The views are kept by their order
+    // of preparation in the frame instead.
+    int32_t prepareOrder = 0;
+    int32_t viewOrders[16] = {};
+
+    void ResetViewOrders()
+    {
+        prepareOrder = 0;
+        std::fill(std::begin(viewOrders), std::end(viewOrders), -1);
+    }
+
+    int32_t PreparedViewOrder(int32_t index)
+    {
+        auto order = prepareOrder++;
+        if (index >= 0 && index < int32_t(std::size(viewOrders)))
+            viewOrders[index] = order;
+        return order;
+    }
+
+    int32_t RenderedViewOrder(int32_t index)
+    {
+        return index >= 0 && index < int32_t(std::size(viewOrders)) && viewOrders[index] >= 0 ? viewOrders[index] : index;
+    }
+
+    // the jobs of every view but the first one
+    struct ViewJobs
+    {
+        void* camera = nullptr;
+        void* lights[3] = {};
+        VisibilityJobs Get() { return { reinterpret_cast<void**>(camera), reinterpret_cast<void***>(lights) }; }
+    };
+    std::map<int32_t, ViewJobs> otherViewJobs;
 
     void UseJobs(const VisibilityJobs& jobs, bool swapped)
     {
@@ -274,15 +307,17 @@ namespace Splitscreen
     {
         if (jobsSwapped)
             UseJobs(gameJobs, false);
-        if (secondViewJobs.camera)
-            DestroyVisibilityJob(secondViewJobs.camera);
-        for (auto& job : secondViewLights)
+        for (auto& [view, jobs] : otherViewJobs)
         {
-            if (job)
-                DestroyVisibilityJob(job);
-            job = nullptr;
+            if (jobs.camera)
+                DestroyVisibilityJob(jobs.camera);
+            for (auto job : jobs.lights)
+            {
+                if (job)
+                    DestroyVisibilityJob(job);
+            }
         }
-        secondViewJobs.camera = nullptr;
+        otherViewJobs.clear();
         views[0] = views[1] = -1;
     }
 
@@ -302,24 +337,24 @@ namespace Splitscreen
         else if (views[1] == -1 && view != views[0])
             views[1] = view;
 
-        if (view != views[1])
+        auto jobs = view != views[0] ? otherViewJobs.find(view) : otherViewJobs.end();
+        if (view != views[0] && jobs == otherViewJobs.end() && otherViewJobs.size() < 8)
+        {
+            // the game's parameters (SoftwareRasterizer init): size, then the same for the camera and the lights
+            const uint32_t camera[9] = { 512, 256, 0x8000, 0, 0x40000, 40, std::bit_cast<uint32_t>(0.01f), std::bit_cast<uint32_t>(1.5f), 0x1000101 };
+            const uint32_t light[9] = { 256, 256, 0x8000, 0, 0x40000, 40, std::bit_cast<uint32_t>(0.01f), std::bit_cast<uint32_t>(1.5f), 0x1000101 };
+            jobs = otherViewJobs.try_emplace(view).first;
+            jobs->second.camera = CreateVisibilityJob(camera);
+            for (auto& job : jobs->second.lights)
+                job = CreateVisibilityJob(light);
+        }
+        if (jobs == otherViewJobs.end())
         {
             if (jobsSwapped)
                 UseJobs(gameJobs, false);
             return;
         }
-
-        // the game's parameters (SoftwareRasterizer init): size, then the same for the camera and the lights
-        if (!secondViewJobs.camera)
-        {
-            const uint32_t camera[9] = { 512, 256, 0x8000, 0, 0x40000, 40, std::bit_cast<uint32_t>(0.01f), std::bit_cast<uint32_t>(1.5f), 0x1000101 };
-            const uint32_t light[9] = { 256, 256, 0x8000, 0, 0x40000, 40, std::bit_cast<uint32_t>(0.01f), std::bit_cast<uint32_t>(1.5f), 0x1000101 };
-            secondViewJobs.camera = reinterpret_cast<void**>(CreateVisibilityJob(camera));
-            for (auto& job : secondViewLights)
-                job = CreateVisibilityJob(light);
-        }
-        if (!jobsSwapped)
-            UseJobs(secondViewJobs, true);
+        UseJobs(jobs->second.Get(), true);
     }
 
     // Sun shadow casters: preparing a view queues each node of the scene grid (HGrid +10Ch nodes, +110h count) in the cascade jobs and
@@ -449,6 +484,54 @@ namespace Splitscreen
     float savedAO = 0.0f;
     bool aoOff = false;
 
+    // Applying the video options (gamma calibration, any video setting) resizes player 1's viewport to the whole window (the render
+    // device's SetRes), only entering split screen and the end of a cinematic halve it (sub_55C7B0(engine, 0)): player 1's view covered
+    // player 2's half (player 2's camera seemed stuck) until the lobby. It's laid out again when player 1's viewport is wider than player 2's
+    // origin (+4A0h width, +4A8h x) outside a cinematic (byte_310A450 player 1 full width, engine +27Ch cinematic count).
+    void(__fastcall* SplitLayout)(uint8_t* engine, void* edx, int32_t fullWidth) = nullptr;
+    uint8_t* pPlayer1FullWidth = nullptr;
+
+    void KeepSplitLayout(uint8_t* viewport)
+    {
+        auto engine = GetEngine();
+        auto split = GetSplitViewport();
+        if (!SplitLayout || !pPlayer1FullWidth || !engine || !split || viewport != GetFirstViewport() || *pPlayer1FullWidth ||
+            *reinterpret_cast<int32_t*>(engine + 0x27C) != 0)
+            return;
+        auto origin = *reinterpret_cast<int32_t*>(split + 0x4A8);
+        if (origin > 0 && *reinterpret_cast<int32_t*>(viewport + 0x4A0) > origin)
+        {
+            *pPlayer1FullWidth = 1; // the layout returns when it's already the asked state
+            SplitLayout(engine, nullptr, 0);
+        }
+    }
+
+    // Planar reflections (Lead options +26Dh) take 4 slots of the view pool for each view, player 2's view (prepared first) left too few
+    // for player 1's sun cascades (shorter shadow distance): off in split screen.
+    uint8_t savedReflections = 0;
+    bool reflectionsOff = false;
+
+    void UpdateReflections()
+    {
+        if (!pResourceDB || !*pResourceDB)
+            return;
+        auto& reflections = *(*reinterpret_cast<uint8_t**>(*pResourceDB + 8) + 0x26D);
+        if (bSplitscreen)
+        {
+            if (reflections != 0)
+            {
+                savedReflections = reflections;
+                reflections = 0;
+                reflectionsOff = true;
+            }
+        }
+        else if (reflectionsOff)
+        {
+            reflections = savedReflections;
+            reflectionsOff = false;
+        }
+    }
+
     void UpdateAmbientOcclusion()
     {
         if (!pResourceDB || !*pResourceDB)
@@ -497,6 +580,8 @@ namespace Splitscreen
             fullHeight = *reinterpret_cast<int32_t*>(viewport + 0x4A4);
         }
         UpdateAmbientOcclusion();
+        UpdateReflections();
+        KeepSplitLayout(viewport);
 
         // from the start, before the profile loads: the profile saves and loads customizable loadouts only
         UnlockGuestLoadout();
@@ -987,14 +1072,14 @@ export void InitSplitscreen()
     // (the scene grid: prepare's argument in ebx, renderer +44h)
     static auto PrepareView = safetyhook::create_mid(prepareView.get_first(8), [](SafetyHookContext& regs)
     {
-        auto view = *reinterpret_cast<int32_t*>(regs.edi);
+        auto view = Splitscreen::PreparedViewOrder(*reinterpret_cast<int32_t*>(regs.edi));
         Splitscreen::SelectVisibilityJobs(view);
         Splitscreen::PreparingView(view, reinterpret_cast<uint8_t*>(regs.ebx));
     });
     static auto RenderView = safetyhook::create_mid(renderView.get_first(), [](SafetyHookContext& regs)
     {
         auto params = *reinterpret_cast<uint8_t**>(regs.ecx + 0x20FC);
-        auto view = *reinterpret_cast<int32_t*>(params + 0x26C);
+        auto view = Splitscreen::RenderedViewOrder(*reinterpret_cast<int32_t*>(params + 0x26C));
         Splitscreen::SelectVisibilityJobs(view);
         Splitscreen::RenderingView(view, *reinterpret_cast<uint8_t**>(regs.ecx + 0x44));
     });
@@ -1031,6 +1116,24 @@ export void InitSplitscreen()
             });
         }
     }
+
+    auto splitLayout = hook::pattern("55 8B EC 8B 41 44 83 EC 10 85 C0 0F 84 ? ? ? ? 56 0F B6 35 ? ? ? ? 57 8B 7D 08");
+    if (!splitLayout.empty())
+    {
+        Splitscreen::SplitLayout = splitLayout.get_first<void(__fastcall)(uint8_t*, void*, int32_t)>();
+        Splitscreen::pPlayer1FullWidth = *splitLayout.get_first<uint8_t*>(0x15);
+    }
+
+    // the view pool reset once a frame (RenderContext in ecx)
+    auto viewPoolReset = hook::pattern("33 C0 89 81 ? ? 00 00 89 41 1C 89 81 ? ? 00 00");
+    if (!viewPoolReset.empty())
+    {
+        static auto ViewPoolReset = safetyhook::create_mid(viewPoolReset.get_first(), [](SafetyHookContext& regs)
+        {
+            Splitscreen::ResetViewOrders();
+        });
+    }
+    Splitscreen::ResetViewOrders();
 
     static auto DestroyJobs = safetyhook::create_mid(destroyJobs.get_first(), [](SafetyHookContext& regs)
     {

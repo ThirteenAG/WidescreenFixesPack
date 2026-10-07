@@ -69,34 +69,42 @@ void Init()
         mINI::INIFile mIni(iniReader.GetIniPath());
         mIni.read(ini);
 
-        // Read the existing user INI file into a structure
-        mINI::INIStructure sc4Ini;
-        mINI::INIFile sc4IniFile(exePath / "SplinterCell4.ini");
-        sc4IniFile.read(sc4Ini);
+        // The engine creates a missing game INI by copying Default.ini, but only when the file doesn't exist,
+        // so do the same here instead of generating a file with only a few keys in it.
+        // Only update it when it could be read, otherwise everything else in it would be lost
+        auto sc4IniPath = exePath / "SplinterCell4.ini";
+        std::error_code ec;
+        if (!std::filesystem::exists(sc4IniPath, ec) && !ec)
+            CopyFileW((exePath / "Default.ini").c_str(), sc4IniPath.c_str(), TRUE);
 
-        for (auto const& sec : ini)
+        mINI::INIStructure sc4Ini;
+        mINI::INIFile sc4IniFile(sc4IniPath);
+        if (sc4IniFile.read(sc4Ini))
         {
-            std::string sectionName = std::get<0>(sec);
-            if (sectionName == "GENERAL" || sectionName == "Graphics" || sectionName == "WinDrv.WindowsClient" || sectionName == "D3DDrv.D3DRenderDevice")
+            for (auto const& sec : ini)
             {
-                for (auto const& kv : std::get<1>(sec))
+                std::string sectionName = std::get<0>(sec);
+                if (sectionName == "GENERAL" || sectionName == "Graphics" || sectionName == "WinDrv.WindowsClient" || sectionName == "D3DDrv.D3DRenderDevice")
                 {
-                    std::string key = std::get<0>(kv);
-                    std::string value = std::get<1>(kv);
-                    sc4Ini[sectionName].set(key, value);
+                    for (auto const& kv : std::get<1>(sec))
+                    {
+                        std::string key = std::get<0>(kv);
+                        std::string value = std::get<1>(kv);
+                        sc4Ini[sectionName].set(key, value);
+                    }
                 }
             }
+
+            auto ResX = std::to_string(Screen.Width);
+            auto ResY = std::to_string(Screen.Height);
+
+            sc4Ini["WinDrv.WindowsClient"].set("WindowedViewportX", ResX);
+            sc4Ini["WinDrv.WindowsClient"].set("WindowedViewportY", ResY);
+            sc4Ini["WinDrv.WindowsClient"].set("FullscreenViewportX", ResX);
+            sc4Ini["WinDrv.WindowsClient"].set("FullscreenViewportY", ResY);
+
+            sc4IniFile.generate(sc4Ini);
         }
-
-        auto ResX = std::to_string(Screen.Width);
-        auto ResY = std::to_string(Screen.Height);
-
-        sc4Ini["WinDrv.WindowsClient"].set("WindowedViewportX", ResX);
-        sc4Ini["WinDrv.WindowsClient"].set("WindowedViewportY", ResY);
-        sc4Ini["WinDrv.WindowsClient"].set("FullscreenViewportX", ResX);
-        sc4Ini["WinDrv.WindowsClient"].set("FullscreenViewportY", ResY);
-
-        sc4IniFile.generate(sc4Ini);
     }
 
     {
@@ -104,21 +112,23 @@ void Init()
         mINI::INIFile mIni(iniReader.GetIniPath());
         mIni.read(ini);
 
-        // Read the existing user INI file into a structure
+        // Only update the user INI when it exists and could be read; the game creates it on first run,
+        // and a file written from scratch here would be missing everything else (bindings etc.)
         mINI::INIStructure userIni;
         mINI::INIFile userIniFile(exePath / "SplinterCell4User.ini");
-        userIniFile.read(userIni);
-
-        if (ini.has("Engine.Input"))
+        if (userIniFile.read(userIni))
         {
-            for (auto const& kv : ini["Engine.Input"])
+            if (ini.has("Engine.Input"))
             {
-                std::string key = std::get<0>(kv);
-                std::string value = std::get<1>(kv);
-                userIni["Engine.Input"].setAll(key, value);
+                for (auto const& kv : ini["Engine.Input"])
+                {
+                    std::string key = std::get<0>(kv);
+                    std::string value = std::get<1>(kv);
+                    userIni["Engine.Input"].setAll(key, value);
+                }
             }
+            userIniFile.generate(userIni);
         }
-        userIniFile.generate(userIni);
     }
 
     if (bForceLL)

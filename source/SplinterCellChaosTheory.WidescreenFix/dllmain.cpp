@@ -30,10 +30,11 @@ void* __fastcall sub_10CC8580(void* _this, void* edx)
             mINI::INIFile mIni(iniReader.GetIniPath());
             mIni.read(ini);
 
-            // Read the existing user INI file into a structure
+            // Read the existing joysticks INI file into a structure, leave it alone if that fails
             mINI::INIStructure joysticksIni;
             mINI::INIFile joysticksIniFile(it);
-            joysticksIniFile.read(joysticksIni);
+            if (!joysticksIniFile.read(joysticksIni))
+                continue;
 
             for (auto const& sec : ini)
             {
