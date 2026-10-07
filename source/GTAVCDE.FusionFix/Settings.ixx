@@ -1,0 +1,40 @@
+module;
+
+#include "stdafx.h"
+
+export module Settings;
+
+
+export struct FusionSettings
+{
+    bool skipIntro = true;
+    bool skipMenu = true;
+    int saveSlot = 5;
+    float hudScale = 0.8f;
+    float radarScale = 0.75f;
+    bool disableFirstPersonAimForRifles = true;
+    bool improveCameraPC = true;
+    bool rawMouseInput = true;
+    bool restoreOriginalCamera = true;
+    float centeringDelay = 5.0f;
+};
+export FusionSettings Settings;
+
+export void ReadSettings()
+{
+    CIniReader reader("");
+    Settings.skipIntro = reader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    Settings.skipMenu = reader.ReadInteger("MAIN", "SkipMenu", 1) != 0;
+    const auto slot = reader.ReadInteger("MAIN", "SaveSlot", 6);
+    Settings.saveSlot = slot >= 1 && slot <= 8 ? slot - 1 : 5;
+    const auto validScale = [](float value) { return std::isfinite(value) && value > 0.0f ? value : 1.0f; };
+    Settings.hudScale = validScale(reader.ReadFloat("MAIN", "HudScale", 0.8f));
+    Settings.radarScale = validScale(reader.ReadFloat("MAIN", "RadarScale", 0.75f));
+    Settings.disableFirstPersonAimForRifles = reader.ReadInteger("MAIN", "DisableFirstPersonAimForRifles", 1) != 0;
+    Settings.improveCameraPC = reader.ReadInteger("MAIN", "ImproveCameraPC", 1) != 0;
+    Settings.restoreOriginalCamera = reader.ReadInteger("MAIN", "RestoreOriginalCamera", 1) != 0;
+    Settings.rawMouseInput = reader.ReadInteger("MAIN", "RawMouseInput", 1) != 0;
+    const auto delay = reader.ReadFloat("MAIN", "CenteringDelay", 5.0f);
+    Settings.centeringDelay = std::isfinite(delay) && delay >= 0.0f ? delay : 5.0f;
+    WFP::onReadGameConfig().executeAll();
+}

@@ -578,13 +578,10 @@ project "FarCry64.WidescreenFix"
 
 group "GrandTheftAuto"
 project "GTA3DE.FusionFix"
-   files { "source/GTADE.FusionFix/*.ixx", "source/GTADE.FusionFix/*.h" }
    setpaths("GTA_III_DEFINITIVE_EDITION_DIR", "Gameface/Binaries/Win64/LibertyCity.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTAVCDE.FusionFix"
-   files { "source/GTADE.FusionFix/*.ixx", "source/GTADE.FusionFix/*.h" }
    setpaths("GTA_VICE_CITY_DEFINITIVE_EDITION_DIR", "Gameface/Binaries/Win64/ViceCity.exe", "Gameface/Binaries/Win64/scripts/")
 project "GTASADE.FusionFix"
-   files { "source/GTADE.FusionFix/*.ixx", "source/GTADE.FusionFix/*.h" }
    setpaths("GTA_SAN_ANDREAS_DEFINITIVE_EDITION_DIR", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
 group ""
 
