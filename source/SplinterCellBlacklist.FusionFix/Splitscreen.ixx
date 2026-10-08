@@ -491,8 +491,34 @@ namespace Splitscreen
     void(__fastcall* SplitLayout)(uint8_t* engine, void* edx, int32_t fullWidth) = nullptr;
     uint8_t* pPlayer1FullWidth = nullptr;
 
+    // DEBUG: FusionFix_split.log next to the exe, a line when it changed
+    void SplitLog(const std::string& key, const std::string& text)
+    {
+        static std::map<std::string, std::string> last;
+        if (last[key] == text)
+            return;
+        last[key] = text;
+        static FILE* file = _fsopen("FusionFix_split.log", "a", _SH_DENYWR);
+        if (!file)
+            return;
+        fprintf(file, "%llu %s: %s", GetTickCount64(), key.c_str(), text.c_str());
+        fputc(10, file);
+        fflush(file);
+    }
+
+    std::string ViewportText(uint8_t* viewport)
+    {
+        if (!viewport)
+            return "none";
+        auto v = reinterpret_cast<int32_t*>(viewport);
+        return std::format("{:X} size {}x{} origin {},{} full {}x{}", uintptr_t(viewport), v[0x4A0 / 4], v[0x4A4 / 4], v[0x4A8 / 4], v[0x4AC / 4], v[0x4B0 / 4], v[0x4B4 / 4]);
+    }
+
     void KeepSplitLayout(uint8_t* viewport)
     {
+        if (auto engine = GetEngine(); engine && viewport == GetFirstViewport())
+            SplitLog("viewports", std::format("p1 {} | p2 {} | p1 full width {} cinematics {} split flag {}", ViewportText(viewport), ViewportText(GetSplitViewport()),
+                pPlayer1FullWidth ? *pPlayer1FullWidth : -1, *reinterpret_cast<int32_t*>(engine + 0x27C), (*reinterpret_cast<uint32_t*>(engine + 0x1EC) & 0x10) != 0));
         auto engine = GetEngine();
         auto split = GetSplitViewport();
         if (!SplitLayout || !pPlayer1FullWidth || !engine || !split || viewport != GetFirstViewport() || *pPlayer1FullWidth ||
@@ -502,6 +528,7 @@ namespace Splitscreen
         if (origin > 0 && *reinterpret_cast<int32_t*>(viewport + 0x4A0) > origin)
         {
             *pPlayer1FullWidth = 1; // the layout returns when it's already the asked state
+            SplitLog("layout", std::format("again at {}", GetTickCount64()));
             SplitLayout(engine, nullptr, 0);
         }
     }
@@ -1079,7 +1106,11 @@ export void InitSplitscreen()
     static auto RenderView = safetyhook::create_mid(renderView.get_first(), [](SafetyHookContext& regs)
     {
         auto params = *reinterpret_cast<uint8_t**>(regs.ecx + 0x20FC);
-        auto view = Splitscreen::RenderedViewOrder(*reinterpret_cast<int32_t*>(params + 0x26C));
+        auto index = *reinterpret_cast<int32_t*>(params + 0x26C);
+        auto view = Splitscreen::RenderedViewOrder(index);
+        auto rc = reinterpret_cast<uint8_t*>(regs.ecx + 0x2C); // DEBUG
+        Splitscreen::SplitLog(std::format("view {}", view), std::format("index {} pool {} reflections option {}", index, *reinterpret_cast<int32_t*>(rc + 0x20CC),
+            Splitscreen::pResourceDB && *Splitscreen::pResourceDB ? *(*reinterpret_cast<uint8_t**>(*Splitscreen::pResourceDB + 8) + 0x26D) : -1));
         Splitscreen::SelectVisibilityJobs(view);
         Splitscreen::RenderingView(view, *reinterpret_cast<uint8_t**>(regs.ecx + 0x44));
     });
