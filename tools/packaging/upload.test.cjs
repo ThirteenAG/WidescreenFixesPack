@@ -7,6 +7,38 @@ const os = require('node:os');
 const {EventEmitter} = require('node:events');
 const {github} = require('./upload.cjs');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+test('the default uploader loads the installed ESM client and passes completed ZIPs to it', async t => {
+  const {DefaultArtifactClient} = await import('@actions/artifact');
+  const originalUpload = DefaultArtifactClient.prototype.uploadArtifact;
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'wfp-upload-client-'));
+  t.after(async () => {
+    DefaultArtifactClient.prototype.uploadArtifact = originalUpload;
+    await fs.rm(root, {recursive: true, force: true});
+  });
+  let calls = 0;
+  DefaultArtifactClient.prototype.uploadArtifact = async (name, files, directory, options) => {
+    calls++;
+    assert.equal(name, 'fixture.zip');
+    assert.equal(files.length, 1);
+    assert.equal(path.dirname(files[0]), directory);
+    assert.equal(await fs.readFile(files[0], 'utf8'), 'complete');
+    assert.deepEqual(options, {retentionDays: 90, skipArchive: true});
+  };
+  await github({root, spawnProcess: (command, args) => {
+    const child = new EventEmitter();
+    const work = args[args.indexOf('-WorkDirectory') + 1];
+    setTimeout(async () => {
+      try {
+        const file = path.join(work, 'fixture.zip');
+        await fs.writeFile(file, 'complete');
+        await fs.writeFile(path.join(work, 'archives', 'fixture.ready.json'), JSON.stringify({id: 'fixture', file}));
+        child.emit('close', 0);
+      } catch (error) { child.emit('error', error); }
+    }, 0);
+    return child;
+  }});
+  assert.equal(calls, 1);
+});
 for (const fail of [false, true]) {
   test(`GitHub adapter ${fail ? 'propagates upload failure and waits active uploads' : 'uploads complete records exactly once with four workers'}`, async t => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'wfp-upload-test-'));

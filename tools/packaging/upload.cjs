@@ -9,7 +9,7 @@ async function github({project = '', mode = 'after-build', signing = 'optional',
   const work = path.join(root, 'build/packaging', crypto.randomUUID());
   const directory = path.join(work, 'archives');
   await fs.mkdir(directory, {recursive: true});
-  const client = uploader ? null : new (require('@actions/artifact').DefaultArtifactClient)();
+  const client = uploader ? null : new (await import('@actions/artifact')).DefaultArtifactClient();
   const upload = uploader || (async result => client.uploadArtifact(`${result.id}.zip`, [result.file], path.dirname(result.file), {retentionDays: 90, skipArchive: true}));
   const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(root, 'tools/packaging/Release.ps1'), '-Mode', mode, '-Signing', signing, '-WorkDirectory', work];
   if (project) args.push('-Project', project);
