@@ -1,3 +1,11 @@
+require "vstudio"
+
+-- PS2 and PSP as Visual Studio platforms of their own (as premake-consoles does for
+-- consoles); their projects are Makefile ones, so no MSBuild platform files are needed.
+premake.vstudio.vs2010_architectures.ps2 = "PS2"
+premake.vstudio.vs2010_architectures.psp = "PSP"
+premake.api.addAllowed("system", { "ps2", "psp" })
+
 -- The folder a project is deployed to, and the game it is started from when debugging,
 -- is the path of one machine and does not belong in the repository. It is read from a
 -- `.env` file next to this script, which is not tracked by git and holds one
@@ -264,6 +272,13 @@ function CommonWorkspaceSetup(platform, prefix)
       filter { "platforms:x64" }
          architecture "x64"
          libdirs { "external/minidx9/Lib/x64" }
+      -- unknown VS platforms: keep the system PATH for the build commands
+      filter { "platforms:PS2" }
+         system "ps2"
+         bindirs { "$(PATH)" }
+      filter { "platforms:PSP" }
+         system "psp"
+         bindirs { "$(PATH)" }
       filter {}
 
       filter "configurations:Debug*"
@@ -599,7 +614,7 @@ project "RedDeadRedemption.FusionFix"
 group ""
 
 -- ====================== PCSX2F SOLUTION ======================
-CommonWorkspaceSetup("Win32", "PCSX2F")
+CommonWorkspaceSetup("PS2", "PCSX2F")
 
 group ""
 project "Burnout3.PCSX2F.WidescreenFix"
@@ -727,7 +742,7 @@ project "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix"
 group ""
 
 -- ====================== PPSSPP SOLUTION ======================
-CommonWorkspaceSetup("Win32", "PPSSPP")
+CommonWorkspaceSetup("PSP", "PPSSPP")
 
 group ""
 group "GrandTheftAuto"

@@ -9,7 +9,6 @@ uintptr_t listPosition;
 SafetyMipsMid particleHook;
 injector::hook_back<void()> nativeFrame;
 void Tick() {
-    if (!Ready()) return;
     StoryProfile current=profile;
     if (viceCity) {
         // This callback is entered by a native call and is compiled with -G0.
@@ -18,7 +17,7 @@ void Tick() {
         current.rain+=gp;current.cameraNoRain+=gp;current.playerNoRain+=gp;
         current.cutscene+=gp;current.area+=gp;
     }
-    Update(Data(),current,0x08800000,0x0A000000);
+    Update(Data(),current,MemoryBegin,MemoryEnd);
 }
 void BeforeUI() { Report(listPosition ? *reinterpret_cast<const volatile uint32_t*>(listPosition) : 0);nativeFrame.fun(); }
 }
@@ -78,7 +77,7 @@ bool Stories() {
     nativeFrame.fun=injector::MakeCALL(phase,BeforeUI).get();
     safetymips::Options options;options.preserve=PSP_HOOK_SAVE_FPU;
     particleHook=safetymips::create_mid(particle,[](SafetyMipsContext& regs) {
-        if (Ready()) Particle(Data(),viceCity ? vcsParticles : lcsParticles,unsigned(regs.a0),reinterpret_cast<const Vec3*>(uintptr_t(regs.a1)));
+        Particle(Data(),viceCity ? vcsParticles : lcsParticles,unsigned(regs.a0),reinterpret_cast<const Vec3*>(uintptr_t(regs.a1)));
     },options);
     return console::portable::Finish()==0;
 }

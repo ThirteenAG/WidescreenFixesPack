@@ -24,12 +24,9 @@ typedef int (*FastTrace_t)(void* pActor, const struct FVector* pEnd, const struc
 uintptr_t p_FastTrace = 0; // AActor::FastTrace
 
 static float gRainStrength = 1.0f; // how much rain is over the camera, handed to the effect as is
-#define RAIN_MEMORY_LOW 0x08800000u
-#define RAIN_MEMORY_HIGH 0x0A000000u
-
 static int IsGameMemory(uint32_t address, uint32_t size)
 {
-    return address >= RAIN_MEMORY_LOW && address <= RAIN_MEMORY_HIGH - size;
+    return address >= MemoryBegin && address <= MemoryEnd - size;
 }
 static int IsCameraUnderRoof(void* pActor, const struct FVector* pCamPos)
 {
@@ -64,7 +61,6 @@ void _0fRAPlayerControllerETickf6KELevelTickWrapper(void* PlayerController, int 
     static void* prevPlayerController = 0;
     static uint32_t traceTick = 0;
     const struct FVector* pCamPos = (const struct FVector*)((uintptr_t)PlayerController + 0x1B0);
-    if (!Ready()) return;
     Packet* data = &Data();
     if (!IsGameMemory((uint32_t)(uintptr_t)PlayerController, 0x1B0 + 32)) {
         gCurrentPlayerController = nullptr;
@@ -103,7 +99,6 @@ Matrix matrix;
 
 void _0FIDrawRainP6LUStaticMeshP6PFLevelSceneNodeP6QFRenderInterfaceWrapper(void* a1, int a2, int a3)
 {
-    if (!Ready()) return;
     Packet* data = &Data();
     if (gCurrentPlayerController)
     {
@@ -157,7 +152,6 @@ void _0FIDrawRainP6LUStaticMeshP6PFLevelSceneNodeP6QFRenderInterfaceWrapper(void
 
 void _0fIUGUIPageEDrawP6HUCanvasWrapper(void* a1, int* a2)
 {
-    if (!Ready()) return;
     Packet* data = &Data();
     data->enabled = 0;
 }
