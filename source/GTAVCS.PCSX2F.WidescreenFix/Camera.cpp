@@ -1,5 +1,6 @@
 #include "Game.hpp"
 #include "../Shared/Console/Cutscene.hpp"
+#include "../Shared/Console/ScriptSlotZero.hpp"
 
 namespace vcs {
 namespace {
@@ -55,6 +56,9 @@ void DrawCutsceneBorders(void*) {
 }
 }
 void InstallCamera() {
+    // Script handles in slot 0 are valid: DOES_OBJECT_EXIST, "object destroyed", DOES_VEHICLE_EXIST.
+    static constexpr console::slot_zero::Ps2Site slotZero[] = {{0x30FBE8, 0x2C4701DA}, {0x311770, 0x2C4201DA}, {0x3D6510, 0x2C470027}};
+    console::slot_zero::PatchPs2(slotZero);
     // The second instruction is JR RA; the inline hook also captures its delay
     // slot, keeping the complete three-instruction setter in one owned patch.
     fovHook = safetymips::create_inline_game(0x2653E0, SetFOV);

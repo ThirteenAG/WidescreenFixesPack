@@ -19,8 +19,6 @@ void ReadSettings() {
     settings.fov=fov>0 ? bounded(fov,0.1f,2.5f,1) : 1;
     settings.restoreCutsceneFov=inireader.ReadInteger("FOV","RestoreCutsceneFOV",1)!=0;
     settings.cutsceneBorders=inireader.ReadInteger("FOV","CutsceneBorders",1)!=0;
-    float lod=inireader.ReadFloat("MISC","LODDistMultiplier",0);
-    settings.lod=lod>0 ? bounded(lod,0.1f,4,1) : 0;
     auto& drawing=Drawing::settings;
     drawing.aspect=console::portable::Aspect();
     char ratio[64];inireader.ReadString("MAIN","ForceAspectRatio","auto",ratio,sizeof(ratio));
