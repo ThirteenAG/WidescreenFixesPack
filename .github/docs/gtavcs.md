@@ -54,7 +54,7 @@ Ultra-wide screenshot:
 
 # Project2DFX
 
-[Project2DFX](https://github.com/ThirteenAG/WidescreenFixesPack/releases/download/gtavcs/GTAVCS.PCSX2F.Project2DFX.zip) now available as a separate plugin.
+[Project2DFX](https://github.com/ThirteenAG/III.VC.SA.IV.Project2DFX/releases/tag/gtavcsps2) is available as a separate plugin.
 
 <img src="https://user-images.githubusercontent.com/4904157/166120612-d05a7258-2187-488c-b408-087511bd93a8.png" width="652px" />
 

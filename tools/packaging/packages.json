@@ -532,24 +532,6 @@
       "dependencies": []
     },
     {
-      "id": "GTALCS.PCSX2F.Project2DFX",
-      "producers": [
-        {
-          "project": "GTALCS.PCSX2F.Project2DFX",
-          "solution": "PCSX2F",
-          "source": "data/GTALCS.PCSX2F.Project2DFX/PLUGINS/GTALCS.PCSX2F.Project2DFX.elf",
-          "destination": "PLUGINS/GTALCS.PCSX2F.Project2DFX.elf"
-        }
-      ],
-      "files": [
-        {
-          "source": "data/GTALCS.PCSX2F.Project2DFX/PLUGINS/GTALCS.PCSX2F.Project2DFX.ini",
-          "destination": "PLUGINS/GTALCS.PCSX2F.Project2DFX.ini"
-        }
-      ],
-      "dependencies": []
-    },
-    {
       "id": "GTALCS.PCSX2F.WidescreenFix",
       "producers": [
         {
@@ -589,28 +571,6 @@
         {
           "source": "data/GTALCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/plugin.ini",
           "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/plugin.ini"
-        }
-      ],
-      "dependencies": []
-    },
-    {
-      "id": "GTALCS.PPSSPP.Project2DFX",
-      "producers": [
-        {
-          "project": "GTALCS.PPSSPP.Project2DFX",
-          "solution": "PPSSPP",
-          "source": "data/GTALCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/GTALCS.PPSSPP.Project2DFX.prx",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/GTALCS.PPSSPP.Project2DFX.prx"
-        }
-      ],
-      "files": [
-        {
-          "source": "data/GTALCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/GTALCS.PPSSPP.Project2DFX.ini",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/GTALCS.PPSSPP.Project2DFX.ini"
-        },
-        {
-          "source": "data/GTALCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/plugin.ini",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/plugin.ini"
         }
       ],
       "dependencies": []
@@ -772,24 +732,6 @@
       "dependencies": []
     },
     {
-      "id": "GTAVCS.PCSX2F.Project2DFX",
-      "producers": [
-        {
-          "project": "GTAVCS.PCSX2F.Project2DFX",
-          "solution": "PCSX2F",
-          "source": "data/GTAVCS.PCSX2F.Project2DFX/PLUGINS/GTAVCS.PCSX2F.Project2DFX.elf",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.Project2DFX.elf"
-        }
-      ],
-      "files": [
-        {
-          "source": "data/GTAVCS.PCSX2F.Project2DFX/PLUGINS/GTAVCS.PCSX2F.Project2DFX.ini",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.Project2DFX.ini"
-        }
-      ],
-      "dependencies": []
-    },
-    {
       "id": "GTAVCS.PCSX2F.WidescreenFix",
       "producers": [
         {
@@ -883,28 +825,6 @@
         {
           "source": "data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/plugin.ini",
           "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/plugin.ini"
-        }
-      ],
-      "dependencies": []
-    },
-    {
-      "id": "GTAVCS.PPSSPP.Project2DFX",
-      "producers": [
-        {
-          "project": "GTAVCS.PPSSPP.Project2DFX",
-          "solution": "PPSSPP",
-          "source": "data/GTAVCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.prx",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.prx"
-        }
-      ],
-      "files": [
-        {
-          "source": "data/GTAVCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.ini",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.ini"
-        },
-        {
-          "source": "data/GTAVCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/plugin.ini",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/plugin.ini"
         }
       ],
       "dependencies": []
@@ -1702,37 +1622,6 @@
           "destination": "ddraw.dll"
         }
       ]
-    },
-    {
-      "id": "PCSX2F.XboxRainDroplets",
-      "producers": [
-        {
-          "project": "PCSX2F.XboxRainDroplets",
-          "solution": "PCSX2F",
-          "source": "data/PCSX2F.XboxRainDroplets/PLUGINS/PCSX2F.XboxRainDroplets.elf",
-          "destination": "PLUGINS/PCSX2F.XboxRainDroplets.elf"
-        }
-      ],
-      "files": [],
-      "dependencies": []
-    },
-    {
-      "id": "PPSSPP.XboxRainDroplets",
-      "producers": [
-        {
-          "project": "PPSSPP.XboxRainDroplets",
-          "solution": "PPSSPP",
-          "source": "data/PPSSPP.XboxRainDroplets/memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/PPSSPP.XboxRainDroplets.prx",
-          "destination": "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/PPSSPP.XboxRainDroplets.prx"
-        }
-      ],
-      "files": [
-        {
-          "source": "data/PPSSPP.XboxRainDroplets/memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/plugin.ini",
-          "destination": "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/plugin.ini"
-        }
-      ],
-      "dependencies": []
     },
     {
       "id": "PsiOpsTheMindgateConspiracy.WidescreenFix",

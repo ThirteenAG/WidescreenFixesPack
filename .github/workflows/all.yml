@@ -64,7 +64,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtavcs
-        artifacts: data/Archives/GTAVCS.PCSX2F.WidescreenFix.zip, data/Archives/GTAVCS.PCSX2F.Project2DFX.zip, data/Archives/GTAVCS.PCSX2F.ImVehLM.zip
+        artifacts: data/Archives/GTAVCS.PCSX2F.WidescreenFix.zip, data/Archives/GTAVCS.PCSX2F.ImVehLM.zip
 
     - name: GTA Liberty City Stories Widescreen Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
@@ -72,7 +72,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtalcspsp
-        artifacts: data/Archives/GTALCS.PPSSPP.WidescreenFix.zip, data/Archives/GTALCS.PPSSPP.Project2DFX.zip, data/Archives/GTALCS.PPSSPP.ImVehLM.zip
+        artifacts: data/Archives/GTALCS.PPSSPP.WidescreenFix.zip, data/Archives/GTALCS.PPSSPP.ImVehLM.zip
 
     - name: GTA Chinatown Wars Fusion Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
@@ -88,7 +88,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtavcspsp
-        artifacts: data/Archives/GTAVCS.PPSSPP.WidescreenFix.zip, data/Archives/GTAVCS.PPSSPP.Project2DFX.zip, data/Archives/GTAVCS.PPSSPP.ImVehLM.zip, data/Archives/GTAVCS.PPSSPP.GamepadIcons.zip
+        artifacts: data/Archives/GTAVCS.PPSSPP.WidescreenFix.zip, data/Archives/GTAVCS.PPSSPP.ImVehLM.zip, data/Archives/GTAVCS.PPSSPP.GamepadIcons.zip
 
     - name: Grand Theft Auto Liberty City Stories Widescreen Fix [PCSX2F]
       uses: ./.github/workflows/release_tag
@@ -96,7 +96,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
         tag: gtalcs
-        artifacts: data/Archives/GTALCS.PCSX2F.WidescreenFix.zip, data/Archives/GTALCS.PCSX2F.Project2DFX.zip, data/Archives/GTALCS.PCSX2F.ImVehLM.zip
+        artifacts: data/Archives/GTALCS.PCSX2F.WidescreenFix.zip, data/Archives/GTALCS.PCSX2F.ImVehLM.zip
 
     - name: Grand Theft Auto San Andreas Widescreen Fix
       uses: ./.github/workflows/release_tag
@@ -770,10 +770,3 @@ jobs:
         tag: rerev2
         artifacts: data/Archives/ResidentEvilRevelations2.FusionFix.zip
 
-    - name: Xbox Rain Droplets Plugins
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
-        tag: xrd
-        artifacts: data/Archives/PPSSPP.XboxRainDroplets.zip, data/Archives/PCSX2F.XboxRainDroplets.zip

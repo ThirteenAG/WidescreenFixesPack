@@ -440,12 +440,13 @@ namespace Splitscreen
     // inside it (depth test fails behind the scene), the shadow is applied where it's marked. In split screen the marking failed in
     // player 1's view (the second one rendered) depending on the camera angle: lamps lit Sam and the walls without their shadows. The
     // stencil test is off there, the shadow is applied over the volume's screen area.
-    bool inSpotComposite = false;
+    // The sun's cascades go through the same composite: player 1 lost the farther ones (a cut-off line, the floor lit past it).
+    bool inShadowComposite = false;
 
     // the composite enabling the stencil test: the value pushed for SetRenderState(D3DRS_STENCILENABLE)
     void StencilEnable(uint32_t* value)
     {
-        if (inSpotComposite && GetSplitViewport())
+        if (inShadowComposite && GetSplitViewport())
             *value = 0;
     }
 
@@ -491,34 +492,8 @@ namespace Splitscreen
     void(__fastcall* SplitLayout)(uint8_t* engine, void* edx, int32_t fullWidth) = nullptr;
     uint8_t* pPlayer1FullWidth = nullptr;
 
-    // DEBUG: FusionFix_split.log next to the exe, a line when it changed
-    void SplitLog(const std::string& key, const std::string& text)
-    {
-        static std::map<std::string, std::string> last;
-        if (last[key] == text)
-            return;
-        last[key] = text;
-        static FILE* file = _fsopen("FusionFix_split.log", "a", _SH_DENYWR);
-        if (!file)
-            return;
-        fprintf(file, "%llu %s: %s", GetTickCount64(), key.c_str(), text.c_str());
-        fputc(10, file);
-        fflush(file);
-    }
-
-    std::string ViewportText(uint8_t* viewport)
-    {
-        if (!viewport)
-            return "none";
-        auto v = reinterpret_cast<int32_t*>(viewport);
-        return std::format("{:X} size {}x{} origin {},{} full {}x{}", uintptr_t(viewport), v[0x4A0 / 4], v[0x4A4 / 4], v[0x4A8 / 4], v[0x4AC / 4], v[0x4B0 / 4], v[0x4B4 / 4]);
-    }
-
     void KeepSplitLayout(uint8_t* viewport)
     {
-        if (auto engine = GetEngine(); engine && viewport == GetFirstViewport())
-            SplitLog("viewports", std::format("p1 {} | p2 {} | p1 full width {} cinematics {} split flag {}", ViewportText(viewport), ViewportText(GetSplitViewport()),
-                pPlayer1FullWidth ? *pPlayer1FullWidth : -1, *reinterpret_cast<int32_t*>(engine + 0x27C), (*reinterpret_cast<uint32_t*>(engine + 0x1EC) & 0x10) != 0));
         auto engine = GetEngine();
         auto split = GetSplitViewport();
         if (!SplitLayout || !pPlayer1FullWidth || !engine || !split || viewport != GetFirstViewport() || *pPlayer1FullWidth ||
@@ -528,13 +503,12 @@ namespace Splitscreen
         if (origin > 0 && *reinterpret_cast<int32_t*>(viewport + 0x4A0) > origin)
         {
             *pPlayer1FullWidth = 1; // the layout returns when it's already the asked state
-            SplitLog("layout", std::format("again at {}", GetTickCount64()));
             SplitLayout(engine, nullptr, 0);
         }
     }
 
-    // Planar reflections (Lead options +26Dh) take 4 slots of the view pool for each view, player 2's view (prepared first) left too few
-    // for player 1's sun cascades (shorter shadow distance): off in split screen.
+    // Planar reflections (Lead options +26Dh) take 4 slots of the view pool (10 a frame) for each view, with the sun's cascades two views
+    // don't fit: off in split screen.
     uint8_t savedReflections = 0;
     bool reflectionsOff = false;
 
@@ -1106,11 +1080,7 @@ export void InitSplitscreen()
     static auto RenderView = safetyhook::create_mid(renderView.get_first(), [](SafetyHookContext& regs)
     {
         auto params = *reinterpret_cast<uint8_t**>(regs.ecx + 0x20FC);
-        auto index = *reinterpret_cast<int32_t*>(params + 0x26C);
-        auto view = Splitscreen::RenderedViewOrder(index);
-        auto rc = reinterpret_cast<uint8_t*>(regs.ecx + 0x2C); // DEBUG
-        Splitscreen::SplitLog(std::format("view {}", view), std::format("index {} pool {} reflections option {}", index, *reinterpret_cast<int32_t*>(rc + 0x20CC),
-            Splitscreen::pResourceDB && *Splitscreen::pResourceDB ? *(*reinterpret_cast<uint8_t**>(*Splitscreen::pResourceDB + 8) + 0x26D) : -1));
+        auto view = Splitscreen::RenderedViewOrder(*reinterpret_cast<int32_t*>(params + 0x26C));
         Splitscreen::SelectVisibilityJobs(view);
         Splitscreen::RenderingView(view, *reinterpret_cast<uint8_t**>(regs.ecx + 0x44));
     });
@@ -1121,17 +1091,32 @@ export void InitSplitscreen()
     auto spotComposite9 = hook::pattern("E8 ? ? ? ? 83 BF 54 01 00 00 00 7E 08 53 8B CF E8");
     auto stencilEnable = hook::pattern("6A 01 6A 34 8B CE E8 ? ? ? ? 6A 01 6A 39 8B CE E8");
     auto stencilEnable9 = hook::pattern("6A 01 6A 34 50 FF D2 8B 46 34 8B 08 8B 91 E4 00 00 00 6A 01 6A 39 50 FF D2");
+    // the sun's cascades (DirPasses) go through the same composite: player 1's view lost all but the nearest (shorter shadow distance)
+    auto sunComposite = hook::pattern("E8 ? ? ? ? 83 BE 8C 01 00 00 00 7E 08 53 8B CE E8");
+    auto sunComposite9 = hook::pattern("E8 ? ? ? ? 83 BE 54 01 00 00 00 7E 08 53 8B CE E8");
     auto& composite = spotComposite.size() == 2 ? spotComposite : spotComposite9;
+    auto& sun = !sunComposite.empty() ? sunComposite : sunComposite9;
     if (composite.size() == 2 && (!stencilEnable.empty() || !stencilEnable9.empty()))
     {
         static auto CompositeStart = safetyhook::create_mid(composite.get(0).get<void>(5), [](SafetyHookContext& regs)
         {
-            Splitscreen::inSpotComposite = true;
+            Splitscreen::inShadowComposite = true;
         });
         static auto CompositeEnd = safetyhook::create_mid(composite.get(0).get<void>(0x16), [](SafetyHookContext& regs)
         {
-            Splitscreen::inSpotComposite = false;
+            Splitscreen::inShadowComposite = false;
         });
+        if (!sun.empty())
+        {
+            static auto SunCompositeStart = safetyhook::create_mid(sun.get_first(5), [](SafetyHookContext& regs)
+            {
+                Splitscreen::inShadowComposite = true;
+            });
+            static auto SunCompositeEnd = safetyhook::create_mid(sun.get_first(0x16), [](SafetyHookContext& regs)
+            {
+                Splitscreen::inShadowComposite = false;
+            });
+        }
         if (!stencilEnable.empty())
         {
             static auto StencilEnable = safetyhook::create_mid(stencilEnable.get_first(6), [](SafetyHookContext& regs)

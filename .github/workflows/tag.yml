@@ -98,7 +98,6 @@ on:
         - tod
         - truecrimenyc
         - truecrimesola
-        - xrd
         - usm
 
 env:
@@ -120,14 +119,14 @@ env:
   gta3: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTA3_WidescreenFix /p:Configuration=Release
   gta3de: msbuild -m build/Win64.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTA3DE_FusionFix /p:Configuration=Release
   gtactwpsp: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTACTW_PPSSPP_FusionFix /p:Configuration=Release
-  gtalcs: msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTALCS_PCSX2F_WidescreenFix /t:GrandTheftAuto\\GTALCS_PCSX2F_Project2DFX /t:GrandTheftAuto\\GTALCS_PCSX2F_ImVehLM /p:Configuration=Release
-  gtalcspsp: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTALCS_PPSSPP_WidescreenFix /t:GrandTheftAuto\\GTALCS_PPSSPP_Project2DFX /t:GrandTheftAuto\\GTALCS_PPSSPP_ImVehLM /p:Configuration=Release
+  gtalcs: msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTALCS_PCSX2F_WidescreenFix /t:GrandTheftAuto\\GTALCS_PCSX2F_ImVehLM /p:Configuration=Release
+  gtalcspsp: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTALCS_PPSSPP_WidescreenFix /t:GrandTheftAuto\\GTALCS_PPSSPP_ImVehLM /p:Configuration=Release
   gtasa: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTASA_WidescreenFix /p:Configuration=Release
   gtasade: msbuild -m build/Win64.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTASADE_FusionFix /p:Configuration=Release
   gtavc: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTAVC_WidescreenFix /p:Configuration=Release
   gtavcde: msbuild -m build/Win64.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTAVCDE_FusionFix /p:Configuration=Release
-  gtavcs: msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTAVCS_PCSX2F_WidescreenFix /t:GrandTheftAuto\\GTAVCS_PCSX2F_Project2DFX /t:GrandTheftAuto\\GTAVCS_PCSX2F_ImVehLM /p:Configuration=Release
-  gtavcspsp: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTAVCS_PPSSPP_WidescreenFix /t:GrandTheftAuto\\GTAVCS_PPSSPP_Project2DFX /t:GrandTheftAuto\\GTAVCS_PPSSPP_ImVehLM /t:GrandTheftAuto\\GTAVCS_PPSSPP_GamepadIcons /p:Configuration=Release
+  gtavcs: msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTAVCS_PCSX2F_WidescreenFix /t:GrandTheftAuto\\GTAVCS_PCSX2F_ImVehLM /p:Configuration=Release
+  gtavcspsp: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:GrandTheftAuto\\GTAVCS_PPSSPP_WidescreenFix /t:GrandTheftAuto\\GTAVCS_PPSSPP_ImVehLM /t:GrandTheftAuto\\GTAVCS_PPSSPP_GamepadIcons /p:Configuration=Release
   gun: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Gun_WidescreenFix /p:Configuration=Release
   hd2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:HiddenandDangerous2_WidescreenFix /p:Configuration=Release
   justcause: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:JustCause_WidescreenFix /p:Configuration=Release
@@ -192,7 +191,6 @@ env:
   tod: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TotalOverdose_WidescreenFix /p:Configuration=Release
   truecrimenyc: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TrueCrimeNewYorkCity_WidescreenFix /p:Configuration=Release && msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:TrueCrimeNewYorkCity_PCSX2F_WidescreenFix /p:Configuration=Release
   truecrimesola: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TrueCrimeStreetsofLA_WidescreenFix /p:Configuration=Release
-  xrd: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:PPSSPP_XboxRainDroplets /p:Configuration=Release && msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:PCSX2F_XboxRainDroplets /p:Configuration=Release
   usm: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:UltimateSpiderMan_WidescreenFix /p:Configuration=Release
 
 jobs:

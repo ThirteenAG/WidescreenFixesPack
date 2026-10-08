@@ -644,20 +644,9 @@ project "GTALCS.PCSX2F.WidescreenFix"
    "../../external/injector/include/ps2/inireader.o", "../../external/injector/include/ps2/mips.o")
    writelinkfile_ps2("GTALCS.PCSX2F.WidescreenFix")
 
-project "GTALCS.PCSX2F.Project2DFX"
-   kind "Makefile"
-   dependson { "GTALCS.PCSX2F.WidescreenFix" }
-   add_ps2sdk()
-   targetextension ".elf"
-   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.Project2DFX")
-   writemakefile_ps2("GTALCS.PCSX2F.Project2DFX", "PLUGINS/", "-l:libc.a", "Renderer.o", "../../external/injector/include/ps2/memalloc.o",
-   "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o", "../../external/injector/include/ps2/inireader.o",
-   "../../external/injector/include/ps2/mips.o")
-   writelinkfile_ps2("GTALCS.PCSX2F.Project2DFX")
-
 project "GTAVCS.PCSX2F.WidescreenFix"
    kind "Makefile"
-   dependson { "GTALCS.PCSX2F.Project2DFX" }
+   dependson { "GTALCS.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.WidescreenFix")
@@ -666,20 +655,9 @@ project "GTAVCS.PCSX2F.WidescreenFix"
    "../../external/injector/include/ps2/mips.o")
    writelinkfile_ps2("GTAVCS.PCSX2F.WidescreenFix")
 
-project "GTAVCS.PCSX2F.Project2DFX"
-   kind "Makefile"
-   dependson { "GTAVCS.PCSX2F.WidescreenFix" }
-   add_ps2sdk()
-   targetextension ".elf"
-   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.Project2DFX")
-   writemakefile_ps2("GTAVCS.PCSX2F.Project2DFX", "PLUGINS/", "-l:libc.a", "Renderer.o", "../../external/injector/include/ps2/memalloc.o",
-   "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o","../../external/injector/include/ps2/inireader.o",
-   "../../external/injector/include/ps2/mips.o")
-   writelinkfile_ps2("GTAVCS.PCSX2F.Project2DFX")
-
 project "GTAVCS.PCSX2F.ImVehLM"
    kind "Makefile"
-   dependson { "GTAVCS.PCSX2F.Project2DFX" }
+   dependson { "GTAVCS.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.ImVehLM")
@@ -711,20 +689,9 @@ project "KnightRider.PCSX2F.WidescreenFix"
    "../../external/injector/include/ps2/inireader.o", "../../external/injector/include/ps2/mips.o")
    writelinkfile_ps2("KnightRider.PCSX2F.WidescreenFix")
 
-project "PCSX2F.XboxRainDroplets"
-   kind "Makefile"
-   dependson { "KnightRider.PCSX2F.WidescreenFix" }
-   add_ps2sdk()
-   targetextension ".elf"
-   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PCSX2F.XboxRainDroplets")
-   writemakefile_ps2("PCSX2F.XboxRainDroplets", "PLUGINS/", "-l:libc.a", "../../external/injector/include/ps2/memalloc.o",
-   "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o","../../external/injector/include/ps2/inireader.o",
-   "../../external/injector/include/ps2/mips.o")
-   writelinkfile_ps2("PCSX2F.XboxRainDroplets")
-
 project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
    kind "Makefile"
-   dependson { "PCSX2F.XboxRainDroplets" }
+   dependson { "KnightRider.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
@@ -758,17 +725,9 @@ project "GTALCS.PPSSPP.WidescreenFix"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.WidescreenFix")
    writemakefile_psp("GTALCS.PPSSPP.WidescreenFix")
 
-project "GTALCS.PPSSPP.Project2DFX"
-   kind "Makefile"
-   dependson { "GTALCS.PPSSPP.WidescreenFix" }
-   add_pspsdk()
-   targetextension ".prx"
-   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.Project2DFX")
-   writemakefile_psp("GTALCS.PPSSPP.Project2DFX", "lodl.cpp")
-
 project "GTALCS.PPSSPP.ImVehLM"
    kind "Makefile"
-   dependson { "GTALCS.PPSSPP.Project2DFX" }
+   dependson { "GTALCS.PPSSPP.WidescreenFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.ImVehLM")
@@ -782,17 +741,9 @@ project "GTAVCS.PPSSPP.WidescreenFix"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
    writemakefile_psp("GTAVCS.PPSSPP.WidescreenFix")
 
-project "GTAVCS.PPSSPP.Project2DFX"
-   kind "Makefile"
-   dependson { "GTAVCS.PPSSPP.WidescreenFix" }
-   add_pspsdk()
-   targetextension ".prx"
-   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.Project2DFX")
-   writemakefile_psp("GTAVCS.PPSSPP.Project2DFX", "lodl.cpp")
-
 project "GTAVCS.PPSSPP.ImVehLM"
    kind "Makefile"
-   dependson { "GTAVCS.PPSSPP.Project2DFX" }
+   dependson { "GTAVCS.PPSSPP.WidescreenFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.ImVehLM")
@@ -823,17 +774,9 @@ project "MidnightClubLARemix.PPSSPP.FusionFix"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.FusionFix")
    writemakefile_psp("MidnightClubLARemix.PPSSPP.FusionFix")
 
-project "PPSSPP.XboxRainDroplets"
-   kind "Makefile"
-   dependson { "MidnightClubLARemix.PPSSPP.FusionFix" }
-   add_pspsdk()
-   targetextension ".prx"
-   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "PPSSPP.XboxRainDroplets")
-   writemakefile_psp("PPSSPP.XboxRainDroplets")
-
 project "SplinterCellEssentials.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "PPSSPP.XboxRainDroplets" }
+   dependson { "MidnightClubLARemix.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionFix")

@@ -63,7 +63,7 @@ void GroundSpeed(uintptr_t controller) {
 }
 void InstallInput() {
     deadzone = console::bounded(inireader.ReadFloat("MAIN", "StickDeadzone", 0.1f), 0, 0.95f, 0.1f);
-    if (inireader.ReadInteger("MAIN", "DualAnalogPatch", 1)) {
+    {
         sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
         directAxis = safetymips::create_inline(sites::DirectAxis(), DirectAxis);
         // Hide the original left-stick camera help when using separate camera axes.
