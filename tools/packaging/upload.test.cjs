@@ -7,6 +7,24 @@ const os = require('node:os');
 const {EventEmitter} = require('node:events');
 const {github} = require('./upload.cjs');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+test('selected release packages reach the coordinator without uploading Actions artifacts', async t => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'wfp-upload-selection-'));
+  t.after(() => fs.rm(root, {recursive: true, force: true}));
+  await github({root, packages: 'Bully.WidescreenFix,MidnightClubLARemix.PPSSPP.FusionFix',
+    uploader: async () => assert.fail('Selected releases use the release upload steps'),
+    spawnProcess: (command, args) => {
+      assert.equal(args[args.indexOf('-Packages') + 1], 'Bully.WidescreenFix,MidnightClubLARemix.PPSSPP.FusionFix');
+      const child = new EventEmitter();
+      const work = args[args.indexOf('-WorkDirectory') + 1];
+      setTimeout(async () => {
+        try {
+          await fs.writeFile(path.join(work, 'archives', 'fixture.ready.json'), JSON.stringify({id: 'fixture'}));
+          child.emit('close', 0);
+        } catch (error) { child.emit('error', error); }
+      }, 0);
+      return child;
+    }});
+});
 test('the default uploader loads the installed ESM client and passes completed ZIPs to it', async t => {
   const {DefaultArtifactClient} = await import('@actions/artifact');
   const originalUpload = DefaultArtifactClient.prototype.uploadArtifact;

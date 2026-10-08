@@ -1,0 +1,1131 @@
+{
+  "schemaVersion": 1,
+  "workflow": "all.yml",
+  "releases": [
+    {
+      "tag": "bully",
+      "name": "Bully Scholarship Edition Widescreen Fix",
+      "packages": [
+        "Bully.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "burnout3",
+      "name": "Burnout 3 Takedown Widescreen Fix [PCSX2F]",
+      "packages": [
+        "Burnout3.PCSX2F.WidescreenFix"
+      ],
+      "platforms": [
+        "PCSX2F"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "callofcthulhu",
+      "name": "Call of Cthulhu Widescreen Fix",
+      "packages": [
+        "CallOfCthulhu.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "coldfear",
+      "name": "Cold Fear Widescreen Fix",
+      "packages": [
+        "ColdFear.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "condemned",
+      "name": "Condemned Criminal Origins Widescreen Fix",
+      "packages": [
+        "Condemned.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": [
+        "Condemned.MissingSteamFilesFix.Lite",
+        "Condemned.MissingSteamFilesFix"
+      ]
+    },
+    {
+      "tag": "da4",
+      "name": "Deer Avenger 4 Widescreen Fix",
+      "packages": [
+        "DeerAvenger4.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "driv3r",
+      "name": "DRIV3R Widescreen Fix",
+      "packages": [
+        "Driv3r.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "driverpl",
+      "name": "Driver Parallel Lines Widescreen Fix",
+      "packages": [
+        "DriverParallelLines.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "enterthematrix",
+      "name": "Enter the Matrix Widescreen Fix",
+      "packages": [
+        "EnterTheMatrix.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "farcry",
+      "name": "Far Cry Widescreen Fix",
+      "packages": [
+        "FarCry.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32",
+        "Win64"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "gta1",
+      "name": "Grand Theft Auto (1) Widescreen Fix",
+      "packages": [
+        "GTA1.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "gta2",
+      "name": "Grand Theft Auto 2 Widescreen Fix",
+      "packages": [
+        "GTA2.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "gta3",
+      "name": "Grand Theft Auto 3 Widescreen Fix",
+      "packages": [
+        "GTA3.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": [
+        "GTA3.WidescreenFrontend"
+      ]
+    },
+    {
+      "tag": "gtalcs",
+      "name": "Grand Theft Auto Liberty City Stories Widescreen Fix [PCSX2F]",
+      "packages": [
+        "GTALCS.PCSX2F.WidescreenFix",
+        "GTALCS.PCSX2F.ImVehLM"
+      ],
+      "platforms": [
+        "PCSX2F"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "gtasa",
+      "name": "Grand Theft Auto San Andreas Widescreen Fix",
+      "packages": [
+        "GTASA.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": [
+        "GTASA.WidescreenFrontend"
+      ]
+    },
+    {
+      "tag": "gtavcs",
+      "name": "Grand Theft Auto Vice City Stories Widescreen Fix [PCSX2F]",
+      "packages": [
+        "GTAVCS.PCSX2F.WidescreenFix",
+        "GTAVCS.PCSX2F.ImVehLM"
+      ],
+      "platforms": [
+        "PCSX2F"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "gtavc",
+      "name": "Grand Theft Auto Vice City Widescreen Fix",
+      "packages": [
+        "GTAVC.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": [
+        "GTAVC.WidescreenFrontend"
+      ]
+    },
+    {
+      "tag": "gtactwpsp",
+      "name": "GTA Chinatown Wars Fusion Fix [PPSSPP]",
+      "packages": [
+        "GTACTW.PPSSPP.FusionFix"
+      ],
+      "platforms": [
+        "PPSSPP"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "gta3de",
+      "name": "GTA III The Definitive Edition Fusion Fix",
+      "packages": [
+        "GTA3DE.FusionFix"
+      ],
+      "platforms": [
+        "Win64"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "gtalcspsp",
+      "name": "GTA Liberty City Stories Widescreen Fix [PPSSPP]",
+      "packages": [
+        "GTALCS.PPSSPP.WidescreenFix",
+        "GTALCS.PPSSPP.ImVehLM"
+      ],
+      "platforms": [
+        "PPSSPP"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "gtasade",
+      "name": "GTA SA The Definitive Edition Fusion Fix",
+      "packages": [
+        "GTASADE.FusionFix"
+      ],
+      "platforms": [
+        "Win64"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "gtavcde",
+      "name": "GTA VC The Definitive Edition Fusion Fix",
+      "packages": [
+        "GTAVCDE.FusionFix"
+      ],
+      "platforms": [
+        "Win64"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "gtavcspsp",
+      "name": "GTA Vice City Stories Widescreen Fix [PPSSPP]",
+      "packages": [
+        "GTAVCS.PPSSPP.WidescreenFix",
+        "GTAVCS.PPSSPP.ImVehLM",
+        "GTAVCS.PPSSPP.GamepadIcons"
+      ],
+      "platforms": [
+        "PPSSPP"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "gun",
+      "name": "Gun Widescreen Fix",
+      "packages": [
+        "Gun.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "hd2",
+      "name": "Hidden and Dangerous 2 Widescreen Fix",
+      "packages": [
+        "HiddenandDangerous2.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "justcause",
+      "name": "Just Cause Widescreen Fix",
+      "packages": [
+        "JustCause.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "kingkong",
+      "name": "King Kong Widescreen Fix",
+      "packages": [
+        "KingKong.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "kr2",
+      "name": "Knight Rider The Game 2 Widescreen Fix",
+      "packages": [
+        "KnightRider2.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "kr",
+      "name": "Knight Rider The Game Widescreen Fix [+PCSX2F]",
+      "packages": [
+        "KnightRider.WidescreenFix",
+        "KnightRider.PCSX2F.WidescreenFix"
+      ],
+      "platforms": [
+        "PCSX2F",
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "larush",
+      "name": "L.A. Rush Widescreen Fix",
+      "packages": [
+        "LARush.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "mafia",
+      "name": "Mafia Fusion Fix",
+      "packages": [
+        "Mafia.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "manhunt",
+      "name": "Manhunt Widescreen Fix",
+      "packages": [
+        "Manhunt.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": [
+        "Manhunt.WidescreenFrontend"
+      ]
+    },
+    {
+      "tag": "mp2",
+      "name": "Max Payne 2 Widescreen Fix",
+      "packages": [
+        "MaxPayne2.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "mp1",
+      "name": "Max Payne Widescreen Fix",
+      "packages": [
+        "MaxPayne.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "mclarpsp",
+      "name": "Midnight Club: LA Remix Fusion Fix [PPSSPP]",
+      "packages": [
+        "MidnightClubLARemix.PPSSPP.FusionFix"
+      ],
+      "platforms": [
+        "PPSSPP"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "nfsc",
+      "name": "Need For Speed Carbon Widescreen Fix",
+      "packages": [
+        "NFSCarbon.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "nfsmw",
+      "name": "Need For Speed Most Wanted (2005) Widescreen Fix",
+      "packages": [
+        "NFSMostWanted.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "nfsps",
+      "name": "Need for Speed ProStreet Fusion Fix",
+      "packages": [
+        "NFSProStreet.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "nfstherun",
+      "name": "Need For Speed The Run Fusion Fix",
+      "packages": [
+        "NFSTheRun.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "nfsuc",
+      "name": "Need for Speed Undercover Fusion Fix",
+      "packages": [
+        "NFSUndercover.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "nfsu2",
+      "name": "Need For Speed Underground 2 Widescreen Fix",
+      "packages": [
+        "NFSUnderground2.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "nfsu",
+      "name": "Need For Speed Underground Widescreen Fix",
+      "packages": [
+        "NFSUnderground.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "onimusha3",
+      "name": "Onimusha 3 Widescreen Fix",
+      "packages": [
+        "Onimusha3.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "paradisecracked",
+      "name": "Paradise Cracked Widescreen Fix",
+      "packages": [
+        "ParadiseCracked.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "psiops",
+      "name": "Psi-Ops The Mindgate Conspiracy Widescreen Fix",
+      "packages": [
+        "PsiOpsTheMindgateConspiracy.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "psychonauts",
+      "name": "Psychonauts Widescreen Fix",
+      "packages": [
+        "Psychonauts.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "rdr",
+      "name": "Red Dead Redemption Fusion Fix",
+      "packages": [
+        "RedDeadRedemption.FusionFix"
+      ],
+      "platforms": [
+        "Win64"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "re0",
+      "name": "Resident Evil 0 Fusion Fix",
+      "packages": [
+        "ResidentEvil0.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "re2re3gc",
+      "name": "Resident Evil 2 and RE3 Nemesis Fusion Fix [Dolphin]",
+      "packages": [
+        "ResidentEvil2.RE3.Dolphin.FusionFix"
+      ],
+      "platforms": [
+        "Dolphin"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "re4",
+      "name": "Resident Evil 4 Fusion Fix",
+      "packages": [
+        "ResidentEvil4.FusionFix"
+      ],
+      "platforms": [
+        "Win64"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "re5",
+      "name": "Resident Evil 5 Fusion Fix",
+      "packages": [
+        "ResidentEvil5.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "re6",
+      "name": "Resident Evil 6 Fusion Fix",
+      "packages": [
+        "ResidentEvil6.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "re1",
+      "name": "Resident Evil Fusion Fix",
+      "packages": [
+        "ResidentEvil.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "rerev2",
+      "name": "Resident Evil Revelations 2 Fusion Fix",
+      "packages": [
+        "ResidentEvilRevelations2.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "rerev",
+      "name": "Resident Evil Revelations Fusion Fix",
+      "packages": [
+        "ResidentEvilRevelations.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "scarface",
+      "name": "Scarface Fusion Fix",
+      "packages": [
+        "Scarface.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "secondsight",
+      "name": "Second Sight Widescreen Fix",
+      "packages": [
+        "SecondSight.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "sh2",
+      "name": "Silent Hill 2 Widescreen Fix",
+      "packages": [
+        "SilentHill2.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "sh3",
+      "name": "Silent Hill 3 Widescreen Fix",
+      "packages": [
+        "SilentHill3.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "sh4",
+      "name": "Silent Hill 4 Widescreen Fix",
+      "packages": [
+        "SilentHill4.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "sniperelite",
+      "name": "Sniper Elite Widescreen Fix",
+      "packages": [
+        "SniperElite.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "fireteambravo2",
+      "name": "SOCOM U.S. Navy SEALs Fireteam Bravo 2 Fusion Fix",
+      "packages": [
+        "SOCOM.FireteamBravo2.PPSSPP.FusionFix"
+      ],
+      "platforms": [
+        "PPSSPP"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "fireteambravo3",
+      "name": "SOCOM U.S. Navy SEALs Fireteam Bravo 3 Fusion Fix",
+      "packages": [
+        "SOCOM.FireteamBravo3.PPSSPP.FusionFix"
+      ],
+      "platforms": [
+        "PPSSPP"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "fireteambravo1",
+      "name": "SOCOM U.S. Navy SEALs Fireteam Bravo Fusion Fix",
+      "packages": [
+        "SOCOM.FireteamBravo.PPSSPP.FusionFix"
+      ],
+      "platforms": [
+        "PPSSPP"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "sonicheroes",
+      "name": "Sonic Heroes Widescreen Fix",
+      "packages": [
+        "SonicHeroes.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "scb",
+      "name": "Splinter Cell Blacklist Fusion Fix",
+      "packages": [
+        "SplinterCellBlacklist.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "scct",
+      "name": "Splinter Cell Chaos Theory Widescreen Fix",
+      "packages": [
+        "SplinterCellChaosTheory.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "scc",
+      "name": "Splinter Cell Conviction Fusion Fix",
+      "packages": [
+        "SplinterCellConviction.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "scda",
+      "name": "Splinter Cell Double Agent Widescreen Fix",
+      "packages": [
+        "SplinterCellDoubleAgent.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "scdaxbox",
+      "name": "Splinter Cell Double Agent Widescreen Fix [CXBXR]",
+      "packages": [
+        "SplinterCellDoubleAgent.CXBXR.WidescreenFix"
+      ],
+      "platforms": [
+        "CXBXR"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "scdaps2",
+      "name": "Splinter Cell Double Agent Widescreen Fix [PCSX2F]",
+      "packages": [
+        "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
+      ],
+      "platforms": [
+        "PCSX2F"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "sce",
+      "name": "Splinter Cell Essentials Fusion Fix [PPSSPP]",
+      "packages": [
+        "SplinterCellEssentials.PPSSPP.FusionFix"
+      ],
+      "platforms": [
+        "PPSSPP"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "scpt",
+      "name": "Splinter Cell Pandora Tomorrow Widescreen Fix",
+      "packages": [
+        "SplinterCellPandoraTomorrow.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "sc",
+      "name": "Splinter Cell Widescreen Fix",
+      "packages": [
+        "SplinterCell.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "spyro",
+      "name": "Spyro Reignited Trilogy Widescreen Fix",
+      "packages": [
+        "SpyroReignitedTrilogy.WidescreenFix"
+      ],
+      "platforms": [
+        "Win64"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "srs",
+      "name": "Street Racing Syndicate Widescreen Fix",
+      "packages": [
+        "StreetRacingSyndicate.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "thegodfather",
+      "name": "The Godfather Widescreen Fix",
+      "packages": [
+        "TheGodfather.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "thematrixpathofneo",
+      "name": "The Matrix Path of Neo Widescreen Fix",
+      "packages": [
+        "TheMatrixPathOfNeo.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "punisher",
+      "name": "The Punisher Widescreen Fix",
+      "packages": [
+        "ThePunisher.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "thesaboteur",
+      "name": "The Saboteur Fusion Fix",
+      "packages": [
+        "TheSaboteur.FusionFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "thesuffering",
+      "name": "The Suffering Widescreen Fix",
+      "packages": [
+        "TheSuffering.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "thewarriors",
+      "name": "The Warriors Fusion Fix [PPSSPP]",
+      "packages": [
+        "TheWarriors.PPSSPP.FusionFix"
+      ],
+      "platforms": [
+        "PPSSPP"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "thaw",
+      "name": "Tony Hawk's American Wasteland Widescreen Fix",
+      "packages": [
+        "TonyHawksAmericanWasteland.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "thps2",
+      "name": "Tony Hawk's Pro Skater 2 Widescreen Fix",
+      "packages": [
+        "TonyHawksProSkater2.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "thps3",
+      "name": "Tony Hawk's Pro Skater 3 Widescreen Fix",
+      "packages": [
+        "TonyHawksProSkater3.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "thps4",
+      "name": "Tony Hawk's Pro Skater 4 Widescreen Fix",
+      "packages": [
+        "TonyHawksProSkater4.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "thug2",
+      "name": "Tony Hawk's Underground 2 Widescreen Fix",
+      "packages": [
+        "TonyHawksUnderground2.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "thug",
+      "name": "Tony Hawk's Underground Widescreen Fix",
+      "packages": [
+        "TonyHawksUnderground.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "tod",
+      "name": "Total Overdose Widescreen Fix",
+      "packages": [
+        "TotalOverdose.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "truecrimenyc",
+      "name": "True Crime New York City Widescreen Fix",
+      "packages": [
+        "TrueCrimeNewYorkCity.WidescreenFix",
+        "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix"
+      ],
+      "platforms": [
+        "PCSX2F",
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "truecrimesola",
+      "name": "True Crime Streets of LA Widescreen Fix",
+      "packages": [
+        "TrueCrimeStreetsofLA.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "usm",
+      "name": "Ultimate Spider-Man Widescreen Fix",
+      "packages": [
+        "UltimateSpiderMan.WidescreenFix"
+      ],
+      "platforms": [
+        "Win32"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    }
+  ]
+}

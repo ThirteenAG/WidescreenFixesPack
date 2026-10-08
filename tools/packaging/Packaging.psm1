@@ -18,6 +18,33 @@ function Get-ByteHash([byte[]]$Bytes) {
     try { return [BitConverter]::ToString($sha.ComputeHash($Bytes)).Replace('-', '').ToLowerInvariant() } finally { $sha.Dispose() }
 }
 function Get-FileHashValue([string]$File) { return (Get-FileHash -LiteralPath $File -Algorithm SHA256).Hash.ToLowerInvariant() }
+function New-SelectedSolutionPlans($Manifest, $Producers, [string]$Root, [string]$Work) {
+    foreach ($solution in $Manifest.solutions) {
+        $selected = @($Producers | Where-Object { $_.solution -eq $solution })
+        if (!$selected.Count) { continue }
+        $original = Join-Path $Root "build/$solution.WidescreenFixesPack.slnx"
+        [xml]$xml = Get-Content -LiteralPath $original -Raw
+        $found = @{}
+        foreach ($node in @($xml.SelectNodes('//Project'))) {
+            $name = [IO.Path]::GetFileNameWithoutExtension($node.Path)
+            if ($name -in $selected.project -or $name -like 'ReleaseDependencies.*') {
+                $node.Path = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $original) $node.Path))
+                $found[$name] = $true
+            } else { $null = $node.ParentNode.RemoveChild($node) }
+        }
+        foreach ($producer in $selected) { if (!$found.ContainsKey($producer.project)) { throw "Selected project is missing from ${solution}: $($producer.project)" } }
+        foreach ($dependency in @($xml.SelectNodes('//BuildDependency'))) {
+            $dependency.Project = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $original) $dependency.Project))
+            if (![IO.File]::Exists($dependency.Project)) { throw "Missing selected build dependency: $($dependency.Project)" }
+        }
+        foreach ($folder in @($xml.SelectNodes('//Folder'))) { if (!$folder.SelectNodes('.//Project').Count) { $null = $folder.ParentNode.RemoveChild($folder) } }
+        $path = Join-Path $Work "selected-$solution.slnx"
+        $xml.Save($path)
+        # One solution build lets MSBuild schedule selected projects in parallel,
+        # with their genuine shared-dependency project references retained.
+        ,@('-m', $path)
+    }
+}
 function ConvertTo-ToolArguments([string[]]$Values) {
     return (($Values | ForEach-Object {
         '"' + [regex]::Replace([regex]::Replace($_, '(\\*)"', '$1$1\"'), '(\\+)$', '$1$1') + '"'

@@ -2,6 +2,9 @@ name: "Build All"
 description: "Build and package plugins from the JSON release manifest"
 
 inputs:
+  packages:
+    description: "Selected package IDs, or empty to use the build plan"
+    required: false
   project:
     description: "MSBuild commands to run (or empty to build everything)"
     required: false
@@ -37,6 +40,7 @@ runs:
       env:
         GH_TOKEN: ${{ github.token }}
         WFP_PROJECT_COMMANDS: ${{ inputs.project }}
+        WFP_PACKAGES: ${{ inputs.packages }}
         WFP_PACKAGING_MODE: ${{ inputs.packaging_mode }}
         WFP_SIGNING_PROFILE: ${{ inputs.signing_profile }}
       with:
@@ -44,6 +48,7 @@ runs:
           const coordinator = require('./tools/packaging/upload.cjs')
           await coordinator.github({
             project: process.env.WFP_PROJECT_COMMANDS,
+            packages: process.env.WFP_PACKAGES,
             mode: process.env.WFP_PACKAGING_MODE,
             signing: process.env.WFP_SIGNING_PROFILE
           })

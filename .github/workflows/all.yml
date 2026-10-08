@@ -1,4 +1,5 @@
 name: Release By Tags
+run-name: ${{ inputs.request_id && format('Release picker {0}', inputs.request_id) || format('Release {0}', inputs.tag_list) }}
 
 on:
   workflow_call:
@@ -9,11 +10,26 @@ on:
       project:
         required: false
         type: string
+      catalog_hash:
+        required: false
+        type: string
+      request_id:
+        required: false
+        type: string
   workflow_dispatch:
     inputs:
       tag_list:
         description: 'Release specified tags:'
         required: true
+      catalog_hash:
+        description: 'Optional catalog hash supplied by the local picker'
+        required: false
+      request_id:
+        description: 'Optional request ID supplied by the local picker'
+        required: false
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -25,10 +41,19 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Build All
+    - name: Prepare selected releases
+      id: selection
+      shell: powershell
+      env:
+        WFP_RELEASE_TAGS: ${{ inputs.tag_list }}
+        WFP_CATALOG_HASH: ${{ inputs.catalog_hash }}
+      run: ./tools/releases/Prepare.ps1 -Tags $env:WFP_RELEASE_TAGS -CatalogHash $env:WFP_CATALOG_HASH
+
+    - name: Build selected releases
       uses: ./.github/workflows/build_all
       with:
         project: ${{ inputs.project }}
+        packages: ${{ steps.selection.outputs.packages }}
         signing_profile: required
       env:
         CODE_SIGNING_PFX: ${{ secrets.CODE_SIGNING_PFX }}
@@ -38,7 +63,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtasade
         artifacts: data/Archives/GTASADE.FusionFix.zip
 
@@ -46,7 +71,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gta3de
         artifacts: data/Archives/GTA3DE.FusionFix.zip
 
@@ -54,7 +79,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtavcde
         artifacts: data/Archives/GTAVCDE.FusionFix.zip
 
@@ -62,7 +87,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtavcs
         artifacts: data/Archives/GTAVCS.PCSX2F.WidescreenFix.zip, data/Archives/GTAVCS.PCSX2F.ImVehLM.zip
 
@@ -70,7 +95,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtalcspsp
         artifacts: data/Archives/GTALCS.PPSSPP.WidescreenFix.zip, data/Archives/GTALCS.PPSSPP.ImVehLM.zip
 
@@ -78,7 +103,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtactwpsp
         artifacts: data/Archives/GTACTW.PPSSPP.FusionFix.zip
 
@@ -86,7 +111,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtavcspsp
         artifacts: data/Archives/GTAVCS.PPSSPP.WidescreenFix.zip, data/Archives/GTAVCS.PPSSPP.ImVehLM.zip, data/Archives/GTAVCS.PPSSPP.GamepadIcons.zip
 
@@ -94,7 +119,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtalcs
         artifacts: data/Archives/GTALCS.PCSX2F.WidescreenFix.zip, data/Archives/GTALCS.PCSX2F.ImVehLM.zip
 
@@ -102,15 +127,15 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtasa
-        artifacts: data/Archives/GTASA.WidescreenFix.zip, data/Archives/GTASA.WidescreenFrontend.zip
+        artifacts: data/Archives/GTASA.WidescreenFix.zip
 
     - name: Splinter Cell Double Agent Widescreen Fix [PCSX2F]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: scdaps2
         artifacts: data/Archives/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.zip
 
@@ -118,7 +143,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: scdaxbox
         artifacts: data/Archives/SplinterCellDoubleAgent.CXBXR.WidescreenFix.zip
 
@@ -126,7 +151,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: sce
         artifacts: data/Archives/SplinterCellEssentials.PPSSPP.FusionFix.zip
 
@@ -134,7 +159,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: burnout3
         artifacts: data/Archives/Burnout3.PCSX2F.WidescreenFix.zip
 
@@ -142,15 +167,15 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: condemned
-        artifacts: data/Archives/Condemned.MissingSteamFilesFix.Lite.zip, data/Archives/Condemned.MissingSteamFilesFix.zip, data/Archives/Condemned.WidescreenFix.zip
+        artifacts: data/Archives/Condemned.WidescreenFix.zip
 
     - name: Knight Rider The Game 2 Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: kr2
         artifacts: data/Archives/KnightRider2.WidescreenFix.zip
 
@@ -158,7 +183,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: kr
         artifacts: data/Archives/KnightRider.WidescreenFix.zip, data/Archives/KnightRider.PCSX2F.WidescreenFix.zip
 
@@ -166,7 +191,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: farcry
         artifacts: data/Archives/FarCry.WidescreenFix.zip
 
@@ -174,7 +199,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: nfsuc
         artifacts: data/Archives/NFSUndercover.FusionFix.zip
 
@@ -182,7 +207,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: nfsps
         artifacts: data/Archives/NFSProStreet.FusionFix.zip
 
@@ -190,7 +215,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: bully
         artifacts: data/Archives/Bully.WidescreenFix.zip
 
@@ -198,7 +223,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: larush
         artifacts: data/Archives/LARush.WidescreenFix.zip
 
@@ -206,7 +231,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: thegodfather
         artifacts: data/Archives/TheGodfather.WidescreenFix.zip
 
@@ -214,7 +239,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: psychonauts
         artifacts: data/Archives/Psychonauts.WidescreenFix.zip
 
@@ -222,7 +247,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: justcause
         artifacts: data/Archives/JustCause.WidescreenFix.zip
 
@@ -230,7 +255,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: thematrixpathofneo
         artifacts: data/Archives/TheMatrixPathOfNeo.WidescreenFix.zip
 
@@ -238,7 +263,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: enterthematrix
         artifacts: data/Archives/EnterTheMatrix.WidescreenFix.zip
 
@@ -246,7 +271,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: hd2
         artifacts: data/Archives/HiddenandDangerous2.WidescreenFix.zip
 
@@ -254,7 +279,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: usm
         artifacts: data/Archives/UltimateSpiderMan.WidescreenFix.zip
 
@@ -262,7 +287,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: driv3r
         artifacts: data/Archives/Driv3r.WidescreenFix.zip
 
@@ -270,7 +295,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: thesaboteur
         artifacts: data/Archives/TheSaboteur.FusionFix.zip
 
@@ -278,7 +303,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: thesuffering
         artifacts: data/Archives/TheSuffering.WidescreenFix.zip
 
@@ -286,7 +311,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: thewarriors
         artifacts: data/Archives/TheWarriors.PPSSPP.FusionFix.zip
 
@@ -294,7 +319,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: sh4
         artifacts: data/Archives/SilentHill4.WidescreenFix.zip
 
@@ -302,7 +327,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: driverpl
         artifacts: data/Archives/DriverParallelLines.WidescreenFix.zip
 
@@ -310,7 +335,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: callofcthulhu
         artifacts: data/Archives/CallOfCthulhu.WidescreenFix.zip
 
@@ -318,7 +343,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: kingkong
         artifacts: data/Archives/KingKong.WidescreenFix.zip
 
@@ -326,7 +351,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: onimusha3
         artifacts: data/Archives/Onimusha3.WidescreenFix.zip
 
@@ -334,7 +359,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: sh3
         artifacts: data/Archives/SilentHill3.WidescreenFix.zip
 
@@ -342,7 +367,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: sh2
         artifacts: data/Archives/SilentHill2.WidescreenFix.zip
 
@@ -350,7 +375,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: coldfear
         artifacts: data/Archives/ColdFear.WidescreenFix.zip
 
@@ -358,7 +383,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: paradisecracked
         artifacts: data/Archives/ParadiseCracked.WidescreenFix.zip
 
@@ -366,7 +391,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: nfsu
         artifacts: data/Archives/NFSUnderground.WidescreenFix.zip
 
@@ -374,7 +399,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: nfsu2
         artifacts: data/Archives/NFSUnderground2.WidescreenFix.zip
 
@@ -382,7 +407,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: nfsmw
         artifacts: data/Archives/NFSMostWanted.WidescreenFix.zip
 
@@ -390,7 +415,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: nfsc
         artifacts: data/Archives/NFSCarbon.WidescreenFix.zip
 
@@ -398,7 +423,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: nfstherun
         artifacts: data/Archives/NFSTheRun.FusionFix.zip
 
@@ -406,15 +431,15 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: manhunt
-        artifacts: data/Archives/Manhunt.WidescreenFix.zip, data/Archives/Manhunt.WidescreenFrontend.zip
+        artifacts: data/Archives/Manhunt.WidescreenFix.zip
 
     - name: Gun Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gun
         artifacts: data/Archives/Gun.WidescreenFix.zip
 
@@ -422,7 +447,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: fireteambravo1
         artifacts: data/Archives/SOCOM.FireteamBravo.PPSSPP.FusionFix.zip
 
@@ -430,7 +455,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: fireteambravo2
         artifacts: data/Archives/SOCOM.FireteamBravo2.PPSSPP.FusionFix.zip
 
@@ -438,23 +463,24 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: fireteambravo3
         artifacts: data/Archives/SOCOM.FireteamBravo3.PPSSPP.FusionFix.zip
 
-    - name: Devil May Cry 3 Widescreen Fix
+    - name: Midnight Club LA Remix Fusion Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
-        tag: dmc3se
-        artifacts: data/Archives/DevilMayCry3.WidescreenFix.zip
+        tag_list: ${{ steps.selection.outputs.tags }}
+        tag: mclarpsp
+        release_name: 'Midnight Club: LA Remix Fusion Fix [PPSSPP]'
+        artifacts: data/Archives/MidnightClubLARemix.PPSSPP.FusionFix.zip
 
     - name: Deer Avenger 4 Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: da4
         artifacts: data/Archives/DeerAvenger4.WidescreenFix.zip
 
@@ -462,7 +488,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: mafia
         artifacts: data/Archives/Mafia.FusionFix.zip
 
@@ -470,7 +496,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: tod
         artifacts: data/Archives/TotalOverdose.WidescreenFix.zip
 
@@ -478,7 +504,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: thug2
         artifacts: data/Archives/TonyHawksUnderground2.WidescreenFix.zip
 
@@ -486,7 +512,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: thug
         artifacts: data/Archives/TonyHawksUnderground.WidescreenFix.zip
 
@@ -494,7 +520,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: thps4
         artifacts: data/Archives/TonyHawksProSkater4.WidescreenFix.zip
 
@@ -502,7 +528,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: thps3
         artifacts: data/Archives/TonyHawksProSkater3.WidescreenFix.zip
 
@@ -510,7 +536,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: thps2
         artifacts: data/Archives/TonyHawksProSkater2.WidescreenFix.zip
 
@@ -518,7 +544,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: thaw
         artifacts: data/Archives/TonyHawksAmericanWasteland.WidescreenFix.zip
 
@@ -526,7 +552,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: punisher
         artifacts: data/Archives/ThePunisher.WidescreenFix.zip
 
@@ -534,7 +560,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: scarface
         artifacts: data/Archives/Scarface.FusionFix.zip
 
@@ -542,7 +568,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: secondsight
         artifacts: data/Archives/SecondSight.WidescreenFix.zip
 
@@ -550,7 +576,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: psiops
         artifacts: data/Archives/PsiOpsTheMindgateConspiracy.WidescreenFix.zip
 
@@ -558,7 +584,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: mp2
         artifacts: data/Archives/MaxPayne2.WidescreenFix.zip
 
@@ -566,7 +592,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: mp1
         artifacts: data/Archives/MaxPayne.WidescreenFix.zip
 
@@ -574,23 +600,23 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtavc
-        artifacts: data/Archives/GTAVC.WidescreenFix.zip, data/Archives/GTAVC.WidescreenFrontend.zip
+        artifacts: data/Archives/GTAVC.WidescreenFix.zip
 
     - name: Grand Theft Auto 3 Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gta3
-        artifacts: data/Archives/GTA3.WidescreenFix.zip, data/Archives/GTA3.WidescreenFrontend.zip
+        artifacts: data/Archives/GTA3.WidescreenFix.zip
 
     - name: Grand Theft Auto 2 Widescreen Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gta2
         artifacts: data/Archives/GTA2.WidescreenFix.zip
 
@@ -598,7 +624,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: gta1
         artifacts: data/Archives/GTA1.WidescreenFix.zip
 
@@ -606,7 +632,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: truecrimesola
         artifacts: data/Archives/TrueCrimeStreetsofLA.WidescreenFix.zip
 
@@ -614,7 +640,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: truecrimenyc
         artifacts: data/Archives/TrueCrimeNewYorkCity.WidescreenFix.zip, data/Archives/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.zip
 
@@ -622,7 +648,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: srs
         artifacts: data/Archives/StreetRacingSyndicate.WidescreenFix.zip
 
@@ -630,7 +656,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: scda
         artifacts: data/Archives/SplinterCellDoubleAgent.WidescreenFix.zip
 
@@ -638,7 +664,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: scct
         artifacts: data/Archives/SplinterCellChaosTheory.WidescreenFix.zip
 
@@ -646,7 +672,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: scc
         artifacts: data/Archives/SplinterCellConviction.FusionFix.zip
 
@@ -654,7 +680,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: scb
         artifacts: data/Archives/SplinterCellBlacklist.FusionFix.zip
 
@@ -662,7 +688,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: scpt
         artifacts: data/Archives/SplinterCellPandoraTomorrow.WidescreenFix.zip
 
@@ -670,7 +696,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: sc
         artifacts: data/Archives/SplinterCell.WidescreenFix.zip
 
@@ -678,7 +704,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: spyro
         artifacts: data/Archives/SpyroReignitedTrilogy.WidescreenFix.zip
 
@@ -686,7 +712,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: sniperelite
         artifacts: data/Archives/SniperElite.WidescreenFix.zip
 
@@ -694,7 +720,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: sonicheroes
         artifacts: data/Archives/SonicHeroes.WidescreenFix.zip
 
@@ -702,7 +728,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: rdr
         artifacts: data/Archives/RedDeadRedemption.FusionFix.zip
 
@@ -710,7 +736,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: re0
         artifacts: data/Archives/ResidentEvil0.FusionFix.zip
 
@@ -718,7 +744,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: re1
         artifacts: data/Archives/ResidentEvil.FusionFix.zip
 
@@ -726,7 +752,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: re2re3gc
         artifacts: data/Archives/ResidentEvil2.RE3.Dolphin.FusionFix.zip
 
@@ -734,7 +760,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: re4
         artifacts: data/Archives/ResidentEvil4.FusionFix.zip
 
@@ -742,7 +768,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: re5
         artifacts: data/Archives/ResidentEvil5.FusionFix.zip
 
@@ -750,7 +776,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: re6
         artifacts: data/Archives/ResidentEvil6.FusionFix.zip
 
@@ -758,7 +784,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: rerev
         artifacts: data/Archives/ResidentEvilRevelations.FusionFix.zip
 
@@ -766,7 +792,7 @@ jobs:
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ format('{0},{1}', github.event.inputs.tag_list, inputs.tag_list) }}
+        tag_list: ${{ steps.selection.outputs.tags }}
         tag: rerev2
         artifacts: data/Archives/ResidentEvilRevelations2.FusionFix.zip
 

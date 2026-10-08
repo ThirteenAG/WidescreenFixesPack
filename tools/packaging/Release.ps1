@@ -15,6 +15,7 @@ if (-not $RepositoryRoot) { $RepositoryRoot = [IO.Path]::GetFullPath((Join-Path 
 Import-Module (Join-Path $PSScriptRoot 'Packaging.psm1') -Force -DisableNameChecking
 $RepositoryRoot = [IO.Path]::GetFullPath($RepositoryRoot)
 if (-not $WorkDirectory) { $WorkDirectory = Join-Path $RepositoryRoot ('build/packaging/' + [Guid]::NewGuid()) }
+$WorkDirectory = [IO.Path]::GetFullPath($WorkDirectory)
 $completion = Join-Path $WorkDirectory 'completed'; $readyDirectory = Join-Path $WorkDirectory 'archives'
 $null = New-Item -ItemType Directory -Force -Path $completion, $readyDirectory
 $manifest = Read-PackageManifest $RepositoryRoot
@@ -123,7 +124,7 @@ function Get-Platform($Producer) {
 }
 function Build-Plan([string[]]$Arguments) {
     Write-Host "Building $($Arguments -join ' ')"
-    $script:building = Start-PackageTool 'msbuild' ($Arguments + @('/p:Configuration=Release', '/p:PostBuildEventUseInBuild=false', "/p:ForceImportAfterCppTargets=$PSScriptRoot/completion.targets", "/p:WFPCompletionDirectory=$completion")) $RepositoryRoot
+    $script:building = Start-PackageTool 'msbuild' ($Arguments + @('/p:Configuration=Release', '/p:PostBuildEventUseInBuild=false', "/p:SolutionDir=$RepositoryRoot/build/", "/p:ForceImportAfterCppTargets=$PSScriptRoot/completion.targets", "/p:WFPCompletionDirectory=$completion")) $RepositoryRoot
     while (-not $script:building.Process.HasExited) {
         if (Test-Path -LiteralPath (Join-Path $WorkDirectory 'upload-failed.json')) { throw 'An artifact upload failed.' }
         Read-Completions
@@ -151,7 +152,7 @@ try {
         }
         if ($commands.Count) { foreach ($arguments in $commands) { Build-Plan $arguments } }
         elseif ($Packages) {
-            foreach ($producer in @($producers.Values | Sort-Object project)) { Build-Plan @('-m', "build/$($producer.project).vcxproj", "/p:Platform=$(Get-Platform $producer)") }
+            foreach ($arguments in @(New-SelectedSolutionPlans $manifest @($producers.Values) $RepositoryRoot $WorkDirectory)) { Build-Plan $arguments }
         } else { foreach ($solution in $manifest.solutions) { Build-Plan @('-m', "build/$solution.WidescreenFixesPack.slnx") } }
         foreach ($producer in $producers.Values) {
             if (-not $state.Completed.ContainsKey($producer.project)) { Build-Plan @('-m', "build/$($producer.project).vcxproj", "/p:Platform=$(Get-Platform $producer)") }
