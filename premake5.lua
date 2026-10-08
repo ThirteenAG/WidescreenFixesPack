@@ -635,7 +635,6 @@ project "Burnout3.PCSX2F.WidescreenFix"
 group "GrandTheftAuto"
 project "GTALCS.PCSX2F.WidescreenFix"
    kind "Makefile"
-   dependson { "Burnout3.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.WidescreenFix")
@@ -646,7 +645,6 @@ project "GTALCS.PCSX2F.WidescreenFix"
 
 project "GTAVCS.PCSX2F.WidescreenFix"
    kind "Makefile"
-   dependson { "GTALCS.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.WidescreenFix")
@@ -657,7 +655,6 @@ project "GTAVCS.PCSX2F.WidescreenFix"
 
 project "GTAVCS.PCSX2F.ImVehLM"
    kind "Makefile"
-   dependson { "GTAVCS.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.ImVehLM")
@@ -668,7 +665,6 @@ project "GTAVCS.PCSX2F.ImVehLM"
 
 project "GTALCS.PCSX2F.ImVehLM"
    kind "Makefile"
-   dependson { "GTAVCS.PCSX2F.ImVehLM" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.ImVehLM")
@@ -680,7 +676,6 @@ group ""
 
 project "KnightRider.PCSX2F.WidescreenFix"
    kind "Makefile"
-   dependson { "GTAVCS.PCSX2F.ImVehLM" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "KnightRider.PCSX2F.WidescreenFix")
@@ -691,7 +686,6 @@ project "KnightRider.PCSX2F.WidescreenFix"
 
 project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
    kind "Makefile"
-   dependson { "KnightRider.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
@@ -703,7 +697,6 @@ project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
 
 project "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix"
    kind "Makefile"
-   dependson { "SplinterCellDoubleAgent.PCSX2F.WidescreenFix" }
    add_ps2sdk()
    targetextension ".elf"
    setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix")
@@ -727,7 +720,6 @@ project "GTALCS.PPSSPP.WidescreenFix"
 
 project "GTALCS.PPSSPP.ImVehLM"
    kind "Makefile"
-   dependson { "GTALCS.PPSSPP.WidescreenFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.ImVehLM")
@@ -735,7 +727,6 @@ project "GTALCS.PPSSPP.ImVehLM"
 
 project "GTAVCS.PPSSPP.WidescreenFix"
    kind "Makefile"
-   dependson { "GTALCS.PPSSPP.ImVehLM" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix")
@@ -743,7 +734,6 @@ project "GTAVCS.PPSSPP.WidescreenFix"
 
 project "GTAVCS.PPSSPP.ImVehLM"
    kind "Makefile"
-   dependson { "GTAVCS.PPSSPP.WidescreenFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.ImVehLM")
@@ -751,7 +741,6 @@ project "GTAVCS.PPSSPP.ImVehLM"
 
 project "GTAVCS.PPSSPP.GamepadIcons"
    kind "Makefile"
-   dependson { "GTAVCS.PPSSPP.ImVehLM" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.GamepadIcons")
@@ -759,7 +748,6 @@ project "GTAVCS.PPSSPP.GamepadIcons"
 
 project "GTACTW.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "GTAVCS.PPSSPP.ImVehLM" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTACTW.PPSSPP.FusionFix")
@@ -768,7 +756,6 @@ group ""
 
 project "MidnightClubLARemix.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "GTACTW.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "MidnightClubLARemix.PPSSPP.FusionFix")
@@ -776,7 +763,6 @@ project "MidnightClubLARemix.PPSSPP.FusionFix"
 
 project "SplinterCellEssentials.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "MidnightClubLARemix.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellEssentials.PPSSPP.FusionFix")
@@ -785,21 +771,18 @@ project "SplinterCellEssentials.PPSSPP.FusionFix"
 group "SOCOM"
 project "SOCOM.FireteamBravo.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "SplinterCellEssentials.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo.PPSSPP.FusionFix")
    writemakefile_psp("SOCOM.FireteamBravo.PPSSPP.FusionFix")
 project "SOCOM.FireteamBravo2.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "SOCOM.FireteamBravo.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo2.PPSSPP.FusionFix")
    writemakefile_psp("SOCOM.FireteamBravo2.PPSSPP.FusionFix")
 project "SOCOM.FireteamBravo3.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "SOCOM.FireteamBravo2.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SOCOM.FireteamBravo3.PPSSPP.FusionFix")
@@ -808,7 +791,6 @@ group ""
 
 project "TheWarriors.PPSSPP.FusionFix"
    kind "Makefile"
-   dependson { "SOCOM.FireteamBravo3.PPSSPP.FusionFix" }
    add_pspsdk()
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.FusionFix")
