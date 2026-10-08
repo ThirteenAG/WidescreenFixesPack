@@ -5,8 +5,14 @@ module;
 export module Settings;
 
 
+export enum class VisualStyle { DE, PS2, PC };
+
 export struct FusionSettings
 {
+    VisualStyle visualStyle = VisualStyle::PS2;
+    bool restoreWeatherColours = true;
+    bool classicLODsOnly = false;
+    float colourFilterStrength = 1.0f;
     bool skipIntro = true;
     bool skipMenu = true;
     int saveSlot = 5;
@@ -36,5 +42,11 @@ export void ReadSettings()
     Settings.rawMouseInput = reader.ReadInteger("MAIN", "RawMouseInput", 1) != 0;
     const auto delay = reader.ReadFloat("MAIN", "CenteringDelay", 5.0f);
     Settings.centeringDelay = std::isfinite(delay) && delay >= 0.0f ? delay : 5.0f;
+    Settings.classicLODsOnly = reader.ReadInteger("GRAPHICS", "ClassicLODsOnly", 0) != 0;
+    const auto style = reader.ReadInteger("GRAPHICS", "VisualStyle", 1);
+    Settings.visualStyle = style >= 0 && style <= 2 ? static_cast<VisualStyle>(style) : VisualStyle::PS2;
+    Settings.restoreWeatherColours = reader.ReadInteger("GRAPHICS", "RestoreWeatherColours", 1) != 0;
+    const auto strength = reader.ReadFloat("GRAPHICS", "ColourFilterStrength", 1.0f);
+    Settings.colourFilterStrength = std::isfinite(strength) ? std::clamp(strength, 0.0f, 1.0f) : 1.0f;
     WFP::onReadGameConfig().executeAll();
 }

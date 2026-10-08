@@ -34,6 +34,7 @@ namespace
         const float* parameters = nullptr;
     } car;
     SafetyHookInline carBetaHook;
+    SafetyHookInline entryStickHook;
     std::vector<SafetyHookMid> orbitHooks;
     using AimAxis = float(*)(void*, void*, float, bool, bool, int);
     AimAxis aimHorizontal = nullptr;
@@ -46,6 +47,15 @@ namespace
     bool MouseOrbitAllowed()
     {
         return IsMouseCameraActive() && !*disabledControls && !*scriptAngles;
+    }
+    void EntryStickModifier(void* task, void* player, float distance,
+        float* alpha, float* beta, float* pitch, float* yaw)
+    {
+        // EnterCar adds door-facing yaw and pitch to the sampled axes, even
+        // for a mouse. Keep those task adjustments for sticks and scripted
+        // cameras; mouse follow-ped must retain its unmodified frame delta.
+        if (!MouseOrbitAllowed())
+            entryStickHook.ccall<void>(task, player, distance, alpha, beta, pitch, yaw);
     }
     float FovScale(const CameraAngles& camera)
     {
@@ -117,9 +127,18 @@ namespace
         direction = reinterpret_cast<int*>((injector::ReadRelativeOffset(hook::pattern("8B 05 ? ? ? ? 89 47 3C 0F B6 05 ? ? ? ? 48 69 C8 B8 01 00 00 48").get_first<uint8_t>(2)).as_int()));
         scriptAngles = reinterpret_cast<bool*>((injector::ReadRelativeOffset(hook::pattern("C6 05 ? ? ? ? 00 E9 ? ? ? ? 48 8B CF E8 ? ? ? ? E9 ? ? ?").get_first<uint8_t>(2)).as_int() + 1));
         carParameters = reinterpret_cast<const float*>((injector::ReadRelativeOffset(hook::pattern("F3 0F 59 35 ? ? ? ? F3 44 0F 10 44 24 38 F3 44 0F 10 5C 24 34 F3 0F").get_first<uint8_t>(4)).as_int()));
+        auto entryStick = hook::pattern("4C 8B DC 49 89 5B 18 49 89 6B 20 41 56 48 81 EC 90 00 00 00 48 8B 41 18 4D 8B F1").get_first();
+        if (!entryStick)
+            return;
+        entryStickHook = safetyhook::create_inline(entryStick, EntryStickModifier);
+        if (!entryStickHook)
+            return;
         carBetaHook = safetyhook::create_inline(betaCar, ComputeCarBeta);
         if (!carBetaHook)
+        {
+            entryStickHook = {};
             return;
+        }
         const auto add = [](void* address, auto callback)
         {
             orbitHooks.push_back(safetyhook::create_mid(address, callback));
@@ -245,6 +264,7 @@ namespace
         {
             orbitHooks.clear();
             carBetaHook = {};
+            entryStickHook = {};
         }
     }
 }
