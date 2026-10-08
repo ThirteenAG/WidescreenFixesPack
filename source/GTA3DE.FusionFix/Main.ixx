@@ -4,7 +4,6 @@ module;
 
 export module Main;
 
-import Build;
 import Settings;
 import Startup;
 import Save;
@@ -33,11 +32,6 @@ namespace
 
 export void InitFusionFix()
 {
-    if (!IsSupportedBuild())
-    {
-        OutputDebugStringW(L"FusionFix: unsupported DE executable; patches were not installed.\n");
-        return;
-    }
     ReadSettings();
     WFP::onInitEvent().executeAll();
     if (auto address = hook::pattern("48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 48 89 4C 24 08 57 41 54 41 55 41 56 41 57 48 83 EC 40 45 33 ED 4C 8D 3D ?").get_first())

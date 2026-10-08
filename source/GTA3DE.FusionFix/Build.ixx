@@ -4,18 +4,6 @@ module;
 
 export module Build;
 
-// Latest installed PC build: 1.0.112.48699928. Its .text was compared
-// byte-for-byte with the 1126680 IDB input before these patterns were selected.
-export bool IsSupportedBuild()
-{
-    const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-    const auto dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
-    const auto nt = reinterpret_cast<const IMAGE_NT_HEADERS64*>(base + dos->e_lfanew);
-    return nt->FileHeader.TimeDateStamp == 0x66FC55DB
-        && nt->OptionalHeader.SizeOfImage == 0x5936400;
-}
-
-
 export void* WindowProcedureAddress()
 {
     return hook::pattern("4C 8B DC 55 56 57 49 8D AB 48 FE FF FF 48 81 EC A0 02 00 00 48 8B 05 ?").get_first();
