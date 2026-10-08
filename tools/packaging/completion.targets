@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Imported only by the release coordinator. After Build also runs when
+       compilation is up to date; a failed Build never creates this record. -->
+  <Target Name="WFPRecordCompletedBuild" AfterTargets="Build"
+          Condition="'$(WFPCompletionDirectory)'!='' and '$(Configuration)'=='Release'">
+    <MakeDir Directories="$(WFPCompletionDirectory)" />
+    <WriteLinesToFile File="$(WFPCompletionDirectory)\$(MSBuildProjectName).pending"
+      Lines="$(MSBuildProjectName)|$(Configuration)|$(Platform)|$(TargetPath)|$(NMakeOutput)"
+      Overwrite="true" Encoding="UTF-8" />
+    <Move SourceFiles="$(WFPCompletionDirectory)\$(MSBuildProjectName).pending"
+      DestinationFiles="$(WFPCompletionDirectory)\$(MSBuildProjectName).ready" />
+  </Target>
+</Project>

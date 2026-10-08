@@ -1,14 +1,18 @@
 name: "Build All"
-description: "Build, sign, package, and upload plugin artifacts"
+description: "Build and package plugins from the JSON release manifest"
 
 inputs:
   project:
-    description: "Full msbuild command(s) to run (or empty to build everything)"
+    description: "MSBuild commands to run (or empty to build everything)"
     required: false
-  parallel_artifact_uploads:
-    description: "Upload up to four packaged artifacts concurrently"
+  packaging_mode:
+    description: "after-build or as-ready"
     required: false
-    default: "false"
+    default: "after-build"
+  signing_profile:
+    description: "required, optional, or off"
+    required: false
+    default: "optional"
 
 runs:
   using: "composite"
@@ -18,78 +22,28 @@ runs:
 
     - name: Configure build
       shell: cmd
-      run: |
-        ./premake5.bat
+      run: ./premake5.bat
 
     - name: Before Build
       shell: cmd
-      run: |
-        ./before_build.bat
+      run: ./before_build.bat
 
-    - name: Build
+    - name: Install packaging dependencies
       shell: cmd
-      run: |
-        if "${{ inputs.project }}" == "" (
-          echo Building ALL solutions...
-          msbuild -m build/Win32.WidescreenFixesPack.slnx /p:Configuration=Release
-          if errorlevel 1 exit /b 1
-          msbuild -m build/Win64.WidescreenFixesPack.slnx /p:Configuration=Release
-          if errorlevel 1 exit /b 1
-          msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /p:Configuration=Release
-          if errorlevel 1 exit /b 1
-          msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /p:Configuration=Release
-          if errorlevel 1 exit /b 1
-          msbuild -m build/Dolphin.WidescreenFixesPack.slnx /p:Configuration=Release
-          if errorlevel 1 exit /b 1
-          msbuild -m build/CXBXR.WidescreenFixesPack.slnx /p:Configuration=Release
-          if errorlevel 1 exit /b 1
-        ) else (
-          echo Building specific tag...
-          ${{ inputs.project }}
-        )
+      run: npm ci --prefix tools/packaging --omit=dev
 
-    - name: Before Package
+    - name: Build, package, and upload
+      uses: actions/github-script@v9
       env:
         GH_TOKEN: ${{ github.token }}
-      shell: cmd
-      run: |
-        ./before_packaging.bat
-
-    - name: Pack binaries
-      shell: cmd
-      run: |
-        cd ./data
-        release.bat
-
-    - name: Install artifact client
-      if: ${{ inputs.project == '' }}
-      shell: cmd
-      run: |
-        npm install @actions/artifact
-
-    - name: Upload individual zip artifacts
-      if: ${{ inputs.project == '' }}
-      uses: actions/github-script@v9
+        WFP_PROJECT_COMMANDS: ${{ inputs.project }}
+        WFP_PACKAGING_MODE: ${{ inputs.packaging_mode }}
+        WFP_SIGNING_PROFILE: ${{ inputs.signing_profile }}
       with:
         script: |
-          const {DefaultArtifactClient} = require('./node_modules/@actions/artifact')
-          const client = new DefaultArtifactClient()
-          const path = require('path')
-          const globber = await glob.create('data/Archives/*.zip')
-          const files = await globber.glob()
-          if (files.length === 0) {
-            throw new Error('No .zip files found in data/Archives.')
-          }
-          const concurrency = '${{ inputs.parallel_artifact_uploads }}' === 'true' ? 4 : 1
-          let next = 0
-          async function uploadWorker() {
-            while (next < files.length) {
-              const file = files[next++]
-              const name = path.basename(file)
-              core.info(`Uploading ${name}...`)
-              await client.uploadArtifact(name, [file], 'data/Archives', { retentionDays: 90, skipArchive: true })
-            }
-          }
-          const results = await Promise.allSettled(Array.from({ length: Math.min(concurrency, files.length) }, uploadWorker))
-          const failure = results.find(result => result.status === 'rejected')
-          if (failure) throw failure.reason
+          const coordinator = require('./tools/packaging/upload.cjs')
+          await coordinator.github({
+            project: process.env.WFP_PROJECT_COMMANDS,
+            mode: process.env.WFP_PACKAGING_MODE,
+            signing: process.env.WFP_SIGNING_PROFILE
+          })

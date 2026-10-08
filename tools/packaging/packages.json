@@ -1,0 +1,3523 @@
+{
+  "$schema": "./packages.schema.json",
+  "schemaVersion": 1,
+  "solutions": [
+    "Win64",
+    "Win32",
+    "PCSX2F",
+    "PPSSPP",
+    "Dolphin",
+    "CXBXR"
+  ],
+  "dependencies": {
+    "loader-x86": {
+      "archive": "Ultimate-ASI-Loader.zip",
+      "architecture": "x86",
+      "tag": "latest",
+      "repository": "ThirteenAG/Ultimate-ASI-Loader",
+      "assetPattern": "^Ultimate-ASI-Loader\\.zip$"
+    },
+    "loader-x64": {
+      "archive": "Ultimate-ASI-Loader_x64.zip",
+      "architecture": "x64",
+      "tag": "latest",
+      "repository": "ThirteenAG/Ultimate-ASI-Loader",
+      "assetPattern": "^Ultimate-ASI-Loader_x64\\.zip$"
+    },
+    "dgvoodoo": {
+      "archive": "dgVoodoo2.zip",
+      "architecture": "x86",
+      "tag": "latest",
+      "repository": "dege-diosg/dgVoodoo2",
+      "assetPattern": "^dgVoodoo2_\\d+(?:[_.]\\d+)*\\.zip$"
+    },
+    "xidi": {
+      "archive": "xidi.zip",
+      "architecture": "x86",
+      "tag": "latest",
+      "repository": "ThirteenAG/Xidi",
+      "assetPattern": "^Xidi.*\\.zip$"
+    },
+    "dxwrapper": {
+      "archive": "dxwrapper.zip",
+      "architecture": "x86",
+      "tag": "latest",
+      "repository": "elishacloud/dxwrapper",
+      "assetPattern": "^dxwrapper\\.zip$"
+    },
+    "dxwrapper-scda": {
+      "archive": "dxwrapper-scda.zip",
+      "architecture": "x86",
+      "tag": "latest",
+      "repository": "ThirteenAG/dxwrapper",
+      "assetPattern": "^dxwrapper-scda\\.zip$"
+    },
+    "dsoal": {
+      "archive": "DSOAL.zip",
+      "architecture": "x86",
+      "nestedMember": "*.zip",
+      "tag": "archive",
+      "repository": "kcat/dsoal",
+      "selection": "highest-revision",
+      "assetPattern": "^DSOAL_r\\d+\\.zip$"
+    }
+  },
+  "packages": [
+    {
+      "id": "Bully.WidescreenFix",
+      "producers": [
+        {
+          "project": "Bully.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/Bully.WidescreenFix/plugins/Bully.WidescreenFix.asi",
+          "destination": "plugins/Bully.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/Bully.WidescreenFix/plugins/Bully.WidescreenFix.ini",
+          "destination": "plugins/Bully.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "Burnout3.PCSX2F.WidescreenFix",
+      "producers": [
+        {
+          "project": "Burnout3.PCSX2F.WidescreenFix",
+          "solution": "PCSX2F",
+          "source": "data/Burnout3.PCSX2F.WidescreenFix/PLUGINS/Burnout3.PCSX2F.WidescreenFix.elf",
+          "destination": "PLUGINS/Burnout3.PCSX2F.WidescreenFix.elf"
+        }
+      ],
+      "files": [],
+      "dependencies": []
+    },
+    {
+      "id": "CallOfCthulhu.WidescreenFix",
+      "producers": [
+        {
+          "project": "CallOfCthulhu.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/CallOfCthulhu.WidescreenFix/Engine/scripts/CallOfCthulhu.WidescreenFix.asi",
+          "destination": "Engine/scripts/CallOfCthulhu.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/CallOfCthulhu.WidescreenFix/Engine/scripts/CallOfCthulhu.WidescreenFix.ini",
+          "destination": "Engine/scripts/CallOfCthulhu.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "Engine/dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "ColdFear.WidescreenFix",
+      "producers": [
+        {
+          "project": "ColdFear.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/ColdFear.WidescreenFix/scripts/ColdFear.WidescreenFix.asi",
+          "destination": "scripts/ColdFear.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/ColdFear.WidescreenFix/scripts/ColdFear.WidescreenFix.ini",
+          "destination": "scripts/ColdFear.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "Condemned.WidescreenFix",
+      "producers": [
+        {
+          "project": "Condemned.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/Condemned.WidescreenFix/scripts/Condemned.WidescreenFix.asi",
+          "destination": "scripts/Condemned.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/Condemned.WidescreenFix/Game/CondemnedZ.Arch00",
+          "destination": "Game/CondemnedZ.Arch00"
+        },
+        {
+          "source": "data/Condemned.WidescreenFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        },
+        {
+          "source": "data/Condemned.WidescreenFix/default.archcfg",
+          "destination": "default.archcfg"
+        },
+        {
+          "source": "data/Condemned.WidescreenFix/scripts/Condemned.WidescreenFix.ini",
+          "destination": "scripts/Condemned.WidescreenFix.ini"
+        },
+        {
+          "source": "data/Condemned.WidescreenFix/scripts/Xbox360ControlScheme.png",
+          "destination": "scripts/Xbox360ControlScheme.png"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d9.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "DeerAvenger4.WidescreenFix",
+      "producers": [
+        {
+          "project": "DeerAvenger4.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/DeerAvenger4.WidescreenFix/scripts/DeerAvenger4.WidescreenFix.asi",
+          "destination": "scripts/DeerAvenger4.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "ddraw.dll"
+        }
+      ]
+    },
+    {
+      "id": "Driv3r.WidescreenFix",
+      "producers": [
+        {
+          "project": "Driv3r.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/Driv3r.WidescreenFix/scripts/Driv3r.WidescreenFix.asi",
+          "destination": "scripts/Driv3r.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/Driv3r.WidescreenFix/scripts/Driv3r.WidescreenFix.ini",
+          "destination": "scripts/Driv3r.WidescreenFix.ini"
+        },
+        {
+          "source": "data/Driv3r.WidescreenFix/scripts/dxwrapper.ini",
+          "destination": "scripts/dxwrapper.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "dxwrapper",
+          "member": "dxwrapper.asi",
+          "destination": "scripts/dxwrapper.asi"
+        }
+      ]
+    },
+    {
+      "id": "DriverParallelLines.WidescreenFix",
+      "producers": [
+        {
+          "project": "DriverParallelLines.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/DriverParallelLines.WidescreenFix/scripts/DriverParallelLines.WidescreenFix.asi",
+          "destination": "scripts/DriverParallelLines.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/DriverParallelLines.WidescreenFix/scripts/DriverParallelLines.WidescreenFix.ini",
+          "destination": "scripts/DriverParallelLines.WidescreenFix.ini"
+        },
+        {
+          "source": "data/DriverParallelLines.WidescreenFix/scripts/dxwrapper.ini",
+          "destination": "scripts/dxwrapper.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "dxwrapper",
+          "member": "dxwrapper.asi",
+          "destination": "scripts/dxwrapper.asi"
+        }
+      ]
+    },
+    {
+      "id": "EnterTheMatrix.WidescreenFix",
+      "producers": [
+        {
+          "project": "EnterTheMatrix.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/EnterTheMatrix.WidescreenFix/scripts/EnterTheMatrix.WidescreenFix.asi",
+          "destination": "scripts/EnterTheMatrix.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/EnterTheMatrix.WidescreenFix/scripts/EnterTheMatrix.WidescreenFix.ini",
+          "destination": "scripts/EnterTheMatrix.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d9.dll"
+        }
+      ]
+    },
+    {
+      "id": "FarCry.WidescreenFix",
+      "producers": [
+        {
+          "project": "FarCry.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/FarCry.WidescreenFix/Bin32/FarCry.WidescreenFix.asi",
+          "destination": "Bin32/FarCry.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        },
+        {
+          "project": "FarCry64.WidescreenFix",
+          "solution": "Win64",
+          "source": "data/FarCry.WidescreenFix/Bin64/FarCry64.WidescreenFix.asi",
+          "destination": "Bin64/FarCry64.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/FarCry.WidescreenFix/Bin32/FarCry.WidescreenFix.ini",
+          "destination": "Bin32/FarCry.WidescreenFix.ini"
+        },
+        {
+          "source": "data/FarCry.WidescreenFix/Bin64/FarCry64.WidescreenFix.ini",
+          "destination": "Bin64/FarCry64.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "Bin32/version.dll"
+        },
+        {
+          "id": "loader-x64",
+          "member": "*.dll",
+          "destination": "Bin64/version.dll"
+        }
+      ]
+    },
+    {
+      "id": "GTA1.WidescreenFix",
+      "producers": [
+        {
+          "project": "GTA1.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/GTA1.WidescreenFix/WINO/scripts/GTA1.WidescreenFix.asi",
+          "destination": "WINO/scripts/GTA1.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTA1.WidescreenFix/WINO/scripts/GTA1.WidescreenFix.ini",
+          "destination": "WINO/scripts/GTA1.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "WINO/ddraw.dll"
+        }
+      ]
+    },
+    {
+      "id": "GTA2.WidescreenFix",
+      "producers": [
+        {
+          "project": "GTA2.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/GTA2.WidescreenFix/scripts/GTA2.WidescreenFix.asi",
+          "destination": "scripts/GTA2.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTA2.WidescreenFix/scripts/GTA2.WidescreenFix.ini",
+          "destination": "scripts/GTA2.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "ddraw.dll"
+        }
+      ]
+    },
+    {
+      "id": "GTA3.WidescreenFix",
+      "producers": [
+        {
+          "project": "GTA3.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/GTA3.WidescreenFix/scripts/GTA3.WidescreenFix.asi",
+          "destination": "scripts/GTA3.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTA3.WidescreenFix/scripts/GTA3.WidescreenFix.ini",
+          "destination": "scripts/GTA3.WidescreenFix.ini"
+        },
+        {
+          "source": "data/GTA3.WidescreenFix/scripts/global.ini",
+          "destination": "scripts/global.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d8.dll"
+        }
+      ]
+    },
+    {
+      "id": "GTA3.WidescreenFrontend",
+      "producers": [],
+      "files": [],
+      "dependencies": [],
+      "optionalTree": {
+        "source": "textures/GTA3.WidescreenFrontend",
+        "destination": "GTA3.WidescreenFrontend"
+      },
+      "associatedPackages": [
+        "GTA3.WidescreenFix"
+      ]
+    },
+    {
+      "id": "GTA3DE.FusionFix",
+      "producers": [
+        {
+          "project": "GTA3DE.FusionFix",
+          "solution": "Win64",
+          "source": "data/GTA3DE.FusionFix/Gameface/Binaries/Win64/scripts/GTA3DE.FusionFix.asi",
+          "destination": "Gameface/Binaries/Win64/scripts/GTA3DE.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTA3DE.FusionFix/Gameface/Binaries/Win64/scripts/GTA3DE.FusionFix.ini",
+          "destination": "Gameface/Binaries/Win64/scripts/GTA3DE.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x64",
+          "member": "*.dll",
+          "destination": "Gameface/Binaries/Win64/version.dll"
+        }
+      ]
+    },
+    {
+      "id": "GTACTW.PPSSPP.FusionFix",
+      "producers": [
+        {
+          "project": "GTACTW.PPSSPP.FusionFix",
+          "solution": "PPSSPP",
+          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.prx",
+          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.dat",
+          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.dat"
+        },
+        {
+          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.ini",
+          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.ini"
+        },
+        {
+          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTALCS.PCSX2F.ImVehLM",
+      "producers": [
+        {
+          "project": "GTALCS.PCSX2F.ImVehLM",
+          "solution": "PCSX2F",
+          "source": "data/GTALCS.PCSX2F.ImVehLM/PLUGINS/GTALCS.PCSX2F.ImVehLM.elf",
+          "destination": "PLUGINS/GTALCS.PCSX2F.ImVehLM.elf"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTALCS.PCSX2F.ImVehLM/PLUGINS/GTALCS.PCSX2F.ImVehLM.ini",
+          "destination": "PLUGINS/GTALCS.PCSX2F.ImVehLM.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTALCS.PCSX2F.Project2DFX",
+      "producers": [
+        {
+          "project": "GTALCS.PCSX2F.Project2DFX",
+          "solution": "PCSX2F",
+          "source": "data/GTALCS.PCSX2F.Project2DFX/PLUGINS/GTALCS.PCSX2F.Project2DFX.elf",
+          "destination": "PLUGINS/GTALCS.PCSX2F.Project2DFX.elf"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTALCS.PCSX2F.Project2DFX/PLUGINS/GTALCS.PCSX2F.Project2DFX.ini",
+          "destination": "PLUGINS/GTALCS.PCSX2F.Project2DFX.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTALCS.PCSX2F.WidescreenFix",
+      "producers": [
+        {
+          "project": "GTALCS.PCSX2F.WidescreenFix",
+          "solution": "PCSX2F",
+          "source": "data/GTALCS.PCSX2F.WidescreenFix/PLUGINS/GTALCS.PCSX2F.WidescreenFix.elf",
+          "destination": "PLUGINS/GTALCS.PCSX2F.WidescreenFix.elf"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTALCS.PCSX2F.WidescreenFix/PLUGINS/GTALCS.PCSX2F.WidescreenFix.ini",
+          "destination": "PLUGINS/GTALCS.PCSX2F.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTALCS.PPSSPP.ImVehLM",
+      "producers": [
+        {
+          "project": "GTALCS.PPSSPP.ImVehLM",
+          "solution": "PPSSPP",
+          "source": "data/GTALCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/GTALCS.PPSSPP.ImVehLM.prx",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/GTALCS.PPSSPP.ImVehLM.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTALCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/lights-hd.bin",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/lights-hd.bin"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/lights.bin",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/lights.bin"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTALCS.PPSSPP.Project2DFX",
+      "producers": [
+        {
+          "project": "GTALCS.PPSSPP.Project2DFX",
+          "solution": "PPSSPP",
+          "source": "data/GTALCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/GTALCS.PPSSPP.Project2DFX.prx",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/GTALCS.PPSSPP.Project2DFX.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTALCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/GTALCS.PPSSPP.Project2DFX.ini",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/GTALCS.PPSSPP.Project2DFX.ini"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.Project2DFX/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTALCS.PPSSPP.WidescreenFix",
+      "producers": [
+        {
+          "project": "GTALCS.PPSSPP.WidescreenFix",
+          "solution": "PPSSPP",
+          "source": "data/GTALCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.prx",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTALCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.ini",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.ini"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTASA.WidescreenFix",
+      "producers": [
+        {
+          "project": "GTASA.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/GTASA.WidescreenFix/scripts/GTASA.WidescreenFix.asi",
+          "destination": "scripts/GTASA.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTASA.WidescreenFix/scripts/GTASA.WidescreenFix.ini",
+          "destination": "scripts/GTASA.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "vorbisFile.dll"
+        }
+      ]
+    },
+    {
+      "id": "GTASADE.FusionFix",
+      "producers": [
+        {
+          "project": "GTASADE.FusionFix",
+          "solution": "Win64",
+          "source": "data/GTASADE.FusionFix/Gameface/Binaries/Win64/scripts/GTASADE.FusionFix.asi",
+          "destination": "Gameface/Binaries/Win64/scripts/GTASADE.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTASADE.FusionFix/Gameface/Binaries/Win64/scripts/GTASADE.FusionFix.ini",
+          "destination": "Gameface/Binaries/Win64/scripts/GTASADE.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x64",
+          "member": "*.dll",
+          "destination": "Gameface/Binaries/Win64/version.dll"
+        }
+      ]
+    },
+    {
+      "id": "GTAVC.WidescreenFix",
+      "producers": [
+        {
+          "project": "GTAVC.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/GTAVC.WidescreenFix/scripts/GTAVC.WidescreenFix.asi",
+          "destination": "scripts/GTAVC.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTAVC.WidescreenFix/scripts/GTAVC.WidescreenFix.ini",
+          "destination": "scripts/GTAVC.WidescreenFix.ini"
+        },
+        {
+          "source": "data/GTAVC.WidescreenFix/scripts/global.ini",
+          "destination": "scripts/global.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d8.dll"
+        }
+      ]
+    },
+    {
+      "id": "GTAVC.WidescreenFrontend",
+      "producers": [],
+      "files": [],
+      "dependencies": [],
+      "optionalTree": {
+        "source": "textures/GTAVC.WidescreenFrontend",
+        "destination": "GTAVC.WidescreenFrontend"
+      },
+      "associatedPackages": [
+        "GTAVC.WidescreenFix"
+      ]
+    },
+    {
+      "id": "GTAVCDE.FusionFix",
+      "producers": [
+        {
+          "project": "GTAVCDE.FusionFix",
+          "solution": "Win64",
+          "source": "data/GTAVCDE.FusionFix/Gameface/Binaries/Win64/scripts/GTAVCDE.FusionFix.asi",
+          "destination": "Gameface/Binaries/Win64/scripts/GTAVCDE.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTAVCDE.FusionFix/Gameface/Binaries/Win64/scripts/GTAVCDE.FusionFix.ini",
+          "destination": "Gameface/Binaries/Win64/scripts/GTAVCDE.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x64",
+          "member": "*.dll",
+          "destination": "Gameface/Binaries/Win64/version.dll"
+        }
+      ]
+    },
+    {
+      "id": "GTAVCS.PCSX2F.ImVehLM",
+      "producers": [
+        {
+          "project": "GTAVCS.PCSX2F.ImVehLM",
+          "solution": "PCSX2F",
+          "source": "data/GTAVCS.PCSX2F.ImVehLM/PLUGINS/GTAVCS.PCSX2F.ImVehLM.elf",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.ImVehLM.elf"
+        }
+      ],
+      "files": [],
+      "dependencies": []
+    },
+    {
+      "id": "GTAVCS.PCSX2F.Project2DFX",
+      "producers": [
+        {
+          "project": "GTAVCS.PCSX2F.Project2DFX",
+          "solution": "PCSX2F",
+          "source": "data/GTAVCS.PCSX2F.Project2DFX/PLUGINS/GTAVCS.PCSX2F.Project2DFX.elf",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.Project2DFX.elf"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTAVCS.PCSX2F.Project2DFX/PLUGINS/GTAVCS.PCSX2F.Project2DFX.ini",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.Project2DFX.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTAVCS.PCSX2F.WidescreenFix",
+      "producers": [
+        {
+          "project": "GTAVCS.PCSX2F.WidescreenFix",
+          "solution": "PCSX2F",
+          "source": "data/GTAVCS.PCSX2F.WidescreenFix/PLUGINS/GTAVCS.PCSX2F.WidescreenFix.elf",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.WidescreenFix.elf"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTAVCS.PCSX2F.WidescreenFix/PLUGINS/GTAVCS.PCSX2F.WidescreenFix.ini",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.WidescreenFix.ini"
+        },
+        {
+          "source": "data/GTAVCS.PCSX2F.WidescreenFix/PLUGINS/vcscheats.txt",
+          "destination": "PLUGINS/vcscheats.txt"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTAVCS.PPSSPP.GamepadIcons",
+      "producers": [
+        {
+          "project": "GTAVCS.PPSSPP.GamepadIcons",
+          "solution": "PPSSPP",
+          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.prx",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.ini",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.ini"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/360.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/360.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/DEK.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/DEK.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS3.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS3.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS4.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS4.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS5.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS5.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/SWI.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/SWI.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/XBO.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/XBO.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTAVCS.PPSSPP.ImVehLM",
+      "producers": [
+        {
+          "project": "GTAVCS.PPSSPP.ImVehLM",
+          "solution": "PPSSPP",
+          "source": "data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/GTAVCS.PPSSPP.ImVehLM.prx",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/GTAVCS.PPSSPP.ImVehLM.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/lights-hd.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/lights-hd.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/lights.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/lights.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTAVCS.PPSSPP.Project2DFX",
+      "producers": [
+        {
+          "project": "GTAVCS.PPSSPP.Project2DFX",
+          "solution": "PPSSPP",
+          "source": "data/GTAVCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.prx",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTAVCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.ini",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/GTAVCS.PPSSPP.Project2DFX.ini"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.Project2DFX/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.Project2DFX/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "GTAVCS.PPSSPP.WidescreenFix",
+      "producers": [
+        {
+          "project": "GTAVCS.PPSSPP.WidescreenFix",
+          "solution": "PPSSPP",
+          "source": "data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.prx",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.ini",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.ini"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/plugin.ini"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/vcscheats.txt",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/vcscheats.txt"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "Gun.WidescreenFix",
+      "producers": [
+        {
+          "project": "Gun.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/Gun.WidescreenFix/scripts/Gun.WidescreenFix.asi",
+          "destination": "scripts/Gun.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/Gun.WidescreenFix/scripts/Gun.WidescreenFix.ini",
+          "destination": "scripts/Gun.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d9.dll"
+        }
+      ]
+    },
+    {
+      "id": "HiddenandDangerous2.WidescreenFix",
+      "producers": [
+        {
+          "project": "HiddenandDangerous2.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/HiddenandDangerous2.WidescreenFix/scripts/HiddenandDangerous2.WidescreenFix.asi",
+          "destination": "scripts/HiddenandDangerous2.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/HiddenandDangerous2.WidescreenFix/Maps/2e_camra.tga",
+          "destination": "Maps/2e_camra.tga"
+        },
+        {
+          "source": "data/HiddenandDangerous2.WidescreenFix/Maps/2e_scope.tga",
+          "destination": "Maps/2e_scope.tga"
+        },
+        {
+          "source": "data/HiddenandDangerous2.WidescreenFix/Maps/e_zamer.tga",
+          "destination": "Maps/e_zamer.tga"
+        },
+        {
+          "source": "data/HiddenandDangerous2.WidescreenFix/scripts/HiddenandDangerous2.WidescreenFix.ini",
+          "destination": "scripts/HiddenandDangerous2.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d8.dll"
+        }
+      ]
+    },
+    {
+      "id": "JustCause.WidescreenFix",
+      "producers": [
+        {
+          "project": "JustCause.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/JustCause.WidescreenFix/scripts/JustCause.WidescreenFix.asi",
+          "destination": "scripts/JustCause.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/JustCause.WidescreenFix/scripts/JustCause.WidescreenFix.ini",
+          "destination": "scripts/JustCause.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "KingKong.WidescreenFix",
+      "producers": [
+        {
+          "project": "KingKong.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/KingKong.WidescreenFix/scripts/KingKong.WidescreenFix.asi",
+          "destination": "scripts/KingKong.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/KingKong.WidescreenFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        },
+        {
+          "source": "data/KingKong.WidescreenFix/scripts/KingKong.WidescreenFix.ini",
+          "destination": "scripts/KingKong.WidescreenFix.ini"
+        },
+        {
+          "source": "data/KingKong.WidescreenFix/scripts/Xbox360ControlScheme.png",
+          "destination": "scripts/Xbox360ControlScheme.png"
+        },
+        {
+          "source": "data/KingKong.WidescreenFix/scripts/dxwrapper.ini",
+          "destination": "scripts/dxwrapper.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/winmm.dll",
+          "destination": "winmm.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        },
+        {
+          "id": "dxwrapper-scda",
+          "member": "dxwrapper.dll",
+          "destination": "scripts/dxwrapper.asi"
+        }
+      ]
+    },
+    {
+      "id": "KnightRider.PCSX2F.WidescreenFix",
+      "producers": [
+        {
+          "project": "KnightRider.PCSX2F.WidescreenFix",
+          "solution": "PCSX2F",
+          "source": "data/KnightRider.PCSX2F.WidescreenFix/PLUGINS/KnightRider.PCSX2F.WidescreenFix.elf",
+          "destination": "PLUGINS/KnightRider.PCSX2F.WidescreenFix.elf"
+        }
+      ],
+      "files": [],
+      "dependencies": []
+    },
+    {
+      "id": "KnightRider.WidescreenFix",
+      "producers": [
+        {
+          "project": "KnightRider.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/KnightRider.WidescreenFix/scripts/KnightRider.WidescreenFix.asi",
+          "destination": "scripts/KnightRider.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/KnightRider.WidescreenFix/dgVoodoo.conf",
+          "destination": "dgVoodoo.conf"
+        },
+        {
+          "source": "data/KnightRider.WidescreenFix/scripts/KnightRider.WidescreenFix.ini",
+          "destination": "scripts/KnightRider.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "winmm.dll"
+        },
+        {
+          "id": "dgvoodoo",
+          "member": "MS/x86/DDraw.dll",
+          "destination": "DDraw.dll"
+        },
+        {
+          "id": "dgvoodoo",
+          "member": "MS/x86/D3DImm.dll",
+          "destination": "D3DImm.dll"
+        }
+      ]
+    },
+    {
+      "id": "KnightRider2.WidescreenFix",
+      "producers": [
+        {
+          "project": "KnightRider2.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/KnightRider2.WidescreenFix/scripts/KnightRider2.WidescreenFix.asi",
+          "destination": "scripts/KnightRider2.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/KnightRider2.WidescreenFix/dgVoodoo.conf",
+          "destination": "dgVoodoo.conf"
+        },
+        {
+          "source": "data/KnightRider2.WidescreenFix/scripts/KnightRider2.WidescreenFix.ini",
+          "destination": "scripts/KnightRider2.WidescreenFix.ini"
+        },
+        {
+          "source": "data/KnightRider2.WidescreenFix/scripts/ffmpeg.exe",
+          "destination": "scripts/ffmpeg.exe"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "winmm.dll"
+        },
+        {
+          "id": "dgvoodoo",
+          "member": "MS/x86/DDraw.dll",
+          "destination": "DDraw.dll"
+        },
+        {
+          "id": "dgvoodoo",
+          "member": "MS/x86/D3DImm.dll",
+          "destination": "D3DImm.dll"
+        }
+      ]
+    },
+    {
+      "id": "LARush.WidescreenFix",
+      "producers": [
+        {
+          "project": "LARush.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/LARush.WidescreenFix/plugins/LARush.WidescreenFix.asi",
+          "destination": "plugins/LARush.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/LARush.WidescreenFix/plugins/LARush.WidescreenFix.ini",
+          "destination": "plugins/LARush.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "Mafia.FusionFix",
+      "producers": [
+        {
+          "project": "Mafia.FusionFix",
+          "solution": "Win32",
+          "source": "data/Mafia.FusionFix/scripts/Mafia.FusionFix.asi",
+          "destination": "scripts/Mafia.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/Mafia.FusionFix/d3d8.ini",
+          "destination": "d3d8.ini"
+        },
+        {
+          "source": "data/Mafia.FusionFix/models/Box-cerny.4ds",
+          "destination": "models/Box-cerny.4ds"
+        },
+        {
+          "source": "data/Mafia.FusionFix/rw_data.bak",
+          "destination": "rw_data.bak"
+        },
+        {
+          "source": "data/Mafia.FusionFix/rw_data.dll",
+          "destination": "rw_data.dll"
+        },
+        {
+          "source": "data/Mafia.FusionFix/scripts/Mafia.FusionFix.ini",
+          "destination": "scripts/Mafia.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d8.dll"
+        }
+      ]
+    },
+    {
+      "id": "Manhunt.WidescreenFix",
+      "producers": [
+        {
+          "project": "Manhunt.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/Manhunt.WidescreenFix/scripts/Manhunt.WidescreenFix.asi",
+          "destination": "scripts/Manhunt.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "source/Manhunt.WidescreenFix/bin/Manhunt.WidescreenFix.ini",
+          "destination": "scripts/Manhunt.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "Manhunt.WidescreenFrontend",
+      "producers": [],
+      "files": [],
+      "dependencies": [],
+      "optionalTree": {
+        "source": "textures/Manhunt.WidescreenFrontend",
+        "destination": "Manhunt.WidescreenFrontend"
+      },
+      "associatedPackages": [
+        "Manhunt.WidescreenFix"
+      ]
+    },
+    {
+      "id": "MaxPayne.WidescreenFix",
+      "producers": [
+        {
+          "project": "MaxPayne.MSVCP60Wrapper",
+          "solution": "Win32",
+          "source": "data/MaxPayne.WidescreenFix/MSVCP60.dll",
+          "destination": "MSVCP60.dll",
+          "sign": true
+        },
+        {
+          "project": "MaxPayne.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/MaxPayne.WidescreenFix/scripts/MaxPayne.WidescreenFix.asi",
+          "destination": "scripts/MaxPayne.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/MaxPayne.WidescreenFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        },
+        {
+          "source": "data/MaxPayne.WidescreenFix/alsoft.ini",
+          "destination": "alsoft.ini"
+        },
+        {
+          "source": "data/MaxPayne.WidescreenFix/scripts/ControlScheme.png",
+          "destination": "scripts/ControlScheme.png"
+        },
+        {
+          "source": "data/MaxPayne.WidescreenFix/scripts/MaxPayne.WidescreenFix.ini",
+          "destination": "scripts/MaxPayne.WidescreenFix.ini"
+        },
+        {
+          "source": "data/MaxPayne.WidescreenFix/scripts/dxwrapper.ini",
+          "destination": "scripts/dxwrapper.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput.dll",
+          "destination": "dinputHooked.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        },
+        {
+          "id": "dxwrapper",
+          "member": "dxwrapper.asi",
+          "destination": "scripts/dxwrapper.asi"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsound.dll",
+          "destination": "dsound.dll"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsoal-aldrv.dll",
+          "destination": "dsoal-aldrv.dll"
+        }
+      ]
+    },
+    {
+      "id": "MaxPayne2.WidescreenFix",
+      "producers": [
+        {
+          "project": "MaxPayne2.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/MaxPayne2.WidescreenFix/scripts/MaxPayne2.WidescreenFix.asi",
+          "destination": "scripts/MaxPayne2.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/MaxPayne2.WidescreenFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        },
+        {
+          "source": "data/MaxPayne2.WidescreenFix/scripts/ControlScheme.png",
+          "destination": "scripts/ControlScheme.png"
+        },
+        {
+          "source": "data/MaxPayne2.WidescreenFix/scripts/MaxPayne2.WidescreenFix.ini",
+          "destination": "scripts/MaxPayne2.WidescreenFix.ini"
+        },
+        {
+          "source": "data/MaxPayne2.WidescreenFix/scripts/dxwrapper.ini",
+          "destination": "scripts/dxwrapper.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "winmm.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput.dll",
+          "destination": "dinput.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        },
+        {
+          "id": "dxwrapper",
+          "member": "dxwrapper.asi",
+          "destination": "scripts/dxwrapper.asi"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsound.dll",
+          "destination": "dsound.dll"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsoal-aldrv.dll",
+          "destination": "dsoal-aldrv.dll"
+        }
+      ]
+    },
+    {
+      "id": "MidnightClubLARemix.PPSSPP.FusionFix",
+      "producers": [
+        {
+          "project": "MidnightClubLARemix.PPSSPP.FusionFix",
+          "solution": "PPSSPP",
+          "source": "data/MidnightClubLARemix.PPSSPP.FusionFix/memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.prx",
+          "destination": "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/MidnightClubLARemix.PPSSPP.FusionFix/memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.ini",
+          "destination": "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.ini"
+        },
+        {
+          "source": "data/MidnightClubLARemix.PPSSPP.FusionFix/memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "NFSCarbon.WidescreenFix",
+      "producers": [
+        {
+          "project": "NFSCarbon.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/NFSCarbon.WidescreenFix/scripts/NFSCarbon.WidescreenFix.asi",
+          "destination": "scripts/NFSCarbon.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/NFSCarbon.WidescreenFix/scripts/NFSCarbon.WidescreenFix.ini",
+          "destination": "scripts/NFSCarbon.WidescreenFix.ini"
+        },
+        {
+          "source": "data/NFSCarbon.WidescreenFix/scripts/NFSCarbon.WidescreenFix.tpk",
+          "destination": "scripts/NFSCarbon.WidescreenFix.tpk"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "NFSMostWanted.WidescreenFix",
+      "producers": [
+        {
+          "project": "NFSMostWanted.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/NFSMostWanted.WidescreenFix/scripts/NFSMostWanted.WidescreenFix.asi",
+          "destination": "scripts/NFSMostWanted.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/NFSMostWanted.WidescreenFix/scripts/NFSMostWanted.WidescreenFix.ini",
+          "destination": "scripts/NFSMostWanted.WidescreenFix.ini"
+        },
+        {
+          "source": "data/NFSMostWanted.WidescreenFix/scripts/NFSMostWanted.WidescreenFix.tpk",
+          "destination": "scripts/NFSMostWanted.WidescreenFix.tpk"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "NFSProStreet.FusionFix",
+      "producers": [
+        {
+          "project": "NFSProStreet.FusionFix",
+          "solution": "Win32",
+          "source": "data/NFSProStreet.FusionFix/scripts/NFSProStreet.FusionFix.asi",
+          "destination": "scripts/NFSProStreet.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/NFSProStreet.FusionFix/scripts/NFSProStreet.FusionFix.ini",
+          "destination": "scripts/NFSProStreet.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "NFSTheRun.FusionFix",
+      "producers": [
+        {
+          "project": "NFSTheRun.FusionFix",
+          "solution": "Win32",
+          "source": "data/NFSTheRun.FusionFix/plugins/NFSTheRun.FusionFix.asi",
+          "destination": "plugins/NFSTheRun.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/NFSTheRun.FusionFix/plugins/NFSTheRun.FusionFix.ini",
+          "destination": "plugins/NFSTheRun.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "NFSUndercover.FusionFix",
+      "producers": [
+        {
+          "project": "NFSUndercover.FusionFix",
+          "solution": "Win32",
+          "source": "data/NFSUndercover.FusionFix/scripts/NFSUndercover.FusionFix.asi",
+          "destination": "scripts/NFSUndercover.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/NFSUndercover.FusionFix/scripts/NFSUndercover.FusionFix.ini",
+          "destination": "scripts/NFSUndercover.FusionFix.ini"
+        },
+        {
+          "source": "data/NFSUndercover.FusionFix/scripts/buttons-playstation.tpk",
+          "destination": "scripts/buttons-playstation.tpk"
+        },
+        {
+          "source": "data/NFSUndercover.FusionFix/scripts/buttons-xbox.tpk",
+          "destination": "scripts/buttons-xbox.tpk"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "NFSUnderground.WidescreenFix",
+      "producers": [
+        {
+          "project": "NFSUnderground.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/NFSUnderground.WidescreenFix/scripts/NFSUnderground.WidescreenFix.asi",
+          "destination": "scripts/NFSUnderground.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/NFSUnderground.WidescreenFix/scripts/NFSUnderground.WidescreenFix.dat",
+          "destination": "scripts/NFSUnderground.WidescreenFix.dat"
+        },
+        {
+          "source": "data/NFSUnderground.WidescreenFix/scripts/NFSUnderground.WidescreenFix.ini",
+          "destination": "scripts/NFSUnderground.WidescreenFix.ini"
+        },
+        {
+          "source": "data/NFSUnderground.WidescreenFix/scripts/NFSUnderground.WidescreenFix.tpk",
+          "destination": "scripts/NFSUnderground.WidescreenFix.tpk"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "NFSUnderground2.WidescreenFix",
+      "producers": [
+        {
+          "project": "NFSUnderground2.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/NFSUnderground2.WidescreenFix/scripts/NFSUnderground2.WidescreenFix.asi",
+          "destination": "scripts/NFSUnderground2.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/NFSUnderground2.WidescreenFix/scripts/NFSUnderground2.WidescreenFix.dat",
+          "destination": "scripts/NFSUnderground2.WidescreenFix.dat"
+        },
+        {
+          "source": "data/NFSUnderground2.WidescreenFix/scripts/NFSUnderground2.WidescreenFix.ini",
+          "destination": "scripts/NFSUnderground2.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "Onimusha3.WidescreenFix",
+      "producers": [
+        {
+          "project": "Onimusha3.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/Onimusha3.WidescreenFix/scripts/Onimusha3.WidescreenFix.asi",
+          "destination": "scripts/Onimusha3.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/Onimusha3.WidescreenFix/scripts/Onimusha3.WidescreenFix.ini",
+          "destination": "scripts/Onimusha3.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "ParadiseCracked.WidescreenFix",
+      "producers": [
+        {
+          "project": "ParadiseCracked.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/ParadiseCracked.WidescreenFix/scripts/ParadiseCracked.WidescreenFix.asi",
+          "destination": "scripts/ParadiseCracked.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/ParadiseCracked.WidescreenFix/scripts/ParadiseCracked.WidescreenFix.ini",
+          "destination": "scripts/ParadiseCracked.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "ddraw.dll"
+        }
+      ]
+    },
+    {
+      "id": "PCSX2F.XboxRainDroplets",
+      "producers": [
+        {
+          "project": "PCSX2F.XboxRainDroplets",
+          "solution": "PCSX2F",
+          "source": "data/PCSX2F.XboxRainDroplets/PLUGINS/PCSX2F.XboxRainDroplets.elf",
+          "destination": "PLUGINS/PCSX2F.XboxRainDroplets.elf"
+        }
+      ],
+      "files": [],
+      "dependencies": []
+    },
+    {
+      "id": "PPSSPP.XboxRainDroplets",
+      "producers": [
+        {
+          "project": "PPSSPP.XboxRainDroplets",
+          "solution": "PPSSPP",
+          "source": "data/PPSSPP.XboxRainDroplets/memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/PPSSPP.XboxRainDroplets.prx",
+          "destination": "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/PPSSPP.XboxRainDroplets.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/PPSSPP.XboxRainDroplets/memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/PPSSPP.XboxRainDroplets/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "PsiOpsTheMindgateConspiracy.WidescreenFix",
+      "producers": [
+        {
+          "project": "PsiOpsTheMindgateConspiracy.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/PsiOpsTheMindgateConspiracy.WidescreenFix/scripts/PsiOpsTheMindgateConspiracy.WidescreenFix.asi",
+          "destination": "scripts/PsiOpsTheMindgateConspiracy.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/PsiOpsTheMindgateConspiracy.WidescreenFix/scripts/PsiOpsTheMindgateConspiracy.WidescreenFix.ini",
+          "destination": "scripts/PsiOpsTheMindgateConspiracy.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "Psychonauts.WidescreenFix",
+      "producers": [
+        {
+          "project": "Psychonauts.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/Psychonauts.WidescreenFix/scripts/Psychonauts.WidescreenFix.asi",
+          "destination": "scripts/Psychonauts.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/Psychonauts.WidescreenFix/scripts/Psychonauts.WidescreenFix.ini",
+          "destination": "scripts/Psychonauts.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "RedDeadRedemption.FusionFix",
+      "producers": [
+        {
+          "project": "RedDeadRedemption.FusionFix",
+          "solution": "Win64",
+          "source": "data/RedDeadRedemption.FusionFix/plugins/RedDeadRedemption.FusionFix.asi",
+          "destination": "plugins/RedDeadRedemption.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/RedDeadRedemption.FusionFix/plugins/RedDeadRedemption.FusionFix.ini",
+          "destination": "plugins/RedDeadRedemption.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x64",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "ResidentEvil.FusionFix",
+      "producers": [
+        {
+          "project": "ResidentEvil.FusionFix",
+          "solution": "Win32",
+          "source": "data/ResidentEvil.FusionFix/scripts/ResidentEvil.FusionFix.asi",
+          "destination": "scripts/ResidentEvil.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/ResidentEvil.FusionFix/scripts/ResidentEvil.FusionFix.ini",
+          "destination": "scripts/ResidentEvil.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "ResidentEvil0.FusionFix",
+      "producers": [
+        {
+          "project": "ResidentEvil0.FusionFix",
+          "solution": "Win32",
+          "source": "data/ResidentEvil0.FusionFix/scripts/ResidentEvil0.FusionFix.asi",
+          "destination": "scripts/ResidentEvil0.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/ResidentEvil0.FusionFix/scripts/ResidentEvil0.FusionFix.ini",
+          "destination": "scripts/ResidentEvil0.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "ResidentEvil2.RE3.Dolphin.FusionFix",
+      "producers": [
+        {
+          "project": "ResidentEvil2.RE3.Dolphin.FusionFix",
+          "solution": "Dolphin",
+          "source": "data/ResidentEvil2.RE3.Dolphin.FusionFix/scripts/ResidentEvil2.RE3.Dolphin.FusionFix.asi",
+          "destination": "scripts/ResidentEvil2.RE3.Dolphin.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/ResidentEvil2.RE3.Dolphin.FusionFix/scripts/ResidentEvil2.RE3.Dolphin.FusionFix.ini",
+          "destination": "scripts/ResidentEvil2.RE3.Dolphin.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x64",
+          "member": "*.dll",
+          "destination": "version.dll"
+        }
+      ]
+    },
+    {
+      "id": "ResidentEvil4.FusionFix",
+      "producers": [
+        {
+          "project": "ResidentEvil4.FusionFix",
+          "solution": "Win64",
+          "source": "data/ResidentEvil4.FusionFix/scripts/ResidentEvil4.FusionFix.asi",
+          "destination": "scripts/ResidentEvil4.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [],
+      "dependencies": [
+        {
+          "id": "loader-x64",
+          "member": "*.dll",
+          "destination": "version.dll"
+        }
+      ]
+    },
+    {
+      "id": "ResidentEvil5.FusionFix",
+      "producers": [
+        {
+          "project": "ResidentEvil5.FusionFix",
+          "solution": "Win32",
+          "source": "data/ResidentEvil5.FusionFix/scripts/ResidentEvil5.FusionFix.asi",
+          "destination": "scripts/ResidentEvil5.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/ResidentEvil5.FusionFix/scripts/ResidentEvil5.FusionFix.ini",
+          "destination": "scripts/ResidentEvil5.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "ResidentEvil6.FusionFix",
+      "producers": [
+        {
+          "project": "ResidentEvil6.FusionFix",
+          "solution": "Win32",
+          "source": "data/ResidentEvil6.FusionFix/scripts/ResidentEvil6.FusionFix.asi",
+          "destination": "scripts/ResidentEvil6.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/ResidentEvil6.FusionFix/scripts/ResidentEvil6.FusionFix.ini",
+          "destination": "scripts/ResidentEvil6.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "ResidentEvilRevelations.FusionFix",
+      "producers": [
+        {
+          "project": "ResidentEvilRevelations.FusionFix",
+          "solution": "Win32",
+          "source": "data/ResidentEvilRevelations.FusionFix/scripts/ResidentEvilRevelations.FusionFix.asi",
+          "destination": "scripts/ResidentEvilRevelations.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/ResidentEvilRevelations.FusionFix/scripts/ResidentEvilRevelations.FusionFix.ini",
+          "destination": "scripts/ResidentEvilRevelations.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "ResidentEvilRevelations2.FusionFix",
+      "producers": [
+        {
+          "project": "ResidentEvilRevelations2.FusionFix",
+          "solution": "Win32",
+          "source": "data/ResidentEvilRevelations2.FusionFix/scripts/ResidentEvilRevelations2.FusionFix.asi",
+          "destination": "scripts/ResidentEvilRevelations2.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/ResidentEvilRevelations2.FusionFix/scripts/ResidentEvilRevelations2.FusionFix.ini",
+          "destination": "scripts/ResidentEvilRevelations2.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "Scarface.FusionFix",
+      "producers": [
+        {
+          "project": "Scarface.FusionFix",
+          "solution": "Win32",
+          "source": "data/Scarface.FusionFix/scripts/Scarface.FusionFix.asi",
+          "destination": "scripts/Scarface.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/Scarface.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        },
+        {
+          "source": "data/Scarface.FusionFix/scripts/Scarface.FusionFix.ini",
+          "destination": "scripts/Scarface.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "SecondSight.WidescreenFix",
+      "producers": [
+        {
+          "project": "SecondSight.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/SecondSight.WidescreenFix/scripts/SecondSight.WidescreenFix.asi",
+          "destination": "scripts/SecondSight.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SecondSight.WidescreenFix/scripts/SecondSight.WidescreenFix.ini",
+          "destination": "scripts/SecondSight.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "SilentHill2.WidescreenFix",
+      "producers": [
+        {
+          "project": "SilentHill2.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/SilentHill2.WidescreenFix/scripts/SilentHill2.WidescreenFix.asi",
+          "destination": "scripts/SilentHill2.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SilentHill2.WidescreenFix/scripts/SilentHill2.WidescreenFix.dat",
+          "destination": "scripts/SilentHill2.WidescreenFix.dat"
+        },
+        {
+          "source": "data/SilentHill2.WidescreenFix/scripts/SilentHill2.WidescreenFix.ini",
+          "destination": "scripts/SilentHill2.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "SilentHill3.WidescreenFix",
+      "producers": [
+        {
+          "project": "SilentHill3.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/SilentHill3.WidescreenFix/scripts/SilentHill3.WidescreenFix.asi",
+          "destination": "scripts/SilentHill3.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SilentHill3.WidescreenFix/scripts/SilentHill3.WidescreenFix.ini",
+          "destination": "scripts/SilentHill3.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "SilentHill4.WidescreenFix",
+      "producers": [
+        {
+          "project": "SilentHill4.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/SilentHill4.WidescreenFix/scripts/SilentHill4.WidescreenFix.asi",
+          "destination": "scripts/SilentHill4.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SilentHill4.WidescreenFix/scripts/SilentHill4.WidescreenFix.ini",
+          "destination": "scripts/SilentHill4.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dsound.dll"
+        }
+      ]
+    },
+    {
+      "id": "SniperElite.WidescreenFix",
+      "producers": [
+        {
+          "project": "SniperElite.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/SniperElite.WidescreenFix/scripts/SniperElite.WidescreenFix.asi",
+          "destination": "scripts/SniperElite.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SniperElite.WidescreenFix/scripts/SniperElite.WidescreenFix.ini",
+          "destination": "scripts/SniperElite.WidescreenFix.ini"
+        },
+        {
+          "source": "data/SniperElite.WidescreenFix/scripts/global.ini",
+          "destination": "scripts/global.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d8.dll"
+        }
+      ]
+    },
+    {
+      "id": "SOCOM.FireteamBravo.PPSSPP.FusionFix",
+      "producers": [
+        {
+          "project": "SOCOM.FireteamBravo.PPSSPP.FusionFix",
+          "solution": "PPSSPP",
+          "source": "data/SOCOM.FireteamBravo.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.prx",
+          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SOCOM.FireteamBravo.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.ini",
+          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.ini"
+        },
+        {
+          "source": "data/SOCOM.FireteamBravo.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "SOCOM.FireteamBravo2.PPSSPP.FusionFix",
+      "producers": [
+        {
+          "project": "SOCOM.FireteamBravo2.PPSSPP.FusionFix",
+          "solution": "PPSSPP",
+          "source": "data/SOCOM.FireteamBravo2.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/SOCOM.FireteamBravo2.PPSSPP.FusionFix.prx",
+          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/SOCOM.FireteamBravo2.PPSSPP.FusionFix.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SOCOM.FireteamBravo2.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/SOCOM.FireteamBravo2.PPSSPP.FusionFix.ini",
+          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/SOCOM.FireteamBravo2.PPSSPP.FusionFix.ini"
+        },
+        {
+          "source": "data/SOCOM.FireteamBravo2.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "SOCOM.FireteamBravo3.PPSSPP.FusionFix",
+      "producers": [
+        {
+          "project": "SOCOM.FireteamBravo3.PPSSPP.FusionFix",
+          "solution": "PPSSPP",
+          "source": "data/SOCOM.FireteamBravo3.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.prx",
+          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SOCOM.FireteamBravo3.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.ini",
+          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.ini"
+        },
+        {
+          "source": "data/SOCOM.FireteamBravo3.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "SonicHeroes.WidescreenFix",
+      "producers": [
+        {
+          "project": "SonicHeroes.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/SonicHeroes.WidescreenFix/scripts/SonicHeroes.WidescreenFix.asi",
+          "destination": "scripts/SonicHeroes.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SonicHeroes.WidescreenFix/scripts/SonicHeroes.WidescreenFix.ini",
+          "destination": "scripts/SonicHeroes.WidescreenFix.ini"
+        },
+        {
+          "source": "data/SonicHeroes.WidescreenFix/scripts/icon.ico",
+          "destination": "scripts/icon.ico"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "winmm.dll"
+        }
+      ]
+    },
+    {
+      "id": "SplinterCell.WidescreenFix",
+      "producers": [
+        {
+          "project": "SplinterCell.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/SplinterCell.WidescreenFix/system/scripts/SplinterCell.WidescreenFix.asi",
+          "destination": "system/scripts/SplinterCell.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SplinterCell.WidescreenFix/system/Xidi.ini",
+          "destination": "system/Xidi.ini"
+        },
+        {
+          "source": "data/SplinterCell.WidescreenFix/system/alsoft.ini",
+          "destination": "system/alsoft.ini"
+        },
+        {
+          "source": "data/SplinterCell.WidescreenFix/system/dgVoodoo.conf",
+          "destination": "system/dgVoodoo.conf"
+        },
+        {
+          "source": "data/SplinterCell.WidescreenFix/system/scripts/SplinterCell.WidescreenFix.ini",
+          "destination": "system/scripts/SplinterCell.WidescreenFix.ini"
+        },
+        {
+          "source": "data/SplinterCell.WidescreenFix/system/update/Echelon.u",
+          "destination": "system/update/Echelon.u"
+        },
+        {
+          "source": "data/SplinterCell.WidescreenFix/system/update/EchelonHUD.u",
+          "destination": "system/update/EchelonHUD.u"
+        },
+        {
+          "source": "data/SplinterCell.WidescreenFix/system/update/EchelonIngredient.u",
+          "destination": "system/update/EchelonIngredient.u"
+        },
+        {
+          "source": "data/SplinterCell.WidescreenFix/system/update/UWindow.u",
+          "destination": "system/update/UWindow.u"
+        },
+        {
+          "source": "data/SplinterCell.WidescreenFix/system/update/Videos/gd_wallmine.bik",
+          "destination": "system/update/Videos/gd_wallmine.bik"
+        },
+        {
+          "source": "data/SplinterCell.WidescreenFix/system/update/textures/ETexRenderer.utx",
+          "destination": "system/update/textures/ETexRenderer.utx"
+        },
+        {
+          "source": "data/SplinterCell.WidescreenFix/system/update/textures/ETexSFX.utx",
+          "destination": "system/update/textures/ETexSFX.utx"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "system/msacm32.dll"
+        },
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "system/msvfw32.dll"
+        },
+        {
+          "id": "dgvoodoo",
+          "member": "MS/x86/D3D8.dll",
+          "destination": "system/d3d8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "system/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "system/Xidi.32.dll"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsound.dll",
+          "destination": "system/dsound.dll"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsoal-aldrv.dll",
+          "destination": "system/dsoal-aldrv.dll"
+        }
+      ]
+    },
+    {
+      "id": "SplinterCellBlacklist.FusionFix",
+      "producers": [
+        {
+          "project": "SplinterCellBlacklist.FusionFix",
+          "solution": "Win32",
+          "source": "data/SplinterCellBlacklist.FusionFix/src/system/scripts/SplinterCellBlacklist.FusionFix.asi",
+          "destination": "src/system/scripts/SplinterCellBlacklist.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix.ini",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix.ini"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/Data/ExtractionWaveConfigs/D_Amman.xml",
+          "destination": "src/SYSTEM/update/Data/ExtractionWaveConfigs/D_Amman.xml"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/Data/ExtractionWaveConfigs/D_Bratislava.xml",
+          "destination": "src/SYSTEM/update/Data/ExtractionWaveConfigs/D_Bratislava.xml"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/Data/ExtractionWaveConfigs/D_Kigali.xml",
+          "destination": "src/SYSTEM/update/Data/ExtractionWaveConfigs/D_Kigali.xml"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/Data/ExtractionWaveConfigs/D_Sanaa.xml",
+          "destination": "src/SYSTEM/update/Data/ExtractionWaveConfigs/D_Sanaa.xml"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/Data/ExtractionWaveConfigs/DefaultWaveConfig.xml",
+          "destination": "src/SYSTEM/update/Data/ExtractionWaveConfigs/DefaultWaveConfig.xml"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/Data/ExtractionWaveConfigs/Random/D_Amman.xml",
+          "destination": "src/SYSTEM/update/Data/ExtractionWaveConfigs/Random/D_Amman.xml"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/Data/ExtractionWaveConfigs/Random/D_Bratislava.xml",
+          "destination": "src/SYSTEM/update/Data/ExtractionWaveConfigs/Random/D_Bratislava.xml"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/Data/ExtractionWaveConfigs/Random/D_Kigali.xml",
+          "destination": "src/SYSTEM/update/Data/ExtractionWaveConfigs/Random/D_Kigali.xml"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/Data/ExtractionWaveConfigs/Random/D_Sanaa.xml",
+          "destination": "src/SYSTEM/update/Data/ExtractionWaveConfigs/Random/D_Sanaa.xml"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/Data/ExtractionWaveConfigs/Random/DefaultWaveConfig.xml",
+          "destination": "src/SYSTEM/update/Data/ExtractionWaveConfigs/Random/DefaultWaveConfig.xml"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/difficultyconfiguration.ini",
+          "destination": "src/SYSTEM/update/difficultyconfiguration.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "src/SYSTEM/version.dll"
+        }
+      ]
+    },
+    {
+      "id": "SplinterCellChaosTheory.WidescreenFix",
+      "producers": [
+        {
+          "project": "SplinterCellChaosTheory.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/SplinterCellChaosTheory.WidescreenFix/system/scripts/SplinterCellChaosTheory.WidescreenFix.asi",
+          "destination": "system/scripts/SplinterCellChaosTheory.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SplinterCellChaosTheory.WidescreenFix/System/Xidi.ini",
+          "destination": "System/Xidi.ini"
+        },
+        {
+          "source": "data/SplinterCellChaosTheory.WidescreenFix/System/alsoft.ini",
+          "destination": "System/alsoft.ini"
+        },
+        {
+          "source": "data/SplinterCellChaosTheory.WidescreenFix/System/scripts/SplinterCellChaosTheory.WidescreenFix.ini",
+          "destination": "System/scripts/SplinterCellChaosTheory.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "System/msacm32.dll"
+        },
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "System/msvfw32.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "System/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "System/Xidi.32.dll"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsound.dll",
+          "destination": "System/dsound.dll"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsoal-aldrv.dll",
+          "destination": "System/dsoal-aldrv.dll"
+        }
+      ]
+    },
+    {
+      "id": "SplinterCellConviction.FusionFix",
+      "producers": [
+        {
+          "project": "SplinterCellConviction.FusionFix",
+          "solution": "Win32",
+          "source": "data/SplinterCellConviction.FusionFix/src/system/scripts/SplinterCellConviction.FusionFix.asi",
+          "destination": "src/system/scripts/SplinterCellConviction.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/Xidi.ini",
+          "destination": "src/system/Xidi.ini"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/scripts/SplinterCellConviction.FusionFix.ini",
+          "destination": "src/system/scripts/SplinterCellConviction.FusionFix.ini"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/actionscheme.ini",
+          "destination": "src/system/update/actionscheme.ini"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/blacklist.ini",
+          "destination": "src/system/update/blacklist.ini"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/convictionsettings.ini",
+          "destination": "src/system/update/convictionsettings.ini"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Menus.dan",
+          "destination": "src/system/update/data/Blacklist/Menus.dan"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Menus.deu",
+          "destination": "src/system/update/data/Blacklist/Menus.deu"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Menus.esp",
+          "destination": "src/system/update/data/Blacklist/Menus.esp"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Menus.fra",
+          "destination": "src/system/update/data/Blacklist/Menus.fra"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Menus.int",
+          "destination": "src/system/update/data/Blacklist/Menus.int"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Menus.ita",
+          "destination": "src/system/update/data/Blacklist/Menus.ita"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Menus.nl",
+          "destination": "src/system/update/data/Blacklist/Menus.nl"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Menus.nor",
+          "destination": "src/system/update/data/Blacklist/Menus.nor"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Menus.swe",
+          "destination": "src/system/update/data/Blacklist/Menus.swe"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_coop/c01_mafiaclub/seq_bb00_shadowvictim.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_coop/c01_mafiaclub/seq_bb00_shadowvictim.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_coop/c01_mafiaclub/seq_se125_inter_sergi.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_coop/c01_mafiaclub/seq_se125_inter_sergi.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_coop/c01_mafiaclub/seq_se125_inter_standards.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_coop/c01_mafiaclub/seq_se125_inter_standards.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_coop/c01_mafiaclub/seq_se190_inter_lesovsky.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_coop/c01_mafiaclub/seq_se190_inter_lesovsky.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_coop/c01_mafiaclub/seq_se192_spec_lesovsky.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_coop/c01_mafiaclub/seq_se192_spec_lesovsky.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_coop/c02_embassy/seq_se168_inter_standards.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_coop/c02_embassy/seq_se168_inter_standards.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_coop/c02_embassy/seq_se168_inter_waitforgrab.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_coop/c02_embassy/seq_se168_inter_waitforgrab.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_coop/c03_bunker/seq_interro_standards.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_coop/c03_bunker/seq_interro_standards.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_coop/c03_bunker/seq_se055_inter_majorrebko_new.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_coop/c03_bunker/seq_se055_inter_majorrebko_new.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_bb03_mae.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_bb03_mae.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se020_main.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se020_main.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se050_samlookuav.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se050_samlookuav.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se070_tuto_takecover.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se070_tuto_takecover.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se080_tuto_covertocover.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se080_tuto_covertocover.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se081_tuto_covertolastco.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se081_tuto_covertolastco.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se110_lightswitch.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se110_lightswitch.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se160_tuto_shootthug.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se160_tuto_shootthug.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se161_efex_transitiontoflash2.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se161_efex_transitiontoflash2.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se190_newflashback.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se190_newflashback.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se_masterscript_0.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/01_market/seq_se_masterscript_0.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/02_museum/seq_se021_narrativewalk.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/02_museum/seq_se021_narrativewalk.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/02_museum/seq_se210_inter_interkobin.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/02_museum/seq_se210_inter_interkobin.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/03_airfield/seq_se070_inter_griminterrogation.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/03_airfield/seq_se070_inter_griminterrogation.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/04_fb-coste/seq_se_130_narrativewalk_on.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/04_fb-coste/seq_se_130_narrativewalk_on.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/05_washingtonmonument/seq_01_map_start.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/05_washingtonmonument/seq_01_map_start.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/05_washingtonmonument/seq_radio_comm110.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/05_washingtonmonument/seq_radio_comm110.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/05_washingtonmonument/seq_se180_samcoste.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/05_washingtonmonument/seq_se180_samcoste.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/07_lincolnmemorial/seq_cp_get_checkpoint_0.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/07_lincolnmemorial/seq_cp_get_checkpoint_0.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/07_lincolnmemorial/seq_se025_grimwithprez.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/07_lincolnmemorial/seq_se025_grimwithprez.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/07_lincolnmemorial/seq_se110_inter_galliard.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/07_lincolnmemorial/seq_se110_inter_galliard.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/08_thirdechelon_b/seq_bb03_narrativewalk.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/08_thirdechelon_b/seq_bb03_narrativewalk.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/08_thirdechelon_b/seq_bb06_narrativewalk.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/08_thirdechelon_b/seq_bb06_narrativewalk.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/08_thirdechelon_b/seq_m08_thire_se351_proj_cs_capture.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/08_thirdechelon_b/seq_m08_thire_se351_proj_cs_capture.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/08_thirdechelon_b/seq_m08_thire_se351_projcs_capturesam.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/08_thirdechelon_b/seq_m08_thire_se351_projcs_capturesam.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/09_abandonedreservoir_b/seq_bb8_chopper_fly.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/09_abandonedreservoir_b/seq_bb8_chopper_fly.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/09_abandonedreservoir_b/seq_objective_manager.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/09_abandonedreservoir_b/seq_objective_manager.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/10_streetsandgarden_a/seq_skip.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/10_streetsandgarden_a/seq_skip.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/11_whitehouse_b/seq_se260_spec_grimwalkssamff2.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/11_whitehouse_b/seq_se260_spec_grimwalkssamff2.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Blacklist/Sequences/maps/_single/11_whitehouse_b/seq_se_masterscript_0.xml",
+          "destination": "src/system/update/data/Blacklist/Sequences/maps/_single/11_whitehouse_b/seq_se_masterscript_0.xml"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Flash/Ingame/3d_mainmenu_1024.gfx",
+          "destination": "src/system/update/data/Flash/Ingame/3d_mainmenu_1024.gfx"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/weapontuning.ini",
+          "destination": "src/system/update/weapontuning.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "src/system/version.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "src/system/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "src/system/Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "SplinterCellDoubleAgent.CXBXR.WidescreenFix",
+      "producers": [
+        {
+          "project": "SplinterCellDoubleAgent.CXBXR.WidescreenFix",
+          "solution": "CXBXR",
+          "source": "data/SplinterCellDoubleAgent.CXBXR.WidescreenFix/scripts/SplinterCellDoubleAgent.CXBXR.WidescreenFix.asi",
+          "destination": "scripts/SplinterCellDoubleAgent.CXBXR.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "winmm.dll"
+        }
+      ]
+    },
+    {
+      "id": "SplinterCellDoubleAgent.PCSX2F.WidescreenFix",
+      "producers": [
+        {
+          "project": "SplinterCellDoubleAgent.PCSX2F.WidescreenFix",
+          "solution": "PCSX2F",
+          "source": "data/SplinterCellDoubleAgent.PCSX2F.WidescreenFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.elf",
+          "destination": "PLUGINS/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.elf"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SplinterCellDoubleAgent.PCSX2F.WidescreenFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.ini",
+          "destination": "PLUGINS/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "SplinterCellDoubleAgent.WidescreenFix",
+      "producers": [
+        {
+          "project": "SplinterCellDoubleAgent.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.asi",
+          "destination": "SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/Xidi.ini",
+          "destination": "SCDA-Offline/System/Xidi.ini"
+        },
+        {
+          "source": "data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.ini",
+          "destination": "SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.ini"
+        },
+        {
+          "source": "data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.png",
+          "destination": "SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.png"
+        },
+        {
+          "source": "data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/scripts/dxwrapper.ini",
+          "destination": "SCDA-Offline/System/scripts/dxwrapper.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "SCDA-Offline/System/msacm32.dll"
+        },
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "SCDA-Offline/System/msvfw32.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "SCDA-Offline/System/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "SCDA-Offline/System/Xidi.32.dll"
+        },
+        {
+          "id": "dxwrapper-scda",
+          "member": "dxwrapper.dll",
+          "destination": "SCDA-Offline/System/scripts/dxwrapper.asi"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsound.dll",
+          "destination": "SCDA-Offline/System/dsound.dll"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsoal-aldrv.dll",
+          "destination": "SCDA-Offline/System/dsoal-aldrv.dll"
+        }
+      ]
+    },
+    {
+      "id": "SplinterCellEssentials.PPSSPP.FusionFix",
+      "producers": [
+        {
+          "project": "SplinterCellEssentials.PPSSPP.FusionFix",
+          "solution": "PPSSPP",
+          "source": "data/SplinterCellEssentials.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/SplinterCellEssentials.PPSSPP.FusionFix.prx",
+          "destination": "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/SplinterCellEssentials.PPSSPP.FusionFix.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SplinterCellEssentials.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/SplinterCellEssentials.PPSSPP.FusionFix.ini",
+          "destination": "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/SplinterCellEssentials.PPSSPP.FusionFix.ini"
+        },
+        {
+          "source": "data/SplinterCellEssentials.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "SplinterCellPandoraTomorrow.WidescreenFix",
+      "producers": [
+        {
+          "project": "SplinterCellPandoraTomorrow.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/scripts/SplinterCellPandoraTomorrow.WidescreenFix.asi",
+          "destination": "system/scripts/SplinterCellPandoraTomorrow.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/Xidi.ini",
+          "destination": "system/Xidi.ini"
+        },
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/alsoft.ini",
+          "destination": "system/alsoft.ini"
+        },
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/scripts/SplinterCellPandoraTomorrow.WidescreenFix.ini",
+          "destination": "system/scripts/SplinterCellPandoraTomorrow.WidescreenFix.ini"
+        },
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/GUI.u",
+          "destination": "system/update/GUI.u"
+        },
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/English/HUD.int",
+          "destination": "system/update/Localization/English/HUD.int"
+        },
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/English/P_0_0_1_Handcuff.int",
+          "destination": "system/update/Localization/English/P_0_0_1_Handcuff.int"
+        },
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/English/P_1_1_1_EMBASSY.int",
+          "destination": "system/update/Localization/English/P_1_1_1_EMBASSY.int"
+        },
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/English/P_3_1_1_MARKET.int",
+          "destination": "system/update/Localization/English/P_3_1_1_MARKET.int"
+        },
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/French/HUD.fra",
+          "destination": "system/update/Localization/French/HUD.fra"
+        },
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/German/HUD.deu",
+          "destination": "system/update/Localization/German/HUD.deu"
+        },
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/Italian/HUD.ita",
+          "destination": "system/update/Localization/Italian/HUD.ita"
+        },
+        {
+          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/Spanish/HUD.esp",
+          "destination": "system/update/Localization/Spanish/HUD.esp"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "system/msacm32.dll"
+        },
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "system/msvfw32.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "system/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "system/Xidi.32.dll"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsound.dll",
+          "destination": "system/dsound.dll"
+        },
+        {
+          "id": "dsoal",
+          "member": "DSOAL+HRTF/Win32/dsoal-aldrv.dll",
+          "destination": "system/dsoal-aldrv.dll"
+        }
+      ]
+    },
+    {
+      "id": "SpyroReignitedTrilogy.WidescreenFix",
+      "producers": [
+        {
+          "project": "SpyroReignitedTrilogy.WidescreenFix",
+          "solution": "Win64",
+          "source": "data/SpyroReignitedTrilogy.WidescreenFix/Falcon/Binaries/Win64/scripts/SpyroReignitedTrilogy.WidescreenFix.asi",
+          "destination": "Falcon/Binaries/Win64/scripts/SpyroReignitedTrilogy.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SpyroReignitedTrilogy.WidescreenFix/Falcon/Binaries/Win64/scripts/SpyroReignitedTrilogy.WidescreenFix.ini",
+          "destination": "Falcon/Binaries/Win64/scripts/SpyroReignitedTrilogy.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x64",
+          "member": "*.dll",
+          "destination": "Falcon/Binaries/Win64/dsound.dll"
+        }
+      ]
+    },
+    {
+      "id": "StreetRacingSyndicate.WidescreenFix",
+      "producers": [
+        {
+          "project": "StreetRacingSyndicate.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/StreetRacingSyndicate.WidescreenFix/Bin/scripts/StreetRacingSyndicate.WidescreenFix.asi",
+          "destination": "Bin/scripts/StreetRacingSyndicate.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/StreetRacingSyndicate.WidescreenFix/Bin/scripts/StreetRacingSyndicate.WidescreenFix.ini",
+          "destination": "Bin/scripts/StreetRacingSyndicate.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "Bin/d3d9.dll"
+        }
+      ]
+    },
+    {
+      "id": "TheGodfather.WidescreenFix",
+      "producers": [
+        {
+          "project": "TheGodfather.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TheGodfather.WidescreenFix/scripts/TheGodfather.WidescreenFix.asi",
+          "destination": "scripts/TheGodfather.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TheGodfather.WidescreenFix/scripts/TheGodfather.WidescreenFix.ini",
+          "destination": "scripts/TheGodfather.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "TheMatrixPathOfNeo.WidescreenFix",
+      "producers": [
+        {
+          "project": "TheMatrixPathOfNeo.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TheMatrixPathOfNeo.WidescreenFix/scripts/TheMatrixPathOfNeo.WidescreenFix.asi",
+          "destination": "scripts/TheMatrixPathOfNeo.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TheMatrixPathOfNeo.WidescreenFix/scripts/TheMatrixPathOfNeo.WidescreenFix.ini",
+          "destination": "scripts/TheMatrixPathOfNeo.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "ThePunisher.WidescreenFix",
+      "producers": [
+        {
+          "project": "ThePunisher.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/ThePunisher.WidescreenFix/scripts/ThePunisher.WidescreenFix.asi",
+          "destination": "scripts/ThePunisher.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/ThePunisher.WidescreenFix/scripts/ThePunisher.WidescreenFix.ini",
+          "destination": "scripts/ThePunisher.WidescreenFix.ini"
+        },
+        {
+          "source": "data/ThePunisher.WidescreenFix/scripts/dxwrapper.ini",
+          "destination": "scripts/dxwrapper.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "dxwrapper",
+          "member": "dxwrapper.asi",
+          "destination": "scripts/dxwrapper.asi"
+        }
+      ]
+    },
+    {
+      "id": "TheSaboteur.FusionFix",
+      "producers": [
+        {
+          "project": "TheSaboteur.FusionFix",
+          "solution": "Win32",
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix.asi",
+          "destination": "scripts/TheSaboteur.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix.ini",
+          "destination": "scripts/TheSaboteur.FusionFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "TheSuffering.WidescreenFix",
+      "producers": [
+        {
+          "project": "TheSuffering.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TheSuffering.WidescreenFix/scripts/TheSuffering.WidescreenFix.asi",
+          "destination": "scripts/TheSuffering.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TheSuffering.WidescreenFix/scripts/TheSuffering.WidescreenFix.ini",
+          "destination": "scripts/TheSuffering.WidescreenFix.ini"
+        },
+        {
+          "source": "data/TheSuffering.WidescreenFix/scripts/dxwrapper.ini",
+          "destination": "scripts/dxwrapper.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "dxwrapper",
+          "member": "dxwrapper.asi",
+          "destination": "scripts/dxwrapper.asi"
+        }
+      ]
+    },
+    {
+      "id": "TheWarriors.PPSSPP.FusionFix",
+      "producers": [
+        {
+          "project": "TheWarriors.PPSSPP.FusionFix",
+          "solution": "PPSSPP",
+          "source": "data/TheWarriors.PPSSPP.FusionFix/memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.prx",
+          "destination": "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.prx"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TheWarriors.PPSSPP.FusionFix/memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.ini",
+          "destination": "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.ini"
+        },
+        {
+          "source": "data/TheWarriors.PPSSPP.FusionFix/memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/plugin.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "TonyHawksAmericanWasteland.WidescreenFix",
+      "producers": [
+        {
+          "project": "TonyHawksAmericanWasteland.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TonyHawksAmericanWasteland.WidescreenFix/Game/scripts/TonyHawksAmericanWasteland.WidescreenFix.asi",
+          "destination": "Game/scripts/TonyHawksAmericanWasteland.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TonyHawksAmericanWasteland.WidescreenFix/Game/scripts/TonyHawksAmericanWasteland.WidescreenFix.ini",
+          "destination": "Game/scripts/TonyHawksAmericanWasteland.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "Game/dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "TonyHawksProSkater2.WidescreenFix",
+      "producers": [
+        {
+          "project": "TonyHawksProSkater2.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TonyHawksProSkater2.WidescreenFix/scripts/TonyHawksProSkater2.WidescreenFix.asi",
+          "destination": "scripts/TonyHawksProSkater2.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TonyHawksProSkater2.WidescreenFix/scripts/TonyHawksProSkater2.WidescreenFix.ini",
+          "destination": "scripts/TonyHawksProSkater2.WidescreenFix.ini"
+        },
+        {
+          "source": "data/TonyHawksProSkater2.WidescreenFix/wndmode.ini",
+          "destination": "wndmode.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "ddraw.dll"
+        }
+      ]
+    },
+    {
+      "id": "TonyHawksProSkater3.WidescreenFix",
+      "producers": [
+        {
+          "project": "TonyHawksProSkater3.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TonyHawksProSkater3.WidescreenFix/scripts/TonyHawksProSkater3.WidescreenFix.asi",
+          "destination": "scripts/TonyHawksProSkater3.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TonyHawksProSkater3.WidescreenFix/scripts/TonyHawksProSkater3.WidescreenFix.ini",
+          "destination": "scripts/TonyHawksProSkater3.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "TonyHawksProSkater4.WidescreenFix",
+      "producers": [
+        {
+          "project": "TonyHawksProSkater4.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TonyHawksProSkater4.WidescreenFix/Game/scripts/TonyHawksProSkater4.WidescreenFix.asi",
+          "destination": "Game/scripts/TonyHawksProSkater4.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TonyHawksProSkater4.WidescreenFix/Game/scripts/TonyHawksProSkater4.WidescreenFix.ini",
+          "destination": "Game/scripts/TonyHawksProSkater4.WidescreenFix.ini"
+        },
+        {
+          "source": "data/TonyHawksProSkater4.WidescreenFix/Game/scripts/dxwrapper.ini",
+          "destination": "Game/scripts/dxwrapper.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "Game/dinput8.dll"
+        },
+        {
+          "id": "dxwrapper",
+          "member": "dxwrapper.asi",
+          "destination": "Game/scripts/dxwrapper.asi"
+        }
+      ]
+    },
+    {
+      "id": "TonyHawksUnderground.WidescreenFix",
+      "producers": [
+        {
+          "project": "TonyHawksUnderground.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TonyHawksUnderground.WidescreenFix/Game/scripts/TonyHawksUnderground.WidescreenFix.asi",
+          "destination": "Game/scripts/TonyHawksUnderground.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TonyHawksUnderground.WidescreenFix/Game/scripts/TonyHawksUnderground.SafeDiscCheck.dll",
+          "destination": "Game/scripts/TonyHawksUnderground.SafeDiscCheck.dll"
+        },
+        {
+          "source": "data/TonyHawksUnderground.WidescreenFix/Game/scripts/TonyHawksUnderground.WidescreenFix.ini",
+          "destination": "Game/scripts/TonyHawksUnderground.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "Game/dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "TonyHawksUnderground2.WidescreenFix",
+      "producers": [
+        {
+          "project": "TonyHawksUnderground2.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TonyHawksUnderground2.WidescreenFix/Game/scripts/TonyHawksUnderground2.WidescreenFix.asi",
+          "destination": "Game/scripts/TonyHawksUnderground2.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TonyHawksUnderground2.WidescreenFix/Game/scripts/TonyHawksUnderground2.WidescreenFix.ini",
+          "destination": "Game/scripts/TonyHawksUnderground2.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "Game/dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "TotalOverdose.WidescreenFix",
+      "producers": [
+        {
+          "project": "TotalOverdose.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TotalOverdose.WidescreenFix/scripts/TotalOverdose.WidescreenFix.asi",
+          "destination": "scripts/TotalOverdose.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TotalOverdose.WidescreenFix/scripts/TotalOverdose.WidescreenFix.ini",
+          "destination": "scripts/TotalOverdose.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix",
+      "producers": [
+        {
+          "project": "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix",
+          "solution": "PCSX2F",
+          "source": "data/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix/PLUGINS/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.elf",
+          "destination": "PLUGINS/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.elf"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix/PLUGINS/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.ini",
+          "destination": "PLUGINS/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "id": "TrueCrimeNewYorkCity.WidescreenFix",
+      "producers": [
+        {
+          "project": "TrueCrimeNewYorkCity.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TrueCrimeNewYorkCity.WidescreenFix/scripts/TrueCrimeNewYorkCity.WidescreenFix.asi",
+          "destination": "scripts/TrueCrimeNewYorkCity.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TrueCrimeNewYorkCity.WidescreenFix/diactfrm.dll",
+          "destination": "diactfrm.dll"
+        },
+        {
+          "source": "data/TrueCrimeNewYorkCity.WidescreenFix/dimap.dll",
+          "destination": "dimap.dll"
+        },
+        {
+          "source": "data/TrueCrimeNewYorkCity.WidescreenFix/scripts/TrueCrimeNewYorkCity.WidescreenFix.ini",
+          "destination": "scripts/TrueCrimeNewYorkCity.WidescreenFix.ini"
+        },
+        {
+          "source": "data/TrueCrimeNewYorkCity.WidescreenFix/scripts/dxwrapper.ini",
+          "destination": "scripts/dxwrapper.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "dxwrapper",
+          "member": "dxwrapper.asi",
+          "destination": "scripts/dxwrapper.asi"
+        }
+      ]
+    },
+    {
+      "id": "TrueCrimeStreetsofLA.WidescreenFix",
+      "producers": [
+        {
+          "project": "TrueCrimeStreetsofLA.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/TrueCrimeStreetsofLA.WidescreenFix/scripts/TrueCrimeStreetsofLA.WidescreenFix.asi",
+          "destination": "scripts/TrueCrimeStreetsofLA.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TrueCrimeStreetsofLA.WidescreenFix/scripts/TrueCrimeStreetsofLA.WidescreenFix.ini",
+          "destination": "scripts/TrueCrimeStreetsofLA.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "UltimateSpiderMan.WidescreenFix",
+      "producers": [
+        {
+          "project": "UltimateSpiderMan.WidescreenFix",
+          "solution": "Win32",
+          "source": "data/UltimateSpiderMan.WidescreenFix/scripts/UltimateSpiderMan.WidescreenFix.asi",
+          "destination": "scripts/UltimateSpiderMan.WidescreenFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/UltimateSpiderMan.WidescreenFix/scripts/UltimateSpiderMan.WidescreenFix.ini",
+          "destination": "scripts/UltimateSpiderMan.WidescreenFix.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dsound.dll"
+        }
+      ]
+    }
+  ]
+}
