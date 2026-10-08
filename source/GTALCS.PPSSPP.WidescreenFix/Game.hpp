@@ -6,7 +6,7 @@ struct Game {};
 using Drawing = console::portable::StoryDrawing<Game>;
 using Anchor = console::portable::DrawAnchor;
 struct Settings {
-    bool dualAnalog = true, modernControls = false, skipIntro = true, unthrottle = true, pcCheats = false;
+    bool modernControls = false, skipIntro = true, unthrottle = true, pcCheats = false;
     int fps = 0;
     float fov = 1.0f, lod = 0.0f;
     bool restoreCutsceneFov = true, cutsceneBorders = true;

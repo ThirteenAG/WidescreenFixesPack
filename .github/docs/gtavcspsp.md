@@ -42,7 +42,7 @@
 # Project2DFX
 
 <details>
-  <summary>Project2DFX now available as a separate plugin</summary>
+  <summary><a href="https://github.com/ThirteenAG/III.VC.SA.IV.Project2DFX/releases/tag/gtavcs">Project2DFX</a> is available as a separate plugin</summary>
   <img src="https://user-images.githubusercontent.com/4904157/156879759-6bd08507-f30b-4890-ae69-b0503b998aa6.png" width="652px" />
 </details>
 

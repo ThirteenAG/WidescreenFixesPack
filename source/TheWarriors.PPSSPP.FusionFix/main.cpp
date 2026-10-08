@@ -44,7 +44,7 @@ int Install() {
         const auto intro = pattern.get_first("10 00 A5 27 ? ? ? ? ? ? ? ? ? ? ? ? 21 28 00 00", 0);
         for (unsigned offset : {12u, 28u, 44u}) injector::MakeNOP(intro + offset);
     }
-    if (inireader.ReadInteger("MAIN", "DualAnalogPatch", 1)) {
+    {
         const auto branch = pattern.get_first("21 10 51 00 ? ? ? ? 1C 00 50 A4", 4);
         // Keep the left stick on movement, including while the native camera
         // modifier is held. Preserve the target and the button-history delay slot.

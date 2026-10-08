@@ -31,7 +31,7 @@
 # Project2DFX
 
 <details>
-  <summary>Project2DFX now available as a separate plugin</summary>
+  <summary><a href="https://github.com/ThirteenAG/III.VC.SA.IV.Project2DFX/releases/tag/gtalcs">Project2DFX</a> is available as a separate plugin</summary>
   <img src="https://user-images.githubusercontent.com/4904157/156891784-3143e193-2e90-470d-bdc1-fdc94bf7ea87.png" width="652px" />
 </details>
 

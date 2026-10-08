@@ -72,6 +72,10 @@ Inputs are copied into private staging folders. PDB embedding and signing affect
 only staged binaries. Signing profiles are `required`, `optional` (when credentials
 exist), and `off`. Both signing and Authenticode verification must succeed when
 signing is enabled. Third-party binaries retain their upstream signatures.
+The signer must match the configured PFX. For a private/self-signed certificate,
+verification accepts only Windows' untrusted-root result, with an otherwise valid
+code-signing chain whose root is included in that PFX. Invalid signatures and
+digests still fail. No certificates are installed and no trust stores are changed.
 
 `embedPdb: "if-present"` embeds when the binary has a CodeView PDB reference;
 `"required"` also requires that reference. PDB GUID and age must match. Embedded
@@ -114,3 +118,7 @@ powershell -NoProfile -File tools/packaging/Test.ps1
 The tests cover manifest migration, real ZIP integrity, unchanged build outputs,
 missing inputs, path/collision checks, symbols, signing failures, and the manual
 compiler guard. Native and console completion flows are also exercised locally.
+
+`TestSigning.ps1` is a Windows integration test using a disposable publisher
+certificate, the real SDK signing tool and production timestamp server. It checks
+signing, unchanged root trust, mismatched publishers, and modified binary rejection.

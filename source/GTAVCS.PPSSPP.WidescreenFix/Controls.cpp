@@ -93,8 +93,7 @@ void InstallControls() {
     FindPlayerPed = reinterpret_cast<uintptr_t (*)()>(Address<0x8960424>());
     FindPlayerVehicle = reinterpret_cast<uintptr_t (*)()>(Address<0x89602c8>());
     WeaponInfo = reinterpret_cast<uintptr_t (*)(int)>(Address<0x8b1fd70>());
-    bool DualAnalogPatch=settings.dualAnalog, ModernControlScheme=settings.modernControls;
-    if (DualAnalogPatch)
+    bool ModernControlScheme=settings.modernControls;
     {
         injector::WriteInstr(Address<0x08A1A3F0>(),
             sh(a1, sp, 0)

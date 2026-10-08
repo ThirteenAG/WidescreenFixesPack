@@ -11,7 +11,6 @@ void ReadSettings() {
     using console::bounded;
     settings.skipIntro=inireader.ReadInteger("MAIN","SkipIntro",1)!=0;
     settings.unthrottle=inireader.ReadInteger("MAIN","UnthrottleEmuDuringLoading",1)!=0;
-    settings.dualAnalog=inireader.ReadInteger("MAIN","DualAnalogPatch",1)!=0;
     settings.fps=inireader.ReadInteger("MAIN","Enable60FPS",0)!=0;
     settings.modernControls=inireader.ReadInteger("CONTROLS","ModernControlScheme",0)!=0;
     settings.pcCheats=inireader.ReadInteger("CONTROLS","PCCheats",0)!=0;
