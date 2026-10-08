@@ -87,6 +87,8 @@ data/MaxPayne.WidescreenFix/dinputHooked.dll
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+!tools/releases/
+!tools/releases/**
 x64/
 x86/
 bld/

@@ -43,6 +43,7 @@ on:
         - larush
         - mafia
         - manhunt
+        - mclarpsp
         - mp1
         - mp2
         - nfsc
@@ -136,6 +137,7 @@ env:
   larush: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:LARush_WidescreenFix /p:Configuration=Release
   mafia: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Mafia_FusionFix /p:Configuration=Release
   manhunt: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:Manhunt_WidescreenFix /p:Configuration=Release
+  mclarpsp: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:MidnightClubLARemix_PPSSPP_FusionFix /p:Configuration=Release
   mp1: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:MaxPayne\\MaxPayne_WidescreenFix /p:Configuration=Release
   mp2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:MaxPayne\\MaxPayne2_WidescreenFix /p:Configuration=Release
   nfsc: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:NeedForSpeed\\NFSCarbon_WidescreenFix /p:Configuration=Release

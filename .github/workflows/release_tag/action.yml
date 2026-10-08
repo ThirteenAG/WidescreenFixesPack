@@ -14,6 +14,10 @@ inputs:
   artifacts:
     description: "List of artifacts for release"
     required: true
+  release_name:
+    description: "Explicit name for a release that may need to be created"
+    required: false
+    default: ''
 
 runs:
   using: "composite"
@@ -31,7 +35,7 @@ runs:
           fi
         done
     - name: Get release info
-      if: ${{ steps.tag_requires_updating.outputs.split_value == 'True' }}
+      if: ${{ steps.tag_requires_updating.outputs.split_value == 'True' && inputs.release_name == '' }}
       id: release_info
       uses: cardinalby/git-get-release-action@1.2.4
       env:
@@ -45,8 +49,11 @@ runs:
         token: ${{ inputs.token }}
         allowUpdates: true
         makeLatest: true
-        name: ${{ steps.release_info.outputs.name }}
+        name: ${{ inputs.release_name || steps.release_info.outputs.name }}
 #        body: ${{ steps.release_info.outputs.body }}
         bodyFile: ${{ steps.tag_requires_updating.outputs.readme_path }}
-        tag: ${{ steps.release_info.outputs.tag_name }}
+        tag: ${{ inputs.tag }}
+        commit: ${{ github.sha }}
+        artifactErrorsFailBuild: true
+        removeArtifacts: false
         artifacts: ${{ inputs.artifacts }}
