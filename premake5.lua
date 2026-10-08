@@ -1,5 +1,10 @@
 require "vstudio"
 
+newoption {
+   trigger = "no-shared-release-deps",
+   description = "Compile common native Release dependencies separately for each plugin"
+}
+
 -- PS2 and PSP as Visual Studio platforms of their own (as premake-consoles does for
 -- consoles); their projects are Makefile ones, so no MSBuild platform files are needed.
 premake.vstudio.vs2010_architectures.ps2 = "PS2"
@@ -884,3 +889,7 @@ project "SplinterCellDoubleAgent.CXBXR.WidescreenFix"
    setpaths("CXBXR_DIR", "cxbx.exe")
    files { "includes/cxbxr/cxbxr.h" }
 group ""
+
+if not _OPTIONS["no-shared-release-deps"] then
+   include "tools/msbuild/shared-dependencies.lua"
+end

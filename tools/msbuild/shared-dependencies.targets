@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(WFPSharedDependencyProducer)'=='true'">
+    <BuildDependsOn>PrepareForBuild;ClCompile</BuildDependsOn>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(WFPSharedDependencyProducer)'=='true'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <PreprocessorDefinitions>NDEBUG;UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\external\hooking;$(ProjectDir)..\external\injector\safetyhook\include;$(ProjectDir)..\external\injector\minhook\include;$(ProjectDir)..\external\injector\utility;$(ProjectDir)..\external\injector\zydis</AdditionalIncludeDirectories>
+      <Optimization>Full</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <StringPooling>true</StringPooling>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <AdditionalOptions>/Zc:__cplusplus /utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <!-- Add after references have built, including on the first clean build.
+       Object items are inputs to the native linker and its incremental tracking. -->
+  <Target Name="WFPAddSharedDependencyObjects" AfterTargets="ResolveProjectReferences" BeforeTargets="Link"
+          Condition="'$(WFPSharedDependencyObjects)'!=''">
+    <ItemGroup>
+      <_WFPSharedDependencyObject Include="$(WFPSharedDependencyObjects)" />
+      <Object Include="@(_WFPSharedDependencyObject)" />
+    </ItemGroup>
+    <Error Condition="'@(_WFPSharedDependencyObject)'==''" Text="Shared dependency objects are missing. Build with project references enabled." />
+    <Error Condition="!Exists('%(_WFPSharedDependencyObject.Identity)')"
+           Text="Shared dependency object is missing: %(_WFPSharedDependencyObject.Identity). Build with project references enabled." />
+  </Target>
+</Project>

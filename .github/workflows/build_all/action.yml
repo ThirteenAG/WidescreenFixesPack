@@ -1,9 +1,14 @@
 name: "Build All"
+description: "Build, sign, package, and upload plugin artifacts"
 
 inputs:
   project:
     description: "Full msbuild command(s) to run (or empty to build everything)"
     required: false
+  parallel_artifact_uploads:
+    description: "Upload up to four packaged artifacts concurrently"
+    required: false
+    default: "false"
 
 runs:
   using: "composite"
@@ -27,11 +32,17 @@ runs:
         if "${{ inputs.project }}" == "" (
           echo Building ALL solutions...
           msbuild -m build/Win32.WidescreenFixesPack.slnx /p:Configuration=Release
+          if errorlevel 1 exit /b 1
           msbuild -m build/Win64.WidescreenFixesPack.slnx /p:Configuration=Release
+          if errorlevel 1 exit /b 1
           msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /p:Configuration=Release
+          if errorlevel 1 exit /b 1
           msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /p:Configuration=Release
+          if errorlevel 1 exit /b 1
           msbuild -m build/Dolphin.WidescreenFixesPack.slnx /p:Configuration=Release
+          if errorlevel 1 exit /b 1
           msbuild -m build/CXBXR.WidescreenFixesPack.slnx /p:Configuration=Release
+          if errorlevel 1 exit /b 1
         ) else (
           echo Building specific tag...
           ${{ inputs.project }}
@@ -67,11 +78,18 @@ runs:
           const globber = await glob.create('data/Archives/*.zip')
           const files = await globber.glob()
           if (files.length === 0) {
-            core.warning('No .zip files found in data/Archives.')
-            return
+            throw new Error('No .zip files found in data/Archives.')
           }
-          for (const file of files) {
-            const name = path.basename(file)
-            core.info(`Uploading ${name}...`)
-            await client.uploadArtifact(name, [file], 'data/Archives', { retentionDays: 90, skipArchive: true })
+          const concurrency = '${{ inputs.parallel_artifact_uploads }}' === 'true' ? 4 : 1
+          let next = 0
+          async function uploadWorker() {
+            while (next < files.length) {
+              const file = files[next++]
+              const name = path.basename(file)
+              core.info(`Uploading ${name}...`)
+              await client.uploadArtifact(name, [file], 'data/Archives', { retentionDays: 90, skipArchive: true })
+            }
           }
+          const results = await Promise.allSettled(Array.from({ length: Math.min(concurrency, files.length) }, uploadWorker))
+          const failure = results.find(result => result.status === 'rejected')
+          if (failure) throw failure.reason
