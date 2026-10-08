@@ -1,0 +1,9 @@
+{
+  "name": "wfp-packaging",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitHub-only artifact upload adapter",
+  "dependencies": {
+    "@actions/artifact": "6.3.1"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WidescreenFixesPack packaging manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "solutions", "dependencies", "packages"],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": 1},
+    "solutions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false,
+        "required": ["archive", "architecture", "repository", "tag", "assetPattern"],
+        "properties": {
+          "archive": {"type": "string"}, "architecture": {"enum": ["x86", "x64"]},
+          "repository": {"type": "string"}, "tag": {"type": "string"},
+          "assetPattern": {"type": "string"}, "selection": {"const": "highest-revision"},
+          "nestedMember": {"type": "string"}
+        }
+      }
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "producers", "files", "dependencies"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"},
+          "producers": {
+            "type": "array", "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["project", "solution", "source", "destination"],
+              "properties": {
+                "project": {"type": "string"}, "solution": {"type": "string"},
+                "source": {"type": "string"}, "destination": {"type": "string"},
+                "embedPdb": {"enum": ["if-present", "required"]}, "sign": {"type": "boolean"}
+              }
+            }
+          },
+          "files": {"type": "array", "items": {"$ref": "#/$defs/file"}},
+          "dependencies": {
+            "type": "array", "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["id", "member", "destination"],
+              "properties": {"id": {"type": "string"}, "member": {"type": "string"}, "destination": {"type": "string"}}
+            }
+          },
+          "optionalTree": {"$ref": "#/$defs/file"},
+          "associatedPackages": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "file": {
+      "type": "object", "additionalProperties": false, "required": ["source", "destination"],
+      "properties": {"source": {"type": "string"}, "destination": {"type": "string"}}
+    }
+  }
+}

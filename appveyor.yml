@@ -47,7 +47,7 @@ before_package:
 
     REM msbuild -m build/Win32.WidescreenFixesPack.slnx /t:EnterTheMatrix_WidescreenFix /p:Configuration=Release
 
-    REM msbuild -m build/Win32.WidescreenFixesPack.slnx /t:FarCry_WidescreenFix /p:Configuration=Release
+    msbuild -m build/Win32.WidescreenFixesPack.slnx /t:FarCry_WidescreenFix /p:Configuration=Release
 
     REM msbuild -m build/Win32.WidescreenFixesPack.slnx /t:GrandTheftAuto\GTA1_WidescreenFix /p:Configuration=Release
 
@@ -179,6 +179,6 @@ before_package:
 
     cd data
 
-    release.bat
+    release.bat -Available
 after_build:
 - ps: Get-ChildItem .\Archives\*.zip  | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }

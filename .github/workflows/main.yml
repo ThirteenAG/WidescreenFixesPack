@@ -31,9 +31,9 @@ jobs:
     - name: Build Solution
       uses: ./.github/workflows/build_all
       with:
-        parallel_artifact_uploads: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+        packaging_mode: ${{ github.event_name == 'push' && github.ref_name == 'master' && 'as-ready' || 'after-build' }}
+        signing_profile: ${{ github.event_name == 'push' && github.ref_name == 'master' && 'required' || 'off' }}
       env:
-        SCCOMPILE_PASSWORD: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.SCCOMPILE_PASSWORD || '' }}
         CODE_SIGNING_PFX: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.CODE_SIGNING_PFX || '' }}
         CODE_SIGNING_PASSWORD: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.CODE_SIGNING_PASSWORD || '' }}
     - name: Update Tags
