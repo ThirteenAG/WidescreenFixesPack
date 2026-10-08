@@ -60,6 +60,9 @@ namespace
     constexpr size_t hardTurnToken = controllerExitToken+9;
     constexpr wchar_t glyphs[20] = {0xAB,0xAB,0xAC,0xAC,0xA4,0xA5,0xA6,0xA7,0xAF,0xB1,0xBC,0xBE,0xBD,0xB9,0xB2,0xB3,0xA3,0xA2,0xB4,0xB5};
     constexpr int pagePhysical[24] = {-1,-1,17,16,4,5,6,7,-1,-1,0,2,8,9,14,15,18,19,-1,-1,13,10,12,11};
+    // Native face-button artwork occupies 20/32 pixels; the replacement occupies
+    // 60/64. Match that visible size while retaining the game's glyph advance.
+    constexpr float iconScale = (20.0f/32.0f)/(60.0f/64.0f);
     SafetyHookInline lookupHook, widthHook, lineWidthHook, wrapWidthHook, maskHook, drawHook, wrapDrawHook, beginHook, endHook;
     SafetyHookInline setTextHook;
     SafetyHookInline glyphHook;
@@ -365,8 +368,13 @@ namespace
                 // Our DDS contains one complete icon, independently of font atlas UVs.
                 const std::array<float,4> uv{0.0f,0.0f,1.0f,1.0f};
                 memcpy(replacement.data()+6,uv.data(),sizeof(uv));
-                return glyphHook.stdcall<int>(primitive,replacement.data(),x,y,width,
-                    width*iconHeightPerWidth[physical],color);
+                const float aspectHeight=width*iconHeightPerWidth[physical];
+                const float iconWidth=width*iconScale, iconHeight=aspectHeight*iconScale;
+                // Center inside the original glyph space. The incoming height
+                // may belong to an HD font atlas, so use aspectHeight here too.
+                return glyphHook.stdcall<int>(primitive,replacement.data(),
+                    x+(width-iconWidth)*0.5f,y+(aspectHeight-iconHeight)*0.5f,
+                    iconWidth,iconHeight,color);
             }
         }
         return glyphHook.stdcall<int>(primitive,glyph,x,y,width,height,color);
