@@ -186,12 +186,6 @@ inline constexpr uint32_t words88[]={0x8FB602F0u,0x8FBF02F4u,0x03E00008u,0x27BD0
 inline constexpr uint8_t masks88[]={0,0,0,0,0,0,0,0,0,0,0,0};
 inline constexpr uint32_t words89[]={0x8FB00020u,0x8FBF0024u,0x03E00008u,0x27BD0030u,0x27BDFFC0u,0xAFB0002Cu,0xAFB10030u,0x00808025u,0x27B10010u,0x02202025u,0x340500FFu,0x340600FFu};
 inline constexpr uint8_t masks89[]={0,0,0,0,0,0,0,0,0,0,0,0};
-inline constexpr uint32_t words90[]={0x27BE0010u,0x27B70020u,0x3C0442F0u,0x4484B000u,0x3C04424Cu,0x4484E000u,0x3C0441C8u,0x4484D000u,0x3C0442A0u,0x4484C000u,0x00122140u,0x0004A021u};
-inline constexpr uint8_t masks90[]={0,0,0,0,0,0,0,0,0,0,0,0};
-inline constexpr uint32_t words91[]={0x3C0442F0u,0x4484B000u,0x3C04424Cu,0x4484E000u,0x3C0441C8u,0x4484D000u,0x3C0442A0u,0x4484C000u,0x00122140u,0x0004A021u,0x00042100u,0x0284A021u};
-inline constexpr uint8_t masks91[]={0,0,0,0,0,0,0,0,0,0,0,0};
-inline constexpr uint32_t words92[]={0x3C04424Cu,0x4484E000u,0x3C0441C8u,0x4484D000u,0x3C0442A0u,0x4484C000u,0x00122140u,0x0004A021u,0x00042100u,0x0284A021u,0x06400005u,0x00000000u};
-inline constexpr uint8_t masks92[]={0,0,0,0,0,0,0,0,0,0,0,0};
 inline constexpr uint32_t words93[]={0x8FB50038u,0x8FBF003Cu,0x03E00008u,0x27BD0040u,0x27BDFF80u,0xE7B40054u,0xE7B60058u,0xE7B8005Cu,0xE7BA0060u,0xE7BC0064u,0xE7BE0068u,0xAFB0006Cu};
 inline constexpr uint8_t masks93[]={0,0,0,0,0,0,0,0,0,0,0,0};
 inline constexpr uint32_t words94[]={0x00000000u,0xC60C0258u,0x3C043FC0u,0x44846800u,0xC60E0780u,0x460D6302u,0x460D7342u,0xE60C0258u,0xE60D0780u,0x0C000000u,0x02202025u,0x0C000000u};
@@ -232,10 +226,6 @@ inline constexpr uint32_t words111[]={0x34040000u,0xA3A50003u,0xA3A50000u,0x8E06
 inline constexpr uint8_t masks111[]={0,0,0,0,0,0,0,0,0,0,0,0};
 inline constexpr uint32_t words112[]={0x02002025u,0x0C000000u,0x00000000u,0xC7AC00D8u,0x0C000000u,0x46006300u,0x0C000000u,0x8E0407BCu,0x00408825u,0x0C000000u,0x02202025u,0xC60C0030u};
 inline constexpr uint8_t masks112[]={0,2,0,0,2,0,2,0,0,2,0,0};
-inline constexpr uint32_t words113[]={0x0C000000u,0x46000306u,0xC60C07A8u,0xE60C07A0u,0x0C000000u,0x00000000u,0xC60C07A8u,0x46006302u,0xE60C07A8u,0x93840000u,0x10800008u,0x00000000u};
-inline constexpr uint8_t masks113[]={2,0,0,0,2,0,0,0,0,1,0,0};
-inline constexpr uint32_t words114[]={0x46000306u,0xC60C07A8u,0xE60C07A0u,0x0C000000u,0x00000000u,0xC60C07A8u,0x46006302u,0xE60C07A8u,0x93840000u,0x10800008u,0x00000000u,0x0C000000u};
-inline constexpr uint8_t masks114[]={0,0,0,2,0,0,0,0,1,0,0,2};
 inline constexpr uint32_t words115[]={0x92240825u,0x14800014u,0x00000000u,0xC62C0798u,0x3C0440A0u,0x44846800u,0x460D603Eu,0x00000000u,0x45010004u,0x00000000u,0x44806000u,0x1000000Au};
 inline constexpr uint8_t masks115[]={0,0,0,0,0,0,0,0,0,0,0,0};
 inline constexpr uint32_t words116[]={0x00000000u,0x8E640000u,0x34840010u,0xAE640000u,0x8644002Cu,0x58800012u,0x8645002Cu,0x8645002Cu,0x10A00005u,0x34040000u,0x8645005Eu,0x14A00003u};
@@ -284,8 +274,6 @@ inline constexpr uint32_t words137[]={0x03E00008u,0xA3840000u,0x03E00008u,0x9382
 inline constexpr uint8_t masks137[]={0,1,0,1,0,0,2,1,1,0,0,0};
 inline constexpr uint32_t words138[]={0x03E00008u,0x27BD00D0u,0x03E00008u,0xAF840000u,0x000439C0u,0x93860000u,0x00042100u,0x8F850000u,0x10C00004u,0x00E42023u,0x8CA20000u,0x10000003u};
 inline constexpr uint8_t masks138[]={0,0,0,1,0,1,0,1,0,0,0,0};
-inline constexpr uint32_t words139[]={0x3C044320u,0x44846800u,0x10000003u,0x460D6302u,0x3C044270u,0x44846000u,0x3C040000u,0x24840000u,0x24840000u,0xC48D0000u,0x3C04BF66u,0x34846666u};
-inline constexpr uint8_t masks139[]={0,0,0,0,0,0,1,1,1,1,0,0};
 inline constexpr uint32_t words140[]={0x00801025u,0x03E00008u,0x00000000u,0x8CA60000u,0x8F870000u,0x24C80001u,0x00E63021u,0x90C60000u,0x28C700CDu,0x10E0002Bu,0xACA80000u,0x28C7006Du};
 inline constexpr uint8_t masks140[]={0,0,0,0,1,0,0,0,0,0,0,0};
 inline constexpr uint32_t words141[]={0x24840000u,0x00A42021u,0xD8800000u,0xFAC00000u,0xC78C0000u,0xE7AC0058u,0x93840000u,0x00042A00u,0x00843021u,0x00862021u,0x00042140u,0x00A42021u};
@@ -370,7 +358,7 @@ inline constexpr uint32_t inVehicleWords[]={0x27BD0010u,0x3882000Au,0x03E00008u,
 inline constexpr uint8_t inVehicleMasks[]={0,0,0,0,0,0,0,0,0,0,0,0};
 inline constexpr uint32_t freeAimAboveWords[]={0x8FB00000u,0x8FBF0004u,0x03E00008u,0x27BD0010u,0x27BDFEE0u,0xE7B400F0u,0xAFB100FCu,0x4480A000u,0x00A08825u,0xE6340000u,0xE6340004u,0xAFB000F8u};
 inline constexpr uint8_t freeAimAboveMasks[]={0,0,0,0,0,0,0,0,0,0,0,0};
-inline constexpr std::array<console::AddressRule,180> rules={{
+inline constexpr std::array<console::AddressRule,174> rules={{
     {0x08810484u,0x08810474u,words0,masks0,12,36,16,0,0,console::AddressKind::Code},
     {0x0882DC20u,0x0882DC10u,menuCloseWords,menuCloseMasks,12,30,16,0,0,console::AddressKind::Code},
     {0x0882E470u,0x0882E460u,words1,masks1,12,44,16,0,0,console::AddressKind::Code},
@@ -474,9 +462,6 @@ inline constexpr std::array<console::AddressRule,180> rules={{
     {0x089C4F8Cu,0x089C4F7Cu,words87,masks87,12,17,16,0,0,console::AddressKind::Code},
     {0x089C57B4u,0x089C57A4u,words88,masks88,12,4,16,0,0,console::AddressKind::Code},
     {0x089C5CFCu,0x089C5CECu,words89,masks89,12,20,16,0,0,console::AddressKind::Code},
-    {0x089CB3A0u,0x089CB390u,words90,masks90,12,6,16,0,0,console::AddressKind::Code},
-    {0x089CB3A8u,0x089CB398u,words91,masks91,12,16,16,0,0,console::AddressKind::Code},
-    {0x089CB3B0u,0x089CB3A0u,words92,masks92,12,8,16,0,0,console::AddressKind::Code},
     {0x089D9AE4u,0x089D9AD4u,words93,masks93,12,34,16,0,0,console::AddressKind::Code},
     {0x089D9E14u,0x089D9E04u,words94,masks94,12,9,16,0,0,console::AddressKind::Code},
     {0x089D9E30u,0x089D9E20u,words95,masks95,12,46,16,0,0,console::AddressKind::Code},
@@ -498,8 +483,6 @@ inline constexpr std::array<console::AddressRule,180> rules={{
     {0x08A1A3E8u,0x08A1A3D8u,words110,masks110,12,36,16,0,0,console::AddressKind::Code},
     {0x08A1A3F0u,0x08A1A3E0u,words111,masks111,12,28,16,0,0,console::AddressKind::Code},
     {0x08A23E98u,0x08A23E88u,words112,masks112,12,28,16,0,0,console::AddressKind::Code},
-    {0x08A24130u,0x08A24120u,words113,masks113,12,8,16,0,0,console::AddressKind::Code},
-    {0x08A24134u,0x08A24124u,words114,masks114,12,4,16,0,0,console::AddressKind::Code},
     {0x08A29130u,0x08A29120u,words115,masks115,12,12,16,0,0,console::AddressKind::Code},
     {0x08A3AF58u,0x08A3AF48u,words116,masks116,12,40,16,0,0,console::AddressKind::Code},
     {0x08A3AF60u,0x08A3AF50u,words117,masks117,12,32,16,0,0,console::AddressKind::Code},
@@ -531,7 +514,6 @@ inline constexpr std::array<console::AddressRule,180> rules={{
     {0x08B0C4D4u,0x08B0C4C4u,words136,masks136,12,22,16,0,0,console::AddressKind::Code},
     {0x08B0C520u,0x08B0C510u,words137,masks137,12,15,16,0,0,console::AddressKind::Code},
     {0x08B1FD70u,0x08B1FD60u,words138,masks138,12,17,16,0,0,console::AddressKind::Code},
-    {0x08B45AC0u,0x08B45AB0u,words139,masks139,12,40,16,0,0,console::AddressKind::Code},
     {0x08BAAB84u,0x08861A70u,words140,masks140,12,44,16,0,0,console::AddressKind::GP},
     {0x08BAD098u,0x08934F48u,loadingStateWords,loadingStateMasks,12,2,16,0,0,console::AddressKind::GP},
     {0x08BADB10u,0x08823D40u,words141,masks141,12,15,16,0,0,console::AddressKind::GP},

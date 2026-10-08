@@ -1,5 +1,6 @@
 #include "Game.hpp"
 #include "../Shared/Console/Cutscene.hpp"
+#include "../Shared/Console/ScriptSlotZero.hpp"
 
 namespace lcs {
 namespace {
@@ -64,6 +65,9 @@ void DrawCutsceneBorders(void*) {
 }
 }
 void InstallCamera() {
+    // Script handles in slot 0 are valid (DOES_VEHICLE_EXIST).
+    static constexpr console::slot_zero::Ps2Site slotZero[] = {{0x189D10, 0x2C540045}};
+    console::slot_zero::PatchPs2(slotZero);
     fovCallback.bind(SetFOV); aspectCallback.bind(CalculateAspectRatio);
     injector::MakeJMP(0x2083A0, fovCallback.address());
     injector::MakeJMP(0x2083A8, aspectCallback.address());

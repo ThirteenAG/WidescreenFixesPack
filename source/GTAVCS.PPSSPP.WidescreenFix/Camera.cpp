@@ -1,5 +1,6 @@
 #include "Game.hpp"
 #include "../Shared/Console/Cutscene.hpp"
+#include "../Shared/Console/ScriptSlotZero.hpp"
 namespace vcsws {
 namespace {
 injector::hook_back<void(void*,int,float,float)> cameraSize;
@@ -31,10 +32,6 @@ void DrawCutsceneBorders(void*) {
         [&](const console::Rect& rect) { Drawing::solidHook.call<void>(&rect, &black, true); });
 }
 SafetyMipsMid littleWillie;
-float LodDistance(uintptr_t camera) {
-    *reinterpret_cast<float*>(camera+0x7A0)=*reinterpret_cast<float*>(camera+0x7A8)*settings.lod;
-    return settings.lod;
-}
 }
 void InstallCamera() {
     cameraSize.fun=injector::MakeCALL(Address<0x8934C58>(),CameraSize).get();
@@ -49,16 +46,7 @@ void InstallCamera() {
         uintptr_t vehicle=*reinterpret_cast<uintptr_t*>(camera+1984);
         if (vehicle && *distance==1.0f && *reinterpret_cast<int16_t*>(vehicle+86)==0xAD) *distance=2.0f;
     });
-    if (settings.lod>0) {
-        injector::MakeCALL(Address<0x8A24130>(),LodDistance);
-        injector::WriteInstr(Address<0x8A24134>(),mips_asm::move(mips_asm::a0,mips_asm::s0));
-        injector::MakeInlineLUIORI(Address<0x8b45ac0>(),60.0f*settings.lod);
-        injector::MakeInlineLUIORI(Address<0x89cb3a0>(),51.0f*settings.lod);
-        injector::MakeInlineLUIORI(Address<0x89cb3a8>(),25.0f*settings.lod);
-        injector::MakeInlineLUIORI(Address<0x89cb3b0>(),80.0f*settings.lod);
-    }
     injector::MakeNOP(Address<0x8ad4ef4>()); // Garage removal must not discard the saved vehicle.
-    injector::WriteInstr(Address<0x8ae8e30>(),0x06200004); // Script commands accept zero-valued indices.
-    injector::WriteInstr(Address<0x8a12a94>(),0x06200004);
+    console::slot_zero::PatchPortable<4>(pattern.text_addr, pattern.text_size); // Script handles in slot 0 are valid.
 }
 }

@@ -1,5 +1,6 @@
 #include "Game.hpp"
 #include "../Shared/Console/Cutscene.hpp"
+#include "../Shared/Console/ScriptSlotZero.hpp"
 namespace lcsws {
 namespace {
 injector::hook_back<void(void*,int,float,float)> cameraSize;
@@ -32,6 +33,7 @@ void DrawCutsceneBorders(void*) {
 }
 }
 void InstallCamera() {
+    console::slot_zero::PatchPortable<4>(pattern.text_addr, pattern.text_size); // Script handles in slot 0 are valid.
     cameraSize.fun=injector::MakeCALL(Address<0x89C1374>(),CameraSize).get();
     injector::MakeCALL(Address<0x8902530>(),SetFov);
     // Animated borders run every frame (including their exit transition) in
