@@ -50,6 +50,20 @@ CRect g_contentRect = {};
 bool g_drawingBars = false;
 export float g_drawOffsetX = 0.0f;
 
+// Loadscreen aspect ratio override. nullopt = Auto (raster-based guess, original behaviour).
+std::optional<float> g_loadscreenAspect;
+// Loading bar horizontal bounds, in pixels of a 1920-wide frame (stock LOADSCS logo: 111..521).
+float g_barLeft = 111.0f;
+float g_barRight = 521.0f;
+
+static bool IsLoadscTexture(const RwTexture* tex)
+{
+    if (!tex) return false;
+    const std::string_view name(tex->name, strnlen(tex->name, sizeof(tex->name)));
+    // loadsc* = loading screens; title_pc* = startup logo screen (e.g. title_pc_US).
+    return name.starts_with("loadsc") || name.starts_with("title_pc");
+}
+
 static inline float CorrectX(float x)
 {
     #if 0
@@ -94,7 +108,11 @@ static CRect ComputeContentRect(CSprite2d* sprite2d, const CRect* rect)
     float w = DEFAULT_ASPECT_RATIO, h = 1.0f; // default 4:3
 
     RwRaster* pRaster = RwTextureGetRaster(sprite2d->m_pTexture);
-    if (pRaster)
+    if (g_loadscreenAspect && IsLoadscTexture(sprite2d->m_pTexture))
+    {
+        // User-chosen ratio, capped at the screen's own ratio so the rect never overflows.
+        w = std::min(*g_loadscreenAspect, SCREEN_WIDTH / SCREEN_HEIGHT);
+    } else if (pRaster)
     {
         int32_t texW = RwRasterGetWidth(pRaster);
         int32_t texH = RwRasterGetHeight(pRaster);
@@ -123,13 +141,16 @@ static CRect ComputeLoadingBarRect(CSprite2d* sprite2d)
     const bool isLoadingArtwork = name.starts_with("loadsc")
         && ((name.size() == 7 && name[6] >= '1' && name[6] <= '9')
             || (name.size() == 8 && name[6] == '1' && name[7] >= '0' && name[7] <= '4'));
-    if (isLoadingArtwork && raster && raster->width > 0 && raster->height > 0
-        && int64_t(raster->width) * 9 == int64_t(raster->height) * 16)
+    const bool rasterIs169 = raster && raster->width > 0 && raster->height > 0
+        && int64_t(raster->width) * 9 == int64_t(raster->height) * 16;
+    const bool overrideIs169 = g_loadscreenAspect
+        && std::abs(*g_loadscreenAspect - 16.0f / 9.0f) < 0.01f;
+    if (isLoadingArtwork && (rasterIs169 || overrideIs169))
     {
         // LOADSCS widescreen artwork shares a logo at x=111..521 in 1920x1080.
         // Transform its bounds with the splash, including pillarbox/crop offset.
-        const float left = std::round(content.left + contentWidth * (111.0f / 1920.0f));
-        const float right = std::round(content.left + contentWidth * (521.0f / 1920.0f));
+        const float left = std::round(content.left + contentWidth * (g_barLeft / 1920.0f));
+        const float right = std::round(content.left + contentWidth * (g_barRight / 1920.0f));
         const float top = std::round(SCREEN_HEIGHT * (984.0f / 1080.0f));
         const float bottom = std::round(SCREEN_HEIGHT * (1008.0f / 1080.0f));
         return CRect(left, bottom, right, top);
@@ -571,6 +592,18 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
+                CIniReader iniReader("");
+                g_loadscreenAspect = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "LoadscreenAspectRatio", "Auto"));
+                if (g_loadscreenAspect && !(*g_loadscreenAspect > 0.5f && *g_loadscreenAspect <= 32.0f / 9.0f))
+                    g_loadscreenAspect.reset();
+
+                g_barLeft = iniReader.ReadFloat("MAIN", "LoadscreenBarLeft", 111.0f);
+                g_barRight = iniReader.ReadFloat("MAIN", "LoadscreenBarRight", 521.0f);
+                if (!(g_barLeft >= 0.0f && g_barRight > g_barLeft && g_barRight <= 1920.0f))
+                {
+                    g_barLeft = 111.0f;
+                    g_barRight = 521.0f;
+                }
             {
                 // Anchor the loading bar in the same texture space as its logo.
                 // Widescreen LOADSCS artwork has its own logo bounds. Square
