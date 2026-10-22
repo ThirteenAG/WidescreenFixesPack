@@ -33,12 +33,17 @@ namespace Camera
     }
 }
 
+struct HudBlur
+{
+    float x, y, z;
+    float blurU, blurV;
+    float maskU, maskV;
+};
+
 struct HudQuad
 {
-    float x[4];
-    float y[4];
-    float u[4];
-    float v[4];
+    float x[4], y[4];
+    float u[4], v[4];
     uint32_t color[4];
     int32_t texture;
     uint32_t blend;
@@ -457,6 +462,17 @@ void Init()
         ReticleHorizontal[i] = safetyhook::create_mid(drawScopeReticle + horizontalCalls[i], AdjustReticleHorizontal);
     for (size_t i = 0; i < _countof(ReticleVertical); ++i)
         ReticleVertical[i] = safetyhook::create_mid(drawScopeReticle + verticalCalls[i], AdjustReticleVertical);
+
+    pattern = hook::pattern("BE ? ? ? ? F3 ? A1 ? ? ? ? 8B"); //49B05D
+    const float uOffset = Screen.fHudOffset / Screen.fWidth43;
+    const float leftU = -uOffset;
+    const float rightU = 1.f + uOffset;
+    auto* vertices = reinterpret_cast<HudBlur*>(*reinterpret_cast<uintptr_t*>(pattern.count(1).get(0).get<uint8_t>(1)));
+    for (size_t i = 0; i < 4; ++i)
+    {
+        const float u = (i == 1 || i == 2) ? rightU : leftU;
+        injector::WriteMemory<float>(&vertices[i].maskU, u, true); //scopes and binos UV blur masks.
+    }
 
     static float fHudScale2 = (0.0009765625f / Screen.fAspectRatio) * (4.0f / 3.0f);
     pattern = hook::pattern("D8 ? ? ? ? ? D9 ? ? D9 ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? D9 ? ? ? D8"); //502232
