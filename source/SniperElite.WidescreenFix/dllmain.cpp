@@ -119,6 +119,7 @@ namespace UI
     enum DrawMode { Game, Menu, Info };
     DrawMode Mode = Game;
     bool CenteredText = false;
+    float ActionManagerTextScale = 0.5f, GameplayTextObjectScale = 0.65f;
     int32_t FontWidth;
     SafetyHookInline MenuDraw, MenuDrawOverlay, PrintText, PixelClip, DrawLine;
     SafetyHookMid MouseUpdate, MinimapIcons[3], MinimapRect, MinimapCenter;
@@ -231,6 +232,13 @@ namespace UI
     {
         hook::range_pattern((uintptr_t)begin, (uintptr_t)end, pattern_str(to_bytes(nativeWidth))).for_each_result(
             [=](hook::pattern_match match) { injector::WriteMemory(match.get<uint32_t>(), width, true); });
+    }
+
+    const float ScaleText()
+    {
+        const float widthScale = Screen.fWidth / 1024.0f;
+        const float heightScale = Screen.fHeight / 768.0f;
+        return heightScale / sqrtf(sqrtf((widthScale * widthScale + heightScale * heightScale) * 0.5f));
     }
 }
 
@@ -490,6 +498,20 @@ void Init()
             *(uintptr_t*)(regs.esi + 0x44) = regs.eax;
         }
     }; injector::MakeInline<HudHook2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
+
+    pattern = hook::pattern("8B ? ? ? ? ? A1 ? ? ? ? 8B ? ? ? 52 8B"); //46BD66
+    const float cursorScale = Screen.fHeight / 960.0f;
+    auto cursorHeight = *reinterpret_cast<float**>(pattern.count(1).get(0).get<uint8_t>(2));
+    auto cursorWidth = *reinterpret_cast<float**>(pattern.count(1).get(0).get<uint8_t>(7));
+    injector::WriteMemory(cursorWidth, *cursorWidth* cursorScale, true);
+    injector::WriteMemory(cursorHeight, *cursorHeight* cursorScale, true); //visible cursor size
+
+    const auto actionManagerDraw = hook::get_pattern<uint8_t>("D8 ? ? ? ? ? 50 D9 ? ? ? E8 ? ? ? ? 50", 2); //5E880C
+    const auto textObjectDraw = hook::get_pattern<uint8_t>("D8 ? ? ? ? ? 89 ? ? ? 8B ? ? ? D8 ? ? ? 89", 2); //4FEDF1
+    UI::ActionManagerTextScale *= UI::ScaleText();
+    UI::GameplayTextObjectScale *= UI::ScaleText();
+    injector::WriteMemory(actionManagerDraw, &UI::ActionManagerTextScale, true); //compass pointer, interaction hints
+    injector::WriteMemory(textObjectDraw, &UI::GameplayTextObjectScale, true); //npc quotes, objective alerts, weapon/scoring status
 
     auto minimapIcons = hook::pattern("E8 ? ? ? ? 8B ? 8B ? 04 8B ? ? 89 ? ? ? 8B ? ? 8D"); //50BB91, 50C10B
     for (size_t i = 0; i < 2; ++i)
