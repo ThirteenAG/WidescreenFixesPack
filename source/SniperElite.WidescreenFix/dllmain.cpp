@@ -37,12 +37,17 @@ namespace Camera
     }
 }
 
+struct HudBlur
+{
+    float x, y, z;
+    float blurU, blurV;
+    float maskU, maskV;
+};
+
 struct HudQuad
 {
-    float x[4];
-    float y[4];
-    float u[4];
-    float v[4];
+    float x[4], y[4];
+    float u[4], v[4];
     uint32_t color[4];
     int32_t texture;
     uint32_t blend;
@@ -524,6 +529,7 @@ void Init()
             "51 56 8B ? 8B ? ? 50 E8 ? ? ? ? 0F ? ? ? 8B",
             "56 57 8B ? 8B ? FF ? ? 8B ? ? 8B ? 3B",
             "A1 ? ? ? ? 56 8B ? ? ? 50 8B",
+            "BE ? ? ? ? F3 ? A1 ? ? ? ? 8B",
             "83 ? ? A1 ? ? ? ? 89 ? ? ? A0 ? ? ? ? 84 ? 0F ? ? ? ? ? A1 ? ? ? ? 84",
             "DB ? ? ? ? ? D8 ? ? ? ? ? DB ? ? ? ? ? D8 ? ? ? ? ? D9",
             "A1 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 6A",
@@ -548,6 +554,17 @@ void Init()
 
         auto pattern = hook::pattern("51 56 8B ? ? ? 85 ? 0F ? ? ? ? ? 80"); //408EE0
         Textures::RegisterTexture = safetyhook::create_inline(pattern.get_first(), Textures::Register);
+
+        pattern = hook::pattern("BE ? ? ? ? F3 ? A1 ? ? ? ? 8B"); //49B05D
+        const float uOffset = Screen.fHudOffset / Screen.fWidth43;
+        const float leftU = -uOffset;
+        const float rightU = 1.f + uOffset;
+        auto* vertices = reinterpret_cast<HudBlur*>(*reinterpret_cast<uintptr_t*>(pattern.count(1).get(0).get<uint8_t>(1)));
+        for (size_t i = 0; i < 4; ++i)
+        {
+            const float u = (i == 1 || i == 2) ? rightU : leftU;
+            injector::WriteMemory<float>(&vertices[i].maskU, u, true); //scopes and binos UV blur masks.
+        }
 
         pattern = hook::pattern("56 8B ? 56 E8 ? ? ? ? 8A"); //48B140
         uint8_t* drawHudQuad = pattern.count(1).get(0).get<uint8_t>(0);
