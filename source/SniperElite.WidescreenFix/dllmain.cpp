@@ -422,7 +422,7 @@ void Init()
     injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(15), Screen.fAspectRatio, true);
 
     pattern = hook::pattern("D8 ? ? ? ? ? 83 ? ? 6A ? 68 ? ? ? ? 51 D9 ? ? E8 ? ? ? ? 83 ? ? 83"); //4A15F6
-    injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(2), AdjustFOV(FOV, Screen.fAspectRatio), true);
+    injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(2), AdjustFOV(std::clamp(FOV, 70.f, 90.f), Screen.fAspectRatio), true);
 
     const auto cutsceneFOV = hook::get_pattern<uint8_t>("E8 ? ? ? ? 83 ? ? C6 ? ? ? ? ? ? F6 ? ? ? 74"); //4749FE
     const auto cutsceneFOVEvent = hook::get_pattern<uint8_t>("51 51 D9 ? ? E8 ? ? ? ? 83 ? ?", 5); //478A7A
