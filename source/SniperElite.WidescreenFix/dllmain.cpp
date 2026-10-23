@@ -33,12 +33,17 @@ namespace Camera
     }
 }
 
+struct HudBlur
+{
+    float x, y, z;
+    float blurU, blurV;
+    float maskU, maskV;
+};
+
 struct HudQuad
 {
-    float x[4];
-    float y[4];
-    float u[4];
-    float v[4];
+    float x[4], y[4];
+    float u[4], v[4];
     uint32_t color[4];
     int32_t texture;
     uint32_t blend;
@@ -114,6 +119,7 @@ namespace UI
     enum DrawMode { Game, Menu, Info };
     DrawMode Mode = Game;
     bool CenteredText = false;
+    float ActionManagerTextScale = 0.5f, GameplayTextObjectScale = 0.65f;
     int32_t FontWidth;
     SafetyHookInline MenuDraw, MenuDrawOverlay, PrintText, PixelClip, DrawLine;
     SafetyHookMid MouseUpdate, MinimapIcons[3], MinimapRect, MinimapCenter;
@@ -226,6 +232,13 @@ namespace UI
     {
         hook::range_pattern((uintptr_t)begin, (uintptr_t)end, pattern_str(to_bytes(nativeWidth))).for_each_result(
             [=](hook::pattern_match match) { injector::WriteMemory(match.get<uint32_t>(), width, true); });
+    }
+
+    const float ScaleText()
+    {
+        const float widthScale = Screen.fWidth / 1024.0f;
+        const float heightScale = Screen.fHeight / 768.0f;
+        return heightScale / sqrtf(sqrtf((widthScale * widthScale + heightScale * heightScale) * 0.5f));
     }
 }
 
@@ -417,7 +430,7 @@ void Init()
     injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(15), Screen.fAspectRatio, true);
 
     pattern = hook::pattern("D8 ? ? ? ? ? 83 ? ? 6A ? 68 ? ? ? ? 51 D9 ? ? E8 ? ? ? ? 83 ? ? 83"); //4A15F6
-    injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(2), AdjustFOV(FOV, Screen.fAspectRatio), true);
+    injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(2), AdjustFOV(std::clamp(FOV, 70.f, 90.f), Screen.fAspectRatio), true);
 
     const auto cutsceneFOV = hook::get_pattern<uint8_t>("E8 ? ? ? ? 83 ? ? C6 ? ? ? ? ? ? F6 ? ? ? 74"); //4749FE
     const auto cutsceneFOVEvent = hook::get_pattern<uint8_t>("51 51 D9 ? ? E8 ? ? ? ? 83 ? ?", 5); //478A7A
@@ -458,6 +471,17 @@ void Init()
     for (size_t i = 0; i < _countof(ReticleVertical); ++i)
         ReticleVertical[i] = safetyhook::create_mid(drawScopeReticle + verticalCalls[i], AdjustReticleVertical);
 
+    pattern = hook::pattern("BE ? ? ? ? F3 ? A1 ? ? ? ? 8B"); //49B05D
+    const float uOffset = Screen.fHudOffset / Screen.fWidth43;
+    const float leftU = -uOffset;
+    const float rightU = 1.f + uOffset;
+    auto* vertices = reinterpret_cast<HudBlur*>(*reinterpret_cast<uintptr_t*>(pattern.count(1).get(0).get<uint8_t>(1)));
+    for (size_t i = 0; i < 4; ++i)
+    {
+        const float u = (i == 1 || i == 2) ? rightU : leftU;
+        injector::WriteMemory<float>(&vertices[i].maskU, u, true); //scopes and binos UV blur masks.
+    }
+
     static float fHudScale2 = (0.0009765625f / Screen.fAspectRatio) * (4.0f / 3.0f);
     pattern = hook::pattern("D8 ? ? ? ? ? D9 ? ? D9 ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? D9 ? ? ? D8"); //502232
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fHudScale2, true); //text size and radar arrows
@@ -474,6 +498,20 @@ void Init()
             *(uintptr_t*)(regs.esi + 0x44) = regs.eax;
         }
     }; injector::MakeInline<HudHook2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
+
+    pattern = hook::pattern("8B ? ? ? ? ? A1 ? ? ? ? 8B ? ? ? 52 8B"); //46BD66
+    const float cursorScale = Screen.fHeight / 960.0f;
+    auto cursorHeight = *reinterpret_cast<float**>(pattern.count(1).get(0).get<uint8_t>(2));
+    auto cursorWidth = *reinterpret_cast<float**>(pattern.count(1).get(0).get<uint8_t>(7));
+    injector::WriteMemory(cursorWidth, *cursorWidth* cursorScale, true);
+    injector::WriteMemory(cursorHeight, *cursorHeight* cursorScale, true); //visible cursor size
+
+    const auto actionManagerDraw = hook::get_pattern<uint8_t>("D8 ? ? ? ? ? 50 D9 ? ? ? E8 ? ? ? ? 50", 2); //5E880C
+    const auto textObjectDraw = hook::get_pattern<uint8_t>("D8 ? ? ? ? ? 89 ? ? ? 8B ? ? ? D8 ? ? ? 89", 2); //4FEDF1
+    UI::ActionManagerTextScale *= UI::ScaleText();
+    UI::GameplayTextObjectScale *= UI::ScaleText();
+    injector::WriteMemory(actionManagerDraw, &UI::ActionManagerTextScale, true); //compass pointer, interaction hints
+    injector::WriteMemory(textObjectDraw, &UI::GameplayTextObjectScale, true); //npc quotes, objective alerts, weapon/scoring status
 
     auto minimapIcons = hook::pattern("E8 ? ? ? ? 8B ? 8B ? 04 8B ? ? 89 ? ? ? 8B ? ? 8D"); //50BB91, 50C10B
     for (size_t i = 0; i < 2; ++i)
