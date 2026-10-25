@@ -1,0 +1,7 @@
+// Embedded settings and text; the full cfg is written on first launch.
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/GTAClassic/en.json"
+fr ASISETTINGS_TEXT "../../text/GTAClassic/fr.json"
+de ASISETTINGS_TEXT "../../text/GTAClassic/de.json"
+it ASISETTINGS_TEXT "../../text/GTAClassic/it.json"
+es ASISETTINGS_TEXT "../../text/GTAClassic/es.json"

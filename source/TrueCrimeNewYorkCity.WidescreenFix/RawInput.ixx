@@ -1,14 +1,22 @@
-﻿module;
+module;
 
 #include <stdafx.h>
 #include <xmmintrin.h>
 #include <cmath>
+#include "OverlayInput.hpp"
+#include "RawMouse.hpp"
 
 export module RawInput;
 
 import ComVars;
 
-export float fRawInputMouse = 0.0f;
+export bool bRawInputMouse = true;
+export bool bRawInputMouseRawData = true;
+export void SetRawMouseSensitivity(float value)
+{
+    TCRawMouse::SetSensitivity(value);
+}
+float MouseDeltaX = 0.0f, MouseDeltaY = 0.0f;
 
 float* fMouseSens = nullptr;
 bool bIsAimingModeSwitch = false;
@@ -35,12 +43,21 @@ HWND hGameWindow = NULL;
 SafetyHookInline shsub_653250 = {};
 LRESULT __fastcall sub_653250(void* _this, void* edx, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
-    static bool bOnce = false;
-    if (!bOnce)
+    LRESULT overlayResult;
+    if (TCOverlay::Message(hWnd, Msg, wParam, lParam, overlayResult)) return overlayResult;
+    // Keep native deactivation and minimization handlers from disrupting the renderer.
+    if ((Msg == WM_ACTIVATEAPP && !wParam) || (Msg == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE) ||
+        ((Msg == WM_NCACTIVATE || Msg == WM_KILLFOCUS || Msg == WM_SHOWWINDOW) && !wParam) ||
+        (Msg == WM_SIZE && wParam == SIZE_MINIMIZED) ||
+        (Msg == WM_SYSCOMMAND && (wParam & 0xFFF0) == SC_MINIMIZE) ||
+        (Msg == WM_WINDOWPOSCHANGED && lParam && (reinterpret_cast<WINDOWPOS*>(lParam)->flags & SWP_HIDEWINDOW)))
+        return DefWindowProcW(hWnd, Msg, wParam, lParam);
+    static bool registered = false;
+    if (!registered && bRawInputMouse && fMouseSens)
     {
         hGameWindow = hWnd;
-        RawCursorHandler<float>::Initialize(hGameWindow, fRawInputMouse * *fMouseSens / 1000.0f);
-        bOnce = true;
+        RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, 1.0f, bRawInputMouseRawData);
+        registered = true;
     }
     return shsub_653250.unsafe_fastcall<LRESULT>(_this, edx, hWnd, Msg, wParam, lParam);
 }
@@ -55,13 +72,18 @@ static float idle_timer = 0.0f;
 SafetyHookInline shsub_40D990 = {};
 void __stdcall sub_40D990(float a1)
 {
+    if (TCOverlay::BlocksInput())
+    {
+        MouseDeltaX = MouseDeltaY = 0;
+        return;
+    }
     static float prev_idle_timer = 0.0f;
     static float accumulated_yaw = 0.0f;
     static float accumulated_pitch = 0.0f;
     static int8_t prev_camera_mode_local = -1;
 
-    float delta_x = RawCursorHandler<float>::MouseDeltaX;
-    float delta_y = RawCursorHandler<float>::MouseDeltaY;
+    float delta_x = MouseDeltaX;
+    float delta_y = MouseDeltaY;
 
     if ((*dword_79430C)[4111])
         delta_x = -delta_x;
@@ -70,8 +92,8 @@ void __stdcall sub_40D990(float a1)
         delta_y = -delta_y;
 
     // Reset deltas for next frame
-    RawCursorHandler<float>::MouseDeltaX = 0.0f;
-    RawCursorHandler<float>::MouseDeltaY = 0.0f;
+    MouseDeltaX = 0.0f;
+    MouseDeltaY = 0.0f;
 
     bool mouse_moved = (std::fabs(delta_x) > 1e-6f || std::fabs(delta_y) > 1e-6f);
 
@@ -231,6 +253,12 @@ void __stdcall sub_40D990(float a1)
     }
 }
 
+export void InitOverlayWindowInput()
+{
+    auto pattern = find_pattern("81 EC 90 00 00 00 53", "83 EC 48 53 8B 5C 24");
+    if (!pattern.empty()) shsub_653250 = safetyhook::create_inline(pattern.get_first(0), sub_653250);
+}
+
 export void InitRawInput()
 {
     auto pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 68 3F 8F F7 79");
@@ -260,9 +288,6 @@ export void InitRawInput()
     pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 20 F3 0F 10 05 ? ? ? ? F3 0F 59 45");
     shsub_40D990 = safetyhook::create_inline(pattern.get_first(0), sub_40D990);
 
-    pattern = find_pattern("81 EC 90 00 00 00 53", "83 EC 48 53 8B 5C 24");
-    shsub_653250 = safetyhook::create_inline(pattern.get_first(0), sub_653250);
-
     static float menuDeltaX = 0.0f;
     static float menuDeltaY = 0.0f;
 
@@ -270,22 +295,40 @@ export void InitRawInput()
     static auto UpdateInputHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         if (hGameWindow != GetForegroundWindow())
+        {
+            RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0);
+            RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0);
+            MouseDeltaX = MouseDeltaY = menuDeltaX = menuDeltaY = 0.0f;
             return;
+        }
 
-        RawCursorHandler<float>::UpdateMouseInput(false);
+        if (TCOverlay::BlocksInput())
+        {
+            // Drain input while the developer overlay owns it.
+            RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0);
+            RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0);
+            MouseDeltaX = MouseDeltaY = 0;
+            menuDeltaX = menuDeltaY = 0;
+            return;
+        }
+
+        auto delta = TCRawMouse::FromCounts(RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0),
+            RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0), fMouseSens ? *fMouseSens : 0.0f);
+        MouseDeltaX += delta.x;
+        MouseDeltaY += delta.y;
 
         if (*byte_850D8A)
             bNonMouseCameraMovement = true;
-        else if (std::fabs(RawCursorHandler<float>::MouseDeltaX) > 1e-6f || std::fabs(RawCursorHandler<float>::MouseDeltaY) > 1e-6f)
+        else if (std::fabs(MouseDeltaX) > 1e-6f || std::fabs(MouseDeltaY) > 1e-6f)
             bNonMouseCameraMovement = false;
 
         if (*nLoading != 0 || *bCutscene || *bPause || bNonMouseCameraMovement)
         {
-            menuDeltaX = RawCursorHandler<float>::MouseDeltaX;
-            menuDeltaY = RawCursorHandler<float>::MouseDeltaY;
+            menuDeltaX = MouseDeltaX;
+            menuDeltaY = MouseDeltaY;
             idle_timer = 10.0f;
-            RawCursorHandler<float>::MouseDeltaX = 0.0f;
-            RawCursorHandler<float>::MouseDeltaY = 0.0f;
+            MouseDeltaX = 0.0f;
+            MouseDeltaY = 0.0f;
         }
     });
 

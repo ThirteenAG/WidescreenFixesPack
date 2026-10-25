@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "FixSettings.hpp"
 #include <d3d9.h>
 #include <D3dx9.h>
 #pragma comment(lib, "D3dx9.lib")
@@ -160,10 +161,10 @@ void* __fastcall sub_100B9860(void* _this, void* edx, int a2, int a3, int a4, in
 
 export void InitD3DDrv()
 {
-    CIniReader iniReader("");
-    static auto nShadowMapResolutionMultiplier = std::clamp(iniReader.ReadInteger("GRAPHICS", "ShadowMapResolutionMultiplier", 0), 0, 16);
-    nGlowResolutionMultiplier = std::clamp(iniReader.ReadInteger("GRAPHICS", "GlowResolutionMultiplier", 0), 0, 16);
-    static auto nMirrorResolutionMultiplier = std::clamp(iniReader.ReadInteger("GRAPHICS", "MirrorResolutionMultiplier", 0), 0, 16);
+
+    static auto nShadowMapResolutionMultiplier = std::clamp(FixSettings().Int("GRAPHICS.ShadowMapResolutionMultiplier"), 0, 16);
+    nGlowResolutionMultiplier = std::clamp(FixSettings().Int("GRAPHICS.GlowResolutionMultiplier"), 0, 16);
+    static auto nMirrorResolutionMultiplier = std::clamp(FixSettings().Int("GRAPHICS.MirrorResolutionMultiplier"), 0, 16);
 
     if (nShadowMapResolutionMultiplier)
     {
@@ -185,7 +186,7 @@ export void InitD3DDrv()
         {
             auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), xref);
             auto v = injector::ReadMemory<uint32_t>(pattern.get_first(1), true);
-            injector::WriteMemory(pattern.get_first(1), v * nShadowMapResolutionMultiplier, true);
+            ProtectedGameRef<uint32_t>(pattern.get_first<uint32_t>(1)) = v * nShadowMapResolutionMultiplier;
         }
     }
 
@@ -333,7 +334,7 @@ export void InitD3DDrv()
             *(int32_t*)(regs.esp + 0x10) = regs.edx;
         }
     }; injector::MakeInline<RenderFilmstrip_Hook2>(pattern.get_first(0), pattern.get_first(6));
-    injector::WriteMemory<uint16_t>(pattern.get_first(6), 0xD285, true);     //test    edx, edx
+    ProtectedGameRef<uint16_t>(pattern.get_first<uint16_t>(6)) = 0xD285;     //test    edx, edx
 
     //SetRes
     static auto pPresentParams = *hook::module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? F3 AB 8B 0D ? ? ? ? 39 01 8B 4D").get_first<D3DPRESENT_PARAMETERS*>(1);
@@ -358,17 +359,16 @@ export void InitD3DDrv()
 
             RawInputHandler<>::OnResChange();
 
-            CIniReader iniReader("");
             auto [DesktopResW, DesktopResH] = GetDesktopRes();
             if (Screen.Width != DesktopResW || Screen.Height != DesktopResH)
             {
-                iniReader.WriteInteger("MAIN", "ResX", Screen.Width);
-                iniReader.WriteInteger("MAIN", "ResY", Screen.Height);
+                FixSettings().Set("MAIN.ResX", std::to_string(Screen.Width));
+                FixSettings().Set("MAIN.ResY", std::to_string(Screen.Height));
             }
             else
             {
-                iniReader.WriteInteger("MAIN", "ResX", 0);
-                iniReader.WriteInteger("MAIN", "ResY", 0);
+                FixSettings().Set("MAIN.ResX", std::to_string(0));
+                FixSettings().Set("MAIN.ResY", std::to_string(0));
             }
 
             Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 800.0f, 600.0f);
@@ -406,8 +406,8 @@ export void InitD3DDrv()
             auto hEngine = GetModuleHandle(L"Engine");
             if (hEngine)
             {
-                injector::WriteMemory(GetProcAddress(hEngine, "?MIRROR_WIDTH@@3IA"), std::clamp(640 * nMirrorResolutionMultiplier, 640, (int)Screen.Width), true);
-                injector::WriteMemory(GetProcAddress(hEngine, "?MIRROR_HEIGHT@@3IA"), std::clamp(360 * nMirrorResolutionMultiplier, 360, (int)Screen.Height), true);
+                ProtectedGameRef<int>(reinterpret_cast<int*>(GetProcAddress(hEngine, "?MIRROR_WIDTH@@3IA"))) = std::clamp(640 * nMirrorResolutionMultiplier, 640, (int)Screen.Width);
+                ProtectedGameRef<int>(reinterpret_cast<int*>(GetProcAddress(hEngine, "?MIRROR_HEIGHT@@3IA"))) = std::clamp(360 * nMirrorResolutionMultiplier, 360, (int)Screen.Height);
             }
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(0));
@@ -508,11 +508,11 @@ export void InitD3DDrv()
 
     static float f4 = 4.0f * fLightsMultiplier;
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 1D ? ? ? ? F3 0F 10 66 ? F3 0F 59 64 24 ? 8B 8C 24");
-    injector::WriteMemory(pattern.get_first(4), &f4, true);
+    ProtectedGameRef<float*>(pattern.get_first<float*>(4)) = &f4;
 
     static float f8 = 8.0f * fLightsMultiplier;
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 25 ? ? ? ? 0F 28 C8 F3 0F 59 0D ? ? ? ? F3 0F 58 0D ? ? ? ? F3 0F 59 C8 F3 0F 10 47");
-    injector::WriteMemory(pattern.get_first(4), &f8, true);
+    ProtectedGameRef<float*>(pattern.get_first<float*>(4)) = &f8;
 
     // Video Loadscreens scaling
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 8B C8 E8 ? ? ? ? 8B 9E");

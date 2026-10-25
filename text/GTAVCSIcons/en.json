@@ -1,0 +1,14 @@
+{
+  "plugin.name": "GTA Vice City Stories PPSSPP Gamepad Icons",
+  "page.controls": "Controls",
+  "icons": "Controller icons",
+  "icons.description": "Choose the controller artwork. The game’s controller-menu cycler also changes and saves this setting. Hub edits apply on the next emulated-game startup.",
+  "set.PSP": "Original PSP",
+  "set.360": "Xbox 360",
+  "set.XBO": "Xbox One",
+  "set.PS3": "PlayStation 3",
+  "set.PS4": "PlayStation 4",
+  "set.PS5": "PlayStation 5",
+  "set.SWI": "Nintendo Switch",
+  "set.DEK": "Steam Deck"
+}

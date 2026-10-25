@@ -1,0 +1,40 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Red Dead Redemption",
+        "exe": [
+          "RDR.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "advanced",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    }
+  ]
+}

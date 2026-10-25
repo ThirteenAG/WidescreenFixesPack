@@ -1,0 +1,175 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Resident Evil 0",
+        "exe": [
+          "re0hd.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.HideMouseCursorAfterMs",
+      "type": "int",
+      "default": 5000,
+      "label": "@HideMouseCursorAfterMs",
+      "description": "@HideMouseCursorAfterMs.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 5000,
+        "enhanced": 5000
+      },
+      "min": 0,
+      "max": 600000
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.DoorSkip",
+      "type": "bool",
+      "default": 1,
+      "label": "@DoorSkip",
+      "description": "@DoorSkip.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 2,
+      "choices": [
+        {
+          "value": 1,
+          "label": "@WindowMode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@WindowMode.borderless"
+        }
+      ],
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.LightSyncRGB",
+      "type": "bool",
+      "default": 1,
+      "label": "@LightSyncRGB",
+      "description": "@LightSyncRGB.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.DisableNoise",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableNoise",
+      "description": "@DisableNoise.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.DisableColorCorrection",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableColorCorrection",
+      "description": "@DisableColorCorrection.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.DisableFog",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableFog",
+      "description": "@DisableFog.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.DisableCreateQuery",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableCreateQuery",
+      "description": "@DisableCreateQuery.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart"
+    }
+  ]
+}

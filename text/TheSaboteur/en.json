@@ -1,0 +1,19 @@
+{
+  "plugin.name": "The Saboteur Fusion Fix",
+  "page.display": "Display",
+  "page.graphics": "Graphics",
+  "FixFOV": "Widescreen field of view",
+  "FixFOV.description": "Widen the camera's field of view on screens wider than 4:3 (Hor+).",
+  "WindowMode": "Window mode",
+  "WindowMode.description": "The window when the game's own fullscreen option is off: with a frame, or borderless. A window as big as the screen has its frame outside the screen.",
+  "WindowMode.windowed": "Windowed",
+  "WindowMode.borderless": "Borderless",
+  "FPSLimit": "Frame rate limit",
+  "FPSLimit.description": "Limit the frame rate; the fix's timing corrections for driving, the clock and the mouse use it. 0 removes the limit and those corrections.",
+  "ConsoleGamma": "Console gamma",
+  "ConsoleGamma.description": "Use the gamma of the Xbox 360 version.",
+  "AntiAliasing": "Anti-aliasing",
+  "AntiAliasing.description": "SMAA anti-aliasing, applied before the HUD is drawn.",
+  "AntiAliasing.off": "Off",
+  "AntiAliasing.smaa": "SMAA"
+}

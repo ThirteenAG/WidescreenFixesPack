@@ -3,10 +3,10 @@
 #include "../Shared/Console/PS2Display.hpp"
 #include "../../external/injector/include/ps2/patches.hpp"
 #include <cstdio>
+#include "Settings.hpp"
+PCSX2F_CFG_SETTINGS();
 extern "C" {
-#include "../../external/injector/include/ps2/inireader.h"
 int CompatibleCRCList[] = {static_cast<int>(0x7EA439F5)};
-char PluginData[MaxIniSize] = {1};
 int PCSX2Data[PCSX2Data_Size] = {1};
 char OSDText[OSDStringNum][OSDStringSize] = {{1}};
 char KeyboardState[StateNum][StateSize] = {{1}};
@@ -43,22 +43,24 @@ void Rejected(pcsx2_hook_status status) {
 extern "C" void init() {
     using namespace lcs;
     if (injector::InitializeCheckedRuntime(Rejected) != PCSX2_HOOK_OK) return;
-    inireader.SetIniPath(PluginData + sizeof(uint32_t), *reinterpret_cast<const uint32_t*>(PluginData));
+    config::Load();
     UpdateViewport();
-    settings.hudScale = console::bounded(inireader.ReadFloat("HUD", "HudScale", 1.0f), 0.5f, 1.5f, 1.0f);
-    settings.widescreen = inireader.ReadInteger("MAIN", "ImprovedWidescreenSupport", 0) != 0;
-    settings.sixtyFPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0) != 0;
-    settings.unthrottle = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1) != 0;
-    settings.pcControls = inireader.ReadInteger("CONTROLS", "PCControlScheme", 0) != 0;
-    settings.mouseSensitivity = console::bounded(inireader.ReadFloat("CONTROLS", "MouseSensitivity", 0.002f), 0.0001f, 0.02f, 0.002f);
-    settings.invertMouse = inireader.ReadInteger("CONTROLS", "InvertMouseY", 0) != 0;
-    settings.cutsceneBorders = inireader.ReadInteger("DISPLAY", "CutsceneBorders", 1) != 0;
-    settings.disableBlur = inireader.ReadInteger("MAIN", "DisableBlur", 0) != 0;
+    settings.hudScale = config::Number(8, 1.0f, 0.5f, 1.5f);
+    settings.widescreen = config::Boolean(1, true);
+    settings.sixtyFPS = config::Boolean(2, false);
+    settings.unthrottle = config::Boolean(3, true);
+    settings.pcControls = config::Boolean(5, false);
+    settings.mouseSensitivity = config::Number(6, 1.0f, 0.05f, 10.0f) * 0.002f;
+    settings.invertMouse = config::Boolean(7, false);
+    settings.cutsceneBorders = int(config::Number(9, 3.0f, 0.0f, 3.0f));
+    settings.fovFactor = config::Number(11, 1.0f, 0.5f, 2.0f);
+    settings.hudAspect = console::parse_hud_aspect(config::values[12].value);
+    settings.disableBlur = config::Boolean(4, true);
     LoadBindings();
     InstallAim();
     InstallControls();
     InstallMenu();
-    if (inireader.ReadInteger("MAIN", "SkipIntro", 1)) injector::MakeNOP(0x1F35EC);
+    if (config::Boolean(0, true)) injector::MakeNOP(0x1F35EC);
     if (settings.widescreen) {
         InstallCamera();
         InstallDrawing();

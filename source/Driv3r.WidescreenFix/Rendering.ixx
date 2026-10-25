@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Rendering;
 
@@ -76,16 +77,21 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            static float fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
-            fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
+            auto& settings = FixSettings();
+            static const auto& fCustomFieldOfView = settings.Float("MAIN.FOVFactor");
+            fHudAspectRatioConstraint = ParseWidescreenHudOffset(settings.String("MAIN.HudAspectRatioConstraint"));
 
-            onResChange() += [](int Width, int Height)
+            auto updateFOV = []()
+            {
+                const float factor = std::isfinite(fCustomFieldOfView) ? std::clamp(fCustomFieldOfView, 0.5f, 2.0f) : 1.0f;
+                fFieldOfView = std::clamp(2.0f * std::atan(std::tan(1.04f * 0.5f) * (fAspectRatio / baseAspect)) * factor, 0.01f, 3.124f);
+            };
+            settings.OnChange("MAIN.FOVFactor", updateFOV);
+
+            onResChange() += [updateFOV](int Width, int Height)
             {
                 fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
-                fFieldOfView = 2.0f * std::atan(std::tan(1.04f * 0.5f) * (fAspectRatio / baseAspect));
-                if (fCustomFieldOfView)
-                    fFieldOfView *= fCustomFieldOfView;
+                updateFOV();
 
                 targetHudAspect = fAspectRatio;
                 if (fHudAspectRatioConstraint.has_value())
@@ -99,6 +105,14 @@ public:
                 fPauseMapAspectRatio = fAspectRatio;
             };
 
+
+            settings.OnChange("MAIN.HudAspectRatioConstraint", []()
+            {
+                fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+                targetHudAspect = fAspectRatio;
+                if (fHudAspectRatioConstraint && *fHudAspectRatioConstraint >= 0.0f)
+                    targetHudAspect = ClampHudAspectRatio(*fHudAspectRatioConstraint, fAspectRatio);
+            });
 
             auto pattern = hook::pattern("8B 44 24 04 89 41 ? B0 01 C2 04 00"); //0x580C00
             struct MenuAspectRatioSwitchHook
@@ -255,8 +269,8 @@ public:
 
             // Object disappearance fix
             pattern = hook::pattern("D9 83 80 01 00 00 ? ? ? 01 00 00");
-            injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<void*>(2), 0x84i8, true); //0x57D4C2
-            injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<void*>(2), 0x84i8, true); //0x57D505
+            ProtectedGameRef<uint8_t>(pattern.count(2).get(0).get<uint8_t>(2)) = 0x84i8; //0x57D4C2
+            ProtectedGameRef<uint8_t>(pattern.count(2).get(1).get<uint8_t>(2)) = 0x84i8; //0x57D505
 
             pattern = hook::pattern("83 EC ? 53 8B 5C 24 ? 57 8B F9");
             shsub_53BC50 = safetyhook::create_inline(pattern.get_first(), sub_53BC50);

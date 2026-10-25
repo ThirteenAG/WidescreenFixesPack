@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <xinput.h>
 
 export module Splitscreen;
@@ -394,8 +395,8 @@ namespace Splitscreen
         auto getStateSlot = *pattern.get_first<decltype(GetState)*>(18);
         SetState = *setStateSlot;
         GetState = *getStateSlot;
-        injector::WriteMemory(setStateSlot, &XInputSetState, true);
-        injector::WriteMemory(getStateSlot, &XInputGetState, true);
+        ProtectedGameRef<decltype(&XInputSetState)>(reinterpret_cast<decltype(&XInputSetState)*>(setStateSlot)) = &XInputSetState;
+        ProtectedGameRef<decltype(&XInputGetState)>(reinterpret_cast<decltype(&XInputGetState)*>(getStateSlot)) = &XInputGetState;
 
         pattern = hook::pattern("89 BE ? ? ? ? 89 3D ? ? ? ? EB 06 89 9E ? ? ? ? 83 C6 04 83 FE 08 0F 8C ? ? ? ? 5F 5E 5B C9 C3");
         padXInput = *pattern.get_first<uint32_t*>(2) - 2; // dword_1431E3C - 8
@@ -441,11 +442,10 @@ export void InitSplitscreen()
     if (bInstance1)
         Splitscreen::LaunchSecondInstance();
 
-    CIniReader iniReader("");
-    Splitscreen::layout = iniReader.ReadInteger("2INSTANCESPLITSCREEN", "Layout", 0) == 1 ? Splitscreen::Layout::LeftRight : Splitscreen::Layout::TopBottom;
-    Splitscreen::padInstance1 = iniReader.ReadInteger("2INSTANCESPLITSCREEN", "GamepadInstance1", 1);
-    Splitscreen::padInstance2 = iniReader.ReadInteger("2INSTANCESPLITSCREEN", "GamepadInstance2", 2);
-    Splitscreen::profileName2 = iniReader.ReadString("2INSTANCESPLITSCREEN", "ProfileInstance2", "Guest");
+    Splitscreen::layout = FixSettings().Int("2INSTANCESPLITSCREEN.Layout") == 1 ? Splitscreen::Layout::LeftRight : Splitscreen::Layout::TopBottom;
+    Splitscreen::padInstance1 = FixSettings().Int("2INSTANCESPLITSCREEN.GamepadInstance1");
+    Splitscreen::padInstance2 = FixSettings().Int("2INSTANCESPLITSCREEN.GamepadInstance2");
+    Splitscreen::profileName2 = FixSettings().String("2INSTANCESPLITSCREEN.ProfileInstance2");
 
     Splitscreen::shCreateSemaphoreA = safetyhook::create_inline(::CreateSemaphoreA, Splitscreen::CreateSemaphoreA);
     Splitscreen::InitPads();
@@ -681,8 +681,8 @@ namespace LocalSplitscreen
 
 export void InitLocalSplitscreen()
 {
-    CIniReader iniReader("");
-    if (iniReader.ReadInteger("SPLITSCREEN", "Enable", 0) == 0 || bEnableSplitscreen)
+
+    if (FixSettings().Bool("SPLITSCREEN.Enable") == 0 || bEnableSplitscreen)
         return;
 
     Splitscreen::localSplitscreen = true;
@@ -693,10 +693,10 @@ export void InitLocalSplitscreen()
             return nullptr;
         return reinterpret_cast<void*>(Splitscreen::viewportPlayer1);
     };
-    Splitscreen::padPlayer1 = iniReader.ReadInteger("SPLITSCREEN", "GamepadPlayer1", 0);
-    Splitscreen::padPlayer2 = iniReader.ReadInteger("SPLITSCREEN", "GamepadPlayer2", 1);
-    Splitscreen::invertYPlayer2 = iniReader.ReadInteger("SPLITSCREEN", "InvertYPlayer2", 0) != 0;
-    Splitscreen::profileName2 = iniReader.ReadString("SPLITSCREEN", "ProfilePlayer2", "Guest");
+    Splitscreen::padPlayer1 = FixSettings().Int("SPLITSCREEN.GamepadPlayer1");
+    Splitscreen::padPlayer2 = FixSettings().Int("SPLITSCREEN.GamepadPlayer2");
+    Splitscreen::invertYPlayer2 = FixSettings().Bool("SPLITSCREEN.InvertYPlayer2") != 0;
+    Splitscreen::profileName2 = FixSettings().String("SPLITSCREEN.ProfilePlayer2");
     Splitscreen::InitPads();
     Splitscreen::InitProfiles();
 

@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
 
 export module Weather;
 
@@ -107,37 +108,37 @@ public:
         {
             if (Settings.visualStyle == VisualStyle::DE)
                 return;
-            auto skyTopRAddress = hook::pattern("44 89 3D ? ? ? ? F3 41 0F 2A 94 8E 70 5F 04 05 F3 0F 59 CD F3 41 0F").get_first<uint8_t>(3);
-            auto skyTopGAddress = hook::pattern("44 89 25 ? ? ? ? F3 41 0F 2A 94 8E F0 5D 04 05 F3 0F 59 CD F3 41 0F").get_first<uint8_t>(3);
-            auto skyTopBAddress = hook::pattern("44 89 2D ? ? ? ? F3 41 0F 2A 94 8E 70 5C 04 05 F3 41 0F 59 D2 F3 0F").get_first<uint8_t>(3);
-            auto skyBottomRAddress = hook::pattern("89 15 ? ? ? ? F3 41 0F 2A 94 8E F0 5A 04 05 F3 0F 59 CD F3 41 0F 59").get_first<uint8_t>(2);
-            auto skyBottomGAddress = hook::pattern("89 1D ? ? ? ? F3 41 0F 2A 94 8E 70 71 04 05 F3 0F 59 CD F3 41 0F 59").get_first<uint8_t>(2);
-            auto skyBottomBAddress = hook::pattern("89 05 ? ? ? ? F3 41 0F 2A 94 8E 70 59 04 05 F3 0F 59 CD F3 41 0F 59").get_first<uint8_t>(2);
-            auto ambientRAddress = hook::pattern("F3 0F 10 15 ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 10 1D ? ? ? ? F3 0F 11 15 ? ? ? ?").get_first<uint8_t>(4);
-            auto ambientGAddress = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 10 1D ? ? ? ? F3 0F 11 15 ? ? ? ?").get_first<uint8_t>(4);
-            auto ambientBAddress = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 10 1D ? ? ? ? F3 0F 11 15 ? ? ? ?").get_first<uint8_t>(4);
-            auto cloudRAddress = hook::pattern("89 05 ? ? ? ? F3 41 0F 2A 94 8E B0 7C 04 05 F3 0F 59 CD F3 41 0F 59").get_first<uint8_t>(2);
-            auto cloudGAddress = hook::pattern("89 05 ? ? ? ? F3 41 0F 59 D2 F3 0F 58 D0 0F 57 C9 0F 57 C0 F3 43 0F").get_first<uint8_t>(2);
-            auto cloudBAddress = hook::pattern("89 05 ? ? ? ? 45 85 F6 74 ? 66 41 0F 6E C6 0F 5B C0 F3 0F 59 05 ?").get_first<uint8_t>(2);
-            auto hoursAddress = hook::pattern("44 0F B6 0D ? ? ? ? 44 03 C1 41 83 F8 3C 7C ? B8 89 88 88 88 41 F7").get_first<uint8_t>(4);
-            auto minutesAddress = hook::pattern("44 0F B6 05 ? ? ? ? 44 0F B6 0D ? ? ? ? 44 03 C1 41 83 F8 3C 7C").get_first<uint8_t>(4);
-            auto weatherInterpolationAddress = hook::pattern("F3 0F 11 05 ? ? ? ? F3 0F 59 05 ? ? ? ? 66 89 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 89").get_first<uint8_t>(4);
-            auto oldWeatherAddress = hook::pattern("66 89 05 ? ? ? ? 0F B7 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 59 05 ? ? ? ? 66 89 05 ? ? ? ? F3 0F 11").get_first<uint8_t>(3);
-            auto newWeatherAddress = hook::pattern("66 89 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 89 0D ? ? ? ? F3 0F 2C").get_first<uint8_t>(3);
-            auto lowCloudRAddress = hook::pattern("89 05 ? ? ? ? F3 41 0F 2A 94 8E B0 85 04 05 F3 0F 59 CD F3 41 0F 59").get_first<uint8_t>(2);
-            auto lowCloudGAddress = hook::pattern("89 05 ? ? ? ? F3 41 0F 2A 94 8E 30 84 04 05 F3 0F 59 CD F3 41 0F 59").get_first<uint8_t>(2);
-            auto lowCloudBAddress = hook::pattern("89 05 ? ? ? ? F3 41 0F 2A 94 8E B0 82 04 05 F3 0F 59 CD F3 41 0F 59").get_first<uint8_t>(2);
-            auto topCloudRAddress = hook::pattern("89 05 ? ? ? ? F3 41 0F 2A 94 8E 30 81 04 05 F3 0F 59 CD F3 41 0F 59").get_first<uint8_t>(2);
-            auto topCloudGAddress = hook::pattern("89 05 ? ? ? ? F3 41 0F 2A 94 8E B0 7F 04 05 F3 0F 59 CD F3 41 0F 59").get_first<uint8_t>(2);
-            auto topCloudBAddress = hook::pattern("89 05 ? ? ? ? F3 41 0F 2A 94 8E 30 7E 04 05 F3 0F 59 CD F3 41 0F 59").get_first<uint8_t>(2);
-            auto directionalRAddress = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ?").get_first<uint8_t>(4);
-            auto directionalGAddress = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 75 ? 48 8D 0D ? ? ?").get_first<uint8_t>(4);
-            auto directionalBAddress = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 75 ? 48 8D 0D ? ? ?").get_first<uint8_t>(4);
-            auto blurRAddress = hook::pattern("F3 41 0F 11 84 8C B0 51 04 05 F3 0F 10 45 14 41 89 84 8C B0 7C 04 05 8B").get_first<uint8_t>(6);
-            auto blurGAddress = hook::pattern("F3 41 0F 11 84 8C 30 50 04 05 F3 0F 10 45 18 49 83 C6 04 F3 41 0F 11 84").get_first<uint8_t>(6);
-            auto blurBAddress = hook::pattern("F3 41 0F 11 84 8C B0 4E 04 05 F3 0F 10 45 1C F3 41 0F 11 84 8C 30 4D 04").get_first<uint8_t>(6);
-            auto blurAAddress = hook::pattern("F3 41 0F 11 84 8C 30 4D 04 05 49 83 FE 60 0F 8C ? ? ? ? 66 FF C6 66").get_first<uint8_t>(6);
-            const auto update = hook::pattern("48 8B C4 48 89 58 08 48 89 70 10 48 89 78 18 55 41 54 41 55 41 56 41 57 48 8D 68 A1 48 81 EC C0 00 00 00 0F 29 70 C8 0F").get_first();
+            auto skyTopRAddress = wfp::patterns::First<uint8_t>("44 89 3D ? ? ? ? F3 41 0F 2A 94 8E 70 5F 04 05 F3 0F 59 CD F3 41 0F", 3);
+            auto skyTopGAddress = wfp::patterns::First<uint8_t>("44 89 25 ? ? ? ? F3 41 0F 2A 94 8E F0 5D 04 05 F3 0F 59 CD F3 41 0F", 3);
+            auto skyTopBAddress = wfp::patterns::First<uint8_t>("44 89 2D ? ? ? ? F3 41 0F 2A 94 8E 70 5C 04 05 F3 41 0F 59 D2 F3 0F", 3);
+            auto skyBottomRAddress = wfp::patterns::First<uint8_t>("89 15 ? ? ? ? F3 41 0F 2A 94 8E F0 5A 04 05 F3 0F 59 CD F3 41 0F 59", 2);
+            auto skyBottomGAddress = wfp::patterns::First<uint8_t>("89 1D ? ? ? ? F3 41 0F 2A 94 8E 70 71 04 05 F3 0F 59 CD F3 41 0F 59", 2);
+            auto skyBottomBAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? F3 41 0F 2A 94 8E 70 59 04 05 F3 0F 59 CD F3 41 0F 59", 2);
+            auto ambientRAddress = wfp::patterns::First<uint8_t>("F3 0F 10 15 ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 10 1D ? ? ? ? F3 0F 11 15 ? ? ? ?", 4);
+            auto ambientGAddress = wfp::patterns::First<uint8_t>("F3 0F 10 0D ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 10 1D ? ? ? ? F3 0F 11 15 ? ? ? ?", 4);
+            auto ambientBAddress = wfp::patterns::First<uint8_t>("F3 0F 10 05 ? ? ? ? F3 0F 10 1D ? ? ? ? F3 0F 11 15 ? ? ? ?", 4);
+            auto cloudRAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? F3 41 0F 2A 94 8E B0 7C 04 05 F3 0F 59 CD F3 41 0F 59", 2);
+            auto cloudGAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? F3 41 0F 59 D2 F3 0F 58 D0 0F 57 C9 0F 57 C0 F3 43 0F", 2);
+            auto cloudBAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? 45 85 F6 74 ? 66 41 0F 6E C6 0F 5B C0 F3 0F 59 05 ?", 2);
+            auto hoursAddress = wfp::patterns::First<uint8_t>("44 0F B6 0D ? ? ? ? 44 03 C1 41 83 F8 3C 7C ? B8 89 88 88 88 41 F7", 4);
+            auto minutesAddress = wfp::patterns::First<uint8_t>("44 0F B6 05 ? ? ? ? 44 0F B6 0D ? ? ? ? 44 03 C1 41 83 F8 3C 7C", 4);
+            auto weatherInterpolationAddress = wfp::patterns::First<uint8_t>("F3 0F 11 05 ? ? ? ? F3 0F 59 05 ? ? ? ? 66 89 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 89", 4);
+            auto oldWeatherAddress = wfp::patterns::First<uint8_t>("66 89 05 ? ? ? ? 0F B7 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 59 05 ? ? ? ? 66 89 05 ? ? ? ? F3 0F 11", 3);
+            auto newWeatherAddress = wfp::patterns::First<uint8_t>("66 89 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 89 0D ? ? ? ? F3 0F 2C", 3);
+            auto lowCloudRAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? F3 41 0F 2A 94 8E B0 85 04 05 F3 0F 59 CD F3 41 0F 59", 2);
+            auto lowCloudGAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? F3 41 0F 2A 94 8E 30 84 04 05 F3 0F 59 CD F3 41 0F 59", 2);
+            auto lowCloudBAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? F3 41 0F 2A 94 8E B0 82 04 05 F3 0F 59 CD F3 41 0F 59", 2);
+            auto topCloudRAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? F3 41 0F 2A 94 8E 30 81 04 05 F3 0F 59 CD F3 41 0F 59", 2);
+            auto topCloudGAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? F3 41 0F 2A 94 8E B0 7F 04 05 F3 0F 59 CD F3 41 0F 59", 2);
+            auto topCloudBAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? F3 41 0F 2A 94 8E 30 7E 04 05 F3 0F 59 CD F3 41 0F 59", 2);
+            auto directionalRAddress = wfp::patterns::First<uint8_t>("F3 0F 10 05 ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ?", 4);
+            auto directionalGAddress = wfp::patterns::First<uint8_t>("F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 75 ? 48 8D 0D ? ? ?", 4);
+            auto directionalBAddress = wfp::patterns::First<uint8_t>("F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 75 ? 48 8D 0D ? ? ?", 4);
+            auto blurRAddress = wfp::patterns::First<uint8_t>("F3 41 0F 11 84 8C B0 51 04 05 F3 0F 10 45 14 41 89 84 8C B0 7C 04 05 8B", 6);
+            auto blurGAddress = wfp::patterns::First<uint8_t>("F3 41 0F 11 84 8C 30 50 04 05 F3 0F 10 45 18 49 83 C6 04 F3 41 0F 11 84", 6);
+            auto blurBAddress = wfp::patterns::First<uint8_t>("F3 41 0F 11 84 8C B0 4E 04 05 F3 0F 10 45 1C F3 41 0F 11 84 8C 30 4D 04", 6);
+            auto blurAAddress = wfp::patterns::First<uint8_t>("F3 41 0F 11 84 8C 30 4D 04 05 49 83 FE 60 0F 8C ? ? ? ? 66 FF C6 66", 6);
+            const auto update = wfp::patterns::First("48 8B C4 48 89 58 08 48 89 70 10 48 89 78 18 55 41 54 41 55 41 56 41 57 48 8D 68 A1 48 81 EC C0 00 00 00 0F 29 70 C8 0F");
             if (!update || !skyTopRAddress || !skyTopGAddress || !skyTopBAddress || !skyBottomRAddress || !skyBottomGAddress || !skyBottomBAddress || !ambientRAddress || !ambientGAddress || !ambientBAddress || !cloudRAddress || !cloudGAddress || !cloudBAddress || !hoursAddress || !minutesAddress || !weatherInterpolationAddress || !oldWeatherAddress || !newWeatherAddress || !lowCloudRAddress || !lowCloudGAddress || !lowCloudBAddress || !topCloudRAddress || !topCloudGAddress || !topCloudBAddress || !directionalRAddress || !directionalGAddress || !directionalBAddress || !blurRAddress || !blurGAddress || !blurBAddress || !blurAAddress)
                 return;
             skyTopR = reinterpret_cast<int32_t*>(injector::ReadRelativeOffset(skyTopRAddress).as_int());

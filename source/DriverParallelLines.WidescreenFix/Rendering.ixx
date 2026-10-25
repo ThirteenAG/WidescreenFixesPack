@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Rendering;
 
@@ -139,15 +140,20 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            static float fCustomFieldOfView = iniReader.ReadFloat("MAIN", "FOVFactor", 0.0f);
+            auto& settings = FixSettings();
+            static const auto& fCustomFieldOfView = settings.Float("MAIN.FOVFactor");
 
-            onResChange() += [](int Width, int Height)
+            auto updateFOV = []()
+            {
+                const float factor = std::isfinite(fCustomFieldOfView) ? std::clamp(fCustomFieldOfView, 0.5f, 2.0f) : 1.0f;
+                fFieldOfView = std::clamp(2.0f * std::atan(std::tan(1.308f * 0.5f) * (fAspectRatio / baseAspect)) * factor, 0.01f, 3.124f);
+            };
+            settings.OnChange("MAIN.FOVFactor", updateFOV);
+
+            onResChange() += [updateFOV](int Width, int Height)
             {
                 fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
-                fFieldOfView = 2.0f * std::atan(std::tan(1.308f * 0.5f) * (fAspectRatio / baseAspect));
-                if (fCustomFieldOfView)
-                    fFieldOfView *= fCustomFieldOfView;
+                updateFOV();
             };
 
             auto pattern = hook::pattern("8B 44 24 04 89 41 10 B0 01 C2 04 00"); //0x57B954

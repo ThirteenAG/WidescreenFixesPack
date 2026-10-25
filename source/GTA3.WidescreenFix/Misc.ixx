@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 
 export module Misc;
 
@@ -162,8 +164,60 @@ namespace CFont
 injector::hook_back<void(__fastcall*)(CCamera*, void*)> hbCalculateDerivedValues;
 void __fastcall CalculateDerivedValues(CCamera* camera, void* edx)
 {
-    CCamera::UpdatePlayerVehicleSpeedBlur(camera);
+    static auto& bVCSCamShake = FixSettings().Int("MISC.VCSCamShake");
+    if (bVCSCamShake)
+        CCamera::UpdatePlayerVehicleSpeedBlur(camera);
     return hbCalculateDerivedValues.fun(camera, edx);
+}
+
+static void InstallVCSCamShake()
+{
+    static bool installed = false;
+    if (installed || !FixSettings().Int("MISC.VCSCamShake"))
+        return;
+    installed = true;
+    auto pattern = hook::pattern("E8 ? ? ? ? FF B4 24 ? ? ? ? E8 ? ? ? ? 80 7B");
+    if (!pattern.empty())
+        hbCalculateDerivedValues.fun = injector::MakeCALL(pattern.get_first(), CalculateDerivedValues, true).get();
+}
+
+static void InstallCarSpeedDependantFOV()
+{
+    static auto& bCarSpeedDependantFOV = FixSettings().Int("MISC.CarSpeedDependantFOV");
+    static bool installed = false;
+    if (installed || !bCarSpeedDependantFOV)
+        return;
+    installed = true;
+    auto pattern = hook::pattern("C7 83 ? ? ? ? ? ? ? ? 80 7B ? ? 74");
+    if (pattern.empty())
+        return;
+    injector::MakeNOP(pattern.get_first(), 10, true);
+    static auto Process_Cam_On_A_String_Hook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        constexpr auto DefaultFOV = 70.0f;
+        auto cam = (CCam*)regs.ebx;
+
+        // Off: the game's fixed field of view (the instruction this replaces)
+        if (!bCarSpeedDependantFOV || cam->ResetStatics)
+        {
+            cam->FOV = DefaultFOV;
+        }
+        else if (cam->CamTargetEntity)
+        {
+            CVehicle* car = (CVehicle*)cam->CamTargetEntity;
+
+            float forwardSpeed = DotProduct(car->GetForward(), car->m_vecMoveSpeed);
+
+            if (forwardSpeed > 0.4f)
+                cam->FOV += (forwardSpeed - 0.4f) * CTimer::ms_fTimeStep;
+
+            if (cam->FOV > DefaultFOV)
+                cam->FOV = pow(0.98f, CTimer::ms_fTimeStep) * (cam->FOV - DefaultFOV) + DefaultFOV;
+
+            if (cam->FOV > DefaultFOV + 30.0f)
+                cam->FOV = DefaultFOV + 30.0f;
+        }
+    });
 }
 
 class Misc
@@ -173,14 +227,17 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
-            auto bCarSpeedDependantFOV = iniReader.ReadInteger("MISC", "CarSpeedDependantFOV", 1) != 0;
-            auto bVCSCamShake = iniReader.ReadInteger("MISC", "VCSCamShake", 0) != 0;
+            // Text Outline applies after a restart; the camera settings while the game runs
+            ReplaceTextShadowWithOutline = FixSettings().Int("MISC.ReplaceTextShadowWithOutline");
 
             if (ReplaceTextShadowWithOutline)
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? 8D 44 24 ? 50 E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 83 3D ? ? ? ? ? 59 0F 84");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 auto CRGBACtor = injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 //Hiding text shadow
@@ -192,6 +249,11 @@ public:
                 });
 
                 pattern = hook::pattern("6A ? 6A ? 6A ? E8 ? ? ? ? 8D 84 24 ? ? ? ? 50 E8 ? ? ? ? 8B 3D ? ? ? ? 8D 84 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 if (CRGBACtorRefs.size() >= CSceneEdit__Draw_61 && CRGBACtorRefs[CSceneEdit__Draw_61] == (uintptr_t)pattern.get_first())
                 {
                     std::vector<int> HideTextShadowsIndexArray = {
@@ -248,9 +310,19 @@ public:
                 }
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? FF 35 ? ? ? ? FF 35");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CFont::shPrintString = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0)).as_int(), CFont::PrintString);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 8D 8C 24 ? ? ? ? 68 ? ? ? ? 68");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CFont::shSetDropColor = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0)).as_int(), CFont::SetDropColor);
 
                 // cursor shadow alpha
@@ -262,12 +334,22 @@ public:
 
                 //mission text shadow color
                 pattern = hook::pattern("6A ? 6A ? 6A ? ? ? E8 ? ? ? ? 8D 44 24");//50A0C2
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory<uint8_t>(pattern.get_first(1), 0x01, true);
                 injector::WriteMemory<uint8_t>(pattern.get_first(3), 0x01, true);
                 injector::WriteMemory<uint8_t>(pattern.get_first(5), 0x01, true);
 
                 //mission failed text shadow color
                 pattern = hook::pattern("6A ? 6A ? 6A ? ? ? E8 ? ? ? ? 8D 84 24 ? ? ? ? 50");//508BFA
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory<uint8_t>(pattern.get_first(1), 0x01, true);
                 injector::WriteMemory<uint8_t>(pattern.get_first(3), 0x01, true);
                 injector::WriteMemory<uint8_t>(pattern.get_first(5), 0x01, true);
@@ -282,42 +364,11 @@ public:
                 //injector::WriteMemory<uint8_t>(pattern.get_first(8), 0x00, true);
             }
 
-            if (bCarSpeedDependantFOV)
-            {
-                auto pattern = hook::pattern("C7 83 ? ? ? ? ? ? ? ? 80 7B ? ? 74");
-                injector::MakeNOP(pattern.get_first(), 10, true);
-                static auto Process_Cam_On_A_String_Hook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    constexpr auto DefaultFOV = 70.0f;
-                    auto cam = (CCam*)regs.ebx;
-
-                    if (cam->ResetStatics)
-                    {
-                        cam->FOV = DefaultFOV;
-                    }
-                    else if (cam->CamTargetEntity)
-                    {
-                        CVehicle* car = (CVehicle*)cam->CamTargetEntity;
-
-                        float forwardSpeed = DotProduct(car->GetForward(), car->m_vecMoveSpeed);
-
-                        if (forwardSpeed > 0.4f)
-                            cam->FOV += (forwardSpeed - 0.4f) * CTimer::ms_fTimeStep;
-
-                        if (cam->FOV > DefaultFOV)
-                            cam->FOV = pow(0.98f, CTimer::ms_fTimeStep) * (cam->FOV - DefaultFOV) + DefaultFOV;
-
-                        if (cam->FOV > DefaultFOV + 30.0f)
-                            cam->FOV = DefaultFOV + 30.0f;
-                    }
-                });
-            }
-
-            if (bVCSCamShake)
-            {
-                auto pattern = hook::pattern("E8 ? ? ? ? FF B4 24 ? ? ? ? E8 ? ? ? ? 80 7B");
-                hbCalculateDerivedValues.fun = injector::MakeCALL(pattern.get_first(), CalculateDerivedValues, true).get();
-            }
+            // The camera settings' hooks are installed the first time they're turned on
+            InstallCarSpeedDependantFOV();
+            OnSettingChange("MISC.CarSpeedDependantFOV", []() { InstallCarSpeedDependantFOV(); });
+            InstallVCSCamShake();
+            OnSettingChange("MISC.VCSCamShake", []() { InstallVCSCamShake(); });
         };
     }
 } Misc;

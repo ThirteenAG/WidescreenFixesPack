@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d9.h>
+#include "Window.hpp"
 
 export module Resolution;
 
@@ -214,12 +216,12 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            bForceMaxRefreshRate = iniReader.ReadInteger("MAIN", "ForceMaxRefreshRate", 1) != 0;
-            nMinResX = iniReader.ReadInteger("MAIN", "MinResX", 0);
-            nMinResY = iniReader.ReadInteger("MAIN", "MinResY", 0);
-            nMaxResX = iniReader.ReadInteger("MAIN", "MaxResX", 0);
-            nMaxResY = iniReader.ReadInteger("MAIN", "MaxResY", 0);
+            auto& settings = FixSettings();
+            bForceMaxRefreshRate = settings.Int("MAIN.ForceMaxRefreshRate") != 0;
+            nMinResX = settings.Int("MAIN.MinResX");
+            nMinResY = settings.Int("MAIN.MinResY");
+            nMaxResX = settings.Int("MAIN.MaxResX");
+            nMaxResY = settings.Int("MAIN.MaxResY");
 
             //curated 32 bit mode list, the same every time the game builds its list from it
             auto pattern = hook::pattern("8B 44 24 04 53 55 56 8B F1 57 89 46 04 8B 08");
@@ -285,6 +287,8 @@ public:
 
             onResChange() += [](int Width, int Height)
             {
+                if (DPLWindow::Place(Width, Height))
+                    return;
                 auto [DesktopResW, DesktopResH] = GetDesktopRes();
                 SetWindowPos(hWnd, NULL, (DesktopResW - Width) / 2, (DesktopResH - Height) / 2, Width, Height, SWP_NOACTIVATE | SWP_NOZORDER);
             };

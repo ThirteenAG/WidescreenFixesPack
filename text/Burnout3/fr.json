@@ -1,0 +1,6 @@
+{
+  "plugin.name": "Burnout 3 PCSX2F Widescreen Fix",
+  "page.display": "Affichage",
+  "enable": "Écran large",
+  "enable.description": "Corrige la caméra, le HUD et la disposition des menus pour le format d'affichage de l'émulateur. Activé par défaut. Redémarrez le jeu émulé après avoir modifié ce réglage."
+}

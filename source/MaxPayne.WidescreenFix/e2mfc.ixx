@@ -2,10 +2,12 @@ module;
 
 #include <stdafx.h>
 #include <unordered_set>
+#include "FixSettings.hpp"
 
 export module e2mfc;
 
 import ComVars;
+import AntiAliasing;
 
 namespace P_Driver
 {
@@ -109,7 +111,9 @@ namespace P_Camera
             *(uint16_t*)(_this + FLAGS) |= FLAG_PROJECTION_DIRTY;
         }
 
+        bool bDirty = (*(uint16_t*)(_this + FLAGS) & FLAG_PROJECTION_DIRTY) != 0;
         shPrepare.unsafe_fastcall(_this, edx);
+        AntiAliasing::OnCameraPrepared(_this, bDirty);
     }
 }
 
@@ -313,8 +317,7 @@ export void InitE2MFC()
     P_Driver::m_initializedDriver = (void**)GetProcAddress(e2mfc, "?m_initializedDriver@P_Driver@@0PAV1@A");
     P_Driver::clearScreen = (decltype(P_Driver::clearScreen))GetProcAddress(e2mfc, "?clearScreen@P_Driver@@QAEXABUtagRECT@@W4ClearingMode@1@ABVG_Color@@@Z");
 
-    CIniReader iniReader("");
-    P_Driver::bVSync = iniReader.ReadInteger("GRAPHICS", "VSync", 1) != 0;
+    P_Driver::bVSync = FixSettings().Bool("GRAPHICS.VSync");
     P_Driver::shSetFullscreenMode = safetyhook::create_inline(GetProcAddress(e2mfc, "?setFullscreenMode@P_Driver@@QAEXPAUHWND__@@IIIW4Buffering@1@IPBVP_ZBufferFormat@@_NI33@Z"), P_Driver::setFullscreenMode);
 
     P_Camera::shValidate = safetyhook::create_inline(GetProcAddress(e2mfc, "?validate@P_Camera@@QAEXXZ"), P_Camera::validate);
@@ -387,7 +390,7 @@ export void InitE2MFC()
     pattern = hook::module_pattern(e2mfc, "C7 46 ? ? ? ? ? 8B 75 ? 89 07 EB 15 FF 15 ? ? ? ? 50 68 ? ? ? ? 53 E8 ? ? ? ? 83 C4 0C 8D 8D ? ? ? ? 51 56 FF 15 ? ? ? ? 85 C0 75 ? 56 FF 15 ? ? ? ? 8D 95");
     static auto LoadLibraryHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (GetModuleHandle(L"e2_d3d8_driver_mfc") == (HMODULE)regs.eax)
+        if (shDllMainHook && GetModuleHandle(L"e2_d3d8_driver_mfc") == (HMODULE)regs.eax)
         {
             shDllMainHook.unsafe_stdcall<BOOL>((HMODULE)regs.eax, DLL_PROCESS_ATTACH, nullptr);
         }
@@ -396,7 +399,7 @@ export void InitE2MFC()
     pattern = hook::module_pattern(e2mfc, "51 FF D3 8B 76");
     static auto FreeLibraryHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (GetModuleHandle(L"e2_d3d8_driver_mfc") == (HMODULE)regs.ecx)
+        if (shDllMainHook && GetModuleHandle(L"e2_d3d8_driver_mfc") == (HMODULE)regs.ecx)
         {
             shDllMainHook.unsafe_stdcall<BOOL>((HMODULE)regs.ecx, DLL_PROCESS_DETACH, nullptr);
         }

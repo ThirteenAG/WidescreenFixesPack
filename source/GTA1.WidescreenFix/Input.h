@@ -1,7 +1,7 @@
 #pragma once
 
 namespace GTA1Rotation { inline void ScreenToWorld(float& x, float& y); }
-namespace GTA1Options { inline void Tick(); }
+namespace GTA1Options { inline void Tick(); inline bool QuitPromptActive(); }
 
 namespace GTA1Input
 {
@@ -27,12 +27,22 @@ namespace GTA1Input
         Frontend = false;
         BeginInputFrame();
         Poll();
+        static bool controlled = false;
+        static bool held[6]{};
+        if (GTA1Options::QuitPromptActive())
+        {
+            controlled = false;
+            std::fill(std::begin(held), std::end(held), false);
+            // Bit 6 and bits 23-31 carry the native menu key. Keep them while
+            // releasing gameplay actions, so Enter/Escape still reach the dialog.
+            return (packet & 0xFF800040u) | 1u | 0x82u | 4u | 8u | 16u | 32u | 256u;
+        }
         auto player = *LocalPlayer;
         if (player >= 0 && player < 4 && Available())
         {
             auto state = PlayerState + player * GTA1Build::PlayerStride;
             auto type = *reinterpret_cast<int*>(state);
-            auto [x, y] = Movement();
+            auto [x, y] = Movement(type != 2);
             if (IsPaused()) x = y = 0;
             auto [aimX, aimY] = Stick(true);
             bool aiming = !IsPaused() && std::hypot(aimX, aimY) > 0.15f;
@@ -48,12 +58,11 @@ namespace GTA1Input
             }
             // Native player modes: 0 vehicle, 1 train, 2 pedestrian.
             bool driving = type != 2;
-            if (driving && PadConnected && !IsPaused())
+            if (driving && PadConnected && !StickThrottle && !IsPaused())
                 y += (Pad.Gamepad.bLeftTrigger > 30) - (Pad.Gamepad.bRightTrigger > 30);
             // Send complete movement states, including release on focus loss.
             if (ModernControls || Gamepad)
             {
-                static bool controlled = false;
                 bool moving = std::hypot(x, y) > 0.15f;
                 if (moving || controlled || (!driving && aiming))
                 {
@@ -95,7 +104,6 @@ namespace GTA1Input
                 (ModernControls && Key(PreviousWeaponKey)) || Button(XINPUT_GAMEPAD_LEFT_SHOULDER),
                 (ModernControls && Key(NextWeaponKey)) || Button(XINPUT_GAMEPAD_RIGHT_SHOULDER)
             };
-            static bool held[6]{};
             // Native control slots: fire, jump/handbrake, enter/exit, special, previous and next weapon.
             constexpr uint32_t changed[] = {4, 0, 8, 32, 16, 256};
             constexpr uint32_t value[] = {0x100000, 0x400000, 0x200000, 0x80000, 0x40000, 0x20000};
@@ -116,8 +124,9 @@ namespace GTA1Input
 
     inline void Install()
     {
-        CIniReader ini("");
+        SettingsReader ini("");
         MouseAim = ini.ReadBoolean("INPUT", "MouseAim", true);
+        FixSettings().OnChange("INPUT.MouseAim", [] { MouseAim = FixSettings().Bool("INPUT.MouseAim"); });
         using GTA1Build::Find, GTA1Build::Off;
         // The player state array (from the packet handler), the local player, the replay
         // mode, the ped getter, the player count, the recording flag and the pause state.

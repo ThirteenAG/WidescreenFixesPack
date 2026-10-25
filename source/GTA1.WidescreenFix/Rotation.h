@@ -109,6 +109,10 @@ namespace GTA1Rotation
             Side = std::min(8816, (int(std::ceil(std::hypot(double(width), double(height)))) + 16) & ~7);
             Active = Angle != 0.0f && width > 0 && height > 0;
             auto view = View(player);
+            // Width43 is rounded to an integer. At 800p, 3*1066 != 4*800
+            // accidentally enables the legacy 320x200 pixel-aspect correction.
+            // Modern output uses square pixels at every resolution.
+            reinterpret_cast<uint8_t*>(view)[44] = 0;
             auto& saved = Views[player];
             if (Active)
             {
@@ -174,12 +178,19 @@ namespace GTA1Rotation
 
     inline void Install()
     {
-        CIniReader ini("");
-        Enabled = ini.ReadBoolean("CAMERA", "RotateWithPlayer", true);
-        RotateVehicle = ini.ReadBoolean("CAMERA", "RotateInVehicles", true);
-        RotateFoot = ini.ReadBoolean("CAMERA", "RotateOnFoot", false);
-        Smoothing = std::clamp(ini.ReadFloat("CAMERA", "RotationSmoothing", 0.35f), 0.0f, 2.0f);
-        ToggleKey = ini.ReadInteger("CAMERA", "ToggleRotationKey", 'C');
+        // Changes from FusionFixHub or a preset apply at once, as from the in-game options
+        static auto read = []
+        {
+            SettingsReader ini("");
+            Enabled = ini.ReadBoolean("CAMERA", "RotateWithPlayer", true);
+            RotateVehicle = ini.ReadBoolean("CAMERA", "RotateInVehicles", true);
+            RotateFoot = ini.ReadBoolean("CAMERA", "RotateOnFoot", false);
+            Smoothing = std::clamp(ini.ReadFloat("CAMERA", "RotationSmoothing", 0.35f), 0.0f, 2.0f);
+            ToggleKey = ini.ReadInteger("CAMERA", "ToggleRotationKey", 'C');
+        };
+        read();
+        for (auto id : { "CAMERA.RotateWithPlayer", "CAMERA.RotateInVehicles", "CAMERA.RotateOnFoot", "CAMERA.RotationSmoothing", "CAMERA.ToggleRotationKey" })
+            FixSettings().OnChange(id, read);
         LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency); Frequency = double(frequency.QuadPart);
         if (!GTA1Raster::OriginalRows || !GTA1Presentation::DrawPixels || !GTA1Input::PlayerState || !GTA1Input::LocalPlayer)
         { Log::Write("GTA1 camera rotation needs the raster, presentation and input hooks."); return; }

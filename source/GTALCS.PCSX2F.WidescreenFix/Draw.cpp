@@ -132,7 +132,10 @@ console::Transform DrawingTransform(bool physical, float centerX, float centerY)
     case DrawMode::Center: case DrawMode::Frontend: break;
     }
     const float baseAspect = drawMode == DrawMode::Frontend ? 4.0f / 3.0f : settings.baseAspect;
-    return console::Transform::anchored(baseAspect, settings.aspect, size, x, y);
+    // Edge-anchored HUD keeps to the sides of the MAIN.HudAspectRatioConstraint box.
+    const bool edge = drawMode == DrawMode::LeftBottom || drawMode == DrawMode::RightTop || drawMode == DrawMode::RightBottom;
+    return console::Transform::anchored(baseAspect, settings.aspect, size, x, y,
+        edge ? console::hud_edge(x, width, settings.aspect, settings.hudAspect) : x);
 }
 
 Rect CorrectRect(Rect value, bool physical) {

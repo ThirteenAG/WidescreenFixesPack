@@ -5,12 +5,12 @@
 #include "../../external/injector/include/ps2/game_abi.hpp"
 #include "../../external/injector/include/ps2/safetymips.hpp"
 #include <cstdio>
+#include "../Shared/Console/PS2Settings.hpp"
+PCSX2F_CFG_SETTINGS()
 
 extern "C" {
 #include "../../external/injector/include/ps2/pcsx2f_api.h"
-#include "../../external/injector/include/ps2/inireader.h"
 int CompatibleCRCList[] = {static_cast<int>(0x7EA439F5)};
-char PluginData[MaxIniSize] = {1};
 char OSDText[OSDStringNum][OSDStringSize] = {{1}};
 }
 
@@ -131,8 +131,13 @@ void Rejected(pcsx2_hook_status status) {
 extern "C" void init() {
     using namespace imvehlm;
     if (injector::InitializeCheckedRuntime(Rejected) != PCSX2_HOOK_OK) return;
-    inireader.SetIniPath(PluginData + sizeof(uint32_t), *reinterpret_cast<const uint32_t*>(PluginData));
-    if (inireader.ReadInteger("MAIN", "VehicleLights", 1) == 0) return;
+    console::ps2settings::Value settings[] = {{"MAIN", "VehicleLights", "1"}};
+    if (!console::ps2settings::load(settings))
+    {
+        std::snprintf(OSDText[0], OSDStringSize, "Vehicle lights disabled: CFG settings unavailable. Update the plugin injector.");
+        return;
+    }
+    if (!console::ps2settings::boolean(settings[0], true)) return;
     lights.textures.pack = Pack;
     lights.hd.pack = PackHd;
     renderCallback.bind(Render);

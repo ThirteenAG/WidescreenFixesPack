@@ -4,6 +4,8 @@ module;
 #include <d3d9.h>
 #include "d3dvtbl.h"
 #include <d3dx9.h>
+#include "FixSettings.hpp"
+#include "../Shared/D3D9Options.hpp"
 
 export module Shaders;
 
@@ -233,16 +235,27 @@ HRESULT WINAPI Hook_CreateVertexShader(LPDIRECT3DDEVICE9 pDevice, CONST DWORD* p
 
 HRESULT WINAPI Hook_CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pPresentationParameters, IDirect3DDevice9** ppReturnedDeviceInterface)
 {
-    HRESULT hr = RealD3D9CreateDevice(d3ddev, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
+    // A mixed vertex processing device instead of the hardware one the renderer asks for; the game's own flags when
+    // the driver refuses it
+    HRESULT hr = E_FAIL;
+    if (BehaviorFlags & (D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_SOFTWARE_VERTEXPROCESSING))
+    {
+        DWORD mixed = (BehaviorFlags & ~(D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_SOFTWARE_VERTEXPROCESSING | D3DCREATE_PUREDEVICE)) | D3DCREATE_MIXED_VERTEXPROCESSING;
+        hr = RealD3D9CreateDevice(d3ddev, Adapter, DeviceType, hFocusWindow, mixed, pPresentationParameters, ppReturnedDeviceInterface);
+    }
+    if (FAILED(hr))
+        hr = RealD3D9CreateDevice(d3ddev, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
     if (FAILED(hr))
         return hr;
+
+    D3D9Options::HookDevice(*ppReturnedDeviceInterface);
 
     UINT_PTR* pVTable = *((UINT_PTR**)*ppReturnedDeviceInterface);
 
     if (pVTable[IDirect3DDevice9VTBL::CreatePixelShader] != (UINT_PTR)Hook_CreatePixelShader)
     {
         RealCreatePixelShader = (CreatePixelShader_t)pVTable[IDirect3DDevice9VTBL::CreatePixelShader];
-        injector::WriteMemory(&pVTable[IDirect3DDevice9VTBL::CreatePixelShader], &Hook_CreatePixelShader, true);
+        ProtectedGameRef<decltype(&Hook_CreatePixelShader)>(reinterpret_cast<decltype(&Hook_CreatePixelShader)*>(&pVTable[IDirect3DDevice9VTBL::CreatePixelShader])) = &Hook_CreatePixelShader;
     }
 
     //not used currently
@@ -258,12 +271,17 @@ HRESULT WINAPI Hook_CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE De
 export void InitShaders()
 {
     // Hook D3D9 creation
+    D3D9Options::anisotropy = FixSettings().Int("GRAPHICS.AnisotropicFiltering");
     auto pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "3B C7 89 83 ? ? ? ? 75");
+    if (pattern.empty())
+        return;
     static auto Direct3DCreate9Hook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         auto pID3D9 = (IDirect3D9*)regs.eax;
         UINT_PTR* pVTable = (UINT_PTR*)(*((UINT_PTR*)pID3D9));
+        if (pVTable[IDirect3D9VTBL::CreateDevice] == (UINT_PTR)Hook_CreateDevice)
+            return;
         RealD3D9CreateDevice = (CreateDevice_t)pVTable[IDirect3D9VTBL::CreateDevice];
-        injector::WriteMemory(&pVTable[IDirect3D9VTBL::CreateDevice], &Hook_CreateDevice, true);
+        ProtectedGameRef<decltype(&Hook_CreateDevice)>(reinterpret_cast<decltype(&Hook_CreateDevice)*>(&pVTable[IDirect3D9VTBL::CreateDevice])) = &Hook_CreateDevice;
     });
 }

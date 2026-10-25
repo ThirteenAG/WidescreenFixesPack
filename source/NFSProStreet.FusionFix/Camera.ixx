@@ -2,152 +2,240 @@ module;
 
 #include <stdafx.h>
 #include <cmath>
+#include "FixSettings.hpp"
 
 export module Camera;
 
 import ComVars;
+import Input;
 
-// Offset from the game's original camera (zero = original camera)
-static float YawOffset = 0.0f;
-static float PitchOffset = 0.0f;
+// Free look for the chase cameras: the right stick or the mouse orbits the camera around the car. Like the
+// car camera of GTA San Andreas, the look direction stays put in the world when the car turns. Once the
+// camera is let go, it eases back to the game's own camera while the car moves.
 
-bool InvertLook = false;
-bool OnlyAllowHorizontalStickMovement = false;
-float StickLookSensitivity = 1.0f;
-float MouseLookSensitivity = 1.0f;
-
-// Auto-return state
-float IdleTimer = 0.0f;
-float IdleTimeoutSeconds = 3.0f;
-float ReturnSpeed = 2.0f;
-
-// Car movement tracking
-bVector3 PrevCarPos = { 0.0f, 0.0f, 0.0f };
-bool  PrevCarPosValid = false;
-float CarSpeed2D = 0.0f;
-float CarMoveThreshold = 0.5f;
-
-constexpr float DEG2RAD = 0.0174533f;
-constexpr float RAD2DEG = 57.2957795f;
-
-float LerpAngleDeg(float from, float to, float t)
+namespace
 {
-    float diff = to - from;
-    while (diff > 180.0f) diff -= 360.0f;
-    while (diff < -180.0f) diff += 360.0f;
-    return from + diff * t;
-}
+    bool bFreeHeading = false;  // the free look has its own direction instead of the game's camera
+    float WorldYaw = 0.0f;      // degrees, direction from the car to the camera in the world
+    float PitchOffset = 0.0f;   // degrees, relative to the game's camera
+    float HoldTime = 0.0f;      // seconds the camera keeps its direction after the last look input
 
-using SteadyClock = std::chrono::steady_clock;
-using TimePoint = SteadyClock::time_point;
-static constexpr auto HideCursorDuration = std::chrono::milliseconds(100);
-TimePoint LastCameraInputTime = {};
-uint8_t bLookBehind = 0;
-uint32_t nCameraMode = 0;
-injector::hook_back<void(__cdecl*)(bMatrix4*, bVector3*, bVector3*, bVector3*)> hb_eCreateLookAtMatrix;
-void __cdecl eCreateLookAtMatrix(bMatrix4* out, bVector3* from, bVector3* to, bVector3* up)
-{
-    bHideCursorForMouseLook = true;
-    LastCameraInputTime = SteadyClock::now();
+    // Settings, also changed in the game's options menu
+    const int* pFreeLook = nullptr;
+    const int* pInvertLook = nullptr;
+    const int* pOnlyHorizontalStick = nullptr;  // the right stick may be bound to vertical actions, such as shifting
+    const float* pStickSensitivity = nullptr;
+    const float* pMouseSensitivity = nullptr;
+    const float* pReturnDelay = nullptr;
+    const float* pReturnSpeed = nullptr;
 
-    if (bLookBehind || (nCameraMode != 2 && nCameraMode != 3))
+    constexpr float StickDegreesPerSecond = 150.0f;
+    constexpr float MouseDegreesPerCount = 0.15f;
+    constexpr float CarMoveThreshold = 0.5f;
+
+    float CarVelocityX = 0.0f;
+    float CarVelocityY = 0.0f;
+    bVector3 PrevCarPos = {};
+    bool bPrevCarPosValid = false;
+
+    uint8_t bLookBehind = 0;
+    uint32_t nCameraMode = 0;
+
+    using SteadyClock = std::chrono::steady_clock;
+
+    constexpr float DEG2RAD = 0.0174532925f;
+
+    float WrapDegrees(float angle)
     {
-        YawOffset = 0.0f;
-        PitchOffset = 0.0f;
-        IdleTimer = 0.0f;
-        PrevCarPosValid = false;
-        return hb_eCreateLookAtMatrix.fun(out, from, to, up);
+        angle = std::fmod(angle + 180.0f, 360.0f);
+        return (angle < 0.0f ? angle + 360.0f : angle) - 180.0f;
     }
 
-    float dt = Sim::Internal::mLastFrameTime;
-
-    // Derive car speed from target position delta
-    if (PrevCarPosValid && dt > 0.0f)
+    // Under Proton/Gamescope (Steam Deck) the mouse cursor can't be warped back to the window centre,
+    // so DirectInput keeps reporting the same offset every frame and the camera spins on its own.
+    // A hand never moves a mouse by exactly the same amount for this many frames in a row.
+    class MouseSanity
     {
-        float cdx = to->x - PrevCarPos.x;
-        float cdy = to->y - PrevCarPos.y;
-        CarSpeed2D = sqrtf(cdx * cdx + cdy * cdy) / dt;
-    }
-    PrevCarPos = *to;
-    PrevCarPosValid = true;
+        int lastX = 0, lastY = 0, repeats = 0;
+        bool broken = false;
 
-    // Consume mouse delta from DirectInput (read and zero to avoid reuse)
-    float mouseDeltaX = (float)g_Mouse.DeltaX;
-    float mouseDeltaY = (float)g_Mouse.DeltaY;
-    g_Mouse.DeltaX = 0;
-    g_Mouse.DeltaY = 0;
-
-    // Combine stick + mouse input
-    float StickX = -g_RightStick.X;
-    float StickY = (OnlyAllowHorizontalStickMovement ? 0.0f : g_RightStick.Y);
-
-    float deltaX = StickX + (-mouseDeltaX * MouseLookSensitivity);
-    float deltaY = StickY + (mouseDeltaY * MouseLookSensitivity);
-
-    bool hasInput = (fabsf(deltaX) > 0.01f || fabsf(deltaY) > 0.01f);
-    bool carIsMoving = (CarSpeed2D > CarMoveThreshold);
-
-    // Update offsets based on input state
-    if (hasInput)
-    {
-        YawOffset += deltaX * StickLookSensitivity;
-        PitchOffset += deltaY * StickLookSensitivity * (InvertLook ? -1.0f : 1.0f);
-        IdleTimer = 0.0f;
-    }
-    else
-    {
-        IdleTimer += dt;
-
-        if (IdleTimer >= IdleTimeoutSeconds && carIsMoving)
+    public:
+        bool Accept(int dx, int dy)
         {
-            // Blend offsets back toward zero
-            float blendFactor = 1.0f - expf(-ReturnSpeed * dt);
-            YawOffset = LerpAngleDeg(YawOffset, 0.0f, blendFactor);
-            PitchOffset = PitchOffset + (0.0f - PitchOffset) * blendFactor;
-
-            // Snap to zero when close enough
-            if (fabsf(YawOffset) < 0.3f && fabsf(PitchOffset) < 0.3f)
+            if (dx == 0 && dy == 0)
             {
-                YawOffset = 0.0f;
-                PitchOffset = 0.0f;
+                repeats = 0;
+                return !broken;
+            }
+
+            if (dx == lastX && dy == lastY)
+            {
+                if (++repeats >= 30)
+                    broken = true;
+            }
+            else
+            {
+                repeats = 0;
+                broken = false;
+            }
+
+            lastX = dx;
+            lastY = dy;
+            return !broken;
+        }
+    } MouseFilter;
+
+    void ResetLook()
+    {
+        bFreeHeading = false;
+        PitchOffset = 0.0f;
+        HoldTime = 0.0f;
+        CarVelocityX = CarVelocityY = 0.0f;
+        bPrevCarPosValid = false;
+    }
+
+    bool IsChaseCamera()
+    {
+        // Chase views; the bumper and hood views stay fixed
+        return !bLookBehind && (nCameraMode == 2 || nCameraMode == 3);
+    }
+
+    injector::hook_back<void(__cdecl*)(bMatrix4*, bVector3*, bVector3*, bVector3*)> hb_eCreateLookAtMatrix;
+    void __cdecl eCreateLookAtMatrix(bMatrix4* out, bVector3* from, bVector3* to, bVector3* up)
+    {
+        auto look = Input::ConsumeLook();
+
+        // A new race, or the chase camera back after another view: the look starts behind the car, and
+        // mouse movement made in the menus or while loading doesn't turn it
+        static auto lastUpdate = SteadyClock::time_point{};
+        auto now = SteadyClock::now();
+        bool bRestart = now - lastUpdate > std::chrono::milliseconds(250);
+        lastUpdate = now;
+        if (bRestart)
+        {
+            ResetLook();
+            look = {};
+        }
+
+        // The car was put somewhere else, such as back on the road
+        if (bPrevCarPosValid && std::hypot(to->x - PrevCarPos.x, to->y - PrevCarPos.y) > 20.0f)
+            ResetLook();
+
+        if (!*pFreeLook || !IsChaseCamera() || GameFlowManager::IsPaused())
+        {
+            if (!*pFreeLook || !IsChaseCamera())
+                ResetLook();
+            return hb_eCreateLookAtMatrix.fun(out, from, to, up);
+        }
+
+        float dt = std::clamp(static_cast<float>(Sim::Internal::mLastFrameTime), 0.0f, 0.1f);
+
+        // The car's velocity, smoothed a little against frame time noise
+        if (bPrevCarPosValid && dt > 0.0f)
+        {
+            float blend = 1.0f - std::exp(-10.0f * dt);
+            CarVelocityX += ((to->x - PrevCarPos.x) / dt - CarVelocityX) * blend;
+            CarVelocityY += ((to->y - PrevCarPos.y) / dt - CarVelocityY) * blend;
+        }
+        PrevCarPos = *to;
+        bPrevCarPosValid = true;
+
+        // The game's camera: where it sits around the car
+        float dx = from->x - to->x;
+        float dy = from->y - to->y;
+        float dz = from->z - to->z;
+        float dist = std::sqrt(dx * dx + dy * dy + dz * dz);
+        float gameYaw = std::atan2(dy, dx) / DEG2RAD;
+        float gamePitch = std::atan2(dz, std::hypot(dx, dy)) / DEG2RAD;
+
+        float yawInput = -look.stickX * StickDegreesPerSecond * (*pStickSensitivity) * dt;
+        // The right stick only turns the camera sideways when its vertical axis drives the car, such as shifting in
+        // the default pad controls, or when the option says so
+        bool onlyHorizontalStick = *pOnlyHorizontalStick != 0 || Input::RightStickVerticalBound();
+        float pitchInput = onlyHorizontalStick ? 0.0f : look.stickY * StickDegreesPerSecond * (*pStickSensitivity) * dt;
+
+        if (MouseFilter.Accept(look.mouseX, look.mouseY))
+        {
+            yawInput -= look.mouseX * MouseDegreesPerCount * (*pMouseSensitivity);
+            pitchInput += look.mouseY * MouseDegreesPerCount * (*pMouseSensitivity);
+        }
+
+        if ((*pInvertLook != 0))
+            pitchInput = -pitchInput;
+
+        // Like San Andreas: the look direction is a direction in the world, so turning the car doesn't
+        // turn it. After the return delay without looking, the camera eases back behind the car.
+        if (std::fabs(yawInput) > 0.001f || std::fabs(pitchInput) > 0.001f)
+        {
+            if (!bFreeHeading)
+            {
+                bFreeHeading = true;
+                WorldYaw = gameYaw;
+            }
+            WorldYaw = WrapDegrees(WorldYaw + yawInput);
+            PitchOffset = std::clamp(PitchOffset + pitchInput, -20.0f, 60.0f);
+            HoldTime = std::max(0.0f, *pReturnDelay);
+        }
+        else if (bFreeHeading)
+        {
+            HoldTime -= dt;
+            if (HoldTime <= 0.0f)
+            {
+                HoldTime = 0.0f;
+
+                // Ease back to the game's own camera while the car moves. The game's camera is the target, so
+                // there's no jump when it takes over again.
+                if (std::hypot(CarVelocityX, CarVelocityY) > CarMoveThreshold)
+                {
+                    float blend = 1.0f - std::exp(-std::max(0.1f, *pReturnSpeed) * dt);
+                    WorldYaw = WrapDegrees(WorldYaw + WrapDegrees(gameYaw - WorldYaw) * blend);
+                    PitchOffset -= PitchOffset * blend;
+                }
+
+                // Back with the game's own camera once the difference can't be seen
+                if (std::fabs(WrapDegrees(WorldYaw - gameYaw)) < 0.05f && std::fabs(PitchOffset) < 0.05f)
+                {
+                    bFreeHeading = false;
+                    PitchOffset = 0.0f;
+                }
             }
         }
-    }
 
-    // If offsets are zero, pass through to the original camera untouched
-    if (YawOffset == 0.0f && PitchOffset == 0.0f)
+        if (!bFreeHeading)
+            return hb_eCreateLookAtMatrix.fun(out, from, to, up);
+
+        // Put the camera at the look direction around the car, at the game's distance
+        float yaw = WorldYaw * DEG2RAD;
+        float pitch = std::clamp((gamePitch + PitchOffset) * DEG2RAD, -1.39626f, 1.39626f);
+
+        from->x = to->x + dist * std::cos(pitch) * std::cos(yaw);
+        from->y = to->y + dist * std::cos(pitch) * std::sin(yaw);
+        from->z = to->z + dist * std::sin(pitch);
+        hb_eCreateLookAtMatrix.fun(out, from, to, up);
+    }
+}
+
+// Mouse cursor. The game shows it whenever the mouse moves, also while driving, where the mouse turns
+// the camera. It's hidden while the race HUD is up and the game isn't paused, so the pause menu, the
+// result screens and the front end still have it.
+namespace
+{
+    SteadyClock::time_point LastHudUpdate = {};
+
+    SafetyHookInline shHudUpdate = {};
+    void __fastcall HudUpdate(void* hud, void* edx, void* player, float dt)
     {
-        return hb_eCreateLookAtMatrix.fun(out, from, to, up);
+        LastHudUpdate = SteadyClock::now();
+        shHudUpdate.unsafe_thiscall(hud, player, dt);
     }
 
-    // Clamp pitch offset so total pitch stays reasonable
-    if (PitchOffset > 60.0f) PitchOffset = 60.0f;
-    if (PitchOffset < -30.0f) PitchOffset = -30.0f;
-
-    // Decompose the game's original camera into spherical coords
-    float dx = from->x - to->x;
-    float dy = from->y - to->y;
-    float dz = from->z - to->z;
-    float dist = sqrtf(dx * dx + dy * dy + dz * dz);
-    float dist2D = sqrtf(dx * dx + dy * dy);
-
-    float origYawRad = atan2f(dy, dx);
-    float origPitchRad = atan2f(dz, dist2D);
-
-    // Apply offsets
-    float finalYawRad = origYawRad + YawOffset * DEG2RAD;
-    float finalPitchRad = origPitchRad + PitchOffset * DEG2RAD;
-
-    // Clamp total pitch to avoid gimbal lock
-    if (finalPitchRad > 1.39626f) finalPitchRad = 1.39626f;   // ~80 deg
-    if (finalPitchRad < -1.39626f) finalPitchRad = -1.39626f;
-
-    // Reconstruct camera position at original distance
-    from->x = to->x + dist * cosf(finalPitchRad) * cosf(finalYawRad);
-    from->y = to->y + dist * cosf(finalPitchRad) * sinf(finalYawRad);
-    from->z = to->z + dist * sinf(finalPitchRad);
-
-    return hb_eCreateLookAtMatrix.fun(out, from, to, up);
+    SafetyHookInline shDrawCursor = {};
+    void __cdecl DrawCursor(int x, int y)
+    {
+        bool driving = IsRacing() && !GameFlowManager::IsPaused() && SteadyClock::now() - LastHudUpdate < std::chrono::milliseconds(200);
+        if (!driving && !Input::UsingGamepad())
+            shDrawCursor.unsafe_ccall(x, y);
+    }
 }
 
 class Camera
@@ -155,21 +243,27 @@ class Camera
 public:
     Camera()
     {
-        WFP::onInitEventAsync() += []()
+        WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            if (!iniReader.ReadInteger("CAMERA", "Enable", 1))
-                return;
+            // FEngHud::Update
+            auto pattern = hook::pattern("56 8B F1 83 BE D4 02 00 00 00 0F 84 ? ? ? ? 80 BE 70 03 00 00 00");
+            if (!pattern.empty())
+                shHudUpdate = safetyhook::create_inline(pattern.get_first(), HudUpdate);
 
-            IdleTimeoutSeconds = iniReader.ReadFloat("CAMERA", "CameraReturnTimeout", 3.0f);
-            ReturnSpeed = iniReader.ReadFloat("CAMERA", "CameraReturnSpeed", 2.0f);
-            StickLookSensitivity = iniReader.ReadFloat("CAMERA", "StickLookSensitivity", 1.0f);
-            MouseLookSensitivity = iniReader.ReadFloat("CAMERA", "MouseLookSensitivity", 1.0f) * 0.15f;
-            InvertLook = iniReader.ReadInteger("CAMERA", "InvertLook", 0) != 0;
-            OnlyAllowHorizontalStickMovement = iniReader.ReadInteger("CAMERA", "OnlyAllowHorizontalStickMovement", 0) != 0;
+            pattern = hook::pattern("55 8B EC 83 E4 ? 81 EC ? ? ? ? 80 3D ? ? ? ? ? 53 56");
+            if (!pattern.empty() && shHudUpdate)
+                shDrawCursor = safetyhook::create_inline(pattern.get_first(), DrawCursor);
 
-            //DrivingCameraMover::Update
-            auto pattern = hook::pattern("E8 ? ? ? ? 0F 57 C0 83 C4 ? 0F 2F 86 ? ? ? ? 0F 82");
+            pFreeLook = &FixSettings().Int("CAMERA.FreeLook");
+            pInvertLook = &FixSettings().Int("CAMERA.InvertLook");
+            pOnlyHorizontalStick = &FixSettings().Int("CAMERA.OnlyAllowHorizontalStickMovement");
+            pStickSensitivity = &FixSettings().Float("MAIN.GamepadCameraSpeed");
+            pMouseSensitivity = &FixSettings().Float("MAIN.MouseSensitivity");
+            pReturnDelay = &FixSettings().Float("CAMERA.ReturnDelay");
+            pReturnSpeed = &FixSettings().Float("CAMERA.ReturnSpeed");
+
+            // DrivingCameraMover::Update
+            pattern = hook::pattern("E8 ? ? ? ? 0F 57 C0 83 C4 ? 0F 2F 86 ? ? ? ? 0F 82");
             hb_eCreateLookAtMatrix.fun = injector::MakeCALL(pattern.get_first(), eCreateLookAtMatrix, true).get();
 
             pattern = hook::pattern("8B 56 ? F3 0F 10 05 ? ? ? ? 88 44 24");
@@ -178,11 +272,6 @@ public:
                 bLookBehind = *(uint8_t*)(regs.esi + 0xBD);
                 nCameraMode = *(uint32_t*)(regs.esi + 0xC8);
             });
-
-            WFP::onGameProcessEvent() += []()
-            {
-                bHideCursorForMouseLook = (SteadyClock::now() - LastCameraInputTime) < HideCursorDuration;
-            };
         };
     }
 } Camera;

@@ -1,0 +1,1523 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Splinter Cell: Chaos Theory",
+        "exe": [
+          "splintercell3.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@FMVWidescreenMode",
+      "description": "@FMVWidescreenMode.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@FMVWidescreenMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@FMVWidescreenMode.1"
+        },
+        {
+          "value": 2,
+          "label": "@FMVWidescreenMode.2"
+        }
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "label": "@ResX",
+      "description": "@ResX.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 8192
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "label": "@ResY",
+      "description": "@ResY.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 8192
+    },
+    {
+      "id": "MAIN.RawInputMouse",
+      "type": "bool",
+      "default": true,
+      "label": "@RawInputMouse",
+      "description": "@RawInputMouse.description",
+      "page": "controls",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.MouseSensitivity",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.1,
+      "max": 5.0,
+      "step": 0.05,
+      "decimals": 2,
+      "label": "@MouseSensitivity",
+      "description": "@MouseSensitivity.description",
+      "page": "controls",
+      "apply": "live",
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.RawInputMouseRawData",
+      "type": "bool",
+      "default": true,
+      "label": "@RawInputMouseRawData",
+      "description": "@RawInputMouseRawData.description",
+      "page": "controls",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.HudWidescreenMode",
+      "type": "choice",
+      "default": 2,
+      "label": "@HudWidescreenMode",
+      "description": "@HudWidescreenMode.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@HudWidescreenMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@HudWidescreenMode.1"
+        },
+        {
+          "value": 2,
+          "label": "@HudWidescreenMode.2"
+        }
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 2,
+        "enhanced": 2
+      }
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@HudAspectRatioConstraint",
+      "description": "@HudAspectRatioConstraint.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipPressStart",
+      "description": "@SkipPressStart.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.DeferredInput",
+      "type": "bool",
+      "default": 1,
+      "label": "@DeferredInput",
+      "description": "@DeferredInput.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WindowMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@WindowMode.1"
+        },
+        {
+          "value": 2,
+          "label": "@WindowMode.2"
+        }
+      ],
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu"
+    },
+    {
+      "id": "WINDOWEDMODE.FullScreenRefreshRateInHz",
+      "type": "int",
+      "default": 0,
+      "label": "@FullScreenRefreshRateInHz",
+      "description": "@FullScreenRefreshRateInHz.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 1000
+    },
+    {
+      "id": "GRAPHICS.ShadowMapResolution",
+      "type": "int",
+      "default": 0,
+      "label": "@ShadowMapResolution",
+      "description": "@ShadowMapResolution.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384
+    },
+    {
+      "id": "GRAPHICS.EnableShadowFiltering",
+      "type": "bool",
+      "default": 0,
+      "label": "@EnableShadowFiltering",
+      "description": "@EnableShadowFiltering.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "label": "@FPSLimit",
+      "description": "@FPSLimit.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 0,
+      "max": 1000,
+      "presets": {
+        "vanilla": 60,
+        "recommended": 60,
+        "enhanced": 60
+      }
+    },
+    {
+      "id": "BONUS.BlacklistIndicators",
+      "type": "choice",
+      "default": 0,
+      "label": "@BlacklistIndicators",
+      "description": "@BlacklistIndicators.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@BlacklistIndicators.0"
+        },
+        {
+          "value": 1,
+          "label": "@BlacklistIndicators.1"
+        },
+        {
+          "value": 2,
+          "label": "@BlacklistIndicators.2"
+        }
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "BONUS.GogglesLightColor",
+      "type": "int",
+      "default": 0,
+      "label": "@GogglesLightColor",
+      "description": "@GogglesLightColor.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 0,
+      "max": 16777215,
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.LightSyncRGB",
+      "type": "bool",
+      "default": 1,
+      "label": "@LightSyncRGB",
+      "description": "@LightSyncRGB.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "Joystick19.ProductName",
+      "type": "string",
+      "default": "Xidi Virtual Controller 1",
+      "label": "@Joystick19.ProductName",
+      "description": "@Joystick19.ProductName.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.VendorID",
+      "type": "string",
+      "default": "65535",
+      "label": "@Joystick19.VendorID",
+      "description": "@Joystick19.VendorID.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.ProductID",
+      "type": "string",
+      "default": "1",
+      "label": "@Joystick19.ProductID",
+      "description": "@Joystick19.ProductID.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.AxisStrafe",
+      "type": "string",
+      "default": "Axis_X",
+      "label": "@Joystick19.AxisStrafe",
+      "description": "@Joystick19.AxisStrafe.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.AxisForwardBackward",
+      "type": "string",
+      "default": "Axis_Y",
+      "label": "@Joystick19.AxisForwardBackward",
+      "description": "@Joystick19.AxisForwardBackward.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.AxisTurnHead",
+      "type": "string",
+      "default": "Axis_Z",
+      "label": "@Joystick19.AxisTurnHead",
+      "description": "@Joystick19.AxisTurnHead.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.AxisLookUpDown",
+      "type": "string",
+      "default": "Axis_Rotation_Z",
+      "label": "@Joystick19.AxisLookUpDown",
+      "description": "@Joystick19.AxisLookUpDown.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy1",
+      "type": "string",
+      "default": "Interaction",
+      "label": "@Joystick19.Joy1",
+      "description": "@Joystick19.Joy1.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy2",
+      "type": "string",
+      "default": "Duck",
+      "label": "@Joystick19.Joy2",
+      "description": "@Joystick19.Joy2.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy3",
+      "type": "string",
+      "default": "Scope",
+      "label": "@Joystick19.Joy3",
+      "description": "@Joystick19.Joy3.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy4",
+      "type": "string",
+      "default": "Jump",
+      "label": "@Joystick19.Joy4",
+      "description": "@Joystick19.Joy4.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy5",
+      "type": "string",
+      "default": "QuickInventory",
+      "label": "@Joystick19.Joy5",
+      "description": "@Joystick19.Joy5.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy6",
+      "type": "string",
+      "default": "CoopActionWhistle",
+      "label": "@Joystick19.Joy6",
+      "description": "@Joystick19.Joy6.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy7",
+      "type": "string",
+      "default": "AltFire",
+      "label": "@Joystick19.Joy7",
+      "description": "@Joystick19.Joy7.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy8",
+      "type": "string",
+      "default": "Fire",
+      "label": "@Joystick19.Joy8",
+      "description": "@Joystick19.Joy8.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy9",
+      "type": "string",
+      "default": "OpsatMenu",
+      "label": "@Joystick19.Joy9",
+      "description": "@Joystick19.Joy9.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy10",
+      "type": "string",
+      "default": "PauseMenu",
+      "label": "@Joystick19.Joy10",
+      "description": "@Joystick19.Joy10.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy11",
+      "type": "string",
+      "default": "SwitchHandZoom",
+      "label": "@Joystick19.Joy11",
+      "description": "@Joystick19.Joy11.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy12",
+      "type": "string",
+      "default": "ZoomToggle",
+      "label": "@Joystick19.Joy12",
+      "description": "@Joystick19.Joy12.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy13",
+      "type": "string",
+      "default": "EEVMode",
+      "label": "@Joystick19.Joy13",
+      "description": "@Joystick19.Joy13.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy14",
+      "type": "string",
+      "default": "StickyCamMode",
+      "label": "@Joystick19.Joy14",
+      "description": "@Joystick19.Joy14.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy15",
+      "type": "string",
+      "default": "NightVision",
+      "label": "@Joystick19.Joy15",
+      "description": "@Joystick19.Joy15.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.Joy16",
+      "type": "string",
+      "default": "ThermalVision",
+      "label": "@Joystick19.Joy16",
+      "description": "@Joystick19.Joy16.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.DPadUp",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick19.DPadUp",
+      "description": "@Joystick19.DPadUp.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.DPadDown",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick19.DPadDown",
+      "description": "@Joystick19.DPadDown.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.DPadLeft",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick19.DPadLeft",
+      "description": "@Joystick19.DPadLeft.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick19.DPadRight",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick19.DPadRight",
+      "description": "@Joystick19.DPadRight.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.ProductName",
+      "type": "string",
+      "default": "Xidi Virtual Controller 2",
+      "label": "@Joystick20.ProductName",
+      "description": "@Joystick20.ProductName.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.VendorID",
+      "type": "string",
+      "default": "65535",
+      "label": "@Joystick20.VendorID",
+      "description": "@Joystick20.VendorID.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.ProductID",
+      "type": "string",
+      "default": "2",
+      "label": "@Joystick20.ProductID",
+      "description": "@Joystick20.ProductID.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.AxisStrafe",
+      "type": "string",
+      "default": "Axis_X",
+      "label": "@Joystick20.AxisStrafe",
+      "description": "@Joystick20.AxisStrafe.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.AxisForwardBackward",
+      "type": "string",
+      "default": "Axis_Y",
+      "label": "@Joystick20.AxisForwardBackward",
+      "description": "@Joystick20.AxisForwardBackward.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.AxisTurnHead",
+      "type": "string",
+      "default": "Axis_Z",
+      "label": "@Joystick20.AxisTurnHead",
+      "description": "@Joystick20.AxisTurnHead.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.AxisLookUpDown",
+      "type": "string",
+      "default": "Axis_Rotation_Z",
+      "label": "@Joystick20.AxisLookUpDown",
+      "description": "@Joystick20.AxisLookUpDown.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy1",
+      "type": "string",
+      "default": "Interaction",
+      "label": "@Joystick20.Joy1",
+      "description": "@Joystick20.Joy1.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy2",
+      "type": "string",
+      "default": "Duck",
+      "label": "@Joystick20.Joy2",
+      "description": "@Joystick20.Joy2.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy3",
+      "type": "string",
+      "default": "Scope",
+      "label": "@Joystick20.Joy3",
+      "description": "@Joystick20.Joy3.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy4",
+      "type": "string",
+      "default": "Jump",
+      "label": "@Joystick20.Joy4",
+      "description": "@Joystick20.Joy4.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy5",
+      "type": "string",
+      "default": "QuickInventory",
+      "label": "@Joystick20.Joy5",
+      "description": "@Joystick20.Joy5.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy6",
+      "type": "string",
+      "default": "CoopActionWhistle",
+      "label": "@Joystick20.Joy6",
+      "description": "@Joystick20.Joy6.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy7",
+      "type": "string",
+      "default": "AltFire",
+      "label": "@Joystick20.Joy7",
+      "description": "@Joystick20.Joy7.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy8",
+      "type": "string",
+      "default": "Fire",
+      "label": "@Joystick20.Joy8",
+      "description": "@Joystick20.Joy8.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy9",
+      "type": "string",
+      "default": "OpsatMenu",
+      "label": "@Joystick20.Joy9",
+      "description": "@Joystick20.Joy9.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy10",
+      "type": "string",
+      "default": "PauseMenu",
+      "label": "@Joystick20.Joy10",
+      "description": "@Joystick20.Joy10.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy11",
+      "type": "string",
+      "default": "SwitchHandZoom",
+      "label": "@Joystick20.Joy11",
+      "description": "@Joystick20.Joy11.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy12",
+      "type": "string",
+      "default": "ZoomToggle",
+      "label": "@Joystick20.Joy12",
+      "description": "@Joystick20.Joy12.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy13",
+      "type": "string",
+      "default": "EEVMode",
+      "label": "@Joystick20.Joy13",
+      "description": "@Joystick20.Joy13.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy14",
+      "type": "string",
+      "default": "StickyCamMode",
+      "label": "@Joystick20.Joy14",
+      "description": "@Joystick20.Joy14.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy15",
+      "type": "string",
+      "default": "NightVision",
+      "label": "@Joystick20.Joy15",
+      "description": "@Joystick20.Joy15.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.Joy16",
+      "type": "string",
+      "default": "ThermalVision",
+      "label": "@Joystick20.Joy16",
+      "description": "@Joystick20.Joy16.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.DPadUp",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick20.DPadUp",
+      "description": "@Joystick20.DPadUp.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.DPadDown",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick20.DPadDown",
+      "description": "@Joystick20.DPadDown.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.DPadLeft",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick20.DPadLeft",
+      "description": "@Joystick20.DPadLeft.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick20.DPadRight",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick20.DPadRight",
+      "description": "@Joystick20.DPadRight.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.ProductName",
+      "type": "string",
+      "default": "Xidi Virtual Controller 3",
+      "label": "@Joystick21.ProductName",
+      "description": "@Joystick21.ProductName.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.VendorID",
+      "type": "string",
+      "default": "65535",
+      "label": "@Joystick21.VendorID",
+      "description": "@Joystick21.VendorID.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.ProductID",
+      "type": "string",
+      "default": "3",
+      "label": "@Joystick21.ProductID",
+      "description": "@Joystick21.ProductID.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.AxisStrafe",
+      "type": "string",
+      "default": "Axis_X",
+      "label": "@Joystick21.AxisStrafe",
+      "description": "@Joystick21.AxisStrafe.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.AxisForwardBackward",
+      "type": "string",
+      "default": "Axis_Y",
+      "label": "@Joystick21.AxisForwardBackward",
+      "description": "@Joystick21.AxisForwardBackward.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.AxisTurnHead",
+      "type": "string",
+      "default": "Axis_Z",
+      "label": "@Joystick21.AxisTurnHead",
+      "description": "@Joystick21.AxisTurnHead.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.AxisLookUpDown",
+      "type": "string",
+      "default": "Axis_Rotation_Z",
+      "label": "@Joystick21.AxisLookUpDown",
+      "description": "@Joystick21.AxisLookUpDown.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy1",
+      "type": "string",
+      "default": "Interaction",
+      "label": "@Joystick21.Joy1",
+      "description": "@Joystick21.Joy1.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy2",
+      "type": "string",
+      "default": "Duck",
+      "label": "@Joystick21.Joy2",
+      "description": "@Joystick21.Joy2.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy3",
+      "type": "string",
+      "default": "Scope",
+      "label": "@Joystick21.Joy3",
+      "description": "@Joystick21.Joy3.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy4",
+      "type": "string",
+      "default": "Jump",
+      "label": "@Joystick21.Joy4",
+      "description": "@Joystick21.Joy4.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy5",
+      "type": "string",
+      "default": "QuickInventory",
+      "label": "@Joystick21.Joy5",
+      "description": "@Joystick21.Joy5.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy6",
+      "type": "string",
+      "default": "CoopActionWhistle",
+      "label": "@Joystick21.Joy6",
+      "description": "@Joystick21.Joy6.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy7",
+      "type": "string",
+      "default": "AltFire",
+      "label": "@Joystick21.Joy7",
+      "description": "@Joystick21.Joy7.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy8",
+      "type": "string",
+      "default": "Fire",
+      "label": "@Joystick21.Joy8",
+      "description": "@Joystick21.Joy8.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy9",
+      "type": "string",
+      "default": "OpsatMenu",
+      "label": "@Joystick21.Joy9",
+      "description": "@Joystick21.Joy9.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy10",
+      "type": "string",
+      "default": "PauseMenu",
+      "label": "@Joystick21.Joy10",
+      "description": "@Joystick21.Joy10.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy11",
+      "type": "string",
+      "default": "SwitchHandZoom",
+      "label": "@Joystick21.Joy11",
+      "description": "@Joystick21.Joy11.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy12",
+      "type": "string",
+      "default": "ZoomToggle",
+      "label": "@Joystick21.Joy12",
+      "description": "@Joystick21.Joy12.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy13",
+      "type": "string",
+      "default": "EEVMode",
+      "label": "@Joystick21.Joy13",
+      "description": "@Joystick21.Joy13.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy14",
+      "type": "string",
+      "default": "StickyCamMode",
+      "label": "@Joystick21.Joy14",
+      "description": "@Joystick21.Joy14.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy15",
+      "type": "string",
+      "default": "NightVision",
+      "label": "@Joystick21.Joy15",
+      "description": "@Joystick21.Joy15.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.Joy16",
+      "type": "string",
+      "default": "ThermalVision",
+      "label": "@Joystick21.Joy16",
+      "description": "@Joystick21.Joy16.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.DPadUp",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick21.DPadUp",
+      "description": "@Joystick21.DPadUp.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.DPadDown",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick21.DPadDown",
+      "description": "@Joystick21.DPadDown.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.DPadLeft",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick21.DPadLeft",
+      "description": "@Joystick21.DPadLeft.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick21.DPadRight",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick21.DPadRight",
+      "description": "@Joystick21.DPadRight.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.ProductName",
+      "type": "string",
+      "default": "Xidi Virtual Controller 4",
+      "label": "@Joystick22.ProductName",
+      "description": "@Joystick22.ProductName.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.VendorID",
+      "type": "string",
+      "default": "65535",
+      "label": "@Joystick22.VendorID",
+      "description": "@Joystick22.VendorID.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.ProductID",
+      "type": "string",
+      "default": "4",
+      "label": "@Joystick22.ProductID",
+      "description": "@Joystick22.ProductID.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.AxisStrafe",
+      "type": "string",
+      "default": "Axis_X",
+      "label": "@Joystick22.AxisStrafe",
+      "description": "@Joystick22.AxisStrafe.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.AxisForwardBackward",
+      "type": "string",
+      "default": "Axis_Y",
+      "label": "@Joystick22.AxisForwardBackward",
+      "description": "@Joystick22.AxisForwardBackward.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.AxisTurnHead",
+      "type": "string",
+      "default": "Axis_Z",
+      "label": "@Joystick22.AxisTurnHead",
+      "description": "@Joystick22.AxisTurnHead.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.AxisLookUpDown",
+      "type": "string",
+      "default": "Axis_Rotation_Z",
+      "label": "@Joystick22.AxisLookUpDown",
+      "description": "@Joystick22.AxisLookUpDown.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy1",
+      "type": "string",
+      "default": "Interaction",
+      "label": "@Joystick22.Joy1",
+      "description": "@Joystick22.Joy1.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy2",
+      "type": "string",
+      "default": "Duck",
+      "label": "@Joystick22.Joy2",
+      "description": "@Joystick22.Joy2.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy3",
+      "type": "string",
+      "default": "Scope",
+      "label": "@Joystick22.Joy3",
+      "description": "@Joystick22.Joy3.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy4",
+      "type": "string",
+      "default": "Jump",
+      "label": "@Joystick22.Joy4",
+      "description": "@Joystick22.Joy4.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy5",
+      "type": "string",
+      "default": "QuickInventory",
+      "label": "@Joystick22.Joy5",
+      "description": "@Joystick22.Joy5.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy6",
+      "type": "string",
+      "default": "CoopActionWhistle",
+      "label": "@Joystick22.Joy6",
+      "description": "@Joystick22.Joy6.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy7",
+      "type": "string",
+      "default": "AltFire",
+      "label": "@Joystick22.Joy7",
+      "description": "@Joystick22.Joy7.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy8",
+      "type": "string",
+      "default": "Fire",
+      "label": "@Joystick22.Joy8",
+      "description": "@Joystick22.Joy8.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy9",
+      "type": "string",
+      "default": "OpsatMenu",
+      "label": "@Joystick22.Joy9",
+      "description": "@Joystick22.Joy9.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy10",
+      "type": "string",
+      "default": "PauseMenu",
+      "label": "@Joystick22.Joy10",
+      "description": "@Joystick22.Joy10.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy11",
+      "type": "string",
+      "default": "SwitchHandZoom",
+      "label": "@Joystick22.Joy11",
+      "description": "@Joystick22.Joy11.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy12",
+      "type": "string",
+      "default": "ZoomToggle",
+      "label": "@Joystick22.Joy12",
+      "description": "@Joystick22.Joy12.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy13",
+      "type": "string",
+      "default": "EEVMode",
+      "label": "@Joystick22.Joy13",
+      "description": "@Joystick22.Joy13.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy14",
+      "type": "string",
+      "default": "StickyCamMode",
+      "label": "@Joystick22.Joy14",
+      "description": "@Joystick22.Joy14.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy15",
+      "type": "string",
+      "default": "NightVision",
+      "label": "@Joystick22.Joy15",
+      "description": "@Joystick22.Joy15.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.Joy16",
+      "type": "string",
+      "default": "ThermalVision",
+      "label": "@Joystick22.Joy16",
+      "description": "@Joystick22.Joy16.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.DPadUp",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick22.DPadUp",
+      "description": "@Joystick22.DPadUp.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.DPadDown",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick22.DPadDown",
+      "description": "@Joystick22.DPadDown.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.DPadLeft",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick22.DPadLeft",
+      "description": "@Joystick22.DPadLeft.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "Joystick22.DPadRight",
+      "type": "string",
+      "default": "",
+      "label": "@Joystick22.DPadRight",
+      "description": "@Joystick22.DPadRight.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "menu",
+      "visibility": "editor",
+      "maxLength": 32
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    }
+  ]
+}

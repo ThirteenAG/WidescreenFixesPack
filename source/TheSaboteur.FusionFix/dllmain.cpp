@@ -1,22 +1,35 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
+#include "../Shared/PatternCheck.hpp"
 
 import ComVars;
 
 void Init()
 {
-    auto pattern = hook::pattern("8B 91 ? ? ? ? 50 FF D2 8B CE");
-    static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    FixSettings();
+    asi_settings::LiveLink::Start();
+    [&]()
     {
-        Direct3DDevice = (IDirect3DDevice9*)regs.eax;
-        WFP::onEndScene().executeAll();
-    });
+        if (!CheckPatterns("The Saboteur: renderer events", {
+            "8B 91 ? ? ? ? 50 FF D2 8B CE",
+            "8B 85 ? ? ? ? 8D B0 ? ? ? ? 8B 85",
+        }))
+            return;
 
-    pattern = hook::pattern("8B 85 ? ? ? ? 8D B0 ? ? ? ? 8B 85");
-    static auto ResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        Direct3DDevice = nullptr;
-        WFP::onBeforeReset().executeAll();
-    });
+        auto pattern = hook::pattern("8B 91 ? ? ? ? 50 FF D2 8B CE");
+        static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            Direct3DDevice = (IDirect3DDevice9*)regs.eax;
+            WFP::onEndScene().executeAll();
+        });
+
+        pattern = hook::pattern("8B 85 ? ? ? ? 8D B0 ? ? ? ? 8B 85");
+        static auto ResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            Direct3DDevice = nullptr;
+            WFP::onBeforeReset().executeAll();
+        });
+    }();
 
     static auto futures = WFP::onInitEventAsync().executeAllAsync();
 
@@ -29,6 +42,8 @@ void Init()
 
     WFP::onInitEvent().executeAll();
 }
+
+ASI_SETTINGS_EXPORT(FixSettings())
 
 CEXP void InitializeASI()
 {

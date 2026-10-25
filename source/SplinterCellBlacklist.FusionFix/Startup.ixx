@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Startup;
 
@@ -8,17 +9,17 @@ import ComVars;
 
 export void InitStartup()
 {
-    CIniReader iniReader("");
-    static auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
-    static auto bSkipPressAnyKeyScreen = iniReader.ReadInteger("MAIN", "SkipPressAnyKeyScreen", 1) != 0;
+    auto& settings = FixSettings();
+    static auto bSkipIntro = settings.Int("MAIN.SkipIntro") != 0;
+    static auto bSkipPressStart = settings.Int("MAIN.SkipPressStart") != 0;
 
     // skip systemdetection
     auto pattern = hook::pattern("0F 84 ? ? ? ? 68 ? ? ? ? 89 B5");
-    injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true); // jz -> jmp
+    ProtectedGameRef<uint16_t>(reinterpret_cast<uint16_t*>(pattern.get_first())) = 0xE990; // jz -> jmp
 
     // UnrealMain
     pattern = hook::pattern("0F 84 ? ? ? ? 56 56 56 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 18 50 8D 8D");
-    injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true); // jz -> jmp
+    ProtectedGameRef<uint16_t>(reinterpret_cast<uint16_t*>(pattern.get_first())) = 0xE990; // jz -> jmp
 
     // NetOnlineManager keeps a pool of NetOverlapped (async network requests, 24h bytes, made in its constructor: 20 of them, free list +E4h,
     // count +F4h). Every login attempt to the rendezvous server (nsOnlineConnection::StateLoggingInToRdv) takes one and a failed attempt
@@ -66,7 +67,7 @@ export void InitStartup()
     // started flag and goes to state 3, the scene goes on to the profile and the main menu from there.
     // With a checkpoint to go back to, it asks to resume at it or return to the Paladin (sub_19949E0, the message box result is handled by
     // sub_197FD00: resume is sub_197F790). Both are done the first time the scene gets to them.
-    if (bSkipPressAnyKeyScreen)
+    if (bSkipPressStart)
     {
         pattern = find_pattern("B0 01 A2 ? ? ? ? 83 B9 68 05 00 00 02 75 0A C7 81 68 05 00 00 03 00 00 00 C2 08 00", "83 B9 68 05 00 00 02 B0 01 A2 ? ? ? ? 75 0A C7 81 68 05 00 00 03 00 00 00 C2 08 00");
         static auto PressStartHandler = reinterpret_cast<char(__fastcall*)(uintptr_t scene, void* edx, int, int)>(pattern.get_first());

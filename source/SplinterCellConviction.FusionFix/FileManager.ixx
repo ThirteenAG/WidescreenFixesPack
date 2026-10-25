@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <fstream>
 #include <unordered_map>
 #include <numeric>
@@ -105,8 +106,7 @@ class ProgressDialog
         else
         {
             // no dialog, just wait for the work
-            while (!closing)
-                Sleep(100);
+            closing.wait(false);
         }
 
         if (activation != INVALID_HANDLE_VALUE)
@@ -155,6 +155,7 @@ public:
         if (!thread.joinable())
             return;
         closing = true;
+        closing.notify_all();
         thread.join();
     }
 };
@@ -401,7 +402,9 @@ namespace FFileManagerLinear
     FArchive* __fastcall CreateFileReader(void* fileManager, void* edx, const char* path, int32_t flags, void* error, int32_t bufferSize)
     {
         if (auto overridePath = FileLoader::ResolveOverride(path))
+        {
             return FileLoader::Inner(fileManager)->CreateFileReader(overridePath, flags, error, bufferSize);
+        }
 
         auto reader = shCreateFileReader.fastcall<FArchive*>(fileManager, edx, path, flags, error, bufferSize);
         if (reader && LinearReaderVTable && *reinterpret_cast<uintptr_t*>(reader) == LinearReaderVTable &&
@@ -1007,10 +1010,17 @@ namespace Dumper
     }
 }
 
+export bool MenuOverridesAvailable()
+{
+    return GetOverloadedFilePathA && FileLoader::NormalizeName && FileLoader::FStringDestructor &&
+        FFileManagerArc::shLookup && FFileManagerArc::shIsAvailable && FFileManagerLinear::shCreateFileReader &&
+        FFileManagerLinear::shFileSize && FFileManagerLinear::shFileExists && FFileManagerLinear::shResolveAlias;
+}
+
 export void InitFileManager()
 {
-    CIniReader iniReader("");
-    auto bDumpPackedFiles = iniReader.ReadInteger("FILELOADER", "DumpPackedFiles", 0) != 0;
+
+    auto bDumpPackedFiles = FixSettings().Bool("FILELOADER.DumpPackedFiles") != 0;
 
     ModuleList dlls;
     dlls.Enumerate(ModuleList::SearchLocation::LocalOnly);

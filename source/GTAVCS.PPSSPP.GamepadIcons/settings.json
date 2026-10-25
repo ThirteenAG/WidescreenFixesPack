@@ -1,0 +1,66 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": "PSP",
+      "label": "@icons",
+      "description": "@icons.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": "PSP",
+          "label": "@set.PSP"
+        },
+        {
+          "value": "360",
+          "label": "@set.360"
+        },
+        {
+          "value": "XBO",
+          "label": "@set.XBO"
+        },
+        {
+          "value": "PS3",
+          "label": "@set.PS3"
+        },
+        {
+          "value": "PS4",
+          "label": "@set.PS4"
+        },
+        {
+          "value": "PS5",
+          "label": "@set.PS5"
+        },
+        {
+          "value": "SWI",
+          "label": "@set.SWI"
+        },
+        {
+          "value": "DEK",
+          "label": "@set.DEK"
+        }
+      ],
+      "presets": {
+        "vanilla": "PSP",
+        "recommended": "PSP",
+        "enhanced": "PSP"
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include <cstdint>
 #include "common.h"
 
@@ -113,6 +114,11 @@ public:
         WFP::onInitEvent() += []()
         {
             auto pattern = hook::pattern("A1 ? ? ? ? 8D 4C 2D");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             pD3D8Device = *pattern.get_first<IUnknown**>(1);
         };
     }

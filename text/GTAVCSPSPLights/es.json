@@ -1,0 +1,6 @@
+{
+  "plugin.name": "GTA Vice City Stories PPSSPP Improved Vehicle Lights",
+  "page.graphics": "Gráficos",
+  "lights": "Luces de vehículos",
+  "lights.description": "Enciende los faros y las luces traseras, de freno y de marcha atrás en las texturas de carrocería de coches y motos. Activado por defecto. Reinicia el juego emulado tras cambiar este ajuste."
+}

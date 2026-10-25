@@ -1,0 +1,316 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Bully: Scholarship Edition",
+        "exe": [
+          "Bully.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility",
+      "order": 1000
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@camera.fovfactor",
+      "description": "@camera.fovfactor.description",
+      "page": "camera",
+      "control": [
+        "slider",
+        "stepper"
+      ],
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "menu",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "Automatic"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "int",
+      "default": 1,
+      "min": 0,
+      "max": 2,
+      "label": "@display.fmv",
+      "description": "@display.fmv.description",
+      "page": "display",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@display.fmv.fit"
+        },
+        {
+          "value": 1,
+          "label": "@display.fmv.fill"
+        },
+        {
+          "value": 2,
+          "label": "@display.fmv.stretch"
+        }
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "label": "@display.window",
+      "description": "@display.window.description",
+      "page": "display",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@display.window.fullscreen"
+        },
+        {
+          "value": 1,
+          "label": "@display.window.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@display.window.borderless"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@display.hudconstraint",
+      "description": "@display.hudconstraint.description",
+      "page": "display",
+      "apply": "live",
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "int",
+      "default": 3,
+      "label": "@display.CutsceneBorders",
+      "description": "@display.CutsceneBorders.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      },
+      "min": 0,
+      "max": 3,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@display.borders.0"
+        },
+        {
+          "value": 1,
+          "label": "@display.borders.1"
+        },
+        {
+          "value": 2,
+          "label": "@display.borders.2"
+        },
+        {
+          "value": 3,
+          "label": "@display.borders.3"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.AnimatedCutsceneBorders",
+      "type": "bool",
+      "default": true,
+      "label": "@display.AnimatedCutsceneBorders",
+      "description": "@display.AnimatedCutsceneBorders.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.AutoGamepad",
+      "type": "bool",
+      "default": true,
+      "label": "@controls.auto",
+      "description": "@controls.auto.description",
+      "page": "controls",
+      "apply": "live",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.1,
+      "max": 5.0,
+      "step": 0.05,
+      "label": "@controls.speed",
+      "description": "@controls.speed.description",
+      "page": "controls",
+      "apply": "live",
+      "control": [
+        "slider",
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.GamepadDeadzone",
+      "type": "float",
+      "default": 0.15,
+      "min": 0.0,
+      "max": 0.5,
+      "step": 0.01,
+      "label": "@controls.deadzone",
+      "description": "@controls.deadzone.description",
+      "page": "controls",
+      "apply": "live",
+      "control": [
+        "slider",
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@display.pausefocus",
+      "description": "@display.pausefocus.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "editor",
+      "apply": "live"
+    }
+  ]
+}

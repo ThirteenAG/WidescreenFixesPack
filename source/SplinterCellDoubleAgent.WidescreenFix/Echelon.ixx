@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "FixSettings.hpp"
 
 export module Echelon;
 
@@ -69,10 +70,10 @@ namespace AEPattern
 
 export void InitEchelon()
 {
-    CIniReader iniReader("");
-    gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
-    auto bEnableRunDuringForcedWalk = iniReader.ReadInteger("MISC", "EnableRunDuringForcedWalk", 1) != 0;
-    bDisablePreCache = iniReader.ReadInteger("MAIN", "DisablePreCache", 0) != 0;
+
+    gBlacklistIndicators = FixSettings().Int("BONUS.BlacklistIndicators");
+    auto bEnableRunDuringForcedWalk = FixSettings().Int("MISC.EnableRunDuringForcedWalk") != 0;
+    bDisablePreCache = FixSettings().Int("MAIN.DisablePreCache") != 0;
 
     #if _DEBUG
     bDisablePreCache = true;
@@ -121,7 +122,7 @@ export void InitEchelon()
     if (bEnableRunDuringForcedWalk)
     {
         auto pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "75 ? ? ? ? ? ? ? ? ? ? DF E0 F6 C4 ? 7A ? C7 45 ? ? ? ? ? EB");
-        injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true); //jz -> jmp
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>()) = 0xEB; //jz -> jmp
     }
 
     if (bDisablePreCache)

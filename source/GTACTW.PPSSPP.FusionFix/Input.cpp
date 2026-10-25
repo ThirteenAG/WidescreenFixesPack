@@ -96,7 +96,7 @@ int ResetRepeat(uintptr_t pad, int action, uint8_t reset) {
 }
 }
 void InstallInput() {
-    if (!inireader.ReadInteger("MAIN", "ModernControls", 1)) return;
+    if (!Option("ModernControls", 1)) return;
     BindGameplay();
     safetymips::Options caller;caller.preserve_game_callees=false;
     held = safetymips::create_inline(Address<0x08891160>(), Held, caller);

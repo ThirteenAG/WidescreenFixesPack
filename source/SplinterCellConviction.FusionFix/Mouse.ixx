@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Mouse;
 
@@ -51,9 +52,8 @@ namespace RawMouse
 export void InitMouse()
 {
 
-    CIniReader iniReader("");
-    auto bRawMouseInput = iniReader.ReadInteger("GAMEPLAY", "RawMouseInput", 1) != 0;
-    auto bDisableMouseSmoothing = iniReader.ReadInteger("GAMEPLAY", "DisableMouseSmoothing", 1) != 0;
+    auto bRawMouseInput = FixSettings().Bool("MAIN.RawInputMouse") != 0;
+    auto bDisableMouseSmoothing = !FixSettings().Bool("MAIN.MouseSmoothing");
 
     if (bDisableNegativeMouseAcceleration)
     {
@@ -74,13 +74,12 @@ export void InitMouse()
         auto pattern = hook::pattern("F6 80 04 06 00 00 02 0F 85 ? ? ? ? 8B 86 34 04 00 00");
         auto jnz = pattern.get_first<uint8_t>(7);
         auto target = jnz + 6 + *reinterpret_cast<int32_t*>(jnz + 2);
-        injector::WriteMemory<uint8_t>(jnz, 0xE9, true);
-        injector::WriteMemory<int32_t>(jnz + 1, int32_t(target - (jnz + 5)), true);
-        injector::WriteMemory<uint8_t>(jnz + 5, 0x90, true);
+        ProtectedGameRef<uint8_t>{jnz} = 0xE9;
+        ProtectedGameRef<int32_t>(reinterpret_cast<int32_t*>(jnz + 1)) = int32_t(target - (jnz + 5));
+        ProtectedGameRef<uint8_t>(jnz + 5) = 0x90;
     }
 
-    static auto fGamepadCameraSpeed = iniReader.ReadFloat("GAMEPLAY", "GamepadCameraSpeed", 1.0f);
-    if (fGamepadCameraSpeed > 0.0f && fGamepadCameraSpeed != 1.0f)
+    static const float& fGamepadCameraSpeed = FixSettings().Float("MAIN.GamepadCameraSpeed");
     {
         // CameraImpl (sub_5CD6FB) turns the camera by the stick input at +424h/+428h (-1..1 with a pad) times the camera mode's
         // yaw and pitch speed (yawSpeed, pitchSpeed in degrees/second, ConvictionCamera.ini), the controller at +20h is in pad mode with +604h & 2
@@ -90,8 +89,9 @@ export void InitMouse()
             auto controller = *reinterpret_cast<uintptr_t*>(regs.esi + 0x20);
             if (!controller || (*reinterpret_cast<uint32_t*>(controller + 0x604) & 2) == 0)
                 return;
-            *reinterpret_cast<float*>(regs.esi + 0x424) *= fGamepadCameraSpeed;
-            *reinterpret_cast<float*>(regs.esi + 0x428) *= fGamepadCameraSpeed;
+            auto speed = fGamepadCameraSpeed > 0.0f ? fGamepadCameraSpeed : 1.0f;
+            *reinterpret_cast<float*>(regs.esi + 0x424) *= speed;
+            *reinterpret_cast<float*>(regs.esi + 0x428) *= speed;
         });
     }
 

@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "../Shared/SplinterCell/Window.hpp"
 #include <d3d9.h>
 
 export module Window;
@@ -8,6 +10,8 @@ export module Window;
 import ComVars;
 import Splitscreen;
 
+bool DeviceWindowed = false;
+HWND GameWindow = nullptr;
 SafetyHookInline shsub_46E388{};
 // UD3DRenderDevice::SetRes(viewport, width, height, fullscreen, ...)
 int __fastcall sub_46E388(void* a1, void* edx, void* a2, int a3, int a4, int fullscreen, int a6)
@@ -18,7 +22,17 @@ int __fastcall sub_46E388(void* a1, void* edx, void* a2, int a3, int a4, int ful
         a3 = rect.right - rect.left;
         a4 = rect.bottom - rect.top;
     }
-    return shsub_46E388.fastcall<int>(a1, edx, a2, a3, a4, 0, a6);
+    static bool first = true;
+    if (std::exchange(first, false) || bEnableSplitscreen)
+        fullscreen = 0;
+    DeviceWindowed = fullscreen == 0;
+    if (DeviceWindowed && !bEnableSplitscreen && FixSettings().Int("MAIN.WindowMode") == 2)
+    {
+        auto area = SCWindow::Monitor(GameWindow).rcMonitor;
+        a3 = area.right - area.left;
+        a4 = area.bottom - area.top;
+    }
+    return shsub_46E388.fastcall<int>(a1, edx, a2, a3, a4, fullscreen, a6);
 }
 
 
@@ -39,6 +53,8 @@ int __fastcall WndProc(HDC _this, void* edx, UINT Msg, int wparam, unsigned int 
     //    break;
 
     case WM_ACTIVATE:
+        if (!DeviceWindowed)
+            break;
         // split screen: both windows stay over the taskbar
         if (LOWORD(wparam) == WA_INACTIVE && !bEnableSplitscreen)
         {
@@ -74,28 +90,23 @@ int __fastcall ViewportSetFocus(uintptr_t viewport, void* edx, int32_t focus)
 
 BOOL WINAPI SetWindowPosHook(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags)
 {
-    SetWindowLong(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
-
+    GameWindow = hWnd;
+    SCWindow::SquareCorners(hWnd);
+    const int width = BackBufferWidth > 0 ? BackBufferWidth : cx;
+    const int height = BackBufferHeight > 0 ? BackBufferHeight : cy;
+    if (!bEnableSplitscreen)
+        SCWindow::Track(hWnd, FixSettings().Int("MAIN.WindowMode"), DeviceWindowed, width, height);
+    if (!DeviceWindowed)
+        return SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags);
     if (bEnableSplitscreen)
     {
+        SetWindowLong(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
         auto rect = GetSplitscreenRect();
         return SetWindowPos(hWnd, 0, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_FRAMECHANGED);
     }
 
-    // centered on its monitor
-    if (uFlags & SWP_NOSIZE)
-    {
-        RECT window = {};
-        GetWindowRect(hWnd, &window);
-        cx = window.right - window.left;
-        cy = window.bottom - window.top;
-    }
-    MONITORINFO info = { sizeof(info) };
-    GetMonitorInfo(MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY), &info);
-    auto& monitor = info.rcMonitor;
-    X = monitor.left + ((monitor.right - monitor.left) - cx) / 2;
-    Y = monitor.top + ((monitor.bottom - monitor.top) - cy) / 2;
-    auto result = SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags & ~SWP_NOMOVE);
+    SCWindow::Place(hWnd, width, height, FixSettings().Int("MAIN.WindowMode") == 2);
+    const auto result = TRUE;
 
     // the window starts without focus
     static bool focused = false;
@@ -129,5 +140,6 @@ export void InitWindow()
 
         BackBufferWidth = PresentationParameters->BackBufferWidth;
         BackBufferHeight = PresentationParameters->BackBufferHeight;
+        SCWindow::SquareCorners(PresentationParameters->hDeviceWindow);
     });
 }

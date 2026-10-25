@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
+#include "../Shared/PatternCheck.hpp"
+#include <atomic>
+#include "Cursor.hpp"
 
 struct Screen
 {
@@ -71,13 +75,13 @@ namespace Textures
     {
         bool added = false;
         int32_t id = RegisterTexture.unsafe_ccall<int32_t>(name, group, &added);
-        if (id == -1)
+        if (id < 0 || static_cast<size_t>(id) >= _countof(Types))
             return id;
 
         if (created)
             *created = added;
 
-        if (added)
+        if (added && name)
         {
             static constexpr struct { const char* name; Type type; } textures[] = {
                 { "\\Splash\\legal.dds", Backdrop },
@@ -225,12 +229,13 @@ namespace UI
     void RedirectWidth(const uint8_t* begin, const uint8_t* end, uintptr_t nativeWidth, const int32_t* width)
     {
         hook::range_pattern((uintptr_t)begin, (uintptr_t)end, pattern_str(to_bytes(nativeWidth))).for_each_result(
-            [=](hook::pattern_match match) { injector::WriteMemory(match.get<uint32_t>(), width, true); });
+            [=](hook::pattern_match match) { ProtectedGameRef<const int32_t*>{match.get<const int32_t*>()} = width; });
     }
 }
 
 namespace FMV
 {
+    std::atomic<int> Mode{ 1 };
     struct VideoSize { uint32_t Width, Height; };
     struct Stream { const VideoSize* Video; };
     Stream*** StreamStorage;
@@ -247,9 +252,20 @@ namespace FMV
             return;
 
         auto* rect = reinterpret_cast<float*>(regs.esp); //x, y, width, height before SetRect
-        const float scale = std::min(Screen.fWidth / stream->Video->Width, Screen.fHeight / stream->Video->Height);
-        rect[2] = stream->Video->Width * scale;
-        rect[3] = stream->Video->Height * scale;
+        const auto mode = Mode.load(std::memory_order_relaxed);
+        if (mode == 2)
+        {
+            rect[2] = Screen.fWidth;
+            rect[3] = Screen.fHeight;
+        }
+        else
+        {
+            const float x = Screen.fWidth / stream->Video->Width;
+            const float y = Screen.fHeight / stream->Video->Height;
+            const float scale = mode == 1 ? std::max(x, y) : std::min(x, y);
+            rect[2] = stream->Video->Width * scale;
+            rect[3] = stream->Video->Height * scale;
+        }
         rect[0] = (Screen.fWidth - rect[2]) / 2.0f;
         rect[1] = (Screen.fHeight - rect[3]) / 2.0f;
         UI::DrawBackdrop(0xFF000000); //clear the pillarbox or letterbox area every frame
@@ -366,13 +382,22 @@ void AdjustReticleVertical(injector::reg_pack& regs)
 
 void Init()
 {
-    CIniReader iniReader("");
-    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
-    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    float FOV = iniReader.ReadFloat("MAIN", "FOV", 75.f);
+    auto& settings = FixSettings();
+    FMV::Mode.store(settings.Int("MAIN.FMVWidescreenMode"), std::memory_order_relaxed);
+    settings.OnChange("MAIN.FMVWidescreenMode", []()
+    {
+        FMV::Mode.store(FixSettings().Int("MAIN.FMVWidescreenMode"), std::memory_order_relaxed);
+    });
+    asi_settings::LiveLink::Start();
+    SniperCursor::Initialize();
+    Screen.Width = settings.Int("MAIN.ResX");
+    Screen.Height = settings.Int("MAIN.ResY");
+    static const auto& fFOVFactor = settings.Float("MAIN.FOVFactor");
 
-    if (!Screen.Width || !Screen.Height)
+    if (Screen.Width <= 0 || Screen.Height <= 0)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+    if (Screen.Width <= 0 || Screen.Height <= 0)
+        std::tie(Screen.Width, Screen.Height) = std::make_tuple(640, 480);
 
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
@@ -380,197 +405,303 @@ void Init()
     Screen.Width43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
     Screen.fWidth43 = static_cast<float>(Screen.Width43);
 
-    auto pattern = hook::pattern("C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? 50 A1"); //622B17
-    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(6), Screen.Height, true);
-    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(16), Screen.Width, true);
-
-    pattern = hook::pattern("8B ? ? ? ? ? 8B ? ? ? ? ? 8B ? 99 2B ? D1 ? 89"); //48B0D6
-    struct SetResHook
+    [&]()
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.ecx = Screen.Width;
-            regs.esi = Screen.Height;
-        }
-    }; injector::MakeInline<SetResHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(12));
+        if (!CheckPatterns("Sniper Elite: resolution", {
+            "C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? 50 A1",
+            "8B ? ? ? ? ? 8B ? ? ? ? ? 8B ? 99 2B ? D1 ? 89",
+            "8B ? ? ? 57 8B ? ? ? 50 6A",
+        }))
+            return;
 
-    pattern = hook::pattern("8B ? ? ? 57 8B ? ? ? 50 6A"); //48B076
-    struct SetResHook2
+        auto pattern = hook::pattern("C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? C7 ? ? ? ? ? ? ? ? ? 50 A1"); //622B17
+        ProtectedGameRef<int32_t>{pattern.count(1).get(0).get<int32_t>(6)} = Screen.Height;
+        ProtectedGameRef<int32_t>{pattern.count(1).get(0).get<int32_t>(16)} = Screen.Width;
+
+        pattern = hook::pattern("8B ? ? ? ? ? 8B ? ? ? ? ? 8B ? 99 2B ? D1 ? 89"); //48B0D6
+        struct SetResHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.ecx = Screen.Width;
+                regs.esi = Screen.Height;
+            }
+        }; injector::MakeInline<SetResHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(12));
+
+        pattern = hook::pattern("8B ? ? ? 57 8B ? ? ? 50 6A"); //48B076
+        struct SetResHook2
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                regs.edi = Screen.Width;
+                regs.esi = Screen.Height;
+            }
+        }; injector::MakeInline<SetResHook2>(pattern.count(1).get(0).get<uint32_t>(1), pattern.count(1).get(0).get<uint32_t>(9));
+        ProtectedGameRef<uint8_t>{pattern.count(1).get(0).get<uint8_t>(0)} = 0x57; //push edi
+    }();
+
+    [&]()
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.edi = Screen.Width;
-            regs.esi = Screen.Height;
-        }
-    }; injector::MakeInline<SetResHook2>(pattern.count(1).get(0).get<uint32_t>(1), pattern.count(1).get(0).get<uint32_t>(9));
-    injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0x57, true); //push edi
+        if (!CheckPatterns("Sniper Elite: aspect", {
+            "D9 ? ? ? 8B ? ? ? D9 ? ? ? ? ? A3 ? ? ? ? DA",
+        }))
+            return;
 
-    pattern = hook::pattern("D9 ? ? ? 8B ? ? ? D9 ? ? ? ? ? A3 ? ? ? ? DA"); //4152C0
-    struct SetScalingHook
+        auto pattern = hook::pattern("D9 ? ? ? 8B ? ? ? D9 ? ? ? ? ? A3 ? ? ? ? DA"); //4152C0
+        struct SetScalingHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                std::memcpy(&regs.eax, &Screen.fAspectRatio, sizeof(float));
+            }
+        }; injector::MakeInline<SetScalingHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(8));
+        ProtectedGameRef<float>{*pattern.count(1).get(0).get<float*>(10)} = Screen.fAspectRatio;
+        ProtectedGameRef<float>{*pattern.count(1).get(0).get<float*>(15)} = Screen.fAspectRatio;
+    }();
+
+    [&]()
     {
-        void operator()(injector::reg_pack& regs)
+        if (!CheckPatterns("Sniper Elite: gameplay FOV", {
+            "D8 ? ? ? ? ? 83 ? ? 6A ? 68 ? ? ? ? 51 D9 ? ? E8 ? ? ? ? 83 ? ? 83",
+        }))
+            return;
+
+        auto pattern = hook::pattern("D8 ? ? ? ? ? 83 ? ? 6A ? 68 ? ? ? ? 51 D9 ? ? E8 ? ? ? ? 83 ? ? 83"); //4A15F6
+        static ProtectedGameRef<float> GameplayFOV{ *pattern.count(1).get(0).get<float*>(2) };
+        auto updateFOV = []()
         {
-            *(float*)&regs.eax = Screen.fAspectRatio;
-        }
-    }; injector::MakeInline<SetScalingHook>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(8));
-    injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(10), Screen.fAspectRatio, true);
-    injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(15), Screen.fAspectRatio, true);
+            const float factor = std::isfinite(fFOVFactor) ? std::clamp(fFOVFactor, 0.5f, 2.0f) : 1.0f;
+            GameplayFOV = std::clamp(AdjustFOV(75.0f, Screen.fAspectRatio) * factor, 1.0f, 179.0f);
+        };
+        updateFOV();
+        settings.OnChange("MAIN.FOVFactor", updateFOV);
+    }();
 
-    pattern = hook::pattern("D8 ? ? ? ? ? 83 ? ? 6A ? 68 ? ? ? ? 51 D9 ? ? E8 ? ? ? ? 83 ? ? 83"); //4A15F6
-    injector::WriteMemory(*pattern.count(1).get(0).get<uint32_t*>(2), AdjustFOV(FOV, Screen.fAspectRatio), true);
+    [&]()
+    {
+        if (!CheckPatterns("Sniper Elite: cinematic framing", {
+            "E8 ? ? ? ? 83 ? ? C6 ? ? ? ? ? ? F6 ? ? ? 74",
+            "51 51 D9 ? ? E8 ? ? ? ? 83 ? ?",
+            "D8 ? ? C6 ? ? ? DC ? D9",
+            "D9 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D9 ? D8 ? D8 ? ? ? ? ? DE ? C3",
+            "83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 83 ? ? D9",
+        }))
+            return;
 
-    const auto cutsceneFOV = hook::get_pattern<uint8_t>("E8 ? ? ? ? 83 ? ? C6 ? ? ? ? ? ? F6 ? ? ? 74"); //4749FE
-    const auto cutsceneFOVEvent = hook::get_pattern<uint8_t>("51 51 D9 ? ? E8 ? ? ? ? 83 ? ?", 5); //478A7A
-    const auto cutsceneFOVCapture = hook::get_pattern<uint8_t>("D8 ? ? C6 ? ? ? DC ? D9"); //4789A1
-    Camera::CutsceneFOV = safetyhook::create_mid(cutsceneFOV, Camera::AdjustCutsceneFOV);
-    Camera::CutsceneFOVEvent = safetyhook::create_mid(cutsceneFOVEvent, Camera::AdjustCutsceneFOV);
-    Camera::CutsceneFOVCapture = safetyhook::create_mid(cutsceneFOVCapture, Camera::CaptureCutsceneFOV);
+        const auto cutsceneFOV = hook::get_pattern<uint8_t>("E8 ? ? ? ? 83 ? ? C6 ? ? ? ? ? ? F6 ? ? ? 74"); //4749FE
+        const auto cutsceneFOVEvent = hook::get_pattern<uint8_t>("51 51 D9 ? ? E8 ? ? ? ? 83 ? ?", 5); //478A7A
+        const auto cutsceneFOVCapture = hook::get_pattern<uint8_t>("D8 ? ? C6 ? ? ? DC ? D9"); //4789A1
+        Camera::CutsceneFOV = safetyhook::create_mid(cutsceneFOV, Camera::AdjustCutsceneFOV);
+        Camera::CutsceneFOVEvent = safetyhook::create_mid(cutsceneFOVEvent, Camera::AdjustCutsceneFOV);
+        Camera::CutsceneFOVCapture = safetyhook::create_mid(cutsceneFOVCapture, Camera::CaptureCutsceneFOV);
 
-    const auto cinematicFraming = hook::get_pattern<uint8_t>("D9 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D9 ? D8 ? D8 ? ? ? ? ? DE ? C3"); //4797B0
-    for (size_t offset : { 0x8, 0x38, 0xCA }) //bar height, letterboxed FOV scale and fallback bars
-        injector::WriteMemory(cinematicFraming + offset, &Camera::AspectRatio43, true);
+        const auto cinematicFraming = hook::get_pattern<uint8_t>("D9 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D9 ? D8 ? D8 ? ? ? ? ? DE ? C3"); //4797B0
+        for (size_t offset : { 0x8, 0x38, 0xCA }) //bar height, letterboxed FOV scale and fallback bars
+            ProtectedGameRef<const float*>{reinterpret_cast<const float**>(cinematicFraming + offset)} = &Camera::AspectRatio43;
 
-    const auto cameraEffects = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 83 ? ? D9"); //600570
-    injector::WriteMemory(cameraEffects + 0x51, &Camera::AspectRatio43, true); //preserve the original bar heights
+        const auto cameraEffects = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 83 ? ? D9"); //600570
+        ProtectedGameRef<const float*>{reinterpret_cast<const float**>(cameraEffects + 0x51)} = &Camera::AspectRatio43; //preserve the original bar heights
+    }();
 
     Screen.fHudOffset = (Screen.fWidth - Screen.Width43) / 2.0f;
 
-    pattern = hook::pattern("51 56 8B ? ? ? 85 ? 0F ? ? ? ? ? 80"); //408EE0
-    Textures::RegisterTexture = safetyhook::create_inline(pattern.get_first(), Textures::Register);
-
-    pattern = hook::pattern("56 8B ? 56 E8 ? ? ? ? 8A"); //48B140
-    uint8_t* drawHudQuad = pattern.count(1).get(0).get<uint8_t>(0);
-    QueueHudQuad = reinterpret_cast<decltype(QueueHudQuad)>(injector::GetBranchDestination(drawHudQuad + 4, true).as_int());
-    injector::MakeCALL(drawHudQuad + 4, sub_48B140Hook, true);
-
-    const auto quadVertices = hook::get_pattern<uint8_t>("8B ? 89 ? ? 8B ? 8B ? ? 6B ? ? 8B"); //487E97
-    injector::MakeInline<HudVertexHook<0>>(quadVertices, quadVertices + 0x14);
-    injector::MakeInline<HudVertexHook<1>>(quadVertices + 0x69, quadVertices + 0x7E);
-    injector::MakeInline<HudVertexHook<2>>(quadVertices + 0xD0, quadVertices + 0xE5);
-    injector::MakeInline<HudVertexHook<3>>(quadVertices + 0x12F, quadVertices + 0x14C); //Replace the native XYZRHW coordinate writes with half-pixel alignment.
-
-    pattern = hook::pattern("83 ? ? 56 8B ? 8B ? ? 85 ? 57 74 ? 8B ? 85"); //507C40
-    uint8_t* drawScopeReticle = pattern.count(1).get(0).get<uint8_t>(0);
-    static constexpr int32_t horizontalCalls[] = { 0x31F, 0x3BC, 0x3E9 };
-    static constexpr int32_t verticalCalls[] = { 0x33C, 0x401, 0x416 };
-    for (size_t i = 0; i < _countof(ReticleHorizontal); ++i)
-        ReticleHorizontal[i] = safetyhook::create_mid(drawScopeReticle + horizontalCalls[i], AdjustReticleHorizontal);
-    for (size_t i = 0; i < _countof(ReticleVertical); ++i)
-        ReticleVertical[i] = safetyhook::create_mid(drawScopeReticle + verticalCalls[i], AdjustReticleVertical);
-
-    static float fHudScale2 = (0.0009765625f / Screen.fAspectRatio) * (4.0f / 3.0f);
-    pattern = hook::pattern("D8 ? ? ? ? ? D9 ? ? D9 ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? D9 ? ? ? D8"); //502232
-    injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fHudScale2, true); //text size and radar arrows
-
-    pattern = hook::pattern("8B ? ? 89 ? ? 83 ? ? ? ? ? ? 75 ? A1"); //5021C2
-    struct HudHook2
+    [&]()
     {
-        void operator()(injector::reg_pack& regs)
+        if (!CheckPatterns("Sniper Elite: HUD and menus", {
+            "51 56 8B ? ? ? 85 ? 0F ? ? ? ? ? 80",
+            "56 8B ? 56 E8 ? ? ? ? 8A",
+            "8B ? 89 ? ? 8B ? 8B ? ? 6B ? ? 8B",
+            "83 ? ? 56 8B ? 8B ? ? 85 ? 57 74 ? 8B ? 85",
+            "D8 ? ? ? ? ? D9 ? ? D9 ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? D9 ? ? ? D8",
+            "8B ? ? 89 ? ? 83 ? ? ? ? ? ? 75 ? A1",
+            "D9 ? ? ? ? ? 5E 5B 83 ? ? C3",
+            "D9 ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? E8",
+            "8B ? ? ? 83 ? ? 53 8B ? ? ? 85 ? 56",
+            "83 ? ? A0 ? ? ? ? 84 ? 55 57",
+            "DB ? ? ? ? ? D8 ? D9 ? DB ? ? ? ? ? D8 ? D9",
+            "A1 ? ? ? ? 83 ? ? 85 ? 74 ? 8A",
+            "8B 0D ? ? ? ? E9 ? ? ? ? ? ? ? ? ? 8B 0D",
+            "51 56 8B ? 8B ? ? 50 E8 ? ? ? ? 0F ? ? ? 8B",
+            "56 57 8B ? 8B ? FF ? ? 8B ? ? 8B ? 3B",
+            "A1 ? ? ? ? 56 8B ? ? ? 50 8B",
+            "83 ? ? A1 ? ? ? ? 89 ? ? ? A0 ? ? ? ? 84 ? 0F ? ? ? ? ? A1 ? ? ? ? 84",
+            "DB ? ? ? ? ? D8 ? ? ? ? ? DB ? ? ? ? ? D8 ? ? ? ? ? D9",
+            "A1 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 6A",
+            "83 ? ? DB ? ? ? ? ? 56 8B ? ? ? 83",
+            "83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 56",
+            "83 ? ? DB ? ? ? ? ? 83 ? ? DB ? ? ? ? ? 8D",
+            "83 ? ? DB ? ? ? ? ? 56 83",
+            "A0 ? ? ? ? 83 ? ? 84 ? 53 55 56 57 0F",
+            "A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? DB",
+            "8B ? ? ? 50 8B ? ? ? 8B ? ? 8B ? 8B ? ? ? 51",
+            "8D ? ? ? 52 E8 ? ? ? ? 83 ? ? 8B ? E8",
+        }))
+            return;
+        if (hook::pattern("E8 ? ? ? ? 8B ? 8B ? 04 8B ? ? 89 ? ? ? 8B ? ? 8D").size() != 2 ||
+            (hook::pattern("D9 ? ? ? 8B ? 8B ? ? 8B ? ? ? ? ? D8").size() != 1 && hook::pattern("8B ? 8B ? ? 8D ? ? ? 89 ? ? ? 50 8D ? ? ? 51").size() != 1) ||
+            (hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 75 ? A1 ? ? ? ? 85 ? 75 ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 ? ? 84 ? 74 ? ? A1 ? ? ? ? 85").size() != 1 && hook::pattern("A1 ? ? ? ? 83 EC ? 85 C0 0F 84 ? ? ? ? ? ? ? ? C1 E0").size() != 1) ||
+            (hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? A0 ? ? ? ? 84 ? 75").size() != 1 && hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? 53 8A").size() != 1))
         {
-            *(float*)(regs.esi + 0x28) += Screen.fHudOffset;
-            *(float*)(regs.esi + 0x30) -= Screen.fHudOffset * 2.0f;
-
-            regs.eax = *(uintptr_t*)(regs.edi + 0x4);
-            *(uintptr_t*)(regs.esi + 0x44) = regs.eax;
+            OutputDebugStringA("Sniper Elite: HUD variants unavailable; HUD and menu correction disabled.\n");
+            return;
         }
-    }; injector::MakeInline<HudHook2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 
-    auto minimapIcons = hook::pattern("E8 ? ? ? ? 8B ? 8B ? 04 8B ? ? 89 ? ? ? 8B ? ? 8D"); //50BB91, 50C10B
-    for (size_t i = 0; i < 2; ++i)
-        UI::MinimapIcons[i] = safetyhook::create_mid(minimapIcons.count(2).get(i).get<uint8_t>(5), UI::AlignMinimapIcon);
+        auto pattern = hook::pattern("51 56 8B ? ? ? 85 ? 0F ? ? ? ? ? 80"); //408EE0
+        Textures::RegisterTexture = safetyhook::create_inline(pattern.get_first(), Textures::Register);
 
-    uint8_t* minimapPlayers = nullptr;
-    auto minimapPlayersSIG = hook::pattern("D9 ? ? ? 8B ? 8B ? ? 8B ? ? ? ? ? D8"); //50BE0C
-    if (!minimapPlayersSIG.empty())
-        minimapPlayers = minimapPlayersSIG.get_first<uint8_t>();
-    else
-        minimapPlayers = hook::get_pattern<uint8_t>("8B ? 8B ? ? 8D ? ? ? 89 ? ? ? 50 8D ? ? ? 51");
+        pattern = hook::pattern("56 8B ? 56 E8 ? ? ? ? 8A"); //48B140
+        uint8_t* drawHudQuad = pattern.count(1).get(0).get<uint8_t>(0);
+        QueueHudQuad = reinterpret_cast<decltype(QueueHudQuad)>(injector::GetBranchDestination(drawHudQuad + 4, true).as_int());
+        injector::MakeCALL(drawHudQuad + 4, sub_48B140Hook, true);
 
-    UI::MinimapIcons[2] = safetyhook::create_mid(minimapPlayers, UI::AlignMinimapIcon);
-    const auto minimapRect = hook::get_pattern<uint8_t>("D9 ? ? ? ? ? 5E 5B 83 ? ? C3", 6); //50907A
-    UI::MinimapRect = safetyhook::create_mid(minimapRect, UI::SquareMinimap);
-    const auto minimapCenter = hook::get_pattern<uint8_t>("D9 ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? E8"); //50B30C
-    UI::MinimapCenter = safetyhook::create_mid(minimapCenter, UI::CenterMinimap);
+        const auto quadVertices = hook::get_pattern<uint8_t>("8B ? 89 ? ? 8B ? 8B ? ? 6B ? ? 8B"); //487E97
+        injector::MakeInline<HudVertexHook<0>>(quadVertices, quadVertices + 0x14);
+        injector::MakeInline<HudVertexHook<1>>(quadVertices + 0x69, quadVertices + 0x7E);
+        injector::MakeInline<HudVertexHook<2>>(quadVertices + 0xD0, quadVertices + 0xE5);
+        injector::MakeInline<HudVertexHook<3>>(quadVertices + 0x12F, quadVertices + 0x14C); //Replace the native XYZRHW coordinate writes with half-pixel alignment.
 
-    const auto fontClip = hook::get_pattern<uint8_t>("8B ? ? ? 83 ? ? 53 8B ? ? ? 85 ? 56"); //40E450
-    const auto printText = hook::get_pattern<uint8_t>("83 ? ? A0 ? ? ? ? 84 ? 55 57"); //40F570
-    const auto nativeWidth = *hook::get_pattern<uintptr_t>("DB ? ? ? ? ? D8 ? D9 ? DB ? ? ? ? ? D8 ? D9", 2); //40E4FD
-    UI::RedirectWidth(fontClip, printText + 0x650, nativeWidth, &UI::FontWidth); //clip, glyphs and text output; end before text height
-    UI::PixelClip = safetyhook::create_inline(fontClip, UI::GetPixelClip);
-    UI::PrintText = safetyhook::create_inline(printText, UI::Print);
+        pattern = hook::pattern("83 ? ? 56 8B ? 8B ? ? 85 ? 57 74 ? 8B ? 85"); //507C40
+        uint8_t* drawScopeReticle = pattern.count(1).get(0).get<uint8_t>(0);
+        static constexpr int32_t horizontalCalls[] = { 0x31F, 0x3BC, 0x3E9 };
+        static constexpr int32_t verticalCalls[] = { 0x33C, 0x401, 0x416 };
+        for (size_t i = 0; i < _countof(ReticleHorizontal); ++i)
+            ReticleHorizontal[i] = safetyhook::create_mid(drawScopeReticle + horizontalCalls[i], AdjustReticleHorizontal);
+        for (size_t i = 0; i < _countof(ReticleVertical); ++i)
+            ReticleVertical[i] = safetyhook::create_mid(drawScopeReticle + verticalCalls[i], AdjustReticleVertical);
 
-    const auto cutsceneSubtitles = hook::get_pattern<uint8_t>("A1 ? ? ? ? 83 ? ? 85 ? 74 ? 8A"); //5DB9C0
-    UI::RedirectWidth(cutsceneSubtitles, cutsceneSubtitles + 0xC4, nativeWidth, &Screen.Width43); //cutscenes font scale follows height
+        static float fHudScale2 = (0.0009765625f / Screen.fAspectRatio) * (4.0f / 3.0f);
+        pattern = hook::pattern("D8 ? ? ? ? ? D9 ? ? D9 ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? D9 ? ? ? D8"); //502232
+        ProtectedGameRef<float*>{pattern.count(1).get(0).get<float*>(2)} = &fHudScale2; //text size and radar arrows
 
-    const auto menuDraw = hook::get_pattern<uint8_t>("8B 0D ? ? ? ? E9 ? ? ? ? ? ? ? ? ? 8B 0D"); //4819F0
-    const auto menuItems = hook::get_pattern<uint8_t>("51 56 8B ? 8B ? ? 50 E8 ? ? ? ? 0F ? ? ? 8B"); //47DFC0
-    const auto frontendItems = hook::get_pattern<uint8_t>("56 57 8B ? 8B ? FF ? ? 8B ? ? 8B ? 3B"); //4AF0A0
-    const auto frontendLayout = hook::get_pattern<uint8_t>("A1 ? ? ? ? 56 8B ? ? ? 50 8B"); //4D5DF0
-    const auto frontendEnd = hook::get_pattern<uint8_t>("83 ? ? A1 ? ? ? ? 89 ? ? ? A0 ? ? ? ? 84 ? 0F ? ? ? ? ? A1 ? ? ? ? 84"); //4FE850
+        pattern = hook::pattern("8B ? ? 89 ? ? 83 ? ? ? ? ? ? 75 ? A1"); //5021C2
+        struct HudHook2
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(float*)(regs.esi + 0x28) += Screen.fHudOffset;
+                *(float*)(regs.esi + 0x30) -= Screen.fHudOffset * 2.0f;
 
-    const auto menuFontScale = hook::get_pattern<uint8_t>("DB ? ? ? ? ? D8 ? ? ? ? ? DB ? ? ? ? ? D8 ? ? ? ? ? D9"); //4D4340
-    UI::RedirectWidth(menuItems, menuDraw, nativeWidth, &Screen.Width43); //controls and hitboxes; end before menu dispatch
-    UI::RedirectWidth(frontendItems, menuFontScale + 0x30, nativeWidth, &Screen.Width43); //frontend controls through font scale
-    UI::RedirectWidth(frontendLayout, frontendEnd, nativeWidth, &Screen.Width43); //frontend layout through menu text sizing
-    UI::MenuDraw = safetyhook::create_inline(menuDraw, UI::Draw<UI::Menu, UI::MenuDraw>);
-    UI::MenuDrawOverlay = safetyhook::create_inline(menuDraw + 0x10, UI::Draw<UI::Menu, UI::MenuDrawOverlay, char>);
+                regs.eax = *(uintptr_t*)(regs.edi + 0x4);
+                *(uintptr_t*)(regs.esi + 0x44) = regs.eax;
+            }
+        }; injector::MakeInline<HudHook2>(pattern.count(1).get(0).get<uint32_t>(0), pattern.count(1).get(0).get<uint32_t>(6));
 
-    const auto loadingImage = hook::get_pattern<uint8_t>("A1 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 6A"); //4D49E0
-    UI::LoadingTexture = *reinterpret_cast<int32_t**>(loadingImage + 1);
-    UI::FlushQuads = reinterpret_cast<decltype(UI::FlushQuads)>(injector::GetBranchDestination(loadingImage + 0x66, true).as_int());
+        auto minimapIcons = hook::pattern("E8 ? ? ? ? 8B ? 8B ? 04 8B ? ? 89 ? ? ? 8B ? ? 8D"); //50BB91, 50C10B
+        for (size_t i = 0; i < 2; ++i)
+            UI::MinimapIcons[i] = safetyhook::create_mid(minimapIcons.count(2).get(i).get<uint8_t>(5), UI::AlignMinimapIcon);
 
-    const auto movieDraw = hook::get_pattern<uint8_t>("A1 ? ? ? ? 83 ? ? 0F ? ? ? ? ? 50 E8 ? ? ? ? 83 ? ? 84"); //628280
-    FMV::Handle = *reinterpret_cast<int32_t**>(movieDraw + 1);
-    const auto streamStorage = hook::get_pattern<uint8_t>("8B ? ? ? ? ? 8B ? ? 85 ? 74 ? 8A ? ? C3"); //41367A
-    FMV::StreamStorage = *reinterpret_cast<FMV::Stream****>(streamStorage + 2);
-    const auto movieRect = hook::get_pattern<uint8_t>("E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? B9 ? ? ? ? E8 ? ? ? ? A1"); //6282CE
-    FMV::ScreenRect = safetyhook::create_mid(movieRect, FMV::FitToScreen);
+        uint8_t* minimapPlayers = nullptr;
+        auto minimapPlayersSIG = hook::pattern("D9 ? ? ? 8B ? 8B ? ? 8B ? ? ? ? ? D8"); //50BE0C
+        if (minimapPlayersSIG.size() == 1)
+            minimapPlayers = minimapPlayersSIG.get_first<uint8_t>();
+        else
+            minimapPlayers = hook::get_pattern<uint8_t>("8B ? 8B ? ? 8D ? ? ? 89 ? ? ? 50 8D ? ? ? 51");
 
-    const auto loadingFrame = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? 56 8B ? ? ? 83"); //4D4770
-    const auto loadingText = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 56"); //4D4840
-    const auto loadingProgress = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? 83 ? ? DB ? ? ? ? ? 8D"); //4D4930
-    const auto loadingPercent = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? 56 83"); //4D4CF0
-    UI::RedirectWidth(loadingFrame, loadingImage, nativeWidth, &Screen.Width43); //frame, text and progress; exclude background image
-    UI::RedirectWidth(loadingPercent, loadingPercent + 0x160, nativeWidth, &Screen.Width43); //percentage overlay; end before loading setup
-    UI::LoadingFrame = safetyhook::create_inline(loadingFrame, UI::Draw<UI::Menu, UI::LoadingFrame, char, int32_t>);
-    UI::LoadingText = safetyhook::create_inline(loadingText, UI::Draw<UI::Menu, UI::LoadingText, int32_t, int32_t>);
-    UI::LoadingProgress = safetyhook::create_inline(loadingProgress, UI::Draw<UI::Menu, UI::LoadingProgress, int32_t, float>);
-    UI::LoadingPercent = safetyhook::create_inline(loadingPercent, UI::Draw<UI::Menu, UI::LoadingPercent, int32_t, float>);
+        UI::MinimapIcons[2] = safetyhook::create_mid(minimapPlayers, UI::AlignMinimapIcon);
+        const auto minimapRect = hook::get_pattern<uint8_t>("D9 ? ? ? ? ? 5E 5B 83 ? ? C3", 6); //50907A
+        UI::MinimapRect = safetyhook::create_mid(minimapRect, UI::SquareMinimap);
+        const auto minimapCenter = hook::get_pattern<uint8_t>("D9 ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? D8 ? ? ? ? ? D9 ? ? ? ? ? E8"); //50B30C
+        UI::MinimapCenter = safetyhook::create_mid(minimapCenter, UI::CenterMinimap);
 
-    const auto infoDraw = hook::get_pattern<uint8_t>("A0 ? ? ? ? 83 ? ? 84 ? 53 55 56 57 0F"); //4ADBA0
-    uint8_t* infoItems = nullptr;
-    auto infoItemsSIG = hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 75 ? A1 ? ? ? ? 85 ? 75 ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 ? ? 84 ? 74 ? ? A1 ? ? ? ? 85"); //4AC2B0
-    if (!infoItemsSIG.empty())
-        infoItems = infoItemsSIG.get_first<uint8_t>();
-    else
-        infoItems = hook::get_pattern<uint8_t>("A1 ? ? ? ? 83 EC ? 85 C0 0F 84 ? ? ? ? ? ? ? ? C1 E0");
+        const auto fontClip = hook::get_pattern<uint8_t>("8B ? ? ? 83 ? ? 53 8B ? ? ? 85 ? 56"); //40E450
+        const auto printText = hook::get_pattern<uint8_t>("83 ? ? A0 ? ? ? ? 84 ? 55 57"); //40F570
+        const auto nativeWidth = *hook::get_pattern<uintptr_t>("DB ? ? ? ? ? D8 ? D9 ? DB ? ? ? ? ? D8 ? D9", 2); //40E4FD
+        UI::RedirectWidth(fontClip, printText + 0x650, nativeWidth, &UI::FontWidth); //clip, glyphs and text output; end before text height
+        UI::PixelClip = safetyhook::create_inline(fontClip, UI::GetPixelClip);
+        UI::PrintText = safetyhook::create_inline(printText, UI::Print);
 
-    uint8_t* infoEnd = nullptr;
-    auto infoEndSIG = hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? A0 ? ? ? ? 84 ? 75"); //4AE290
-    if (!infoEndSIG.empty())
-        infoEnd = infoEndSIG.get_first<uint8_t>();
-    else
-        infoEnd = hook::get_pattern<uint8_t>("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? 53 8A");
+        const auto cutsceneSubtitles = hook::get_pattern<uint8_t>("A1 ? ? ? ? 83 ? ? 85 ? 74 ? 8A"); //5DB9C0
+        UI::RedirectWidth(cutsceneSubtitles, cutsceneSubtitles + 0xC4, nativeWidth, &Screen.Width43); //cutscenes font scale follows height
 
-    UI::RedirectWidth(infoItems, infoEnd, nativeWidth, &Screen.Width43); //map, markers and frame; end after info draw
-    UI::InfoScreen = safetyhook::create_inline(infoDraw, UI::Draw<UI::Info, UI::InfoScreen, char>);
+        const auto menuDraw = hook::get_pattern<uint8_t>("8B 0D ? ? ? ? E9 ? ? ? ? ? ? ? ? ? 8B 0D"); //4819F0
+        const auto menuItems = hook::get_pattern<uint8_t>("51 56 8B ? 8B ? ? 50 E8 ? ? ? ? 0F ? ? ? 8B"); //47DFC0
+        const auto frontendItems = hook::get_pattern<uint8_t>("56 57 8B ? 8B ? FF ? ? 8B ? ? 8B ? 3B"); //4AF0A0
+        const auto frontendLayout = hook::get_pattern<uint8_t>("A1 ? ? ? ? 56 8B ? ? ? 50 8B"); //4D5DF0
+        const auto frontendEnd = hook::get_pattern<uint8_t>("83 ? ? A1 ? ? ? ? 89 ? ? ? A0 ? ? ? ? 84 ? 0F ? ? ? ? ? A1 ? ? ? ? 84"); //4FE850
 
-    pattern = hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? DB"); //481B50
-    UI::MouseUpdate = safetyhook::create_mid(pattern.get_first(), UI::UpdateMouse);
-    pattern = hook::pattern("8B ? ? ? 50 8B ? ? ? 8B ? ? 8B ? 8B ? ? ? 51"); //486BB0
-    UI::DrawLine = safetyhook::create_inline(pattern.get_first(), UI::Line);
+        const auto menuFontScale = hook::get_pattern<uint8_t>("DB ? ? ? ? ? D8 ? ? ? ? ? DB ? ? ? ? ? D8 ? ? ? ? ? D9"); //4D4340
+        UI::RedirectWidth(menuItems, menuDraw, nativeWidth, &Screen.Width43); //controls and hitboxes; end before menu dispatch
+        UI::RedirectWidth(frontendItems, menuFontScale + 0x30, nativeWidth, &Screen.Width43); //frontend controls through font scale
+        UI::RedirectWidth(frontendLayout, frontendEnd, nativeWidth, &Screen.Width43); //frontend layout through menu text sizing
+        UI::MenuDraw = safetyhook::create_inline(menuDraw, UI::Draw<UI::Menu, UI::MenuDraw>);
+        UI::MenuDrawOverlay = safetyhook::create_inline(menuDraw + 0x10, UI::Draw<UI::Menu, UI::MenuDrawOverlay, char>);
 
-    pattern = hook::pattern("8D ? ? ? 52 E8 ? ? ? ? 83 ? ? 8B ? E8"); //4C7F24
-    auto profileViewportCall = pattern.get_first<uint8_t>(5);
-    UI::SetViewingArea = reinterpret_cast<decltype(UI::SetViewingArea)>(injector::GetBranchDestination(profileViewportCall, true).as_int());
-    injector::MakeCALL(profileViewportCall, UI::ProfileViewingArea, true); //profile viewport
+        const auto loadingImage = hook::get_pattern<uint8_t>("A1 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 6A"); //4D49E0
+        UI::LoadingTexture = *reinterpret_cast<int32_t**>(loadingImage + 1);
+        UI::FlushQuads = reinterpret_cast<decltype(UI::FlushQuads)>(injector::GetBranchDestination(loadingImage + 0x66, true).as_int());
+
+        const auto loadingFrame = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? 56 8B ? ? ? 83"); //4D4770
+        const auto loadingText = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 56"); //4D4840
+        const auto loadingProgress = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? 83 ? ? DB ? ? ? ? ? 8D"); //4D4930
+        const auto loadingPercent = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? 56 83"); //4D4CF0
+        UI::RedirectWidth(loadingFrame, loadingImage, nativeWidth, &Screen.Width43); //frame, text and progress; exclude background image
+        UI::RedirectWidth(loadingPercent, loadingPercent + 0x160, nativeWidth, &Screen.Width43); //percentage overlay; end before loading setup
+        UI::LoadingFrame = safetyhook::create_inline(loadingFrame, UI::Draw<UI::Menu, UI::LoadingFrame, char, int32_t>);
+        UI::LoadingText = safetyhook::create_inline(loadingText, UI::Draw<UI::Menu, UI::LoadingText, int32_t, int32_t>);
+        UI::LoadingProgress = safetyhook::create_inline(loadingProgress, UI::Draw<UI::Menu, UI::LoadingProgress, int32_t, float>);
+        UI::LoadingPercent = safetyhook::create_inline(loadingPercent, UI::Draw<UI::Menu, UI::LoadingPercent, int32_t, float>);
+
+        const auto infoDraw = hook::get_pattern<uint8_t>("A0 ? ? ? ? 83 ? ? 84 ? 53 55 56 57 0F"); //4ADBA0
+        uint8_t* infoItems = nullptr;
+        auto infoItemsSIG = hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 75 ? A1 ? ? ? ? 85 ? 75 ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 ? ? 84 ? 74 ? ? A1 ? ? ? ? 85"); //4AC2B0
+        if (infoItemsSIG.size() == 1)
+            infoItems = infoItemsSIG.get_first<uint8_t>();
+        else
+            infoItems = hook::get_pattern<uint8_t>("A1 ? ? ? ? 83 EC ? 85 C0 0F 84 ? ? ? ? ? ? ? ? C1 E0");
+
+        uint8_t* infoEnd = nullptr;
+        auto infoEndSIG = hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? A0 ? ? ? ? 84 ? 75"); //4AE290
+        if (infoEndSIG.size() == 1)
+            infoEnd = infoEndSIG.get_first<uint8_t>();
+        else
+            infoEnd = hook::get_pattern<uint8_t>("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? 53 8A");
+
+        UI::RedirectWidth(infoItems, infoEnd, nativeWidth, &Screen.Width43); //map, markers and frame; end after info draw
+        UI::InfoScreen = safetyhook::create_inline(infoDraw, UI::Draw<UI::Info, UI::InfoScreen, char>);
+
+        pattern = hook::pattern("A0 ? ? ? ? 83 ? ? 84 ? 0F ? ? ? ? ? DB"); //481B50
+        UI::MouseUpdate = safetyhook::create_mid(pattern.get_first(), UI::UpdateMouse);
+        pattern = hook::pattern("8B ? ? ? 50 8B ? ? ? 8B ? ? 8B ? 8B ? ? ? 51"); //486BB0
+        UI::DrawLine = safetyhook::create_inline(pattern.get_first(), UI::Line);
+
+        pattern = hook::pattern("8D ? ? ? 52 E8 ? ? ? ? 83 ? ? 8B ? E8"); //4C7F24
+        auto profileViewportCall = pattern.get_first<uint8_t>(5);
+        UI::SetViewingArea = reinterpret_cast<decltype(UI::SetViewingArea)>(injector::GetBranchDestination(profileViewportCall, true).as_int());
+        injector::MakeCALL(profileViewportCall, UI::ProfileViewingArea, true); //profile viewport
+    }();
+
+    [&]()
+    {
+        if (!QueueHudQuad || !UI::FlushQuads)
+        {
+            OutputDebugStringA("Sniper Elite: movie backdrop drawing unavailable; movie correction disabled.\n");
+            return;
+        }
+        if (!CheckPatterns("Sniper Elite: movies", {
+            "A1 ? ? ? ? 83 ? ? 0F ? ? ? ? ? 50 E8 ? ? ? ? 83 ? ? 84",
+            "8B ? ? ? ? ? 8B ? ? 85 ? 74 ? 8A ? ? C3",
+            "E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? B9 ? ? ? ? E8 ? ? ? ? A1",
+        }))
+            return;
+
+        const auto movieDraw = hook::get_pattern<uint8_t>("A1 ? ? ? ? 83 ? ? 0F ? ? ? ? ? 50 E8 ? ? ? ? 83 ? ? 84"); //628280
+        FMV::Handle = *reinterpret_cast<int32_t**>(movieDraw + 1);
+        const auto streamStorage = hook::get_pattern<uint8_t>("8B ? ? ? ? ? 8B ? ? 85 ? 74 ? 8A ? ? C3"); //41367A
+        FMV::StreamStorage = *reinterpret_cast<FMV::Stream****>(streamStorage + 2);
+        const auto movieRect = hook::get_pattern<uint8_t>("E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? B9 ? ? ? ? E8 ? ? ? ? A1"); //6282CE
+        FMV::ScreenRect = safetyhook::create_mid(movieRect, FMV::FitToScreen);
+    }();
+
+
 }
+
+ASI_SETTINGS_EXPORT(FixSettings())
 
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
         {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("BF ? ? ? ? 8B ? E8 ? ? ? ? 89 ? ? 8B"));
+            CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("BF ? ? ? ? 8B ? E8 ? ? ? ? 89 ? ? 8B"));
         });
 }
 
@@ -579,6 +710,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     if (reason == DLL_PROCESS_ATTACH)
     {
         if (!IsUALPresent()) { InitializeASI(); }
+    }
+    else if (reason == DLL_PROCESS_DETACH)
+    {
+        WindowCursor::Shutdown();
     }
     return TRUE;
 }

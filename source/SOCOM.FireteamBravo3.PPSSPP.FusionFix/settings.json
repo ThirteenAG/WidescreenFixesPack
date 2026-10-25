@@ -1,0 +1,101 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "options",
+      "title": "@page.options",
+      "section": "advanced"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@skip",
+      "description": "@skip.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.DualAnalogPatch",
+      "type": "bool",
+      "default": 1,
+      "label": "@analog",
+      "description": "@analog.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.DisableCameraSmoothing",
+      "type": "bool",
+      "default": 1,
+      "label": "@smoothing",
+      "description": "@smoothing.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "MAIN.DualAnalogPatch",
+        "in": [
+          1
+        ]
+      },
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.UnthrottleEmuDuringLoading",
+      "type": "bool",
+      "default": 1,
+      "label": "@loading",
+      "description": "@loading.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@fov",
+      "description": "@fov.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    }
+  ]
+}

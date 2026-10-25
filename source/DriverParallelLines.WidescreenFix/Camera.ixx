@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <cmath>
 #include <chrono>
 
@@ -239,10 +240,10 @@ public:
     {
         WFP::onInitEventAsync() += []()
         {
-            CIniReader iniReader("");
-            auto bEnable = iniReader.ReadFloat("CAMERA", "Enable", 1) != 0;
-            sIdleTimeoutSeconds = iniReader.ReadFloat("CAMERA", "CameraReturnTimeout", 3.0f);
-            sReturnSpeed = iniReader.ReadFloat("CAMERA", "CameraReturnSpeed", 2.0f);
+            auto& settings = FixSettings();
+            auto bEnable = settings.Int("CAMERA.Enable") != 0;
+            sIdleTimeoutSeconds = settings.Float("CAMERA.CameraReturnTimeout");
+            sReturnSpeed = settings.Float("CAMERA.CameraReturnSpeed");
 
             if (!bEnable)
                 return;
@@ -253,7 +254,7 @@ public:
             // for some reason disables horizontal camera movement, something is not right
             static auto Camera_LookLeft = "_Camera_LookLeft";
             pattern = hook::pattern("68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? F7 D8 1A C0 FE C0 88 46");
-            injector::WriteMemory(pattern.get_first(1), &Camera_LookLeft, true);
+            ProtectedGameRef<decltype(&Camera_LookLeft)>(reinterpret_cast<decltype(&Camera_LookLeft)*>(pattern.get_first(1))) = &Camera_LookLeft;
 
             pattern = hook::pattern("E8 ? ? ? ? 33 F6 3B C6 74 ? FF B3");
             IsActionAssigned = (decltype(IsActionAssigned))injector::GetBranchDestination(pattern.get_first()).as_int();

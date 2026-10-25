@@ -1,0 +1,9 @@
+{
+  "plugin.name": "Enter the Matrix Widescreen Fix",
+  "page.display": "Display",
+  "hudaspect.auto": "Automatic",
+  "FixHud": "Correct HUD",
+  "FixHud.description": "Keeps HUD graphics and text at their correct aspect ratio and position. Changes apply while playing.",
+  "HudAspectRatioConstraint": "HUD aspect ratio",
+  "HudAspectRatioConstraint.description": "Keeps the HUD elements at the screen sides inside a centered box of this aspect ratio. Automatic uses the whole screen width. Changes apply while playing."
+}

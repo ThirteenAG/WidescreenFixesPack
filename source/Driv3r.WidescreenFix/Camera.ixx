@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <cmath>
 #include <chrono>
 #include <numbers>
@@ -231,9 +232,9 @@ public:
     {
         WFP::onInitEventAsync() += []()
         {
-            CIniReader iniReader("");
-            Orbit::Enabled = iniReader.ReadInteger("CAMERA", "Enable", 1) != 0;
-            MouseLookSensitivity = iniReader.ReadFloat("CAMERA", "MouseLookSensitivity", 1.0f);
+            SettingsReader iniReader;
+            Orbit::Enabled = iniReader.ReadBoolean("CAMERA", "Enable", true) != 0;
+            MouseLookSensitivity = iniReader.ReadFloat("MAIN", "MouseSensitivity", 1.0f);
 
             //mouse movement, right after the input devices are read (see Mouse.ixx)
             auto pattern = hook::pattern("E8 ? ? ? ? 57 8D 46 14 E8");
@@ -280,8 +281,8 @@ public:
 
             IdleTimeoutSeconds = iniReader.ReadFloat("CAMERA", "CameraReturnTimeout", 3.0f);
             ReturnSpeed = iniReader.ReadFloat("CAMERA", "CameraReturnSpeed", 2.0f);
-            StickLookSensitivity = iniReader.ReadFloat("CAMERA", "StickLookSensitivity", 1.0f);
-            InvertLook = iniReader.ReadInteger("CAMERA", "InvertLook", 0) != 0;
+            StickLookSensitivity = iniReader.ReadFloat("MAIN", "GamepadCameraSpeed", 1.0f);
+            InvertLook = iniReader.ReadBoolean("CAMERA", "InvertLook", false) != 0;
 
             Keymap::Live();
 

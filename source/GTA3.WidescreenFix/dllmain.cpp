@@ -1,17 +1,24 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
+#include "FixSettings.hpp"
 
 import Legacy;
 import Draw;
 import MenuConstraint;
 import Movie;
+
+// The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
+ASI_SETTINGS_EXPORT(FixSettings())
+
 bool bUsingLegacy = false;
 
 void Init()
 {
-    CIniReader reader(L"GTA3.WidescreenFixLegacy.ini");
-    if (std::filesystem::exists(reader.GetIniPath()))
+    FixSettings();
+    asi_settings::LiveLink::Start();
+    bUsingLegacy = FixSettings().Bool("COMPATIBILITY.LegacyMode");
+    if (bUsingLegacy)
     {
-        bUsingLegacy = true;
         InitLegacy();
         return;
     }
@@ -19,12 +26,22 @@ void Init()
     Movie::Init({ "FF 15 ? ? ? ? 8B 44 24 0C 8B 54 24 08 50 8B 44 24 08 8B 4C 24 04 52 50 A1 ? ? ? ? 8B 18 51 50 FF 93 9C 00 00 00" });
 
     auto pattern = hook::pattern("BE ? ? ? ? 59 89 C7");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto WinMainHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         WFP::onInitEvent().executeAll();
     });
 
     pattern = hook::pattern("8D 44 24 ? 6A ? 6A ? 6A ? 6A ? 50 FF 15 ? ? ? ? 85 C0 74 ? 83 7C 24");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto MainLoopHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         static std::once_flag of;
@@ -37,12 +54,27 @@ void Init()
     });
 
     pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 52 ? 3B C3", "C7 44 24 ? ? ? ? ? 8B 10 89 04 24 FF 52 ? 85 C0 7C ? E8 ? ? ? ? 85 C0 74 ? 8B 85 ? ? ? ? 8B 95 ? ? ? ? A3 ? ? ? ? 89 15 ? ? ? ? E9 A4 01 00 00");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto _rwD3D8CameraClearBeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
     pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? 3D", "C7 44 24 ? ? ? ? ? ? ? ? ? ? FF 52 ? 8B D8 81 FB");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto _rwD3D8BeginSceneBeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
     pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? 3B C3", "C7 44 24 ? ? ? ? ? 8B 10 89 04 24 FF 52 ? 85 C0 7C ? E8 ? ? ? ? 85 C0 74 ? 8B 85 ? ? ? ? 8B 95 ? ? ? ? A3 ? ? ? ? 89 15 ? ? ? ? E9 A7 01 00 00");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto _rwD3D8CameraBeginUpdateBeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
     pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? 8B F0");
@@ -52,9 +84,19 @@ void Init()
     }
 
     pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 52 ? A1", "C7 44 24 ? ? ? ? ? ? ? ? ? ? FF 52 ? E8 ? ? ? ? A1");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto _rwD3D8RasterShowRasterBeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
     pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? A1", "C7 44 24 ? ? ? ? ? ? ? ? ? ? FF 52 ? E8 ? ? ? ? 33 C0");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto _rwD3D8RasterShowRasterBeforeResetHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
     // Run at presentation, as in SA, rather than CameraEndUpdate: frontend

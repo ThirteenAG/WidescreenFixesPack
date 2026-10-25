@@ -2,8 +2,8 @@
 #include <utility>
 #include "../../external/injector/include/ps2/patches.hpp"
 #include <cstring>
+#include "Settings.hpp"
 extern "C" {
-#include "../../external/injector/include/ps2/inireader.h"
 #include "../../external/injector/include/ps2/plugin_settings.h"
 }
 
@@ -282,18 +282,59 @@ void InstallControls() {
     for (auto& patch : dpadPatches) if (patch && Remapped()) (void)patch.enable();
 }
 void LoadBindings() {
-    char value[64];
-    for (unsigned i = 0; i < console::stories::ActionCount; ++i) {
-        const auto& info = console::stories::actions[i];
-        if (!(info.games & game)) continue;
-        value[0] = 0;
-        inireader.ReadString("BINDINGS", info.ini, "", value, sizeof(value));
-        if (value[0]) bindings.parse(Act(i), value);
+    static console::ps2settings::Value values[] = {
+        {"BINDINGS", "Forward", "W"},
+        {"BINDINGS", "Backward", "S"},
+        {"BINDINGS", "Left", "A"},
+        {"BINDINGS", "Right", "D"},
+        {"BINDINGS", "Sprint", "SHIFT"},
+        {"BINDINGS", "Walk", "ALT"},
+        {"BINDINGS", "Jump", "SPACE"},
+        {"BINDINGS", "Crouch", "CTRL"},
+        {"BINDINGS", "Attack", "LMB, NUM0"},
+        {"BINDINGS", "Aim", "RMB"},
+        {"BINDINGS", "NextTarget", "E"},
+        {"BINDINGS", "PrevTarget", "Q"},
+        {"BINDINGS", "EnterVehicle", "F"},
+        {"BINDINGS", "NextWeapon", "WHEELDOWN"},
+        {"BINDINGS", "PrevWeapon", "WHEELUP"},
+        {"BINDINGS", "LookBehind", "C, MMB"},
+        {"BINDINGS", "Camera", "V"},
+        {"BINDINGS", "ZoomIn", "WHEELUP, PAGEUP"},
+        {"BINDINGS", "ZoomOut", "WHEELDOWN, PAGEDOWN"},
+        {"BINDINGS", "Phone", "TAB"},
+        {"BINDINGS", "Mission", "2, NUMPLUS"},
+        {"BINDINGS", "Accelerate", "W"},
+        {"BINDINGS", "Brake", "S"},
+        {"BINDINGS", "SteerLeft", "A"},
+        {"BINDINGS", "SteerRight", "D"},
+        {"BINDINGS", "Handbrake", "SPACE"},
+        {"BINDINGS", "Horn", "H"},
+        {"BINDINGS", "VehicleFire", "LMB, NUM0"},
+        {"BINDINGS", "NextRadio", "WHEELUP"},
+        {"BINDINGS", "PrevRadio", "WHEELDOWN"},
+        {"BINDINGS", "LookLeft", "Q"},
+        {"BINDINGS", "LookRight", "E"},
+        {"BINDINGS", "LeanForward", "SHIFT, NUM8"},
+        {"BINDINGS", "LeanBack", "CTRL, NUM5"},
+        {"BINDINGS", "TurretLeft", "NUM4"},
+        {"BINDINGS", "TurretRight", "NUM6"},
+        {"BINDINGS", "TurretUp", "NUM8"},
+        {"BINDINGS", "TurretDown", "NUM5"},
+        {"BINDINGS", "Pause", "ESC, BACKTICK"},
+    };
+    (void)console::ps2settings::load(values);
+    for (const auto& value : values) {
+        for (unsigned i = 0; i < console::stories::ActionCount; ++i) {
+            const auto& info = console::stories::actions[i];
+            if ((info.games & game) && !std::strcmp(info.ini, value.key)) bindings.parse(Act(i), value.value);
+        }
     }
     bindings.dirty = 0;
 }
 bool SaveBindings() {
     if (!bindings.dirty) return true;
+    if (PCSX2FSettingsVersion != 2) return false;
     // The host only accepts requests inside the module image (not a game stack).
     static PCSX2FIniRequest request;
     request = {};
@@ -306,7 +347,7 @@ bool SaveBindings() {
             bindings.format(Act(i), entry.value);
         }
         if (request.count && (request.count == PCSX2F_SETTINGS_MAX_ENTRIES || i + 1 == console::stories::ActionCount)) {
-            if (PCSX2F_IniRequest(&request) != PCSX2F_SETTINGS_OK) return false;
+            if (console::ps2settings::request(request) != PCSX2F_SETTINGS_OK) return false;
             request.count = 0;
         }
     }

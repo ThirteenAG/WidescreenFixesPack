@@ -30,15 +30,14 @@ export struct Screen
     bool bGraphicNovelMode;      // true: original framing, false: whole pages as large as the screen allows
 } Screen;
 
-export void UpdateScreenResolution(int32_t nWidth, int32_t nHeight)
+// Recalculates everything from the resolution and the settings, after one of them changed
+export void RecalculateScreen()
 {
-    if (nWidth <= 0 || nHeight <= 0 || (nWidth == Screen.nWidth && nHeight == Screen.nHeight))
+    if (Screen.nWidth <= 0 || Screen.nHeight <= 0)
         return;
 
-    Screen.nWidth = nWidth;
-    Screen.nHeight = nHeight;
-    Screen.fWidth = static_cast<float>(nWidth);
-    Screen.fHeight = static_cast<float>(nHeight);
+    Screen.fWidth = static_cast<float>(Screen.nWidth);
+    Screen.fHeight = static_cast<float>(Screen.nHeight);
     Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
 
     constexpr float fDefaultAspectRatio = 4.0f / 3.0f;
@@ -70,6 +69,16 @@ export void UpdateScreenResolution(int32_t nWidth, int32_t nHeight)
     }
 
     ++Screen.nGeneration;
+}
+
+export void UpdateScreenResolution(int32_t nWidth, int32_t nHeight)
+{
+    if (nWidth <= 0 || nHeight <= 0 || (nWidth == Screen.nWidth && nHeight == Screen.nHeight))
+        return;
+
+    Screen.nWidth = nWidth;
+    Screen.nHeight = nHeight;
+    RecalculateScreen();
 }
 
 export SafetyHookInline shDllMainHook = {};

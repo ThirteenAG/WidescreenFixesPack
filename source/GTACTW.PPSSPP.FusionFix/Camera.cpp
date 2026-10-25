@@ -83,7 +83,7 @@ int Pitch(int16_t* matrix, int16_t native) {
 }
 }
 void InstallCamera() {
-    if (!inireader.ReadInteger("MAIN", "Enable3rdPersonCamera", 1)) return;
+    if (!Option("Enable3rdPersonCamera", 1)) return;
     Load();
     injector::MakeNOP(Address<0x088704C8>()); // retain the original cinematic-camera opt-out
     pitch.fun = injector::MakeCALL(Address<0x088559F0>(), Pitch).get();

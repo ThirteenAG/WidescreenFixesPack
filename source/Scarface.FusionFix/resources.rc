@@ -1,0 +1,6 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/Scarface/en.json"
+fr ASISETTINGS_TEXT "../../text/Scarface/fr.json"
+de ASISETTINGS_TEXT "../../text/Scarface/de.json"
+it ASISETTINGS_TEXT "../../text/Scarface/it.json"
+es ASISETTINGS_TEXT "../../text/Scarface/es.json"

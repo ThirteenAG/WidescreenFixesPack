@@ -77,11 +77,19 @@ namespace GTA1Camera
 
     inline void Install()
     {
-        CIniReader ini("");
-        Enabled = ini.ReadBoolean("CAMERA", "SmoothFollow", true);
-        FollowSeconds = std::clamp(double(ini.ReadFloat("CAMERA", "FollowTime", 0.25f)), 0.0, 2.0);
-        HeightSeconds = std::clamp(double(ini.ReadFloat("CAMERA", "HeightTime", 0.35f)), 0.0, 3.0);
-        Zoom = std::clamp(double(ini.ReadFloat("CAMERA", "Zoom", 1.0f)), 0.5, 3.0);
+        // Field of View: the visible area's multiplier. Changes from FusionFixHub or a preset apply at once, as from
+        // the in-game options
+        static auto read = []
+        {
+            SettingsReader ini("");
+            Enabled = ini.ReadBoolean("CAMERA", "SmoothFollow", true);
+            FollowSeconds = std::clamp(double(ini.ReadFloat("CAMERA", "FollowTime", 0.25f)), 0.0, 2.0);
+            HeightSeconds = std::clamp(double(ini.ReadFloat("CAMERA", "HeightTime", 0.35f)), 0.0, 3.0);
+            Zoom = std::clamp(double(ini.ReadFloat("MAIN", "FOVFactor", 1.0f)), 0.5, 2.0);
+        };
+        read();
+        for (auto id : { "CAMERA.SmoothFollow", "CAMERA.FollowTime", "CAMERA.HeightTime", "MAIN.FOVFactor" })
+            FixSettings().OnChange(id, read);
         LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
         CounterFrequency = double(frequency.QuadPart);
         // After the native camera constraints, before projection and visibility bounds.

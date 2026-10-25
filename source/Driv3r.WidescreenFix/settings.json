@@ -1,0 +1,713 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Driv3r",
+        "exe": [
+          "driv3r.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "menu",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@MAIN.WindowMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@MAIN.WindowMode.1"
+        },
+        {
+          "value": 2,
+          "label": "@MAIN.WindowMode.2"
+        }
+      ],
+      "label": "@MAIN.WindowMode",
+      "description": "@MAIN.WindowMode.description",
+      "page": "display",
+      "apply": "restart"
+    },
+    {
+      "id": "CAMERA.Enable",
+      "type": "bool",
+      "default": true,
+      "label": "@CAMERA.Enable",
+      "description": "@CAMERA.Enable.description",
+      "page": "camera",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.MouseSensitivity",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN.MouseSensitivity",
+      "description": "@MAIN.MouseSensitivity.description",
+      "page": "camera",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      },
+      "min": 0.1,
+      "max": 5,
+      "step": 0.05,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "CAMERA.CameraReturnTimeout",
+      "type": "float",
+      "default": 3.0,
+      "label": "@CAMERA.CameraReturnTimeout",
+      "description": "@CAMERA.CameraReturnTimeout.description",
+      "page": "camera",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 3.0,
+        "recommended": 3.0,
+        "enhanced": 3.0
+      },
+      "min": 0,
+      "max": 60,
+      "step": 0.1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": true
+      }
+    },
+    {
+      "id": "CAMERA.CameraReturnSpeed",
+      "type": "float",
+      "default": 2.0,
+      "label": "@CAMERA.CameraReturnSpeed",
+      "description": "@CAMERA.CameraReturnSpeed.description",
+      "page": "camera",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 2.0,
+        "recommended": 2.0,
+        "enhanced": 2.0
+      },
+      "min": 0,
+      "max": 10,
+      "step": 0.1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": true
+      }
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN.GamepadCameraSpeed",
+      "description": "@MAIN.GamepadCameraSpeed.description",
+      "page": "camera",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      },
+      "min": 0,
+      "max": 10,
+      "step": 0.1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": true
+      }
+    },
+    {
+      "id": "CAMERA.InvertLook",
+      "type": "bool",
+      "default": false,
+      "label": "@CAMERA.InvertLook",
+      "description": "@CAMERA.InvertLook.description",
+      "page": "camera",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      },
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": true
+      }
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "controls",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.ModernControls",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.ModernControls",
+      "description": "@MAIN.ModernControls.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.SkipIntro",
+      "description": "@MAIN.SkipIntro.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.DrawDistanceFactor",
+      "type": "float",
+      "default": 4.0,
+      "label": "@MAIN.DrawDistanceFactor",
+      "description": "@MAIN.DrawDistanceFactor.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 4.0,
+        "enhanced": 4.0
+      },
+      "min": 0,
+      "max": 20,
+      "step": 0.1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.CursorSensitivity",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN.CursorSensitivity",
+      "description": "@MAIN.CursorSensitivity.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      },
+      "min": 0,
+      "max": 10,
+      "step": 0.1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "bool",
+      "default": false,
+      "label": "@GRAPHICS.ConsoleGamma",
+      "description": "@GRAPHICS.ConsoleGamma.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "GRAPHICS.AntiAliasing",
+      "type": "choice",
+      "default": 0,
+      "label": "@GRAPHICS.AntiAliasing",
+      "description": "@GRAPHICS.AntiAliasing.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@AntiAliasing.0"
+        },
+        {
+          "value": 1,
+          "label": "SMAA"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "min": 0,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@MAIN.FPSLimit.unlimited"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
+        }
+      ],
+      "label": "@MAIN.FPSLimit",
+      "description": "@MAIN.FPSLimit.description",
+      "page": "graphics",
+      "apply": "restart",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 60,
+        "enhanced": 60
+      }
+    },
+    {
+      "id": "GRAPHICS.AnisotropicFiltering",
+      "type": "choice",
+      "default": 16,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@GRAPHICS.AnisotropicFiltering.0"
+        },
+        {
+          "value": 2,
+          "label": "2x"
+        },
+        {
+          "value": 4,
+          "label": "4x"
+        },
+        {
+          "value": 8,
+          "label": "8x"
+        },
+        {
+          "value": 16,
+          "label": "16x"
+        }
+      ],
+      "label": "@GRAPHICS.AnisotropicFiltering",
+      "description": "@GRAPHICS.AnisotropicFiltering.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 16,
+        "enhanced": 16
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN.FOVFactor",
+      "description": "@MAIN.FOVFactor.description",
+      "page": "camera",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      },
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@MAIN.HudAspectRatioConstraint",
+      "description": "@MAIN.HudAspectRatioConstraint.description",
+      "page": "display",
+      "apply": "live",
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
+    },
+    {
+      "id": "MAIN.ForceMaxRefreshRate",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.ForceMaxRefreshRate",
+      "description": "@MAIN.ForceMaxRefreshRate.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.MinResX",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.MinResX",
+      "description": "@MAIN.MinResX.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.MinResY",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.MinResY",
+      "description": "@MAIN.MinResY.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.MaxResX",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.MaxResX",
+      "description": "@MAIN.MaxResX.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.MaxResY",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.MaxResY",
+      "description": "@MAIN.MaxResY.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "TURNINDICATORS.TurnIndicators",
+      "type": "bool",
+      "default": true,
+      "label": "@TURNINDICATORS.TurnIndicators",
+      "description": "@TURNINDICATORS.TurnIndicators.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "TURNINDICATORS.ManualTurnIndicators",
+      "type": "bool",
+      "default": false,
+      "label": "@TURNINDICATORS.ManualTurnIndicators",
+      "description": "@TURNINDICATORS.ManualTurnIndicators.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      },
+      "enabledIf": {
+        "all": [
+          {
+            "setting": "TURNINDICATORS.TurnIndicators",
+            "equals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "TURNINDICATORS.LeftIndicatorKey",
+      "type": "int",
+      "default": 219,
+      "label": "@TURNINDICATORS.LeftIndicatorKey",
+      "description": "@TURNINDICATORS.LeftIndicatorKey.description",
+      "page": "controls",
+      "apply": "restart",
+      "visibility": "file",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "all": [
+          {
+            "setting": "TURNINDICATORS.TurnIndicators",
+            "equals": true
+          },
+          {
+            "setting": "TURNINDICATORS.ManualTurnIndicators",
+            "equals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "TURNINDICATORS.RightIndicatorKey",
+      "type": "int",
+      "default": 221,
+      "label": "@TURNINDICATORS.RightIndicatorKey",
+      "description": "@TURNINDICATORS.RightIndicatorKey.description",
+      "page": "controls",
+      "apply": "restart",
+      "visibility": "file",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "all": [
+          {
+            "setting": "TURNINDICATORS.TurnIndicators",
+            "equals": true
+          },
+          {
+            "setting": "TURNINDICATORS.ManualTurnIndicators",
+            "equals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "TURNINDICATORS.LeftIndicatorButton",
+      "type": "int",
+      "default": 5,
+      "label": "@TURNINDICATORS.LeftIndicatorButton",
+      "description": "@TURNINDICATORS.LeftIndicatorButton.description",
+      "page": "controls",
+      "apply": "restart",
+      "visibility": "file",
+      "min": 0,
+      "max": 32,
+      "step": 1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "all": [
+          {
+            "setting": "TURNINDICATORS.TurnIndicators",
+            "equals": true
+          },
+          {
+            "setting": "TURNINDICATORS.ManualTurnIndicators",
+            "equals": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "TURNINDICATORS.RightIndicatorButton",
+      "type": "int",
+      "default": 6,
+      "label": "@TURNINDICATORS.RightIndicatorButton",
+      "description": "@TURNINDICATORS.RightIndicatorButton.description",
+      "page": "controls",
+      "apply": "restart",
+      "visibility": "file",
+      "min": 0,
+      "max": 32,
+      "step": 1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "all": [
+          {
+            "setting": "TURNINDICATORS.TurnIndicators",
+            "equals": true
+          },
+          {
+            "setting": "TURNINDICATORS.ManualTurnIndicators",
+            "equals": true
+          }
+        ]
+      }
+    }
+  ]
+}

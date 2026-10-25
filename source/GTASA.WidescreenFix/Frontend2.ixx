@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 #include <control.h>
 #include <commctrl.h>
 #pragma comment(lib, "comctl32.lib")
@@ -648,10 +650,13 @@ namespace VideoPlayer
         if (positioning || !IsPlaying()) return;
         RECT client{};
         if (!GetClientRect(window, &client) || client.right <= 0 || client.bottom <= 0) return;
-        const double scale = std::min(static_cast<double>(client.right) / sourceWidth,
-            static_cast<double>(client.bottom) / sourceHeight);
-        const long width = std::max(1L, static_cast<long>(sourceWidth * scale));
-        const long height = std::max(1L, static_cast<long>(sourceHeight * scale));
+        // Videos: 0 original aspect (black bars), 1 fill (cropped at the aspect), 2 stretched over the window
+        static auto& nFMVWidescreenMode = FixSettings().Int("MAIN.FMVWidescreenMode");
+        const double scaleX = static_cast<double>(client.right) / sourceWidth;
+        const double scaleY = static_cast<double>(client.bottom) / sourceHeight;
+        const double scale = nFMVWidescreenMode == 1 ? std::max(scaleX, scaleY) : std::min(scaleX, scaleY);
+        const long width = nFMVWidescreenMode == 2 ? client.right : std::max(1L, static_cast<long>(sourceWidth * scale));
+        const long height = nFMVWidescreenMode == 2 ? client.bottom : std::max(1L, static_cast<long>(sourceHeight * scale));
         const long left = (client.right - width) / 2;
         const long top = (client.bottom - height) / 2;
         positioning = true;
@@ -1355,22 +1360,21 @@ public:
 
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-
-            auto bScalingMode = iniReader.ReadInteger("MAIN", "ScalingMode", 1) != 0;
-            if (bScalingMode)
+            // The old HUD scaling (MAIN.ScalingMode = 0 in the settings file): its sizes apply after a restart
+            auto& settings = FixSettings();
+            if (settings.Bool("MAIN.ScalingMode"))
                 return;
 
-            fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 1.0f : fHudWidthScale;
-            fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 1.0f : fHudHeightScale;
-            fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 1.0f : fRadarWidthScale;
-            fRadarHeightScale = iniReader.ReadFloat("MAIN", "RadarHeightScale", 0.0f); fRadarHeightScale == 0.0f ? fRadarHeightScale = 1.0f : fRadarHeightScale;
-            fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
-            bProportionalWeaponIcon = iniReader.ReadInteger("MAIN", "ProportionalWeaponIcon", 0) != 0;
-            g_noBorderAnim = iniReader.ReadInteger("MAIN", "NoCutsceneBorderAnimation", 0) != 0;
+            fHudWidthScale = settings.Float("MAIN.HudWidthScale");
+            fHudHeightScale = settings.Float("MAIN.HudHeightScale");
+            fRadarWidthScale = settings.Float("MAIN.RadarWidthScale");
+            fRadarHeightScale = settings.Float("MAIN.RadarHeightScale");
+            fSubtitlesScale = settings.Float("MAIN.SubtitlesScale");
+            bProportionalWeaponIcon = settings.Bool("MAIN.ProportionalWeaponIcon");
+            g_noBorderAnim = !settings.Bool("MAIN.AnimatedCutsceneBorders");
 
-            static float fRadarWidth = iniReader.ReadFloat("MAIN", "RadarWidth", 94.0f);
-            static float fRadarHeight = iniReader.ReadFloat("MAIN", "RadarHeight", 76.0f);
+            static float fRadarWidth = settings.Float("MAIN.RadarWidth");
+            static float fRadarHeight = settings.Float("MAIN.RadarHeight");
 
             if (!fHudWidthScale || !fHudHeightScale) { fHudWidthScale = 1.0f; fHudHeightScale = 1.0f; }
             if (!fRadarWidthScale) { fRadarWidthScale = 1.0f; }
@@ -1414,9 +1418,19 @@ public:
             static ProtectedGameRef<float> radarHeightRef;
 
             auto pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 C1 D8 0D ? ? ? ? D8 E9");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             radarWidthRef.SetAddress(*pattern.get_first<float*>(2));
 
             pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 5C 24 ? D9 05 ? ? ? ? D8 C9 D8 6C 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             radarHeightRef.SetAddress(*pattern.get_first<float*>(2));
 
             radarWidthRef = fRadarWidth * (((float)DEFAULT_SCREEN_WIDTH / (float)DEFAULT_SCREEN_HEIGHT) / (640.0f / 448.0f));

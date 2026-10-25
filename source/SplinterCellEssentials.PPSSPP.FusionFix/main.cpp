@@ -1,4 +1,5 @@
 #include "Screens.hpp"
+#include "../Shared/Console/PortableCfg.hpp"
 extern "C" {
 PSP_MODULE_INFO("SplinterCellPSP.FusionFix", PSP_MODULE_USER, 2, 0);
 // module_start runs above the game's threads (default 0x20), so the early
@@ -8,15 +9,29 @@ unsigned int module_start_thread_parameter[4] __attribute__((used)) = {3, 0x18, 
 }
 namespace {
 using namespace essentials;
-constexpr auto ini = "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/SplinterCellEssentials.PPSSPP.FusionFix.ini";
+constexpr auto ini = "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/SplinterCellEssentials.PPSSPP.FusionFix.cfg";
 constexpr auto logPath = "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/SplinterCellEssentials.PPSSPP.FusionFix.log";
 // The game's main thread already runs while plugins start, and it draws the
 // loading picture and mission briefing right away. Publish those hooks before
 // any file access (which lets the game thread run): they only search the
-// start of the executable, and the INI option is applied afterwards.
+// start of the executable, and the CFG option is applied afterwards.
 // PPSSPP loads a fresh plugin image for every LoadExec (loader, then game),
 // so two "Loaded plugin" messages are expected. A duplicate plugin folder or
 // ini would start a second copy in the same stage; it must not hook twice.
+void CompleteSettings() {
+    console::portable::IniValue defaults[] = {
+        {"MAIN", "SkipIntro", "1"},
+        {"MAIN", "StickDeadzone", "0.1"},
+        {"MAIN", "SpeedStickControl", "1"},
+        {"MAIN", "Enable60FPS", "1"},
+        {"MAIN", "UnthrottleEmuDuringLoading", "1"},
+        {"MAIN", "FOVFactor", "1"},
+        {"MAIN", "ContainFullscreenImages", "1"},
+        {"MAIN", "HudScale", "1"}
+    };
+    console::portable::CompleteCfg(ini, defaults);
+}
+
 bool AlreadyRunning() {
     const SceUID self = sceKernelGetModuleIdByAddress(reinterpret_cast<const void*>(&AlreadyRunning));
     SceUID modules[64]; int count = 0;
@@ -40,11 +55,12 @@ bool EarlyGame() {
     Attach(info);
     if (Begin()) { InstallLoadingScreens(); Finish(); }
     inireader.SetIniPath(ini);
+    CompleteSettings();
 #ifndef NDEBUG
     logger.SetPath(logPath);
     logger.WriteF("Early loading-screen hooks: %d", int(injector::LastError()));
 #endif
-    containImages = inireader.ReadInteger("MAIN", "ContainFullscreenImages", 1) != 0;
+    containImages = inireader.ReadBoolean("MAIN", "ContainFullscreenImages", true);
     return true;
 }
 int Install() {
@@ -62,7 +78,8 @@ extern "C" int module_start(SceSize, void*) {
     // The loader performs LoadExec; PPSSPP loads a fresh plugin image for the
     // game. Leave its second movie call intact, as required by the original loader.
     if (essentials::Start("PSPLoader", ini, logPath) && essentials::Begin()) {
-        if (inireader.ReadInteger("MAIN", "SkipIntro", 1))
+        CompleteSettings();
+        if (inireader.ReadBoolean("MAIN", "SkipIntro", true))
             injector::MakeNOP(pattern.get(0, "25 28 00 00 25 30 00 00 25 38 00 00", 12));
         essentials::InstallLoaderScreens();
         return essentials::Finish();

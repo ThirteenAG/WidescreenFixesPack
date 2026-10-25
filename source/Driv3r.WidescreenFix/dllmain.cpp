@@ -1,16 +1,26 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
 #include "d3d9.h"
+#include "NativeMenu.hpp"
+#include "Window.hpp"
+#include "../Shared/D3D9Options.hpp"
 
 import ComVars;
 
+ASI_SETTINGS_EXPORT(FixSettings())
+
 void Init()
 {
-    // Otherwise with display scaling Windows gives the game a scaled down desktop and stretches its window,
-    // so every resolution fills the screen, and the window does not match the display modes of the resolution list
-    SetProcessDPIAware();
+    WindowedModeWrapper::EnableDpiAwareness();
+    Driv3rMenu::Init();
+
+    D3D9Options::frameLimit = FixSettings().Int("MAIN.FPSLimit");
+    D3D9Options::anisotropy = FixSettings().Int("GRAPHICS.AnisotropicFiltering");
+    D3D9Options::HookCreation();
 
     auto pattern = hook::pattern("A1 ? ? ? ? 85 C0 55");
-    hWnd.SetAddress(*pattern.get_first<HWND*>(1));
+    auto nativeWindow = *pattern.get_first<HWND*>(1);
+    hWnd.SetAddress(nativeWindow);
 
     pattern = hook::pattern("E8 ? ? ? ? ? ? 8D 4C 24 ? 51 8D 54 24");
     static auto MainLoopHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
@@ -70,6 +80,9 @@ void Init()
     RendererModeIndex.SetAddress(dword_8D7DF0 - 2);
     BackbufferWidth.SetAddress(dword_8D7DF0 + 2);
     BackbufferHeight.SetAddress(dword_8D7DF0 + 3);
+    Driv3rWindow::Init(nativeWindow, reinterpret_cast<uint8_t*>(dword_8D7DF0 - 2) - 0x150);
+    FixSettings().Availability("MAIN.WindowMode", [](std::string_view value) { return value == "0" || Driv3rWindow::ready; },
+        [] { return "Native window mode is unavailable."; });
 
     pattern = hook::pattern("A1 ? ? ? ? ? ? 8D 7B ? 57 6A ? 6A");
     Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));
@@ -96,6 +109,8 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        FixSettings();
+        asi_settings::LiveLink::Start();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("55 8B EC 83 EC 60 53 56 57"));
     });
 }

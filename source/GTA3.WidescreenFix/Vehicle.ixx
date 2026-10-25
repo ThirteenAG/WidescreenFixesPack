@@ -1,5 +1,6 @@
 module;
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include <cstdint>
 #include "common.h"
 
@@ -305,6 +306,11 @@ public:
         WFP::onGameInitEvent() += []()
         {
             auto pattern = hook::pattern("E8 ? ? ? ? 85 C0 0F 84 ? ? ? ? E8 ? ? ? ? 89 D9");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             FindPlayerVehicle = (decltype(FindPlayerVehicle))injector::GetBranchDestination(pattern.get_first()).as_int();
         };
     }

@@ -14,7 +14,6 @@ namespace GTA1Modes
     inline int* Mode(Entry* entries, int index) { return *reinterpret_cast<int**>(At(entries, index) + GTA1Build::ModeEntryMode); }
     inline int Count = 0;
     inline bool Prepared = false, FirstApply = true;
-    inline std::wstring IniPath;
     inline int __cdecl Measure(int font, const char* label)
     {
         int width = MeasureHook.call<int>(font, label);
@@ -73,7 +72,7 @@ namespace GTA1Modes
         auto result = ApplyHook.call<void*>(index);
         if (!FirstApply && Prepared && *index < Count)
         {
-            CIniReader ini("");
+            SettingsReader ini("");
             ini.WriteString("MAIN", "ResX", std::to_string(*OutputWidth));
             ini.WriteString("MAIN", "ResY", std::to_string(*OutputHeight));
         }
@@ -126,11 +125,6 @@ namespace GTA1Modes
             "56 8B 74 24 08 8B 0D ? ? ? ? 8A 06 A2 ? ? ? ? 33 C0 8A 06 8D 04 80");
         if (list.size() != 1 || apply.size() != 1)
         { Log::Write("GTA1 resolution selector signatures unavailable."); return; }
-        HMODULE module = nullptr;
-        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-            reinterpret_cast<LPCWSTR>(&Install), &module);
-        wchar_t path[MAX_PATH]{}; GetModuleFileNameW(module, path, MAX_PATH);
-        IniPath = std::filesystem::path(path).replace_extension(L".ini").wstring();
         ModeIndex = *apply.get_first<uint8_t*>(Off(14, 11, 14));
         // The frontend's display reload and the style palette conversion of the in-game mode list.
         auto reload = Find("53 56 57 6A FF C7 05 ? ? ? ? 02 00 00 00 E8", "C7 05 ? ? ? ? 02 00 00 00 56 57 6A FF E8", "6A FF E8 ? ? ? ? 83 C4 04 C3");

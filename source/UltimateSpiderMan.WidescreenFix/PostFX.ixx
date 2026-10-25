@@ -1,6 +1,8 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/PatchPreflight.hpp"
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module PostFX;
@@ -20,6 +22,9 @@ namespace
         IDirect3DDevice9* device = Direct3DDevice;
         if (!device)
             return;
+
+        CPostFX::bConsoleGammaEnabled = FixSettings().Bool("GRAPHICS.ConsoleGamma");
+        CPostFX::bSmaaEnabled = FixSettings().Int("GRAPHICS.AntiAliasing");
 
         // NGL executes this pass after the world, before the UI scenes.
         // Preserve D3D state because NGL caches state across frames.
@@ -55,11 +60,19 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 0) != 0;
-            CPostFX::bSmaaEnabled = iniReader.ReadInteger("GRAPHICS", "SMAA", 0) != 0;
-            if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
+            if (!wfp::PatchPreflight("Ultimate Spider-Man postfx: signatures unavailable; feature disabled.\n",
+            {
+                { "6A 01 E8 ? ? ? ? 8A 15 ? ? ? ? 33 C0", 1 },
+                { "E8 ? ? ? ? A0 ? ? ? ? 84 C0 75 2A", 1 },
+                { "50 E8 ? ? ? ? 83 C4 08 E8 ? ? ? ? A0", 1 },
+                { "6A 00 E8 ? ? ? ? A1 ? ? ? ? 83 C0 0F 83 C4 04 83 E0 F0 8D 48 20", 1 },
+                { "81 EC 88 01 00 00 56 6A 01 8B F1", 1 },
+            }))
                 return;
+
+            auto& settings = FixSettings();
+            CPostFX::bConsoleGammaEnabled = FixSettings().Bool("GRAPHICS.ConsoleGamma") != 0;
+            CPostFX::bSmaaEnabled = FixSettings().Int("GRAPHICS.AntiAliasing") != 0;
 
             CPostFX::bRenderToBackBuffer = false;
             auto pattern = hook::pattern("6A 01 E8 ? ? ? ? 8A 15 ? ? ? ? 33 C0"); //0x52B284 + 2

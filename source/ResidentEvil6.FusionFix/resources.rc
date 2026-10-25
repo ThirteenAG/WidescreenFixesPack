@@ -1,0 +1,8 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/ResidentEvil6/en.json"
+fr ASISETTINGS_TEXT "../../text/ResidentEvil6/fr.json"
+de ASISETTINGS_TEXT "../../text/ResidentEvil6/de.json"
+it ASISETTINGS_TEXT "../../text/ResidentEvil6/it.json"
+es ASISETTINGS_TEXT "../../text/ResidentEvil6/es.json"
+IDR_SHADER_OVERLAY_VS RCDATA "shaders/Overlay_4F0EE939.vso"
+IDR_SHADER_DAMAGEOVERLAY_VS RCDATA "shaders/DamageOverlay_F09EC5E9.vso"

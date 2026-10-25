@@ -1,7 +1,10 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "Window.hpp"
 #include <d3d9.h>
+#include <charconv>
 
 export module Resolution;
 
@@ -85,7 +88,16 @@ ResolutionConfig GetSavedResolution()
             {
                 auto pos = line.find('=');
                 if (pos != std::string::npos)
-                    out = static_cast<uint32_t>(std::stoul(line.substr(pos + 1)));
+                {
+                    const auto value = line.find_first_not_of(" \t", pos + 1);
+                    if (value != std::string::npos)
+                    {
+                        uint32_t parsed = 0;
+                        auto result = std::from_chars(line.data() + value, line.data() + line.size(), parsed);
+                        if (result.ec == std::errc{})
+                            out = parsed;
+                    }
+                }
             }
         };
 
@@ -264,18 +276,39 @@ int32_t ResolveModeIndex(int32_t width, int32_t height, int32_t index)
 }
 
 SafetyHookInline shSetMode = {};
+bool ChangingMode = false, ModeBuilt = false;
+void SaveMode(const D3DPRESENT_PARAMETERS& present, int index)
+{
+    // Windowed presentation uses refresh 0; keep the player's selected display
+    // mode for a later fullscreen start, including its chosen refresh rate.
+    auto selected = present.Windowed ? GetListMode(index) : nullptr;
+    if (selected) SaveResolution(selected->Width, selected->Height, selected->RefreshRate);
+    else SaveResolution(present.BackBufferWidth, present.BackBufferHeight, present.FullScreen_RefreshRateInHz);
+}
+void PublishMode(void* context)
+{
+    auto present = reinterpret_cast<D3DPRESENT_PARAMETERS*>(static_cast<uint8_t*>(context) + 0x160);
+    if (ChangingMode) { ModeBuilt = true; return; }
+    if (present->BackBufferWidth && present->BackBufferHeight)
+    {
+        SaveMode(*present, Driv3rWindow::requestedIndex);
+        onResChange().executeAll(present->BackBufferWidth, present->BackBufferHeight);
+    }
+}
 void __fastcall SetMode(uint8_t* _this, void* edx, int32_t width, int32_t height, int32_t index)
 {
     index = ResolveModeIndex(width, height, index);
+    ChangingMode = true;
+    ModeBuilt = false;
     shSetMode.unsafe_thiscall(_this, width, height, index);
+    ChangingMode = false;
 
-    // A failed Reset restores the previous mode, keep the viewports and the current index in sync with it
-    auto& currentIndex = *reinterpret_cast<int32_t*>(_this + 0x1098);
-    if (currentIndex == index && RendererModeIndex != index)
+    // Publish the dimensions accepted by Reset, including its restored mode on failure.
+    if (Driv3rWindow::SynchronizeViewport(_this, index, RendererModeIndex, BackbufferWidth, BackbufferHeight, ModeBuilt))
     {
-        currentIndex = RendererModeIndex;
-        *reinterpret_cast<int32_t*>(_this + 0x105C) = BackbufferWidth;
-        *reinterpret_cast<int32_t*>(_this + 0x1060) = BackbufferHeight;
+        auto present = reinterpret_cast<D3DPRESENT_PARAMETERS*>(Driv3rWindow::renderer + 0x160);
+        SaveMode(*present, RendererModeIndex);
+        onResChange().executeAll(BackbufferWidth, BackbufferHeight);
     }
 }
 
@@ -286,12 +319,13 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            bForceMaxRefreshRate = iniReader.ReadInteger("MAIN", "ForceMaxRefreshRate", 1) != 0;
+            SettingsReader iniReader;
+            bForceMaxRefreshRate = iniReader.ReadBoolean("MAIN", "ForceMaxRefreshRate", true) != 0;
             nMinResX = iniReader.ReadInteger("MAIN", "MinResX", 0);
             nMinResY = iniReader.ReadInteger("MAIN", "MinResY", 0);
             nMaxResX = iniReader.ReadInteger("MAIN", "MaxResX", 0);
             nMaxResY = iniReader.ReadInteger("MAIN", "MaxResY", 0);
+            Driv3rWindow::onPrepared = PublishMode;
 
             auto pattern = hook::pattern("33 C0 39 05 ? ? ? ? A3 ? ? ? ? A2 ? ? ? ? 75");
             GameModeList = reinterpret_cast<ModeList*>(*pattern.get_first<uintptr_t>(9) - offsetof(ModeList, count));
@@ -302,28 +336,28 @@ public:
 
             //uncap resolutions, the mode list is already limited
             pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 57 8B DE E8 ? ? ? ? 85 C0"); //54A5A0
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), 0, true);
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), 0, true);
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 0)) = INT_MAX;
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 5)) = INT_MAX;
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 10)) = 0;
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 15)) = 0;
 
             pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 50 E8 ? ? ? ? 85"); //57F665
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), 0, true);
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), 0, true);
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 0)) = INT_MAX;
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 5)) = INT_MAX;
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 10)) = 0;
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 15)) = 0;
 
             pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 50 33 DB E8"); //5C9288
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 0), INT_MAX, true);
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 5), INT_MAX, true);
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 10), 0, true);
-            injector::WriteMemory(pattern.get_first<int32_t*>(1 + 15), 0, true);
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 0)) = INT_MAX;
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 5)) = INT_MAX;
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 10)) = 0;
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(1 + 15)) = 0;
 
             //default to desktop res
             auto [DesktopResW, DesktopResH] = GetDesktopRes();
             pattern = hook::pattern("56 57 56 56 68 ? ? ? ? 68 ? ? ? ? 56 56"); //576C6B
-            injector::WriteMemory(pattern.get_first<int32_t*>(5), DesktopResH, true);
-            injector::WriteMemory(pattern.get_first<int32_t*>(10), DesktopResW, true);
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(5)) = DesktopResH;
+            ProtectedGameRef<int32_t>(pattern.get_first<int32_t>(10)) = DesktopResW;
 
             //startup resolution (before profile loading)
             pattern = hook::pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? ? ? E8"); //57F6DF
@@ -357,12 +391,7 @@ public:
                 {
                     *(uint32_t*)(regs.ebx + 0x180) = regs.ecx;
 
-                    auto w = *(uint32_t*)(regs.ebx + 0x160);
-                    auto h = *(uint32_t*)(regs.ebx + 0x164);
-                    auto refreshrate = *(uint32_t*)(regs.ebx + 0x190);
-
-                    SaveResolution(w, h, refreshrate);
-                    onResChange().executeAll(w, h);
+                    PublishMode(reinterpret_cast<void*>(regs.ebx));
                 }
             };
             injector::MakeInline<GetResHook>(pattern.count(2).get(0).get<void*>(0), pattern.count(2).get(0).get<void*>(6));
@@ -370,6 +399,7 @@ public:
 
             onResChange() += [](int Width, int Height)
             {
+                if (Driv3rWindow::Place(Width, Height)) return;
                 auto [DesktopResW, DesktopResH] = GetDesktopRes();
                 static tagRECT REKT;
                 REKT.left = (LONG)(((float)DesktopResW / 2.0f) - ((float)Width / 2.0f));

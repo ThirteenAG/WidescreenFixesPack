@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "FixSettings.hpp"
 
 export module Settings;
 
@@ -14,11 +15,10 @@ export struct FusionSettings
     bool classicLODsOnly = false;
     float colourFilterStrength = 1.0f;
     bool skipIntro = true;
-    bool skipMenu = true;
-    int saveSlot = 5;
+    bool skipMenu = false;
+    int saveSlot = 4;
     float hudScale = 0.8f;
     float radarScale = 0.75f;
-    bool disableFirstPersonAimForRifles = true;
     bool improveCameraPC = true;
     bool rawMouseInput = true;
     bool restoreOriginalCamera = true;
@@ -28,25 +28,24 @@ export FusionSettings Settings;
 
 export void ReadSettings()
 {
-    CIniReader reader("");
-    Settings.skipIntro = reader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
-    Settings.skipMenu = reader.ReadInteger("MAIN", "SkipMenu", 1) != 0;
-    const auto slot = reader.ReadInteger("MAIN", "SaveSlot", 6);
-    Settings.saveSlot = slot >= 1 && slot <= 8 ? slot - 1 : 5;
+
+    Settings.skipIntro = FixSettings().Bool("MAIN.SkipIntro");
+    Settings.skipMenu = FixSettings().Bool("MAIN.SkipMenu");
+    const auto slot = FixSettings().Int("MAIN.SaveSlot");
+    Settings.saveSlot = slot >= 1 && slot <= 8 ? slot - 1 : 4;
     const auto validScale = [](float value) { return std::isfinite(value) && value > 0.0f ? value : 1.0f; };
-    Settings.hudScale = validScale(reader.ReadFloat("MAIN", "HudScale", 0.8f));
-    Settings.radarScale = validScale(reader.ReadFloat("MAIN", "RadarScale", 0.75f));
-    Settings.disableFirstPersonAimForRifles = reader.ReadInteger("MAIN", "DisableFirstPersonAimForRifles", 1) != 0;
-    Settings.improveCameraPC = reader.ReadInteger("MAIN", "ImproveCameraPC", 1) != 0;
-    Settings.restoreOriginalCamera = reader.ReadInteger("MAIN", "RestoreOriginalCamera", 1) != 0;
-    Settings.rawMouseInput = reader.ReadInteger("MAIN", "RawMouseInput", 1) != 0;
-    const auto delay = reader.ReadFloat("MAIN", "CenteringDelay", 5.0f);
+    Settings.hudScale = validScale(FixSettings().Float("MAIN.HudScale"));
+    Settings.radarScale = validScale(FixSettings().Float("MAIN.RadarScale"));
+    Settings.improveCameraPC = FixSettings().Bool("MAIN.ImproveCameraPC");
+    Settings.restoreOriginalCamera = FixSettings().Bool("MAIN.RestoreOriginalCamera");
+    Settings.rawMouseInput = FixSettings().Bool("MAIN.RawInputMouse");
+    const auto delay = FixSettings().Float("MAIN.CenteringDelay");
     Settings.centeringDelay = std::isfinite(delay) && delay >= 0.0f ? delay : 5.0f;
-    Settings.classicLODsOnly = reader.ReadInteger("GRAPHICS", "ClassicLODsOnly", 0) != 0;
-    const auto style = reader.ReadInteger("GRAPHICS", "VisualStyle", 1);
+    Settings.classicLODsOnly = FixSettings().Bool("GRAPHICS.ClassicLODsOnly");
+    const auto style = FixSettings().Int("GRAPHICS.VisualStyle");
     Settings.visualStyle = style >= 0 && style <= 2 ? static_cast<VisualStyle>(style) : VisualStyle::PS2;
-    Settings.restoreWeatherColours = reader.ReadInteger("GRAPHICS", "RestoreWeatherColours", 1) != 0;
-    const auto strength = reader.ReadFloat("GRAPHICS", "ColourFilterStrength", 1.0f);
+    Settings.restoreWeatherColours = FixSettings().Bool("GRAPHICS.RestoreWeatherColours");
+    const auto strength = FixSettings().Float("GRAPHICS.ColourFilterStrength");
     Settings.colourFilterStrength = std::isfinite(strength) ? std::clamp(strength, 0.0f, 1.0f) : 1.0f;
     WFP::onReadGameConfig().executeAll();
 }

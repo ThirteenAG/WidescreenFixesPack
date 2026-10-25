@@ -1,0 +1,32 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.EnableWidescreenSupport",
+      "type": "bool",
+      "default": 1,
+      "label": "@enable",
+      "description": "@enable.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    }
+  ]
+}

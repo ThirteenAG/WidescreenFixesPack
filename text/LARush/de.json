@@ -1,0 +1,13 @@
+{
+  "plugin.name": "L.A. Rush Widescreen Fix",
+  "page.display": "Anzeige",
+  "page.advanced": "Erweitert",
+  "ResX": "Auflösungsbreite",
+  "ResX.description": "Ausgabebreite in Pixeln. Null verwendet die Desktopauflösung. Wirkt nach einem Neustart.",
+  "ResY": "Auflösungshöhe",
+  "ResY.description": "Ausgabehöhe in Pixeln. Null verwendet die Desktopauflösung. Wirkt nach einem Neustart.",
+  "SkipIntro": "Intro-Logos überspringen",
+  "SkipIntro.description": "Überspringt die Logo-Videos von Publisher, Studio und Technik sowie den Rechtshinweis. Das Intro-Video bleibt. Wirkt beim Spielstart.",
+  "Fix2D": "HUD und Menüs korrigieren",
+  "Fix2D.description": "Hält HUD-Grafiken, Texte und Menüs in ihren 4:3-Proportionen und passt die Maus daran an. Wirkt nach einem Neustart."
+}

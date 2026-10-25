@@ -3,11 +3,10 @@
 #include "../../external/injector/include/ps2/game_abi.hpp"
 #include "../Shared/Console/PS2Display.hpp"
 extern "C" {
-#include "../../external/injector/include/ps2/inireader.h"
 #include "../../external/injector/include/ps2/patterns.h"
 #include "../../external/injector/include/ps2/log.h"
 extern int PCSX2Data[];
-extern char OSDText[OSDStringNum][OSDStringSize], PluginData[MaxIniSize];
+extern char OSDText[OSDStringNum][OSDStringSize];
 }
 namespace scda {
 struct Addresses {

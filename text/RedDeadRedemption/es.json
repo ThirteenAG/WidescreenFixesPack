@@ -1,0 +1,6 @@
+{
+  "plugin.name": "Red Dead Redemption Fusion Fix",
+  "page.advanced": "Avanzado",
+  "SkipIntro": "Saltar introducción",
+  "SkipIntro.description": "Omite los logotipos y los avisos legales al iniciar."
+}

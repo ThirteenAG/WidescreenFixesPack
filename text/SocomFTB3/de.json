@@ -1,0 +1,14 @@
+{
+  "plugin.name": "SOCOM Fireteam Bravo 3 Fusion Fix (PPSSPP)",
+  "page.options": "Erweiterte Optionen",
+  "skip": "Intro überspringen",
+  "skip.description": "Überspringt die Intros beim Start. Nach einer Änderung neu starten.",
+  "analog": "Dual-Analog-Steuerung",
+  "analog.description": "Steuert die Kamera mit dem rechten Stick. Stick-Verhalten und Fernglas-Empfindlichkeit bleiben wie im Originalspiel. Nach einer Änderung neu starten.",
+  "smoothing": "Kameraglättung deaktivieren",
+  "smoothing.description": "Entfernt die zusätzliche Glättung der normalen Kamera. Das Stick-Verhalten bleibt wie im Originalspiel. Erfordert Dual-Analog-Steuerung; nach Änderungen neu starten.",
+  "loading": "Schnelleres Laden",
+  "loading.description": "Verkürzt die Ladebildschirme. Nach Änderungen neu starten.",
+  "fov": "FOV-Faktor der Standardkamera",
+  "fov.description": "Multipliziert das Sichtfeld der normalen Spielkamera. 1.0 behält die Originalansicht; größere Werte erweitern sie. Ziel- und Fernglasansicht bleiben unverändert. Nach Änderungen neu starten."
+}

@@ -20,7 +20,7 @@ std::unordered_map<int, std::string> ResListText;
 std::vector<int> ResListHashes;
 std::vector<int> dwSupportedResolutionsArray;
 std::vector<int> dwSupportedRefreshRateArray;
-int cachedWidth, cachedHeight;
+int cachedWidth = 0, cachedHeight = 0;
 
 namespace DALOptions
 {
@@ -182,6 +182,8 @@ void __cdecl sub_6DB0D0()
 SafetyHookInline shWndProc = {};
 LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
+    onWindowMessage().executeAll(hWnd, Msg, wParam, lParam);
+
     switch (Msg)
     {
         case WM_SYSKEYDOWN:
@@ -198,9 +200,13 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
         break;
         case WM_SIZE:
         {
-            cachedWidth = LOWORD(lParam);
-            cachedHeight = HIWORD(lParam);
-            onResChange().executeAll(cachedWidth, cachedHeight);
+            // Minimizing reports a zero size
+            if (wParam != SIZE_MINIMIZED && LOWORD(lParam) > 0 && HIWORD(lParam) > 0)
+            {
+                cachedWidth = LOWORD(lParam);
+                cachedHeight = HIWORD(lParam);
+                onResChange().executeAll(cachedWidth, cachedHeight);
+            }
         }
         break;
     }
@@ -216,6 +222,8 @@ export std::pair<int, int> GetRes()
 export float GetAspectRatio()
 {
     auto [Width, Height] = GetRes();
+    if (Width <= 0 || Height <= 0)
+        return 16.0f / 9.0f;
     return static_cast<float>(Width) / static_cast<float>(Height);
 }
 

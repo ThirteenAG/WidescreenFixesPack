@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 
 export module Draw;
 
@@ -86,6 +88,13 @@ public:
 
         onResChange().executeAll(RsGlobal->width, RsGlobal->height);
     }
+    // Computes the HUD offsets again (a setting they depend on changed)
+    static void Refresh()
+    {
+        auto ratio = ms_fAspectRatio;
+        ms_fAspectRatio = 0.0f;
+        SetAspectRatio(ratio);
+    }
     static float ScaleY(float y);
 
     static void SetNearClipZ(float nearclip) { ms_fNearClipZ = nearclip; }
@@ -98,21 +107,51 @@ public:
         WFP::onInitEvent() += []()
         {
             auto pattern = hook::pattern("D9 05 ? ? ? ? 8B 15 ? ? ? ? D8 0D ? ? ? ? 68 AB AA AA 3F");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ms_fFOV.SetAddress(*pattern.get_first<float*>(2));
 
             pattern = hook::pattern("D8 35 ? ? ? ? DE C9 D9 E8");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ms_fAspectRatio.SetAddress(*pattern.get_first<float*>(2));
 
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 53 53 53 B9");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto SetFOV = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CDraw::SetFOV);
 
             pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? A1 ? ? ? ? ? ? 50 51");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto CalculateAspectRatio = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CDraw::CalculateAspectRatio);
 
             pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 05 0F 8B ? ? ? ? D9 44 24 ? D8 64 24 ? D8 1D");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ms_fNearClipZ.SetAddress(*pattern.get_first<float*>(2));
 
             pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 0F 84 ? ? ? ? D9 44 24 ? D8 8E");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ms_fFarClipZ.SetAddress(*pattern.get_first<float*>(2));
         };
     }
@@ -319,6 +358,8 @@ void CDraw::SetFOV(float fov)
 
 void CDraw::CalculateAspectRatio()
 {
+    // Once per frame, gameplay and frontend: changed settings apply here (FixSettings.hpp)
+    RWGTA::GameThread::Run();
     SetAspectRatio(CDraw::FindAspectRatio());
 }
 
@@ -340,13 +381,35 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
-            fSCMAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "SCMAspectRatioConstraint", "Auto"));
+            fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            fSCMAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.SCMAspectRatioConstraint"));
+            OnSettingChange("MAIN.HudAspectRatioConstraint", []()
+            {
+                fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+                CDraw::Refresh();
+            });
+            OnSettingChange("MAIN.SCMAspectRatioConstraint", []()
+            {
+                fSCMAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.SCMAspectRatioConstraint"));
+                CDraw::Refresh();
+            });
+
+            // Field of View: a multiplier of the gameplay cameras' corrected field of view
+            static auto& fov = FixSettings().Float("MAIN.FOVFactor");
+            FOVManager::g_BaseFOVMultiplier = std::clamp(fov, 0.5f, 2.0f);
+            OnSettingChange("MAIN.FOVFactor", []()
+            {
+                FOVManager::g_BaseFOVMultiplier = std::clamp(fov, 0.5f, 2.0f);
+            });
             lastScreenWidth = 0;
 
             static float fScaledFOV = 0.0f;
             auto pattern = hook::pattern("D9 05 ? ? ? ? 56 D8 0D ? ? ? ? 8B F1");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &fScaledFOV, true);
             injector::MakeNOP(pattern.get_first(7), 6, true);
             static auto CalculateFrustumPlanes = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
@@ -355,6 +418,11 @@ public:
             });
 
             pattern = hook::pattern("D9 05 ? ? ? ? D8 25 ? ? ? ? DC C0 D8 C9 D9 5C 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto Find3rdPersonCamTargetVector = safetyhook::create_mid(pattern.get_first(), Find3rdPersonCamTargetVectorFMUL);
 
             static float fCameraWidth = 0.01403292f;

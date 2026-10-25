@@ -3,6 +3,27 @@
 #include "../Shared/Console/PSP.hpp"
 namespace ctw {
 using namespace console::portable;
+// CFG writers pad values and the Hub can use textual booleans. Parse the
+// complete trimmed token instead of the SDK reader's untrimmed bool prefix.
+inline bool Option(const char* key, bool fallback) {
+    char buffer[16]{};
+    const char* text = inireader.ReadString("MAIN", key, fallback ? "1" : "0", buffer, sizeof(buffer));
+    while (*text == ' ' || *text == '\t') ++text;
+    char token[6]{};
+    unsigned length = 0;
+    while (*text && *text != ' ' && *text != '\t' && *text != '\r' && *text != '\n') {
+        if (length == sizeof(token) - 1) return fallback;
+        const char value = *text++;
+        token[length++] = value >= 'A' && value <= 'Z' ? char(value + ('a' - 'A')) : value;
+    }
+    while (*text == ' ' || *text == '\t' || *text == '\r' || *text == '\n') ++text;
+    if (*text) return fallback;
+    if (!std::strcmp(token, "1") || !std::strcmp(token, "true") || !std::strcmp(token, "yes") ||
+        !std::strcmp(token, "on") || !std::strcmp(token, "y")) return true;
+    if (!std::strcmp(token, "0") || !std::strcmp(token, "false") || !std::strcmp(token, "no") ||
+        !std::strcmp(token, "off") || !std::strcmp(token, "n")) return false;
+    return fallback;
+}
 inline constexpr float nativeAspect = 480.0f / 272.0f;
 inline float targetAspect = nativeAspect;
 inline bool automaticAspect = true;

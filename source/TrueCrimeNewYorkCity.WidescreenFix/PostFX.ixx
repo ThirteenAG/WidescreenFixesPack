@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d9.h>
 #include <d3dx9effect.h>
 #pragma comment(lib, "D3dx9.lib")
@@ -8,6 +9,7 @@ module;
 export module PostFX;
 
 import ComVars;
+import AntiAliasing;
 
 static IUnknown** pD3D8Device = nullptr;
 
@@ -196,11 +198,11 @@ public:
     class ConsoleGamma
     {
     public:
-        static inline bool bConsoleGammaEnabled = true;
+        static inline const int* pConsoleGammaEnabled = nullptr; // GRAPHICS.ConsoleGamma, changes apply live
 
         static inline void Render()
         {
-            if (bConsoleGammaEnabled)
+            if (*pConsoleGammaEnabled)
             {
                 RenderSafe([](IDirect3DDevice9* device, IDirect3DSurface9* rt0, IDirect3DTexture9* depthTex)
                 {
@@ -225,7 +227,7 @@ public:
     class Bloom
     {
     public:
-        static inline bool bBloomEnabled = true;
+        static inline const int* pBloomEnabled = nullptr; // MISC.Bloom, changes apply live
         static inline bool bBloomInitialized = false;
 
         static inline UINT BloomWidth = 0;
@@ -243,7 +245,7 @@ public:
 
         static void Initialize(IDirect3DDevice9* device)
         {
-            if (bBloomEnabled && !bBloomInitialized)
+            if (*pBloomEnabled && !bBloomInitialized)
             {
                 bBloomInitialized = true;
 
@@ -258,7 +260,7 @@ public:
         }
         static void Render()
         {
-            if (bBloomEnabled)
+            if (*pBloomEnabled)
             {
                 RenderSafe([](IDirect3DDevice9* device, IDirect3DSurface9* rt0, IDirect3DTexture9* depthTex)
                 {
@@ -337,13 +339,13 @@ public:
     class DistanceBlur
     {
     public:
-        static inline bool bDOFEnabled = true;
+        static inline const int* pDOFEnabled = nullptr; // MISC.DistantBlur, changes apply live
 
         static inline float fDistBlurStrength = 1.0f;
 
         static void Render(float nearZ, float farZ)
         {
-            if (bDOFEnabled)
+            if (*pDOFEnabled)
             {
                 RenderSafe([=](IDirect3DDevice9* device, IDirect3DSurface9* rt0, IDirect3DTexture9* depthTex)
                 {
@@ -371,10 +373,9 @@ public:
         }
     };
 
-    class AntiAliasing
+    class SMAA
     {
     public:
-        static inline bool bAAEnabled = true;
         static inline bool bAAInitialized = false;
 
         static inline IDirect3DTexture9* pAreaTex = {};
@@ -388,7 +389,7 @@ public:
 
         static void Initialize(IDirect3DDevice9* device)
         {
-            if (!bAAEnabled || bAAInitialized)
+            if (bAAInitialized)
                 return;
 
             bAAInitialized = true;
@@ -443,7 +444,7 @@ public:
 
         static void Render()
         {
-            if (bAAEnabled)
+            if (AntiAliasing::IsSMAA())
             {
                 RenderSafe([](IDirect3DDevice9* device, IDirect3DSurface9* rt0, IDirect3DTexture9* depthTex)
                 {
@@ -551,11 +552,20 @@ void sub_533AA0(float* screenData)
         {
             if (node->cb == sub_52F7D0)
             {
+                // TAA, DLAA or FSR first: the other effects work on the resolved scene
+                if (AntiAliasing::IsActive())
+                {
+                    CPostFX::RenderSafe([](IDirect3DDevice9* device, IDirect3DSurface9* rt0, IDirect3DTexture9* depthTex)
+                    {
+                        AntiAliasing::Render(device, rt0, depthTex);
+                    });
+                }
+
                 float zn = screenData[7];
                 float zf = screenData[8];
                 CPostFX::DistanceBlur::Render(zn, zf);
                 CPostFX::Bloom::Render();
-                CPostFX::AntiAliasing::Render();
+                CPostFX::SMAA::Render();
                 CPostFX::ConsoleGamma::Render();
             }
         }
@@ -572,14 +582,12 @@ void sub_533AA0(float* screenData)
 
 export void InitPostFX()
 {
-    CIniReader iniReader("");
-    CPostFX::DistanceBlur::bDOFEnabled = iniReader.ReadInteger("MISC", "DistantBlur", 1) != 0;
-    CPostFX::Bloom::bBloomEnabled = iniReader.ReadInteger("MISC", "Bloom", 1) != 0;
-    CPostFX::AntiAliasing::bAAEnabled = iniReader.ReadInteger("MISC", "AntiAliasing", 1) != 0;
-    CPostFX::ConsoleGamma::bConsoleGammaEnabled = iniReader.ReadInteger("MISC", "ConsoleGamma", 1) != 0;
-
-    if (!CPostFX::DistanceBlur::bDOFEnabled && !CPostFX::Bloom::bBloomEnabled && !CPostFX::AntiAliasing::bAAEnabled && !CPostFX::ConsoleGamma::bConsoleGammaEnabled)
-        return;
+    // The effects follow their settings while the game runs, so the pass is hooked even when all of them are off;
+    // each effect creates its resources the first time it's drawn. SMAA is a choice of GRAPHICS.AntiAliasing
+    // (AntiAliasing).
+    CPostFX::DistanceBlur::pDOFEnabled = &FixSettings().Int("MISC.DistantBlur");
+    CPostFX::Bloom::pBloomEnabled = &FixSettings().Int("MISC.Bloom");
+    CPostFX::ConsoleGamma::pConsoleGammaEnabled = &FixSettings().Int("GRAPHICS.ConsoleGamma");
 
     auto pattern = hook::pattern("A1 ? ? ? ? 8B 10 8D 4C 24 ? 51 50");
     pD3D8Device = *pattern.get_first<IUnknown**>(1);

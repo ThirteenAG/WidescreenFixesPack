@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module ComVars;

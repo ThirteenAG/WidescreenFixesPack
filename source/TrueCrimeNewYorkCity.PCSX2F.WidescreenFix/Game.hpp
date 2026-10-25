@@ -5,7 +5,6 @@
 #include <cstdint>
 
 extern "C" {
-#include "../../external/injector/include/ps2/inireader.h"
 extern int PCSX2Data[PCSX2Data_Size];
 extern char FrameLimitUnthrottle;
 }

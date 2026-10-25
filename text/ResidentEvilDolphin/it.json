@@ -1,0 +1,11 @@
+{
+  "plugin.name": "Resident Evil 2 / 3 Dolphin Fusion Fix",
+  "page.gameplay": "Gioco",
+  "page.graphics": "Grafica",
+  "EnableDoorSkip": "Salta porte",
+  "EnableDoorSkip.description": "Salta le animazioni delle porte. Riavvia Dolphin dopo aver modificato questa impostazione.",
+  "UnthrottleEmuDuringDoorSkip": "Transizioni porte rapide",
+  "UnthrottleEmuDuringDoorSkip.description": "Rimuove il limite di fotogrammi dell'emulatore durante le transizioni delle porte. Riavvia Dolphin dopo aver modificato questa impostazione.",
+  "LightSyncRGB": "Illuminazione RGB",
+  "LightSyncRGB.description": "Sincronizza l'illuminazione delle tastiere compatibili con la salute del giocatore. Riavvia Dolphin dopo aver modificato questa impostazione."
+}

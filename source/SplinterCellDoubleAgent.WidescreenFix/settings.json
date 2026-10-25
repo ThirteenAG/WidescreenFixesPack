@@ -1,0 +1,1130 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Splinter Cell Double Agent",
+        "exe": [
+          "SplinterCell4.exe",
+          "SplinterCell4steam.exe",
+          "SCDA_online.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "bonus",
+      "title": "@page.bonus",
+      "section": "graphics"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "GRAPHICS.ShadowMapResolutionMultiplier",
+      "type": "int",
+      "default": 8,
+      "label": "@GRAPHICS.ShadowMapResolutionMultiplier",
+      "description": "@GRAPHICS.ShadowMapResolutionMultiplier.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 8,
+        "enhanced": 8
+      },
+      "min": 0,
+      "max": 16,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "GRAPHICS.GlowResolutionMultiplier",
+      "type": "int",
+      "default": 8,
+      "label": "@GRAPHICS.GlowResolutionMultiplier",
+      "description": "@GRAPHICS.GlowResolutionMultiplier.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 8,
+        "enhanced": 8
+      },
+      "min": 0,
+      "max": 16,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "GRAPHICS.MirrorResolutionMultiplier",
+      "type": "int",
+      "default": 3,
+      "label": "@GRAPHICS.MirrorResolutionMultiplier",
+      "description": "@GRAPHICS.MirrorResolutionMultiplier.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      },
+      "min": 0,
+      "max": 16,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "GRAPHICS.AnisotropicFiltering",
+      "type": "choice",
+      "default": 16,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@GRAPHICS.AnisotropicFiltering.0"
+        },
+        {
+          "value": 2,
+          "label": "2x"
+        },
+        {
+          "value": 4,
+          "label": "4x"
+        },
+        {
+          "value": 8,
+          "label": "8x"
+        },
+        {
+          "value": 16,
+          "label": "16x"
+        }
+      ],
+      "label": "@GRAPHICS.AnisotropicFiltering",
+      "description": "@GRAPHICS.AnisotropicFiltering.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 16,
+        "enhanced": 16
+      }
+    },
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.ResX",
+      "description": "@MAIN.ResX.description",
+      "page": "display",
+      "apply": "restart",
+      "min": 0,
+      "max": 7680,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.ResY",
+      "description": "@MAIN.ResY.description",
+      "page": "display",
+      "apply": "restart",
+      "min": 0,
+      "max": 4320,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.RawInputMouse",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.RawInputMouse",
+      "description": "@MAIN.RawInputMouse.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.MouseSensitivity",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.1,
+      "max": 5.0,
+      "step": 0.05,
+      "decimals": 2,
+      "label": "@MAIN.MouseSensitivity",
+      "description": "@MAIN.MouseSensitivity.description",
+      "page": "controls",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.RawInputMouseRawData",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.RawInputMouseRawData",
+      "description": "@MAIN.RawInputMouseRawData.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.HudWidescreenMode",
+      "type": "int",
+      "default": 1,
+      "label": "@MAIN.HudWidescreenMode",
+      "description": "@MAIN.HudWidescreenMode.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@MAIN.HudAspectRatioConstraint",
+      "description": "@MAIN.HudAspectRatioConstraint.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.ForceLL",
+      "type": "int",
+      "default": 1,
+      "label": "@MAIN.ForceLL",
+      "description": "@MAIN.ForceLL.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "label": "@MISC.FPSLimit",
+      "description": "@MISC.FPSLimit.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 60,
+        "recommended": 60,
+        "enhanced": 60
+      },
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "BONUS.BlacklistIndicators",
+      "type": "int",
+      "default": 0,
+      "label": "@BONUS.BlacklistIndicators",
+      "description": "@BONUS.BlacklistIndicators.description",
+      "page": "bonus",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      },
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "BONUS.GogglesLightColor",
+      "type": "int",
+      "default": 0,
+      "label": "@BONUS.GogglesLightColor",
+      "description": "@BONUS.GogglesLightColor.description",
+      "page": "bonus",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      },
+      "min": 0,
+      "max": 5,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.LightSyncRGB",
+      "type": "int",
+      "default": 1,
+      "label": "@BONUS.LightSyncRGB",
+      "description": "@BONUS.LightSyncRGB.description",
+      "page": "bonus",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MISC.EnableRunDuringForcedWalk",
+      "type": "int",
+      "default": 1,
+      "label": "@MISC.EnableRunDuringForcedWalk",
+      "description": "@MISC.EnableRunDuringForcedWalk.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.DisablePreCache",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.DisablePreCache",
+      "description": "@MAIN.DisablePreCache.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "int",
+      "default": 1,
+      "label": "@MISC.SkipIntro",
+      "description": "@MISC.SkipIntro.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.SingleCoreAffinity",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.SingleCoreAffinity",
+      "description": "@MAIN.SingleCoreAffinity.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "ONLINE.ForceWindowedMode",
+      "type": "int",
+      "default": 0,
+      "label": "@ONLINE.ForceWindowedMode",
+      "description": "@ONLINE.ForceWindowedMode.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "ONLINE.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "label": "@ONLINE.FPSLimit",
+      "description": "@ONLINE.FPSLimit.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "ONLINE.FullScreenRefreshRateInHz",
+      "type": "int",
+      "default": 0,
+      "label": "@ONLINE.FullScreenRefreshRateInHz",
+      "description": "@ONLINE.FullScreenRefreshRateInHz.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "FORCEWINDOWED.UsePrimaryMonitor",
+      "type": "int",
+      "default": 0,
+      "label": "@FORCEWINDOWED.UsePrimaryMonitor",
+      "description": "@FORCEWINDOWED.UsePrimaryMonitor.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "FORCEWINDOWED.CenterWindow",
+      "type": "int",
+      "default": 1,
+      "label": "@FORCEWINDOWED.CenterWindow",
+      "description": "@FORCEWINDOWED.CenterWindow.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "FORCEWINDOWED.AlwaysOnTop",
+      "type": "int",
+      "default": 0,
+      "label": "@FORCEWINDOWED.AlwaysOnTop",
+      "description": "@FORCEWINDOWED.AlwaysOnTop.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "FORCEWINDOWED.ForceWindowStyle",
+      "type": "int",
+      "default": 0,
+      "label": "@FORCEWINDOWED.ForceWindowStyle",
+      "description": "@FORCEWINDOWED.ForceWindowStyle.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "ONLINE.FPSLimitMode",
+      "type": "int",
+      "default": 1,
+      "label": "@ONLINE.FPSLimitMode",
+      "description": "@ONLINE.FPSLimitMode.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 1,
+      "max": 2,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "int",
+      "default": 0,
+      "label": "@GRAPHICS.ConsoleGamma",
+      "description": "@GRAPHICS.ConsoleGamma.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      },
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "GRAPHICS.BlurEnabled",
+      "type": "int",
+      "default": 1,
+      "label": "@GRAPHICS.BlurEnabled",
+      "description": "@GRAPHICS.BlurEnabled.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "GRAPHICS.BlurStrength",
+      "type": "float",
+      "default": 5.0,
+      "label": "@GRAPHICS.BlurStrength",
+      "description": "@GRAPHICS.BlurStrength.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 5.0,
+        "recommended": 5.0,
+        "enhanced": 5.0
+      },
+      "min": 0,
+      "max": 10,
+      "step": 0.05,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "NATIVE.Enabled",
+      "type": "bool",
+      "default": true,
+      "label": "@ui.nativegraphicsoverrides",
+      "description": "@ui.nativegraphicsoverrides.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_WINDOW.StartupFullscreen",
+      "type": "string",
+      "default": "True",
+      "label": "@NATIVE_WINDOW.StartupFullscreen",
+      "description": "@NATIVE_WINDOW.StartupFullscreen.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_WINDOW.TextureDetail",
+      "type": "string",
+      "default": "UltraHigh",
+      "label": "@NATIVE_WINDOW.TextureDetail",
+      "description": "@NATIVE_WINDOW.TextureDetail.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_GENERAL.DisableHDRTonemapping",
+      "type": "string",
+      "default": "False",
+      "label": "@NATIVE_GENERAL.DisableHDRTonemapping",
+      "description": "@NATIVE_GENERAL.DisableHDRTonemapping.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_GENERAL.LowResTex",
+      "type": "string",
+      "default": "False",
+      "label": "@NATIVE_GENERAL.LowResTex",
+      "description": "@NATIVE_GENERAL.LowResTex.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_GENERAL.SimpleShader",
+      "type": "string",
+      "default": "False",
+      "label": "@NATIVE_GENERAL.SimpleShader",
+      "description": "@NATIVE_GENERAL.SimpleShader.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_GENERAL.SimpleEffect",
+      "type": "string",
+      "default": "False",
+      "label": "@NATIVE_GENERAL.SimpleEffect",
+      "description": "@NATIVE_GENERAL.SimpleEffect.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_GENERAL.HidePieces",
+      "type": "string",
+      "default": "False",
+      "label": "@NATIVE_GENERAL.HidePieces",
+      "description": "@NATIVE_GENERAL.HidePieces.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_GRAPHICS.bEnableHDR",
+      "type": "string",
+      "default": "True",
+      "label": "@NATIVE_GRAPHICS.bEnableHDR",
+      "description": "@NATIVE_GRAPHICS.bEnableHDR.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_GRAPHICS.bSpecularLighting",
+      "type": "string",
+      "default": "True",
+      "label": "@NATIVE_GRAPHICS.bSpecularLighting",
+      "description": "@NATIVE_GRAPHICS.bSpecularLighting.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_GRAPHICS.bHighQualityVisualFX",
+      "type": "string",
+      "default": "True",
+      "label": "@NATIVE_GRAPHICS.bHighQualityVisualFX",
+      "description": "@NATIVE_GRAPHICS.bHighQualityVisualFX.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_D3D.UseHWShadowMapping",
+      "type": "string",
+      "default": "False",
+      "label": "@NATIVE_D3D.UseHWShadowMapping",
+      "description": "@NATIVE_D3D.UseHWShadowMapping.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_D3D.ShadowResolutionDegree",
+      "type": "string",
+      "default": "0",
+      "label": "@NATIVE_D3D.ShadowResolutionDegree",
+      "description": "@NATIVE_D3D.ShadowResolutionDegree.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_D3D.ShadowTurnOffDegree",
+      "type": "string",
+      "default": "0",
+      "label": "@NATIVE_D3D.ShadowTurnOffDegree",
+      "description": "@NATIVE_D3D.ShadowTurnOffDegree.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_D3D.bUseSmoothShadow",
+      "type": "string",
+      "default": "True",
+      "label": "@NATIVE_D3D.bUseSmoothShadow",
+      "description": "@NATIVE_D3D.bUseSmoothShadow.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "NATIVE_D3D.FSAADegree",
+      "type": "string",
+      "default": "0",
+      "label": "@NATIVE_D3D.FSAADegree",
+      "description": "@NATIVE_D3D.FSAADegree.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy1",
+      "type": "string",
+      "default": "Jump",
+      "label": "@INPUT.Joy1",
+      "description": "@INPUT.Joy1.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy2",
+      "type": "string",
+      "default": "Duck",
+      "label": "@INPUT.Joy2",
+      "description": "@INPUT.Joy2.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy3",
+      "type": "string",
+      "default": "Interaction",
+      "label": "@INPUT.Joy3",
+      "description": "@INPUT.Joy3.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy4",
+      "type": "string",
+      "default": "Scope",
+      "label": "@INPUT.Joy4",
+      "description": "@INPUT.Joy4.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy5",
+      "type": "string",
+      "default": "SwitchCam",
+      "label": "@INPUT.Joy5",
+      "description": "@INPUT.Joy5.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy6",
+      "type": "string",
+      "default": "QuickInventory",
+      "label": "@INPUT.Joy6",
+      "description": "@INPUT.Joy6.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy7",
+      "type": "string",
+      "default": "AltFire",
+      "label": "@INPUT.Joy7",
+      "description": "@INPUT.Joy7.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy8",
+      "type": "string",
+      "default": "Fire",
+      "label": "@INPUT.Joy8",
+      "description": "@INPUT.Joy8.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy9",
+      "type": "string",
+      "default": "PauseMenu",
+      "label": "@INPUT.Joy9",
+      "description": "@INPUT.Joy9.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy10",
+      "type": "string",
+      "default": "BackToWall",
+      "label": "@INPUT.Joy10",
+      "description": "@INPUT.Joy10.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy11",
+      "type": "string",
+      "default": "AnalogRightDown",
+      "label": "@INPUT.Joy11",
+      "description": "@INPUT.Joy11.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy12",
+      "type": "string",
+      "default": "OpsatMenu",
+      "label": "@INPUT.Joy12",
+      "description": "@INPUT.Joy12.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy13",
+      "type": "string",
+      "default": "DPadUp",
+      "label": "@INPUT.Joy13",
+      "description": "@INPUT.Joy13.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy14",
+      "type": "string",
+      "default": "DPadRight",
+      "label": "@INPUT.Joy14",
+      "description": "@INPUT.Joy14.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy15",
+      "type": "string",
+      "default": "DPadDown",
+      "label": "@INPUT.Joy15",
+      "description": "@INPUT.Joy15.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy16",
+      "type": "string",
+      "default": "DPadLeft",
+      "label": "@INPUT.Joy16",
+      "description": "@INPUT.Joy16.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.JoyX",
+      "type": "string",
+      "default": "Axis aStrafe DeadZone=0.3",
+      "label": "@INPUT.JoyX",
+      "description": "@INPUT.JoyX.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.JoyY",
+      "type": "string",
+      "default": "Axis aForward DeadZone=0.3",
+      "label": "@INPUT.JoyY",
+      "description": "@INPUT.JoyY.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.JoyZ",
+      "type": "string",
+      "default": "Axis aTurn DeadZone=0.3",
+      "label": "@INPUT.JoyZ",
+      "description": "@INPUT.JoyZ.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.JoyV",
+      "type": "string",
+      "default": "Axis aLookUp DeadZone=0.3",
+      "label": "@INPUT.JoyV",
+      "description": "@INPUT.JoyV.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.JoyR",
+      "type": "string",
+      "default": "Axis aAltFire DeadZone=0.0",
+      "label": "@INPUT.JoyR",
+      "description": "@INPUT.JoyR.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.JoyU",
+      "type": "string",
+      "default": "Axis aFire DeadZone=0.0",
+      "label": "@INPUT.JoyU",
+      "description": "@INPUT.JoyU.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.AnalogUp",
+      "type": "string",
+      "default": "AnalogUp",
+      "label": "@INPUT.AnalogUp",
+      "description": "@INPUT.AnalogUp.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.AnalogDown",
+      "type": "string",
+      "default": "AnalogDown",
+      "label": "@INPUT.AnalogDown",
+      "description": "@INPUT.AnalogDown.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.AnalogLeft",
+      "type": "string",
+      "default": "AnalogLeft",
+      "label": "@INPUT.AnalogLeft",
+      "description": "@INPUT.AnalogLeft.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.AnalogRight",
+      "type": "string",
+      "default": "AnalogRight",
+      "label": "@INPUT.AnalogRight",
+      "description": "@INPUT.AnalogRight.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.MouseWheelUp",
+      "type": "string",
+      "default": "AxisMod SpeedInc=0.20",
+      "label": "@INPUT.MouseWheelUp",
+      "description": "@INPUT.MouseWheelUp.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.MouseWheelDown",
+      "type": "string",
+      "default": "AxisMod SpeedInc=-0.20",
+      "label": "@INPUT.MouseWheelDown",
+      "description": "@INPUT.MouseWheelDown.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Tilde",
+      "type": "string",
+      "default": "Type",
+      "label": "@INPUT.Tilde",
+      "description": "@INPUT.Tilde.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "menu",
+      "visibility": "editor",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@ui.autogamelanguage"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    }
+  ]
+}

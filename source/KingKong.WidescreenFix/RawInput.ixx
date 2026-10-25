@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/PatchPreflight.hpp"
 
 export module RawInput;
 
@@ -70,6 +71,25 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 
 export void InitRawInput()
 {
+    if (Screen.fRawInputMouse <= 0.0f)
+        return;
+    if (!wfp::PatchPreflight("King Kong raw input: signatures unavailable; feature disabled.\n",
+    {
+        { "53 8B 5C 24 ? 55 8B 6C 24 ? 56 8B 74 24 ? 57 8B 7C 24 ? 8D 44 24 ? 50 56 57 53 55", 1 },
+        { "C7 05 ? ? ? ? ? ? ? ? EB 21 D8 15 ? ? ? ? DF E0 F6 C4 41 75 ? DD D8", 1 },
+        { "C7 05 ? ? ? ? ? ? ? ? C3 D8 15 ? ? ? ? DF E0 F6 C4 41 75 ? DD D8 C7 05", 1 },
+        { "8B 0D ? ? ? ? 8B 91 ? ? ? ? 89 95 ? ? ? ? 8B 85 ? ? ? ? 83 E8 06", 1 },
+        { "55 8B EC B8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 8B 48 ? 89 8D ? ? ? ? 8B 15 ? ? ? ? 89 95 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0", 1 },
+        { "55 8B EC 83 EC 34 D9 05 ? ? ? ? D9 45 ? DA E9 DF E0 F6 C4 44", 6 },
+        { "8B 55 ? 8B 82 ? ? ? ? 89 45 ? D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 4D ? 89 4D ? 8B 55 ? 8B 45 ? 89 82 ? ? ? ? 8B 4D", 1 },
+        { "8B 45 ? 8B 88 ? ? ? ? 89 4D ? D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 55 ? 89 55 ? 8B 45 ? 8B 4D ? 89 88 ? ? ? ? 8B 55", 1 },
+        { "D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 4D ? 89 4D ? 8B 55 ? 8B 45 ? 89 82 ? ? ? ? 8B 4D", 1 },
+        { "D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 45 ? 89 45 ? 8B 4D ? 8B 55 ? 89 91 ? ? ? ? 8B 45", 1 },
+        { "D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 55 ? 89 55 ? 8B 45 ? 8B 4D ? 89 88 ? ? ? ? 8B 55 ? 8B 82 ? ? ? ? 89 45", 1 },
+        { "D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 4D ? 89 4D ? 8B 55 ? 8B 45 ? 89 82 ? ? ? ? 68", 1 },
+    }))
+        return;
+
     if (Screen.fRawInputMouse > 0.0f)
     {
         auto pattern = hook::pattern("53 8B 5C 24 ? 55 8B 6C 24 ? 56 8B 74 24 ? 57 8B 7C 24 ? 8D 44 24 ? 50 56 57 53 55");
@@ -88,8 +108,8 @@ export void InitRawInput()
         shsub_45B1B0 = safetyhook::create_inline(pattern.get_first(), sub_45B1B0);
 
         pattern = hook::pattern("55 8B EC 83 EC 34 D9 05 ? ? ? ? D9 45 ? DA E9 DF E0 F6 C4 44");
-        shCameraRotationY = safetyhook::create_inline(pattern.count(6).get(0).get<void*>(0), CameraRotationY);
-        shCameraRotationX = safetyhook::create_inline(pattern.count(6).get(5).get<void*>(0), CameraRotationX);
+        shCameraRotationY = safetyhook::create_inline(pattern.count_hint(6).get(0).get<void*>(0), CameraRotationY);
+        shCameraRotationX = safetyhook::create_inline(pattern.count_hint(6).get(5).get<void*>(0), CameraRotationX);
 
         static auto SetCursor = [](float* pMouseX, float* pMouseY)
         {
@@ -105,8 +125,10 @@ export void InitRawInput()
             else
                 wasUsingLeftStick = false;
 
-            RECT clientRect;
-            GetClientRect(RawCursorHandler<float>::UpdateMouseInput(true), &clientRect);
+            RECT clientRect{};
+            const auto window = RawCursorHandler<float>::UpdateMouseInput(true);
+            if (!window || !GetClientRect(window, &clientRect) || clientRect.right <= 0 || clientRect.bottom <= 0)
+                return;
 
             // Normalize to 0.0 - 1.0 range
             float clientWidth = static_cast<float>(clientRect.right - clientRect.left);
@@ -131,19 +153,19 @@ export void InitRawInput()
 
         static float f1 = 1.0f;
         pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 4D ? 89 4D ? 8B 55 ? 8B 45 ? 89 82 ? ? ? ? 8B 4D");
-        injector::WriteMemory(pattern.get_first(2), &f1, true);
-        injector::WriteMemory<float>(pattern.get_first(16), f1, true);
+        ProtectedGameRef<float*>{pattern.get_first<float*>(2)} = &f1;
+        ProtectedGameRef<float>{pattern.get_first<float>(16)} = f1;
 
         pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 45 ? 89 45 ? 8B 4D ? 8B 55 ? 89 91 ? ? ? ? 8B 45");
-        injector::WriteMemory(pattern.get_first(2), &f1, true);
-        injector::WriteMemory<float>(pattern.get_first(16), f1, true);
+        ProtectedGameRef<float*>{pattern.get_first<float*>(2)} = &f1;
+        ProtectedGameRef<float>{pattern.get_first<float>(16)} = f1;
 
         pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 55 ? 89 55 ? 8B 45 ? 8B 4D ? 89 88 ? ? ? ? 8B 55 ? 8B 82 ? ? ? ? 89 45");
-        injector::WriteMemory(pattern.get_first(2), &f1, true);
-        injector::WriteMemory<float>(pattern.get_first(16), f1, true);
+        ProtectedGameRef<float*>{pattern.get_first<float*>(2)} = &f1;
+        ProtectedGameRef<float>{pattern.get_first<float>(16)} = f1;
 
         pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 4D ? 89 4D ? 8B 55 ? 8B 45 ? 89 82 ? ? ? ? 68");
-        injector::WriteMemory(pattern.get_first(2), &f1, true);
-        injector::WriteMemory<float>(pattern.get_first(16), f1, true);
+        ProtectedGameRef<float*>{pattern.get_first<float*>(2)} = &f1;
+        ProtectedGameRef<float>{pattern.get_first<float>(16)} = f1;
     }
 }

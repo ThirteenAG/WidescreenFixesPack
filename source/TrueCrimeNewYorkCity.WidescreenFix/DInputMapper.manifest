@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity type="win32" name="FusionFix.TrueCrimeNYC.ControllerMapping" version="1.0.0.0" processorArchitecture="x86" />
+  <file name="diactfrm.dll">
+    <comClass clsid="{9F34AF20-6095-11D3-8FB2-00C04F8EC627}" threadingModel="Both" />
+    <comClass clsid="{18AB439E-FCF4-40D4-90DA-F79BAA3B0655}" threadingModel="Both" />
+  </file>
+</assembly>

@@ -1,10 +1,13 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <queue>
 #include <functional>
 #include <unordered_map>
 #include <vector>
+
+#include "GameplayCamera.hpp"
 
 export module Engine;
 
@@ -115,6 +118,8 @@ namespace UGameEngine
     SafetyHookInline shTick = {};
     void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
     {
+        RefreshHudConstraint();
+
         // Update the shared softbody fixed timestep once per frame
         // All cloth actors use the same substep count and interpolation alpha
         AESoftBodyActor::AdvanceFixedTimestep(deltaTime);
@@ -128,7 +133,7 @@ namespace UGameEngine
             }
         }
 
-        if (Screen.fRawInputMouse > 0.0f && UWindowsViewport::deferredCauseInputEventForRawInput)
+        if (Screen.bRawInputMouse && UWindowsViewport::deferredCauseInputEventForRawInput)
         {
             UWindowsViewport::deferredCauseInputEventForRawInput(228, 4, static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0)));
             UWindowsViewport::deferredCauseInputEventForRawInput(229, 4, static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0)));
@@ -388,7 +393,7 @@ export void InitEngine()
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), pattern_str(0xD8, 0xC9, 0xD8, 0x0D, to_bytes(flt_104E9F78)));
     for (size_t i = 0; i < pattern.count_hint(4).size(); ++i)
     {
-        injector::WriteMemory(pattern.get(i).get<void>(4), &Screen.HUDScaleX, true); //(DWORD)Engine + 0x1E9F78
+        ProtectedGameRef<float*>(pattern.get(i).get<float*>(4)) = &Screen.HUDScaleX; //(DWORD)Engine + 0x1E9F78
     }
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B ? 94 00 00 00 E8");
@@ -400,7 +405,27 @@ export void InitEngine()
     injector::MakeCALL(pattern.count(2).get(0).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9B7C
     injector::MakeCALL(pattern.count(2).get(1).get<uint32_t>(7), FCanvasUtilDrawTileHook, true); //(uint32_t)Engine + 0xC9DE1
 
-    //FOV
+    // Keep gameplay factors on the owned main camera and its matching projection helpers.
+    SCGameplayCamera::fullNameSource = &UObject::GetFullName;
+    auto cameraCtor = GetProcAddress(GetModuleHandle(L"Engine"), "??0FCameraSceneNode@@QAE@PAVUViewport@@PAVAActor@@VFVector@@VFRotator@@M@Z");
+    const std::pair<const char*, int> cameraCallers[] =
+    {
+        { "8B 54 24 48 89 41 04 8B 44 24 3C 50 56 89 51 08 8D 4C 24 64 E8 ? ? ? ? 8B 56 34", 20 },
+        { "89 6F 08 89 06 89 4E 04 8D 8C 24 48 01 00 00 89 56 08 8B 54 24 44 52 53 E8 ? ? ? ?", 24 },
+        { "89 6F 08 89 06 89 4E 04 8D 8C 24 54 01 00 00 89 56 08 8B 54 24 60 52 53 E8 ? ? ? ?", 24 },
+    };
+    for (size_t i = 0; i < std::size(cameraCallers); ++i)
+    {
+        auto caller = hook::module_pattern(GetModuleHandle(L"Engine"), cameraCallers[i].first);
+        if (cameraCtor && caller.size() == 1)
+        {
+            auto call = caller.get_first<void>(cameraCallers[i].second);
+            if (injector::GetBranchDestination(call).as_int() == reinterpret_cast<uintptr_t>(cameraCtor))
+                SCGameplayCamera::callers[i] = reinterpret_cast<uintptr_t>(call) + 5;
+        }
+    }
+    SCGameplayCamera::FinalizeCallers();
+
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B CB 89 42 ? 89 72");
     static auto FCameraSceneNodeCtorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
@@ -408,14 +433,17 @@ export void InitEngine()
         {
             return;
         }
-
-        *(float*)(regs.ebx + 0x200) = AdjustFOV(*(float*)(regs.ebx + 0x200), Screen.fAspectRatio);
+        static const auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
+        float factor = SCGameplayCamera::Factor(reinterpret_cast<void*>(regs.ebx), *reinterpret_cast<uintptr_t*>(regs.esp + 0x16C), fFOVFactor);
+        if (UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
+            factor = 1.0f;
+        *(float*)(regs.ebx + 0x200) = std::clamp(AdjustFOV(*(float*)(regs.ebx + 0x200), Screen.fAspectRatio) * factor, 1.0f, 179.0f);
     });
 
     // Resolution overrides
-    static auto newSETRES = L"SETRES 000x000"; // Final video resolution switch to 640x480, also crashes with dgvoodoo on some resolutions
+    static auto newSETRES = L"SETRES 000x000"; // Final video resolution switch to 640x480
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "68 ? ? ? ? 8B 01 FF 10 68 00 00 80 3F");
-    injector::WriteMemory(pattern.get_first(1), newSETRES, true);
+    ProtectedGameRef<const wchar_t*>(pattern.get_first<const wchar_t*>(1)) = newSETRES;
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "68 ? ? ? ? 50 FF D5 83 C4 08 85 C0 75 28 84 5E 58 74 23 8B 0D ? ? ? ? 8B 51 48 8B 42 30 8B 00 8D 48 30 A1 ? ? ? ? 8B 00 50 68 ? ? ? ? E9 1F 01 00 00");
     a640x480 = *pattern.get_first<const wchar_t*>(1);
@@ -461,7 +489,7 @@ export void InitEngine()
     if (!IsEnhanced())
     {
         pattern = find_module_pattern(GetModuleHandle(L"Engine"), "0F 84 ? ? ? ? 8B 47 24 8D 8C 24 90 00 00 00");
-        injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp
+        ProtectedGameRef<uint16_t>(pattern.get_first<uint16_t>(0)) = 0xE990; // jz -> jmp
     }
 
     // Prevent fake backdrops from rendering in thermal vision
@@ -554,10 +582,10 @@ export void InitEngine()
     if (bSkipIntro)
     {
         pattern = find_module_pattern(GetModuleHandle(L"Engine"), "75 ? A1 ? ? ? ? 85 C0 75 ? 68 00 00 80 3F");
-        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jz -> jmp
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(0)) = 0xEB; // jz -> jmp
 
         pattern = find_module_pattern(GetModuleHandle(L"Engine"), "75 ? 39 3D ? ? ? ? 75");
-        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jz -> jmp
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(0)) = 0xEB; // jz -> jmp
     }
 
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 0D ? ? ? ? 56 8B 74 24 10");
@@ -591,7 +619,7 @@ export void InitEngine()
     if (bSkipPressStartToContinue)
     {
         pattern = find_module_pattern(GetModuleHandle(L"Engine"), "75 ? ? ? ? ? ? 8B CD FF 52 ? 6A 00");
-        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jz -> jmp
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(0)) = 0xEB; // jz -> jmp
     }
 
     UInput::GetKey = (decltype(UInput::GetKey))GetProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPBGH@Z");
@@ -634,13 +662,27 @@ export void InitEngine()
             AESoftBodyActor::shTick = safetyhook::create_inline(sbActorTick.get_first(), AESoftBodyActor::Tick);
 
             uintptr_t fld = reinterpret_cast<uintptr_t>(sbUpdate.get_first(10));
-            injector::WriteMemory<uint8_t>(fld + 1, 0x05, true);
-            injector::WriteMemory<uintptr_t>(fld + 2, reinterpret_cast<uintptr_t>(&AESoftBodyActor::fFrameDelta), true);
+            ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(fld + 1)) = 0x05;
+            ProtectedGameRef<uintptr_t>(reinterpret_cast<uintptr_t*>(fld + 2)) = reinterpret_cast<uintptr_t>(&AESoftBodyActor::fFrameDelta);
 
             uintptr_t clampLow = *sbUpdate.get_first<uintptr_t>(18);
-            injector::WriteMemory<float>(clampLow, AESoftBodyActor::kMinDt, true);
+            ProtectedGameRef<float>(reinterpret_cast<float*>(clampLow)) = AESoftBodyActor::kMinDt;
         }
     }
+
+    // Buffered shadows: the shadow buffer texture matrix puts the compared depth in 24-bit integer units (z * 16777215,
+    // bias * -16777216), which only the hardware of the time understood. Current drivers compare in 0..1, so every
+    // receiver ends up behind the stored depth. Use the same matrix in 0..1 units.
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "D9 40 38 D8 0D ? ? ? ? D9 5C 24 34");
+    if (!pattern.empty())
+    {
+        static float fShadowBufferBiasScale = -1.0f;
+        ProtectedGameRef<float*>(pattern.get_first<float*>(5)) = &fShadowBufferBiasScale;
+    }
+
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "DB 44 24 18 68 FF FF 7F 4B");
+    if (!pattern.empty())
+        ProtectedGameRef<float>(pattern.get_first<float>(5)) = 1.0f;
 
     #if _DEBUG
     shFindAxisName = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?FindAxisName@UInput@@MBEPAMPAVAActor@@PBG@Z"), FindAxisName);

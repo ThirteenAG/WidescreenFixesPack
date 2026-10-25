@@ -1,6 +1,16 @@
 #include "stdafx.h"
+#include "../Shared/PatchPreflight.hpp"
+#include "FixSettings.hpp"
+#include "NativeMenuBindings.hpp"
+#include "Movie.hpp"
+#include "Startup.hpp"
+#include "WindowModes.hpp"
+#include "Camera.hpp"
 
 import PostFX;
+
+// Set when the process exits; the game's modules may already be unloaded then
+static bool ProcessExiting = false;
 
 struct Screen
 {
@@ -23,7 +33,6 @@ struct Screen
     float fWidescreenHudOffset;
     float fFOV;
     float fIniFOV;
-    float fFOVFactor;
     bool bUnstretchedText = true;
     bool bBinocularsActive = false;     // set by the binoculars HUD draw, consumed by SetCamera
 
@@ -40,7 +49,6 @@ struct Screen
         fHudScale = 1.0f / (((4.0f / 3.0f)) / (fAspectRatio));
         fHudOffset = (((600.0f * fAspectRatio) - 800.0f) / 2.0f) / fHudScale;
         fRadarVerticalOffset = fHudOffset * (4.0f / 3.0f);
-        fFOVFactor = fHudScale * fIniFOV;
         fWidescreenHudOffset = -CalculateWidescreenOffset(fWidth, fHeight, 800.0f, 600.0f, 3.5f);
         if (fHudAspectRatioConstraint.has_value())
         {
@@ -190,16 +198,96 @@ sub_380E58B5(float* a1, float a2, float a3, float a4, float a5, float a6, float 
 
 void Init()
 {
-    CIniReader iniReader("");
-    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
-    Screen.fIniFOV = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
-    if (!Screen.fIniFOV) { Screen.fIniFOV = 1.0f; }
+    auto& settings = FixSettings();
+    asi_settings::LiveLink::Start();
+    CursorConfinement::SetEnabled(settings.Bool("MAIN.ConfineCursor"));
+    settings.OnChange("MAIN.ConfineCursor", []()
+    {
+        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+    });
+    FarCryMovie::Mode = &settings.Int("MAIN.FMVWidescreenMode");
+    const auto windowMode = std::clamp(settings.Int("MAIN.WindowMode"), 0, 2);
+    FarCryWindow::Mode.store(windowMode);
+    FarCryWindow::LastWindowMode = windowMode == 2 ? 2 : 1;
+    FarCryWindow::OnModeChanged = [](int mode)
+    {
+        FixSettings().Set("MAIN.WindowMode", std::to_string(mode));
+    };
+    settings.OnChange("MAIN.WindowMode", []()
+    {
+        const auto requested = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
+        if (requested != FarCryWindow::Mode.load())
+            FarCryWindow::Pending.store(requested);
+    });
+    WFP::onShutdownEvent() += []()
+    {
+        // Restoring hooks inside CryGame, CrySystem or XRenderD3D9 is only safe on a dynamic unload
+        if (ProcessExiting)
+            return;
+        FarCryWindow::ResetHooks();
+        FarCryCamera::Reset();
+        FarCryStartup::CompileHook.reset();
+#ifndef _WIN64
+        FarCryMovie::AspectHook.reset();
+#endif
+        FarCryMovie::Ready = false;
+    };
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(settings.String("MAIN.HudAspectRatioConstraint"));
+    auto updateView = []()
+    {
+        auto& settings = FixSettings();
+        const float factor = settings.Float("MAIN.FOVFactor");
+        Screen.fIniFOV = std::isfinite(factor) ? std::clamp(factor, 0.5f, 2.0f) : 1.0f;
+        Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(settings.String("MAIN.HudAspectRatioConstraint"));
+        if (Screen.nWidth > 0 && Screen.nHeight > 0)
+            Screen.AdjustToRes(Screen.nWidth, Screen.nHeight);
+    };
+    updateView();
+    settings.OnChange("MAIN.FOVFactor", updateView);
+    settings.OnChange("MAIN.HudAspectRatioConstraint", updateView);
 
     WFP::onInitEvent().executeAll();
 }
 
 void InitXRenderD3D9()
 {
+    const bool windowReady = FarCryWindow::Install(GetModuleHandleW(L"XRenderD3D9.dll"));
+    InitDeviceHook();
+#ifndef _WIN64
+    if (!wfp::PatchPreflight(GetModuleHandleW(L"XRenderD3D9"), "Far Cry renderer HUD: signatures unavailable; feature disabled.\n",
+    {
+        { "E8 ? ? ? ? 8B 86 98 C6 01 00 8B 08 57 6A 03 50 FF 91 B0 00 00 00 8B 86 18 D3 01 00", 1 },
+        { "55 E8 ? ? ? ? 8B 86 98 C6 01 00", 1 },
+        { "64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 64 89 25 00 00 00 00 83 EC 18 55 8B 6C 24 3C 81 FD 00 10 00 00 56", 1 },
+        { "8B B1 98 C6 01 00 85 F6 89 81 54 6D 01 00", 1 },
+        { "89 BE 84 D4 01 00 8B 9E 7C D4 01 00", 1 },
+        { "8B 35 ? ? ? ? 6A 10", 1 },
+        { "8B 86 ? ? ? ? 83 C0 F0 3B F8 7E 02 8B F8", 1 },
+        { "B8 00 00 CA 10 89 83 34 B7 01 00", 1 },
+        { "8B 86 ? ? ? ? 8B 80 ? ? ? ? 8D 8D", 1 },
+        { "89 51 08 89 58 24 8B 86", 1 },
+        { "8A 87 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 07 53 8B 5C 24 44", 1 },
+        { "8B 83 ? ? ? ? 85 C0 75 16 A1", 1 },
+    }))
+        return;
+#else
+    if (!wfp::PatchPreflight(GetModuleHandleW(L"XRenderD3D9"), "Far Cry renderer HUD: signatures unavailable; feature disabled.\n",
+    {
+        { "E8 ? ? ? ? 48 8B 8F ? ? ? ? 4C 8B C3 48 8B 01 BA ? ? ? ? FF 90 ? ? ? ? 48 8B 8F", 1 },
+        { "E8 ? ? ? ? 48 8B 8D ? ? ? ? 48 8B 01 4C 8B C3 BA ? ? ? ? FF 90 ? ? ? ? 48 8B 8D", 1 },
+        { "44 89 89 ? ? ? ? 44 89 81 ? ? ? ? 89 91 ? ? ? ? 44 89 91", 1 },
+        { "8B 8B ? ? ? ? 89 48 10 8B 8B ? ? ? ? 89 48 14", 1 },
+        { "FF 15 ? ? ? ? B9 ? ? ? ? 2B C3 99 2B C2 D1 F8 44 8B F0", 1 },
+        { "41 8B 84 24 ? ? ? ? 83 C0 F0 3B F8 0F 4F F8", 1 },
+        { "BD ? ? ? ? 89 AF ? ? ? ? 4C 89 AC 24 ? ? ? ? 0F 85 ? ? ? ? 41 BD", 1 },
+        { "48 8B C4 48 81 EC ? ? ? ? 48 C7 44 24 ? ? ? ? ? 48 89 58 F8 48 89 68 F0 48 89 70 E8 48 89 78 E0 4C 89 60 D8 66 0F 7F 70", 1 },
+        { "41 89 43 18 8B 47 04 41 89 43 1C 8B 47 08 41 89 6B 24 41 89 43 20", 1 },
+        { "48 8B C4 48 81 EC ? ? ? ? 80 B9 ? ? ? ? ? 0F 85 ? ? ? ? 48 89 58 F8", 1 },
+        { "48 83 BF ? ? ? ? ? 4C 8B 7C 24", 1 },
+    }))
+        return;
+#endif
+
     #ifndef _WIN64
     auto pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "E8 ? ? ? ? 8B 86 98 C6 01 00 8B 08 57 6A 03 50 FF 91 B0 00 00 00 8B 86 18 D3 01 00");
     injector::MakeCALL(pattern.get_first(0), sub_380E58B5, true); //text 0x38012EB7
@@ -287,27 +375,31 @@ void InitXRenderD3D9()
     });
     #endif
 
+    if (!windowReady)
+    {
     #ifndef _WIN64
     //borderless windowed
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 35 ? ? ? ? 6A 10");
-    injector::WriteMemory(*pattern.get_first<uint32_t*>(2), GetSystemMetricsHook, true); //0x3816A218
+    ProtectedGameRef<decltype(&GetSystemMetricsHook)>{reinterpret_cast<decltype(&GetSystemMetricsHook)*>(*pattern.get_first<uint32_t*>(2))} = &GetSystemMetricsHook; //0x3816A218
 
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 86 ? ? ? ? 83 C0 F0 3B F8 7E 02 8B F8");
-    injector::WriteMemory<uint8_t>(pattern.get_first(-2), 0xEB, true); //jmp
+    ProtectedGameRef<uint8_t>{pattern.get_first<uint8_t>(-2)} = 0xEB; //jmp
 
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "B8 00 00 CA 10 89 83 34 B7 01 00");
-    injector::WriteMemory(pattern.get_first(1), *pattern.get_first<LONG>(1) & ~WS_OVERLAPPEDWINDOW, true);
+    ProtectedGameRef<LONG>{pattern.get_first<LONG>(1)} &= ~WS_OVERLAPPEDWINDOW;
     #else
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "FF 15 ? ? ? ? B9 ? ? ? ? 2B C3 99 2B C2 D1 F8 44 8B F0");
     auto ptr = (uint64_t)pattern.get_first(0) + injector::ReadMemory<uint32_t>(pattern.get_first(2), true) + 6;
-    injector::WriteMemory(ptr, GetSystemMetricsHook, true); //0x1008845E
+    ProtectedGameRef<decltype(&GetSystemMetricsHook)>{reinterpret_cast<decltype(&GetSystemMetricsHook)*>(ptr)} = &GetSystemMetricsHook; //0x1008845E
 
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "41 8B 84 24 ? ? ? ? 83 C0 F0 3B F8 0F 4F F8");
-    injector::WriteMemory<uint8_t>(pattern.get_first(-2), 0xEB, true); //jmp
+    ProtectedGameRef<uint8_t>{pattern.get_first<uint8_t>(-2)} = 0xEB; //jmp
 
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "BD ? ? ? ? 89 AF ? ? ? ? 4C 89 AC 24 ? ? ? ? 0F 85 ? ? ? ? 41 BD");
-    injector::WriteMemory(pattern.get_first(1), *pattern.get_first<LONG>(1) & ~WS_OVERLAPPEDWINDOW, true);
+    ProtectedGameRef<LONG>{pattern.get_first<LONG>(1)} &= ~WS_OVERLAPPEDWINDOW;
     #endif
+
+    }
 
     //2D
     #ifndef _WIN64
@@ -345,6 +437,26 @@ void InitXRenderD3D9()
             if (ret == dword_3302ED49 && ret2 == dword_33038051) //fmv
             {
                 Screen.bStretch = false;
+                if (FarCryMovie::Ready && FarCryMovie::Mode)
+                {
+                    const auto geometry = FarCryMovie::Layout({ x1, y1, x2, y2 }, Screen.fAspectRatio, Screen.fFMVAspectRatio,
+                        std::clamp(*FarCryMovie::Mode, 0, 2), *reinterpret_cast<float*>(regs.esp + 0x44), *reinterpret_cast<float*>(regs.esp + 0x48),
+                        *reinterpret_cast<float*>(regs.esp + 0x4C), *reinterpret_cast<float*>(regs.esp + 0x50));
+                    FarCryMovie::ClearBars(geometry, [&](const FarCryMovie::Rectangle& bar)
+                    {
+                        DrawImage(reinterpret_cast<void*>(regs.esi), bar.x, bar.y, bar.width, bar.height,
+                            0, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.5f);
+                    });
+                    ProtectedGameRef<float>{ reinterpret_cast<float*>(regs.esp + 0x30) } = geometry.image.x;
+                    ProtectedGameRef<float>{ reinterpret_cast<float*>(regs.esp + 0x34) } = geometry.image.y;
+                    ProtectedGameRef<float>{ reinterpret_cast<float*>(regs.esp + 0x38) } = geometry.image.width;
+                    ProtectedGameRef<float>{ reinterpret_cast<float*>(regs.esp + 0x3C) } = geometry.image.height;
+                    ProtectedGameRef<float>{ reinterpret_cast<float*>(regs.esp + 0x44) } = geometry.u0;
+                    ProtectedGameRef<float>{ reinterpret_cast<float*>(regs.esp + 0x48) } = geometry.v0;
+                    ProtectedGameRef<float>{ reinterpret_cast<float*>(regs.esp + 0x4C) } = geometry.u1;
+                    ProtectedGameRef<float>{ reinterpret_cast<float*>(regs.esp + 0x50) } = geometry.v1;
+                    return;
+                }
                 *(float*)(regs.esp + 0x30) /= Screen.fHudScale;
                 *(float*)(regs.esp + 0x38) /= Screen.fHudScale;
                 *(float*)(regs.esp + 0x30) += Screen.fHudOffset;
@@ -432,14 +544,35 @@ void InitXRenderD3D9()
         if (ret == dword_1005DA88 && ret2 == dword_10068D88) //fmv
         {
             Screen.bStretch = false;
-            x1 /= Screen.fHudScale;
-            x2 /= Screen.fHudScale;
-            x1 += Screen.fHudOffset;
+            if (FarCryMovie::Ready && FarCryMovie::Mode)
+            {
+                const auto geometry = FarCryMovie::Layout({ x1, y1, x2, y2 }, Screen.fAspectRatio, Screen.fFMVAspectRatio,
+                    std::clamp(*FarCryMovie::Mode, 0, 2), a6, a7, a8, a9);
+                FarCryMovie::ClearBars(geometry, [&](const FarCryMovie::Rectangle& bar)
+                {
+                    DrawImage(_this, bar.x, bar.y, bar.width, bar.height,
+                        0, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.5f);
+                });
+                x1 = geometry.image.x;
+                y1 = geometry.image.y;
+                x2 = geometry.image.width;
+                y2 = geometry.image.height;
+                a6 = geometry.u0;
+                a7 = geometry.v0;
+                a8 = geometry.u1;
+                a9 = geometry.v1;
+            }
+            else
+            {
+                x1 /= Screen.fHudScale;
+                x2 /= Screen.fHudScale;
+                x1 += Screen.fHudOffset;
 
-            x1 -= Screen.fFMVOffsetH;
-            y1 -= Screen.fFMVOffsetV;
-            x2 += Screen.fFMVOffsetH + Screen.fFMVOffsetH;
-            y2 += Screen.fFMVOffsetV + Screen.fFMVOffsetV;
+                x1 -= Screen.fFMVOffsetH;
+                y1 -= Screen.fFMVOffsetV;
+                x2 += Screen.fFMVOffsetH + Screen.fFMVOffsetH;
+                y2 += Screen.fFMVOffsetV + Screen.fFMVOffsetV;
+            }
         }
         else if (ret == dword_1018DCD8 || ret == dword_1018DD8F || ret == dword_1018DEA3 || ret == dword_1018DF57)
         {
@@ -574,16 +707,18 @@ void InitXRenderD3D9()
             HKL* lpList = NULL;
             wchar_t szBuf[512];
 
-            UINT uLayouts = GetKeyboardLayoutList(0, NULL);
+            int uLayouts = GetKeyboardLayoutList(0, NULL);
             lpList = (HKL*)LocalAlloc(LPTR, (uLayouts * sizeof(HKL)));
-            uLayouts = GetKeyboardLayoutList(uLayouts, lpList);
+            if (!lpList)
+            return;
+        uLayouts = GetKeyboardLayoutList(uLayouts, lpList);
 
             for (int i = 0; i < uLayouts; ++i)
             {
-                GetLocaleInfo(MAKELCID(((UINT)lpList[i] & 0xffffffff), SORT_DEFAULT), LOCALE_SLANGUAGE, szBuf, 512);
+                GetLocaleInfo(MAKELCID(LOWORD(reinterpret_cast<ULONG_PTR>(lpList[i])), SORT_DEFAULT), LOCALE_SLANGUAGE, szBuf, 512);
                 if (wcsstr(szBuf, L"English") != NULL)
                 {
-                    PostMessage((HWND)regs.eax, WM_INPUTLANGCHANGEREQUEST, 0, (LPARAM)LoadKeyboardLayout(std::to_wstring((UINT)lpList[i]).c_str(), KLF_ACTIVATE));
+                    PostMessage((HWND)regs.eax, WM_INPUTLANGCHANGEREQUEST, 0, reinterpret_cast<LPARAM>(lpList[i]));
                     break;
                 }
                 memset(szBuf, 0, 512);
@@ -604,16 +739,18 @@ void InitXRenderD3D9()
         HKL* lpList = NULL;
         wchar_t szBuf[512];
 
-        UINT uLayouts = GetKeyboardLayoutList(0, NULL);
+        int uLayouts = GetKeyboardLayoutList(0, NULL);
         lpList = (HKL*)LocalAlloc(LPTR, (uLayouts * sizeof(HKL)));
+        if (!lpList)
+            return;
         uLayouts = GetKeyboardLayoutList(uLayouts, lpList);
 
         for (int i = 0; i < uLayouts; ++i)
         {
-            GetLocaleInfo(MAKELCID(((UINT)lpList[i] & 0xffffffff), SORT_DEFAULT), LOCALE_SLANGUAGE, szBuf, 512);
+            GetLocaleInfo(MAKELCID(LOWORD(reinterpret_cast<ULONG_PTR>(lpList[i])), SORT_DEFAULT), LOCALE_SLANGUAGE, szBuf, 512);
             if (wcsstr(szBuf, L"English") != NULL)
             {
-                PostMessage(hWnd, WM_INPUTLANGCHANGEREQUEST, 0, (LPARAM)LoadKeyboardLayout(std::to_wstring((UINT)lpList[i]).c_str(), KLF_ACTIVATE));
+                PostMessage(hWnd, WM_INPUTLANGCHANGEREQUEST, 0, reinterpret_cast<LPARAM>(lpList[i]));
                 break;
             }
             memset(szBuf, 0, 512);
@@ -624,11 +761,49 @@ void InitXRenderD3D9()
     });
     #endif
 
-    InitDeviceHook();
 }
 
 void InitCryGame()
 {
+    FarCryCamera::Install(GetModuleHandleW(L"CryGame.dll"), GetModuleHandleW(L"CrySystem.dll"));
+    FarCryMovie::Install(GetModuleHandleW(L"CryGame.dll"));
+#ifndef _WIN64
+    if (!wfp::PatchPreflight(GetModuleHandleW(L"CryGame"), "Far Cry HUD callers: signatures unavailable; feature disabled.\n",
+    {
+        { "33 C0 40 5F EB 02 33 C0 5E C9 C2 10 00", 1 },
+        { "D9 85 7C FF FF FF D8 25 ? ? ? ? 83 EC 28", 1 },
+        { "8B 8B 80 06 00 00 8B 01 68 78 00 02 00", 1 },
+        { "8B 4D DC 8B 01 FF 50 14 DC C0 83 EC 28", 1 },
+        { "8B 8B 80 06 00 00 8B 01 68 65 00 02 00 FF 90 38 02 00 00 D9 05 ? ? ? ? D8 15 ? ? ? ? DF E0", 1 },
+        { "8B 06 6A 01 8B CE FF 50 04 8B 8B 80 06 00 00", 1 },
+        { "D9 05 ? ? ? ? 8B 4D E0 8B 75 D0 83 C1 20", 1 },
+        { "EB 02 DD D8 8B 75 20 8B 0E 8B 01", 1 },
+        { "8B 10 8B C8 FF 52 14 5E C2 08 00", 1 },
+        { "8D 86 ? ? ? ? 83 38 FF 7E 2A D9 E8 6A 01", 1 },
+        { "8D 85 65 FF FF FF 89 45 08 D9 45 D8 D8 0D", 1 },
+    }))
+        return;
+#else
+    if (!wfp::PatchPreflight(GetModuleHandleW(L"CryGame"), "Far Cry HUD callers: signatures unavailable; feature disabled.\n",
+    {
+        { "E9 ? ? ? ? F3 44 0F 10 35 ? ? ? ? 66 44 0F 12 3D ? ? ? ? F3 41 0F 5C F0 41 0F 2F F6", 1 },
+        { "48 83 BB ? ? ? ? ? 66 44 0F 6F 94 24 ? ? ? ? 66 44 0F 6F 8C 24 ? ? ? ? 66 0F 6F BC 24", 1 },
+        { "F3 44 0F 10 0D ? ? ? ? 49 8B 4D 00 48 8B 01 FF 90 ? ? ? ? 84 C0", 1 },
+        { "F3 0F 10 BC 24 ? ? ? ? 44 0F 28 C7 F3 0F 10 0D ? ? ? ? F3 44 0F", 1 },
+        { "49 8B 8C 24 ? ? ? ? 48 8B 01 BA ? ? ? ? FF 90 ? ? ? ? 8B 15 ? ? ? ? F6 C2 01", 1 },
+        { "49 8B 17 49 8B CF FF 52 28 F3 0F 59 05 ? ? ? ? F3 0F 10 2D ? ? ? ? F3 0F 58 E8", 1 },
+        { "49 8B 8C 24 ? ? ? ? 48 8B 01 BA ? ? ? ? FF 90 ? ? ? ? F3 0F 10 2D ? ? ? ? F3 0F", 1 },
+        { "48 8B 06 B2 01 48 8B CE FF 50 08 48 8D 94 24 ? ? ? ? 8B 08 89 0A", 1 },
+        { "F3 44 0F 10 94 24 ? ? ? ? F3 0F 10 BC 24 ? ? ? ? F3 0F 10 B4 24", 1 },
+        { "F3 0F 10 BC 24 ? ? ? ? F3 0F 10 B4 24 ? ? ? ? E9 ? ? ? ? 45 0F 28 C5 45 0F 28 D4", 1 },
+        { "F3 44 0F 10 9C 24 ? ? ? ? F3 44 0F 10 84 24", 1 },
+        { "E9 ? ? ? ? F3 0F 5E 15 ? ? ? ? F3 0F 10 05", 1 },
+        { "F3 44 0F 10 84 24 84 00 00 00 E9 ? ? ? ? F3 44 0F 5E 05", 1 },
+        { "4C 8D A4 24 ? ? ? ? 4C 8D B4 24 ? ? ? ? 45 33 FF", 1 },
+    }))
+        return;
+#endif
+
     #ifndef _WIN64
     dword_3302ED49 = hook::make_module_pattern(GetModuleHandle(L"CryGame"), "33 C0 40 5F EB 02 33 C0 5E C9 C2 10 00").get_first(0);
     dword_330D054C = hook::make_module_pattern(GetModuleHandle(L"CryGame"), "D9 85 7C FF FF FF D8 25 ? ? ? ? 83 EC 28").get_first(0);
@@ -748,8 +923,8 @@ void __fastcall SetCamera(void* engine, void* edx, float* cam, char bToTheScreen
         // re-armed by the next HUD draw.
         if (Screen.bBinocularsActive)
             Screen.bBinocularsActive = false;
-        else if (Screen.fFOVFactor > 0.0f)
-            cam[12] *= Screen.fFOVFactor;      // fHudScale * fIniFOV = aspect/(4/3) * fIniFOV
+        else if (Screen.fHudScale > 0.0f)
+            cam[12] *= FarCryCamera::Factor(Screen.fHudScale, Screen.fIniFOV);
     }
 
     shSetCamera.unsafe_fastcall(engine, edx, cam, bToTheScreen);
@@ -767,8 +942,8 @@ void __fastcall SetCamera(void* engine, float* cam, char bToTheScreen)
         // re-armed by the next HUD draw.
         if (Screen.bBinocularsActive)
             Screen.bBinocularsActive = false;
-        else if (Screen.fFOVFactor > 0.0f)
-            cam[12] *= Screen.fFOVFactor;      // fHudScale * fIniFOV = aspect/(4/3) * fIniFOV
+        else if (Screen.fHudScale > 0.0f)
+            cam[12] *= FarCryCamera::Factor(Screen.fHudScale, Screen.fIniFOV);
     }
 
     shSetCamera.unsafe_fastcall(engine, cam, bToTheScreen);
@@ -777,6 +952,23 @@ void __fastcall SetCamera(void* engine, float* cam, char bToTheScreen)
 
 void InitCry3DEngine()
 {
+    InitDrawHook();
+#ifndef _WIN64
+    if (!wfp::PatchPreflight(GetModuleHandleW(L"Cry3DEngine"), "Far Cry projection: signatures unavailable; feature disabled.\n",
+    {
+        { "74 ? 32 C0 5F 8B E5 5D C2", 1 },
+        { "83 EC ? 53 55 56 57 8B 7C 24", 1 },
+    }))
+        return;
+#else
+    if (!wfp::PatchPreflight(GetModuleHandleW(L"Cry3DEngine"), "Far Cry projection: signatures unavailable; feature disabled.\n",
+    {
+        { "0F 87 ? ? ? ? 32 C0 66 44 0F 6F 84 24", 1 },
+        { "48 8B C4 48 81 EC ? ? ? ? 48 89 58 ? 48 89 68 ? 48 8B E9", 1 },
+    }))
+        return;
+#endif
+
     #ifndef _WIN64
     auto pattern = hook::module_pattern(GetModuleHandle(L"Cry3DEngine"), "74 ? 32 C0 5F 8B E5 5D C2");
     injector::MakeNOP(pattern.get_first(), 2, true);
@@ -791,18 +983,35 @@ void InitCry3DEngine()
     shSetCamera = safetyhook::create_inline(pattern.get_first(), SetCamera);
     #endif
 
-    InitDrawHook();
 }
 
 void InitCrySystem()
 {
+    FarCryCamera::Install(GetModuleHandleW(L"CryGame.dll"), GetModuleHandleW(L"CrySystem.dll"));
+
+#ifndef _WIN64
+    if (!wfp::PatchPreflight(GetModuleHandleW(L"CrySystem"), "Far Cry text callers: signatures unavailable; feature disabled.\n",
+    {
+        { "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00 8B 06 8B CE FF 50 40 5F 5E 5B C9 C2 04 00 55 8B EC 83 EC 30", 1 },
+        { "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00", 2 },
+    }))
+        return;
+#else
+    if (!wfp::PatchPreflight(GetModuleHandleW(L"CrySystem"), "Far Cry text callers: signatures unavailable; feature disabled.\n",
+    {
+        { "83 BC 24 ? ? ? ? ? 74 12 48 8B 4E 38 BA ? ? ? ? 48 8B 01", 4 },
+        { "48 8B CB 4C 63 C0 48 8B 05 ? ? ? ? 42 FF 14 C0 48 83 C4 20 5B C3", 7 },
+    }))
+        return;
+#endif
+
     #ifndef _WIN64
     dword_36552A15 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00 8B 06 8B CE FF 50 40 5F 5E 5B C9 C2 04 00 55 8B EC 83 EC 30").get_first(0);
     dword_365526AD = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00").get(1).get<void>(0);
     #else
-    dword_100B0A58 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 BC 24 ? ? ? ? ? 74 12 48 8B 4E 38 BA ? ? ? ? 48 8B 01").count(4).get(1).get<void*>(0);
-    dword_100B1018 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 BC 24 ? ? ? ? ? 74 12 48 8B 4E 38 BA ? ? ? ? 48 8B 01").count(4).get(3).get<void*>(0);
-    dword_100B72BB = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "48 8B CB 4C 63 C0 48 8B 05 ? ? ? ? 42 FF 14 C0 48 83 C4 20 5B C3").count(7).get(5).get<void*>(17);
+    dword_100B0A58 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 BC 24 ? ? ? ? ? 74 12 48 8B 4E 38 BA ? ? ? ? 48 8B 01").count_hint(4).get(1).get<void*>(0);
+    dword_100B1018 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 BC 24 ? ? ? ? ? 74 12 48 8B 4E 38 BA ? ? ? ? 48 8B 01").count_hint(4).get(3).get<void*>(0);
+    dword_100B72BB = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "48 8B CB 4C 63 C0 48 8B 05 ? ? ? ? 42 FF 14 C0 48 83 C4 20 5B C3").count_hint(7).get(5).get<void*>(17);
     #endif
 }
 
@@ -844,6 +1053,20 @@ void __fastcall DrawStringW(void* a1, float fBaseX, float fBaseY, const wchar_t*
 
 void InitCryFont()
 {
+#ifndef _WIN64
+    if (!wfp::PatchPreflight(GetModuleHandleW(L"CryFont"), "Far Cry fonts: signatures unavailable; feature disabled.\n",
+    {
+        { "55 8D 6C 24 ? 81 EC ? ? ? ? 53 56", 1 },
+    }))
+        return;
+#else
+    if (!wfp::PatchPreflight(GetModuleHandleW(L"CryFont"), "Far Cry fonts: signatures unavailable; feature disabled.\n",
+    {
+        { "4C 89 4C 24 ? F3 0F 11 54 24", 1 },
+    }))
+        return;
+#endif
+
     #ifndef _WIN64
     auto pattern = hook::module_pattern(GetModuleHandle(L"CryFont"), "55 8D 6C 24 ? 81 EC ? ? ? ? 53 56");
     shDrawStringW = safetyhook::create_inline(pattern.get_first(), DrawStringW);
@@ -853,16 +1076,40 @@ void InitCryFont()
     #endif
 }
 
+ASI_SETTINGS_EXPORT(FixSettings())
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        Init();
-        CallbackHandler::RegisterCallback(L"XRenderD3D9.dll", InitXRenderD3D9);
-        CallbackHandler::RegisterCallback(L"CryGame.dll", InitCryGame);
-        CallbackHandler::RegisterCallback(L"Cry3DEngine.dll", InitCry3DEngine);
-        CallbackHandler::RegisterCallback(L"CrySystem.dll", InitCrySystem);
-        CallbackHandler::RegisterCallback(L"CryFont.dll", InitCryFont);
+        WindowedModeWrapper::EnableDpiAwareness();
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime([]()
+        {
+            Init();
+            CallbackHandler::RegisterModuleLoadCallback(L"CryScriptSystem.dll", []()
+            {
+                FarCryStartup::Install(FixSettings().Bool("MAIN.SkipIntro"), GetModuleHandleW(L"CryScriptSystem.dll"));
+                FarCryMenu::Init();
+            });
+            CallbackHandler::RegisterModuleLoadCallback(L"XRenderD3D9.dll", InitXRenderD3D9);
+            CallbackHandler::RegisterModuleLoadCallback(L"CryGame.dll", []()
+            {
+                InitCryGame();
+                FarCryMenu::Init();
+            });
+            CallbackHandler::RegisterModuleLoadCallback(L"Cry3DEngine.dll", InitCry3DEngine);
+            CallbackHandler::RegisterModuleLoadCallback(L"CrySystem.dll", []()
+            {
+                InitCrySystem();
+                FarCryMenu::Init();
+            });
+            CallbackHandler::RegisterModuleLoadCallback(L"CryInput.dll", FarCryMenu::Init);
+            CallbackHandler::RegisterModuleLoadCallback(L"CryFont.dll", []()
+            {
+                InitCryFont();
+                FarCryMenu::Init();
+            });
+        });
     });
 }
 
@@ -874,6 +1121,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     }
     else if (reason == DLL_PROCESS_DETACH)
     {
+        ProcessExiting = lpReserved != nullptr;
         WFP::onShutdownEvent().executeAll();
     }
     return TRUE;

@@ -1,0 +1,12 @@
+{
+  "plugin.name": "Splinter Cell: Double Agent (Cxbx-Reloaded) Widescreen Fix",
+  "page.display": "Anzeige",
+  "page.compatibility": "Kompatibilität",
+  "menu.auto": "Auto",
+  "MAIN.TextLanguage": "Einstellungssprache",
+  "MAIN.TextLanguage.description": "Sprache der Einstellungsbeschreibungen. Auto folgt der Systemsprache.",
+  "MAIN.FixHUD": "HUD-Format korrigieren",
+  "MAIN.FixHUD.description": "Hält das HUD in seiner Originalform, statt es mit dem Emulatorfenster zu strecken.",
+  "MAIN.HudAspectRatioConstraint": "Seitenverhältnis",
+  "MAIN.HudAspectRatioConstraint.description": "Auto folgt dem Emulatorfenster. Breite:Höhe (zum Beispiel 16:9) oder einen Dezimalwert eingeben, um die HUD-Form selbst festzulegen. Spielkamera und Anzeigemodus des Emulators bleiben unverändert."
+}

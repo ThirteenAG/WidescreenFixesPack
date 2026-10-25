@@ -14,7 +14,12 @@ export struct Screen
 } Screen;
 
 export int nFPSLimit;
-export bool bWidescreenHUD, bWidescreenMap, bZoomFMVs;
+export int nWindowMode = 0;
+export int nWindowWidth = 0, nWindowHeight = 0;
+export uintptr_t GameplayCamera = 0;
+export bool GameplayFovEnabled = false;
+export bool bWidescreenHUD, bWidescreenMap;
+export int nFMVWidescreenMode = 1;
 export bool bNoCutsceneBorderAnimation;
 export int nCutsceneBorders;
 export bool bChangeDrawDistance;

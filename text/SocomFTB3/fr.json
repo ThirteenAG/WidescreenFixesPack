@@ -1,0 +1,14 @@
+{
+  "plugin.name": "SOCOM Fireteam Bravo 3 Fusion Fix (PPSSPP)",
+  "page.options": "Options avancées",
+  "skip": "Passer l'intro",
+  "skip.description": "Passe les intros au démarrage. Redémarrez après un changement.",
+  "analog": "Commandes double analogique",
+  "analog.description": "Contrôle la caméra au stick droit. La réponse du stick et la sensibilité des jumelles restent celles du jeu d'origine. Redémarrez après un changement.",
+  "smoothing": "Désactiver le lissage caméra",
+  "smoothing.description": "Supprime le lissage supplémentaire de la caméra normale. La réponse du stick reste celle du jeu d'origine. Nécessite les commandes double analogique ; redémarrez après un changement.",
+  "loading": "Chargement accéléré",
+  "loading.description": "Accélère les écrans de chargement. Redémarrez après un changement.",
+  "fov": "Facteur de FOV caméra standard",
+  "fov.description": "Multiplie le champ de vision de la caméra de jeu normale. 1.0 garde la vue d'origine ; des valeurs plus grandes l'élargissent. Les vues de visée et des jumelles ne changent pas. Redémarrez après un changement."
+}

@@ -1,0 +1,19 @@
+{
+  "plugin.name": "The Saboteur Fusion Fix",
+  "page.display": "Schermo",
+  "page.graphics": "Grafica",
+  "FixFOV": "Campo visivo widescreen",
+  "FixFOV.description": "Allarga il campo visivo della telecamera sugli schermi più larghi di 4:3 (Hor+).",
+  "WindowMode": "Modalità finestra",
+  "WindowMode.description": "La finestra quando l'opzione schermo intero del gioco è disattivata: con cornice o senza bordi. Una finestra grande quanto lo schermo ha la cornice fuori dallo schermo.",
+  "WindowMode.windowed": "Finestra",
+  "WindowMode.borderless": "Senza bordi",
+  "FPSLimit": "Limite fotogrammi",
+  "FPSLimit.description": "Limita la frequenza; le correzioni dei tempi della patch per guida, orologio e mouse la usano. 0 rimuove il limite e queste correzioni.",
+  "ConsoleGamma": "Gamma console",
+  "ConsoleGamma.description": "Usa il gamma della versione Xbox 360.",
+  "AntiAliasing": "Antialiasing",
+  "AntiAliasing.description": "Antialiasing SMAA, applicato prima che venga disegnato l'HUD.",
+  "AntiAliasing.off": "Disattivato",
+  "AntiAliasing.smaa": "SMAA"
+}

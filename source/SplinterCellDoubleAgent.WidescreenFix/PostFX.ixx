@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module PostFX;
@@ -15,7 +16,6 @@ namespace UD3DRenderDevice
     void __fastcall Present(void* UD3DRenderDevice, void* edx, void* UViewport, int a3)
     {
         auto device = *(IDirect3DDevice9**)((uintptr_t)UD3DRenderDevice + pDeviceOffset);
-        //CPostFX::RenderSMAA(device);
         CPostFX::RenderGamma(device);
         return shPresent.unsafe_fastcall(UD3DRenderDevice, edx, UViewport, a3);
     }
@@ -23,14 +23,12 @@ namespace UD3DRenderDevice
 
 export void InitPostFX()
 {
-    CIniReader iniReader("");
-    CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 1) != 0;
-    CPostFX::bSmaaEnabled = iniReader.ReadInteger("GRAPHICS", "SMAA", 0) != 0;
-    CPostFX::bBlurEnabled = iniReader.ReadInteger("GRAPHICS", "BlurEnabled", 1) != 0;
-    CPostFX::fBlurStrength = iniReader.ReadFloat("GRAPHICS", "BlurStrength", 5.0f);
+    CPostFX::bConsoleGammaEnabled = FixSettings().Int("GRAPHICS.ConsoleGamma") != 0;
+    CPostFX::bBlurEnabled = FixSettings().Int("GRAPHICS.BlurEnabled") != 0;
+    CPostFX::fBlurStrength = FixSettings().Float("GRAPHICS.BlurStrength");
     CPostFX::bRenderToBackBuffer = true;
 
-    if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bBlurEnabled && !CPostFX::bSmaaEnabled)
+    if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bBlurEnabled)
         return;
 
     auto pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "8B 8F ? ? ? ? ? ? 53");

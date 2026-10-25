@@ -1,0 +1,6 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/SplinterCell/en.json"
+fr ASISETTINGS_TEXT "../../text/SplinterCell/fr.json"
+de ASISETTINGS_TEXT "../../text/SplinterCell/de.json"
+it ASISETTINGS_TEXT "../../text/SplinterCell/it.json"
+es ASISETTINGS_TEXT "../../text/SplinterCell/es.json"

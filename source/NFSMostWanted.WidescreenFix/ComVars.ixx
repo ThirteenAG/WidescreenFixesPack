@@ -28,46 +28,31 @@ export struct bMatrix4
     bVector4 v3;
 };
 
-export namespace cFEngGameInterface
-{
-    struct FEMouseInfo
-    {
-        int16_t x;
-        int16_t y;
-        int16_t unk;
-        int16_t buttons;
-    };
-
-    void (__stdcall* GetMouseInfo)(FEMouseInfo* info) = nullptr;
-}
-
-export struct MouseData
-{
-    int   DeltaX = 0;
-    int   DeltaY = 0;
-    int   Wheel = 0;
-} g_Mouse;
-
-export struct StickData
-{
-    int   RawX = 0;
-    int   RawY = 0;
-    float X = 0.0f;
-    float Y = 0.0f;
-} g_RightStick;
-
-export bool bHideCursorForMouseLook = false;
-
-export int SimRate = -1;
-
 export GameRef<HWND> hWnd;
 export GameRef<uint32_t> dwWindowedMode;
 export GameRef<tagRECT> WindowRect;
 export GameRef<int> g_RacingResolution;
 export GameRef<IDirect3DDevice9*> Direct3DDevice;
 export GameRef<void*> MoviePlayerInstance;
+export GameRef<int32_t> nGameState;
+
+export constexpr int32_t GameStateFrontEnd = 3;
+
+export bool IsFrontEnd()
+{
+    return nGameState == GameStateFrontEnd;
+}
 
 export void** pOptions = nullptr;
+
+export namespace cFEng
+{
+    void** pInstance = nullptr;
+    void (__fastcall* MakeLoadedPackagesDirty)(void*, void*) = nullptr;
+}
+
+// Actual simulation rate in Hz, set by Misc
+export int SimRate = 60;
 
 export namespace Sim
 {
@@ -77,25 +62,14 @@ export namespace Sim
     }
 }
 
-export namespace cFEng
-{
-    void** pInstance = nullptr;
-    void (__fastcall* MakeLoadedPackagesDirty)(void*, void*) = nullptr;
-}
-
-export unsigned int bStringHash(const char* str)
+export uint32_t bStringHash(const char* str)
 {
     if (!str)
-        return -1;
+        return 0xFFFFFFFF;
 
-    int result = -1;
-    unsigned char c = *str;
-
-    while (c != 0)
-    {
-        result = c + 33 * result;
-        c = *(++str);
-    }
+    uint32_t result = 0xFFFFFFFF;
+    for (; *str; ++str)
+        result = static_cast<uint8_t>(*str) + 33 * result;
 
     return result;
 }
@@ -116,6 +90,20 @@ export __declspec(noinline) ResChange<int, int>& onResChange()
 {
     static ResChange<int, int> ResChangeEvent;
     return ResChangeEvent;
+}
+
+template<typename... Args>
+class WindowMessage : public WFP::Event<Args...>
+{
+public:
+    using WFP::Event<Args...>::Event;
+};
+
+// Every message of the game window, before the game handles it
+export __declspec(noinline) WindowMessage<HWND, UINT, WPARAM, LPARAM>& onWindowMessage()
+{
+    static WindowMessage<HWND, UINT, WPARAM, LPARAM> WindowMessageEvent;
+    return WindowMessageEvent;
 }
 
 struct FEMinNode
@@ -165,40 +153,7 @@ export struct FEImage : FEObject
     unsigned int ImageFlags;
 };
 
-export void* (*CreateResourceFile)(const char* filename, int32_t type, int flags, int file_offset, int file_size) = nullptr;
-export void(__fastcall* ResourceFileBeginLoading)(void* ResourceFile, void* edx, void* callback, void* callback_param) = nullptr;
-export void (__cdecl* ServiceResourceLoading)() = nullptr;
-
 export namespace FEPackage
 {
     char (__fastcall* ForAllObjects)(void* pPackage, void* edx, void* pCB) = nullptr;
-}
-
-struct BindingSlot
-{
-    int assignmentId;
-    int unk_04;
-    int unk_08;
-};
-
-export struct ActionBindingData
-{
-    BindingSlot slots[4];
-    int unk_30;
-};
-
-export ActionBindingData* gActionBindings;
-
-export bool IsRightStickAssignedToAnyAction()
-{
-    constexpr int ACTION_MIN = 0;
-    constexpr int ACTION_MAX = 18;
-    constexpr int NUM_SLOTS = 4;
-
-    for (int action = ACTION_MIN; action <= ACTION_MAX; ++action)
-        for (int slot = 0; slot < NUM_SLOTS; ++slot)
-            if (gActionBindings[action].slots[slot].assignmentId == 6)
-                return true;
-
-    return false;
 }

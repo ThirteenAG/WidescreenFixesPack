@@ -27,6 +27,7 @@ namespace InputDevices
 
     inline bool ModernControls = true;
     inline bool Gamepad = true;
+    inline bool StickThrottle = false;
     inline float Deadzone = 0.20f;
     inline int MoveUpKey = 'W', MoveDownKey = 'S', MoveLeftKey = 'A', MoveRightKey = 'D';
     inline int FireKey = VK_LBUTTON, EnterVehicleKey = 'F', JumpKey = VK_SPACE;
@@ -56,10 +57,11 @@ namespace InputDevices
         return GetForegroundWindow() == Window;
     }
 
-    inline void Read(CIniReader& ini)
+    inline void Read(SettingsReader& ini)
     {
         ModernControls = ini.ReadBoolean("INPUT", "ModernControls", true);
         Gamepad = ini.ReadBoolean("INPUT", "Gamepad", true);
+        StickThrottle = ini.ReadBoolean("INPUT", "StickThrottle", false);
         auto value = ini.ReadFloat("INPUT", "StickDeadzone", 0.20f);
         Deadzone = ClearDeadzone(value);
         MoveUpKey = ini.ReadInteger("INPUT", "MoveUpKey", 'W');
@@ -73,6 +75,14 @@ namespace InputDevices
         PreviousWeaponKey = ini.ReadInteger("INPUT", "PreviousWeaponKey", 'Q');
         NextWeaponKey = ini.ReadInteger("INPUT", "NextWeaponKey", 'E');
         PauseKey = ini.ReadInteger("INPUT", "PauseKey", 'P');
+    }
+    // Changes from FusionFixHub or a preset apply at once, as from the in-game options
+    inline void Watch()
+    {
+        for (auto id : { "INPUT.ModernControls", "INPUT.Gamepad", "INPUT.StickThrottle", "INPUT.StickDeadzone", "INPUT.MoveUpKey",
+            "INPUT.MoveDownKey", "INPUT.MoveLeftKey", "INPUT.MoveRightKey", "INPUT.FireKey", "INPUT.EnterVehicleKey", "INPUT.JumpKey",
+            "INPUT.SpecialKey", "INPUT.PreviousWeaponKey", "INPUT.NextWeaponKey", "INPUT.PauseKey" })
+            FixSettings().OnChange(id, [] { SettingsReader ini(""); Read(ini); });
     }
 
     inline void Poll()
@@ -117,17 +127,18 @@ namespace InputDevices
         return Stick(x, y, Deadzone);
     }
 
-    inline std::pair<float, float> Movement()
+    inline std::pair<float, float> Movement(bool vehicle = false)
     {
         Poll();
         auto [x, y] = Stick();
+        if (vehicle && !StickThrottle) y = 0;
         if (ModernControls)
         {
             x += Key(MoveRightKey) - Key(MoveLeftKey);
             y += Key(MoveDownKey) - Key(MoveUpKey);
         }
         x += Button(XINPUT_GAMEPAD_DPAD_RIGHT) - Button(XINPUT_GAMEPAD_DPAD_LEFT);
-        y += Button(XINPUT_GAMEPAD_DPAD_DOWN) - Button(XINPUT_GAMEPAD_DPAD_UP);
+        if (!vehicle || StickThrottle) y += Button(XINPUT_GAMEPAD_DPAD_DOWN) - Button(XINPUT_GAMEPAD_DPAD_UP);
         auto length = std::hypot(x, y);
         if (length > 1.0f) { x /= length; y /= length; }
         return { x, y };

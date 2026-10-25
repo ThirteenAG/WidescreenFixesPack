@@ -57,7 +57,7 @@ namespace GTA1Timing
     }
     inline void Install()
     {
-        CIniReader ini("");
+        SettingsReader ini("");
         if (!ini.ReadBoolean("MAIN", "FixFramePacing", true)) return;
         // The tick wait; the same globals at the same offsets in every build.
         auto wait = GTA1Build::Find("A0 ? ? ? ? 84 C0 74 1F A1 ? ? ? ? 85 C0 74 16 8B 44 24 04 39 05 ? ? ? ? 72 F8 C7 05",

@@ -1,0 +1,635 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Splinter Cell",
+        "exe": [
+          "SplinterCell.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.ResX",
+      "description": "@MAIN.ResX.description",
+      "page": "display",
+      "apply": "restart",
+      "min": 0,
+      "max": 7680,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.ResY",
+      "description": "@MAIN.ResY.description",
+      "page": "display",
+      "apply": "restart",
+      "min": 0,
+      "max": 4320,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.ForceShadowBufferMode",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.ForceShadowBufferMode",
+      "description": "@MAIN.ForceShadowBufferMode.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.ShadowBufferResolution",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.ShadowBufferResolution",
+      "description": "@MAIN.ShadowBufferResolution.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      },
+      "min": 0,
+      "max": 4096,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.RawInputMouse",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.RawInputMouse",
+      "description": "@MAIN.RawInputMouse.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.MouseSensitivity",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.1,
+      "max": 5.0,
+      "step": 0.05,
+      "decimals": 2,
+      "label": "@MAIN.MouseSensitivity",
+      "description": "@MAIN.MouseSensitivity.description",
+      "page": "controls",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.RawInputMouseRawData",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.RawInputMouseRawData",
+      "description": "@MAIN.RawInputMouseRawData.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@MAIN.FMVWidescreenMode",
+      "description": "@MAIN.FMVWidescreenMode.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@ui.original"
+        },
+        {
+          "value": 1,
+          "label": "@ui.fill"
+        },
+        {
+          "value": 2,
+          "label": "@ui.stretch"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.HudWidescreenMode",
+      "type": "choice",
+      "default": 2,
+      "label": "@MAIN.HudWidescreenMode",
+      "description": "@MAIN.HudWidescreenMode.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 2,
+        "enhanced": 2
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@ui.original"
+        },
+        {
+          "value": 1,
+          "label": "@ui.fixedoffset"
+        },
+        {
+          "value": 2,
+          "label": "@ui.screenedges"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@MAIN.HudAspectRatioConstraint",
+      "description": "@MAIN.HudAspectRatioConstraint.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.GrainScale",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN.GrainScale",
+      "description": "@MAIN.GrainScale.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      },
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.SkipIntro",
+      "description": "@MAIN.SkipIntro.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.SkipPressStartToContinue",
+      "description": "@MAIN.SkipPressStartToContinue.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.RestoreCutsceneFOV",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.RestoreCutsceneFOV",
+      "description": "@MAIN.RestoreCutsceneFOV.description",
+      "page": "camera",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 2,
+      "label": "@MAIN.CutsceneBorders",
+      "description": "@MAIN.CutsceneBorders.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 2,
+        "enhanced": 2
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@ui.original"
+        },
+        {
+          "value": 1,
+          "label": "@ui.remove"
+        },
+        {
+          "value": 2,
+          "label": "@ui.aspectdependent"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "label": "@MISC.FPSLimit",
+      "description": "@MISC.FPSLimit.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 60,
+        "recommended": 60,
+        "enhanced": 60
+      },
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.DeferredInput",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.DeferredInput",
+      "description": "@MAIN.DeferredInput.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "INPUT.Joy1",
+      "type": "string",
+      "default": "Interaction",
+      "label": "@INPUT.Joy1",
+      "description": "@INPUT.Joy1.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy2",
+      "type": "string",
+      "default": "Duck",
+      "label": "@INPUT.Joy2",
+      "description": "@INPUT.Joy2.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy3",
+      "type": "string",
+      "default": "Scope",
+      "label": "@INPUT.Joy3",
+      "description": "@INPUT.Joy3.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy4",
+      "type": "string",
+      "default": "Jump",
+      "label": "@INPUT.Joy4",
+      "description": "@INPUT.Joy4.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy5",
+      "type": "string",
+      "default": "BackToWall | ReloadGun",
+      "label": "@INPUT.Joy5",
+      "description": "@INPUT.Joy5.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy6",
+      "type": "string",
+      "default": "QuickInventory",
+      "label": "@INPUT.Joy6",
+      "description": "@INPUT.Joy6.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy7",
+      "type": "string",
+      "default": "AltFire",
+      "label": "@INPUT.Joy7",
+      "description": "@INPUT.Joy7.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy8",
+      "type": "string",
+      "default": "Fire",
+      "label": "@INPUT.Joy8",
+      "description": "@INPUT.Joy8.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy9",
+      "type": "string",
+      "default": "",
+      "label": "@INPUT.Joy9",
+      "description": "@INPUT.Joy9.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy10",
+      "type": "string",
+      "default": "",
+      "label": "@INPUT.Joy10",
+      "description": "@INPUT.Joy10.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy11",
+      "type": "string",
+      "default": "SwitchROF",
+      "label": "@INPUT.Joy11",
+      "description": "@INPUT.Joy11.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy12",
+      "type": "string",
+      "default": "ResetCamera",
+      "label": "@INPUT.Joy12",
+      "description": "@INPUT.Joy12.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy13",
+      "type": "string",
+      "default": "DPadUp",
+      "label": "@INPUT.Joy13",
+      "description": "@INPUT.Joy13.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy14",
+      "type": "string",
+      "default": "DPadDown",
+      "label": "@INPUT.Joy14",
+      "description": "@INPUT.Joy14.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy15",
+      "type": "string",
+      "default": "DPadLeft",
+      "label": "@INPUT.Joy15",
+      "description": "@INPUT.Joy15.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.Joy16",
+      "type": "string",
+      "default": "DPadRight",
+      "label": "@INPUT.Joy16",
+      "description": "@INPUT.Joy16.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.JoyX",
+      "type": "string",
+      "default": "Axis aStrafe DeadZone=0.3",
+      "label": "@INPUT.JoyX",
+      "description": "@INPUT.JoyX.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.JoyY",
+      "type": "string",
+      "default": "Axis aForward DeadZone=0.3",
+      "label": "@INPUT.JoyY",
+      "description": "@INPUT.JoyY.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.JoyZ",
+      "type": "string",
+      "default": "Axis aTurn DeadZone=0.3",
+      "label": "@INPUT.JoyZ",
+      "description": "@INPUT.JoyZ.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "INPUT.JoyV",
+      "type": "string",
+      "default": "Axis aLookUp DeadZone=0.3",
+      "label": "@INPUT.JoyV",
+      "description": "@INPUT.JoyV.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "menu",
+      "visibility": "editor",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@ui.autogamelanguage"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WindowMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@WindowMode.1"
+        },
+        {
+          "value": 2,
+          "label": "@WindowMode.2"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    }
+  ]
+}

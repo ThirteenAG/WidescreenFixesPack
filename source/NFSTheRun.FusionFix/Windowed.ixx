@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Windowed;
 
@@ -124,8 +125,6 @@ HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpW
     if (hWndParent && hWndParent != GetDesktopWindow())
         return CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
 
-    SetProcessDPIAware();
-
     auto [resW, resH] = GetRes();
 
     DWORD desktopX, desktopY;
@@ -144,8 +143,6 @@ HWND WINAPI CreateWindowExW_Hook(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR l
 {
     if (hWndParent && hWndParent != GetDesktopWindow())
         return CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-
-    SetProcessDPIAware();
 
     auto [resW, resH] = GetRes();
 
@@ -224,52 +221,83 @@ class Windowed
 public:
     Windowed()
     {
-        CIniReader iniReader("");
-        auto bImproveWindowedMode = iniReader.ReadInteger("MAIN", "ImproveWindowedMode", 1) != 0;
-
-        if (bImproveWindowedMode)
+        // After the game's code is unpacked: a protected exe (Origin) isn't when the plugin loads
+        WFP::onInitEvent() += []()
         {
-            static bool bResChanged = false;
+            // Per monitor DPI awareness, so the game gets real pixels on scaled desktops
+            using SetContext = BOOL(WINAPI*)(HANDLE);
+            if (auto set = reinterpret_cast<SetContext>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetProcessDpiAwarenessContext")))
+                set(reinterpret_cast<HANDLE>(-4));
+            else
+                SetProcessDPIAware();
 
+            // No rounded corners on Windows 11 (DWMWA_WINDOW_CORNER_PREFERENCE = DWMWCP_DONOTROUND) in every window
+            // mode, so the game image keeps square corners; nothing happens before Windows 11
             WFP::onGameProcessEvent() += []()
             {
-                DisplayCursor(FALSE);
+                static HWND cornersSet = NULL;
+                HWND window = hWnd.get();
+                if (!window || window == cornersSet)
+                    return;
+                cornersSet = window;
 
-                if (bResChanged)
+                using SetAttributeFn = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
+                static auto setAttribute = []() -> SetAttributeFn
                 {
-                    static std::pair<int, int> cachedRes = { 0, 0 };
-                    auto currentRes = GetRes();
-                    if (currentRes != cachedRes)
-                    {
-                        cachedRes = currentRes;
-                        ApplyWindowStyle();
-                        bResChanged = false;
-                    }
-                }
+                    auto dwm = LoadLibraryExW(L"dwmapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+                    return dwm ? reinterpret_cast<SetAttributeFn>(GetProcAddress(dwm, "DwmSetWindowAttribute")) : nullptr;
+                }();
+                int preference = 1;
+                if (setAttribute)
+                    setAttribute(window, 33, &preference, sizeof(preference));
             };
 
-            //fb::OptionsVideoHandler::reset
-            auto pattern = hook::pattern("E8 ? ? ? ? 8B 4E ? 8A 56 ? 83 C4");
-            static auto resetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                bResChanged = true;
-            });
+            auto bImproveWindowedMode = FixSettings().Int("MAIN.ImproveWindowedMode") != 0;
 
-            //fb::OptionsVideoHandler::applyVideoSettings
-            pattern = hook::pattern("51 83 C6 ? 68");
-            static auto applyVideoSettingsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            if (bImproveWindowedMode)
             {
-                bResChanged = true;
-            });
+                static bool bResChanged = false;
 
-            IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
-                    std::forward_as_tuple("CreateWindowExA", CreateWindowExA_Hook),
-                    std::forward_as_tuple("CreateWindowExW", CreateWindowExW_Hook),
-                    //std::forward_as_tuple("SetWindowLongA", SetWindowLongA_Hook),
-                    //std::forward_as_tuple("SetWindowLongW", SetWindowLongW_Hook),
-                    std::forward_as_tuple("AdjustWindowRectEx", AdjustWindowRectEx_Hook),
-                    std::forward_as_tuple("SetWindowPos", SetWindowPos_Hook)
-            );
-        }
+                WFP::onGameProcessEvent() += []()
+                {
+                    DisplayCursor(FALSE);
+
+                    if (bResChanged)
+                    {
+                        static std::pair<int, int> cachedRes = { 0, 0 };
+                        auto currentRes = GetRes();
+                        if (currentRes != cachedRes)
+                        {
+                            cachedRes = currentRes;
+                            ApplyWindowStyle();
+                            bResChanged = false;
+                        }
+                    }
+                };
+
+                //fb::OptionsVideoHandler::reset
+                auto pattern = hook::pattern("E8 ? ? ? ? 8B 4E ? 8A 56 ? 83 C4");
+                static auto resetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    bResChanged = true;
+                });
+
+                //fb::OptionsVideoHandler::applyVideoSettings
+                pattern = hook::pattern("51 83 C6 ? 68");
+                static auto applyVideoSettingsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    bResChanged = true;
+                });
+
+                IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
+                        std::forward_as_tuple("CreateWindowExA", CreateWindowExA_Hook),
+                        std::forward_as_tuple("CreateWindowExW", CreateWindowExW_Hook),
+                        //std::forward_as_tuple("SetWindowLongA", SetWindowLongA_Hook),
+                        //std::forward_as_tuple("SetWindowLongW", SetWindowLongW_Hook),
+                        std::forward_as_tuple("AdjustWindowRectEx", AdjustWindowRectEx_Hook),
+                        std::forward_as_tuple("SetWindowPos", SetWindowPos_Hook)
+                );
+            }
+        };
     };
 } Windowed;

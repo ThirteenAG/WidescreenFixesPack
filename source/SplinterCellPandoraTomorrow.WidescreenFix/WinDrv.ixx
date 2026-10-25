@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <functional>
 #include <unordered_set>
 
@@ -42,12 +43,12 @@ namespace UWindowsViewport
             }
         }
 
-        if (Screen.fRawInputMouse > 0.0f)
+        if (Screen.bRawInputMouse)
         {
             static bool bOnce = false;
             if (!bOnce)
             {
-                RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, Screen.fRawInputMouse, Screen.bRawInputMouseRawData);
+                RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, FixSettings().Float("MAIN.MouseSensitivity"), Screen.bRawInputMouseRawData);
                 bOnce = true;
             }
 

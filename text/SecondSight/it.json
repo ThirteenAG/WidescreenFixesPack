@@ -1,0 +1,11 @@
+{
+  "plugin.name": "Fix widescreen Second Sight",
+  "page.camera": "Telecamera",
+  "page.advanced": "Avanzate",
+  "ResX": "Larghezza risoluzione",
+  "ResX.description": "Larghezza in pixel. Zero usa la risoluzione del desktop. Riavvio necessario.",
+  "ResY": "Altezza risoluzione",
+  "ResY.description": "Altezza in pixel. Zero usa la risoluzione del desktop. Riavvio necessario.",
+  "FOVFactor": "Fattore campo visivo",
+  "FOVFactor.description": "Moltiplica il campo visivo corretto. 1.0 mantiene l'inquadratura prevista; valori maggiori allargano la visuale. Visuali più ampie possono mostrare oggetti attraverso i muri in alcuni punti."
+}

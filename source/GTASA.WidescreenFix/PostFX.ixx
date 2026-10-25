@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module PostFX;
@@ -9,6 +11,7 @@ export module PostFX;
 import Skeleton;
 import Draw;
 import PostFXCore;
+import AntiAliasing;
 
 injector::hook_back<void(__fastcall*)(void*, void*)> hbRenderMotionBlur;
 void __fastcall RenderMotionBlur(void* camera, void* edx);
@@ -22,10 +25,39 @@ static void __cdecl SetupBackBufferVertex()
     SetupBackBuffer.unsafe_ccall();
 }
 
+// CPostEffects::SpeedFX, the speed overlay: skipped while Speed Blur is off
+injector::hook_back<void(__cdecl*)(float)> hbSpeedFX;
+static void __cdecl SpeedFX(float speed)
+{
+    static auto& bDisableSpeedBlur = FixSettings().Int("GRAPHICS.DisableSpeedBlur");
+    if (!bDisableSpeedBlur)
+        hbSpeedFX.fun(speed);
+}
+
 static IDirect3DDevice9* GetDevice9()
 {
     if (!pD3D9Device || !*pD3D9Device) return nullptr;
     return *pD3D9Device;
+}
+
+static const int* pConsoleGamma = &FixSettings().Int("GRAPHICS.ConsoleGamma");
+static const int* pAntiAliasing = &FixSettings().Int("GRAPHICS.AntiAliasing");
+
+static void InstallConsoleGamma()
+{
+    static bool installed = false;
+    if (installed || !*pConsoleGamma)
+        return;
+    installed = true;
+
+    auto pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 51 E8 ? ? ? ? 8B 15 ? ? ? ? 52 E8 ? ? ? ? 83 C4 ? 83 C4");
+    if (pattern.empty())
+        return;
+    static auto ConsoleGammaHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        CPostFX::bConsoleGammaEnabled = *pConsoleGamma != 0;
+        CPostFX::RenderGamma(GetDevice9());
+    });
 }
 
 class PostFX
@@ -35,9 +67,9 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 0) != 0;
-            CPostFX::bSmaaEnabled = iniReader.ReadInteger("GRAPHICS", "SMAA", 0) != 0;
+            // All of them can be switched in the game's menu: SMAA is the Anti-Aliasing setting's SMAA choice
+            CPostFX::bConsoleGammaEnabled = *pConsoleGamma != 0;
+            CPostFX::bSmaaEnabled = *pAntiAliasing == 1;
 
             // Resolve the buffer initializer from CPostEffects::Update; the
             // initial setup call itself can be redirected by SilentPatch.
@@ -45,44 +77,49 @@ public:
             if (setup.size() == 1)
                 SetupBackBuffer = safetyhook::create_inline(injector::GetBranchDestination(setup.get_first(9)).as_int(), SetupBackBufferVertex);
 
-            if (iniReader.ReadInteger("GRAPHICS", "DisableSpeedBlur", 0) != 0)
             {
-                // Skip only the speed overlay. Keep the caller's state reset
+                // Skip only the speed overlay when it's off. Keep the caller's state reset
                 // and all other post-processing, including SMAA, intact.
                 auto speed = hook::pattern("A1 ? ? ? ? 50 E8 ? ? ? ? 83 C4 04 8A 0D ? ? ? ? 32 C0 84 C9");
                 if (speed.size() == 1)
-                    injector::MakeNOP(speed.get_first(6), 5, true);
+                    hbSpeedFX.fun = injector::MakeCALL(speed.get_first(6), SpeedFX, true).get();
             }
 
-            if (CPostFX::bSmaaEnabled)
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? EB ? E8");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 hbRenderMotionBlur.fun = injector::MakeCALL(pattern.get_first(), RenderMotionBlur).get();
             }
 
-            if (CPostFX::bConsoleGammaEnabled)
-            {
-                auto pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 51 E8 ? ? ? ? 8B 15 ? ? ? ? 52 E8 ? ? ? ? 83 C4 ? 83 C4");
-                static auto ConsoleGammaHook = safetyhook::create_mid(pattern.get_first(), +[](SafetyHookContext& regs)
-                {
-                    CPostFX::RenderGamma(GetDevice9());
-                });
-            }
+            // The gamma hook sits on code that other mods (Project2DFX) look for: install it only once Console Gamma is
+            // turned on
+            InstallConsoleGamma();
+            OnSettingChange("GRAPHICS.ConsoleGamma", []() { InstallConsoleGamma(); });
 
-            if (CPostFX::bConsoleGammaEnabled || CPostFX::bSmaaEnabled)
+            WFP::onBeforeReset() += []()
             {
-                WFP::onBeforeReset() += []()
-                {
-                    CPostFX::Shutdown();
-                    CPostFX::OnDeviceReset();
-                };
-            }
+                CPostFX::Shutdown();
+                CPostFX::OnDeviceReset();
+            };
         };
     }
 } PostFX;
 
+// After the 3D scene and its effects, before the HUD: SMAA, or temporal anti-aliasing
 void __fastcall RenderMotionBlur(void* camera, void* edx)
 {
-    CPostFX::RenderSMAA(GetDevice9());
+    if (CPostFX::bSmaaEnabled != (*pAntiAliasing == 1))
+    {
+        // The SMAA textures are made when it's on: start over
+        CPostFX::Shutdown();
+        CPostFX::bSmaaEnabled = *pAntiAliasing == 1;
+    }
+    auto device = GetDevice9();
+    CPostFX::RenderSMAA(device);
+    AntiAliasing::Render(device);
     hbRenderMotionBlur.fun(camera, edx);
 }

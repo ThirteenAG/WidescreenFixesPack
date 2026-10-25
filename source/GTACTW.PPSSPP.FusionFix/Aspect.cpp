@@ -32,8 +32,8 @@ void RefreshAspect() {
     if (automaticAspect) targetAspect = console::bounded(console::portable::Aspect(), 0.5f, maximumAspect, nativeAspect);
 }
 void InstallAspect() {
-    char ratio[64];
-    inireader.ReadString("MAIN", "ForceAspectRatio", "auto", ratio, sizeof(ratio));
+    char ratioBuffer[64]{};
+    const char* ratio = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", ratioBuffer, sizeof(ratioBuffer));
     char* separator = nullptr;
     const float numerator = std::strtof(ratio, &separator);
     if (separator && *separator == ':') {

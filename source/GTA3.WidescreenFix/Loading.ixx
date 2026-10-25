@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 
 export module Loading;
 
@@ -273,28 +275,57 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            static bool gbNoIslandLoading = iniReader.ReadInteger("MISC", "NoIslandLoading", 1) != 0;
-            static bool gbDisableZoneCull = iniReader.ReadInteger("MISC", "DisableZoneCull", 1) != 0;
+            static bool gbNoIslandLoading = FixSettings().Bool("MISC.NoIslandLoading");
+            static bool gbDisableZoneCull = FixSettings().Bool("MISC.DisableZoneCull");
 
             if (gbNoIslandLoading)
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? 59 50 E8 ? ? ? ? C6 05");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 GetLevelSplashScreen = (decltype(GetLevelSplashScreen))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = hook::pattern("E8 ? ? ? ? 0F B6 1D ? ? ? ? 59 8D 4C 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 LoadSplash = (decltype(LoadSplash))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = hook::pattern("E8 ? ? ? ? 80 3D ? ? ? ? ? 59 75 ? A1");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CFileLoader::LoadCollisionFromDatFile = (decltype(CFileLoader::LoadCollisionFromDatFile))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? A1 ? ? ? ? 59 EB ? 83 F8");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 DeleteIsland = (decltype(DeleteIsland))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = hook::pattern("05 ? ? ? ? 50 E8 ? ? ? ? 59 68");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CWorld::ms_bigBuildingsList = *pattern.get_first<CPtrList*>(1);
 
                 pattern = hook::pattern("A1 ? ? ? ? 50 E8 ? ? ? ? A1 ? ? ? ? 59 EB");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 auto arr = *pattern.get_first<CEntity**>(1);
                 CStreaming::pIslandLODindustEntity = &arr[0];
                 CStreaming::pIslandLODcomIndEntity = &arr[1];
@@ -360,108 +391,263 @@ public:
 
                 //CCollision::SortOutCollisionAfterLoad
                 pattern = hook::pattern("E8 ? ? ? ? 8D 04 24 50 E8 ? ? ? ? 59 80 3D");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CCollision::shSortOutCollisionAfterLoad = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CCollision::SortOutCollisionAfterLoad);
 
                 //CRecordDataForChase::StartChaseScene
                 pattern = hook::pattern("E8 ? ? ? ? 6A ? E8 ? ? ? ? 59 6A ? 6A");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 //COMMAND_LOAD_COLLISION
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? 59 E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 59");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 59");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 59 E8 ? ? ? ? 30 C0");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 E8 ? ? ? ? 30 C0 83 C4");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 //COMMAND_LOAD_COLLISION_WITH_SCREEN
                 pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 59 B9 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 8B 35");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), cDMAudio__SetEffectsFadeVolStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 59 B9 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 8B 35");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), CPad__StopPadsShakingStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 B9 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 8B 35");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), CCollision__LoadCollisionScreenStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 8B 35 ? ? ? ? 6A ? 56");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), cDMAudio__ServiceStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? 59 E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? A1");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), CStreaming__RemoveUnusedBigBuildingsStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? A1");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), CStreaming__RemoveUnusedBuildingsStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 59 B9");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), CStreaming__RequestBigBuildingsStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 B9 ? ? ? ? 6A ? E8 ? ? ? ? E8");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), CStreaming__LoadAllRequestedModelsStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8B 44 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), cDMAudio__SetEffectsFadeVolStub);
 
                 //CStreaming::RequestBigBuildings
                 pattern = hook::pattern("E8 ? ? ? ? 59 59 B9 ? ? ? ? 01 E9");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CStreaming::RequestModel = (decltype(CStreaming::RequestModel))injector::GetBranchDestination(pattern.get_first()).as_int();
                 pattern = hook::pattern("53 56 8B 35 ? ? ? ? 57 89 F0 55 8B 58 ? 8B 7C 24 ? 83 EB ? 72");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CPools::pp_pBuildingPool = *pattern.get_first<CBuildingPool**>(4);
                 CStreaming::shRequestBigBuildings = safetyhook::create_inline(pattern.get_first(), CStreaming::RequestBigBuildings);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 6A 01 6A 01 E8 ? ? ? ? 59 59 E8 ? ? ? ? 68");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CStreaming::shRemoveIslandsNotUsed = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CStreaming::RemoveIslandsNotUsed);
 
                 //CStreaming::RequestIslands
                 pattern = hook::pattern("E8 ? ? ? ? C6 05 ? ? ? ? ? 59 5D 5F");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeRET(injector::GetBranchDestination(pattern.get_first()).as_int());
 
                 //CStreaming::RemoveUnusedBigBuildings
                 pattern = hook::pattern("E8 ? ? ? ? 59 83 FB ? 74 ? 6A ? E8 ? ? ? ? 59 83 FB ? 74 ? 6A ? E8 ? ? ? ? 59 53");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 83 FB ? 74 ? 6A ? E8 ? ? ? ? 59 53");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 53 E8 ? ? ? ? 59 5B C3");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 //CModelInfo::RemoveColModelsFromOtherLevels
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 6A ? 6A ? A3");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeRET(injector::GetBranchDestination(pattern.get_first()).as_int());
 
                 //CRenderer::ScanWorld
                 pattern = hook::pattern("E8 ? ? ? ? 59 68 ? ? ? ? E8 ? ? ? ? 59 E9");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CRenderer::hbScanBigBuildingList.fun = injector::MakeCALL(pattern.get_first(), CRenderer::ScanBigBuildingList).get();
 
                 //RestoreForStartLoad
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? 59 E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 59 6A ? E8 ? ? ? ? A1");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 59 6A ? E8 ? ? ? ? A1");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 6A ? E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? 59 6A ? 6A ? E8 ? ? ? ? 59 59 53");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? 59 6A ? 6A ? E8 ? ? ? ? 59 59 53");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 6A ? 6A ? E8 ? ? ? ? 59 59 53");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 5);
             }
 
             if (gbDisableZoneCull)
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? 84 C0 59 74 ? 8A 83");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CRenderer::shIsEntityCullZoneVisible = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CRenderer::IsEntityCullZoneVisible);
 
                 pattern = hook::pattern("75 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 8B 5B ? 85 DB 75 ? 5D 5B C3");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 2);
             }
         };

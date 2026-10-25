@@ -1,6 +1,9 @@
 module;
 
 #include "stdafx.h"
+#include "FixSettings.hpp"
+
+#include "GameplayCamera.hpp"
 
 export module Engine;
 
@@ -13,6 +16,7 @@ namespace UGameEngine
     SafetyHookInline shTick = {};
     void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
     {
+        RefreshHudConstraint();
         if (Screen.bDeferredInput)
         {
             while (!UWindowsViewport::deferredCauseInputEvent.empty())
@@ -22,7 +26,7 @@ namespace UGameEngine
             }
         }
 
-        if (Screen.fRawInputMouse > 0.0f && UWindowsViewport::deferredCauseInputEventForRawInput)
+        if (Screen.bRawInputMouse && UWindowsViewport::deferredCauseInputEventForRawInput)
         {
             UWindowsViewport::deferredCauseInputEventForRawInput(228, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaX.exchange(0)));
             UWindowsViewport::deferredCauseInputEventForRawInput(229, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaY.exchange(0)));
@@ -75,9 +79,8 @@ export void InitEngine()
     InitGUI();
     InitWidescreenHUD();
 
-    CIniReader iniReader("");
-    bool bSingleCoreAffinity = iniReader.ReadInteger("MAIN", "SingleCoreAffinity", 1) != 0;
-    bDisablePreCache = iniReader.ReadInteger("MAIN", "DisablePreCache", 0) != 0;
+    bool bSingleCoreAffinity = FixSettings().Int("MAIN.SingleCoreAffinity") != 0;
+    bDisablePreCache = FixSettings().Int("MAIN.DisablePreCache") != 0;
 
     #if _DEBUG
     bDisablePreCache = true;
@@ -134,15 +137,15 @@ export void InitEngine()
     }; injector::MakeInline<ImageUnrealDrawHook>(pattern.get_first(0), pattern.get_first(104));
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "D9 05 ? ? ? ? 83 C4 08 D8 C9 D9 5C 24 24");
-    injector::WriteMemory(pattern.get_first(2), &Screen.fHudScaleX2, true);
+    ProtectedGameRef<float*>(pattern.get_first<float*>(2)) = &Screen.fHudScaleX2;
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "D9 05 ? ? ? ? D8 4C 24 10 D9 5C 24 28");
-    injector::WriteMemory(pattern.get_first(2), &Screen.fHudScaleX2, true);
+    ProtectedGameRef<float*>(pattern.get_first<float*>(2)) = &Screen.fHudScaleX2;
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 10 0D ? ? ? ? F3 0F 11 44 24 ? F3 0F 11 44 24 ? F3 0F 10 05 ? ? ? ? F3 0F 11 4C 24 ? F3 0F 11 44 24");
-    injector::WriteMemory(pattern.get_first(4), &Screen.fHudScaleX2, true);
+    ProtectedGameRef<float*>(pattern.get_first<float*>(4)) = &Screen.fHudScaleX2;
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 10 0D ? ? ? ? F3 0F 10 15 ? ? ? ? 2B D1 F3 0F 2A C2");
-    injector::WriteMemory(pattern.get_first(4), &Screen.fHudScaleX2, true);
+    ProtectedGameRef<float*>(pattern.get_first<float*>(4)) = &Screen.fHudScaleX2;
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 5C 1D ? ? ? ? 0F 28 FD F3 0F 59 FA"); //0x103069A5 + 0x4
-    injector::WriteMemory(pattern.get_first(4), &Screen.fHudOffset, true);
+    ProtectedGameRef<float*>(pattern.get_first<float*>(4)) = &Screen.fHudOffset;
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 5C D8 F3 0F 58 DC"); //0x1030503C
     struct HUDPosHook
@@ -164,7 +167,7 @@ export void InitEngine()
     }; injector::MakeInline<TextHook>(pattern.get_first(-4), pattern.get_first(4));
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 5C 1D ? ? ? ? 0F 28 FD F3 0F 59 FA"); //0x103069A5 + 0x4
-    injector::WriteMemory(pattern.get_first(4), &Screen.fHudOffset, true);
+    ProtectedGameRef<float*>(pattern.get_first<float*>(4)) = &Screen.fHudOffset;
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 0D ? ? ? ? 83 39 00 89 54 24 20 75 3D 8B 15 ? ? ? ? 83 3A 00");
     struct TextHook2
@@ -236,7 +239,29 @@ export void InitEngine()
         }
     }; injector::MakeInline<UCanvasCloseVideoHook>(pattern.get_first(0), pattern.get_first(6));
 
-    //FOV
+    // Match the owned gameplay camera and its native coordinate helpers.
+    DAGameplayCamera::fullNameSource = &UObject::GetFullName;
+    DAGameplayCamera::advancedCameraMode = reinterpret_cast<const int*>(GetProcAddress(GetModuleHandle(L"Engine"), "?ADVANCED_CAMERA_MODE@@3HA"));
+    auto cameraCtor = GetProcAddress(GetModuleHandle(L"Engine"), "??0FCameraSceneNode@@QAE@PAVUViewport@@PAVAActor@@VFVector@@VFRotator@@M@Z");
+    const std::pair<const char*, int> cameraCallers[] =
+    {
+        { "8B CC 89 11 8B 95 C8 FE FF FF 89 51 04 8B 95 CC FE FF FF 89 51 08 8B 8D C0 FE FF FF 51 ? 8B C8 E8 ? ? ? ?", 32 },
+        { "8B 55 E8 83 EC 0C 8B C4 89 08 8B 4D EC 89 50 04 8B 55 08 52 89 48 08 53 8D 8D 68 FC FF FF E8 ? ? ? ?", 30 },
+        { "8B 55 DC 83 EC 0C 8B C4 89 08 8B 4D E0 89 50 04 8B 55 08 52 89 48 08 53 8D 8D 5C FC FF FF E8 ? ? ? ?", 30 },
+        { "8B 45 D4 8B 4D D8 83 EC 0C 8B D4 89 1A 89 42 04 89 4A 08 8B 55 EC 52 56 8D 8D 7C FC FF FF E8 ? ? ? ?", 30 },
+    };
+    for (size_t i = 0; i < std::size(cameraCallers); ++i)
+    {
+        auto caller = hook::module_pattern(GetModuleHandle(L"Engine"), cameraCallers[i].first);
+        if (cameraCtor && caller.size() == 1)
+        {
+            auto call = caller.get_first<void>(cameraCallers[i].second);
+            if (injector::GetBranchDestination(call).as_int() == reinterpret_cast<uintptr_t>(cameraCtor))
+                DAGameplayCamera::callers[i] = reinterpret_cast<uintptr_t>(call) + 5;
+        }
+    }
+    DAGameplayCamera::FinalizeCallers();
+
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 10 05 ? ? ? ? F3 0F 11 83 ? ? ? ? E8");
     static auto FCameraSceneNodeCtorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
@@ -245,8 +270,11 @@ export void InitEngine()
             *(float*)(regs.ebx + 0x268) = AdjustFOV(*(float*)(regs.ebx + 0x268), Screen.fAspectRatio, 4.0f / 3.0f);
             return;
         }
-
-        *(float*)(regs.ebx + 0x268) = AdjustFOV(*(float*)(regs.ebx + 0x268), Screen.fAspectRatio, Screen.fDefaultARforFOV);
+        static const auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
+        float factor = DAGameplayCamera::Factor(reinterpret_cast<void*>(regs.ebx), *reinterpret_cast<uintptr_t*>(regs.ebp + 4), fFOVFactor);
+        if (!gCurrentCameraShotName.empty())
+            factor = 1.0f;
+        *(float*)(regs.ebx + 0x268) = std::clamp(AdjustFOV(*(float*)(regs.ebx + 0x268), Screen.fAspectRatio, Screen.fDefaultARforFOV) * factor, 1.0f, 179.0f);
     });
 
     if (bSingleCoreAffinity)
@@ -326,11 +354,11 @@ export void InitEngine()
     if (bDisablePreCache)
     {
         pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? C6 05");
-        injector::WriteMemory<uint8_t>(pattern.get_first(6), 1, true);
-        injector::WriteMemory<uint8_t>(pattern.get_first(13), 0, true);
-        injector::WriteMemory<uint8_t>(pattern.get_first(20), 0, true);
-        injector::WriteMemory<uint8_t>(pattern.get_first(27), 1, true);
-        injector::WriteMemory<uint8_t>(pattern.get_first(34), 1, true);
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(6)) = 1;
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(13)) = 0;
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(20)) = 0;
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(27)) = 1;
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(34)) = 1;
 
         static auto UGameEngineLoadMapHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
@@ -340,7 +368,7 @@ export void InitEngine()
 
     //ScopeLens
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "76 ? 8B 48 ? 8B 81");
-    injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true);
+    ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(0)) = 0xEB;
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 5E D0 F3 0F 59 E0");
     injector::MakeNOP(pattern.get_first(0), 8, true);
@@ -359,5 +387,5 @@ export void InitEngine()
     //SpeedInc
     static float f020 = 0.20f;
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 10 0D ? ? ? ? 83 C4 ? 0F 2F C8 F3 0F 11 86");
-    injector::WriteMemory(pattern.get_first(4), &f020, true);
+    ProtectedGameRef<float*>(pattern.get_first<float*>(4)) = &f020;
 }

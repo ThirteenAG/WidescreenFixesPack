@@ -1,0 +1,6 @@
+{
+  "plugin.name": "Burnout 3 PCSX2F Widescreen Fix",
+  "page.display": "Anzeige",
+  "enable": "Breitbildunterstützung",
+  "enable.description": "Korrigiert Kamera, HUD und Menülayout für das Seitenverhältnis der Emulatoranzeige. Standardmäßig aktiviert. Nach einer Änderung das emulierte Spiel neu starten."
+}

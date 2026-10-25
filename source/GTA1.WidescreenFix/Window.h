@@ -258,6 +258,15 @@ namespace GTA1Window
         SetWindowLongW(Window, GWL_EXSTYLE, GetWindowLongW(Window, GWL_EXSTYLE) & ~WS_EX_TOPMOST);
         Placement = { area.left + (mw - w) / 2, area.top + (mh - h) / 2, area.left + (mw - w) / 2 + w, area.top + (mh - h) / 2 + h };
         SetWindowPos(Window, HWND_NOTOPMOST, Placement.left, Placement.top, w, h, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+        // No rounded corners on Windows 11 (DWMWA_WINDOW_CORNER_PREFERENCE = DWMWCP_DONOTROUND); nothing before it
+        using SetAttributeFn = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
+        static auto setAttribute = []() -> SetAttributeFn
+        {
+            auto dwm = LoadLibraryExW(L"dwmapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+            return dwm ? reinterpret_cast<SetAttributeFn>(GetProcAddress(dwm, "DwmSetWindowAttribute")) : nullptr;
+        }();
+        int preference = 1;
+        if (setAttribute) setAttribute(Window, 33, &preference, sizeof(preference));
     }
     // MGL places its window itself, at the top left corner and topmost: keep it where it belongs.
     inline BOOL WINAPI PositionWindow(HWND window, HWND after, int x, int y, int width, int height, UINT flags)
@@ -449,8 +458,8 @@ namespace GTA1Window
         if (message == WM_SYSKEYDOWN && key == VK_RETURN && (flags & (1 << 29)) && !(flags & (1 << 30)))
         {
             ToggleFullscreen();
-            CIniReader ini("");
-            ini.WriteString("MAIN", "FullscreenWindow", Fullscreen ? "1" : "0");
+            SettingsReader ini("");
+            ini.WriteString("MAIN", "WindowMode", Fullscreen ? "2" : "1");
             return true;
         }
         return false;
@@ -458,9 +467,11 @@ namespace GTA1Window
 
     inline void Install()
     {
-        CIniReader ini("");
-        Enabled = ini.ReadBoolean("MAIN", "WindowedMode", true);
-        Fullscreen = ini.ReadBoolean("MAIN", "FullscreenWindow", false);
+        SettingsReader ini("");
+        // Window Mode: 0 the game's exclusive fullscreen, 1 a window of the game's size, 2 borderless over the monitor
+        int mode = ini.ReadInteger("MAIN", "WindowMode", 0);
+        Enabled = mode != 0;
+        Fullscreen = mode == 2;
         if (!Enabled) return;
         SetProcessDPIAware();
         // MGL looks DirectDraw up when it starts its display driver: give it this one.

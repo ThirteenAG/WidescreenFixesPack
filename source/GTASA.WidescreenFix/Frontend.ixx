@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 #include <Zydis.h>
 
 export module Frontend;
@@ -113,30 +115,45 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-
-            auto bScalingMode = iniReader.ReadInteger("MAIN", "ScalingMode", 1) != 0;
-            if (!bScalingMode)
+            auto& settings = FixSettings();
+            if (!settings.Bool("MAIN.ScalingMode"))
                 return;
 
-            static float fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f);
-            static float fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f);
-            static float fRadarWidth = iniReader.ReadFloat("MAIN", "RadarWidth", 94.0f);
-            static float fRadarHeight = iniReader.ReadFloat("MAIN", "RadarHeight", 76.0f);
-            static float fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f);
-            static bool bProportionalWeaponIcon = iniReader.ReadInteger("MAIN", "ProportionalWeaponIcon", 0) != 0;
-            g_noBorderAnim = iniReader.ReadInteger("MAIN", "NoCutsceneBorderAnimation", 0) != 0;
+            // The HUD's, radar's and subtitles' sizes follow their settings while the game runs
+            static auto& fHudWidthScale = settings.Float("MAIN.HudWidthScale");
+            static auto& fHudHeightScale = settings.Float("MAIN.HudHeightScale");
+            static auto& fRadarWidth = settings.Float("MAIN.RadarWidth");
+            static auto& fRadarHeight = settings.Float("MAIN.RadarHeight");
+            static auto& fSubtitlesScale = settings.Float("MAIN.SubtitlesScale");
+            static bool bProportionalWeaponIcon = settings.Bool("MAIN.ProportionalWeaponIcon");
+            g_noBorderAnim = !settings.Bool("MAIN.AnimatedCutsceneBorders");
+            OnSettingChange("MAIN.AnimatedCutsceneBorders", []() { g_noBorderAnim = !FixSettings().Bool("MAIN.AnimatedCutsceneBorders"); });
 
             constexpr auto INV_DEFAULT_SCREEN_HEIGHT = 1.0f / (float)DEFAULT_SCREEN_HEIGHT;
             constexpr auto INV_DEFAULT_SCREEN_HEIGHT_MENU = 1.0f / 448.0f;
 
             auto pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 6A 02 E8 ? ? ? ? 6A 00 E8 ? ? ? ? 6A 02");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ResXInvRef.SetAddress(*pattern.get_first<float*>(2));
 
             pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 6A 02 E8 ? ? ? ? 6A 00 E8 ? ? ? ? 6A 02");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ResYInvRef.SetAddress(*pattern.get_first<float*>(2));
 
             pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 6A 02 E8 ? ? ? ? 83 C4 08 68 FF 00 00 00 6A 00");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ScaledResXRef.SetAddress(*pattern.get_first<float*>(2));
 
             std::vector<uintptr_t> allHudScaleAddrs;
@@ -222,9 +239,19 @@ public:
 
             //Menu helper text
             pattern = hook::pattern("E8 ? ? ? ? 51 ? ? ? ? ? ? ? ? 83 C4 ? 5F");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             hbStretchX.fun = injector::MakeCALL(pattern.get_first(), StretchX, true).get();
 
             pattern = hook::pattern("E8 ? ? ? ? 8B 4D ? 89 44 24 ? 8B 44 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             shDisplaySlider = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DisplaySlider);
 
             // Slider rendering and mouse tests use exactly the same screen edges.
@@ -271,51 +298,118 @@ public:
             static ProtectedGameRef<float> radarHeightRef;
 
             pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 C1 D8 0D ? ? ? ? D8 E9");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             radarWidthRef.SetAddress(*pattern.get_first<float*>(2));
 
             pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 5C 24 ? D9 05 ? ? ? ? D8 C9 D8 6C 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             radarHeightRef.SetAddress(*pattern.get_first<float*>(2));
 
-            radarWidthRef = fRadarWidth;// *(((float)DEFAULT_SCREEN_WIDTH / (float)DEFAULT_SCREEN_HEIGHT) / (640.0f / 448.0f));
-            radarHeightRef = fRadarHeight;
+            static float SubtitlesWrapReserve = 260.0f;
+            static auto ApplyRadar = []()
+            {
+                radarWidthRef = fRadarWidth;// *(((float)DEFAULT_SCREEN_WIDTH / (float)DEFAULT_SCREEN_HEIGHT) / (640.0f / 448.0f));
+                radarHeightRef = fRadarHeight;
+                SubtitlesWrapReserve = 2.0f * std::max(140.0f, 40.0f + fRadarWidth + 6.0f) - 20.0f;
+            };
+            ApplyRadar();
+            OnSettingChange("MAIN.RadarWidth", []() { ApplyRadar(); });
+            OnSettingChange("MAIN.RadarHeight", []() { ApplyRadar(); });
 
             // DrawPlayerInfo reuses the radar variable, need to restore it
             static auto fPlayerInfoBarsPosX = 94.0f;
             pattern = hook::pattern("D8 0D ? ? ? ? D8 6C 24 ? E8 ? ? ? ? 50 0F B6 C3");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &fPlayerInfoBarsPosX, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D8 6C 24 ? E8 ? ? ? ? 50 6A 01 E8 ? ? ? ? 83 C4 18 8B 74 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &fPlayerInfoBarsPosX, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D8 6C 24 ? E8 ? ? ? ? 0F B6 CB");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &fPlayerInfoBarsPosX, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D8 6C 24 ? E8 ? ? ? ? 50 6A 01 E8 ? ? ? ? 83 C4 18 0F B6 05");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &fPlayerInfoBarsPosX, true);
 
-            if (fSubtitlesScale)
             {
-                fSubtitlesScale = std::clamp(fSubtitlesScale, 0.25f, 4.0f);
                 static float SubtitlesWidth = 1.2f;
                 static float SubtitlesHeight = 0.58f;
 
                 pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 51 DB 05 ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory(pattern.get_first(2), &SubtitlesWidth, true);
 
                 pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? A0");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory(pattern.get_first(2), &SubtitlesWidth, true);
 
                 pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? DB 05 ? ? ? ? A1");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory(pattern.get_first(2), &SubtitlesHeight, true);
 
                 pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? A0");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory(pattern.get_first(2), &SubtitlesHeight, true);
 
                 pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? DB 05 ? ? ? ? 83 C4 04");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory(pattern.get_first(2), &SubtitlesHeight, true);
 
-                SubtitlesWidth *= fSubtitlesScale;
-                SubtitlesHeight *= fSubtitlesScale;
+                static auto ApplySubtitles = []()
+                {
+                    float scale = std::clamp(fSubtitlesScale, 0.25f, 4.0f);
+                    SubtitlesWidth = 1.2f * scale;
+                    SubtitlesHeight = 0.58f * scale;
+                };
+                ApplySubtitles();
+                OnSettingChange("MAIN.SubtitlesScale", []() { ApplySubtitles(); });
             }
 
             // Center gameplay subtitles, but reserve the radar's space on BOTH sides.
@@ -323,23 +417,47 @@ public:
             // For symmetric margins of (radarReserve + 8), leftReserve must be
             // 2 * radarReserve - 20 (260 at the default radar size).
             static float SubtitlesShift = 20.0f;
-            static float SubtitlesWrapReserve = 2.0f * std::max(140.0f, 40.0f + fRadarWidth + 6.0f) - 20.0f;
             pattern = hook::pattern("D8 0D ? ? ? ? D8 C1 DE EA D9 C9 D8 0D");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &SubtitlesWrapReserve, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D8 44 24 ? D9 5C 24 ? D9 05 ? ? ? ? D8 C9 D8 EA D9 C9 DC C0 DE E9 D9 5C 24 ? DD D8 D9 44 24 ? D8 0D ? ? ? ? D8 6C 24 ? D8 64 24 ? D8 64 24 ? D8 0D ? ? ? ? D8 44 24 ? D9 44 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &SubtitlesShift, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D8 C1 DE EA D9 C9 D9 1C 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &SubtitlesWrapReserve, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D8 44 24 ? D9 5C 24 ? D9 05 ? ? ? ? D8 C9 D8 EA D9 C9 DC C0 DE E9 D9 5C 24 ? DD D8 D9 44 24 ? D8 0D ? ? ? ? D8 6C 24 ? D8 64 24 ? D8 64 24 ? D8 0D ? ? ? ? D8 44 24 ? D9 1C 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &SubtitlesShift, true);
 
             // The vital-stats branch adds another 40 scaled pixels after centering.
             // Remove only that extra offset; retain its smaller font/wrapping width.
             static float SubtitlesStatsShift = 0.0f;
             pattern = hook::pattern("D9 44 24 ? D8 0D ? ? ? ? DE C1 E9 ? ? ? ? DB 05");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(6), &SubtitlesStatsShift, true);
 
             // These calls belong to gameplay's normal and vital-stats branches.
@@ -353,10 +471,9 @@ public:
             if (!pattern.empty())
                 injector::WriteMemory(pattern.get_first(2), &fNonEnglishScale, true);
 
-            if (fHudWidthScale || fHudHeightScale)
             {
-                fHudWidthScale = std::clamp(fHudWidthScale, 0.25f, 4.0f);
-                fHudHeightScale = std::clamp(fHudHeightScale, 0.25f, 4.0f);
+                OnSettingChange("MAIN.HudWidthScale", []() { CDraw::Refresh(); });
+                OnSettingChange("MAIN.HudHeightScale", []() { CDraw::Refresh(); });
 
                 uintptr_t m_dwHUDWidth[] =
                 {
@@ -652,11 +769,11 @@ public:
                     fHUDWidth = INV_SCREEN_WIDTH(fAspectRatio);
                     fHUDHeight = INV_DEFAULT_SCREEN_HEIGHT_MENU;
 
-                    fHUDWidth *= fHudWidthScale;
-                    fHUDHeight *= fHudHeightScale;
+                    fHUDWidth *= std::clamp(fHudWidthScale, 0.25f, 4.0f);
+                    fHUDHeight *= std::clamp(fHudHeightScale, 0.25f, 4.0f);
 
                     fWeaponIconScaleX = 0.17343046f / (CDraw::GetAspectRatio() / (4.0f / 3.0f));
-                    fWeaponIconScaleX *= fHudWidthScale;
+                    fWeaponIconScaleX *= std::clamp(fHudWidthScale, 0.25f, 4.0f);
                 };
 
                 CallbackHandler::RegisterCallback(L"CLEO+.cleo", InitCleoFix);

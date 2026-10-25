@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module Frontend;
@@ -105,25 +106,6 @@ namespace cFEng
     }
 }
 
-namespace FEngHud
-{
-    bool bUpdateFEngHud = false;
-
-    struct MinimapOriginal
-    {
-        float originalX;
-    };
-
-    static std::unordered_map<void*, MinimapOriginal> originalMinimapCache;
-    static void* s_lastMinimapPtr = nullptr;
-
-    SafetyHookInline shSetWideScreenMode = {};
-    void __fastcall SetWideScreenMode(void* _this, void* edx)
-    {
-        return shSetWideScreenMode.unsafe_fastcall(_this, edx);
-    }
-}
-
 class Frontend
 {
 public:
@@ -131,8 +113,13 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            cFEng::fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
+            cFEng::fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+
+            // A changed HUD aspect ratio moves the HUD groups with their package's next message
+            FixSettings().OnChange("MAIN.HudAspectRatioConstraint", []()
+            {
+                cFEng::fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            });
 
             auto pattern = hook::pattern("E8 ? ? ? ? 6A ? 57 E8 ? ? ? ? 83 C4 ? EB ? 8B 7C 24");
             FE::Object::SetCenter = (decltype(FE::Object::SetCenter))injector::GetBranchDestination(pattern.get_first()).as_int();
@@ -148,10 +135,7 @@ public:
             cFEng::hbQueuePackageMessage.fun = injector::MakeCALL(pattern.get_first(), cFEng::QueuePackageMessage, true).get();
 
             pattern = find_pattern("E8 ? ? ? ? 85 F6 74 ? F3 0F 10 86 ? ? ? ? 0F 5A C0 F2 0F 58 05", "E8 ? ? ? ? 85 F6 74 ? F3 0F 10 86 ? ? ? ? F3 0F 58 05");
-            cFEng::hbQueuePackageMessage.fun = injector::MakeCALL(pattern.get_first(), cFEng::QueuePackageMessage, true).get();
-
-            //pattern = hook::pattern("E8 ? ? ? ? 83 86 ? ? ? ? ? 0B FB");
-            //FEngHud::shSetWideScreenMode = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), FEngHud::SetWideScreenMode);
+            injector::MakeCALL(pattern.get_first(), cFEng::QueuePackageMessage, true);
 
             pattern = find_pattern("74 ? 68 ? ? ? ? E8 ? ? ? ? 85 F6");
             if (!pattern.empty())

@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include "d3d9.h"
 
 export module MSAA;
@@ -46,8 +47,7 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            static auto nHideAABug = std::clamp(iniReader.ReadInteger("GRAPHICS", "HideAABug", 1), 0, 2);
+            static auto nHideAABug = std::clamp(FixSettings().Int("GRAPHICS.HideAABug"), 0, 2);
             static bool bMSAAEnabled = false;
             static bool bMSAAChecked = false;
 

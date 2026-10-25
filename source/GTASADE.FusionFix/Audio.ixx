@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
 
 export module Audio;
 
@@ -62,7 +63,8 @@ namespace
         const auto now = *gameTime;
         for (size_t i = 0; i < sounds.parked.size(); ++i)
         {
-            auto& slot = *reinterpret_cast<uint8_t**>(entity + 976 + i * sizeof(void*));
+            auto* slotAddress = reinterpret_cast<uint8_t**>(entity + 976 + i * sizeof(void*));
+            auto* slot = *slotAddress;
             auto& parked = sounds.parked[i];
             if (parked.sound != slot)
                 parked = {slot, now};
@@ -72,9 +74,9 @@ namespace
                 // reaches the hardware. If allocation fails, that can last
                 // forever. End an abandoned handover with the same stop flags
                 // used by CAEVehicleAudioEntity::StoppedUsingAsPlayerVehicle.
-                *reinterpret_cast<uint16_t*>(slot + 102) &= ~uint16_t(4);
+                *reinterpret_cast<uint16_t*>(slot + 102) &= uint16_t(~uint16_t(4));
                 *reinterpret_cast<uint16_t*>(slot + 124) = 1;
-                slot = nullptr;
+                *slotAddress = nullptr;
                 parked = {};
             }
         }
@@ -89,9 +91,9 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            auto rain = hook::pattern("40 57 48 81 EC 80 00 00 00 48 8B 05 ? ? ? ? 48 8B F9 48 8B 48 30 48 85 C9 0F 84 ? ? ? ? 83 79 68 69").get_first();
-            auto engine = hook::pattern("40 53 56 57 48 83 EC 60 4C 0F BF 81 2C 01 00 00 48 8B D9 48 8B 05 ? ? ? ? 48 8B FA 48 8B 72 10 4A 8B 0C C0").get_first();
-            auto timer = hook::pattern("8B 05 ? ? ? ? 03 C5 89 7B 28 F3 48 0F 2A C0 B8 04 00 00 00").get_first<uint8_t>(2);
+            auto rain = wfp::patterns::First("40 57 48 81 EC 80 00 00 00 48 8B 05 ? ? ? ? 48 8B F9 48 8B 48 30 48 85 C9 0F 84 ? ? ? ? 83 79 68 69");
+            auto engine = wfp::patterns::First("40 53 56 57 48 83 EC 60 4C 0F BF 81 2C 01 00 00 48 8B D9 48 8B 05 ? ? ? ? 48 8B FA 48 8B 72 10 4A 8B 0C C0");
+            auto timer = wfp::patterns::First<uint8_t>("8B 05 ? ? ? ? 03 C5 89 7B 28 F3 48 0F 2A C0 B8 04 00 00 00", 2);
             if (!rain || !engine || !timer)
                 return;
             gameTime = reinterpret_cast<const uint32_t*>(injector::ReadRelativeOffset(timer).as_int());

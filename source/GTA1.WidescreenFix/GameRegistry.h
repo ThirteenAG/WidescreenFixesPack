@@ -1,7 +1,8 @@
 #pragma once
+#include <set>
 
-// The game's registry settings, kept per user: reads and writes of its machine-wide
-// key go to the current user's copy, and values can be overridden from the ini.
+// Read installed game settings without changing registry keys or values.
+// The fix's options persist to CFG; native registry writes stay in memory.
 namespace GameRegistry
 {
     inline bool GameRegistryPath(LPCSTR path)
@@ -14,9 +15,7 @@ namespace GameRegistry
         }
         return false;
     }
-    // Values the game reads from its registry keys can be overridden from the
-    // fix's ini. Installers often leave the per-user keys read-only for the user,
-    // so settings changed in game are kept there instead.
+    // CFG overrides and native writes are served from memory.
     inline std::mutex RegistryLock;
     inline std::map<HKEY, std::string> GameKeys;
     inline std::map<std::string, DWORD> RegistryOverrides;
@@ -45,20 +44,74 @@ namespace GameRegistry
         std::lock_guard lock(RegistryLock);
         GameKeys[*out] = path;
     }
+    inline std::set<HKEY> VirtualKeys;
+    inline std::string FullPath(HKEY root, LPCSTR path)
+    {
+        std::lock_guard lock(RegistryLock);
+        const auto parent = GameKeys.find(root);
+        if (parent != GameKeys.end())
+            return parent->second + (path && *path ? "\\" + std::string(path) : "");
+        return path ? path : "";
+    }
     inline LSTATUS WINAPI OpenKey(HKEY root, LPCSTR path, DWORD options, REGSAM access, PHKEY out)
     {
-        if (root == HKEY_LOCAL_MACHINE && GameRegistryPath(path)) root = HKEY_CURRENT_USER;
-        auto status = RegOpenKeyExA(root, path, options, access, out);
-        TrackKey(status, path, out);
+        const auto fullPath = FullPath(root, path);
+        if (!GameRegistryPath(fullPath.c_str()))
+            return RegOpenKeyExA(root, path, options, access, out);
+        if (!out)
+            return ERROR_INVALID_PARAMETER;
+        // Installed values are read-only. Missing game keys exist in memory.
+        auto status = RegOpenKeyExA(HKEY_CURRENT_USER, fullPath.c_str(), options, KEY_READ, out);
+        if (status != ERROR_SUCCESS)
+            status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, fullPath.c_str(), options, KEY_READ, out);
+        if (status != ERROR_SUCCESS)
+        {
+            auto token = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+            if (!token)
+                return ERROR_NOT_ENOUGH_MEMORY;
+            *out = reinterpret_cast<HKEY>(token);
+            std::lock_guard lock(RegistryLock);
+            VirtualKeys.insert(*out);
+            status = ERROR_SUCCESS;
+        }
+        TrackKey(status, fullPath.c_str(), out);
         return status;
     }
     inline LSTATUS WINAPI CreateKey(HKEY root, LPCSTR path, DWORD reserved, LPSTR cls,
         DWORD options, REGSAM access, const LPSECURITY_ATTRIBUTES attributes, PHKEY out, LPDWORD disposition)
     {
-        if (root == HKEY_LOCAL_MACHINE && GameRegistryPath(path)) root = HKEY_CURRENT_USER;
-        auto status = RegCreateKeyExA(root, path, reserved, cls, options, access, attributes, out, disposition);
-        TrackKey(status, path, out);
+        const auto fullPath = FullPath(root, path);
+        if (!GameRegistryPath(fullPath.c_str()))
+            return RegCreateKeyExA(root, path, reserved, cls, options, access, attributes, out, disposition);
+        const auto status = OpenKey(root, path, options, KEY_READ, out);
+        if (status == ERROR_SUCCESS && disposition)
+        {
+            std::lock_guard lock(RegistryLock);
+            *disposition = VirtualKeys.count(*out) ? REG_CREATED_NEW_KEY : REG_OPENED_EXISTING_KEY;
+        }
         return status;
+    }
+    inline LSTATUS WINAPI SetValue(HKEY key, LPCSTR name, DWORD reserved, DWORD type, const BYTE* data, DWORD size)
+    {
+        std::string path;
+        {
+            std::lock_guard lock(RegistryLock);
+            const auto found = GameKeys.find(key);
+            if (found != GameKeys.end())
+                path = found->second;
+        }
+        if (path.empty())
+            return RegSetValueExA(key, name, reserved, type, data, size);
+        if (!data)
+            return ERROR_INVALID_PARAMETER;
+        if (type == REG_DWORD && size == sizeof(DWORD))
+        {
+            DWORD value{};
+            memcpy(&value, data, sizeof(value));
+            SetOverride(path.c_str(), name ? name : "", value);
+            return ERROR_SUCCESS;
+        }
+        return ERROR_UNSUPPORTED_TYPE;
     }
     inline LSTATUS WINAPI QueryValue(HKEY key, LPCSTR name, LPDWORD reserved, LPDWORD type, LPBYTE data, LPDWORD size)
     {
@@ -78,6 +131,11 @@ namespace GameRegistry
             memcpy(data, &value, sizeof(value)); *size = sizeof(DWORD);
             return ERROR_SUCCESS;
         }
+        {
+            std::lock_guard lock(RegistryLock);
+            if (VirtualKeys.count(key))
+                return ERROR_FILE_NOT_FOUND;
+        }
         return RegQueryValueExA(key, name, reserved, type, data, size);
     }
     inline LSTATUS WINAPI CloseKey(HKEY key)
@@ -85,47 +143,26 @@ namespace GameRegistry
         {
             std::lock_guard lock(RegistryLock);
             GameKeys.erase(key);
+            if (VirtualKeys.erase(key))
+            {
+                CloseHandle(reinterpret_cast<HANDLE>(key));
+                return ERROR_SUCCESS;
+            }
         }
         return RegCloseKey(key);
     }
-    inline void DefaultValue(const char* path, const char* name, DWORD value)
+    inline void DefaultValue(const char* path, const char* name, DWORD fallback)
     {
-        HKEY key;
-        if (RegCreateKeyExA(HKEY_CURRENT_USER, path, 0, nullptr, 0, KEY_READ | KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) return;
-        DWORD size = sizeof(DWORD), type = 0, existing = 0;
-        if (RegQueryValueExA(key, name, nullptr, &type, reinterpret_cast<BYTE*>(&existing), &size) == ERROR_FILE_NOT_FOUND)
-            RegSetValueExA(key, name, 0, REG_DWORD, reinterpret_cast<const BYTE*>(&value), sizeof(value));
-        RegCloseKey(key);
-    }
-    inline void DefaultString(const char* path, const char* name, const char* value)
-    {
-        HKEY key;
-        if (RegCreateKeyExA(HKEY_CURRENT_USER, path, 0, nullptr, 0, KEY_READ | KEY_WRITE, nullptr, &key, nullptr) != ERROR_SUCCESS) return;
-        DWORD size = 0;
-        if (RegQueryValueExA(key, name, nullptr, nullptr, nullptr, &size) == ERROR_FILE_NOT_FOUND)
-            RegSetValueExA(key, name, 0, REG_SZ, reinterpret_cast<const BYTE*>(value), static_cast<DWORD>(strlen(value) + 1));
-        RegCloseKey(key);
+        DWORD value = 0, size = sizeof(value);
+        if (Override(path, name, value)) return;
+        if (RegGetValueA(HKEY_CURRENT_USER, path, name, RRF_RT_REG_DWORD, nullptr, &value, &size) == ERROR_SUCCESS ||
+            RegGetValueA(HKEY_LOCAL_MACHINE, path, name, RRF_RT_REG_DWORD, nullptr, &value, &size) == ERROR_SUCCESS) return;
+        SetOverride(path, name, fallback);
     }
     inline void Install()
     {
-        // On first use, retain the installation's machine-wide preferences.
-        // Subsequent launches use only the current user's settings.
-        for (auto path : { "Software\\DMA Design\\Grand Theft Auto" })
-        {
-            HKEY current = nullptr, machine = nullptr;
-            auto existing = RegOpenKeyExA(HKEY_CURRENT_USER, path, 0, KEY_READ, &current);
-            if (existing == ERROR_SUCCESS) { RegCloseKey(current); continue; }
-            if (existing != ERROR_FILE_NOT_FOUND ||
-                RegOpenKeyExA(HKEY_LOCAL_MACHINE, path, 0, KEY_READ, &machine) != ERROR_SUCCESS) continue;
-            if (RegCreateKeyExA(HKEY_CURRENT_USER, path, 0, nullptr, 0, KEY_READ | KEY_WRITE, nullptr, &current, nullptr) == ERROR_SUCCESS)
-            {
-                RegCopyTreeA(machine, nullptr, current);
-                RegCloseKey(current);
-            }
-            RegCloseKey(machine);
-        }
         IATHook::Replace(GetModuleHandleW(nullptr), "advapi32.dll",
             std::make_tuple("RegOpenKeyExA", OpenKey), std::make_tuple("RegCreateKeyExA", CreateKey),
-            std::make_tuple("RegQueryValueExA", QueryValue), std::make_tuple("RegCloseKey", CloseKey));
+            std::make_tuple("RegQueryValueExA", QueryValue), std::make_tuple("RegSetValueExA", SetValue), std::make_tuple("RegCloseKey", CloseKey));
     }
 }

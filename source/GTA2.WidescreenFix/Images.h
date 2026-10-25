@@ -124,8 +124,8 @@ namespace GTA2Images
         if (rows.size() == 1 && bitmapRows.size() == 1 &&
             *rows.get_first<uintptr_t>(24) == *bitmapRows.get_first<uintptr_t>(6))
         {
-            injector::WriteMemory(rows.get_first(24), uintptr_t(ScreenRows.data()), true);
-            injector::WriteMemory(bitmapRows.get_first(6), uintptr_t(ScreenRows.data()), true);
+            ProtectedGameRef<uintptr_t>(rows.get_first<uintptr_t>(24)) = uintptr_t(ScreenRows.data());
+            ProtectedGameRef<uintptr_t>(bitmapRows.get_first<uintptr_t>(6)) = uintptr_t(ScreenRows.data());
             Log::Write("GTA2 screen-row table relocated for large framebuffers.");
         }
         else Log::Write("GTA2 screen-row table signatures unavailable.");

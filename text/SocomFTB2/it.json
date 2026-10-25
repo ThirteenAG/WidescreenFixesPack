@@ -1,0 +1,11 @@
+{
+  "plugin.name": "SOCOM Fireteam Bravo 2 PPSSPP Fusion Fix",
+  "page.gameplay": "Gioco",
+  "page.controls": "Comandi",
+  "SkipIntro": "Salta introduzione",
+  "SkipIntro.description": "Salta le finestre di messaggio iniziali quando la versione del gioco le prevede. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "DualAnalogPatch": "Comandi doppio analogico",
+  "DualAnalogPatch.description": "Attiva mira e controllo della telecamera con lo stick destro. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "UnthrottleEmuDuringLoading": "Caricamento rapido",
+  "UnthrottleEmuDuringLoading.description": "Rimuove il limite di fotogrammi dell'emulatore durante i caricamenti e lo ripristina alla fine dei thread di caricamento. Riavvia il gioco emulato dopo aver modificato questa impostazione."
+}

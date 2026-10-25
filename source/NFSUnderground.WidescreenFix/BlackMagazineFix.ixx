@@ -6,9 +6,16 @@ export module BlackMagazineFix;
 
 import ComVars;
 
-uint32_t* dword_73645C;
-uint8_t* pIsMagazineMode;
-void* off_71AA4C;
+// Magazine covers (the magazine view of the front end) had a black background. While the 3D scene is drawn, its
+// viewport is cleared whenever the world is rendered (dword_73645C == 1), which wipes the background drawn before
+// it. In the magazine view the 3D pass doesn't clear; the 2D background viewport clears instead. Outside the
+// magazine view nothing changes.
+
+uint32_t* dword_73645C = nullptr;
+uint8_t* pIsMagazineMode = nullptr;
+void* off_71AA4C = nullptr;
+
+// Replaces "cmp dword_73645C, 1" before SetViewport(clear): ZF set = clear the 3D viewport
 void __declspec(naked) CmpShouldClearSurfaceDuring3DRender()
 {
     _asm
@@ -17,7 +24,6 @@ void __declspec(naked) CmpShouldClearSurfaceDuring3DRender()
         cmp dword ptr[eax], 1
         jne resume
 
-        // pIsMagazineMode is set if the magazine view screen is open.
         mov eax, pIsMagazineMode
         cmp byte ptr[eax], 0
 
@@ -26,20 +32,20 @@ void __declspec(naked) CmpShouldClearSurfaceDuring3DRender()
     }
 }
 
+// Replaces "mov esi, offset dword_71AA4C" after "push 0" (the clear flag) for the background's SetViewport
 void __declspec(naked) MaybeClearSurfaceDuringBackgroundRender()
 {
     _asm
     {
-        call CmpShouldClearSurfaceDuring3DRender
+        mov esi, pIsMagazineMode
+        cmp byte ptr[esi], 0
         jz resume
 
-        // In case 3D rendering won't clear the render surface, it must
-        // be done during the 2D background rendering.
         mov dword ptr[esp + 4], 1
 
         resume:
         mov esi, off_71AA4C
-            ret
+        ret
     }
 }
 
@@ -50,27 +56,20 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            bool bBlackMagazineFix = iniReader.ReadInteger("MISC", "BlackMagazineFix", 0) != 0;
+            auto magazine = hook::pattern("8B F8 A0 ? ? ? ? 84 C0 0F 85");
+            auto clear3D = hook::pattern("83 3D ? ? ? ? 01 8B 77 58");
+            auto background = hook::pattern("BE ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C4 ? 85 C0");
+            if (magazine.empty() || clear3D.empty() || background.empty())
+                return;
 
-            if (bBlackMagazineFix)
-            {
-                auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? E8 ? ? ? ? A1 ? ? ? ? 33 F6");
-                if (pattern.empty())
-                    return;
+            pIsMagazineMode = *magazine.get_first<uint8_t*>(3);
 
-                pattern = hook::pattern("8B F8 A0 ? ? ? ? 84 C0 0F 85");
-                pIsMagazineMode = *pattern.get_first<uint8_t*>(3);
+            dword_73645C = *clear3D.get_first<uint32_t*>(2);
+            injector::MakeRangedNOP(clear3D.get_first(0), clear3D.get_first(7));
+            injector::MakeCALL(clear3D.get_first(0), CmpShouldClearSurfaceDuring3DRender);
 
-                pattern = hook::pattern("83 3D ? ? ? ? 01 8B 77 58");
-                dword_73645C = *pattern.get_first<uint32_t*>(2);
-                injector::MakeRangedNOP(pattern.get_first(0), pattern.get_first(7));
-                injector::MakeCALL(pattern.get_first(0), CmpShouldClearSurfaceDuring3DRender); // 4098A2
-
-                pattern = hook::pattern("BE ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C4 ? 85 C0");
-                off_71AA4C = *pattern.get_first<void*>(1);
-                injector::MakeCALL(pattern.get_first(0), MaybeClearSurfaceDuringBackgroundRender); // 409CF2
-            }
+            off_71AA4C = *background.get_first<void*>(1);
+            injector::MakeCALL(background.get_first(0), MaybeClearSurfaceDuringBackgroundRender);
         };
     }
 } BlackMagazineFix;

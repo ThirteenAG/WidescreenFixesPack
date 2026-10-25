@@ -1,0 +1,23 @@
+{
+  "plugin.name": "Splinter Cell Essentials PPSSPP Fusion Fix",
+  "SkipIntro": "Salta introduzione",
+  "SkipIntro.description": "Salta il primo filmato del loader; il secondo, necessario, resta intatto. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "StickDeadzone": "Zona morta stick",
+  "StickDeadzone.description": "Imposta la zona morta di entrambi gli stick analogici. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "SpeedStickControl": "Velocità analogica",
+  "SpeedStickControl.description": "Usa lo stick sinistro per controllare la velocità di movimento. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "Enable60FPS": "60 FPS",
+  "Enable60FPS.description": "Usa la simulazione nativa basata sul tempo trascorso con il limitatore a 60 FPS del ciclo principale. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "UnthrottleEmuDuringLoading": "Caricamento rapido",
+  "UnthrottleEmuDuringLoading.description": "Rimuove il limite durante i caricamenti. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "FOVFactor": "Fattore FOV",
+  "FOVFactor.description": "Scala il campo visivo di gioco; i primi piani dei dispositivi mantengono l'inquadratura nativa dell'overlay. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "ContainFullscreenImages": "Adatta immagini a tutto schermo",
+  "ContainFullscreenImages.description": "Mantiene immagini di caricamento, schermate di briefing e filmati sottotitolati nelle proporzioni native con bande laterali. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "HudScale": "Dimensione HUD",
+  "HudScale.description": "Scala l'HUD all'interno della sua area con proporzioni corrette. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "page.gameplay": "Gioco",
+  "page.controls": "Comandi",
+  "page.camera": "Telecamera",
+  "page.display": "Schermo"
+}

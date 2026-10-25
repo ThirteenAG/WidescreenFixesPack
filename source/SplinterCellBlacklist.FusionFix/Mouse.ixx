@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Mouse;
 
@@ -103,9 +104,9 @@ namespace TurnSpeed
 
 export void InitMouse()
 {
-    CIniReader iniReader("");
-    auto bDisableNegativeMouseAcceleration = iniReader.ReadInteger("MAIN", "DisableNegativeMouseAcceleration", 1) != 0;
-    TurnSpeed::multiplier = std::clamp(iniReader.ReadFloat("MAIN", "TurnSpeed", 1.0f), 0.5f, 10.0f);
+    auto& settings = FixSettings();
+    auto bDisableNegativeMouseAcceleration = settings.Int("MAIN.DisableNegativeMouseAcceleration") != 0;
+    TurnSpeed::multiplier = std::clamp(settings.Float("MAIN.TurnSpeed"), 0.5f, 10.0f);
 
     if (TurnSpeed::multiplier != 1.0f)
     {
@@ -137,7 +138,7 @@ export void InitMouse()
     auto pattern = hook::pattern("C7 06 ? ? ? ? C7 46 28 ? ? ? ? C7 46 2C ? ? ? ? 89 9E 30 08 00 00");
     auto vtable = *pattern.get_first<uintptr_t*>(2);
     Mouse::CauseInputEvent = reinterpret_cast<Mouse::CauseInputEventFn>(vtable[0x78 / 4]);
-    injector::WriteMemory(&vtable[0x78 / 4], &Mouse::CauseInputEventHook, true);
+    ProtectedGameRef<decltype(&Mouse::CauseInputEventHook)>(reinterpret_cast<decltype(&Mouse::CauseInputEventHook)*>(&vtable[0x78 / 4])) = &Mouse::CauseInputEventHook;
 
     // UWindowsViewport input update, after the DirectInput mouse and before the keys, esi is the viewport.
     // The input is the viewport's +58h, as in WndProc.

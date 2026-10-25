@@ -223,7 +223,7 @@ void DrawElement(uintptr_t object, uintptr_t function) {
 }
 
 void InstallHud() {
-    if (!inireader.ReadInteger("MAIN", "FixHUD", 1)) return;
+    if (!inireader.ReadBoolean("MAIN", "FixHUD", true)) return;
     const auto rectSite = pattern.get_first("FF 00 2A 31 ?? ?? 09 3C 1D 00 40 15 ?? ?? 29 25 40 52 04 00", 0);
     const auto viewportSite = pattern.get_first("F0 FF BD 27 30 01 85 8C 00 00 B0 AF 25 80 80 00 01 00 A4 30", 0);
     const auto selectSite = pattern.get_first("F0 FF BD 27 ?? ?? 85 8F 00 00 BF AF 05 00 85 10", 0);
@@ -236,6 +236,7 @@ void InstallHud() {
     const auto promptSite = pattern.get_first("90 FF BD 27 54 00 B0 AF 25 80 80 00 ?? ?? 84 8F 7F 43 07 3C 04 00 86 8C", 0);
     const auto manager = pattern.get_first("D0 FF BD 27 0C 00 B1 AF ?? ?? 11 3C ?? ?? 31 26 08 00 25 8E 00 C9 06 3C", 0);
     if (!rectSite || !viewportSite || !selectSite || !spriteSite || !glyphSite || !movieSite || !flashGlyphSite || !pageSite || !videoSite || !promptSite || !manager) {
+        PatchNotice("Midnight Club: HUD correction unavailable.\n");
 #ifndef NDEBUG
         logger.WriteF("HUD sites missing: %X %X %X %X %X %X %X", rectSite, viewportSite, selectSite, spriteSite, glyphSite, movieSite, manager);
 #endif

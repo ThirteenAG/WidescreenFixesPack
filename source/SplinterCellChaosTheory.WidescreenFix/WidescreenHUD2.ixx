@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "HudPositions.hpp"
 
 export module WidescreenHUD2;
 
@@ -214,46 +215,48 @@ export bool HudNeedsToMoveRightGoggles(uint32_t id)
     });
 }
 
+export void RefreshModernHudPositions(float offset)
+{
+    if (Screen.nHudWidescreenMode == 2) CTHudLive::positions.SetOffset(offset);
+}
+
 export void InitWidescreenHUD2()
 {
     if (Screen.nHudWidescreenMode <= 1)
         return;
 
-    auto pattern = hook::pattern("C7 00 ? ? ? ? 8B 15 ? ? ? ? 89 50 08 C2 04 00");
-    pHudAreaWidgetVTable = *pattern.get_first<void*>(2);
-
-    pattern = hook::pattern("C7 00 ? ? ? ? 89 48 10 89 50 14");
-    pHudImageRendererVTable = *pattern.get_first<void*>(2);
-
-    pattern = hook::pattern("C7 00 ? ? ? ? 66 89 50 10");
-    pHudTextLabelVTable = *pattern.get_first<void*>(2);
-
-    pattern = hook::pattern("C7 00 ? ? ? ? 8B 15 ? ? ? ? 89 50 08 8B 0D ? ? ? ? 89 48 0C C3");
-    pHudPlaceholderViewportVTable = *pattern.get_first<void*>(2);
-
-    pattern = hook::pattern("FF 52 ? 8B CF E8 ? ? ? ? 8D 4C 24 1C");
-    static auto MAGMAParserHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    auto area = hook::pattern("C7 00 ? ? ? ? 8B 15 ? ? ? ? 89 50 08 C2 04 00");
+    auto image = hook::pattern("C7 00 ? ? ? ? 89 48 10 89 50 14");
+    auto text = hook::pattern("C7 00 ? ? ? ? 66 89 50 10");
+    auto placeholder = hook::pattern("C7 00 ? ? ? ? 8B 15 ? ? ? ? 89 50 08 8B 0D ? ? ? ? 89 48 0C C3");
+    auto parser = hook::pattern("FF 52 0C 8B CF E8 ? ? ? ? 8D 4C 24 1C");
+    auto destroy = hook::pattern("51 53 56 57 8B F9 8B 4F 08 33 DB 3B CB C7 07 ? ? ? ? 74 06 8B 01 6A 01 FF 10 8B 47 0C 3B C3 0F 84 7E 00 00 00");
+    if (area.size() != 1 || image.size() != 1 || text.size() != 1 || placeholder.size() != 1 || parser.size() != 1 || destroy.size() != 1) return;
+    pHudAreaWidgetVTable = *area.get_first<void*>(2);
+    pHudImageRendererVTable = *image.get_first<void*>(2);
+    pHudTextLabelVTable = *text.get_first<void*>(2);
+    pHudPlaceholderViewportVTable = *placeholder.get_first<void*>(2);
+    CTHudLive::destructorHook = safetyhook::create_inline(destroy.get_first(), CTHudLive::Destroyed);
+    if (!CTHudLive::destructorHook) return;
+    static auto MAGMAParserHook = safetyhook::create_mid(parser.get_first(), [](SafetyHookContext& regs)
     {
         auto id = *(uint32_t*)(regs.esp + 0x18);
-        auto& element = *reinterpret_cast<HudElement*>(regs.eax);
-
+        auto source = reinterpret_cast<void*>(regs.eax);
+        auto point = reinterpret_cast<void*>(regs.ecx);
+        auto owner = reinterpret_cast<void*>(regs.edi);
+        auto type = *reinterpret_cast<void**>(source);
+        const int count = type == pHudAreaWidgetVTable ? 1 : 2;
+        if (type != pHudAreaWidgetVTable && type != pHudImageRendererVTable && type != pHudTextLabelVTable && type != pHudPlaceholderViewportVTable) return;
+        int direction = 0, extra = 0;
         if (HudNeedsToMoveLeft(id))
-        {
-            element.MoveLeft(Screen.fWidescreenHudOffset);
-        }
+            direction = -1;
         else if (HudNeedsToMoveLeftGoggles(id))
-        {
-            // Left goggles borders get extra 15 pixel offset
-            element.MoveLeft(Screen.fWidescreenHudOffset + 15.0f);
-        }
+        { direction = -1; extra = 15; }
         else if (HudNeedsToMoveRight(id))
-        {
-            element.MoveRight(Screen.fWidescreenHudOffset);
-        }
+            direction = 1;
         else if (HudNeedsToMoveRightGoggles(id))
-        {
-            // Right goggles borders get extra 20 pixel offset
-            element.MoveRight(Screen.fWidescreenHudOffset + 20.0f);
-        }
+        { direction = 1; extra = 20; }
+        if (direction) CTHudLive::positions.Add(owner, point, source, id, type, count, direction, extra, Screen.fWidescreenHudOffset);
     });
+    if (!MAGMAParserHook) CTHudLive::destructorHook.reset();
 }

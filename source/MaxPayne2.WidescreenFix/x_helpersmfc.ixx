@@ -21,6 +21,11 @@ export void InitX_HelpersMFC()
 
     // Loading screens cover the 4:3 area and leave the previous frame on the sides
     auto pattern = hook::module_pattern(X_HelpersMFC, "E8 ? ? ? ? A1 ? ? ? ? 8B 08 FF 15 ? ? ? ? 8B 0D"); // X_ProgressBar::updateProgressBar, before P_Driver::endScene
+    if (pattern.empty())
+    {
+        OutputDebugStringA("Max Payne 2: loading-screen pattern unavailable.\n");
+        return;
+    }
     static auto X_ProgressBarUpdateProgressBarHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs) //0x10003051
     {
         RefreshScreenResolution();

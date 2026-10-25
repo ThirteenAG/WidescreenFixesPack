@@ -1,15 +1,21 @@
 #include "stdafx.h"
 #include "d3d9.h"
+#include "FixSettings.hpp"
+#include "../Shared/NFS/Cursor.hpp"
 
 import ComVars;
 #ifdef _DEBUG
 import Speedhack;
 #endif
 
+// The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
+ASI_SETTINGS_EXPORT(FixSettings())
+
 std::once_flag of;
 
+// MainLoop(int ticks): the ticker difference since the last frame, in 1/65536 ms
 SafetyHookInline shMainLoop = {};
-void __cdecl MainLoop(float TickerDifference)
+void __cdecl MainLoop(int32_t TickerDifference)
 {
     #ifdef _DEBUG
     SetSpeed(1.0f);
@@ -20,6 +26,7 @@ void __cdecl MainLoop(float TickerDifference)
         WFP::onGameInitEvent().executeAll();
     });
 
+    CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
 
     static bool oldMenuState = GameFlowManager::IsPaused();
@@ -50,6 +57,7 @@ void __cdecl MiniMainLoop()
         WFP::onGameInitEvent().executeAll();
     });
 
+    CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
 
     shMiniMainLoop.unsafe_ccall();
@@ -57,6 +65,7 @@ void __cdecl MiniMainLoop()
 
 void Init()
 {
+    NFSCursor::Initialize();
     #ifdef _DEBUG
     InitSpeedhack();
     #endif
@@ -99,6 +108,7 @@ void Init()
     });
 
     WFP::onInitEvent().executeAll();
+    asi_settings::LiveLink::Start();
 
     static auto futures = WFP::onInitEventAsync().executeAllAsync();
 

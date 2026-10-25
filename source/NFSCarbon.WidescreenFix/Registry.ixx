@@ -2,10 +2,71 @@ module;
 
 #include <stdafx.h>
 #include <FunctionHookMinHook.hpp>
+#include "FixSettings.hpp"
+#include "../Shared/NFS/LanguageSetting.hpp"
 
 export module Registry;
 
 import ComVars;
+
+// The game's language. At startup the game reads the "Language" value of its HKLM key, which the installer writes,
+// and looks the name up in a table of { name, language id, region }; without the value or a match the language is
+// English. The id picks the text, the three files of the exe's table of languages (LANGUAGES\<language>_GLOBAL.BIN,
+// _FRONTEND.BIN and _INGAME.BIN); the region picks PAL or NTSC movies and the European car names. An id that
+// isn't in the table of text files crashes the game when it loads the text, which is the case for Korean, Chinese,
+// Japanese and Thai in the European and American exe, although their names are in the table. The other files
+// don't depend on the language: the speech (sound\Speech) and the subtitles (SUBTITLES\<movie>.sub) are the same
+// for all of them, and a movie that isn't there in the language (MOVIES\<movie>_<language>_<ntsc|pal>.vp6) falls
+// back to Spanish and English and is skipped when none is there.
+namespace Language
+{
+    struct GameLanguage
+    {
+        const char* name;
+        int32_t id;
+        int32_t region;
+    };
+
+    struct TextFiles
+    {
+        int32_t id;
+        const char* name;
+        const char* files[3];
+        uint32_t unknown[2];
+    };
+
+    // The languages of the exe's tables, with their text files; the settings' languages (LANGUAGE.Language) that
+    // aren't among them can't be used
+    std::vector<WFPLanguageSetting::Entry> Entries()
+    {
+        auto names = hook::pattern("A1 ? ? ? ? 85 C0 74 ? B8 ? ? ? ? 8B F0 EB 03");
+        auto texts = hook::pattern("B9 ? ? ? ? EB 03 8D 49 00 39 11 74 0F 83 C1 1C 40 81 F9");
+        if (names.empty() || texts.empty())
+            return {};
+        auto table = *names.get_first<GameLanguage*>(10);
+        auto textsBegin = *texts.get_first<TextFiles*>(1);
+        auto textsEnd = *texts.get_first<TextFiles*>(0x14);
+
+        std::vector<WFPLanguageSetting::Entry> entries;
+        for (auto info = table; info->name; ++info)
+        {
+            for (auto text = textsBegin; text < textsEnd; ++text)
+            {
+                if (text->id != info->id)
+                    continue;
+                WFPLanguageSetting::Entry entry{ info->name, {} };
+                for (auto file : text->files)
+                {
+                    if (file)
+                        entry.files.push_back(file);
+                }
+                entries.push_back(std::move(entry));
+                break;
+            }
+        }
+        return entries;
+    }
+}
 
 static std::filesystem::path CustomUserDir;
 static bool bUseCustomUserDir = false;
@@ -27,6 +88,23 @@ static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, 
     return mhSHGetFolderPathA->get_original<decltype(SHGetFolderPathA)>()(hwnd, csidl, hToken, dwFlags, pszPath);
 }
 
+// The game's read of its language gets the language setting; the registry itself isn't changed
+static LSTATUS WINAPI WrapperQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+{
+    LSTATUS result;
+    if (WFPLanguageSetting::AnswerQuery(FixSettings().String("LANGUAGE.Language"), lpValueName, lpType, lpData, lpcbData, result))
+        return result;
+    return RegistryWrapper::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+}
+
+static LSTATUS WINAPI FallbackQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+{
+    LSTATUS result;
+    if (WFPLanguageSetting::AnswerQuery(FixSettings().String("LANGUAGE.Language"), lpValueName, lpType, lpData, lpcbData, result))
+        return result;
+    return RegistryFallback::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+}
+
 class Registry
 {
 public:
@@ -45,9 +123,8 @@ public:
             if (!pattern.empty())
                 injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
 
-            CIniReader iniReader("");
-            bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
-            auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+            bool bWriteSettingsToFile = FixSettings().Bool("MAIN.PortableSettings");
+            auto szCustomUserFilesDirectoryInGameDir = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir");
 
             if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
                 szCustomUserFilesDirectoryInGameDir.clear();
@@ -247,7 +324,7 @@ public:
                     std::forward_as_tuple("RegOpenKeyA", RegistryWrapper::RegOpenKeyA),
                     std::forward_as_tuple("RegOpenKeyExA", RegistryWrapper::RegOpenKeyExA),
                     std::forward_as_tuple("RegCreateKeyExA", RegistryWrapper::RegCreateKeyExA),
-                    std::forward_as_tuple("RegQueryValueExA", RegistryWrapper::RegQueryValueExA),
+                    std::forward_as_tuple("RegQueryValueExA", WrapperQueryValueExA),
                     std::forward_as_tuple("RegSetValueExA", RegistryWrapper::RegSetValueExA),
                     std::forward_as_tuple("RegQueryValueA", RegistryWrapper::RegQueryValueA),
                     std::forward_as_tuple("RegDeleteKeyA", RegistryWrapper::RegDeleteKeyA),
@@ -262,7 +339,7 @@ public:
                         RegistryWrapper::RegOpenKeyA,
                         RegistryWrapper::RegOpenKeyExA,
                         RegistryWrapper::RegCreateKeyExA,
-                        RegistryWrapper::RegQueryValueExA,
+                        WrapperQueryValueExA,
                         RegistryWrapper::RegSetValueExA,
                         RegistryWrapper::RegQueryValueA,
                         RegistryWrapper::RegDeleteKeyA,
@@ -317,7 +394,7 @@ public:
                     std::forward_as_tuple("RegOpenKeyA", RegistryFallback::RegOpenKeyA),
                     std::forward_as_tuple("RegOpenKeyExA", RegistryFallback::RegOpenKeyExA),
                     std::forward_as_tuple("RegCreateKeyExA", RegistryFallback::RegCreateKeyExA),
-                    std::forward_as_tuple("RegQueryValueExA", RegistryFallback::RegQueryValueExA),
+                    std::forward_as_tuple("RegQueryValueExA", FallbackQueryValueExA),
                     std::forward_as_tuple("RegSetValueExA", RegistryFallback::RegSetValueExA),
                     std::forward_as_tuple("RegQueryValueA", RegistryFallback::RegQueryValueA),
                     std::forward_as_tuple("RegDeleteKeyA", RegistryFallback::RegDeleteKeyA),
@@ -332,7 +409,7 @@ public:
                         RegistryFallback::RegOpenKeyA,
                         RegistryFallback::RegOpenKeyExA,
                         RegistryFallback::RegCreateKeyExA,
-                        RegistryFallback::RegQueryValueExA,
+                        FallbackQueryValueExA,
                         RegistryFallback::RegSetValueExA,
                         RegistryFallback::RegQueryValueA,
                         RegistryFallback::RegDeleteKeyA,
@@ -341,27 +418,9 @@ public:
                 }
             }
 
-            auto szLanguage = iniReader.ReadString("LANGUAGE", "Language", "");
-            if (!szLanguage.empty())
-            {
-                HKEY hKey = nullptr;
-                if (bWriteSettingsToFile)
-                {
-                    if (RegistryWrapper::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\Electronic Arts\\Need for Speed Carbon", &hKey) == ERROR_SUCCESS)
-                    {
-                        RegistryWrapper::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
-                        RegistryWrapper::RegCloseKey(hKey);
-                    }
-                }
-                else
-                {
-                    if (RegistryFallback::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\Electronic Arts\\Need for Speed Carbon", &hKey) == ERROR_SUCCESS)
-                    {
-                        RegistryFallback::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
-                        RegistryFallback::RegCloseKey(hKey);
-                    }
-                }
-            }
+            // The language setting: only languages whose files are there can be used, and the installer's is stored on
+            // the first start (see LanguageSetting.hpp); the game's read of "Language" gets it, the registry isn't changed
+            WFPLanguageSetting::Startup(FixSettings(), "LANGUAGE.Language", Language::Entries(), defaultLanguage);
         };
     }
 } Registry;

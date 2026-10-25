@@ -1,0 +1,23 @@
+{
+  "plugin.name": "Splinter Cell Essentials PPSSPP Fusion Fix",
+  "SkipIntro": "Skip intro",
+  "SkipIntro.description": "Skip the loader’s first movie; its required second movie remains intact. Restart the emulated game after changing this setting.",
+  "StickDeadzone": "Stick deadzone",
+  "StickDeadzone.description": "Set the deadzone for both analog sticks. Restart the emulated game after changing this setting.",
+  "SpeedStickControl": "Analog movement speed",
+  "SpeedStickControl.description": "Use the left stick to control movement speed. Restart the emulated game after changing this setting.",
+  "Enable60FPS": "60 FPS",
+  "Enable60FPS.description": "Use native elapsed-time simulation with the main-loop 60 FPS limiter. Restart the emulated game after changing this setting.",
+  "UnthrottleEmuDuringLoading": "Faster loading",
+  "UnthrottleEmuDuringLoading.description": "Unthrottle during loading. Restart the emulated game after changing this setting.",
+  "FOVFactor": "FOV factor",
+  "FOVFactor.description": "Scale gameplay FOV; device close-ups keep their native overlay framing. Restart the emulated game after changing this setting.",
+  "ContainFullscreenImages": "Fit full-screen images",
+  "ContainFullscreenImages.description": "Keep loading pictures, briefing screens and subtitled movies at their native aspect with side bars. Restart the emulated game after changing this setting.",
+  "HudScale": "HUD scale",
+  "HudScale.description": "Scale the HUD inside its aspect-correct canvas. Restart the emulated game after changing this setting.",
+  "page.gameplay": "Gameplay",
+  "page.controls": "Controls",
+  "page.camera": "Camera",
+  "page.display": "Display"
+}

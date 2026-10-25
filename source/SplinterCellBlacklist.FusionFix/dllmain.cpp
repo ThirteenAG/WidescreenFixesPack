@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
 
 import ComVars;
 import FileManager;
@@ -11,6 +12,8 @@ import Missions;
 import Unlocks;
 import LED;
 import Splitscreen;
+
+#include "NativeMenu.hpp"
 
 SafetyHookInline shSetProcessAffinityMask{};
 BOOL WINAPI SetProcessAffinityMaskHook(HANDLE hProcess, DWORD_PTR dwProcessAffinityMask)
@@ -55,9 +58,12 @@ void LaunchDedicatedServer(const std::string& exePath)
 
 void Init()
 {
-    CIniReader iniReader("");
-    auto bForceCPUAffinityToAllCores = iniReader.ReadInteger("MAIN", "ForceCPUAffinityToAllCores", 1) != 0;
-    auto sDedicatedServerExePath = iniReader.ReadString("STARTUP", "DedicatedServerExePath", "");
+    auto& settings = FixSettings();
+    asi_settings::LiveLink::Start();
+    // Validate/install before this fix's other executable hooks alter prefixes.
+    BlacklistMenu::Init();
+    auto bForceCPUAffinityToAllCores = settings.Int("MAIN.ForceCPUAffinityToAllCores") != 0;
+    auto sDedicatedServerExePath = settings.Get("STARTUP.DedicatedServerExePath");
 
     if (!sDedicatedServerExePath.empty())
         LaunchDedicatedServer(sDedicatedServerExePath);
@@ -75,6 +81,8 @@ void Init()
     if (bForceCPUAffinityToAllCores)
         shSetProcessAffinityMask = safetyhook::create_inline(SetProcessAffinityMask, SetProcessAffinityMaskHook);
 }
+
+ASI_SETTINGS_EXPORT(FixSettings())
 
 CEXP void InitializeASI()
 {

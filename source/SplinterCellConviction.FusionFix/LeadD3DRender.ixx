@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module LeadD3DRender;
 
@@ -33,12 +34,12 @@ void __fastcall VideoRender(void* renderer, void* edx, float* quad)
 
 export void InitLeadD3DRender()
 {
-    CIniReader iniReader("");
-    auto bDisableDOF = iniReader.ReadInteger("GRAPHICS", "DisableDOF", 1) != 0;
-    auto bDisableBlackAndWhiteFilter = iniReader.ReadInteger("GRAPHICS", "DisableBlackAndWhiteFilter", 0) != 0;
-    auto bDisableCharacterLighting = iniReader.ReadInteger("GRAPHICS", "DisableCharacterLighting", 0) != 0;
-    auto bEnhancedSonarVision = iniReader.ReadInteger("GRAPHICS", "EnhancedSonarVision", 0) != 0;
-    gBlacklistIndicators = iniReader.ReadInteger("GRAPHICS", "BlacklistIndicators", 0);
+
+    auto bDisableDOF = FixSettings().Bool("GRAPHICS.DisableDOF") != 0;
+    auto bDisableBlackAndWhiteFilter = FixSettings().Bool("GRAPHICS.DisableBlackAndWhiteFilter") != 0;
+    auto bDisableCharacterLighting = FixSettings().Bool("GRAPHICS.DisableCharacterLighting") != 0;
+    auto bEnhancedSonarVision = FixSettings().Bool("GRAPHICS.EnhancedSonarVision") != 0;
+    gBlacklistIndicators = FixSettings().Int("GRAPHICS.BlacklistIndicators");
 
     if (bDisableDOF)
     {
@@ -55,7 +56,7 @@ export void InitLeadD3DRender()
     if (bDisableCharacterLighting)
     {
         auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "80 78 44 00");
-        injector::WriteMemory<uint8_t>(pattern.get_first(3), 1, true);
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(3)) = 1;
     }
 
     if (bEnhancedSonarVision)
@@ -95,7 +96,7 @@ export void InitLeadD3DRender()
 
         //to do: add bNightVision check
         pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "75 15 8B 80");
-        injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>()) = 0xEB;
 
         //to do: add bNightVision check
         pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "80 B8 ? ? ? ? ? 74 65");
@@ -106,12 +107,12 @@ export void InitLeadD3DRender()
         injector::MakeNOP(pattern.get_first(2), 7);
     }
 
-    if (iniReader.ReadInteger("DISPLAY", "UltraWideSupport", 1) != 0)
+    if (FixSettings().Bool("DISPLAY.UltraWideSupport") != 0)
     {
         // Flash pass: don't restrict the viewport to the multi-monitor HUD rect (l3d::Options +0x1F8 enable, +0x1FC rect),
         // the Flash renderer places the stage into that rect itself (see InitWidescreenFix)
         auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "38 98 F8 01 00 00 74");
-        injector::WriteMemory<uint8_t>(pattern.get_first(6), 0xEB, true);
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(6)) = 0xEB;
 
         // Videos are drawn in that pass as a clip space quad covering the whole viewport, keep them in the 16:9 rect
         pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "55 8D 6C 24 8C 81 EC ? ? ? ? 53 56 57 89 4D 28 E8");

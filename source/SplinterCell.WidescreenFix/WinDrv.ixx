@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <functional>
 #include <unordered_set>
 
@@ -39,15 +40,23 @@ namespace UWindowsViewport
             PostMessage(hGameWindow, WM_KEYUP, VK_LWIN, 0);
         }
 
-        if (Screen.fRawInputMouse > 0.0f)
+        if (Screen.bRawInputMouse)
         {
+            if (Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam))
+            {
+                RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0);
+                RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0);
+                deferredCauseInputEventForRawInput = nullptr;
+            }
             static bool bOnce = false;
             if (!bOnce)
             {
-                RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, Screen.fRawInputMouse, Screen.bRawInputMouseRawData);
+                RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, FixSettings().Float("MAIN.MouseSensitivity"), Screen.bRawInputMouseRawData);
                 bOnce = true;
             }
-            if (Msg == WM_MOUSEMOVE)
+            const bool menuMouse = (Msg == WM_MOUSEMOVE || Msg == WM_RAWINPUTMOUSE) &&
+                WindowsMenuMouseActive && WindowsMenuMouseActive(UWindowsViewport);
+            if (Msg == WM_MOUSEMOVE && !menuMouse)
             {
                 return 0;
             }
@@ -56,9 +65,21 @@ namespace UWindowsViewport
                 if (hGameWindow != GetForegroundWindow())
                     return 0;
 
+                if (menuMouse)
+                {
+                    // Native Windows coordinates drive UWindow picking. Do
+                    // not recenter the menu cursor or carry deltas into play.
+                    RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0);
+                    RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0);
+                    deferredCauseInputEventForRawInput = nullptr;
+                    return 0;
+                }
+
                 deferredCauseInputEventForRawInput = [UWindowsViewport](int inputID, int a3, float value)
                 {
-                    shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, inputID, a3, value);
+                    if (hGameWindow == GetForegroundWindow() &&
+                        !(WindowsMenuMouseActive && WindowsMenuMouseActive(UWindowsViewport)))
+                        shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, inputID, a3, value);
                 };
 
                 auto pViewport = reinterpret_cast<uint8_t*>(UWindowsViewport);
@@ -139,15 +160,15 @@ export void InitWinDrv()
     }; injector::MakeInline<OpenWindowHook>(pattern.get_first(0), pattern.get_first(6));
 
     pattern = hook::module_pattern(GetModuleHandle(L"WinDrv"), "8D 4D B8 68 ? ? ? ? C7 45 ? ? ? ? ? 51");
-    injector::WriteMemory(pattern.get_first(4), *pattern.get_first<LONG>(4) & ~WS_OVERLAPPEDWINDOW, true);
-    injector::WriteMemory(pattern.get_first(11), *pattern.get_first<LONG>(11) & ~WS_OVERLAPPEDWINDOW, true);
+    ProtectedGameRef<LONG>(pattern.get_first<LONG>(4)) = *pattern.get_first<LONG>(4) & ~WS_OVERLAPPEDWINDOW;
+    ProtectedGameRef<LONG>(pattern.get_first<LONG>(11)) = *pattern.get_first<LONG>(11) & ~WS_OVERLAPPEDWINDOW;
 
     pattern = hook::module_pattern(GetModuleHandle(L"WinDrv"), "6A 00 8D 55 B8 68 ? ? ? ? C7 45");
-    injector::WriteMemory(pattern.get_first(6), *pattern.get_first<LONG>(6) & ~WS_OVERLAPPEDWINDOW, true);
-    injector::WriteMemory(pattern.get_first(13), *pattern.get_first<LONG>(13) & ~WS_OVERLAPPEDWINDOW, true);
+    ProtectedGameRef<LONG>(pattern.get_first<LONG>(6)) = *pattern.get_first<LONG>(6) & ~WS_OVERLAPPEDWINDOW;
+    ProtectedGameRef<LONG>(pattern.get_first<LONG>(13)) = *pattern.get_first<LONG>(13) & ~WS_OVERLAPPEDWINDOW;
 
     pattern = hook::module_pattern(GetModuleHandle(L"WinDrv"), "68 ? ? ? ? 6A F0 83 38 00 74 1D 8B 8E");
-    injector::WriteMemory(pattern.get_first(1), *pattern.get_first<LONG>(1) & ~WS_OVERLAPPEDWINDOW, true);
+    ProtectedGameRef<LONG>(pattern.get_first<LONG>(1)) = *pattern.get_first<LONG>(1) & ~WS_OVERLAPPEDWINDOW;
 
     pattern = hook::module_pattern(GetModuleHandle(L"WinDrv"), "8B 8E ? ? ? ? 8B 51 04 52 FF 15 ? ? ? ? 8D A5");
     struct OpenWindowHook2

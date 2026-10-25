@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/SplinterCell/Window.hpp"
 #include <intrin.h>
 
 export module Window;
@@ -60,9 +61,7 @@ namespace Window
     // The frame around the client area of a window with this style
     RECT Frame(DWORD style, DWORD exStyle)
     {
-        RECT frame = {};
-        AdjustWindowRectEx(&frame, style, FALSE, exStyle);
-        return frame;
+        return SCWindow::Frame(WindowHandle, style, exStyle);
     }
 
     // A resolution that fits in the area, the aspect ratio is kept
@@ -170,6 +169,7 @@ namespace Window
     {
         if (window == WindowHandle)
         {
+            SCWindow::SquareCorners(window);
             auto position = PlaceWindowed(window, width, height, Frame(GetWindowLongA(window, GWL_STYLE), GetWindowLongA(window, GWL_EXSTYLE)));
             x = position.x;
             y = position.y;
@@ -180,6 +180,8 @@ namespace Window
     // ResizeViewport puts the borderless window over the monitor (SWP_FRAMECHANGED), it's made as big as the resolution and centered
     BOOL WINAPI SetWindowPosHook(HWND window, HWND after, int x, int y, int width, int height, UINT flags)
     {
+        if (window == WindowHandle)
+            SCWindow::SquareCorners(window);
         if (window == WindowHandle && flags == SWP_FRAMECHANGED && lastMode == Borderless && renderDevice)
         {
             auto area = Monitor(window).rcMonitor;
@@ -307,16 +309,17 @@ namespace Window
 
 export void InitWindow()
 {
+    SCWindow::EnableDpi();
     using namespace Window;
 
     // Resizable window with a maximize box: the editor style check in CreateMainWindow, OpenWindow, ResizeViewport and EndFullscreen
     auto pattern = hook::pattern("BE 00 00 CF 10 E8 ? ? ? ? 85 C0 75 05 BE 00 00 CA 10");
-    injector::WriteMemory<uint8_t>(pattern.get_first(12), 0xEB, true); // jnz -> jmp
+    ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(12))) = 0xEB; // jnz -> jmp
 
     pattern = hook::pattern("E8 ? ? ? ? 85 C0 75 ? 81 E7 FF FF FA FF");
     pattern.count(3).for_each_result([](hook::pattern_match match)
     {
-        injector::WriteMemory<uint8_t>(match.get<void>(7), 0xEB, true); // jnz -> jmp
+        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(match.get<void>(7))) = 0xEB; // jnz -> jmp
     });
 
     // CreateMainWindow: x, y (CW_USEDEFAULT windowed) and the window size in eax, ecx, the client at [ebp-14h]
@@ -408,11 +411,11 @@ export void InitWindow()
 
     // The resolution list isn't greyed out in borderless (sub_1ACC1B0)
     pattern = hook::pattern("83 3D ? ? ? ? 02 8D ? 50 02 00 00 C7 45 ? FF FF FF FF 0F 95");
-    injector::WriteMemory<uint8_t>(pattern.get_first(6), 0x7F, true);
+    ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(6))) = 0x7F;
 
     // SetRes: the display mode match (sub_A81C00) makes the borderless resolution the monitor's
     pattern = find_pattern("83 38 02 75 ? 8B 4D 10 8B 55 0C 6A 00 6A 02", "83 3A 02 75 ? 8B 45 10 6A 00 6A 02 50 57 E8");
-    injector::WriteMemory<uint8_t>(pattern.get_first(3), 0xEB, true); // jnz -> jmp
+    ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(3))) = 0xEB; // jnz -> jmp
 
     // Borderless uses the desktop resolution (sub_66AAB0) instead of its own, in the menu (sub_1AC9FB0) and at startup (sub_530A10)
     pattern = hook::pattern("8D 8D 9C FE FF FF 51 E8 ? ? ? ? 8B 46 0C 83 C4 04 83 F8 02");

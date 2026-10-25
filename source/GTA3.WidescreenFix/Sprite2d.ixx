@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 
 export module Sprite2d;
 
@@ -600,77 +602,177 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            bFullscreenMenuBackground = iniReader.ReadInteger("GRAPHICS", "FullscreenMenuBackground", 1) != 0;
+            bFullscreenMenuBackground = FixSettings().Bool("GRAPHICS.FullscreenMenuBackground");
+            OnSettingChange("GRAPHICS.FullscreenMenuBackground", []() { bFullscreenMenuBackground = FixSettings().Bool("GRAPHICS.FullscreenMenuBackground"); });
 
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? 89 D9 83 C4 34");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetVertices1 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices1);
 
                 pattern = hook::pattern("E8 ? ? ? ? 89 D9 83 C4 ? E8 ? ? ? ? 6A ? 68 ? ? ? ? 6A ? E8 ? ? ? ? 83 C4 ? 83 C4");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetVertices2 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices2);
 
                 pattern = hook::pattern("E8 ? ? ? ? 8B 04 9D ? ? ? ? FF 04 9D");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetVertices3 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices3);
 
                 pattern = hook::pattern("E8 ? ? ? ? 89 D9 83 C4 30");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetVertices4 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices4);
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 83 7C 24 ? ? 7E");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetVertices5 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 59 6A ? 68 ? ? ? ? 6A ? E8 ? ? ? ? 43");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetMaskVertices = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetMaskVertices);
             }
 
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? EB ? 8D 44 20 ? B9");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDraw1 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw1);
 
                 pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? FF 35 ? ? ? ? FF 35 ? ? ? ? E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? FF 35");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDraw2 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw2);
 
                 pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? 89 C0 8D 40 ? 8D 8C 24 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? 50");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDraw3 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw3);
 
                 pattern = hook::pattern("E8 ? ? ? ? 8D 4C 24 ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 8D 44 24 ? 8D 8B");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDraw4 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw4);
 
                 pattern = hook::pattern("FF 74 24 ? E8 ? ? ? ? 83 C4 ? 5D 5E");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDraw5 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(4)).as_int(), Draw5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 59 6A ? 6A ? E8 ? ? ? ? 59 59 6A ? 6A ? E8 ? ? ? ? 8B 83 ? ? ? ? 59 48");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDrawRect1 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawRect1);
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? E9 ? ? ? ? 0F BF B4 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDrawRect2 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawRect2);
 
                 pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 83 C4 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDrawRectXLU = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawRectXLU);
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? ? ? ? ? ? ? ? ? ? ? ? ? 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 50");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shAddSpriteToBank = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), AddSpriteToBank);
             }
 
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? E9 ? ? ? ? 8D 84 20 ? ? ? ? FF 74 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shShowRadarTrace = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), ShowRadarTrace);
             }
 
             {
                 auto pattern = hook::pattern("74 ? B9 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 85 C0");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 2, true);
 
                 pattern = hook::pattern("74 ? B9 ? ? ? ? E8 ? ? ? ? 8B 35");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 2, true);
 
                 pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 85 C0 74 ? 0F BE 90");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDrawBordersForWideScreen = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawBordersForWideScreen);
             }
 
             {
                 // Draw black border for sniper and rocket launcher
                 auto pattern = hook::pattern("E8 ? ? ? ? 59 59 B9 ? ? ? ? E8");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto Render2dStuff = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     CRGBA black(0, 0, 0, 255);

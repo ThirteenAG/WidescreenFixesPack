@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d9.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
@@ -126,9 +127,9 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            auto bModernControls = iniReader.ReadInteger("MAIN", "ModernControls", 1) != 0;
-            bOrbitCamera = iniReader.ReadInteger("CAMERA", "Enable", 1) != 0;
+            SettingsReader iniReader;
+            auto bModernControls = iniReader.ReadBoolean("MAIN", "ModernControls", true) != 0;
+            bOrbitCamera = iniReader.ReadBoolean("CAMERA", "Enable", true) != 0;
 
             //Modern default controls, for new profiles and for Reset in the controls menu
             if (bModernControls)
@@ -158,14 +159,14 @@ public:
 
         WFP::onInitEventAsync() += []()
         {
-            CIniReader iniReader("");
-            auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+            SettingsReader iniReader;
+            auto bSkipIntro = iniReader.ReadBoolean("MAIN", "SkipIntro", true) != 0;
             static float fDrawDistanceFactor = iniReader.ReadFloat("MAIN", "DrawDistanceFactor", 1.0f);
 
             if (bSkipIntro)
             {
                 auto pattern = hook::pattern("77 7B FF 24 85 ? ? ? ? 8B 06");
-                injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //jmp
+                ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(0)) = 0xEB; //jmp
             }
 
             //Draw distance adjuster

@@ -1,0 +1,9 @@
+{
+  "plugin.name": "Enter the Matrix Widescreen Fix",
+  "page.display": "Affichage",
+  "hudaspect.auto": "Automatique",
+  "FixHud": "Corriger l'interface",
+  "FixHud.description": "Garde les graphismes et textes de l'interface dans leurs proportions et à leur place. Les changements sont immédiats.",
+  "HudAspectRatioConstraint": "Format de l'interface",
+  "HudAspectRatioConstraint.description": "Garde les éléments de l'interface placés sur les côtés dans une zone centrée de ce format. Automatique utilise toute la largeur de l'écran. Les changements sont immédiats."
+}

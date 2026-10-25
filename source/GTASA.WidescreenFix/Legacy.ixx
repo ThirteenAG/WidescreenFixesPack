@@ -1,6 +1,8 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
+#include "FixSettings.hpp"
 #include <d3d9.h>
 #include <control.h>
 
@@ -317,27 +319,30 @@ bool bProportionalWeaponIcon = false;
 
 void ReadSettings()
 {
-    CIniReader iniReader("");
-    ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
-    ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-    szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
-    szFrontendAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
-    bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
-    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
+    ResX = static_cast<uint32_t>(FixSettings().Int("LEGACY.ResX"));
+    ResY = static_cast<uint32_t>(FixSettings().Int("LEGACY.ResY"));
+    szForceAspectRatio = FixSettings().String("LEGACY.ForceAspectRatio");
+    szFrontendAspectRatio = FixSettings().String("LEGACY.FrontendAspectRatio");
+    bDontTouchFOV = FixSettings().Bool("LEGACY.DontTouchFOV");
+    bRestoreCutsceneFOV = FixSettings().Bool("LEGACY.RestoreCutsceneFOV");
 
-    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 1.0f : fHudWidthScale;
-    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 1.0f : fHudHeightScale;
-    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 1.0f : fRadarWidthScale;
-    fRadarHeightScale = iniReader.ReadFloat("MAIN", "RadarHeightScale", 0.0f); fRadarHeightScale == 0.0f ? fRadarHeightScale = 1.0f : fRadarHeightScale;
-    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
-    bProportionalWeaponIcon = iniReader.ReadInteger("MAIN", "ProportionalWeaponIcon", 0) != 0;
+    fHudWidthScale = FixSettings().Float("LEGACY.HudWidthScale");
+    fHudHeightScale = FixSettings().Float("LEGACY.HudHeightScale");
+    fRadarWidthScale = FixSettings().Float("MAIN.RadarWidthScale");
+    fRadarHeightScale = FixSettings().Float("MAIN.RadarHeightScale");
+    fSubtitlesScale = FixSettings().Float("MAIN.SubtitlesScale");
+    if (fHudWidthScale == 0.0f) fHudWidthScale = 1.0f;
+    if (fHudHeightScale == 0.0f) fHudHeightScale = 1.0f;
+    if (fRadarWidthScale == 0.0f) fRadarWidthScale = 1.0f;
+    if (fRadarHeightScale == 0.0f) fRadarHeightScale = 1.0f;
+    if (fSubtitlesScale == 0.0f) fSubtitlesScale = 1.0f;
+    bProportionalWeaponIcon = FixSettings().Bool("LEGACY.ProportionalWeaponIcon");
 
-    bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
-    bAllowAltTabbingWithoutPausing = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
-    nHideAABug = iniReader.ReadInteger("MISC", "HideAABug", 0);
-    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
-    DisableWhiteCrosshairDot = iniReader.ReadInteger("MISC", "DisableWhiteCrosshairDot", 0) != 0;
-    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
+    bSmartCutsceneBorders = FixSettings().Bool("LEGACY.SmartCutsceneBorders");
+    bAllowAltTabbingWithoutPausing = !FixSettings().Bool("MAIN.PauseOnFocusLoss");
+    nHideAABug = FixSettings().Int("LEGACY.HideAABug");
+    ReplaceTextShadowWithOutline = FixSettings().Int("LEGACY.ReplaceTextShadowWithOutline");
+    DisableWhiteCrosshairDot = FixSettings().Bool("MISC.DisableWhiteCrosshairDot");
 }
 
 void GetMemoryAddresses()
@@ -1920,66 +1925,27 @@ void ApplyIniOptions()
     }
 }
 
-void CompatWarning()
+bool LegacyExecutableSupported()
 {
-    wchar_t buffer[MAX_PATH];
-    GetModuleFileName(GetModuleHandle(L"wshps.asi"), buffer, sizeof(buffer));
-    auto s = std::wstring(buffer);
-
-    auto result = MessageBox(NULL, L"wshps.asi is no longer required for the widescreen fix to work.\n\
-     Click Yes to remove it, restart the game after.\n\
-     Click No to continue, but issues may occur (not recommended).\n\
-     You can remove wshps.asi manually later.", L"GTASA.WidescreenFix.asi", MB_YESNO);
-
-    switch (result)
-    {
-        case IDYES:
-            MoveFileW(s.c_str(), std::wstring(s + L".deleteonnextlaunch").c_str());
-            ExitProcess(0);
-            break;
-        default:
-            break;
-    }
-}
-
-DWORD WINAPI CompatHandler(LPVOID)
-{
-    HANDLE hTimer = NULL;
-    LARGE_INTEGER liDueTime;
-    liDueTime.QuadPart = -30 * 10000000LL;
-    hTimer = CreateWaitableTimer(NULL, TRUE, NULL);
-    SetWaitableTimer(hTimer, &liDueTime, 0, NULL, NULL, 0);
-    bool bSP = false, bWSHPS = false;
-
-    while (true)
-    {
-        if (!bSP && GetModuleHandle(L"SilentPatchSA.asi") != NULL)
-        {
-            OverwriteResolution();
-            bSP = true;
-        }
-
-        if (!bWSHPS && GetModuleHandle(L"wshps.asi") != NULL)
-        {
-            CompatWarning();
-            bWSHPS = true;
-        }
-
-        if ((WaitForSingleObject(hTimer, 0) == WAIT_OBJECT_0) || (bSP && bWSHPS))
-        {
-            CloseHandle(hTimer);
-            return 0;
-        }
-
-        Sleep(0);
-    };
-
-    return 0;
+    if (reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr)) != 0x400000)
+        return false;
+    // Fixed patch addresses belong to the original 1.0 US executable layout.
+    auto borders = hook::pattern("75 0A B9 28 F0 B6 00 E8 A7 65 FD FF");
+    auto text = hook::pattern("75 02 B0 38 DB 05 48 70 C1 00 0F B6");
+    auto modes = hook::pattern("0F 8C C1 00 00 00 8B 4C 24 10 81 F9");
+    return !borders.empty() && !text.empty() && !modes.empty()
+        && reinterpret_cast<uintptr_t>(borders.get_first()) == 0x53E2AD
+        && reinterpret_cast<uintptr_t>(text.get_first()) == 0x58BB90
+        && reinterpret_cast<uintptr_t>(modes.get_first()) == 0x745B71;
 }
 
 export void InitLegacy()
 {
-    CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&CompatHandler, NULL, 0, NULL);
+    if (!LegacyExecutableSupported())
+    {
+        wfp::patterns::Report("GTA SA legacy mode disabled: unsupported or modified executable.\n");
+        return;
+    }
     ReadSettings();
     GetMemoryAddresses();
     OverwriteResolution();
@@ -1991,4 +1957,10 @@ export void InitLegacy()
     InstallHUDFixes();
     InstallSCMDrawingFixes();
     Install2dSpriteFixes();
+    CallbackHandler::RegisterCallback(L"SilentPatchSA.asi", OverwriteResolution);
+    CallbackHandler::RegisterCallback(L"wshps.asi", []()
+    {
+        MessageBoxW(nullptr, L"wshps.asi conflicts with the widescreen fix's legacy mode. Disable it before the next start.",
+            L"GTA SA Widescreen Fix", MB_OK | MB_ICONWARNING);
+    });
 }

@@ -1,0 +1,16 @@
+{
+  "plugin.name": "Total Overdose Widescreen Fix",
+  "page.advanced": "Avancé",
+  "ResX": "Largeur de la résolution",
+  "ResX.description": "Définit la largeur de rendu. Si une valeur vaut zéro, la résolution du bureau est utilisée. Redémarrage nécessaire.",
+  "ResY": "Hauteur de la résolution",
+  "ResY.description": "Définit la hauteur de rendu. Si une valeur vaut zéro, la résolution du bureau est utilisée. Redémarrage nécessaire.",
+  "page.game": "Jeu",
+  "SkipIntro": "Passer les logos au démarrage",
+  "SkipIntro.description": "Passe les logos SCI et Deadline au démarrage. La vidéo d’introduction et les autres vidéos restent actives. Nécessite un redémarrage.",
+  "FMVWidescreenMode": "Format des vidéos",
+  "FMVWidescreenMode.description": "Conserve le format avec des bandes noires, recadre pour remplir l’écran ou étire l’image. Effet immédiat.",
+  "FMVWidescreenMode.original": "Format original",
+  "FMVWidescreenMode.fill": "Remplir",
+  "FMVWidescreenMode.stretch": "Étirer"
+}

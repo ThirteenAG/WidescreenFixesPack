@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
 #include "callargs.h"
 
@@ -576,9 +577,19 @@ public:
                 // Widescreen LOADSCS artwork has its own logo bounds. Square
                 // and 2:1 legacy rasters retain the original 4:3 placement.
                 auto pattern = hook::pattern("8B 0D ? ? ? ? 8D 0C 8D ? ? ? ? E8 ? ? ? ? 83 C4 18 C3");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto currentSplash = *pattern.get_first<int32_t*>(2);
                 static auto splashes = *pattern.get_first<CSprite2d*>(9);
                 pattern = hook::pattern("E8 ? ? ? ? D9 05 ? ? ? ? D8 1D ? ? ? ? 83 C4 28 DF E0 F6 C4 44");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto LoadingBar = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     const int32_t index = *currentSplash;
@@ -595,26 +606,61 @@ public:
 
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? 8B 06 83 C4 34");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetVertices1 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices1);
 
                 pattern = hook::pattern("E8 ? ? ? ? 6A 04 68 ? ? ? ? 6A 05 E8 ? ? ? ? 83 C4 20 83 C4 08");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetVertices2 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices2);
 
                 pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 8D 4E");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetVertices3 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices3);
 
                 pattern = hook::pattern("E8 ? ? ? ? 8A 4E ? B0 FF");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetVertices4 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices4);
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 20 83 FF 02");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetVertices5 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 6A 04 68 ? ? ? ? 6A 05 E8 ? ? ? ? 83 C4 18");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shSetMaskVertices = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetMaskVertices);
             }
 
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? ? ? ? 8D 56");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDraw1 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw1);
 
                 //7284B0
@@ -629,6 +675,11 @@ public:
                 //shDraw4 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw4);
 
                 pattern = hook::pattern("E8 ? ? ? ? 6A 00 6A FF E8 ? ? ? ? 83 C4 08 85 C0 74 ? 6A 00 6A FF E8 ? ? ? ? 8B 88");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDraw5 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw5);
 
                 pattern = hook::pattern("E8 ? ? ? ? 8B 4C 24 ? 83 C1 2F");
@@ -643,10 +694,20 @@ public:
                 else
                 {
                     pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? A1 ? ? ? ? ? ? ? ? ? ? 99 ? ? 2B C2 ? ? ? ? ? ? ? ? 89 44 24");
+                    if (pattern.size() < 1)
+                    {
+                        wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                        return;
+                    }
                     shDrawRect1 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawRect1);
                 }
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? B0 ? 5B 83 C4");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDrawRect2 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawRect2);
 
                 //727C50
@@ -654,33 +715,73 @@ public:
                 //shDrawRectXLU = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawRectXLU);
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 5B 83 C4 ? C3 ? ? ? ? ? ? 8A 44 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shAddToBuffer = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), AddToBuffer);
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 46 83 FE ? 89 74 24 ? 0F 8C ? ? ? ? 8B 44 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shRenderOneXLUSprite_Rotate_Aspect = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), RenderOneXLUSprite_Rotate_Aspect);
 
             }
 
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 5F 5E 5D 5B 83 C4 ? C3 56 6A");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shShowRadarTraceWithHeight = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), ShowRadarTraceWithHeight);
             }
 
             {
                 auto pattern = hook::pattern("74 ? A0 ? ? ? ? 84 C0 75 ? B9");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 2, true);
 
                 pattern = hook::pattern("75 ? B9 ? ? ? ? E8 ? ? ? ? 56 6A");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 2, true);
 
                 pattern = hook::pattern("74 ? B9 ? ? ? ? E8 ? ? ? ? 8B 44 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 2, true);
 
                 pattern = hook::pattern("E8 ? ? ? ? 56 6A ? E8 ? ? ? ? 83 C4 ? 85 C0");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shDrawBordersForWideScreen = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawBordersForWideScreen);
 
                 //CHud::DrawHelpText (help text is lower with widescreen borders, not needed)
                 pattern = hook::pattern("8A 0D ? ? ? ? 84 C9 75 ? B0");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 12, true);
                 static auto DrawHelpTextHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
@@ -692,6 +793,11 @@ public:
                 //CFont::PrintChar (allow text that is shifted into the centered canvas)
                 static auto fZero = 0.0f;
                 auto pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 05 0F 8B ? ? ? ? DB 05 ? ? ? ? D8 5C 24 ? DF E0 F6 C4 05 0F 8B ? ? ? ? A0");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory(pattern.get_first(2), &fZero, true);
 
                 onResChange() += [](int Width, int Height)

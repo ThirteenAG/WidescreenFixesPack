@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "FixSettings.hpp"
 #include <d3d9.h>
 #include <d3dx9.h>
 
@@ -410,16 +411,16 @@ private:
 public:
     FusionDxHook()
     {
-        CIniReader iniReader("");
-        bHideUntexturedObjects = iniReader.ReadInteger("MISC", "HideUntexturedObjects", 2);
-        bDisableBlur = iniReader.ReadInteger("MAIN", "DisableBlur", 1) != 0;
-        bVSync = iniReader.ReadInteger("MAIN", "VSync", 1) != 0;
+        auto& settings = FixSettings();
+        bHideUntexturedObjects = settings.Int("MISC.HideUntexturedObjects");
+        bDisableBlur = settings.Bool("MAIN.DisableBlur");
+        bVSync = settings.Bool("MAIN.VSync");
 
         auto pattern = hook::pattern("8B 96 ? ? ? ? 6A 01 52 50");
         if (pattern.empty()) // not Gamer's Edition
             bHideUntexturedObjects = 0;
 
-        CallbackHandler::RegisterCallback(L"d3d9.dll", []()
+        CallbackHandler::RegisterModuleLoadCallback(L"d3d9.dll", []()
         {
             std::thread([]()
             {
@@ -459,15 +460,10 @@ public:
 
                     auto D3D9CreateDevice = [](LPDIRECT3D9 pDirect3D9, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pPresentationParameters, IDirect3DDevice9** ppReturnedDeviceInterface) -> HRESULT
                     {
-                        if (bVSync && pPresentationParameters)
+                        if (pPresentationParameters)
                         {
-                            pPresentationParameters->PresentationInterval = D3DPRESENT_INTERVAL_ONE;
+                            pPresentationParameters->PresentationInterval = bVSync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
                             pPresentationParameters->FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
-                        }
-                        else
-                        {
-                            pPresentationParameters->PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
-                            pPresentationParameters->FullScreen_RefreshRateInHz = 0;
                         }
                         auto res = CreateDeviceOriginal.unsafe_stdcall<HRESULT>(pDirect3D9, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
                         return res;
@@ -490,15 +486,10 @@ public:
                         g_CurrentOffset = 0;
                         g_CurrentStride = 0;
 
-                        if (bVSync && pPresentationParameters)
+                        if (pPresentationParameters)
                         {
-                            pPresentationParameters->PresentationInterval = D3DPRESENT_INTERVAL_ONE;
+                            pPresentationParameters->PresentationInterval = bVSync ? D3DPRESENT_INTERVAL_ONE : D3DPRESENT_INTERVAL_IMMEDIATE;
                             pPresentationParameters->FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
-                        }
-                        else
-                        {
-                            pPresentationParameters->PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
-                            pPresentationParameters->FullScreen_RefreshRateInHz = 0;
                         }
                         auto res = ResetOriginal.unsafe_stdcall<HRESULT>(pDevice, pPresentationParameters);
                         return res;

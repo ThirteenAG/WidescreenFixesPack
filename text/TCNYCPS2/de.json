@@ -1,0 +1,13 @@
+{
+  "plugin.name": "True Crime New York City PCSX2F Widescreen Fix",
+  "page.gameplay": "Spiel",
+  "page.display": "Anzeige",
+  "SkipIntro": "Intro überspringen",
+  "SkipIntro.description": "Überspringt das Intro des Launchers. Nach einer Änderung das emulierte Spiel neu starten.",
+  "Enable60FPS": "60 FPS",
+  "Enable60FPS.description": "Aktiviert die 60-FPS-Timinganpassung des Spiels. Nach einer Änderung das emulierte Spiel neu starten.",
+  "UnthrottleEmuDuringLoading": "Schnelleres Laden",
+  "UnthrottleEmuDuringLoading.description": "Verkürzt den Start und die Ladebildschirme. Nach einer Änderung das emulierte Spiel neu starten.",
+  "constraint": "HUD-Seitenverhältnis",
+  "constraint.description": "Auto folgt der Emulatoranzeige. Breite:Höhe oder ein Dezimalwert zwischen 4:3 und 32:9 begrenzt das HUD. Danach das emulierte Spiel neu starten."
+}

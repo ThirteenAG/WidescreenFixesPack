@@ -1,12 +1,46 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module WidescreenHUD;
 
 import ComVars;
 import GUI;
 import HudIDs;
+import WidescreenHUD2;
+
+export void RefreshHudConstraint()
+{
+    if (Screen.Width <= 0 || Screen.Height <= 0 || Screen.fWidth <= 0.0f || Screen.fHeight <= 0.0f ||
+        !std::isfinite(Screen.fWidth) || !std::isfinite(Screen.fHeight) || !std::isfinite(Screen.fAspectRatio))
+        return;
+
+    static std::string previous;
+    static int previousWidth = 0, previousHeight = 0;
+    const auto wanted = FixSettings().Wanted("MAIN.HudAspectRatioConstraint");
+    if (wanted == previous && Screen.Width == previousWidth && Screen.Height == previousHeight)
+        return;
+
+    // Only the game thread publishes values consumed by the HUD draw hooks.
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(wanted);
+    const float height = Screen.fHeight;
+    float width = Screen.fWidth;
+    const auto constraint = Screen.fHudAspectRatioConstraint;
+    if (constraint && (*constraint < 0.0f || *constraint > 32.0f / 9.0f))
+        Screen.fWidescreenHudOffset = *constraint;
+    else
+    {
+        if (constraint)
+            width = height * ClampHudAspectRatio(*constraint, Screen.fAspectRatio);
+        Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(width, height, 640.0f, 480.0f);
+    }
+    RefreshModernHudPositions(Screen.fWidescreenHudOffset);
+    previous = wanted;
+    previousWidth = Screen.Width;
+    previousHeight = Screen.Height;
+}
+
 
 namespace HudImageMatchers
 {

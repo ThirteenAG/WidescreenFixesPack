@@ -1,0 +1,55 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Spyro Reignited Trilogy",
+        "exe": [
+          "Spyro-Win64-Shipping.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.OverrideFOV",
+      "type": "float",
+      "default": -1.0,
+      "label": "@OverrideFOV",
+      "description": "@OverrideFOV.description",
+      "page": "advanced",
+      "apply": "live",
+      "visibility": "editor",
+      "min": -1,
+      "max": 179
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "advanced",
+      "apply": "live",
+      "visibility": "menu",
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    }
+  ]
+}

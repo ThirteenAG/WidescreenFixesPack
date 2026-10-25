@@ -14,8 +14,8 @@ float Axis(uint8_t value) {
 }
 
 void InstallAspect() {
-    char ratio[64];
-    inireader.ReadString("MAIN", "ForceAspectRatio", "auto", ratio, sizeof(ratio));
+    char ratioBuffer[64];
+    const char* ratio = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", ratioBuffer, sizeof(ratioBuffer));
     char* separator = nullptr;
     const float numerator = std::strtof(ratio, &separator);
     if (separator && *separator == ':') {
@@ -27,13 +27,13 @@ void InstallAspect() {
         }
     }
     RefreshAspect();
-    hudScale = console::bounded(inireader.ReadFloat("MAIN", "HUDScale", 1.0f), 0.5f, 1.0f, 1.0f);
+    hudScale = console::bounded(inireader.ReadFloat("MAIN", "HudScale", 1.0f), 0.5f, 1.0f, 1.0f);
 
     // Perspective setter: f24 holds the selected aspect (the viewport default
     // at +0x134 when the caller passed 0). Full-screen cameras get Hor+;
     // render-target and mirror cameras keep their own aspect.
     const auto site = pattern.get_first("34 01 18 C6 0E 3C 04 3C 35 FA 84 34", 4);
-    if (!site) return;
+    if (!FeatureSites({ site }, "Midnight Club: aspect correction unavailable.\n")) return;
     projection = safetymips::create_mid(site, [](SafetyMipsContext& regs) {
         const auto viewport = uintptr_t(regs.s0);
         if (at<int>(viewport + 0x1AC) != 480 || at<int>(viewport + 0x1B0) != 272) return;
@@ -45,11 +45,11 @@ void InstallAspect() {
 }
 
 void InstallCamera() {
-    if (!inireader.ReadInteger("MAIN", "DualAnalogPatch", 1)) return;
+    if (!inireader.ReadBoolean("MAIN", "DualAnalogPatch", true)) return;
     const auto sampleSite = pattern.get_first("10 00 06 A2 11 00 05 A2", 0);
     const auto neutralSite = pattern.get_first("00 00 A0 A0 01 00 A7 A0 02 00 A6 A0", 0);
     const auto panSite = pattern.get_first("?? ?? 8C C7 02 00 00 10 07 63 00 46 06 B3 00 46 07 00 40 16 80 00 0C E6", 16);
-    if (!sampleSite || !neutralSite || !panSite) return;
+    if (!FeatureSites({ sampleSite, neutralSite, panSite }, "Midnight Club: dual analog controls unavailable.\n")) return;
     // Pad sampling: the game keeps the second stick in its pad record (+18/+19).
     sample = safetymips::create_mid(sampleSite, [](SafetyMipsContext& regs) {
         const auto object = uintptr_t(regs.s0);

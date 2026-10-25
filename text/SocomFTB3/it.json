@@ -1,0 +1,14 @@
+{
+  "plugin.name": "SOCOM Fireteam Bravo 3 Fusion Fix (PPSSPP)",
+  "page.options": "Opzioni avanzate",
+  "skip": "Salta introduzione",
+  "skip.description": "Salta le introduzioni all'avvio. Riavvia dopo la modifica.",
+  "analog": "Comandi doppio analogico",
+  "analog.description": "Controlla la telecamera con lo stick destro. Risposta dello stick e sensibilità del binocolo restano come nel gioco originale. Riavvia dopo la modifica.",
+  "smoothing": "Disattiva smussatura telecamera",
+  "smoothing.description": "Rimuove la smussatura extra della telecamera normale. La risposta dello stick resta come nel gioco originale. Richiede i comandi doppio analogico; riavvia dopo le modifiche.",
+  "loading": "Caricamento rapido",
+  "loading.description": "Velocizza le schermate di caricamento. Riavvia dopo le modifiche.",
+  "fov": "Fattore FOV telecamera standard",
+  "fov.description": "Moltiplica il campo visivo della telecamera di gioco normale. 1.0 mantiene la visuale originale; valori maggiori la allargano. Le visuali di mira e del binocolo restano invariate. Riavvia dopo le modifiche."
+}

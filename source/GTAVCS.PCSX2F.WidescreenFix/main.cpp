@@ -1,14 +1,14 @@
 #include "Game.hpp"
 #include "Controls.hpp"
+#include "Settings.hpp"
+PCSX2F_CFG_SETTINGS();
 #include "../../external/injector/include/ps2/patches.hpp"
 extern "C" {
 #include "../../external/injector/include/ps2/pcsx2f_api.h"
-#include "../../external/injector/include/ps2/inireader.h"
 #include "../../external/injector/include/ps2/patterns.h"
 #include <cstdio>
 
 int CompatibleCRCList[] = {0x4F32A11F};
-char PluginData[MaxIniSize] = {1};
 int PCSX2Data[PCSX2Data_Size] = {1};
 char KeyboardState[StateNum][StateSize] = {{1}};
 CMouseControllerState MouseState[StateNum] = {{1}};
@@ -81,17 +81,19 @@ void ApplyFrameRate() {
 extern "C" void init() {
     using namespace vcs;
     if (injector::InitializeCheckedRuntime(Rejected) != PCSX2_HOOK_OK) return;
-    inireader.SetIniPath(PluginData + sizeof(uint32_t), *reinterpret_cast<const uint32_t*>(PluginData));
-    settings.skipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
-    settings.widescreen = inireader.ReadInteger("MAIN", "ImprovedWidescreenSupport", 0) != 0;
-    settings.sixtyFPS = inireader.ReadInteger("MAIN", "Enable60FPS", 0) != 0;
-    settings.unthrottle = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1) != 0;
-    settings.modernControls = inireader.ReadInteger("CONTROLS", "ModernControlScheme", 1) != 0;
-    settings.pcControls = inireader.ReadInteger("CONTROLS", "PCControlScheme", 0) != 0;
-    settings.hudScale = console::bounded(inireader.ReadFloat("HUD", "HudScale", 1.0f), 0.5f, 1.5f, 1.0f);
-    settings.mouseSensitivity = console::bounded(inireader.ReadFloat("CONTROLS", "MouseSensitivity", 0.002f), 0.0001f, 0.02f, 0.002f);
-    settings.invertMouse = inireader.ReadInteger("CONTROLS", "InvertMouseY", 0) != 0;
-    settings.cutsceneBorders = inireader.ReadInteger("DISPLAY", "CutsceneBorders", 1) != 0;
+    config::Load();
+    settings.skipIntro = config::Boolean(0, true);
+    settings.widescreen = config::Boolean(1, true);
+    settings.sixtyFPS = config::Boolean(2, false);
+    settings.unthrottle = config::Boolean(3, true);
+    settings.modernControls = config::Boolean(4, true);
+    settings.pcControls = config::Boolean(5, false);
+    settings.hudScale = config::Number(8, 1.0f, 0.5f, 1.5f);
+    settings.mouseSensitivity = config::Number(6, 1.0f, 0.05f, 10.0f) * 0.002f;
+    settings.invertMouse = config::Boolean(7, false);
+    settings.cutsceneBorders = int(config::Number(9, 3.0f, 0.0f, 3.0f));
+    settings.fovFactor = config::Number(11, 1.0f, 0.5f, 2.0f);
+    settings.hudAspect = console::parse_hud_aspect(config::values[12].value);
     LoadBindings();
     UpdateViewport();
 

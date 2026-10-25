@@ -10,6 +10,8 @@ import ComVars;
 SafetyHookInline shappFromAnsi = {};
 wchar_t* __cdecl appFromAnsi(const char* a1)
 {
+    if (NativeResolutionListPublished)
+        return shappFromAnsi.unsafe_ccall<wchar_t*>(a1);
     bool bReqPtr = false;
     std::vector<int> offsets = { 0, 24, 48, 74, 101 };
     for (size_t i = 0; i < ResList.size(); i++)
@@ -200,10 +202,10 @@ export void InitCore()
     uint32_t pfappInit = (uint32_t)pattern.get_first();
 
     auto rpattern = hook::range_pattern(pfappInit, pfappInit + 0x900, "80 02 00 00");
-    injector::WriteMemory<uint16_t>(rpattern.count(2).get(0).get<uint32_t>(-6), 0x7EEB, true); //pfappInit + 0x5FC
-    injector::WriteMemory(rpattern.count(2).get(1).get<uint32_t>(0), Screen.Width, true);  //pfappInit + 0x67E + 0x1
+    ProtectedGameRef<uint16_t>(reinterpret_cast<uint16_t*>(rpattern.count(2).get(0).get<uint32_t>(-6))) = 0x7EEB; //pfappInit + 0x5FC
+    ProtectedGameRef<decltype(Screen.Width)>(reinterpret_cast<decltype(Screen.Width)*>(rpattern.count(2).get(1).get<uint32_t>(0))) = Screen.Width;  //pfappInit + 0x67E + 0x1
     rpattern = hook::range_pattern(pfappInit, pfappInit + 0x900, "E0 01 00 00");
-    injector::WriteMemory(rpattern.count(2).get(1).get<uint32_t>(0), Screen.Height, true); //pfappInit + 0x69F + 0x1
+    ProtectedGameRef<decltype(Screen.Height)>(reinterpret_cast<decltype(Screen.Height)*>(rpattern.count(2).get(1).get<uint32_t>(0))) = Screen.Height; //pfappInit + 0x69F + 0x1
 
     shappFromAnsi = safetyhook::create_inline(FindProcAddress(GetModuleHandle(L"Core"), "?appFromAnsi@@YAPBGPBD@Z", "?appFromAnsi@@YAPB_WPBD@Z"), appFromAnsi);
 
@@ -216,6 +218,8 @@ export void InitCore()
     {
         static auto OverwriteResolutions = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
+            if (NativeResolutionListPublished)
+                return;
             auto str = std::wstring_view((const wchar_t*)regs.ebx);
 
             for (const auto& it : ResList)
@@ -233,6 +237,8 @@ export void InitCore()
         pattern = hook::module_pattern(GetModuleHandle(L"Core"), "33 C0 66 85 C9");
         static auto OverwriteResolutions = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
+            if (NativeResolutionListPublished)
+                return;
             auto str = std::wstring_view((const wchar_t*)regs.esi);
 
             for (const auto& it : ResList)

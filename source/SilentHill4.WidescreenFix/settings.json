@@ -1,0 +1,404 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Silent Hill 4: The Room",
+        "exe": [
+          "Silent Hill 4.exe"
+        ],
+        "launcher": [
+          "SH4Config.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "gameplay"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@displaymode.fullscreen"
+        },
+        {
+          "value": 1,
+          "label": "@displaymode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@displaymode.borderless"
+        }
+      ],
+      "label": "@displaymode",
+      "description": "@displaymode.description",
+      "page": "display",
+      "group": "@group.resolution",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 16384,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@desktop"
+        }
+      ],
+      "label": "@resx",
+      "description": "@resx.description",
+      "page": "display",
+      "group": "@group.resolution",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 16384,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@desktop"
+        }
+      ],
+      "label": "@resy",
+      "description": "@resy.description",
+      "page": "display",
+      "group": "@group.resolution",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "label": "@cutsceneborders",
+      "description": "@cutsceneborders.description",
+      "page": "display",
+      "group": "@group.cutscenes",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@cutsceneborders.0"
+        },
+        {
+          "value": 1,
+          "label": "@cutsceneborders.1"
+        },
+        {
+          "value": 2,
+          "label": "@cutsceneborders.2"
+        },
+        {
+          "value": 3,
+          "label": "@cutsceneborders.3"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@movies.original"
+        },
+        {
+          "value": 1,
+          "label": "@movies.fill"
+        },
+        {
+          "value": 2,
+          "label": "@movies.stretch"
+        }
+      ],
+      "label": "@movies",
+      "description": "@movies.description",
+      "page": "display",
+      "group": "@group.cutscenes",
+      "control": [
+        "cycler",
+        "segmented"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "CAMERA.Camera",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@camera.classic"
+        },
+        {
+          "value": 1,
+          "label": "@camera.modern"
+        }
+      ],
+      "label": "@camera",
+      "description": "@camera.description",
+      "page": "camera",
+      "control": [
+        "cycler",
+        "segmented"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "CAMERA.CameraSpeed",
+      "type": "float",
+      "default": 7,
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "decimals": 0,
+      "label": "@cameraspeed",
+      "description": "@cameraspeed.description",
+      "page": "camera",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.Camera",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.InvertCamera",
+      "type": "bool",
+      "default": 0,
+      "label": "@invertcamera",
+      "description": "@invertcamera.description",
+      "page": "camera",
+      "enabledIf": {
+        "setting": "CAMERA.Camera",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.CameraDistance",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@cameradistance.near"
+        },
+        {
+          "value": 1,
+          "label": "@cameradistance.normal"
+        },
+        {
+          "value": 2,
+          "label": "@cameradistance.far"
+        }
+      ],
+      "label": "@cameradistance",
+      "description": "@cameradistance.description",
+      "page": "camera",
+      "control": [
+        "cycler",
+        "segmented"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.Camera",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.FieldOfView",
+      "type": "float",
+      "default": 60,
+      "min": 40,
+      "max": 80,
+      "step": 5,
+      "decimals": 0,
+      "unit": "\u00b0",
+      "label": "@fov",
+      "description": "@fov.description",
+      "page": "camera",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.Camera",
+        "equals": 1
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@intro.show"
+        },
+        {
+          "value": 1,
+          "label": "@intro.skip"
+        }
+      ],
+      "label": "@intro",
+      "description": "@intro.description",
+      "page": "game",
+      "control": [
+        "cycler",
+        "segmented"
+      ],
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "Auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Fran\u00e7ais"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Espa\u00f1ol"
+        }
+      ],
+      "label": "@textlanguage",
+      "description": "@textlanguage.description",
+      "page": "compatibility",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@fovfactor",
+      "description": "@fovfactor.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@hudconstraint",
+      "description": "@hudconstraint.description",
+      "page": "display",
+      "apply": "live",
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "editor",
+      "apply": "live"
+    }
+  ]
+}

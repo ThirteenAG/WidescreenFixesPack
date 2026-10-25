@@ -2,6 +2,8 @@ module;
 
 #include <stdafx.h>
 #include <FunctionHookMinHook.hpp>
+#include "FixSettings.hpp"
+#include "../Shared/NFS/LanguageSetting.hpp"
 
 export module Registry;
 
@@ -9,6 +11,55 @@ import ComVars;
 
 static std::filesystem::path CustomUserDir;
 static bool bUseCustomUserDir = false;
+
+// The installer's language, from the registry before the fix redirects it
+static std::string InstallerLanguage()
+{
+    std::string language = "English US";
+    HKEY hKeyOrig = nullptr;
+    if (RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Underground 2", &hKeyOrig) == ERROR_SUCCESS)
+    {
+        char szLang[256] = {};
+        DWORD cbData = sizeof(szLang);
+        if (RegQueryValueExA(hKeyOrig, "Language", nullptr, nullptr, (LPBYTE)szLang, &cbData) == ERROR_SUCCESS && cbData > 1)
+            language = szLang;
+        RegCloseKey(hKeyOrig);
+    }
+    return language;
+}
+
+// The game reads "Language" from the registry once at startup and compares it with its names (case-insensitive);
+// a name it doesn't know leaves the language at English. Several names lead to the same language: "English UK" is
+// English, "English China" is Chinese, and "Thai" leads to a language the game's table of languages doesn't have.
+// A language loads its text (LANGUAGES\<name>.BIN) and the memory card texts (memcard\LOCALE_<name>.loc, English
+// for Chinese); the game reads both without checking that they're there. Speech (UG2_Speech_FR/GR/IT/SP/JP.big)
+// falls back to the English bank when a language's is missing, and the fonts of Korean, Chinese and Japanese are in
+// LANGUAGES\LanguageTextures.bin, which every language loads.
+/// The language setting (LANGUAGE.Language): only installed languages can be used, and the installer's is stored on
+// the first start (see LanguageSetting.hpp)
+static void LanguageStartup()
+{
+    // The installer's other names of a language, as the setting has them
+    auto installer = InstallerLanguage();
+    if (_stricmp(installer.c_str(), "English UK") == 0)
+        installer = "English US";
+    else if (_stricmp(installer.c_str(), "English China") == 0)
+        installer = "Chinese (Traditional)";
+
+    WFPLanguageSetting::Startup(FixSettings(), "LANGUAGE.Language", {
+        { "English US", { "LANGUAGES\\English.bin", "memcard\\LOCALE_ENGLISH.loc" } },
+        { "French", { "LANGUAGES\\French.bin", "memcard\\LOCALE_FRENCH.loc" } },
+        { "German", { "LANGUAGES\\German.bin", "memcard\\LOCALE_GERMAN.loc" } },
+        { "Italian", { "LANGUAGES\\Italian.bin", "memcard\\LOCALE_ITALIAN.loc" } },
+        { "Spanish", { "LANGUAGES\\Spanish.bin", "memcard\\LOCALE_SPANISH.loc" } },
+        { "Dutch", { "LANGUAGES\\Dutch.bin", "memcard\\LOCALE_DUTCH.loc" } },
+        { "Swedish", { "LANGUAGES\\Swedish.bin", "memcard\\LOCALE_SWEDISH.loc" } },
+        { "Danish", { "LANGUAGES\\Danish.bin", "memcard\\LOCALE_DANISH.loc" } },
+        { "Korean", { "LANGUAGES\\Korean.bin", "memcard\\LOCALE_KOREAN.loc" } },
+        { "Chinese (Traditional)", { "LANGUAGES\\Chinese.bin", "memcard\\LOCALE_ENGLISH.loc" } },
+        { "Japanese", { "LANGUAGES\\Japanese.bin", "memcard\\LOCALE_JAPANESE.loc" } },
+    }, installer);
+}
 
 static std::unique_ptr<FunctionHookMinHook> mhSHGetFolderPathA;
 static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
@@ -27,6 +78,23 @@ static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, 
     return mhSHGetFolderPathA->get_original<decltype(SHGetFolderPathA)>()(hwnd, csidl, hToken, dwFlags, pszPath);
 }
 
+// The game's read of its language gets the language setting; the registry itself isn't changed
+static LSTATUS WINAPI WrapperQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+{
+    LSTATUS result;
+    if (WFPLanguageSetting::AnswerQuery(FixSettings().String("LANGUAGE.Language"), lpValueName, lpType, lpData, lpcbData, result))
+        return result;
+    return RegistryWrapper::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+}
+
+static LSTATUS WINAPI FallbackQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+{
+    LSTATUS result;
+    if (WFPLanguageSetting::AnswerQuery(FixSettings().String("LANGUAGE.Language"), lpValueName, lpType, lpData, lpcbData, result))
+        return result;
+    return RegistryFallback::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+}
+
 class Registry
 {
 public:
@@ -34,9 +102,8 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
-            auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+            bool bWriteSettingsToFile = FixSettings().Bool("MAIN.PortableSettings");
+            auto szCustomUserFilesDirectoryInGameDir = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir");
 
             if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
                 szCustomUserFilesDirectoryInGameDir.clear();
@@ -51,19 +118,9 @@ public:
             mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
             mhSHGetFolderPathA->create();
 
-            static std::string defaultLanguage = "English US";
-
-            HKEY hKeyOrig = nullptr;
-            if (RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Underground 2", &hKeyOrig) == ERROR_SUCCESS)
-            {
-                char szLang[256] = {};
-                DWORD cbData = sizeof(szLang);
-                if (RegQueryValueExA(hKeyOrig, "Language", nullptr, nullptr, (LPBYTE)szLang, &cbData) == ERROR_SUCCESS && cbData > 1)
-                {
-                    defaultLanguage = szLang;
-                }
-                RegCloseKey(hKeyOrig);
-            }
+            // The language setting (an installed language) replaces the installer's when the game reads it
+            static std::string defaultLanguage = InstallerLanguage();
+            LanguageStartup();
 
             auto InstallRegistryInlineHooks = [](
                 decltype(&RegCloseKey)      fRegCloseKey,
@@ -243,7 +300,7 @@ public:
                     std::forward_as_tuple("RegOpenKeyA", RegistryWrapper::RegOpenKeyA),
                     std::forward_as_tuple("RegOpenKeyExA", RegistryWrapper::RegOpenKeyExA),
                     std::forward_as_tuple("RegCreateKeyExA", RegistryWrapper::RegCreateKeyExA),
-                    std::forward_as_tuple("RegQueryValueExA", RegistryWrapper::RegQueryValueExA),
+                    std::forward_as_tuple("RegQueryValueExA", WrapperQueryValueExA),
                     std::forward_as_tuple("RegSetValueExA", RegistryWrapper::RegSetValueExA),
                     std::forward_as_tuple("RegQueryValueA", RegistryWrapper::RegQueryValueA),
                     std::forward_as_tuple("RegDeleteKeyA", RegistryWrapper::RegDeleteKeyA),
@@ -258,7 +315,7 @@ public:
                         RegistryWrapper::RegOpenKeyA,
                         RegistryWrapper::RegOpenKeyExA,
                         RegistryWrapper::RegCreateKeyExA,
-                        RegistryWrapper::RegQueryValueExA,
+                        WrapperQueryValueExA,
                         RegistryWrapper::RegSetValueExA,
                         RegistryWrapper::RegQueryValueA,
                         RegistryWrapper::RegDeleteKeyA,
@@ -320,7 +377,7 @@ public:
                     std::forward_as_tuple("RegOpenKeyA", RegistryFallback::RegOpenKeyA),
                     std::forward_as_tuple("RegOpenKeyExA", RegistryFallback::RegOpenKeyExA),
                     std::forward_as_tuple("RegCreateKeyExA", RegistryFallback::RegCreateKeyExA),
-                    std::forward_as_tuple("RegQueryValueExA", RegistryFallback::RegQueryValueExA),
+                    std::forward_as_tuple("RegQueryValueExA", FallbackQueryValueExA),
                     std::forward_as_tuple("RegSetValueExA", RegistryFallback::RegSetValueExA),
                     std::forward_as_tuple("RegQueryValueA", RegistryFallback::RegQueryValueA),
                     std::forward_as_tuple("RegDeleteKeyA", RegistryFallback::RegDeleteKeyA),
@@ -335,40 +392,12 @@ public:
                         RegistryFallback::RegOpenKeyA,
                         RegistryFallback::RegOpenKeyExA,
                         RegistryFallback::RegCreateKeyExA,
-                        RegistryFallback::RegQueryValueExA,
+                        FallbackQueryValueExA,
                         RegistryFallback::RegSetValueExA,
                         RegistryFallback::RegQueryValueA,
                         RegistryFallback::RegDeleteKeyA,
                         RegistryFallback::RegEnumKeyA
                     );
-                }
-            }
-
-            auto szLanguage = iniReader.ReadString("LANGUAGE", "Language", "");
-            if (!szLanguage.empty())
-            {
-                HKEY hKey = nullptr;
-                if (bWriteSettingsToFile)
-                {
-                    if (RegistryWrapper::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Underground 2", &hKey) == ERROR_SUCCESS)
-                    {
-                        RegistryWrapper::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
-                        RegistryWrapper::RegCloseKey(hKey);
-                    }
-                }
-                else
-                {
-                    if (RegistryFallback::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Underground 2", &hKey) == ERROR_SUCCESS)
-                    {
-                        RegistryFallback::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
-                        RegistryFallback::RegCloseKey(hKey);
-                    }
-
-                    if (RegistryFallback::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\Electronic Arts\\EA Games\\Need for Speed Underground 2", &hKey) == ERROR_SUCCESS)
-                    {
-                        RegistryFallback::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
-                        RegistryFallback::RegCloseKey(hKey);
-                    }
                 }
             }
         };

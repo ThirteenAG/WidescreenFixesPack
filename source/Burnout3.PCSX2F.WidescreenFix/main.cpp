@@ -2,6 +2,8 @@
 #include "../../external/injector/include/ps2/safetymips.hpp"
 #include "../../external/injector/include/ps2/game_abi.hpp"
 #include "../Shared/Console/PS2Display.hpp"
+#include "../Shared/Console/PS2Settings.hpp"
+PCSX2F_CFG_SETTINGS()
 #include <array>
 #include <cstdio>
 extern "C" {
@@ -55,12 +57,17 @@ void Rejected(pcsx2_hook_status status) {
 template<class Callback> void Mid(uintptr_t address, Callback callback, bool executeOriginal = true) {
     safetymips::Options options;
     options.execute_original = executeOriginal;
+    if (hookCount >= hooks.size()) { Rejected(PCSX2_HOOK_INVALID_ARGUMENT); return; }
     hooks[hookCount++] = safetymips::create_mid(address, callback, options);
 }
 }
 
 extern "C" void init() {
     if (injector::InitializeCheckedRuntime(Rejected) != PCSX2_HOOK_OK) return;
+    console::ps2settings::Value settings[] = {{"MAIN", "EnableWidescreenSupport", "1"}};
+    if (!console::ps2settings::load(settings))
+        std::snprintf(OSDText[0], OSDStringSize, "CFG settings unavailable: update the plugin injector for CFG support.");
+    if (!console::ps2settings::boolean(settings[0], true)) return;
     ApplyHud();
     injector::WriteMemory<uint32_t>(0x228194, 0x24020001); // Select the native widescreen camera.
     hudReset1.bind(HudReset1); hudReset2.bind(HudReset2);

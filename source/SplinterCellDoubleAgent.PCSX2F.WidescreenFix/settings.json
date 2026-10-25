@@ -1,0 +1,70 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.SkipIntro",
+      "description": "@MAIN.SkipIntro.description",
+      "page": "gameplay",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.HudScale",
+      "type": "float",
+      "default": 1,
+      "label": "@HUD.HudScale",
+      "description": "@HUD.HudScale.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "min": 0.5,
+      "max": 1.5,
+      "step": 0.05
+    },
+    {
+      "id": "HUD.WidescreenHud",
+      "type": "bool",
+      "default": 1,
+      "label": "@HUD.WidescreenHud",
+      "description": "@HUD.WidescreenHud.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    }
+  ]
+}

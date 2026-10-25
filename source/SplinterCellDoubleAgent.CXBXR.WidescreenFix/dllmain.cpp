@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
 #include "cxbxr/cxbxr.h"
 
 struct cxbxr
@@ -127,38 +128,78 @@ namespace FCanvasUtil
     }
 }
 
+// "Auto" or empty -> nullopt; otherwise "W:H", "WxH" or a decimal ratio.
+static std::optional<float> ParseAspectRatio(std::string_view input)
+{
+    std::string text(input);
+    text.erase(0, text.find_first_not_of(" \t\r\n"));
+    text.erase(text.find_last_not_of(" \t\r\n") + 1);
+    if (text.empty() || _stricmp(text.c_str(), "auto") == 0)
+        return std::nullopt;
+
+    char* end = nullptr;
+    const float first = std::strtof(text.c_str(), &end);
+    if (end == text.c_str() || !std::isfinite(first) || first <= 0.0f)
+        return std::nullopt;
+    if (*end == '\0')
+        return first;
+    if (*end != ':' && *end != 'x' && *end != 'X')
+        return std::nullopt;
+
+    const char* second = end + 1;
+    const float height = std::strtof(second, &end);
+    if (end == second || *end != '\0' || !std::isfinite(height) || height <= 0.0f)
+        return std::nullopt;
+    return first / height;
+}
+
 void Init()
 {
-    if (!Screen.Width || !Screen.Height)
+    if (!FixSettings().Bool("MAIN.FixHUD"))
+        return;
+    if (Screen.Width <= 0 || Screen.Height <= 0 || Screen.Width > 16384 || Screen.Height > 16384)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+    if (Screen.Width <= 0 || Screen.Height <= 0)
+        std::tie(Screen.Width, Screen.Height) = std::make_tuple(640, 480);
 
     float intResX = 640.0f;
     float intResY = 480.0f;
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
-    Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
+    Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
+    if (auto ratio = ParseAspectRatio(FixSettings().String("MAIN.HudAspectRatioConstraint")))
+        Screen.fAspectRatio = std::clamp(*ratio, 4.0f / 3.0f, 32.0f / 9.0f);
     Screen.fHudScale = Screen.fAspectRatio / (4.0f / 3.0f);
     Screen.fHudOffset = (((intResY * Screen.fAspectRatio) - intResX) / 2.0f) / Screen.fHudScale;
 
-    auto rpattern = hook::range_pattern(cxbxr.begin, cxbxr.end, "E8 ? ? ? ? 80 3D ? ? ? ? ? 74 17");
-    injector::MakeCALL(rpattern.get_first(0), FCanvasUtil::DrawQuad, true); //0x2A1181
-    rpattern = hook::range_pattern(cxbxr.begin, cxbxr.end, "E8 ? ? ? ? F6 43 0C 01");
-    injector::MakeCALL(rpattern.get_first(0), FCanvasUtil::DrawQuad, true); //0x2B6040
-    rpattern = hook::range_pattern(cxbxr.begin, cxbxr.end, "E8 ? ? ? ? 8B 45 BC 66 83 38 20");
-    injector::MakeCALL(rpattern.get_first(0), FCanvasUtil::DrawQuad, true); //0x2B610C
-
-    rpattern = hook::range_pattern(cxbxr.begin, cxbxr.end, "53 8B 5C 24 0C 56 57 8B 7C 24 10 8B F1 39 7E 18 75 05 39 5E 1C");
-    FCanvasUtil::BeginPrimitive = (uint32_t)rpattern.get_first(0);
-    rpattern = hook::range_pattern(cxbxr.begin, cxbxr.end, "56 8B 74 24 0C 6A 18 6A 01 8B CE E8 ? ? ? ? 8B 0E 8D 04 40 8D 04 C1 5E C3");
-    FCanvasUtil::FArrayAlloc = (uint32_t)rpattern.get_first(0);
+    auto first = hook::range_pattern(cxbxr.begin, cxbxr.end, "E8 ? ? ? ? 80 3D ? ? ? ? ? 74 17");
+    auto second = hook::range_pattern(cxbxr.begin, cxbxr.end, "E8 ? ? ? ? F6 43 0C 01");
+    auto third = hook::range_pattern(cxbxr.begin, cxbxr.end, "E8 ? ? ? ? 8B 45 BC 66 83 38 20");
+    auto begin = hook::range_pattern(cxbxr.begin, cxbxr.end, "53 8B 5C 24 0C 56 57 8B 7C 24 10 8B F1 39 7E 18 75 05 39 5E 1C");
+    auto allocate = hook::range_pattern(cxbxr.begin, cxbxr.end, "56 8B 74 24 0C 6A 18 6A 01 8B CE E8 ? ? ? ? 8B 0E 8D 04 40 8D 04 C1 5E C3");
+    if (first.size() != 1 || second.size() != 1 || third.size() != 1 || begin.size() != 1 || allocate.size() != 1)
+    {
+        OutputDebugStringA("SCDA Cxbx-Reloaded: HUD patch group unavailable.\n");
+        return;
+    }
+    FCanvasUtil::BeginPrimitive = reinterpret_cast<uintptr_t>(begin.get_first());
+    FCanvasUtil::FArrayAlloc = reinterpret_cast<uintptr_t>(allocate.get_first());
+    for (auto address : { first.get_first(), second.get_first(), third.get_first() })
+        injector::MakeCALL(address, FCanvasUtil::DrawQuad, true);
 }
+
+ASI_SETTINGS_EXPORT(FixSettings())
 
 CEXP void InitializeASI()
 {
     auto pid = getParentPID(GetCurrentProcessId());
     auto name = getProcessName(pid).stem();
-    if (name == "cxbx" || name == "cxbxr-ldr")
+    if (_wcsicmp(name.c_str(), L"cxbx") == 0 || _wcsicmp(name.c_str(), L"cxbxr-ldr") == 0)
     {
+        FixSettings();
+        // FusionFixHub edits the .cfg while the emulator runs; changes apply at the next start.
+        asi_settings::LiveLink::Start();
+        WindowedModeWrapper::EnableDpiAwareness();
         std::tie(Screen.Width, Screen.Height) = getWindowDimensions(pid);
         std::call_once(CallbackHandler::flag, []()
         {
@@ -167,7 +208,7 @@ CEXP void InitializeASI()
             PIMAGE_NT_HEADERS ntHeader = (IMAGE_NT_HEADERS*)(cxbxr.begin + dosHeader->e_lfanew);
             cxbxr.end = cxbxr.begin + ntHeader->OptionalHeader.SizeOfImage;
 
-            CallbackHandler::RegisterCallback(Init, hook::range_pattern(cxbxr.begin, cxbxr.end, "E8 ? ? ? ? 80 3D ? ? ? ? ? 74 17 8B 46 5C 8B 88 ? ? ? ? 6A 01"));
+            CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::range_pattern(cxbxr.begin, cxbxr.end, "E8 ? ? ? ? 80 3D ? ? ? ? ? 74 17 8B 46 5C 8B 88 ? ? ? ? 6A 01"));
         });
     }
 }

@@ -1,16 +1,27 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
+#include "NativeMenu.hpp"
 #include "d3d9.h"
+#include "Window.hpp"
 
 import ComVars;
 
 void Init()
 {
+    FixSettings();
+    DPLMenu::Init();
+    asi_settings::LiveLink::Start();
     // Otherwise with display scaling Windows gives the game a scaled down desktop and stretches its window,
     // and the window does not match the display modes of the resolution list
-    SetProcessDPIAware();
 
     auto pattern = hook::pattern("A1 ? ? ? ? 85 C0 8D 7E");
-    hWnd.SetAddress(*pattern.get_first<HWND*>(1));
+    auto nativeWindow = *pattern.get_first<HWND*>(1);
+    hWnd.SetAddress(nativeWindow);
+    D3D9Options::frameLimit = FixSettings().Int("MAIN.FPSLimit");
+    DPLWindow::Init(nativeWindow);
+    FixSettings().Availability("MAIN.WindowMode", [](std::string_view value) { return value == "0" || DPLWindow::ready; },
+        [] { return "Window mode is unavailable."; });
+    D3D9Options::HookCreation();
 
     pattern = hook::pattern("38 05 ? ? ? ? 75 ? 39 81 ? ? ? ? 74");
     dwWindowedMode.SetAddress(*pattern.get_first<uint32_t*>(2));
@@ -76,10 +87,13 @@ void Init()
     };
 }
 
+ASI_SETTINGS_EXPORT(FixSettings())
+
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        WindowedModeWrapper::EnableDpiAwareness();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("55 8B EC 83 EC 60 53 56 57"));
     });
 }

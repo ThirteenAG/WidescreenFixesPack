@@ -1,0 +1,7 @@
+// Embedded settings description and translations; .cfg is written in full on first start.
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/SRS/en.json"
+fr ASISETTINGS_TEXT "../../text/SRS/fr.json"
+de ASISETTINGS_TEXT "../../text/SRS/de.json"
+it ASISETTINGS_TEXT "../../text/SRS/it.json"
+es ASISETTINGS_TEXT "../../text/SRS/es.json"

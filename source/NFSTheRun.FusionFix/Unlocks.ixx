@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Unlocks;
 
@@ -23,7 +24,8 @@ namespace fb
         Unlockable* __cdecl getMatchingGarageCar(uint32_t attribSysClassKey, uint32_t attribSysCollectionKey)
         {
             auto GarageCar = shgetMatchingGarageCar.unsafe_ccall<Unlockable*>(attribSysClassKey, attribSysCollectionKey);
-            GarageCar->m_isUnlocked = true;
+            if (GarageCar)
+                GarageCar->m_isUnlocked = true;
             return GarageCar;
         }
     }
@@ -33,7 +35,7 @@ namespace fb
         SafetyHookInline shsetValue = {};
         void __fastcall setValue(void* UIDataValue, void* edx, int index, const char** key, uint8_t* dataValue)
         {
-            auto strKey = std::string_view(*key);
+            auto strKey = (key && *key) ? std::string_view(*key) : std::string_view();
 
             if (strKey == "isLocked")
             {
@@ -50,7 +52,7 @@ namespace fb
         SafetyHookInline shsetValue2 = {};
         void __fastcall setValue2(void* UIDataValue, void* edx, const char** key, uint8_t* dataValue)
         {
-            auto strKey = std::string_view(*key);
+            auto strKey = (key && *key) ? std::string_view(*key) : std::string_view();
 
             if (strKey == "isLocked")
             {
@@ -73,10 +75,9 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            auto bUnlockAllCars = iniReader.ReadInteger("UNLOCKS", "UnlockAllCars", 1) != 0;
-            auto bUnlockChallenges = iniReader.ReadInteger("UNLOCKS", "UnlockChallenges", 1) != 0;
-            auto bUnlockEverything = iniReader.ReadInteger("UNLOCKS", "UnlockEverything", 1) != 0;
+            auto bUnlockAllCars = FixSettings().Int("UNLOCKS.UnlockAllCars") != 0;
+            auto bUnlockChallenges = FixSettings().Int("UNLOCKS.UnlockChallenges") != 0;
+            auto bUnlockEverything = FixSettings().Int("UNLOCKS.UnlockEverything") != 0;
 
             if (bUnlockChallenges)
             {
@@ -98,9 +99,8 @@ public:
                 auto pattern = hook::pattern("8B 56 ? 0F B7 48");
                 static auto UnlockablePropertiesHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
-                    auto property = std::string_view(*(const char**)regs.eax);
-
-                    if (property == "Unlockers")
+                    auto name = regs.eax ? *(const char**)regs.eax : nullptr;
+                    if (name && std::string_view(name) == "Unlockers")
                     {
                         static auto undef = "Undefined";
                         static auto addr_undef = &undef;

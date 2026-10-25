@@ -1,4 +1,7 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
+
+ASI_SETTINGS_EXPORT(FixSettings())
 #include <LEDEffects.h>
 
 import ComVars;
@@ -12,6 +15,10 @@ import WinDrv;
 import Xidi;
 import Online;
 import Eax;
+import GUI;
+import WidescreenHUD;
+
+#include "NativeMenu.hpp"
 
 void AmmoInClip()
 {
@@ -44,31 +51,33 @@ void AmmoInClip()
 
 void Init()
 {
-    CIniReader iniReader("");
-    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
-    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    Screen.fRawInputMouse = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouse", 1.0f), 0.0f, 5.0f) / 2.0f;
-    Screen.bRawInputMouseRawData = iniReader.ReadInteger("MAIN", "RawInputMouseRawData", 0) != 0;
-    Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1);
-    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
-    bool bForceLL = iniReader.ReadInteger("MAIN", "ForceLL", 1) != 0;
-    auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
-    Screen.szLoadscPath = iniReader.GetIniPath();
-    Screen.szLoadscPath.replace_extension(".png");
-    gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
-    gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
-    bLightSyncRGB = iniReader.ReadInteger("BONUS", "LightSyncRGB", 1);
 
-    if (!Screen.Width || !Screen.Height)
+    Screen.Width = FixSettings().Int("MAIN.ResX");
+    Screen.Height = FixSettings().Int("MAIN.ResY");
+    Screen.bRawInputMouse = FixSettings().Bool("MAIN.RawInputMouse");
+    FixSettings().OnChange("MAIN.MouseSensitivity", []
+    {
+        RawInputHandler<>::SetSensitivity(FixSettings().Float("MAIN.MouseSensitivity") * 0.5f);
+    });
+    Screen.bRawInputMouseRawData = FixSettings().Int("MAIN.RawInputMouseRawData") != 0;
+    Screen.nHudWidescreenMode = FixSettings().Int("MAIN.HudWidescreenMode");
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+    bool bForceLL = FixSettings().Int("MAIN.ForceLL") != 0;
+    auto nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
+    Screen.szLoadscPath = FixSettings().CfgPath();
+    Screen.szLoadscPath.replace_extension(".png");
+    gBlacklistIndicators = FixSettings().Int("BONUS.BlacklistIndicators");
+    gColor = FixSettings().Int("BONUS.GogglesLightColor");
+    bLightSyncRGB = FixSettings().Int("MAIN.LightSyncRGB");
+
+    if (Screen.Width <= 0 || Screen.Height <= 0 || Screen.Width > 16384 || Screen.Height > 16384)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+    if (Screen.Width <= 0 || Screen.Height <= 0)
+        std::tie(Screen.Width, Screen.Height) = std::make_tuple(640, 480);
 
     auto exePath = GetExeModulePath();
 
     {
-        mINI::INIStructure ini;
-        mINI::INIFile mIni(iniReader.GetIniPath());
-        mIni.read(ini);
-
         // The engine creates a missing game INI by copying Default.ini, but only when the file doesn't exist,
         // so do the same here instead of generating a file with only a few keys in it.
         // Only update it when it could be read, otherwise everything else in it would be lost
@@ -81,18 +90,38 @@ void Init()
         mINI::INIFile sc4IniFile(sc4IniPath);
         if (sc4IniFile.read(sc4Ini))
         {
-            for (auto const& sec : ini)
+            if (FixSettings().Bool("NATIVE.Enabled"))
             {
-                std::string sectionName = std::get<0>(sec);
-                if (sectionName == "GENERAL" || sectionName == "Graphics" || sectionName == "WinDrv.WindowsClient" || sectionName == "D3DDrv.D3DRenderDevice")
-                {
-                    for (auto const& kv : std::get<1>(sec))
-                    {
-                        std::string key = std::get<0>(kv);
-                        std::string value = std::get<1>(kv);
-                        sc4Ini[sectionName].set(key, value);
-                    }
-                }
+                if (auto value = FixSettings().String("NATIVE_WINDOW.StartupFullscreen"); !value.empty())
+                    sc4Ini["WinDrv.WindowsClient"].set("StartupFullscreen", value);
+                if (auto value = FixSettings().String("NATIVE_WINDOW.TextureDetail"); !value.empty())
+                    sc4Ini["WinDrv.WindowsClient"].set("TextureDetail", value);
+                if (auto value = FixSettings().String("NATIVE_GENERAL.DisableHDRTonemapping"); !value.empty())
+                    sc4Ini["GENERAL"].set("DisableHDRTonemapping", value);
+                if (auto value = FixSettings().String("NATIVE_GENERAL.LowResTex"); !value.empty())
+                    sc4Ini["GENERAL"].set("LowResTex", value);
+                if (auto value = FixSettings().String("NATIVE_GENERAL.SimpleShader"); !value.empty())
+                    sc4Ini["GENERAL"].set("SimpleShader", value);
+                if (auto value = FixSettings().String("NATIVE_GENERAL.SimpleEffect"); !value.empty())
+                    sc4Ini["GENERAL"].set("SimpleEffect", value);
+                if (auto value = FixSettings().String("NATIVE_GENERAL.HidePieces"); !value.empty())
+                    sc4Ini["GENERAL"].set("HidePieces", value);
+                if (auto value = FixSettings().String("NATIVE_GRAPHICS.bEnableHDR"); !value.empty())
+                    sc4Ini["Graphics"].set("bEnableHDR", value);
+                if (auto value = FixSettings().String("NATIVE_GRAPHICS.bSpecularLighting"); !value.empty())
+                    sc4Ini["Graphics"].set("bSpecularLighting", value);
+                if (auto value = FixSettings().String("NATIVE_GRAPHICS.bHighQualityVisualFX"); !value.empty())
+                    sc4Ini["Graphics"].set("bHighQualityVisualFX", value);
+                if (auto value = FixSettings().String("NATIVE_D3D.UseHWShadowMapping"); !value.empty())
+                    sc4Ini["D3DDrv.D3DRenderDevice"].set("UseHWShadowMapping", value);
+                if (auto value = FixSettings().String("NATIVE_D3D.ShadowResolutionDegree"); !value.empty())
+                    sc4Ini["D3DDrv.D3DRenderDevice"].set("ShadowResolutionDegree", value);
+                if (auto value = FixSettings().String("NATIVE_D3D.ShadowTurnOffDegree"); !value.empty())
+                    sc4Ini["D3DDrv.D3DRenderDevice"].set("ShadowTurnOffDegree", value);
+                if (auto value = FixSettings().String("NATIVE_D3D.bUseSmoothShadow"); !value.empty())
+                    sc4Ini["D3DDrv.D3DRenderDevice"].set("bUseSmoothShadow", value);
+                if (auto value = FixSettings().String("NATIVE_D3D.FSAADegree"); !value.empty())
+                    sc4Ini["D3DDrv.D3DRenderDevice"].set("FSAADegree", value);
             }
 
             auto ResX = std::to_string(Screen.Width);
@@ -108,25 +137,14 @@ void Init()
     }
 
     {
-        mINI::INIStructure ini;
-        mINI::INIFile mIni(iniReader.GetIniPath());
-        mIni.read(ini);
-
         // Only update the user INI when it exists and could be read; the game creates it on first run,
         // and a file written from scratch here would be missing everything else (bindings etc.)
         mINI::INIStructure userIni;
         mINI::INIFile userIniFile(exePath / "SplinterCell4User.ini");
         if (userIniFile.read(userIni))
         {
-            if (ini.has("Engine.Input"))
-            {
-                for (auto const& kv : ini["Engine.Input"])
-                {
-                    std::string key = std::get<0>(kv);
-                    std::string value = std::get<1>(kv);
-                    userIni["Engine.Input"].setAll(key, value);
-                }
-            }
+            for (auto key : { "Joy1", "Joy2", "Joy3", "Joy4", "Joy5", "Joy6", "Joy7", "Joy8", "Joy9", "Joy10", "Joy11", "Joy12", "Joy13", "Joy14", "Joy15", "Joy16", "JoyX", "JoyY", "JoyZ", "JoyV", "JoyR", "JoyU", "AnalogUp", "AnalogDown", "AnalogLeft", "AnalogRight", "MouseWheelUp", "MouseWheelDown", "Tilde" })
+                userIni["Engine.Input"].setAll(key, FixSettings().String(std::string("INPUT.") + key));
             userIniFile.generate(userIni);
         }
     }
@@ -257,12 +275,16 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        // Real pixels on scaled desktops: the desktop resolution, and a full screen picture not drawn into a corner
+        WindowedModeWrapper::EnableDpiAwareness();
+        FixSettings();
+        asi_settings::LiveLink::Start();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("74 ? 68 ? ? ? ? 53 FF D7"));
         CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
         CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
         CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
         CallbackHandler::RegisterCallback(L"gear_RD.dll", InitGear);
-        CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);
+        CallbackHandler::RegisterCallback(L"EchelonMenus.dll", [] { InitEchelonMenus(); DAMenu::Init(); NativeWindowsMenuHelp = DAMenu::WindowsHelp; });
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
         CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
         CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);

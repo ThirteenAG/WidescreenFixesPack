@@ -1,0 +1,32 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.VehicleLights",
+      "type": "bool",
+      "default": 1,
+      "label": "@lights",
+      "description": "@lights.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    }
+  ]
+}

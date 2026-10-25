@@ -1,4 +1,4 @@
-#include "../Shared/Console/PSP.hpp"
+#include "../Shared/Console/PortableCfg.hpp"
 #include <cstdio>
 extern "C" { PSP_MODULE_INFO("GTAVCS.GamepadIcons", PSP_MODULE_USER, 2, 0); }
 namespace icons {
@@ -13,7 +13,7 @@ static_assert(sizeof(Raster) == 16 && sizeof(Texture) == 80);
 // plugin. The PSP set is the game's own artwork, kept from the loaded texture.
 constexpr const char* sets[] = {"PSP", "360", "XBO", "PS3", "PS4", "PS5", "SWI", "DEK"};
 constexpr unsigned SetCount = sizeof(sets) / sizeof(*sets);
-constexpr auto path = "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.ini";
+constexpr auto path = "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.cfg";
 constexpr auto folder = "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/";
 struct Icon { const char* name; Texture* texture; uint8_t* data; uint32_t backup, size, markAt; bool saved; uint8_t mark[16]; };
 Icon icons[] = {
@@ -168,8 +168,10 @@ Texture* DestroyDisplayList(Texture* texture, void* data) {
     return destroyDisplayList.call<Texture*>(texture, data);
 }
 void Save() {
-    const SceUID file = sceIoOpen(path, PSP_O_WRONLY | PSP_O_CREAT | PSP_O_TRUNC, 0777);
-    if (file >= 0) { sceIoWrite(file, sets[selected], 3); sceIoClose(file); }
+    IniValue value[] = {{"MAIN", "GamepadIcons", {}}};
+    std::snprintf(value[0].value, sizeof(value[0].value), "%s", sets[selected]);
+    static IniWriter<> writer;
+    writer.update(path, value, 1);
 }
 void SetController(uintptr_t object, uint8_t mode) {
     const auto pad = getPad(0);
@@ -187,15 +189,13 @@ void SetController(uintptr_t object, uint8_t mode) {
     controller.fun(object, mode);
 }
 int Install() {
-    sceKernelDelayThread(120000);
-    if (!Begin()) return -1;
-    char stored[4]{};
-    const SceUID file = sceIoOpen(path, PSP_O_RDONLY, 0777);
-    if (file >= 0) {
-        const int count = sceIoRead(file, stored, 3); sceIoClose(file);
-        if (count == 3) for (unsigned i = 0; i < SetCount; ++i)
-            if (std::memcmp(stored, sets[i], 3) == 0) { selected = i; break; }
-    }
+    if (!BeginReported()) return -1;
+    IniValue defaults[] = {{"MAIN", "GamepadIcons", "PSP"}};
+    CompleteCfg(path, defaults);
+    char stored[16]{};
+    const char* storedSet = inireader.ReadString("MAIN", "GamepadIcons", "PSP", stored, sizeof(stored));
+    for (unsigned i = 0; i < SetCount; ++i)
+        if (std::strcmp(storedSet, sets[i]) == 0) { selected = i; break; }
     getPad = reinterpret_cast<decltype(getPad)>(pattern.get_first("C0 20 04 00 23 10 85 00 ? ? ? ? ? ? ? ? 08 00 E0 03 21 10 44 00", -8));
     constexpr auto gui = "00 00 B0 AF 04 00 BF AF ? ? ? ? 25 80 80 00 ? ? ? ? 00 00 00 00 ? ? ? ? 25 20 00 02 ? ? ? ? 00 00 00 00 ? ? ? ? 01 00 02 34 25 10 00 00";
     guiLeft = reinterpret_cast<decltype(guiLeft)>(pattern.get(0, gui, -4));
@@ -204,8 +204,12 @@ int Install() {
     const auto set = pattern.get_first("25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00 FF 00 86 30 25 20 A0 00 ? ? ? ? 25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00 FF 00 86 30 25 20 A0 00 ? ? ? ? 25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00", -4);
     // The destruction profile belongs to the same supported executable as the
     // load patterns. Reject an unknown version before installing any hooks.
-    if (!getPad || !guiLeft || !guiRight || injector::ReadMemory<uint32_t>(0x08A65C4C) != 0x27BDFFF0 ||
-        injector::GetBranchDestination(read).as_int() != 0x08A65C4C) return -1;
+    if (!getPad || !guiLeft || !guiRight || !read || !set || injector::ReadMemory<uint32_t>(0x08A65C4C) != 0x27BDFFF0 ||
+        injector::GetBranchDestination(read).as_int() != 0x08A65C4C)
+    {
+        logger.Write("Controller icons disabled: unsupported game version.\n");
+        return -1;
+    }
     readTexture = safetymips::create_inline(0x08A65C4C, ReadTexture);
     destroyDisplayList = safetymips::create_inline(0x08B21348, DestroyDisplayList);
     controller.fun = injector::MakeCALL(set, SetController).get();
@@ -214,6 +218,6 @@ int Install() {
 }
 }
 extern "C" int module_start(SceSize, void*) {
-    if (!console::portable::Start("GTA3", icons::path, "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.log")) return 0;
+    if (!console::portable::StartReported("GTA3", icons::path, "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.log")) return 0;
     return icons::Install();
 }

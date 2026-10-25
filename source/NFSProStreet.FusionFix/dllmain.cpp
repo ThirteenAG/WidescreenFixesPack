@@ -1,7 +1,12 @@
 #include "stdafx.h"
 #include "d3d9.h"
+#include "FixSettings.hpp"
+#include "../Shared/NFS/Cursor.hpp"
 
 import ComVars;
+
+// The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
+ASI_SETTINGS_EXPORT(FixSettings())
 
 std::once_flag of;
 
@@ -13,6 +18,7 @@ void __cdecl MainLoop(float TickerDifference)
         WFP::onGameInitEvent().executeAll();
     });
 
+    CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
 
     static bool oldMenuState = GameFlowManager::IsPaused();
@@ -39,6 +45,7 @@ void __cdecl MiniMainLoop()
         WFP::onGameInitEvent().executeAll();
     });
 
+    CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
 
     shMiniMainLoop.unsafe_ccall();
@@ -46,6 +53,7 @@ void __cdecl MiniMainLoop()
 
 void Init()
 {
+    NFSCursor::Initialize();
     auto pattern = hook::pattern("8B 0D ? ? ? ? 50 51 89 54 24");
     hWnd.SetAddress(*pattern.get_first<HWND*>(2));
 
@@ -87,6 +95,7 @@ void Init()
     });
 
     WFP::onInitEvent().executeAll();
+    asi_settings::LiveLink::Start();
 
     static auto futures = WFP::onInitEventAsync().executeAllAsync();
 

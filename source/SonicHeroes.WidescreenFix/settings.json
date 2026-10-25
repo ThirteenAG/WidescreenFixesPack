@@ -1,0 +1,574 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Sonic Heroes",
+        "exe": [
+          "Tsonic_win.exe",
+          "Tsonic_win2.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "gameplay"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility",
+      "order": 1000
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "label": "@MAIN.WindowMode",
+      "description": "@MAIN.WindowMode.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@MAIN.WindowMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@MAIN.WindowMode.1"
+        },
+        {
+          "value": 2,
+          "label": "@MAIN.WindowMode.2"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.WindowResize",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.WindowResize",
+      "description": "@MAIN.WindowResize.description",
+      "page": "display",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.BorderlessScaling",
+      "type": "choice",
+      "default": 0,
+      "label": "@MAIN.BorderlessScaling",
+      "description": "@MAIN.BorderlessScaling.description",
+      "page": "display",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@MAIN.BorderlessScaling.0"
+        },
+        {
+          "value": 1,
+          "label": "@MAIN.BorderlessScaling.1"
+        },
+        {
+          "value": 2,
+          "label": "@MAIN.BorderlessScaling.2"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.ResX",
+      "description": "@MAIN.ResX.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.ResY",
+      "description": "@MAIN.ResY.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384
+    },
+    {
+      "id": "MAIN.MinAspectRatio",
+      "type": "float",
+      "default": 1.33333334,
+      "label": "@MAIN.MinAspectRatio",
+      "description": "@MAIN.MinAspectRatio.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0.1,
+      "max": 10
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN.FOVFactor",
+      "description": "@MAIN.FOVFactor.description",
+      "page": "camera",
+      "apply": "live",
+      "visibility": "menu",
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MISC.CustomUserFilesDirectoryInGameDir",
+      "type": "string",
+      "default": "0",
+      "label": "@MISC.CustomUserFilesDirectoryInGameDir",
+      "description": "@MISC.CustomUserFilesDirectoryInGameDir.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MISC.ShadowScale",
+      "type": "float",
+      "default": 1.7,
+      "label": "@MISC.ShadowScale",
+      "description": "@MISC.ShadowScale.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 0.1,
+      "max": 10,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1.7,
+        "enhanced": 1.7
+      }
+    },
+    {
+      "id": "GRAPHICS.ShadowResolution",
+      "type": "int",
+      "default": 1024,
+      "label": "@GRAPHICS.ShadowResolution",
+      "description": "@GRAPHICS.ShadowResolution.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 16,
+      "max": 8192,
+      "presets": {
+        "vanilla": 256,
+        "recommended": 1024,
+        "enhanced": 1024
+      }
+    },
+    {
+      "id": "MISC.ClipRange",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MISC.ClipRange",
+      "description": "@MISC.ClipRange.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0.01,
+      "max": 100
+    },
+    {
+      "id": "MISC.FixLensFlare",
+      "type": "bool",
+      "default": 1,
+      "label": "@MISC.FixLensFlare",
+      "description": "@MISC.FixLensFlare.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.FixAdvertiseWindows",
+      "type": "bool",
+      "default": 1,
+      "label": "@MISC.FixAdvertiseWindows",
+      "description": "@MISC.FixAdvertiseWindows.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.FixStaffRoll",
+      "type": "bool",
+      "default": 1,
+      "label": "@MISC.FixStaffRoll",
+      "description": "@MISC.FixStaffRoll.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.DisableCDCheck",
+      "type": "bool",
+      "default": 1,
+      "label": "@MISC.DisableCDCheck",
+      "description": "@MISC.DisableCDCheck.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "MISC.DisableMouseInput",
+      "type": "bool",
+      "default": 1,
+      "label": "@MISC.DisableMouseInput",
+      "description": "@MISC.DisableMouseInput.description",
+      "page": "game",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.DisableFrameSkipping",
+      "type": "bool",
+      "default": 1,
+      "label": "@MISC.DisableFrameSkipping",
+      "description": "@MISC.DisableFrameSkipping.description",
+      "page": "game",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.DisableQuitDialog",
+      "type": "bool",
+      "default": 0,
+      "label": "@MISC.DisableQuitDialog",
+      "description": "@MISC.DisableQuitDialog.description",
+      "page": "game",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MISC.DisableLoadingTimer",
+      "type": "bool",
+      "default": 0,
+      "label": "@MISC.DisableLoadingTimer",
+      "description": "@MISC.DisableLoadingTimer.description",
+      "page": "game",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MISC.DisableSubtitles",
+      "type": "bool",
+      "default": 0,
+      "label": "@MISC.DisableSubtitles",
+      "description": "@MISC.DisableSubtitles.description",
+      "page": "game",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MISC.RestoreDemos",
+      "type": "bool",
+      "default": 1,
+      "label": "@MISC.RestoreDemos",
+      "description": "@MISC.RestoreDemos.description",
+      "page": "game",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.IncreaseObjectDistance",
+      "type": "bool",
+      "default": 1,
+      "label": "@MISC.IncreaseObjectDistance",
+      "description": "@MISC.IncreaseObjectDistance.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.MinObjDistance",
+      "type": "int",
+      "default": 0,
+      "label": "@MISC.MinObjDistance",
+      "description": "@MISC.MinObjDistance.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 255
+    },
+    {
+      "id": "GRAPHICS.DrawDistance",
+      "type": "float",
+      "default": 2.0,
+      "label": "@MISC.ObjDistanceScale",
+      "description": "@MISC.ObjDistanceScale.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 255
+    },
+    {
+      "id": "MISC.WarpSwitchEffectMode",
+      "type": "choice",
+      "default": 2,
+      "label": "@MISC.WarpSwitchEffectMode",
+      "description": "@MISC.WarpSwitchEffectMode.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 2,
+        "enhanced": 2
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@MISC.WarpSwitchEffectMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@MISC.WarpSwitchEffectMode.1"
+        },
+        {
+          "value": 2,
+          "label": "@MISC.WarpSwitchEffectMode.2"
+        }
+      ]
+    },
+    {
+      "id": "MISC.BetterFrameSync",
+      "type": "bool",
+      "default": 1,
+      "label": "@MISC.BetterFrameSync",
+      "description": "@MISC.BetterFrameSync.description",
+      "page": "game",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.FPSLimitMode",
+      "type": "int",
+      "default": 2,
+      "label": "@MISC.FPSLimitMode",
+      "description": "@MISC.FPSLimitMode.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file",
+      "min": 0,
+      "max": 2
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "float",
+      "default": 60.0,
+      "label": "@MAIN.FPSLimit",
+      "description": "@MAIN.FPSLimit.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 1,
+      "max": 1000
+    },
+    {
+      "id": "SkipFE.Enabled",
+      "type": "bool",
+      "default": 0,
+      "label": "@SkipFE.Enabled",
+      "description": "@SkipFE.Enabled.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "SkipFE.SystemMode",
+      "type": "int",
+      "default": 3,
+      "label": "@SkipFE.SystemMode",
+      "description": "@SkipFE.SystemMode.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file",
+      "min": 0,
+      "max": 5
+    },
+    {
+      "id": "SkipFE.Stage",
+      "type": "int",
+      "default": 2,
+      "label": "@SkipFE.Stage",
+      "description": "@SkipFE.Stage.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file",
+      "min": 0,
+      "max": 61
+    },
+    {
+      "id": "SkipFE.Team1",
+      "type": "int",
+      "default": 0,
+      "label": "@SkipFE.Team1",
+      "description": "@SkipFE.Team1.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file",
+      "min": -1,
+      "max": 4
+    },
+    {
+      "id": "SkipFE.Team2",
+      "type": "int",
+      "default": -1,
+      "label": "@SkipFE.Team2",
+      "description": "@SkipFE.Team2.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file",
+      "min": -1,
+      "max": 4
+    },
+    {
+      "id": "SkipFE.Team3",
+      "type": "int",
+      "default": -1,
+      "label": "@SkipFE.Team3",
+      "description": "@SkipFE.Team3.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file",
+      "min": -1,
+      "max": 4
+    },
+    {
+      "id": "SkipFE.Team4",
+      "type": "int",
+      "default": -1,
+      "label": "@SkipFE.Team4",
+      "description": "@SkipFE.Team4.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file",
+      "min": -1,
+      "max": 4
+    },
+    {
+      "id": "SkipFE.Movie",
+      "type": "int",
+      "default": -1,
+      "label": "@SkipFE.Movie",
+      "description": "@SkipFE.Movie.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file",
+      "min": -1,
+      "max": 28
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.ConfineCursor",
+      "description": "@MAIN.ConfineCursor.description",
+      "page": "advanced",
+      "apply": "live",
+      "visibility": "editor"
+    }
+  ]
+}

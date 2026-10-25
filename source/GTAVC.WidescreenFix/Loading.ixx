@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 
 export module Loading;
 
@@ -287,52 +289,111 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            gbNoIslandLoading = iniReader.ReadInteger("MISC", "NoIslandLoading", 1) != 0;
+            gbNoIslandLoading = FixSettings().Bool("MISC.NoIslandLoading");
 
             if (gbNoIslandLoading)
             {
                 auto pattern = hook::pattern("05 ? ? ? ? 8D 9C 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CWorld::ms_bigBuildingsList = *pattern.get_first<CPtrList*>(1);
 
                 pattern = hook::pattern("E8 ? ? ? ? 84 C0 59 59 74 ? 6A ? EB ? 8D 40");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CRenderer::ShouldModelBeStreamed = (decltype(CRenderer::ShouldModelBeStreamed))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = hook::pattern("A3 ? ? ? ? EB ? 8D 40 ? 39 FE");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 auto arr = *pattern.get_first<CEntity**>(1);
                 CStreaming::pIslandLODmainlandEntity = &arr[0];
                 CStreaming::pIslandLODbeachEntity = &arr[1];
 
                 //CStreaming::RequestBigBuildings
                 pattern = hook::pattern("E8 ? ? ? ? 59 59 83 ED");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CStreaming::RequestModel = (decltype(CStreaming::RequestModel))injector::GetBranchDestination(pattern.get_first()).as_int();
                 pattern = hook::pattern("53 56 8B 35 ? ? ? ? 57 89 F0 55 8B 58 ? 8B 7C 24 ? 83 EB ? 72");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CPools::pp_pBuildingPool = *pattern.get_first<CBuildingPool**>(4);
                 CStreaming::shRequestBigBuildings = safetyhook::create_inline(pattern.get_first(), CStreaming::RequestBigBuildings);
 
                 //LoadScene
                 pattern = hook::pattern("0F 84 ? ? ? ? 8B 35 ? ? ? ? 89 F1 8B 41 ? 89 44 24 ? 83 6C 24 ? ? 0F 82 ? ? ? ? 8B 54 24 ? ? ? ? 89 44 24 ? C1 64 24 ? ? 8B 4C 24 ? ? ? ? 89 44 24 ? 89 C0");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true);
 
                 pattern = hook::pattern("0F 8C ? ? ? ? FF 74 24 ? E8 ? ? ? ? 8B 35");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 6);
 
                 pattern = hook::pattern("0F 82 ? ? ? ? 89 EF ? ? ? 89 44 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true);
 
                 pattern = hook::pattern("75 ? 83 3D ? ? ? ? ? 74 ? A1 ? ? ? ? 6A ? EB ? 83 7C 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
 
                 pattern = hook::pattern("75 ? 83 3D ? ? ? ? ? 74 ? A1 ? ? ? ? 6A ? 50 E8 ? ? ? ? 59 59 8B 1D");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
 
                 pattern = hook::pattern("0F 82 ? ? ? ? 89 EA");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true);
 
                 static eLevelName level = LEVEL_IGNORE;
                 static auto pos = CVector{ 0.0f, 0.0f, 0.0f };
 
                 pattern = find_pattern("59 89 44 24 ? 68 ? ? ? ? E8 ? ? ? ? 8B 2D");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto LoadSceneHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     level = (eLevelName)regs.eax;
@@ -340,6 +401,11 @@ public:
                 });
 
                 pattern = find_pattern("FF 74 24 ? E8 ? ? ? ? 59 6A ? E8");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto LoadSceneHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     CStreaming::RequestBigBuildings2(level, pos);
@@ -348,6 +414,11 @@ public:
 
                 //CStreaming::RemoveBuildingsNotInArea
                 pattern = find_pattern("8B 7D ? 83 EF");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto RemoveBuildingsNotInAreaHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     CStreaming::FixIslandLODs();
@@ -355,34 +426,79 @@ public:
 
                 //CStreaming::RemoveIslandsNotUsed
                 pattern = hook::pattern("75 ? 8B 1D ? ? ? ? 85 DB 0F 84");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 2);
 
                 pattern = hook::pattern("75 ? 8B 1D ? ? ? ? 85 DB 74 ? 8A 43");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 2);
 
                 //CStreaming::RemoveUnusedBigBuildings
                 pattern = hook::pattern("0F 84 ? ? ? ? 8B 35 ? ? ? ? 89 F5");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true);
 
                 pattern = hook::pattern("0F 8C ? ? ? ? FF 74 24 ? E8 ? ? ? ? 59 83 C4");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 6);
 
                 //CStreaming::LoadBigBuildingsWhenNeeded
                 pattern = hook::pattern("E8 ? ? ? ? 80 3D ? ? ? ? ? 75 ? BB");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeRET(injector::GetBranchDestination(pattern.get_first()).as_int());
 
                 //CRenderer::ScanWorld
                 pattern = hook::pattern("E8 ? ? ? ? 59 68 ? ? ? ? E8 ? ? ? ? 59 E9");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CRenderer::hbScanBigBuildingList.fun = injector::MakeCALL(pattern.get_first(), CRenderer::ScanBigBuildingList).get();
 
                 //CColStore::EnsureCollisionIsInMemory
                 pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 6A ? E8 ? ? ? ? 59 E8 ? ? ? ? 45");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), CMenuManager__MessageScreenStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? 6A ? E8 ? ? ? ? 59 E8 ? ? ? ? 45");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), CTimer__SuspendStub);
 
                 pattern = hook::pattern("E8 ? ? ? ? 45 83 C7 ? 83 C6");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeCALL(pattern.get_first(), CTimer__ResumeStub);
             }
         };

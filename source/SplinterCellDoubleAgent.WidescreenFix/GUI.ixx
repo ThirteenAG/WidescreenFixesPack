@@ -105,11 +105,11 @@ export enum class KnownHashes : uint32_t
 namespace CMenusManager
 {
     SafetyHookInline shDisplayMenu = {};
-    void __fastcall DisplayMenu(int* menusManager, void* edx, uint32_t* entry, char show, char a4, char a5)
+    uint8_t __fastcall DisplayMenu(int* menusManager, void* edx, uint32_t* entry, bool show, bool hidePrevious, int priority)
     {
         uint32_t hash = entry[1];
         IsMenuDisplayedCache[hash] = (show != 0);
-        shDisplayMenu.unsafe_fastcall(menusManager, edx, entry, show, a4, a5);
+        return shDisplayMenu.unsafe_fastcall<uint8_t>(menusManager, edx, entry, show, hidePrevious, priority);
     }
 
     export bool IsMenuDisplayed(uint32_t hash)
@@ -212,7 +212,7 @@ export void InitGUI()
                 int16_t clampedGameX = std::clamp(*(int16_t*)(regs.edx + 0), int16_t(0 - delta), int16_t(800 + delta));
                 int16_t clampedGameY = std::clamp(*(int16_t*)(regs.edx + 2), int16_t(0), int16_t(585));
 
-                if (Screen.fRawInputMouse > 0.0f)
+                if (Screen.bRawInputMouse)
                 {
                     RawInputHandler<>::RawMouseCursorX = CMenusManager::GameToRawInputX(clampedGameX, vmin, vmax);
                     RawInputHandler<>::RawMouseCursorY = CMenusManager::GameToRawInputY(clampedGameY, 0, 585);
@@ -229,4 +229,10 @@ export void InitGUI()
     //USCMagmaInteraction::ProcessInputReleaseState
 
     CMenusManager::shDisplayMenu = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplayMenu@CMenusManager@@QAE_NPAVPage@magma@@_N1W4EMENUPRIORITY@@@Z"), CMenusManager::DisplayMenu);
+}
+// Only expose our exact owned detour for native-menu body validation.
+export const SafetyHookInline* NativeMenuDisplayHook()
+{
+    return CMenusManager::shDisplayMenu && CMenusManager::shDisplayMenu.enabled() &&
+        CMenusManager::shDisplayMenu.destination_address() == reinterpret_cast<uintptr_t>(CMenusManager::DisplayMenu) ? &CMenusManager::shDisplayMenu : nullptr;
 }

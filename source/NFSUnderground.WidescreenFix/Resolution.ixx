@@ -20,33 +20,11 @@ std::vector<int> dwSupportedResolutionsArray;
 int cachedWidth, cachedHeight;
 bool bForceDeviceReset = false;
 
-void __stdcall GetResolution(int* outWidth, int* outHeight)
-{
-    if (!outWidth || !outHeight)
-        return;
-
-    if (g_RacingResolution < 0 || g_RacingResolution >= (int)ResList.size())
-    {
-        auto desktopRes = GetDesktopRes();
-        *outWidth = std::get<0>(desktopRes);
-        *outHeight = std::get<1>(desktopRes);
-    }
-    else
-    {
-        *outWidth = ResList[g_RacingResolution].width;
-        *outHeight = ResList[g_RacingResolution].height;
-    }
-}
-
-SafetyHookInline shSearchForString = {};
-char* __fastcall SearchForString(void* ecx, int hash)
-{
-    return shSearchForString.unsafe_fastcall<char*>(ecx, hash);
-}
-
 SafetyHookInline shWndProc = {};
 LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
+    onWindowMessage().executeAll(hWnd, Msg, wParam, lParam);
+
     switch (Msg)
     {
         case WM_SYSKEYDOWN:
@@ -63,9 +41,13 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
         break;
         case WM_SIZE:
         {
-            cachedWidth = LOWORD(lParam);
-            cachedHeight = HIWORD(lParam);
-            onResChange().executeAll(cachedWidth, cachedHeight);
+            // Minimizing reports a zero size
+            if (wParam != SIZE_MINIMIZED && LOWORD(lParam) > 0 && HIWORD(lParam) > 0)
+            {
+                cachedWidth = LOWORD(lParam);
+                cachedHeight = HIWORD(lParam);
+                onResChange().executeAll(cachedWidth, cachedHeight);
+            }
         }
         break;
     }
@@ -100,6 +82,8 @@ export std::pair<int, int> GetRes()
 export float GetAspectRatio()
 {
     auto [Width, Height] = GetRes();
+    if (Width <= 0 || Height <= 0)
+        return 4.0f / 3.0f;
     return static_cast<float>(Width) / static_cast<float>(Height);
 }
 
@@ -205,8 +189,17 @@ public:
             {
                 auto [width, height, refresh] = res;
                 ResList.push_back({ width, height, refresh });
-                auto label = std::format(L"{}x{}", width, height);
-                ResListText.push_back(label);
+            }
+
+            if (ResList.empty())
+            {
+                auto [width, height] = GetDesktopRes();
+                ResList.push_back({ width, height, 60 });
+            }
+
+            for (const auto& res : ResList)
+            {
+                ResListText.push_back(std::format(L"{}x{}", res.width, res.height));
                 dwSupportedResolutionsArray.push_back(1);
             }
 
@@ -237,9 +230,6 @@ public:
 
             pattern = hook::pattern("BA ? ? ? ? 33 C9 3B C2");
             injector::WriteMemory(pattern.get_first(1), (int)ResList.size() - 1, true);
-
-            pattern = hook::pattern("83 FF ? 0F 8C ? ? ? ? 5F 5E 5D");
-            injector::WriteMemory<uint8_t>(pattern.get_first(2), (uint8_t)ResList.size() - 1, true);
 
             {
                 auto setResRef = [](hook::pattern pattern, int offset, std::vector<ProtectedGameRef<int32_t>>& targetVector)
@@ -301,26 +291,17 @@ public:
                 ResYRefs.push_back(ScreenHeight2);
             }
 
-            //pattern = hook::pattern("83 EC ? 55 56 57 33 FF");
-            //static auto IncScreenResEvent = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            //{
-            //
-            //});
-
             pattern = hook::pattern("D8 25 ? ? ? ? E8 ? ? ? ? 8B 4E");
             static auto IncScreenResEventEnd = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 int index = g_RacingResolution;
-                int width = ResList[index].width;
-                int height = ResList[index].height;
-
                 if (index >= 0 && index < (int)ResList.size())
                 {
+                    int width = ResList[index].width;
+                    int height = ResList[index].height;
                     SetRes(width, height);
-                    static int packed = 0;
                     // Pack width and height as shorts into an int, and set sign bit as flag: (width << 16) | height | 0x80000000
-                    packed = (width << 16) | (height & 0xFFFF) | 0x80000000;
-                    SaveResolution(packed);
+                    SaveResolution((width << 16) | (height & 0xFFFF) | 0x80000000);
                     bForceDeviceReset = true;
                 }
             });
@@ -331,12 +312,10 @@ public:
             pattern = hook::pattern("A3 ? ? ? ? A3 ? ? ? ? 75 ? A3 ? ? ? ? 89 0D ? ? ? ? A3");
             injector::MakeNOP(pattern.get_first(), 5, true);
 
-            pattern = hook::pattern("E8 ? ? ? ? 85 C0 74 ? 8B 3D ? ? ? ? 68");
-            shSearchForString = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SearchForString);
-
             static auto nCurrentMenuResolutionSelectorIndex = -1;
             pattern = hook::pattern("8B 43 ? 83 C4 ? 83 CE");
             injector::MakeNOP(pattern.get_first(), 3, true);
+            // Reuse the last of the five native text widgets for every mode; its loop stays at five.
             static auto Force1280x1024RenderObject = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 regs.eax = 4;
@@ -347,7 +326,7 @@ public:
             static auto FEngFontRenderStringHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 auto str = std::wstring_view(*(wchar_t**)(regs.esp + 0x4));
-                if (str == L"1280 x 1024")
+                if (str == L"1280 x 1024" && nCurrentMenuResolutionSelectorIndex >= 0 && nCurrentMenuResolutionSelectorIndex < (int)ResListText.size())
                 {
                     *(wchar_t**)(regs.esp + 0x4) = (wchar_t*)ResListText[nCurrentMenuResolutionSelectorIndex].c_str();
                 }
@@ -367,12 +346,9 @@ public:
                 int index = g_RacingResolutionCached;
                 if (index >= 0 && index < (int)ResList.size())
                 {
-                    static int packed = 0;
                     int width = ResList[index].width;
                     int height = ResList[index].height;
-                    // Pack width and height as shorts into an int, and set sign bit as flag: (width << 16) | height | 0x80000000
-                    packed = (width << 16) | (height & 0xFFFF) | 0x80000000;
-                    SaveResolution(packed);
+                    SaveResolution((width << 16) | (height & 0xFFFF) | 0x80000000);
                 }
 
                 g_RacingResolution = g_RacingResolutionCached;

@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <cmath>
 #include <numbers>
 
@@ -18,6 +19,19 @@ struct FovSite
 };
 std::array<FovSite, 16> fovSites;
 
+double CameraHalfAngle(uintptr_t camera, double angle)
+{
+    double corrected = std::atan(std::tan(angle * 0.5) * GetCameraFovScale());
+    if (GameplayFovEnabled && camera == GameplayCamera && !IsCutsceneCamera())
+    {
+        const float value = FixSettings().Float("MAIN.FOVFactor");
+        const float factor = std::isfinite(value) ? std::clamp(value, 0.5f, 2.0f) : 1.0f;
+        if (factor != 1.0f)
+            corrected = std::clamp(corrected * factor, 0.005, (std::numbers::pi - 0.01) * 0.5);
+    }
+    return corrected;
+}
+
 template<size_t I> void CorrectFov(SafetyHookContext& regs)
 {
     auto& site = fovSites[I];
@@ -26,7 +40,7 @@ template<size_t I> void CorrectFov(SafetyHookContext& regs)
     // Change the existing half-angle multiplier before the native FLD. This
     // leaves the x87 stack, camera FOV fields, and projection code intact.
     site.multiplier = angle == 0.0 ? 0.5f : static_cast<float>(
-        std::atan(std::tan(angle * 0.5) * GetCameraFovScale()) / angle);
+        CameraHalfAngle(camera, angle) / angle);
 }
 
 template<size_t... I> constexpr auto FovCallbacks(std::index_sequence<I...>)
@@ -38,12 +52,11 @@ void RefreshCameraFov(SafetyHookContext& regs)
 {
     auto camera = regs.ecx;
     if (Field<uint8_t>(camera, 0x15C)) return; // orthographic camera
-    double scale = GetCameraFovScale();
     for (auto [field, projection] : { std::pair{0x140u, 0x1A4u}, std::pair{0x14Cu, 0x364u} })
     {
         double angle = Field<float>(camera, field);
         if (!std::isfinite(angle) || angle <= 0.0 || angle >= std::numbers::pi) return;
-        double expected = 1.0 / (std::tan(angle * 0.5) * scale);
+        double expected = 1.0 / std::tan(CameraHalfAngle(camera, angle));
         double cached = Field<float>(camera, projection);
         if (std::isfinite(cached) && std::abs(cached - expected) <= expected * 0.00001) continue;
 
@@ -93,7 +106,10 @@ export void InitFOV()
         }
     }
     if (matches.size() != 2 && matches.size() != 16)
+    {
+        OutputDebugStringA("Mafia: camera projection patterns unavailable.\n");
         return;
+    }
     constexpr auto callbacks = FovCallbacks(std::make_index_sequence<16>{});
     for (size_t i = 0; i < matches.size(); ++i)
     {
@@ -102,7 +118,7 @@ export void InitFOV()
         site.cameraRegister = Field<uint8_t>(load, 1) & 7;
         site.field = Field<uint32_t>(load, 2);
         site.hook = safetyhook::create_mid(load, callbacks[i]);
-        if (site.hook) injector::WriteMemory(multiply + 2, &site.multiplier, true);
+        if (site.hook) ProtectedGameRef<float*>{reinterpret_cast<float**>(multiply + 2)} = &site.multiplier;
     }
     // Called for the active camera on every scene render, before the renderer
     // checks its revision. Projection setters alone miss cutscene transitions.
@@ -112,6 +128,8 @@ export void InitFOV()
     {
         static auto CameraFovHook = safetyhook::create_mid(pCamera.get_first(), RefreshCameraFov);
     }
+    else
+        OutputDebugStringA("Mafia: active camera refresh pattern unavailable.\n");
 }
 
 export void InitMovie()
@@ -121,19 +139,26 @@ export void InitMovie()
     auto pattern = find_module_pattern(module,
         "8B 4C 24 14 8B 54 24 00 8D 41 28 89 10 8B 54 24 04",
         "8B 4C 24 14 8B 54 24 00 8D 41 2C 89 10 8B 54 24 04");
-    if (pattern.size() != 1) return;
+    if (pattern.size() != 1)
+    {
+        OutputDebugStringA("Mafia: movie position pattern unavailable.\n");
+        return;
+    }
     static auto MoviePositionHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         auto& rect = Field<RECT>(regs.esp, 0);
-        if (!bZoomFMVs)
+        float width = Screen.fWidth, height = Screen.fHeight;
+        if (nFMVWidescreenMode != 2)
         {
-            rect.left = static_cast<LONG>(std::nearbyint((Screen.fWidth - rect.right / fMovieAspect) * 0.5));
-            rect.right = static_cast<LONG>(std::nearbyint(rect.right / fMovieAspect));
+            const float scaleX = Screen.fWidth / 4.0f;
+            const float scaleY = Screen.fHeight / 3.0f;
+            const float scale = nFMVWidescreenMode == 1 ? std::max(scaleX, scaleY) : std::min(scaleX, scaleY);
+            width = scale * 4.0f;
+            height = scale * 3.0f;
         }
-        else
-        {
-            rect.top = static_cast<LONG>(std::nearbyint((Screen.fHeight - rect.bottom * fMovieAspect) * 0.5));
-            rect.bottom = static_cast<LONG>(std::nearbyint(rect.bottom * fMovieAspect));
-        }
+        rect.left = static_cast<LONG>(std::nearbyint((Screen.fWidth - width) * 0.5f));
+        rect.top = static_cast<LONG>(std::nearbyint((Screen.fHeight - height) * 0.5f));
+        rect.right = static_cast<LONG>(std::nearbyint(width));
+        rect.bottom = static_cast<LONG>(std::nearbyint(height));
     });
 }

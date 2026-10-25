@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module Misc;
@@ -17,7 +19,9 @@ import Draw;
 injector::hook_back<void(__fastcall*)(CCamera*, void*, bool, bool)> hbCalculateDerivedValues;
 void __fastcall CalculateDerivedValues(CCamera* camera, void* edx, bool bForMirror, bool bOriented)
 {
-    CCamera::UpdatePlayerVehicleSpeedBlur(camera);
+    static auto& bVCSCamShake = FixSettings().Int("MISC.VCSCamShake");
+    if (bVCSCamShake)
+        CCamera::UpdatePlayerVehicleSpeedBlur(camera);
     return hbCalculateDerivedValues.fun(camera, edx, bForMirror, bOriented);
 }
 
@@ -146,6 +150,17 @@ void __cdecl PrintString(float x, float y, char* text)
     CFont::SetOutlinePosition(0);
 }
 
+static void InstallVCSCamShake()
+{
+    static bool installed = false;
+    if (installed || !FixSettings().Int("MISC.VCSCamShake"))
+        return;
+    installed = true;
+    auto pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 8B 96 ? ? ? ? 89 8E ? ? ? ? 8B CE 89 86");
+    if (!pattern.empty())
+        hbCalculateDerivedValues.fun = injector::MakeCALL(pattern.get_first(), CalculateDerivedValues, true).get();
+}
+
 class Misc
 {
 public:
@@ -153,23 +168,38 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            auto bAllowAltTabbingWithoutPausing = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
-            auto bDisableWhiteCrosshairDot = iniReader.ReadInteger("MISC", "DisableWhiteCrosshairDot", 0) != 0;
-            static auto nHideAABug = iniReader.ReadInteger("GRAPHICS", "HideAABug", 2);
-            ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 1);
-            auto bCarSpeedDependantFOV = iniReader.ReadInteger("MISC", "CarSpeedDependantFOV", 1) != 0;
-            auto bVCSCamShake = iniReader.ReadInteger("MISC", "VCSCamShake", 0) != 0;
+            // The edge lines and the camera shake apply while the game runs, the others after a restart
+            auto& settings = FixSettings();
+            auto bAllowAltTabbingWithoutPausing = !settings.Bool("MAIN.PauseOnFocusLoss");
+            auto bDisableWhiteCrosshairDot = settings.Bool("MISC.DisableWhiteCrosshairDot");
+            static auto& nHideAABug = settings.Int("GRAPHICS.HideAABug");
+            ReplaceTextShadowWithOutline = settings.Int("MISC.ReplaceTextShadowWithOutline");
 
             auto pattern = hook::pattern("E8 ? ? ? ? 8A 0D ? ? ? ? 83 C4 14");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CFont::PrintString = (decltype(CFont::PrintString))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? EB ? ? ? ? ? ? EB ? ? ? ? ? ? EB");
             if (!pattern.empty())
                 hbPrintStringFromBottom.fun = injector::MakeCALL(pattern.get_first(), PrintStringFromBottom, true).get();
 
-            static auto loc_719F30 = (uintptr_t)hook::pattern("8B 0D ? ? ? ? BA ? ? ? ? 2B D5").get_first();
+            auto requiredPattern0 = hook::pattern("8B 0D ? ? ? ? BA ? ? ? ? 2B D5");
+            if (requiredPattern0.size() <= 0)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
+            static auto loc_719F30 = (uintptr_t)requiredPattern0.get_first();
             pattern = hook::pattern("D9 05 ? ? ? ? A0 ? ? ? ? D8 1D ? ? ? ? 66 0F BE D9 8A 0D ? ? ? ? A2 ? ? ? ? 89 54 24 ? 8A 15 ? ? ? ? DF E0 F6 C4 44 88 0D ? ? ? ? 8A 0D ? ? ? ? C6 05 ? ? ? ? ? 88 15 ? ? ? ? 88 0D ? ? ? ? C6 05 ? ? ? ? ? 7B ? 0F BF D3 89 54 24 ? DB 44 24 ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 C9 D8 05 ? ? ? ? D9 1D ? ? ? ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 C9 D8 05 ? ? ? ? D9 1D ? ? ? ? DD D8 8B 7C 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto PrintStringHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 static thread_local bool inOutlinePass = false;
@@ -281,9 +311,13 @@ public:
                 injector::MakeNOP(0x58E2DD, 5, true);
             }
 
-            if (nHideAABug)
             {
                 auto pattern = hook::pattern("89 3D ? ? ? ? 89 3D ? ? ? ? 89 3D ? ? ? ? 8B F1");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 SelectedMultisamplingLevels = *pattern.get_first<int*>(2);
 
                 WFP::onEndScene() += []()
@@ -322,9 +356,19 @@ public:
             if (ReplaceTextShadowWithOutline)
             {
                 auto pattern = hook::pattern("E8 ? ? ? ? 6A ? E8 ? ? ? ? 0F B6 7B");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto SetDropShadowPosition = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CFont::SetOutlinePosition);
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 68 ? ? ? ? 8B CF E8 ? ? ? ? ? ? ? ? E8 ? ? ? ? 89 44 24 ? 43");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 hbPrintString.fun = injector::MakeCALL(pattern.get_first(), PrintString, true).get();
 
                 // Controller setup text outlines
@@ -337,11 +381,9 @@ public:
                     injector::WriteMemory<uint8_t>(pattern.get_first(1), 1, true);
             }
 
-            if (bVCSCamShake)
-            {
-                auto pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 8B 96 ? ? ? ? 89 8E ? ? ? ? 8B CE 89 86");
-                hbCalculateDerivedValues.fun = injector::MakeCALL(pattern.get_first(), CalculateDerivedValues, true).get();
-            }
+            // The camera shake's hook is installed the first time it's turned on
+            InstallVCSCamShake();
+            OnSettingChange("MISC.VCSCamShake", []() { InstallVCSCamShake(); });
         };
     }
 } Misc;

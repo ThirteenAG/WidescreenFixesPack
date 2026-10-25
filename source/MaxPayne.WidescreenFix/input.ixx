@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "../Shared/MaxPayne/GamepadButtons.hpp"
 #define DIRECTINPUT_VERSION 0x0700
 #include <dinput.h>
 #include <Xinput.h>
@@ -108,6 +110,14 @@ void UpdateInput()
         if (FAILED(hr))
             return;
     }
+
+    // Controller in use, for the button names in tips: a button held or a stick pushed
+    auto IsPushed = [](LONG value) { return std::abs(value - 32768) > 32768 / 4; };
+    bool bActive = IsPushed(g_LastJoyState.lX) || IsPushed(g_LastJoyState.lY) || IsPushed(g_LastJoyState.lRx) || IsPushed(g_LastJoyState.lRy);
+    for (int i = 0; i < 16 && !bActive; ++i)
+        bActive = (g_LastJoyState.rgbButtons[i] & 0x80) != 0;
+    if (bActive)
+        MaxPayneGamepadButtons::OnPadActivity();
 }
 
 void CleanupInput()
@@ -542,6 +552,55 @@ namespace MaxPayne_InputControl
 
         return ret;
     }
+
+    // Tips name the key of an action by a token, "Press #USE# to ...", replaced with the key's name (the HUD message
+    // code's substitution, for every action: this std::string in ecx, the token in edx, the name, a std::string, on
+    // the stack). While a controller is in use, the tokens of the actions the fix maps get the controller's button.
+    struct GameString
+    {
+        uint32_t allocator;
+        const char* pText;
+        uint32_t nLength;
+        uint32_t nReserved;
+    };
+
+    const char* GetPadName(std::string_view token)
+    {
+        static const std::pair<std::string_view, JoystickButton ControlScheme::*> Buttons[] =
+        {
+            { "#SHOOT#", &ControlScheme::Shoot }, { "#RELOAD#", &ControlScheme::Reload }, { "#JUMP#", &ControlScheme::Jump },
+            { "#CROUCH#", &ControlScheme::Crouch }, { "#DODGEMODIFIER#", &ControlScheme::DodgeModifier }, { "#USE#", &ControlScheme::Use },
+            { "#NEXTWEAPON#", &ControlScheme::NextWeapon }, { "#PREVIOUSWEAPON#", &ControlScheme::PreviousWeapon },
+            { "#PAUSE#", &ControlScheme::Pause }, { "#PAINKILLER#", &ControlScheme::Painkiller }, { "#SNIPERZOOM#", &ControlScheme::SniperZoom },
+            { "#SLOWMOTION#", &ControlScheme::SlowMotion }, { "#BULLETTIME#", &ControlScheme::BulletTime },
+        };
+
+        static auto& nGamepadIcons = FixSettings().Int("MAIN.GamepadIcons");
+        if (!MaxPayneGamepadButtons::IsPadInUse())
+            return nullptr;
+        if (token == "#RUN#" || token == "#WALKBACK#" || token == "#STRAFELEFT#" || token == "#STAFERIGHT#")
+            return "Left Stick";
+        if (token == "#AIMUP#" || token == "#AIMDOWN#" || token == "#AIMLEFT#" || token == "#AIMRIGHT#")
+            return "Right Stick";
+        for (auto& [name, button] : Buttons)
+        {
+            if (token == name)
+                return MaxPayneGamepadButtons::NameInUse(g_ControlScheme.*button, nGamepadIcons);
+        }
+        return nullptr;
+    }
+
+    SafetyHookInline shReplaceToken = {};
+    char* __fastcall ReplaceToken(void* pText, const char* szToken, GameString* pName)
+    {
+        GameString padName = {};
+        if (auto szPadName = szToken ? GetPadName(szToken) : nullptr)
+        {
+            padName = { 0, szPadName, uint32_t(std::strlen(szPadName)), uint32_t(std::strlen(szPadName)) };
+            pName = &padName;
+        }
+        return shReplaceToken.unsafe_fastcall<char*>(pText, szToken, pName);
+    }
 }
 
 bool g_VibrationThisFrame = false;
@@ -661,6 +720,11 @@ export void InitInput()
     MaxPayne_InputControl::shgetButton = safetyhook::create_inline(pattern.count(3).get(0).get<void*>(0), MaxPayne_InputControl::getButton);
     MaxPayne_InputControl::shgetButtonSingleClicked = safetyhook::create_inline(pattern.count(3).get(1).get<void*>(0), MaxPayne_InputControl::getButtonSingleClicked);
     MaxPayne_InputControl::shgetButtonReleased = safetyhook::create_inline(pattern.count(3).get(2).get<void*>(0), MaxPayne_InputControl::getButtonReleased);
+
+    // Tips with controller button names, see MaxPayne_InputControl::ReplaceToken
+    pattern = hook::pattern("83 EC 0C 53 55 8B E9 56 57 83 C9 FF 33 C0 8B FA F2 AE");
+    if (!pattern.empty())
+        MaxPayne_InputControl::shReplaceToken = safetyhook::create_inline(pattern.get_first(), MaxPayne_InputControl::ReplaceToken); //0x4CD1A0
 
     pattern = hook::pattern("FF 15 ? ? ? ? 33 DB 8D 4C 24");
     static auto ApplicationTickHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

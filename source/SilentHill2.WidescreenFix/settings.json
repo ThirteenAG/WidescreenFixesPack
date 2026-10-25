@@ -1,0 +1,329 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Silent Hill 2",
+        "exe": [
+          "sh2pc.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "gameplay"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 16384,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@desktop"
+        }
+      ],
+      "label": "@resx",
+      "description": "@resx.description",
+      "page": "display",
+      "group": "@group.resolution",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 16384,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@desktop"
+        }
+      ],
+      "label": "@resy",
+      "description": "@resy.description",
+      "page": "display",
+      "group": "@group.resolution",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.Fix2D",
+      "type": "bool",
+      "default": 1,
+      "label": "@sh2.fix2d",
+      "description": "@sh2.fix2d.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.FullscreenImages",
+      "type": "bool",
+      "default": 1,
+      "label": "@images",
+      "description": "@sh2.fullscreenimages.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "bool",
+      "default": 1,
+      "label": "@sh2.fmvwidescreen",
+      "description": "@sh2.fmvwidescreen.description",
+      "page": "display",
+      "group": "@group.cutscenes",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 1,
+          "label": "@sh2.letterbox"
+        }
+      ],
+      "label": "@sh2.cutsceneborders",
+      "description": "@sh2.cutsceneborders.description",
+      "page": "display",
+      "group": "@group.cutscenes",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MISC.ReduceCutsceneFOV",
+      "type": "bool",
+      "default": 0,
+      "label": "@sh2.cutscenefov",
+      "description": "@sh2.cutscenefov.description",
+      "page": "display",
+      "group": "@group.cutscenes",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MISC.IncreaseNoiseEffectRes",
+      "type": "int",
+      "default": 512,
+      "min": 0,
+      "max": 4096,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@original"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 512
+        },
+        {
+          "value": 640
+        },
+        {
+          "value": 960
+        },
+        {
+          "value": 1440
+        },
+        {
+          "value": 2048
+        }
+      ],
+      "label": "@sh2.noiseres",
+      "description": "@sh2.noiseres.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 512,
+        "enhanced": 1440
+      }
+    },
+    {
+      "id": "MISC.LightingFix",
+      "type": "bool",
+      "default": 1,
+      "label": "@sh2.lightingfix",
+      "description": "@sh2.lightingfix.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.FastTransitions",
+      "type": "bool",
+      "default": 1,
+      "label": "@sh2.fasttransitions",
+      "description": "@sh2.fasttransitions.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.PS2CameraSpeed",
+      "type": "bool",
+      "default": 1,
+      "label": "@sh2.ps2cameraspeed",
+      "description": "@sh2.ps2cameraspeed.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.GamepadControlsFix",
+      "type": "bool",
+      "default": 1,
+      "label": "@sh2.gamepadfix",
+      "description": "@sh2.gamepadfix.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 30,
+      "min": 0,
+      "max": 240,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@original"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        }
+      ],
+      "label": "@sh2.fpslimit",
+      "description": "@sh2.fpslimit.description",
+      "page": "game",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MISC.SingleCoreAffinity",
+      "type": "bool",
+      "default": 0,
+      "label": "@sh2.singlecore",
+      "description": "@sh2.singlecore.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MISC.DisableSafeMode",
+      "type": "bool",
+      "default": 1,
+      "label": "@sh2.safemode",
+      "description": "@sh2.safemode.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MISC.CreateLocalFix",
+      "type": "bool",
+      "default": 1,
+      "label": "@sh2.localfix",
+      "description": "@sh2.localfix.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MISC.SteamCrashFix",
+      "type": "bool",
+      "default": 1,
+      "label": "@sh2.steamcrashfix",
+      "description": "@sh2.steamcrashfix.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    }
+  ]
+}

@@ -1,7 +1,11 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d9.h>
+#include <atomic>
+#include <unordered_set>
+#include "Hud.hpp"
 
 export module Frontend;
 
@@ -41,93 +45,91 @@ namespace cFEng
         }
     };
 
-    std::unordered_map<void*, std::pair<float, float>> originalCenterCache;
-
-    void** mInstance = nullptr;
-
+    NFSPSHud::Positions HudPositions;
+    std::unordered_set<std::string> HudPackages;
+    std::atomic_bool HudAspectRatioPending = false;
     static void* s_currentLeftGroup = nullptr;
     static void* s_currentRightGroup = nullptr;
+    SafetyHookInline shDestroyGroup;
+
+    int __fastcall DestroyGroup(void* object, void*)
+    {
+        HudPositions.Retire(object);
+        if (s_currentLeftGroup == object)
+            s_currentLeftGroup = nullptr;
+        if (s_currentRightGroup == object)
+            s_currentRightGroup = nullptr;
+        return shDestroyGroup.unsafe_thiscall<int>(object);
+    }
+
+    bool ApplyHudPackage(const char* packageName)
+    {
+        if (!packageName || !*packageName || !FE::Object::FindObject || !shDestroyGroup)
+            return false;
+        bool found = false;
+        for (bool right : { false, true })
+        {
+            auto object = static_cast<FEObject*>(FE::Object::FindObject(packageName, right ? 0x5D0101F1 : 0x1603009E));
+            if (!object || object->Type != FE_Group || !object->pData)
+                continue;
+            found = true;
+            auto& current = right ? s_currentRightGroup : s_currentLeftGroup;
+            current = object;
+            HudPositions.Apply(object, { object->pData, object->GUID }, right, fWidescreenHudOffset,
+                [](void* group, float& x, float& y)
+                {
+                    FE::Object::GetCenter(group, &x, &y);
+                    return true;
+                }, [](void* group, float x, float y)
+                {
+                    FE::Object::SetCenter(group, x, y);
+                });
+        }
+        return found;
+    }
+
+    void ServiceHud()
+    {
+        bool changed = HudAspectRatioPending.exchange(false);
+        if (changed)
+            fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+        auto previous = fWidescreenHudOffset;
+        updateWidescreenOffset();
+        if (!changed && previous == fWidescreenHudOffset)
+            return;
+        for (auto package = HudPackages.begin(); package != HudPackages.end();)
+        {
+            if (ApplyHudPackage(package->c_str()))
+                ++package;
+            else
+                package = HudPackages.erase(package);
+        }
+    }
+
+    SafetyHookInline shHudFrame;
+    void __cdecl HudFrame()
+    {
+        shHudFrame.unsafe_ccall();
+        ServiceHud();
+    }
 
     injector::hook_back<void(__fastcall*)(void*, void*, int, char const*, int)> hbQueuePackageMessage;
-    void __fastcall QueuePackageMessage(void* instance, void* edx, int MessageHash, char const* packageName, int a4)
+    void __fastcall QueuePackageMessage(void* instance, void* edx, int messageHash, const char* packageName, int argument)
     {
+        hbQueuePackageMessage.fun(instance, edx, messageHash, packageName, argument);
         updateWidescreenOffset();
-
-        hbQueuePackageMessage.fun(instance, edx, MessageHash, packageName, a4);
-
-        void* leftGroup = FE::Object::FindObject(packageName, 0x1603009E);
-        void* rightGroup = FE::Object::FindObject(packageName, 0x5D0101F1);
-
-        if (leftGroup && leftGroup != s_currentLeftGroup)
+        if (ApplyHudPackage(packageName))
         {
-            originalCenterCache.erase(s_currentLeftGroup);
-            s_currentLeftGroup = leftGroup;
-        }
-
-        if (rightGroup && rightGroup != s_currentRightGroup)
-        {
-            originalCenterCache.erase(s_currentRightGroup);
-            s_currentRightGroup = rightGroup;
-        }
-
-        if (leftGroup)
-        {
-            auto it = originalCenterCache.find(leftGroup);
-            if (it == originalCenterCache.end())
+            try
             {
-                float x = 0.0f, y = 0.0f;
-                FE::Object::GetCenter(leftGroup, &x, &y);
-                originalCenterCache[leftGroup] = { x, y };
-                it = originalCenterCache.find(leftGroup);
+                HudPackages.emplace(packageName);
             }
-
-            const auto& [origX, origY] = it->second;
-            FE::Object::SetCenter(leftGroup, origX - fWidescreenHudOffset, origY);
-        }
-
-        if (rightGroup)
-        {
-            auto it = originalCenterCache.find(rightGroup);
-            if (it == originalCenterCache.end())
+            catch (const std::bad_alloc&)
             {
-                float x = 0.0f, y = 0.0f;
-                FE::Object::GetCenter(rightGroup, &x, &y);
-                originalCenterCache[rightGroup] = { x, y };
-                it = originalCenterCache.find(rightGroup);
             }
-
-            const auto& [origX, origY] = it->second;
-            FE::Object::SetCenter(rightGroup, origX + fWidescreenHudOffset, origY);
         }
     }
-}
 
-namespace FEngHud
-{
-    SafetyHookInline shSetWideScreenMode = {};
-    void __fastcall SetWideScreenMode(void* _this, void* edx)
-    {
-        static int prevResX = ResX;
-        static int prevResY = ResY;
-
-        if (ResX != prevResX || ResY != prevResY)
-        {
-            uint8_t* pThis = reinterpret_cast<uint8_t*>(_this);
-            uint8_t* pCachedState = pThis + 882;
-            bool isWidescreen = *pCachedState;
-
-            constexpr int kEnableHash = 0x62ED04EC;
-            constexpr int kDisableHash = 0x53EC068C;
-
-            int messageHash = isWidescreen ? kEnableHash : kDisableHash;
-            cFEng::QueuePackageMessage(*cFEng::mInstance, 0, messageHash, *reinterpret_cast<char**>(pThis + 44), 0);
-
-            prevResX = ResX;
-            prevResY = ResY;
-        }
-
-        return shSetWideScreenMode.unsafe_fastcall(_this, edx);
-    }
 }
 
 class Frontend
@@ -137,56 +139,39 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            cFEng::fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
+            cFEng::fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
 
-            auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 5E C2 ? ? 8B 51");
-            FE::Object::SetCenter = (decltype(FE::Object::SetCenter))injector::GetBranchDestination(pattern.get_first()).as_int();
-
-            pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? 83 C4 ? ? ? ? ? ? ? ? ? ? ? ? 56 E8 ? ? ? ? 83 C4 ? 5E C2");
-            FE::Object::GetCenter = (decltype(FE::Object::GetCenter))injector::GetBranchDestination(pattern.get_first()).as_int();
-
-            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 50 57 68 ? ? ? ? 8B CD E8 ? ? ? ? ? ? 8B 50");
-            FE::Object::FindObject = (decltype(FE::Object::FindObject))injector::GetBranchDestination(pattern.get_first()).as_int();
-
-            pattern = hook::pattern("E8 ? ? ? ? 5E 59 C3 8B 96");
-            cFEng::mInstance = *pattern.get_first<void**>(-9);
-            cFEng::hbQueuePackageMessage.fun = injector::MakeCALL(pattern.get_first(), cFEng::QueuePackageMessage, true).get();
-
-            pattern = hook::pattern("52 68 ? ? ? ? E8 ? ? ? ? 5E 59");
-            cFEng::hbQueuePackageMessage.fun = injector::MakeCALL(pattern.get_first(6), cFEng::QueuePackageMessage, true).get();
-
-            //can't change res in game
-            //pattern = hook::pattern("E8 ? ? ? ? 8B 86 ? ? ? ? 0B 86");
-            //FEngHud::shSetWideScreenMode = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), FEngHud::SetWideScreenMode);
-
-            static auto DrawPillarboxes = []()
+            // A settings callback can run on the live-link thread; native HUD work stays on the game thread.
+            FixSettings().OnChange("MAIN.HudAspectRatioConstraint", []()
             {
-                float target_aspect = 2.25f;
-                float video_width = ResY * target_aspect;
-                float pillar = (ResX - video_width) / 2.0f;
-                if (pillar > 0.0f)
-                {
-                    D3DRECT rects[2];
-                    rects[0].x1 = 0;
-                    rects[0].y1 = 0;
-                    rects[0].x2 = static_cast<LONG>(pillar);
-                    rects[0].y2 = static_cast<LONG>(ResY);
-                    rects[1].x1 = static_cast<LONG>(ResX) - static_cast<LONG>(pillar);
-                    rects[1].y1 = 0;
-                    rects[1].x2 = static_cast<LONG>(ResX);
-                    rects[1].y2 = static_cast<LONG>(ResY);
-                    (**Direct3DDevice)->Clear(2, rects, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-                }
-            };
+                cFEng::HudAspectRatioPending = true;
+            });
 
-            //WFP::onEndScene() += []()
-            //{
-            //    if (TheGameFlowManager->CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND)
-            //    {
-            //        DrawPillarboxes();
-            //    }
-            //};
+            auto destroyGroup = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 51 56 A1 ? ? ? ? 33 C4 50 8D 44 24 0C 64 A3 00 00 00 00 8B F1 89 74 24 08 8D 4E 5C C7 44 24 14 00 00 00 00 C7 01 ? ? ? ? E8 ? ? ? ? 8B CE");
+            auto hudFrame = hook::pattern("83 EC 0C 56 8B 35 ? ? ? ? 8D 44 24 08 50 FF 15 ? ? ? ? 8B 44 24 08 8B 54 24 0C 8B 0D ? ? ? ? E8 ? ? ? ? 50 56 E8 ? ? ? ? D9 1D ? ? ? ? 8B 0D ? ? ? ? 83 C4 08 83 F9 01");
+            auto setCenter = hook::pattern("E8 ? ? ? ? 83 C4 ? 5E C2 ? ? 8B 51");
+            auto getCenter = hook::pattern("E8 ? ? ? ? ? ? ? ? 83 C4 ? ? ? ? ? ? ? ? ? ? ? ? 56 E8 ? ? ? ? 83 C4 ? 5E C2");
+            auto findObject = hook::pattern("E8 ? ? ? ? 83 C4 ? 50 57 68 ? ? ? ? 8B CD E8 ? ? ? ? ? ? 8B 50");
+            auto queue = hook::pattern("E8 ? ? ? ? 5E 59 C3 8B 96");
+            auto hudMessage = hook::pattern("52 68 ? ? ? ? E8 ? ? ? ? 5E 59");
+            if (destroyGroup.size() != 1 || hudFrame.size() != 1 || setCenter.size() != 1 || getCenter.size() != 1 ||
+                findObject.size() != 1 || queue.size() != 1 || hudMessage.size() != 1)
+                return;
+            FE::Object::SetCenter = reinterpret_cast<decltype(FE::Object::SetCenter)>(injector::GetBranchDestination(setCenter.get_first()).as_int());
+            FE::Object::GetCenter = reinterpret_cast<decltype(FE::Object::GetCenter)>(injector::GetBranchDestination(getCenter.get_first()).as_int());
+            FE::Object::FindObject = reinterpret_cast<decltype(FE::Object::FindObject)>(injector::GetBranchDestination(findObject.get_first()).as_int());
+            cFEng::shDestroyGroup = safetyhook::create_inline(destroyGroup.get_first(), cFEng::DestroyGroup);
+            if (!cFEng::shDestroyGroup)
+                return;
+            cFEng::shHudFrame = safetyhook::create_inline(hudFrame.get_first(), cFEng::HudFrame);
+            if (!cFEng::shHudFrame)
+            {
+                cFEng::shDestroyGroup.reset();
+                return;
+            }
+            cFEng::mInstance = *queue.get_first<void**>(-9);
+            cFEng::hbQueuePackageMessage.fun = injector::MakeCALL(queue.get_first(), cFEng::QueuePackageMessage, true).get();
+            injector::MakeCALL(hudMessage.get_first(6), cFEng::QueuePackageMessage, true);
         };
     }
 } Frontend;

@@ -1,7 +1,12 @@
 #include "stdafx.h"
 #include "d3d9.h"
+#include "FixSettings.hpp"
+#include "../Shared/NFS/Cursor.hpp"
 
 import ComVars;
+
+// The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
+ASI_SETTINGS_EXPORT(FixSettings())
 
 std::once_flag of;
 
@@ -12,6 +17,7 @@ void MainLoop()
         WFP::onGameInitEvent().executeAll();
     });
 
+    CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
 
     static bool oldMenuState = GameFlowManager::IsPaused();
@@ -30,6 +36,7 @@ void MainLoop()
 
 void Init()
 {
+    NFSCursor::Initialize();
     auto pattern = hook::pattern("A1 ? ? ? ? 68 ? ? ? ? 50 FF 15");
     hWnd.SetAddress(*pattern.get_first<HWND*>(1));
     WindowRect.SetAddress(*pattern.get_first<tagRECT*>(6));
@@ -49,6 +56,9 @@ void Init()
     pattern = hook::pattern("A1 ? ? ? ? 3B C3 74 ? ? ? 75");
     GameFlowManager::pRaceCoordinator = *pattern.get_first<int**>(1);
 
+    pattern = hook::pattern("83 3D ? ? ? ? 06 ? ? A1");
+    nGameState.SetAddress(*pattern.get_first<int32_t*>(2));
+
     pattern = hook::pattern("A0 ? ? ? ? 84 C0 74 ? C6 05 ? ? ? ? ? E9");
     bExitFEOptionsSystem.SetAddress(*pattern.get_first<uint8_t*>(1));
 
@@ -56,10 +66,14 @@ void Init()
     cFEng::pInstance = *pattern.get_first<void**>(2);
     cFEng::MakeLoadedPackagesDirty = (decltype(cFEng::MakeLoadedPackagesDirty))injector::GetBranchDestination(pattern.get_first(10)).as_int();
 
+    // The frame's time step, after PrepareRealTimestep. The time MainLoop passes to it is measured from the end
+    // of the previous wait, so with a frame rate limit it leaves out the wait; PrepareRealTimestep stores the
+    // whole step (with the wait, in 1/1800 s units, the remainder kept for the next frame).
+    static float* FrameTimeStep = *hook::get_pattern<float*>("D9 05 ? ? ? ? D8 05 ? ? ? ? D9 05 ? ? ? ? D8 C9 E8 ? ? ? ? 85 C0", 2);
     pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? E8 ? ? ? ? B9 ? ? ? ? 8B F8");
-    static auto GetActualDeltaTime = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    static auto GetActualDeltaTime = safetyhook::create_mid(pattern.get_first(8), [](SafetyHookContext& regs)
     {
-        actualDeltaTime = *(float*)(regs.esp);
+        actualDeltaTime = *FrameTimeStep;
     });
 
     pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 85 C0 74 ? ? ? 50 FF 51");
@@ -76,6 +90,9 @@ void Init()
     });
 
     WFP::onInitEvent().executeAll();
+
+    // Serve the initialized settings to editors while the game runs.
+    asi_settings::LiveLink::Start();
 
     static auto futures = WFP::onInitEventAsync().executeAllAsync();
 

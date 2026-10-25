@@ -1,11 +1,13 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module WinDrv;
 
 import ComVars;
 import Xidi;
+import WindowedMode;
 
 namespace UWindowsViewport
 {
@@ -17,15 +19,21 @@ namespace UWindowsViewport
     {
         hGameWindow = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x1F0) + 4);
 
-        if (Screen.fRawInputMouse > 0.0f)
+        if ((Msg == WM_KEYDOWN || Msg == WM_KEYUP) && wParam == VK_F1 && NativeWindowsMenuHelp &&
+            NativeWindowsMenuHelp(Msg == WM_KEYDOWN && !(lParam & (1u << 30))))
+            return 0;
+
+        if (Screen.bRawInputMouse)
         {
             static bool bOnce = false;
             if (!bOnce)
             {
-                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.fRawInputMouse, Screen.bRawInputMouseRawData);
+                RawInputHandler<>::RegisterRawInput(hGameWindow, FixSettings().Float("MAIN.MouseSensitivity"), Screen.bRawInputMouseRawData);
                 bOnce = true;
             }
 
+            auto menuMouse = (Msg == WM_MOUSEMOVE || Msg == WM_RAWINPUTMOUSE) &&
+                NativeWindowsMenuMouse && NativeWindowsMenuMouse(lParam, Msg == WM_MOUSEMOVE);
             if (Msg == WM_MOUSEMOVE)
             {
                 return 0;
@@ -34,6 +42,17 @@ namespace UWindowsViewport
             {
                 if (hGameWindow != GetForegroundWindow())
                     return 0;
+
+                if (menuMouse)
+                {
+                    // Absolute Windows input now follows the native Magma
+                    // hover/picking path. Keep raw deltas out of menu motion
+                    // and out of gameplay after the native page is dismissed.
+                    RawInputHandler<>::RawMouseDeltaX.exchange(0);
+                    RawInputHandler<>::RawMouseDeltaY.exchange(0);
+                    deferredCauseInputEventForRawInput = nullptr;
+                    return 0;
+                }
 
                 deferredCauseInputEventForRawInput = [UWindowsViewport](int inputID, int a3, float value)
                 {
@@ -56,9 +75,30 @@ namespace UWindowsViewport
             }
         }
 
+        // Alt+Enter: the game only goes from the window to fullscreen, back to the window here; held keys don't switch again
+        if (Msg == WM_SYSCHAR && wParam == VK_RETURN)
+            return 0; // DefWindowProc would restore the window to where it was before fullscreen
+        if ((Msg == WM_SYSKEYDOWN || Msg == WM_KEYDOWN) && wParam == VK_RETURN && (GetKeyState(VK_MENU) & 0x8000))
+        {
+            if (lParam & (1 << 30))
+                return 0;
+            if (*reinterpret_cast<uint8_t*>(reinterpret_cast<uintptr_t>(UWindowsViewport) + 0x204) & 1)
+            {
+                LeaveFullscreen(reinterpret_cast<uintptr_t>(UWindowsViewport));
+                return 0;
+            }
+        }
+
+        auto lastMsg = nViewportWndProcMsg;
+        nViewportWndProcMsg = Msg;
         bCalledFromWndProc = true;
         auto ret = shViewportWndProc.unsafe_fastcall<int32_t>(UWindowsViewport, edx, Msg, wParam, lParam);
         bCalledFromWndProc = false;
+        nViewportWndProcMsg = lastMsg;
+
+        // A window at the desktop resolution is bigger than the screen with its frame
+        if (Msg == WM_GETMINMAXINFO)
+            reinterpret_cast<MINMAXINFO*>(lParam)->ptMaxTrackSize = { GetSystemMetrics(SM_CXVIRTUALSCREEN) * 2, GetSystemMetrics(SM_CYVIRTUALSCREEN) * 2 };
         return ret;
     }
 

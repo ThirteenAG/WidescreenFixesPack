@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module TransparentMenu;
@@ -42,8 +44,7 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            static int bTransparentMenu = iniReader.ReadInteger("GRAPHICS", "TransparentMenu", 0);
+            static int bTransparentMenu = FixSettings().Int("GRAPHICS.TransparentMenu");
 
             if (bTransparentMenu <= 0)
                 return;
@@ -56,35 +57,85 @@ public:
             }
 
             auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? B0 ? 83 C4 ? 5B");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             hbDrawRect1.fun = injector::MakeCALL(pattern.get_first(), CSprite2d__DrawRect1, true).get();
 
             pattern = hook::pattern("E8 ? ? ? ? 59 59 8B 86");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             hbDrawRect2.fun = injector::MakeCALL(pattern.get_first(), CSprite2d__DrawRect2, true).get();
 
             if (bTransparentMenu < 2)
             {
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8D 4C 24 ? 68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? ? ? 8B 2D ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 81 FD ? ? ? ? ? ? 75 ? ? ? EB ? ? ? ? ? ? ? ? ? 89 6C 24 ? ? ? ? ? ? ? A1");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 hbDraw2DPolygon.fun = injector::MakeCALL(pattern.get_first(), CSprite2d__Draw2DPolygon, true).get();
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8D 4C 24 ? 68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? ? ? 8B 0D ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 81 F9 ? ? ? ? ? ? 75 ? ? ? EB ? ? ? ? ? ? ? ? ? 89 4C 24 ? ? ? ? ? ? ? 8B 1D");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 hbDraw2DPolygon.fun = injector::MakeCALL(pattern.get_first(), CSprite2d__Draw2DPolygon, true).get();
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8D 4C 24 ? 68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? ? ? 8B 2D ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 81 FD ? ? ? ? ? ? 75 ? ? ? EB ? ? ? ? ? ? ? ? ? 89 6C 24 ? ? ? ? ? ? ? 8B 15");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 hbDraw2DPolygon.fun = injector::MakeCALL(pattern.get_first(), CSprite2d__Draw2DPolygon, true).get();
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8D 4C 24 ? 68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? ? ? 8B 0D ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 81 F9 ? ? ? ? ? ? 75 ? ? ? EB ? ? ? ? ? ? ? ? ? 89 4C 24 ? ? ? ? ? ? ? A1");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 hbDraw2DPolygon.fun = injector::MakeCALL(pattern.get_first(), CSprite2d__Draw2DPolygon, true).get();
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8D 8C 24 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? ? ? 8B 15");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 hbDraw2DPolygon.fun = injector::MakeCALL(pattern.get_first(), CSprite2d__Draw2DPolygon, true).get();
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8D 8C 24 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? ? ? 8B 0D");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 hbDraw2DPolygon.fun = injector::MakeCALL(pattern.get_first(), CSprite2d__Draw2DPolygon, true).get();
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 80 3D ? ? ? ? ? 75 ? 31 C0 C6 05 ? ? ? ? ? A3 ? ? ? ? 8B 86");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 hbDraw2DPolygon.fun = injector::MakeCALL(pattern.get_first(), CSprite2d__Draw2DPolygon, true).get();
 
                 pattern = hook::pattern("E8 ? ? ? ? 59 59 6A ? 6A ? E8 ? ? ? ? 59 59 6A ? 6A ? E8 ? ? ? ? 59 59 6A ? 6A ? E8 ? ? ? ? 59 59 6A ? 6A ? E8 ? ? ? ? 59 59 6A ? 6A ? E8 ? ? ? ? 59 59 6A ? 6A ? E8 ? ? ? ? 81 BE");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto renderHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&)
                 {
                     if (gTransparentMenuCanRender)
@@ -98,6 +149,11 @@ public:
             }
 
             pattern = hook::pattern("53 89 CB B9 ? ? ? ? E8");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto captureHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&)
             {
                 if (FrontendMenuManager->m_bGameNotLoaded)

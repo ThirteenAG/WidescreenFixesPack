@@ -1,8 +1,10 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
 #include "callargs.h"
+#include "FixSettings.hpp"
 
 export module Frontend;
 
@@ -171,6 +173,12 @@ namespace ScriptDraw
         auto wrap = hook::pattern(pattern_str(0xD8, '?', to_bytes(&lines->m_fWrapX)) + " D9 1C 24 E8 ? ? ? ?").count(2);
         auto print = hook::pattern(pattern_str(0xD8, '?', to_bytes(&lines->m_fAtX)) + " DE C9 DA 6C 24 ? D9 1C 24 E8 ? ? ? ?").count(2);
 
+        if (wrap.empty() || print.empty())
+        {
+            wfp::patterns::Report("Script text layout disabled: draw signatures unavailable.\n");
+            return;
+        }
+
         // Keep all script coordinates and font dimensions independent of custom HUD
         // scaling, including the pass that draws before the fade.
         for (auto field : { &lines->m_fScaleX, &lines->m_fWrapX, &lines->m_fCenterSize })
@@ -215,15 +223,22 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            static float fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f);
-            static float fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f);
-            static float fRadarWidth = iniReader.ReadFloat("MAIN", "RadarWidth", 94.0f);
-            static float fRadarHeight = iniReader.ReadFloat("MAIN", "RadarHeight", 76.0f);
-            static float fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f);
-            g_noBorderAnim = iniReader.ReadInteger("MAIN", "NoCutsceneBorderAnimation", 0) != 0;
+            // The HUD's, radar's and subtitles' sizes follow their settings while the game runs
+            auto& settings = FixSettings();
+            static auto& fHudWidthScale = settings.Float("MAIN.HudWidthScale");
+            static auto& fHudHeightScale = settings.Float("MAIN.HudHeightScale");
+            static auto& fRadarWidth = settings.Float("MAIN.RadarWidth");
+            static auto& fRadarHeight = settings.Float("MAIN.RadarHeight");
+            static auto& fSubtitlesScale = settings.Float("MAIN.SubtitlesScale");
+            g_noBorderAnim = !settings.Bool("MAIN.AnimatedCutsceneBorders");
+            OnSettingChange("MAIN.AnimatedCutsceneBorders", []() { g_noBorderAnim = !FixSettings().Bool("MAIN.AnimatedCutsceneBorders"); });
 
             auto pattern = hook::pattern("E8 ? ? ? ? 59 6A ? E8 ? ? ? ? 83 3D ? ? ? ? ? 59 0F 84");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CFont::SetColor = (decltype(CFont::SetColor))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
             constexpr auto INV_DEFAULT_SCREEN_HEIGHT = 1.0f / (float)DEFAULT_SCREEN_HEIGHT;
@@ -283,6 +298,11 @@ public:
             SetResY(pattern, FrontendClass::eCReplay);
 
             pattern = hook::pattern("BE ? ? ? ? 8D 7C 24 ? A5 A5 A5 BE ? ? ? ? A1");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             playerSkinPos.SetAddress(*pattern.get_first<CVector*>(1));
 
             static float fHeadRadioOffset = 0.0f;
@@ -333,6 +353,11 @@ public:
             MenuCanvas::onLayoutChange() += UpdateMenuLayout;
 
             pattern = hook::pattern("FF 35 ? ? ? ? E8 ? ? ? ? 8D 84 24 ? ? 00 00 50");
+            if (pattern.size() < 10)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.count(10).get(0).get<uint32_t>(2), &fHeadRadioOffset, true);
             injector::WriteMemory(pattern.count(10).get(1).get<uint32_t>(2), &fDoubRadioOffset, true);
             injector::WriteMemory(pattern.count(10).get(2).get<uint32_t>(2), &fKjahRadioOffset, true);
@@ -345,27 +370,42 @@ public:
             injector::WriteMemory(pattern.count(10).get(9).get<uint32_t>(2), &fMp33RadioOffset, true);
 
             pattern = hook::pattern("E8 ? ? ? ? 8B 8B ? ? ? ? 8D 84 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CMenuManager::shStretchX = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CMenuManager::StretchX);
 
-            if (fHudWidthScale || fHudHeightScale)
             {
-                fHudWidthScale = std::clamp(fHudWidthScale, 0.25f, 4.0f);
-                fHudHeightScale = std::clamp(fHudHeightScale, 0.25f, 4.0f);
-
                 static float fCustomWideScreenWidthScaleDown = 1.0f / 640.0f;
                 static float fCustomWideScreenHeightScaleDown = 1.0f / 480.0f;
 
                 onResChange() += [](int Width, int Height)
                 {
                     float fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
-                    fCustomWideScreenWidthScaleDown = INV_SCREEN_WIDTH(fAspectRatio) * fHudWidthScale;
-                    fCustomWideScreenHeightScaleDown = INV_DEFAULT_SCREEN_HEIGHT * fHudHeightScale;
+                    fCustomWideScreenWidthScaleDown = INV_SCREEN_WIDTH(fAspectRatio) * std::clamp(fHudWidthScale, 0.25f, 4.0f);
+                    fCustomWideScreenHeightScaleDown = INV_DEFAULT_SCREEN_HEIGHT * std::clamp(fHudHeightScale, 0.25f, 4.0f);
                 };
+                OnSettingChange("MAIN.HudWidthScale", []() { CDraw::Refresh(); });
+                OnSettingChange("MAIN.HudHeightScale", []() { CDraw::Refresh(); });
 
-                auto temp1 = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? DD D9 D9 44 24 1C D8 C1 D9 1C 24").count(1).get(0).get<uint32_t*>(2);
+                auto requiredPattern0 = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? DD D9 D9 44 24 1C D8 C1 D9 1C 24");
+                if (requiredPattern0.size() <= 0)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
+                auto temp1 = *requiredPattern0.get(0).get<uint32_t*>(2);
                 auto DrawHudHorScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp1)));
 
-                auto temp2 = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? DD DA D9 44 24 1C D8 C2 D9 1C 24").count(1).get(0).get<uint32_t*>(2);
+                auto requiredPattern1 = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? DD DA D9 44 24 1C D8 C2 D9 1C 24");
+                if (requiredPattern1.size() <= 0)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
+                auto temp2 = *requiredPattern1.get(0).get<uint32_t*>(2);
                 auto DrawHudVerScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp2)));
 
                 for (size_t i = 0; i < DrawHudHorScalePattern.size(); i++)
@@ -387,18 +427,40 @@ public:
                 }
 
                 auto pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8"); //0x57E954 radio text
+                if (pattern.size() < 28)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory(pattern.count(28).get(24).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
                 //injector::WriteMemory(pattern.count(28).get(25).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
                 injector::WriteMemory(pattern.count(28).get(27).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);//0x595F45 replay
 
                 pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50"); //0x57E93E radio text
+                if (pattern.size() < 19)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::WriteMemory(pattern.count(19).get(16).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
                 injector::WriteMemory(pattern.count(19).get(18).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);//0x620C2F replay
 
-                auto temp3 = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DA 6C 24 0C D9 1C 24 ").count(1).get(0).get<uint32_t*>(2);
+                auto requiredPattern2 = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DA 6C 24 0C D9 1C 24 ");
+                if (requiredPattern2.size() <= 0)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
+                auto temp3 = *requiredPattern2.get(0).get<uint32_t*>(2);
                 auto CDarkelDrawMessagesPattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp3))); //0x5ECD00
 
-                auto temp4 = *hook::pattern("D8 0D ? ? ? ? 50 D8 0D ? ? ? ? D9 1C 24 A1 ? ? ? ? 89 44 24 08").count(1).get(0).get<uint32_t*>(2);
+                auto requiredPattern3 = hook::pattern("D8 0D ? ? ? ? 50 D8 0D ? ? ? ? D9 1C 24 A1 ? ? ? ? 89 44 24 08");
+                if (requiredPattern3.size() <= 0)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
+                auto temp4 = *requiredPattern3.get(0).get<uint32_t*>(2);
                 auto CDarkelDrawMessagesPattern2 = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp4))); //0x5ECCF8
 
                 CDarkelDrawMessagesPattern.for_each_result([&](const hook::pattern_match& match)
@@ -417,6 +479,11 @@ public:
 
             {
                 auto pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 00");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 {
                     ProtectedGameRef<float> ref;
                     ref.SetAddress(*pattern.get_first<float*>(2));
@@ -424,6 +491,11 @@ public:
                 }
 
                 pattern = hook::pattern("D8 0D ? ? ? ? D8 05 ? ? ? ? D8 05 ? ? ? ? D9 1C 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 {
                     ProtectedGameRef<float> ref;
                     ref.SetAddress(*pattern.get_first<float*>(2));
@@ -431,6 +503,11 @@ public:
                 }
 
                 pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 DD DA D9 40");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 {
                     ProtectedGameRef<float> ref;
                     ref.SetAddress(*pattern.get_first<float*>(2));
@@ -438,6 +515,11 @@ public:
                 }
 
                 pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 05 ? ? ? ? D8 CA DA 6C 24 ? DD DA D8 C1 D8 05");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 {
                     ProtectedGameRef<float> ref;
                     ref.SetAddress(*pattern.get_first<float*>(2));
@@ -445,41 +527,78 @@ public:
                 }
             }
 
-            for (auto& radarWidthRef : RadarWidthRefs)
+            static auto ApplyRadar = []()
             {
-                radarWidthRef = fRadarWidth * (((float)DEFAULT_SCREEN_WIDTH / (float)DEFAULT_SCREEN_HEIGHT) / (640.0f / 448.0f));
-            }
+                for (auto& radarWidthRef : RadarWidthRefs)
+                {
+                    radarWidthRef = fRadarWidth * (((float)DEFAULT_SCREEN_WIDTH / (float)DEFAULT_SCREEN_HEIGHT) / (640.0f / 448.0f));
+                }
 
-            for (auto& radarHeightRef : RadarHeightRefs)
+                for (auto& radarHeightRef : RadarHeightRefs)
+                {
+                    radarHeightRef = fRadarHeight;
+                }
+
+                // Gameplay subtitles wrap around the constrained HUD, without shrinking the font.
+                Subtitles::RadarReserve = 30.0f + fRadarWidth + 8.0f;
+            };
+            ApplyRadar();
+            OnSettingChange("MAIN.RadarWidth", []() { ApplyRadar(); });
+            OnSettingChange("MAIN.RadarHeight", []() { ApplyRadar(); });
+
             {
-                radarHeightRef = fRadarHeight;
-            }
-
-            if (fSubtitlesScale)
-            {
-                fSubtitlesScale = std::clamp(fSubtitlesScale, 0.25f, 4.0f);
-
-                ProtectedGameRef<float> SubtitlesWidth;
+                // The game's own sizes, which the setting scales
+                static ProtectedGameRef<float> SubtitlesWidth;
                 pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? 6A 00");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 SubtitlesWidth.SetAddress(*pattern.get_first<float*>(2));
 
-                ProtectedGameRef<float> SubtitlesHeight;
+                static ProtectedGameRef<float> SubtitlesHeight;
                 pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? 6A 00");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 SubtitlesHeight.SetAddress(*pattern.get_first<float*>(2));
 
-                SubtitlesWidth *= fSubtitlesScale;
-                SubtitlesHeight *= fSubtitlesScale;
+                static const float fSubtitlesWidth = SubtitlesWidth;
+                static const float fSubtitlesHeight = SubtitlesHeight;
+                static auto ApplySubtitles = []()
+                {
+                    float scale = std::clamp(fSubtitlesScale, 0.25f, 4.0f);
+                    SubtitlesWidth = fSubtitlesWidth * scale;
+                    SubtitlesHeight = fSubtitlesHeight * scale;
+                };
+                ApplySubtitles();
+                OnSettingChange("MAIN.SubtitlesScale", []() { ApplySubtitles(); });
             }
-
-            // Gameplay subtitles wrap around the constrained HUD, without shrinking the font.
-            Subtitles::RadarReserve = 30.0f + fRadarWidth + 8.0f;
             pattern = hook::pattern("D9 1C 24 DE D9 E8 ? ? ? ? 59 6A 01 E8");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             Subtitles::hbSetCentreSize.fun = injector::MakeCALL(pattern.get_first(5), Subtitles::SetCentreSize, true).get();
             pattern = hook::pattern("DE D9 DD D8 E8 ? ? ? ? 83 C4 0C 6A 00 E8");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             hbPrintStringSubtitles.fun = injector::MakeCALL(pattern.get_first(4), PrintStringSubtitles, true).get();
 
             // Script text uses a centered canvas in both fade passes.
             pattern = hook::pattern("BE ? ? ? ? 90 66 83 BD");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ScriptDraw::Init(*pattern.get_first<intro_text_line*>(1));
 
         };

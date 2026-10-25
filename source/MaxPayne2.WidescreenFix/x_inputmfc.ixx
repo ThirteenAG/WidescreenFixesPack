@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "../Shared/MaxPayne/GamepadButtons.hpp"
 #define DIRECTINPUT_VERSION 0x0700
 #include <dinput.h>
 #include <Xinput.h>
@@ -108,6 +110,14 @@ void UpdateInput()
         if (FAILED(hr))
             return;
     }
+
+    // Controller in use, for the button names in tips: a button held or a stick pushed
+    auto IsPushed = [](LONG value) { return std::abs(value - 32768) > 32768 / 4; };
+    bool bActive = IsPushed(g_LastJoyState.lX) || IsPushed(g_LastJoyState.lY) || IsPushed(g_LastJoyState.lRx) || IsPushed(g_LastJoyState.lRy);
+    for (int i = 0; i < 16 && !bActive; ++i)
+        bActive = (g_LastJoyState.rgbButtons[i] & 0x80) != 0;
+    if (bActive)
+        MaxPayneGamepadButtons::OnPadActivity();
 }
 
 void CleanupInput()
@@ -545,6 +555,41 @@ namespace X_InputControlButton
 
         return ret;
     }
+
+    // Tips name the key of an action by a token, "Press #USE# to ...", replaced with the name
+    // MaxPayne_ConfiguredInput gives the control (a std::string). While a controller is in use, the controls the fix
+    // maps get the controller's button instead.
+    struct GameString
+    {
+        uint32_t allocator;
+        char szText[16];
+        uint32_t nLength;
+        uint32_t nReserved;
+    };
+
+    void* (__fastcall* describe)(void* pControl, void* edx) = nullptr;
+    void* __fastcall describeHook(void* pControl, void* edx)
+    {
+        static auto& nGamepadIcons = FixSettings().Int("MAIN.GamepadIcons");
+        const char* szPadName = nullptr;
+        if (MaxPayneGamepadButtons::IsPadInUse())
+        {
+            if (pControl == GetInputPtr(MaxPayne_ConfiguredInput::RUN) || pControl == GetInputPtr(MaxPayne_ConfiguredInput::WALKBACK) ||
+                pControl == GetInputPtr(MaxPayne_ConfiguredInput::STRAFELEFT) || pControl == GetInputPtr(MaxPayne_ConfiguredInput::STRAFERIGHT))
+                szPadName = "Left Stick";
+            else
+                szPadName = MaxPayneGamepadButtons::NameInUse(GetButtonForInput(pControl), nGamepadIcons);
+        }
+        if (!szPadName)
+            return describe(pControl, edx);
+
+        static GameString padName = {};
+        padName.nLength = uint32_t(std::min<size_t>(std::strlen(szPadName), sizeof(padName.szText) - 1));
+        padName.nReserved = sizeof(padName.szText) - 1;
+        std::memcpy(padName.szText, szPadName, padName.nLength);
+        padName.szText[padName.nLength] = '\0';
+        return &padName;
+    }
 }
 
 bool g_VibrationThisFrame = false;
@@ -609,13 +654,15 @@ export void InitInput()
     MaxPayne_ConfiguredInput::sm_control = *pattern.get_first<uintptr_t*>(2);
 
     // Mouse smoothing: each frame applies half of the movement not applied yet and carries the rest
-    // over to the next one. Without it the movement applies in the frame it's made.
-    CIniReader iniReader("");
-    if (iniReader.ReadInteger("MISC", "MouseSmoothing", 1) == 0)
+    // over to the next one. Switched off, the movement applies in the frame it's made.
+    pattern = hook::module_pattern(GetModuleHandle(L"X_Inputmfc"), "8D 74 24 ? E8 ? ? ? ? D9 44 24 ? D8 47 5B"); // X_InputDeviceMouse::update
+    static auto pSmoothingCall = (uintptr_t)pattern.get_first(4); //0x10006DCA
+    static auto MouseSmoothingHook = safetyhook::create_mid(pSmoothingCall, [](SafetyHookContext& regs)
     {
-        pattern = hook::module_pattern(GetModuleHandle(L"X_Inputmfc"), "8D 74 24 ? E8 ? ? ? ? D9 44 24 ? D8 47 5B"); // X_InputDeviceMouse::update
-        injector::MakeNOP(pattern.get_first(4), 5, true); //0x10006DCA
-    }
+        static auto& nMouseSmoothing = FixSettings().Int("MAIN.MouseSmoothing");
+        if (!nMouseSmoothing)
+            return_to(pSmoothingCall + 5);
+    });
 
     pattern = hook::module_pattern(GetModuleHandle(L"X_Inputmfc"), "C7 05 ? ? ? ? ? ? ? ? 8B 4D");
     static auto X_InputconstructHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
@@ -638,6 +685,11 @@ export void InitInput()
     X_InputControlButton::shget = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"X_Inputmfc"), "?get@X_InputControlButton@@QBE_NXZ"), X_InputControlButton::get);
     X_InputControlButton::shgetSingleClicked = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"X_Inputmfc"), "?getSingleClicked@X_InputControlButton@@QBE_NXZ"), X_InputControlButton::getSingleClicked);
     X_InputControlButton::shgetReleased = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"X_Inputmfc"), "?getReleased@X_InputControlButton@@QBE_NXZ"), X_InputControlButton::getReleased);
+
+    // Tips with controller button names, see X_InputControlButton::describeHook
+    pattern = hook::pattern("A1 ? ? ? ? 8B 4C 24 ? 8B 7C 24 ? 03 C8 E8"); // the tip's token substitution
+    if (!pattern.empty())
+        X_InputControlButton::describe = (decltype(X_InputControlButton::describe))injector::MakeCALL(pattern.get_first(15), X_InputControlButton::describeHook, true).get(); //0x4A2C6F
 
     pattern = hook::pattern("83 EC ? 56 8B F1 FF 15 ? ? ? ? 84 C0 74 ? ? ? FF 15 ? ? ? ? 84 C0 74 ? 8D 44 24 ? 50 FF 15 ? ? ? ? 8B C8 FF 15 ? ? ? ? ? ? ? 5E");
     X_InputControlButton::shreadAimUpDown = safetyhook::create_inline(pattern.get_first(), X_InputControlButton::readAimUpDown);

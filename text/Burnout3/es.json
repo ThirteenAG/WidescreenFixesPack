@@ -1,0 +1,6 @@
+{
+  "plugin.name": "Burnout 3 PCSX2F Widescreen Fix",
+  "page.display": "Pantalla",
+  "enable": "Soporte panorámico",
+  "enable.description": "Corrige la cámara, el HUD y la disposición de los menús para la proporción de pantalla del emulador. Activado por defecto. Reinicia el juego emulado tras cambiar este ajuste."
+}

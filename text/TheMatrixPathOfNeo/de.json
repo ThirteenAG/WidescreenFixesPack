@@ -1,0 +1,11 @@
+{
+  "plugin.name": "The Matrix: Path of Neo Widescreen Fix",
+  "page.display": "Anzeige",
+  "page.advanced": "Erweitert",
+  "ResX": "AuflÃ¶sungsbreite",
+  "ResX.description": "Ausgabebreite in Pixeln. Null verwendet die DesktopauflÃ¶sung. Wirkt nach einem Neustart.",
+  "ResY": "AuflÃ¶sungshÃ¶he",
+  "ResY.description": "AusgabehÃ¶he in Pixeln. Null verwendet die DesktopauflÃ¶sung. Wirkt nach einem Neustart.",
+  "FixHud": "HUD und Videos korrigieren",
+  "FixHud.description": "Hält 2D-Grafiken und Videos im richtigen Seitenverhältnis. Wirkt nach einem Neustart."
+}

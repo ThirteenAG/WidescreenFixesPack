@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
+#include "../Shared/SplinterCell/Window.hpp"
+
+ASI_SETTINGS_EXPORT(FixSettings())
 #include <LEDEffects.h>
 #include <list>
 
@@ -12,6 +16,8 @@ import BlacklistControls;
 import LAN;
 import Mouse;
 import Splitscreen;
+
+#include "NativeMenu.hpp"
 
 SafetyHookInline shSetProcessAffinityMask{};
 BOOL WINAPI SetProcessAffinityMaskHook(HANDLE hProcess, DWORD_PTR dwProcessAffinityMask)
@@ -39,21 +45,24 @@ namespace UESEQJobUnlockAchievement
     }
 }
 
+void InitLED();
+
 void Init()
 {
-    CIniReader iniReader("");
-    bSkipIntro = iniReader.ReadInteger("GENERAL", "SkipIntro", 1) != 0;
-    bWindowedMode = iniReader.ReadInteger("DISPLAY", "WindowedMode", 0) != 0;
-    bDisableNegativeMouseAcceleration = iniReader.ReadInteger("GAMEPLAY", "DisableNegativeMouseAcceleration", 1) != 0;
-    bSkipSystemDetection = iniReader.ReadInteger("GENERAL", "SkipSystemDetection", 1) != 0;
-    bForceCPUAffinityToAllCores = iniReader.ReadInteger("GENERAL", "ForceCPUAffinityToAllCores", 1) != 0;
-    bUltraWideSupport = iniReader.ReadInteger("DISPLAY", "UltraWideSupport", 1) != 0;
-    bDisableBlackAndWhiteFilter = iniReader.ReadInteger("GRAPHICS", "DisableBlackAndWhiteFilter", 0) != 0;
-    bBlacklistControlScheme = iniReader.ReadInteger("GAMEPLAY", "BlacklistControlScheme", 1) != 0;
-    auto bUnlockDLC = iniReader.ReadInteger("UNLOCKS", "UnlockDLC", 1) != 0;
-    bEnableSplitscreen = iniReader.ReadInteger("2INSTANCESPLITSCREEN", "Enable", 0) != 0;
+    SCWindow::EnableDpi();
 
-    static auto nFPSLimit = iniReader.ReadInteger("DISPLAY", "FPSLimit", 0);
+    bSkipIntro = FixSettings().Bool("MAIN.SkipIntro") != 0;
+    bWindowedMode = FixSettings().Int("MAIN.WindowMode") != 0;
+    bDisableNegativeMouseAcceleration = FixSettings().Bool("GAMEPLAY.DisableNegativeMouseAcceleration") != 0;
+    bSkipSystemDetection = FixSettings().Bool("GENERAL.SkipSystemDetection") != 0;
+    bForceCPUAffinityToAllCores = FixSettings().Bool("GENERAL.ForceCPUAffinityToAllCores") != 0;
+    bUltraWideSupport = FixSettings().Bool("DISPLAY.UltraWideSupport") != 0;
+    bDisableBlackAndWhiteFilter = FixSettings().Bool("GRAPHICS.DisableBlackAndWhiteFilter") != 0;
+    bBlacklistControlScheme = FixSettings().Bool("GAMEPLAY.BlacklistControlScheme") != 0;
+    auto bUnlockDLC = FixSettings().Bool("UNLOCKS.UnlockDLC") != 0;
+    bEnableSplitscreen = FixSettings().Bool("2INSTANCESPLITSCREEN.Enable") != 0;
+
+    static auto nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
 
     if (bEnableSplitscreen)
         bWindowedMode = true;
@@ -77,7 +86,7 @@ void Init()
     //disable uplay
     {
         auto pattern = hook::pattern("74 28 E8 ? ? ? ? 8B 10 8B C8 FF 92 ? ? ? ? 3B C3");
-        injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>()) = 0xEB;
     }
 
     // UESEQJobUnlockAchievement crash fix
@@ -87,9 +96,14 @@ void Init()
     }
 
     InitFileManager();
+    if (!MenuOverridesAvailable())
+    {
+        SCCMenu::Log("native menu movie overrides unavailable: loader API or file-manager hooks missing");
+    }
     InitWindow();
     InitSplitscreen();
     InitLocalSplitscreen();
+    SCCMenu::Init();
     InitGraphics();
 
     InitMouse();
@@ -115,7 +129,7 @@ void Init()
     if (bSkipSystemDetection)
     {
         auto pattern = hook::pattern("75 13 E8 ? ? ? ? 50 E8");
-        injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>()) = 0xEB;
     }
 
     if (bForceCPUAffinityToAllCores)
@@ -135,15 +149,15 @@ void Init()
     {
         auto pattern = hook::pattern("74 15 FF 74 24 08 8B CE E8 ? ? ? ? 8B 40 08");
         if (!pattern.empty())
-            injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true); // UEPECInventory
+            ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>()) = 0xEB; // UEPECInventory
 
         pattern = hook::pattern("74 15 FF 74 24 08 8B CE E8 ? ? ? ? 8B 40 04 F7 D0");
         if (!pattern.empty())
-            injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true); // UEPECInventory
+            ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>()) = 0xEB; // UEPECInventory
 
         pattern = hook::pattern("75 25 FF 75 FC");
         if (!pattern.empty())
-            injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true); // MenuUniformSelect
+            ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>()) = 0xEB; // MenuUniformSelect
 
         pattern = hook::pattern("8B 41 7C D1 E8 F7 D0");
         if (!pattern.empty())
@@ -175,12 +189,13 @@ void Init()
 
     InitLAN();
     InitWidescreenFix();
+    InitLED();
 }
 
 void InitLED()
 {
-    CIniReader iniReader("");
-    auto bLightSyncRGB = iniReader.ReadInteger("LOGITECH", "LightSyncRGB", 1);
+
+    auto bLightSyncRGB = FixSettings().Bool("MAIN.LightSyncRGB");
 
     if (bLightSyncRGB)
     {
@@ -211,6 +226,8 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        FixSettings();
+        asi_settings::LiveLink::Start();
         {
             std::error_code ec;
             auto injPath = std::filesystem::path("InjectorCLIx86.exe");
@@ -239,7 +256,6 @@ CEXP void InitializeASI()
 
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("D9 1C 24 E8 ? ? ? ? D9 5E 0C"));
         CallbackHandler::RegisterCallback(L"LeadD3DRender.dll", InitLeadD3DRender);
-        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(InitLED, hook::pattern("D9 1C 24 E8 ? ? ? ? D9 5E 0C"));
     });
 }
 

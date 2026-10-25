@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <LEDEffects.h>
 
 export module LED;
@@ -18,8 +19,8 @@ int __cdecl appStricmpHook(const char* String1, const char* String2)
 
 export void InitLED()
 {
-    CIniReader iniReader("");
-    auto bLightSyncRGB = iniReader.ReadInteger("LOGITECH", "LightSyncRGB", 1);
+    auto& settings = FixSettings();
+    auto bLightSyncRGB = settings.Int("MAIN.LightSyncRGB");
 
     if (bLightSyncRGB)
     {

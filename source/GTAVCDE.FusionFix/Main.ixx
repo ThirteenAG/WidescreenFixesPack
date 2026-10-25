@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
 
 export module Main;
 
@@ -17,6 +18,7 @@ import Timecycle;
 import PostEffects;
 import Renderer;
 import World;
+import FieldOfView;
 
 namespace
 {
@@ -34,10 +36,10 @@ export void InitFusionFix()
 {
     ReadSettings();
     WFP::onInitEvent().executeAll();
-    if (auto address = hook::pattern("48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 48 89 4C 24 08 57 41 54 41 55 41 56 41 57 48 83 EC 30 45 33 FF 48 8D 3D ?").get_first())
+    if (auto address = wfp::patterns::First("48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 48 89 4C 24 08 57 41 54 41 55 41 56 41 57 48 83 EC 30 45 33 FF 48 8D 3D ?"))
         initialiseHook = safetyhook::create_inline(address, Initialise);
     // CGame::Process, rather than CCamera::Process (which also runs in loads).
-    if (auto address = hook::pattern("40 53 55 41 54 41 57 48 83 EC 48 E8 ? ? ? ? E8 ? ? ? ? 48 63 05").get_first())
+    if (auto address = wfp::patterns::First("40 53 55 41 54 41 57 48 83 EC 48 E8 ? ? ? ? E8 ? ? ? ? 48 63 05"))
     {
         static auto processHook = safetyhook::create_mid(address, [](SafetyHookContext&)
         {

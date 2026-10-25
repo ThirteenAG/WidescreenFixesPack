@@ -37,8 +37,10 @@ void SetFOV(float value) {
         return;
     }
     const auto area = *reinterpret_cast<const uint32_t*>(address::currentArea);
-    *reinterpret_cast<float*>(drawFov) = console::horizontal_fov(
-        value, area == 0 ? 16.0f / 9.0f : 4.0f / 3.0f, settings.aspect, tangent, arcTangent);
+    // MAIN.FOVFactor widens gameplay cameras only; cutscenes return above.
+    *reinterpret_cast<float*>(drawFov) = console::bounded(console::horizontal_fov(
+        value, area == 0 ? 16.0f / 9.0f : 4.0f / 3.0f, settings.aspect, tangent, arcTangent) * settings.fovFactor,
+        1.0f, 170.0f, value);
 }
 float CalculateAspectRatio() {
     UpdateViewport();
@@ -56,12 +58,12 @@ void DrawCutsceneBorders(void*) {
     // fixed 4:3-mode bars. Called every frame, so the bars also animate out.
     const auto now = *reinterpret_cast<const uint32_t*>(timeInMilliseconds);
     const bool dark = *reinterpret_cast<const float*>(camera + 0x1BB4) >= 255.0f;
-    borders.tick(now, CutsceneActive(), settings.cutsceneBorders, dark);
+    borders.tick(now, CutsceneActive(), settings.cutsceneBorders != 0, dark);
     DrawScope scope(DrawMode::None);
     TextureScope texture(false);
     const Color black{0,0,0,255};
     borders.draw(cinematic.window(settings.aspect, 480, 272), 480, 272,
-        [&](const Rect& rect) { drawRect(&rect, &black, true); });
+        [&](const Rect& rect) { drawRect(&rect, &black, true); }, settings.cutsceneBorders);
 }
 }
 void InstallCamera() {

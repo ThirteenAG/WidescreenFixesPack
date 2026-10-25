@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <deque>
 
 export module TurnIndicators;
@@ -231,11 +232,11 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            static bool bTurnIndicators = iniReader.ReadInteger("TURNINDICATORS", "TurnIndicators", 1);
-            static bool bManualTurnIndicators = iniReader.ReadInteger("TURNINDICATORS", "ManualTurnIndicators", 0);
-            static uint32_t nLeftIndicatorKey = iniReader.ReadInteger("TURNINDICATORS", "LeftIndicatorKey", VK_OEM_4);
-            static uint32_t nRightIndicatorKey = iniReader.ReadInteger("TURNINDICATORS", "RightIndicatorKey", VK_OEM_6);
+            auto& settings = FixSettings();
+            static bool bTurnIndicators = settings.Int("TURNINDICATORS.TurnIndicators");
+            static bool bManualTurnIndicators = settings.Int("TURNINDICATORS.ManualTurnIndicators");
+            static uint32_t nLeftIndicatorKey = settings.Int("TURNINDICATORS.LeftIndicatorKey");
+            static uint32_t nRightIndicatorKey = settings.Int("TURNINDICATORS.RightIndicatorKey");
 
             auto pattern = hook::pattern("55 8B EC 51 8B 51 ? ? ? 83 F8");
             ActivateLamp = (decltype(ActivateLamp))pattern.get_first();

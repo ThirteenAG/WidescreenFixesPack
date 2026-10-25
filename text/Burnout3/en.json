@@ -1,0 +1,6 @@
+{
+  "plugin.name": "Burnout 3 PCSX2F Widescreen Fix",
+  "page.display": "Display",
+  "enable": "Widescreen support",
+  "enable.description": "Correct the camera, HUD and menu layout for the emulator display aspect ratio. Enabled by default. Restart the emulated game after changing this option."
+}

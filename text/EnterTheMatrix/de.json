@@ -1,0 +1,9 @@
+{
+  "plugin.name": "Enter the Matrix Widescreen Fix",
+  "page.display": "Anzeige",
+  "hudaspect.auto": "Automatisch",
+  "FixHud": "HUD korrigieren",
+  "FixHud.description": "Hält HUD-Grafiken und Texte im richtigen Seitenverhältnis und an ihrer Position. Änderungen wirken sofort.",
+  "HudAspectRatioConstraint": "HUD-Seitenverhältnis",
+  "HudAspectRatioConstraint.description": "Hält die HUD-Elemente an den Bildschirmseiten in einem zentrierten Bereich dieses Seitenverhältnisses. Automatisch nutzt die ganze Bildschirmbreite. Änderungen wirken sofort."
+}

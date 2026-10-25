@@ -1,0 +1,63 @@
+// MAIN.DisableNoise: replaces the TV noise pass (pixel shader CRC 0x2C3893DD). The noise texture is read at
+// one point per frame instead of per pixel, so no grain; line jitter and the scanline mask stay
+ps_3_0
+def c0, -0.5, 1, -1, -0
+def c7, 0.298999995, 0.587000012, 0.114, 0
+def c8, -0.169, -0.331, 0.5, 0
+def c9, 0.5, -0.419, -0.0810000002, 0
+def c10, 1, 1.40199995, 0, 1.77199996
+def c11, 1, -0.344000012, -0.713999987, 0
+dcl_texcoord v0
+dcl_2d s0
+dcl_2d s1
+dcl_2d s2
+mov r0.x, c3.w
+mov r0.y, v0.w
+texld r0, r0, s0
+add r0.x, r0.x, c0.x
+dp2add r0.x, r0.x, c3.x, v0.x
+add r0.y, c3.y, v0.y
+rcp r1.x, c4.x
+rcp r1.y, c4.y
+mul r0.xy, r0, r1
+frc r0.xy, r0
+mov r1.y, c0.y
+mad r0.zw, r0.xyxy, -c4.xyxy, r1.y
+mul r0.xy, r0, c4
+cmp r0.w, r0.w, c0.z, c0.w
+cmp r0.w, r0.y, r0.w, c0.w
+cmp r0.z, r0.z, r0.w, c0.w
+cmp r0.z, r0.x, r0.z, c0.w
+lrp r1.xz, r0.xyyw, c6.zyww, c6.xyyw
+texld r2, r1.xzzw, s2
+mul r0.xyw, r2.xyzz, r2.xyzz
+cmp r0.xyz, r0.z, c5, r0.xyww
+dp3 r0.w, r0, c7
+mov r2, c2.xyxy
+texld r3, r2, s0
+texld r2, r2.zwzw, s0
+add r1.xz, r2.yyzw, c0.x
+add r1.w, r3.x, c0.x
+add r2.x, r1.y, c3.z
+mul r1.xzw, r1, r2.x
+mov r2.x, r0.w
+dp3 r0.w, r0, c8
+dp3 r0.x, r0, c9
+mov r2.z, r0.x
+mov r2.y, r0.w
+dp3 r0.y, r2, c11
+dp2add r0.z, r2, c10.xwzw, c10.z
+dp2add r0.x, r2.xzzw, c10, c10.z
+rcp r0.w, c2.z
+mul r1.xz, r0.w, v0.zyww
+texld r2, r1.xzzw, s1
+add r0.w, -r2.x, c0.y
+mad r0.w, r0.w, -c2.w, r1.y
+mul r0.xyz, r0.w, r0
+rsq r0.x, r0.x
+rcp oC0.x, r0.x
+rsq r0.x, r0.y
+rsq r0.y, r0.z
+rcp oC0.z, r0.y
+rcp oC0.y, r0.x
+mov oC0.w, c0.y

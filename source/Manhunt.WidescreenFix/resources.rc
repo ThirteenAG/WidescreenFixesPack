@@ -1,0 +1,7 @@
+// The fix's settings (ASI Settings, see source/Shared/AsiSettings) and the text of its options
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/Manhunt/en.json"
+fr ASISETTINGS_TEXT "../../text/Manhunt/fr.json"
+de ASISETTINGS_TEXT "../../text/Manhunt/de.json"
+it ASISETTINGS_TEXT "../../text/Manhunt/it.json"
+es ASISETTINGS_TEXT "../../text/Manhunt/es.json"

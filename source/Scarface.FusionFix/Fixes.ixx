@@ -1,5 +1,6 @@
 module;
 #include "stdafx.h"
+#include "FixSettings.hpp"
 
 export module Fixes;
 import ComVars;
@@ -18,10 +19,25 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
-            auto bFixRecoilRange = iniReader.ReadInteger("FIXES", "FixRecoilRange", 1) != 0;
-            static auto fForceAlphaRef = iniReader.ReadFloat("TEST", "ForceAlphaRef", 0.0f);
+            auto& settings = FixSettings();
+            auto bSkipIntro = settings.Bool("MAIN.SkipIntro");
+            auto bFixRecoilRange = settings.Bool("FIXES.FixRecoilRange");
+
+            if (bSkipIntro)
+            {
+                for (const auto signature : {
+                    "0F 85 ? ? ? ? 6A ? 6A ? 6A ? 6A ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 ? 5E",
+                    "E8 ? ? ? ? 83 C4 20 5F 5E C7 45",
+                    "75 22 E8 ? ? ? ? 8B C8" })
+                {
+                    if (hook::pattern(signature).size() != 1)
+                    {
+                        bSkipIntro = false;
+                        OutputDebugStringA("Scarface: intro-skip patterns unavailable.\n");
+                        break;
+                    }
+                }
+            }
 
             // ControllerDirectInput's constructor spins on DIERR_OTHERAPPHASPRIO while
             // unfocused, preventing the main thread from pumping window messages.
@@ -30,6 +46,8 @@ public:
             auto pattern = hook::pattern("FF 51 1C 3D 05 00 07 80 74 ED 8B 95 ? ? ? ? 03 D2 03 D2"); // 0x6DDB9B + 8
             if (pattern.size() == 1)
                 injector::MakeNOP(pattern.get_first(8), 2);
+            else
+                OutputDebugStringA("Scarface: background input-acquisition pattern unavailable.\n");
 
             if (bSkipIntro)
             {
@@ -45,13 +63,10 @@ public:
             {
                 // First pushed argument is MAX; the second call still supplies MIN.
                 auto pattern = hook::pattern("E8 ? ? ? ? 51 8B CE ? ? ? E8 ? ? ? ? 51 8B 0D ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? ? ? 8B 0D");
-                injector::MakeCALL(pattern.get_first(), GetBarrelCreepSideMax, true);
-            }
-
-            if (fForceAlphaRef)
-            {
-                auto pattern = hook::pattern("D9 05 ? ? ? ? 8B 4E 14 D9 7C 24 12");
-                injector::WriteMemory(pattern.get_first(2), &fForceAlphaRef, true);
+                if (pattern.size() == 1)
+                    injector::MakeCALL(pattern.get_first(), GetBarrelCreepSideMax, true);
+                else
+                    OutputDebugStringA("Scarface: recoil-range pattern unavailable.\n");
             }
         };
     }

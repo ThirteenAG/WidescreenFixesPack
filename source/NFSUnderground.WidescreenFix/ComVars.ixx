@@ -28,25 +28,6 @@ export struct bMatrix4
     bVector4 v3;
 };
 
-export struct MouseData
-{
-    int   DeltaX = 0;
-    int   DeltaY = 0;
-    int   Wheel = 0;
-} g_Mouse;
-
-export struct StickData
-{
-    int   RawX = 0;
-    int   RawY = 0;
-    float X = 0.0f;
-    float Y = 0.0f;
-} g_RightStick;
-
-export bool bHideCursorForMouseLook = false;
-
-export int SimRate = -1;
-
 export GameRef<HWND> hWnd;
 export GameRef<uint32_t> dwWindowedMode;
 export GameRef<tagRECT> WindowRect;
@@ -55,7 +36,13 @@ export GameRef<IDirect3DDevice9*> Direct3DDevice;
 export GameRef<int32_t> nGameState;
 export GameRef<void*> pCurrentMoviePlayer;
 
-export float actualDeltaTime = 0.0f;
+// Game flow states (nGameState)
+export constexpr int32_t GameStateFrontEnd = 3;
+export constexpr int32_t GameStateRacing = 6;
+
+// The game's time step of the current frame in seconds (PrepareRealTimestep): the whole frame including the
+// frame rate limiter's wait, in steps of 1/3600 s
+export GameRef<float> RealTimeElapsed;
 
 export namespace cFEng
 {
@@ -69,19 +56,19 @@ export bool MovieIsPlaying()
     return pCurrentMoviePlayer != nullptr;
 }
 
-export int bStringHash(const char* str)
+export bool IsFrontEnd()
+{
+    return nGameState == GameStateFrontEnd;
+}
+
+export uint32_t bStringHash(const char* str)
 {
     if (!str)
-        return -1;
+        return 0xFFFFFFFF;
 
-    int result = -1;
-    unsigned char c = *str;
-
-    while (c != 0)
-    {
-        result = c + 33 * result;
-        c = *(++str);
-    }
+    uint32_t result = 0xFFFFFFFF;
+    for (; *str; ++str)
+        result = static_cast<uint8_t>(*str) + 33 * result;
 
     return result;
 }
@@ -91,10 +78,7 @@ export namespace GameFlowManager
     int** pRaceCoordinator = nullptr;
     bool IsPaused()
     {
-        if (pRaceCoordinator && *pRaceCoordinator && (**pRaceCoordinator == 7 || **pRaceCoordinator == 11))
-            return true;
-
-        return false;
+        return pRaceCoordinator && *pRaceCoordinator && (**pRaceCoordinator == 7 || **pRaceCoordinator == 11);
     }
 }
 
@@ -109,6 +93,20 @@ export __declspec(noinline) ResChange<int, int>& onResChange()
 {
     static ResChange<int, int> ResChangeEvent;
     return ResChangeEvent;
+}
+
+template<typename... Args>
+class WindowMessage : public WFP::Event<Args...>
+{
+public:
+    using WFP::Event<Args...>::Event;
+};
+
+// Messages received by the game's window procedure, before the game handles them
+export __declspec(noinline) WindowMessage<HWND, UINT, WPARAM, LPARAM>& onWindowMessage()
+{
+    static WindowMessage<HWND, UINT, WPARAM, LPARAM> WindowMessageEvent;
+    return WindowMessageEvent;
 }
 
 export struct __declspec(align(4)) MenuScreen
@@ -158,7 +156,6 @@ export enum FEObjType : int32_t
     FE_UserMin = 0x100,
 };
 
-
 export struct FEObject : FEMinNode
 {
     uint32_t GUID;
@@ -179,10 +176,6 @@ export struct FEImage : FEObject
 {
     unsigned int ImageFlags;
 };
-
-export void* (*CreateResourceFile)(const char* filename, int32_t type, int flags, int file_offset, int file_size) = nullptr;
-export void(__fastcall* ResourceFileBeginLoading)(void* ResourceFile, void* callback, void* callback_param) = nullptr;
-export void (__cdecl* ServiceResourceLoading)() = nullptr;
 
 export void (__cdecl* FEngSetInvisible)(const char* pkg_name, unsigned int obj_hash) = nullptr;
 export unsigned int (__cdecl* FEHashUpper)(const char* String) = nullptr;

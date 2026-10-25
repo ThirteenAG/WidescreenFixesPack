@@ -1,0 +1,6 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/SniperElite/en.json"
+fr ASISETTINGS_TEXT "../../text/SniperElite/fr.json"
+de ASISETTINGS_TEXT "../../text/SniperElite/de.json"
+it ASISETTINGS_TEXT "../../text/SniperElite/it.json"
+es ASISETTINGS_TEXT "../../text/SniperElite/es.json"

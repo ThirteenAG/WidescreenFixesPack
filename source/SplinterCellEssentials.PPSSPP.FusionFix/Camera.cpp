@@ -86,7 +86,7 @@ void Draw(uintptr_t engine, uintptr_t viewport, int present, void* pixels, int* 
 }
 }
 void InstallCamera() {
-    fovFactor = console::bounded(inireader.ReadFloat("MAIN", "FOVFactor", 1), 0.1f, 2.5f, 1);
+    fovFactor = console::bounded(inireader.ReadFloat("MAIN", "FOVFactor", 1), 0.5f, 2.0f, 1);
     const auto game = sites::GameDraw(), screen = sites::ScreenToWorld(), world = sites::WorldToScreen(), vectors = sites::VectorWorldToScreen();
     const auto constructor = sites::CameraConstructor();
     unsigned count = 0;

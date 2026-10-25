@@ -1,0 +1,10 @@
+{
+  "plugin.name": "SOCOM Fireteam Bravo Fusion Fix (PPSSPP)",
+  "page.options": "Optionen",
+  "skip": "Intro überspringen",
+  "skip.description": "Überspringt die Meldungsfenster beim Start, sofern diese Spielversion sie unterstützt. Nach einer Änderung neu starten.",
+  "analog": "Dual-Analog-Steuerung",
+  "analog.description": "Bewegt die Kamera mit dem rechten Stick; die native Steuerung mit dem linken Stick bleibt erhalten. Nach einer Änderung neu starten.",
+  "loading": "Schnelleres Laden",
+  "loading.description": "Hebt die Begrenzung beim Laden vorübergehend auf; normales Tempo, sobald die Lade-Threads enden. Nach einer Änderung neu starten."
+}
