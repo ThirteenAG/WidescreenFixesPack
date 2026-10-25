@@ -69,3 +69,30 @@ inline float Aspect() {
     return bounded(value, 0.5f, 8.0f, 480.0f / 272.0f);
 }
 }
+
+// Release builds retain actionable failure logs for callers that opt in.
+namespace console::portable
+{
+    inline void ReportedRejection(psp_hook_status status)
+    {
+        Unthrottle(false);
+        static bool reported = false;
+        if (!reported)
+        {
+            reported = true;
+            logger.WriteF("Fix disabled: patch validation failed (%u). Use a supported game version.\n", unsigned(status));
+        }
+    }
+    inline bool StartReported(const char* game, const char* cfg, const char* log)
+    {
+        logger.SetPath(log);
+        if (Start(game, cfg, log))
+            return true;
+        logger.Write("Fix disabled: game module or emulator runtime unavailable.\n");
+        return false;
+    }
+    inline bool BeginReported()
+    {
+        return injector::InitializeCheckedRuntime(ReportedRejection) == PSP_HOOK_OK;
+    }
+}

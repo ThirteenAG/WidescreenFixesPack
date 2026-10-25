@@ -62,7 +62,6 @@ on:
         - re0
         - re1
         - re2re3gc
-        - re4
         - re5
         - re6
         - rerev
@@ -74,7 +73,6 @@ on:
         - scct
         - scda
         - scdaps2
-        - scdaxbox
         - sce
         - scpt
         - secondsight
@@ -156,7 +154,6 @@ env:
   re0: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvil0_FusionFix /p:Configuration=Release
   re1: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvil_FusionFix /p:Configuration=Release
   re2re3gc: msbuild -m build/Dolphin.WidescreenFixesPack.slnx /t:ResidentEvil2_RE3_Dolphin_FusionFix /p:Configuration=Release
-  re4: msbuild -m build/Win64.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvil4_FusionFix /p:Configuration=Release
   re5: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvil5_FusionFix /p:Configuration=Release
   re6: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvil6_FusionFix /p:Configuration=Release
   rerev: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:ResidentEvil\\ResidentEvilRevelations_FusionFix /p:Configuration=Release
@@ -168,7 +165,6 @@ env:
   scct: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SplinterCell\\SplinterCellChaosTheory_WidescreenFix /p:Configuration=Release
   scda: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SplinterCell\\SplinterCellDoubleAgent_WidescreenFix /p:Configuration=Release
   scdaps2: msbuild -m build/PCSX2F.WidescreenFixesPack.slnx /t:SplinterCellDoubleAgent_PCSX2F_WidescreenFix /p:Configuration=Release
-  scdaxbox: msbuild -m build/CXBXR.WidescreenFixesPack.slnx /t:SplinterCellDoubleAgent_CXBXR_WidescreenFix /p:Configuration=Release
   sce: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:SplinterCellEssentials_PPSSPP_FusionFix /p:Configuration=Release
   scpt: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SplinterCell\\SplinterCellPandoraTomorrow_WidescreenFix /p:Configuration=Release
   secondsight: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SecondSight_WidescreenFix /p:Configuration=Release
@@ -208,6 +204,9 @@ jobs:
   call-workflow-passing-data:
     needs: setup_project_name
     uses: ThirteenAG/WidescreenFixesPack/.github/workflows/all.yml@master
+    permissions:
+      contents: write
+      id-token: write
     with:
       tag_list: ${{ inputs.tag_name }}
       project: ${{ needs.setup_project_name.outputs.project_name }}

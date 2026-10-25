@@ -13,9 +13,9 @@ install:
     git submodule update --init --recursive
 
     premake5 vs2026
+
+    msbuild build/AsiSettingsValidator.vcxproj /p:Configuration=Release /p:Platform=Win32
 cache: build
-before_build:
-- cmd: before_build.bat
 build:
   project: build/Win64.WidescreenFixesPack.slnx
   parallel: true

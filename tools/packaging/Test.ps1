@@ -18,6 +18,11 @@ try {
     $producer = [pscustomobject]@{project='A'; solution='Win32'; source='data/A/A.asi'; destination='A.asi'; sign=$false}
     $package = [pscustomobject]@{id='A'; producers=@($producer); files=@([pscustomobject]@{source='data/A/config.ini'; destination='config.ini'}); dependencies=@()}
     $fixture = [pscustomobject]@{schemaVersion=1; solutions=@('Win32'); dependencies=[pscustomobject]@{}; packages=@($package)}
+    foreach ($file in @('A.cfg', 'A.ini', 'scripts/FusionFix.ini', 'scripts/nvngx_dlss.dll', 'scripts/ffx_fsr3upscaler_x64.dll', 'dxvk.dll', 'vkd3d-proton.dll', 'vulkan.dll', 'vulkan-1.dll', 'nvngx.dll', '_nvngx.dll', 'nvapi64.dll', 'scripts/capture-automation.asi')) {
+        Assert-Fails { Assert-PackageContents $package @($file) '' } 'Generated CFG|Legacy fix INI|Vendor graphics DLL|Automation files'
+    }
+    Assert-PackageContents $package @('Xidi.ini', 'scripts/dxwrapper.ini', 'plugin.ini', 'scripts/global.ini', 'native/actionscheme.ini', 'Xidi.32.dll', 'A.asi') ''
+
     Copy-Item -LiteralPath (Join-Path $root 'data/7za.exe') -Destination (Join-Path $work 'data/7za.exe')
     $bytes = New-Object byte[] 512
     [BitConverter]::GetBytes([uint16]0x5a4d).CopyTo($bytes, 0)
@@ -26,6 +31,9 @@ try {
     [BitConverter]::GetBytes([uint16]332).CopyTo($bytes, 68)
     [BitConverter]::GetBytes([uint16]224).CopyTo($bytes, 84)
     [BitConverter]::GetBytes([uint16]0x10b).CopyTo($bytes, 88)
+    Assert (-not (Test-EmbeddedSettings $bytes)) 'Settings description detected in an empty binary.'
+    $resourceName = [Text.Encoding]::Unicode.GetBytes('ASISETTINGS'); $resourceName.CopyTo($bytes, 300)
+    Assert (Test-EmbeddedSettings $bytes) 'Settings description not detected.'
     [IO.File]::WriteAllBytes((Join-Path $work 'data/A/A.asi'), $bytes)
     [IO.File]::WriteAllText((Join-Path $work 'data/A/config.ini'), 'configuration')
     [IO.File]::WriteAllText((Join-Path $work 'data/A/stale.asi'), 'not an input')
@@ -35,6 +43,19 @@ try {
     $result = Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'invocation') 'off'
     Assert ($result.files.Count -eq 2 -and 'stale.asi' -notin $result.files) 'Unexpected archive inputs.'
     Assert ((Get-FileHashValue (Join-Path $work 'data/A/A.asi')) -eq $originalHash) 'Source binary was changed.'
+    Assert (@(Get-HubDestinations $package).Count -eq 1 -and @(Get-HubDestinations $package)[0] -eq 'FusionFixHub.exe') 'Wrong hub destination.'
+    $nested = [pscustomobject]@{id='B'; producers=@([pscustomobject]@{project='B'; solution='Win32'; source='B.asi'; destination='Game/scripts/B.asi'}); files=@(); dependencies=@()}
+    Assert (@(Get-HubDestinations $nested)[0] -eq 'Game/FusionFixHub.exe') 'Wrong hub destination above scripts.'
+    $nested.dependencies = @([pscustomobject]@{id='loader-x64'; member='*.dll'; destination='Bin64/version.dll'})
+    Assert (@(Get-HubDestinations $nested)[0] -eq 'Bin64/FusionFixHub.exe') 'Wrong hub destination beside the loader.'
+    $console = [pscustomobject]@{id='C'; producers=@([pscustomobject]@{project='C'; solution='PPSSPP'; source='C.prx'; destination='PLUGINS/C.prx'}); files=@(); dependencies=@()}
+    Assert (-not @(Get-HubDestinations $console).Count) 'An emulator plugin got the hub.'
+    $hubBytes = [byte[]]$bytes.Clone(); [BitConverter]::GetBytes([uint16]34404).CopyTo($hubBytes, 68)
+    $hubFile = Join-Path $work 'FusionFixHub.exe'; [IO.File]::WriteAllBytes($hubFile, $hubBytes)
+    Remove-Item -LiteralPath $result.file
+    $result = Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'with-hub') 'off' $hubFile
+    Assert ('FusionFixHub.exe' -in $result.files -and $result.files.Count -eq 3) 'The hub is missing from the archive.'
+    Assert-Fails { Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'x86-hub') 'off' (Join-Path $work 'data/A/A.asi') } 'not an x64'
     Remove-Item -LiteralPath $result.file, (Join-Path $work 'data/A/config.ini')
     Assert-Fails { Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'second') 'off' } 'does not exist|Cannot find'
     Assert (-not (Test-Path -LiteralPath $result.file)) 'A failed package created a ZIP.'
@@ -44,6 +65,7 @@ try {
     Assert-Fails { Assert-EmbeddedPdb $bytes ([Text.Encoding]::ASCII.GetBytes('dummy PDB')) } 'footer'
     $tracked = @(& git -C $root ls-files data)
     foreach ($file in $tracked) {
+        if (-not (Test-Path -LiteralPath (Join-Path $root $file) -PathType Leaf)) { continue }
         $parts = $file.Split('/'); if ($parts.Count -lt 3) { continue }
         $entry = @($manifest.packages | Where-Object { $_.id -eq $parts[1] })
         if (-not $entry.Count -or -not $entry[0].producers.Count) { continue }

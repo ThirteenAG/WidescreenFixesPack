@@ -1,0 +1,7 @@
+// Shaders of the shared temporal anti-aliasing (AntiAliasing.hpp), compiled at build time (premake5.lua, add_antialiasing)
+
+WFPAA_CAMERAMOTION RCDATA "shaders/CameraMotion.pso"
+WFPAA_RESOLVE RCDATA "shaders/Resolve.pso"
+WFPAA_OUTPUT RCDATA "shaders/Output.pso"
+WFPAA_COPY RCDATA "shaders/Copy.pso"
+WFPAA_DEPTH RCDATA "shaders/Depth.pso"

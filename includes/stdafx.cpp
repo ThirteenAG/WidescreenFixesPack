@@ -181,55 +181,40 @@ bool IsUALPresent()
 
 std::tuple<int32_t, int32_t> GetDesktopRes()
 {
-    HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
-    MONITORINFO info = {};
-    info.cbSize = sizeof(MONITORINFO);
-    GetMonitorInfo(monitor, &info);
-    int32_t DesktopResW = info.rcMonitor.right - info.rcMonitor.left;
-    int32_t DesktopResH = info.rcMonitor.bottom - info.rcMonitor.top;
-    return std::make_tuple(DesktopResW, DesktopResH);
+    // A DPI aware process gets the display mode in physical pixels; one that isn't gets the monitor's size in its own
+    // (scaled) coordinates, the ones its windows use
+    auto monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTOPRIMARY);
+    MONITORINFOEXW info = { sizeof(info) };
+    DEVMODEW mode = { .dmSize = sizeof(DEVMODEW) };
+    if (GetMonitorInfoW(monitor, &info) && IsProcessDPIAware() && EnumDisplaySettingsW(info.szDevice, ENUM_CURRENT_SETTINGS, &mode) &&
+        mode.dmPelsWidth > 0 && mode.dmPelsHeight > 0)
+        return { static_cast<int32_t>(mode.dmPelsWidth), static_cast<int32_t>(mode.dmPelsHeight) };
+    int32_t width = info.rcMonitor.right - info.rcMonitor.left;
+    int32_t height = info.rcMonitor.bottom - info.rcMonitor.top;
+    return width > 0 && height > 0 ? std::make_tuple(width, height) : std::make_tuple(640, 480);
 }
 
 std::vector<std::tuple<int, int, int>> GetResolutionsList(bool uniqueByRefresh)
 {
     std::vector<std::tuple<int, int, int>> list;
-    DISPLAY_DEVICE dd;
-    dd.cb = sizeof(DISPLAY_DEVICE);
-    DWORD deviceNum = 0;
-    while (EnumDisplayDevices(NULL, deviceNum, &dd, 0))
+    // The modes of the primary monitor, the one the game runs on
+    MONITORINFOEXW info = { sizeof(info) };
+    const wchar_t* device = GetMonitorInfoW(MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTOPRIMARY), &info) ? info.szDevice : nullptr;
+    DEVMODEW mode = { .dmSize = sizeof(DEVMODEW) };
+    for (DWORD index = 0; EnumDisplaySettingsW(device, index, &mode); ++index)
     {
-        DISPLAY_DEVICE newdd = { 0 };
-        newdd.cb = sizeof(DISPLAY_DEVICE);
-        DWORD monitorNum = 0;
-        DEVMODE dm = { 0 };
-        while (EnumDisplayDevices(dd.DeviceName, monitorNum, &newdd, 0))
-        {
-            for (auto iModeNum = 0; EnumDisplaySettings(NULL, iModeNum, &dm) != 0; iModeNum++)
-            {
-                list.emplace_back(dm.dmPelsWidth, dm.dmPelsHeight, dm.dmDisplayFrequency);
-            }
-            monitorNum++;
-        }
-        deviceNum++;
+        if (mode.dmPelsWidth < 640 || mode.dmPelsHeight < 480 || mode.dmBitsPerPel < 16)
+            continue;
+        list.emplace_back(static_cast<int>(mode.dmPelsWidth), static_cast<int>(mode.dmPelsHeight),
+            mode.dmDisplayFrequency > 1 ? static_cast<int>(mode.dmDisplayFrequency) : 60);
     }
-
     if (list.empty())
     {
-        // Default resolutions with 60Hz refresh rate
-        std::vector<std::pair<int, int>> defaultRes = {
-            {160,120}, {240,160}, {320,240}, {400,240}, {480,320}, {640,360}, {640,480},
-            {768,480}, {800,600}, {854,480}, {960,540}, {960,640}, {1024,576}, {1024,768},
-            {1152,864}, {1280,720}, {1280,800}, {1280,1024}, {1280,1080}, {1360,768}, {1366,768},
-            {1400,1050}, {1440,900}, {1600,900}, {1600,1200}, {1680,1050}, {1920,1080}, {1920,1200},
-            {2048,1080}, {2048,1152}, {2048,1536}, {2560,1080}, {2560,1440}, {2560,1600}, {2560,2048},
-            {3200,1800}, {3200,2048}, {3200,2400}, {3440,1440}, {3840,1080}, {3840,1600}, {3840,2160},
-            {3840,2400}, {4096,2160}, {4096,3072}, {5120,2160}, {5120,2880}, {5120,3200}, {5120,4096},
-            {6400,4096}, {6400,4800}, {7680,4320}, {7680,4800}
-        };
-        for (const auto& res : defaultRes)
-        {
-            list.emplace_back(res.first, res.second, 60);
-        }
+        auto [width, height] = GetDesktopRes();
+        DEVMODEW mode = { .dmSize = sizeof(DEVMODEW) };
+        int refresh = EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1 ?
+            static_cast<int>(mode.dmDisplayFrequency) : 60;
+        list.emplace_back(width, height, refresh);
     }
 
     std::sort(list.begin(), list.end(), [](const std::tuple<int, int, int>& lhs, const std::tuple<int, int, int>& rhs)
@@ -300,15 +285,10 @@ void GetResolutionsList(std::vector<std::string>& list, bool includeRefreshRate)
 // default return value = 60
 uint32_t GetDesktopRefreshRate()
 {
-    uint32_t rate = 60;
-    DEVMODE dm = { 0 };
-
-    if (!EnumDisplaySettings(NULL, ENUM_CURRENT_SETTINGS, &dm))
-        return rate;
-
-    rate = dm.dmDisplayFrequency;
-
-    return rate;
+    DEVMODEW mode = { .dmSize = sizeof(DEVMODEW) };
+    if (!EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) || mode.dmDisplayFrequency <= 1)
+        return 60;
+    return mode.dmDisplayFrequency;
 }
 
 uint32_t crc32(uint32_t crc, const void* buf, size_t size)

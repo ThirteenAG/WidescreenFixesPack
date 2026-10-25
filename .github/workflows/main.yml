@@ -18,6 +18,7 @@ concurrency:
 
 permissions:
   contents: write
+  id-token: write      # GitHub Actions OIDC token: publishes the settings descriptions to fusionfix.io
 
 jobs:
   build:
@@ -33,9 +34,19 @@ jobs:
       with:
         packaging_mode: ${{ github.event_name == 'push' && github.ref_name == 'master' && 'as-ready' || 'after-build' }}
         signing_profile: ${{ github.event_name == 'push' && github.ref_name == 'master' && 'required' || 'off' }}
+        hub_policy: ${{ github.event_name == 'push' && github.ref_name == 'master' && 'required' || 'optional' }}
       env:
         CODE_SIGNING_PFX: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.CODE_SIGNING_PFX || '' }}
         CODE_SIGNING_PASSWORD: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.CODE_SIGNING_PASSWORD || '' }}
+        HUB_RELEASE_TOKEN: ${{ secrets.HUB_RELEASE_TOKEN }}
+    # Nightly builds publish their settings descriptions to fusionfix.io's dev channel; a refused upload only warns
+    - name: Publish the settings descriptions to fusionfix.io (dev)
+      if: ${{ github.event_name == 'push' && github.ref_name == 'master' && github.repository == 'ThirteenAG/WidescreenFixesPack' }}
+      continue-on-error: true
+      shell: pwsh
+      run: |
+        python -m pip install --quiet pefile==2024.8.26
+        python tools/releases/publish-settings.py --channel dev
     - name: Update Tags
       continue-on-error: true
       if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}

@@ -13,6 +13,63 @@ function Assert-PackageFile([string]$File) {
     $item = Get-Item -LiteralPath $File -ErrorAction Stop
     if ($item.PSIsContainer -or $item.Length -eq 0 -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Missing, empty or invalid file: $File" }
 }
+function Assert-PackageContents($Package, [string[]]$Paths, [string]$Stage) {
+    $legacyNames = @($Package.id) + @($Package.producers | ForEach-Object { $_.project })
+    foreach ($relative in $Paths) {
+        $name = [IO.Path]::GetFileName($relative.Replace('\', '/'))
+        if ($relative -match '(?i)automation') { throw "Automation files in package $($Package.id): $relative" }
+        if ($name -match '(?i)\.cfg$') { throw "Generated CFG in package $($Package.id): $relative" }
+        if ($name -match '(?i)^(?:widescreenfix|fusionfix)\.ini$' -or @($legacyNames | Where-Object { $name -ieq ($_ + '.ini') }).Count) {
+            throw "Legacy fix INI in package $($Package.id): $relative"
+        }
+        if ($name -match '(?i)^(?:_?nvngx.*|nvapi64|vulkan(?:-1)?|ffx_.*|amd_fidelityfx.*|libxess.*|dxvk.*|vkd3d.*)\.dll$') {
+            throw "Vendor graphics DLL in package $($Package.id): $relative"
+        }
+        if ($Stage -and $name -match '(?i)^(?:ddraw|d3d8|d3dim|d3dimm|d3d9|d3d10(?:_1|core)?|d3d11|d3d12|dxgi)\.dll$') {
+            $file = Resolve-PackagePath $Stage $relative
+            $version = [Diagnostics.FileVersionInfo]::GetVersionInfo($file)
+            if (($version.ProductName + ' ' + $version.FileDescription) -match '(?i)\b(?:DXVK|VKD3D|dgVoodoo(?:2)?)\b') {
+                throw "Vendor graphics DLL in package $($Package.id): $relative"
+            }
+        }
+    }
+}
+function Get-HubExecutable([string]$Root) {
+    # CI downloads the signed release into build/hub; a local build takes the hub's own Release build next to this repository.
+    foreach ($candidate in @($env:FUSIONFIXHUB_EXE, (Join-Path $Root 'build/hub/FusionFixHub.exe'), (Join-Path $Root '../FusionFixHub-App/bin/Release/FusionFixHub.exe'))) {
+        if ($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)) { return [IO.Path]::GetFullPath($candidate) }
+    }
+    return $null
+}
+function Get-HubDestinations($Package) {
+    # FusionFixHub.exe goes next to the game's executable: where the ASI loader goes, else above the plugin's scripts/plugins folder.
+    # Emulator plugins get none: the hub manages a game folder on PC.
+    if ($null -ne $Package.hub) { return @($Package.hub) }
+    $native = @($Package.producers | Where-Object { $_.solution -notin @('PCSX2F', 'PPSSPP') -and $_.source -match '\.asi$' })
+    if (-not $native.Count) { return @() }
+    $folders = @($Package.dependencies | Where-Object { $_.id -like 'loader-*' } | ForEach-Object { $_.destination -replace '/?[^/]*$', '' })
+    if (-not $folders.Count) { $folders = @($native | ForEach-Object { $_.destination -replace '/?[^/]*$', '' -replace '(^|/)(?i:scripts|plugins)$', '' }) }
+    return @($folders | Sort-Object -Unique | ForEach-Object { if ($_) { $_ + '/FusionFixHub.exe' } else { 'FusionFixHub.exe' } })
+}
+function Get-PackageFiles($Package, [string]$Root) {
+    # An emulator plugin's English settings text (<id>.asisettings.en.json) brings the other languages built beside it
+    $files = @($Package.files)
+    foreach ($file in @($Package.files | Where-Object { $_.destination -match '\.asisettings\.en\.json$' })) {
+        $source = Resolve-PackagePath $Root $file.source
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
+        $prefix = [IO.Path]::GetFileName($source) -replace 'en\.json$', ''
+        foreach ($language in @(Get-ChildItem -LiteralPath (Split-Path -Parent $source) -Filter "$prefix*.json" -File | Where-Object { $_.Name -ne [IO.Path]::GetFileName($source) -and $_.Name -match '\.asisettings\.[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*\.json$' } | Sort-Object Name)) {
+            $files += [pscustomobject]@{ source = ($file.source -replace '[^/]+$', $language.Name); destination = ($file.destination -replace '[^/]+$', $language.Name) }
+        }
+    }
+    return $files
+}
+function Test-EmbeddedSettings([byte[]]$Bytes) {
+    # The settings description is a resource of type ASISETTINGS; its type name is stored as UTF-16 in the resource directory.
+    $name = [Text.Encoding]::Unicode.GetBytes('ASISETTINGS')
+    $text = [Text.Encoding]::GetEncoding(28591)
+    return $text.GetString($Bytes).Contains($text.GetString($name))
+}
 function Get-ByteHash([byte[]]$Bytes) {
     $sha = [Security.Cryptography.SHA256]::Create()
     try { return [BitConverter]::ToString($sha.ComputeHash($Bytes)).Replace('-', '').ToLowerInvariant() } finally { $sha.Dispose() }
@@ -27,7 +84,7 @@ function New-SelectedSolutionPlans($Manifest, $Producers, [string]$Root, [string
         $found = @{}
         foreach ($node in @($xml.SelectNodes('//Project'))) {
             $name = [IO.Path]::GetFileNameWithoutExtension($node.Path)
-            if ($name -in $selected.project -or $name -like 'ReleaseDependencies.*') {
+            if ($name -in $selected.project -or $name -like 'ReleaseDependencies.*' -or $name -eq 'AsiSettingsValidator') {
                 $node.Path = [IO.Path]::GetFullPath((Join-Path (Split-Path -Parent $original) $node.Path))
                 $found[$name] = $true
             } else { $null = $node.ParentNode.RemoveChild($node) }
@@ -87,8 +144,11 @@ function Stop-PackageTool($Tool) {
     }
 }
 function Get-PackagingShell {
-    if ([Environment]::OSVersion.Platform -eq 'Win32NT') { return (Get-Command powershell.exe).Source }
-    return (Get-Command pwsh).Source
+    $name = if ($PSEdition -eq 'Core') { 'pwsh' } else { 'powershell' }
+    if ([Environment]::OSVersion.Platform -eq 'Win32NT') { $name += '.exe' }
+    $shell = Join-Path $PSHOME $name
+    if (Test-Path -LiteralPath $shell) { return $shell }
+    return (Get-Command $name).Source
 }
 function Get-PackageArchiver([string]$Root) {
     if ([Environment]::OSVersion.Platform -eq 'Win32NT') { return Join-Path $Root 'data/7za.exe' }
@@ -109,7 +169,11 @@ function Read-PackageManifest([string]$Root = $script:RepositoryRoot) {
         if ($dependency.architecture -notin @('x86', 'x64')) { throw 'Invalid dependency architecture.' }
     }
     foreach ($package in $manifest.packages) {
-        Assert-Fields $package @('id', 'producers', 'files', 'dependencies', 'optionalTree', 'associatedPackages') 'package'
+        Assert-Fields $package @('id', 'producers', 'files', 'dependencies', 'optionalTree', 'associatedPackages', 'hub') 'package'
+        foreach ($destination in @($package.hub | Where-Object { $null -ne $_ })) {
+            if ($destination -isnot [string] -or $destination -notmatch '(^|/)FusionFixHub\.exe$') { throw "Invalid hub destination: $($package.id)" }
+            $null = Resolve-PackagePath $Root $destination
+        }
         if ($package.id -notmatch '^[A-Za-z0-9_.-]+$' -or $ids.ContainsKey($package.id)) { throw "Invalid/duplicate package: $($package.id)" }
         $ids[$package.id] = $true
         $destinations = @{}
@@ -272,7 +336,7 @@ function Invoke-DependencyDownloads($Manifest, $Packages, [string]$Root, [string
     }
     [IO.File]::WriteAllText((Join-Path $Work 'dependencies.json'), ($resolved | ConvertTo-Json -Depth 10))
 }
-function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Work, [string]$Signing = 'optional') {
+function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Work, [string]$Signing = 'optional', [string]$Hub = '') {
     if ($Signing -notin @('required', 'optional', 'off')) { throw 'Invalid signing profile.' }
     $packageWork = Join-Path $Work $Package.id
     $stage = Join-Path $packageWork 'stage'; $check = Join-Path $packageWork 'verify'
@@ -285,7 +349,7 @@ function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Wor
             $pfx = Join-Path $packageWork 'certificate.pfx'
             [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String(($env:CODE_SIGNING_PFX -replace '\s', '')))
         }
-        foreach ($file in $Package.files) {
+        foreach ($file in @(Get-PackageFiles $Package $Root)) {
             $source = Resolve-PackagePath $Root $file.source; Assert-PackageFile $source
             $target = Resolve-PackagePath $stage $file.destination
             $null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target)
@@ -302,6 +366,7 @@ function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Wor
                 $info = Get-PeInfo $bytes
                 $architecture = if ($producer.solution -in @('Win64', 'Dolphin')) {'x64'} else {'x86'}
                 if ($info.Architecture -ne $architecture) { throw "Wrong build architecture: $($producer.project)" }
+                if ($source -match '\.asi$' -and -not (Test-EmbeddedSettings $bytes)) { throw "No embedded settings description: $($producer.project)" }
             } elseif ($source -match '\.(elf|prx)$') {
                 if ($bytes.Length -lt 52 -or [BitConverter]::ToUInt32($bytes, 0) -ne 0x464c457f -or $bytes[4] -ne 1 -or $bytes[5] -ne 1 -or [BitConverter]::ToUInt16($bytes, 18) -ne 8) { throw "Not a MIPS ELF module: $($producer.project)" }
             }
@@ -335,6 +400,18 @@ function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Wor
             $expected[$rule.destination] = Get-FileHashValue $target
             $dependencyHashes[$rule.id] = Get-FileHashValue $archive
         }
+        if ($Hub) {
+            # Shipped as released (already signed), never re-signed
+            Assert-PackageFile $Hub
+            if ((Get-PeInfo ([IO.File]::ReadAllBytes($Hub))).Architecture -ne 'x64') { throw 'FusionFixHub.exe is not an x64 binary.' }
+            foreach ($destination in @(Get-HubDestinations $Package)) {
+                if ($expected.ContainsKey($destination)) { throw "Destination collision: $($Package.id)/$destination" }
+                $target = Resolve-PackagePath $stage $destination
+                $null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target)
+                Copy-Item -LiteralPath $Hub -Destination $target
+                $expected[$destination] = Get-FileHashValue $target
+            }
+        }
         if ($Package.optionalTree) {
             $source = Resolve-PackagePath $Root $Package.optionalTree.source
             if (-not (Test-Path -LiteralPath $source)) { return @{ id = $Package.id; skipped = $true } }
@@ -349,6 +426,7 @@ function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Wor
             }
         }
         if (-not $expected.Count) { throw "Empty package: $($Package.id)" }
+        Assert-PackageContents $Package @($expected.Keys) $stage
         $temporary = Join-Path $packageWork "$($Package.id).partial.zip"
         $null = Invoke-PackageTool $archiver @('a', '-tzip', $temporary, './*', '-r') $stage
         $null = Invoke-PackageTool $archiver @('t', $temporary)
