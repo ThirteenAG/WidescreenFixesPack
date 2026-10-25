@@ -1,13 +1,18 @@
-# Midnight Club: LA Remix Fusion Fix [PPSSPP]
+# Midnight Club LA Remix Fusion Fix (PPSSPP)
 
-Adds right-stick chase-camera controls, configurable widescreen rendering, and HUD correction.
+[Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/MidnightClubLARemix.PPSSPP.FusionFix/main.cpp)
+
+Widens the 3D view without stretching, corrects HUD, menu and video proportions, and supports the right-stick chase camera. Changes made on fusionfix.io or in FusionFixHub apply the next time the emulated game starts. An old `MidnightClubLARemix.PPSSPP.FusionFix.ini` isn't used anymore and can be deleted; keep the supplied `plugin.ini`. Choose anti-aliasing in PPSSPP.
+
+Use HUD Scale to change the size of the HUD.
+
+## Presets and FusionFixHub
+
+- Presets: Vanilla turns off the right-stick camera; Recommended (the defaults) and Enhanced turn it on. HUD correction stays on and HUD scale stays 1.0 in every preset.
+- Setting texts: English, French, German, Italian and Spanish.
 
 ## Installation
 
-1. Extract `MidnightClubLARemix.PPSSPP.FusionFix.zip` into the directory containing PPSSPP's `memstick` folder, preserving the archive's folders.
-2. Enable plugins in PPSSPP and launch Midnight Club: LA Remix.
-3. Configure the fix in `memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.ini`.
-
-The right stick turns the chase camera; pulling back looks behind the car. The D-pad retains its original camera controls. `ForceAspectRatio` can follow the emulator window or use a fixed ratio. `FixHUD` keeps HUD elements, menus and movies in their original proportions; `HUDScale` adjusts the race HUD.
-
-[Source code](https://github.com/ThirteenAG/WidescreenFixesPack/tree/master/source/MidnightClubLARemix.PPSSPP.FusionFix)
+1. Extract the fix archive into the directory containing PPSSPP's `memstick` folder, preserving its folders.
+2. Start the game once to create `memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.cfg`.
+3. Edit settings in FusionFixHub or on fusionfix.io, then restart the emulated game.

@@ -4,7 +4,7 @@
 
 **Splinter Cell: Double Agent Widescreen Fix (PCSX2F)** corrects widescreen aspect ratio, HUD scaling, and field of view. Co-op HUD, FMV, and loading-screen limitations are listed below.
 
-[Website](https://thirteenag.github.io/wfp#scdaps2) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgent.PCSX2F.WidescreenFix/main.c)
+[Website](https://thirteenag.github.io/wfp#scdaps2) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgent.PCSX2F.WidescreenFix/main.cpp)
 
 </div>
 
@@ -15,12 +15,6 @@
 - **Aspect ratio** — Correct widescreen aspect ratio scaling.
 - **HUD** — Correct HUD scaling for widescreen.
 - **Field of view** — Adjust the field of view for widescreen.
-
-## Limitations
-
-- **Videos** — Not corrected by this fix.
-
----
 
 ## Installation
 
@@ -35,8 +29,16 @@
 
 ![](https://i.imgur.com/swnrFGs.jpg)
 
-## Known Issues
+## Known limits
 
-- HUD in Coop mode is partially broken
-- FMVs are stretched, I couldn't find a way to fix them
-- Loadscreens are stretched (same as above)
+- Parts of the co-op HUD can remain misplaced.
+- Videos and loading screens stretch to fill the screen.
+
+## Hub settings
+
+Change HUD correction, HUD size (0.5–1.5) and startup-logo skipping in FusionFixHub or on fusionfix.io. Changes apply the next time the emulated game starts. After updating from an older release, reapply your preferences in FusionFixHub. Choose anti-aliasing in PCSX2.
+
+## Presets and FusionFixHub
+
+- Presets: Vanilla shows the startup logos; Recommended (the defaults) and Enhanced skip them. Memory-card notices and the normal frontend remain visible. The widescreen HUD and HUD scale are the same in every preset.
+- Setting texts: English, French, German, Italian and Spanish.

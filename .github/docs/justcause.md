@@ -2,9 +2,9 @@
 
 <img src="https://thirteenag.github.io/screens/justcause/main2.jpg" width="760" alt="Just Cause Widescreen Fix">
 
-**Just Cause Widescreen Fix** corrects resolution handling, aspect ratio, HUD scaling, field of view and video scaling for widescreen displays.
+**Just Cause Widescreen Fix** corrects resolution handling, aspect ratio, HUD scaling and video scaling for widescreen displays.
 
-[Website](https://thirteenag.github.io/wfp#justcause) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/JustCause.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/JustCause.WidescreenFix/scripts/JustCause.WidescreenFix.ini)
+[Website](https://thirteenag.github.io/wfp#justcause) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/JustCause.WidescreenFix/dllmain.cpp)
 
 </div>
 
@@ -12,20 +12,30 @@
 
 ## Fixes
 
-- **Resolution** — Set the output resolution with `ResX` and `ResY` in the INI file.
+- **Resolution** — Set the output resolution on fusionfix.io or in FusionFixHub.
 - **Aspect ratio** — Correct widescreen aspect ratio scaling.
 - **HUD** — Correct HUD scaling for widescreen.
-- **Field of view** — Adjust the field of view for widescreen.
 - **Videos** — Correct FMV scaling for widescreen.
 
 ---
+
+## Options
+
+By default the fix uses the desktop resolution and turns on fullscreen video scaling and extra loading-screen pillarboxes. **Extra borders** can also show side borders in gameplay when the HUD is hidden. The skip-intro option skips the Avalanche and Eidos logo videos while keeping story videos. Fullscreen video scaling and extra borders change live. Resolution and intro skipping require restarting the game.
+
+Presets: Vanilla turns the video zoom and the loading-screen pillarboxes off; Recommended and Enhanced turn them on. Resolution is a player choice and isn't changed by presets. Texts are available in English, French, German, Italian and Spanish.
+
+## Known limits
+
+- No field-of-view multiplier, HUD aspect-ratio, or window-mode settings.
+- No in-game options menu; use fusionfix.io or FusionFixHub.
 
 ## Installation
 
 1. Download the fix archive from this release.
 2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
-3. Optionally edit `scripts/JustCause.WidescreenFix.ini` to configure the fix.
-4. Launch the game.
+3. Launch the game once to create `scripts/JustCause.WidescreenFix.cfg`.
+4. Configure the fix on fusionfix.io or in FusionFixHub, then restart the game. An old `scripts/JustCause.WidescreenFix.ini` isn't used anymore and can be deleted.
 
 
 
