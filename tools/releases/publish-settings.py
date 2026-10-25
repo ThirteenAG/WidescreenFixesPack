@@ -115,7 +115,7 @@ def main():
                     failed += 1
                     continue
                 request = urllib.request.Request("https://fusionfix.io/api/publish/settings", data=json.dumps(body).encode(), method="POST",
-                                                 headers={"Authorization": "Bearer " + token, "Content-Type": "application/json"})
+                                                 headers={"Authorization": "Bearer " + token, "Content-Type": "application/json", "User-Agent": "FusionFix-CI"})
                 try:
                     print(f"{fix}: {urllib.request.urlopen(request).read().decode()}")
                 except urllib.error.HTTPError as e:
