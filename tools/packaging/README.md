@@ -4,13 +4,28 @@
 repository and destinations are relative to the ZIP root. `packages.schema.json`
 provides editor completion. The PowerShell packager rejects unknown fields,
 duplicate destinations, escaping paths, missing/empty inputs, ambiguous archive
-members, incorrect architectures, mismatched symbols, and tool failures.
+members, incorrect architectures, mismatched symbols, and tool failures. ZIP inputs
+also reject generated CFG files, legacy fix INIs, automation files, and bundled
+DXVK/DLSS/FSR/XeSS/VKD3D graphics DLLs. Dependency and native-game INIs remain valid.
 
 Each package lists build producers, asset files, and dependency extraction rules.
 FarCry requires both architectures; MaxPayne also requires its MSVCP60 wrapper.
 Selected releases automatically build every producer their packages need. A new
 solution project without a manifest entry fails rather than being omitted.
 Inactive data directories without build projects are not released.
+
+Every PC plugin `.asi` must embed its settings description (`ASISETTINGS` resource).
+PC fix packages also get `FusionFixHub.exe` next to the game's executable: beside the
+ASI loader, else above the plugin's `scripts`/`plugins` folder; a package's `hub`
+array overrides this. Emulator plugins get none. The hub is taken from
+`FUSIONFIXHUB_EXE`, `build/hub/FusionFixHub.exe` (CI downloads the signed release
+there) or `../FusionFixHub-App/bin/Release/FusionFixHub.exe`, and is never re-signed.
+`-Hub required|optional|off` (or `WFP_HUB_POLICY`) decides whether a missing hub
+fails; public releases require it.
+
+PSP and PS2 builds refresh the module's settings description and the sidecars of every
+language from their validated sources after compilation. Validation, compilation and sidecar
+copy failures stop the build before deployment or release completion.
 
 ## Local commands
 
@@ -20,7 +35,7 @@ Visual Studio/MSBuild. The repository's 7za.exe and EmbedPDB.exe are used on Win
 PowerShell 7 can run the packaging code on other systems with a 7z installation;
 native building, PDB embedding, and Authenticode signing still require Windows tools.
 
-Run `premake5.bat` and `before_build.bat` first. The latter prepares texture assets.
+Run `premake5.bat` first.
 
 From a Visual Studio Developer shell, `build_release.bat` builds all Release
 solutions and packages them as they finish, with signing off. It forwards extra

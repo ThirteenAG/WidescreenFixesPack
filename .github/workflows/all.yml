@@ -30,6 +30,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write      # GitHub Actions OIDC token: publishes the settings descriptions to fusionfix.io
 
 jobs:
   build:
@@ -55,9 +56,11 @@ jobs:
         project: ${{ inputs.project }}
         packages: ${{ steps.selection.outputs.packages }}
         signing_profile: required
+        hub_policy: required
       env:
         CODE_SIGNING_PFX: ${{ secrets.CODE_SIGNING_PFX }}
         CODE_SIGNING_PASSWORD: ${{ secrets.CODE_SIGNING_PASSWORD }}
+        HUB_RELEASE_TOKEN: ${{ secrets.HUB_RELEASE_TOKEN }}
 
     - name: GTA SA The Definitive Edition Fusion Fix
       uses: ./.github/workflows/release_tag
@@ -138,14 +141,6 @@ jobs:
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: scdaps2
         artifacts: data/Archives/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.zip
-
-    - name: Splinter Cell Double Agent Widescreen Fix [CXBXR]
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ steps.selection.outputs.tags }}
-        tag: scdaxbox
-        artifacts: data/Archives/SplinterCellDoubleAgent.CXBXR.WidescreenFix.zip
 
     - name: Splinter Cell Essentials Fusion Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
@@ -756,14 +751,6 @@ jobs:
         tag: re2re3gc
         artifacts: data/Archives/ResidentEvil2.RE3.Dolphin.FusionFix.zip
 
-    - name: Resident Evil 4 Fusion Fix
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ steps.selection.outputs.tags }}
-        tag: re4
-        artifacts: data/Archives/ResidentEvil4.FusionFix.zip
-
     - name: Resident Evil 5 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
@@ -796,3 +783,13 @@ jobs:
         tag: rerev2
         artifacts: data/Archives/ResidentEvilRevelations2.FusionFix.zip
 
+    # The settings description inside each released plugin, published to fusionfix.io after the release assets were
+    # updated (the site checks the posted zip against the release's asset)
+    - name: Publish the settings descriptions to fusionfix.io
+      if: github.repository == 'ThirteenAG/WidescreenFixesPack' && github.ref_name == 'master'
+      shell: pwsh
+      env:
+        WFP_RELEASE_TAGS: ${{ steps.selection.outputs.tags }}
+      run: |
+        python -m pip install --quiet pefile==2024.8.26
+        python tools/releases/publish-settings.py --channel release --tags $env:WFP_RELEASE_TAGS

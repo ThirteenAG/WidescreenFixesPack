@@ -1,0 +1,9 @@
+// Shaders of the shared temporal anti-aliasing for Direct3D 11 (AntiAliasingD3D11.hpp): shaders/*.hlsl compiled with
+// fxc /T ps_5_0 /E main /Gec, shaders/d3d11/Fullscreen.hlsl with /T vs_5_0 /E main, at build time
+
+WFPAA11_FULLSCREEN RCDATA "shaders/d3d11/Fullscreen.cso"
+WFPAA11_CAMERAMOTION RCDATA "shaders/d3d11/CameraMotion.cso"
+WFPAA11_RESOLVE RCDATA "shaders/d3d11/Resolve.cso"
+WFPAA11_OUTPUT RCDATA "shaders/d3d11/Output.cso"
+WFPAA11_COPY RCDATA "shaders/d3d11/Copy.cso"
+WFPAA11_DEPTH RCDATA "shaders/d3d11/Depth.cso"

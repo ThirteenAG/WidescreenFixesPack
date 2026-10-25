@@ -66,9 +66,22 @@ std::filesystem::path getProcessName(DWORD pid)
 
 std::tuple<uint32_t, uint32_t> getWindowDimensions(DWORD pid)
 {
-    RECT rc;
-    std::vector<HWND> vhWnds;
-    GetAllWindowsFromProcessID(pid, vhWnds);
-    GetClientRect(vhWnds.back(), &rc);
-    return std::make_tuple(rc.right, rc.bottom);
+    std::vector<HWND> windows;
+    GetAllWindowsFromProcessID(pid, windows);
+    uint32_t width = 0, height = 0;
+    uint64_t largest = 0;
+    for (auto window : windows)
+    {
+        RECT client{};
+        if (!window || !IsWindowVisible(window) || !GetClientRect(window, &client) || client.right <= 0 || client.bottom <= 0)
+            continue;
+        const auto area = uint64_t(client.right) * client.bottom;
+        if (area > largest)
+        {
+            largest = area;
+            width = client.right;
+            height = client.bottom;
+        }
+    }
+    return std::make_tuple(width, height);
 }

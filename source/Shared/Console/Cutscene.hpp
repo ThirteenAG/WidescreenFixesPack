@@ -33,11 +33,14 @@ struct CutsceneBorderAnimation {
         amount = bounded(amount + (active ? step : -step), 0.0f, 1.0f, 0.0f);
         return amount;
     }
-    template<class Draw> void draw(const Rect& target, float width, float height, Draw emit) const {
+    // MAIN.CutsceneBorders: 0 off, 1 letterbox (top/bottom), 2 pillarbox
+    // (left/right), 3 both. The bits select which sides of the window are masked.
+    template<class Draw> void draw(const Rect& target, float width, float height, Draw emit, int sides = 3) const {
         if (amount <= 0) return;
-        const float left = target.left * amount, top = target.top * amount;
-        const float right = (width - target.right) * amount;
-        const float bottom = (height - target.bottom) * amount;
+        const float pillar = (sides & 2) ? amount : 0.0f, letter = (sides & 1) ? amount : 0.0f;
+        const float left = target.left * pillar, top = target.top * letter;
+        const float right = (width - target.right) * pillar;
+        const float bottom = (height - target.bottom) * letter;
         if (left > 0) emit(Rect{0, height, left, 0});
         if (right > 0) emit(Rect{width-right, height, width, 0});
         if (top > 0) emit(Rect{0, top, width, 0});

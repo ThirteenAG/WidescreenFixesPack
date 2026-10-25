@@ -450,7 +450,8 @@ public:
     {
         filter = searchString;
         RegistryReader.SetIniPath(iniPath);
-        std::filesystem::create_directories(std::filesystem::path(iniPath).parent_path());
+        if (auto directory = iniPath.parent_path(); !directory.empty())
+            std::filesystem::create_directories(directory);
     }
 
     static void AddDefault(std::string_view key, std::string_view value)

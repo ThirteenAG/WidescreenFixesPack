@@ -7,6 +7,8 @@ enum class DrawAnchor { None, Center, TopRight, BottomRight, Radar, World };
 struct StoryDrawingSettings {
     float aspect = 16.0f / 9.0f, hud = 1.0f, radar = 1.0f, radarX = 12.0f, radarY = 196.0f;
     float multiplayerRadar = 1.0f, multiplayerRadarY = 196.0f;
+    // MAIN.HudAspectRatioConstraint; 0 = the whole screen.
+    float hudAspect = 0.0f;
 };
 struct StoryDrawingProfile {
     uintptr_t rect, textured, buffered, polygon, array, mask;
@@ -73,7 +75,10 @@ template<class Game> struct StoryDrawing {
         }
         if (anchor == DrawAnchor::Radar && profile.multiplayer && *reinterpret_cast<uint8_t*>(profile.multiplayer))
             size = settings.multiplayerRadar;
-        return Transform::anchored(480.0f / 272.0f, settings.aspect, size, x, y);
+        // Edge-anchored elements keep to the sides of the constrained HUD box.
+        const bool edge = anchor == DrawAnchor::TopRight || anchor == DrawAnchor::BottomRight || anchor == DrawAnchor::Radar;
+        return Transform::anchored(480.0f / 272.0f, settings.aspect, size, x, y,
+            edge ? hud_edge(x, w, settings.aspect, settings.hudAspect) : x);
     }
     static Rect Correct(Rect r, bool physical) {
         if (anchor == DrawAnchor::None) return r;

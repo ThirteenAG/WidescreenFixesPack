@@ -36,12 +36,6 @@ jobs:
       script: |
         premake5.bat
 
-  - task: CmdLine@2
-    displayName: Before build
-    inputs:
-      script: |
-        before_build.bat
-
   - task: MSBuild@1
     displayName: Build Win32
     inputs:

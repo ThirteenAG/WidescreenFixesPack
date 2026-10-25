@@ -610,18 +610,6 @@
       "unmanagedAssets": []
     },
     {
-      "tag": "re4",
-      "name": "Resident Evil 4 Fusion Fix",
-      "packages": [
-        "ResidentEvil4.FusionFix"
-      ],
-      "platforms": [
-        "Win64"
-      ],
-      "available": true,
-      "unmanagedAssets": []
-    },
-    {
       "tag": "re5",
       "name": "Resident Evil 5 Fusion Fix",
       "packages": [
@@ -845,18 +833,6 @@
       ],
       "platforms": [
         "Win32"
-      ],
-      "available": true,
-      "unmanagedAssets": []
-    },
-    {
-      "tag": "scdaxbox",
-      "name": "Splinter Cell Double Agent Widescreen Fix [CXBXR]",
-      "packages": [
-        "SplinterCellDoubleAgent.CXBXR.WidescreenFix"
-      ],
-      "platforms": [
-        "CXBXR"
       ],
       "available": true,
       "unmanagedAssets": []
