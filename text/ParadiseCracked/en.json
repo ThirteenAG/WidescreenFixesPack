@@ -1,0 +1,8 @@
+{
+  "plugin.name": "Paradise Cracked Widescreen Fix",
+  "page.display": "Display",
+  "ResX": "Resolution width",
+  "ResX.description": "Width in pixels. Zero selects the desktop resolution. Restart required.",
+  "ResY": "Resolution height",
+  "ResY.description": "Height in pixels. Zero selects the desktop resolution. Restart required."
+}

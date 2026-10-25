@@ -25,7 +25,7 @@ namespace
         frameDelta = ConsumeRawMouse();
         mousePathActive = false;
         const auto result = baseUpdatePadHook.ccall<uintptr_t>(pad, time, deltaTime, enableMouse);
-        SetCursorCapture(mousePathActive && Settings.improveCameraPC);
+        SetCursorCapture(mousePathActive);
         return result;
     }
 }

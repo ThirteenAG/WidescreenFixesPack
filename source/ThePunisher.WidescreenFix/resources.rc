@@ -1,0 +1,6 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/ThePunisher/en.json"
+fr ASISETTINGS_TEXT "../../text/ThePunisher/fr.json"
+de ASISETTINGS_TEXT "../../text/ThePunisher/de.json"
+it ASISETTINGS_TEXT "../../text/ThePunisher/it.json"
+es ASISETTINGS_TEXT "../../text/ThePunisher/es.json"

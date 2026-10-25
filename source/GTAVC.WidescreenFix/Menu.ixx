@@ -1,13 +1,16 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib") // needed for timeBeginPeriod()/timeEndPeriod()
 
 export module Menu;
 
 import Skeleton;
+import Options;
 
 enum eMenuAction
 {
@@ -507,6 +510,7 @@ static float GetFrameLimiterValue()
 // Keep menu pacing independent of the gameplay limiter's timestamps and setting.
 static FrameLimiter menuFpsLimiter;
 static float menuFrameLimit = 60.0f;
+static bool menuFrameLimitChanged = false;
 
 static void LimitMenuFrame()
 {
@@ -514,11 +518,13 @@ static void LimitMenuFrame()
         return;
 
     static bool initialized = false;
-    if (!initialized)
+    if (!initialized || menuFrameLimitChanged)
     {
-        timeBeginPeriod(1);
+        if (!initialized)
+            timeBeginPeriod(1);
         menuFpsLimiter.Init(FrameLimiter::FPS_ACCURATE, menuFrameLimit);
         initialized = true;
+        menuFrameLimitChanged = false;
     }
     menuFpsLimiter.Sync();
 }
@@ -555,6 +561,15 @@ bool __cdecl RsEventHandler(RsEvent event, void* data)
     return hbRsEventHandler.fun(event, data);
 }
 
+static SafetyHookInline DrawMenuHook;
+
+static void __fastcall DrawMenuWithIndicators(uint8_t* manager, void*)
+{
+    FixOptions::BeginMenuDraw();
+    DrawMenuHook.unsafe_thiscall<void>(manager);
+    FixOptions::DrawScrollIndicators();
+}
+
 class Menu
 {
 public:
@@ -562,15 +577,28 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            menuFrameLimit = static_cast<float>(std::max(0,
-                iniReader.ReadInteger("MAIN", "MenuFrameLimit", 60)));
+            menuFrameLimit = static_cast<float>(std::max(0, FixSettings().Int("MAIN.FPSLimitMenus")));
+            OnSettingChange("MAIN.FPSLimitMenus", []()
+            {
+                menuFrameLimit = static_cast<float>(std::max(0, FixSettings().Int("MAIN.FPSLimitMenus")));
+                menuFrameLimitChanged = true;
+            });
 
             auto pattern = hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 89 44 24 ? 80 7D");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CText::TheText = *pattern.get_first<void*>(1);
             CText::Get = (decltype(CText::Get))injector::GetBranchDestination(pattern.get_first(5)).as_int();
 
             pattern = hook::pattern("80 7D ? ? 75 ? 8B B5");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto GetMenuOptionText = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 auto& ptr = *(wchar_t**)(regs.esp + 0x14);
@@ -582,14 +610,31 @@ public:
 
             static int cachedAction = -1;
             pattern = hook::pattern("83 E8 ? 0F 84 ? ? ? ? 83 E8 ? 0F 84 ? ? ? ? 83 E8 ? 0F 84 ? ? ? ? 83 E8 ? 0F 84 ? ? ? ? 83 E8 ? 0F 84 ? ? ? ? 83 E8 ? 83 F8");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto GetCurrentAction = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 cachedAction = regs.eax;
             });
 
             pattern = hook::pattern("80 BC 24 ? ? ? ? ? 0F 84 ? ? ? ? 8B 44 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto GetMenuOnOffText = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
+                // The values of the fix's own rows (Options.ixx)
+                if (auto text = FixOptions::RightText(cachedAction))
+                {
+                    regs.ebx = reinterpret_cast<uintptr_t>(text);
+                    return;
+                }
+
                 auto ptr = (wchar_t*)(regs.ebx);
                 if (ptr)
                 {
@@ -611,6 +656,11 @@ public:
             });
 
             pattern = hook::pattern("31 C0 80 7B ? ? 75 ? 40 88 43 ? 89 D9");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::MakeNOP(pattern.get_first(), 12, true);
             static auto ProcessOnOffMenuOptionsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
@@ -628,6 +678,11 @@ public:
             });
 
             pattern = hook::pattern("31 C0 80 7B ? ? 75 ? 40 88 43 ? EB ? 31 C0 80 3D");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::MakeNOP(pattern.get_first(), 12, true);
             static auto ProcessOnOffMenuOptionsHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
@@ -645,16 +700,32 @@ public:
             });
 
             pattern = hook::pattern("74 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0 80 E4 ? 80 FC ? 0F 85 ? ? ? ? 6A");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true);
 
             pattern = hook::pattern("E8 ? ? ? ? 59 59 EB ? 89 C0 8D 40 ? A1 ? ? ? ? 50");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             hbRsEventHandler.fun = injector::MakeCALL(pattern.get_first(0), RsEventHandler).get();
 
             pattern = hook::pattern("E8 ? ? ? ? 59 E8 ? ? ? ? E8 ? ? ? ? 6A ? 6A");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto DrawFrontEndHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&)
             {
                 LimitMenuFrame();
             });
+            DrawMenuHook = safetyhook::create_inline(pattern.get_first<uint8_t>(-9), DrawMenuWithIndicators);
         };
     }
 } Menu;

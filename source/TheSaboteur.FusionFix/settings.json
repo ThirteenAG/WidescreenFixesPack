@@ -1,0 +1,125 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "The Saboteur",
+        "exe": [
+          "Saboteur.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.FixFOV",
+      "type": "bool",
+      "default": 1,
+      "label": "@FixFOV",
+      "description": "@FixFOV.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 2,
+      "choices": [
+        {
+          "value": 1,
+          "label": "@WindowMode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@WindowMode.borderless"
+        }
+      ],
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "label": "@FPSLimit",
+      "description": "@FPSLimit.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 60,
+        "enhanced": 60
+      },
+      "min": 0,
+      "max": 1000
+    },
+    {
+      "id": "GRAPHICS.AntiAliasing",
+      "type": "choice",
+      "default": 0,
+      "label": "@AntiAliasing",
+      "description": "@AntiAliasing.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@AntiAliasing.off"
+        },
+        {
+          "value": 1,
+          "label": "@AntiAliasing.smaa"
+        }
+      ]
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "bool",
+      "default": false,
+      "label": "@ConsoleGamma",
+      "description": "@ConsoleGamma.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": true
+      }
+    }
+  ]
+}

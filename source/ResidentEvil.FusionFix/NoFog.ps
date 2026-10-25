@@ -1,0 +1,12 @@
+// MAIN.DisableFog: replaces the fog pass (pixel shader CRC 0xE8C35AD8) so that it adds no fog
+ps_3_0
+def c0, 0.00392156886, 0, 0, 0
+def c2, 1, 255, 65025, 0
+dcl_texcoord v0.zw
+dcl_2d s0
+mov r0, c0.w
+mul r0.yzw, r0.x, c2.xxyz
+mov oDepth, r0.x
+frc r0.xyz, r0.yzww
+mad oC0.xyz, r0.yzzw, -c0.xxyw, r0
+mov oC0.w, c1.y

@@ -24,12 +24,12 @@ void SetFov(float degrees) {
 void DrawCutsceneBorders(void*) {
     const auto now = *reinterpret_cast<const uint32_t*>(Address<0x8B5E144>());
     const bool dark = *reinterpret_cast<const uint8_t*>(Address<0x8B30D6F>()) >= 255;
-    borders.tick(now, CutsceneActive(), settings.cutsceneBorders, dark);
+    borders.tick(now, CutsceneActive(), settings.cutsceneBorders != 0, dark);
     Drawing::Scope scope(Anchor::None);
     Drawing::TextureScope texture(false);
     const console::portable::StoryColor black{0,0,0,255};
     borders.draw(cinematic.window(Drawing::settings.aspect, 480, 272), 480, 272,
-        [&](const console::Rect& rect) { Drawing::solidHook.call<void>(&rect, &black, true); });
+        [&](const console::Rect& rect) { Drawing::solidHook.call<void>(&rect, &black, true); }, settings.cutsceneBorders);
 }
 }
 void InstallCamera() {

@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/PatchPreflight.hpp"
 #include <sstream>
 #include <iomanip>
 
@@ -92,6 +93,14 @@ namespace XeTexturePacker
 
 export void InitXeTexturePacker()
 {
+    if (!wfp::PatchPreflight("King Kong texture cache: signatures unavailable; feature disabled.\n",
+    {
+        { "FF 15 ? ? ? ? 83 C4 0C 85 C0 0F 95 C0", 1 },
+        { "53 55 56 6A 14", 1 },
+        { "55 8B EC 83 E4 F8 81 EC B4 00 00 00 53", 1 },
+    }))
+        return;
+
     // Texture caching for Gamer's Edition
     auto pattern = hook::pattern("FF 15 ? ? ? ? 83 C4 0C 85 C0 0F 95 C0");
     if (!pattern.empty())

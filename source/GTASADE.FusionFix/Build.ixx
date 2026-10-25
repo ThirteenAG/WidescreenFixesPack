@@ -1,59 +1,69 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
 
 export module Build;
 
 export void* WindowProcedureAddress()
 {
-    return hook::pattern("4C 8B DC 55 56 57 49 8D AB 48 FE FF FF 48 81 EC A0 02 00 00 48 8B 05 ?").get_first();
+    return wfp::patterns::First("4C 8B DC 55 56 57 49 8D AB 48 FE FF FF 48 81 EC A0 02 00 00 48 8B 05 ?");
 }
 export void* HudParserAddress()
 {
-    return hook::pattern("40 55 53 57 41 55 48 8D AC 24 58 FC FF FF 48 81 EC A8 04 00 00 48 8B 05").get_first();
+    return wfp::patterns::First("40 55 53 57 41 55 48 8D AC 24 58 FC FF FF 48 81 EC A8 04 00 00 48 8B 05");
 }
 export void* HudScanCallAddress()
 {
-    return hook::pattern("E8 ? ? ? ? E9 ? ? ? ? 48 8D 85 90 00 00 00 48 8B CB 48 89 44 24").get_first();
+    return wfp::patterns::First("E8 ? ? ? ? E9 ? ? ? ? 48 8D 85 90 00 00 00 48 8B CB 48 89 44 24");
 }
 export void* LegalScreenAddress()
 {
-    return hook::pattern("40 53 48 83 EC 20 48 8B 42 20 45 33 C9 48 85 C0 49 8B D8 41 0F 95 C1 4C 03 C8 4C 89 4A 20 48 8B 01 FF 90 A0 04 00 00 88").get_first();
+    return wfp::patterns::First("40 53 48 83 EC 20 48 8B 42 20 45 33 C9 48 85 C0 49 8B D8 41 0F 95 C1 4C 03 C8 4C 89 4A 20 48 8B 01 FF 90 A0 04 00 00 88");
 }
 export void* InterfaceUpdateAddress()
 {
-    return hook::pattern("40 53 55 48 81 EC B8 00 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89 84 24").get_first();
+    return wfp::patterns::First("40 53 55 48 81 EC B8 00 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89 84 24");
 }
 export void* ResumeGameAddress()
 {
-    return hook::pattern("40 57 48 83 EC 20 48 8B F9 E8 ? ? ? ? 83 3D ? ? ? ? 09 48 8B CF").get_first();
+    return wfp::patterns::First("40 57 48 83 EC 20 48 8B F9 E8 ? ? ? ? 83 3D ? ? ? ? 09 48 8B CF");
 }
 export void* GameStateAddress()
 {
-    static const auto address = injector::ReadRelativeOffset(hook::pattern("83 3D ? ? ? ? 09 75 ? E8 ? ? ? ? 8B 05 ? ? ? ? 48 8D 0D ?").get_first<uint8_t>(2)).as_int() + 1;
+    static const auto address = injector::ReadRelativeOffset(wfp::patterns::First<uint8_t>("83 3D ? ? ? ? 09 75 ? E8 ? ? ? ? 8B 05 ? ? ? ? 48 8D 0D ?", 2)).as_int() + 1;
     return reinterpret_cast<void*>(address);
 }
 export void* LoginFlagsAddress()
 {
-    static const auto address = injector::ReadRelativeOffset(hook::pattern("48 8D 05 ? ? ? ? F6 04 01 02 74 ? 48 8D 05 ? ? ? ? C7 44 24 30").get_first<uint8_t>(3)).as_int();
+    const auto operand = wfp::patterns::First<uint8_t>("48 8D 05 ? ? ? ? F6 04 01 02 74 ? 48 8D 05 ? ? ? ? C7 44 24 30", 3);
+    if (!operand)
+        return nullptr;
+    static const auto address = injector::ReadRelativeOffset(operand).as_int();
     return reinterpret_cast<void*>(address);
 }
 export void* ControllerDevicesAddress()
 {
-    static const auto address = injector::ReadRelativeOffset(hook::pattern("48 8D 35 ? ? ? ? 48 63 05 ? ? ? ? F3 41 0F 5C C2 4C 8B BC 24 A0").get_first<uint8_t>(3)).as_int();
+    const auto operand = wfp::patterns::First<uint8_t>("48 8D 35 ? ? ? ? 48 63 05 ? ? ? ? F3 41 0F 5C C2 4C 8B BC 24 A0", 3);
+    if (!operand)
+        return nullptr;
+    static const auto address = injector::ReadRelativeOffset(operand).as_int();
     return reinterpret_cast<void*>(address);
 }
 export void* ControllerSlotAddress()
 {
-    static const auto address = injector::ReadRelativeOffset(hook::pattern("48 63 05 ? ? ? ? F3 41 0F 5C C2 4C 8B BC 24 A0 00 00 00 45 0F 57 C9").get_first<uint8_t>(3)).as_int();
+    const auto operand = wfp::patterns::First<uint8_t>("48 63 05 ? ? ? ? F3 41 0F 5C C2 4C 8B BC 24 A0 00 00 00 45 0F 57 C9", 3);
+    if (!operand)
+        return nullptr;
+    static const auto address = injector::ReadRelativeOffset(operand).as_int();
     return reinterpret_cast<void*>(address);
 }
 
 export void* PadUpdateAddress()
 {
-    return hook::pattern("48 8B C4 53 41 54 48 81 EC A8 00 00 00 44 0F 29 50 98 48 8B D9 48 8B 0D").get_first();
+    return wfp::patterns::First("48 8B C4 53 41 54 48 81 EC A8 00 00 00 44 0F 29 50 98 48 8B D9 48 8B 0D");
 }
 export void* MouseSampleAddress()
 {
-    return hook::pattern("F2 0F 11 43 20 0F 54 C1 41 0F 2F C3 73 ? 44 89 7B 20 F3 0F 10 43 24 0F").get_first();
+    return wfp::patterns::First("F2 0F 11 43 20 0F 54 C1 41 0F 2F C3 73 ? 44 89 7B 20 F3 0F 10 43 24 0F");
 }

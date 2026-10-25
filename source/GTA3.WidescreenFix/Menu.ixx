@@ -1,13 +1,16 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib") // needed for timeBeginPeriod()/timeEndPeriod()
 
 export module Menu;
 
 import Skeleton;
+import Options;
 
 export enum CutsceneBordersMode : int8_t
 {
@@ -55,11 +58,13 @@ export namespace CMenuManager
 namespace CText
 {
     injector::hook_back<const wchar_t* (__fastcall*)(void*, void*, const char*)> hbGet;
+    // The row text's call site keeps its own previous target (Options.ixx answers the fix's rows there too)
+    injector::hook_back<const wchar_t* (__fastcall*)(void*, void*, const char*)> hbGetRowText;
     const wchar_t* __fastcall GetMenuOptionText(void* CText, void* edx, const char* name)
     {
         if (std::string_view(name) == "FED_WIS")
             return L"CUTSCENE BORDERS";
-        return hbGet.fun(CText, edx, name);
+        return hbGetRowText.fun(CText, edx, name);
     }
 
     const wchar_t* GetCutsceneBordersText(void* CText, void* edx, const char* name)
@@ -314,6 +319,7 @@ static float GetFrameLimiterValue()
 // Keep menu pacing independent of the gameplay limiter's timestamps and setting.
 static FrameLimiter menuFpsLimiter;
 static float menuFrameLimit = 60.0f;
+static bool menuFrameLimitChanged = false;
 
 static void LimitMenuFrame()
 {
@@ -321,11 +327,13 @@ static void LimitMenuFrame()
         return;
 
     static bool initialized = false;
-    if (!initialized)
+    if (!initialized || menuFrameLimitChanged)
     {
-        timeBeginPeriod(1);
+        if (!initialized)
+            timeBeginPeriod(1);
         menuFpsLimiter.Init(FrameLimiter::FPS_ACCURATE, menuFrameLimit);
         initialized = true;
+        menuFrameLimitChanged = false;
     }
     menuFpsLimiter.Sync();
 }
@@ -362,6 +370,15 @@ bool __cdecl RsEventHandler(RsEvent event, void* data)
     return hbRsEventHandler.fun(event, data);
 }
 
+static SafetyHookInline DrawMenuHook;
+
+static void __fastcall DrawMenuWithIndicators(uint8_t* manager, void*)
+{
+    FixOptions::BeginMenuDraw();
+    DrawMenuHook.unsafe_thiscall<void>(manager);
+    FixOptions::DrawScrollIndicators();
+}
+
 class Menu
 {
 public:
@@ -369,20 +386,44 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            menuFrameLimit = static_cast<float>(std::max(0,
-                iniReader.ReadInteger("MAIN", "MenuFrameLimit", 60)));
+            menuFrameLimit = static_cast<float>(std::max(0, FixSettings().Int("MAIN.FPSLimitMenus")));
+            OnSettingChange("MAIN.FPSLimitMenus", []()
+            {
+                menuFrameLimit = static_cast<float>(std::max(0, FixSettings().Int("MAIN.FPSLimitMenus")));
+                menuFrameLimitChanged = true;
+            });
 
             auto pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? 8B B5");
-            CText::hbGet.fun = injector::MakeCALL(pattern.get_first(0), CText::GetMenuOptionText).get();
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
+            CText::hbGetRowText.fun = injector::MakeCALL(pattern.get_first(0), CText::GetMenuOptionText).get();
+            CText::hbGet.fun = CText::hbGetRowText.fun;
 
             pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? E9 ? ? ? ? 8D 84 20 ? ? ? ? B9 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 89 44 24 ? E9 ? ? ? ? 0F BE 05");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CText::hbGet.fun = injector::MakeCALL(pattern.get_first(0), CText::GetCutsceneBordersOn).get();
 
             pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? E9 ? ? ? ? 0F BE 05");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CText::hbGet.fun = injector::MakeCALL(pattern.get_first(0), CText::GetCutsceneBordersOff).get();
 
             pattern = hook::pattern("A2 ? ? ? ? 6A ? 68 ? ? ? ? E8 ? ? ? ? 89 D9 E9 ? ? ? ? 31 C0 80 3D ? ? ? ? ? 75 ? 40 A2");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::MakeNOP(pattern.get_first(), 5, true);
             injector::MakeNOP(pattern.get_first(-6), 1, true);
             static auto ProcessOnOffMenuOptionsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
@@ -403,12 +444,27 @@ public:
             });
 
             pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? E9 ? ? ? ? 89 C0");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CText::hbGet.fun = injector::MakeCALL(pattern.get_first(0), CText::GetFrameLimiterOn).get();
 
             pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? E9 E8 05 00 00");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CText::hbGet.fun = injector::MakeCALL(pattern.get_first(0), CText::GetFrameLimiterOff).get();
 
             pattern = hook::pattern("A2 ? ? ? ? 6A 00 68 98 00 00 00 E8 ? ? ? ? 89 D9 E8 ? ? ? ? E9 78 02 00 00");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::MakeNOP(pattern.get_first(), 5, true);
             injector::MakeNOP(pattern.get_first(-6), 1, true);
             static auto ProcessOnOffMenuOptionsHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
@@ -429,16 +485,32 @@ public:
             });
 
             pattern = hook::pattern("74 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0 80 E4 ? 80 FC ? 0F 85 ? ? ? ? 6A");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true);
 
             pattern = hook::pattern("E8 ? ? ? ? 59 59 EB ? A1 ? ? ? ? 50");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             hbRsEventHandler.fun = injector::MakeCALL(pattern.get_first(0), RsEventHandler).get();
 
             pattern = hook::pattern("E8 ? ? ? ? 83 BB ? ? ? ? ? 59 75 ? 80 BB");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto DrawFrontEndHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&)
             {
                 LimitMenuFrame();
             });
+            DrawMenuHook = safetyhook::create_inline(pattern.get_first<uint8_t>(-9), DrawMenuWithIndicators);
         };
     }
 } Menu;

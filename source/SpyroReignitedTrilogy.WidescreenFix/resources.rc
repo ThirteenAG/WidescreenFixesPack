@@ -1,0 +1,6 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/SpyroReignitedTrilogy/en.json"
+fr ASISETTINGS_TEXT "../../text/SpyroReignitedTrilogy/fr.json"
+de ASISETTINGS_TEXT "../../text/SpyroReignitedTrilogy/de.json"
+it ASISETTINGS_TEXT "../../text/SpyroReignitedTrilogy/it.json"
+es ASISETTINGS_TEXT "../../text/SpyroReignitedTrilogy/es.json"

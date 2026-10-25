@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "../Shared/PatchPreflight.hpp"
+#include "FixSettings.hpp"
 
 struct Screen
 {
@@ -16,15 +18,69 @@ struct Screen
     float fTextScale;
 } Screen;
 
+namespace IntroSkip
+{
+    struct Movie
+    {
+        const char* name;
+        int32_t state;
+        int32_t skipState;
+        int32_t skipMode;
+    };
+
+    constexpr int32_t LastLogo{ 6 };
+    constexpr int32_t IntroIndex{ 7 };
+    const Movie* pMovies{ nullptr };
+    SafetyHookInline openHook{};
+
+    void* __stdcall OpenMovie(const char* path, uint32_t flags)
+    {
+        if (pMovies && path && flags == 0)
+        {
+            const char* name = path;
+            for (auto* p = path; *p; ++p)
+                if (*p == '\\' || *p == '/') name = p + 1;
+            for (int32_t i{ 0 }; i <= LastLogo; ++i)
+            {
+                const auto length = std::strlen(pMovies[i].name);
+                if (_strnicmp(name, pMovies[i].name, length) == 0 && _stricmp(name + length, ".bik") == 0)
+                    return nullptr;
+            }
+        }
+        return openHook.stdcall<void*>(path, flags);
+    }
+
+    void Install()
+    {
+        auto input = find_pattern("6A 05 23 F1 E8 ? ? ? ? 83 C4 04 85 C0 75 04 85 F6 74 ? A1 ? ? ? ? C1 E0 04 8B 88");
+        auto open = find_pattern("FF 15 ? ? ? ? 3B C3 89 06 75 ? C7 86 ? ? ? ? 02 00 00 00");
+        if (input.size() != 1 || open.size() != 1)
+            return;
+
+        const auto* movies = reinterpret_cast<Movie*>(*input.get_first<uintptr_t>(30) - offsetof(Movie, skipMode));
+        if (!movies[0].name || _stricmp(movies[0].name, "RushLogo") != 0 ||
+            !movies[IntroIndex].name || _stricmp(movies[IntroIndex].name, "Intro") != 0)
+            return;
+
+        pMovies = movies;
+        // Native failed-open handling advances logo states without starting their movies.
+        openHook = safetyhook::create_inline(**open.get_first<void**>(2), OpenMovie);
+    }
+}
+
 void Init()
 {
-    CIniReader iniReader("");
-    Screen.nWidth = iniReader.ReadInteger("MAIN", "ResX", 0);
-    Screen.nHeight = iniReader.ReadInteger("MAIN", "ResY", 0);
-    bool bFix2D = iniReader.ReadInteger("MAIN", "Fix2D", 1) != 0;
+    hook::pattern pattern;
+    auto& settings = FixSettings();
+    asi_settings::LiveLink::Start();
+    Screen.nWidth = settings.Int("MAIN.ResX");
+    Screen.nHeight = settings.Int("MAIN.ResY");
+    const bool bFix2D = settings.Bool("MAIN.Fix2D");
 
-    if (!Screen.nWidth || !Screen.nHeight)
+    if (Screen.nWidth <= 0 || Screen.nHeight <= 0 || Screen.nWidth > 16384 || Screen.nHeight > 16384)
         std::tie(Screen.nWidth, Screen.nHeight) = GetDesktopRes();
+    if (Screen.nWidth <= 0 || Screen.nHeight <= 0)
+        std::tie(Screen.nWidth, Screen.nHeight) = std::make_tuple(640, 480);
 
     Screen.fWidth = static_cast<float>(Screen.nWidth);
     Screen.fHeight = static_cast<float>(Screen.nHeight);
@@ -37,133 +93,191 @@ void Init()
     Screen.fTextScale = (1.0f / 640.0f) / Screen.fHudScale;
 
     //Registry
-    auto pattern = hook::pattern("E8 ? ? ? ? 6A 20 E8 ? ? ? ? 8B E8 85 ED 89 6B 38");
-    struct RegHook
+    if (wfp::PatchPreflight("LA Rush installed movie state: signatures unavailable; feature disabled.\n",
     {
-        void operator()(injector::reg_pack& regs)
+        { "E8 ? ? ? ? 6A 20 E8 ? ? ? ? 8B E8 85 ED 89 6B 38", 1 },
+    }))
+    {
+        pattern = hook::pattern("E8 ? ? ? ? 6A 20 E8 ? ? ? ? 8B E8 85 ED 89 6B 38");
+        struct RegHook
         {
-            *(uint32_t*)(regs.ecx + 0x37C) = 1;   // MovieInstalled
-            *(uint32_t*)(regs.ecx + 0x380) = 0;   // IsCDROMVersion
-            *(uint32_t*)(regs.ecx + 0x384) = 0;   // MovieCDNo
-        }
-    }; injector::MakeInline<RegHook>(pattern.get_first(0)); //0x54160C
+            void operator()(injector::reg_pack& regs)
+            {
+                *(uint32_t*)(regs.ecx + 0x37C) = 1;   // MovieInstalled
+                *(uint32_t*)(regs.ecx + 0x380) = 0;   // IsCDROMVersion
+                *(uint32_t*)(regs.ecx + 0x384) = 0;   // MovieCDNo
+            }
+        }; injector::MakeInline<RegHook>(pattern.get_first(0)); //0x54160C
+
+    }
 
     //Resolution
-    pattern = hook::pattern("8B 44 24 04 85 C0 75 ? 8B 44 24");
-    struct ResHook
+    if (wfp::PatchPreflight("LA Rush resolution and aspect: signatures unavailable; feature disabled.\n",
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(int32_t*)(regs.esp + 0x08) = Screen.nWidth;
-            *(int32_t*)(regs.esp + 0x0C) = Screen.nHeight;
-        }
-    }; injector::MakeInline<ResHook>(pattern.get_first(6), pattern.get_first(28)); //0x53F6D6
-
-    pattern = hook::pattern("89 BB 5C 03 00 00");
-    struct ResHook2
+        { "8B 44 24 04 85 C0 75 ? 8B 44 24", 1 },
+        { "89 BB 5C 03 00 00", 1 },
+        { "68 ? ? ? ? 8B CE E8 ? ? ? ? 51 D9 1C 24", 1 },
+        { "F3 0F 10 05 ? ? ? ? 8B C7 99", 1 },
+    }))
     {
-        void operator()(injector::reg_pack& regs)
+        pattern = hook::pattern("8B 44 24 04 85 C0 75 ? 8B 44 24");
+        struct ResHook
         {
-            *(int32_t*)(regs.ebx + 0x35C) = Screen.nWidth;
-            *(int32_t*)(regs.ebx + 0x360) = Screen.nHeight;
-        }
-    }; injector::MakeInline<ResHook2>(pattern.get_first(0), pattern.get_first(6)); //0x53F6D6
+            void operator()(injector::reg_pack& regs)
+            {
+                *(int32_t*)(regs.esp + 0x08) = Screen.nWidth;
+                *(int32_t*)(regs.esp + 0x0C) = Screen.nHeight;
+            }
+        }; injector::MakeInline<ResHook>(pattern.get_first(6), pattern.get_first(28)); //0x53F6D6
 
-    //Aspect Ratio
-    pattern = hook::pattern("68 ? ? ? ? 8B CE E8 ? ? ? ? 51 D9 1C 24");
-    injector::WriteMemory<float>(pattern.get_first(1), Screen.fAspectRatio, true);
+        pattern = hook::pattern("89 BB 5C 03 00 00");
+        struct ResHook2
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                *(int32_t*)(regs.ebx + 0x35C) = Screen.nWidth;
+                *(int32_t*)(regs.ebx + 0x360) = Screen.nHeight;
+            }
+        }; injector::MakeInline<ResHook2>(pattern.get_first(0), pattern.get_first(6)); //0x53F6D6
 
-    pattern = hook::pattern("F3 0F 10 05 ? ? ? ? 8B C7 99");
-    injector::WriteMemory<float>(*pattern.get_first<void*>(4), Screen.fAspectRatio, true);
+        //Aspect Ratio
+        pattern = hook::pattern("68 ? ? ? ? 8B CE E8 ? ? ? ? 51 D9 1C 24");
+        ProtectedGameRef<float>{pattern.get_first<float>(1)} = Screen.fAspectRatio;
+
+        pattern = hook::pattern("F3 0F 10 05 ? ? ? ? 8B C7 99");
+        ProtectedGameRef<float>{*pattern.get_first<float*>(4)} = Screen.fAspectRatio;
+
+    }
 
     if (bFix2D)
     {
-        static auto ret_551F3B = (uint32_t)hook::get_pattern("83 C6 28 4D 75 F2 5F 5D 5E B8 01 00 00 00 5B 81 C4 98 00 00 00 C2 0C 00", 0);
-        pattern = hook::pattern("F3 0F 11 56 ? F3 0F 11 4E ? E8 ? ? ? ? 8B E8 85 ED");
-        struct TextHook
+        if (wfp::PatchPreflight("LA Rush HUD and cursor: signatures unavailable; feature disabled.\n",
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(float*)(regs.esi + 0x0C) = regs.xmm2.f32[0];
-                *(float*)(regs.esi + 0x10) = regs.xmm1.f32[0];
-
-                auto ret = *(uint32_t*)(regs.esp + 0x28);
-                if (ret == ret_551F3B)
-                {
-                    *(float*)(regs.esi + 0x04) /= Screen.fHudScale;
-                    *(float*)(regs.esi + 0x08) /= Screen.fHudScale;
-                }
-            }
-        }; injector::MakeInline<TextHook>(pattern.get_first(0), pattern.get_first(10)); //0x5504BA
-
-        static auto ret_4ED9E4 = (uint32_t)hook::get_pattern("83 C4 04 8B 44 24 10 8B 0D ? ? ? ? 40 3B C1 89 44 24 10", 0);
-        static auto ret_4D25FE = (uint32_t)hook::get_pattern("83 C4 04 5F 5B 83 C4 54", 0);
-        static auto ret_4F62A6 = (uint32_t)hook::get_pattern("83 C4 40 5E 5D 83 C4 6C C3", 0);
-        static auto ret_4ED33B = (uint32_t)hook::get_pattern("A1 ? ? ? ? 8B 0D ? ? ? ? 83 C4 04 3B C1 74 4B D9 05", 0);
-        static auto ret_4FA384 = (uint32_t)hook::get_pattern("83 C4 34 5F 5D 5B 59 C2 08 00", 0);
-        static auto ret_4EF78F = (uint32_t)hook::get_pattern("8B 44 24 34 83 C4 18 40 83 C7 02 83 F8 09", 0);
-        pattern = hook::pattern("0F B6 46 42 0F B7 4E 40");
-        struct BackgroundGraphicsHook
+            { "83 C6 28 4D 75 F2 5F 5D 5E B8 01 00 00 00 5B 81 C4 98 00 00 00 C2 0C 00", 1 },
+            { "F3 0F 11 56 ? F3 0F 11 4E ? E8 ? ? ? ? 8B E8 85 ED", 1 },
+            { "83 C4 04 8B 44 24 10 8B 0D ? ? ? ? 40 3B C1 89 44 24 10", 1 },
+            { "83 C4 04 5F 5B 83 C4 54", 1 },
+            { "83 C4 40 5E 5D 83 C4 6C C3", 1 },
+            { "A1 ? ? ? ? 8B 0D ? ? ? ? 83 C4 04 3B C1 74 4B D9 05", 1 },
+            { "83 C4 34 5F 5D 5B 59 C2 08 00", 1 },
+            { "8B 44 24 34 83 C4 18 40 83 C7 02 83 F8 09", 1 },
+            { "0F B6 46 42 0F B7 4E 40", 1 },
+            { "A1 ? ? ? ? 8B 0D ? ? ? ? F3 0F 10 05 ? ? ? ? 50 51 8D 54 24 40 F3 0F 11 44 24", 1 },
+            { "83 C4 14 E9 ? ? ? ? 3B DF 75 43 F3 0F 10 44 24 ? F3 0F 58 44 24", 1 },
+            { "68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? F3 0F 10 44 24 ? F3 0F 58 44 24", 1 },
+            { "D9 58 0C DD D8 DD D8 83 C4 5C C3", 1 },
+        }))
         {
-            void operator()(injector::reg_pack& regs)
+            static auto ret_551F3B = (uint32_t)hook::get_pattern("83 C6 28 4D 75 F2 5F 5D 5E B8 01 00 00 00 5B 81 C4 98 00 00 00 C2 0C 00", 0);
+            pattern = hook::pattern("F3 0F 11 56 ? F3 0F 11 4E ? E8 ? ? ? ? 8B E8 85 ED");
+            struct TextHook
             {
-                auto ret = *(uint32_t*)(regs.esp + 0x38);
-                if (ret != ret_4ED9E4 && ret != ret_4D25FE && ret != ret_4F62A6 && ret != ret_4ED33B && ret != ret_4FA384 && ret != ret_4EF78F)
+                void operator()(injector::reg_pack& regs)
                 {
-                    *(float*)(regs.esi + 0x10) /= Screen.fHudScale;
-                    *(float*)(regs.esi + 0x14) /= Screen.fHudScale;
-                    *(float*)(regs.esi + 0x18) /= Screen.fHudScale;
-                    *(float*)(regs.esi + 0x1C) /= Screen.fHudScale;
+                    *(float*)(regs.esi + 0x0C) = regs.xmm2.f32[0];
+                    *(float*)(regs.esi + 0x10) = regs.xmm1.f32[0];
+
+                    auto ret = *(uint32_t*)(regs.esp + 0x28);
+                    if (ret == ret_551F3B)
+                    {
+                        *(float*)(regs.esi + 0x04) /= Screen.fHudScale;
+                        *(float*)(regs.esi + 0x08) /= Screen.fHudScale;
+                    }
                 }
+            }; injector::MakeInline<TextHook>(pattern.get_first(0), pattern.get_first(10)); //0x5504BA
 
-                *(uint16_t*)&regs.ecx = *(uint16_t*)(regs.esi + 0x40);
-                *(uint8_t*)&regs.eax = *(uint8_t*)(regs.esi + 0x42);
-            }
-        }; injector::MakeInline<BackgroundGraphicsHook>(pattern.get_first(0), pattern.get_first(8)); //550082
-
-        //Mouse
-        static auto ret_4C74E8 = (uint32_t)hook::get_pattern("A1 ? ? ? ? 8B 0D ? ? ? ? F3 0F 10 05 ? ? ? ? 50 51 8D 54 24 40 F3 0F 11 44 24", 0);
-        static auto ret_4C751D = (uint32_t)hook::get_pattern("83 C4 14 E9 ? ? ? ? 3B DF 75 43 F3 0F 10 44 24 ? F3 0F 58 44 24", 0);
-        static auto ret_4F6CFC = (uint32_t)hook::get_pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? F3 0F 10 44 24 ? F3 0F 58 44 24", 0);
-        pattern = hook::pattern("D9 58 0C DD D8 DD D8 83 C4 5C C3");
-        struct MouseHook
-        {
-            void operator()(injector::reg_pack& regs)
+            static auto ret_4ED9E4 = (uint32_t)hook::get_pattern("83 C4 04 8B 44 24 10 8B 0D ? ? ? ? 40 3B C1 89 44 24 10", 0);
+            static auto ret_4D25FE = (uint32_t)hook::get_pattern("83 C4 04 5F 5B 83 C4 54", 0);
+            static auto ret_4F62A6 = (uint32_t)hook::get_pattern("83 C4 40 5E 5D 83 C4 6C C3", 0);
+            static auto ret_4ED33B = (uint32_t)hook::get_pattern("A1 ? ? ? ? 8B 0D ? ? ? ? 83 C4 04 3B C1 74 4B D9 05", 0);
+            static auto ret_4FA384 = (uint32_t)hook::get_pattern("83 C4 34 5F 5D 5B 59 C2 08 00", 0);
+            static auto ret_4EF78F = (uint32_t)hook::get_pattern("8B 44 24 34 83 C4 18 40 83 C7 02 83 F8 09", 0);
+            pattern = hook::pattern("0F B6 46 42 0F B7 4E 40");
+            struct BackgroundGraphicsHook
             {
-                if (*(uint32_t*)regs.esp != ret_4C74E8 && *(uint32_t*)regs.esp != ret_4C751D && *(uint32_t*)regs.esp != ret_4F6CFC)
+                void operator()(injector::reg_pack& regs)
                 {
-                    *(float *)(regs.eax + 0x0) /= Screen.fHudScale;
-                    *(float *)(regs.eax + 0x0) += Screen.fHudOffsetReal / Screen.fWidth;
-                    *(float *)(regs.eax + 0x8) /= Screen.fHudScale;
+                    auto ret = *(uint32_t*)(regs.esp + 0x38);
+                    if (ret != ret_4ED9E4 && ret != ret_4D25FE && ret != ret_4F62A6 && ret != ret_4ED33B && ret != ret_4FA384 && ret != ret_4EF78F)
+                    {
+                        *(float*)(regs.esi + 0x10) /= Screen.fHudScale;
+                        *(float*)(regs.esi + 0x14) /= Screen.fHudScale;
+                        *(float*)(regs.esi + 0x18) /= Screen.fHudScale;
+                        *(float*)(regs.esi + 0x1C) /= Screen.fHudScale;
+                    }
+
+                    *(uint16_t*)&regs.ecx = *(uint16_t*)(regs.esi + 0x40);
+                    *(uint8_t*)&regs.eax = *(uint8_t*)(regs.esi + 0x42);
                 }
-            }
-        }; injector::MakeInline<MouseHook>(pattern.get_first(10)); //4BF734
-        injector::MakeRET(pattern.get_first(10 + 5));
+            }; injector::MakeInline<BackgroundGraphicsHook>(pattern.get_first(0), pattern.get_first(8)); //550082
+
+            //Mouse
+            static auto ret_4C74E8 = (uint32_t)hook::get_pattern("A1 ? ? ? ? 8B 0D ? ? ? ? F3 0F 10 05 ? ? ? ? 50 51 8D 54 24 40 F3 0F 11 44 24", 0);
+            static auto ret_4C751D = (uint32_t)hook::get_pattern("83 C4 14 E9 ? ? ? ? 3B DF 75 43 F3 0F 10 44 24 ? F3 0F 58 44 24", 0);
+            static auto ret_4F6CFC = (uint32_t)hook::get_pattern("68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? F3 0F 10 44 24 ? F3 0F 58 44 24", 0);
+            pattern = hook::pattern("D9 58 0C DD D8 DD D8 83 C4 5C C3");
+            struct MouseHook
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    if (*(uint32_t*)regs.esp != ret_4C74E8 && *(uint32_t*)regs.esp != ret_4C751D && *(uint32_t*)regs.esp != ret_4F6CFC)
+                    {
+                        *(float *)(regs.eax + 0x0) /= Screen.fHudScale;
+                        *(float *)(regs.eax + 0x0) += Screen.fHudOffsetReal / Screen.fWidth;
+                        *(float *)(regs.eax + 0x8) /= Screen.fHudScale;
+                    }
+                }
+            }; injector::MakeInline<MouseHook>(pattern.get_first(10)); //4BF734
+            injector::MakeRET(pattern.get_first(10 + 5));
+        }
+
+
     }
     else
     {
         //Text Scale
-        pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 68");
-        injector::WriteMemory<float>(*pattern.get_first<void*>(2), Screen.fTextScale, true); //0x5E0134
+        if (wfp::PatchPreflight("LA Rush text scale: signatures unavailable; feature disabled.\n",
+        {
+            { "D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 68", 1 },
+        }))
+        {
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 68");
+            ProtectedGameRef<float>{*pattern.get_first<float*>(2)} = Screen.fTextScale; //0x5E0134
+        }
+
+
     }
 
     //Videos
-    pattern = hook::pattern("E8 ? ? ? ? 89 44 24 60 E8 ? ? ? ? F3 0F 10 05");
-    struct FMVHook
+    if (wfp::PatchPreflight("LA Rush movies: signatures unavailable; feature disabled.\n",
     {
-        void operator()(injector::reg_pack& regs)
+        { "E8 ? ? ? ? 89 44 24 60 E8 ? ? ? ? F3 0F 10 05", 1 },
+    }))
+    {
+        pattern = hook::pattern("E8 ? ? ? ? 89 44 24 60 E8 ? ? ? ? F3 0F 10 05");
+        struct FMVHook
         {
-            *(int32_t*)(regs.esp + 0x58) += (int32_t)Screen.fHudOffsetReal;
-            regs.eax = Screen.nWidth43;
-        }
-    }; injector::MakeInline<FMVHook>(pattern.get_first(0)); //0x572C6F
+            void operator()(injector::reg_pack& regs)
+            {
+                *(int32_t*)(regs.esp + 0x58) += (int32_t)Screen.fHudOffsetReal;
+                regs.eax = Screen.nWidth43;
+            }
+        }; injector::MakeInline<FMVHook>(pattern.get_first(0)); //0x572C6F
+
+    }
+
+    if (settings.Bool("MAIN.SkipIntro"))
+        IntroSkip::Install();
 }
+
+ASI_SETTINGS_EXPORT(FixSettings())
 
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
         {
-            CallbackHandler::RegisterCallback(Init, hook::pattern("8B 44 24 04 85 C0 75 ? 8B 44 24"));
+            WindowedModeWrapper::EnableDpiAwareness();
+            CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("8B 44 24 04 85 C0 75 ? 8B 44 24"));
         });
 }
 

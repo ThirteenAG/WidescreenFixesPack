@@ -1,0 +1,114 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Splinter Cell: Double Agent (Cxbx-Reloaded)",
+        "exe": [
+          "cxbx.exe",
+          "cxbxr-ldr.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "menu",
+      "visibility": "editor",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FixHUD",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.FixHUD",
+      "description": "@MAIN.FixHUD.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@MAIN.HudAspectRatioConstraint",
+      "description": "@MAIN.HudAspectRatioConstraint.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "suggestions": [
+        {
+          "value": "Auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "4:3",
+          "label": "4:3"
+        },
+        {
+          "value": "16:9",
+          "label": "16:9"
+        },
+        {
+          "value": "21:9",
+          "label": "21:9"
+        },
+        {
+          "value": "32:9",
+          "label": "32:9"
+        }
+      ]
+    }
+  ]
+}

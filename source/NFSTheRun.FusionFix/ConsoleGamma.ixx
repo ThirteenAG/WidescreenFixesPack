@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <cassert>
@@ -315,15 +316,12 @@ public:
     {
         WFP::onInitEventAsync() += []()
         {
-            CIniReader iniReader("");
-            bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 1) != 0;
-
-            if (!bConsoleGammaEnabled)
-                return;
+            bConsoleGammaEnabled = FixSettings().Int("GRAPHICS.ConsoleGamma") != 0;
 
             auto pattern = hook::pattern("57 ? ? 52 51 50 8B 47");
             static auto DX11PresentHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
+                bConsoleGammaEnabled = FixSettings().Bool("GRAPHICS.ConsoleGamma");
                 IDXGISwapChain* pSwapChain = (IDXGISwapChain*)regs.eax;
                 ConsoleGammaDX11::Render(pSwapChain);
             });

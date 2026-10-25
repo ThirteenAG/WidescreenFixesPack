@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/PatternPreflight.hpp"
+#include "FixSettings.hpp"
 
 export module Shadows;
 
@@ -89,84 +91,98 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            ShadowRes::Resolution = iniReader.ReadInteger("GRAPHICS", "ShadowsRes", 2048);
-            ShadowRes::bAutoScaleShadowsRes = iniReader.ReadInteger("GRAPHICS", "AutoScaleShadowsRes", 1) != 0;
-            ShadowRes::CurrentTexFormat = iniReader.ReadInteger("GRAPHICS", "ShadowMapTextureFormat", 0);
-            ShadowRes::bForceSharpShadows = iniReader.ReadInteger("GRAPHICS", "ForceSharpShadows", 0) != 0;
+            ShadowRes::Resolution = std::clamp(FixSettings().Int("GRAPHICS.ShadowResolution"), 1024, 16384);
+            ShadowRes::CurrentTexFormat = FixSettings().Bool("GRAPHICS.SoftShadows") ? 1 : 0;   // INTZ or D24S8
 
-            bool bShadowsFix = iniReader.ReadInteger("GRAPHICS", "ShadowsFix", 1) != 0;
-            bool bImproveShadowLOD = iniReader.ReadInteger("GRAPHICS", "ImproveShadowLOD", 1) != 0;
-
-            if (bShadowsFix)
             {
-                //dynamic shadow fix that stops them from disappearing when going into tunnels, under bridges, etc.
-                uint32_t* dword_6DE377 = hook::pattern("75 3B C7 05 ? ? ? ? 00 00 80 3F").count(1).get(0).get<uint32_t>(0);
-                injector::MakeNOP(dword_6DE377, 2, true);
-                injector::WriteMemory((uint32_t)dword_6DE377 + 8, 0, true);
+                [&]()
+                {
+                    if (!PatternPreflight::Check("NFSMostWanted Shadows", {
+                        { "75 3B C7 05 ? ? ? ? 00 00 80 3F", 1, true },
+                        { "D9 05 ? ? ? ? 8B 54 24 70 D9 1A E9 D1", 1, true },
+                    }))
+                        return;
 
-                //car shadow opacity
-                uint32_t* dword_8A0E50 = *hook::pattern("D9 05 ? ? ? ? 8B 54 24 70 D9 1A E9 D1").count(1).get(0).get<uint32_t*>(2);
-                injector::WriteMemory(dword_8A0E50, 60.0f, true);
+                    //dynamic shadow fix that stops them from disappearing when going into tunnels, under bridges, etc.
+                    uint32_t* dword_6DE377 = hook::pattern("75 3B C7 05 ? ? ? ? 00 00 80 3F").count(1).get(0).get<uint32_t>(0);
+                    injector::MakeNOP(dword_6DE377, 2, true);
+                    injector::WriteMemory((uint32_t)dword_6DE377 + 8, 0, true);
+
+                    //car shadow opacity
+                    uint32_t* dword_8A0E50 = *hook::pattern("D9 05 ? ? ? ? 8B 54 24 70 D9 1A E9 D1").count(1).get(0).get<uint32_t*>(2);
+                    injector::WriteMemory(dword_8A0E50, 60.0f, true);
+                }();
+
             }
 
-            if (ShadowRes::Resolution)
             {
-                uintptr_t loc_6E5507 = reinterpret_cast<uintptr_t>(hook::pattern("52 68 C3 00 00 00 50 FF 91 E4 00 00 00").get_first(0)) + 0xD;
-                uintptr_t loc_6E54E1 = loc_6E5507 - 0x26;
-
-                ShadowRes::DepthBiasAddr_901AC0 = *(uintptr_t*)(loc_6E54E1 + 2);
-                ShadowRes::DepthBiasSlopeAddr_901ABC = *(uintptr_t*)(loc_6E5507 + 2);
-
-                struct ShadowDepthBiasHook
+                [&]()
                 {
-                    void operator()(injector::reg_pack& regs)
+                    if (!PatternPreflight::Check("NFSMostWanted Shadows", {
+                        { "52 68 C3 00 00 00 50 FF 91 E4 00 00 00", 1, false },
+                        { "89 56 08 89 46 0C C7 46 04 0F 00 00 00 89 7E 10 E8", 1, false },
+                        { "68 00 04 00 00 68 00 04 00 00 50 FF 51 5C 85 C0 7C 32", 1, true },
+                        { "68 00 04 00 00 68 00 04 00 00 50 FF 52 5C 85 C0 7D 36", 1, true },
+                        { "68 44 46 31 36 6A 02 6A 01 68", 1, false },
+                    }))
+                        return;
+
+                    uintptr_t loc_6E5507 = reinterpret_cast<uintptr_t>(hook::pattern("52 68 C3 00 00 00 50 FF 91 E4 00 00 00").get_first(0)) + 0xD;
+                    uintptr_t loc_6E54E1 = loc_6E5507 - 0x26;
+
+                    ShadowRes::DepthBiasAddr_901AC0 = *(uintptr_t*)(loc_6E54E1 + 2);
+                    ShadowRes::DepthBiasSlopeAddr_901ABC = *(uintptr_t*)(loc_6E5507 + 2);
+
+                    struct ShadowDepthBiasHook
                     {
-                        _asm {fld ShadowRes::DepthBias}
-                    }
-                }; injector::MakeInline<ShadowDepthBiasHook>(loc_6E54E1, loc_6E54E1 + 6);
+                        void operator()(injector::reg_pack& regs)
+                        {
+                            _asm {fld ShadowRes::DepthBias}
+                        }
+                    }; injector::MakeInline<ShadowDepthBiasHook>(loc_6E54E1, loc_6E54E1 + 6);
 
-                struct ShadowDepthBiasSlopeHook
-                {
-                    void operator()(injector::reg_pack& regs)
+                    struct ShadowDepthBiasSlopeHook
                     {
-                        regs.edx = *(uint32_t*)(&ShadowRes::DepthBiasSlope);
-                    }
-                }; injector::MakeInline<ShadowDepthBiasSlopeHook>(loc_6E5507, loc_6E5507 + 6);
+                        void operator()(injector::reg_pack& regs)
+                        {
+                            regs.edx = *(uint32_t*)(&ShadowRes::DepthBiasSlope);
+                        }
+                    }; injector::MakeInline<ShadowDepthBiasSlopeHook>(loc_6E5507, loc_6E5507 + 6);
 
-                uintptr_t loc_6BD32B = reinterpret_cast<uintptr_t>(hook::pattern("89 56 08 89 46 0C C7 46 04 0F 00 00 00 89 7E 10 E8").get_first(0)) + 0x10;
-                uintptr_t loc_6BD333 = loc_6BD32B + 8;
+                    uintptr_t loc_6BD32B = reinterpret_cast<uintptr_t>(hook::pattern("89 56 08 89 46 0C C7 46 04 0F 00 00 00 89 7E 10 E8").get_first(0)) + 0x10;
+                    uintptr_t loc_6BD333 = loc_6BD32B + 8;
 
-                ShadowRes::dword_6C86B1 = static_cast<uintptr_t>(injector::GetBranchDestination(loc_6BD32B)) + 1;
-                ShadowRes::dword_6C86C1 = static_cast<uintptr_t>(injector::GetBranchDestination(loc_6BD333)) + 1;
+                    ShadowRes::dword_6C86B1 = static_cast<uintptr_t>(injector::GetBranchDestination(loc_6BD32B)) + 1;
+                    ShadowRes::dword_6C86C1 = static_cast<uintptr_t>(injector::GetBranchDestination(loc_6BD333)) + 1;
 
-                ShadowRes::dword_6C8786 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 51 5C 85 C0 7C 32").count(1).get(0).get<uint32_t>(1);
-                ShadowRes::dword_6C878B = (uint32_t)ShadowRes::dword_6C8786 + 5;
-                ShadowRes::dword_6C87B8 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 52 5C 85 C0 7D 36").count(1).get(0).get<uint32_t>(1);
-                ShadowRes::dword_6C87BD = (uint32_t)ShadowRes::dword_6C87B8 + 5;
+                    ShadowRes::dword_6C8786 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 51 5C 85 C0 7C 32").count(1).get(0).get<uint32_t>(1);
+                    ShadowRes::dword_6C878B = (uint32_t)ShadowRes::dword_6C8786 + 5;
+                    ShadowRes::dword_6C87B8 = hook::pattern("68 00 04 00 00 68 00 04 00 00 50 FF 52 5C 85 C0 7D 36").count(1).get(0).get<uint32_t>(1);
+                    ShadowRes::dword_6C87BD = (uint32_t)ShadowRes::dword_6C87B8 + 5;
 
-                uintptr_t loc_6C87E5 = reinterpret_cast<uintptr_t>(hook::pattern("68 44 46 31 36 6A 02 6A 01 68").get_first(0));
-                ShadowRes::dword_6C87EF = loc_6C87E5 + 0xA;
-                ShadowRes::dword_6C87F4 = ShadowRes::dword_6C87EF + 5;
+                    uintptr_t loc_6C87E5 = reinterpret_cast<uintptr_t>(hook::pattern("68 44 46 31 36 6A 02 6A 01 68").get_first(0));
+                    ShadowRes::dword_6C87EF = loc_6C87E5 + 0xA;
+                    ShadowRes::dword_6C87F4 = ShadowRes::dword_6C87EF + 5;
 
-                DWORD oldprotect;
-                injector::UnprotectMemory(ShadowRes::dword_6C86B1, sizeof(uint32_t), oldprotect);
-                injector::UnprotectMemory(ShadowRes::dword_6C86C1, sizeof(uint32_t), oldprotect);
-                injector::UnprotectMemory(ShadowRes::dword_6C8786, sizeof(uint32_t), oldprotect);
-                injector::UnprotectMemory(ShadowRes::dword_6C878B, sizeof(uint32_t), oldprotect);
-                injector::UnprotectMemory(ShadowRes::dword_6C87B8, sizeof(uint32_t), oldprotect);
-                injector::UnprotectMemory(ShadowRes::dword_6C87BD, sizeof(uint32_t), oldprotect);
-                injector::UnprotectMemory(ShadowRes::dword_6C87F4, sizeof(uint32_t), oldprotect);
-                injector::UnprotectMemory(ShadowRes::dword_6C87EF, sizeof(uint32_t), oldprotect);
+                    DWORD oldprotect;
+                    injector::UnprotectMemory(ShadowRes::dword_6C86B1, sizeof(uint32_t), oldprotect);
+                    injector::UnprotectMemory(ShadowRes::dword_6C86C1, sizeof(uint32_t), oldprotect);
+                    injector::UnprotectMemory(ShadowRes::dword_6C8786, sizeof(uint32_t), oldprotect);
+                    injector::UnprotectMemory(ShadowRes::dword_6C878B, sizeof(uint32_t), oldprotect);
+                    injector::UnprotectMemory(ShadowRes::dword_6C87B8, sizeof(uint32_t), oldprotect);
+                    injector::UnprotectMemory(ShadowRes::dword_6C87BD, sizeof(uint32_t), oldprotect);
+                    injector::UnprotectMemory(ShadowRes::dword_6C87F4, sizeof(uint32_t), oldprotect);
+                    injector::UnprotectMemory(ShadowRes::dword_6C87EF, sizeof(uint32_t), oldprotect);
 
-                onResChange() += [](int Width, int Height)
-                {
-                    float fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
-                    ShadowRes::update(ShadowRes::Resolution, fAspectRatio);
-                };
+                    onResChange() += [](int Width, int Height)
+                    {
+                        float fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
+                        ShadowRes::update(ShadowRes::Resolution, fAspectRatio);
+                    };
+                }();
+
             }
 
-            if (ShadowRes::CurrentTexFormat >= 0)
             {
                 uintptr_t loc_6C87E5 = reinterpret_cast<uintptr_t>(hook::pattern("68 44 46 31 36 6A 02 6A 01 68").get_first(0));
                 uintptr_t loc_6C8798 = loc_6C87E5 - 0x4D;
@@ -217,18 +233,21 @@ public:
                     *(uint32_t*)dword_982C08 = 2;
             }
 
-            if (ShadowRes::bForceSharpShadows)
             {
-                uintptr_t loc_6D5F3A = reinterpret_cast<uintptr_t>(hook::pattern("83 E8 03 89 44 24 14 EB 04 3B C3 7F 44").get_first(0));
-                injector::WriteMemory<uint8_t>(loc_6D5F3A + 2, 2, true);
-            }
+                [&]()
+                {
+                    if (!PatternPreflight::Check("NFSMostWanted Shadows", {
+                        { "68 ? ? ? ? EB ? A1 ? ? ? ? 0D", 1, true },
+                        { "68 ? ? ? ? 50 41 68", 2, true },
+                    }))
+                        return;
 
-            if (bImproveShadowLOD)
-            {
-                uint32_t* dword_6E5174 = hook::pattern("68 ? ? ? ? EB ? A1 ? ? ? ? 0D").count(1).get(0).get<uint32_t>(1);
-                injector::WriteMemory(dword_6E5174, 0x00000000, true);
-                uint32_t* dword_6BFFA2 = hook::pattern("68 ? ? ? ? 50 41 68").count(2).get(1).get<uint32_t>(1);
-                injector::WriteMemory(dword_6BFFA2, 0x00006102, true);
+                    uint32_t* dword_6E5174 = hook::pattern("68 ? ? ? ? EB ? A1 ? ? ? ? 0D").count(1).get(0).get<uint32_t>(1);
+                    injector::WriteMemory(dword_6E5174, 0x00000000, true);
+                    uint32_t* dword_6BFFA2 = hook::pattern("68 ? ? ? ? 50 41 68").count(2).get(1).get<uint32_t>(1);
+                    injector::WriteMemory(dword_6BFFA2, 0x00006102, true);
+                }();
+
             }
         };
     }

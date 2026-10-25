@@ -1,0 +1,176 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Resident Evil 5",
+        "exe": [
+          "re5dx9.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "decimals": 2,
+      "unit": "x",
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "slider"
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 2,
+      "choices": [
+        {
+          "value": 1,
+          "label": "@WindowMode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@WindowMode.borderless"
+        }
+      ],
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.LightSyncRGB",
+      "type": "bool",
+      "default": 1,
+      "label": "@LightSyncRGB",
+      "description": "@LightSyncRGB.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.ColorFilter",
+      "type": "bool",
+      "default": 1,
+      "label": "@ColorFilter",
+      "description": "@ColorFilter.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.ModernControls",
+      "type": "bool",
+      "default": 0,
+      "label": "@ModernControls",
+      "description": "@ModernControls.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.ForceLaserSight",
+      "type": "bool",
+      "default": 0,
+      "label": "@ForceLaserSight",
+      "description": "@ForceLaserSight.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.KnifeParry",
+      "type": "bool",
+      "default": 0,
+      "label": "@KnifeParry",
+      "description": "@KnifeParry.description",
+      "page": "gameplay",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    }
+  ]
+}

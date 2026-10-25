@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "../Shared/CursorConfinement.hpp"
 
 export module CursorClip;
 
@@ -11,39 +13,22 @@ class CursorClip
 public:
     CursorClip()
     {
-        WFP::onInitEventAsync() += []()
+        WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            auto bClipCursor = iniReader.ReadInteger("MAIN", "ClipCursor", 1) != 0;
-
-            if (bClipCursor)
+            auto& settings = FixSettings();
+            CursorConfinement::SetEnabled(settings.Bool("MAIN.ConfineCursor"));
+            settings.OnChange("MAIN.ConfineCursor", []()
             {
-                WFP::onGameProcessEvent() += []()
-                {
-                    POINT pt;
-                    RECT rec;
-
-                    GetClientRect(hWnd, &rec);
-                    MapWindowPoints(hWnd, nullptr, (LPPOINT)&rec, 2);
-
-                    if (hWnd == GetFocus())
-                        ClipCursor(&rec);
-                    else
-                        ClipCursor(NULL);
-
-                    GetCursorPos(&pt);
-                    ScreenToClient(hWnd, &pt);
-                };
-
-                //TODO: add onActivateApp event to dllmain
-                WFP::onActivateApp() += [](bool wParam)
-                {
-                    if (!wParam)
-                    {
-                        ClipCursor(NULL);
-                    }
-                };
-            }
+                CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+            });
+            WFP::onGameProcessEvent() += []()
+            {
+                CursorConfinement::Frame(hWnd.get());
+            };
+        };
+        WFP::onShutdownEvent() += []()
+        {
+            CursorConfinement::Shutdown();
         };
     }
 } CursorClip;

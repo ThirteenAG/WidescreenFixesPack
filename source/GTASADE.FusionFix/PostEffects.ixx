@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
 
 export module PostEffects;
 
@@ -101,7 +102,8 @@ namespace
             // The weather curve's gain/contrast/saturation/midtone contrast
             // would grade the restored palette a second time. Native user
             // brightness, weapon wheel effects and material blendables remain.
-            std::fill_n(reinterpret_cast<float*>(actor + 1076), 4, 1.0f);
+            for (size_t channel = 0; channel < 4; ++channel)
+                reinterpret_cast<float*>(actor + 1076)[channel] = 1.0f;
         }
         const auto result = applyValuesHook.ccall<uintptr_t>(actor);
         if (active)
@@ -123,8 +125,8 @@ public:
         {
             if (Settings.visualStyle == VisualStyle::DE)
                 return;
-            const auto applyValues = hook::pattern("48 8B C4 55 53 57 41 56 48 8D 68 88 48 81 EC 58 01 00 00 4C 89 60 D8 48").get_first();
-            const auto colourOptions = hook::pattern("48 8B C4 55 41 56 48 8D 68 A1 48 81 EC E8 00 00 00 48 83 3D ? ? ? ?").get_first();
+            const auto applyValues = wfp::patterns::First("48 8B C4 55 53 57 41 56 48 8D 68 88 48 81 EC 58 01 00 00 4C 89 60 D8 48");
+            const auto colourOptions = wfp::patterns::First("48 8B C4 55 41 56 48 8D 68 A1 48 81 EC E8 00 00 00 48 83 3D ? ? ? ?");
             if (!applyValues || !colourOptions)
                 return;
             colourOptionsHook = safetyhook::create_inline(colourOptions, UpdateColorOptions);

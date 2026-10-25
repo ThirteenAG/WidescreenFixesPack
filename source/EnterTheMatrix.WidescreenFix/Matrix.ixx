@@ -1,6 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/PatchPreflight.hpp"
+#include "FixSettings.hpp"
+#include "NativeConfig.hpp"
 
 export module Matrix;
 
@@ -37,23 +40,38 @@ void* __cdecl sub_608BF9(int a1, int a2, int a3, int a4, int a5, int a6, float a
         if (a1 == 20)
         {
             a1 -= Screen.nWidescreenHudOffset;
-            *(int32_t*)(*(uintptr_t*)a8 + 0x30) -= Screen.nWidescreenHudOffset;
+            *reinterpret_cast<int32_t*>(*reinterpret_cast<uintptr_t*>(a8) + 0x30) -= Screen.nWidescreenHudOffset;
         }
         else if (a1 == 592)
         {
             a1 += Screen.nWidescreenHudOffset + 15;
-            *(int32_t*)(*(uintptr_t*)a8 + 0x30) += Screen.nWidescreenHudOffset + 15;
+            *reinterpret_cast<int32_t*>(*reinterpret_cast<uintptr_t*>(a8) + 0x30) += Screen.nWidescreenHudOffset + 15;
         }
     }
 
     return hb_608BF9.fun(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
 }
 
+void UpdateHudConstraint()
+{
+    auto ratio = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+    Screen.fHudAspectRatioConstraint = ratio;
+    if (Screen.nWidth <= 0 || Screen.nHeight <= 0)
+        return;
+    float width = Screen.fWidth;
+    if (ratio && std::isfinite(*ratio) && *ratio > 0.0f)
+        width = Screen.fHeight * ClampHudAspectRatio(std::clamp(*ratio, 4.0f / 3.0f, 32.0f / 9.0f), Screen.fAspectRatio);
+    const float offset = -CalculateWidescreenOffset(width, Screen.fHeight, 640.0f, 480.0f);
+    Screen.fWidescreenHudOffset = std::isfinite(offset) && std::abs(static_cast<double>(offset)) <= INT32_MAX / 2.0 ? offset : 0.0f;
+    Screen.nWidescreenHudOffset = static_cast<int32_t>(Screen.fWidescreenHudOffset);
+}
+
 export void InitMatrix()
 {
-    CIniReader iniReader("");
-    bool bFixHud = iniReader.ReadInteger("MAIN", "FixHud", 1) != 0;
-    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
+    auto& settings = FixSettings();
+    bool bFixHud = settings.Bool("MAIN.FixHud");
+    UpdateHudConstraint();
+    settings.OnChange("MAIN.HudAspectRatioConstraint", UpdateHudConstraint);
 
     static int32_t* dwordResX = nullptr;
     static int32_t* dwordResY = nullptr;
@@ -76,85 +94,101 @@ export void InitMatrix()
         }
     }
 
-    auto pattern = hook::pattern("68 ? ? ? ? 6A 00 68 ? ? ? ? 68 ? ? ? ? FF 15 ? ? ? ? 89 85 EC FA FF FF 8B 8D");
-    struct ResHook
+    if (!dwordResX || !dwordResY)
     {
-        void operator()(injector::reg_pack& regs)
+        OutputDebugStringA("Enter the Matrix: native resolution globals unavailable; widescreen layout disabled.\n");
+        return;
+    }
+
+    hook::pattern pattern;
+    if (wfp::PatchPreflight("Enter the Matrix resolution: signatures unavailable; feature disabled.\n",
+    {
+        { "68 ? ? ? ? 6A 00 68 ? ? ? ? 68 ? ? ? ? FF 15 ? ? ? ? 89 85 EC FA FF FF 8B 8D", 1 },
+    }))
+    {
+        pattern = hook::pattern("68 ? ? ? ? 6A 00 68 ? ? ? ? 68 ? ? ? ? FF 15 ? ? ? ? 89 85 EC FA FF FF 8B 8D");
+        struct ResHook
         {
-            char iniPath[MAX_PATH];
-            GetModuleFileNameA(NULL, iniPath, MAX_PATH);
-            *strrchr(iniPath, '\\') = '\0';
-            strcat_s(iniPath, "\\MatrixConfig.ini");
-            CIniReader iniReader(iniPath);
-            std::tie(Screen.nWidth, Screen.nHeight) = GetDesktopRes();
-            char defVal[20];
-            sprintf_s(defVal, "%dx%d", Screen.nWidth, Screen.nHeight);
-            auto iniRes = iniReader.ReadString("RENDERING", "RESOLUTION", defVal);
-            sscanf_s(iniRes.c_str(), "%dx%d", &Screen.nWidth, &Screen.nHeight);
-
-            *dwordResX = Screen.nWidth;
-            *dwordResY = Screen.nHeight;
-
-            Screen.fWidth = static_cast<float>(Screen.nWidth);
-            Screen.fHeight = static_cast<float>(Screen.nHeight);
-            Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
-            Screen.nWidth43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
-            Screen.fWidth43 = static_cast<float>(Screen.nWidth43);
-            Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
-            Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
-            Screen.fHudScale = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-            Screen.fFieldOfView = 1.0f * (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-            Screen.fCutOffArea = 0.5f / Screen.fFieldOfView;
-            Screen.fFMVScale = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-            Screen.fFMVOffset = ((Screen.fWidth - Screen.fWidth43) / 2.0f) / (Screen.fWidth / 640.0f);
-
-            Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f);
-            if (Screen.fHudAspectRatioConstraint.has_value())
+            void operator()(injector::reg_pack& regs)
             {
-                float value = Screen.fHudAspectRatioConstraint.value();
-                if (value < 0.0f || value > (32.0f / 9.0f))
-                    Screen.fWidescreenHudOffset = value;
-                else
-                {
-                    value = ClampHudAspectRatio(value, Screen.fAspectRatio);
-                    Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f);
-                }
+                std::tie(Screen.nWidth, Screen.nHeight) = MatrixNativeResolution();
+                *dwordResX = Screen.nWidth;
+                *dwordResY = Screen.nHeight;
+
+                Screen.fWidth = static_cast<float>(Screen.nWidth);
+                Screen.fHeight = static_cast<float>(Screen.nHeight);
+                Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
+                Screen.nWidth43 = static_cast<uint32_t>(Screen.fHeight * (4.0f / 3.0f));
+                Screen.fWidth43 = static_cast<float>(Screen.nWidth43);
+                Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
+                Screen.fHudOffsetReal = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f;
+                Screen.fHudScale = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+                Screen.fFieldOfView = 1.0f * (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+                Screen.fCutOffArea = 0.5f / Screen.fFieldOfView;
+                Screen.fFMVScale = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
+                Screen.fFMVOffset = ((Screen.fWidth - Screen.fWidth43) / 2.0f) / (Screen.fWidth / 640.0f);
+
+                UpdateHudConstraint();
             }
-            Screen.nWidescreenHudOffset = static_cast<int32_t>(Screen.fWidescreenHudOffset);
-        }
-    }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(resHookEnd)); //0x7AD916
+        }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(resHookEnd)); //0x7AD916
+
+    }
 
     //Aspect Ratio
-    pattern = hook::pattern("D9 05 ? ? ? ? D8 35 ? ? ? ? D9 1D ? ? ? ? 5D C3");
-    static auto flt_972448 = *pattern.get_first<float*>(8);
-    static auto flt_97244C = *pattern.get_first<float*>(14);
-    struct ARHook
+    if (wfp::PatchPreflight("Enter the Matrix aspect: signatures unavailable; feature disabled.\n",
     {
-        void operator()(injector::reg_pack& regs)
+        { "D9 05 ? ? ? ? D8 35 ? ? ? ? D9 1D ? ? ? ? 5D C3", 1 },
+    }))
+    {
+        pattern = hook::pattern("D9 05 ? ? ? ? D8 35 ? ? ? ? D9 1D ? ? ? ? 5D C3");
+        static auto flt_972448 = *pattern.get_first<float*>(8);
+        static auto flt_97244C = *pattern.get_first<float*>(14);
+        struct ARHook
         {
-            *flt_972448 = 1.0f;
-            *flt_97244C = 1.0f;
-        }
-    }; injector::MakeInline<ARHook>(pattern.get_first(0), pattern.get_first(18)); //0x6E6024, 0x6E6024+18
+            void operator()(injector::reg_pack& regs)
+            {
+                *flt_972448 = 1.0f;
+                *flt_97244C = 1.0f;
+            }
+        }; injector::MakeInline<ARHook>(pattern.get_first(0), pattern.get_first(18)); //0x6E6024, 0x6E6024+18
+
+    }
 
     //FMVs
-    pattern = hook::pattern("C7 45 10 00 00 00 00 C7 45 18 80 02 00 00 8B 45 E4");
-    struct FMVHook
+    if (wfp::PatchPreflight("Enter the Matrix movies: signatures unavailable; feature disabled.\n",
     {
-        void operator()(injector::reg_pack& regs)
+        { "C7 45 10 00 00 00 00 C7 45 18 80 02 00 00 8B 45 E4", 1 },
+    }))
+    {
+        pattern = hook::pattern("C7 45 10 00 00 00 00 C7 45 18 80 02 00 00 8B 45 E4");
+        struct FMVHook
         {
-            *(int32_t*)(regs.ebp + 0x10) = 0 + static_cast<int32_t>(Screen.fFMVOffset);
-            *(int32_t*)(regs.ebp + 0x18) = 640 - static_cast<int32_t>(Screen.fFMVOffset + Screen.fFMVOffset);
-        }
-    }; injector::MakeInline<FMVHook>(pattern.get_first(0), pattern.get_first(14)); //0x7B3369
+            void operator()(injector::reg_pack& regs)
+            {
+                *reinterpret_cast<int32_t*>(regs.ebp + 0x10) = static_cast<int32_t>(Screen.fFMVOffset);
+                *reinterpret_cast<int32_t*>(regs.ebp + 0x18) = 640 - static_cast<int32_t>(Screen.fFMVOffset + Screen.fFMVOffset);
+            }
+        }; injector::MakeInline<FMVHook>(pattern.get_first(0), pattern.get_first(14)); //0x7B3369
+
+    }
 
     if (bFixHud)
     {
-        pattern = hook::pattern("6A 02 FF 15 ? ? ? ? 83 C4 04 C7 05"); //0x40766C
-        hb_5F27E2.fun = injector::MakeJMP(*pattern.get_first<void*>(157), sub_5F27E2, true).get(); // hud
-        pattern = hook::pattern("E8 ? ? ? ? 83 C4 1C 83 3D ? ? ? ? 00 75 ? 8B 55 FC"); //0x403882
-        hb_5F28E2.fun = injector::MakeJMP(injector::GetBranchDestination(pattern.get_first(0)), sub_5F28E2, true).get(); // text
-        pattern = hook::pattern("E8 ? ? ? ? 83 C4 28 8B 15 ? ? ? ? DB 42 1C"); //0x407013
-        hb_608BF9.fun = injector::MakeJMP(injector::GetBranchDestination(pattern.get_first(0)), sub_608BF9, true).get();
+        if (wfp::PatchPreflight("Enter the Matrix HUD: signatures unavailable; feature disabled.\n",
+        {
+            { "6A 02 FF 15 ? ? ? ? 83 C4 04 C7 05", 1 },
+            { "E8 ? ? ? ? 83 C4 1C 83 3D ? ? ? ? 00 75 ? 8B 55 FC", 1 },
+            { "E8 ? ? ? ? 83 C4 28 8B 15 ? ? ? ? DB 42 1C", 1 },
+        }))
+        {
+            pattern = hook::pattern("6A 02 FF 15 ? ? ? ? 83 C4 04 C7 05"); //0x40766C
+            hb_5F27E2.fun = injector::MakeJMP(*pattern.get_first<void*>(157), sub_5F27E2, true).get(); // hud
+            pattern = hook::pattern("E8 ? ? ? ? 83 C4 1C 83 3D ? ? ? ? 00 75 ? 8B 55 FC"); //0x403882
+            hb_5F28E2.fun = injector::MakeJMP(injector::GetBranchDestination(pattern.get_first(0)), sub_5F28E2, true).get(); // text
+            pattern = hook::pattern("E8 ? ? ? ? 83 C4 28 8B 15 ? ? ? ? DB 42 1C"); //0x407013
+            hb_608BF9.fun = injector::MakeJMP(injector::GetBranchDestination(pattern.get_first(0)), sub_608BF9, true).get();
+        }
+
+
     }
 }

@@ -2,10 +2,12 @@ module;
 
 #include <stdafx.h>
 #include <d3d9.h>
+#include "FixSettings.hpp"
 
 export module PostFX;
 
 import PostFXCore;
+import AntiAliasing;
 
 // ConsoleGamma and SMAA, on the game view before the HUD draws over it. The game renders with
 // Direct3D 8, which d3d8to9 turns into Direct3D 9, and the device it hands the game gives out the
@@ -43,13 +45,16 @@ namespace P_D3D
             pDevice = pDevice9;
         }
 
-        if (pDevice && pDevice->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
+        bool bReset = pDevice && pDevice->TestCooperativeLevel() == D3DERR_DEVICENOTRESET;
+        if (bReset)
         {
             CPostFX::Shutdown();
             CPostFX::OnDeviceReset();
         }
+        AntiAliasing::BeforeBeginScene(_this, bReset);
 
         shBeginScene.unsafe_fastcall(_this, edx);
+        AntiAliasing::AfterBeginScene(_this, pDevice);
     }
 
     // Video mode changes and quitting release the device
@@ -57,21 +62,26 @@ namespace P_D3D
     void __fastcall DRV_freeMode(uint8_t* _this, void* edx)
     {
         CPostFX::ReleaseDevice();
+        AntiAliasing::OnFreeMode(_this);
         pDevice = nullptr;
         shFreeMode.unsafe_fastcall(_this, edx);
     }
 }
 
-bool IsPostFXEnabled()
+// Both can be switched in the menu: the hooks are always in place, and the settings are read where the effects draw
+const int* pConsoleGamma = nullptr;
+const int* pAntiAliasing = nullptr;
+
+void ReadPostFXSettings()
 {
-    static bool bEnabled = []
+    CPostFX::bConsoleGammaEnabled = *pConsoleGamma != 0;
+    bool bSmaa = *pAntiAliasing == 1;
+    if (CPostFX::bSmaaEnabled != bSmaa)
     {
-        CIniReader iniReader("");
-        CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 0) != 0;
-        CPostFX::bSmaaEnabled = iniReader.ReadInteger("GRAPHICS", "SMAA", 0) != 0;
-        return CPostFX::bConsoleGammaEnabled || CPostFX::bSmaaEnabled;
-    }();
-    return bEnabled;
+        // The SMAA textures are made while it's on: start over
+        CPostFX::Shutdown();
+        CPostFX::bSmaaEnabled = bSmaa;
+    }
 }
 
 // At the end of MP_GameMode::renderMode: before the HUD, and before XboxRainDroplets draws its drops
@@ -80,6 +90,13 @@ void RenderPostFX()
 {
     auto pDevice = P_D3D::pDevice;
     if (!pDevice)
+        return;
+
+    // TAA, DLAA and FSR first, the scene resolved before the other effects (nothing with Off or SMAA)
+    AntiAliasing::Render(pDevice);
+
+    ReadPostFXSettings();
+    if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
         return;
 
     // the passes cover the viewport, the one of the last camera may not be the whole screen
@@ -118,8 +135,9 @@ void __fastcall EndPostProcessing(void* _this, void* edx)
 
 export void InitPostFX()
 {
-    if (!IsPostFXEnabled())
-        return;
+    pConsoleGamma = &FixSettings().Int("GRAPHICS.ConsoleGamma");
+    pAntiAliasing = &FixSettings().Int("GRAPHICS.AntiAliasing");
+    ReadPostFXSettings();
 
     auto pattern = hook::pattern("8B C8 FF 52 10 8B 8E ? ? ? ? E8 ? ? ? ? 5D"); // MP_GameMode::renderMode
     hbEndPostProcessing.fun = injector::MakeCALL(pattern.get_first(11), EndPostProcessing, true).get(); //0x451EB6
@@ -128,9 +146,6 @@ export void InitPostFX()
 // e2_d3d8_driver_mfc gets loaded again for video mode changes
 export void InitPostFXDriver()
 {
-    if (!IsPostFXEnabled())
-        return;
-
     auto e2_d3d8_driver_mfc = GetModuleHandle(L"e2_d3d8_driver_mfc");
     P_D3D::shBeginScene = safetyhook::create_inline(GetProcAddress(e2_d3d8_driver_mfc, "?DRV_beginScene@P_D3D@@UAEXXZ"), P_D3D::DRV_beginScene);
     P_D3D::shFreeMode = safetyhook::create_inline(GetProcAddress(e2_d3d8_driver_mfc, "?DRV_freeMode@P_D3D@@UAEXXZ"), P_D3D::DRV_freeMode);

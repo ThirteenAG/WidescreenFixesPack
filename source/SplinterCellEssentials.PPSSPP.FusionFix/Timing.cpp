@@ -7,7 +7,7 @@ injector::hook_back<int()> loaded;
 int Loaded() { Unthrottle(false); return loaded.fun(); }
 
 void InstallFrameRate() {
-    if (!inireader.ReadInteger("MAIN", "Enable60FPS", 0)) return;
+    if (!inireader.ReadBoolean("MAIN", "Enable60FPS", true)) return;
     const auto psnBudget = sites::Unique("08 3D 04 3C 89 88 84 34 00 60 84 44 1E 00 90 2A 01 65 14 46");
     if (psnBudget) {
         // PSN advances its engine clock by a fixed frame interval. Change that
@@ -30,7 +30,7 @@ void InstallFrameRate() {
 
 void InstallTiming() {
     InstallFrameRate();
-    if (!inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1)) return;
+    if (!inireader.ReadBoolean("MAIN", "UnthrottleEmuDuringLoading", true)) return;
     auto enable = sites::Unique("D2 43 05 3C 00 90 85 44 40 C2 05 3C");
     if (!enable) enable = sites::Unique("D2 43 06 3C 00 90 86 44 40 C2 06 3C");
     const auto disable = sites::Unique("34 00 B2 AF 38 00 BF AF ? ? ? ? 00 00 00 00", 8);

@@ -1,6 +1,8 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/PatchPreflight.hpp"
+#include "FixSettings.hpp"
 #include <d3d9.h>
 #include <fstream>
 #include <sstream>
@@ -65,12 +67,13 @@ void __cdecl ListAddMesh(uintptr_t mesh, const float* matrix, void* params, void
     if (!name || *name != 0x382C7DCB || !matrix || !IsBackBufferScene()) // fx_cam_flash000
         return shListAddMesh.ccall<void>(mesh, matrix, params, shaderParams);
 
+    const auto factor = Screen.GameplayFOVFactor();
     std::array<float, 16> adjusted;
     std::copy_n(matrix, adjusted.size(), adjusted.begin());
     for (size_t i = 0; i < 3; ++i)
     {
-        adjusted[i] *= Screen.fAspectRatioDiff * Screen.fFOVFactor;
-        adjusted[4 + i] *= Screen.fFOVFactor;
+        adjusted[i] *= Screen.fAspectRatioDiff * factor;
+        adjusted[4 + i] *= factor;
     }
     shListAddMesh.ccall<void>(mesh, adjusted.data(), params, shaderParams);
 }
@@ -612,9 +615,60 @@ public:
     {
         WFP::onInitEvent() += []
         {
-            CIniReader iniReader("");
-            // Developer-only diagnostic; omitted from the shipped INI and off by default.
-            bTraceScreenEffects = iniReader.ReadInteger("DEBUG", "TraceScreenEffects", 0) != 0;
+            if (!wfp::PatchPreflight("Ultimate Spider-Man frontend: signatures unavailable; feature disabled.\n",
+            {
+                { "83 EC 10 56 8B F1 8A 46 1D 84 C0 57 8B 7C 24 1C", 1 },
+                { "64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 64 89 25 00 00 00 00 83 EC 38 55 8B 6C 24 50 D9 45 0C", 1 },
+                { "83 EC 64 53 8B 5C 24 6C 85 DB 55 56 57", 1 },
+                { "83 EC ? 56 8B F1 8B 46 ? 85 C0 0F 84 ? ? ? ? 8B 46 ? 85 C0 0F 84 ? ? ? ? 8B 46 ? ? ? 6A", 1 },
+                { "C7 06 ? ? ? ? 8B 46 ? 85 C0 C7 44 24 ? ? ? ? ? 74 ? 8B 08 50 FF 51 ? 8B 46 ? 85 C0 C7 44 24", 1 },
+                { "DB 44 24 08 56 8B F1 57 8B 7E 1C D8 4F 30 E8 ? ? ? ? DB 44 24 0C 89 46 08", 1 },
+                { "81 EC 14 01 00 00 56 57 8B BC 24 20 01 00 00 85 FF 8B F1", 1 },
+                { "DB 44 24 08 56 8B F1 57 8B 7E 1C D8 4F 30 E8 ? ? ? ? DB 44 24 0C 89 86 8C 00 00 00", 1 },
+                { "C7 03 ? ? ? ? 8B 51 08 50 52 89 74 24 50 E8", 2 },
+                { "56 E8 ? ? ? ? 56 E8 ? ? ? ? 83 C4 18 5E 83 C4 0C C3", 1 },
+                { "8B 0D ? ? ? ? E8 ? ? ? ? 84 DB 5B 75 ? 6A 01", 1 },
+                { "8B 0D ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 5E 83 C4 40 C3", 1 },
+                { "E8 ? ? ? ? 89 44 24 ? A1 ? ? ? ? 83 C4", 1 },
+                { "E8 ? ? ? ? 8B 46 ? 8B 48 ? 83 C4 ? 85 C9", 1 },
+                { "E8 ? ? ? ? 83 C4 ? 8D 54 24 ? 52 8D 4C 24", 1 },
+                { "E8 ? ? ? ? ? ? ? ? ? ? ? ? 8B 8C 24 ? ? ? ? 8B 94 24 ? ? ? ? 83 C4", 1 },
+                { "E8 ? ? ? ? 8B 4C 24 ? 8B 54 24 ? ? ? 89 4C 24 ? 8B CA 83 C4", 1 },
+                { "E8 ? ? ? ? 8B 44 24 ? 8B 4C 24 ? ? ? 83 C4", 1 },
+                { "E8 ? ? ? ? 8B 44 24 ? 8B 4C 24 ? 89 44 24 ? 89 4C 24", 1 },
+                { "E8 ? ? ? ? ? ? ? ? ? ? ? ? 8B 54 24 ? 8B 44 24 ? 8B 4C 24", 1 },
+                { "E8 ? ? ? ? 8A 44 24 ? 8B 6C 24", 1 },
+                { "E8 ? ? ? ? 8B 8D ? ? ? ? 8B 44 24", 1 },
+                { "E8 ? ? ? ? 8B 44 24 14 8B 54 24 10 8B 4C 24 24 89 54 24 34", 1 },
+                { "E8 ? ? ? ? D9 44 24 18 D8 1D ? ? ? ? 83 C4 0C DF E0 F6 C4 05", 1 },
+                { "E8 ? ? ? ? 8B 54 24 14 8B 4C 24 10 83 C4 0C 89 4C 24 20", 1 },
+                { "E8 ? ? ? ? D9 85 34 01 00 00 D8 0D ? ? ? ? 8B 4C 24 20", 1 },
+                { "E8 ? ? ? ? 8B 48 04 8B 10 8B 6C 24 54 89 4C 24 30", 1 },
+                { "E8 ? ? ? ? 8B 4E ? 85 C9 74 ? E8 ? ? ? ? 8B 4E ? 85 C9 74 ? E8 ? ? ? ? 8B 46 ? 85 C0 74 ? 8B C8", 1 },
+                { "81 EC ? ? ? ? 53 56 8B F1 8B 86", 1 },
+                { "56 8B F1 83 3E 00 74 ? 8A 86 C0 00 00 00 84 C0 75 ? 8B 46 60", 1 },
+                { "56 8B F1 8B 46 04 85 C0 74 ? 8A 46 2A 84 C0 75 ? 8B 46 20", 1 },
+                { "8B 4E 4C 85 C9 5F 74 ? E8 ? ? ? ? 8B 46 50", 1 },
+                { "8B 40 14 85 C0 74 07 8B C8 E8 ? ? ? ? 8B 4E 40 85 C9", 1 },
+                { "8A 42 2D 84 C0 74 05 E8 ? ? ? ? 8B 4E 1C 85 C9", 1 },
+                { "8B 46 30 85 C0 74 0D 8B 00 85 C0 74 07 8B C8 E8 ? ? ? ? 8B 4E 34", 1 },
+                { "8B 46 48 85 C0 74 0D 8B 00 85 C0 74 07 8B C8 E8 ? ? ? ? E8", 1 },
+                { "57 8B F9 8B 47 04 85 C0 74 ? 8A 47 4C 84 C0 74 ? D9 47 48", 1 },
+                { "8B 0D ? ? ? ? 8B 56 5C 89 0C 82 8B 4E 58 40", 1 },
+                { "C7 07 ? ? ? ? C7 44 24 18 00 00 00 00 8D 77 18", 1 },
+                { "C7 06 ? ? ? ? 8B 46 44 85 C0 C7 44 24 10 00 00 00 00 74 28", 1 },
+                { "56 8B 71 60 85 F6 74 18 57 8B 7C 24 0C 8D 49 00", 1 },
+                { "E8 ? ? ? ? 83 C4 ? E8 ? ? ? ? 5F 5D", 1 },
+                { "E8 ? ? ? ? 83 C4 ? 8D 4C 24 ? C7 44 24 ? ? ? ? ? E8 ? ? ? ? 8B 4E", 1 },
+                { "D9 9C 24 ? ? ? ? E8 ? ? ? ? 83 C4 10", 1 },
+            }))
+                return;
+
+            auto& settings = FixSettings();
+            // Developer diagnostic, compiled in only on request
+#ifdef USM_DEBUG_TRACE_SCREEN_EFFECTS
+            bTraceScreenEffects = true;
+#endif
             if (bTraceScreenEffects)
             {
                 auto colorPattern = hook::pattern("83 EC 10 56 8B F1 8A 46 1D 84 C0 57 8B 7C 24 1C"); //0x73D9F0
@@ -650,7 +704,7 @@ public:
             pattern = hook::pattern("C7 06 ? ? ? ? 8B 46 ? 85 C0 C7 44 24 ? ? ? ? ? 74 ? 8B 08 50 FF 51 ? 8B 46 ? 85 C0 C7 44 24"); //0x583FFD + 2
             auto sliderVtable = *pattern.get_first<uintptr_t*>(2); // 0x88E6F8
             // SetRect is slot 9 (0x88E6F8 + 0x24 = 0x88E71C).
-            injector::WriteMemory(&sliderVtable[9], SetMenuSliderRect, true);
+            WriteGameValue(&sliderVtable[9], SetMenuSliderRect);
 
             pattern = hook::pattern("DB 44 24 08 56 8B F1 57 8B 7E 1C D8 4F 30 E8 ? ? ? ? DB 44 24 0C 89 46 08"); //0x582E40
             shSetMenuWidgetRect = safetyhook::create_inline(pattern.get_first(), SetMenuWidgetRect);
@@ -663,14 +717,14 @@ public:
 
             // The static artwork and scrolling-band constructors share this sequence.
             pattern = hook::pattern("C7 03 ? ? ? ? 8B 51 08 50 52 89 74 24 50 E8"); //0x595C4D + 2, 0x595ECD + 2
-            pattern.count(2);
+            pattern.count_hint(2);
             for (size_t i = 0; i < 2; ++i)
             {
                 auto textureVtable = *pattern.get(i).get<uintptr_t*>(2);
                 if (i == 0)
                 {
                     pDrawMenuTexture = reinterpret_cast<decltype(pDrawMenuTexture)>(textureVtable[7]);
-                    injector::WriteMemory(&textureVtable[7], DrawMenuTexture, true);
+                    WriteGameValue(&textureVtable[7], DrawMenuTexture);
                 }
             }
 

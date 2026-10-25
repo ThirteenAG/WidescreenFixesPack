@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "../Shared/PatternCheck.hpp"
 #include <d3d9.h>
 
 export module PostFX;
@@ -15,14 +17,18 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 0) != 0;
-            CPostFX::bSmaaEnabled = iniReader.ReadInteger("GRAPHICS", "SMAA", 0) != 0;
+            CPostFX::bConsoleGammaEnabled = FixSettings().Bool("GRAPHICS.ConsoleGamma");
+            CPostFX::bSmaaEnabled = (FixSettings().Int("GRAPHICS.AntiAliasing") == 1);
 
             if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
                 return;
 
             auto pattern = hook::pattern("83 05 ? ? ? ? 01 F7 47 08 00 00 00 80 8B CE");
+            if (pattern.size() != 1)
+            {
+                OutputDebugStringA("The Saboteur: post-processing pattern unavailable.\n");
+                return;
+            }
             static auto BeforeRenderPassHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 static constexpr std::string_view UIPasses[] = { "ClamberingHUDDrawList", "ClamberingHUDBucket", "Flash Bucket", "Debug" };

@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
+#include "FixSettings.hpp"
+
+ASI_SETTINGS_EXPORT(FixSettings())
 #include "Log.h"
 #include "InputDevices.h"
 #include "GameRegistry.h"
@@ -95,7 +99,7 @@ struct CameraOrPhysics
 
 int nResX;
 int nResY;
-bool bExtendHud;
+std::optional<float> fHudAspectRatioConstraint; // HUD Aspect Ratio: a centred box of this aspect (Auto: the whole screen)
 int32_t nQuicksaveKey;
 int32_t nZoomIncreaseKey;
 int32_t nZoomDecreaseKey;
@@ -119,6 +123,7 @@ void __cdecl SetColourDepth()
     if (*rendererReady) colorDepthHook.call<void>();
 }
 #include "Options.h"
+#include "PauseMenu.hpp"
 int* fullscreenWidth = nullptr, * fullscreenHeight = nullptr;
 void (__cdecl* ReloadVideoMode)() = nullptr;
 
@@ -131,10 +136,13 @@ void InstallOptions(void* setPage)
         ReloadVideoMode = reinterpret_cast<decltype(ReloadVideoMode)>(reload.get_first());
     ApplyResolution = []
     {
+        if (!ReloadVideoMode)
+            return false;
         // The video mode is re-read from the patched settings and reset, as after alt-tab.
-        if (fullscreenWidth) injector::WriteMemory(fullscreenWidth, nResX, true);
-        if (fullscreenHeight) injector::WriteMemory(fullscreenHeight, nResY, true);
-        if (ReloadVideoMode) ReloadVideoMode();
+        if (fullscreenWidth) ProtectedGameRef<int>{fullscreenWidth} = nResX;
+        if (fullscreenHeight) ProtectedGameRef<int>{fullscreenHeight} = nResY;
+        ReloadVideoMode();
+        return true;
     };
     // Original GTA2 Manager settings applied at once where the game allows it.
     static void* sound = nullptr;
@@ -176,9 +184,20 @@ void InstallOptions(void* setPage)
     Sections = {
         { Open(L"DISPLAY", Display), Open(L"GRAPHICS", Graphics), Open(L"SOUND", Sound), Open(L"CAMERA", CameraPage),
           Open(L"CONTROLS", ControlsPage), Open(L"GAME", GamePage), Back() },
-        { Resolution(), Toggle(L"WINDOWED MODE", "MAIN", "WindowedMode", windowedMode, true),
+        { Resolution(),
+          Entry{ L"WINDOW MODE (RESTART)", [] { return std::wstring(windowedMode ? L"BORDERLESS" : L"FULLSCREEN"); },
+              [](int) { windowedMode = !windowedMode; SaveInt("MAIN", "WindowMode", windowedMode ? 2 : 0); } },
           Toggle(L"FILL MENU BACKGROUND", "MAIN", "FillFrontendBackground", bFillBackground),
-          Toggle(L"WIDE HUD", "MAIN", "ExtendHud", bExtendHud),
+          Entry{ L"HUD ASPECT RATIO", [] { auto& value = FixSettings().String("MAIN.HudAspectRatioConstraint"); return Upper(std::wstring(value.begin(), value.end())); },
+              [](int step)
+              {
+                  static const char* values[] = { "Auto", "4:3", "16:9", "21:9", "32:9" };
+                  auto& current = FixSettings().String("MAIN.HudAspectRatioConstraint");
+                  int index = 0;
+                  for (int i = 0; i < int(std::size(values)); ++i) if (_stricmp(current.c_str(), values[i]) == 0) index = i;
+                  index = (index + int(std::size(values)) + (step < 0 ? -1 : 1)) % int(std::size(values));
+                  FixSettings().Set("MAIN.HudAspectRatioConstraint", values[index]);
+              } },
           RegToggle(L"TRIPLE BUFFER", "Screen", "tripple_buffer", 0, L" (RESTART)"), Back() },
         { RegRange(L"GAMMA", "Screen", "gamma", 0, 20, 1, 10, [](int) { if (gammaRefresh) *gammaRefresh = 1; }),
           RegToggle(L"LIGHTING", "Screen", "lighting", 1),
@@ -199,6 +218,7 @@ void InstallOptions(void* setPage)
           Choice(L"MAX LOOK AHEAD", "CAMERA", "MaxLookAhead", GTA2Camera::MaxLead, { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f }), Back() },
         { Toggle(L"MODERN CONTROLS", "INPUT", "ModernControls", ModernControls),
           Toggle(L"GAMEPAD", "INPUT", "Gamepad", Gamepad),
+          Toggle(L"STICK THROTTLE", "INPUT", "StickThrottle", StickThrottle),
           Toggle(L"MOUSE AIM", "INPUT", "MouseAim", GTA2Input::MouseAim),
           Choice(L"STICK DEADZONE", "INPUT", "StickDeadzone", Deadzone, { 0.05f, 0.1f, 0.15f, 0.2f, 0.25f, 0.3f, 0.4f }),
           Open(L"MODERN KEYS", Keys), Open(L"MORE MODERN KEYS", MoreKeys),
@@ -219,7 +239,7 @@ void InstallOptions(void* setPage)
           NativeKey(L"SPECIAL 2", 10), NativeKey(L"SPECIAL 3", 11), Back() },
         { language, RegRange(L"TEXT SPEED", "Option", "text_speed", 1, 3, 1, 3),
           RegToggle(L"PLAY INTRO MOVIE", "Screen", "do_play_movie", 1),
-          Toggle(L"SKIP INTRO MOVIE", "MISC", "SkipMovie", bSkipMovie, true),
+          Toggle(L"SKIP INTRO MOVIE", "MAIN", "SkipIntro", bSkipMovie, true),
           Toggle(L"SKIP CREDITS", "MISC", "SkipCredits", bSkipCredits),
           RegToggle(L"SHOW PLAYER NAMES", "Network", "show_player_names", 1),
           Toggle(L"NO SOUND DELAY", "MISC", "NoSampManDelay", bNoSampManDelay, true), Back() },
@@ -273,18 +293,63 @@ LRESULT APIENTRY WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return CallWindowProc(wndProcOld, hwnd, uMsg, wParam, lParam);
 }
 
-DWORD WINAPI WindowCheck(LPVOID hWnd)
+namespace
 {
-    while (*(HWND*)hWnd == NULL)
-        Sleep(10);
+    HWND* pendingWindow = nullptr;
+    HHOOK windowMessages = nullptr;
+}
 
-    wndProcOld = (WNDPROC)GetWindowLong(*(HWND*)hWnd, GWL_WNDPROC);
-    InputDevices::Window = *(HWND*)hWnd;
-    SetWindowLong(*(HWND*)hWnd, GWL_WNDPROC, (LONG)WndProc);
-    return 0;
+void AttachGameWindow(HWND window)
+{
+    wndProcOld = reinterpret_cast<WNDPROC>(GetWindowLongPtrW(window, GWLP_WNDPROC));
+    InputDevices::Window = window;
+    SetWindowLongPtrW(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WndProc));
+}
+
+LRESULT CALLBACK WindowMessage(int code, WPARAM wParam, LPARAM lParam)
+{
+    if (code >= 0 && pendingWindow && *pendingWindow)
+    {
+        const auto message = reinterpret_cast<const MSG*>(lParam);
+        if (message->hwnd == *pendingWindow)
+        {
+            const auto window = *pendingWindow;
+            pendingWindow = nullptr;
+            UnhookWindowsHookEx(windowMessages);
+            windowMessages = nullptr;
+            AttachGameWindow(window);
+        }
+    }
+    return CallNextHookEx(nullptr, code, wParam, lParam);
+}
+
+void WatchWindow(HWND* window)
+{
+    if (!window)
+        return;
+    if (*window)
+    {
+        AttachGameWindow(*window);
+        return;
+    }
+    pendingWindow = window;
+    windowMessages = SetWindowsHookExW(WH_GETMESSAGE, WindowMessage, nullptr, GetCurrentThreadId());
+    if (!windowMessages)
+    {
+        pendingWindow = nullptr;
+        wfp::patterns::Report("Game window input extension disabled: message hook unavailable.\n");
+    }
 }
 
 int posType = 0; // 0 = default, 1 = centered, 2 = unscaled
+
+// The width the HUD box adds to the game's 4:3 HUD: the whole screen's, or that of the HUD Aspect Ratio
+float HudBoxOffset()
+{
+    if (!fHudAspectRatioConstraint || *fHudAspectRatioConstraint <= 0.0f || *fHudAspectRatioConstraint > 32.0f / 9.0f)
+        return hud_offset;
+    return std::clamp(screen_height * ClampHudAspectRatio(*fHudAspectRatioConstraint, screen_aspect_ratio) - screen_height * default_aspect_ratio, 0.0f, std::max(0.0f, hud_offset));
+}
 
 void RePositionElement(void* addr) {
     static injector::hook_back<int* (__fastcall*)(int*, int, int*, int*)> rePositionElement;
@@ -293,23 +358,18 @@ void RePositionElement(void* addr) {
 
         float x = *out / fone;
         if (posType == 0) {
-            // Shift this element approximatively.
-            if (bExtendHud) {
-                float f = screen_height / default_screen_height;
-                if (x <= 140.0f * f) {
-                }
-                else if (x > 140.0f * f && x < 490.0f * f) {
-                    x += hud_offset / 2;
-                }
-                else if (x >= 490.0f * f) {
-                    x += hud_offset;
-                }
+            // Shift this element approximatively, to the side of the HUD box it belongs to.
+            float box = HudBoxOffset();
+            float f = screen_height / default_screen_height;
+            x += (hud_offset - box) / 2;
+            if (x > 140.0f * f && x < 490.0f * f) {
+                x += box / 2;
             }
-            else
-                goto centered;
+            else if (x >= 490.0f * f) {
+                x += box;
+            }
         }
         else if (posType == 1) {
-centered:
             x += (hud_offset / 2);
         }
         else if (posType == 2) {
@@ -400,12 +460,28 @@ void Init()
     Log::Write("GTA2 patches initializing.");
     SetProcessDPIAware();
 
-    CIniReader iniReader("");
+    FixSettings().Availability("SETUP.Option.Language", [](std::string_view value)
+    {
+        return value == "auto" || std::filesystem::exists(std::filesystem::path("data") / (std::string(value) + ".gxt"));
+    }, [] { return "Only installed game languages are available."; });
+    SettingsReader iniReader("");
     nResX = iniReader.ReadInteger("MAIN", "ResX", 0);
     nResY = iniReader.ReadInteger("MAIN", "ResY", 0);
-    bExtendHud = iniReader.ReadBoolean("MAIN", "ExtendHud", 0);
+    // Changes from FusionFixHub or a preset apply at once where the in-game options apply them at once too
+    static auto readLive = []
+    {
+        fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+        bSkipCredits = FixSettings().Int("MISC.SkipCredits") != 0;
+        bFillBackground = FixSettings().Bool("MAIN.FillFrontendBackground");
+        nQuicksaveKey = FixSettings().Int("MISC.QuicksaveKey");
+        nZoomIncreaseKey = FixSettings().Int("MISC.ZoomIncreaseKey");
+        nZoomDecreaseKey = FixSettings().Int("MISC.ZoomDecreaseKey");
+    };
+    for (auto id : { "MAIN.HudAspectRatioConstraint", "MISC.SkipCredits", "MAIN.FillFrontendBackground", "MISC.QuicksaveKey",
+        "MISC.ZoomIncreaseKey", "MISC.ZoomDecreaseKey" })
+        FixSettings().OnChange(id, readLive);
 
-    bSkipMovie = iniReader.ReadInteger("MISC", "SkipMovie", 1) != 0;
+    bSkipMovie = iniReader.ReadBoolean("MAIN", "SkipIntro", true);
     bSkipCredits = iniReader.ReadInteger("MISC", "SkipCredits", 1) != 0;
     bNoSampManDelay = iniReader.ReadInteger("MISC", "NoSampManDelay", 1) != 0;
     bFillBackground = iniReader.ReadBoolean("MAIN", "FillFrontendBackground", false);
@@ -413,34 +489,68 @@ void Init()
     nQuicksaveKey = iniReader.ReadInteger("MISC", "QuicksaveKey", VK_F5);
     nZoomIncreaseKey = iniReader.ReadInteger("MISC", "ZoomIncreaseKey", VK_OEM_PLUS);
     nZoomDecreaseKey = iniReader.ReadInteger("MISC", "ZoomDecreaseKey", VK_OEM_MINUS);
+    readLive();
 
     Log::Read(iniReader);
     InputDevices::Read(iniReader);
+    InputDevices::Watch();
     Desktop::Resolution(nResX, nResY);
-    auto versionProbe = hook::get_pattern("50 51 E8 ? ? ? ? 81 7C 24 74 01 06 00 00 73 2E", 2);
+    auto requiredLookup0 = hook::pattern("50 51 E8 ? ? ? ? 81 7C 24 74 01 06 00 00 73 2E");
+    if (requiredLookup0.empty())
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
+    auto versionProbe = requiredLookup0.get_first(2);
     injector::MakeCALL(versionProbe, GTA2Images::DetectDirectX);
-    rendererReady = *hook::pattern("83 3D ? ? ? ? 00 75 04 33 C0 EB 17 C7 05").get_first<uint32_t*>(2);
-    colorDepthHook = safetyhook::create_inline(hook::get_pattern("FF 15 ? ? ? ? E9 25 FF FF FF"), SetColourDepth);
-    windowedMode = iniReader.ReadBoolean("MAIN", "WindowedMode", true);
+    auto requiredPattern0 = hook::pattern("83 3D ? ? ? ? 00 75 04 33 C0 EB 17 C7 05");
+    if (requiredPattern0.size() <= 0)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
+    rendererReady = *requiredPattern0.get_first<uint32_t*>(2);
+    auto requiredLookup1 = hook::pattern("FF 15 ? ? ? ? E9 25 FF FF FF");
+    if (requiredLookup1.empty())
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
+    colorDepthHook = safetyhook::create_inline(requiredLookup1.get_first(), SetColourDepth);
+    // Window Mode: 0 the game's exclusive fullscreen, 2 borderless (a window of the resolution's size without a frame,
+    // centred; at the desktop's size it covers the monitor)
+    windowedMode = iniReader.ReadInteger("MAIN", "WindowMode", 0) != 0;
     // Several registry readers share a prologue; take the one the screen setup calls for start_mode.
-    auto screenSetting = hook::get_pattern("6A 01 68 ? ? ? ? B9 ? ? ? ? A3 ? ? ? ? E8 ? ? ? ? 8B 0D", 17);
+    auto requiredLookup2 = hook::pattern("6A 01 68 ? ? ? ? B9 ? ? ? ? A3 ? ? ? ? E8 ? ? ? ? 8B 0D");
+    if (requiredLookup2.empty())
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
+    auto screenSetting = requiredLookup2.get_first(17);
     screenSettingHook = safetyhook::create_inline(injector::GetBranchDestination(screenSetting).get<void>(), ReadScreenSetting);
     if (windowedMode)
     {
         // The bundled DirectDraw wrapper supplies the legacy pixel format.
-        auto call = hook::get_pattern("83 EC 20 E8 ? ? ? ? 84 C0 75 04 83 C4 20 C3", 3);
+        auto requiredLookup3 = hook::pattern("83 EC 20 E8 ? ? ? ? 84 C0 75 04 83 C4 20 C3");
+        if (requiredLookup3.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        auto call = requiredLookup3.get_first(3);
         auto windowAllowed = injector::GetBranchDestination(call).get();
-        uint8_t alwaysAllowed[] = { 0xB0, 0x01, 0xC3 };
-        injector::WriteMemoryRaw(windowAllowed, alwaysAllowed, sizeof(alwaysAllowed), true);
+        const std::array<uint8_t, 3> alwaysAllowed = { 0xB0, 0x01, 0xC3 };
+        ProtectedGameRef<std::array<uint8_t, 3>>(windowAllowed.get<std::array<uint8_t, 3>>()) = alwaysAllowed;
         // The renderer's windowed capability is also checked on focus loss, where
         // a "no" minimizes the window (alt-tab, clicking another window).
         auto windowCapable = hook::pattern("A1 ? ? ? ? 8B 0D ? ? ? ? 50 51 FF 15 ? ? ? ? 85 C0 74 09 F6");
-        if (windowCapable.size() == 1) injector::WriteMemoryRaw(windowCapable.get_first(), alwaysAllowed, sizeof(alwaysAllowed), true);
+        if (windowCapable.size() == 1) ProtectedGameRef<std::array<uint8_t, 3>>(windowCapable.get_first<std::array<uint8_t, 3>>()) = alwaysAllowed;
 
         // Borderless: the windowed mode uses WS_OVERLAPPEDWINDOW; use a popup and
         // centre it on its monitor (a desktop-sized window covers the screen).
         auto style = hook::pattern("68 00 00 CF 10 6A F0 50 FF 15");
-        if (style.size() == 1) injector::WriteMemory<uint32_t>(style.get_first(1), WS_POPUP | WS_VISIBLE, true);
+        if (style.size() == 1) ProtectedGameRef<uint32_t>(style.get_first<uint32_t>(1)) = WS_POPUP | WS_VISIBLE;
         auto position = hook::pattern("8B 0D ? ? ? ? 03 C2 8B 15 ? ? ? ? 50 A1 ? ? ? ? 51 52 6A 00 50");
         auto clientWidth = hook::pattern("A1 ? ? ? ? 03 D1 8B 4C 24 18");
         auto clientHeight = hook::pattern("8B 15 ? ? ? ? 68 16 03 00 00");
@@ -452,7 +562,7 @@ void Init()
             static auto configuredWidth = *clientWidth.get_first<int*>(1);
             static auto configuredHeight = *clientHeight.get_first<int*>(2);
             // The resize passes SWP_NOMOVE; allow it to move the window to the centre.
-            injector::WriteMemory<uint32_t>(clientHeight.get_first(7), 0x316 & ~SWP_NOMOVE, true);
+            ProtectedGameRef<uint32_t>(clientHeight.get_first<uint32_t>(7)) = 0x316 & ~SWP_NOMOVE;
             static SafetyHookMid positionHook = safetyhook::create_mid(position.get_first(), [](SafetyHookContext&)
             {
                 int width = *configuredWidth, height = *configuredHeight;
@@ -466,14 +576,36 @@ void Init()
     GTA2Camera::Install(iniReader);
     GTA2Input::Install(iniReader);
     
-    window_width = *hook::pattern("8B 3D ? ? ? ? 8B 4C 24 1C").get_first<uint32_t*>(2);
-    window_height = *hook::pattern("8B 0D ? ? ? ? 2B F8").get_first<uint32_t*>(2);
+    auto requiredPattern1 = hook::pattern("8B 3D ? ? ? ? 8B 4C 24 1C");
+    if (requiredPattern1.size() <= 0)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
+    window_width = *requiredPattern1.get_first<uint32_t*>(2);
+    auto requiredPattern2 = hook::pattern("8B 0D ? ? ? ? 2B F8");
+    if (requiredPattern2.size() <= 0)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
+    window_height = *requiredPattern2.get_first<uint32_t*>(2);
 
     // Res change
     if (nResX && nResY) {
         auto pattern = hook::pattern("8B 2D ? ? ? ? 56 8B 35 ? ? ? ? 57 8B 3D"); //0x4CB29F
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         static auto dword_6732E0 = *pattern.get_first<uint32_t*>(2);
         pattern = hook::pattern("89 0D ? ? ? ? A3 ? ? ? ? 89 0D ? ? ? ? EB 5F"); //0x4CB2D5
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         static auto dword_673578 = *pattern.get_first<uint32_t*>(2);
         static auto dword_6732E8 = *pattern.get_first<uint32_t*>(7);
         static auto dword_6732E4 = *pattern.get_first<uint32_t*>(13);
@@ -490,21 +622,46 @@ void Init()
         }; injector::MakeInline<SetResHook>(pattern.get_first(-12), pattern.get_first(17));
 
         pattern = hook::pattern("74 49 A3 ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 84 C0");
-        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //0x4CC61E
-        injector::WriteMemory<uint8_t>(pattern.get_first(24), 0xEB, true); //0x4CC636
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(0)) = 0xEB; //0x4CC61E
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(24)) = 0xEB; //0x4CC636
         pattern = hook::pattern("74 2B A1 ? ? ? ? B9 ? ? ? ? 50 68");
-        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //0x4CB692
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(0)) = 0xEB; //0x4CB692
         pattern = hook::pattern("B8 ? ? ? ? 3B C8 74 2B 6A 10 68");
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         fullscreenWidth = pattern.get_first<int>(1); fullscreenHeight = pattern.get_first<int>(12);
-        injector::WriteMemory(pattern.get_first(1), nResX, true); //0x4CB59C + 1
-        injector::WriteMemory<uint8_t>(pattern.get_first(10), 32, true);
-        injector::WriteMemory(pattern.get_first(12), nResY, true); //0x4CB5A7 + 1
+        ProtectedGameRef<int>(pattern.get_first<int>(1)) = nResX; //0x4CB59C + 1
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(10)) = 32;
+        ProtectedGameRef<int>(pattern.get_first<int>(12)) = nResY; //0x4CB5A7 + 1
         pattern = hook::pattern("6A ? 50 51 52 32 DB"); //0x4CB583
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         //injector::WriteMemory<uint8_t>(pattern.get_first(1), 32, true); // causes green menu
         injector::MakeNOP(pattern.get_first(32), 2, true); //0x4CB5A3
     }
 
     auto pattern = hook::pattern("B9 2F 00 00 00 F3 A5"); //0x4A80CD 0x4A6257
+    if (pattern.size() < 2)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     struct CameraZoom
     {
         void operator()(injector::reg_pack& regs)
@@ -520,9 +677,19 @@ void Init()
 
     // Ped Shadows
     pattern = hook::pattern("A1 ? ? ? ? 8B 48 38 81 C1 ? ? ? ? E8 ? ? ? ? 84 C0"); //0x5EB4FC
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto ptrToGame = *pattern.get_first<uint32_t*>(1);
 
     pattern = hook::pattern("81 C1 ? ? ? ? E8 ? ? ? ? 8B C8 E8 ? ? ? ? D9 05"); //0x4BE38E
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeNOP(pattern.get_first(0), 6, true);
     static auto PedShadowsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
@@ -534,7 +701,7 @@ void Init()
             auto playerph1 = *ph1;
             auto cameraZPos = (float)playerph1.cameraPos.z / 16384.0f;
             auto shadowsDistance = (1.0f / (cameraZPos + 7.0f)) * 8.0f;
-            shadowsDummyUIScale = shadowsDistance * playerph1.uiScale;
+            shadowsDummyUIScale = static_cast<uint32_t>(shadowsDistance * playerph1.uiScale);
             regs.ecx = (uintptr_t)&shadowsDummyUIScale;
             return;
         }
@@ -544,133 +711,329 @@ void Init()
 
     // Hud
     pattern = hook::pattern("E8 ? ? ? ? 2B FB");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     RePositionElement(pattern.get_first(-5962)); // 0x4C72AA
 
     pattern = hook::pattern("E8 ? ? ? ? 8B 76 54");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     RePositionElement(pattern.get_first(-3233)); // 0x4BA2F4
 
     pattern = hook::pattern("E8 ? ? ? ? 81 3B ? ? ? ?");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     RePositionElement(pattern.get_first(-7509)); // 0x4C71DA
 
     pattern = hook::pattern("E8 ? ? ? ? C6 44 24 ? ? EB 7C");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     RePositionElement(pattern.get_first(-359)); // 0x44B4BA
 
     pattern = hook::pattern("E8 ? ? ? ? 81 C6 ? ? ? ? 56");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(0)); // Big messages 0x4C8A7D
 
     pattern = hook::pattern("E8 ? ? ? ? 66 0F B6 86 ? ? ? ?");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(0)); // Subtitle sprite 0x4C946F
 
     pattern = hook::pattern("6A 40 E8 ? ? ? ? 56");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(2)); // Subtitle text 0x4C94D7
 
     pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? 84 C0 74 0B 8B 0D ? ? ? ? E8 ? ? ? ? FF 15 ? ? ? ?");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(450950)); // Quit text 1 0x4C87A5
 
     pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? 84 C0 74 0B 8B 0D ? ? ? ? E8 ? ? ? ? FF 15 ? ? ? ?");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(451046)); // Quit text 2 0x4C8805
 
     pattern = hook::pattern("50 E8 ? ? ? ? 57 E8 ? ? ? ? 5F");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(1)); // Quit text 3 0x4C8867
 
     pattern = hook::pattern("E8 ? ? ? ? 56 53");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(0)); // Stats sprite 0x4CA1BC
 
     pattern = hook::pattern("57 E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 5F");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(1)); // Stats text 0x4CA40C
 
     pattern = hook::pattern("E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8B CB E8 ? ? ? ? 5D");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<2>(pattern.get_first(-14347)); // 3d Text 0x4BAD41
 
     pattern = hook::pattern("E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 8B CB E8 ? ? ? ? 5D");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<2>(pattern.get_first(-14202)); // 3d Text 0x4BADD2
 
     pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 89 5C 24 18");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<2>(pattern.get_first(0)); // 3d Text 0x4BAE7B
 
     pattern = hook::pattern("E8 ? ? ? ? 8B 15 ? ? ? ? 8B 44 24 1C");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<2>(pattern.get_first(0)); // 3d Text 0x4BAF3D
 
     pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 8D 8E ? ? ? ? E8 ? ? ? ? 8D 8E ? ? ? ?");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(-2986)); // Zone name 0x4C98F0
 
     pattern = hook::pattern("55 E8 ? ? ? ? 68 ? ? ? ?");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(1)); // Zone name 0x4C9933
 
     pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 8D 8E ? ? ? ? E8 ? ? ? ? 8D 8E ? ? ? ?");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(-2844)); // Zone name 0x4C997E
 
     pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 8D 8E ? ? ? ? E8 ? ? ? ? 8D 8E ? ? ? ?");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(-2774)); // Zone name 0x4C99C4
 
     pattern = hook::pattern("E8 ? ? ? ? 03 F5 56");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     SetPosType<1>(pattern.get_first(0)); // Zone name 0x4C9A29
 
     pattern = hook::pattern("E8 ? ? ? ? 8B 46 04 6A 00");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     ReposSpriteCall3D(pattern.get_first(-495)); // Money messages 0x4B9424
 
     pattern = hook::pattern("74 7B 68 ? ? ? ?");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeNOP(pattern.get_first(0), 2, true); // 0x4B93AC
 
     pattern = hook::pattern("74 4D 8D 4C 24 14");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeNOP(pattern.get_first(0), 2, true); // 0x4B93DA
 
     // Frontend
     pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 1C 8B 54 24 20");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     ReposAndScaleFontCall(pattern.get_first(0)); // 0x453799
 
     pattern = hook::pattern("E8 ? ? ? ? FE 44 24 11");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     ReposAndScaleFontCall(pattern.get_first(-9210)); // 0x453A1D
 
     pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 30 8B 4C 24 18");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     ReposAndScaleFontCall(pattern.get_first(0)); // 0x4567DC
     
     pattern = hook::pattern("E8 ? ? ? ? 66 A1 ? ? ? ? 68 ? ? ? ?");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     ReposAndScaleFontCall(pattern.get_first(-4085)); // 0x456A17
     
     pattern = hook::pattern("E8 ? ? ? ? 8B 7C 24 1C 8A 44 24 30");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     ReposAndScaleFontCall(pattern.get_first(0)); // 0x4570A7
     
     pattern = hook::pattern("EB 7E 66 8B 6D 6C");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     ReposAndScaleFontCall(pattern.get_first(128)); // 0x4580C1
     
     pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 18 40");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     ReposAndScaleFontCall(pattern.get_first(0)); // 0x458421
     
     pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? 68 ? ? ? ? 57");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     ReposAndScaleSpriteCall(pattern.get_first(0)); // 0x453705
 
     pattern = hook::pattern(" E8 ? ? ? ? EB 44 8B 44 24 10");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     ReposAndScaleSpriteCall(pattern.get_first(0)); // 0x453753
 
     pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? 66 8B 5D 6A");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     ReposAndScaleSpriteCall(pattern.get_first(0)); // 0x4582EE
 
     pattern = hook::pattern("8B 15 ? ? ? ? 6A 06 52 8B 08 50"); //0x4B4FB8
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     auto hwnd = *pattern.get_first<HWND*>(2);
-    CreateThreadAutoClose(0, 0, (LPTHREAD_START_ROUTINE)&WindowCheck, (LPVOID)hwnd, 0, NULL);
+    WatchWindow(hwnd);
 
     if (bSkipMovie)
     {
         //skip movie to prevent windowed crash
         pattern = hook::pattern("8A 88 ? ? ? ? 88 88 ? ? ? ? 40 84 C9 ? ? B8 ? ? ? ? C3");
-        injector::WriteMemory<uint8_t>(*pattern.get_first<void*>(2), '_', true); //0x459695+2
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        ProtectedGameRef<uint8_t>(*pattern.get_first<uint8_t*>(2)) = '_'; //0x459695+2
     }
 
     pattern = hook::pattern("81 EC 00 01 00 00 55 56 57 8B F1 E8 ? ? ? ? 8B AC 24 10 01 00 00");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     frontendPageHook = safetyhook::create_inline(pattern.get_first(), SetFrontendPage);
     InstallOptions(pattern.get_first());
 
     if (bNoSampManDelay)
     {
         pattern = hook::pattern("FF D5 6A 01");
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::MakeNOP(pattern.get_first(2), 8, true); //0x4B6821+2
     }
 
     // Intro crash fix
     pattern = hook::pattern("74 66 E8 ? ? ? ?");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeNOP(pattern.get_first(0), 2, true);
 
+    GTA2PauseMenu::Install();
     GTA2Movies::Install();
     Log::Write("GTA2 presentation and input hooks installed.");
 
@@ -682,15 +1045,62 @@ void Init()
         //injector::WriteMemory(0x47FEDC, 0, true);
         //injector::WriteMemory(0x47FEF5, 500, true);
 
-        static uint32_t dword_45E510 = (uint32_t)hook::get_pattern("8D 81 00 03 00 00 C3", 0);
-        static uint32_t dword_5EC070 = *(uint32_t*)hook::get_pattern("B9 ? ? ? ? E8 ? ? ? ? 66 0F B6", 1);
-        static uint32_t dword_47EF40 = (uint32_t)hook::get_pattern("83 EC 18 53 8B 5C 24 20 55 8B", 0);
-        static uint32_t dword_6644BC = *(uint32_t*)hook::get_pattern("8B 15 ? ? ? ? 8B 82 38 03 00", 2);
-        static uint32_t dword_4C6750 = (uint32_t)hook::get_pattern("8B 44 24 08 8B 54 24 04 6A FF 50 52", 0);
-        static uint32_t dword_672F40 = *(uint32_t*)hook::get_pattern("8B 0D ? ? ? ? 56 68 ? ? ? ? 6A 01", 2);
-        static uint32_t dword_673E2C = *(uint32_t*)hook::get_pattern("A1 ? ? ? ? 85 C0 75 ? 8A 41 30", 1);
+        auto requiredLookup4 = hook::pattern("8D 81 00 03 00 00 C3");
+        if (requiredLookup4.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        static uint32_t dword_45E510 = (uint32_t)requiredLookup4.get_first(0);
+        auto requiredLookup5 = hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 66 0F B6");
+        if (requiredLookup5.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        static uint32_t dword_5EC070 = *(uint32_t*)requiredLookup5.get_first(1);
+        auto requiredLookup6 = hook::pattern("83 EC 18 53 8B 5C 24 20 55 8B");
+        if (requiredLookup6.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        static uint32_t dword_47EF40 = (uint32_t)requiredLookup6.get_first(0);
+        auto requiredLookup7 = hook::pattern("8B 15 ? ? ? ? 8B 82 38 03 00");
+        if (requiredLookup7.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        static uint32_t dword_6644BC = *(uint32_t*)requiredLookup7.get_first(2);
+        auto requiredLookup8 = hook::pattern("8B 44 24 08 8B 54 24 04 6A FF 50 52");
+        if (requiredLookup8.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        static uint32_t dword_4C6750 = (uint32_t)requiredLookup8.get_first(0);
+        auto requiredLookup9 = hook::pattern("8B 0D ? ? ? ? 56 68 ? ? ? ? 6A 01");
+        if (requiredLookup9.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        static uint32_t dword_672F40 = *(uint32_t*)requiredLookup9.get_first(2);
+        auto requiredLookup10 = hook::pattern("A1 ? ? ? ? 85 C0 75 ? 8A 41 30");
+        if (requiredLookup10.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        static uint32_t dword_673E2C = *(uint32_t*)requiredLookup10.get_first(1);
 
         pattern = hook::pattern("8B 73 04 33 FF 3B F7 66 89 BB E8"); //0x481380
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         struct QuicksaveHook
         {
             void operator()(injector::reg_pack& regs)
@@ -726,22 +1136,27 @@ void InitD3DDim()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"d3dim"), "B8 00 08 00 00 39");
     if (!pattern.count_hint(2).empty())
-        injector::WriteMemory(pattern.get(0).get<void>(1), -1, true);
+        ProtectedGameRef<int>(pattern.get(0).get<int>(1)) = -1;
 }
 
 void InitD3DDim700()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"d3dim700"), "B8 00 08 00 00 39");
     if (!pattern.count_hint(2).empty())
-        injector::WriteMemory(pattern.get(0).get<void>(1), -1, true);
+        ProtectedGameRef<int>(pattern.get(0).get<int>(1)) = -1;
 }
 
 void InitD3DDLL() 
 {
     auto module = GetModuleHandleW(L"d3ddll.dll");
     GTA2Images::Install(module);
-    CIniReader iniReader("");
+    SettingsReader iniReader("");
     auto pattern = hook::module_pattern(module, "89 7C 24 28 89 74 24 2C");
+    if (pattern.empty())
+    {
+        wfp::patterns::Report("GTA2: frontend background signature unavailable.\n");
+        return;
+    }
     struct gbh_BlitImageHook
     {
         void operator()(injector::reg_pack& regs)
@@ -789,6 +1204,8 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        FixSettings();
+        asi_settings::LiveLink::Start();
         SetGameDirectory();
         GameRegistry::Install();
         Log::Install();
@@ -810,7 +1227,7 @@ CEXP void InitializeASI()
         const int keys[] = { 0xC8, 0xD0, 0xCB, 0xCD, 0x1D, 0x1C, 0x39, 0x2C, 0x2D, 0x0F, 0x38, 0x36 };
         for (int i = 0; i < 12; ++i)
             GameRegistry::DefaultValue("Software\\DMA Design Ltd\\GTA2\\Control", std::to_string(i).c_str(), keys[i]);
-        CallbackHandler::RegisterCallback(Init, hook::pattern("83 EC 68 55 56 8B 74 24 74"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("83 EC 68 55 56 8B 74 24 74"));
         CallbackHandler::RegisterCallback(L"d3dim.dll", InitD3DDim);       // crash fix for
         CallbackHandler::RegisterCallback(L"d3dim700.dll", InitD3DDim700); // resolutions > 2048
         CallbackHandler::RegisterCallback(L"d3ddll.dll", InitD3DDLL); // frontend background scale
@@ -822,6 +1239,12 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     if (reason == DLL_PROCESS_ATTACH)
     {
         if (!IsUALPresent()) { InitializeASI(); }
+    }
+    else if (reason == DLL_PROCESS_DETACH && windowMessages)
+    {
+        UnhookWindowsHookEx(windowMessages);
+        windowMessages = nullptr;
+        pendingWindow = nullptr;
     }
     return TRUE;
 }

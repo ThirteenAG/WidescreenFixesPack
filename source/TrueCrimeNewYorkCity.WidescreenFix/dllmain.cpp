@@ -1,4 +1,8 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
+#include "../Shared/D3D8Compatibility.hpp"
+#include "OverlayInput.hpp"
+#include "Camera.hpp"
 
 import ComVars;
 import Framelimit;
@@ -7,6 +11,10 @@ import WidescreenHUD;
 import DepthStencil;
 import DInputMapper;
 import PostFX;
+import AntiAliasing;
+
+// The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
+ASI_SETTINGS_EXPORT(FixSettings())
 
 int32_t nLanguage;
 int32_t __cdecl SetLanguage(LPCSTR lpValueName)
@@ -116,25 +124,70 @@ void __stdcall TransformMapToScreen(__m128* a1, const __m128* a2)
     *a1 = result;
 }
 
+// HUD offsets for the resolution and the HUD aspect ratio constraint; again when the constraint is changed
+void UpdateWidescreenHudOffsets()
+{
+    if (Screen.Height <= 0)
+        return;
+
+    float fWidescreenHudOffset = CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f, 0.0f, true);
+    Screen.fWidescreenHudOffsetPhone = fWidescreenHudOffset / (Screen.fHeight * (4.0f / 3.0f));
+    if (Screen.fHudAspectRatioConstraint.has_value())
+    {
+        float value = Screen.fHudAspectRatioConstraint.value();
+        if (value < 0.0f || value > (32.0f / 9.0f))
+            fWidescreenHudOffset = value;
+        else
+        {
+            value = ClampHudAspectRatio(value, Screen.fAspectRatio);
+            fWidescreenHudOffset = CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f, 0.0f, true);
+        }
+    }
+    Screen.fWidescreenHudOffsetRadar = fWidescreenHudOffset;
+    Screen.fWidescreenHudOffset = fWidescreenHudOffset / (Screen.fHeight * (4.0f / 3.0f));
+}
+
 void Init()
 {
-    CIniReader iniReader("");
-    bool bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
-    bool bDoNotUseRegistryPath = iniReader.ReadInteger("MAIN", "DoNotUseRegistryPath", 1) != 0;
-    bool bBorderlessWindowed = iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0;
-    nLanguage = iniReader.ReadInteger("MAIN", "Language", -1);
-    static bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
-    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
-    static bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-    nFrameLimitType = iniReader.ReadInteger("FRAMELIMIT", "FrameLimitType", 1);
+    // Settings described in settings.json and stored in the plugin's .cfg; all but the HUD aspect ratio constraint and
+    // the post-processing effects apply after a restart
+    auto& settings = FixSettings();
+    // FusionFixHub changes the values while the game runs (the live link, served for all plugins of the game)
+    asi_settings::LiveLink::Start();
+    bool bSkipIntro = settings.Bool("MAIN.SkipIntro");
+    bool bDoNotUseRegistryPath = settings.Bool("MAIN.DoNotUseRegistryPath");
+    bool bBorderlessWindowed = settings.Bool("MAIN.BorderlessWindowed");
+    nLanguage = settings.Int("MAIN.Language");
+    static bool bFixHUD = settings.Bool("MAIN.FixHUD");
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(settings.String("MAIN.HudAspectRatioConstraint"));
+    settings.OnChange("MAIN.HudAspectRatioConstraint", []
+    {
+        Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+        UpdateWidescreenHudOffsets();
+    });
+    static bool bFixFOV = settings.Bool("MAIN.FixFOV");
+    TCCamera::SetFactor(settings.Float("MAIN.FOVFactor"));
+    settings.OnChange("MAIN.FOVFactor", []
+    {
+        TCCamera::SetFactor(FixSettings().Float("MAIN.FOVFactor"));
+    });
+    if (!TCCamera::Init())
+        OutputDebugStringA("TCNYC: gameplay FOV camera contract unavailable.\n");
+    nFrameLimitType = settings.Int("FRAMELIMIT.FrameLimitType");
     fFpsLimit = 30.0f;
-    if (iniReader.ReadInteger("FRAMELIMIT", "Enable60FPS", 1) != 0)
+    if (settings.Bool("FRAMELIMIT.Enable60FPS"))
         fFpsLimit = 60.0f;
 
-    static float fSensitivityFactor = std::abs(iniReader.ReadFloat("MOUSE", "SensitivityFactor", 0.0f));
-    fRawInputMouse = std::abs(iniReader.ReadFloat("MOUSE", "RawInputMouse", 1.0f));
+    static float fSensitivityFactor = std::abs(settings.Float("MOUSE.SensitivityFactor"));
+    bRawInputMouse = settings.Bool("MAIN.RawInputMouse");
+    bRawInputMouseRawData = settings.Bool("MAIN.RawInputMouseRawData");
+    SetRawMouseSensitivity(settings.Float("MAIN.MouseSensitivity"));
+    settings.OnChange("MAIN.MouseSensitivity", []
+    {
+        SetRawMouseSensitivity(FixSettings().Float("MAIN.MouseSensitivity"));
+    });
 
-    bool bHighResolutionShadows = iniReader.ReadInteger("MISC", "HighResolutionShadows", 1) != 0;
+    bool bHighResolutionShadows = settings.Bool("MISC.HighResolutionShadows");
 
     auto pattern = hook::pattern("88 15 ? ? ? ? 8D 45");
     bPause = *pattern.get_first<bool*>(2);
@@ -224,21 +277,7 @@ void Init()
             Screen.fWidth43 = static_cast<float>(Screen.Width43);
             Screen.fHudOffset = (1.0f / (Screen.fHeight * (4.0f / 3.0f))) * ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
 
-            Screen.fWidescreenHudOffset = CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f, 0.0f, true);
-            Screen.fWidescreenHudOffsetPhone = Screen.fWidescreenHudOffset / (Screen.fHeight * (4.0f / 3.0f));
-            if (Screen.fHudAspectRatioConstraint.has_value())
-            {
-                float value = Screen.fHudAspectRatioConstraint.value();
-                if (value < 0.0f || value > (32.0f / 9.0f))
-                    Screen.fWidescreenHudOffset = value;
-                else
-                {
-                    value = ClampHudAspectRatio(value, Screen.fAspectRatio);
-                    Screen.fWidescreenHudOffset = CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f, 0.0f, true);
-                }
-            }
-            Screen.fWidescreenHudOffsetRadar = Screen.fWidescreenHudOffset;
-            Screen.fWidescreenHudOffset = Screen.fWidescreenHudOffset / (Screen.fHeight * (4.0f / 3.0f));
+            UpdateWidescreenHudOffsets();
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(6));
 
@@ -304,18 +343,27 @@ void Init()
         });
     }
 
-    if (bFixFOV)
+    pattern = hook::pattern("F3 0F 10 45 08 56 8B F1 8B 46 1C");
+    if (pattern.size() == 1)
     {
-        pattern = hook::pattern("F3 0F 10 45 08 56 8B F1 8B 46 1C"); //0x64BDF9 
         struct FOVHook
         {
             void operator()(injector::reg_pack& regs)
             {
-                Screen.fFieldOfView = *(float*)(regs.ebp + 0x8) * (((4.0f / 3.0f)) / (Screen.fAspectRatio));
-                regs.xmm0.f32[0] = Screen.fFieldOfView;
+                float scale = *reinterpret_cast<const float*>(regs.ebp + 8);
+                if (bFixFOV && std::isfinite(Screen.fAspectRatio) && Screen.fAspectRatio > 0.0f)
+                    scale *= (4.0f / 3.0f) / Screen.fAspectRatio;
+                const bool blocked = !bPause || !bCutscene || !nLoading || *bPause || *bCutscene || *nLoading != 0;
+                scale = TCCamera::Apply(reinterpret_cast<const void*>(regs.ecx),
+                    *reinterpret_cast<const uintptr_t*>(regs.ebp + 4), scale, blocked);
+                Screen.fFieldOfView = scale;
+                regs.xmm0.f32[0] = scale;
             }
-        }; injector::MakeInline<FOVHook>(pattern.get_first(0));
+        }; injector::MakeInline<FOVHook>(pattern.get_first());
     }
+
+    // Install the overlay before the limiter/raw-input hooks alter their shared patterns.
+    TCOverlay::Init();
 
     if (fFpsLimit)
     {
@@ -333,7 +381,8 @@ void Init()
         injector::WriteMemory(pattern.get_first(4), &fSensitivityFactor, true);
     }
 
-    if (fRawInputMouse)
+    InitOverlayWindowInput();
+    if (bRawInputMouse)
         InitRawInput();
 
     if (bHighResolutionShadows)
@@ -358,6 +407,7 @@ void Init()
     }
 
     InitDepthStencil();
+    AntiAliasing::Init();
     InitPostFX();
     InitDInputMapper();
 }
@@ -366,6 +416,7 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        D3D8Compatibility::Initialize(true, true);
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("BF 94 00 00 00 8B C7"));
     });
 }

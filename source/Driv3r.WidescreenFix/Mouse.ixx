@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <chrono>
 #include <map>
 #include <tuple>
@@ -72,7 +73,7 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
+            SettingsReader iniReader;
             CursorSensitivity = iniReader.ReadFloat("MAIN", "CursorSensitivity", 1.0f);
 
             // The game reads buffered mouse data every 8 ms by GetTickCount, so about every 16 ms, and only 32 events at a time, which delays

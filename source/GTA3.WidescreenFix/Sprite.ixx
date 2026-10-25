@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
 
 export module Sprite;
@@ -51,12 +52,27 @@ public:
         WFP::onGameInitEvent() += []()
         {
             auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 84 C0 0F 84 ? ? ? ? 0F B7 05");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             shCalcScreenCoors = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CalcScreenCoors);
 
             // CParticle::Render, including the projection used for particle trails.
             pattern = hook::pattern("51 50 56 E8 ? ? ? ? 83 C4 14 84 C0 D9 EE D9 EE D9 EE D9 EE 0F 84");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::MakeCALL(pattern.get_first(3), CalcParticleScreenCoors, true);
             pattern = hook::pattern("55 50 E8 ? ? ? ? 83 C4 14 84 C0 D9 EE D9 EE D9 EE 0F 84");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::MakeCALL(pattern.get_first(2), CalcParticleScreenCoors, true);
         };
     }

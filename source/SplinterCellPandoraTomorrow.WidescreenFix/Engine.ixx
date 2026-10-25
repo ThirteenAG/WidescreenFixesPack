@@ -1,10 +1,13 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <queue>
 #include <functional>
 #include <unordered_map>
 #include <vector>
+
+#include "GameplayCamera.hpp"
 
 export module Engine;
 
@@ -303,6 +306,8 @@ namespace UGameEngine
     SafetyHookInline shTick = {};
     void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
     {
+        RefreshHudConstraint();
+
         // Update the shared softbody fixed timestep once per frame
         // All cloth actors use the same substep count and interpolation alpha
         AESoftBodyActor::AdvanceFixedTimestep(deltaTime);
@@ -316,7 +321,7 @@ namespace UGameEngine
             }
         }
 
-        if (Screen.fRawInputMouse > 0.0f && UWindowsViewport::deferredCauseInputEventForRawInput)
+        if (Screen.bRawInputMouse && UWindowsViewport::deferredCauseInputEventForRawInput)
         {
             UWindowsViewport::deferredCauseInputEventForRawInput(228, 4, static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0)));
             UWindowsViewport::deferredCauseInputEventForRawInput(229, 4, static_cast<float>(RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0)));
@@ -589,11 +594,11 @@ export void InitEngine()
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "DC 0D ? ? ? ? DB 43 18 DC 0D ? ? ? ? D9 5D E4 75 12 D9 45 10");
     if (!pattern.empty())
-        injector::WriteMemory(pattern.get_first(2), &Screen.dHUDScaleX, true);
+        ProtectedGameRef<decltype(&Screen.dHUDScaleX)>(reinterpret_cast<decltype(&Screen.dHUDScaleX)*>(pattern.get_first(2))) = &Screen.dHUDScaleX;
     else
     {
         pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F2 0F 5E 05 ? ? ? ? 66 0F 5A D0");
-        injector::WriteMemory(pattern.get_first(4), &Screen.dHUDScaleXInv, true);
+        ProtectedGameRef<decltype(&Screen.dHUDScaleXInv)>(reinterpret_cast<decltype(&Screen.dHUDScaleXInv)*>(pattern.get_first(4))) = &Screen.dHUDScaleXInv;
     }
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 4D F4 5F 5E 64 89 0D 00 00 00 00 5B 8B E5 5D C2 4C 00");
@@ -624,7 +629,30 @@ export void InitEngine()
         injector::MakeCALL(pattern.get_first(0), FCanvasUtilDrawTileHook, true);
     }
 
-    //FOV
+    // Both renderers use the same player camera hook.
+    PTGameplayCamera::fullNameSource = &UObject::GetFullName;
+    auto cameraCtor = GetProcAddress(GetModuleHandle(L"Engine"), "??0FCameraSceneNode@@QAE@PAVUViewport@@PAVAActor@@VFVector@@VFRotator@@M@Z");
+    const std::pair<const char*, int> cameraCallers[] =
+    {
+        { "8B CC 89 11 8B 55 D8 89 41 04 8B 45 C0 50 89 51 08 53 8D 8D 70 F9 FF FF E8 ? ? ? ?", 24 },
+        { "83 EC 0C 8B C4 89 08 8B 4D E0 89 50 04 8B 55 08 52 89 48 08 57 8D 8D DC FC FF FF E8 ? ? ? ?", 27 },
+        { "83 EC 0C 8B C4 89 08 8B 4D E0 89 50 04 8B 55 08 52 89 48 08 57 8D 8D D0 FC FF FF E8 ? ? ? ?", 27 },
+        { "8B C4 FF B5 F8 FA FF FF 8B 8D B0 FA FF FF 56 66 0F D6 00 89 48 08 8D 8D 00 FB FF FF E8 ? ? ? ?", 28 },
+        { "8B CC FF B5 20 FD FF FF 8B 85 10 FD FF FF 57 66 0F D6 01 89 41 08 8D 8D 24 FD FF FF E8 ? ? ? ?", 28 },
+        { "8B CC FF B5 20 FD FF FF 8B 85 0C FD FF FF 57 66 0F D6 01 89 41 08 8D 8D 24 FD FF FF E8 ? ? ? ?", 28 },
+    };
+    for (size_t i = 0; i < std::size(cameraCallers); ++i)
+    {
+        auto caller = hook::module_pattern(GetModuleHandle(L"Engine"), cameraCallers[i].first);
+        if (cameraCtor && caller.size() == 1)
+        {
+            auto call = caller.get_first<void>(cameraCallers[i].second);
+            if (injector::GetBranchDestination(call).as_int() == reinterpret_cast<uintptr_t>(cameraCtor))
+                PTGameplayCamera::callers[i] = reinterpret_cast<uintptr_t>(call) + 5;
+        }
+    }
+    PTGameplayCamera::FinalizeCallers();
+
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "E8 ? ? ? ? 8B 4D ? 5F 8B C6 5E 64 89 0D ? ? ? ? 5B 8B E5 5D C2 24 00");
     if (!pattern.empty())
     {
@@ -634,8 +662,11 @@ export void InitEngine()
             {
                 return;
             }
-
-            *(float*)(regs.esi + 0x214) = AdjustFOV(*(float*)(regs.esi + 0x214), Screen.fAspectRatio);
+            static const auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
+            float factor = PTGameplayCamera::Factor(reinterpret_cast<void*>(regs.esi), *reinterpret_cast<uintptr_t*>(regs.ebp + 4), fFOVFactor);
+            if (UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
+                factor = 1.0f;
+            *(float*)(regs.esi + 0x214) = std::clamp(AdjustFOV(*(float*)(regs.esi + 0x214), Screen.fAspectRatio) * factor, 1.0f, 179.0f);
         });
     }
     else
@@ -647,8 +678,11 @@ export void InitEngine()
             {
                 return;
             }
-
-            *(float*)(regs.edi + 0x214) = AdjustFOV(*(float*)(regs.edi + 0x214), Screen.fAspectRatio);
+            static const auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
+            float factor = PTGameplayCamera::Factor(reinterpret_cast<void*>(regs.edi), *reinterpret_cast<uintptr_t*>(regs.ebp + 4), fFOVFactor);
+            if (UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")
+                factor = 1.0f;
+            *(float*)(regs.edi + 0x214) = std::clamp(AdjustFOV(*(float*)(regs.edi + 0x214), Screen.fAspectRatio) * factor, 1.0f, 179.0f);
         });
     }
 
@@ -660,8 +694,8 @@ export void InitEngine()
         auto pattern2 = hook::module_pattern(GetModuleHandle(L"Engine"), "68 00 02 00 00 68 00 02 00 00");
         for (size_t i = 0; i < pattern2.size(); i++)
         {
-            injector::WriteMemory(pattern2.get(i).get<uint32_t>(1), Screen.nPostProcessFixedScale, true);
-            injector::WriteMemory(pattern2.get(i).get<uint32_t>(6), Screen.nPostProcessFixedScale, true);
+            ProtectedGameRef<decltype(Screen.nPostProcessFixedScale)>(reinterpret_cast<decltype(Screen.nPostProcessFixedScale)*>(pattern2.get(i).get<uint32_t>(1))) = Screen.nPostProcessFixedScale;
+            ProtectedGameRef<decltype(Screen.nPostProcessFixedScale)>(reinterpret_cast<decltype(Screen.nPostProcessFixedScale)*>(pattern2.get(i).get<uint32_t>(6))) = Screen.nPostProcessFixedScale;
         }
 
         // Thermal vision uses a separate render target size so it bypasses the main fix, apply PostProcessFixedScale here as well
@@ -671,7 +705,7 @@ export void InitEngine()
             // Override all thermal RT presets
             uintptr_t thermalSceneSizes = *thermalRT.get_first<uintptr_t>(3);
             for (int i = 0; i < 3; i++)
-                injector::WriteMemory<uint32_t>(thermalSceneSizes + i * 4, Screen.nPostProcessFixedScale, true);
+                ProtectedGameRef<uint32_t>(reinterpret_cast<uint32_t*>(thermalSceneSizes + i * 4)) = Screen.nPostProcessFixedScale;
         }
     }
 
@@ -679,7 +713,7 @@ export void InitEngine()
     {
         auto thermalDispatch = find_module_pattern(GetModuleHandle(L"Engine"), "FF B5 FC FB FF FF 56 53 6A 00 E8", "0C 8B 55 08 50 51 52 56 6A 00 E8");
         if (!thermalDispatch.empty())
-            injector::WriteMemory<uint8_t>(thermalDispatch.get_first(9), 2, true);
+            ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(thermalDispatch.get_first(9))) = 2;
     }
 
     if (gColor.RGBA)
@@ -722,7 +756,7 @@ export void InitEngine()
 
     // LOD
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "0F 84 ? ? ? ? FF 15 ? ? ? ? 8B 8C 24", "0F 84 ? ? ? ? 8B 41 ? F3 0F 10 81");
-    injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp
+    ProtectedGameRef<uint16_t>(reinterpret_cast<uint16_t*>(pattern.get_first(0))) = 0xE990; // jz -> jmp
 
     if (bSkipIntro)
     {
@@ -756,12 +790,12 @@ export void InitEngine()
     {
         pattern = find_module_pattern(GetModuleHandle(L"Engine"), "0F 84 ? ? ? ? F3 0F 10 45 ? F3 0F 59 05");
         if (!pattern.empty())
-            injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp
+            ProtectedGameRef<uint16_t>(reinterpret_cast<uint16_t*>(pattern.get_first(0))) = 0xE990; // jz -> jmp
         else
         {
             pattern = find_module_pattern(GetModuleHandle(L"Engine"), "74 ? D9 45 ? D8 0D ? ? ? ? E8");
             if (!pattern.empty())
-                injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jz -> jmp
+                ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(0))) = 0xEB; // jz -> jmp
         }
     }
 
@@ -824,20 +858,20 @@ export void InitEngine()
             if (sbUpdate.size())
             {
                 uintptr_t movss = reinterpret_cast<uintptr_t>(sbUpdate.get_first(18));
-                injector::WriteMemory<uint8_t>(movss + 3, 0x05, true);
-                injector::WriteMemory<uintptr_t>(movss + 4, reinterpret_cast<uintptr_t>(&AESoftBodyActor::fFrameDelta), true);
+                ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(movss + 3)) = 0x05;
+                ProtectedGameRef<uintptr_t>(reinterpret_cast<uintptr_t*>(movss + 4)) = reinterpret_cast<uintptr_t>(&AESoftBodyActor::fFrameDelta);
 
                 uintptr_t clampLow = *sbUpdate.get_first<uintptr_t>(13);
-                injector::WriteMemory<float>(clampLow, AESoftBodyActor::kMinDt, true);
+                ProtectedGameRef<float>(reinterpret_cast<float*>(clampLow)) = AESoftBodyActor::kMinDt;
             }
             else // retail: x87 fld m32
             {
                 uintptr_t fld = reinterpret_cast<uintptr_t>(sbUpdateRetail.get_first(9));
-                injector::WriteMemory<uint8_t>(fld + 1, 0x05, true);
-                injector::WriteMemory<uintptr_t>(fld + 2, reinterpret_cast<uintptr_t>(&AESoftBodyActor::fFrameDelta), true);
+                ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(fld + 1)) = 0x05;
+                ProtectedGameRef<uintptr_t>(reinterpret_cast<uintptr_t*>(fld + 2)) = reinterpret_cast<uintptr_t>(&AESoftBodyActor::fFrameDelta);
 
                 uintptr_t clampLow = *sbUpdateRetail.get_first<uintptr_t>(17);
-                injector::WriteMemory<float>(clampLow, AESoftBodyActor::kMinDt, true);
+                ProtectedGameRef<float>(reinterpret_cast<float*>(clampLow)) = AESoftBodyActor::kMinDt;
             }
         }
     }
@@ -853,8 +887,19 @@ export void InitEngine()
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "FF 15 ? ? ? ? D9 5D 08 F3 0F 10 45 08 0F 2F 05 ? ? ? ? 0F 86", "A7 94 01 00 00 D9 5C 24 1C FF 15 ? ? ? ? D8 1D ? ? ? ? DF E0");
     if (!pattern.empty())
     {
-        injector::WriteMemory<uintptr_t>(pattern.get_first(17), reinterpret_cast<uintptr_t>(&FLevelSceneNode::fPlantFarDistance), true);
+        ProtectedGameRef<uintptr_t>(reinterpret_cast<uintptr_t*>(pattern.get_first(17))) = reinterpret_cast<uintptr_t>(&FLevelSceneNode::fPlantFarDistance);
     }
+
+    // Buffered shadows (retail): the shadow buffer texture matrix puts the compared depth in 24-bit integer units
+    // (z * 16777215, bias -16777.217), which only the hardware of the time understood. Current drivers compare in 0..1,
+    // so every receiver ends up behind the stored depth. Use the same matrix in 0..1 units.
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "68 00 00 80 3F 68 6F 12 83 C6");
+    if (!pattern.empty())
+        ProtectedGameRef<float>(pattern.get_first<float>(6)) = -0.001f;
+
+    pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "6A 00 68 FF FF 7F 4B 6A 00 6A 00");
+    if (!pattern.empty())
+        ProtectedGameRef<float>(pattern.get_first<float>(3)) = 1.0f;
 
     // Fix thermal vision grain scaling at high resolutions
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 46 04 8B 80 84 00 00 00 99 F7 F9 66 0F 6E C0", "04 8B C8 8B 82 84 00 00 00 99 F7 F9");

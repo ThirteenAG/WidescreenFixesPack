@@ -1,0 +1,8 @@
+{
+  "plugin.name": "Paradise Cracked Widescreen-Fix",
+  "page.display": "Anzeige",
+  "ResX": "Auflösungsbreite",
+  "ResX.description": "Breite in Pixeln. Null wählt die Desktopauflösung. Neustart erforderlich.",
+  "ResY": "Auflösungshöhe",
+  "ResY.description": "Höhe in Pixeln. Null wählt die Desktopauflösung. Neustart erforderlich."
+}

@@ -1,0 +1,6 @@
+{
+  "plugin.name": "GTA Liberty City Stories PCSX2F Improved Vehicle Lights",
+  "page.graphics": "Graphismes",
+  "lights": "Feux des véhicules",
+  "lights.description": "Allume les phares, feux arrière, feux stop et feux de recul sur les textures de carrosserie des voitures et motos, générés à partir des textures du jeu. Activé par défaut. Redémarrez le jeu émulé après avoir modifié ce réglage."
+}

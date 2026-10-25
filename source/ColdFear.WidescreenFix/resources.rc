@@ -1,0 +1,7 @@
+// The fix's settings (ASI Settings, see source/Shared/AsiSettings) and the text of their labels and of the in-game menu
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/ColdFear/en.json"
+fr ASISETTINGS_TEXT "../../text/ColdFear/fr.json"
+de ASISETTINGS_TEXT "../../text/ColdFear/de.json"
+it ASISETTINGS_TEXT "../../text/ColdFear/it.json"
+es ASISETTINGS_TEXT "../../text/ColdFear/es.json"

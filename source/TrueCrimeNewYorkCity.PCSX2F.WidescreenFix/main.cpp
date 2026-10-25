@@ -3,6 +3,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cmath>
+#include <cctype>
+#include "../Shared/Console/PS2Settings.hpp"
+PCSX2F_CFG_SETTINGS()
 
 extern "C" {
 int CompatibleCRCList[] = {0x42A9C4EC, 0x7A9D67B8, 0x77B4F13C, static_cast<int>(0xB1AC3BEB)};
@@ -10,7 +14,6 @@ int CompatibleElfCRCList[] = {0x42A9C4EC, 0x1118ACD0, 0x7A9D67B8, static_cast<in
                             0x77B4F13C, static_cast<int>(0xA4334B91), static_cast<int>(0xB1AC3BEB), static_cast<int>(0xB2D44C6C)};
 int PCSX2Data[PCSX2Data_Size] = {1};
 char OSDText[OSDStringNum][OSDStringSize] = {{1}};
-char PluginData[MaxIniSize] = {1};
 char FrameLimitUnthrottle;
 }
 
@@ -22,11 +25,19 @@ float Constraint(const char* value) {
     if (!value) return -1;
     char* end = nullptr;
     const float numerator = std::strtof(value, &end);
-    if (end == value || *end != ':') return -1;
-    const char* denominatorStart = end + 1;
-    const float denominator = std::strtof(denominatorStart, &end);
-    if (end == denominatorStart || *end || !(numerator > 0 && denominator > 0)) return -1;
-    return console::bounded(numerator / denominator, 4.0f / 3.0f, 32.0f / 9.0f, -1);
+    if (end == value || !std::isfinite(numerator) || numerator <= 0) return -1;
+    while (std::isspace(static_cast<unsigned char>(*end))) ++end;
+    float ratio = numerator;
+    if (*end == ':')
+    {
+        const char* denominatorStart = end + 1;
+        const float denominator = std::strtof(denominatorStart, &end);
+        if (end == denominatorStart || !std::isfinite(denominator) || denominator <= 0) return -1;
+        ratio /= denominator;
+    }
+    while (std::isspace(static_cast<unsigned char>(*end))) ++end;
+    if (*end || !std::isfinite(ratio)) return -1;
+    return console::bounded(ratio, 4.0f / 3.0f, 32.0f / 9.0f, -1);
 }
 uintptr_t Absolute(uintptr_t at) {
     return (uintptr_t(injector::ReadMemory<uint16_t>(at)) << 16) + int16_t(injector::ReadMemory<uint16_t>(at + 4));
@@ -41,12 +52,14 @@ bool Required(uintptr_t value, const char* name) {
 extern "C" void init() {
     using namespace tcny;
     if (injector::InitializeCheckedRuntime(Rejected) != PCSX2_HOOK_OK) return;
-    inireader.SetIniPath(PluginData + sizeof(uint32_t), *reinterpret_cast<const uint32_t*>(PluginData));
-    const bool skipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
-    enable60 = inireader.ReadInteger("MAIN", "Enable60FPS", 0) != 0;
-    unthrottle = inireader.ReadInteger("MAIN", "UnthrottleEmuDuringLoading", 1) != 0;
-    char text[64];
-    display.constraint = Constraint(inireader.ReadString("MAIN", "HudAspectRatioConstraint", "auto", text, sizeof(text)));
+    console::ps2settings::Value options[] = {{"MAIN", "SkipIntro", "1"}, {"MAIN", "HudAspectRatioConstraint", "auto"},
+                                            {"MAIN", "Enable60FPS", "1"}, {"MAIN", "UnthrottleEmuDuringLoading", "1"}};
+    if (!console::ps2settings::load(options))
+        std::snprintf(OSDText[0], OSDStringSize, "CFG settings unavailable: update the plugin injector for CFG support.");
+    const bool skipIntro = console::ps2settings::boolean(options[0], true);
+    enable60 = console::ps2settings::boolean(options[2], true);
+    unthrottle = console::ps2settings::boolean(options[3], true);
+    display.constraint = Constraint(options[1].value);
     // As before the rewrite: fast-forward from boot until the first engine frame reports loading state.
     FrameLimitUnthrottle = unthrottle;
     // The launcher and the streamed TC2 engine are separate ELF generations.

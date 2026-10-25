@@ -1,6 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/SplinterCell/Window.hpp"
+#include "FixSettings.hpp"
+#include "MovieFrame.hpp"
 #include <minidx8/d3d8.h>
 
 export module D3DDrv;
@@ -12,11 +15,28 @@ D3DPRESENT_PARAMETERS* pPresentParams = nullptr;
 SafetyHookInline shUD3DRenderDeviceSetRes = {};
 int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* UViewport, int width, int height, int a5)
 {
-    bool bInvalidRes = true;
+    static const int mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
+    static bool first = true;
+    if (std::exchange(first, false))
+        a5 = mode == 0;
+    const auto nativeResolution = RequestedNativeResolution;
+    if (nativeResolution)
+    {
+        width = nativeResolution->first;
+        height = nativeResolution->second;
+    }
+    if (!a5 && mode == 2)
+    {
+        auto area = SCWindow::Monitor(pPresentParams ? pPresentParams->hDeviceWindow : nullptr).rcMonitor;
+        width = area.right - area.left;
+        height = area.bottom - area.top;
+    }
+
+    bool bInvalidRes = !nativeResolution;
     std::wstring resStr = std::to_wstring(width) + L"x" + std::to_wstring(height);
     for (const auto& it : ResList)
     {
-        if (resStr == it.first)
+        if (!nativeResolution && resStr == it.first)
         {
             swscanf_s(it.second.c_str(), L"%dx%d", &width, &height);
             bInvalidRes = false;
@@ -24,7 +44,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
         }
     }
 
-    if (bInvalidRes)
+    if (bInvalidRes && (a5 || mode != 2))
     {
         width = Screen.Width;
         height = Screen.Height;
@@ -34,14 +54,28 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     // Skip redundant SetRes calls to avoid unnecessary device resets and screen flicker
     // Lost devices still fall through so D3D can recover
     IDirect3DDevice8* pExistingDevice = *(IDirect3DDevice8**)((uintptr_t)UD3DRenderDevice + 0x4684);
-    if (pExistingDevice && width == Screen.Width && height == Screen.Height &&
+    if (pExistingDevice && pPresentParams && pPresentParams->Windowed == !a5 &&
+        width == Screen.Width && height == Screen.Height &&
         pExistingDevice->TestCooperativeLevel() == D3D_OK)
     {
         return 1;
     }
 
     auto ret = shUD3DRenderDeviceSetRes.unsafe_fastcall<int>(UD3DRenderDevice, edx, UViewport, width, height, a5);
+    if (!ret || !pPresentParams)
+        return ret;
 
+    if (nativeResolution && UViewport)
+    {
+        // Fullscreen may select the closest supported mode. Use what native resize published.
+        const int actualWidth = *reinterpret_cast<int*>(static_cast<uint8_t*>(UViewport) + 0x7C);
+        const int actualHeight = *reinterpret_cast<int*>(static_cast<uint8_t*>(UViewport) + 0x80);
+        if (actualWidth > 0 && actualHeight > 0 && actualWidth <= 16384 && actualHeight <= 16384)
+        {
+            width = actualWidth;
+            height = actualHeight;
+        }
+    }
     Screen.Width = width;
     Screen.Height = height;
     Screen.fWidth = static_cast<float>(Screen.Width);
@@ -82,10 +116,19 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
             bWidescreenOverrideRegistered = true;
         }
     }
+    SCWindow::Track(pPresentParams->hDeviceWindow, mode, pPresentParams->Windowed != FALSE, Screen.Width, Screen.Height);
+    SCWindow::SquareCorners(pPresentParams->hDeviceWindow);
+
+    if (nativeResolution)
+    {
+        FixSettings().Set("MAIN.ResX", std::to_string(Screen.Width), true);
+        FixSettings().Set("MAIN.ResY", std::to_string(Screen.Height), true);
+    }
+
     if (Screen.Width < 640 || Screen.Height < 480)
         return ret;
 
-    CIniReader iniReader("");
+    SettingsReader iniReader;
     auto [DesktopResW, DesktopResH] = GetDesktopRes();
     if (Screen.Width != DesktopResW || Screen.Height != DesktopResH)
     {
@@ -100,13 +143,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
 
     if (pPresentParams->Windowed)
     {
-        tagRECT rect;
-        rect.left = (LONG)(((float)DesktopResW / 2.0f) - (Screen.fWidth / 2.0f));
-        rect.top = (LONG)(((float)DesktopResH / 2.0f) - (Screen.fHeight / 2.0f));
-        rect.right = (LONG)Screen.Width;
-        rect.bottom = (LONG)Screen.Height;
-        SetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE, GetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
-        SetWindowPos(pPresentParams->hDeviceWindow, NULL, rect.left, rect.top, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
+        SCWindow::Place(pPresentParams->hDeviceWindow, Screen.Width, Screen.Height, mode == 2);
         SetForegroundWindow(pPresentParams->hDeviceWindow);
         SetCursor(NULL);
     }
@@ -148,6 +185,7 @@ constexpr uintptr_t kRenderDevice_VideoFrame  = 0x5D54;
 IDirect3DTexture8* pHiResVideoTexture = nullptr;
 int                nHiResVideoTexW    = 0;
 int                nHiResVideoTexH    = 0;
+void* pPendingVideoCanvas = nullptr;
 
 int NextPow2(int v)
 {
@@ -184,10 +222,7 @@ void PumpMessagesDeferringClose()
 // Draw Bink frame using a custom texture with correct aspect ratio scaling
 void DrawHiResCutsceneFrame(IDirect3DDevice8* pD3DDevice, void* UCanvas)
 {
-    // This keeps the window responsive and lets Alt+F4 take effect immediately instead of waiting for the video
-    PumpMessagesDeferringClose();
-
-    if (!pBinkCopyToBuffer)
+    if (!pBinkCopyToBuffer || !UCanvas || !*reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(UCanvas) + kCanvas_IsPlaying))
         return;
 
     void* hBink = *(void**)((uintptr_t)UCanvas + kCanvas_hBink);
@@ -196,7 +231,7 @@ void DrawHiResCutsceneFrame(IDirect3DDevice8* pD3DDevice, void* UCanvas)
 
     int videoWidth  = *(int*)hBink;
     int videoHeight = *(int*)((uintptr_t)hBink + 4);
-    if (videoWidth <= 0 || videoHeight <= 0)
+    if (videoWidth <= 0 || videoHeight <= 0 || videoWidth > 16384 || videoHeight > 16384)
         return;
 
     // Recreate texture when video resolution changes
@@ -216,68 +251,68 @@ void DrawHiResCutsceneFrame(IDirect3DDevice8* pD3DDevice, void* UCanvas)
         nHiResVideoTexH = videoHeight;
     }
 
-    // Copy decoded Bink frame into texture
     D3DLOCKED_RECT lockedRect;
-    if (SUCCEEDED(pHiResVideoTexture->LockRect(0, &lockedRect, nullptr, 0)))
-    {
-        pBinkCopyToBuffer(hBink, lockedRect.pBits, lockedRect.Pitch, (unsigned)videoHeight, 0, 0, 0x80000005u);
-        pHiResVideoTexture->UnlockRect(0);
-    }
+    if (FAILED(pHiResVideoTexture->LockRect(0, &lockedRect, nullptr, 0)))
+        return;
+    pBinkCopyToBuffer(hBink, lockedRect.pBits, lockedRect.Pitch, (unsigned)videoHeight, 0, 0, 0x80000005u);
+    pHiResVideoTexture->UnlockRect(0);
 
-    // Use viewport size (not back buffer) to handle windowed/borderless scaling
-    int screenW = Screen.Width;
-    int screenH = Screen.Height;
-    void* pViewport = *(void**)((uintptr_t)UCanvas + kCanvas_Viewport);
-    if (pViewport)
-    {
-        int viewportW = *(int*)((uintptr_t)pViewport + kViewport_Width);
-        int viewportH = *(int*)((uintptr_t)pViewport + kViewport_Height);
-        if (viewportW > 0 && viewportH > 0)
-        {
-            screenW = viewportW;
-            screenH = viewportH;
-        }
-    }
-    if (screenW <= 0 || screenH <= 0)
+    IDirect3DSurface8* target = nullptr;
+    if (FAILED(pD3DDevice->GetRenderTarget(&target)))
+        return;
+    D3DSURFACE_DESC targetDesc{};
+    const auto described = target->GetDesc(&targetDesc);
+    target->Release();
+    if (FAILED(described) || !targetDesc.Width || !targetDesc.Height)
+        return;
+    // Windowed presentation crops the desktop-sized buffer to this viewport.
+    auto viewport = *reinterpret_cast<uint8_t**>(static_cast<uint8_t*>(UCanvas) + kCanvas_Viewport);
+    if (!viewport)
+        return;
+    const int screenW = *reinterpret_cast<int*>(viewport + kViewport_Width);
+    const int screenH = *reinterpret_cast<int*>(viewport + kViewport_Height);
+    if (screenW <= 0 || screenH <= 0 || screenW > int(targetDesc.Width) || screenH > int(targetDesc.Height))
         return;
 
-    float fScreenW = (float)screenW;
-    float fScreenH = (float)screenH;
-
-    float vTop = 0.0f;
-    float vBottom = 1.0f;
-    float contentHeight = (float)videoHeight;
-    if (Screen.nFMVWidescreenMode)
+    DWORD state = 0;
+    D3DVIEWPORT8 savedViewport{};
+    if (FAILED(pD3DDevice->GetViewport(&savedViewport)) ||
+        FAILED(pD3DDevice->CreateStateBlock(D3DSBT_ALL, &state)))
+        return;
+    struct RestoreState
     {
-        int barPixels = (videoHeight - (videoWidth * 9) / 16) / 2;
-        if (barPixels > 0)
+        IDirect3DDevice8* device;
+        DWORD state;
+        D3DVIEWPORT8 viewport;
+        ~RestoreState()
         {
-            contentHeight = (float)(videoHeight - 2 * barPixels);
-            vTop = (float)barPixels / (float)videoHeight;
-            vBottom = 1.0f - vTop;
+            device->ApplyStateBlock(state);
+            device->SetViewport(&viewport);
+            device->DeleteStateBlock(state);
         }
-    }
+    } restore{ pD3DDevice, state, savedViewport };
+    D3DVIEWPORT8 movieViewport{ 0, 0, DWORD(screenW), DWORD(screenH), 0.0f, 1.0f };
+    pD3DDevice->SetViewport(&movieViewport);
+    pD3DDevice->SetPixelShader(0);
+    pD3DDevice->SetRenderState(D3DRS_ZENABLE, FALSE);
+    pD3DDevice->SetRenderState(D3DRS_ZWRITEENABLE, FALSE);
+    pD3DDevice->SetRenderState(D3DRS_STENCILENABLE, FALSE);
+    pD3DDevice->SetRenderState(D3DRS_WRAP0, 0);
+    pD3DDevice->SetRenderState(D3DRS_ALPHATESTENABLE, FALSE);
+    pD3DDevice->SetRenderState(D3DRS_FOGENABLE, FALSE);
+    pD3DDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+    pD3DDevice->SetRenderState(D3DRS_COLORWRITEENABLE, 0xF);
+    pD3DDevice->SetTextureStageState(0, D3DTSS_TEXCOORDINDEX, 0);
+    pD3DDevice->SetTextureStageState(0, D3DTSS_TEXTURETRANSFORMFLAGS, D3DTTFF_DISABLE);
+    pD3DDevice->SetTextureStageState(0, D3DTSS_ADDRESSU, D3DTADDRESS_CLAMP);
+    pD3DDevice->SetTextureStageState(0, D3DTSS_ADDRESSV, D3DTADDRESS_CLAMP);
+    pD3DDevice->SetTextureStageState(0, D3DTSS_MIPFILTER, D3DTEXF_NONE);
+    pD3DDevice->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
 
-    float videoAspect  = (float)videoWidth / contentHeight;
-    float screenAspect = fScreenW / fScreenH;
-
-    float targetW, targetH, targetX, targetY;
-    if (screenAspect > videoAspect)
-    {
-        // Pillarbox
-        targetH = fScreenH;
-        targetW = targetH * videoAspect;
-        targetX = (fScreenW - targetW) / 2.0f;
-        targetY = 0.0f;
-    }
-    else
-    {
-        // Letterbox
-        targetW = fScreenW;
-        targetH = targetW / videoAspect;
-        targetX = 0.0f;
-        targetY = (fScreenH - targetH) / 2.0f;
-    }
+    const auto frame = SCMovie::Layout(screenW, screenH, videoWidth, videoHeight,
+        FixSettings().Int("MAIN.FMVWidescreenMode"));
+    const float targetW = frame.width, targetH = frame.height, targetX = frame.x, targetY = frame.y;
+    const float vTop = frame.top, vBottom = frame.bottom;
 
     pD3DDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
 
@@ -292,10 +327,10 @@ void DrawHiResCutsceneFrame(IDirect3DDevice8* pD3DDevice, void* UCanvas)
     struct Vertex { float x, y, z, rhw, u, v; };
     Vertex vertices[4] =
     {
-        { targetX,           targetY,           0.0f, 1.0f, 0.0f, vTop    },
-        { targetX + targetW, targetY,           0.0f, 1.0f, 1.0f, vTop    },
-        { targetX,           targetY + targetH, 0.0f, 1.0f, 0.0f, vBottom },
-        { targetX + targetW, targetY + targetH, 0.0f, 1.0f, 1.0f, vBottom },
+        { targetX,           targetY,           0.0f, 1.0f, frame.left, vTop    },
+        { targetX + targetW, targetY,           0.0f, 1.0f, frame.right, vTop    },
+        { targetX,           targetY + targetH, 0.0f, 1.0f, frame.left, vBottom },
+        { targetX + targetW, targetY + targetH, 0.0f, 1.0f, frame.right, vBottom },
     };
     pD3DDevice->SetVertexShader(D3DFVF_XYZRHW | D3DFVF_TEX1);
     pD3DDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(Vertex));
@@ -321,7 +356,7 @@ namespace UD3DRenderDevice
         if (raw < stock)
             raw = stock;
 
-        // Clamping to 4096x4096 for dgVoodoo 2 compatability for now
+        // Clamping to 4096x4096 for now
         //return raw > 16384 ? 16384 : raw;
         return raw > 4096 ? 4096 : raw;
     }
@@ -344,7 +379,7 @@ namespace UD3DRenderDevice
         if (raw < stock)
             raw = stock;
 
-        // Clamping to 4096x4096 for dgVoodoo 2 compatability for now
+        // Clamping to 4096x4096 for now
         //return raw > 16384 ? 16384 : raw;
         return raw > 4096 ? 4096 : raw;
     }
@@ -366,7 +401,7 @@ namespace UD3DRenderDevice
                 int videoHeight = *(int*)((uintptr_t)hBink + 4);
 
                 // Non 640 videos use a small playback texture resize to prevent overflow
-                if (videoWidth > 0 && videoHeight > 0 && videoWidth != 640)
+                if (videoWidth > 0 && videoHeight > 0 && videoWidth <= 16384 && videoHeight <= 16384 && videoWidth != 640)
                 {
                     void* bigTexture = pPrepareTexture(renderDevice, nullptr,
                                                        NextPow2(videoWidth), NextPow2(videoHeight));
@@ -384,6 +419,7 @@ namespace UD3DRenderDevice
 
     void __fastcall StopVideo(void* renderDevice, void* edx, void* UCanvas, int a3, int a4)
     {
+        pPendingVideoCanvas = nullptr;
         if (pHiResVideoTexture)
         {
             pHiResVideoTexture->Release();
@@ -435,6 +471,8 @@ namespace UD3DRenderDevice
         if (!hBink || *(int*)hBink <= 0 || *(int*)((uintptr_t)hBink + 4) <= 0)
             return;
 
+        if (!bGadgetVideoIsPlaying)
+            PumpMessagesDeferringClose();
         shDisplayVideo.unsafe_fastcall(UD3DRenderDevice, edx, UCanvas, a3);
 
         // Do not apply to gadget videos
@@ -445,176 +483,35 @@ namespace UD3DRenderDevice
         if (!pD3DDevice)
             return;
 
-        // Back-buffer path for standard 640x480 cutscenes
-        if (*(uint32_t*)((uintptr_t)UCanvas + kCanvas_VideoOnBackBuffer) != 0)
+        if (bPlayingVideo)
         {
-            IDirect3DSurface8* pBackBuffer = nullptr;
-
-            if (SUCCEEDED(pD3DDevice->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &pBackBuffer)))
-            {
-                D3DSURFACE_DESC desc;
-                if (SUCCEEDED(pBackBuffer->GetDesc(&desc)))
-                {
-                    int W = desc.Width;
-                    int H = desc.Height;
-
-                    const int videoWidth  = 640;
-                    const int videoHeight = 480;
-                    const int srcX = 0;
-                    const int srcY = 0;
-
-                    // Clamp in case of an unusually small back buffer
-                    const int captureW = (W < videoWidth)  ? W : videoWidth;
-                    const int captureH = (H < videoHeight) ? H : videoHeight;
-
-                    // Create a 640x480 temporary surface for the FMV region
-                    IDirect3DSurface8* pTemp = nullptr;
-                    if (SUCCEEDED(pD3DDevice->CreateImageSurface(videoWidth, videoHeight, desc.Format, &pTemp)))
-                    {
-                        // Copy only the 640x480 FMV region of the back buffer to temp
-                        RECT srcRect = { 0, 0, captureW, captureH };
-                        POINT pt = { 0, 0 };
-                        pD3DDevice->CopyRects(pBackBuffer, &srcRect, 1, pTemp, &pt);
-
-                        // Clear the back buffer to black
-                        pD3DDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-
-                        // Create a 640x480 texture from the temp surface
-                        IDirect3DTexture8* pTexture = nullptr;
-                        if (SUCCEEDED(pD3DDevice->CreateTexture(videoWidth, videoHeight, 1, 0, desc.Format, D3DPOOL_MANAGED, &pTexture)))
-                        {
-                            IDirect3DSurface8* pTexSurf = nullptr;
-                            if (SUCCEEDED(pTexture->GetSurfaceLevel(0, &pTexSurf)))
-                            {
-                                // Copy temp to texture surface using CopyRects (corrected direction)
-                                pD3DDevice->CopyRects(pTemp, nullptr, 0, pTexSurf, &pt);
-                                pTexSurf->Release();
-
-                                // Set up render states for 2D drawing
-                                pD3DDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
-                                pD3DDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
-                                pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
-                                pD3DDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
-                                pD3DDevice->SetTexture(0, pTexture);
-
-                                // Add for smoother stretching
-                                pD3DDevice->SetTextureStageState(0, D3DTSS_MINFILTER, D3DTEXF_LINEAR);
-                                pD3DDevice->SetTextureStageState(0, D3DTSS_MAGFILTER, D3DTEXF_LINEAR);
-
-                                // Define vertices for a quad (TL, TR, BL, BR)
-                                struct Vertex
-                                {
-                                    float x, y, z, rhw;
-                                    float u, v;
-                                };
-
-                                float targetW, targetH, targetX, targetY;
-
-                                if (Screen.nFMVWidescreenMode)
-                                {
-                                    const int barPixels = 60;
-                                    int innerHeight = videoHeight - 2 * barPixels;
-                                    float contentAspect = (float)videoWidth / (float)innerHeight;
-                                    float screenAspect = (float)Screen.Width / (float)Screen.Height;
-
-                                    if (screenAspect > contentAspect)
-                                    {
-                                        // Pillarbox: fit to height
-                                        targetH = (float)Screen.Height;
-                                        targetW = targetH * contentAspect;
-                                        targetX = ((float)Screen.Width - targetW) / 2.0f;
-                                        targetY = 0.0f;
-                                    }
-                                    else
-                                    {
-                                        // Letterbox: fit to width
-                                        targetW = (float)Screen.Width;
-                                        targetH = targetW / contentAspect;
-                                        targetX = 0.0f;
-                                        targetY = ((float)Screen.Height - targetH) / 2.0f;
-                                    }
-
-                                    // UVs for cropped inner content (texture is exactly 640x480)
-                                    float uLeft = (float)srcX / (float)videoWidth;
-                                    float uRight = (float)(srcX + videoWidth) / (float)videoWidth;
-                                    float vTop = (float)(srcY + barPixels) / (float)videoHeight;
-                                    float vBottom = (float)(srcY + barPixels + innerHeight) / (float)videoHeight;
-
-                                    Vertex vertices[4] = {
-                                        { targetX, targetY, 0.0f, 1.0f, uLeft, vTop },
-                                        { targetX + targetW, targetY, 0.0f, 1.0f, uRight, vTop },
-                                        { targetX, targetY + targetH, 0.0f, 1.0f, uLeft, vBottom },
-                                        { targetX + targetW, targetY + targetH, 0.0f, 1.0f, uRight, vBottom }
-                                    };
-
-                                    // Draw the quad
-                                    pD3DDevice->SetVertexShader(D3DFVF_XYZRHW | D3DFVF_TEX1);
-                                    pD3DDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(Vertex));
-                                }
-                                else // Original pillarbox without cropping (includes bars)
-                                {
-                                    // Pillarboxing
-                                    targetW = (float)(Screen.Height * videoWidth / videoHeight);
-                                    targetH = (float)Screen.Height;
-                                    targetX = (float)((Screen.Width - (int)targetW) / 2);
-                                    targetY = 0.0f;
-
-                                    float uLeft = (float)srcX / (float)videoWidth;
-                                    float uRight = (float)(srcX + videoWidth) / (float)videoWidth;
-                                    float vTop = (float)srcY / (float)videoHeight;
-                                    float vBottom = (float)(srcY + videoHeight) / (float)videoHeight;
-
-                                    Vertex vertices[4] = {
-                                        { targetX, targetY, 0.0f, 1.0f, uLeft, vTop },
-                                        { targetX + targetW, targetY, 0.0f, 1.0f, uRight, vTop },
-                                        { targetX, targetY + targetH, 0.0f, 1.0f, uLeft, vBottom },
-                                        { targetX + targetW, targetY + targetH, 0.0f, 1.0f, uRight, vBottom }
-                                    };
-
-                                    // Draw the quad
-                                    pD3DDevice->SetVertexShader(D3DFVF_XYZRHW | D3DFVF_TEX1);
-                                    pD3DDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, vertices, sizeof(Vertex));
-                                }
-
-                                if (targetX > 0.0f)
-                                {
-                                    D3DRECT leftRect = { 0, 0, (LONG)targetX, H };
-                                    pD3DDevice->Clear(1, &leftRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-                                }
-
-                                // Clear right side
-                                if (targetX + targetW < (float)W)
-                                {
-                                    D3DRECT rightRect = { (LONG)(targetX + targetW), 0, W, H };
-                                    pD3DDevice->Clear(1, &rightRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-                                }
-
-                                // Clear top side
-                                if (targetY > 0.0f)
-                                {
-                                    D3DRECT topRect = { 0, 0, W, (LONG)targetY };
-                                    pD3DDevice->Clear(1, &topRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-                                }
-
-                                // Clear bottom side
-                                if (targetY + targetH < (float)H)
-                                {
-                                    D3DRECT bottomRect = { 0, (LONG)(targetY + targetH), W, H };
-                                    pD3DDevice->Clear(1, &bottomRect, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-                                }
-                            }
-                            pTexture->Release();
-                        }
-                        pTemp->Release();
-                    }
-                }
-                pBackBuffer->Release();
-            }
+            // Native scene rendering follows decoding; publish only after it flushes.
+            pPendingVideoCanvas = UCanvas;
         }
-        else if (bPlayingVideo)
-        {
-            DrawHiResCutsceneFrame(pD3DDevice, UCanvas);
-        }
+    }
+}
+
+// Light passes: spot lights project their light texture (stage 1) and buffered shadows their depth texture (stage 0)
+// with homogeneous texture coordinates from the vertex shader. Drivers of the time divided by w on their own;
+// current ones only do it with D3DTTFF_PROJECTED, and the vertex shader path always sets 0, so the spot light
+// and its shadow come out black. Remember which stages each light vertex shader projects and set the flag for them.
+namespace FD3DRenderInterface
+{
+    std::unordered_map<void*, uint32_t> ProjectedStages;
+
+    SafetyHookInline shSetupLightPass = {};
+    int __fastcall SetupLightPass(void* self, void* edx, void* lightInfo)
+    {
+        auto lightFlags = *(uint32_t*)(*(uintptr_t*)(*(uintptr_t*)(*(uintptr_t*)((uintptr_t)lightInfo + 0x4C) + 0x48) + 0xC8) + 0x7C);
+        auto lightType = (lightFlags >> 2) & 3;
+        bool bShadowBuffer = (lightFlags & 0x10) != 0;
+
+        auto ret = shSetupLightPass.unsafe_fastcall<int>(self, edx, lightInfo);
+
+        if (auto pVertexShader = *(void**)((uintptr_t)self + 0x410))
+            ProjectedStages[pVertexShader] = (bShadowBuffer ? 1 : 0) | (lightType < 2 ? 2 : 0);
+
+        return ret;
     }
 }
 
@@ -693,6 +590,13 @@ export void InitD3DDrv()
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 10 FF 92 ? ? ? ? 8B 86 14 5D 00 00");
     static auto EndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
+        if (auto canvas = std::exchange(pPendingVideoCanvas, nullptr);
+            canvas && bPlayingVideo && !bGadgetVideoIsPlaying && !bShuttingDown)
+        {
+            auto device = reinterpret_cast<IDirect3DDevice8*>(regs.eax);
+            if (device && device->TestCooperativeLevel() == D3D_OK)
+                DrawHiResCutsceneFrame(device, canvas);
+        }
         UpdateXidiProfile();
 
         if (bDisplayingSplash)
@@ -759,6 +663,31 @@ export void InitD3DDrv()
             }
         }
     });
+
+    // Light passes: projected light and shadow buffer stages (see FD3DRenderInterface above)
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "83 EC 38 53 55 56 57 8B F1 6A 00 6A 00 6A 00 8B 06 6A 00 FF 50 3C 8B 5C 24 4C 8B 43 4C");
+    if (!pattern.empty())
+    {
+        FD3DRenderInterface::shSetupLightPass = safetyhook::create_inline(pattern.get_first(), FD3DRenderInterface::SetupLightPass);
+
+        // State upload, vertex shader path: texture transform flags of every stage are set to 0 here
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "6A 00 6A 18 53 8B 82 84 46 00 00 50 8B 08 FF 91 FC 00 00 00");
+        if (!pattern.empty())
+        {
+            static auto ProjectedStagesHook = safetyhook::create_mid(pattern.get_first(14), [](SafetyHookContext& regs)
+            {
+                auto stage = regs.ebx;
+                auto pState = regs.edi - (48 + 38 * stage) * sizeof(uint32_t);
+                auto pVertexShader = *(void**)pState;
+                if (!pVertexShader)
+                    pVertexShader = *(void**)(regs.esi + 69 * sizeof(uint32_t));
+
+                auto it = FD3DRenderInterface::ProjectedStages.find(pVertexShader);
+                if (it != FD3DRenderInterface::ProjectedStages.end() && (it->second & (1 << stage)))
+                    *(DWORD*)(regs.esp + 12) = D3DTTFF_PROJECTED;
+            });
+        }
+    }
 
     // Fix night vision grain scaling and FPS-dependent noise animation
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 5C 24 14 FF 15 ? ? ? ? D9 5C 24 10 FF 15 ? ? ? ? D8 4C 24 14 D9 5C 24 24 FF 15 ? ? ? ? D8 4C 24 28");

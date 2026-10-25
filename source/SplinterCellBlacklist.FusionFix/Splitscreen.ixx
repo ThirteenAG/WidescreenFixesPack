@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <Xinput.h>
 #include <intrin.h>
 
@@ -857,6 +858,35 @@ namespace Splitscreen
         return shSceneTick[N].thiscall<bool>(scene, slot, delta);
     }
 
+    // Action prompts (BehaviorActionControllerIcon, element at +2Ch) are made when the HUD is created and when the controls change,
+    // outside the scene ticks: player 2's HUD and selection wheel kept the keyboard keys. The prompt takes the mode of the player whose
+    // HUD scene has it (an element's parent at +178h), player 1 without a pad keeps the keys.
+    SafetyHookInline shActionIcon{};
+    char __fastcall ActionIcon(uint8_t* behavior, void* edx, void* input)
+    {
+        void* scene = nullptr;
+        if (IsPlaying() && GetSplitViewport())
+        {
+            auto element = *reinterpret_cast<uint8_t**>(behavior + 0x2C);
+            for (int i = 0; element && i < 32 && !scene; i++, element = *reinterpret_cast<uint8_t**>(element + 0x178))
+            {
+                if (IsA(element, ".?AVHudScene@UI@@"))
+                    scene = element;
+            }
+        }
+        if (!scene)
+            return shActionIcon.thiscall<char>(behavior, input);
+
+        auto mode = *pGamepadMode;
+        if (IsPlayer2Scene(scene))
+            *pGamepadMode = 1;
+        else if (!padPlayer1)
+            *pGamepadMode = 0;
+        auto result = shActionIcon.thiscall<char>(behavior, input);
+        *pGamepadMode = mode;
+        return result;
+    }
+
     // Player 2's controller, pawn (controller +310h) and camera tick in gamepad mode: the controller tick clears the look axes in
     // keyboard mode, the pawn's tips (prompts) take the button of the input mode, the camera picks the invert setting by it
     SafetyHookInline shControllerTick{};
@@ -966,12 +996,12 @@ namespace Splitscreen
 
 export void InitSplitscreen()
 {
-    CIniReader iniReader("");
-    if (iniReader.ReadInteger("SPLITSCREEN", "Enable", 1) == 0)
+    auto& settings = FixSettings();
+    if (settings.Int("SPLITSCREEN.Enable") == 0)
         return;
 
-    Splitscreen::padPlayer1 = std::clamp(iniReader.ReadInteger("SPLITSCREEN", "GamepadPlayer1", 0), 0, XUSER_MAX_COUNT);
-    Splitscreen::padPlayer2 = std::clamp(iniReader.ReadInteger("SPLITSCREEN", "GamepadPlayer2", 1), 1, XUSER_MAX_COUNT);
+    Splitscreen::padPlayer1 = std::clamp(settings.Int("SPLITSCREEN.GamepadPlayer1"), 0, XUSER_MAX_COUNT);
+    Splitscreen::padPlayer2 = std::clamp(settings.Int("SPLITSCREEN.GamepadPlayer2"), 1, XUSER_MAX_COUNT);
 
     auto xinput = GetModuleHandleW(L"xinput1_3.dll");
     if (!xinput)
@@ -1199,6 +1229,34 @@ export void InitSplitscreen()
     });
 
     Splitscreen::shViewportInput = safetyhook::create_inline(viewportEvent.get_first(), Splitscreen::ViewportInput);
+
+    auto actionIcon = hook::pattern("3B ? 74 21 8B 41 20 3B ? 4C 75 19 8B ? 38 50 E8 ? ? ? ? 83 ? 38 6F 89 ? 34 75 07 C7 ? 34 82 00 00 00");
+    if (!actionIcon.empty())
+    {
+        // the function's start (push ebp, mov ebp esp, push -1)
+        static constexpr uint8_t prologue[] = { 0x55, 0x8B, 0xEC, 0x6A, 0xFF };
+        auto start = actionIcon.get_first<uint8_t>();
+        for (int i = 0; i < 0x60 && memcmp(start, prologue, sizeof(prologue)) != 0; i++)
+            start--;
+        if (memcmp(start, prologue, sizeof(prologue)) == 0)
+            Splitscreen::shActionIcon = safetyhook::create_inline(start, Splitscreen::ActionIcon);
+    }
+
+    // Menus' mouse position (movie 1280x720 by the viewport's size, mid frame player 1's half in split screen): the menus are drawn over
+    // the whole window, the position is by the whole width (+4B0h), the buttons answered on the left half only
+    auto menuMouse = hook::pattern("85 C0 74 06 8B 7D F8 8B 5D FC F3 0F 10 46 3C");
+    if (!menuMouse.empty())
+    {
+        static auto MenuMouse = safetyhook::create_mid(menuMouse.get_first(10), [](SafetyHookContext& regs)
+        {
+            auto viewport = reinterpret_cast<uint8_t*>(regs.esi);
+            auto split = Splitscreen::GetSplitViewport();
+            auto width = *reinterpret_cast<int32_t*>(viewport + 0x4A0);
+            auto full = *reinterpret_cast<int32_t*>(viewport + 0x4B0);
+            if (split && viewport != split && int32_t(regs.edi) == width && full > width)
+                regs.edi = full;
+        });
+    }
 
     static void* sceneTickHandlers[] = { &Splitscreen::SceneTick<0>, &Splitscreen::SceneTick<1>, &Splitscreen::SceneTick<2>, &Splitscreen::SceneTick<3>,
                                          &Splitscreen::SceneTick<4>, &Splitscreen::SceneTick<5>, &Splitscreen::SceneTick<6>, &Splitscreen::SceneTick<7> };

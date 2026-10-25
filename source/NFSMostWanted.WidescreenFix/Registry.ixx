@@ -2,6 +2,8 @@ module;
 
 #include <stdafx.h>
 #include <FunctionHookMinHook.hpp>
+#include "FixSettings.hpp"
+#include "../Shared/NFS/LanguageSetting.hpp"
 
 export module Registry;
 
@@ -27,6 +29,87 @@ static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, 
     return mhSHGetFolderPathA->get_original<decltype(SHGetFolderPathA)>()(hwnd, csidl, hToken, dwFlags, pszPath);
 }
 
+// The game's language: the "Language" registry value names it, the game compares it with its table of names
+// ("English US", "German", ...) and takes the language id and region from it; an unknown name is English US. The
+// id picks LANGUAGES\<file>.BIN, and the movies are MOVIES\<movie>_<language>_<ntsc|pal>.vp6 with the language's
+// name from the same table and "_pal" for every European region (all names but English US); a language without
+// its movies plays the English ones of the same region, and without those the story movies and tutorials are
+// skipped. The speech is in shared banks and the language textures in LanguageTextures.bin. An install has only
+// some of the files (a German install only GERMAN.BIN); with a language whose text file is missing every text is
+// missing and the game crashed making the default profile name. Korean, Chinese, Japanese and Thai are in the
+// table of names but have no text file in the European and American builds, which crash looking them up, so they
+// aren't offered.
+namespace Language
+{
+    // A movie of every release in the language's movies, or in the English ones the game falls back to
+    std::string Movie(const char* language, bool pal)
+    {
+        auto file = [&](const char* name) { return std::string("MOVIES\\blacklist_01_") + name + (pal ? "_pal.vp6" : "_ntsc.vp6"); };
+        std::error_code ec;
+        if (std::filesystem::exists(GetExeModulePath<std::filesystem::path>() / file(language), ec))
+            return file(language);
+        return file("english");
+    }
+
+    // The settings' languages (LANGUAGE.Language) and the files each needs
+    std::vector<WFPLanguageSetting::Entry> Entries()
+    {
+        return {
+            { "English US", { "LANGUAGES\\ENGLISH.BIN", Movie("english", false) } },
+            { "English UK", { "LANGUAGES\\ENGLISH.BIN", Movie("english", true) } },
+            { "French", { "LANGUAGES\\FRENCH.BIN", Movie("french", true) } },
+            { "German", { "LANGUAGES\\GERMAN.BIN", Movie("german", true) } },
+            { "Italian", { "LANGUAGES\\ITALIAN.BIN", Movie("italian", true) } },
+            { "Spanish", { "LANGUAGES\\SPANISH.BIN", Movie("spanish", true) } },
+            { "Swedish", { "LANGUAGES\\SWEDISH.BIN", Movie("swedish", true) } },
+            { "Danish", { "LANGUAGES\\DANISH.BIN", Movie("danish", true) } },
+            { "Dutch", { "LANGUAGES\\DUTCH.BIN", Movie("dutch", true) } },
+            { "Polish", { "LANGUAGES\\POLISH.BIN", Movie("polish", true) } },
+            { "Russian", { "LANGUAGES\\RUSSIAN.BIN", Movie("russian", true) } },
+        };
+    }
+
+    // The installer's language, from the real registry; portable installs have none
+    std::string Installer()
+    {
+        std::string language;
+        HKEY hKey = nullptr;
+        if (RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Most Wanted", &hKey) == ERROR_SUCCESS)
+        {
+            char szLang[256] = {};
+            DWORD cbData = sizeof(szLang) - 1;
+            if (RegQueryValueExA(hKey, "Language", nullptr, nullptr, (LPBYTE)szLang, &cbData) == ERROR_SUCCESS && cbData > 1)
+                language = szLang;
+            RegCloseKey(hKey);
+        }
+        return language;
+    }
+
+    // The language setting: only languages whose files are there can be used, and the installer's is stored on the
+    // first start (see LanguageSetting.hpp). Before the registry is redirected.
+    void Startup()
+    {
+        WFPLanguageSetting::Startup(FixSettings(), "LANGUAGE.Language", Entries(), Installer());
+    }
+}
+
+// The game's read of its language gets the language setting; the registry itself isn't changed
+static LSTATUS WINAPI WrapperQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+{
+    LSTATUS result;
+    if (WFPLanguageSetting::AnswerQuery(FixSettings().String("LANGUAGE.Language"), lpValueName, lpType, lpData, lpcbData, result))
+        return result;
+    return RegistryWrapper::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+}
+
+static LSTATUS WINAPI FallbackQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+{
+    LSTATUS result;
+    if (WFPLanguageSetting::AnswerQuery(FixSettings().String("LANGUAGE.Language"), lpValueName, lpType, lpData, lpcbData, result))
+        return result;
+    return RegistryFallback::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+}
+
 class Registry
 {
 public:
@@ -34,9 +117,8 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            bool bWriteSettingsToFile = iniReader.ReadInteger("MISC", "WriteSettingsToFile", 0) != 0;
-            auto szCustomUserFilesDirectoryInGameDir = iniReader.ReadString("MISC", "CustomUserFilesDirectoryInGameDir", "0");
+            bool bWriteSettingsToFile = FixSettings().Bool("MAIN.PortableSettings");
+            auto szCustomUserFilesDirectoryInGameDir = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir");
 
             if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
                 szCustomUserFilesDirectoryInGameDir.clear();
@@ -51,19 +133,12 @@ public:
             mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
             mhSHGetFolderPathA->create();
 
-            static std::string defaultLanguage = "English US";
-
-            HKEY hKeyOrig = nullptr;
-            if (RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Most Wanted", &hKeyOrig) == ERROR_SUCCESS)
-            {
-                char szLang[256] = {};
-                DWORD cbData = sizeof(szLang);
-                if (RegQueryValueExA(hKeyOrig, "Language", nullptr, nullptr, (LPBYTE)szLang, &cbData) == ERROR_SUCCESS && cbData > 1)
-                {
-                    defaultLanguage = szLang;
-                }
-                RegCloseKey(hKeyOrig);
-            }
+            // The installer's language as the redirected registry's default; the game's read of it gets the language
+            // setting (an installed language, which may differ from what the key holds)
+            Language::Startup();
+            static std::string defaultLanguage = Language::Installer();
+            if (defaultLanguage.empty())
+                defaultLanguage = "English US";
 
             auto InstallRegistryInlineHooks = [](
                 decltype(&RegCloseKey)      fRegCloseKey,
@@ -235,7 +310,7 @@ public:
                     std::forward_as_tuple("RegOpenKeyA", RegistryWrapper::RegOpenKeyA),
                     std::forward_as_tuple("RegOpenKeyExA", RegistryWrapper::RegOpenKeyExA),
                     std::forward_as_tuple("RegCreateKeyExA", RegistryWrapper::RegCreateKeyExA),
-                    std::forward_as_tuple("RegQueryValueExA", RegistryWrapper::RegQueryValueExA),
+                    std::forward_as_tuple("RegQueryValueExA", WrapperQueryValueExA),
                     std::forward_as_tuple("RegSetValueExA", RegistryWrapper::RegSetValueExA),
                     std::forward_as_tuple("RegQueryValueA", RegistryWrapper::RegQueryValueA),
                     std::forward_as_tuple("RegDeleteKeyA", RegistryWrapper::RegDeleteKeyA),
@@ -250,7 +325,7 @@ public:
                         RegistryWrapper::RegOpenKeyA,
                         RegistryWrapper::RegOpenKeyExA,
                         RegistryWrapper::RegCreateKeyExA,
-                        RegistryWrapper::RegQueryValueExA,
+                        WrapperQueryValueExA,
                         RegistryWrapper::RegSetValueExA,
                         RegistryWrapper::RegQueryValueA,
                         RegistryWrapper::RegDeleteKeyA,
@@ -303,7 +378,7 @@ public:
                     std::forward_as_tuple("RegOpenKeyA", RegistryFallback::RegOpenKeyA),
                     std::forward_as_tuple("RegOpenKeyExA", RegistryFallback::RegOpenKeyExA),
                     std::forward_as_tuple("RegCreateKeyExA", RegistryFallback::RegCreateKeyExA),
-                    std::forward_as_tuple("RegQueryValueExA", RegistryFallback::RegQueryValueExA),
+                    std::forward_as_tuple("RegQueryValueExA", FallbackQueryValueExA),
                     std::forward_as_tuple("RegSetValueExA", RegistryFallback::RegSetValueExA),
                     std::forward_as_tuple("RegQueryValueA", RegistryFallback::RegQueryValueA),
                     std::forward_as_tuple("RegDeleteKeyA", RegistryFallback::RegDeleteKeyA),
@@ -318,7 +393,7 @@ public:
                         RegistryFallback::RegOpenKeyA,
                         RegistryFallback::RegOpenKeyExA,
                         RegistryFallback::RegCreateKeyExA,
-                        RegistryFallback::RegQueryValueExA,
+                        FallbackQueryValueExA,
                         RegistryFallback::RegSetValueExA,
                         RegistryFallback::RegQueryValueA,
                         RegistryFallback::RegDeleteKeyA,
@@ -327,27 +402,6 @@ public:
                 }
             }
 
-            auto szLanguage = iniReader.ReadString("LANGUAGE", "Language", "");
-            if (!szLanguage.empty())
-            {
-                HKEY hKey = nullptr;
-                if (bWriteSettingsToFile)
-                {
-                    if (RegistryWrapper::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Most Wanted", &hKey) == ERROR_SUCCESS)
-                    {
-                        RegistryWrapper::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
-                        RegistryWrapper::RegCloseKey(hKey);
-                    }
-                }
-                else
-                {
-                    if (RegistryFallback::RegOpenKeyA(HKEY_LOCAL_MACHINE, "Software\\EA Games\\Need for Speed Most Wanted", &hKey) == ERROR_SUCCESS)
-                    {
-                        RegistryFallback::RegSetValueExA(hKey, "Language", 0, REG_SZ, (const BYTE*)szLanguage.c_str(), (DWORD)szLanguage.size() + 1);
-                        RegistryFallback::RegCloseKey(hKey);
-                    }
-                }
-            }
         };
     }
 } Registry;

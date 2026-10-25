@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Unlocks;
 
@@ -8,10 +9,10 @@ import ComVars;
 
 export void InitUnlocks()
 {
-    CIniReader iniReader("");
-    auto bUnlockDLC = iniReader.ReadInteger("UNLOCKS", "UnlockDLC", 1) != 0;
-    static auto bUnlockAllNonCampaignMissions = iniReader.ReadInteger("UNLOCKS", "UnlockAllNonCampaignMissions", 1) != 0;
-    static auto bUnlockAllCampaignMissions = iniReader.ReadInteger("UNLOCKS", "UnlockAllCampaignMissions", 0) != 0;
+    auto& settings = FixSettings();
+    auto bUnlockDLC = settings.Int("UNLOCKS.UnlockDLC") != 0;
+    static auto bUnlockAllNonCampaignMissions = settings.Int("UNLOCKS.UnlockAllNonCampaignMissions") != 0;
+    static auto bUnlockAllCampaignMissions = settings.Int("UNLOCKS.UnlockAllCampaignMissions") != 0;
 
     if (bUnlockDLC)
     {

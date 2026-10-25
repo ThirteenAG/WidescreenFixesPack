@@ -15,7 +15,16 @@ namespace GTA2Camera
     inline Draw4 OriginalDrawTile = nullptr, OriginalDrawTilePart = nullptr, OriginalDrawQuad = nullptr, OriginalDrawTriangle = nullptr;
     inline Draw5 OriginalDrawQuadClipped = nullptr;
     inline void** SlotDrawTile = nullptr, ** SlotDrawTilePart = nullptr, ** SlotDrawQuad = nullptr, ** SlotDrawQuadClipped = nullptr, ** SlotDrawTriangle = nullptr;
-    inline SafetyHookInline LoaderHook, ProjectionHook, LayersHook;
+    inline SafetyHookInline LoaderHook, ProjectionHook, LayersHook, ScoreHook;
+    inline bool DrawingScore = false;
+    inline int __fastcall DrawScore(void* score, int, int digit, int offset)
+    {
+        const bool previous = DrawingScore;
+        DrawingScore = true;
+        auto result = ScoreHook.thiscall<int>(score, digit, offset);
+        DrawingScore = previous;
+        return result;
+    }
     inline std::array<SafetyHookInline, 2> WorldToScreenHooks;
     inline SafetyHookMid FrameHook, ArrowHook;
     inline void* (__fastcall* GetCurrentPed)(void*, int) = nullptr;
@@ -74,13 +83,13 @@ namespace GTA2Camera
     inline int __stdcall DrawQuad(uint32_t flags, uint32_t texture, float* vertices, uint32_t extra)
     {
         // 0x20000 marks interface quads: HUD, text and menus stay upright.
-        if (!Active || !vertices || (flags & 0x20000)) return OriginalDrawQuad(flags, texture, vertices, extra);
+        if (!Active || !vertices || DrawingScore || (flags & 0x20000)) return OriginalDrawQuad(flags, texture, vertices, extra);
         float copy[32]; RotateVertices(vertices, copy, 4);
         return OriginalDrawQuad(flags, texture, copy, extra);
     }
     inline int __stdcall DrawQuadClipped(uint32_t flags, uint32_t texture, float* vertices, uint32_t extra, uint32_t clip)
     {
-        if (!Active || !vertices || (flags & 0x20000)) return OriginalDrawQuadClipped(flags, texture, vertices, extra, clip);
+        if (!Active || !vertices || DrawingScore || (flags & 0x20000)) return OriginalDrawQuadClipped(flags, texture, vertices, extra, clip);
         float copy[32]; RotateVertices(vertices, copy, 4);
         return OriginalDrawQuadClipped(flags, texture, copy, extra, clip);
     }
@@ -267,6 +276,14 @@ namespace GTA2Camera
         RotateProjected(outX, outY);
         return result;
     }
+    inline int __fastcall WorldToScreen1(void* camera, int, int x, int y, int z, int* outX, int* outY)
+    {
+        auto result = WorldToScreenHooks[1].thiscall<int>(camera, x, y, z, outX, outY);
+        // Score glyphs are screen-facing: rotate the world anchor before the
+        // native digit layout and clipping, then leave their quads upright.
+        if (DrawingScore) RotateProjected(outX, outY);
+        return result;
+    }
 
     inline void KeyDown(WPARAM key)
     {
@@ -283,7 +300,7 @@ namespace GTA2Camera
         {
             int width = *reinterpret_cast<int*>(camera + 0x68), height = *reinterpret_cast<int*>(camera + 0x6C);
             if (width > 0 && height > 0) { CenterX = width * 0.5f; CenterY = height * 0.5f; }
-            Expand = float(std::sqrt(1.0 + double(CenterY) * CenterY / (double(CenterX) * CenterX))) * RangeScale;
+            Expand = float(std::sqrt(1.0 + double(CenterY) * CenterY / (double(CenterX) * CenterX)));
         }
         LARGE_INTEGER counter{}; QueryPerformanceCounter(&counter);
         double elapsed = LastFrame && Frequency ? (counter.QuadPart - LastFrame) / Frequency : 0.0;
@@ -356,18 +373,27 @@ namespace GTA2Camera
         return nullptr;
     }
 
-    inline void Install(CIniReader& ini)
+    inline void Read(SettingsReader& ini)
     {
         Enabled = ini.ReadBoolean("CAMERA", "RotateWithPlayer", true);
         RotateVehicle = ini.ReadBoolean("CAMERA", "RotateInVehicles", true);
         RotateFoot = ini.ReadBoolean("CAMERA", "RotateOnFoot", false);
         Smoothing = std::clamp(ini.ReadFloat("CAMERA", "RotationSmoothing", 0.35f), 0.0f, 2.0f);
         ToggleKey = ini.ReadInteger("CAMERA", "ToggleRotationKey", VK_F6);
-        RangeScale = std::clamp(ini.ReadFloat("CAMERA", "RangeScale", 1.0f), 0.5f, 4.0f);
+        RangeScale = std::clamp(ini.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.0f);
         SmoothFollow = ini.ReadBoolean("CAMERA", "SmoothFollow", true);
         FollowTime = std::clamp(ini.ReadFloat("CAMERA", "FollowTime", 0.25f), 0.0f, 2.0f);
         HeightTime = std::clamp(ini.ReadFloat("CAMERA", "HeightTime", 0.35f), 0.0f, 3.0f);
         MaxLead = std::clamp(ini.ReadFloat("CAMERA", "MaxLookAhead", 0.5f), 0.0f, 1.0f);
+    }
+
+    inline void Install(SettingsReader& ini)
+    {
+        // Changes from FusionFixHub or a preset apply at once, as from the in-game options
+        Read(ini);
+        for (auto id : { "CAMERA.RotateWithPlayer", "CAMERA.RotateInVehicles", "CAMERA.RotateOnFoot", "CAMERA.RotationSmoothing",
+            "CAMERA.ToggleRotationKey", "MAIN.FOVFactor", "CAMERA.SmoothFollow", "CAMERA.FollowTime", "CAMERA.HeightTime", "CAMERA.MaxLookAhead" })
+            FixSettings().OnChange(id, [] { SettingsReader ini(""); Read(ini); });
         LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency); Frequency = double(frequency.QuadPart);
 
         auto projection = hook::pattern("83 EC 10 53 55 56 8B F1 57 8D 44 24 14 8B 4E 68 8D BE A4 00 00 00");
@@ -401,9 +427,16 @@ namespace GTA2Camera
         RangeFactor = *range.get_first<int*>(1);
         LoaderHook = safetyhook::create_inline(loader.get_first(), LoadRenderer);
         LayersHook = safetyhook::create_inline(layers.get_first(), DrawLayers);
-        // Only the copy used for labels and on-screen tests: the other one feeds
-        // arrows and money pops, which are world quads the draw hook already turns.
+        // Labels always rotate their anchors. Arrows still rotate at the draw
+        // hook; score pop-ups rotate only their anchors, keeping text readable.
         WorldToScreenHooks[0] = safetyhook::create_inline(world.get(0).get<void>(), WorldToScreen0);
+        auto score = hook::pattern("A1 ? ? ? ? 83 EC 10 53 55 8B 68 38 8B 44 24 1C 56 81 C5 4C 01 00 00 57 48 8B F9 74 04 33 F6 EB 05 BE 04 00 00 00");
+        if (score.size() == 1 && world.size() == 2)
+        {
+            ScoreHook = safetyhook::create_inline(score.get_first(), DrawScore);
+            WorldToScreenHooks[1] = safetyhook::create_inline(world.get(1).get<void>(), WorldToScreen1);
+        }
+        else Log::Write("GTA2 rotating score signature unavailable.");
         FrameHook = safetyhook::create_mid(frame.get_first(), [](SafetyHookContext& context)
         {
             Frame(reinterpret_cast<void*>(context.ecx));

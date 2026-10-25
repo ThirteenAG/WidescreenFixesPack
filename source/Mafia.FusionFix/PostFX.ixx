@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module PostFX;
@@ -38,9 +39,8 @@ export IDirect3DDevice9* GetDevice9()
 
 export void InitPostFX()
 {
-    CIniReader iniReader("");
-    CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 0) != 0;
-    CPostFX::bSmaaEnabled = iniReader.ReadInteger("GRAPHICS", "SMAA", 0) != 0;
+    CPostFX::bConsoleGammaEnabled = FixSettings().Bool("GRAPHICS.ConsoleGamma") != 0;
+    CPostFX::bSmaaEnabled = FixSettings().Bool("GRAPHICS.AntiAliasing") != 0;
 
     InitDevicePointer();
 

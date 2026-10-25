@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module TransparentMenu;
@@ -21,8 +23,7 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            auto bTransparentMenu = iniReader.ReadInteger("GRAPHICS", "TransparentMenu", 0) != 0;
+            auto bTransparentMenu = FixSettings().Bool("GRAPHICS.TransparentMenu");
 
             if (!bTransparentMenu)
                 return;
@@ -35,6 +36,11 @@ public:
             }
 
             auto pattern = hook::pattern("E8 ? ? ? ? 83 7C 24 ? ? 59 75 ? 83 C4");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto captureHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&)
             {
                 static bool wasMenuActive = false;

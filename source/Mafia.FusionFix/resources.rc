@@ -1,0 +1,6 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/Mafia/en.json"
+fr ASISETTINGS_TEXT "../../text/Mafia/fr.json"
+de ASISETTINGS_TEXT "../../text/Mafia/de.json"
+it ASISETTINGS_TEXT "../../text/Mafia/it.json"
+es ASISETTINGS_TEXT "../../text/Mafia/es.json"

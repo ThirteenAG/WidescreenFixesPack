@@ -9,6 +9,13 @@ import Settings;
 
 namespace
 {
+    // The pattern's first match, nullptr when it isn't found (a game update changed the code)
+    uint8_t* FindFirst(std::string_view signature, ptrdiff_t offset = 0)
+    {
+        auto pattern = hook::pattern(signature);
+        return pattern.empty() ? nullptr : pattern.get_first<uint8_t>(offset);
+    }
+
     std::vector<SafetyHookMid> profileHooks;
     int* carZoomCount = nullptr;
     int PedZoom(uintptr_t camera)
@@ -31,19 +38,22 @@ public:
             if (!Settings.restoreOriginalCamera)
                 return;
             const std::array sites{
-                hook::pattern("0F 2E 9B 48 01 00 00 F3 0F 11 9B 38 01 00 00 74 ? 8B 05 ? ? ? ? 0F").get_first(),
-                hook::pattern("E8 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00 B9 0A 00 00 00 E8 ? ? ? ? 0F 28 7C 24 20 84 C0").get_first(),
-                hook::pattern("E8 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00 EB ? E8 ? ? ? ? 84 C0 74 ? 8B 83 34 01 00 00").get_first(),
-                hook::pattern("E8 ? ? ? ? 48 8B 0D ? ? ? ? 48 8B 7C 24 58 48 85 C9 74 ? 48 8B").get_first(),
-                hook::pattern("0F 84 ? ? ? ? 80 7B 76 00 0F 85 ? ? ? ? 80 7B 67 00 48 89 74 24").get_first(),
-                hook::pattern("B8 01 00 00 00 0F 44 D0 8B 89 4C 01 00 00 33 FF 83 FA 05 8B F7 0F 45 F2").get_first(),
-                hook::pattern("0F 45 F2 3B CE 0F 84 ? ? ? ? 8B 05 ? ? ? ? 0F 57 C0 F3 48 0F 2A").get_first(),
-                hook::pattern("75 ? B8 01 00 00 00 66 89 05 ? ? ? ? 0F 2E A3 60 01 00 00 74 ? 8B").get_first(),
-                hook::pattern("75 ? 44 88 7E 6B 44 38 76 71 75 ? 66 83 FB 2C 77 ? 48 B9 80 09 80 30").get_first(),
-                hook::pattern("F3 0F 11 A3 50 01 00 00 75 ? 85 C9 75 ? 8D 41 10 EB ? 3B 0D ? ? ?").get_first()};
+                FindFirst("0F 2E 9B 48 01 00 00 F3 0F 11 9B 38 01 00 00 74 ? 8B 05 ? ? ? ? 0F"),
+                FindFirst("E8 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00 B9 0A 00 00 00 E8 ? ? ? ? 0F 28 7C 24 20 84 C0"),
+                FindFirst("E8 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00 EB ? E8 ? ? ? ? 84 C0 74 ? 8B 83 34 01 00 00"),
+                FindFirst("E8 ? ? ? ? 48 8B 0D ? ? ? ? 48 8B 7C 24 58 48 85 C9 74 ? 48 8B"),
+                FindFirst("0F 84 ? ? ? ? 80 7B 76 00 0F 85 ? ? ? ? 80 7B 67 00 48 89 74 24"),
+                FindFirst("B8 01 00 00 00 0F 44 D0 8B 89 4C 01 00 00 33 FF 83 FA 05 8B F7 0F 45 F2"),
+                FindFirst("0F 45 F2 3B CE 0F 84 ? ? ? ? 8B 05 ? ? ? ? 0F 57 C0 F3 48 0F 2A"),
+                FindFirst("75 ? B8 01 00 00 00 66 89 05 ? ? ? ? 0F 2E A3 60 01 00 00 74 ? 8B"),
+                FindFirst("75 ? 44 88 7E 6B 44 38 76 71 75 ? 66 83 FB 2C 77 ? 48 B9 80 09 80 30"),
+                FindFirst("F3 0F 11 A3 50 01 00 00 75 ? 85 C9 75 ? 8D 41 10 EB ? 3B 0D ? ? ?")};
             if (std::any_of(sites.begin(), sites.end(), [](auto p) { return !p; }))
                 return;
-            carZoomCount = reinterpret_cast<int*>((injector::ReadRelativeOffset(hook::pattern("C7 05 ? ? ? ? 05 00 00 00 0F 84 ? ? ? ? 80 7B 76 00 0F 85 ? ?").get_first<uint8_t>(2)).as_int() + 4));
+            const auto zoomCountOperand = FindFirst("C7 05 ? ? ? ? 05 00 00 00 0F 84 ? ? ? ? 80 7B 76 00 0F 85 ? ?", 2);
+            if (!zoomCountOperand)
+                return;
+            carZoomCount = reinterpret_cast<int*>(injector::ReadRelativeOffset(zoomCountOperand).as_int() + 4);
             profileHooks.push_back(safetyhook::create_mid(sites[0], [](SafetyHookContext& c)
             {
                 // re3: MaxDist = 2 + {0.25, 1.5, 2.9}. DE's native
@@ -80,7 +90,7 @@ public:
             {
                 // 0 first person, 1/2/3 follow, 4 top-down, 5 cinematic,
                 // 6 wraps to first person. Both extra table entries are zero.
-                *carZoomCount = 6;
+                ProtectedGameRef<int>{carZoomCount} = 6;
             }));
             profileHooks.push_back(safetyhook::create_mid(sites[5], [](SafetyHookContext& c)
             {

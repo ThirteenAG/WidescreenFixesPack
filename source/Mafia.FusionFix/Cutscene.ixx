@@ -112,6 +112,11 @@ namespace Cutscene
     }
 }
 
+export bool IsCutsceneCamera()
+{
+    return Cutscene::IsActive();
+}
+
 export float GetCameraFovScale()
 {
     // As in the GTA fixes, border preferences and their animation never animate

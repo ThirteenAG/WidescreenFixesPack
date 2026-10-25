@@ -1,0 +1,105 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "The Godfather",
+        "exe": [
+          "godfather.exe",
+          "godfather_German.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.PreferWidescreenResolutions",
+      "type": "bool",
+      "default": 1,
+      "label": "@PreferWidescreenResolutions",
+      "description": "@PreferWidescreenResolutions.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "camera",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "live",
+      "visibility": "editor",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <cmath>
 
 export module DrawDistance;
@@ -38,23 +39,23 @@ export void InitDrawDistance()
 
     if ((300.0f > fDrawDistanceMin) && (300.0f < fDrawDistanceMax))
     {
-        injector::WriteMemory(pDrawDistValue.get_first(0x1), fDrawDistance, true);
+        ProtectedGameRef<std::remove_cvref_t<decltype(fDrawDistance)>>{pDrawDistValue.get_first<std::remove_cvref_t<decltype(fDrawDistance)>>(0x1)} = fDrawDistance;
     }
 
     if (nGameVersion == MAFIA_1_0_ENG)
     {
-        injector::WriteMemory(pDrawDistValue1.get_first(0x1), drawDistValue1, true);
+        ProtectedGameRef<std::remove_cvref_t<decltype(drawDistValue1)>>{pDrawDistValue1.get_first<std::remove_cvref_t<decltype(drawDistValue1)>>(0x1)} = drawDistValue1;
 
-        injector::WriteMemory(pDrawDistValue2.get_first(0x2), &drawDistValue2, true);
-        injector::WriteMemory(pDrawDistValue22.get_first(0x2), &drawDistValue2, true);
-        injector::WriteMemory(pDrawDistValue23.get_first(0x2), &drawDistValue2, true);
-        injector::WriteMemory(pDrawDistValue24.get_first(0x2), &drawDistValue2, true);
-        injector::WriteMemory(pDrawDistValue25.get_first(0x2), &drawDistValue2, true);
+        ProtectedGameRef<std::remove_cvref_t<decltype(&drawDistValue2)>>{pDrawDistValue2.get_first<std::remove_cvref_t<decltype(&drawDistValue2)>>(0x2)} = &drawDistValue2;
+        ProtectedGameRef<std::remove_cvref_t<decltype(&drawDistValue2)>>{pDrawDistValue22.get_first<std::remove_cvref_t<decltype(&drawDistValue2)>>(0x2)} = &drawDistValue2;
+        ProtectedGameRef<std::remove_cvref_t<decltype(&drawDistValue2)>>{pDrawDistValue23.get_first<std::remove_cvref_t<decltype(&drawDistValue2)>>(0x2)} = &drawDistValue2;
+        ProtectedGameRef<std::remove_cvref_t<decltype(&drawDistValue2)>>{pDrawDistValue24.get_first<std::remove_cvref_t<decltype(&drawDistValue2)>>(0x2)} = &drawDistValue2;
+        ProtectedGameRef<std::remove_cvref_t<decltype(&drawDistValue2)>>{pDrawDistValue25.get_first<std::remove_cvref_t<decltype(&drawDistValue2)>>(0x2)} = &drawDistValue2;
     }
     else
     {
-        injector::WriteMemory(pDrawDistValue12.get_first(0x4), drawDistValue1, true);
+        ProtectedGameRef<std::remove_cvref_t<decltype(drawDistValue1)>>{pDrawDistValue12.get_first<std::remove_cvref_t<decltype(drawDistValue1)>>(0x4)} = drawDistValue1;
 
-        injector::WriteMemory(pDrawDistValue26.get_first(0x4), drawDistValue2, true);
+        ProtectedGameRef<std::remove_cvref_t<decltype(drawDistValue2)>>{pDrawDistValue26.get_first<std::remove_cvref_t<decltype(drawDistValue2)>>(0x4)} = drawDistValue2;
     }
 }

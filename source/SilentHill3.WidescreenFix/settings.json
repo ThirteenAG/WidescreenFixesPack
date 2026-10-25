@@ -1,0 +1,763 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Silent Hill 3",
+        "exe": [
+          "sh3.exe"
+        ],
+        "launcher": [
+          "SH3Config.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "aa",
+      "title": "@page.aa",
+      "section": "graphics"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "gameplay"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "label": "@cutsceneborders",
+      "description": "@cutsceneborders.description",
+      "page": "display",
+      "group": "@group.cutscenes",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@cutsceneborders.0"
+        },
+        {
+          "value": 1,
+          "label": "@cutsceneborders.1"
+        },
+        {
+          "value": 2,
+          "label": "@cutsceneborders.2"
+        },
+        {
+          "value": 3,
+          "label": "@cutsceneborders.3"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@movies.original"
+        },
+        {
+          "value": 1,
+          "label": "@movies.fill"
+        },
+        {
+          "value": 2,
+          "label": "@movies.stretch"
+        }
+      ],
+      "label": "@movies",
+      "description": "@movies.description",
+      "page": "display",
+      "group": "@group.cutscenes",
+      "control": [
+        "cycler",
+        "segmented"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FullscreenImages",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@images.original"
+        },
+        {
+          "value": 1,
+          "label": "@images.fill"
+        }
+      ],
+      "label": "@images",
+      "description": "@images.description",
+      "page": "display",
+      "group": "@group.cutscenes",
+      "control": [
+        "cycler",
+        "segmented"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 16384,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@desktop"
+        }
+      ],
+      "label": "@resx",
+      "description": "@resx.description",
+      "page": "display",
+      "group": "@group.resolution",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 16384,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@desktop"
+        }
+      ],
+      "label": "@resy",
+      "description": "@resy.description",
+      "page": "display",
+      "group": "@group.resolution",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.RenderResX",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 16384,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@desktop"
+        }
+      ],
+      "label": "@renderresx",
+      "description": "@renderresx.description",
+      "page": "display",
+      "group": "@group.resolution",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.RenderResY",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 16384,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@desktop"
+        }
+      ],
+      "label": "@renderresy",
+      "description": "@renderresy.description",
+      "page": "display",
+      "group": "@group.resolution",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "CAMERA.Camera",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@camera.classic"
+        },
+        {
+          "value": 1,
+          "label": "@camera.modern"
+        }
+      ],
+      "label": "@camera",
+      "description": "@camera.description",
+      "page": "camera",
+      "control": [
+        "cycler",
+        "segmented"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "CAMERA.CameraSpeed",
+      "type": "float",
+      "default": 8,
+      "min": 1,
+      "max": 16,
+      "step": 1,
+      "decimals": 0,
+      "label": "@cameraspeed",
+      "description": "@cameraspeed.description",
+      "page": "camera",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.Camera",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.InvertCamera",
+      "type": "bool",
+      "default": 0,
+      "label": "@invertcamera",
+      "description": "@invertcamera.description",
+      "page": "camera",
+      "enabledIf": {
+        "setting": "CAMERA.Camera",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.CameraDistance",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@cameradistance.near"
+        },
+        {
+          "value": 1,
+          "label": "@cameradistance.normal"
+        },
+        {
+          "value": 2,
+          "label": "@cameradistance.far"
+        }
+      ],
+      "label": "@cameradistance",
+      "description": "@cameradistance.description",
+      "page": "camera",
+      "control": [
+        "cycler",
+        "segmented"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.Camera",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.FieldOfView",
+      "type": "float",
+      "default": 60,
+      "min": 40,
+      "max": 80,
+      "step": 5,
+      "decimals": 0,
+      "unit": "°",
+      "label": "@fov",
+      "description": "@fov.description",
+      "page": "camera",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.Camera",
+        "equals": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.ShadowResolution",
+      "type": "int",
+      "default": 1024,
+      "min": 0,
+      "max": 4096,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@original"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 512
+        },
+        {
+          "value": 1024
+        },
+        {
+          "value": 2048
+        },
+        {
+          "value": 4096
+        }
+      ],
+      "label": "@shadowsres",
+      "description": "@shadowsres.description",
+      "page": "graphics",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1024,
+        "enhanced": 2048
+      }
+    },
+    {
+      "id": "GRAPHICS.DOFRes",
+      "type": "int",
+      "default": 1024,
+      "min": 0,
+      "max": 4096,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@original"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 512
+        },
+        {
+          "value": 1024
+        },
+        {
+          "value": 2048
+        }
+      ],
+      "label": "@dofres",
+      "description": "@dofres.description",
+      "page": "graphics",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1024,
+        "enhanced": 2048
+      }
+    },
+    {
+      "id": "GRAPHICS.StatusScreenRes",
+      "type": "int",
+      "default": 512,
+      "min": 0,
+      "max": 2048,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@original"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 256
+        },
+        {
+          "value": 512
+        },
+        {
+          "value": 1024
+        }
+      ],
+      "label": "@statusres",
+      "description": "@statusres.description",
+      "page": "graphics",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 512,
+        "enhanced": 1024
+      }
+    },
+    {
+      "id": "GRAPHICS.FogComplexity",
+      "type": "int",
+      "default": 75,
+      "min": 0,
+      "max": 100,
+      "special": [
+        {
+          "value": 0,
+          "label": "@original"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 50
+        },
+        {
+          "value": 75
+        },
+        {
+          "value": 100
+        }
+      ],
+      "label": "@fog",
+      "description": "@fog.description",
+      "page": "graphics",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 75,
+        "enhanced": 100
+      }
+    },
+    {
+      "id": "GRAPHICS.AnisotropicFiltering",
+      "type": "choice",
+      "default": 16,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 2,
+          "label": "2x"
+        },
+        {
+          "value": 4,
+          "label": "4x"
+        },
+        {
+          "value": 8,
+          "label": "8x"
+        },
+        {
+          "value": 16,
+          "label": "16x"
+        }
+      ],
+      "label": "@anisotropy",
+      "description": "@anisotropy.description",
+      "page": "graphics",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 16,
+        "enhanced": 16
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@intro.show"
+        },
+        {
+          "value": 1,
+          "label": "@intro.skip"
+        }
+      ],
+      "label": "@intro",
+      "description": "@intro.description",
+      "page": "game",
+      "control": [
+        "cycler",
+        "segmented"
+      ],
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SH2Reference",
+      "type": "bool",
+      "default": 1,
+      "label": "@sh2reference",
+      "description": "@sh2reference.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "recommended": 1,
+        "enhanced": 1,
+        "vanilla": 0
+      }
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "Auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@textlanguage",
+      "description": "@textlanguage.description",
+      "page": "compatibility",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.GraphicsAPI",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "Direct3D 8 (d3d8to9)"
+        },
+        {
+          "value": 1,
+          "label": "Vulkan (DXVK)"
+        }
+      ],
+      "label": "@sh3.api",
+      "description": "@sh3.api.description",
+      "page": "aa",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "restart"
+    },
+    {
+      "id": "GRAPHICS.AntiAliasing",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "Off"
+        },
+        {
+          "value": 1,
+          "label": "TAA"
+        },
+        {
+          "value": 2,
+          "label": "DLAA"
+        },
+        {
+          "value": 3,
+          "label": "FSR"
+        }
+      ],
+      "label": "@sh3.aa",
+      "description": "@sh3.aa.description",
+      "page": "aa",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.Sharpness",
+      "type": "float",
+      "default": 0.0,
+      "min": 0.0,
+      "max": 100.0,
+      "step": 5.0,
+      "label": "@sh3.sharpness",
+      "description": "@sh3.sharpness.description",
+      "page": "aa",
+      "apply": "live",
+      "control": [
+        "slider",
+        "stepper"
+      ],
+      "presets": {
+        "vanilla": 0.0,
+        "recommended": 0.0,
+        "enhanced": 0.0
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@fovfactor",
+      "description": "@fovfactor.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "label": "@displaymode",
+      "description": "@displaymode.description",
+      "page": "display",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@displaymode.fullscreen"
+        },
+        {
+          "value": 1,
+          "label": "@displaymode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@displaymode.borderless"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@hudconstraint",
+      "description": "@hudconstraint.description",
+      "page": "display",
+      "apply": "live",
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "editor",
+      "apply": "live"
+    }
+  ]
+}

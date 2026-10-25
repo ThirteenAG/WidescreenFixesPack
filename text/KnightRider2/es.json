@@ -1,0 +1,14 @@
+{
+  "plugin.name": "Knight Rider 2 Widescreen Fix",
+  "page.display": "Pantalla",
+  "page.camera": "Cámara",
+  "page.advanced": "Avanzado",
+  "ResX": "Ancho de resolución",
+  "ResX.description": "Ancho de salida en píxeles. Cero usa la resolución del escritorio. Se aplica tras reiniciar.",
+  "ResY": "Alto de resolución",
+  "ResY.description": "Alto de salida en píxeles. Cero usa la resolución del escritorio. Se aplica tras reiniciar.",
+  "FOVFactor": "Factor de campo de visión",
+  "FOVFactor.description": "Multiplica el campo de visión corregido. 1.0 mantiene el encuadre previsto; valores mayores amplían la vista. Se aplica al instante.",
+  "FixFMV": "Corregir vídeos",
+  "FixFMV.description": "Centra los vídeos en sus proporciones originales de 4:3, con bandas negras cuando sea necesario. Se aplica tras reiniciar."
+}

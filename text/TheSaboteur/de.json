@@ -1,0 +1,19 @@
+{
+  "plugin.name": "The Saboteur Fusion Fix",
+  "page.display": "Anzeige",
+  "page.graphics": "Grafik",
+  "FixFOV": "Breitbild-Sichtfeld",
+  "FixFOV.description": "Verbreitert das Sichtfeld der Kamera auf Bildschirmen breiter als 4:3 (Hor+).",
+  "WindowMode": "Fenstermodus",
+  "WindowMode.description": "Das Fenster, wenn die Vollbild-Option des Spiels aus ist: mit Rahmen oder randlos. Ein bildschirmgroßes Fenster hat seinen Rahmen außerhalb des Bildschirms.",
+  "WindowMode.windowed": "Fenster",
+  "WindowMode.borderless": "Randlos",
+  "FPSLimit": "Bildratenbegrenzung",
+  "FPSLimit.description": "Begrenzt die Bildrate; die Timing-Korrekturen des Fixes für Fahren, Uhr und Maus richten sich danach. 0 entfernt die Grenze und diese Korrekturen.",
+  "ConsoleGamma": "Konsolen-Gamma",
+  "ConsoleGamma.description": "Verwendet das Gamma der Xbox-360-Version.",
+  "AntiAliasing": "Kantenglättung",
+  "AntiAliasing.description": "SMAA-Kantenglättung, vor dem HUD angewendet.",
+  "AntiAliasing.off": "Aus",
+  "AntiAliasing.smaa": "SMAA"
+}

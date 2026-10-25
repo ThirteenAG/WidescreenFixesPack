@@ -1,11 +1,13 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module Misc;
 
 import ComVars;
+import Input;
 
 namespace MoviePlayback
 {
@@ -34,21 +36,104 @@ namespace MoviePlayback
     }
 }
 
+// Frame rate. The game simulates in fixed steps of 1/60 s and has no frame rate limit, so above 60 FPS
+// some frames got no simulation step and the game stuttered. The step is set to the frame rate limit,
+// frames are paced to it, and every frame gets one step.
+namespace FrameRate
+{
+    float fStepTime = 1.0f / 60.0f;
+    float fStepRate = 60.0f;
+
+    void PreciseWaitUntil(LARGE_INTEGER target)
+    {
+        static LARGE_INTEGER frequency = []() { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
+        static HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        double seconds = double(target.QuadPart - now.QuadPart) / double(frequency.QuadPart);
+
+        constexpr double SpinTime = 0.0015;
+        if (seconds > SpinTime)
+        {
+            LARGE_INTEGER due;
+            due.QuadPart = -static_cast<LONGLONG>((seconds - SpinTime) * 10000000.0);
+            if (timer && SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
+                WaitForSingleObject(timer, INFINITE);
+            else
+                Sleep(static_cast<DWORD>((seconds - SpinTime) * 1000.0));
+        }
+
+        do
+        {
+            YieldProcessor();
+            QueryPerformanceCounter(&now);
+        } while (now.QuadPart < target.QuadPart);
+    }
+
+    // Called before every frame is shown
+    void LimitFrameRate()
+    {
+        static LARGE_INTEGER frequency = []() { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
+        static LARGE_INTEGER next = {};
+
+        LONGLONG period = static_cast<LONGLONG>(double(frequency.QuadPart) * fStepTime);
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        if (next.QuadPart == 0 || now.QuadPart - next.QuadPart > period * 4)
+        {
+            // First frame, or far behind after a hitch or loading
+            next.QuadPart = now.QuadPart + period;
+            return;
+        }
+
+        PreciseWaitUntil(next);
+        next.QuadPart += period;
+    }
+
+    // Sim::Service(dt) runs a step for every whole step time that has passed. With dt close to one
+    // step, timing noise gave 0 or 2 steps instead of 1. The time is rounded to the nearest step here;
+    // the difference is carried over, so the simulation keeps real time within half a step.
+    int32_t* SimActive = nullptr;
+    float* Accumulator = nullptr;
+    float Carry = 0.0f;
+
+    void PrepareStep(float& dt)
+    {
+        if (!*SimActive)
+        {
+            Carry = 0.0f;
+            return;
+        }
+
+        float previous = *Accumulator;
+        float due = previous + dt + Carry;
+        int steps = static_cast<int>(std::floor(due / fStepTime + 0.5f));
+        if (steps <= 0)
+        {
+            Carry = 0.0f;
+            dt = due - previous;
+            return;
+        }
+
+        // A little more than the steps, so that the game's truncation gives exactly this many
+        float target = (static_cast<float>(steps) + 0.001f) * fStepTime;
+        Carry = due - target;
+        dt = target - previous;
+    }
+}
+
 class Misc
 {
 public:
     Misc()
     {
-        WFP::onInitEventAsync() += []()
+        WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
-            bool bExperimentalCrashFix = iniReader.ReadInteger("MISC", "CrashFix", 1) != 0;
-            bool bMoviePlaybackFix = iniReader.ReadInteger("MISC", "MoviePlaybackFix", 1) != 0;
-            SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
-            bool bCarShadowFix = iniReader.ReadInteger("GRAPHICS", "CarShadowFix", 1) != 0;
+            bool bSkipIntro = FixSettings().Bool("MAIN.SkipIntro");
+            int nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
 
-            if (bMoviePlaybackFix)
+            // Movies could start silent and then freeze
             {
                 auto audioPattern = hook::pattern("8B 8E 80 01 00 00 3B CB 74 ? E8 ? ? ? ? 85 C0 7E ? FF 76 44"); // 0x888908
                 auto statePattern = hook::pattern("8B 8E 5C 01 00 00 E8 ? ? ? ? 83 F8 02 74 ? 8B 8E 5C 01 00 00"); // 0x88883E
@@ -61,145 +146,115 @@ public:
                 }
             }
 
-            if (bCarShadowFix)
+            // Car shadow opacity of the Xbox 360 version
             {
                 uint32_t* dword_7BEA3A = hook::pattern("D8 05 ? ? ? ? DC C0 E8 ? ? ? ? 85 C0 7F 04 33 C0").count(1).get(0).get<uint32_t>(2);
                 static float f60 = 60.0f;
                 injector::WriteMemory(dword_7BEA3A, &f60, true);
             }
 
-            if (bSkipIntro)
+            // EA Nation is gone: the game no longer logs in by itself, which showed "Connecting to EA Nation"
             {
-                static auto counter = 0;
-                static auto og_value = 0;
-                auto pattern = hook::pattern("8B 0D ? ? ? ? 53 33 DB 3B CB ? ? 8B 47 04");
-                static uint32_t* dword_A9E6D8 = *pattern.get_first<uint32_t*>(2);
-                struct SkipIntroHook
-                {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        if (counter < 3)
-                        {
-                            if (counter == 0)
-                                og_value = *dword_A9E6D8;
-                            *dword_A9E6D8 = 1;
-                            counter++;
-                        }
-                        else
-                        {
-                            *dword_A9E6D8 = og_value;
-                        }
-
-                        regs.ecx = *(uint32_t*)dword_A9E6D8;
-                    }
-                }; injector::MakeInline<SkipIntroHook>(pattern.get_first(0), pattern.get_first(6));;
+                auto pattern = hook::pattern("A0 ? ? ? ? 84 C0 74 34 A0 ? ? ? ? 84 C0 75 2B E8");
+                if (!pattern.empty())
+                    injector::WriteMemory<uint8_t>(pattern.get_first(7), 0xEB, true); // jz -> jmp
             }
 
-            if (bExperimentalCrashFix)
+            // Saved progress could be lost after loading a profile, often followed by a crash. Every saveable
+            // block (GameplayData, RaceData, FEPlayerCarDB) is stored and found again under an id read from
+            // +0x10 of its object, but the constructors put the name hash at +0xC: the id is whatever malloc
+            // left there, so on newer Windows it rarely matched when loading. The blocks have different sizes,
+            // so MemcardManager::LoadSaveData finds them by size alone.
             {
                 auto pattern = hook::pattern("75 0B 8B 06 8B CE FF 50 14 3B D8"); //0x59606D
                 if (!pattern.empty())
                     injector::MakeNOP(pattern.get_first(0), 2, true);
-
-                pattern = hook::pattern("74 20 8B 44 24 20 8B 55 00 6A 00 50 6A 00"); //0x5960A9
-                if (!pattern.empty())
-                    injector::MakeNOP(pattern.get_first(0), 2, true);
             }
 
-            if (SimRate)
+            if (bSkipIntro)
             {
-                if (SimRate < 0)
+                // The intro movies: the EA logo, the PSA and the attract movie are skipped as if the game's
+                // own "skip movies" setting was on. The movie play message holds the movie's name at +0x24.
+                auto pattern = hook::pattern("8B 0D ? ? ? ? 53 33 DB 3B CB ? ? 8B 47 04");
+                static uint32_t* pSkipMovies = *pattern.get_first<uint32_t*>(2);
+                struct SkipIntroHook
                 {
-                    if (SimRate == -1)
-                        SimRate = GetDesktopRefreshRate();
-                    else if (SimRate == -2)
-                        SimRate = GetDesktopRefreshRate() * 2;
-                    else
-                        SimRate = 60;
-                }
+                    void operator()(injector::reg_pack& regs)
+                    {
+                        regs.ecx = *pSkipMovies;
 
-                // this shouldn't be necessary - if the game frametime/rate is matched with the sim frametime/rate, then everything is fine.
-                // limit rate to avoid issues...
-                //if (SimRate > 360)
-                //    SimRate = 360;
-                //if (SimRate < 60)
-                //    SimRate = 60;
+                        auto name = *reinterpret_cast<const char**>(regs.eax + 0x24);
+                        if (name)
+                        {
+                            for (auto movie : { "EAHD_Bumper", "PSA_", "Attract" })
+                            {
+                                if (_strnicmp(name, movie, strlen(movie)) == 0)
+                                    regs.ecx = 1;
+                            }
+                        }
+                    }
+                }; injector::MakeInline<SkipIntroHook>(pattern.get_first(0), pattern.get_first(6));
 
-                static float FrameTime = 1.0f / SimRate;
-                static float fSimRate = (float)SimRate;
-
-                // Frame times
-                // PrepareRealTimestep() NTSC video mode frametime, .rdata
-                //float* flt_9CBC14 = *hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").count(1).get(0).get<float*>(53); //0x006B4CFB
-                uint32_t* dword_6B4D30 = hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").count(1).get(0).get<uint32_t>(53); //0x006B4CFB
-                // MainLoop frametime (FPS lock) .text
-                float* flt_6B79E3 = hook::pattern("C7 44 24 1C 89 88 88 3C").count(1).get(0).get<float>(4); //0x6B79DF
-                // FullSpeedMode frametime (10x speed) .text
-                float* flt_6B79F4 = hook::pattern("C7 44 24 1C AB AA 2A 3E").count(1).get(0).get<float>(4); //0x6B79F0
-                // Unknown frametime 1 .text
-                float* flt_764A42 = hook::pattern("C7 46 14 89 88 88 3C").count(1).get(0).get<float>(3); //0x00764A3F
-                // Unknown frametime 2 .text
-                float* flt_76AD08 = hook::pattern("68 89 88 88 3C").count(1).get(0).get<float>(1); //0x76AD07
-                // ESimTask frametime .rdata
-                float* flt_9DB360 = *hook::pattern("83 C4 04 D9 46 14 42 D8 05 ? ? ? ?").count(1).get(0).get<float*>(9); //0x672EFB
-                // Unknown frametime 3 .rdata (in some data structure, these values may need to be scaled up from 60.0 accordingly)
-                //float* flt_9E24F0 = hook::pattern("00 00 70 42 89 88 88 3C 00 00 20 40 00 00 E0 40").count(1).get(0).get<float>(4); //0x9E24EC
-                // Sim::QueueEvents frametime .text (this affects gameplay smoothness noticeably)
-                float* flt_9EBB6C = *hook::pattern("D9 46 1C 8B 46 24 83 F8 03 D8 0D ? ? ? ?").count(1).get(0).get<float*>(11); //0x0076AD57
-
-                //injector::WriteMemory(flt_9CBC14, FrameTime, true);
-                injector::WriteMemory(dword_6B4D30, &FrameTime, true);
-                injector::WriteMemory(flt_6B79E3, FrameTime, true);
-                injector::WriteMemory(flt_6B79F4, FrameTime * 10.0f, true);
-                injector::WriteMemory(flt_764A42, FrameTime, true);
-                injector::WriteMemory(flt_76AD08, FrameTime, true);
-                injector::WriteMemory(flt_9DB360, FrameTime, true);
-                //injector::WriteMemory(flt_9E24F0, FrameTime, true);
-                injector::WriteMemory(flt_9EBB6C, FrameTime, true);
-
-                // Frame rates
-                // Unknown framerate 1 .rdata (in some data structure, these values may need to be scaled up from 60.0 accordingly)
-                //float* flt_9E24EC = hook::pattern("00 00 70 42 89 88 88 3C").count(1).get(0).get<float>(0); //0x9E24EC
-                // Unknown framerate 2 .rdata (in some data structure, these values may need to be scaled up from 60.0 accordingly)
-                //float* flt_9E2500 = hook::pattern("00 00 70 42 89 88 88 3C").count(1).get(0).get<float>(20); //0x9E24EC
-
-                //injector::WriteMemory(flt_9E24EC, fSimRate, true);
-                //injector::WriteMemory(flt_9E2500, fSimRate, true);
-
-                // NOTE: drift scoring system has 60.0 values... it may be affected by this... it needs thorough testing to see if parts like that are affected!
-
-                // fix WorldMap cursor & scale the update constants with frametime to keep consistent movement
-                // WorldMap::UpdateAnalogInput()
-                auto pattern = hook::pattern("D9 05 ? ? ? ? 83 EC 08 D8 0D ? ? ? ? 56 8B F1");//0x0058F770 anchor
-                // WorldMap framerate .text
-                uint32_t* dword_58F779 = pattern.count(1).get(0).get<uint32_t>(0xB); //0x0058F779
-                // constants
-                float* flt_9CEDF4 = *pattern.count(1).get(0).get<float*>(0x1B); //0x0058F789 dereference
-                uint32_t* dword_58F78F = pattern.count(1).get(0).get<uint32_t>(0x21); //0x0058F78F
-                uint32_t* dword_58F79E = pattern.count(1).get(0).get<uint32_t>(0x2E); //0x0058F79E
-                uint32_t* dword_58F7A8 = pattern.count(1).get(0).get<uint32_t>(0x38); //0x0058F7A8
-                uint32_t* dword_58F7B5 = pattern.count(1).get(0).get<uint32_t>(0x45); //0x0058F7B5
-
-                injector::WriteMemory(dword_58F779, &fSimRate, true);
-
-                // Scalar target FPS
-                constexpr float TargetFPS = 60.0f;
-
-                static float WorldMapConst5 = ((*flt_9CEDF4) / (1.0f / TargetFPS)) * FrameTime;
-                injector::WriteMemory(flt_9CEDF4, WorldMapConst5, true);
-
-                static float WorldMapConst1 = ((*(float*)dword_58F78F) / (1.0f / TargetFPS)) * FrameTime;
-                injector::WriteMemory(dword_58F78F, &WorldMapConst1, true);
-
-                static float WorldMapConst2 = ((*(float*)dword_58F79E) / (1.0f / TargetFPS)) * FrameTime;
-                injector::WriteMemory(dword_58F79E, &WorldMapConst2, true);
-
-                static float WorldMapConst3 = ((*(float*)dword_58F7A8) / (1.0f / TargetFPS)) * FrameTime;
-                injector::WriteMemory(dword_58F7A8, &WorldMapConst3, true);
-
-                static float WorldMapConst4 = ((*(float*)dword_58F7B5) / (1.0f / TargetFPS)) * FrameTime;
-                injector::WriteMemory(dword_58F7B5, &WorldMapConst4, true);
+                // The title screen continues by itself, straight to the main menu (see Frontend's SplashScreen hooks)
+                Input::SetSkipTitleScreen(true);
             }
+
+            // Frame rate limit and simulation rate: -1 = monitor refresh rate, -2 = twice the refresh rate.
+            // The game needs a fixed rate, so it can't be unlimited.
+            if (nFPSLimit == -2)
+                nFPSLimit = GetDesktopRefreshRate() * 2;
+            else if (nFPSLimit <= 0)
+                nFPSLimit = GetDesktopRefreshRate();
+            SimRate = std::clamp(nFPSLimit, 30, 1000);
+            FrameRate::fStepRate = static_cast<float>(SimRate);
+            FrameRate::fStepTime = 1.0f / FrameRate::fStepRate;
+
+            // Sim::Service: step time and rate
+            static ProtectedGameRef<float> StepTime;
+            StepTime.SetAddress(*hook::pattern("D9 46 1C 8B 46 24 83 F8 03 D8 0D ? ? ? ?").count(1).get(0).get<float*>(11));
+            StepTime = FrameRate::fStepTime;
+
+            auto pattern = hook::pattern("64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 A1 ? ? ? ? 64 89 25 00 00 00 00 83 EC 18 56 57 33");
+            static ProtectedGameRef<float> StepRate;
+            StepRate.SetAddress(*pattern.get_first<float*>(0x57));
+            StepRate = FrameRate::fStepRate;
+
+            FrameRate::SimActive = *pattern.get_first<int32_t*>(15);
+            FrameRate::Accumulator = *pattern.get_first<float*>(0x27);
+            static auto SimServiceHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                FrameRate::PrepareStep(*reinterpret_cast<float*>(regs.esp + 4));
+            });
+
+            // Sim tasks and the simulation timer count in steps of 1/60 s
+            static ProtectedGameRef<float> TaskStepTime;
+            TaskStepTime.SetAddress(*hook::pattern("83 C4 04 D9 46 14 42 D8 05 ? ? ? ?").count(1).get(0).get<float*>(9));
+            TaskStepTime = FrameRate::fStepTime;
+
+            static ProtectedGameRef<float> TimerStepTime;
+            TimerStepTime.SetAddress(hook::pattern("C7 46 14 89 88 88 3C").count(1).get(0).get<float>(3));
+            TimerStepTime = FrameRate::fStepTime;
+
+            static ProtectedGameRef<float> TimeScaleStep;
+            TimeScaleStep.SetAddress(hook::pattern("68 89 88 88 3C").count(1).get(0).get<float>(1));
+            TimeScaleStep = FrameRate::fStepTime;
+
+            // Debug modes of the main loop: fixed step, and ten times the speed
+            static ProtectedGameRef<float> FixedFrameTime;
+            FixedFrameTime.SetAddress(hook::pattern("C7 44 24 1C 89 88 88 3C").count(1).get(0).get<float>(4));
+            FixedFrameTime = FrameRate::fStepTime;
+
+            static ProtectedGameRef<float> FullSpeedFrameTime;
+            FullSpeedFrameTime.SetAddress(hook::pattern("C7 44 24 1C AB AA 2A 3E").count(1).get(0).get<float>(4));
+            FullSpeedFrameTime = FrameRate::fStepTime * 10.0f;
+
+            // Not while loading: the loading loop services the file transfers once per pass, so waiting
+            // there would only make loading slower
+            WFP::onEndScene() += []()
+            {
+                if (!bInMiniMainLoop)
+                    FrameRate::LimitFrameRate();
+            };
         };
     }
 } Misc;

@@ -1,118 +1,220 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/PatternPreflight.hpp"
+#include "FixSettings.hpp"
 #include <d3d9.h>
-#include <usercall.hpp>
 
 export module Frontend;
 
 import ComVars;
 import Resolution;
 
-std::optional<float> fHudAspectRatioConstraint;
-float fWidescreenHudOffset = 120.0f;
-void (__cdecl* eSetCurrentRenderTarget)(int a1) = nullptr;
+// The front end and the HUD are authored for a 640x480 canvas. The canvas is scaled to the screen
+// height and centred, HUD elements are moved to the screen edges using the layout table, and full
+// screen movies are shown at their original aspect ratio with black bars, fill the screen or are
+// stretched to it (MAIN.FMVWidescreenMode).
 
-namespace FEScale
+namespace
 {
-    float fFEScale = 1.0f;
-    float fCalcFEScale = 1.0f;
-    float fFMVScale = 1.0f;
-    float fCalcFMVScale = 1.0f;
-    bool bEnabled = false;
-    bool bAutoFitFE = false;
-    bool bAutoFitFMV = true;
-    bool bMovieFlag = false;
+    std::optional<float> fHudAspectRatioConstraint;
+    float fWidescreenHudOffset = 120.0f;
 
-    injector::hook_back<void(__cdecl*)(uint32_t, D3DMATRIX*)> hbSetTransformHook;
-    void __cdecl SetTransformHook(uint32_t EVIEW_ID, D3DMATRIX* mat)
+    union HudPos
     {
-        D3DMATRIX cMat;
-        memcpy(&cMat, mat, sizeof(D3DMATRIX));
+        uint32_t dwPos;
+        float fPos;
+        HudPos(uint32_t pos) : dwPos(pos) {}
+        HudPos(float pos) : fPos(pos) {}
+    };
 
-        if (bMovieFlag)
+    struct HudLayoutEntry
+    {
+        uint32_t posX;
+        uint32_t posY;
+        float offsetX;
+        float offsetY;
+    };
+
+    std::vector<HudLayoutEntry> HudLayout;
+
+    // The screen size the HUD offset was made for; the offset follows a change of the constraint at once
+    float fHudScreenWidth = 640.0f;
+    float fHudScreenHeight = 480.0f;
+
+    void UpdateWidescreenHudOffset()
+    {
+        float width = fHudScreenWidth;
+        float height = fHudScreenHeight;
+        fWidescreenHudOffset = -CalculateWidescreenOffset(width, height, 640.0f, 480.0f);
+        if (fHudAspectRatioConstraint.has_value())
         {
-            cMat._11 = fCalcFMVScale;
-            cMat._22 = fCalcFMVScale;
+            float value = fHudAspectRatioConstraint.value();
+            if (value < 0.0f || value > (32.0f / 9.0f))
+                fWidescreenHudOffset = value;
+            else
+            {
+                value = ClampHudAspectRatio(value, width / height);
+                fWidescreenHudOffset = -CalculateWidescreenOffset(height * value, height, 640.0f, 480.0f);
+            }
         }
+    }
+
+    // Layout table: original element position (as float bits) and how far to move it for 16:9.
+    // Embedded from textures/NFS/NFSU/HudLayout.dat.
+    void LoadHudLayout()
+    {
+        HMODULE module = nullptr;
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&LoadHudLayout), &module);
+        HRSRC resource = FindResourceA(module, "HUDLAYOUT", MAKEINTRESOURCEA(10));
+        HGLOBAL handle = resource ? LoadResource(module, resource) : nullptr;
+        auto text = handle ? static_cast<const char*>(LockResource(handle)) : nullptr;
+        if (!text)
+            return;
+
+        std::istringstream stream(std::string(text, SizeofResource(module, resource)));
+        std::string line;
+        while (std::getline(stream, line))
+        {
+            if (line.empty() || line[0] == '#' || line[0] == '\r')
+                continue;
+
+            HudLayoutEntry entry = {};
+            if (sscanf_s(line.c_str(), "%*s %x %x %f %f", &entry.posX, &entry.posY, &entry.offsetX, &entry.offsetY) == 4)
+                HudLayout.push_back(entry);
+        }
+    }
+
+    std::vector<ProtectedGameRef<float>> HudPosXRefs;
+}
+
+// An object the fix adds to an in-game menu, such as the pause menu's "Plugins" row: it's moved for the
+// screen's aspect ratio like the object it was copied from. The layout table matches objects by their position.
+export void AddHudLayoutCopy(float fromX, float fromY, float toX, float toY)
+{
+    auto bits = [](float value) { uint32_t result; memcpy(&result, &value, sizeof(result)); return result; };
+    auto it = std::find_if(HudLayout.begin(), HudLayout.end(), [&](const HudLayoutEntry& e) { return e.posX == bits(fromX) && e.posY == bits(fromY); });
+    if (it == HudLayout.end())
+        return;
+    auto copy = *it;
+    copy.posX = bits(toX);
+    copy.posY = bits(toY);
+    if (std::none_of(HudLayout.begin(), HudLayout.end(), [&](const HudLayoutEntry& e) { return e.posX == copy.posX && e.posY == copy.posY; }))
+        HudLayout.push_back(copy);
+}
+
+namespace
+{
+    float fMinimapPosX = 320.0f;
+    float fMinimapPosY = 240.0f;
+
+    void WidescreenHud(HudPos& x, HudPos& y, bool minimap = false)
+    {
+        if (IsFrontEnd())
+            return;
+
+        auto it = std::find_if(HudLayout.begin(), HudLayout.end(), [&](const HudLayoutEntry& e)
+        {
+            return e.posX == x.dwPos && e.posY == y.dwPos;
+        });
+
+        if (it == HudLayout.end())
+            return;
+
+        constexpr auto fBaseOffset = (480.0f * (16.0f / 9.0f) - 640.0f) / 2.0f;
+        if (it->offsetX >= 0.0f)
+            x.fPos += fWidescreenHudOffset + (it->offsetX - fBaseOffset);
         else
+            x.fPos -= fWidescreenHudOffset - (it->offsetX + fBaseOffset);
+
+        y.fPos += it->offsetY;
+
+        if (minimap)
         {
-            cMat._11 *= fCalcFEScale;
-            cMat._22 *= fCalcFEScale;
+            x.fPos -= fMinimapPosX;
+            x.fPos += HudPosXRefs.front();
         }
-
-        return usercall::Call<usercall::reg::edi, usercall::reg::stack>(hbSetTransformHook.fun, EVIEW_ID, &cMat);
-    }
-
-    void Update()
-    {
-        fCalcFEScale = fFEScale;
-        fCalcFMVScale = fFMVScale;
-        float fAspectRatio = GetAspectRatio();
-
-        if (bAutoFitFE)
-            fCalcFEScale *= fAspectRatio / (4.0f / 3.0f);
-        if (bAutoFitFMV)
-            fCalcFMVScale *= fAspectRatio / (16.0f / 9.0f);
-
-        if (fCalcFEScale > fFEScale)
-            fCalcFEScale = fFEScale;
-
-        if (fCalcFMVScale > fFMVScale)
-            fCalcFMVScale = fFMVScale;
-    }
-
-    void SetMovieFlag()
-    {
-        bMovieFlag = true;
-        // execute a draw call for the FE to set the transform (similar to Pro Street)
-        eSetCurrentRenderTarget(0);
-    }
-
-    void UnsetMovieFlag()
-    {
-        bMovieFlag = false;
-        eSetCurrentRenderTarget(0);
     }
 }
 
-union HudPos
+// Movies
+namespace
 {
-    uint32_t dwPos;
-    float fPos;
-    HudPos(uint32_t pos) : dwPos(pos) {}
-    HudPos(float pos) : fPos(pos) {}
-};
-
-class CDatEntry
-{
-public:
-    int32_t dwPosX;
-    int32_t dwPosY;
-    float fOffsetX;
-    float fOffsetY;
-
-    CDatEntry(uint32_t posx, uint32_t posy, float fOffsetX, float fOffsetY)
-        : dwPosX(posx), dwPosY(posy), fOffsetX(fOffsetX), fOffsetY(fOffsetY)
+    bool IsPowerOfTwo(int value)
     {
+        return value > 0 && (value & (value - 1)) == 0;
     }
-};
 
-void LoadDatFile(std::filesystem::path strPath, std::function<void(std::string_view line)>&& cb)
-{
-    std::ifstream hFile;
-    hFile.open(strPath);
-    if (hFile.is_open())
+    // 0 original aspect, 1 fill the screen, 2 stretch
+    const int* pFMVWidescreenMode = nullptr;
+
+    struct MovieQuad
     {
-        std::string line;
-        while (std::getline(hFile, line))
+        void* renderObject;
+        float x0, y0, x1, y1, z;
+        float u0, v0, u1, v1;
+    };
+
+    void FitMovie(MovieQuad& quad, int frameWidth, int frameHeight)
+    {
+        // Object transform in canvas units, copied to the render object by the game
+        auto matrix = reinterpret_cast<const float*>(reinterpret_cast<uintptr_t>(quad.renderObject) + 0x20);
+        float objectWidth = std::fabs(matrix[0]);
+        float objectHeight = std::fabs(matrix[5]);
+        if (objectWidth < 1.0f || objectHeight < 1.0f || frameWidth <= 0 || frameHeight <= 0)
+            return;
+
+        // The game's own movies are anamorphic: power-of-two frames made for a 4:3 screen. The 2:1 frames
+        // contain a 16:9 picture with black bars, which are cropped.
+        // Replacement movies with other sizes are shown with square pixels.
+        bool fullScreen = objectWidth >= 600.0f && objectHeight >= 450.0f;
+
+        float contentAspect;
+        float crop = 0.0f;
+        if (IsPowerOfTwo(frameWidth) && IsPowerOfTwo(frameHeight))
         {
-            if (line[0] && line[0] != '#')
+            contentAspect = fullScreen ? 4.0f / 3.0f : objectWidth / objectHeight;
+            if (frameWidth == frameHeight * 2)
             {
-                cb(line);
+                crop = 0.125f;
+                contentAspect /= 1.0f - 2.0f * crop;
             }
         }
-        hFile.close();
+        else
+            contentAspect = float(frameWidth) / float(frameHeight);
+
+        // Full screen movies use the whole screen, others keep their box
+        float boxWidth = fullScreen ? 480.0f * GetAspectRatio() : objectWidth;
+        float boxHeight = fullScreen ? 480.0f : objectHeight;
+        int mode = fullScreen ? *pFMVWidescreenMode : 0;
+
+        float width = boxWidth;
+        float height = boxWidth / contentAspect;
+        if (mode == 2)
+            height = boxHeight;
+        else if (mode == 1 ? height < boxHeight : height > boxHeight)
+        {
+            height = boxHeight;
+            width = boxHeight * contentAspect;
+        }
+
+        float halfX = 0.5f * width / objectWidth;
+        float halfY = 0.5f * height / objectHeight;
+        quad.x0 = -halfX;
+        quad.y0 = -halfY;
+        quad.x1 = halfX;
+        quad.y1 = halfY;
+
+        float v = quad.v1 - quad.v0;
+        quad.v0 += v * crop;
+        quad.v1 -= v * crop;
+
+        // Black bars around a playing full screen movie. Menus also contain movie objects that aren't playing.
+        if (fullScreen && MovieIsPlaying())
+        {
+            if (auto device = Direct3DDevice.get())
+                device->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+        }
     }
 }
 
@@ -123,359 +225,223 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            bool bFixHUD = iniReader.ReadInteger("MAIN", "FixHUD", 1) != 0;
-            int nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
-            FEScale::fFEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
-            FEScale::fCalcFEScale = FEScale::fFEScale;
-            FEScale::fFMVScale = iniReader.ReadFloat("MAIN", "FMVScale", 1.0f);
-            FEScale::fCalcFMVScale = FEScale::fFMVScale;
-            FEScale::bAutoFitFE = iniReader.ReadInteger("MAIN", "AutoFitFE", 0) != 0;
-            FEScale::bAutoFitFMV = iniReader.ReadInteger("MAIN", "AutoFitFMV", 1) != 0;
-            fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
+            fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            pFMVWidescreenMode = &FixSettings().Int("MAIN.FMVWidescreenMode");
 
-            auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? E8 ? ? ? ? A1 ? ? ? ? 33 F6");
+            LoadHudLayout();
+
+            static ProtectedGameRef<float> fHudScaleX;
+            fHudScaleX.SetAddress(*hook::pattern("D8 0D ? ? ? ? 57 0F B6 B8").count(1).get(0).get<float*>(2));
+
+            auto addRefs = [](hook::pattern pattern, ptrdiff_t offset)
+            {
+                pattern.for_each_result([&](hook::pattern_match match)
+                {
+                    ProtectedGameRef<float> ref;
+                    ref.SetAddress(match.get<float>(offset));
+                    HudPosXRefs.push_back(std::move(ref));
+                });
+            };
+
+            // Canvas centre X (320.0) used by the HUD
+            addRefs(hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"), 7);
+            addRefs(hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"), 4);
+            addRefs(hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43"), 4);
+            {
+                [&]()
+                {
+                    if (!PatternPreflight::Check("NFSUnderground Frontend", {
+                        { "D8 1D ? ? ? ? DF E0 F6 C4 41 75 0F D9 45 FC", 1, true },
+                    }))
+                        return;
+
+                    ProtectedGameRef<float> ref;
+                    ref.SetAddress(*hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 0F D9 45 FC").count(1).get(0).get<float*>(2));
+                    HudPosXRefs.push_back(std::move(ref));
+                }();
+
+            }
+
+            static ProtectedGameRef<float> fRearviewMirrorLeftX1;
+            static ProtectedGameRef<float> fRearviewMirrorLeftX2;
+            static ProtectedGameRef<float> fRearviewMirrorRightX1;
+            static ProtectedGameRef<float> fRearviewMirrorRightX2;
+
+            auto pattern = hook::pattern("C7 44 24 ? 00 00 DC 43 C7 44 24 ? 00 00 70 41");
             if (!pattern.empty())
-                eSetCurrentRenderTarget = (decltype(eSetCurrentRenderTarget))injector::GetBranchDestination(pattern.get_first()).as_int();
+            {
+                fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(20));
+                fRearviewMirrorLeftX2.SetAddress(pattern.get_first<float>(42));
+                fRearviewMirrorRightX1.SetAddress(pattern.get_first<float>(4));
+                fRearviewMirrorRightX2.SetAddress(pattern.get_first<float>(64));
+            }
             else
             {
-                pattern = hook::pattern("55 8B EC 83 E4 ? 81 EC ? ? ? ? 56 57 E8");
-                eSetCurrentRenderTarget = (decltype(eSetCurrentRenderTarget))pattern.get_first();
+                pattern = hook::pattern("C7 44 24 ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? FF 91");
+                fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(26));
+                fRearviewMirrorLeftX2.SetAddress(pattern.get_first<float>(48));
+                fRearviewMirrorRightX1.SetAddress(pattern.get_first<float>(4));
+                fRearviewMirrorRightX2.SetAddress(pattern.get_first<float>(70));
             }
 
-            //HUD
-            if (bFixHUD)
+            // Front end mouse cursor: canvas left edge (-320) in screen to canvas conversions
+            static std::vector<ProtectedGameRef<int32_t>> CursorOffsetRefs;
+            auto addCursorRefs = [](hook::pattern pattern, ptrdiff_t offset)
             {
-                static ProtectedGameRef<float> fHudScaleX;
-                fHudScaleX.SetAddress(*hook::pattern("D8 0D ? ? ? ? 57 0F B6 B8").count(1).get(0).get<float*>(2));
-
-                static std::vector<ProtectedGameRef<float>> fHudPosXArray;
-
-                auto pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
-                pattern.for_each_result([](auto match)
-                {
-                    ProtectedGameRef<float> ref;
-                    ref.SetAddress(match.get<float>(7));
-                    fHudPosXArray.push_back(std::move(ref));
-                });
-
-                pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43");
-                pattern.for_each_result([](auto match)
-                {
-                    ProtectedGameRef<float> ref;
-                    ref.SetAddress(match.get<float>(4));
-                    fHudPosXArray.push_back(std::move(ref));
-                });
-
-                pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43");
-                pattern.for_each_result([](auto match)
-                {
-                    ProtectedGameRef<float> ref;
-                    ref.SetAddress(match.get<float>(4));
-                    fHudPosXArray.push_back(std::move(ref));
-                });
-
-                ProtectedGameRef<float> temp_ref;
-                temp_ref.SetAddress(*hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 41 75 0F D9 45 FC").count(1).get(0).get<float*>(2));
-                fHudPosXArray.push_back(std::move(temp_ref));
-
-                static ProtectedGameRef<float> fRearviewMirrorLeftX1;
-                static ProtectedGameRef<float> fRearviewMirrorLeftX2;
-                static ProtectedGameRef<float> fRearviewMirrorRightX1;
-                static ProtectedGameRef<float> fRearviewMirrorRightX2;
-
-                pattern = hook::pattern("C7 44 24 ? 00 00 DC 43 C7 44 24 ? 00 00 70 41");
-                if (!pattern.empty())
-                {
-                    fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(20));
-                    fRearviewMirrorLeftX2.SetAddress(pattern.get_first<float>(42));
-                    fRearviewMirrorRightX1.SetAddress(pattern.get_first<float>(4));
-                    fRearviewMirrorRightX2.SetAddress(pattern.get_first<float>(64));
-                }
-                else
-                {
-                    pattern = hook::pattern("C7 44 24 ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? FF 91");
-                    fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(26));
-                    fRearviewMirrorLeftX2.SetAddress(pattern.get_first<float>(48));
-                    fRearviewMirrorRightX1.SetAddress(pattern.get_first<float>(4));
-                    fRearviewMirrorRightX2.SetAddress(pattern.get_first<float>(70));
-                }
-
-                //mouse cursor fix
-                static std::vector<ProtectedGameRef<int32_t>> fNegativeHudPosXArray;
-
-                pattern = hook::pattern("81 C2 C0 FE FF FF");
-                pattern.for_each_result([](auto match)
+                pattern.for_each_result([&](hook::pattern_match match)
                 {
                     ProtectedGameRef<int32_t> ref;
-                    ref.SetAddress(match.get<int32_t>(2));
-                    fNegativeHudPosXArray.push_back(std::move(ref));
+                    ref.SetAddress(match.get<int32_t>(offset));
+                    CursorOffsetRefs.push_back(std::move(ref));
                 });
+            };
+            addCursorRefs(hook::pattern("81 C2 C0 FE FF FF"), 2);
+            addCursorRefs(hook::pattern("05 C0 FE FF FF"), 1);
+            addCursorRefs(hook::pattern("8D 88 C0 FE FF FF"), 2);
 
-                pattern = hook::pattern("05 C0 FE FF FF");
-                pattern.for_each_result([](auto match)
+            pattern = hook::pattern("8B 06 8B 4C 24 08");
+            struct ClientRectHook1
+            {
+                void operator()(injector::reg_pack& regs)
                 {
-                    ProtectedGameRef<int32_t> ref;
-                    ref.SetAddress(match.get<int32_t>(1));
-                    fNegativeHudPosXArray.push_back(std::move(ref));
-                });
+                    regs.eax = *(uint32_t*)(regs.esi + 0x00);
+                    regs.ecx = static_cast<uint32_t>(HudPosXRefs.front() + HudPosXRefs.front());
+                }
+            }; injector::MakeInline<ClientRectHook1>(pattern.get_first(0), pattern.get_first(6));
 
-                ProtectedGameRef<int32_t> temp_ref2;
-                temp_ref2.SetAddress(hook::pattern("8D 88 C0 FE FF FF").get_first<int32_t>(2));
-                fNegativeHudPosXArray.push_back(std::move(temp_ref2));
+            pattern = hook::pattern("8B 07 8B 4C 24 0C");
+            struct ClientRectHook2
+            {
+                void operator()(injector::reg_pack& regs)
+                {
+                    regs.eax = *(uint32_t*)(regs.edi + 0x00);
+                    regs.ecx = 480;
+                }
+            }; injector::MakeInline<ClientRectHook2>(pattern.get_first(0), pattern.get_first(6));
 
-                pattern = hook::pattern("8B 06 8B 4C 24 08");
-                struct ClientRectHook1
+            onResChange() += [](int Width, int Height)
+            {
+                float width = static_cast<float>(Width);
+                float height = static_cast<float>(Height);
+
+                fHudScaleX = (1.0f / width * (height / 480.0f)) * 2.0f;
+                float fHudPosX = 640.0f / (640.0f * fHudScaleX);
+
+                for (auto& pos : HudPosXRefs)
+                    pos = fHudPosX;
+
+                for (auto& pos : CursorOffsetRefs)
+                    pos = static_cast<int32_t>(-fHudPosX);
+
+                fRearviewMirrorLeftX1 = (fHudPosX - 320.0f) + 200.0f;
+                fRearviewMirrorLeftX2 = (fHudPosX - 320.0f) + 200.0f;
+                fRearviewMirrorRightX1 = (fHudPosX - 320.0f) + 440.0f;
+                fRearviewMirrorRightX2 = (fHudPosX - 320.0f) + 440.0f;
+
+                fHudScreenWidth = width;
+                fHudScreenHeight = height;
+                UpdateWidescreenHudOffset();
+            };
+
+            FixSettings().OnChange("MAIN.HudAspectRatioConstraint", []()
+            {
+                fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+                UpdateWidescreenHudOffset();
+            });
+
+            pattern = hook::pattern("8B 47 1C 8B 4F 20 89 84 24 10 01 00 00 8B 47 24 89 84 24 18 01 00 00 39 5C 24 04");
+            if (!pattern.empty())
+            {
+                struct HudHook
                 {
                     void operator()(injector::reg_pack& regs)
                     {
-                        regs.eax = *(uint32_t*)(regs.esi + 0x00);
-                        regs.ecx = static_cast<uint32_t>(fHudPosXArray.front() + fHudPosXArray.front());
+                        regs.eax = *(uint32_t*)(regs.edi + 0x1C);
+                        regs.ecx = *(uint32_t*)(regs.edi + 0x20);
+                        HudPos x = regs.eax;
+                        HudPos y = regs.ecx;
+                        WidescreenHud(x, y);
+                        regs.eax = x.dwPos;
+                        regs.ecx = y.dwPos;
                     }
-                }; injector::MakeInline<ClientRectHook1>(pattern.get_first(0), pattern.get_first(6));
+                }; injector::MakeInline<HudHook>(pattern.get_first(0), pattern.get_first(6));
 
-                pattern = hook::pattern("8B 07 8B 4C 24 0C");
-                struct ClientRectHook2
+                pattern = hook::pattern("D8 05 ? ? ? ? D9 5B 68 D8 05 ? ? ? ? D9 5B 6C D9 40 3C");
+                injector::WriteMemory(pattern.get_first(2), &fMinimapPosX, true);
+                injector::WriteMemory(pattern.get_first(11), &fMinimapPosY, true);
+
+                pattern = hook::pattern("8B 4D 08 D9 41 68 53 57 8B 5D 0C 8B F8");
+                struct MinimapHook1
                 {
                     void operator()(injector::reg_pack& regs)
                     {
-                        regs.eax = *(uint32_t*)(regs.edi + 0x00);
-                        regs.ecx = 480;
+                        regs.ecx = *(uint32_t*)(regs.ebp + 0x08);
+                        HudPos x = *(uint32_t*)(regs.ecx + 0x68);
+                        HudPos y = *(uint32_t*)(regs.ecx + 0x6C);
+                        WidescreenHud(x, y, true);
+                        *(uint32_t*)(regs.ecx + 0x68) = x.dwPos;
+                        *(uint32_t*)(regs.ecx + 0x6C) = y.dwPos;
+                        _asm fld dword ptr[x.fPos]
                     }
-                }; injector::MakeInline<ClientRectHook2>(pattern.get_first(0), pattern.get_first(6));
+                }; injector::MakeInline<MinimapHook1>(pattern.get_first(0), pattern.get_first(6));
 
-                onResChange() += [](int Width, int Height)
+                pattern = hook::pattern("D9 40 68 8B 4D 0C D8 60 70 53 56 8D 91 83 00 00 00 D9 54 24 34");
+                struct MinimapHook2
                 {
-                    fHudScaleX = (1.0f / static_cast<float>(Width) * (static_cast<float>(Height) / 480.0f)) * 2.0f;
-
-                    float fHudPosX = 640.0f / (640.0f * fHudScaleX);
-
-                    for (auto& pos : fHudPosXArray)
+                    void operator()(injector::reg_pack& regs)
                     {
-                        pos = fHudPosX;
+                        regs.ecx = *(uint32_t*)(regs.ebp + 0x0C);
+                        HudPos x = *(uint32_t*)(regs.eax + 0x68);
+                        HudPos y = *(uint32_t*)(regs.eax + 0x6C);
+                        WidescreenHud(x, y, true);
+                        *(uint32_t*)(regs.eax + 0x68) = x.dwPos;
+                        *(uint32_t*)(regs.eax + 0x6C) = y.dwPos;
+                        _asm fld dword ptr[x.fPos]
                     }
+                }; injector::MakeInline<MinimapHook2>(pattern.get_first(0), pattern.get_first(6));
 
-                    for (auto& pos : fNegativeHudPosXArray)
-                    {
-                        pos = static_cast<uint32_t>(-fHudPosX);
-                    }
-
-                    float fHudOffset = ((480.0f * (static_cast<float>(Width) / static_cast<float>(Height))) - 640.0f) / 2.0f;
-
-                    fRearviewMirrorLeftX1 = (fHudPosX - 320.0f) + 200.0f;
-                    fRearviewMirrorLeftX2 = (fHudPosX - 320.0f) + 200.0f;
-                    fRearviewMirrorRightX1 = (fHudPosX - 320.0f) + 440.0f;
-                    fRearviewMirrorRightX2 = (fHudPosX - 320.0f) + 440.0f;
-
-                    fWidescreenHudOffset = -CalculateWidescreenOffset(static_cast<float>(Width), static_cast<float>(Height), 640.0f, 480.0f);
-                    if (fHudAspectRatioConstraint.has_value())
-                    {
-                        float value = fHudAspectRatioConstraint.value();
-                        if (value < 0.0f || value > (32.0f / 9.0f))
-                            fWidescreenHudOffset = value;
-                        else
-                        {
-                            value = ClampHudAspectRatio(value, static_cast<float>(Width) / static_cast<float>(Height));
-                            fWidescreenHudOffset = -CalculateWidescreenOffset(static_cast<float>(Height) * value, static_cast<float>(Height), 640.0f, 480.0f);
-                        }
-                    }
-                };
-
-                static std::vector<CDatEntry> HudCoords;
-
-                CIniReader iniReader("");
-                auto DataFilePath = iniReader.GetIniPath();
-                DataFilePath.replace_extension(".dat");
-
-                LoadDatFile(DataFilePath, [](std::string_view line)
+                pattern = hook::pattern("D9 40 1C 8B 4D 08 D9 40 20");
+                struct MinimapHook3
                 {
-                    int32_t PosX, PosY;
-                    float fOffsetX, fOffsetY;
-                    sscanf_s(line.data(), "%*s %x %x %f %f %*f %*f", &PosX, &PosY, &fOffsetX, &fOffsetY);
-                    HudCoords.emplace_back(PosX, PosY, fOffsetX, fOffsetY);
-                });
-
-                static float fMinimapPosX = 320.0f;
-                static float fMinimapPosY = 240.0f;
-
-                static auto WidescreenHud = [](HudPos& HudPosX, HudPos& HudPosY, bool bAddHudOffset = false)
-                {
-                    if (nGameState != 3) // Disables WidescreenHUD in FrontEnd
+                    void operator()(injector::reg_pack& regs)
                     {
-                        auto it = std::find_if(HudCoords.begin(), HudCoords.end(),
-                                               [cc = CDatEntry(HudPosX.dwPos, HudPosY.dwPos, 0.0f, 0.0f)]
-                                               (const CDatEntry& cde) -> bool
-                        {
-                            return (cc.dwPosX == cde.dwPosX && cc.dwPosY == cde.dwPosY);
-                        });
-
-                        if (it != HudCoords.end())
-                        {
-                            constexpr auto fBaseOffset = (480.0f * (16.0f / 9.0f) - 640.0f) / 2.0f;
-
-                            if (it->fOffsetX >= 0.0f)
-                                HudPosX.fPos += fWidescreenHudOffset + (it->fOffsetX - fBaseOffset);
-                            else
-                                HudPosX.fPos -= fWidescreenHudOffset - (it->fOffsetX + fBaseOffset);
-
-                            HudPosY.fPos += it->fOffsetY;
-
-                            if (bAddHudOffset)
-                            {
-                                HudPosX.fPos -= fMinimapPosX;
-                                HudPosX.fPos += fHudPosXArray.front();
-                            }
-                        }
+                        HudPos x = *(uint32_t*)(regs.eax + 0x1C);
+                        HudPos y = *(uint32_t*)(regs.eax + 0x20);
+                        WidescreenHud(x, y, true);
+                        *(uint32_t*)(regs.eax + 0x1C) = x.dwPos;
+                        *(uint32_t*)(regs.eax + 0x20) = y.dwPos;
+                        regs.ecx = *(uint32_t*)(regs.ebp + 0x8);
+                        _asm fld dword ptr[x.fPos]
+                        _asm fld dword ptr[y.fPos]
                     }
-                };
+                }; injector::MakeInline<MinimapHook3>(pattern.get_first(0), pattern.get_first(9));
 
-                pattern = hook::pattern("8B 47 1C 8B 4F 20 89 84 24 10 01 00 00 8B 47 24 89 84 24 18 01 00 00 39 5C 24 04");
-                if (!pattern.empty())
+                pattern = hook::pattern("D8 43 1C 8B 54 24 18 8B 44 24 10 D9 1A 8B 4E 68 50 51 57");
+                struct LapsHook
                 {
-                    struct HudHook
+                    void operator()(injector::reg_pack& regs)
                     {
-                        void operator()(injector::reg_pack& regs)
-                        {
-                            regs.eax = *(uint32_t*)(regs.edi + 0x1C);
-                            regs.ecx = *(uint32_t*)(regs.edi + 0x20);
-                            HudPos HudPosX = regs.eax;
-                            HudPos HudPosY = regs.ecx;
-                            WidescreenHud(HudPosX, HudPosY);
-                            regs.eax = HudPosX.dwPos;
-                            regs.ecx = HudPosY.dwPos;
-                        }
-                    }; injector::MakeInline<HudHook>(pattern.get_first(0), pattern.get_first(6));
-
-                    pattern = hook::pattern("D8 05 ? ? ? ? D9 5B 68 D8 05 ? ? ? ? D9 5B 6C D9 40 3C");
-                    injector::WriteMemory(pattern.get_first(2), &fMinimapPosX, true);
-                    injector::WriteMemory(pattern.get_first(11), &fMinimapPosY, true);
-
-                    pattern = hook::pattern("8B 4D 08 D9 41 68 53 57 8B 5D 0C 8B F8");
-                    struct MinimapHook1
-                    {
-                        void operator()(injector::reg_pack& regs)
-                        {
-                            regs.ecx = *(uint32_t*)(regs.ebp + 0x08);
-
-                            HudPos HudPosX = *(uint32_t*)(regs.ecx + 0x68);
-                            HudPos HudPosY = *(uint32_t*)(regs.ecx + 0x6C);
-                            WidescreenHud(HudPosX, HudPosY, true);
-                            *(uint32_t*)(regs.ecx + 0x68) = HudPosX.dwPos;
-                            *(uint32_t*)(regs.ecx + 0x6C) = HudPosY.dwPos;
-
-                            _asm fld dword ptr[HudPosX.fPos]
-                        }
-                    }; injector::MakeInline<MinimapHook1>(pattern.get_first(0), pattern.get_first(6));
-
-                    pattern = hook::pattern("D9 40 68 8B 4D 0C D8 60 70 53 56 8D 91 83 00 00 00 D9 54 24 34");
-                    struct MinimapHook2
-                    {
-                        void operator()(injector::reg_pack& regs)
-                        {
-                            regs.ecx = *(uint32_t*)(regs.ebp + 0x0C);
-
-                            HudPos HudPosX = *(uint32_t*)(regs.eax + 0x68);
-                            HudPos HudPosY = *(uint32_t*)(regs.eax + 0x6C);
-                            WidescreenHud(HudPosX, HudPosY, true);
-                            *(uint32_t*)(regs.eax + 0x68) = HudPosX.dwPos;
-                            *(uint32_t*)(regs.eax + 0x6C) = HudPosY.dwPos;
-                            _asm fld dword ptr[HudPosX.fPos]
-                        }
-                    }; injector::MakeInline<MinimapHook2>(pattern.get_first(0), pattern.get_first(6));
-
-                    pattern = hook::pattern("D9 40 1C 8B 4D 08 D9 40 20");
-                    struct MinimapHook3
-                    {
-                        void operator()(injector::reg_pack& regs)
-                        {
-                            HudPos HudPosX = *(uint32_t*)(regs.eax + 0x1C);
-                            HudPos HudPosY = *(uint32_t*)(regs.eax + 0x20);
-                            WidescreenHud(HudPosX, HudPosY, true);
-                            *(uint32_t*)(regs.eax + 0x1C) = HudPosX.dwPos;
-                            *(uint32_t*)(regs.eax + 0x20) = HudPosY.dwPos;
-                            regs.ecx = *(uint32_t*)(regs.ebp + 0x8);
-                            _asm {fld dword ptr[HudPosX.fPos]}
-                            _asm {fld dword ptr[HudPosY.fPos]}
-                        }
-                    }; injector::MakeInline<MinimapHook3>(pattern.get_first(0), pattern.get_first(9));
-
-                    pattern = hook::pattern("D8 43 1C 8B 54 24 18 8B 44 24 10 D9 1A 8B 4E 68 50 51 57");
-                    struct LapsHook
-                    {
-                        void operator()(injector::reg_pack& regs)
-                        {
-                            regs.edx = *(uint32_t*)(regs.esp + 0x18);
-
-                            HudPos HudPosX = *(uint32_t*)(regs.ebx + 0x1C);
-                            HudPos HudPosY = *(uint32_t*)(regs.ebx + 0x20);
-                            WidescreenHud(HudPosX, HudPosY);
-                            *(uint32_t*)(regs.ebx + 0x1C) = HudPosX.dwPos;
-                            *(uint32_t*)(regs.ebx + 0x20) = HudPosY.dwPos;
-                            _asm fadd dword ptr[HudPosX.fPos]
-                        }
-                    }; injector::MakeInline<LapsHook>(pattern.get_first(0), pattern.get_first(7));
-                }
+                        regs.edx = *(uint32_t*)(regs.esp + 0x18);
+                        HudPos x = *(uint32_t*)(regs.ebx + 0x1C);
+                        HudPos y = *(uint32_t*)(regs.ebx + 0x20);
+                        WidescreenHud(x, y);
+                        *(uint32_t*)(regs.ebx + 0x1C) = x.dwPos;
+                        *(uint32_t*)(regs.ebx + 0x20) = y.dwPos;
+                        _asm fadd dword ptr[x.fPos]
+                    }
+                }; injector::MakeInline<LapsHook>(pattern.get_first(0), pattern.get_first(7));
             }
 
-            if (nFMVWidescreenMode)
+            // cFEngRender::RenderMovie: the movie quad's corners and texture coordinates are pushed for
+            // the render object setup call, the movie's texture info is in ebx
+            pattern = hook::pattern("68 00 00 80 3F 68 00 00 00 3F 68 00 00 00 3F 68 00 00 00 BF 68 00 00 00 BF 50 E8");
+            static auto RenderMovieHook = safetyhook::create_mid(pattern.get_first(26), [](SafetyHookContext& regs)
             {
-                auto pattern = hook::pattern("68 00 00 80 3F 68 00 00 00 3F 68 00 00 00 3F 68 00 00 00 BF 68 00 00 00 BF");
-                injector::WriteMemory<float>(pattern.get_first(6 + 0), (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true); // Height (Bottom)
-                injector::WriteMemory<float>(pattern.get_first(6 + 5), (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true); // Width (Right)
-                injector::WriteMemory<float>(pattern.get_first(6 + 10), -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true); // Height (Top)
-                injector::WriteMemory<float>(pattern.get_first(6 + 15), -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true); // Width (Left)
-
-                if (nFMVWidescreenMode > 1)
-                {
-                    injector::WriteMemory<float>(pattern.get_first(6 + 0), (0.5f / ((4.0f / 3.0f) / (4.0f / 3.0f))), true); // Height (Bottom)
-                    injector::WriteMemory<float>(pattern.get_first(6 + 5), (0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true); // Width (Right)
-                    injector::WriteMemory<float>(pattern.get_first(6 + 10), -(0.5f / ((4.0f / 3.0f) / (4.0f / 3.0f))), true); // Height (Top)
-                    injector::WriteMemory<float>(pattern.get_first(6 + 15), -(0.5f / ((4.0f / 3.0f) / (16.0f / 9.0f))), true); // Width (Left)
-                }
-            }
-
-            if ((FEScale::fFEScale != 1.0f) || (FEScale::fFMVScale != 1.0f) || (FEScale::bAutoFitFE) || (FEScale::bAutoFitFMV))
-            {
-                FEScale::bEnabled = true;
-
-                auto pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? C7 05 ? ? ? ? ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? 68");
-                static auto SetMovieFlag = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    FEScale::SetMovieFlag();
-                });
-
-                pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? 8B F1 E8 ? ? ? ? 56 E8 ? ? ? ? A1 ? ? ? ? 50 C7 05 ? ? ? ? ? ? ? ? E8 ? ? ? ? 83 C4 ? 68");
-                static auto UnsetMovieFlag1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    FEScale::UnsetMovieFlag();
-                });
-
-                pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? 8B F1 E8 ? ? ? ? 56 E8 ? ? ? ? A1 ? ? ? ? 50 C7 05 ? ? ? ? ? ? ? ? E8 ? ? ? ? 83 C4 ? C7 05");
-                static auto UnsetMovieFlag2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    FEScale::UnsetMovieFlag();
-                });
-
-                pattern = find_pattern("E8 ? ? ? ? A1 ? ? ? ? ? ? 83 C4 ? 57 6A ? 50 FF 91 ? ? ? ? A1 ? ? ? ? ? ? 57 6A ? 50 FF 92 ? ? ? ? 85 DB", "E8 ? ? ? ? A1 ? ? ? ? ? ? 83 C4 ? 57 6A ? 50 FF 91 ? ? ? ? A1 ? ? ? ? ? ? 57 6A ? 50 FF 92 ? ? ? ? 8B 45");
-                FEScale::hbSetTransformHook.fun = usercall::MakeUsercall(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    auto arg1 = (uint32_t)regs.edi;
-                    auto arg2 = *(D3DMATRIX**)(regs.esp + 0x0);
-                    FEScale::SetTransformHook(arg1, arg2);
-                });
-
-                WFP::onGameProcessEvent() += []()
-                {
-                    if (FEScale::bEnabled)
-                        FEScale::Update();
-                };
-
-                pattern = hook::pattern("8B 45 ? 8B 78 ? 8B 55");
-                static auto RenderMovieHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    Direct3DDevice->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-                });
-            }
+                auto quad = reinterpret_cast<MovieQuad*>(regs.esp);
+                auto texture = regs.ebx;
+                if (texture)
+                    FitMovie(*quad, *reinterpret_cast<int16_t*>(texture + 0x44), *reinterpret_cast<int16_t*>(texture + 0x46));
+            });
         };
-    };
+    }
 } Frontend;

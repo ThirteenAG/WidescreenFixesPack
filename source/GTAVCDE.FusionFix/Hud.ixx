@@ -54,7 +54,8 @@ namespace
 
     void ScaleWidget(SafetyHookContext& context)
     {
-        if (static_cast<int>(context.rax) != 7 || (!outputs.playerInfo && !outputs.radar))
+        if (static_cast<int>(context.rax) != 7 || (!outputs.playerInfo && !outputs.radar) ||
+            !outputs.x || !outputs.y || !outputs.width || !outputs.height)
             return;
         auto& baseline = outputs.playerInfo ? playerInfo : radar;
         auto& x = *outputs.x;

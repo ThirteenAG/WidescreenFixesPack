@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
 #include <TlHelp32.h>
 
 import ComVars;
@@ -12,6 +13,10 @@ import Xidi;
 import WidescreenHUD;
 import WidescreenHUD2;
 import Eax;
+import WindowedMode;
+
+#include "NativeMenu.hpp"
+#include "NativeMenuBindings.hpp"
 
 const wchar_t* aJoysticks = nullptr;
 SafetyHookInline shsub_10CC8580;
@@ -25,29 +30,17 @@ void* __fastcall sub_10CC8580(void* _this, void* edx)
         std::filesystem::path aJoysticksPath = std::wstring(aJoysticks) + L".ini";
         for (auto it : { aJoysticksDefaultPath, aJoysticksPath })
         {
-            CIniReader iniReader("");
-            mINI::INIStructure ini;
-            mINI::INIFile mIni(iniReader.GetIniPath());
-            mIni.read(ini);
-
             // Read the existing joysticks INI file into a structure, leave it alone if that fails
             mINI::INIStructure joysticksIni;
             mINI::INIFile joysticksIniFile(it);
             if (!joysticksIniFile.read(joysticksIni))
                 continue;
 
-            for (auto const& sec : ini)
+            auto& settings = FixSettings();
+            for (const auto& setting : settings.GetDescription().settings)
             {
-                std::string sectionName = std::get<0>(sec);
-                if (sectionName.starts_with("Joystick"))
-                {
-                    for (auto const& kv : std::get<1>(sec))
-                    {
-                        std::string key = std::get<0>(kv);
-                        std::string value = std::get<1>(kv);
-                        joysticksIni[sectionName].set(key, value);
-                    }
-                }
+                if (setting.section.starts_with("Joystick"))
+                    joysticksIni[setting.section].set(setting.key, settings.Get(setting.id));
             }
 
             joysticksIniFile.generate(joysticksIni);
@@ -59,26 +52,33 @@ void* __fastcall sub_10CC8580(void* _this, void* edx)
 
 void Init()
 {
-    CIniReader iniReader("");
-    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
-    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    Screen.bDeferredInput = iniReader.ReadInteger("MAIN", "DeferredInput", 1) != 0;
-    Screen.fRawInputMouse = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouse", 1.0f), 0.0f, 5.0f);
-    Screen.bRawInputMouseRawData = iniReader.ReadInteger("MAIN", "RawInputMouseRawData", 0) != 0;
-    Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 2);
-    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
-    bDisableAltTabFix = iniReader.ReadInteger("MAIN", "DisableAltTabFix", 1) != 0;
-    nShadowMapResolution = iniReader.ReadInteger("GRAPHICS", "ShadowMapResolution", 0);
-    bEnableShadowFiltering = iniReader.ReadInteger("GRAPHICS", "EnableShadowFiltering", 0) != 0;
-    auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
-    gColor = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
-    gBlacklistIndicators = iniReader.ReadInteger("BONUS", "BlacklistIndicators", 0);
-    bLightSyncRGB = iniReader.ReadInteger("BONUS", "LightSyncRGB", 1);
-    auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
-    auto bSkipPressAnyKeyToContinue = iniReader.ReadInteger("MAIN", "SkipPressAnyKeyToContinue", 0) != 0;
+    auto& settings = FixSettings();
+    asi_settings::LiveLink::Start();
+    InitWindowedMode(); // DPI awareness before the desktop resolution is read
+    Screen.Width = settings.Int("MAIN.ResX");
+    Screen.Height = settings.Int("MAIN.ResY");
+    Screen.bDeferredInput = settings.Int("MAIN.DeferredInput") != 0;
+    Screen.bRawInputMouse = settings.Int("MAIN.RawInputMouse") != 0;
+    settings.OnChange("MAIN.MouseSensitivity", []
+    {
+        RawInputHandler<>::SetSensitivity(FixSettings().Float("MAIN.MouseSensitivity"));
+    });
+    Screen.bRawInputMouseRawData = settings.Int("MAIN.RawInputMouseRawData") != 0;
+    Screen.nHudWidescreenMode = settings.Int("MAIN.HudWidescreenMode");
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(settings.Get("MAIN.HudAspectRatioConstraint"));
+    nShadowMapResolution = settings.Int("GRAPHICS.ShadowMapResolution");
+    bEnableShadowFiltering = settings.Int("GRAPHICS.EnableShadowFiltering") != 0;
+    auto nFPSLimit = settings.Int("MAIN.FPSLimit");
+    gColor = settings.Int("BONUS.GogglesLightColor");
+    gBlacklistIndicators = settings.Int("BONUS.BlacklistIndicators");
+    bLightSyncRGB = settings.Int("MAIN.LightSyncRGB");
+    auto bSkipIntro = settings.Int("MAIN.SkipIntro") != 0;
+    auto bSkipPressStart = settings.Int("MAIN.SkipPressStart") != 0;
 
-    if (!Screen.Width || !Screen.Height)
+    if (Screen.Width <= 0 || Screen.Height <= 0 || Screen.Width > 16384 || Screen.Height > 16384)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+    if (Screen.Width <= 0 || Screen.Height <= 0)
+        std::tie(Screen.Width, Screen.Height) = std::make_tuple(640, 480);
 
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
@@ -117,6 +117,18 @@ void Init()
             auto ResY = std::to_wstring(Screen.Height);
             WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"WindowedViewportX", ResX.c_str(), pszPath);
             WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"WindowedViewportY", ResY.c_str(), pszPath);
+
+            // Fullscreen needs a display mode (a window resized by the player can have any size)
+            bool bDisplayMode = false;
+            DEVMODEW mode = { .dmSize = sizeof(DEVMODEW) };
+            for (DWORD i = 0; !bDisplayMode && EnumDisplaySettingsW(NULL, i, &mode); ++i)
+                bDisplayMode = int(mode.dmPelsWidth) == Screen.Width && int(mode.dmPelsHeight) == Screen.Height;
+            if (!bDisplayMode)
+            {
+                auto [DesktopResW, DesktopResH] = GetDesktopRes();
+                ResX = std::to_wstring(DesktopResW);
+                ResY = std::to_wstring(DesktopResH);
+            }
             WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"FullscreenViewportX", ResX.c_str(), pszPath);
             WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"FullscreenViewportY", ResY.c_str(), pszPath);
         }
@@ -127,6 +139,7 @@ void Init()
     InitCore();
     InitWinDrv();
     InitGUI();
+    CTMenu::Init();
     InitEchelon();
     InitWidescreenHUD2();
 
@@ -148,40 +161,43 @@ void Init()
     {
         static float fFPSLimit = 1.0f / static_cast<float>(nFPSLimit);
         auto pattern = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 89 54 24 10 89 44 24 18");
-        injector::WriteMemory(pattern.get_first(2), &fFPSLimit, true);
+        if (!pattern.empty())
+            ProtectedGameRef<decltype(&fFPSLimit)>(reinterpret_cast<decltype(&fFPSLimit)*>(pattern.get_first(2))) = &fFPSLimit;
+        else
+            OutputDebugStringA("Splinter Cell Chaos Theory: FPS limit patch unavailable.\n");
     }
 
     //Bink high res
     pattern = hook::pattern("68 E0 01 00 00 68 80 02 00 00 50 FF 52 ? EB 18");
     if (!pattern.empty())
     {
-        injector::WriteMemory(pattern.get_first(1), 2160, true);
-        injector::WriteMemory(pattern.get_first(6), 3840, true);
+        ProtectedGameRef<decltype(2160)>(reinterpret_cast<decltype(2160)*>(pattern.get_first(1))) = 2160;
+        ProtectedGameRef<decltype(3840)>(reinterpret_cast<decltype(3840)*>(pattern.get_first(6))) = 3840;
     }
 
     pattern = hook::pattern("68 E0 01 00 00 68 80 02 00 00 50 FF 51 ? EB 18 8B 10 6A 01 6A 15 6A 00 6A 01 68 E0 01 00 00 68 80 02 00 00 50 FF 52 ? 85 DB");
     if (!pattern.empty())
     {
-        injector::WriteMemory(pattern.get_first(1), 2160, true);
-        injector::WriteMemory(pattern.get_first(6), 3840, true);
+        ProtectedGameRef<decltype(2160)>(reinterpret_cast<decltype(2160)*>(pattern.get_first(1))) = 2160;
+        ProtectedGameRef<decltype(3840)>(reinterpret_cast<decltype(3840)*>(pattern.get_first(6))) = 3840;
     }
 
     pattern = hook::pattern("68 E0 01 00 00 68 80 02 00 00 50 FF 51 ? EB 18 8B 10 6A 01 6A 15 6A 00 6A 01 68 E0 01 00 00 68 80 02 00 00 50 FF 52 ? 8B AC 24 88 00 00 00");
     if (!pattern.empty())
     {
-        injector::WriteMemory(pattern.get_first(1), 2160, true);
-        injector::WriteMemory(pattern.get_first(6), 3840, true);
+        ProtectedGameRef<decltype(2160)>(reinterpret_cast<decltype(2160)*>(pattern.get_first(1))) = 2160;
+        ProtectedGameRef<decltype(3840)>(reinterpret_cast<decltype(3840)*>(pattern.get_first(6))) = 3840;
     }
 
     static float h = 1.0f / 2160.0f;
     pattern = hook::pattern("D8 0D ? ? ? ? 8B 0E");
     if (!pattern.empty())
-        injector::WriteMemory(pattern.get_first(2), &h, true);
+        ProtectedGameRef<decltype(&h)>(reinterpret_cast<decltype(&h)*>(pattern.get_first(2))) = &h;
 
     static float w = 1.0f / 3840.0f;
     pattern = hook::pattern("D8 0D ? ? ? ? 8B 54 24 18 8B 44 24 24");
     if (!pattern.empty())
-        injector::WriteMemory(pattern.get_first(2), &w, true);
+        ProtectedGameRef<decltype(&w)>(reinterpret_cast<decltype(&w)*>(pattern.get_first(2))) = &w;
 
     // Button names
     pattern = hook::pattern("56 E8 ? ? ? ? 83 C4 04 50 8D 8C 24 90 00 00 00");
@@ -225,16 +241,16 @@ void Init()
     if (bSkipIntro)
     {
         auto pattern = hook::pattern("75 ? 68 ? ? ? ? E8 ? ? ? ? 50 E8 ? ? ? ? 83 C4 08 85 C0 75 ? 68");
-        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true);
+        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(0))) = 0xEB;
     }
 
-    if (bSkipPressAnyKeyToContinue)
+    if (bSkipPressStart)
     {
         auto pattern = hook::pattern("6A 0A FF 50 ? 8B 0D");
-        injector::WriteMemory<uint8_t>(pattern.get_first(1), 1, true);
+        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(1))) = 1;
 
         pattern = hook::pattern("6A 08 FF 52 ? 8B 0D ? ? ? ? 3B FE");
-        injector::WriteMemory<uint8_t>(pattern.get_first(1), 1, true);
+        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(1))) = 1;
     }
 }
 
@@ -282,6 +298,8 @@ void InitGameOverlayRenderer()
         ShellExecuteEx(&sei);
     }
 }
+
+ASI_SETTINGS_EXPORT(FixSettings())
 
 CEXP void InitializeASI()
 {

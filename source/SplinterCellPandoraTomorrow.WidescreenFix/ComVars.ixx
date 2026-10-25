@@ -33,7 +33,7 @@ export struct Screen
     uint32_t nShadowMapResolution;
     uint32_t nReflectionsResolution;
     uint32_t nBloomResolutionMultiplier;
-    float fRawInputMouse;
+    bool bRawInputMouse;
     bool bRawInputMouseRawData;
     bool bDeferredInput;
     int nCutsceneBorders;
@@ -60,6 +60,10 @@ export bool bEnableCheckpoints = true;
 export float fLightDistanceMultiplier = 8.0f;
 export HWND hGameWindow = NULL;
 export bool bIsWindowed = false;
+
+export std::vector<std::pair<int, int>> NativeDisplayModes;
+export bool NativeResolutionListPublished = false;
+export thread_local std::optional<std::pair<int, int>> RequestedNativeResolution;
 
 export std::vector<std::pair<const std::wstring, std::wstring>> ResList =
 {

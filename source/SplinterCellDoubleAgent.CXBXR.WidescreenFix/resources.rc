@@ -1,0 +1,6 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/SplinterCellDoubleAgentXbox/en.json"
+fr ASISETTINGS_TEXT "../../text/SplinterCellDoubleAgentXbox/fr.json"
+de ASISETTINGS_TEXT "../../text/SplinterCellDoubleAgentXbox/de.json"
+it ASISETTINGS_TEXT "../../text/SplinterCellDoubleAgentXbox/it.json"
+es ASISETTINGS_TEXT "../../text/SplinterCellDoubleAgentXbox/es.json"

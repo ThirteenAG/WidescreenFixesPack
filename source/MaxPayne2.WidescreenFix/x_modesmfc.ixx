@@ -1,6 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "../Shared/CursorConfinement.hpp"
+#include "../Shared/MaxPayne/FrameRate.hpp"
 
 export module x_modesmfc;
 
@@ -37,7 +40,6 @@ namespace X_ModeSwitch
         return szClassName;
     }
 
-    int32_t nGraphicNovelModeKey = VK_F2;
 
     void update(SafetyHookContext& regs)
     {
@@ -76,12 +78,11 @@ namespace X_ModeSwitch
             return;
         }
 
-        bool bPressed = (GetAsyncKeyState(nGraphicNovelModeKey) & 0x8000) != 0;
+        bool bPressed = nGraphicNovelModeKey && (GetAsyncKeyState(nGraphicNovelModeKey) & 0x8000) != 0;
         if (!bPressed && bWasPressed)
         {
-            Screen.bGraphicNovelMode = !Screen.bGraphicNovelMode;
-            CIniReader iniReader("");
-            iniReader.WriteInteger("MAIN", "GraphicNovelMode", Screen.bGraphicNovelMode);
+            // Applied through the setting, which the menu and the settings file follow
+            FixSettings().Set("MAIN.GraphicNovelMode", Screen.bGraphicNovelMode ? "0" : "1");
             MaxPayne_GraphicNovelPage::Refresh();
         }
         bWasPressed = bPressed;
@@ -117,14 +118,16 @@ namespace X_ModeSwitch
         }
 
         bGameViewRendered = false;
+
+        // Frame rate limit, before the frame is shown
+        static auto& nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
+        CursorConfinement::Frame(WindowedModeWrapper::GameHWND);
+        MaxPayneFrameRate::Limit(nFPSLimit);
     }
 }
 
 export void InitX_ModesMFC()
 {
-    CIniReader iniReader("");
-    X_ModeSwitch::nGraphicNovelModeKey = iniReader.ReadInteger("MAIN", "GraphicNovelModeKey", VK_F2);
-
     auto pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 46 0D 83 F8 03 75 ? D9 46 11");
     static auto X_ModeSwitchUpdateHook = safetyhook::create_mid(pattern.get_first(), X_ModeSwitch::update); //0x10001914
 

@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module Misc;
@@ -14,8 +15,8 @@ public:
     {
         WFP::onInitEventAsync() += []()
         {
-            CIniReader iniReader("");
-            auto bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+            auto& settings = FixSettings();
+            auto bSkipIntro = settings.Int("MAIN.SkipIntro") != 0;
 
             if (bSkipIntro)
             {

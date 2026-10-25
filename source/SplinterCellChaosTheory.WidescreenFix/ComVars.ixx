@@ -7,6 +7,10 @@ module;
 
 export module ComVars;
 
+export void (*NativeMenuTick)(void*) = nullptr;
+export bool (*NativeWindowsMenuMouse)(LPARAM, bool) = nullptr;
+export bool (*NativeWindowsMenuHelp)(bool) = nullptr;
+
 export struct Screen
 {
     int Width;
@@ -30,7 +34,7 @@ export struct Screen
     float fFMVoffsetEndX;
     float fFMVoffsetStartY;
     float fFMVoffsetEndY;
-    float fRawInputMouse;
+    bool bRawInputMouse;
     bool bRawInputMouseRawData;
     bool bDeferredInput;
 } Screen;
@@ -67,7 +71,6 @@ export struct FLTColor
     }
 };
 
-export bool bDisableAltTabFix;
 export int32_t nShadowMapResolution;
 export bool bEnableShadowFiltering;
 export bool bPlayingVideo = false;
@@ -81,6 +84,8 @@ export uint32_t* dword_1120B6B0 = nullptr;
 export uint32_t* dword_11223A7C = nullptr;
 export HWND hGameWindow = NULL;
 export bool bIsWindowed = false;
+export bool bBorderless = false;        // the window mode (not fullscreen) is borderless
+export UINT nViewportWndProcMsg = 0;    // the message UWindowsViewport::ViewportWndProc is handling
 
 export namespace UWindowsViewport
 {
@@ -241,6 +246,6 @@ export constexpr uint16_t OPCODE_FMUL = 0x0DD8;   // D8 0D    fmul dword ptr [..
 export void ReplaceFpuMemOperand(hook::pattern& pattern, uint16_t opcode, float* new_ptr, size_t opcode_offset = 0)
 {
     auto addr = (uintptr_t)pattern.get_first(opcode_offset);
-    injector::WriteMemory<uint16_t>(addr, opcode, true);
-    injector::WriteMemory(addr + sizeof(opcode), new_ptr, true);
+    ProtectedGameRef<uint16_t>(reinterpret_cast<uint16_t*>(addr)) = opcode;
+    ProtectedGameRef<decltype(new_ptr)>(reinterpret_cast<decltype(new_ptr)*>(addr + sizeof(opcode))) = new_ptr;
 }

@@ -1,12 +1,18 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
+#include "NativeMenu.hpp"
 #include "callargs.h"
 #include <d3d9.h>
 
 import ComVars;
+
+ASI_SETTINGS_EXPORT(FixSettings())
 import PostFX;
 import RestoredFeatures;
 import WidescreenFix;
 import Camera;
+
+#include "WindowMode.hpp"
 
 void CheckCompatibility()
 {
@@ -35,13 +41,35 @@ void CheckCompatibility()
     TerminateProcess(GetCurrentProcess(), EXIT_FAILURE);
 }
 
+char __fastcall SkipLogo(const char*, void*, float, float)
+{
+    return 1;
+}
+
+void InitIntro()
+{
+    if (!FixSettings().Bool("MAIN.SkipIntro")) return;
+    auto logos = hook::pattern("68 00 00 16 44 68 00 00 48 44 B9 ? ? ? ? E8 ? ? ? ? B9 ? ? ? ? 68 00 00 16 44 68 00 00 48 44 E8 ? ? ? ? B9 ? ? ? ? 68 00 00 C8 43 68 00 00 30 44 E8 ? ? ? ?");
+    if (logos.size() == 1 && std::strcmp(*logos.get_first<const char*>(11), "logo1") == 0 &&
+        std::strcmp(*logos.get_first<const char*>(21), "logo3") == 0 && std::strcmp(*logos.get_first<const char*>(41), "logo2") == 0 &&
+        injector::GetBranchDestination(logos.get_first(15)) == injector::GetBranchDestination(logos.get_first(35)) &&
+        injector::GetBranchDestination(logos.get_first(15)) == injector::GetBranchDestination(logos.get_first(55)))
+    {
+        for (int offset : { 15, 35, 55 })
+            injector::MakeCALL(logos.get_first(offset), SkipLogo, true);
+    }
+    else
+        OutputDebugStringA("Mafia: startup logo patterns unavailable.\n");
+}
+
 void Init()
 {
+    WindowedModeWrapper::EnableDpiAwareness();
+    InitIntro();
     InitWidescreenFix();
     InitCamera();
     RestoredFeatures::InitRadar();
-    CIniReader iniReader("");
-    bool bWriteSettingsToFile = iniReader.ReadInteger("MAIN", "WriteSettingsToFile", 1) != 0;
+    bool bWriteSettingsToFile = FixSettings().Bool("MAIN.PortableSettings") != 0;
 
     if (bWriteSettingsToFile)
     {
@@ -62,45 +90,108 @@ void Init()
             std::forward_as_tuple("RegEnumKeyA", RegistryWrapper::RegEnumKeyA)
         );
     }
+    MafiaMenu::Init();
 }
 
-int WINAPI GetSystemMetricsHook(int nIndex)
+BOOL WINAPI SetWindowPosHook(HWND window, HWND after, int x, int y, int width, int height, UINT flags)
 {
-    return 0;
+    if (!nWindowMode || window != WindowedModeWrapper::GameHWND ||
+        (flags & (SWP_NOMOVE | SWP_NOSIZE)) == (SWP_NOMOVE | SWP_NOSIZE))
+        return SetWindowPos(window, after, x, y, width, height, flags);
+    WindowedModeWrapper::desiredClientWidth = nWindowWidth;
+    WindowedModeWrapper::desiredClientHeight = nWindowHeight;
+    WindowedModeWrapper::afterCreateWindow();
+    if (nWindowMode == 2)
+        WindowedModeWrapper::CenterWindowPosition(nWindowWidth, nWindowHeight);
+    return SetWindowPos(window, after, 0, 0, 0, 0, (flags | SWP_NOMOVE | SWP_NOSIZE) & ~SWP_FRAMECHANGED);
 }
 
 HWND WINAPI CreateWindowExAHook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
 {
-    auto hwnd = ::CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle & ~WS_OVERLAPPEDWINDOW, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-
-    if (dwStyle != 0x50000000)
+    if (nWindowMode && !(dwStyle & WS_CHILD))
     {
-        auto [DesktopResW, DesktopResH] = GetDesktopRes();
-        tagRECT rect;
-        rect.left = (LONG)(((float)DesktopResW / 2.0f) - (nWidth / 2.0f));
-        rect.top = (LONG)(((float)DesktopResH / 2.0f) - (nHeight / 2.0f));
-        rect.right = nWidth;
-        rect.bottom = nHeight;
-        SetWindowPos(hwnd, NULL, rect.left, rect.top, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
+        WindowedModeWrapper::bBorderlessWindowed = nWindowMode == 2;
+        WindowedModeWrapper::bStretchWindow = nWindowMode == 2;
+        WindowedModeWrapper::desiredClientWidth = nWindowWidth;
+        WindowedModeWrapper::desiredClientHeight = nWindowHeight;
+        auto window = WindowedModeWrapper::CreateWindowExA_Hook(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+        MafiaWindow::Attach(window);
+        return window;
     }
+    auto window = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    if (window && !(dwStyle & WS_CHILD))
+    {
+        WindowedModeWrapper::GameHWND = window;
+        MafiaWindow::Attach(window);
+        using SetAttribute = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
+        static auto setAttribute = []() -> SetAttribute
+        {
+            auto dwm = LoadLibraryExW(L"dwmapi.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+            return dwm ? reinterpret_cast<SetAttribute>(GetProcAddress(dwm, "DwmSetWindowAttribute")) : nullptr;
+        }();
+        int preference = 1;
+        if (setAttribute)
+            setAttribute(window, 33, &preference, sizeof(preference));
+    }
+    return window;
+}
 
-    return hwnd;
+void InitWindowMode()
+{
+    auto engine = GetLS3DF();
+    auto mode = hook::module_pattern(engine, "F6 05 ? ? ? ? 02 8B 35 ? ? ? ? 0F 84 ? ? ? ? 8B 3D ? ? ? ? 55 55 55 55");
+    auto create = hook::module_pattern(engine, "FF 15 ? ? ? ? 3B C5 A3 ? ? ? ? 0F 84 ? ? ? ? 50");
+    if (mode.size() != 1 || create.size() != 1)
+    {
+        OutputDebugStringA("Mafia: native window mode patterns unavailable.\n");
+        return;
+    }
+    nWindowMode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
+    static auto parameters = *mode.get_first<uint32_t*>(2);
+    CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+    FixSettings().OnChange("MAIN.ConfineCursor", []()
+    {
+        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+    });
+    MafiaWindow::Init(engine, parameters);
+    static auto windowMode = safetyhook::create_mid(mode.get_first(), [](SafetyHookContext&)
+    {
+        auto flags = *parameters;
+        flags = nWindowMode ? (flags & ~(2u | 8u | 0x80u)) : (flags | 2u);
+        flags = FixSettings().Bool("MAIN.PauseOnFocusLoss") ? flags | 0x20u : flags & ~0x20u;
+        ProtectedGameRef<uint32_t>{ parameters } = flags;
+        nWindowWidth = static_cast<int>(parameters[-7]);
+        nWindowHeight = static_cast<int>(parameters[-6]);
+        if (nWindowMode == 2 || nWindowWidth <= 0 || nWindowHeight <= 0 || nWindowWidth > 16384 || nWindowHeight > 16384)
+            std::tie(nWindowWidth, nWindowHeight) = GetDesktopRes();
+        if (nWindowWidth <= 0 || nWindowHeight <= 0)
+            std::tie(nWindowWidth, nWindowHeight) = std::make_tuple(640, 480);
+        ProtectedGameRef<uint32_t>{ parameters - 7 } = nWindowWidth;
+        ProtectedGameRef<uint32_t>{ parameters - 6 } = nWindowHeight;
+        if (nWindowMode == 2 && pResolutionWidth && pResolutionHeight)
+        {
+            ProtectedGameRef<int32_t>{ pResolutionWidth } = nWindowWidth;
+            ProtectedGameRef<int32_t>{ pResolutionHeight } = nWindowHeight;
+        }
+    });
+    FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+    {
+        const bool pause = FixSettings().Bool("MAIN.PauseOnFocusLoss");
+        ProtectedGameRef<uint32_t>{ parameters } = pause ? *parameters | 0x20u : *parameters & ~0x20u;
+        auto window = WindowedModeWrapper::GameHWND;
+        if (!pause && window && GetForegroundWindow() != window)
+            SendMessageW(window, WM_ACTIVATE, WA_INACTIVE, 0);
+    });
+    ProtectedGameRef<decltype(&CreateWindowExAHook)>{ reinterpret_cast<decltype(&CreateWindowExAHook)*>(*create.get_first<uint32_t*>(2)) } = CreateWindowExAHook;
+    IATHook::Replace(engine, "USER32.dll", std::forward_as_tuple("SetWindowPos", SetWindowPosHook));
 }
 
 void InitLS3DF()
 {
+    WindowedModeWrapper::EnableDpiAwareness();
     RestoredFeatures::InitProjectorOpacity();
-    CIniReader iniReader("");
 
-    if (iniReader.ReadInteger("MAIN", "BorderlessWindowed", 1) != 0)
-    {
-        auto pattern = hook::module_pattern(GetLS3DF(), "8B 35 ? ? ? ? 0F 84 ? ? ? ? 8B 3D ? ? ? ? 55 55 55 55");
-        if (pattern.size() == 1)
-            injector::WriteMemory(*pattern.get_first<uint32_t*>(2), GetSystemMetricsHook, true);
-        pattern = hook::module_pattern(GetLS3DF(), "FF 15 ? ? ? ? 3B C5 A3 ? ? ? ? 0F 84 ? ? ? ? 50");
-        if (pattern.size() == 1)
-            injector::WriteMemory(*pattern.get_first<uint32_t*>(2), CreateWindowExAHook, true);
-    }
+    InitWindowMode();
 
     // Shadows Z-Fighting
     {
@@ -154,9 +245,8 @@ void InitLS3DF()
 
 void InitIJoy()
 {
-    CIniReader iniReader("");
-    static float fLeftStickDeadzone = iniReader.ReadFloat("MAIN", "LeftStickDeadzone", 10.0f) / 100.0f;
-    static float fRightStickDeadzone = iniReader.ReadFloat("MAIN", "RightStickDeadzone", 10.0f) / 100.0f;
+    static float fLeftStickDeadzone = FixSettings().Float("MAIN.LeftStickDeadzone") / 100.0f;
+    static float fRightStickDeadzone = FixSettings().Float("MAIN.RightStickDeadzone") / 100.0f;
     static constexpr auto pad_max = 10000.0f; //[ -10000 0 10000 ]
 
     if (fLeftStickDeadzone)
@@ -171,7 +261,7 @@ void InitIJoy()
                 float f = *(float*)(regs.ebp + 0xF38);
 
                 auto len = sqrtf(x * x + y * y);
-                if (len < fLeftStickDeadzone)
+                if (fLeftStickDeadzone >= 1.0f || len <= fLeftStickDeadzone)
                 {
                     x = 0.0f;
                     y = 0.0f;
@@ -190,7 +280,7 @@ void InitIJoy()
                 _asm {fadd dword ptr[f]}
             }
         }; injector::MakeInline<LSHook>(pattern.get_first(0), pattern.get_first(11)); //0x10002F71
-        injector::WriteMemory(pattern.get_first(5), 0x9004C1F6, true); //test cl, 4
+        ProtectedGameRef<std::remove_cvref_t<decltype(0x9004C1F6)>>{pattern.get_first<std::remove_cvref_t<decltype(0x9004C1F6)>>(5)} = 0x9004C1F6; //test cl, 4
     }
 
     if (fRightStickDeadzone)
@@ -205,7 +295,7 @@ void InitIJoy()
                 float f = *(float*)(regs.ebp + 0xF38);
 
                 auto len = sqrtf(x * x + y * y);
-                if (len < fRightStickDeadzone)
+                if (fRightStickDeadzone >= 1.0f || len <= fRightStickDeadzone)
                 {
                     x = 0.0f;
                     y = 0.0f;
@@ -224,7 +314,7 @@ void InitIJoy()
                 _asm {fadd dword ptr[f]}
             }
         }; injector::MakeInline<RSX>(pattern.get_first(0), pattern.get_first(12));
-        injector::WriteMemory(pattern.get_first(5), 0x9004C1F6, true); //test cl, 4
+        ProtectedGameRef<std::remove_cvref_t<decltype(0x9004C1F6)>>{pattern.get_first<std::remove_cvref_t<decltype(0x9004C1F6)>>(5)} = 0x9004C1F6; //test cl, 4
     }
 }
 
@@ -232,8 +322,10 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        FixSettings();
+        asi_settings::LiveLink::Start();
         CheckCompatibility();
-        CallbackHandler::RegisterCallback(Init);
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init);
         CallbackHandler::RegisterCallback(L"rw_data.dll", RestoredFeatures::InitEyeAnimations);
         for (auto name : { L"LS3DF.dll", L"LSV11.dll", L"LSV10.dll" })
         {
@@ -256,6 +348,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     if (reason == DLL_PROCESS_ATTACH)
     {
         if (!IsUALPresent()) { InitializeASI(); }
+    }
+    else if (reason == DLL_PROCESS_DETACH)
+    {
+        CursorConfinement::Shutdown();
     }
     return TRUE;
 }

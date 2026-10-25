@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <deque>
 
 export module TurnIndicators;
@@ -162,9 +163,9 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            static bool bTurnIndicators = iniReader.ReadInteger("TURNINDICATORS", "TurnIndicators", 1);
-            static bool bManualTurnIndicators = iniReader.ReadInteger("TURNINDICATORS", "ManualTurnIndicators", 0);
+            SettingsReader iniReader;
+            static bool bTurnIndicators = iniReader.ReadBoolean("TURNINDICATORS", "TurnIndicators", true);
+            static bool bManualTurnIndicators = iniReader.ReadBoolean("TURNINDICATORS", "ManualTurnIndicators", false);
             static uint32_t nLeftIndicatorKey = iniReader.ReadInteger("TURNINDICATORS", "LeftIndicatorKey", VK_OEM_4);
             static uint32_t nRightIndicatorKey = iniReader.ReadInteger("TURNINDICATORS", "RightIndicatorKey", VK_OEM_6);
             static uint32_t nLeftIndicatorButton = iniReader.ReadInteger("TURNINDICATORS", "LeftIndicatorButton", 5);

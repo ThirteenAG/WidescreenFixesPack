@@ -1,6 +1,8 @@
 module;
 
-#include "stdafx.h"
+#include <stdafx.h>
+#include "FixSettings.hpp"
+#include "../Shared/CursorConfinement.hpp"
 
 export module CursorClip;
 
@@ -8,33 +10,12 @@ import ComVars;
 
 namespace
 {
-    bool bClipped = false;
-
-    void ReleaseCursor()
+    BOOL WINAPI GameClipCursor(const RECT* rect)
     {
-        if (bClipped)
-        {
-            ClipCursor(nullptr);
-            bClipped = false;
-        }
-    }
-
-    void UpdateCursorClip()
-    {
-        HWND window = hWnd;
-        RECT rect{};
-        POINT origin{};
-        if (!window || GetForegroundWindow() != window || IsIconic(window) ||
-            !GetClientRect(window, &rect) || !ClientToScreen(window, &origin) ||
-            rect.right <= rect.left || rect.bottom <= rect.top)
-        {
-            ReleaseCursor();
-            return;
-        }
-
-        OffsetRect(&rect, origin.x, origin.y);
-        if (ClipCursor(&rect))
-            bClipped = true;
+        if (rect)
+            return ClipCursor(rect);
+        CursorConfinement::Release();
+        return TRUE;
     }
 }
 
@@ -45,17 +26,21 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            if (iniReader.ReadInteger("MAIN", "ClipCursor", 1) == 0)
-                return;
-
-            WFP::onGameProcessEvent() += UpdateCursorClip;
-            WFP::onActivateApp() += [](bool active)
+            IATHook::Replace(GetModuleHandle(nullptr), "USER32.dll", std::forward_as_tuple("ClipCursor", GameClipCursor));
+            auto& settings = FixSettings();
+            CursorConfinement::SetEnabled(settings.Bool("MAIN.ConfineCursor"));
+            settings.OnChange("MAIN.ConfineCursor", []()
             {
-                if (!active)
-                    ReleaseCursor();
+                CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+            });
+            WFP::onGameProcessEvent() += []()
+            {
+                CursorConfinement::Frame(hWnd.get());
             };
-            WFP::onShutdownEvent() += ReleaseCursor;
+        };
+        WFP::onShutdownEvent() += []()
+        {
+            CursorConfinement::Shutdown();
         };
     }
 } CursorClip;

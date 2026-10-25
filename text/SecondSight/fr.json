@@ -1,0 +1,11 @@
+{
+  "plugin.name": "Correctif écran large Second Sight",
+  "page.camera": "Caméra",
+  "page.advanced": "Avancé",
+  "ResX": "Largeur de la résolution",
+  "ResX.description": "Largeur en pixels. Zéro utilise la résolution du bureau. Redémarrage requis.",
+  "ResY": "Hauteur de la résolution",
+  "ResY.description": "Hauteur en pixels. Zéro utilise la résolution du bureau. Redémarrage requis.",
+  "FOVFactor": "Facteur de champ de vision",
+  "FOVFactor.description": "Multiplie le champ de vision corrigé. 1.0 conserve le cadrage prévu ; des valeurs plus grandes élargissent la vue. Une vue plus large peut montrer des objets à travers les murs à certains endroits."
+}

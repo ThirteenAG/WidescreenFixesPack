@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib") // needed for timeBeginPeriod()/timeEndPeriod()
 
@@ -8,7 +9,6 @@ export module Framelimit;
 
 import ComVars;
 
-float fFPSLimit;
 export class FrameLimiter
 {
 public:
@@ -105,33 +105,71 @@ private:
 
 export void InitFramelimit()
 {
-    CIniReader iniReader("");
-    fFPSLimit = static_cast<float>(iniReader.ReadInteger("FRAMELIMIT", "FPSLimit", 60));
-
-    if (fFPSLimit)
+    auto frame = find_pattern("83 EC 08 56 57 8B F1", "89 3D ? ? ? ? F7 87");
+    auto level = find_pattern("B9 ? ? ? ? 3B 0D ? ? ? ? 1B D2 F7 DA");
+    if (frame.empty() || level.empty())
     {
-        static auto mode = (iniReader.ReadInteger("FRAMELIMIT", "FPSLimitMode", 2) == 2) ? FrameLimiter::FPSLimitMode::FPS_ACCURATE : FrameLimiter::FPSLimitMode::FPS_REALTIME;
-        if (mode == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
+        OutputDebugStringA("King Kong: frame limiter signatures unavailable.\n");
+        return;
+    }
+
+    static FrameLimiter limiter;
+    static float previousRate = 0.0f;
+    static int previousMode = 0;
+    static bool timerPeriod = false;
+    static auto fpslimiter = safetyhook::create_mid(frame.get_first(), [](SafetyHookContext&)
+    {
+        static const auto& requested = FixSettings().Int("MAIN.FPSLimit");
+        static const auto& method = FixSettings().Int("MAIN.FPSLimitMode");
+        const int mode = method == 2 ? 2 : 1;
+        static HMONITOR previousMonitor = nullptr;
+        static float refreshRate = 60.0f;
+        if (requested == -1)
+        {
+            const auto window = WindowedModeWrapper::GameHWND ? WindowedModeWrapper::GameHWND : GetActiveWindow();
+            const auto monitor = MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY);
+            if (previousMonitor != monitor)
+            {
+                previousMonitor = monitor;
+                MONITORINFOEXW info{};
+                info.cbSize = sizeof(info);
+                DEVMODEW display{};
+                display.dmSize = sizeof(display);
+                refreshRate = GetMonitorInfoW(monitor, &info) && EnumDisplaySettingsW(info.szDevice, ENUM_CURRENT_SETTINGS, &display) &&
+                    display.dmDisplayFrequency > 1 ? static_cast<float>(display.dmDisplayFrequency) : 60.0f;
+            }
+        }
+        float rate = requested == -1 ? refreshRate : static_cast<float>(requested);
+        if (!std::isfinite(rate) || rate <= 0.0f)
+        {
+            previousRate = 0.0f;
+            return;
+        }
+        rate = std::clamp(rate, 30.0f, 1000.0f);
+        // These two native sequences require 30 FPS even with a higher user cap.
+        if (gCurrentLevel == 0xF858 || gCurrentLevel == 0x0213)
+            rate = 30.0f;
+        if (mode == 2 && !timerPeriod)
+        {
             timeBeginPeriod(1);
-
-        static FrameLimiter FpsLimiter;
-        FpsLimiter.Init(mode, fFPSLimit);
-
-        auto pattern = find_pattern("83 EC 08 56 57 8B F1", "89 3D ? ? ? ? F7 87");
-        static auto fpslimiter = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            timerPeriod = true;
+        }
+        if (rate != previousRate || mode != previousMode)
         {
-            FpsLimiter.Sync();
-        });
-
-        pattern = find_pattern("B9 ? ? ? ? 3B 0D ? ? ? ? 1B D2 F7 DA");
-        static auto fpslimiterlevel = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            gCurrentLevel = regs.eax & 0x7FFFF;
-
-            if (gCurrentLevel == 0xF858 || gCurrentLevel == 0x0213) // Chased by V-Rex || Kong To The Rescue
-                FpsLimiter.Init(mode, 30.0f);
-            else
-                FpsLimiter.Init(mode, fFPSLimit);
-        });
+            previousRate = rate;
+            previousMode = mode;
+            limiter.Init(mode == 2 ? FrameLimiter::FPS_ACCURATE : FrameLimiter::FPS_REALTIME, rate);
+        }
+        limiter.Sync();
+    });
+    static auto fpslimiterlevel = safetyhook::create_mid(level.get_first(), [](SafetyHookContext& regs)
+    {
+        gCurrentLevel = regs.eax & 0x7FFFF;
+    });
+    if (!fpslimiter || !fpslimiterlevel)
+    {
+        fpslimiter.reset();
+        fpslimiterlevel.reset();
+        OutputDebugStringA("King Kong: frame limiter hooks unavailable.\n");
     }
 }

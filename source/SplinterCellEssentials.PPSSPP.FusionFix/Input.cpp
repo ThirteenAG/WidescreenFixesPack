@@ -69,7 +69,7 @@ void InstallInput() {
         // Hide the original left-stick camera help when using separate camera axes.
         injector::MakeJMP(pattern.get_first("B0 FF BD 27 B0 03 8C C4", 0), +[]() {});
     }
-    if (inireader.ReadInteger("MAIN", "SpeedStickControl", 1)) {
+    if (inireader.ReadBoolean("MAIN", "SpeedStickControl", true)) {
         // The PSP controller tick snaps the stick magnitude to zero, walk or run
         // after the circular filter. Keep the filtered axes, so every native and
         // script speed calculation (holstered, armed, aiming) sees the real tilt.

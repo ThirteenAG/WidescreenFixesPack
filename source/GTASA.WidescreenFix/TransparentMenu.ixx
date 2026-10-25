@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 #include "callargs.h"
 #include <d3d9.h>
 
@@ -33,13 +35,17 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            static int bTransparentMenu = iniReader.ReadInteger("GRAPHICS", "TransparentMenu", 0);
+            static int bTransparentMenu = FixSettings().Int("GRAPHICS.TransparentMenu");
 
             if (bTransparentMenu <= 0)
                 return;
 
             auto pattern = hook::pattern("E8 ? ? ? ? 0F B6 15 ? ? ? ? 50");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto CRGBA = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 using tCRGBA = void(__thiscall*)(void*, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
@@ -50,9 +56,19 @@ public:
             });
 
             pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? 83 C4 ? 84 C0 74 ? 68");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             hbDrawRect2.fun = injector::MakeCALL(pattern.get_first(), CSprite2d__DrawRect2, true).get();
 
             pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? 53 53 53 53 53 53 E8 ? ? ? ? E8");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto captureHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&)
             {
                 if (*(int*)0xC8D4C0 < 9)

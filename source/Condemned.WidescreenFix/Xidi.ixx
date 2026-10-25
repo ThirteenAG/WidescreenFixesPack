@@ -10,13 +10,23 @@ export XidiSendVibrationFunc XidiSendVibration = nullptr;
 export std::atomic<bool> bShowingCursor = false;
 export std::atomic<bool> bKeyAssignmentInProgress = false;
 
+std::atomic_bool XidiPending{ false };
+
 export void InitXidi()
 {
+    // Module-load notification can precede the library's CRT initialization.
+    XidiPending.store(true, std::memory_order_release);
+}
+
+export void UpdateXidi()
+{
+    if (!XidiPending.exchange(false, std::memory_order_acquire))
+        return;
     typedef void (*XidiSetButtonLabelFunc)(int index, const char* label);
     typedef bool (*XidiRegisterProfileCallbackFunc)(const wchar_t* (*callback)());
-    auto xidiModule = GetModuleHandleW(L"Xidi.32.dll");
+    HMODULE xidiModule = nullptr;
 
-    if (xidiModule)
+    if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"Xidi.32.dll", &xidiModule))
     {
         auto XidiRegisterProfileCallback = (XidiRegisterProfileCallbackFunc)GetProcAddress(xidiModule, "XidiRegisterProfileCallback");
         auto XidiSetButtonLabel = (XidiSetButtonLabelFunc)GetProcAddress(xidiModule, "XidiSetButtonLabel");

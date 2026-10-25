@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <cmath>
 #include <numbers>
 
@@ -22,6 +23,7 @@ namespace Camera
     float dt, yaw, pitch, idleTimer;
     float CameraReturnTimeout, CameraReturnSpeed;
     bool engaged;
+    bool FreeCameraEnabled = false;
     constexpr float pi = std::numbers::pi_v<float>;
 
     void Reset()
@@ -87,22 +89,31 @@ namespace Camera
 
     int __fastcall UpdateCamera(uintptr_t _this, void*, uint32_t elapsed)
     {
-        DWORD now = GetTickCount();
-        auto mode = Field<int>(_this, 16);
-        auto car = Field<uintptr_t>(_this, 12);
-        if (mode < 7 || mode > 9 || !car || Field<uint8_t>(_this, 32) ||
-            (*pControlFlags & 1) || std::abs(Field<float>(_this, 48)) > 0.001f ||
-            (cameraTick && now - cameraTick > 250))
-            Reset();
-        else if (owner != _this || vehicle != car)
+        if (FreeCameraEnabled)
         {
-            Reset();
-            owner = _this;
-            vehicle = car;
+            DWORD now = GetTickCount();
+            auto mode = Field<int>(_this, 16);
+            auto car = Field<uintptr_t>(_this, 12);
+            if (mode < 7 || mode > 9 || !car || Field<uint8_t>(_this, 32) ||
+                (*pControlFlags & 1) || std::abs(Field<float>(_this, 48)) > 0.001f ||
+                (cameraTick && now - cameraTick > 250))
+                Reset();
+            else if (owner != _this || vehicle != car)
+            {
+                Reset();
+                owner = _this;
+                vehicle = car;
+            }
+            cameraTick = now;
+            dt = std::min(elapsed, 83u) * 0.001f;
         }
-        cameraTick = now;
-        dt = std::min(elapsed, 83u) * 0.001f;
-        return shUpdate.unsafe_thiscall<int>(_this, elapsed);
+        const int result = shUpdate.unsafe_thiscall<int>(_this, elapsed);
+        const int mode = Field<int>(_this, 16);
+        GameplayCamera = Field<uintptr_t>(_this, 4);
+        GameplayFovEnabled = GameplayCamera && pControlFlags && !(*pControlFlags & 1) &&
+            (mode == 1 || (mode >= 7 && mode <= 9)) && !Field<uint8_t>(_this, 32) &&
+            !Field<uint8_t>(_this, 148) && std::abs(Field<float>(_this, 48)) <= 0.001f;
+        return result;
     }
 
     bool GetOrbit(uintptr_t camera, const Vector& forward, Vector& orbit)
@@ -173,16 +184,22 @@ namespace Camera
 
 export void InitCamera()
 {
-    CIniReader ini("");
-    if (!ini.ReadInteger("CAMERA", "FreeCamera", 0)) return;
     using namespace Camera;
-    CameraReturnTimeout = std::max(ini.ReadFloat("CAMERA", "CameraReturnTimeout", 3.0f), 0.0f);
-    CameraReturnSpeed = std::max(ini.ReadFloat("CAMERA", "CameraReturnSpeed", 2.0f), 0.0f);
+    auto update = find_pattern("81 EC ? ? ? ? 53 55 56 8B F1 33 ED 57 8B 46 04 8B 7E 1C 3B C5");
+    auto aim = find_pattern("A0 ? ? ? ? 83 EC 24 A8 01 56 57 8B F9 0F 85");
+    if (update.size() != 1 || aim.size() != 1)
+    {
+        OutputDebugStringA("Mafia: gameplay camera state patterns unavailable.\n");
+        return;
+    }
+    pControlFlags = *aim.get_first<uint8_t*>(1);
+    shUpdate = safetyhook::create_inline(update.get_first(), UpdateCamera);
+    if (!shUpdate || !FixSettings().Bool("CAMERA.FreeCamera")) return;
+    CameraReturnTimeout = std::max(FixSettings().Float("CAMERA.CameraReturnTimeout"), 0.0f);
+    CameraReturnSpeed = std::max(FixSettings().Float("CAMERA.CameraReturnSpeed"), 0.0f);
 
     auto input = find_pattern("83 EC ? 53 8A 5C 24 ? 55 8B E9 56 57 8B 45 08 85 C0 74 ? 8B 4D 0C 2B C8 B8 EB A0 0E EA");
-    auto update = find_pattern("81 EC ? ? ? ? 53 55 56 8B F1 33 ED 57 8B 46 04 8B 7E 1C 3B C5");
     auto place = find_pattern("83 EC 3C 8B 44 24 44 56 8B F1 8B 08 89 4C 24 04 8B 50 04 89 54 24 08");
-    auto aim = find_pattern("A0 ? ? ? ? 83 EC 24 A8 01 56 57 8B F9 0F 85");
     if (input.size() != 1 || update.size() != 1 || place.size() != 1 || aim.size() != 1) return;
     auto aimStart = reinterpret_cast<uintptr_t>(aim.get_first());
     auto horizontal = hook::range_pattern(aimStart, aimStart + 0x100,
@@ -195,14 +212,13 @@ export void InitCamera()
     pSensitivityY = *vertical.get_first<float*>(2);
     pInvertLook = *vertical.get_first<uint8_t*>(11);
     shInput = safetyhook::create_inline(input.get_first(), UpdateInput);
-    shUpdate = safetyhook::create_inline(update.get_first(), UpdateCamera);
     shPlace = safetyhook::create_inline(place.get_first(), PlaceCamera);
     shAim = safetyhook::create_inline(aim.get_first(), AimCamera);
-    if (!shInput || !shUpdate || !shPlace || !shAim)
+    FreeCameraEnabled = shInput && shPlace && shAim;
+    if (!FreeCameraEnabled)
     {
         shAim.reset();
         shPlace.reset();
-        shUpdate.reset();
         shInput.reset();
     }
 }

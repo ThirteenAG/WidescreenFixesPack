@@ -1,4 +1,6 @@
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "../Shared/SplinterCell/Window.hpp"
 
 import ComVars;
 import CrashHandler;
@@ -12,44 +14,50 @@ import GUI;
 import Xidi;
 import Eax;
 
+#include "NativeMenu.hpp"
+
 void Init()
 {
+    SCWindow::EnableDpi();
     InitCrashHandler();
 
-    CIniReader iniReader("");
-    Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
-    Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
-    Screen.bDeferredInput = iniReader.ReadInteger("MAIN", "DeferredInput", 1) != 0;
-    Screen.fRawInputMouse = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouse", 1.0f), 0.0f, 5.0f);
-    Screen.bRawInputMouseRawData = iniReader.ReadInteger("MAIN", "RawInputMouseRawData", 0) != 0;
-    Screen.nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
-    Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 1);
-    Screen.bOpsatWidescreenMode = iniReader.ReadInteger("MAIN", "OpsatWidescreenMode", 0) != 0;
-    Screen.bScopeWidescreenMode = iniReader.ReadInteger("MAIN", "ScopeWidescreenMode", 0) != 0;
-    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
-    Screen.nPostProcessFixedScale = iniReader.ReadInteger("MAIN", "PostProcessFixedScale", 1);
-    Screen.fGrainScale = std::clamp(iniReader.ReadFloat("MAIN", "GrainScale", 1.0f), 0.0f, 1.0f);
-    Screen.nShadowMapResolution = iniReader.ReadInteger("MAIN", "ShadowMapResolution", 1);
-    Screen.nReflectionsResolution = iniReader.ReadInteger("MAIN", "ReflectionsResolution", 1);
-    Screen.nBloomResolutionMultiplier = std::clamp(iniReader.ReadInteger("MAIN", "BloomResolutionMultiplier", 0), 0, 4);
-    fLightDistanceMultiplier = std::clamp(iniReader.ReadFloat("MAIN", "LightDistanceMultiplier", 8.0f), 1.0f, 8.0f);
-    auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
-    gColor.RGBA = iniReader.ReadInteger("BONUS", "GogglesLightColor", 0);
-    bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
-    bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
-    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 0) != 0;
-    Screen.nCutsceneBorders = iniReader.ReadInteger("MAIN", "CutsceneBorders", 0);
-    bEnableConsole = iniReader.ReadInteger("MAIN", "EnableConsole", 0) != 0;
-    bEnableCheckpoints = iniReader.ReadInteger("MAIN", "EnableCheckpoints", 1) != 0;
+    auto& settings = FixSettings();
+    asi_settings::LiveLink::Start();
+    Screen.Width = settings.Int("MAIN.ResX");
+    Screen.Height = settings.Int("MAIN.ResY");
+    Screen.bDeferredInput = settings.Int("MAIN.DeferredInput") != 0;
+    Screen.bRawInputMouse = settings.Int("MAIN.RawInputMouse") != 0;
+    settings.OnChange("MAIN.MouseSensitivity", []
+    {
+        RawInputHandler<int32_t>::SetSensitivity(FixSettings().Float("MAIN.MouseSensitivity"));
+    });
+    Screen.bRawInputMouseRawData = settings.Int("MAIN.RawInputMouseRawData") != 0;
+    Screen.nFMVWidescreenMode = settings.Int("MAIN.FMVWidescreenMode");
+    Screen.nHudWidescreenMode = settings.Int("MAIN.HudWidescreenMode");
+    Screen.bOpsatWidescreenMode = settings.Int("MAIN.OpsatWidescreenMode") != 0;
+    Screen.bScopeWidescreenMode = settings.Int("MAIN.ScopeWidescreenMode") != 0;
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(settings.Get("MAIN.HudAspectRatioConstraint"));
+    Screen.nPostProcessFixedScale = settings.Int("MAIN.PostProcessFixedScale");
+    Screen.fGrainScale = std::clamp(settings.Float("MAIN.GrainScale"), 0.0f, 1.0f);
+    Screen.nShadowMapResolution = settings.Int("MAIN.ShadowMapResolution");
+    Screen.nReflectionsResolution = settings.Int("MAIN.ReflectionsResolution");
+    Screen.nBloomResolutionMultiplier = std::clamp(settings.Int("MAIN.BloomResolutionMultiplier"), 0, 4);
+    fLightDistanceMultiplier = std::clamp(settings.Float("MAIN.LightDistanceMultiplier"), 1.0f, 8.0f);
+    auto nFPSLimit = settings.Int("MAIN.FPSLimit");
+    gColor.RGBA = settings.Int("BONUS.GogglesLightColor");
+    bSkipIntro = settings.Int("MAIN.SkipIntro") != 0;
+    bSkipPressStartToContinue = settings.Int("MAIN.SkipPressStart") != 0;
+    bRestoreCutsceneFOV = settings.Int("MAIN.RestoreCutsceneFOV") != 0;
+    Screen.nCutsceneBorders = settings.Int("MAIN.CutsceneBorders");
+    bEnableConsole = settings.Int("MAIN.EnableConsole") != 0;
+    bEnableCheckpoints = settings.Int("MAIN.EnableCheckpoints") != 0;
 
-    if (!Screen.Width || !Screen.Height)
+    if (Screen.Width <= 0 || Screen.Height <= 0)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+    if (Screen.Width <= 0 || Screen.Height <= 0)
+        std::tie(Screen.Width, Screen.Height) = std::make_tuple(640, 480);
 
     auto exePath = GetExeModulePath();
-
-    mINI::INIStructure ini;
-    mINI::INIFile mIni(iniReader.GetIniPath());
-    mIni.read(ini);
 
     auto userIniPath = exePath / "SplinterCell2User.ini";
 
@@ -59,15 +67,38 @@ void Init()
     mINI::INIFile userIniFile(userIniPath);
     if (userIniFile.read(userIni))
     {
-        if (ini.has("Engine.Input"))
-        {
-            for (auto const& kv : ini["Engine.Input"])
-            {
-                std::string key = std::get<0>(kv);
-                std::string value = std::get<1>(kv);
-                userIni["Engine.Input"].setAll(key, value);
-            }
-        }
+        for (const auto& [id, key] : std::array{
+            std::pair{ "INPUT.Aliases14", "Aliases[14]" },
+            std::pair{ "INPUT.Aliases15", "Aliases[15]" },
+            std::pair{ "INPUT.Aliases33", "Aliases[33]" },
+            std::pair{ "INPUT.Joy1", "Joy1" },
+            std::pair{ "INPUT.Joy2", "Joy2" },
+            std::pair{ "INPUT.Joy3", "Joy3" },
+            std::pair{ "INPUT.Joy4", "Joy4" },
+            std::pair{ "INPUT.Joy5", "Joy5" },
+            std::pair{ "INPUT.Joy6", "Joy6" },
+            std::pair{ "INPUT.Joy7", "Joy7" },
+            std::pair{ "INPUT.Joy8", "Joy8" },
+            std::pair{ "INPUT.Joy9", "Joy9" },
+            std::pair{ "INPUT.Joy10", "Joy10" },
+            std::pair{ "INPUT.Joy11", "Joy11" },
+            std::pair{ "INPUT.Joy12", "Joy12" },
+            std::pair{ "INPUT.Joy13", "Joy13" },
+            std::pair{ "INPUT.Joy14", "Joy14" },
+            std::pair{ "INPUT.Joy15", "Joy15" },
+            std::pair{ "INPUT.Joy16", "Joy16" },
+            std::pair{ "INPUT.JoyX", "JoyX" },
+            std::pair{ "INPUT.JoyY", "JoyY" },
+            std::pair{ "INPUT.JoyV", "JoyV" },
+            std::pair{ "INPUT.JoyZ", "JoyZ" },
+            std::pair{ "INPUT.JoyR", "JoyR" },
+            std::pair{ "INPUT.JoyU", "JoyU" },
+            std::pair{ "INPUT.AnalogUp", "AnalogUp" },
+            std::pair{ "INPUT.AnalogDown", "AnalogDown" },
+            std::pair{ "INPUT.AnalogLeft", "AnalogLeft" },
+            std::pair{ "INPUT.AnalogRight", "AnalogRight" }
+        })
+            userIni["Engine.Input"].setAll(key, settings.Get(id));
         userIni["Engine.EPCGameOptions"]["Resolution"] = std::to_string(Screen.Width) + "x" + std::to_string(Screen.Height);
         userIniFile.generate(userIni);
     }
@@ -117,6 +148,17 @@ void Init()
     {
         list.push_back(str);
     }
+
+    NativeDisplayModes = { { 640, 480 }, { 800, 600 } };
+    for (const auto& resolution : list)
+    {
+        int width = 0, height = 0;
+        if (sscanf_s(resolution.c_str(), "%dx%d", &width, &height) == 2 &&
+            width >= 640 && height >= 480 && width <= 16384 && height <= 16384)
+            NativeDisplayModes.emplace_back(width, height);
+    }
+    std::sort(NativeDisplayModes.begin(), NativeDisplayModes.end());
+    NativeDisplayModes.erase(std::unique(NativeDisplayModes.begin(), NativeDisplayModes.end()), NativeDisplayModes.end());
 
     // Sort list by resolution size (descending)
     std::sort(list.begin(), list.end(), [](const std::string& lhs, const std::string& rhs)
@@ -194,27 +236,29 @@ void Init()
         static float fFPSLimit = 1.0f / static_cast<float>(nFPSLimit);
         auto pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 45 F0 F3 0F 10 05 ? ? ? ? F3 0F 11 45 EC"); // Digital version
         if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(4), &fFPSLimit, true);
+            ProtectedGameRef<decltype(&fFPSLimit)>(reinterpret_cast<decltype(&fFPSLimit)*>(pattern.get_first(4))) = &fFPSLimit;
         else
         {
             pattern = hook::pattern("8B 0D ? ? ? ? 89 4D C8 8B 15 ? ? ? ? 89 55 E0"); // Retail version
             if (!pattern.empty())
-                injector::WriteMemory(pattern.get_first(2), &fFPSLimit, true);
+                ProtectedGameRef<decltype(&fFPSLimit)>(reinterpret_cast<decltype(&fFPSLimit)*>(pattern.get_first(2))) = &fFPSLimit;
         }
     }
 }
+
+ASI_SETTINGS_EXPORT(FixSettings())
 
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
         CallbackHandler::RegisterCallback(Init);
-        CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
+        CallbackHandler::RegisterCallback(L"Core.dll", [] { InitCore(); PTMenu::Init(); });
         CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
         CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
         CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
-        CallbackHandler::RegisterCallback(L"GUI.dll", InitGUI);
+        CallbackHandler::RegisterCallback(L"GUI.dll", [] { InitGUI(); PTMenu::InitDrawing(); });
         CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
         CallbackHandler::RegisterCallback(L"eax.dll", InitEAX);

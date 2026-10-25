@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 
 export module MenuConstraint;
 
@@ -18,8 +20,7 @@ namespace MenuConstraintHooks
     constexpr const char* TransitionSignature = nullptr;
     bool IsCurrentFrontend()
     {
-        CIniReader reader("");
-        return reader.ReadInteger("MAIN", "ScalingMode", 1) != 0;
+        return FixSettings().Bool("MAIN.ScalingMode");
     }
     // The 1.0 retail executable rewrites the following call during DRM setup.
     constexpr const char* DrawSignature = "56 8B F1 8A 46 32 84 C0 0F 85 ? ? ? ? 68 00 00 7F 43";
@@ -187,6 +188,11 @@ namespace MenuConstraintHooks
     uintptr_t FindUnique(const char* signature)
     {
         auto pattern = hook::pattern(signature);
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+            return 0;
+        }
         return pattern.size() == 1 ? reinterpret_cast<uintptr_t>(pattern.get_first()) : 0;
     }
 
@@ -261,13 +267,24 @@ public:
         WFP::onGameInitEvent() += []()
         {
             if (!MenuConstraintHooks::IsCurrentFrontend()) return;
-            CIniReader reader("");
-            MenuCanvas::Constraint = ParseWidescreenHudOffset(reader.ReadString("MAIN", "MenuAspectRatioConstraint", "Auto"));
-            if (!MenuCanvas::Constraint || !std::isfinite(*MenuCanvas::Constraint))
-                return;
-            MenuCanvas::Enabled = MenuConstraintHooks::Install();
-            if (MenuCanvas::Enabled)
-                onResChange().executeAll(RsGlobal->width, RsGlobal->height);
+            // The hooks are installed once a ratio is chosen (at start or later in the menu); Auto keeps the
+            // whole screen through them
+            static auto Apply = []()
+            {
+                MenuCanvas::Constraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.MenuAspectRatioConstraint"));
+                if (MenuCanvas::Constraint && !std::isfinite(*MenuCanvas::Constraint))
+                    MenuCanvas::Constraint.reset();
+                static bool installed = false;
+                if (MenuCanvas::Constraint && !installed)
+                {
+                    installed = true;
+                    MenuCanvas::Enabled = MenuConstraintHooks::Install();
+                }
+                if (MenuCanvas::Enabled)
+                    onResChange().executeAll(RsGlobal->width, RsGlobal->height);
+            };
+            Apply();
+            OnSettingChange("MAIN.MenuAspectRatioConstraint", []() { Apply(); });
         };
     }
 } MenuConstraint;

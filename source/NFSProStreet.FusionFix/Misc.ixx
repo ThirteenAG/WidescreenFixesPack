@@ -1,29 +1,32 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "../Shared/NFS/FieldOfView.hpp"
 #include <d3d9.h>
-#define DIRECTINPUT_VERSION 0x0700
-#include <dinput.h>
 
 export module Misc;
 
 import ComVars;
-import Compat;
+import Input;
 
-SafetyHookInline shsub_5A0B50 = {};
-void __cdecl sub_5A0B50(int a1, int a2)
+// Points the memory operand of a game instruction at a value of the fix
+template<typename T>
+void Redirect(void* operand, T* value)
 {
-    if (!bHideCursorForMouseLook || GameFlowManager::IsPaused())
-        return shsub_5A0B50.unsafe_ccall(a1, a2);
+    ProtectedGameRef<T*> ref;
+    ref.SetAddress(operand);
+    ref = value;
 }
 
+// Damage memory pools: they leaked a little with every race, so long sessions ran out of memory.
+// They're recreated once the game is back in the front end.
 namespace DamageFix
 {
-    inline uintptr_t ptrGameFlowManagerStatus = 0x00ABB510;
-    inline uintptr_t ptrbFree = 0x00436130;
-    inline intptr_t ptrMemoryPoolClose = 0x00435D20;
-    inline uintptr_t ptr_g_AttachmentVBMemoryPool = 0x00BFBCE0;
-    inline uintptr_t ptr_g_AttachmentMemoryPool = 0x00BFBCE4;
+    inline uintptr_t ptrbFree = 0;
+    inline intptr_t ptrMemoryPoolClose = 0;
+    inline uintptr_t ptr_g_AttachmentVBMemoryPool = 0;
+    inline uintptr_t ptr_g_AttachmentMemoryPool = 0;
 
     void* ptrDamageVBPool = 0;
     void* ptrDamagePool = 0;
@@ -31,12 +34,12 @@ namespace DamageFix
     inline const char* aDamagevbpool = "OptimizedDamageVBPool";
     inline const char* aDamagepool = "OptimizedDamagePool";
 
-    inline intptr_t bGetFreeMemoryPoolNum = 0x00435C70;
-    inline intptr_t bWareMalloc = 0x00435EB0;
-    inline uintptr_t MemoryPoolInfoTable = 0x00B4D9F0;
-    inline uintptr_t MemoryPoolMem = 0x00B4DD10;
-    inline uintptr_t MemoryPools = 0x00B4DBF0;
-    inline uintptr_t MemoryPool_Init = 0x00435140;
+    inline intptr_t bGetFreeMemoryPoolNum = 0;
+    inline intptr_t bWareMalloc = 0;
+    inline uintptr_t MemoryPoolInfoTable = 0;
+    inline uintptr_t MemoryPoolMem = 0;
+    inline uintptr_t MemoryPools = 0;
+    inline uintptr_t MemoryPool_Init = 0;
 
     #define g_AttachmentVBMemoryPool_Val *reinterpret_cast<uint32_t*>(ptr_g_AttachmentVBMemoryPool)
     #define g_AttachmentMemoryPool_Val *reinterpret_cast<uint32_t*>(ptr_g_AttachmentMemoryPool)
@@ -143,18 +146,13 @@ namespace DamageFix
 
     void GameLoopExecutor()
     {
-        if (!bReInitFlag) return;
+        if (!bReInitFlag)
+            return;
 
-        if (*reinterpret_cast<uint32_t*>(ptrGameFlowManagerStatus) == 3)
+        if (IsFrontEnd())
         {
-            //*(bool*)0x00A9D6A7 = false; // g_AttachmentInPhysics
-
-            //printf("Re-initing damage memory pools\n");
-
-            // close the memory pools first
             reinterpret_cast<void(*)(uint32_t)>(ptrMemoryPoolClose)(g_AttachmentMemoryPool_Val);   // MemoryPool::Close
             reinterpret_cast<void(*)(uint32_t)>(ptrMemoryPoolClose)(g_AttachmentVBMemoryPool_Val); // MemoryPool::Close
-
 
             g_AttachmentVBMemoryPool_Val = -1;
             g_AttachmentMemoryPool_Val = -1;
@@ -163,11 +161,10 @@ namespace DamageFix
             reinterpret_cast<void(*)(void*)>(ptrbFree)(ptrDamagePool);   // bFree
             DamagePublic_Init();
             bReInitFlag = false;
-            //*(bool*)0x00A9D6A7 = true; // g_AttachmentInPhysics
         }
     }
 
-    int Init()
+    void Init()
     {
         uintptr_t loc_6DAB0E = reinterpret_cast<uintptr_t>(hook::pattern("68 00 60 00 00 E8 ? ? ? ? D9 05 ? ? ? ?").get_first(0)) + 0x5A;
         uintptr_t loc_6A7976 = reinterpret_cast<uintptr_t>(hook::pattern("8B 11 8B 43 08 8B 92 54 01 00 00 50 FF D2").get_first(0)) - 0xB;
@@ -175,8 +172,6 @@ namespace DamageFix
         uintptr_t loc_4351E6 = loc_4351CC + 0x1A;
         uintptr_t loc_4482FC = reinterpret_cast<uintptr_t>(hook::pattern("66 F7 46 0E 00 20 0F").get_first(0)) + 6;
         uintptr_t loc_6DB10F = reinterpret_cast<uintptr_t>(hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 8B 4C 24 10 64 89 0D 00 00 00 00 59 5E 83 C4 14 C3 CC").get_first(0)) - 0xA;
-        uintptr_t loc_4AD80F = reinterpret_cast<uintptr_t>(hook::pattern("E8 ? ? ? ? 83 3D ? ? ? ? 06 0F").get_first(0)) + 7;
-        ptrGameFlowManagerStatus = *reinterpret_cast<uintptr_t*>(loc_4AD80F);
         ptrbFree = reinterpret_cast<uintptr_t>(hook::pattern("80 7E F5 22").get_first(0)) - 0x74;
 
         uintptr_t loc_7907EA = reinterpret_cast<uintptr_t>(hook::pattern("E8 ? ? ? ? 8B 4E 60 51").get_first(0));
@@ -188,12 +183,12 @@ namespace DamageFix
         uintptr_t loc_436538 = reinterpret_cast<uintptr_t>(hook::pattern("C1 E8 02 25 FF 07 00 00").get_first(0)) + 0x40;
         bWareMalloc = loc_436538 + 5 + *reinterpret_cast<intptr_t*>(loc_436538 + 1);
 
-        uintptr_t loc_1C45036 = reinterpret_cast<uintptr_t>(hook::pattern("8B C8 C1 E1 04 81 C1 ? ? ? ?").get_first(0)); // securom section, in drm-free demo: 0x00436188
+        uintptr_t loc_1C45036 = reinterpret_cast<uintptr_t>(hook::pattern("8B C8 C1 E1 04 81 C1 ? ? ? ?").get_first(0)); // SecuROM section; 0x00436188 in the DRM-free demo
         MemoryPoolInfoTable = *reinterpret_cast<uintptr_t*>(loc_1C45036 + 7);
         MemoryPoolMem = *reinterpret_cast<uintptr_t*>(loc_1C45036 + 0x2A);
         MemoryPools = *reinterpret_cast<uintptr_t*>(loc_1C45036 + 0x37);
 
-        uintptr_t loc_435F84 = reinterpret_cast<uintptr_t>(hook::pattern("C6 05 ? ? ? ? 00 C7 05 ? ? ? ? FF FF FF FF C7 05 ? ? ? ? 10 00 00 00 89 35 ? ? ? ? E8").get_first(0)) + 0x21; // 2 hits in DRM-free, which is OK
+        uintptr_t loc_435F84 = reinterpret_cast<uintptr_t>(hook::pattern("C6 05 ? ? ? ? 00 C7 05 ? ? ? ? FF FF FF FF C7 05 ? ? ? ? 10 00 00 00 89 35 ? ? ? ? E8").get_first(0)) + 0x21; // 2 hits in the DRM-free demo, which is OK
         MemoryPool_Init = loc_435F84 + 5 + *reinterpret_cast<intptr_t*>(loc_435F84 + 1);
 
         uintptr_t sub_438AE0 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 83 E0 1F 0D 00 04 00 00 89 44 24 08 E9 ? ? ? ?").get_first(0));
@@ -211,247 +206,304 @@ namespace DamageFix
         // remove free assert
         injector::MakeJMP(loc_4351CC, loc_4351E6, true);
 
-        // force damage skin recreation!
-        //injector::MakeNOP(0x00448D85, 6, true);
-        //injector::MakeNOP(0x00448D7B, 6, true);
+        // force damage skin recreation
         injector::MakeNOP(loc_4482FC, 6, true);
 
         // game loop
         injector::MakeCALL(loc_6DB10F, GameLoopExecutor, true);
-
-        return 0;
     }
 }
 
-static bool bAccessedPostRace;
-uint32_t StuffToCompare = 0;
-bool __stdcall memory_readable(void* ptr, size_t byteCount)
+// FE::Object::SetScript(object, script hash, start) could be called with an object whose memory was already
+// released, which crashed in the script lookup. Objects in unmapped memory are skipped.
+namespace FEScriptFix
 {
-    MEMORY_BASIC_INFORMATION mbi;
-    if (VirtualQuery(ptr, &mbi, sizeof(MEMORY_BASIC_INFORMATION)) == 0)
-        return false;
-
-    if (mbi.State != MEM_COMMIT)
-        return false;
-
-    if (mbi.Protect == PAGE_NOACCESS || mbi.Protect == PAGE_EXECUTE)
-        return false;
-
-    // This checks that the start of memory block is in the same "region" as the
-    // end. If it isn't you "simplify" the problem into checking that the rest of
-    // the memory is readable.
-    size_t blockOffset = (size_t)((char*)ptr - (char*)mbi.AllocationBase);
-    size_t blockBytesPostPtr = mbi.RegionSize - blockOffset;
-
-    if (blockBytesPostPtr < byteCount)
-        return memory_readable((char*)ptr + blockBytesPostPtr,
-                               byteCount - blockBytesPostPtr);
-
-    return true;
-}
-
-uint32_t FEScriptFixExit;
-void __declspec(naked) FEScriptMemoryCheck()
-{
-    _asm
+    bool IsReadable(const void* ptr, size_t size)
     {
-        push edi
-        mov edi, [esp + 8]
-        mov StuffToCompare, edi
+        MEMORY_BASIC_INFORMATION mbi;
+        if (!VirtualQuery(ptr, &mbi, sizeof(mbi)) || mbi.State != MEM_COMMIT || (mbi.Protect & (PAGE_NOACCESS | PAGE_GUARD)) || mbi.Protect == PAGE_EXECUTE)
+            return false;
+
+        auto end = reinterpret_cast<uintptr_t>(mbi.BaseAddress) + mbi.RegionSize;
+        auto last = reinterpret_cast<uintptr_t>(ptr) + size;
+        return last <= end || IsReadable(reinterpret_cast<const void*>(end), last - end);
     }
 
-    if (memory_readable((void*)StuffToCompare, 8))
-        _asm jmp FEScriptFixExit
-
-    _asm
+    SafetyHookInline shSetScript = {};
+    void __cdecl SetScript(void* object, uint32_t scriptHash, bool start)
     {
-        pop edi
-        retn
+        if (object && !IsReadable(object, 8))
+            return;
+        shSetScript.unsafe_ccall(object, scriptHash, start);
     }
 }
 
-uint32_t* dword_AC6ED4 = (uint32_t*)0x00AC6ED4;
-static bool bInSparkRender = false;
-void(__thiscall* sub_706550)(void* that, void* texture) = (void(__thiscall*)(void*, void*))0x706550;
-void(__thiscall* XSpriteManager_DrawBatch)(void* that, void* view) = (void(__thiscall*)(void*, void*))0x004B61C0;
-#pragma runtime_checks( "", off )
-void __stdcall XSpriteManager_DrawBatch_Hook(void* view)
+// Sparks are drawn with additive blending, like on the Xbox 360: the sprite batch sets its texture and blend
+// states, and the destination blend is made additive after that while the spark batch is drawn
+namespace XenonEffects
 {
-    void* that;
-    _asm mov that, ecx
+    bool bInSparkRender = false;
 
-    bInSparkRender = true;
-    XSpriteManager_DrawBatch(that, view);
-    bInSparkRender = false;
-}
-
-void __stdcall sub_706550_hook(void* texture)
-{
-    void* that;
-    _asm mov that, ecx
-
-    sub_706550(that, texture);
-    if (bInSparkRender)
+    void(__thiscall* DrawBatchFunc)(void*, void*) = nullptr;
+    void __fastcall DrawBatch(void* manager, void* edx, void* view)
     {
-        LPDIRECT3DDEVICE9 gDevice = **(LPDIRECT3DDEVICE9**)dword_AC6ED4;
-        gDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+        bInSparkRender = true;
+        DrawBatchFunc(manager, view);
+        bInSparkRender = false;
+    }
+
+    void(__thiscall* SetTextureFunc)(void*, void*) = nullptr;
+    void __fastcall SetTexture(void* self, void* edx, void* texture)
+    {
+        SetTextureFunc(self, texture);
+        if (bInSparkRender && *Direct3DDevice && **Direct3DDevice)
+            (**Direct3DDevice)->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
     }
 }
 
-uintptr_t SinglePlayerPostRaceStateManager_HandleScreenConstructed = 0x5A7750;
-void __stdcall SinglePlayerPostRaceStateManager_HandleScreenConstructed_Hook()
+// Online and LAN races keep running in the background; input is blocked while the window isn't focused
+namespace OnlineInputBlocker
 {
-    uintptr_t that;
-    _asm mov that, ecx
+    bool bPollingEnabled = true;
+    uintptr_t* OnlineActiveGameManager = nullptr;
 
-    reinterpret_cast<void(__thiscall*)(uintptr_t)>(SinglePlayerPostRaceStateManager_HandleScreenConstructed)(that);
-
-    // set mbScreenConstructed to true because the game has anxiety setting it
-    *(bool*)(that + 0xC6) = true;
-}
-
-uintptr_t OnlinePostRaceStateManager_HandleScreenConstructed = 0x5FA460;
-void __stdcall OnlinePostRaceStateManager_HandleScreenConstructed_Hook()
-{
-    uintptr_t that;
-    _asm mov that, ecx
-
-    reinterpret_cast<void(__thiscall*)(uintptr_t)>(OnlinePostRaceStateManager_HandleScreenConstructed)(that);
-
-    // set mbScreenConstructed to true because the game has anxiety setting it
-    *(bool*)(that + 0xC6) = true;
-}
-
-int32_t RetZero()
-{
-    return 0;
-}
-
-void __declspec(naked) UpdateAchievements_Hook()
-{
-    _asm
+    uintptr_t ptrGameDevicePoll = 0;
+    void __fastcall GameDevicePoll(uintptr_t device, void* edx)
     {
-        pop eax
-        pop eax
-        ret
+        if (bPollingEnabled)
+            reinterpret_cast<void(__thiscall*)(uintptr_t)>(ptrGameDevicePoll)(device);
+    }
+
+    uintptr_t ptrSteeringWheelDevicePoll = 0;
+    uint32_t __fastcall SteeringWheelDevicePoll(uintptr_t device, void* edx)
+    {
+        if (!bPollingEnabled)
+            return 0;
+        return reinterpret_cast<uint32_t(__thiscall*)(uintptr_t)>(ptrSteeringWheelDevicePoll)(device);
+    }
+
+    WNDPROC GameWndProc = nullptr;
+    LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+    {
+        onWindowMessage().executeAll(hWnd, msg, wParam, lParam);
+
+        if (msg == WM_ACTIVATEAPP || msg == WM_ACTIVATE)
+        {
+            bool inactive = (msg == WM_ACTIVATE) ? (LOWORD(wParam) == WA_INACTIVE) : (wParam == FALSE);
+            if (!inactive)
+                bPollingEnabled = true;
+            else if (OnlineActiveGameManager && *OnlineActiveGameManager)
+            {
+                bPollingEnabled = false;
+                return TRUE;
+            }
+        }
+
+        return GameWndProc(hWnd, msg, wParam, lParam);
     }
 }
 
-namespace LANFix
+// Frame rate. The game simulates in fixed steps of 1/60 s and limits the frame rate with a coarse wait. The
+// step is set to the frame rate limit, frames are paced to it precisely, and every frame gets one step. Real
+// time is still kept: slower frames get more steps.
+//
+// The step time constants of the game (1/60 as a float and as a double, and ten steps for the full speed mode)
+// are shared with code that has nothing to do with the simulation step: the conversion of the 60 Hz real time
+// counter to seconds for the texture animations and for the clock of the speech system, the timer unit
+// conversions and the sub-step limit of the attachment physics. Those keep their values, so the simulation's
+// own instructions are pointed at values of the fix instead of changing the constants.
+namespace FrameRate
 {
-    uintptr_t ptrDataConnection = 0x827190;
-    uint32_t AddrFamily = 2; // 2 = AF_INET, 23 = AF_INET6 (to add v6, the string needs to be extended, as the input box is limited to 15 chars!)
+    float fStepTime = 1.0f / 60.0f;
+    double dStepTime = 1.0 / 60.0;
+    float fFullSpeedTime = 10.0f / 60.0f;
 
-    uint32_t CheckAddressFamily(std::string addr)
+
+
+    void PreciseWaitUntil(LARGE_INTEGER target)
     {
-        // default to AF_INET because it doesn't work otherwise...
-        return 2;
+        static LARGE_INTEGER frequency = []() { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
+        static HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        double seconds = double(target.QuadPart - now.QuadPart) / double(frequency.QuadPart);
+
+        constexpr double SpinTime = 0.0015;
+        if (seconds > SpinTime)
+        {
+            LARGE_INTEGER due;
+            due.QuadPart = -static_cast<LONGLONG>((seconds - SpinTime) * 10000000.0);
+            if (timer && SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
+                WaitForSingleObject(timer, INFINITE);
+            else
+                Sleep(static_cast<DWORD>((seconds - SpinTime) * 1000.0));
+        }
+
+        do
+        {
+            YieldProcessor();
+            QueryPerformanceCounter(&now);
+        } while (now.QuadPart < target.QuadPart);
     }
 
-    bool __stdcall DataConnectionHook(char* addr, void* unk)
+    // Called before every frame is shown
+    void LimitFrameRate()
     {
-        uintptr_t that;
-        _asm mov that, ecx
+        static LARGE_INTEGER frequency = []() { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
+        static LARGE_INTEGER next = {};
 
-        // attempt to detect address family
-        AddrFamily = CheckAddressFamily(addr);
+        LONGLONG period = static_cast<LONGLONG>(double(frequency.QuadPart) * fStepTime);
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        if (next.QuadPart == 0 || now.QuadPart - next.QuadPart > period * 4)
+        {
+            // First frame, or far behind after a hitch or loading
+            next.QuadPart = now.QuadPart + period;
+            return;
+        }
 
-        return reinterpret_cast<bool(__thiscall*)(uintptr_t, char*, void*)>(ptrDataConnection)(that, addr, unk);
+        PreciseWaitUntil(next);
+        next.QuadPart += period;
+    }
+
+    // Sim::QueueEvents(dt) runs a step for every whole step time that has passed. With dt close to one
+    // step, timing noise gave 0 or 2 steps instead of 1. The time is rounded to the nearest step here;
+    // the difference is carried over, so the simulation keeps real time within half a step.
+    int32_t* SimActive = nullptr;
+    float* TimeBank = nullptr;
+    float Carry = 0.0f;
+
+    void PrepareStep(float& dt)
+    {
+        if (!*SimActive || dt <= 0.0f)
+            return;
+
+        float previous = *TimeBank;
+        float due = previous + dt + Carry;
+        int steps = static_cast<int>(std::floor(due / fStepTime + 0.5f));
+        if (steps <= 0)
+        {
+            Carry = 0.0f;
+            dt = due - previous;
+            return;
+        }
+
+        // A little more than the steps, so that the game's truncation gives exactly this many
+        float target = (static_cast<float>(steps) + 0.001f) * fStepTime;
+        Carry = due - target;
+        dt = target - previous;
+    }
+}
+
+// The drag race burnout adds and takes away a fixed amount of boost grip on every simulation step, made for
+// 60 steps per second. The amounts are scaled with the step time the vehicle's simulate function gets.
+namespace BoostGrip
+{
+    double dOriginalAdder = 0.0, dOriginalSubtractor = 0.0;
+    double dAdder = 0.0, dSubtractor = 0.0;
+}
+
+// Field of view
+namespace FOV
+{
+    // Xbox 360 (1) or mathematically correct (2) horizontal and vertical FOV factors; 0 = the game's own
+    double dOriginalHorizontal = 1.24, dOriginalVertical = 1.48;
+    double dHorizontal = 1.24, dVertical = 1.48;
+    const int* pScaling = nullptr;
+    const float* pFovFactor = nullptr;     // Multiplier for the driving cameras
+
+    void Update()
+    {
+        int scaling = std::clamp(*pScaling, 0, 2);
+        dHorizontal = scaling == 0 ? dOriginalHorizontal : (scaling == 1 ? 1.26 : 1.30);
+        dVertical = scaling == 0 ? dOriginalVertical : (scaling == 1 ? 1.50 : 1.48);
+    }
+}
+
+namespace AspectRatio
+{
+    // The screen aspect ratio relative to 16:9
+    float fScreenAspectRatio = 1.0f;
+    double dHudWidth = 4.0 / 3.0;
+
+    // Movies are 16:9. Original aspect (0): wider screens get pillarboxes, narrower ones letterboxes; fill (1): the
+    // movie keeps its aspect and covers the screen, cropped at the sides or at the top and bottom; stretch (2): the
+    // whole screen. Switched in the options menu at once.
+    float fMovieTop = 1.0f, fMovieBottom = -1.0f, fMovieLeft = -1.0f, fMovieRight = 1.0f;
+    const int* pMovieMode = nullptr;
+
+    void Update()
+    {
+        fScreenAspectRatio = (static_cast<float>(ResX) / static_cast<float>(ResY)) * 0.5625f;
+        dHudWidth = (4.0 / 3.0) / fScreenAspectRatio;
+
+        int mode = pMovieMode ? *pMovieMode : 0;
+        float width = mode == 2 ? 1.0f : 1.0f / fScreenAspectRatio;
+        float height = 1.0f;
+        if (mode == 0 ? width > 1.0f : width < 1.0f)
+        {
+            height /= width;
+            width = 1.0f;
+        }
+        fMovieLeft = -width;
+        fMovieRight = width;
+        fMovieTop = height;
+        fMovieBottom = -height;
     }
 }
 
 namespace FEScale
 {
+    // The front end is made for 16:9 (or 4:3 on narrow screens); it's scaled down to fit narrower
+    // screens, and movies keep their aspect ratio
     float fFEScale = 1.0f;
-    float fCalcFEScale = 1.0f;
-    float fFMVScale = 1.0f;
-    float fCalcFMVScale = 1.0f;
-    bool bAutoFitFE = true;
-    bool bAutoFitFMV = true;
-
-    void UpdateXtendedInput()
-    {
-        if (!XtendedInput::bFoundXInput)
-            return;
-        if (!XtendedInput::GetUseWin32Cursor())
-            return;
-        if (XtendedInput::SetFEScale)
-            XtendedInput::SetFEScale(fCalcFEScale);
-    }
+    bool bMovieShown = false;
 }
 
-namespace OnlineInputBlocker
+// In-engine cutscenes (the ICE scenes: race intros, the kings' scenes and the endings) use the player view's field of
+// view, widened for the screen like the game. Their data has a letterbox channel, which the game puts into the camera,
+// but the PC version draws no bars from it (only the Wii version does), so there are no original bars. Pillarbox (2)
+// keeps the scenes at 16:9 on wider screens: the sides are cleared before the frame is shown while a scene's camera
+// runs outside the front end (whose menus keep their own layout). Switched in the options menu at once.
+namespace Cutscene
 {
-    bool bPollingEnabledOnline = true;
+    const int* pBorders = nullptr;
+    uintptr_t* ICEManager = nullptr;    // TheICEManager; its camera mover (+0x70) exists while a scene's camera runs
 
-    uintptr_t ptrGameDevicePoll = 0x006C0D10;
-    void __stdcall GameDevice_PollDevice_Hook()
+    bool IsPlaying()
     {
-        uintptr_t that;
-        _asm mov that, ecx
+        return ICEManager && *ICEManager && *reinterpret_cast<uintptr_t*>(*ICEManager + 0x70);
+    }
 
-        if (!bPollingEnabledOnline)
+    void DrawPillarbox(IDirect3DDevice9* device)
+    {
+        IDirect3DSurface9* target = nullptr;
+        if (FAILED(device->GetRenderTarget(0, &target)) || !target)
+            return;
+        D3DSURFACE_DESC desc = {};
+        HRESULT hr = target->GetDesc(&desc);
+        target->Release();
+        if (FAILED(hr))
             return;
 
-        return reinterpret_cast<void(__thiscall*)(uintptr_t)>(ptrGameDevicePoll)(that);
+        LONG width = static_cast<LONG>(desc.Width), height = static_cast<LONG>(desc.Height);
+        LONG bar = (width - static_cast<LONG>(std::lround(height * 16.0 / 9.0))) / 2;
+        if (bar <= 0)
+            return;
+
+        D3DVIEWPORT9 viewport = {};
+        device->GetViewport(&viewport);
+        DWORD scissor = FALSE;
+        device->GetRenderState(D3DRS_SCISSORTESTENABLE, &scissor);
+        D3DVIEWPORT9 full = { 0, 0, desc.Width, desc.Height, 0.0f, 1.0f };
+        device->SetViewport(&full);
+        device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+        D3DRECT rects[] = { { 0, 0, bar, height }, { width - bar, 0, width, height } };
+        device->Clear(2, rects, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+        device->SetRenderState(D3DRS_SCISSORTESTENABLE, scissor);
+        device->SetViewport(&viewport);
     }
-
-    uintptr_t ptrSteeringWheelDevicePoll = 0x006A6180;
-    uint32_t __stdcall SteeringWheelDevice_PollDevice_Hook()
-    {
-        uintptr_t that;
-        _asm mov that, ecx
-
-        if (!bPollingEnabledOnline)
-            return 0;
-
-        return reinterpret_cast<uint32_t(__thiscall*)(uintptr_t)>(ptrSteeringWheelDevicePoll)(that);
-    }
-}
-
-uintptr_t OnlineActiveGameManager_msInstance = 0x00B3082C;
-unsigned int GameWndProcAddr = 0;
-LRESULT(WINAPI* GameWndProc)(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-LRESULT WINAPI WSFixWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    switch (msg)
-    {
-
-        case WM_ACTIVATEAPP:
-        case WM_ACTIVATE:
-            if (LOWORD(wParam) == WA_INACTIVE || wParam == FALSE)
-            {
-                if (*(uint32_t*)OnlineActiveGameManager_msInstance)
-                {
-                    if (XtendedInput::bFoundXInput)
-                        XtendedInput::SetPollingState(false);
-                    else
-                        OnlineInputBlocker::bPollingEnabledOnline = false;
-
-                    return TRUE;
-                }
-            }
-            else
-            {
-                if (XtendedInput::bFoundXInput)
-                    XtendedInput::SetPollingState(true);
-                else
-                    OnlineInputBlocker::bPollingEnabledOnline = true;
-            }
-    }
-
-    return GameWndProc(hWnd, msg, wParam, lParam);
-}
-#pragma runtime_checks( "", restore )
-
-bool bCheckDemoVersion()
-{
-    // demo version check
-    uintptr_t sub_6DBA80 = reinterpret_cast<uintptr_t>(hook::pattern("83 EC 08 6A 01 68 ? ? ? ? C7 44 24 0C 00 00 00 00").get_first(0));
-    char* nfsc_demo_str = *reinterpret_cast<char**>(sub_6DBA80 + 6); // yes, we're checking for nfsc_demo.exe, this is correct for Pro Street
-    if ((strstr(nfsc_demo_str, "demo.exe") == nullptr) && (nfsc_demo_str != nullptr))
-        return false;
-    return true;
 }
 
 class Misc
@@ -461,832 +513,472 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            //Stop settings reset after crash
+            FOV::pScaling = &FixSettings().Int("GRAPHICS.Scaling");
+            FOV::pFovFactor = &FixSettings().Float("MAIN.FOVFactor");
+            bool bSkipIntro = FixSettings().Bool("MAIN.SkipIntro");
+            int nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
+            static const int* pDisableMotionBlur = &FixSettings().Int("GRAPHICS.DisableMotionBlur");
+            int32_t nShadowsRes = FixSettings().Int("GRAPHICS.ShadowResolution");
+            if (nShadowsRes != 0)
+                nShadowsRes = std::clamp(nShadowsRes, 512, 16384);
+
+            FreeConsole();
+
+            // The game marks its settings with "FirstTime" while it runs and resets them on the next start when that
+            // is still set, so every crash also reset the settings
             auto pattern = hook::pattern("C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52");
             injector::WriteMemory(pattern.get_first(4), 0, true);
 
-            //Enables HD_GROUP texture on start screen
-            uint32_t* dword_7E2C02 = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B F8 8B 46 0C 57").count(1).get(0).get<uint32_t>(1);
-            injector::WriteMemory(dword_7E2C02, &"ENABLEHD", true);
+            // The title screen uses its HD background
+            pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B F8 8B 46 0C 57");
+            injector::WriteMemory(pattern.get_first(1), &"ENABLEHD", true);
 
-            CIniReader iniReader("");
-            auto bShowConsole = iniReader.ReadInteger("MultiFix", "ShowConsole", 0) != 0;
-            auto bResDetect = iniReader.ReadInteger("MultiFix", "ResDetect", 1) != 0;
-            auto bPostRaceFix = iniReader.ReadInteger("MultiFix", "PostRaceFix", 1) != 0;
-            auto bFramerateUncap = iniReader.ReadInteger("MultiFix", "FramerateUncap", 1) != 0;
-            auto bAntiTrackStreamerCrash = iniReader.ReadInteger("MultiFix", "AntiTrackStreamerCrash", 1) != 0;
-            auto bAntiFEScriptCrash = (iniReader.ReadInteger("MultiFix", "AntiFEScriptCrash", 1) != 0);
-            auto bDisableAchievements = iniReader.ReadInteger("MultiFix", "DisableAchievements", 1) != 0;
-            //auto bDisableMassiveAds = iniReader.ReadInteger("MultiFix", "DisableMassiveAds", 1) != 0;
-            auto bDisableBoosterPackThanks = iniReader.ReadInteger("MultiFix", "DisableBoosterPackThanks", 1) != 0;
-            auto bDisablePunkBuster = iniReader.ReadInteger("MultiFix", "DisablePunkBuster", 1) != 0;
-            auto bDamageMemoryLeakFix = iniReader.ReadInteger("MultiFix", "DamageMemoryLeakFix", 1) != 0;
-            bool bWin11LANFix = iniReader.ReadInteger("MultiFix", "Win11LANFix", 1) != 0;
-
-            if (!bShowConsole)
-                FreeConsole();
-
-            if (bResDetect)
+            // Resolutions: every display mode of at least 640x480 is listed, instead of a few fixed ones
+            pattern = hook::pattern("83 C0 08 83 F8 58 72 E8 E9 ? ? ? ? 8B 53 3C 8B 43 10");
+            if (!pattern.empty())
             {
-                struct ScreenRes
+                auto check = pattern.get_first<uint8_t>(-0x12);     // height in ecx, width in edx
+                auto reject = injector::GetBranchDestination(pattern.get_first(8)).as_int();
+                auto accept = reinterpret_cast<uintptr_t>(pattern.get_first(13));
+                std::vector<uint8_t> code = { 0x81, 0xF9, 0xE0, 0x01, 0x00, 0x00 };     // cmp ecx, 480
+                auto jb = [&](uintptr_t target)
                 {
-                    uint32_t ResX;
-                    uint32_t ResY;
+                    int32_t rel = int32_t(target - (reinterpret_cast<uintptr_t>(check) + code.size() + 6));
+                    code.insert(code.end(), { 0x0F, 0x82 });
+                    code.insert(code.end(), reinterpret_cast<uint8_t*>(&rel), reinterpret_cast<uint8_t*>(&rel) + 4);
+                };
+                jb(reject);
+                code.insert(code.end(), { 0x81, 0xFA, 0x80, 0x02, 0x00, 0x00 });     // cmp edx, 640
+                jb(reject);
+                int8_t toAccept = int8_t(accept - (reinterpret_cast<uintptr_t>(check) + code.size() + 2));
+                code.insert(code.end(), { 0xEB, uint8_t(toAccept) });
+                injector::WriteMemoryRaw(check, code.data(), code.size(), true);
+            }
+
+            // TrackStreamer::HandleLoading: a section that doesn't fit into the streaming pool waits for space, but
+            // the special section 2500 was then taken from the main pool instead (and always was), which could run
+            // out of memory and crash. It's loaded through the streaming pool and waits like every other section.
+            pattern = hook::pattern("80 7C 24 ? ? 74 10 68 ? ? ? ? 55");
+            injector::MakeJMP(pattern.get_first(0), pattern.get_first(23), true);
+            pattern = hook::pattern("75 11 01 6C 24 1C 83 43 28 01");
+            injector::MakeNOP(pattern.get_first(0), 2, true);
+
+            // FE::Object::SetScript
+            pattern = hook::pattern("57 8B 7C 24 08 85 FF 74 2C 8B 44 24 0C 56");
+            FEScriptFix::shSetScript = safetyhook::create_inline(pattern.get_first(), FEScriptFix::SetScript);
+
+            // PunkBuster: its per frame update returns at once (the function's entry, before its SecuROM stub)
+            pattern = hook::pattern("83 B9 80 03 00 00 00");
+            injector::MakeRET(pattern.get_first(-0x3D), 0, true);
+
+            DamageFix::Init();
+
+            // The Xbox 360 achievement system, unused on PC: no manager, no updates and no checks
+            pattern = hook::pattern("A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 53 56 57 8B D9");
+            auto updateAchievements = hook::pattern("8B F1 80 7E 20 00 75 05");
+            auto checkAchievements = hook::pattern("8B F9 33 ED 80 3D ? ? ? ? 00 74 30");
+            if (!pattern.empty() && !updateAchievements.empty() && !checkAchievements.empty())
+            {
+                static auto RetZero = []() -> int32_t { return 0; };
+                injector::MakeJMP(pattern.get_first(0), static_cast<int32_t(*)()>(RetZero), true);     // AchievementManager::Get
+                injector::WriteMemoryRaw(updateAchievements.get_first(-0x1B), (void*)"\x58\x58\xC3", 3, true);  // AchievementManager::UpdateAchievements: pop, pop, ret
+                injector::MakeRET(checkAchievements.get_first(-0x27), 4, true);                     // GProStreetAchievments::Check
+            }
+
+            // The post race screen could get stuck on "Continue": mbScreenConstructed wasn't set
+            pattern = hook::pattern("75 07 C6 86 C5 00 00 00 01");
+            auto spVTable = hook::pattern("6A 2C C6 44 24 1C 01 C7 06 ? ? ? ?");
+            auto onlineVTable = hook::pattern("C7 86 CC 00 00 00 ? ? ? ? C7 06 ? ? ? ? C7 86 CC 00 00 00 ? ? ? ? C7 86 D0 00 00");
+            if (!pattern.empty() && !spVTable.empty() && !onlineVTable.empty())
+            {
+                // Shadow and stat uploading leaked memory
+                injector::MakeNOP(pattern.get_first(0), 2, true);
+                injector::MakeJMP(pattern.get_first(9), pattern.get_first(0x4E), true);
+
+                static uintptr_t SinglePlayerHandler = 0, OnlineHandler = 0;
+                static auto Handler = [](uintptr_t original, uintptr_t self)
+                {
+                    reinterpret_cast<void(__thiscall*)(uintptr_t)>(original)(self);
+                    *reinterpret_cast<bool*>(self + 0xC6) = true;
+                };
+                struct Hooks
+                {
+                    static void __fastcall SinglePlayer(uintptr_t self, void*) { Handler(SinglePlayerHandler, self); }
+                    static void __fastcall Online(uintptr_t self, void*) { Handler(OnlineHandler, self); }
                 };
 
-                std::vector<std::string> list;
-                GetResolutionsList(list);
-                static std::vector<ScreenRes> list2;
-                for (auto s : list)
-                {
-                    ScreenRes r;
-                    sscanf_s(s.c_str(), "%dx%d", &r.ResX, &r.ResY);
-                    list2.emplace_back(r);
-                }
-
-                auto pattern = hook::pattern("83 C0 08 83 F8 58 72 E8 E9 ? ? ? ? 8B 53 3C 8B 43 10"); //0x70B3F0
-                injector::WriteMemory(pattern.get_first(-0x6), &list2[0].ResX, true); //0x70B3EA
-                injector::WriteMemory(pattern.get_first(-0xE), &list2[0].ResY, true); //0x70B3E2
-                injector::WriteMemory<uint8_t>(pattern.get_first(0x5), 0xFFi8, true); //0x70B3F5
+                auto spSlot = *spVTable.get_first<uintptr_t>(9) + 0x128;
+                auto onlineSlot = *onlineVTable.get_first<uintptr_t>(0xC) + 0x128;
+                SinglePlayerHandler = *reinterpret_cast<uintptr_t*>(spSlot);
+                OnlineHandler = *reinterpret_cast<uintptr_t*>(onlineSlot);
+                injector::WriteMemory(spSlot, &Hooks::SinglePlayer, true);
+                injector::WriteMemory(onlineSlot, &Hooks::Online, true);
             }
 
-            if (bAntiTrackStreamerCrash)
+            // The main loop's own limit during races (a busy wait for 33 ms since the last frame); frames are paced
+            // in FrameRate instead
+            pattern = hook::pattern("83 3D ? ? ? ? ? 75 05 E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9 74 0F 6A 09");
+            if (!pattern.empty())
+                injector::MakeJMP(pattern.get_first(0), pattern.get_first(14), true);
+
+            // The booster pack thanks screen on new profiles: the game goes on as if it was already shown
+            pattern = hook::pattern("50 8B F1 68 E6 2E 00 00");
+            if (!pattern.empty())
             {
-                auto pattern = hook::pattern("80 7C 24 ? ? 74 10 68 ? ? ? ? 55");
-                injector::MakeJMP(pattern.get_first(0), pattern.get_first(23), true); //0x00748A09, 0x748A20
-                pattern = hook::pattern("75 11 01 6C 24 1C 83 43 28 01");
-                injector::MakeNOP(pattern.get_first(0), 2, true); //0x007489FD
+                injector::MakeJMP(pattern.get_first(-0xC + 2), pattern.get_first(-0xC + 0x23), true);
+                injector::MakeNOP(pattern.get_first(-0xC + 0x25), 4, true);
             }
 
-            if (bAntiFEScriptCrash)
+            // LAN games: the data connection's UDP socket was made for any address family (AF_UNSPEC), which newer
+            // Windows versions refuse, and its address lookup could return IPv6 addresses the game can't use. Both
+            // are IPv4, the only family the game's 15 character address field can hold.
+            pattern = hook::pattern("FF 15 ? ? ? ? 83 F8 FF 89 46 04 75 0F");
+            if (!pattern.empty())
             {
-                auto pattern = hook::pattern("57 8B 7C 24 08 85 FF 74 2C 8B 44 24 0C 56");
-                injector::MakeJMP(pattern.get_first(0), FEScriptMemoryCheck, true); //0x58DC10
-                FEScriptFixExit = (uint32_t)hook::get_pattern("85 FF 74 2C 8B 44 24 0C 56 50 8B CF", 0); //0x0058DC15
+                static auto LANSocketHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+                {
+                    constexpr uint32_t AF_INET_ = 2;
+                    *reinterpret_cast<uint32_t*>(regs.esp + 0x00) = AF_INET_;   // socket(af, SOCK_DGRAM, IPPROTO_UDP)
+                    *reinterpret_cast<uint32_t*>(regs.esp + 0x14) = AF_INET_;   // the lookup hints' ai_family
+                });
             }
 
-            if (bDisablePunkBuster)
+            // Aspect ratio, worked out by the game for every frame
+            AspectRatio::pMovieMode = &FixSettings().Int("MAIN.FMVWidescreenMode");
+            pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 04 24 D9 04 24 83 C4 0C");
+            static auto AspectRatioHook = safetyhook::create_mid(pattern.get_first(8), [](SafetyHookContext& regs)
             {
-                uintptr_t loc_704667 = reinterpret_cast<uintptr_t>(hook::pattern("83 B9 80 03 00 00 00").get_first(0)) - 0x36;
-                injector::MakeRET(loc_704667, 0, true);
-            }
+                AspectRatio::Update();
+            });
 
-            if (bDamageMemoryLeakFix)
-                DamageFix::Init();
-
-            // this "multifix" portion is only for v1.1 (and newer?)! checking version number here (addresses: v1.0 = 0x6B95E6, v1.1 = 0x6CC3A6)
-            uintptr_t VersionLoc = reinterpret_cast<uintptr_t>(hook::pattern("6A ? 6A ? 8D 4C 24 18 68 ? ? ? ? 51").get_first(0));
-
-            uint8_t MinorVer = *(uint8_t*)(VersionLoc + 1);
-            uint8_t MajorVer = *(uint8_t*)(VersionLoc + 3);
-
-            if ((MajorVer >= 1) && (MinorVer >= 1))
+            // FOV, HUD and movies are always worked out for 16:9 and corrected for the screen here
             {
-                if (bDisableAchievements)
-                {
-                    uintptr_t loc_7B3A90 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 53 56 57 8B D9").get_first(0));
-                    uintptr_t loc_7C2607 = reinterpret_cast<uintptr_t>(hook::pattern("8B F1 80 7E 20 00 75 05").get_first(0)) - 0x1B;
-                    uintptr_t loc_691F20 = reinterpret_cast<uintptr_t>(hook::pattern("8B F9 33 ED 80 3D ? ? ? ? 00 74 30").get_first(0)) - 0x27;
-
-                    injector::MakeJMP(loc_7B3A90, RetZero, true); // AchievementManager::Get
-                    injector::MakeJMP(loc_7C2607, UpdateAchievements_Hook, true); // AchievementManager::UpdateAchievements
-                    injector::MakeRET(loc_691F20, 4, true); // GProStreetAchievments::Check
-                }
-
-                // PostRaceStateManagerFix
-                if (bPostRaceFix)
-                {
-                    uintptr_t loc_5A783C = reinterpret_cast<uintptr_t>(hook::pattern("75 07 C6 86 C5 00 00 00 01").get_first(0));
-                    uintptr_t loc_5A7845 = loc_5A783C + 9;
-                    uintptr_t loc_5A788A = loc_5A783C + 0x4E;
-
-                    uintptr_t vTable = reinterpret_cast<uintptr_t>(hook::pattern("6A 2C C6 44 24 1C 01 C7 06 ? ? ? ?").get_first(0)) + 9;
-                    uintptr_t vTableLoc = *reinterpret_cast<uintptr_t*>(vTable) + 0x128;
-
-                    uintptr_t vTableOnline = reinterpret_cast<uintptr_t>(hook::pattern("C7 86 CC 00 00 00 ? ? ? ? C7 06 ? ? ? ? C7 86 CC 00 00 00 ? ? ? ? C7 86 D0 00 00").get_first(0)) + 0xC;
-                    uintptr_t vTableOnlineLoc = *reinterpret_cast<uintptr_t*>(vTableOnline) + 0x128;
-
-                    SinglePlayerPostRaceStateManager_HandleScreenConstructed = *reinterpret_cast<uintptr_t*>(vTableLoc);
-                    OnlinePostRaceStateManager_HandleScreenConstructed = *reinterpret_cast<uintptr_t*>(vTableOnlineLoc);
-
-                    // skip shadow & stat uploading to avoid memory leaks
-                    injector::MakeNOP(loc_5A783C, 2, true);
-                    injector::MakeJMP(loc_5A7845, loc_5A788A, true);
-                    // fix FEPostRaceStateManager::mbScreenConstructed from not being set after the screen's constructed
-                    injector::WriteMemory<uintptr_t>(vTableLoc, reinterpret_cast<uintptr_t>(&SinglePlayerPostRaceStateManager_HandleScreenConstructed_Hook), true);
-                    injector::WriteMemory<uintptr_t>(vTableOnlineLoc, reinterpret_cast<uintptr_t>(&OnlinePostRaceStateManager_HandleScreenConstructed_Hook), true);
-                }
-
-                if (bFramerateUncap) // Framerate unlock
-                {
-                    auto pattern = hook::pattern("83 3D ? ? ? ? ? 75 05 E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9 74 0F 6A 09");
-                    if (!pattern.empty())
-                        injector::MakeJMP(pattern.get_first(0), pattern.get_first(14), true); //0x004B42FA, 0x4B4308
-                }
-
-                // causes the game randomly not to launch so not a good idea to disable
-                //if (bDisableMassiveAds)
-                //{
-                //    injector::MakeRET(0x007BE4F0, 0, true); // DynamicAds
-                //    injector::MakeJMP(0x70E515, 0x70E541, true); // MassiveAds
-                //    injector::MakeJMP(0x004B03B5, 0x4B03D3, true);
-                //    injector::MakeJMP(0x698D28, 0x698D50, true);
-                //    injector::MakeJMP(0x006FA940, 0x6D8A30, true);
-                //    injector::MakeRET(0x007B6510, 0, true);
-                //}
-
-                if (bDisableBoosterPackThanks)
-                {
-                    uintptr_t loc_7E2380 = reinterpret_cast<uintptr_t>(hook::pattern("50 8B F1 68 E6 2E 00 00").get_first(0)) - 0xC;
-                    uintptr_t loc_7E2382 = loc_7E2380 + 2;
-                    uintptr_t loc_7E23A3 = loc_7E2380 + 0x23;
-                    uintptr_t loc_7E23A5 = loc_7E2380 + 0x25;
-
-                    injector::MakeJMP(loc_7E2382, loc_7E23A3, true);
-                    injector::MakeNOP(loc_7E23A5, 4, true);
-                }
-
-
-                if (bWin11LANFix)
-                {
-                    LANFix::ptrDataConnection = reinterpret_cast<uintptr_t>(hook::pattern("83 EC 20 33 C0 56 6A 11 6A 02 89 44 24 10").get_first(0));
-                    uintptr_t loc_82719A = LANFix::ptrDataConnection + 0xA;
-                    uintptr_t loc_8271A6 = LANFix::ptrDataConnection + 0x16;
-                    uintptr_t loc_8271A9 = LANFix::ptrDataConnection + 0x19;
-                    uintptr_t loc_8271D1 = LANFix::ptrDataConnection + 0x41;
-
-                    uintptr_t loc_823C54 = reinterpret_cast<uintptr_t>(hook::pattern("C7 44 24 1C FF FF FF FF 89 46 04 E8 ? ? ? ? 84 C0 0F 84").get_first(0)) + 0xB;
-
-                    struct LANFixHook1
-                    {
-                        void operator()(injector::reg_pack& regs)
-                        {
-                            *(uint32_t*)(regs.esp + 0x10) = LANFix::AddrFamily;
-                            regs.eax = LANFix::AddrFamily;
-                        }
-                    }; injector::MakeInline<LANFixHook1>(loc_82719A, loc_8271A6);
-
-                    struct LANFixHook2
-                    {
-                        void operator()(injector::reg_pack& regs)
-                        {
-                            *(uint32_t*)(regs.esp + 0x10) = 0;
-                            *(uint32_t*)(regs.esp + 0x20) = 0;
-                            *(uint32_t*)(regs.esp + 0x24) = 0;
-                            *(uint32_t*)(regs.esp + 0x28) = 0;
-                            *(uint32_t*)(regs.esp + 0x2C) = 0;
-                            *(uint32_t*)(regs.esp + 0x18) = 2;
-                            *(uint32_t*)(regs.esp + 0x1C) = 17;
-                        }
-                    }; injector::MakeInline<LANFixHook2>(loc_8271A9, loc_8271D1);
-
-                    injector::MakeCALL(loc_823C54, LANFix::DataConnectionHook);
-                }
+                static float fRatio = 1.777777777f;
+                pattern = hook::pattern("A1 ? ? ? ? 83 EC 0C 80 B8 ? ? ? ? 00 ? ? B9 ? ? ? ? E8");
+                injector::WriteMemory<uint8_t>(pattern.get_first(15), 0xEB, true); // jmp
+                injector::WriteMemory(pattern.get_first(89), &fRatio, true);
+                pattern = hook::pattern("D9 C9 DF F1 DD D8 ? ? 0F B7 C3");
+                injector::MakeNOP(pattern.get_first(6), 2, true);
+                pattern = hook::pattern("74 ? 8B 16 8B 42 ? FF D0 5E 5B");
+                injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jmp
             }
 
-            bool bFixAspectRatio = iniReader.ReadInteger("MAIN", "FixAspectRatio", 1) != 0;
-            static int32_t nScaling = iniReader.ReadInteger("MAIN", "Scaling", 1);
-            bool bFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1) != 0;
-            FEScale::fFEScale = iniReader.ReadFloat("MAIN", "FEScale", 1.0f);
-            FEScale::fCalcFEScale = FEScale::fFEScale;
-            FEScale::fFMVScale = iniReader.ReadFloat("MAIN", "FMVScale", 1.0f);
-            FEScale::fCalcFMVScale = FEScale::fFMVScale;
-            static bool bAutoFitFE = iniReader.ReadInteger("MAIN", "AutoFitFE", 1) != 0;
-            static bool bAutoFitFMV = iniReader.ReadInteger("MAIN", "AutoFitFMV", 1) != 0;
-            static int ForceFEMode = iniReader.ReadInteger("MAIN", "ForceFEMode", 0);
-            bool bGammaFix = iniReader.ReadInteger("MISC", "GammaFix", 1) != 0;
-            bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 0) != 0;
-            bool bSkipFEBootflow = iniReader.ReadInteger("MISC", "SkipFEBootflow", 0) != 0;
-            //static int32_t nImproveGamepadSupport = iniReader.ReadInteger("MISC", "ImproveGamepadSupport", 0);
-            static float fLeftStickDeadzone = iniReader.ReadFloat("MISC", "LeftStickDeadzone", 10.0f);
-            static float fRightStickDeadzone = iniReader.ReadFloat("MISC", "RightStickDeadzone", 10.0f);
-            bool bDisableMotionBlur = iniReader.ReadInteger("MISC", "DisableMotionBlur", 0) != 0;
-            bool bFixXenonEffects = iniReader.ReadInteger("MISC", "FixXenonEffects", 1) != 0;
-            bool bBrakeLightFix = iniReader.ReadInteger("MISC", "BrakeLightFix", 1) != 0;
-            static int32_t nShadowRes = iniReader.ReadInteger("MISC", "ShadowRes", 2048);
-
-            static int SimRate = iniReader.ReadInteger("MISC", "SimRate", -1);
-            if (bFixAspectRatio)
+            // FOV width and height
+            pattern = hook::pattern("0F 57 C0 F3 0F 10 ? ? ? ? ? F3 0F 10 ? ? ? F3 0F 10 ? ? ? ? ? 8D 7E");
+            static auto FOVHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
             {
-                // Real-Time Aspect Ratio Calculation
-                static float fScreenAspectRatio;
+                if (*reinterpret_cast<int*>(regs.ebp + 0x08) <= 0x19)
+                    *reinterpret_cast<float*>(regs.esp + 0x48) /= AspectRatio::fScreenAspectRatio;
+            });
 
-                auto pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 04 24 D9 04 24 83 C4 0C");
-                struct AspectRatioHook
-                {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        fScreenAspectRatio = (static_cast<float>(ResX) / static_cast<float>(ResY)) * 0.5625f;
-                        auto f = regs.xmm0.f32[0];
-                        _asm { fld dword ptr ds : [f] }
-                    }
-                }; injector::MakeInline<AspectRatioHook>(pattern.get_first(8), pattern.get_first(16)); // 4BCB35
+            // FOV scaling of the player views: the horizontal and vertical factors of the widescreen FOV, switched
+            // in the options menu at once
+            pattern = hook::pattern("DC 0D ? ? ? ? D9 5C 24 ? D9 44 24 ? DC 0D ? ? ? ? ? ? D9 44 24 ? DC 0D");
+            FOV::dOriginalHorizontal = **pattern.get_first<double*>(2);
+            FOV::dOriginalVertical = **pattern.get_first<double*>(16);
+            FOV::Update();
+            Redirect(pattern.get_first(2), &FOV::dHorizontal);
+            Redirect(pattern.get_first(16), &FOV::dVertical);
 
+            // Field of view of the driving cameras: DrivingCameraMover::Update writes its FOV (a 16 bit angle) to
+            // the camera at the end of every update. The option multiplies it there, so the menus,
+            // movies, the garage and the race intro cameras keep theirs.
+            pattern = hook::pattern("8B 86 A8 00 00 00 8B 56 1C F3 0F 2C 08 66 89 8A 84 01 00 00");
+            static std::vector<SafetyHookMid> DrivingFOVHooks;
+            NFSFieldOfView::InstallDrivingHooks(pattern, 13, 1, DrivingFOVHooks, +[](SafetyHookContext& regs)
+            {
+                regs.ecx = NFSFieldOfView::ScaleDrivingAngle(regs.ecx, *FOV::pFovFactor, 150.0f * 65536.0f / 360.0f);
+            });
 
-                // Force 16:9 FOV, HUD & FMV Scaling
-                {
-                    static float fRatio = 1.777777777f;
-                    auto pattern = hook::pattern("A1 ? ? ? ? 83 EC 0C 80 B8 ? ? ? ? 00 ? ? B9 ? ? ? ? E8");
-                    uint32_t* dword_4BCAEF = pattern.count(1).get(0).get<uint32_t>(15);
-                    injector::WriteMemory<uint8_t>(dword_4BCAEF, 0xEB, true); // jmp
-                    uint32_t* dword_4BCB39 = pattern.count(1).get(0).get<uint32_t>(89);
-                    injector::WriteMemory(dword_4BCB39, &fRatio, true);
-                    uint32_t* dword_6FF9E3 = hook::pattern("D9 C9 DF F1 DD D8 ? ? 0F B7 C3").count(1).get(0).get<uint32_t>(6);
-                    injector::MakeNOP(dword_6FF9E3, 2, true); // 2 nops
-                    uint32_t* dword_4B51EB = hook::pattern("74 ? 8B 16 8B 42 ? FF D0 5E 5B").count(1).get(0).get<uint32_t>(0);
-                    injector::WriteMemory<uint8_t>(dword_4B51EB, 0xEB, true); // jmp
-                }
+            // HUD width: 4:3 / the screen aspect ratio
+            pattern = hook::pattern("DC 3D ? ? ? ? D9 5C 24 0C F3 0F 10");
+            injector::WriteMemory(pattern.get_first(2), &AspectRatio::dHudWidth, true);
 
-                // FOV Width & Height
-                {
-                    static float dword_9FA868, temp_xmm0;
+            // Movies: 16:9, fitted into the screen
+            pattern = hook::pattern("F3 0F 10 ? ? ? ? ? F3 0F 10 ? ? ? ? ? 0F 57 C0 F3 0F 10");
+            injector::WriteMemory(pattern.get_first(4), &AspectRatio::fMovieTop, true);
+            injector::WriteMemory(pattern.get_first(12), &AspectRatio::fMovieLeft, true);
+            injector::WriteMemory(pattern.get_first(23), &AspectRatio::fMovieRight, true);
+            injector::WriteMemory(pattern.get_first(65), &AspectRatio::fMovieBottom, true);
 
-                    auto pattern = hook::pattern("0F 57 C0 F3 0F 10 ? ? ? ? ? F3 0F 10 ? ? ? F3 0F 10 ? ? ? ? ? 8D 7E");
-                    struct FOVHook
-                    {
-                        void operator()(injector::reg_pack& regs)
-                        {
-                            int ebp08 = *(int*)(regs.ebp + 0x08);
-                            float esp48 = *(float*)(regs.esp + 0x48);
-
-                            if (ebp08 <= 0x19) // jump if greater than
-                                *(float*)(regs.esp + 0x48) = (esp48 / fScreenAspectRatio);
-
-                            regs.xmm0.f64[0] = 0.0f;
-                            regs.xmm0.f64[1] = 0.0f;
-                            regs.xmm1.f32[0] = dword_9FA868;
-                        }
-                    }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(11)); // 6FFB1A
-
-                    if (nScaling)
-                    {
-                        static double XB360_Hor;
-                        static double XB360_Ver;
-
-                        if (nScaling == 1)
-                        {
-                            XB360_Hor = 1.26;
-                            XB360_Ver = 1.50;
-                        }
-                        if (nScaling >= 2)
-                        {
-                            XB360_Hor = 1.30;
-                            XB360_Ver = 1.48;
-                        }
-
-                        auto pattern = hook::pattern("DC 0D ? ? ? ? D9 5C 24 ? D9 44 24 ? DC 0D ? ? ? ? ? ? D9 44 24 ? DC 0D");
-                        uint32_t* dword_6FFA12 = pattern.count(2).get(0).get<uint32_t>(2);
-                        injector::WriteMemory(dword_6FFA12, &XB360_Hor, true);
-                        uint32_t* dword_6FFA20 = pattern.count(2).get(0).get<uint32_t>(16);
-                        injector::WriteMemory(dword_6FFA20, &XB360_Ver, true);
-                    }
-                }
-
-                // HUD Width
-                {
-                    static double dbl_HUDWidth = (4.0 / 3.0f);
-
-                    auto pattern = hook::pattern("DC 3D ? ? ? ? D9 5C 24 0C F3 0F 10");
-                    struct HUDWidthHook
-                    {
-                        void operator()(injector::reg_pack& regs)
-                        {
-                            _asm
-                            {
-                                fdivr qword ptr ds : [dbl_HUDWidth]
-                                fdiv dword ptr ds : [fScreenAspectRatio]
-                            }
-                        }
-                    }; injector::MakeInline<HUDWidthHook>(pattern.get_first(0), pattern.get_first(6)); // 4B44F6
-                }
-
-                // FMV Width & Height
-                {
-                    static float Width1 = -0.75f;
-                    static float Width2 = 0.75f;
-                    static float Height1 = 0.75f;
-                    static float Height2 = -0.75f;
-                    static float FMVWidthLeft, FMVWidthRight;
-
-                    if (bFMVWidescreenMode)
-                    {
-                        Width1 = -1.00f;
-                        Width2 = 1.00f;
-                        Height1 = 1.00f;
-                        Height2 = -1.00f;
-                    }
-
-                    static float CalcWidth1 = Width1;
-                    static float CalcWidth2 = Width2;
-                    static float CalcHeight1 = Height1;
-                    static float CalcHeight2 = Height2;
-
-                    // Real-Time FMV Aspect Ratio Calculation
-                    auto pattern = hook::pattern("80 BC 24 ? ? ? ? 00 DE F9 D9");
-                    struct FMVHook
-                    {
-                        void operator()(injector::reg_pack& regs)
-                        {
-                            int espB0 = *(int*)(regs.esp + 0xB0);
-
-                            CalcWidth1 = Width1 * FEScale::fCalcFMVScale;
-                            CalcWidth2 = Width2 * FEScale::fCalcFMVScale;
-                            CalcHeight1 = Height1 * FEScale::fCalcFMVScale;
-                            CalcHeight2 = Height2 * FEScale::fCalcFMVScale;
-
-                            FMVWidthLeft = CalcWidth1 / fScreenAspectRatio;
-                            FMVWidthRight = CalcWidth2 / fScreenAspectRatio;
-
-                            _asm cmp byte ptr ds : [espB0] , 0x00;
-                        }
-                    }; injector::MakeInline<FMVHook>(pattern.get_first(0), pattern.get_first(8)); // 70235A
-
-                    {
-                        auto pattern = hook::pattern("F3 0F 10 ? ? ? ? ? F3 0F 10 ? ? ? ? ? 0F 57 C0 F3 0F 10");
-                        uint32_t* dword_702224 = pattern.count(1).get(0).get<uint32_t>(4);
-                        injector::WriteMemory(dword_702224, &CalcHeight1, true);
-                        uint32_t* dword_70222C = pattern.count(1).get(0).get<uint32_t>(12);
-                        injector::WriteMemory(dword_70222C, &FMVWidthLeft, true);
-                        uint32_t* dword_702237 = pattern.count(1).get(0).get<uint32_t>(23);
-                        injector::WriteMemory(dword_702237, &FMVWidthRight, true);
-                        uint32_t* dword_702261 = pattern.count(1).get(0).get<uint32_t>(65);
-                        injector::WriteMemory(dword_702261, &CalcHeight2, true);
-                    }
-                }
-
-                // Crowd Culling Fix
-                {
-                    static float CrowdCullDist;
-
-                    auto pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 44 24 7C ? ? ? ? ? ? 2B C3 83 E8 01");
-                    struct CrowdCullHook
-                    {
-                        void operator()(injector::reg_pack& regs)
-                        {
-                            CrowdCullDist = (0.6f / fScreenAspectRatio);
-                            *(float*)(regs.esp + 0x7C) = CrowdCullDist;
-                        }
-                    }; injector::MakeInline<CrowdCullHook>(pattern.get_first(0), pattern.get_first(8)); // 76CECB
-                }
-            }
-
-            // Real-Time Aspect Ratio Calculation
-            // the game normally checks against 1.34, but this breaks 16:10 aspect ratios
-            // 1.5555555 is halfway between 4:3 and 16:9
-            static float WidescreenCheckThreshold = 1.5555555f;
-
-            if (ForceFEMode >= 2)
-                WidescreenCheckThreshold = +INFINITY;
-            if (ForceFEMode == 1)
-                WidescreenCheckThreshold = -INFINITY;
-
+            // The front end is made for 16:9 or 4:3. The game normally switches at 1.34, which stretched 16:10;
+            // it switches halfway between the two, and the front end is scaled down to fit the screen.
             pattern = hook::pattern("0F B6 C0 89 01 B0 01");
-            struct HUDWidescreenModeHook
+            static auto WidescreenModeHook = safetyhook::create_mid(pattern.count(7).get(0).get<void>(0), [](SafetyHookContext& regs)
             {
-                void operator()(injector::reg_pack& regs)
+                float aspect = static_cast<float>(ResX) / static_cast<float>(ResY);
+                bool widescreen = aspect >= 1.5555555f;
+                FEScale::fFEScale = std::min(1.0f, aspect / (widescreen ? (16.0f / 9.0f) : (4.0f / 3.0f)));
+                regs.eax = widescreen ? 1 : 0;
+            });
+
+            pattern = hook::pattern("F3 0F 11 44 24 14 F3 0F 10 05 ? ? ? ? 6A 00");
+            static auto FEScaleHook = safetyhook::create_mid(pattern.get_first(14), [](SafetyHookContext& regs)
+            {
+                // Movies are fitted by themselves
+                float scale = FEScale::bMovieShown ? 1.0f : FEScale::fFEScale;
+                *reinterpret_cast<float*>(regs.esp + 0x14) *= scale;
+                regs.xmm0.f32[0] = scale;
+            });
+
+            // Movies started by the front end, except for its background movie
+            pattern = hook::pattern("8D 94 24 7C 01 00 00 55");
+            static auto FETransform = reinterpret_cast<void(*)()>(hook::get_pattern("8D 4C 24 18 51 68 89 13 00 00", -0x9E));
+            static auto MovieStartHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+            {
+                std::string_view filename = reinterpret_cast<const char*>(regs.esp + 0x13C);
+                if (filename.find("FE_BG") == std::string_view::npos && !FEScale::bMovieShown)
                 {
-                    float fScreenAspectRatio = (static_cast<float>(ResX) / static_cast<float>(ResY));
-                    FEScale::fCalcFEScale = FEScale::fFEScale;
-                    FEScale::fCalcFMVScale = FEScale::fFMVScale;
+                    FEScale::bMovieShown = true;
 
-                    if ((fScreenAspectRatio >= WidescreenCheckThreshold))
-                    {
-                        if (bAutoFitFE)
-                            FEScale::fCalcFEScale *= fScreenAspectRatio / (16.0f / 9.0f);
-                        if (bAutoFitFMV)
-                            FEScale::fCalcFMVScale *= fScreenAspectRatio / (16.0f / 9.0f);
-                        regs.eax = (int)1;
-                        *(int*)(regs.ecx) = regs.eax;
-                    }
-                    else
-                    {
-                        if (bAutoFitFE)
-                            FEScale::fCalcFEScale *= fScreenAspectRatio / (4.0f / 3.0f);
-                        if (bAutoFitFMV)
-                            FEScale::fCalcFMVScale *= fScreenAspectRatio / (4.0f / 3.0f);
-                        regs.eax = (int)0;
-                        *(int*)(regs.ecx) = regs.eax;
-                    }
-
-                    if (FEScale::fCalcFEScale > FEScale::fFEScale)
-                        FEScale::fCalcFEScale = FEScale::fFEScale;
-
-                    if (FEScale::fCalcFMVScale > FEScale::fFMVScale)
-                        FEScale::fCalcFMVScale = FEScale::fFMVScale;
-
-                    FEScale::UpdateXtendedInput();
+                    // The front end transform is updated before the movie player locks it
+                    FETransform();
                 }
-            }; injector::MakeInline<HUDWidescreenModeHook>(pattern.count(7).get(0).get<uint32_t>(0)); // 44C332
+            });
 
-            // this sets the actual value used to check the aspect ratio, but will cause stuff to stretch if forced in one way or the other
-            //uintptr_t loc_6F9545 = reinterpret_cast<uintptr_t>(hook::pattern("D9 05 ? ? ? ? D9 C9 DF F1 DD D8 76 ? B8 01 00 00 00").get_first(0));
-            //injector::WriteMemory<float*>(loc_6F9545 + 2, &WidescreenCheckThreshold, true);
-
-            static bool bMovieFlag = false;
-            uintptr_t loc_4B4518 = reinterpret_cast<uintptr_t>(hook::pattern("F3 0F 11 44 24 14 F3 0F 10 05 ? ? ? ? 6A 00").get_first(0)) + 6;
-            struct FEScaleHook
+            pattern = hook::pattern("C7 05 ? ? ? ? 01 00 00 00 A1 ? ? ? ? 85 C0 0F 84 ? ? ? ? 8B 35");
+            static auto MovieShutdownHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
             {
-                void operator()(injector::reg_pack& regs)
-                {
-                    float Xscale = FEScale::fCalcFEScale;
-                    float Yscale = FEScale::fCalcFEScale;
+                FEScale::bMovieShown = false;
+            });
 
-                    if (bMovieFlag)
-                    {
-                        Xscale = FEScale::fCalcFMVScale;
-                        Yscale = FEScale::fCalcFMVScale;
-                    }
-
-                    *(float*)(regs.esp + 0x14) *= Xscale;
-                    regs.xmm0.f32[0] = Yscale;
-                }
-            }; injector::MakeInline<FEScaleHook>(loc_4B4518, loc_4B4518 + 8);
-
-            uintptr_t loc_5CE7DA = reinterpret_cast<uintptr_t>(hook::pattern("8D 94 24 7C 01 00 00 55").get_first(0));
-            static uintptr_t sub_4B4430 = reinterpret_cast<uintptr_t>(hook::pattern("8D 4C 24 18 51 68 89 13 00 00").get_first(0)) - 0x9E;
-            struct FEMovieStarterCallbackHook
+            // Cutscene borders: the ICE manager, from the letterbox channel's frame update
+            pattern = hook::pattern("A1 ? ? ? ? 56 8B 70 70 85 F6 57 8B F9 74");
+            if (!pattern.empty())
             {
-                void operator()(injector::reg_pack& regs)
+                Cutscene::pBorders = &FixSettings().Int("MAIN.CutsceneBorders");
+                Cutscene::ICEManager = *pattern.get_first<uintptr_t*>(1);
+                WFP::onEndScene() += []()
                 {
-                    // ignore FE_BG (splash screen) movie
-                    std::string filename = (char*)(regs.esp + 0x13C);
-                    if ((filename.find("FE_BG") == std::string::npos) && !bMovieFlag)
-                    {
-                        bMovieFlag = true;
+                    if ((*Cutscene::pBorders & 2) && !IsFrontEnd() && Cutscene::IsPlaying() && *Direct3DDevice && **Direct3DDevice)
+                        Cutscene::DrawPillarbox(**Direct3DDevice);
+                };
+            }
 
-                        // trigger the FE transform before the movie player locks it!
-                        // this calls render functions inside the main thread, so if things become unstable when movies play, this could be the reason!
-                        // calling render stuff in non-render threads is unsafe
-                        // it's only math stuff though, so it shouldn't be unstable
-                        reinterpret_cast<void(*)()>(sub_4B4430)();
-                    }
-
-                    regs.edx = regs.esp + 0x17C;
-                }
-            }; injector::MakeInline<FEMovieStarterCallbackHook>(loc_5CE7DA, loc_5CE7DA + 0x7);
-
-            uintptr_t loc_59AD04 = reinterpret_cast<uintptr_t>(hook::pattern("C7 05 ? ? ? ? 01 00 00 00 A1 ? ? ? ? 85 C0 0F 84 ? ? ? ? 8B 35").get_first(0));
-            static uintptr_t ptr_movieshuttingdown = *reinterpret_cast<uintptr_t*>(loc_59AD04 + 2);
-            struct MoviePlayerShutdownHook
+            // Crowd culling distance, for the wider FOV
+            pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 44 24 7C ? ? ? ? ? ? 2B C3 83 E8 01");
+            static auto CrowdCullHook = safetyhook::create_mid(pattern.get_first(8), [](SafetyHookContext& regs)
             {
-                void operator()(injector::reg_pack& regs)
-                {
-                    bMovieFlag = false;
-                    *(uint32_t*)ptr_movieshuttingdown = 1;
-                }
-            }; injector::MakeInline<MoviePlayerShutdownHook>(loc_59AD04, loc_59AD04 + 0xA);
+                regs.xmm0.f32[0] = 0.6f / AspectRatio::fScreenAspectRatio;
+            });
 
-            if (bGammaFix)
+            // Brightness: the gamma ramp was built with the exponent's built-in default (0.81) at start, not with the
+            // brightness setting, until the setting was changed. The ramp is built from the setting, with the game's
+            // own mapping; without a setting the default is 50% (exponent 1.0).
             {
-                static uint32_t* dword_AC6F0C;  // Gamma Integer
+                auto gammaInteger = hook::pattern("A1 ? ? ? ? 8B 4C 24 04 8B D0 B8 67 66 66 66");
+                if (gammaInteger.empty())
+                    gammaInteger = hook::pattern("A1 ? ? ? ? 8B 4C 24 04 8B D0 83 C2 04 B8 CD CC CC CC");   // demo
+                static int32_t* pGammaInteger = *gammaInteger.get_first<int32_t*>(1);
 
-                if (bCheckDemoVersion())
-                    dword_AC6F0C = *hook::pattern("A1 ? ? ? ? 8B 4C 24 04 8B D0 83 C2 04 B8 CD CC CC CC").get(0).get<uint32_t*>(1);
-                else
-                    dword_AC6F0C = *hook::pattern("A1 ? ? ? ? 8B 4C 24 04 8B D0 B8 67 66 66 66").get(0).get<uint32_t*>(1);
+                static ProtectedGameRef<float> GammaFloat;
+                GammaFloat.SetAddress(*hook::pattern("F3 0F 11 44 24 04 D8 64 24 04 C6 ? 01 D9 5C").get_first<float*>(29));
+                GammaFloat = 1.0f;
 
-                static uint32_t* dword_AA9630 = *hook::pattern("F3 0F 11 44 24 04 D8 64 24 04 C6 ? 01 D9 5C").get(0).get<uint32_t*>(29); // Gamma Float
-                injector::WriteMemory(dword_AA9630, 1.0f, true); // sets default brightness to 50%
-
-                static float NewBrightness;
-
-                auto pattern = hook::pattern("55 8B EC 83 E4 F8 83 EC 10 ? ? ? ? ? ? ? ? 56 57 33 FF");
-                struct GammaHook
+                pattern = hook::pattern("55 8B EC 83 E4 F8 83 EC 10 ? ? ? ? ? ? ? ? 56 57 33 FF");
+                static auto GammaHook = safetyhook::create_mid(pattern.get_first(17), [](SafetyHookContext& regs)
                 {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        auto GammaInteger = *(int*)(dword_AC6F0C);
-                        auto GammaFloat = *(float*)(dword_AA9630);
-                        NewBrightness = 100.0f / (GammaInteger * 2.0f);
-                        GammaFloat = NewBrightness;
-                        regs.xmm0.f32[0] = GammaFloat;
-                    }
-                }; injector::MakeInline<GammaHook>(pattern.count(1).get(0).get<uint32_t>(9), pattern.count(1).get(0).get<uint32_t>(17)); // 4B3E89
+                    // The mapping of the game's brightness setter: exponent = 1.5 - setting / 100 (setting 0 to 100)
+                    if (*pGammaInteger > 0)
+                        regs.xmm0.f32[0] = 1.5f - std::clamp(*pGammaInteger / 100.0f, 0.0f, 1.0f);
+                });
             }
 
             if (bSkipIntro)
             {
-                // EA Bumper
-                uint32_t* dword_6FC24A = hook::pattern("68 ? ? ? ? 6A ? FF D2 D9 EE").count(1).get(0).get<uint32_t>(1);
-                injector::WriteMemory(dword_6FC24A, &"SkipThis", true);
+                // EA bumper and attract movies
+                pattern = hook::pattern("68 ? ? ? ? 6A ? FF D2 D9 EE");
+                injector::WriteMemory(pattern.get_first(1), &"SkipThis", true);
+                pattern = hook::pattern("68 ? ? ? ? 6A ? 8B CE FF D2");
+                injector::WriteMemory(pattern.get_first(1), &"SkipThis", true);
 
-                // Attract
-                uint32_t* dword_6FC264 = hook::pattern("68 ? ? ? ? 6A ? 8B CE FF D2").count(1).get(0).get<uint32_t>(1);
-                injector::WriteMemory(dword_6FC264, &"SkipThis", true);
-            }
-
-            if (bSkipFEBootflow)
-            {
-                uintptr_t loc_5B52A3 = reinterpret_cast<uintptr_t>(hook::pattern("38 1D ? ? ? ? 74 1F 6A 03 8B CE").get_first(0));
-                *reinterpret_cast<bool*>(*reinterpret_cast<uintptr_t*>(loc_5B52A3 + 2)) = true;
-            }
-
-            // 2023/07/07 - nImproveGamepadSupport is deprecated in Pro Street.
-            // Use NFS_XtendedInput instead for proper controller configuration.
-            // https://github.com/xan1242/NFS-XtendedInput
-
-            //bool bXtendedInputExists = false;
-            //if (nImproveGamepadSupport)
-            //    bXtendedInputExists = (::GetModuleHandleA("NFS_XtendedInput.asi") != NULL) || std::filesystem::exists("NFS_XtendedInput.asi");
-            //
-            //if (nImproveGamepadSupport && !bXtendedInputExists)
-            //{
-            //    auto pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 51 A1 ? ? ? ? 33 C4 50 8D 44 24 08 64 A3 ? ? ? ? A1 ? ? ? ? 50");
-            //    static auto CreateResourceFile = (void*(*)(const char* ResourceFileName, int32_t ResourceFileType, int, int, int)) pattern.get_first(0); //0x006D6DE0
-            //    pattern = hook::pattern("8B 44 24 04 56 8B F1 8B 4C 24 0C 89 46 38 89 4E 3C");
-            //    static auto ResourceFileBeginLoading = (void(__thiscall *)(void* rsc, int a1, int a2)) pattern.get_first(0); //0x006D9430
-            //    static auto LoadResourceFile = [](const char* ResourceFileName, int32_t ResourceFileType, int32_t nUnk1 = 0, int32_t nUnk2 = 0, int32_t nUnk3 = 0, int32_t nUnk4 = 0, int32_t nUnk5 = 0)
-            //    {
-            //        auto r = CreateResourceFile(ResourceFileName, ResourceFileType, nUnk1, nUnk2, nUnk3);
-            //        ResourceFileBeginLoading(r, nUnk4, nUnk5);
-            //    };
-            //
-            //    if (nImproveGamepadSupport < 3)
-            //    {
-            //        static auto TPKPath = GetThisModulePath<std::string>().substr(GetExeModulePath<std::string>().length());
-            //
-            //        if (nImproveGamepadSupport == 1)
-            //            TPKPath += "buttons-xbox.tpk";
-            //        else if (nImproveGamepadSupport == 2)
-            //            TPKPath += "buttons-playstation.tpk";
-            //
-            //        static injector::hook_back<void(__cdecl*)()> hb_6D98B0;
-            //        auto LoadTPK = []()
-            //        {
-            //            if (std::filesystem::exists(TPKPath))
-            //            {
-            //                LoadResourceFile(TPKPath.c_str(), 1);
-            //            }
-            //            return hb_6D98B0.fun();
-            //        };
-            //
-            //        pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 35 ? ? ? ? 6A 04 FF D6 83 C4 04 85 C0"); //0x6DABDE
-            //        hb_6D98B0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<void(__cdecl*)()>(LoadTPK), true).get();
-            //    }
-            //
-            //    const char* ControlsTexts[] = { " 2", " 3", " 4", " 5", " 6", " 7", " 8", " 9", " 10", " 1", " Up", " Down", " Left", " Right", "X Rotation", "Y Rotation", "X Axis", "Y Axis", "Z Axis", "Hat Switch" };
-            //    const char* ControlsTextsXBOX[] = { "B", "X", "Y", "LB", "RB", "View (Select)", "Menu (Start)", "Left stick", "Right stick", "A", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "LT / RT", "D-pad" };
-            //    const char* ControlsTextsPS[] = { "Circle", "Square", "Triangle", "L1", "R1", "Select", "Start", "L3", "R3", "Cross", "D-pad Up", "D-pad Down", "D-pad Left", "D-pad Right", "Right stick Left/Right", "Right stick Up/Down", "Left stick Left/Right", "Left stick Up/Down", "L2 / R2", "D-pad" };
-            //
-            //    static std::vector<std::string> Texts(ControlsTexts, std::end(ControlsTexts));
-            //    static std::vector<std::string> TextsXBOX(ControlsTextsXBOX, std::end(ControlsTextsXBOX));
-            //    static std::vector<std::string> TextsPS(ControlsTextsPS, std::end(ControlsTextsPS));
-            //
-            //    pattern = hook::pattern("68 04 01 00 00 51 E8 ? ? ? ? 83 C4 10 5F 5E C3"); //0x679B53
-            //    injector::WriteMemory<uint8_t>(pattern.get(0).get<uint32_t>(16 + 5), 0xC3, true);
-            //    struct Buttons
-            //    {
-            //        void operator()(injector::reg_pack& regs)
-            //        {
-            //            auto pszStr = *(char**)(regs.esp + 4);
-            //            auto it = std::find_if(Texts.begin(), Texts.end(), [&](const std::string& str) { std::string s(pszStr); return s.find(str) != std::string::npos; });
-            //            auto i = std::distance(Texts.begin(), it);
-            //
-            //            if (it != Texts.end())
-            //            {
-            //                if (nImproveGamepadSupport != 2)
-            //                    strcpy(pszStr, TextsXBOX[i].c_str());
-            //                else
-            //                    strcpy(pszStr, TextsPS[i].c_str());
-            //            }
-            //        }
-            //    }; injector::MakeInline<Buttons>(pattern.get_first(16));
-            //
-            //    pattern = hook::pattern("8B 0F 8B 54 0E 08 DB 44 90 0C"); //0x6A5E4C
-            //    static auto unk_ABA3E4 = *hook::get_pattern<void**>("81 FE ? ? ? ? 0F 8C ? ? ? ? 8B 44 24 14 83 B8", 2);
-            //    struct MenuRemap
-            //    {
-            //        void operator()(injector::reg_pack& regs)
-            //        {
-            //            regs.ecx = *(uint32_t*)regs.edi;
-            //            regs.edx = *(uint32_t*)(regs.esi + regs.ecx + 0x08);
-            //
-            //            auto dword_ABA4C4 = &unk_ABA3E4[26];
-            //            auto dword_ABA454 = &unk_ABA3E4[28];
-            //            *(uint32_t*)(*(uint32_t*)dword_ABA4C4 + 0x20) = 4; // changes RB to LB
-            //            *(uint32_t*)(*(uint32_t*)dword_ABA454 + 0x20) = 5; // changes LB to RB
-            //        }
-            //    }; injector::MakeInline<MenuRemap>(pattern.get_first(0), pattern.get_first(6));
-            //
-            //    static injector::hook_back<int32_t(__cdecl*)(char*)> hb_4366E0;
-            //    auto padFix = [](char*) -> int32_t
-            //    {
-            //        return 0x2A5E19E0;
-            //    };
-            //    pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D");
-            //    hb_4366E0.fun = injector::MakeCALL(pattern.get_first(0), static_cast<int32_t(__cdecl*)(char*)>(padFix), true).get();
-            //
-            //    // Enables controls for FE photo mode
-            //    //pattern = hook::pattern("D9 EE 6A 00 51 D9 1C 24 8B 8E D0 00 00 00 E8 ? ? ? ? D9 EE 6A 00 "); //0x59890A
-            //    //injector::WriteMemory(pattern.get_first(0), 0xC3595E90, true); //pop esi  pop ecx  ret
-            //
-            //    // Start menu text
-            //    uint32_t* dword_7E2C9A = hook::pattern("68 ? ? ? ? 50 51 E8 ? ? ? ? 8D 54 24 2C").count(1).get(0).get<uint32_t>(1);
-            //    if (nImproveGamepadSupport != 2)
-            //        injector::WriteMemory(dword_7E2C9A, 0x25C22853, true); //"Press START to begin" (Xbox)
-            //    else
-            //        injector::WriteMemory(dword_7E2C9A, 0x703A92CC, true); //"Press START button" (PlayStation)
-            //}
-
-            if (fLeftStickDeadzone)
-            {
-                // DInput [ 0 32767 | 32768 65535 ]
-                fLeftStickDeadzone /= 200.0f;
-
-                auto pattern = hook::pattern("89 86 34 02 00 00 8D 45 D4"); //0x892ACD 0x892ADF
-                struct DeadzoneHookX
+                // The title screen: it continues by itself once it's shown, as if Start was pressed after its
+                // minimum time. That also resets the profile data, before the profile is loaded.
+                auto padStart = hook::pattern("51 56 8B F1 83 7E 04 11 74");
+                auto screenTick = hook::pattern("83 EC 08 56 8B F1 83 7E 04 11 74");
+                if (!padStart.empty() && !screenTick.empty())
                 {
-                    void operator()(injector::reg_pack& regs)
+                    static auto HandlePadStart = reinterpret_cast<void(__thiscall*)(uint8_t*)>(padStart.get_first());
+                    static auto RealTimer = *padStart.get_first<int32_t*>(0x2B);
+                    static SafetyHookInline shScreenTick = {};
+
+                    struct BootFlow
                     {
-                        double dStickState = (double)regs.eax / 65535.0;
-                        dStickState -= 0.5;
-                        if (std::abs(dStickState) <= fLeftStickDeadzone)
-                            dStickState = 0.0;
-                        dStickState += 0.5;
-                        *(uint32_t*)(regs.esi + 0x234) = (uint32_t)(dStickState * 65535.0);
-                    }
-                }; injector::MakeInline<DeadzoneHookX>(pattern.get_first(0), pattern.get_first(6));
-
-                struct DeadzoneHookY
-                {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        double dStickState = (double)regs.edx / 65535.0;
-                        dStickState -= 0.5;
-                        if (std::abs(dStickState) <= fLeftStickDeadzone)
-                            dStickState = 0.0;
-                        dStickState += 0.5;
-                        *(uint32_t*)(regs.esi + 0x238) = (uint32_t)(dStickState * 65535.0);
-                    }
-                }; injector::MakeInline<DeadzoneHookY>(pattern.get_first(18 + 0), pattern.get_first(18 + 6));
-            }
-
-            {
-                auto pattern = hook::pattern("8B 85 ? ? ? ? 3B 86");
-                static auto JoyStateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    if (hWnd != GetForegroundWindow())
-                        return;
-
-                    DIJOYSTATE* state = (DIJOYSTATE*)(regs.ebp - 0x13C);
-
-                    g_RightStick.RawX = state->lRx;
-                    g_RightStick.RawY = state->lRy;
-
-                    float dz = (fRightStickDeadzone > 0.0f) ? fRightStickDeadzone / 200.0f : 0.0f;
-
-                    double rx = ((double)state->lRx - 32767.5) / 32767.5;
-                    if (std::abs(rx) <= dz) rx = 0.0;
-                    g_RightStick.X = (float)rx;
-
-                    double ry = ((double)state->lRy - 32767.5) / 32767.5;
-                    if (std::abs(ry) <= dz) ry = 0.0;
-                    g_RightStick.Y = (float)ry;
-                });
-
-                pattern = hook::pattern("8B 45 ? 3B C7 75 ? 3B D7");
-                static auto MouseStateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    if (hWnd != GetForegroundWindow())
-                        return;
-
-                    MouseData* state = (MouseData*)(regs.ebp - 0x14);
-                    g_Mouse.DeltaX = state->DeltaX;
-                    g_Mouse.DeltaY = state->DeltaY;
-                    g_Mouse.Wheel = state->Wheel;
-                });
-
-                pattern = hook::pattern("55 8B EC 83 E4 ? 81 EC ? ? ? ? 80 3D ? ? ? ? ? 53 56");
-                shsub_5A0B50 = safetyhook::create_inline(pattern.get_first(), sub_5A0B50);
-            }
-
-            if (SimRate)
-            {
-                if (SimRate < 0)
-                {
-                    if (SimRate == -1)
-                        SimRate = GetDesktopRefreshRate();
-                    else if (SimRate == -2)
-                        SimRate = GetDesktopRefreshRate() * 2;
-                    else
-                        SimRate = 60;
+                        static void __fastcall ScreenTick(uint8_t* self, void*)
+                        {
+                            constexpr int32_t SplashScreenState = 17;
+                            static bool bDone = false;
+                            if (!bDone && *reinterpret_cast<int32_t*>(self + 4) == SplashScreenState)
+                            {
+                                bDone = true;
+                                *reinterpret_cast<int32_t*>(self + 0xC8) = *RealTimer - 4000 * 5;     // timer ticks, 4000 per second
+                                HandlePadStart(self);
+                                return;
+                            }
+                            shScreenTick.unsafe_thiscall(self);
+                        }
+                    };
+                    shScreenTick = safetyhook::create_inline(screenTick.get_first(), BootFlow::ScreenTick);
                 }
 
-                // this shouldn't be necessary - if the game frametime/rate is matched with the sim frametime/rate, then everything is fine.
-                // limit rate to avoid issues...
-                //if (SimRate > 360)
-                //    SimRate = 360;
-                //if (SimRate < 60)
-                //    SimRate = 60;
+                // The profile and career are loaded at startup like the Xbox 360 version does: only errors are
+                // shown, not "Load complete" with a button to press
+                auto load = hook::pattern("8B 44 24 04 56 8B F1 89 46 20 C6 05 ? ? ? ? 00 8B 46 20 85 C0 0F 84");
+                auto bootFlowStateChange = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 51 56 A1 ? ? ? ? 33 C4 50 8D 44 24 0C 64 A3 00 00 00 00 8B F1 8B 8E D8 00 00 00 8B 01 8B 50 0C FF D2 8B 4E 04");
+                if (!load.empty() && !bootFlowStateChange.empty())
+                {
+                    static bool bBooting = true;
+                    static SafetyHookInline shLoad = {};
 
-                static float FrameTime = 1.0f / SimRate;
-                static double dFrameTime = 1.0 / SimRate;
-                //static float fSimRate = (float)SimRate;
-                static double dSimRate = (double)SimRate;
+                    struct Memcard
+                    {
+                        // MemcardManager::Load(file, silent)
+                        static void __fastcall Load(void* manager, void*, void* file, bool silent)
+                        {
+                            shLoad.unsafe_thiscall(manager, file, silent || bBooting);
+                        }
+                    };
+                    shLoad = safetyhook::create_inline(load.get_first(), Memcard::Load);
 
-                // Frame times
-                // PrepareRealTimestep() NTSC video mode framerate, .text
-                uint32_t* dword_6D8B8F = hook::pattern("D9 05 ? ? ? ? B9 ? ? ? ? D8 44 24 14 D9 5C 24 14").count(1).get(0).get<uint32_t>(53); //0x6D8B5A anchor, 0x6D8B8F pointer write
-                // MainLoop double frametime (FPS lock) .rdata
-                double* dbl_9FABF8 = *hook::pattern("D8 44 24 08 D9 5C 24 20 EB 47 83 3D").count(1).get(0).get<double*>(0x1B); //0x006DAEE8 anchor, 0x6DAF03 location dereference
-                // MainLoop float frametime (FPS lock) .rdata
-                float* flt_98C218 = *hook::pattern("D8 44 24 08 D9 5C 24 20 EB 47 83 3D").count(1).get(0).get<float*>(0x30); //0x006DAEE8 anchor, 0x6DAF18 location dereference
-                // FullSpeedMode frametime (10x speed) .rdata
-                float* flt_98D868 = *hook::pattern("D8 44 24 08 D9 5C 24 20 EB 47 83 3D").count(1).get(0).get<float*>(0x47); //0x006DAEE8 anchor, 0x6DAF2F location dereference
-                // Unknown frametime 1 .rdata
-                float* flt_996F48 = *hook::pattern("D8 66 7C D9 5C 24 14 D9 44 24 14 D9 05 ? ? ? ? DF F1").count(1).get(0).get<float*>(0xD); //0x74F3F4 anchor, 0x74F401 location dereference
-                // Unknown frametime 2 .rdata
-                double* dbl_996F40 = *hook::pattern("D8 66 7C D9 5C 24 14 D9 44 24 14 D9 05 ? ? ? ? DF F1").count(1).get(0).get<double*>(0x33); //0x74F3F4 anchor, 0x74F427 location dereference
-                // Unknown frametime 3 .rdata
-                float* flt_996F3C = *hook::pattern("D8 66 7C D9 5C 24 14 D9 44 24 14 D9 05 ? ? ? ? DF F1").count(1).get(0).get<float*>(0x41); //0x74F3F4 anchor, 0x0074F435 location dereference
-                // NIS related frametime .rdata
-                float* flt_9FB408 = *hook::pattern("D9 EE 51 D9 1C 24 E8 ? ? ? ? D9 05 ? ? ? ? D9 1C 24").count(1).get(0).get<float*>(0xD); //0x4D9B7F anchor, 0x004D9B8C location dereference
-                // Sim::QueueEvents frametime .rdata (this affects gameplay smoothness noticeably)
-                float* flt_9EE934 = *hook::pattern("D9 46 1C 8B 10 83 EC 08 D9 5C 24 04 8B C8 D9 05 ? ? ? ?").count(1).get(0).get<float*>(16); //0x004CE576 anchor, 0x004CE586 location dereference
-
-                injector::WriteMemory(dword_6D8B8F, &dSimRate, true);
-                injector::WriteMemory(dbl_9FABF8, dFrameTime, true);
-                injector::WriteMemory(flt_98C218, FrameTime, true);
-                injector::WriteMemory(flt_98D868, FrameTime * 10.0f, true);
-                injector::WriteMemory(flt_996F48, FrameTime, true);
-                injector::WriteMemory(dbl_996F40, -dFrameTime, true);
-                injector::WriteMemory(flt_996F3C, -FrameTime, true);
-                injector::WriteMemory(flt_9FB408, FrameTime, true);
-                injector::WriteMemory(flt_9EE934, FrameTime, true);
-
-                // Frame rates
-                // TODO: if any issues arise, figure out where 60.0 values are used and update the constants...
-
-                // scale boost grip values with frametime to make staging (drag burnout) normal difficulty and not broken and too easy (.rdata)
-                // using 60fps as the basis for scaling
-                constexpr double ScaleFPS = 60.0;
-                double* dbl_9FB3B8 = *hook::pattern("D9 83 80 03 00 00 DC 05 ? ? ? ? D9 5C 24 14").count(1).get(0).get<double*>(8); //0x483707 anchor, 0x48370F location dereference, value at 0x009FB3B8
-                double* dbl_9FB3C0 = *hook::pattern("D9 83 80 03 00 00 DC 25 ? ? ? ? D9 5C 24 14").count(1).get(0).get<double*>(8); //0x4836DD anchor, 0x4836E3 location dereference, value at 0x009FB3C0
-
-                static double BoostGripAdder = ((*dbl_9FB3B8) / (1 / ScaleFPS)) * dFrameTime;
-                injector::WriteMemory(dbl_9FB3B8, BoostGripAdder, true);
-
-                static double BoostGripSubtractor = ((*dbl_9FB3C0) / (1 / ScaleFPS)) * dFrameTime;
-                injector::WriteMemory(dbl_9FB3C0, BoostGripSubtractor, true);
+                    // The boot flow is done once it switches to its exit state
+                    static auto BootFlowStateChangeHook = safetyhook::create_mid(bootFlowStateChange.get_first(0x31), [](SafetyHookContext& regs)
+                    {
+                        if (*reinterpret_cast<int32_t*>(regs.esi + 4) == -1)
+                            bBooting = false;
+                    });
+                }
             }
 
-            if (bDisableMotionBlur)
+            // Brake lights: while the car moves forward they only came on above 80% brake, so with a pad's trigger they
+            // mostly showed when ABS pulsed the brake fully. They come on with any brake, as when reversing.
             {
-                pattern = hook::pattern("74 73 F3 0F 10 84 24 ? ? ? ? F3 0F 11 44 24");
-                injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); //4B153E jmp 4B15B3
-            }
-
-            if (bFixXenonEffects)
-            {
-                uint32_t* dword_4CA335 = hook::pattern("E8 ? ? ? ? 8B 4E 08 83 C4 04 51 E8 ? ? ? ? 8B 56 08 5E").count(1).get(0).get<uint32_t>(0xC);
-                uint32_t* dword_4C8B45 = hook::pattern("6A 20 6A 00 53 6A 00 57 FF D1 8B 46 14 8B 17").count(1).get(0).get<uint32_t>(0x25);
-                pattern = hook::pattern("A1 ? ? ? ? 53 8B 5C 24 08 56 57 8B 38 74 19");
-                XSpriteManager_DrawBatch = (void(__thiscall*)(void*, void*))pattern.count(1).get(0).get<uint32_t>(-7);
-                dword_AC6ED4 = *pattern.count(1).get(0).get<uint32_t*>(1);
-                sub_706550 = (void(__thiscall*)(void*, void*))hook::pattern("56 57 8B 7C 24 0C 8B 17 8B 52 10 8B F1 8B 46 18 8B 08 52").count(2).get(0).get<uint32_t>(0);
-
-                injector::MakeCALL(dword_4CA335, XSpriteManager_DrawBatch_Hook, true);
-                injector::MakeCALL(dword_4C8B45, sub_706550_hook, true);
-            }
-
-            if (bBrakeLightFix)
-            {
-                static constexpr double d0 = 0.0f;
-                pattern = hook::pattern("DD 05 ? ? ? ? D9 C9 DF F1 DD D8 77 15 8B 86"); //717C9A
+                static constexpr double d0 = 0.0;
+                pattern = hook::pattern("DD 05 ? ? ? ? D9 C9 DF F1 DD D8 77 15 8B 86");
                 injector::WriteMemory(pattern.get_first(2), &d0, true);
             }
 
-            if (nShadowRes)
+            // Sparks
             {
-                pattern = hook::pattern("B8 ? ? ? ? EB 0C B8 ? ? ? ? EB 05 B8 ? ? ? ? 57 6A 00");
-                injector::WriteMemory(pattern.get_first(1), nShadowRes, true);
-                injector::WriteMemory(pattern.get_first(8), nShadowRes, true);
-                injector::WriteMemory(pattern.get_first(15), nShadowRes, true);
+                auto drawBatchCall = hook::pattern("E8 ? ? ? ? 8B 4E 08 83 C4 04 51 E8 ? ? ? ? 8B 56 08 5E");
+                auto setTextureCall = hook::pattern("6A 20 6A 00 53 6A 00 57 FF D1 8B 46 14 8B 17");
+                pattern = hook::pattern("A1 ? ? ? ? 53 8B 5C 24 08 56 57 8B 38 74 19");
+                XenonEffects::DrawBatchFunc = reinterpret_cast<decltype(XenonEffects::DrawBatchFunc)>(pattern.get_first(-7));
+                XenonEffects::SetTextureFunc = reinterpret_cast<decltype(XenonEffects::SetTextureFunc)>(hook::pattern("56 57 8B 7C 24 0C 8B 17 8B 52 10 8B F1 8B 46 18 8B 08 52").count(2).get(0).get<void>(0));
+                injector::MakeCALL(drawBatchCall.get_first(0xC), XenonEffects::DrawBatch, true);
+                injector::MakeCALL(setTextureCall.get_first(0x25), XenonEffects::SetTexture, true);
             }
 
-            // WndProc hook to disable freezing on focus loss during Online/LAN & to block inputs during that
-            uint32_t* wndproc_addr = hook::pattern("C7 44 24 2C 30 00 00 00 C7 44 24 30 40 00 00 00 C7 44 24 34 ? ? ? ? 89 6C 24 38").count(1).get(0).get<uint32_t>(0x14);
-            GameWndProcAddr = *(uint32_t*)wndproc_addr;
-            GameWndProc = (LRESULT(WINAPI*)(HWND, UINT, WPARAM, LPARAM))GameWndProcAddr;
-            injector::WriteMemory<uint32_t>(wndproc_addr, (uint32_t)&WSFixWndProc, true);
+            // Motion blur off without turning off the other World FX: its branch is skipped. Switched in the options
+            // menu at once.
+            pattern = hook::pattern("74 73 F3 0F 10 84 24 ? ? ? ? F3 0F 11 44 24");
+            if (!pattern.empty())
+            {
+                static ProtectedGameRef<uint8_t> MotionBlurBranch;
+                MotionBlurBranch.SetAddress(pattern.get_first(0));
+                static auto UpdateMotionBlur = []()
+                {
+                    uint8_t opcode = *pDisableMotionBlur ? 0xEB : 0x74;    // jmp or jz
+                    if (MotionBlurBranch != opcode)
+                        MotionBlurBranch = opcode;
+                };
+                UpdateMotionBlur();
+                WFP::onGameProcessEvent() += []() { UpdateMotionBlur(); };
+            }
 
-            uintptr_t GameDevice_PollDevice_vTable = reinterpret_cast<uintptr_t>(hook::pattern("64 A3 00 00 00 00 8B F1 89 74 24 10 8D 7E 2C C7 06").get_first(0)) + 0x11;
-            GameDevice_PollDevice_vTable = *reinterpret_cast<uintptr_t*>(GameDevice_PollDevice_vTable);
-            uintptr_t GameDevice_PollDevice_vTableLoc = GameDevice_PollDevice_vTable + 0x10;
-            OnlineInputBlocker::ptrGameDevicePoll = *(uintptr_t*)GameDevice_PollDevice_vTableLoc;
+            WFP::onGameProcessEvent() += []() { FOV::Update(); };
 
+            // Shadow map size for every quality level
+            if (nShadowsRes != 0)
+            {
+                auto shadowPattern = hook::pattern("B8 ? ? ? ? EB 0C B8 ? ? ? ? EB 05 B8 ? ? ? ? 57 6A 00");
+                if (!shadowPattern.empty())
+                {
+                    injector::WriteMemory(shadowPattern.get_first(1), nShadowsRes, true);
+                    injector::WriteMemory(shadowPattern.get_first(8), nShadowsRes, true);
+                    injector::WriteMemory(shadowPattern.get_first(15), nShadowsRes, true);
+                }
+                else
+                    OutputDebugStringA("NFS ProStreet: shadow resolution pattern unavailable.\n");
+            }
 
-            uintptr_t SteeringWheelDevice_PollDevice_vTable = reinterpret_cast<uintptr_t>(hook::pattern("8B 44 24 20 0F 57 C0 89 46 18 C7 06").get_first(0)) + 0xC;
-            SteeringWheelDevice_PollDevice_vTable = *reinterpret_cast<uintptr_t*>(SteeringWheelDevice_PollDevice_vTable);
-            uintptr_t SteeringWheelDevice_PollDevice_vTableLoc = SteeringWheelDevice_PollDevice_vTable + 0x10;
-            OnlineInputBlocker::ptrSteeringWheelDevicePoll = *(uintptr_t*)SteeringWheelDevice_PollDevice_vTableLoc;
+            // Window procedure, and the input blocker for online races
+            {
+                auto wndProc = hook::pattern("C7 44 24 2C 30 00 00 00 C7 44 24 30 40 00 00 00 C7 44 24 34 ? ? ? ? 89 6C 24 38").get_first<WNDPROC>(0x14);
+                OnlineInputBlocker::GameWndProc = *wndProc;
+                injector::WriteMemory(wndProc, &OnlineInputBlocker::WndProc, true);
 
-            injector::WriteMemory<uint32_t>(GameDevice_PollDevice_vTableLoc, (uint32_t)&OnlineInputBlocker::GameDevice_PollDevice_Hook, true);
-            injector::WriteMemory<uint32_t>(SteeringWheelDevice_PollDevice_vTableLoc, (uint32_t)&OnlineInputBlocker::SteeringWheelDevice_PollDevice_Hook, true);
+                OnlineInputBlocker::OnlineActiveGameManager = *hook::pattern("8B 0D ? ? ? ? 89 3D ? ? ? ? 3B CF 5F 5E").get_first<uintptr_t*>(2);
 
-            uintptr_t OnlineActiveGameManager_msInstance = reinterpret_cast<uintptr_t>(hook::pattern("8B 0D ? ? ? ? 89 3D ? ? ? ? 3B CF 5F 5E").get_first(0)) + 2;
-            OnlineActiveGameManager_msInstance = *reinterpret_cast<uintptr_t*>(OnlineActiveGameManager_msInstance);
+                auto gameDeviceVTable = *hook::pattern("64 A3 00 00 00 00 8B F1 89 74 24 10 8D 7E 2C C7 06").get_first<uintptr_t>(0x11);
+                OnlineInputBlocker::ptrGameDevicePoll = *reinterpret_cast<uintptr_t*>(gameDeviceVTable + 0x10);
+                injector::WriteMemory(gameDeviceVTable + 0x10, &OnlineInputBlocker::GameDevicePoll, true);
 
+                auto wheelVTable = *hook::pattern("8B 44 24 20 0F 57 C0 89 46 18 C7 06").get_first<uintptr_t>(0xC);
+                OnlineInputBlocker::ptrSteeringWheelDevicePoll = *reinterpret_cast<uintptr_t*>(wheelVTable + 0x10);
+                injector::WriteMemory(wheelVTable + 0x10, &OnlineInputBlocker::SteeringWheelDevicePoll, true);
+            }
+
+            // Frame rate limit and simulation rate: -1 = monitor refresh rate, -2 = twice the refresh rate.
+            // The game needs a fixed rate, so it can't be unlimited.
+            if (nFPSLimit == -2)
+                nFPSLimit = GetDesktopRefreshRate() * 2;
+            else if (nFPSLimit <= 0)
+                nFPSLimit = GetDesktopRefreshRate();
+            SimRate = std::clamp(nFPSLimit, 30, 1000);
+            FrameRate::fStepTime = 1.0f / static_cast<float>(SimRate);
+            FrameRate::dStepTime = 1.0 / static_cast<double>(SimRate);
+            FrameRate::fFullSpeedTime = FrameRate::fStepTime * 10.0f;
+            {
+                // Sim::QueueEvents(dt): the steps that are due, by the step time as a float and as a double
+                pattern = hook::pattern("33 DB 39 1D ? ? ? ? 74 36 0F 57 C0 0F 2F 44 24 3C 73 2C D9 05");
+                FrameRate::SimActive = *pattern.get_first<int32_t*>(4);
+                FrameRate::TimeBank = *pattern.get_first<float*>(0x16);
+                static auto QueueEventsHook = safetyhook::create_mid(pattern.get_first(-0x26), [](SafetyHookContext& regs)
+                {
+                    FrameRate::PrepareStep(*reinterpret_cast<float*>(regs.esp + 4));
+                });
+                Redirect(pattern.get_first(0x28), &FrameRate::fStepTime);
+                Redirect(pattern.get_first(0x59), &FrameRate::dStepTime);
+
+                // The simulation's step time: set up in its constructor, and every step it's the time scale (slow
+                // motion and so on, eased by the time scale controller with the step time) times the step time
+                Redirect(hook::get_pattern("A1 ? ? ? ? F3 0F 10 05 ? ? ? ? 89 46 60 8B 0D", 9), &FrameRate::fStepTime);
+                Redirect(hook::get_pattern("D9 46 1C 8B 10 83 EC 08 D9 5C 24 04 8B C8 D9 05", 16), &FrameRate::fStepTime);
+                Redirect(hook::get_pattern("D9 46 1C 83 7E 24 03 DC 0D ? ? ? ? 5F", 9), &FrameRate::dStepTime);
+
+                // The step event adds up the unscaled simulation time of the frame, which the world and the
+                // effects are updated with
+                Redirect(hook::get_pattern("D9 46 14 DC 05 ? ? ? ? D9 5E 14 7D", 5), &FrameRate::dStepTime);
+
+                // The main loop's full speed mode, which the game turns on for a moment around race starts (until
+                // the intro NIS runs), advances ten steps per frame
+                Redirect(hook::get_pattern("D8 44 24 08 D9 5C 24 20 EB 47 83 3D", 0x47), &FrameRate::fFullSpeedTime);
+
+                // Boost grip of the drag race burnout, scaled with the step time of every simulate call
+                auto boostAdd = hook::pattern("D9 83 80 03 00 00 DC 05 ? ? ? ? D9 5C 24 14");
+                auto boostSub = hook::pattern("D9 83 80 03 00 00 DC 25 ? ? ? ? D9 5C 24 14");
+                auto simulate = hook::pattern("55 8B EC 83 E4 F8 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 81 EC F8 02 00 00");
+                if (!boostAdd.empty() && !boostSub.empty() && !simulate.empty())
+                {
+                    BoostGrip::dOriginalAdder = BoostGrip::dAdder = **boostAdd.get_first<double*>(8);
+                    BoostGrip::dOriginalSubtractor = BoostGrip::dSubtractor = **boostSub.get_first<double*>(8);
+                    Redirect(boostAdd.get_first(8), &BoostGrip::dAdder);
+                    Redirect(boostSub.get_first(8), &BoostGrip::dSubtractor);
+
+                    // thiscall OnTaskSimulate(float dT), at its entry
+                    static auto SimulateHook = safetyhook::create_mid(simulate.get_first(0), [](SafetyHookContext& regs)
+                    {
+                        double scale = std::clamp(static_cast<double>(*reinterpret_cast<float*>(regs.esp + 4)), 0.0, 0.1) * 60.0;
+                        BoostGrip::dAdder = BoostGrip::dOriginalAdder * scale;
+                        BoostGrip::dSubtractor = BoostGrip::dOriginalSubtractor * scale;
+                    });
+                }
+            }
+
+            WFP::onEndScene() += []()
+            {
+                FrameRate::LimitFrameRate();
+            };
         };
     }
 } Misc;

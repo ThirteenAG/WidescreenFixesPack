@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module WidescreenFix;
@@ -153,11 +154,11 @@ float* __fastcall Viewport2Movie(uintptr_t scene, void* edx, float* out, const f
 
 export void InitWidescreenFix()
 {
-    CIniReader iniReader("");
-    auto bUltraWideSupport = iniReader.ReadInteger("MAIN", "UltraWideSupport", 1) != 0;
-    bLetterbox = iniReader.ReadInteger("MAIN", "Letterbox", 0) != 0;
-    static auto fFOVFactor = std::clamp(iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.5f);
-    fScreenCullBias = std::clamp(iniReader.ReadFloat("MAIN", "ScreenCullBias", 0.0f), 0.0f, 1.0f);
+    auto& settings = FixSettings();
+    auto bUltraWideSupport = settings.Int("MAIN.UltraWideSupport") != 0;
+    bLetterbox = settings.Int("MAIN.Letterbox") != 0;
+    static const auto& fFOVFactor = settings.Float("MAIN.FOVFactor");
+    fScreenCullBias = std::clamp(settings.Float("MAIN.ScreenCullBias"), 0.0f, 1.0f);
 
     if (bUltraWideSupport)
     {
@@ -232,7 +233,7 @@ export void InitWidescreenFix()
 
         // UD3DRenderDevice
         pattern = hook::pattern("76 23 8B 06");
-        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jbe -> jmp
+        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(0))) = 0xEB; // jbe -> jmp
 
         // UD3DRenderDevice letterbox (sub_A804E0, x, y, width, height of the 3D view): the game uses the MonitorAspect setting
         // (video options, the pixel aspect ratio above is 1 now) and letterboxes and pillarboxes the 3D view to 16:9.
@@ -481,7 +482,7 @@ export void InitWidescreenFix()
                 if (GetAspectRatio() > fDefaultAspectRatio)
                     val = AdjustFOV(val, GetAspectRatio(), fDefaultAspectRatio);
 
-                val *= fFOVFactor;
+                val *= std::isfinite(fFOVFactor) ? std::clamp(fFOVFactor, 0.5f, 2.0f) : 1.0f;
 
                 if (val > 162.5f)
                     val = 162.5f;

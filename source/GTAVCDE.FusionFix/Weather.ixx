@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
 
 export module Weather;
 
@@ -85,31 +86,31 @@ public:
         {
             if (Settings.visualStyle == VisualStyle::DE)
                 return;
-            auto skyTopRAddress = hook::pattern("89 35 ? ? ? ? F3 0F 2A C0 0F B6 04 0F 49 8D 8D 90 15 12 05 F3 0F 2A").get_first<uint8_t>(2);
-            auto skyTopGAddress = hook::pattern("44 89 35 ? ? ? ? F3 0F 2A D0 0F B6 04 3A 0F 57 C0 0F 57 C9 F3 0F 2A").get_first<uint8_t>(3);
-            auto skyTopBAddress = hook::pattern("44 89 3D ? ? ? ? F3 0F 2A C0 42 0F B6 04 11 49 8D 8D 70 11 12 05 49").get_first<uint8_t>(3);
-            auto skyBottomRAddress = hook::pattern("44 89 25 ? ? ? ? F3 0F 2A C0 42 0F B6 04 11 F3 0F 2A C8 42 0F B6 04").get_first<uint8_t>(3);
-            auto skyBottomGAddress = hook::pattern("44 89 2D ? ? ? ? F3 0F 2A C0 F3 0F 59 D4 42 0F B6 04 11 0F 57 C9 F3").get_first<uint8_t>(3);
-            auto skyBottomBAddress = hook::pattern("89 05 ? ? ? ? 48 8D 05 ? ? ? ? 48 8D 88 E0 09 12 05 48 8D 90 E0").get_first<uint8_t>(2);
-            auto ambientRAddress = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 0D ? ? ? ?").get_first<uint8_t>(4);
-            auto ambientGAddress = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 0D ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ?").get_first<uint8_t>(4);
-            auto ambientBAddress = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 0D ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ?").get_first<uint8_t>(4);
-            auto cloudRAddress = hook::pattern("89 05 ? ? ? ? 0F B6 04 0F 0F 57 C0 0F 57 C9 0F 57 D2 F3 0F 2A D0 0F").get_first<uint8_t>(2);
-            auto cloudGAddress = hook::pattern("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 90 24").get_first<uint8_t>(2);
-            auto cloudBAddress = hook::pattern("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A C8 0F B6 04 17 F3 0F 2A C0 41 0F").get_first<uint8_t>(2);
-            auto blurRAddress = hook::pattern("F3 0F 11 05 ? ? ? ? 0F B6 04 17 0F 57 C0 F3 0F 59 CC F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 60").get_first<uint8_t>(4);
-            auto blurGAddress = hook::pattern("F3 0F 11 05 ? ? ? ? 0F 57 C0 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 10").get_first<uint8_t>(4);
-            auto blurBAddress = hook::pattern("F3 0F 11 05 ? ? ? ? 0F 57 C0 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 C0").get_first<uint8_t>(4);
-            auto lowCloudRAddress = hook::pattern("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 80 1E").get_first<uint8_t>(2);
-            auto lowCloudGAddress = hook::pattern("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 F0 25").get_first<uint8_t>(2);
-            auto lowCloudBAddress = hook::pattern("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A F3 0F 2A C8 41").get_first<uint8_t>(2);
-            auto topCloudRAddress = hook::pattern("89 05 ? ? ? ? 0F 57 C9 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A").get_first<uint8_t>(2);
-            auto topCloudGAddress = hook::pattern("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 00 28").get_first<uint8_t>(2);
-            auto topCloudBAddress = hook::pattern("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 30 23").get_first<uint8_t>(2);
-            auto directionalRAddress = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ?").get_first<uint8_t>(4);
-            auto directionalGAddress = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 75 ? 48 8D 0D ? ? ?").get_first<uint8_t>(4);
-            auto directionalBAddress = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 75 ? 48 8D 0D ? ? ?").get_first<uint8_t>(4);
-            const auto update = hook::pattern("48 8B C4 48 89 58 08 48 89 70 10 48 89 78 18 55 41 54 41 55 41 56 41 57 48 8D 6C 24 A0 48 81 EC 60 01 00 00 0F 29 70 C8 0F 29 78 B8 44 0F 29 40 A8 44 0F 29 48 98 44 0F 29 50 88 44 0F 29 98 78 FF FF FF 44 0F 29 A0 68 FF FF FF 44 0F 29 A8 58 FF FF FF 44 0F 29 B0 48 FF FF FF 44 0F 29 B8 38 FF FF FF 48 8B 05 ? ? ? ? 48 33 C4 48 89 45 B0 0F B6 05 ? ? ? ?").get_first();
+            auto skyTopRAddress = wfp::patterns::First<uint8_t>("89 35 ? ? ? ? F3 0F 2A C0 0F B6 04 0F 49 8D 8D 90 15 12 05 F3 0F 2A", 2);
+            auto skyTopGAddress = wfp::patterns::First<uint8_t>("44 89 35 ? ? ? ? F3 0F 2A D0 0F B6 04 3A 0F 57 C0 0F 57 C9 F3 0F 2A", 3);
+            auto skyTopBAddress = wfp::patterns::First<uint8_t>("44 89 3D ? ? ? ? F3 0F 2A C0 42 0F B6 04 11 49 8D 8D 70 11 12 05 49", 3);
+            auto skyBottomRAddress = wfp::patterns::First<uint8_t>("44 89 25 ? ? ? ? F3 0F 2A C0 42 0F B6 04 11 F3 0F 2A C8 42 0F B6 04", 3);
+            auto skyBottomGAddress = wfp::patterns::First<uint8_t>("44 89 2D ? ? ? ? F3 0F 2A C0 F3 0F 59 D4 42 0F B6 04 11 0F 57 C9 F3", 3);
+            auto skyBottomBAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? 48 8D 05 ? ? ? ? 48 8D 88 E0 09 12 05 48 8D 90 E0", 2);
+            auto ambientRAddress = wfp::patterns::First<uint8_t>("F3 0F 10 05 ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 0D ? ? ? ?", 4);
+            auto ambientGAddress = wfp::patterns::First<uint8_t>("F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 0D ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ?", 4);
+            auto ambientBAddress = wfp::patterns::First<uint8_t>("F3 0F 10 05 ? ? ? ? F3 0F 11 0D ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ?", 4);
+            auto cloudRAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? 0F B6 04 0F 0F 57 C0 0F 57 C9 0F 57 D2 F3 0F 2A D0 0F", 2);
+            auto cloudGAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 90 24", 2);
+            auto cloudBAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A C8 0F B6 04 17 F3 0F 2A C0 41 0F", 2);
+            auto blurRAddress = wfp::patterns::First<uint8_t>("F3 0F 11 05 ? ? ? ? 0F B6 04 17 0F 57 C0 F3 0F 59 CC F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 60", 4);
+            auto blurGAddress = wfp::patterns::First<uint8_t>("F3 0F 11 05 ? ? ? ? 0F 57 C0 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 10", 4);
+            auto blurBAddress = wfp::patterns::First<uint8_t>("F3 0F 11 05 ? ? ? ? 0F 57 C0 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 C0", 4);
+            auto lowCloudRAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 80 1E", 2);
+            auto lowCloudGAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 F0 25", 2);
+            auto lowCloudBAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A F3 0F 2A C8 41", 2);
+            auto topCloudRAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? 0F 57 C9 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A", 2);
+            auto topCloudGAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 00 28", 2);
+            auto topCloudBAddress = wfp::patterns::First<uint8_t>("89 05 ? ? ? ? 0F B6 04 0F F3 0F 2A D0 0F B6 04 17 F3 0F 2A C0 41 0F B6 04 0A 49 8D 89 30 23", 2);
+            auto directionalRAddress = wfp::patterns::First<uint8_t>("F3 0F 10 05 ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ?", 4);
+            auto directionalGAddress = wfp::patterns::First<uint8_t>("F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 75 ? 48 8D 0D ? ? ?", 4);
+            auto directionalBAddress = wfp::patterns::First<uint8_t>("F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 75 ? 48 8D 0D ? ? ?", 4);
+            const auto update = wfp::patterns::First("48 8B C4 48 89 58 08 48 89 70 10 48 89 78 18 55 41 54 41 55 41 56 41 57 48 8D 6C 24 A0 48 81 EC 60 01 00 00 0F 29 70 C8 0F 29 78 B8 44 0F 29 40 A8 44 0F 29 48 98 44 0F 29 50 88 44 0F 29 98 78 FF FF FF 44 0F 29 A0 68 FF FF FF 44 0F 29 A8 58 FF FF FF 44 0F 29 B0 48 FF FF FF 44 0F 29 B8 38 FF FF FF 48 8B 05 ? ? ? ? 48 33 C4 48 89 45 B0 0F B6 05 ? ? ? ?");
             if (!update || !skyTopRAddress || !skyTopGAddress || !skyTopBAddress || !skyBottomRAddress || !skyBottomGAddress || !skyBottomBAddress || !ambientRAddress || !ambientGAddress || !ambientBAddress || !cloudRAddress || !cloudGAddress || !cloudBAddress || !blurRAddress || !blurGAddress || !blurBAddress || !lowCloudRAddress || !lowCloudGAddress || !lowCloudBAddress || !topCloudRAddress || !topCloudGAddress || !topCloudBAddress || !directionalRAddress || !directionalGAddress || !directionalBAddress)
                 return;
             skyTopR = reinterpret_cast<int32_t*>(injector::ReadRelativeOffset(skyTopRAddress).as_int());

@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "TrackedHud.hpp"
 
 export module WidescreenHUD;
 
@@ -133,64 +135,72 @@ export bool HudNeedsToMoveRight(uint32_t id)
     //});
 }
 
+DAHud::Positions trackedPositions;
+SafetyHookInline areaWidgetDtorHook;
 SafetyHookInline shsub_106EE220 = {};
-void __fastcall sub_106EE220(uint32_t* magma, void* edx, void** a2)
+
+void* __fastcall DestroyAreaWidget(void* widget, void* edx, unsigned int flags)
 {
-    shsub_106EE220.unsafe_fastcall(magma, edx, a2);
+    // Keyframes own these values; retire the coordinate before native destruction/free.
+    trackedPositions.Remove(widget);
+    return areaWidgetDtorHook.unsafe_fastcall<void*>(widget, edx, flags);
+}
 
-    auto id = magma[1];
-    auto& element = *reinterpret_cast<HudElement*>(a2[1]);
+void __fastcall sub_106EE220(uint32_t* magma, void* edx, void** frame)
+{
+    shsub_106EE220.unsafe_fastcall(magma, edx, frame);
+    if (!magma || !frame || !frame[1])
+        return;
+    const auto id = magma[1];
+    const int direction = HudNeedsToMoveLeft(id) ? -1 : HudNeedsToMoveRight(id) ? 1 : 0;
+    auto& element = *reinterpret_cast<HudElement*>(frame[1]);
+    if (!direction || !element.pDtor || *element.pDtor != pHudAreaWidgetDtor)
+        return;
+    if (areaWidgetDtorHook)
+        trackedPositions.Add(&element, element.AsAreaWidget.Position.X, direction);
+    else
+        element.AsAreaWidget.Position.X = int16_t(std::clamp(int(element.AsAreaWidget.Position.X) +
+            direction * DAHud::Positions::Offset(Screen.fWidescreenHudOffset), int(INT16_MIN), int(INT16_MAX)));
+}
 
-    if (HudNeedsToMoveLeft(id))
+export void RefreshHudConstraint()
+{
+    if (Screen.nHudWidescreenMode < 1 || Screen.Width <= 0 || Screen.Height <= 0 || Screen.fWidth <= 0.0f || Screen.fHeight <= 0.0f ||
+        !std::isfinite(Screen.fWidth) || !std::isfinite(Screen.fHeight) || !std::isfinite(Screen.fAspectRatio))
+        return;
+    static std::string previous;
+    static int previousWidth = 0, previousHeight = 0;
+    const auto wanted = FixSettings().Wanted("MAIN.HudAspectRatioConstraint");
+    if (wanted == previous && Screen.Width == previousWidth && Screen.Height == previousHeight)
+        return;
+    if (!areaWidgetDtorHook)
+        return;
+
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(wanted);
+    const auto constraint = Screen.fHudAspectRatioConstraint;
+    float width = Screen.fWidth;
+    if (constraint && (*constraint < 0.0f || *constraint > 32.0f / 9.0f))
+        Screen.fWidescreenHudOffset = *constraint;
+    else
     {
-        if (*element.pDtor == pHudAreaWidgetDtor)
-        {
-            element.AsAreaWidget.Position.X -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        }
-        //else if (*element.pDtor == pHudImageRendererDtor)
-        //{
-        //    element.AsImageRenderer.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //    element.AsImageRenderer.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //}
-        //else if (*element.pDtor == pHudTextLabelDtor)
-        //{
-        //    element.AsTextLabel.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //    element.AsTextLabel.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //}
-        //else if (*element.pDtor == pHudPlaceholderViewportDtor)
-        //{
-        //    element.AsPlaceholderViewport.Bounds.Left -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //    element.AsPlaceholderViewport.Bounds.Right -= static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //}
+        if (constraint)
+            width = Screen.fHeight * ClampHudAspectRatio(*constraint, Screen.fAspectRatio);
+        Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(width, Screen.fHeight, 800.0f, 600.0f);
     }
-    else if (HudNeedsToMoveRight(id))
-    {
-        if (*element.pDtor == pHudAreaWidgetDtor)
-        {
-            element.AsAreaWidget.Position.X += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        }
-        //else if (*element.pDtor == pHudImageRendererDtor)
-        //{
-        //    element.AsImageRenderer.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //    element.AsImageRenderer.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //}
-        //else if (*element.pDtor == pHudTextLabelDtor)
-        //{
-        //    element.AsTextLabel.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //    element.AsTextLabel.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //}
-        //else if (*element.pDtor == pHudPlaceholderViewportDtor)
-        //{
-        //    element.AsPlaceholderViewport.Bounds.Left += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //    element.AsPlaceholderViewport.Bounds.Right += static_cast<int16_t>(Screen.fWidescreenHudOffset);
-        //}
-    }
+    Screen.FilmstripOffset = int32_t(Screen.fWidth - width + float(Screen.FilmstripScaleX) / 5.25f);
+    trackedPositions.SetOffset(Screen.fWidescreenHudOffset);
+    previous = wanted;
+    previousWidth = Screen.Width;
+    previousHeight = Screen.Height;
 }
 
 export void InitWidescreenHUD()
 {
     if (Screen.nHudWidescreenMode < 1)
+    {
+        FixSettings().Availability("MAIN.HudAspectRatioConstraint", [](std::string_view) { return false; });
         return;
+    }
 
     auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "56 8B F1 E8 ? ? ? ? F6 44 24 08 01 74 ? 56 E8 ? ? ? ? 83 C4 04 8B C6 5E C2 04 00");
     pHudAreaWidgetDtor = pattern.get(41).get<void*>(0);
@@ -200,5 +210,17 @@ export void InitWidescreenHUD()
     pHudTextLabelDtor = pattern.get(92).get<void*>(0);
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 56 8B F1 8B 4E 0C");
+    trackedPositions.SetOffset(Screen.fWidescreenHudOffset);
+    areaWidgetDtorHook = safetyhook::create_inline(reinterpret_cast<void*>(pHudAreaWidgetDtor), DestroyAreaWidget);
+    if (!areaWidgetDtorHook)
+        OutputDebugStringA("Splinter Cell Double Agent: live HUD lifetime tracking unavailable; startup layout retained.\n");
     shsub_106EE220 = safetyhook::create_inline(pattern.get_first(0), sub_106EE220);
+    const bool live = bool(areaWidgetDtorHook) && bool(shsub_106EE220);
+    FixSettings().Availability("MAIN.HudAspectRatioConstraint", [live](std::string_view) { return live; });
+}
+// Only expose our exact owned detour for native-menu body validation.
+export const SafetyHookInline* NativeMenuAddFrameHook()
+{
+    return shsub_106EE220 && shsub_106EE220.enabled() &&
+        shsub_106EE220.destination_address() == reinterpret_cast<uintptr_t>(sub_106EE220) ? &shsub_106EE220 : nullptr;
 }

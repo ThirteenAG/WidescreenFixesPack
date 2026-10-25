@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module WinDrv;
 
@@ -17,6 +18,10 @@ namespace UWindowsViewport
     {
         hGameWindow = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x230) + 4);
 
+        if ((Msg == WM_KEYDOWN || Msg == WM_KEYUP) && wParam == VK_F1 && hGameWindow == GetForegroundWindow() &&
+            NativeWindowsMenuHelp && NativeWindowsMenuHelp(Msg == WM_KEYDOWN && !(lParam & (1u << 30))))
+            return 0;
+
         // Handle Alt+F4 to close the window
         if (Msg == WM_SYSKEYDOWN && wParam == VK_F4)
         {
@@ -29,12 +34,12 @@ namespace UWindowsViewport
             PostMessage(hGameWindow, WM_KEYUP, VK_LWIN, 0);
         }
 
-        if (Screen.fRawInputMouse > 0.0f)
+        if (Screen.bRawInputMouse)
         {
             static bool bOnce = false;
             if (!bOnce)
             {
-                RawInputHandler<>::RegisterRawInput(hGameWindow, Screen.fRawInputMouse, Screen.bRawInputMouseRawData);
+                RawInputHandler<>::RegisterRawInput(hGameWindow, FixSettings().Float("MAIN.MouseSensitivity") * 0.5f, Screen.bRawInputMouseRawData);
                 bOnce = true;
             }
             if (Msg == WM_MOUSEMOVE)

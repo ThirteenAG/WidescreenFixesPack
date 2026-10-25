@@ -1,8 +1,11 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/PatchPreflight.hpp"
+#include "FixSettings.hpp"
 #include <fstream>
 #include <set>
+#include "CameraState.hpp"
 
 export module Camera;
 
@@ -27,7 +30,7 @@ void __fastcall RenderWorld(uintptr_t manager, void*, uintptr_t camera, int play
 
 float AdjustHorizontalFOV(float fov)
 {
-    return 2.0f * std::atan(std::tan(fov * 0.5f) * Screen.fAspectRatioDiff * Screen.fFOVFactor);
+    return 2.0f * std::atan(std::tan(fov * 0.5f) * Screen.fAspectRatioDiff * Screen.GameplayFOVFactor());
 }
 
 bool bTraceComicCapture = false;
@@ -61,10 +64,13 @@ void __fastcall RenderComicCamera(uintptr_t component, void*, float* info)
             log << std::endl;
         }
     }
+    const auto savedComicPass = USMCamera::ComicPass;
+    USMCamera::ComicPass = true;
     auto savedCapturePass = bComicCapturePass;
     bComicCapturePass = capture != 0;
     shRenderComicCamera.thiscall<void>(component, info);
     bComicCapturePass = savedCapturePass;
+    USMCamera::ComicPass = savedComicPass;
 }
 
 SafetyHookInline shRebuildViewFrame;
@@ -196,6 +202,22 @@ std::array<float, 16> DrawDistances, DrawDistancesSquared;
 
 void SetDrawDistance(float scale)
 {
+    if (!std::isfinite(scale) || scale <= 1.0f)
+        return;
+    if (!wfp::PatchPreflight("Ultimate Spider-Man draw distance: signatures unavailable; feature disabled.\n",
+    {
+        { "D9 00 D9 C0 DE C9 D8 05 ? ? ? ? D9 FA D9 54 24 10", 1 },
+        { "D9 04 8D ? ? ? ? D9 44 24", 1 },
+        { "D9 04 8D ? ? ? ? C3", 1 },
+        { "D8 1D ? ? ? ? 89 44 24 ? C7 44 24", 1 },
+        { "D8 1D ? ? ? ? C7 44 24 ? ? ? ? ? DF E0 F6 C4 05 8D 44 24 ? 7B ? 8D 44 24 ? D9 00", 1 },
+        { "C7 44 24 ? ? ? ? ? DF E0 F6 C4 05 8D 44 24 ? 7B ? 8D 44 24 ? 8B 08", 1 },
+        { "C7 44 24 ? ? ? ? ? DF E0 F6 C4 05 8D 44 24 ? 7B ? 8D 44 24 ? D9 00", 1 },
+        { "D9 04 85 ? ? ? ? 0F B6 4E", 1 },
+        { "D9 04 8D ? ? ? ? 8A 4D", 1 },
+    }))
+        return;
+
     if (!std::isfinite(scale))
         scale = 1.0f;
     scale = std::clamp(scale, 1.0f, 2.0f);
@@ -212,7 +234,7 @@ void SetDrawDistance(float scale)
     // build_render_data_regions uses sqrt(height^2 + 167^2), independently
     // of mesh fade distances. Redirect only its operand, not the shared constant.
     auto pattern = hook::pattern("D9 00 D9 C0 DE C9 D8 05 ? ? ? ? D9 FA D9 54 24 10"); //0x5470B0 + 8
-    injector::WriteMemory(pattern.get_first(8), &fRenderRegionDistanceSquared, true);
+    WriteGameValue(pattern.get_first(8), &fRenderRegionDistanceSquared);
 
     pattern = hook::pattern("D9 04 8D ? ? ? ? D9 44 24"); //0x53D1AF + 3
     auto originalDistances = *pattern.get_first<float*>(3);
@@ -227,20 +249,20 @@ void SetDrawDistance(float scale)
         DrawDistances[i] = originalDistances[i] * scale;
         DrawDistancesSquared[i] = originalSquared[i] * scale * scale;
     }
-    injector::WriteMemory(linearOperand, DrawDistances.data(), true);
-    injector::WriteMemory(squaredOperand, DrawDistancesSquared.data(), true);
+    WriteGameValue(linearOperand, DrawDistances.data());
+    WriteGameValue(squaredOperand, DrawDistancesSquared.data());
     pattern = hook::pattern("D8 1D ? ? ? ? 89 44 24 ? C7 44 24"); //0x53CEFC + 2
-    injector::WriteMemory(pattern.get_first(2), &fDrawDistance, true);
+    WriteGameValue(pattern.get_first(2), &fDrawDistance);
     pattern = hook::pattern("D8 1D ? ? ? ? C7 44 24 ? ? ? ? ? DF E0 F6 C4 05 8D 44 24 ? 7B ? 8D 44 24 ? D9 00"); //0x53D377 + 2
-    injector::WriteMemory(pattern.get_first(2), &fDrawDistance, true);
+    WriteGameValue(pattern.get_first(2), &fDrawDistance);
     pattern = hook::pattern("C7 44 24 ? ? ? ? ? DF E0 F6 C4 05 8D 44 24 ? 7B ? 8D 44 24 ? 8B 08"); //0x53CF06 + 4
-    injector::WriteMemory(pattern.get_first(4), fDrawDistance, true);
+    WriteGameValue(pattern.get_first(4), fDrawDistance);
     pattern = hook::pattern("C7 44 24 ? ? ? ? ? DF E0 F6 C4 05 8D 44 24 ? 7B ? 8D 44 24 ? D9 00"); //0x53D37D + 4
-    injector::WriteMemory(pattern.get_first(4), fDrawDistance, true);
+    WriteGameValue(pattern.get_first(4), fDrawDistance);
     pattern = hook::pattern("D9 04 85 ? ? ? ? 0F B6 4E"); //0x51E8E3 + 3
-    injector::WriteMemory(pattern.get_first(3), DrawDistancesSquared.data(), true);
+    WriteGameValue(pattern.get_first(3), DrawDistancesSquared.data());
     pattern = hook::pattern("D9 04 8D ? ? ? ? 8A 4D"); //0x53A2E4 + 3
-    injector::WriteMemory(pattern.get_first(3), DrawDistancesSquared.data(), true);
+    WriteGameValue(pattern.get_first(3), DrawDistancesSquared.data());
 }
 
 class Camera
@@ -250,6 +272,22 @@ public:
     {
         WFP::onInitEvent() += []
         {
+            if (!wfp::PatchPreflight("Ultimate Spider-Man camera: signatures unavailable; feature disabled.\n",
+            {
+                { "E8 ? ? ? ? D8 3D", 1 },
+                { "E8 ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? D9 44 24", 1 },
+                { "E8 ? ? ? ? D9 5E ? 5F 32 C0", 1 },
+                { "8A 0D ? ? ? ? 84 C9 89 44 24 24 74 08 DD D8", 1 },
+                { "E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 8D 94 24 ? ? ? ? 52 8D 84 24 ? ? ? ? 50 8D 4C 24", 1 },
+                { "E8 ? ? ? ? 6A 00 E8 ? ? ? ? 6A 04 E8 ? ? ? ? 50 E8 ? ? ? ? 8A 46 48", 1 },
+                { "64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 64 89 25 00 00 00 00 83 EC 40 56 8B F1 83 7E 2C 04", 1 },
+                { "D9 44 24 14 5E D8 64 24 08 D9 44 24 14 D8 64 24 0C DE F9", 1 },
+                { "E8 ? ? ? ? 83 C4 0C 83 C4 10 C3", 1 },
+                { "D8 05 ? ? ? ? D9 5C 24 04 8B 54 24 04 D8 05", 1 },
+                { "56 E8 ? ? ? ? 83 C4 04 5F 83 C4 40 C3", 1 },
+            }))
+                return;
+
             auto pattern = hook::pattern("E8 ? ? ? ? D8 3D"); //0x515290 + 2
             pAspect = injector::ReadMemory<float*>(injector::GetBranchDestination(pattern.get_first()).as_int() + 2);
 
@@ -261,6 +299,7 @@ public:
 
             pattern = hook::pattern("8A 0D ? ? ? ? 84 C9 89 44 24 24 74 08 DD D8"); //0x53A99C + 2
             pIgnoreZoom = *pattern.get_first<uint8_t*>(2);
+            USMCamera::Initialize(pZoom, pIgnoreZoom);
 
             pattern = hook::pattern("E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 8D 94 24 ? ? ? ? 52 8D 84 24 ? ? ? ? 50 8D 4C 24"); //0x53A930
             shRebuildViewFrame = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), RebuildViewFrame);
@@ -268,8 +307,10 @@ public:
             pattern = hook::pattern("E8 ? ? ? ? 6A 00 E8 ? ? ? ? 6A 04 E8 ? ? ? ? 50 E8 ? ? ? ? 8A 46 48"); //0x741C68
             injector::MakeCALL(pattern.get_first(), RebuildComicViewFrame, true);
 
-            // Bounded transition diagnostics; hidden from the distributed INI.
-            bTraceComicCapture = CIniReader("").ReadInteger("DEBUG", "TraceComicCapture", 0) != 0;
+            // Developer diagnostics, compiled in only on request
+#ifdef USM_DEBUG_TRACE_COMIC_CAPTURE
+            bTraceComicCapture = true;
+#endif
             pattern = hook::pattern("64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 64 89 25 00 00 00 00 83 EC 40 56 8B F1 83 7E 2C 04"); //0x7419C0
             shRenderComicCamera = safetyhook::create_inline(pattern.get_first(), RenderComicCamera);
 
@@ -334,9 +375,8 @@ public:
                     pVisibilityOrigin[0], pVisibilityOrigin[2], radius);
             });
 
-            CIniReader iniReader("");
-            // Developer-only diagnostics: omitted from the shipped INI and off by default.
-            if (iniReader.ReadInteger("DEBUG", "TraceBuildingVisibility", 0))
+            auto& settings = FixSettings();
+#ifdef USM_DEBUG_TRACE_BUILDING_VISIBILITY
             {
                 static std::ofstream visibilityLog(GetThisModulePath() / "USM.BuildingVisibility.log", std::ios::trunc);
                 visibilityLog << "Visibility-list trace active; stock capacity = 20.\n" << std::flush;
@@ -351,15 +391,17 @@ public:
                         << " count=" << regs.edx << " time=" << GetTickCount64() << '\n' << std::flush;
                 });
             }
+#endif
 
-            if (iniReader.ReadInteger("DEBUG", "DisableOcclusionCulling", 0))
+#ifdef USM_DEBUG_DISABLE_OCCLUSION_CULLING
             {
                 pattern = hook::pattern("A1 ? ? ? ? 83 C4 04 83 F8 03 74 38 56 8B CF"); //0x54B26A + 1
                 pDisableOcclusionCulling = *pattern.get_first<int32_t*>(1);
                 pattern = hook::pattern("51 53 55 56 57 8B F9 89 7C 24 10 E8 ? ? ? ? 8B 74 24 18 56"); //0x54B250
                 shRenderWorld = safetyhook::create_inline(pattern.get_first(), RenderWorld);
             }
-            auto distanceScale = iniReader.ReadFloat("MAIN", "DrawDistanceScale", 1.0f);
+#endif
+            auto distanceScale = settings.Float("GRAPHICS.DrawDistance");
             if (!std::isfinite(distanceScale))
                 distanceScale = 1.0f;
             distanceScale = std::clamp(distanceScale, 1.0f, 10.0f);

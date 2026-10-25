@@ -1,0 +1,88 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.ForceAspectRatio",
+      "type": "string",
+      "default": "auto",
+      "label": "@ForceAspectRatio",
+      "description": "@ForceAspectRatio.description",
+      "page": "display",
+      "visibility": "editor",
+      "apply": "restart",
+      "maxLength": 14,
+      "suggestions": [
+        "auto",
+        "4:3",
+        "16:9",
+        "21:9",
+        "32:9"
+      ]
+    },
+    {
+      "id": "MAIN.HudScale",
+      "type": "float",
+      "default": 1.0,
+      "label": "@HUDScale",
+      "description": "@HUDScale.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      },
+      "min": 0.5,
+      "max": 1.0,
+      "step": 0.05
+    },
+    {
+      "id": "MAIN.DualAnalogPatch",
+      "type": "bool",
+      "default": 1,
+      "label": "@DualAnalogPatch",
+      "description": "@DualAnalogPatch.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FixHUD",
+      "type": "bool",
+      "default": 1,
+      "label": "@FixHUD",
+      "description": "@FixHUD.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    }
+  ]
+}

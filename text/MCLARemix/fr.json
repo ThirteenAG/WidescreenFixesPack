@@ -1,0 +1,13 @@
+{
+  "plugin.name": "Midnight Club LA Remix PPSSPP Fusion Fix",
+  "page.display": "Affichage",
+  "page.controls": "Commandes",
+  "ForceAspectRatio": "Format d'image",
+  "ForceAspectRatio.description": "Utilise automatiquement le format de l'émulateur, ou force un rapport largeur:hauteur. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "HUDScale": "Taille du HUD",
+  "HUDScale.description": "Met à l'échelle le HUD de course autour de ses ancrages aux bords de l'écran ; les menus gardent leur taille d'origine. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "DualAnalogPatch": "Caméra double analogique",
+  "DualAnalogPatch.description": "Le stick droit tourne la caméra de poursuite ; les commandes de regard à la croix directionnelle gardent leur comportement d'origine. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "FixHUD": "Correction du HUD",
+  "FixHUD.description": "Garde les éléments du HUD aux bords de l'écran et centre les menus et les vidéos dans leurs proportions d'origine. Redémarrez le jeu émulé après avoir modifié ce réglage."
+}

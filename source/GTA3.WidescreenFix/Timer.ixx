@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 
 export module Timer;
 

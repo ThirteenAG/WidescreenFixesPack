@@ -1,0 +1,16 @@
+{
+  "plugin.name": "Total Overdose Widescreen Fix",
+  "page.advanced": "Advanced",
+  "ResX": "Resolution width",
+  "ResX.description": "Override rendering width. If either dimension is zero, use the desktop resolution. Requires a restart.",
+  "ResY": "Resolution height",
+  "ResY.description": "Override rendering height. If either dimension is zero, use the desktop resolution. Requires a restart.",
+  "page.game": "Game",
+  "SkipIntro": "Skip startup logos",
+  "SkipIntro.description": "Skip the SCI and Deadline startup logos. The story intro and other videos still play. Requires a restart.",
+  "FMVWidescreenMode": "Video mode",
+  "FMVWidescreenMode.description": "Keep the original aspect with black borders, crop to fill the screen, or stretch. Applies immediately.",
+  "FMVWidescreenMode.original": "Original aspect",
+  "FMVWidescreenMode.fill": "Fill",
+  "FMVWidescreenMode.stretch": "Stretch"
+}

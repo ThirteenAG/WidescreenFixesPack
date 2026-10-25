@@ -1,0 +1,18 @@
+{
+  "plugin.name": "Sniper Elite Widescreen Fix",
+  "page.display": "Affichage",
+  "page.advanced": "Avancé",
+  "ResX": "Largeur de la résolution",
+  "ResX.description": "Largeur de l'écran en pixels. 0 utilise la résolution du bureau.",
+  "ResY": "Hauteur de la résolution",
+  "ResY.description": "Hauteur de l'écran en pixels. 0 utilise la résolution du bureau.",
+  "FOVFactor": "Champ de vision",
+  "FOVFactor.description": "Multiplie le champ de vision en jeu, qui s'élargit déjà avec l'écran (Hor+). Les cinématiques gardent leur cadrage.",
+  "ConfineCursor": "Confiner le curseur",
+  "ConfineCursor.description": "Garde le curseur dans la fenêtre du jeu tant que le jeu est actif. Il est libéré quand le jeu perd le focus, pendant le déplacement de la fenêtre et dès que l'option est désactivée.",
+  "FMVWidescreenMode": "Mode vidéo",
+  "FMVWidescreenMode.description": "Format vidéo original avec bandes, recadrage ou étirement. Les changements s’appliquent pendant la lecture.",
+  "FMVWidescreenMode.original": "Format d'origine",
+  "FMVWidescreenMode.fill": "Remplir",
+  "FMVWidescreenMode.stretch": "Étirer"
+}

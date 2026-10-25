@@ -1,0 +1,14 @@
+{
+  "plugin.name": "The Warriors Fusion Fix (PPSSPP)",
+  "page.options": "Erweiterte Optionen",
+  "skip": "Intro überspringen",
+  "skip.description": "Überspringt die Intros beim Start. Nach einer Änderung neu starten.",
+  "fps": "60 FPS",
+  "fps.description": "Aktiviert den nativen 60-FPS-Patch. Nach einer Änderung neu starten.",
+  "aspect": "Seitenverhältnis",
+  "aspect.description": "Auto folgt dem Seitenverhältnis des Emulators. Breite:Höhe (zum Beispiel 16:9) erzwingt eines, 0 behält Bild und HUD des Originals bei. Nach Änderungen neu starten.",
+  "loading": "Schnelleres Laden",
+  "loading.description": "Verkürzt die Ladebildschirme der Levels. Nach Änderungen neu starten.",
+  "DualAnalogPatch": "Steuerung mit zwei Sticks",
+  "DualAnalogPatch.description": "Rechten Stick für die Kamera und linken Stick für Bewegung verwenden. Neustart erforderlich."
+}

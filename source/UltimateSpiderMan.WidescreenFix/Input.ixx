@@ -1,6 +1,8 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/PatchPreflight.hpp"
+#include "FixSettings.hpp"
 #ifdef _DEBUG
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
@@ -183,13 +185,29 @@ public:
     {
         WFP::onInitEvent() += []
         {
+            if (!wfp::PatchPreflight("Ultimate Spider-Man input: signatures unavailable; feature disabled.\n",
+            {
+                { "8B 15 ? ? ? ? 89 44 24 ? 8B 4F", 1 },
+                { "E8 ? ? ? ? 83 C4 ? 85 C0 74 ? 50 68", 1 },
+                { "E8 ? ? ? ? 83 C4 ? C2 ? ? 8B 54 24", 1 },
+                { "E8 ? ? ? ? ? ? 83 C4 ? C2 ? ? 8A 44 24", 1 },
+                { "E8 ? ? ? ? 8B 54 24 ? 52 8D 4D", 1 },
+                { "E8 ? ? ? ? 8A 45 ? 84 C0 0F 84 ? ? ? ? 8A 45", 1 },
+                { "8A 45 6D 84 C0 0F 84 ? ? ? ? 8A 45 3D 84 C0", 1 },
+                { "A1 ? ? ? ? 53 50 FF 15", 1 },
+                { "8B 4E ? 52 E8 ? ? ? ? 5E", 1 },
+                { "E8 ? ? ? ? 8B 7C 24 ? 8B 74 24 ? 8B 43", 1 },
+                { "E8 ? ? ? ? 8B 86 ? ? ? ? 8B 8E ? ? ? ? 89 44 24", 1 },
+            }))
+                return;
+
             auto pattern = hook::pattern("8B 15 ? ? ? ? 89 44 24 ? 8B 4F"); //0x473B75 + 2
             pInput = *pattern.get_first<uintptr_t*>(2);
 
             #ifdef _DEBUG
             // Allow the Windows key while debugging; keep foreground, nonexclusive input.
             pattern = hook::pattern("6A 16 51 50 FF 52 34 8B 44 24 ? 8B 10 50 FF 52 1C"); // 0x82150C + 1
-            injector::WriteMemory<uint8_t>(pattern.get_first(1), DISCL_FOREGROUND | DISCL_NONEXCLUSIVE, true);
+            WriteGameValue<uint8_t>(pattern.get_first(1), DISCL_FOREGROUND | DISCL_NONEXCLUSIVE);
             #endif
 
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 85 C0 74 ? 50 68"); //0x81D240

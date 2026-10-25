@@ -17,7 +17,7 @@ std::string ExtractPixelShaderFilename(const DWORD* pFunction, size_t dataSize)
 {
     const char* data = reinterpret_cast<const char*>(pFunction);
     const char* fileTag = nullptr;
-    for (size_t i = 0; i < dataSize; ++i)
+    for (size_t i = 0; i + 4 <= dataSize; ++i)
     {
         if (data[i] == 'F' && data[i + 1] == 'I' && data[i + 2] == 'L' && data[i + 3] == 'E')
         {
@@ -28,7 +28,8 @@ std::string ExtractPixelShaderFilename(const DWORD* pFunction, size_t dataSize)
     if (!fileTag) return "";
     fileTag += 4;
     const char* end = fileTag;
-    while (*end != '\0') ++end;
+    while (end < data + dataSize && *end != '\0') ++end;
+    if (end == data + dataSize) return "";
     std::string fullPath(fileTag, end - fileTag);
     size_t lastSlash = fullPath.find_last_of('\\');
     if (lastSlash != std::string::npos)
@@ -154,16 +155,16 @@ HRESULT WINAPI Hook_CreateDevice(IDirect3D8* d3ddev, UINT Adapter, D3DDEVTYPE De
 
     UINT_PTR* pVTable = *((UINT_PTR**)*ppReturnedDeviceInterface);
 
-    if (pVTable[IDirect3DDevice9VTBL::CreatePixelShader] != (UINT_PTR)Hook_CreatePixelShader)
+    if (pVTable[IDirect3DDevice8VTBL::CreatePixelShader] != (UINT_PTR)Hook_CreatePixelShader)
     {
-        RealCreatePixelShader = (CreatePixelShader_t)pVTable[IDirect3DDevice9VTBL::CreatePixelShader];
-        injector::WriteMemory(&pVTable[IDirect3DDevice9VTBL::CreatePixelShader], &Hook_CreatePixelShader, true);
+        RealCreatePixelShader = (CreatePixelShader_t)pVTable[IDirect3DDevice8VTBL::CreatePixelShader];
+        ProtectedGameRef<decltype(&Hook_CreatePixelShader)>(reinterpret_cast<decltype(&Hook_CreatePixelShader)*>(&pVTable[IDirect3DDevice8VTBL::CreatePixelShader])) = &Hook_CreatePixelShader;
     }
 
-    if (pVTable[IDirect3DDevice9VTBL::CreateVertexShader] != (UINT_PTR)Hook_CreateVertexShader)
+    if (pVTable[IDirect3DDevice8VTBL::CreateVertexShader] != (UINT_PTR)Hook_CreateVertexShader)
     {
-        RealCreateVertexShader = (CreateVertexShader_t)pVTable[IDirect3DDevice9VTBL::CreateVertexShader];
-        injector::WriteMemory(&pVTable[IDirect3DDevice9VTBL::CreateVertexShader], &Hook_CreateVertexShader, true);
+        RealCreateVertexShader = (CreateVertexShader_t)pVTable[IDirect3DDevice8VTBL::CreateVertexShader];
+        ProtectedGameRef<decltype(&Hook_CreateVertexShader)>(reinterpret_cast<decltype(&Hook_CreateVertexShader)*>(&pVTable[IDirect3DDevice8VTBL::CreateVertexShader])) = &Hook_CreateVertexShader;
     }
 
     return hr;
@@ -180,7 +181,7 @@ export void InitShaders()
             auto pID3D8 = (IDirect3D8*)regs.eax;
             UINT_PTR* pVTable = (UINT_PTR*)(*((UINT_PTR*)pID3D8));
             RealD3D8CreateDevice = (CreateDevice_t)pVTable[IDirect3D8VTBL::CreateDevice];
-            injector::WriteMemory(&pVTable[IDirect3D8VTBL::CreateDevice], &Hook_CreateDevice, true);
+            ProtectedGameRef<decltype(&Hook_CreateDevice)>(reinterpret_cast<decltype(&Hook_CreateDevice)*>(&pVTable[IDirect3D8VTBL::CreateDevice])) = &Hook_CreateDevice;
         });
     }
 }

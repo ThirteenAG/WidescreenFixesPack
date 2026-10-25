@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include <dshow.h>
+#include "FixSettings.hpp"
 
 export module Movie;
 
@@ -36,8 +37,10 @@ namespace Movie
 
     BOOL WINAPI GetMovieRect(HWND window, LPRECT rect)
     {
+        // Videos: 0 original aspect (black bars), 1 fill (cropped at the aspect), 2 stretched over the window as the game does
+        static auto& nFMVWidescreenMode = FixSettings().Int("MAIN.FMVWidescreenMode");
         const BOOL result = (*GetClientRectImport)(window, rect);
-        if (!result) return result;
+        if (!result || nFMVWidescreenMode == 2) return result;
 
         const LONG width = rect->right - rect->left;
         const LONG height = rect->bottom - rect->top;
@@ -58,7 +61,8 @@ namespace Movie
 
         LONG movieWidth = width;
         LONG movieHeight = height;
-        if (int64_t(width) * aspectHeight > int64_t(height) * aspectWidth)
+        // Fill fits the other side; the child window is clipped to the client area
+        if ((int64_t(width) * aspectHeight > int64_t(height) * aspectWidth) == (nFMVWidescreenMode != 1))
             movieWidth = std::max<LONG>(1, static_cast<LONG>(int64_t(height) * aspectWidth / aspectHeight));
         else
             movieHeight = std::max<LONG>(1, static_cast<LONG>(int64_t(width) * aspectHeight / aspectWidth));

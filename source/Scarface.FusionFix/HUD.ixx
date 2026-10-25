@@ -1,6 +1,8 @@
 module;
 #include "stdafx.h"
+#include "FixSettings.hpp"
 #include "RTTI.h"
+#include "Cutscene.hpp"
 
 export module HUD;
 import ComVars;
@@ -18,7 +20,7 @@ namespace
     bool* frontendDraw;
     uintptr_t groupVtable, layerVtable, pageVtable, boxVtable, p3dVtable;
     uintptr_t objectVtable, textVtable, spriteVtable, roundedRectangleVtable;
-    std::optional<float> constraint;
+    std::atomic<float> constraint{ std::numeric_limits<float>::quiet_NaN() };
 
     struct Drawable
     {
@@ -97,7 +99,7 @@ namespace
                 transform[12] += offset / 0.6886667013168335f;
                 flags |= 8;
             }
-            memcpy(static_cast<uint8_t*>(drawable) + 0x48, transform.data(), sizeof(transform));
+            *reinterpret_cast<std::array<float, 16>*>(static_cast<uint8_t*>(drawable) + 0x48) = transform;
             Game::Field<uint8_t>(drawable, 0x94) = flags;
         }
         else if (item.box)
@@ -151,10 +153,11 @@ namespace
         const float aspect = width / height;
         if (aspect <= 4.0f / 3.0f) return 0.0f;
         float target = aspect;
-        if (constraint && std::isfinite(*constraint))
+        const float ratio = constraint.load(std::memory_order_relaxed);
+        if (std::isfinite(ratio))
         {
             // Also accept the repository's pixel-width form, e.g. 1920x1080.
-            target = ClampHudAspectRatio(*constraint > 32.0f / 9.0f ? *constraint / height : *constraint, aspect);
+            target = ClampHudAspectRatio(ratio > 32.0f / 9.0f ? ratio / height : ratio, aspect);
         }
         // Layer::Display (67A910) fits 640x480 and applies its native 448/480 scale.
         const float pixelsPerUnit = std::min(width / 640.0f, height / 480.0f) * (448.0f / 480.0f);
@@ -213,6 +216,7 @@ namespace
         auto manager = *hudManager;
         auto display = *currentDisplay;
         auto app = *application;
+        ScarfaceCutscene::DrawScope cutscene(*frontendDraw && manager && app ? display : nullptr);
         if (!manager || !display || !app || !*frontendDraw)
             return hbDraw.fun(handler);
         const float offset = Offset(display);
@@ -322,10 +326,33 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            auto szHudAspectRatioConstraint = iniReader.ReadString("MAIN", "HudAspectRatioConstraint", "Auto");
-
-            constraint = ParseWidescreenHudOffset(szHudAspectRatioConstraint);
+            auto& settings = FixSettings();
+            const auto updateConstraint = []()
+            {
+                const auto value = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
+                constraint.store(value.value_or(std::numeric_limits<float>::quiet_NaN()), std::memory_order_relaxed);
+            };
+            updateConstraint();
+            settings.OnChange("MAIN.HudAspectRatioConstraint", updateConstraint);
+            // Validate the complete draw group before installing any of its calls.
+            for (const auto signature : {
+                "E8 ? ? ? ? 83 C4 ? 8D 4C 24 ? 8B F8 ? ? 51",
+                "E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 74 ? E8 ? ? ? ? 84 C0 74 ? F6 86",
+                "E8 ? ? ? ? 80 7E ? ? 74 ? 8B 4E ? ? ? FF 50 ? 5E C2 ? ? E8",
+                "8B 0D ? ? ? ? 6A ? E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 74 ? E8 ? ? ? ? 84 C0 74 ? F6 86",
+                "8B 15 ? ? ? ? 8B B2",
+                "8B 35 ? ? ? ? 85 F6 74 ? 56",
+                "C6 05 ? ? ? ? ? E8 ? ? ? ? 6A ? 6A ? E8",
+                "8B 48 ? E8 ? ? ? ? 5F 5E 83 C4",
+                "E8 ? ? ? ? 80 7E ? ? 0F 84 ? ? ? ? 8B 7C 24",
+                "E8 ? ? ? ? 80 7E ? ? 74 ? 8B 4E ? ? ? 55" })
+            {
+                if (hook::pattern(signature).size() != 1)
+                {
+                    OutputDebugStringA("Scarface: HUD draw patterns unavailable.\n");
+                    return;
+                }
+            }
             moved.reserve(256);
             group.reserve(128);
 
@@ -364,7 +391,10 @@ public:
             const auto drawHandlerVtable = ScarfaceRTTI::FindVtable(".?AVDrawHandler@FrontEndManager@@");
 
             if (!drawHandlerVtable || !groupVtable || !layerVtable || !pageVtable || !boxVtable || !p3dVtable || !objectVtable || !textVtable || !spriteVtable || !roundedRectangleVtable)
+            {
+                OutputDebugStringA("Scarface: HUD draw tables unavailable.\n");
                 return;
+            }
 
             pattern = hook::pattern("8B 48 ? E8 ? ? ? ? 5F 5E 83 C4");
             hbSubmitMapIcon.fun = injector::MakeCALL(pattern.get_first(3), SubmitMapIcon, true).get();
@@ -376,7 +406,8 @@ public:
             hbSubmitMapIcon.fun = injector::MakeCALL(pattern.get_first(), SubmitMapIcon, true).get();
 
             hbDraw.fun = injector::ReadMemory<decltype(hbDraw.fun)>(drawHandlerVtable, true);
-            injector::WriteMemory(drawHandlerVtable, &Draw, true);
+            ProtectedGameRef<decltype(&Draw)>{reinterpret_cast<decltype(&Draw)*>(drawHandlerVtable)} = &Draw;
+            ScarfaceCutscene::DrawReady = true;
         };
     }
 } HUD;

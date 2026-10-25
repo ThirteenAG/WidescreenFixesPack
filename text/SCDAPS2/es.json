@@ -1,0 +1,11 @@
+{
+  "plugin.name": "Splinter Cell Double Agent PCSX2F Widescreen Fix",
+  "page.gameplay": "Juego",
+  "page.display": "Pantalla",
+  "MAIN.SkipIntro": "Saltar introducción",
+  "MAIN.SkipIntro.description": "Salta el vídeo de logotipos al inicio. Reinicia el juego emulado tras cambiar este ajuste.",
+  "HUD.HudScale": "Escala del HUD",
+  "HUD.HudScale.description": "Escala la interfaz dentro de su área con la proporción correcta. Reinicia el juego emulado tras cambiar este ajuste.",
+  "HUD.WidescreenHud": "HUD panorámico",
+  "HUD.WidescreenHud.description": "Mueve los elementos del HUD de juego a los bordes de la pantalla, también en la mitad de cada jugador en cooperativo. Reinicia el juego emulado tras cambiar este ajuste."
+}

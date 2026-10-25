@@ -1,0 +1,127 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "The Suffering",
+        "exe": [
+          "suffering.exe"
+        ]
+      },
+      {
+        "name": "The Suffering: Ties That Bind",
+        "exe": [
+          "sufferingttb.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@CutsceneBorders.off"
+        },
+        {
+          "value": 1,
+          "label": "@CutsceneBorders.letterbox"
+        }
+      ],
+      "label": "@CutsceneBorders",
+      "description": "@CutsceneBorders.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "camera",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "min": 0,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@FPSLimit.unlimited"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
+        }
+      ],
+      "label": "@FPSLimit",
+      "description": "@FPSLimit.description",
+      "page": "display",
+      "apply": "restart",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 60,
+        "enhanced": 60
+      },
+      "visibility": "menu"
+    }
+  ]
+}

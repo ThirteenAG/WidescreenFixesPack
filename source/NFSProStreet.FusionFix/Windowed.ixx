@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Windowed;
 
@@ -13,8 +14,16 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            int32_t nWindowedMode = iniReader.ReadInteger("MISC", "WindowedMode", 0);
+            const auto mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 5);
+            constexpr int32_t nativeModes[] = { 0, 2, 4, 3, 1, 5 };
+            int32_t nWindowedMode = nativeModes[mode];
+
+            // Per monitor DPI awareness, so the game gets real pixels on scaled desktops
+            using SetContext = BOOL(WINAPI*)(HANDLE);
+            if (auto set = reinterpret_cast<SetContext>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetProcessDpiAwarenessContext")))
+                set(reinterpret_cast<HANDLE>(-4));
+            else
+                SetProcessDPIAware();
 
             if (nWindowedMode)
             {

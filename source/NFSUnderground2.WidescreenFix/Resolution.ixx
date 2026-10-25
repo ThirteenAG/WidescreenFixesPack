@@ -94,18 +94,6 @@ void __stdcall GetRacingResolution(int* outWidth, int* outHeight)
     onResChange().executeAll(*outWidth, *outHeight);
 }
 
-SafetyHookInline shGetLocalizedString = {};
-char* __cdecl GetLocalizedString(int hash)
-{
-    return shGetLocalizedString.unsafe_ccall<char*>(hash);
-}
-
-SafetyHookInline shGetLocalizedWideString = {};
-char __cdecl GetLocalizedWideString(wchar_t* out, int size, int hash)
-{
-    return shGetLocalizedWideString.unsafe_ccall<char>(out, size, hash);
-}
-
 namespace FEString
 {
     void (__fastcall* SetString)(void* FEString, void* edx, const char* str) = nullptr;
@@ -175,6 +163,8 @@ void __cdecl sub_5D1C40()
 SafetyHookInline shWndProc = {};
 LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
+    onWindowMessage().executeAll(hWnd, Msg, wParam, lParam);
+
     switch (Msg)
     {
         case WM_SYSKEYDOWN:
@@ -191,9 +181,13 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
         break;
         case WM_SIZE:
         {
-            cachedWidth = LOWORD(lParam);
-            cachedHeight = HIWORD(lParam);
-            onResChange().executeAll(cachedWidth, cachedHeight);
+            // Minimizing reports a zero size
+            if (wParam != SIZE_MINIMIZED && LOWORD(lParam) > 0 && HIWORD(lParam) > 0)
+            {
+                cachedWidth = LOWORD(lParam);
+                cachedHeight = HIWORD(lParam);
+                onResChange().executeAll(cachedWidth, cachedHeight);
+            }
         }
         break;
     }
@@ -209,6 +203,8 @@ export std::pair<int, int> GetRes()
 export float GetAspectRatio()
 {
     auto [Width, Height] = GetRes();
+    if (Width <= 0 || Height <= 0)
+        return 4.0f / 3.0f;
     return static_cast<float>(Width) / static_cast<float>(Height);
 }
 
@@ -223,8 +219,17 @@ public:
             {
                 auto [width, height, refresh] = res;
                 ResList.push_back({ width, height, refresh });
-                auto label = std::format("{}x{}", width, height);
-                ResListText.push_back(label);
+            }
+
+            if (ResList.empty())
+            {
+                auto [width, height] = GetDesktopRes();
+                ResList.push_back({ width, height, 60 });
+            }
+
+            for (const auto& res : ResList)
+            {
+                ResListText.push_back(std::format("{}x{}", res.width, res.height));
                 dwSupportedResolutionsArray.push_back(1);
             }
 
@@ -254,12 +259,6 @@ public:
 
             pattern = hook::pattern("A1 ? ? ? ? 83 F8 ? 0F 87 ? ? ? ? FF 24 85 ? ? ? ? 8B 44 24");
             shsub_5BF610 = safetyhook::create_inline(pattern.get_first(), GetRacingResolution);
-
-            pattern = hook::pattern("E8 ? ? ? ? 8B 4C 24 ? 83 C4 ? 50 51 E8 ? ? ? ? 8B 47");
-            shGetLocalizedString = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), GetLocalizedString);
-
-            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 84 C0 8D 84 24");
-            shGetLocalizedWideString = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), GetLocalizedWideString);
 
             pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 83 C4 ? 83 F8 ? 77 ? FF 24 85 ? ? ? ? 8B 4E");
             DALLangHash::FEngSetLanguageHash = (decltype(DALLangHash::FEngSetLanguageHash))injector::GetBranchDestination(pattern.get_first()).as_int();

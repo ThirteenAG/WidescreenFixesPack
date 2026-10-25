@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 
 export module Radardisc;
 
@@ -70,8 +72,7 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            auto bHQRadardisc = iniReader.ReadInteger("MISC", "HQRadarDisc", 1) != 0;
+            auto bHQRadardisc = FixSettings().Bool("MISC.HQRadarDisc");
 
             if (!bHQRadardisc)
                 return;
@@ -79,24 +80,59 @@ public:
             // If radardisc loaded from TXD is the original low-quality 64x64 texture,
             // replace its raster with a programmatically drawn high-quality ring.
             auto pattern = hook::pattern("BD ? ? ? ? C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? 8B 04 DD");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CHud::Sprites = *pattern.get_first<decltype(CHud::Sprites)>(1);
 
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 85 C0 A3 ? ? ? ? 75 ? 68");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             RwRasterCreate = (decltype(RwRasterCreate))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = find_pattern("E8 ? ? ? ? 8B 46 ? 56", "E8 ? ? ? ? 85 C0 74 ? 8B 84 24 ? ? ? ? ? ? ? 8B 84 84");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             RwRasterLock = (decltype(RwRasterLock))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = find_pattern("E8 ? ? ? ? 8D 4C 24 ? 8D 54 24 ? 51 8D 44 24", "E8 ? ? ? ? 8B 84 24 ? ? ? ? 8B 84 84");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             RwRasterUnlock = (decltype(RwRasterUnlock))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? 89 C3 59 55");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             RwTextureCreate = (decltype(RwTextureCreate))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? C7 83 ? ? ? ? ? ? ? ? 59 8D 83");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             RwTextureDestroy = (decltype(RwTextureDestroy))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = hook::pattern("31 ED 31 D2 89 C0 31 C0 C7 04 AD ? ? ? ? ? ? ? ? 89 D1");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto CHudInitialiseHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 RwTexture* pDiscTex = CHud::Sprites[HUD_RADARDISC].m_pTexture;

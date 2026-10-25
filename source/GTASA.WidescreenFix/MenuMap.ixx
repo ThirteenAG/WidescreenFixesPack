@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 
 export module MenuMap;
 
@@ -118,12 +120,17 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            if (!iniReader.ReadInteger("MAIN", "ScalingMode", 1)) return;
-            bFullscreenMap = iniReader.ReadInteger("MISC", "FullscreenMap", 1) != 0;
+            if (!FixSettings().Bool("MAIN.ScalingMode")) return;
+            bFullscreenMap = FixSettings().Bool("MISC.FullscreenMap");
+            OnSettingChange("MISC.FullscreenMap", []() { bFullscreenMap = FixSettings().Bool("MISC.FullscreenMap"); });
 
             // PrintMap initializes a map centered on the player.
             auto pattern = hook::pattern("C7 47 68 00 00 A0 43 C7 47 6C 00 00 4E 43");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::MakeNOP(pattern.get_first(), 7, true);
             static auto InitMapOrigin = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {

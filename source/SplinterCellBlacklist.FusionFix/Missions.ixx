@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <sstream>
 #include <format>
 #include <array>
@@ -754,37 +755,37 @@ namespace FThermalSonarVisionComponent
 
 export void InitMissions()
 {
-    CIniReader iniReader("");
-    auto bDisableNightVisionFlash = iniReader.ReadInteger("MAIN", "DisableNightVisionFlash", 1) != 0;
-    auto bDisablePerfectionistChecks = iniReader.ReadInteger("MAIN", "DisablePerfectionistChecks", 1) != 0;
-    auto nDefaultMissionFilter = std::clamp(iniReader.ReadInteger("MAIN", "DefaultMissionFilter", 1), 0, 3);
-    auto bSMIMapDisableStartupAnimation = iniReader.ReadInteger("MAIN", "SMIMapDisableStartupAnimation", 1) != 0;
+    auto& settings = FixSettings();
+    auto bDisableNightVisionFlash = settings.Int("MAIN.DisableNightVisionFlash") != 0;
+    auto bDisablePerfectionistChecks = settings.Int("MAIN.DisablePerfectionistChecks") != 0;
+    auto nDefaultMissionFilter = std::clamp(settings.Int("MAIN.DefaultMissionFilter"), 0, 3);
+    auto bSMIMapDisableStartupAnimation = settings.Int("MAIN.SMIMapDisableStartupAnimation") != 0;
 
-    sExtractionWaveConfigs = iniReader.ReadString("EXTRACTION", "ExtractionWaveConfigs", "Default");
-    nExtractionWaveEnemyMultiplier = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyMultiplier", 1), 1, 9999);
-    nExtractionWaveEnemyRandomRangeMin = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyRandomRangeMin", 0), 0, 9999);
-    nExtractionWaveEnemyRandomRangeMax = std::clamp(iniReader.ReadInteger("EXTRACTION", "ExtractionWaveEnemyRandomRangeMax", 4), 1, 9999);
-    auto bEnableKobinAndGrimMaps = iniReader.ReadInteger("EXTRACTION", "EnableKobinAndGrimMaps", 0) != 0;
-    auto bEnableCoopCampaignMaps = iniReader.ReadInteger("EXTRACTION", "EnableCoopCampaignMaps", 0) != 0;
+    sExtractionWaveConfigs = settings.Get("EXTRACTION.ExtractionWaveConfigs");
+    nExtractionWaveEnemyMultiplier = std::clamp(settings.Int("EXTRACTION.ExtractionWaveEnemyMultiplier"), 1, 9999);
+    nExtractionWaveEnemyRandomRangeMin = std::clamp(settings.Int("EXTRACTION.ExtractionWaveEnemyRandomRangeMin"), 0, 9999);
+    nExtractionWaveEnemyRandomRangeMax = std::clamp(settings.Int("EXTRACTION.ExtractionWaveEnemyRandomRangeMax"), 1, 9999);
+    auto bEnableKobinAndGrimMaps = settings.Int("EXTRACTION.EnableKobinAndGrimMaps") != 0;
+    auto bEnableCoopCampaignMaps = settings.Int("EXTRACTION.EnableCoopCampaignMaps") != 0;
     // Charlie on maps of other modes
     auto bCharlieOnOtherMaps = bEnableKobinAndGrimMaps || bEnableCoopCampaignMaps;
-    auto bEnableKestrelDLC = iniReader.ReadInteger("KESTREL", "EnableKestrelDLC", 0) != 0;
+    auto bEnableKestrelDLC = settings.Int("KESTREL.EnableKestrelDLC") != 0;
 
-    static auto sHUNTERReinforcementsNumber = iniReader.ReadString("HUNTER", "ReinforcementsNumber", "Default");
-    static auto nHUNTERReinforcementsEnemyMultiplier = std::clamp(iniReader.ReadInteger("HUNTER", "ReinforcementsEnemyMultiplier", 1), 1, 9999);
-    static auto nHUNTERReinforcementsEnemyRandomRangeMin = std::clamp(iniReader.ReadInteger("HUNTER", "ReinforcementsEnemyRandomRangeMin", 1), 1, 9999);
-    static auto nHUNTERReinforcementsEnemyRandomRangeMax = std::clamp(iniReader.ReadInteger("HUNTER", "ReinforcementsEnemyRandomRangeMax", 1), 1, 9999);
+    static auto sHUNTERReinforcementsNumber = settings.Get("HUNTER.ReinforcementsNumber");
+    static auto nHUNTERReinforcementsEnemyMultiplier = std::clamp(settings.Int("HUNTER.ReinforcementsEnemyMultiplier"), 1, 9999);
+    static auto nHUNTERReinforcementsEnemyRandomRangeMin = std::clamp(settings.Int("HUNTER.ReinforcementsEnemyRandomRangeMin"), 1, 9999);
+    static auto nHUNTERReinforcementsEnemyRandomRangeMax = std::clamp(settings.Int("HUNTER.ReinforcementsEnemyRandomRangeMax"), 1, 9999);
 
-    static auto bGHOSTDisableMissionFailOnDetection = iniReader.ReadInteger("GHOST", "DisableMissionFailOnDetection", 1) != 0;
+    static auto bGHOSTDisableMissionFailOnDetection = settings.Int("GHOST.DisableMissionFailOnDetection") != 0;
 
-    static auto bCOOPDisableMissionFailOnDetection = iniReader.ReadInteger("COOP", "DisableMissionFailOnDetection", 0) != 0;
-    static auto sCOOPReinforcementsNumber = iniReader.ReadString("COOP", "ReinforcementsNumber", "Default");
-    static auto nCOOPReinforcementsEnemyMultiplier = std::clamp(iniReader.ReadInteger("COOP", "ReinforcementsEnemyMultiplier", 1), 1, 9999);
-    static auto nCOOPReinforcementsEnemyRandomRangeMin = std::clamp(iniReader.ReadInteger("COOP", "ReinforcementsEnemyRandomRangeMin", 1), 1, 9999);
-    static auto nCOOPReinforcementsEnemyRandomRangeMax = std::clamp(iniReader.ReadInteger("COOP", "ReinforcementsEnemyRandomRangeMax", 1), 1, 9999);
+    static auto bCOOPDisableMissionFailOnDetection = settings.Int("COOP.DisableMissionFailOnDetection") != 0;
+    static auto sCOOPReinforcementsNumber = settings.Get("COOP.ReinforcementsNumber");
+    static auto nCOOPReinforcementsEnemyMultiplier = std::clamp(settings.Int("COOP.ReinforcementsEnemyMultiplier"), 1, 9999);
+    static auto nCOOPReinforcementsEnemyRandomRangeMin = std::clamp(settings.Int("COOP.ReinforcementsEnemyRandomRangeMin"), 1, 9999);
+    static auto nCOOPReinforcementsEnemyRandomRangeMax = std::clamp(settings.Int("COOP.ReinforcementsEnemyRandomRangeMax"), 1, 9999);
 
-    static auto bCAMPAIGNDisableMissionFailOnDetection = iniReader.ReadInteger("CAMPAIGN", "DisableMissionFailOnDetection", 0) != 0;
-    auto bEnableRunDuringForcedWalk = iniReader.ReadInteger("CAMPAIGN", "EnableRunDuringForcedWalk", 1) != 0;
+    static auto bCAMPAIGNDisableMissionFailOnDetection = settings.Int("CAMPAIGN.DisableMissionFailOnDetection") != 0;
+    auto bEnableRunDuringForcedWalk = settings.Int("CAMPAIGN.EnableRunDuringForcedWalk") != 0;
 
     // GameMode
     auto pattern = hook::pattern("55 8B EC 83 3D ? ? ? ? ? 75 55");
@@ -968,14 +969,14 @@ export void InitMissions()
         {
             static std::string s = xmlPath.string();
             auto pattern = find_pattern("68 ? ? ? ? E8 ? ? ? ? 83 C4 08 50 8D 4D D8 E8 ? ? ? ? BB");
-            injector::WriteMemory(pattern.get_first(1), s.data(), true);
+            ProtectedGameRef<decltype(s.data())>(reinterpret_cast<decltype(s.data())*>(pattern.get_first(1))) = s.data();
         }
 
         if (std::filesystem::exists(GetExeModulePath() / xmlPathDefault, ec))
         {
             static std::string s = xmlPathDefault.string();
             auto pattern = find_pattern("68 ? ? ? ? E8 ? ? ? ? 8B F0 83 C4 08 39 75 D8 74 3D 80 3E 00 74 0C 56 E8 ? ? ? ? 83 C4 04 40 EB 02 33 C0 89 45 DC 39 45 E0 7D 10 6A 01 8D 4D D8 89 45 E0 E8 ? ? ? ? 8B 45 DC 85 C0");
-            injector::WriteMemory(pattern.get_first(1), s.data(), true);
+            ProtectedGameRef<decltype(s.data())>(reinterpret_cast<decltype(s.data())*>(pattern.get_first(1))) = s.data();
         }
     }
 
@@ -1283,7 +1284,7 @@ export void InitMissions()
     if (bEnableRunDuringForcedWalk)
     {
         pattern = hook::pattern("74 18 8B 80 ? ? ? ? 85 C0 74 0E 8B 4E 3C 83 E1 01 51 8B C8 E8");
-        injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true); // jz -> jmp
+        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first())) = 0xEB; // jz -> jmp
     }
 
     if (bDisableNightVisionFlash)
@@ -1299,12 +1300,12 @@ export void InitMissions()
 
     {
         pattern = hook::pattern("B9 ? ? ? ? 89 8E ? ? ? ? F3 0F 7E 05");
-        injector::WriteMemory(pattern.get_first(1), nDefaultMissionFilter, true);
+        ProtectedGameRef<decltype(nDefaultMissionFilter)>(reinterpret_cast<decltype(nDefaultMissionFilter)*>(pattern.get_first(1))) = nDefaultMissionFilter;
     }
 
     if (bSMIMapDisableStartupAnimation)
     {
         pattern = hook::pattern("0F 8E ? ? ? ? 8D 8E ? ? ? ? E8 ? ? ? ? 80 BE");
-        injector::WriteMemory<uint16_t>(pattern.count(2).get(1).get<void>(), 0xE990, true); // jle -> jmp
+        ProtectedGameRef<uint16_t>(reinterpret_cast<uint16_t*>(pattern.count(2).get(1).get<void>())) = 0xE990; // jle -> jmp
     }
 }

@@ -1,0 +1,10 @@
+{
+  "plugin.name": "SOCOM Fireteam Bravo Fusion Fix (PPSSPP)",
+  "page.options": "Opciones",
+  "skip": "Saltar introducción",
+  "skip.description": "Salta la secuencia de cuadros de mensaje inicial si esta versión del juego lo admite. Reinicia tras cambiarlo.",
+  "analog": "Controles de doble analógico",
+  "analog.description": "Usa el stick derecho para mover la cámara y conserva los controles nativos del stick izquierdo. Reinicia tras cambiarlo.",
+  "loading": "Carga más rápida",
+  "loading.description": "Quita temporalmente el límite durante las cargas; restaura el ritmo normal cuando terminan los hilos de carga. Reinicia tras cambiarlo."
+}

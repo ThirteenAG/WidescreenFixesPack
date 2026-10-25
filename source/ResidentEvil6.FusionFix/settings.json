@@ -1,0 +1,318 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Resident Evil 6",
+        "exe": [
+          "BH6.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "gameplay"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        }
+      ],
+      "label": "@hudaspect",
+      "description": "@hudaspect.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "decimals": 2,
+      "unit": "x",
+      "label": "@fovfactor",
+      "description": "@fovfactor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "slider"
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@cutsceneborders.off"
+        },
+        {
+          "value": 1,
+          "label": "@cutsceneborders.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@cutsceneborders.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@cutsceneborders.both"
+        }
+      ],
+      "label": "@cutsceneborders",
+      "description": "@cutsceneborders.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 0,
+      "min": -1,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": -1,
+          "label": "@fpslimit.refreshrate"
+        },
+        {
+          "value": 0,
+          "label": "@fpslimit.unlimited"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
+        }
+      ],
+      "label": "@fpslimit",
+      "description": "@fpslimit.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 120,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 2,
+      "choices": [
+        {
+          "value": 1,
+          "label": "@windowmode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@windowmode.borderless"
+        }
+      ],
+      "label": "@windowmode",
+      "description": "@windowmode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": 1,
+      "label": "@PauseOnFocusLoss",
+      "description": "@PauseOnFocusLoss.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SplitScreenVertical",
+      "type": "bool",
+      "default": 0,
+      "label": "@SplitScreenVertical",
+      "description": "@SplitScreenVertical.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.SplitScreenSwapTopBottom",
+      "type": "bool",
+      "default": 0,
+      "label": "@SplitScreenSwapTopBottom",
+      "description": "@SplitScreenSwapTopBottom.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.DisableDamageOverlay",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableDamageOverlay",
+      "description": "@DisableDamageOverlay.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.DisableDBNOEffects",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableDBNOEffects",
+      "description": "@DisableDBNOEffects.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.DisableObjectiveIndicator",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableObjectiveIndicator",
+      "description": "@DisableObjectiveIndicator.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.LightSyncRGB",
+      "type": "bool",
+      "default": 1,
+      "label": "@LightSyncRGB",
+      "description": "@LightSyncRGB.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.Autoclicker",
+      "type": "bool",
+      "default": 0,
+      "label": "@Autoclicker",
+      "description": "@Autoclicker.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    }
+  ]
+}

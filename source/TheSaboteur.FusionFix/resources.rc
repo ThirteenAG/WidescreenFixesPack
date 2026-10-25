@@ -1,0 +1,6 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/TheSaboteur/en.json"
+fr ASISETTINGS_TEXT "../../text/TheSaboteur/fr.json"
+de ASISETTINGS_TEXT "../../text/TheSaboteur/de.json"
+it ASISETTINGS_TEXT "../../text/TheSaboteur/it.json"
+es ASISETTINGS_TEXT "../../text/TheSaboteur/es.json"

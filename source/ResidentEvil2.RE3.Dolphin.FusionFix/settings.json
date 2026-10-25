@@ -1,0 +1,67 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.EnableDoorSkip",
+      "type": "bool",
+      "default": 1,
+      "label": "@EnableDoorSkip",
+      "description": "@EnableDoorSkip.description",
+      "page": "gameplay",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.UnthrottleEmuDuringDoorSkip",
+      "type": "bool",
+      "default": 1,
+      "label": "@UnthrottleEmuDuringDoorSkip",
+      "description": "@UnthrottleEmuDuringDoorSkip.description",
+      "page": "gameplay",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.LightSyncRGB",
+      "type": "bool",
+      "default": 1,
+      "label": "@LightSyncRGB",
+      "description": "@LightSyncRGB.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    }
+  ]
+}

@@ -14,8 +14,6 @@
     "../../external/injector/include/ps2/memalloc.c",
     "../../external/injector/include/ps2/patterns.c",
     "../../external/injector/include/ps2/injector.c",
-    "../../external/injector/include/ps2/rini.c",
-    "../../external/injector/include/ps2/inireader.c",
     "../../external/injector/include/ps2/mips.c"
   ],
   "output": "../../data/GTALCS.PCSX2F.WidescreenFix/PLUGINS/GTALCS.PCSX2F.WidescreenFix.elf",

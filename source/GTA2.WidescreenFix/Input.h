@@ -1,4 +1,5 @@
 #pragma once
+#include "../Shared/CheckedPattern.hpp"
 
 namespace GTA2Options { inline void Process(char* menu); }
 #include <atomic>
@@ -58,16 +59,16 @@ namespace GTA2Input
         bool quitPrompt = Field<uint8_t>(player, 1930) != 0;
         // Keyboard Escape/Enter already reach the native quit prompt; inject only controller buttons.
         static bool confirmHeld = false;
-        bool confirm = quitPrompt && Button(XINPUT_GAMEPAD_A);
-        if (Focused() && !replay && confirm && !confirmHeld) ProcessKey(player, 0, 28);
+        bool confirm = Button(XINPUT_GAMEPAD_A);
+        if (Focused() && !replay && quitPrompt && confirm && !confirmHeld) ProcessKey(player, 0, 28);
         confirmHeld = confirm;
         static bool escapeHeld = false;
-        bool escape = quitPrompt && Button(XINPUT_GAMEPAD_B);
+        bool escape = Button(XINPUT_GAMEPAD_BACK) || (quitPrompt && Button(XINPUT_GAMEPAD_B));
         if (Focused() && !replay && escape && !escapeHeld) ProcessKey(player, 0, 1);
         escapeHeld = escape;
         static bool pauseHeld = false;
         bool pause = Button(XINPUT_GAMEPAD_START) || (ModernControls && Key(PauseKey));
-        if (Focused() && !replay && pause && !pauseHeld) ProcessKey(player, 0, 0x40);
+        if (Focused() && !replay && !quitPrompt && pause && !pauseHeld) ProcessKey(player, 0, 0x40);
         pauseHeld = pause;
         bool paused = *Game && Field<int>(*Game, 0) == 2;
         static unsigned inputSamples = 0;
@@ -83,12 +84,12 @@ namespace GTA2Input
         {
             auto car = Field<void*>(ped, 0x16C);
             auto object = Field<void*>(ped, 0x168);
-            auto [x, y] = Movement();
+            auto [x, y] = Movement(car != nullptr);
             uint32_t buttons = 0;
             if (car)
             {
-                if (y < -0.15f || (PadConnected && Pad.Gamepad.bRightTrigger > 30)) buttons |= 1;
-                if (y > 0.15f || (PadConnected && Pad.Gamepad.bLeftTrigger > 30)) buttons |= 2;
+                if (y < -0.15f || (!StickThrottle && PadConnected && Pad.Gamepad.bRightTrigger > 30)) buttons |= 1;
+                if (y > 0.15f || (!StickThrottle && PadConnected && Pad.Gamepad.bLeftTrigger > 30)) buttons |= 2;
                 if (x < -0.15f) buttons |= 4;
                 if (x > 0.15f) buttons |= 8;
             }
@@ -146,7 +147,7 @@ namespace GTA2Input
             Field<uint32_t>(player, 4) |= buttons;
 
             static bool messageHeld = false, recoveryHeld = false;
-            bool message = Button(XINPUT_GAMEPAD_BACK);
+            bool message = Button(XINPUT_GAMEPAD_RIGHT_THUMB);
             if (message && !messageHeld) ProcessKey(player, 0, 0x41);
             messageHeld = message;
             bool recovery = Key(RecoveryKey);
@@ -161,7 +162,7 @@ namespace GTA2Input
         }
         // The engine retains its input packet between key transitions. Inject
         // only while decoding it, so a released modern key cannot remain latched.
-        if (!Focused()) { Field<uint32_t>(player, 4) = 0; CachedNativeButtons = 0; }
+        if (!Focused() || quitPrompt || escape) { Field<uint32_t>(player, 4) = 0; CachedNativeButtons = 0; }
         auto result = PlayerInputHook.thiscall<int>(player);
         Field<uint32_t>(player, 4) = nativeButtons;
         return result;
@@ -208,7 +209,7 @@ namespace GTA2Input
                 x > 0.35f || Button(XINPUT_GAMEPAD_DPAD_RIGHT),
                 y < -0.35f || Button(XINPUT_GAMEPAD_DPAD_UP),
                 y > 0.35f || Button(XINPUT_GAMEPAD_DPAD_DOWN),
-                Button(XINPUT_GAMEPAD_A), Button(XINPUT_GAMEPAD_B), Button(XINPUT_GAMEPAD_X)
+                Button(XINPUT_GAMEPAD_A), Button(XINPUT_GAMEPAD_B) || Button(XINPUT_GAMEPAD_BACK), Button(XINPUT_GAMEPAD_X)
             };
             auto now = GetTickCount();
             for (int i = 0; i < 7; ++i)
@@ -232,19 +233,75 @@ namespace GTA2Input
         GTA2Options::Process(static_cast<char*>(menu));
     }
 
-    inline void Install(CIniReader& ini)
+    inline void Install(SettingsReader& ini)
     {
         MouseAim = ini.ReadBoolean("INPUT", "MouseAim", true);
         RecoveryKey = ini.ReadInteger("MISC", "RecoverPlayerKey", VK_F8);
-        GetPed = reinterpret_cast<decltype(GetPed)>(hook::get_pattern("8B 41 68 83 F8 02 74 0C 83 F8 03 74 07 8B 81 C4 02 00 00 C3"));
-        ProcessKey = reinterpret_cast<decltype(ProcessKey)>(hook::get_pattern("53 8B 5C 24 08 56 57 8B FB 8B F1 8B 0D ? ? ? ? 81 E7 FF FF 00 00"));
-        TeleportPed = reinterpret_cast<decltype(TeleportPed)>(hook::get_pattern("53 8B 5C 24 08 56 57 8B 7C 24 14 8D 44 24 14 57 8B F1 8B 0D"));
-        Multiplayer = *hook::pattern("A1 ? ? ? ? 85 C0 75 ? 8A 41 30").get_first<uint32_t*>(1);
-        Game = *hook::pattern("8B 0D ? ? ? ? 6A 02 6A 01 E8 ? ? ? ? 5F 5E 5B C2 04 00").get_first<void**>(2);
-        Replay = *hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 84 C0 74 22 B9 ? ? ? ?").get_first<void*>(1);
-        IsReplay = reinterpret_cast<decltype(IsReplay)>(hook::get_pattern("8B 41 38 83 F8 01 74 08 83 F8 03 74"));
-        PlayerInputHook = safetyhook::create_inline(hook::get_pattern("56 8B 71 04 8A 51 78 8B C6 24 01 3C 01 0F 94 C0"), PlayerInput);
-        GatherHook = safetyhook::create_mid(hook::get_pattern("84 C0 74 05 E8 ? ? ? ? 33 C0 47 8A 43 23"), [](SafetyHookContext& context)
+        FixSettings().OnChange("INPUT.MouseAim", [] { MouseAim = FixSettings().Bool("INPUT.MouseAim"); });
+        FixSettings().OnChange("MISC.RecoverPlayerKey", [] { RecoveryKey = FixSettings().Int("MISC.RecoverPlayerKey"); });
+        auto requiredLookup0 = hook::pattern("8B 41 68 83 F8 02 74 0C 83 F8 03 74 07 8B 81 C4 02 00 00 C3");
+        if (requiredLookup0.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        GetPed = reinterpret_cast<decltype(GetPed)>(requiredLookup0.get_first());
+        auto requiredLookup1 = hook::pattern("53 8B 5C 24 08 56 57 8B FB 8B F1 8B 0D ? ? ? ? 81 E7 FF FF 00 00");
+        if (requiredLookup1.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        ProcessKey = reinterpret_cast<decltype(ProcessKey)>(requiredLookup1.get_first());
+        auto requiredLookup2 = hook::pattern("53 8B 5C 24 08 56 57 8B 7C 24 14 8D 44 24 14 57 8B F1 8B 0D");
+        if (requiredLookup2.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        TeleportPed = reinterpret_cast<decltype(TeleportPed)>(requiredLookup2.get_first());
+        auto requiredPattern0 = hook::pattern("A1 ? ? ? ? 85 C0 75 ? 8A 41 30");
+        if (requiredPattern0.size() <= 0)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        Multiplayer = *requiredPattern0.get_first<uint32_t*>(1);
+        auto requiredPattern1 = hook::pattern("8B 0D ? ? ? ? 6A 02 6A 01 E8 ? ? ? ? 5F 5E 5B C2 04 00");
+        if (requiredPattern1.size() <= 0)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        Game = *requiredPattern1.get_first<void**>(2);
+        auto requiredPattern2 = hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 84 C0 74 22 B9 ? ? ? ?");
+        if (requiredPattern2.size() <= 0)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        Replay = *requiredPattern2.get_first<void*>(1);
+        auto requiredLookup3 = hook::pattern("8B 41 38 83 F8 01 74 08 83 F8 03 74");
+        if (requiredLookup3.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        IsReplay = reinterpret_cast<decltype(IsReplay)>(requiredLookup3.get_first());
+        auto requiredLookup4 = hook::pattern("56 8B 71 04 8A 51 78 8B C6 24 01 3C 01 0F 94 C0");
+        if (requiredLookup4.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        PlayerInputHook = safetyhook::create_inline(requiredLookup4.get_first(), PlayerInput);
+        auto requiredLookup5 = hook::pattern("84 C0 74 05 E8 ? ? ? ? 33 C0 47 8A 43 23");
+        if (requiredLookup5.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        GatherHook = safetyhook::create_mid(requiredLookup5.get_first(), [](SafetyHookContext& context)
         {
             using namespace InputDevices;
             // Decode every simulation tick, including ticks without a legacy
@@ -252,6 +309,12 @@ namespace GTA2Input
             if ((ModernControls || Gamepad) && !*Multiplayer && !IsReplay(Replay, 0) && Field<int>(Replay, 0x38) != 2)
                 context.eax = (context.eax & ~255u) | 1u;
         });
-        MenuInputHook = safetyhook::create_inline(hook::get_pattern("53 56 8B F1 32 DB 38 9E 0D 01 00 00 0F 84"), MenuInput);
+        auto requiredLookup6 = hook::pattern("53 56 8B F1 32 DB 38 9E 0D 01 00 00 0F 84");
+        if (requiredLookup6.empty())
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        MenuInputHook = safetyhook::create_inline(requiredLookup6.get_first(), MenuInput);
     }
 }

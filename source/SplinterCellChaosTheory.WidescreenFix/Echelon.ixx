@@ -43,9 +43,15 @@ export void InitEchelon()
 {
     // EPlayerController additional state cache
     auto pattern = hook::pattern("8B 88 ? ? ? ? 8B 6E");
-    AEPlayerController::shTick = safetyhook::create_inline(pattern.get_first(-10), AEPlayerController::Tick);
+    if (!pattern.empty())
+        AEPlayerController::shTick = safetyhook::create_inline(pattern.get_first(-10), AEPlayerController::Tick);
+    else
+        OutputDebugStringA("Splinter Cell Chaos Theory: player state cache unavailable.\n");
 
     // Aiming camera smoothing
     pattern = hook::pattern("6B D2 ? 8B 8C 32");
-    injector::WriteMemory<uint8_t>(pattern.get_first(2), 0, true);
+    if (!pattern.empty())
+        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(2))) = 0;
+    else
+        OutputDebugStringA("Splinter Cell Chaos Theory: aiming smoothing patch unavailable.\n");
 }

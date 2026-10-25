@@ -84,7 +84,8 @@ namespace CMenusManager
             uint32_t hash = GetMenuItemHash(item);
             IsMenuDisplayedCache[hash] = true;
         }
-        return shsub_10D30900.unsafe_fastcall(item, edx, a2);
+        shsub_10D30900.unsafe_fastcall(item, edx, a2);
+        if (NativeMenuTick) NativeMenuTick(item);
     }
 
     export bool IsMenuDisplayed(uint32_t hash)
@@ -107,97 +108,113 @@ namespace CMenusManager
         return IsMenuDisplayed(hash);
     }
 
+    inline const HudID menuHashes[] = {
+        Page::P_Briefing,
+        Page::P_CDKeyEntry,
+        //Page::P_CamControl,
+        Page::P_Camera,
+        Page::P_ChatIngame,
+        Page::P_ContextMenu,
+        Page::P_Controls_Popup_Joy_Selection,
+        Page::P_Controls_Popup_Selection,
+        //Page::P_Controls_joystick,
+        Page::P_Controls_keyboard,
+        Page::P_CreateAccount,
+        Page::P_CreateProfile,
+        Page::P_Difficulty,
+        Page::P_DisplayAdvanced,
+        Page::P_DisplaySettings,
+        //Page::P_EEV,
+        //Page::P_Email,
+        Page::P_Empty,
+        Page::P_EnterServerPassword,
+        //Page::P_Equipment,
+        Page::P_Extras,
+        //Page::P_FadeBlack,
+        Page::P_Footer_training2,
+        Page::P_FriendsContext,
+        Page::P_FriendsManagement,
+        Page::P_GameOverOnline,
+        //Page::P_Image,
+        Page::P_LoadOut,
+        Page::P_LoadOut2,
+        Page::P_LoadingScreen,
+        Page::P_LobbyLan,
+        Page::P_LobbyOnline,
+        Page::P_Login,
+        Page::P_ManageAccount,
+        Page::P_ManageGame,
+        //Page::P_Map,
+        Page::P_MenuCoop,
+        Page::P_MenuGameOver,
+        Page::P_MenuGameType,
+        Page::P_MenuLoadGame,
+        Page::P_MenuLoadLevel,
+        Page::P_MenuLobbyList,
+        Page::P_MenuOnline,
+        Page::P_MenuRoomCreateLan,
+        Page::P_MenuRoomListLan,
+        Page::P_MenuSaveGame,
+        Page::P_MenuSettings,
+        Page::P_MenuSolo,
+        //Page::P_MissionStatistics,
+        Page::P_Movies,
+        //Page::P_MsgBox,
+        //Page::P_MsgBox_Training,
+        //Page::P_MsgBox_Training2,
+        Page::P_MusicsBio,
+        Page::P_MusicsList,
+        //Page::P_ObjectiveReview,
+        Page::P_OfflineOnline,
+        Page::P_OnlineCreate,
+        Page::P_OnlineESRB,
+        Page::P_OnlineFilter,
+        Page::P_OnlineQuickMatchFilter,
+        Page::P_OnlineTermsOfUse,
+        Page::P_OptionPopup,
+        Page::P_OverallAchievement,
+        Page::P_Pause,
+        Page::P_PauseOnline,
+        Page::P_PrivateMessage,
+        Page::P_Profiles,
+        Page::P_Progress,
+        Page::P_RoomOnline,
+        //Page::P_SavingScreen,
+        //Page::P_SavingScreen1,
+        //Page::P_ShaderAdvanced,
+        //Page::P_Sniper,
+        //Page::P_Sound,
+        Page::P_SoundSettings,
+        Page::P_TrainingVideo,
+        Page::P_TrainingVideoMain,
+        //Page::P_endmission,
+        Page::P_opticcable,
+        Page::P_LoadOut_Infos,
+        Page::P_LoadOut_Selection,
+    };
+
+    export bool IsMenuPage(uint32_t hash)
+    {
+        return std::any_of(std::begin(menuHashes), std::end(menuHashes), [hash](HudID menuHash)
+        {
+            return uint32_t(menuHash) == hash;
+        });
+    }
+
     export bool IsMainMenuDisplayed()
     {
-        static const HudID menuHashes[] = {
-            Page::P_Briefing,
-            Page::P_CDKeyEntry,
-            //Page::P_CamControl,
-            Page::P_Camera,
-            Page::P_ChatIngame,
-            Page::P_ContextMenu,
-            Page::P_Controls_Popup_Joy_Selection,
-            Page::P_Controls_Popup_Selection,
-            //Page::P_Controls_joystick,
-            Page::P_Controls_keyboard,
-            Page::P_CreateAccount,
-            Page::P_CreateProfile,
-            Page::P_Difficulty,
-            Page::P_DisplayAdvanced,
-            Page::P_DisplaySettings,
-            //Page::P_EEV,
-            //Page::P_Email,
-            Page::P_Empty,
-            Page::P_EnterServerPassword,
-            //Page::P_Equipment,
-            Page::P_Extras,
-            //Page::P_FadeBlack,
-            Page::P_Footer_training2,
-            Page::P_FriendsContext,
-            Page::P_FriendsManagement,
-            Page::P_GameOverOnline,
-            //Page::P_Image,
-            Page::P_LoadOut,
-            Page::P_LoadOut2,
-            Page::P_LoadingScreen,
-            Page::P_LobbyLan,
-            Page::P_LobbyOnline,
-            Page::P_Login,
-            Page::P_ManageAccount,
-            Page::P_ManageGame,
-            //Page::P_Map,
-            Page::P_MenuCoop,
-            Page::P_MenuGameOver,
-            Page::P_MenuGameType,
-            Page::P_MenuLoadGame,
-            Page::P_MenuLoadLevel,
-            Page::P_MenuLobbyList,
-            Page::P_MenuOnline,
-            Page::P_MenuRoomCreateLan,
-            Page::P_MenuRoomListLan,
-            Page::P_MenuSaveGame,
-            Page::P_MenuSettings,
-            Page::P_MenuSolo,
-            //Page::P_MissionStatistics,
-            Page::P_Movies,
-            //Page::P_MsgBox,
-            //Page::P_MsgBox_Training,
-            //Page::P_MsgBox_Training2,
-            Page::P_MusicsBio,
-            Page::P_MusicsList,
-            //Page::P_ObjectiveReview,
-            Page::P_OfflineOnline,
-            Page::P_OnlineCreate,
-            Page::P_OnlineESRB,
-            Page::P_OnlineFilter,
-            Page::P_OnlineQuickMatchFilter,
-            Page::P_OnlineTermsOfUse,
-            Page::P_OptionPopup,
-            Page::P_OverallAchievement,
-            Page::P_Pause,
-            Page::P_PauseOnline,
-            Page::P_PrivateMessage,
-            Page::P_Profiles,
-            Page::P_Progress,
-            Page::P_RoomOnline,
-            //Page::P_SavingScreen,
-            //Page::P_SavingScreen1,
-            //Page::P_ShaderAdvanced,
-            //Page::P_Sniper,
-            //Page::P_Sound,
-            Page::P_SoundSettings,
-            Page::P_TrainingVideo,
-            Page::P_TrainingVideoMain,
-            //Page::P_endmission,
-            Page::P_opticcable,
-            Page::P_LoadOut_Infos,
-            Page::P_LoadOut_Selection,
-        };
-
         return std::any_of(std::begin(menuHashes), std::end(menuHashes), [](HudID hash)
         {
-            return CMenusManager::IsMenuDisplayed(hash);
+            return IsMenuDisplayed(hash);
         });
+    }
+
+    export bool IsPointerMenuPage(uint32_t hash)
+    {
+        // Camera/optic HUD pages share the old menu/HUD classification but
+        // can be aiming tools; an empty transition page proves no pointer UI.
+        if (hash == uint32_t(Page::P_Camera) || hash == uint32_t(Page::P_opticcable) || hash == uint32_t(Page::P_Empty)) return false;
+        return IsMenuPage(hash);
     }
 
     export bool IsOpsatDisplayed()
@@ -319,7 +336,7 @@ export void InitGUI()
                 int16_t clampedGameX = std::clamp(*(int16_t*)(regs.edx + 0), int16_t(0 - delta), int16_t(640 + delta));
                 int16_t clampedGameY = std::clamp(*(int16_t*)(regs.edx + 2), int16_t(0), int16_t(480));
 
-                if (Screen.fRawInputMouse > 0.0f)
+                if (Screen.bRawInputMouse)
                 {
                     RawInputHandler<>::RawMouseCursorX = CMenusManager::GameToRawInputX(clampedGameX, vmin, vmax);
                     RawInputHandler<>::RawMouseCursorY = CMenusManager::GameToRawInputY(clampedGameY, 0, 480);

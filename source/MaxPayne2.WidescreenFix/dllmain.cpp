@@ -1,4 +1,9 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
+#include "../Shared/D3D8Compatibility.hpp"
+#include "../Shared/CursorConfinement.hpp"
+#include "../Shared/MaxPayne/SettingsMenu.hpp"
+#include "../Shared/MaxPayne/FrameRate.hpp"
 
 import ComVars;
 import e2mfc;
@@ -11,26 +16,95 @@ import sndmfc;
 import x_inputmfc;
 import xidi;
 import PostFX;
+import AntiAliasing;
+
+// The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
+ASI_SETTINGS_EXPORT(FixSettings())
+
+// Window mode (MAIN.WindowMode). The game opens its video mode with sub_404B20(windowed), windowed for -window, and the
+// window as large as the resolution plus the frame sizes kept at CWnd[27] and CWnd[28], at CWnd[29], CWnd[30]. A window
+// larger than the screen, CWnd[23] and CWnd[24], was moved to the corner and shrunk to it, the game rendering at less
+// than the resolution. Windowed: the frame of the window's real style, the window centered on its monitor by its
+// client area, which a window as large as the monitor covers exactly with the frame outside. Borderless: no frame.
+// Full screen with -window keeps the borderless window it had.
+namespace WindowMode
+{
+    enum
+    {
+        Fullscreen,
+        Windowed,
+        Borderless,
+    };
+
+    // MAIN.WindowMode as it was at startup
+    int32_t nWindowMode = Fullscreen;
+
+    // Position and frame size of a window with the client size given, centered on the window's monitor in its DPI
+    std::tuple<int32_t, int32_t, int32_t, int32_t> GetCenteredWindowRect(HWND hWnd, int32_t nWidth, int32_t nHeight)
+    {
+        using AdjustForDpi = BOOL(WINAPI*)(LPRECT, DWORD, BOOL, DWORD, UINT);
+        using GetDpi = UINT(WINAPI*)(HWND);
+        static auto user32 = GetModuleHandleW(L"user32.dll");
+        static auto adjustForDpi = reinterpret_cast<AdjustForDpi>(GetProcAddress(user32, "AdjustWindowRectExForDpi"));
+        static auto getDpi = reinterpret_cast<GetDpi>(GetProcAddress(user32, "GetDpiForWindow"));
+
+        auto style = (DWORD)GetWindowLongW(hWnd, GWL_STYLE);
+        auto exStyle = (DWORD)GetWindowLongW(hWnd, GWL_EXSTYLE);
+        RECT rect = { 0, 0, nWidth, nHeight };
+        UINT nDpi = getDpi && hWnd ? getDpi(hWnd) : 0;
+        if (!(adjustForDpi && nDpi && adjustForDpi(&rect, style, FALSE, exStyle, nDpi)))
+            AdjustWindowRectEx(&rect, style, FALSE, exStyle);
+
+        MONITORINFO info = { sizeof(MONITORINFO) };
+        GetMonitorInfoW(MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY), &info);
+        auto& monitor = info.rcMonitor;
+        int32_t x = monitor.left + (monitor.right - monitor.left - nWidth) / 2 + rect.left;
+        int32_t y = monitor.top + (monitor.bottom - monitor.top - nHeight) / 2 + rect.top;
+        // a window that fits on the monitor with its frame stays whole on it
+        if (rect.right - rect.left <= monitor.right - monitor.left)
+            x = std::clamp(x, int32_t(monitor.left), int32_t(monitor.right - (rect.right - rect.left)));
+        if (rect.bottom - rect.top <= monitor.bottom - monitor.top)
+            y = std::clamp(y, int32_t(monitor.top), int32_t(monitor.bottom - (rect.bottom - rect.top)));
+        return { x, y, (rect.right - rect.left) - nWidth, (rect.bottom - rect.top) - nHeight };
+    }
+}
 
 SafetyHookInline shsub_404B20 = {};
 int __fastcall sub_404B20(int* CWnd, void* edx, char a2)
 {
-    // border size to 0
-    CWnd[27] = 0;
-    CWnd[28] = 0;
+    if (WindowMode::nWindowMode != WindowMode::Fullscreen)
+        a2 = 1;
 
-    HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
-    MONITORINFOEX info = { sizeof(MONITORINFOEX) };
-    GetMonitorInfo(monitor, &info);
-    DEVMODE devmode = {};
-    devmode.dmSize = sizeof(DEVMODE);
-    EnumDisplaySettings(info.szDevice, ENUM_CURRENT_SETTINGS, &devmode);
-    DWORD DesktopX = devmode.dmPelsWidth;
-    DWORD DesktopY = devmode.dmPelsHeight;
+    if (a2 && WindowMode::nWindowMode != WindowMode::Windowed)
+    {
+        // border size to 0
+        CWnd[27] = 0;
+        CWnd[28] = 0;
 
-    // center window position
-    CWnd[29] = (int)(((float)DesktopX / 2.0f) - ((float)CWnd[25] / 2.0f));
-    CWnd[30] = (int)(((float)DesktopY / 2.0f) - ((float)CWnd[26] / 2.0f));
+        HMONITOR monitor = MonitorFromWindow(GetDesktopWindow(), MONITOR_DEFAULTTONEAREST);
+        MONITORINFOEX info = { sizeof(MONITORINFOEX) };
+        GetMonitorInfo(monitor, &info);
+        DEVMODE devmode = {};
+        devmode.dmSize = sizeof(DEVMODE);
+        EnumDisplaySettings(info.szDevice, ENUM_CURRENT_SETTINGS, &devmode);
+        DWORD DesktopX = devmode.dmPelsWidth;
+        DWORD DesktopY = devmode.dmPelsHeight;
+
+        // center window position
+        CWnd[29] = (int)(((float)DesktopX / 2.0f) - ((float)CWnd[25] / 2.0f));
+        CWnd[30] = (int)(((float)DesktopY / 2.0f) - ((float)CWnd[26] / 2.0f));
+    }
+    else if (a2)
+    {
+        auto hWnd = *(HWND*)&CWnd[8]; // CWnd::m_hWnd
+        auto [x, y, nFrameX, nFrameY] = WindowMode::GetCenteredWindowRect(hWnd, CWnd[25], CWnd[26]);
+        CWnd[27] = nFrameX;
+        CWnd[28] = nFrameY;
+        CWnd[29] = x;
+        CWnd[30] = y;
+        CWnd[23] = std::max(CWnd[23], CWnd[25] + nFrameX);
+        CWnd[24] = std::max(CWnd[24], CWnd[26] + nFrameY);
+    }
 
     return shsub_404B20.unsafe_fastcall<int>(CWnd, edx, a2);
 }
@@ -113,12 +187,12 @@ namespace CWinApp
 
 void InitSettingsFile()
 {
-    CIniReader iniReader("");
-    if (iniReader.ReadInteger("MISC", "WriteSettingsToFile", 1) == 0)
+    auto& settings = FixSettings();
+    if (!settings.Bool("MAIN.PortableSettings"))
         return;
 
     char szDocuments[MAX_PATH];
-    if (iniReader.ReadInteger("MISC", "UseGameFolderForSavegames", 0) != 0)
+    if (settings.Bool("MISC.UseGameFolderForSavegames"))
         CWinApp::SettingsPath = GetExeModulePath() / "savegames";
     else if (SHGetSpecialFolderPathA(nullptr, szDocuments, CSIDL_PERSONAL, FALSE))
         CWinApp::SettingsPath = std::filesystem::path(szDocuments) / "Max Payne 2 Savegames";
@@ -212,35 +286,81 @@ namespace DisplayModeList
     }
 }
 
+// The settings that apply at once, read again whenever one of them changes (in the menu, in an editor through the
+// live link, or the graphic novel key)
+void ApplySettings()
+{
+    auto& settings = FixSettings();
+    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(settings.String("MAIN.HudAspectRatioConstraint"));
+    Screen.fFOVFactor = settings.Float("MAIN.FOVFactor");
+    if (Screen.fFOVFactor <= 0.0f) { Screen.fFOVFactor = 1.0f; }
+    Screen.bGraphicNovelMode = settings.Int("MAIN.GraphicNovelMode") != 0;
+    Cinematic::nCutsceneBorders = std::clamp(settings.Int("MAIN.CutsceneBorders"), (int32_t)Cinematic::Off, (int32_t)Cinematic::Both);
+    Cinematic::bNoBorderAnimation = !settings.Bool("MAIN.AnimatedCutsceneBorders");
+    nGraphicNovelModeKey = MaxPayneMenu::KeyCode(settings.String("MAIN.GraphicNovelModeKey"));
+
+    // HUD offsets, cameras and the graphic novel page follow the new values
+    RecalculateScreen();
+}
+
 void ReadSettings()
 {
-    CIniReader iniReader("");
-    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
-    Screen.fFOVFactor = iniReader.ReadFloat("MAIN", "FOVFactor", 1.0f);
-    if (Screen.fFOVFactor <= 0.0f) { Screen.fFOVFactor = 1.0f; }
-    Screen.bGraphicNovelMode = iniReader.ReadInteger("MAIN", "GraphicNovelMode", 1) != 0;
-    Cinematic::nCutsceneBorders = std::clamp(iniReader.ReadInteger("MAIN", "CutsceneBorders", Cinematic::Both), (int32_t)Cinematic::Off, (int32_t)Cinematic::Both);
-    Cinematic::bNoBorderAnimation = iniReader.ReadInteger("MAIN", "NoCutsceneBorderAnimation", 0) != 0;
+    ApplySettings();
+    for (auto szId : { "MAIN.HudAspectRatioConstraint", "MAIN.FOVFactor", "MAIN.GraphicNovelMode", "MAIN.CutsceneBorders", "MAIN.AnimatedCutsceneBorders", "MAIN.GraphicNovelModeKey" })
+        FixSettings().OnChange(szId, ApplySettings);
+}
+
+// The fix's settings next to the game's options; the rest is on its page in Plugins
+std::vector<MaxPayneMenu::Placement> MenuPlacements()
+{
+    using MaxPayneMenu::Spot;
+    return
+    {
+        { "GCID_VIDEOU", Spot::BeforeLastMenu, 2, { "MAIN.WindowMode", "MAIN.FOVFactor", "MAIN.HudAspectRatioConstraint", "GRAPHICS.AntiAliasing", "GRAPHICS.ConsoleGamma", "GRAPHICS.VSync", "MAIN.FPSLimit" } },
+        { "GCID_GENERICU", Spot::BeforeFirstItem, 0, { "MAIN.CutsceneBorders", "MAIN.AnimatedCutsceneBorders", "MAIN.GraphicNovelMode", "MAIN.FMVWidescreenMode" } },
+        { "GCID_CONTROLSU", Spot::BeforeLastMenu, 3, { "MAIN.GamepadIcons" } },
+        { "GCID_MOUSESETTINGSU", Spot::BeforeBack, 3, { "MAIN.MouseSmoothing" } },
+    };
+}
+
+// The fix's rows in the game's Options menu, see source/Shared/MaxPayne/SettingsMenu.hpp. MP_MenuMode
+// answers the rows through its virtual functions setItem, isItemEnabled, setSlider and getSlider; the item and slider
+// lines (X_BasicModesMFC) keep their name (P_Text) at +4 and their ID at +12, and update in slot 3.
+void InitMenu()
+{
+    HMODULE hModule = nullptr;
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&InitMenu, &hModule);
+    auto basicModes = GetModuleHandleW(L"X_BasicModesMFC");
+    if (!basicModes || !MaxPayneMenu::Init(hModule, GetModuleHandleW(L"rlmfc"), GetModuleHandleW(L"e2mfc"), MenuPlacements()))
+        return;
+
+    MaxPayneMenu::HookMenu(MaxPayneMenu::FindVTable(GetModuleHandleW(nullptr), ".?AVMP_MenuMode@@"), { 21, 22, 29, 30 },
+        MaxPayneMenu::FindVTable(basicModes, ".?AVX_MenuItem@@"), MaxPayneMenu::FindVTable(basicModes, ".?AVX_MenuSlider@@"), { 4, 12, 3 });
 }
 
 void Init()
 {
-    CIniReader iniReader("");
-    static bool bUseGameFolderForSavegames = iniReader.ReadInteger("MISC", "UseGameFolderForSavegames", 0) != 0;
+    auto& settings = FixSettings();
+    static bool bUseGameFolderForSavegames = settings.Bool("MISC.UseGameFolderForSavegames");
     if (bUseGameFolderForSavegames)
     {
         auto pattern = hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 40 04 68");
         injector::WriteMemory<uint8_t>(pattern.get_first(1), 0x85, true); //0x41D14C
     }
 
-    bool bAltTab = iniReader.ReadInteger("MISC", "AllowAltTabbingWithoutPausing", 0) != 0;
-    if (bAltTab)
+    // Losing the focus pauses the game, unless it keeps running in the background
     {
         auto pattern = hook::pattern("E8 ? ? ? ? 8B CF C6 87 82 00 00 00 00");
-        injector::MakeNOP(pattern.get_first(0), 5, true); //0x404935
+        static auto pKillFocusCall = (uintptr_t)pattern.get_first(0); //0x404935
+        static auto KillProgramFocusHook = safetyhook::create_mid(pKillFocusCall, [](SafetyHookContext& regs)
+        {
+            static auto& nPauseOnFocusLoss = FixSettings().Int("MAIN.PauseOnFocusLoss");
+            if (!nPauseOnFocusLoss)
+                return_to(pKillFocusCall + 5);
+        });
     }
 
-    static int32_t nLoadSaveSlot = iniReader.ReadInteger("MISC", "LoadSaveSlot", -1);
+    static int32_t nLoadSaveSlot = settings.Int("MISC.LoadSaveSlot");
     if (nLoadSaveSlot == -2 || nLoadSaveSlot == -3 || (nLoadSaveSlot >= 0 && nLoadSaveSlot <= 999))
     {
         static auto unk_556860 = *hook::get_pattern<void*>("BA ? ? ? ? 2B D1 8A 01 88 04 0A", 1);
@@ -351,6 +471,7 @@ void Init()
     {
         MP_GameMode::pInstance = (uint8_t*)regs.esi;
         bGameViewRendered = true;
+        AntiAliasing::BeginGameView();
         Cinematic::UpdateBorders(MP_GameMode::pInstance);
     });
 
@@ -405,18 +526,24 @@ void Init()
     static auto PostProcessWarpHook = safetyhook::create_mid(pattern.get_first(12), [](SafetyHookContext& regs) //0x47AB87
     {
         KeepOriginalProjection(*(void**)(regs.ecx + 0x10));
+        AntiAliasing::OnPostProcessing();
     });
 
     //savegame date format
-    static auto fmt = iniReader.ReadString("MISC", "SaveStringFormat", "%a, %b %d %Y, %H:%M");
+    static auto fmt = settings.String("MISC.SaveStringFormat");
     pattern = hook::pattern("68 ? ? ? ? 8D 54 24 18 68 ? ? ? ? 52"); //41CA8D
     injector::WriteMemory(pattern.get_first(1), fmt.data(), true);
 
-    bool BorderlessWindowedMode = iniReader.ReadInteger("MAIN", "BorderlessWindowedMode", 1) != 0;
-    if (BorderlessWindowedMode)
+    // Window mode, see sub_404B20
+    pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 83 EC 14 53 55");
+    shsub_404B20 = safetyhook::create_inline(pattern.get_first(), sub_404B20);
+
+    // Skip intro: the logo movie (startup.bik) at startup is skipped the way the -skipstartup switch does it
+    if (settings.Bool("MAIN.SkipIntro"))
     {
-        pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 83 EC 14 53 55");
-        shsub_404B20 = safetyhook::create_inline(pattern.get_first(), sub_404B20);
+        pattern = hook::pattern("E8 ? ? ? ? 84 C0 75 3E 8B 8F A8 00 00 00"); // MaxPayneCommandLine::skipStartup()
+        if (!pattern.empty())
+            injector::WriteMemory<uint8_t>(pattern.get_first(7), 0xEB, true); // jnz -> jmp //0x4188EA
     }
 }
 
@@ -424,7 +551,32 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        D3D8Compatibility::Initialize(true);
+        // Per monitor DPI awareness, so the game gets real pixels on scaled desktops. The process' awareness can be set
+        // only once: when it's set already (the exe's compatibility settings, "Override high DPI scaling", make it per
+        // monitor v1 or system aware before any plugin loads), the windows this thread creates (the game's) get it
+        using SetContext = BOOL(WINAPI*)(HANDLE);
+        using SetThreadContext = HANDLE(WINAPI*)(HANDLE);
+        auto user32 = GetModuleHandleW(L"user32.dll");
+        if (auto set = reinterpret_cast<SetContext>(GetProcAddress(user32, "SetProcessDpiAwarenessContext")))
+        {
+            if (!set(reinterpret_cast<HANDLE>(-4)))
+            {
+                if (auto setThread = reinterpret_cast<SetThreadContext>(GetProcAddress(user32, "SetThreadDpiAwarenessContext")))
+                    setThread(reinterpret_cast<HANDLE>(-4));
+            }
+        }
+        else
+            SetProcessDPIAware();
+
+        // Settings described in settings.json and stored in the plugin's .cfg; editors change them through the live link
+        FixSettings();
+        WindowMode::nWindowMode = std::clamp(FixSettings().Int("MAIN.WindowMode"), (int32_t)WindowMode::Fullscreen, (int32_t)WindowMode::Borderless);
+        asi_settings::LiveLink::Start();
+        AntiAliasing::Init();
         ReadSettings();
+        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+        FixSettings().OnChange("MAIN.ConfineCursor", []() { CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor")); });
         InitSettingsFile();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("0F 84 ? ? ? ? E8 ? ? ? ? 8B 40 04 68"));
         CallbackHandler::RegisterCallback(L"E2MFC.dll", InitE2MFC);
@@ -432,8 +584,8 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"X_ModesMFC.dll", InitX_ModesMFC);
         CallbackHandler::RegisterCallback(L"X_HelpersMFC.dll", InitX_HelpersMFC);
         CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { InitE2_D3D8_DRIVER_MFC(); InitPostFXDriver(); });
-        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { BorderlessWindowedHook.reset(); shDllMainHook.reset(); ShutdownPostFXDriver(); });
-        CallbackHandler::RegisterCallback(L"X_BasicModesMFC.dll", InitX_BasicModesMFC);
+        CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { BorderlessWindowedHook.reset(); shDllMainHook.reset(); ShutdownE2_D3D8_DRIVER_MFC(); ShutdownPostFXDriver(); });
+        CallbackHandler::RegisterCallback(L"X_BasicModesMFC.dll", []() { InitX_BasicModesMFC(); InitMenu(); });
         CallbackHandler::RegisterCallback(L"sndmfc.dll", InitSNDMFC);
         CallbackHandler::RegisterCallback(L"X_Inputmfc.dll", InitInput);
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
@@ -445,6 +597,10 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     if (reason == DLL_PROCESS_ATTACH)
     {
         if (!IsUALPresent()) { InitializeASI(); }
+    }
+    else if (reason == DLL_PROCESS_DETACH)
+    {
+        CursorConfinement::Shutdown();
     }
     return TRUE;
 }

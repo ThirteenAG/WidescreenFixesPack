@@ -1,0 +1,14 @@
+{
+  "plugin.name": "SOCOM Fireteam Bravo 3 Fusion Fix (PPSSPP)",
+  "page.options": "Advanced options",
+  "skip": "Skip intro",
+  "skip.description": "Skip startup intros. Restart after changing this option.",
+  "analog": "Dual analog controls",
+  "analog.description": "Control the camera with the right stick. Stick response and binocular sensitivity stay as in the original game. Restart after changing this option.",
+  "smoothing": "Disable camera smoothing",
+  "smoothing.description": "Removes the extra smoothing of the normal camera. Stick response stays as in the original game. Requires dual analog controls; restart after changes.",
+  "loading": "Faster loading",
+  "loading.description": "Speeds up loading screens. Restart after changes.",
+  "fov": "Default camera FOV factor",
+  "fov.description": "Multiply the field of view of the normal gameplay camera. 1.0 keeps the original view; larger values widen it. Aiming and binocular views stay unchanged. Restart after changes."
+}

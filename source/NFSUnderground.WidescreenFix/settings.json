@@ -1,0 +1,792 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "Widescreen Fix",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Need for Speed Underground",
+        "exe": [
+          "speed.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "graphics",
+      "title": "@WFP_GRAPHICS",
+      "section": "graphics"
+    },
+    {
+      "id": "antialiasing",
+      "title": "@WFP_ANTIALIASING",
+      "section": "graphics"
+    },
+    {
+      "id": "camera",
+      "title": "@WFP_CAMERA",
+      "section": "camera"
+    },
+    {
+      "id": "gamepad",
+      "title": "@WFP_GAMEPAD",
+      "section": "camera"
+    },
+    {
+      "id": "other",
+      "title": "@WFP_PAGE_OTHER",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@WFP_PAGE_COMPATIBILITY",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": 1,
+      "label": "@WFP_CONFINECURSOR",
+      "description": "@WFP_DESC_CONFINECURSOR",
+      "page": "other",
+      "apply": "live",
+      "visibility": "editor"
+    },
+    {
+      "id": "GRAPHICS.Scaling",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WFP_SCALING_XBOX_UG"
+        },
+        {
+          "value": 1,
+          "label": "@WFP_SCALING_CORRECT"
+        }
+      ],
+      "label": "@WFP_SCALING",
+      "description": "@WFP_DESC_SCALING",
+      "page": "graphics",
+      "control": [
+        "segmented",
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@WFP_FOV",
+      "description": "@WFP_DESC_FOV",
+      "page": "graphics",
+      "control": [
+        "slider"
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      },
+      "apply": "live"
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "bool",
+      "default": 0,
+      "label": "@WFP_CONSOLEGAMMA",
+      "description": "@WFP_DESC_CONSOLEGAMMA",
+      "page": "graphics",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.AntiAliasing",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WFP_OFF"
+        },
+        {
+          "value": 1,
+          "label": "SMAA"
+        },
+        {
+          "value": 2,
+          "label": "TAA"
+        },
+        {
+          "value": 3,
+          "label": "DLAA"
+        },
+        {
+          "value": 4,
+          "label": "FSR"
+        }
+      ],
+      "label": "@WFP_ANTIALIASING",
+      "description": "@WFP_DESC_ANTIALIASING",
+      "page": "antialiasing",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 2
+      }
+    },
+    {
+      "id": "GRAPHICS.Sharpness",
+      "type": "float",
+      "default": 25,
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "label": "@WFP_AASHARPNESS",
+      "description": "@WFP_DESC_AASHARPNESS",
+      "page": "antialiasing",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "GRAPHICS.AntiAliasing",
+        "in": [
+          2,
+          3,
+          4
+        ]
+      },
+      "presets": {
+        "vanilla": 25,
+        "recommended": 25,
+        "enhanced": 25
+      }
+    },
+    {
+      "id": "MAIN.GraphicsAPI",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "Direct3D 9"
+        },
+        {
+          "value": 1,
+          "label": "Vulkan (DXVK)"
+        },
+        {
+          "value": 2,
+          "label": "D3D9on12"
+        }
+      ],
+      "label": "@WFP_GRAPHICSAPI",
+      "description": "@WFP_DESC_GRAPHICSAPI",
+      "page": "antialiasing",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": -1,
+      "min": -2,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": -1,
+          "label": "@WFP_FPS_MONITOR"
+        },
+        {
+          "value": -2,
+          "label": "@WFP_FPS_TWICEMONITOR"
+        },
+        {
+          "value": 0,
+          "label": "@WFP_OFF"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30,
+          "label": "@WFP_FPS_30"
+        },
+        {
+          "value": 40,
+          "label": "@WFP_FPS_40"
+        },
+        {
+          "value": 50,
+          "label": "@WFP_FPS_50"
+        },
+        {
+          "value": 60,
+          "label": "@WFP_FPS_60"
+        },
+        {
+          "value": 75,
+          "label": "@WFP_FPS_75"
+        },
+        {
+          "value": 100,
+          "label": "@WFP_FPS_100"
+        },
+        {
+          "value": 120,
+          "label": "@WFP_FPS_120"
+        },
+        {
+          "value": 144,
+          "label": "@WFP_FPS_144"
+        },
+        {
+          "value": 165,
+          "label": "@WFP_FPS_165"
+        },
+        {
+          "value": 200,
+          "label": "@WFP_FPS_200"
+        },
+        {
+          "value": 240,
+          "label": "@WFP_FPS_240"
+        }
+      ],
+      "label": "@WFP_FPSLIMIT",
+      "description": "@WFP_DESC_FPSLIMIT",
+      "page": "other",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "restart",
+      "presets": {
+        "vanilla": 60,
+        "recommended": -1,
+        "enhanced": -1
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WFP_WINDOWED_FULLSCREEN"
+        },
+        {
+          "value": 1,
+          "label": "@WFP_WINDOWED_BORDER"
+        },
+        {
+          "value": 2,
+          "label": "@WFP_WINDOWED_BORDERLESSFULL"
+        },
+        {
+          "value": 3,
+          "label": "@WFP_WINDOWED_RESIZABLE"
+        },
+        {
+          "value": 4,
+          "label": "@WFP_WINDOWED_BORDERLESS"
+        },
+        {
+          "value": 5,
+          "label": "@WFP_WINDOWED_STRETCHED"
+        }
+      ],
+      "label": "@WFP_WINDOWED",
+      "description": "@WFP_DESC_WINDOWED",
+      "page": "other",
+      "control": [
+        "dropdown",
+        "cycler"
+      ],
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@WFP_SKIPINTRO",
+      "description": "@WFP_DESC_SKIPINTRO",
+      "page": "other",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "LANGUAGE.Language",
+      "type": "choice",
+      "default": "English US",
+      "choices": [
+        {
+          "value": "English US",
+          "label": "English (US)"
+        },
+        {
+          "value": "English UK",
+          "label": "English (UK)"
+        },
+        {
+          "value": "French",
+          "label": "Français"
+        },
+        {
+          "value": "German",
+          "label": "Deutsch"
+        },
+        {
+          "value": "Italian",
+          "label": "Italiano"
+        },
+        {
+          "value": "Spanish",
+          "label": "Español"
+        },
+        {
+          "value": "Dutch",
+          "label": "Nederlands"
+        },
+        {
+          "value": "Swedish",
+          "label": "Svenska"
+        },
+        {
+          "value": "Russian",
+          "label": "Russian"
+        },
+        {
+          "value": "Korean",
+          "label": "Korean"
+        },
+        {
+          "value": "Chinese (Traditional)",
+          "label": "Chinese (Traditional)"
+        }
+      ],
+      "label": "@WFP_LANGUAGE",
+      "description": "@WFP_DESC_LANGUAGE",
+      "page": "other",
+      "control": [
+        "dropdown",
+        "cycler"
+      ],
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WFP_ICONS_AUTO"
+        },
+        {
+          "value": 1,
+          "label": "@WFP_ICONS_XBOX"
+        },
+        {
+          "value": 2,
+          "label": "@WFP_ICONS_PLAYSTATION"
+        }
+      ],
+      "label": "@WFP_GAMEPADICONS",
+      "description": "@WFP_DESC_GAMEPADICONS",
+      "page": "gamepad",
+      "control": [
+        "segmented",
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WFP_FMVMODE_ORIGINAL"
+        },
+        {
+          "value": 1,
+          "label": "@WFP_FMVMODE_FILL"
+        },
+        {
+          "value": 2,
+          "label": "@WFP_FMVMODE_STRETCH"
+        }
+      ],
+      "label": "@WFP_FMVMODE",
+      "description": "@WFP_DESC_FMVMODE",
+      "page": "graphics",
+      "control": [
+        "segmented",
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "CAMERA.FreeLook",
+      "type": "bool",
+      "default": 1,
+      "label": "@WFP_FREELOOK",
+      "description": "@WFP_DESC_FREELOOK",
+      "page": "camera",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.2,
+      "max": 3.0,
+      "step": 0.1,
+      "decimals": 1,
+      "label": "@WFP_STICKSENSITIVITY",
+      "page": "camera",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.FreeLook",
+        "equals": 1
+      }
+    },
+    {
+      "id": "MAIN.MouseSensitivity",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.2,
+      "max": 3.0,
+      "step": 0.1,
+      "decimals": 1,
+      "label": "@WFP_MOUSESENSITIVITY",
+      "page": "camera",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.FreeLook",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.InvertLook",
+      "type": "bool",
+      "default": 0,
+      "label": "@WFP_INVERTLOOK",
+      "page": "camera",
+      "enabledIf": {
+        "setting": "CAMERA.FreeLook",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.OnlyAllowHorizontalStickMovement",
+      "type": "bool",
+      "default": 0,
+      "label": "@WFP_HORIZONTALSTICK",
+      "description": "@WFP_DESC_HORIZONTALSTICK",
+      "page": "camera",
+      "enabledIf": {
+        "setting": "CAMERA.FreeLook",
+        "equals": 1
+      },
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "CAMERA.ReturnDelay",
+      "type": "float",
+      "default": 3.0,
+      "min": 0,
+      "max": 10,
+      "step": 0.5,
+      "decimals": 1,
+      "unit": "s",
+      "label": "@WFP_RETURNDELAY",
+      "description": "@WFP_DESC_RETURNDELAY",
+      "page": "camera",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.FreeLook",
+        "equals": 1
+      },
+      "presets": {
+        "vanilla": 3.0,
+        "recommended": 3.0,
+        "enhanced": 3.0
+      }
+    },
+    {
+      "id": "CAMERA.ReturnSpeed",
+      "type": "float",
+      "default": 2.0,
+      "min": 0.5,
+      "max": 5,
+      "step": 0.5,
+      "decimals": 1,
+      "label": "@WFP_RETURNSPEED",
+      "description": "@WFP_DESC_RETURNSPEED",
+      "page": "camera",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.FreeLook",
+        "equals": 1
+      },
+      "presets": {
+        "vanilla": 2.0,
+        "recommended": 2.0,
+        "enhanced": 2.0
+      }
+    },
+    {
+      "id": "GAMEPAD.LeftStickDeadzone",
+      "type": "float",
+      "default": 10,
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "unit": "%",
+      "label": "@WFP_LEFTDEADZONE",
+      "description": "@WFP_DESC_DEADZONE",
+      "page": "gamepad",
+      "control": [
+        "slider"
+      ]
+    },
+    {
+      "id": "GAMEPAD.RightStickDeadzone",
+      "type": "float",
+      "default": 10,
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "unit": "%",
+      "label": "@WFP_RIGHTDEADZONE",
+      "description": "@WFP_DESC_DEADZONE",
+      "page": "gamepad",
+      "control": [
+        "slider"
+      ]
+    },
+    {
+      "id": "GRAPHICS.HideAABug",
+      "type": "choice",
+      "default": 2,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WFP_HIDEAABUG_OFF"
+        },
+        {
+          "value": 1,
+          "label": "@WFP_HIDEAABUG_TOPLEFT"
+        },
+        {
+          "value": 2,
+          "label": "@WFP_HIDEAABUG_ALL"
+        }
+      ],
+      "label": "@WFP_HIDEAABUG",
+      "description": "@WFP_DESC_HIDEAABUG",
+      "page": "other",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@WFP_HUDASPECT_AUTO"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "16:9",
+          "label": "@WFP_HUDASPECT_169"
+        },
+        {
+          "value": "21:9",
+          "label": "@WFP_HUDASPECT_219"
+        }
+      ],
+      "label": "@WFP_HUDASPECT",
+      "description": "@WFP_DESC_HUDASPECT",
+      "page": "graphics",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
+    },
+    {
+      "id": "MAIN.ShowLangSelect",
+      "type": "bool",
+      "default": 0,
+      "label": "@WFP_SHOWLANGSELECT",
+      "description": "@WFP_DESC_SHOWLANGSELECT",
+      "page": "other",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.CustomUserFilesDirectoryInGameDir",
+      "type": "path",
+      "folder": true,
+      "relativeTo": "game",
+      "default": "0",
+      "special": [
+        {
+          "value": "0",
+          "label": "@WFP_SAVEFOLDER_PROGRAMDATA"
+        }
+      ],
+      "label": "@WFP_SAVEFOLDER",
+      "description": "@WFP_DESC_SAVEFOLDER",
+      "page": "other",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "GRAPHICS.D3D9on12",
+      "type": "bool",
+      "default": 0,
+      "label": "D3D9on12",
+      "description": "@WFP_DESC_D3D9ON12",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@WFP_TEXTLANGUAGE_AUTO"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "French"
+        },
+        {
+          "value": "de",
+          "label": "German"
+        },
+        {
+          "value": "it",
+          "label": "Italian"
+        },
+        {
+          "value": "es",
+          "label": "Spanish"
+        },
+        {
+          "value": "nl",
+          "label": "Dutch"
+        },
+        {
+          "value": "sv",
+          "label": "Swedish"
+        },
+        {
+          "value": "da",
+          "label": "Danish"
+        },
+        {
+          "value": "fi",
+          "label": "Finnish"
+        },
+        {
+          "value": "pl",
+          "label": "Polish"
+        },
+        {
+          "value": "cs",
+          "label": "Czech"
+        },
+        {
+          "value": "hu",
+          "label": "Hungarian"
+        },
+        {
+          "value": "ru",
+          "label": "Russian"
+        },
+        {
+          "value": "pt",
+          "label": "Portuguese"
+        },
+        {
+          "value": "pt-BR",
+          "label": "Portuguese (Brazil)"
+        }
+      ],
+      "label": "@WFP_TEXTLANGUAGE",
+      "description": "@WFP_DESC_TEXTLANGUAGE",
+      "page": "compatibility",
+      "visibility": "editor"
+    }
+  ]
+}

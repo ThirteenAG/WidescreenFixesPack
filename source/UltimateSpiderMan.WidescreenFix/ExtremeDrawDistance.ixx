@@ -1,6 +1,8 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/PatchPreflight.hpp"
+#include "FixSettings.hpp"
 
 export module ExtremeDrawDistance;
 
@@ -215,21 +217,21 @@ namespace ExtremeDistance
         // Change LEA [manager+18h] to MOV [manager+18h], preserving instruction size.
         {
             auto pattern = hook::pattern("8D 7B 18 8B 0F 8B 41 44 8B 54 24 14 3B 90 C0 00 00 00"); //0x5D1F31
-            injector::WriteMemory(pattern.get_first(), uint8_t(0x8B), true);
+            WriteGameValue(pattern.get_first(), uint8_t(0x8B));
         }
         {
             auto pattern = hook::pattern("8D 5D 18 90 8B 0B 8B 41 44 8B 54 24 30"); //0x5DA71C, 0x5DA7FC
-            pattern.count(2);
+            pattern.count_hint(2);
             for (size_t i = 0; i < 2; ++i)
-                injector::WriteMemory(pattern.get(i).get<void>(), uint8_t(0x8B), true);
+                WriteGameValue(pattern.get(i).get<void>(), uint8_t(0x8B));
         }
         {
             auto pattern = hook::pattern("8D 73 18 8B 0E 8B 41 44 8B 54 24 14 3B 90 C0 00 00 00"); //0x5DBEE3
-            injector::WriteMemory(pattern.get_first(), uint8_t(0x8B), true);
+            WriteGameValue(pattern.get_first(), uint8_t(0x8B));
         }
         {
             auto pattern = hook::pattern("8D 6B 18 8D 9B 00 00 00 00 8B 7D 00 85 FF 74"); //0x5DD637
-            injector::WriteMemory(pattern.get_first(), uint8_t(0x8B), true);
+            WriteGameValue(pattern.get_first(), uint8_t(0x8B));
         }
 
         {
@@ -311,59 +313,59 @@ namespace ExtremeDistance
         }
         {
             auto pattern = hook::pattern("B8 ? ? ? ? 0F B7 10 3B D1 74 ? 83 C0 1C 46"); //0x519A93 + 1
-            injector::WriteMemory(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x18, true);
+            WriteGameValue(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x18);
         }
         {
             auto pattern = hook::pattern("3D ? ? ? ? 7C ? 5E 83 C4 0C C3 8B C6 6B C0 1C"); //0x519AA3 + 1
-            injector::WriteMemory(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + sizeof(LoadedRegions) + 0x18, true);
+            WriteGameValue(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + sizeof(LoadedRegions) + 0x18);
         }
         {
             auto pattern = hook::pattern("8D 88 ? ? ? ? C7 44 24 04 FF FF 7F 7F 8B 54 24 04"); //0x519AB4 + 2
-            injector::WriteMemory(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()), true);
+            WriteGameValue(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()));
         }
         {
             auto pattern = hook::pattern("66 C7 80 ? ? ? ? FF FF 89 51 08 C7 44 24 04 FF FF 7F FF"); //0x519AE3 + 3
-            injector::WriteMemory(pattern.get_first(3), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x18, true);
+            WriteGameValue(pattern.get_first(3), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x18);
         }
         {
             auto pattern = hook::pattern("8D 80 ? ? ? ? 89 08 C7 44 24 08 FF FF 7F FF"); //0x519AFB + 2
-            injector::WriteMemory(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0xC, true);
+            WriteGameValue(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0xC);
         }
         {
             auto pattern = hook::pattern("BE ? ? ? ? EB ? 8D A4 24 00 00 00 00 66 8B 7E 10"); //0x52E9F2 + 1
-            injector::WriteMemory(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x8, true);
+            WriteGameValue(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x8);
         }
         {
             auto pattern = hook::pattern("81 FE ? ? ? ? 0F 8C ? ? ? ? 5F 5E 5D 5B 81 C4 A0 00 00 00 C3 81 EC C0 00 00 00"); //0x52EB49 + 2
-            injector::WriteMemory(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + sizeof(LoadedRegions) + 0x8, true);
+            WriteGameValue(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + sizeof(LoadedRegions) + 0x8);
         }
         {
             auto pattern = hook::pattern("B8 ? ? ? ? 8D 6F 20 8B F7 8D 5F 30 83 C7 10"); //0x53B92E + 1
-            injector::WriteMemory(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x18, true);
+            WriteGameValue(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x18);
         }
         {
             auto pattern = hook::pattern("3D ? ? ? ? 89 44 24 14 0F 8C ? ? ? ? A1"); //0x53BA94 + 1
-            injector::WriteMemory(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + sizeof(LoadedRegions) + 0x18, true);
+            WriteGameValue(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + sizeof(LoadedRegions) + 0x18);
         }
         {
             auto pattern = hook::pattern("BD ? ? ? ? 90 66 8B 5D 00 66 81 FB FF FF 74"); //0x5401CA + 1
-            injector::WriteMemory(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x18, true);
+            WriteGameValue(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x18);
         }
         {
             auto pattern = hook::pattern("81 FD ? ? ? ? 7C ? 5F 5E 5D 5B C3 8B 4E 64"); //0x540201 + 2
-            injector::WriteMemory(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + sizeof(LoadedRegions) + 0x18, true);
+            WriteGameValue(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + sizeof(LoadedRegions) + 0x18);
         }
         {
             auto pattern = hook::pattern("81 C7 ? ? ? ? 8D 57 0C 52 57 E8"); //0x540214 + 2
-            injector::WriteMemory(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()), true);
+            WriteGameValue(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()));
         }
         {
             auto pattern = hook::pattern("BE ? ? ? ? EB ? 8D A4 24 00 00 00 00 8D 64 24 00"); //0x565CBE + 1
-            injector::WriteMemory(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x8, true);
+            WriteGameValue(pattern.get_first(1), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + 0x8);
         }
         {
             auto pattern = hook::pattern("81 FE ? ? ? ? 0F 8C ? ? ? ? 5F 5E 5D 5B 81 C4 A0 00 00 00 C3 56"); //0x565E19 + 2
-            injector::WriteMemory(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + sizeof(LoadedRegions) + 0x8, true);
+            WriteGameValue(pattern.get_first(2), reinterpret_cast<uintptr_t>(LoadedRegions.data()) + sizeof(LoadedRegions) + 0x8);
         }
         // Native query callers own fifteen-entry vectors; the neighbour builder
         // owns thirty-two scratch entries and a matching bounds buffer.
@@ -484,52 +486,52 @@ namespace ExtremeDistance
         // teardown, on the same relocated table. The occupancy mask is only 32 bits.
         {
             auto pattern = hook::pattern("8B 15 ? ? ? ? 33 C9 85 D2 56 7E ? A1"); //0x5198A0 + 2
-            injector::WriteMemory(*pattern.get_first<uintptr_t>(2), uint32_t(RegionAllocators.size()), true);
+            WriteGameValue(*pattern.get_first<uintptr_t>(2), uint32_t(RegionAllocators.size()));
         }
         // lego_bitvector_pool also has one entry per loaded region. It does not
         // grow after its first block; size that block before the first allocation.
         {
             auto pattern = hook::pattern("3D ? ? ? ? 89 44 24 10 89 5C 24 14 89 7C 24 18"); //0x5346BC + 1
-            injector::WriteMemory(*pattern.get_first<uintptr_t>(1) + 0x10, uint32_t(RegionAllocators.size()), true);
+            WriteGameValue(*pattern.get_first<uintptr_t>(1) + 0x10, uint32_t(RegionAllocators.size()));
         }
         // Region entity hash tables are checked out from a separate list. Its
         // initializer makes nine tables (eight district slots plus one spare).
         // An empty checkout reads the sentinel's uninitialized value as a table.
         {
             auto pattern = hook::pattern("BB 09 00 00 00 6A 28 E8 ? ? ? ? 8B F0 83 C4 04"); //0x55544B + 1
-            injector::WriteMemory(pattern.get_first(1), uint32_t(RegionAllocators.size() + 1), true);
+            WriteGameValue(pattern.get_first(1), uint32_t(RegionAllocators.size() + 1));
         }
         {
             auto pattern = hook::pattern("8B 04 8D ? ? ? ? C3 CC CC CC A1"); //0x5198D5 + 3
-            injector::WriteMemory(pattern.get_first(3), RegionAllocators.data(), true);
+            WriteGameValue(pattern.get_first(3), RegionAllocators.data());
         }
         {
             auto pattern = hook::pattern("39 14 8D ? ? ? ? 74 ? 41 3B C8 7C ? C3 B8 01 00 00 00"); //0x5198F0 + 3
-            injector::WriteMemory(pattern.get_first(3), RegionAllocators.data(), true);
+            WriteGameValue(pattern.get_first(3), RegionAllocators.data());
         }
         {
             auto pattern = hook::pattern("8B 34 BD ? ? ? ? 3B F3 74 ? 8B 46 10 50 E8"); //0x52E710 + 3
-            injector::WriteMemory(pattern.get_first(3), RegionAllocators.data(), true);
+            WriteGameValue(pattern.get_first(3), RegionAllocators.data());
         }
         {
             auto pattern = hook::pattern("8B 0C BD ? ? ? ? 51 E8 ? ? ? ? 83 C4 08"); //0x52E72A + 3
-            injector::WriteMemory(pattern.get_first(3), RegionAllocators.data(), true);
+            WriteGameValue(pattern.get_first(3), RegionAllocators.data());
         }
         {
             auto pattern = hook::pattern("89 1C BD ? ? ? ? A1 ? ? ? ? 47 3B F8 7C"); //0x52E73A + 3
-            injector::WriteMemory(pattern.get_first(3), RegionAllocators.data(), true);
+            WriteGameValue(pattern.get_first(3), RegionAllocators.data());
         }
         {
             auto pattern = hook::pattern("A1 ? ? ? ? 53 33 DB 3B C3 0F 85"); //0x53B860 + 1
-            injector::WriteMemory(pattern.get_first(1), RegionAllocators.data(), true);
+            WriteGameValue(pattern.get_first(1), RegionAllocators.data());
         }
         {
             auto pattern = hook::pattern("89 34 BD ? ? ? ? 89 6E 0C 74 ? 38 1D"); //0x53B8A6 + 3
-            injector::WriteMemory(pattern.get_first(3), RegionAllocators.data(), true);
+            WriteGameValue(pattern.get_first(3), RegionAllocators.data());
         }
         {
             auto pattern = hook::pattern("39 04 8D ? ? ? ? 74 ? 41 3B CA 7C ? 5F 89 5E 1C"); //0x5456C7 + 3
-            injector::WriteMemory(pattern.get_first(3), RegionAllocators.data(), true);
+            WriteGameValue(pattern.get_first(3), RegionAllocators.data());
         }
     }
 
@@ -626,11 +628,11 @@ namespace ExtremeDistance
         // Leave low-detail city meshes available as a fallback for unloaded regions.
         fDrawDistance = 167.0f * scale;
         fRenderRegionDistanceSquared = fDrawDistance * fDrawDistance;
-        injector::WriteMemory(pRegionDistanceOperand, &fRenderRegionDistanceSquared, true);
-        injector::WriteMemory(pMeshDistanceOperand, &fDrawDistance, true);
-        injector::WriteMemory(pLegoDistanceOperand, &fDrawDistance, true);
-        injector::WriteMemory(pMeshDistanceImmediate, fDrawDistance, true);
-        injector::WriteMemory(pLegoDistanceImmediate, fDrawDistance, true);
+        WriteGameValue(pRegionDistanceOperand, &fRenderRegionDistanceSquared);
+        WriteGameValue(pMeshDistanceOperand, &fDrawDistance);
+        WriteGameValue(pLegoDistanceOperand, &fDrawDistance);
+        WriteGameValue(pMeshDistanceImmediate, fDrawDistance);
+        WriteGameValue(pLegoDistanceImmediate, fDrawDistance);
 
         // Rendering uses both linear and squared fade distances. Keep the original
         // tables for assigning authored distance categories when entities are loaded.
@@ -639,15 +641,92 @@ namespace ExtremeDistance
             DrawDistances[i] = reinterpret_cast<float*>(pOriginalDistances)[i] * scale;
             DrawDistancesSquared[i] = reinterpret_cast<float*>(pOriginalSquaredDistances)[i] * scale * scale;
         }
-        injector::WriteMemory(pLinearDistancesOperand, DrawDistances.data(), true);
-        injector::WriteMemory(pSquaredDistancesOperand, DrawDistancesSquared.data(), true);
-        injector::WriteMemory(pEntitySquaredDistancesOperand, DrawDistancesSquared.data(), true);
-        injector::WriteMemory(pLodSquaredDistancesOperand, DrawDistancesSquared.data(), true);
+        WriteGameValue(pLinearDistancesOperand, DrawDistances.data());
+        WriteGameValue(pSquaredDistancesOperand, DrawDistancesSquared.data());
+        WriteGameValue(pEntitySquaredDistancesOperand, DrawDistancesSquared.data());
+        WriteGameValue(pLodSquaredDistancesOperand, DrawDistancesSquared.data());
     }
 }
 
 export void InitExtremeDrawDistance(float scale)
 {
+    if (!wfp::PatchPreflight("Ultimate Spider-Man extended draw distance: signatures unavailable; feature disabled.\n",
+    {
+        { "8B 49 64 E9 ? ? ? ? CC CC CC CC CC CC CC CC 64 A1 00 00 00 00", 1 },
+        { "51 8B 4C 24 0C 55 33 ED 3B CD 0F 84", 1 },
+        { "83 EC 0C 8B 4C 24 2C 8B 54 24 28 8B 44 24 14 51 8B 4C 24 28 52 8B 54 24 28 51 8B 4C 24 28 52 51 6A 48", 1 },
+        { "8B 44 24 04 8B 4C 24 08 56 50 51 FF 15", 1 },
+        { "D8 1D ? ? ? ? 89 44 24 1C C7 44 24 14 00 00 27 43", 1 },
+        { "D8 1D ? ? ? ? C7 44 24 10 00 00 27 43 DF E0", 1 },
+        { "C7 44 24 14 00 00 27 43 DF E0 F6 C4 05 8D 44 24 1C", 1 },
+        { "C7 44 24 10 00 00 27 43 DF E0 F6 C4 05 8D 44 24 14", 1 },
+        { "D9 04 8D ? ? ? ? D9 44 24 20 D8 25", 1 },
+        { "D9 04 8D ? ? ? ? C3 CC CC 83 EC 08 8B CE E8", 1 },
+        { "D9 04 85 ? ? ? ? 0F B6 4E 2E D9 1C 24 89 4C 24 04", 1 },
+        { "D9 04 8D ? ? ? ? 8A 4D 10 D9 5C 24 1C C0 E9 04", 1 },
+        { "D8 05 ? ? ? ? D9 FA D9 54 24 10 D8 1D", 1 },
+        { "A1 ? ? ? ? 8D 1C C6 8D 44 18 01 8B 1D", 1 },
+        { "A3 ? ? ? ? C2 04 00 CC CC CC CC 83 EC 68 56", 1 },
+        { "D9 04 95 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 41", 1 },
+        { "A3 ? ? ? ? B8 39 8E E3 38 F7 64 24 44 C1 EA 05", 1 },
+        { "8B 0D ? ? ? ? 8D 44 10 01 C1 E0 04 03 C1 C3", 1 },
+        { "A1 ? ? ? ? 33 FF 85 C0 7E ? 8B 1D", 1 },
+        { "8B 92 C0 00 00 00 39 95 84 00 00 00 8A 95 80 00 00 00", 1 },
+        { "8B D0 2B D1 68 ? ? ? ? C1 FA 02 52 50 51 E8 ? ? ? ? 83 C4 10", 1 },
+        { "8B D0 2B D1 68 ? ? ? ? C1 FA 02 52 50 51 E8 ? ? ? ? 8B 46 3C", 1 },
+        { "6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 6C 53 55 8B E9", 1 },
+        { "8B 44 24 04 56 6A 00 6A 00 6A 00 6A 00 8B F1 8B 4E 38", 1 },
+        { "56 8B 71 38 33 C0 85 F6 7E ? 57 8B 7C 24 0C 53", 1 },
+        { "8B 44 24 04 8B 44 81 18 C2 04 00 CC CC CC CC CC", 1 },
+        { "8D 7B 18 8B 0F 8B 41 44 8B 54 24 14 3B 90 C0 00 00 00", 1 },
+        { "8D 5D 18 90 8B 0B 8B 41 44 8B 54 24 30", 2 },
+        { "8D 73 18 8B 0E 8B 41 44 8B 54 24 14 3B 90 C0 00 00 00", 1 },
+        { "8D 6B 18 8D 9B 00 00 00 00 8B 7D 00 85 FF 74", 1 },
+        { "8B 44 85 18 8B 50 44 8B 92 C0 00 00 00 39 95 84 00 00 00", 1 },
+        { "8D 44 81 18 83 C1 18 8B D0 2B D1 68", 1 },
+        { "8D 44 86 18 8D 4E 18 8B D0 2B D1 68", 1 },
+        { "8B 0D ? ? ? ? 03 F2 6B F6 1C 0F B7 86", 1 },
+        { "B9 FF FF 00 00 33 C0 66 39 0D ? ? ? ? 74", 1 },
+        { "8B 54 24 04 56 33 F6 85 D2 7E ? B8", 1 },
+        { "B8 ? ? ? ? 0F B7 10 3B D1 74 ? 83 C0 1C 46", 1 },
+        { "3D ? ? ? ? 7C ? 5E 83 C4 0C C3 8B C6 6B C0 1C", 1 },
+        { "8D 88 ? ? ? ? C7 44 24 04 FF FF 7F 7F 8B 54 24 04", 1 },
+        { "66 C7 80 ? ? ? ? FF FF 89 51 08 C7 44 24 04 FF FF 7F FF", 1 },
+        { "8D 80 ? ? ? ? 89 08 C7 44 24 08 FF FF 7F FF", 1 },
+        { "BE ? ? ? ? EB ? 8D A4 24 00 00 00 00 66 8B 7E 10", 1 },
+        { "81 FE ? ? ? ? 0F 8C ? ? ? ? 5F 5E 5D 5B 81 C4 A0 00 00 00 C3 81 EC C0 00 00 00", 1 },
+        { "B8 ? ? ? ? 8D 6F 20 8B F7 8D 5F 30 83 C7 10", 1 },
+        { "3D ? ? ? ? 89 44 24 14 0F 8C ? ? ? ? A1", 1 },
+        { "BD ? ? ? ? 90 66 8B 5D 00 66 81 FB FF FF 74", 1 },
+        { "81 FD ? ? ? ? 7C ? 5F 5E 5D 5B C3 8B 4E 64", 1 },
+        { "81 C7 ? ? ? ? 8D 57 0C 52 57 E8", 1 },
+        { "BE ? ? ? ? EB ? 8D A4 24 00 00 00 00 8D 64 24 00", 1 },
+        { "81 FE ? ? ? ? 0F 8C ? ? ? ? 5F 5E 5D 5B 81 C4 A0 00 00 00 C3 56", 1 },
+        { "8B 4B 3C 89 04 8B FF 43 3C 83 C6 1C 81 FE", 1 },
+        { "8B 53 3C 89 0C 93 FF 43 3C 83 C6 1C 81 FE", 1 },
+        { "89 44 94 34 FF 84 24 B4 00 00 00 8D 4C 24 28 51", 1 },
+        { "55 8B EC 83 E4 F0 81 EC 14 01 00 00 A0", 1 },
+        { "E8 ? ? ? ? E8 ? ? ? ? 8B CB E8", 1 },
+        { "8B BC B4 84 00 00 00 8D 4C 24 60 51 8B 4F 64 8D 54 24 24", 1 },
+        { "8B 44 24 08 83 F8 01 53 55 8B 6C 24 0C 8B D9", 1 },
+        { "8B 46 50 8B 50 1C 89 3C 90 FF 40 1C 56 8B CF", 1 },
+        { "8B 15 ? ? ? ? 33 C9 85 D2 56 7E ? A1", 1 },
+        { "3D ? ? ? ? 89 44 24 10 89 5C 24 14 89 7C 24 18", 1 },
+        { "BB 09 00 00 00 6A 28 E8 ? ? ? ? 8B F0 83 C4 04", 1 },
+        { "8B 04 8D ? ? ? ? C3 CC CC CC A1", 1 },
+        { "39 14 8D ? ? ? ? 74 ? 41 3B C8 7C ? C3 B8 01 00 00 00", 1 },
+        { "8B 34 BD ? ? ? ? 3B F3 74 ? 8B 46 10 50 E8", 1 },
+        { "8B 0C BD ? ? ? ? 51 E8 ? ? ? ? 83 C4 08", 1 },
+        { "89 1C BD ? ? ? ? A1 ? ? ? ? 47 3B F8 7C", 1 },
+        { "A1 ? ? ? ? 53 33 DB 3B C3 0F 85", 1 },
+        { "89 34 BD ? ? ? ? 89 6E 0C 74 ? 38 1D", 1 },
+        { "39 04 8D ? ? ? ? 74 ? 41 3B CA 7C ? 5F 89 5E 1C", 1 },
+        { "E8 ? ? ? ? 8B 8C 24 D4 00 00 00 33 C0 83 C4 14", 1 },
+        { "E8 ? ? ? ? 53 A3 ? ? ? ? 89 1D", 1 },
+        { "55 8B EC 83 E4 F8 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 50", 1 },
+    }))
+        return;
+
     using namespace ExtremeDistance;
     fRequestedDrawDistanceScale = std::clamp(scale, 2.0f, 10.0f);
     ResolveRuntimePointers();

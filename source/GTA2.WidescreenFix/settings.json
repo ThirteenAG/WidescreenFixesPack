@@ -1,0 +1,1150 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Grand Theft Auto 2",
+        "exe": [
+          "gta2.exe",
+          "gta2 manager.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "setup",
+      "title": "@page.setup",
+      "section": "gameplay"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.ResX",
+      "description": "@MAIN.ResX.description",
+      "page": "display",
+      "apply": "restart",
+      "min": 0,
+      "max": 7680,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.ResY",
+      "description": "@MAIN.ResY.description",
+      "page": "display",
+      "apply": "restart",
+      "min": 0,
+      "max": 4320,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@windowmode.fullscreen"
+        },
+        {
+          "value": 2,
+          "label": "@windowmode.borderless"
+        }
+      ],
+      "label": "@MAIN.WindowMode",
+      "description": "@MAIN.WindowMode.description",
+      "page": "display",
+      "apply": "restart",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.FillFrontendBackground",
+      "type": "bool",
+      "default": false,
+      "label": "@MAIN.FillFrontendBackground",
+      "description": "@MAIN.FillFrontendBackground.description",
+      "page": "display",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@fmvmode.original"
+        },
+        {
+          "value": 1,
+          "label": "@fmvmode.fill"
+        },
+        {
+          "value": 2,
+          "label": "@fmvmode.stretch"
+        }
+      ],
+      "label": "@MAIN.FMVWidescreenMode",
+      "description": "@MAIN.FMVWidescreenMode.description",
+      "page": "display",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        }
+      ],
+      "label": "@MAIN.HudAspectRatioConstraint",
+      "description": "@MAIN.HudAspectRatioConstraint.description",
+      "page": "display",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.SkipIntro",
+      "description": "@MAIN.SkipIntro.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MISC.SkipCredits",
+      "type": "int",
+      "default": 1,
+      "label": "@MISC.SkipCredits",
+      "description": "@MISC.SkipCredits.description",
+      "page": "gameplay",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MISC.NoSampManDelay",
+      "type": "int",
+      "default": 1,
+      "label": "@MISC.NoSampManDelay",
+      "description": "@MISC.NoSampManDelay.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MISC.QuicksaveKey",
+      "type": "int",
+      "default": 116,
+      "label": "@MISC.QuicksaveKey",
+      "description": "@MISC.QuicksaveKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MISC.ZoomIncreaseKey",
+      "type": "int",
+      "default": 187,
+      "label": "@MISC.ZoomIncreaseKey",
+      "description": "@MISC.ZoomIncreaseKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MISC.ZoomDecreaseKey",
+      "type": "int",
+      "default": 189,
+      "label": "@MISC.ZoomDecreaseKey",
+      "description": "@MISC.ZoomDecreaseKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MISC.RecoverPlayerKey",
+      "type": "int",
+      "default": 119,
+      "label": "@MISC.RecoverPlayerKey",
+      "description": "@MISC.RecoverPlayerKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "CAMERA.RotateWithPlayer",
+      "type": "bool",
+      "default": true,
+      "label": "@CAMERA.RotateWithPlayer",
+      "description": "@CAMERA.RotateWithPlayer.description",
+      "page": "camera",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "CAMERA.RotateInVehicles",
+      "type": "bool",
+      "default": true,
+      "label": "@CAMERA.RotateInVehicles",
+      "description": "@CAMERA.RotateInVehicles.description",
+      "page": "camera",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "CAMERA.RotateOnFoot",
+      "type": "bool",
+      "default": false,
+      "label": "@CAMERA.RotateOnFoot",
+      "description": "@CAMERA.RotateOnFoot.description",
+      "page": "camera",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
+    },
+    {
+      "id": "CAMERA.RotationSmoothing",
+      "type": "float",
+      "default": 0.35,
+      "label": "@CAMERA.RotationSmoothing",
+      "description": "@CAMERA.RotationSmoothing.description",
+      "page": "camera",
+      "presets": {
+        "vanilla": 0.35,
+        "recommended": 0.35,
+        "enhanced": 0.35
+      },
+      "min": 0,
+      "max": 2,
+      "step": 0.05,
+      "control": [
+        "slider",
+        "stepper"
+      ]
+    },
+    {
+      "id": "CAMERA.ToggleRotationKey",
+      "type": "int",
+      "default": 117,
+      "label": "@CAMERA.ToggleRotationKey",
+      "description": "@CAMERA.ToggleRotationKey.description",
+      "page": "camera",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "CAMERA.SmoothFollow",
+      "type": "bool",
+      "default": true,
+      "label": "@CAMERA.SmoothFollow",
+      "description": "@CAMERA.SmoothFollow.description",
+      "page": "camera",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "CAMERA.FollowTime",
+      "type": "float",
+      "default": 0.25,
+      "label": "@CAMERA.FollowTime",
+      "description": "@CAMERA.FollowTime.description",
+      "page": "camera",
+      "presets": {
+        "vanilla": 0.25,
+        "recommended": 0.25,
+        "enhanced": 0.25
+      },
+      "min": 0,
+      "max": 2,
+      "step": 0.05,
+      "control": [
+        "slider",
+        "stepper"
+      ]
+    },
+    {
+      "id": "CAMERA.HeightTime",
+      "type": "float",
+      "default": 0.35,
+      "label": "@CAMERA.HeightTime",
+      "description": "@CAMERA.HeightTime.description",
+      "page": "camera",
+      "presets": {
+        "vanilla": 0.35,
+        "recommended": 0.35,
+        "enhanced": 0.35
+      },
+      "min": 0,
+      "max": 3,
+      "step": 0.05,
+      "control": [
+        "slider",
+        "stepper"
+      ]
+    },
+    {
+      "id": "CAMERA.MaxLookAhead",
+      "type": "float",
+      "default": 0.5,
+      "label": "@CAMERA.MaxLookAhead",
+      "description": "@CAMERA.MaxLookAhead.description",
+      "page": "camera",
+      "presets": {
+        "vanilla": 0.5,
+        "recommended": 0.5,
+        "enhanced": 0.5
+      },
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "control": [
+        "slider",
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN.FOVFactor",
+      "description": "@MAIN.FOVFactor.description",
+      "page": "camera",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      },
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "control": [
+        "slider",
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.ModernControls",
+      "type": "bool",
+      "default": true,
+      "label": "@INPUT.ModernControls",
+      "description": "@INPUT.ModernControls.description",
+      "page": "controls",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "INPUT.Gamepad",
+      "type": "bool",
+      "default": true,
+      "label": "@INPUT.Gamepad",
+      "description": "@INPUT.Gamepad.description",
+      "page": "controls",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "INPUT.StickThrottle",
+      "type": "bool",
+      "default": false,
+      "label": "@INPUT.StickThrottle",
+      "description": "@INPUT.StickThrottle.description",
+      "page": "controls",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
+    },
+    {
+      "id": "INPUT.StickDeadzone",
+      "type": "float",
+      "default": 0.2,
+      "label": "@INPUT.StickDeadzone",
+      "description": "@INPUT.StickDeadzone.description",
+      "page": "controls",
+      "presets": {
+        "vanilla": 0.2,
+        "recommended": 0.2,
+        "enhanced": 0.2
+      },
+      "min": 0.05,
+      "max": 0.9,
+      "step": 0.05,
+      "control": [
+        "slider",
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.MouseAim",
+      "type": "bool",
+      "default": true,
+      "label": "@INPUT.MouseAim",
+      "description": "@INPUT.MouseAim.description",
+      "page": "controls",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "INPUT.MoveUpKey",
+      "type": "int",
+      "default": 87,
+      "label": "@INPUT.MoveUpKey",
+      "description": "@INPUT.MoveUpKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.MoveDownKey",
+      "type": "int",
+      "default": 83,
+      "label": "@INPUT.MoveDownKey",
+      "description": "@INPUT.MoveDownKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.MoveLeftKey",
+      "type": "int",
+      "default": 65,
+      "label": "@INPUT.MoveLeftKey",
+      "description": "@INPUT.MoveLeftKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.MoveRightKey",
+      "type": "int",
+      "default": 68,
+      "label": "@INPUT.MoveRightKey",
+      "description": "@INPUT.MoveRightKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.FireKey",
+      "type": "int",
+      "default": 1,
+      "label": "@INPUT.FireKey",
+      "description": "@INPUT.FireKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.EnterVehicleKey",
+      "type": "int",
+      "default": 70,
+      "label": "@INPUT.EnterVehicleKey",
+      "description": "@INPUT.EnterVehicleKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.JumpKey",
+      "type": "int",
+      "default": 32,
+      "label": "@INPUT.JumpKey",
+      "description": "@INPUT.JumpKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.SpecialKey",
+      "type": "int",
+      "default": 16,
+      "label": "@INPUT.SpecialKey",
+      "description": "@INPUT.SpecialKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.PreviousWeaponKey",
+      "type": "int",
+      "default": 81,
+      "label": "@INPUT.PreviousWeaponKey",
+      "description": "@INPUT.PreviousWeaponKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.NextWeaponKey",
+      "type": "int",
+      "default": 69,
+      "label": "@INPUT.NextWeaponKey",
+      "description": "@INPUT.NextWeaponKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "INPUT.PauseKey",
+      "type": "int",
+      "default": 80,
+      "label": "@INPUT.PauseKey",
+      "description": "@INPUT.PauseKey.description",
+      "page": "controls",
+      "min": 0,
+      "max": 255,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "DIAGNOSTICS.Enabled",
+      "type": "bool",
+      "default": false,
+      "label": "@DIAGNOSTICS.Enabled",
+      "description": "@DIAGNOSTICS.Enabled.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "SETUP.Screen.tripple_buffer",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 1,
+      "step": 1,
+      "label": "@SETUP.Screen.tripple_buffer",
+      "description": "@SETUP.Screen.tripple_buffer.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Screen.gamma",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 20,
+      "step": 1,
+      "label": "@SETUP.Screen.gamma",
+      "description": "@SETUP.Screen.gamma.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Screen.lighting",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 1,
+      "step": 1,
+      "label": "@SETUP.Screen.lighting",
+      "description": "@SETUP.Screen.lighting.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Screen.exploding_on",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 1,
+      "step": 1,
+      "label": "@SETUP.Screen.exploding_on",
+      "description": "@SETUP.Screen.exploding_on.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Screen.max_frame_rate",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 1,
+      "step": 1,
+      "label": "@SETUP.Screen.max_frame_rate",
+      "description": "@SETUP.Screen.max_frame_rate.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Screen.min_frame_rate",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 1,
+      "step": 1,
+      "label": "@SETUP.Screen.min_frame_rate",
+      "description": "@SETUP.Screen.min_frame_rate.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Screen.special_recognition",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 1,
+      "step": 1,
+      "label": "@SETUP.Screen.special_recognition",
+      "description": "@SETUP.Screen.special_recognition.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Sound.CDVol",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 127,
+      "step": 1,
+      "label": "@SETUP.Sound.CDVol",
+      "description": "@SETUP.Sound.CDVol.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Sound.SFXVol",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 127,
+      "step": 1,
+      "label": "@SETUP.Sound.SFXVol",
+      "description": "@SETUP.Sound.SFXVol.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Sound.do_3d_sound",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 1,
+      "step": 1,
+      "label": "@SETUP.Sound.do_3d_sound",
+      "description": "@SETUP.Sound.do_3d_sound.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Option.text_speed",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 3,
+      "step": 1,
+      "label": "@SETUP.Option.text_speed",
+      "description": "@SETUP.Option.text_speed.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Screen.do_play_movie",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 1,
+      "step": 1,
+      "label": "@SETUP.Screen.do_play_movie",
+      "description": "@SETUP.Screen.do_play_movie.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Network.show_player_names",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 1,
+      "step": 1,
+      "label": "@SETUP.Network.show_player_names",
+      "description": "@SETUP.Network.show_player_names.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.0",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.0",
+      "description": "@SETUP.Control.0.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.1",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.1",
+      "description": "@SETUP.Control.1.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.2",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.2",
+      "description": "@SETUP.Control.2.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.3",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.3",
+      "description": "@SETUP.Control.3.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.4",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.4",
+      "description": "@SETUP.Control.4.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.5",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.5",
+      "description": "@SETUP.Control.5.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.6",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.6",
+      "description": "@SETUP.Control.6.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.7",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.7",
+      "description": "@SETUP.Control.7.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.8",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.8",
+      "description": "@SETUP.Control.8.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.9",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.9",
+      "description": "@SETUP.Control.9.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.10",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.10",
+      "description": "@SETUP.Control.10.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Control.11",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 65535,
+      "step": 1,
+      "label": "@SETUP.Control.11",
+      "description": "@SETUP.Control.11.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart",
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SETUP.Option.Language",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "Installed"
+        },
+        {
+          "value": "e",
+          "label": "English"
+        },
+        {
+          "value": "f",
+          "label": "French"
+        },
+        {
+          "value": "g",
+          "label": "German"
+        },
+        {
+          "value": "i",
+          "label": "Italian"
+        },
+        {
+          "value": "s",
+          "label": "Spanish"
+        },
+        {
+          "value": "j",
+          "label": "Japanese"
+        }
+      ],
+      "label": "@SETUP.Option.Language",
+      "description": "@SETUP.Option.Language.description",
+      "page": "setup",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "Automatic"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        }
+      ]
+    }
+  ]
+}

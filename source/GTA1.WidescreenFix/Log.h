@@ -53,7 +53,7 @@ namespace Log
 #endif
         return EXCEPTION_CONTINUE_SEARCH;
     }
-    inline void Read(CIniReader& ini)
+    inline void Read(SettingsReader& ini)
     {
         Enabled = ini.ReadBoolean("DIAGNOSTICS", "Enabled", false);
         if (Enabled) SetUnhandledExceptionFilter(Crash);

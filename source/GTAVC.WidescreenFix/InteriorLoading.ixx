@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 
 export module InteriorLoading;
 
@@ -523,33 +525,72 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            gbNoInteriorLoading = iniReader.ReadInteger("MISC", "NoInteriorLoading", 0) != 0;
+            gbNoInteriorLoading = FixSettings().Bool("MISC.NoInteriorLoading");
 
             if (gbNoInteriorLoading)
             {
                 auto pattern = find_pattern("8B 04 95 ? ? ? ? 83 C0 ? 50 8B 04 8D ? ? ? ? 83 C0 ? 50 68 ? ? ? ? E8 ? ? ? ? 83 C4 ? 5B");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CModelInfo::pp_modelInfoPtrs = (CBaseModelInfo***)(pattern.get_first(3));
 
                 pattern = find_pattern("E8 ? ? ? ? 59 59 30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 45 ? 89 E9 6A ? 50 E8 ? ? ? ? 83 3D ? ? ? ? ? 74 ? 6A");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CTimeCycle::StartExtraColour = (decltype(CTimeCycle::StartExtraColour))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = find_pattern("E8 ? ? ? ? 59 30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 45 ? 89 E9 6A ? 50 E8 ? ? ? ? 8B 35");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CTimeCycle::StopExtraColour = (decltype(CTimeCycle::StopExtraColour))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = find_pattern("E8 ? ? ? ? 59 B9 ? ? ? ? E8 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? E8");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CStreaming::RemoveBuildingsNotInArea = (decltype(CStreaming::RemoveBuildingsNotInArea))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = find_pattern("E8 ? ? ? ? A1 ? ? ? ? 59 50 68");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 CStreaming::LoadScene = (decltype(CStreaming::LoadScene))injector::GetBranchDestination(pattern.get_first()).as_int();
 
                 pattern = find_pattern("66 A1 ? ? ? ? 66 89 83");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 ppScriptParams = pattern.get_first<int32_t*>(2);
 
                 pattern = find_pattern("B8 ? ? ? ? BF ? ? ? ? 01 E8");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 ppScriptSpace = pattern.get_first<uint8_t*>(1);
 
                 pattern = find_pattern("88 46 ? 8A 47");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 3, true);
                 static auto LoadObjectInstanceHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
@@ -559,6 +600,11 @@ public:
                 });
 
                 pattern = find_pattern("88 43 ? E9 ? ? ? ? 89 C0");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 injector::MakeNOP(pattern.get_first(), 3, true);
                 static auto LoadObjectInstanceHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
@@ -568,12 +614,27 @@ public:
                 });
 
                 pattern = find_pattern("E8 ? ? ? ? 24 ? 8A 53");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shHasPreRenderEffects = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), HasPreRenderEffects);
 
                 pattern = find_pattern("E8 ? ? ? ? 83 C4 ? 84 C0 0F 85 ? ? ? ? 8D 85");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 shLoadCol = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), LoadCol);
 
                 pattern = find_pattern("E8 ? ? ? ? ? ? ? ? ? E8 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto CGameProcessHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     ProcessInteriorSwitching();
@@ -590,6 +651,11 @@ public:
                 });
 
                 pattern = find_pattern("E8 ? ? ? ? C6 05 ? ? ? ? ? 59 EB");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto AfterInitialiseWhenRestartingHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     CVector pos = TheCamera->GetCoords();
@@ -598,8 +664,19 @@ public:
                     CStreaming::LoadScene(&pos);
                 });
 
-                static auto loc_452309 = (uintptr_t)hook::pattern("30 C0 81 C4 88 00 00 00 5D 5F 5E 5B C2 04 00 8D 45 ? 89 E9 6A 01 50 E8 ? ? ? ? 66 A1 ? ? ? ? 50 E8 ? ? ? ? 59 30 C0 81 C4 88 00 00 00 5D 5F 5E 5B C2 04 00 8D 45").get_first();
+                auto requiredPattern0 = hook::pattern("30 C0 81 C4 88 00 00 00 5D 5F 5E 5B C2 04 00 8D 45 ? 89 E9 6A 01 50 E8 ? ? ? ? 66 A1 ? ? ? ? 50 E8 ? ? ? ? 59 30 C0 81 C4 88 00 00 00 5D 5F 5E 5B C2 04 00 8D 45");
+                if (requiredPattern0.size() <= 0)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
+                static auto loc_452309 = (uintptr_t)requiredPattern0.get_first();
                 pattern = find_pattern("8B 1D ? ? ? ? 69 DB 70 01 00 00 81 C3 ? ? ? ? 83 3D");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto COMMAND_SET_PLAYER_CONTROL = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     CRunningScript* script = (CRunningScript*)regs.ebp;
@@ -631,7 +708,13 @@ public:
                     }
                 });
 
-                //static auto loc_44EDC4 = (uintptr_t)hook::pattern("30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 46 ? 89 F1 6A ? 50 E8 ? ? ? ? A1 ? ? ? ? 6B C0 ? 8B 04 C5 ? ? ? ? 80 B8 ? ? ? ? ? 74 ? 8B 88 ? ? ? ? 85 C9 74 ? 83 C1 ? FF 35 ? ? ? ? FF 35 ? ? ? ? FF 35 ? ? ? ? FF 35 ? ? ? ? E8").get_first();
+               auto requiredPattern1 = hook::pattern("30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 46 ? 89 F1 6A ? 50 E8 ? ? ? ? A1 ? ? ? ? 6B C0 ? 8B 04 C5 ? ? ? ? 80 B8 ? ? ? ? ? 74 ? 8B 88 ? ? ? ? 85 C9 74 ? 83 C1 ? FF 35 ? ? ? ? FF 35 ? ? ? ? FF 35 ? ? ? ? FF 35 ? ? ? ? E8");
+               if (requiredPattern1.size() <= 0)
+               {
+                   wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                   return;
+               }
+                //static auto loc_44EDC4 = (uintptr_t)requiredPattern1.get_first();
                 //pattern = find_pattern("D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 5C 24 ? D9 44 24 ? D8 1D ? ? ? ? DF E0 8B 1D");
                 //static auto COMMAND_SET_PLAYER_COORDINATES = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 //{
@@ -645,7 +728,13 @@ public:
                 //    }
                 //});
 
-                //static auto loc_4544B7 = (uintptr_t)hook::pattern("30 C0 81 C4 68 01 00 00 5F 5E 5B C2 04 00 8D 46 ? 89 F1 6A 01 50 E8 ? ? ? ? A1 ? ? ? ? 8B 0D ? ? ? ? 50 E8 ? ? ? ? 80 B8").get_first();
+               auto requiredPattern2 = hook::pattern("30 C0 81 C4 68 01 00 00 5F 5E 5B C2 04 00 8D 46 ? 89 F1 6A 01 50 E8 ? ? ? ? A1 ? ? ? ? 8B 0D ? ? ? ? 50 E8 ? ? ? ? 80 B8");
+               if (requiredPattern2.size() <= 0)
+               {
+                   wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                   return;
+               }
+                //static auto loc_4544B7 = (uintptr_t)requiredPattern2.get_first();
                 //pattern = find_pattern("8B 35 ? ? ? ? 69 F6 70 01 00 00 81 C6 ? ? ? ? 8B 06");
                 //static auto COMMAND_SET_PLAYER_HEADING = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 //{
@@ -659,8 +748,19 @@ public:
                 //    }
                 //});
 
-                static auto loc_454135 = (uintptr_t)hook::pattern("30 C0 81 C4 68 01 00 00 5F 5E 5B C2 04 00 B9 ? ? ? ? E8 ? ? ? ? 84 C0").get_first();
+                auto requiredPattern3 = hook::pattern("30 C0 81 C4 68 01 00 00 5F 5E 5B C2 04 00 B9 ? ? ? ? E8 ? ? ? ? 84 C0");
+                if (requiredPattern3.size() <= 0)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
+                static auto loc_454135 = (uintptr_t)requiredPattern3.get_first();
                 pattern = find_pattern("DB 05 ? ? ? ? 66 A1 ? ? ? ? B9 ? ? ? ? 50 50");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto COMMAND_DO_FADE = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     CRunningScript* script = (CRunningScript*)regs.esi;
@@ -676,7 +776,13 @@ public:
                     }
                 });
 
-                //static auto loc_4595C1 = (uintptr_t)hook::pattern("30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 45 ? 89 E9 6A ? 50 E8 ? ? ? ? 83 3D ? ? ? ? ? 74 ? C6 05 ? ? ? ? ? EB ? 90").get_first();
+               auto requiredPattern4 = hook::pattern("30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? 8D 45 ? 89 E9 6A ? 50 E8 ? ? ? ? 83 3D ? ? ? ? ? 74 ? C6 05 ? ? ? ? ? EB ? 90");
+               if (requiredPattern4.size() <= 0)
+               {
+                   wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                   return;
+               }
+                //static auto loc_4595C1 = (uintptr_t)requiredPattern4.get_first();
                 //pattern = find_pattern("D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 5C 24 ? D9 44 24 ? D8 1D ? ? ? ? DF E0 F6 C4 04 75 ? 80 E4 45 F6 C4 41 74 ? FF 74 24 ? FF 74 24 ? E8 ? ? ? ? D9 5C 24 ? 59 59 8B 44 24 ? 8A 1D ? ? ? ? 89 84 24 ? ? ? ? 8B 44 24 ? 89 84 24 ? ? ? ? 8D 84 24");
                 //static auto COMMAND_CLEAR_AREA = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 //{
@@ -690,7 +796,13 @@ public:
                 //    }
                 //});
 
-                //static auto loc_630B59 = (uintptr_t)hook::pattern("30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? BA ? ? ? ? 8D 44 24 ? 03 55 ? 6A ? 52 50 E8 ? ? ? ? 83 45 ? ? 83 C4 ? 8D 44 24").get_first();
+               auto requiredPattern5 = hook::pattern("30 C0 81 C4 ? ? ? ? 5D 5F 5E 5B C2 ? ? BA ? ? ? ? 8D 44 24 ? 03 55 ? 6A ? 52 50 E8 ? ? ? ? 83 45 ? ? 83 C4 ? 8D 44 24");
+               if (requiredPattern5.size() <= 0)
+               {
+                   wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                   return;
+               }
+                //static auto loc_630B59 = (uintptr_t)requiredPattern5.get_first();
                 //pattern = find_pattern("A1 ? ? ? ? 50 A3 ? ? ? ? E8 ? ? ? ? 59");
                 //static auto COMMAND_SET_AREA_VISIBLE = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 //{
@@ -733,7 +845,13 @@ public:
                 //    }
                 //});
 
-                //static auto loc_45AA37 = (uintptr_t)hook::pattern("30 C0 81 C4 08 02 00 00 5D 5F 5E 5B C2 04 00 8D 45 ? 89 E9 6A 03 50 E8 ? ? ? ? A1 ? ? ? ? 8B 0D ? ? ? ? 50 E8 ? ? ? ? A1").get_first();
+               auto requiredPattern6 = hook::pattern("30 C0 81 C4 08 02 00 00 5D 5F 5E 5B C2 04 00 8D 45 ? 89 E9 6A 03 50 E8 ? ? ? ? A1 ? ? ? ? 8B 0D ? ? ? ? 50 E8 ? ? ? ? A1");
+               if (requiredPattern6.size() <= 0)
+               {
+                   wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                   return;
+               }
+                //static auto loc_45AA37 = (uintptr_t)requiredPattern6.get_first();
                 //pattern = find_pattern("D9 05 ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D9 9C 24 ? ? ? ? D9 05 ? ? ? ? D9 9C 24 ? ? ? ? E8");
                 //static auto COMMAND_LOAD_SCENE = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 //{

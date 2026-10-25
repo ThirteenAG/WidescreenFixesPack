@@ -1,5 +1,8 @@
 #include "stdafx.h"
+#include "FixSettings.hpp"
 #include <utility/Scan.hpp>
+
+ASI_SETTINGS_EXPORT(FixSettings())
 
 namespace rdrFlashIntroHandler
 {
@@ -12,14 +15,14 @@ namespace rdrFlashIntroHandler
     SafetyHookInline FlashIntroHandlerHook{};
     void __fastcall Update(FlashIntroHandler* smp_Instance)
     {
-        smp_Instance->bLegalsCompleted = 1;
+        if (smp_Instance)
+            smp_Instance->bLegalsCompleted = 1;
     }
 }
 
 void Init()
 {
-    CIniReader iniReader("");
-    bool bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
+    bool bSkipIntro = FixSettings().Bool("MAIN.SkipIntro");
 
     if (bSkipIntro)
     {
@@ -30,6 +33,8 @@ void Init()
             if (func_start)
                 rdrFlashIntroHandler::FlashIntroHandlerHook = safetyhook::create_inline(func_start.value(), rdrFlashIntroHandler::Update);
         }
+        if (!rdrFlashIntroHandler::FlashIntroHandlerHook)
+            OutputDebugStringA("Red Dead Redemption Fusion Fix: intro handler unavailable; startup screens retained.\n");
     }
 }
 
@@ -37,6 +42,8 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        FixSettings();
+        asi_settings::LiveLink::Start();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init);
     });
 }

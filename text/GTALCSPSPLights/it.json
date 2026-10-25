@@ -1,0 +1,6 @@
+{
+  "plugin.name": "GTA Liberty City Stories PPSSPP Improved Vehicle Lights",
+  "page.graphics": "Grafica",
+  "lights": "Luci dei veicoli",
+  "lights.description": "Accende fari, luci posteriori, luci di stop e luci di retromarcia sulle texture della carrozzeria di auto e moto. Attivo per impostazione predefinita. Riavvia il gioco emulato dopo aver modificato questa impostazione."
+}

@@ -1,0 +1,10 @@
+{
+  "plugin.name": "SOCOM Fireteam Bravo Fusion Fix (PPSSPP)",
+  "page.options": "Options",
+  "skip": "Passer l'intro",
+  "skip.description": "Passe la série de boîtes de message au démarrage si cette version du jeu le permet. Redémarrez après un changement.",
+  "analog": "Commandes double analogique",
+  "analog.description": "Le stick droit déplace la caméra ; les commandes natives du stick gauche sont conservées. Redémarrez après un changement.",
+  "loading": "Chargement accéléré",
+  "loading.description": "Supprime temporairement la limite pendant les chargements ; rythme normal rétabli à la fin des threads de chargement. Redémarrez après un changement."
+}

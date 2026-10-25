@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
 
 export module EntryExit;
@@ -26,9 +27,19 @@ public:
             injector::WriteMemory<uint8_t>(pattern.get_first(2), 127, true);
 
             pattern = hook::pattern("89 0C 95 ? ? ? ? 42");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(3), &ms_visibleEntityList[0], true);
 
             pattern = hook::pattern("8B 04 85 ? ? ? ? 88 48");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(3), &ms_visibleEntityList[0], true);
         };
     }

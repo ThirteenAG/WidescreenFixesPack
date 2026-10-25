@@ -1,0 +1,19 @@
+{
+  "plugin.name": "The Saboteur Fusion Fix",
+  "page.display": "Affichage",
+  "page.graphics": "Graphismes",
+  "FixFOV": "Champ de vision grand écran",
+  "FixFOV.description": "Élargit le champ de vision de la caméra sur les écrans plus larges que 4:3 (Hor+).",
+  "WindowMode": "Mode fenêtre",
+  "WindowMode.description": "La fenêtre quand l'option plein écran du jeu est désactivée : avec cadre ou sans bordure. Une fenêtre de la taille de l'écran a son cadre hors de l'écran.",
+  "WindowMode.windowed": "Fenêtré",
+  "WindowMode.borderless": "Sans bordure",
+  "FPSLimit": "Limite d'images par seconde",
+  "FPSLimit.description": "Limite la fréquence d'images ; les corrections de synchronisation du correctif pour la conduite, l'horloge et la souris l'utilisent. 0 retire la limite et ces corrections.",
+  "ConsoleGamma": "Gamma console",
+  "ConsoleGamma.description": "Utilise le gamma de la version Xbox 360.",
+  "AntiAliasing": "Anticrénelage",
+  "AntiAliasing.description": "Anticrénelage SMAA, appliqué avant l'affichage du HUD.",
+  "AntiAliasing.off": "Désactivé",
+  "AntiAliasing.smaa": "SMAA"
+}

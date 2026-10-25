@@ -26,7 +26,7 @@ export struct Screen
     int nHudWidescreenMode;
     uint32_t nFMVWidescreenMode;
     uint32_t nShadowBufferResolution;
-    float fRawInputMouse;
+    bool bRawInputMouse;
     bool bRawInputMouseRawData;
     bool bDeferredInput;
     int nCutsceneBorders;
@@ -50,6 +50,10 @@ export std::vector<std::pair<const std::wstring, std::wstring>> ResList =
     { L"1280x1024", L"" },
     { L"1600x1200", L"" },
 };
+
+export std::vector<std::pair<int, int>> NativeDisplayModes;
+export bool NativeResolutionListPublished = false;
+export thread_local std::optional<std::pair<int, int>> RequestedNativeResolution;
 
 export const wchar_t* a640x480 = nullptr;
 export const wchar_t* a800x600 = nullptr;
@@ -84,6 +88,8 @@ export bool IsEnhanced()
 
 export namespace UWindowsViewport
 {
+    // Set by the native menu; null keeps the default gameplay input.
+    bool (__cdecl* WindowsMenuMouseActive)(void*) = nullptr;
     std::queue<std::function<void()>> deferredCauseInputEvent;
     std::function<void(int inputID, int a3, float value)> deferredCauseInputEventForRawInput;
 }

@@ -1,6 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/SplinterCell/Window.hpp"
+#include "FixSettings.hpp"
+#include "MovieFrame.hpp"
 #include <minidx8/d3d8.h>
 
 export module D3DDrv;
@@ -104,13 +107,13 @@ namespace RainSplashFix
         if (!(scale > 0.0f))
             scale = 1.0f;
 
-        injector::WriteMemory<float>(pSizeScaleC73z, fOrigC73z * scale, true);
-        injector::WriteMemory<float>(pSizeScaleC75y, fOrigC75y * scale, true);
-        injector::WriteMemory<float>(pMaxSizeC75z,   fOrigC75z * scale, true);
-        injector::WriteMemory<float>(pMaxSizeC75w,   fOrigC75w * scale, true);
+        ProtectedGameRef<float>(reinterpret_cast<float*>(pSizeScaleC73z)) = fOrigC73z * scale;
+        ProtectedGameRef<float>(reinterpret_cast<float*>(pSizeScaleC75y)) = fOrigC75y * scale;
+        ProtectedGameRef<float>(reinterpret_cast<float*>(pMaxSizeC75z)) = fOrigC75z * scale;
+        ProtectedGameRef<float>(reinterpret_cast<float*>(pMaxSizeC75w)) = fOrigC75w * scale;
 
         if (pDoneFlag) // retail: re-run the patched lazy initialiser
-            injector::WriteMemory<uint32_t>(pDoneFlag, *pDoneFlag & ~2u, true);
+            ProtectedGameRef<uint32_t>(reinterpret_cast<uint32_t*>(pDoneFlag)) = *pDoneFlag & ~2u;
     }
 }
 
@@ -118,11 +121,28 @@ D3DPRESENT_PARAMETERS* pPresentParams = nullptr;
 SafetyHookInline shUD3DRenderDeviceSetRes = {};
 int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* UViewport, int width, int height, int a5)
 {
-    bool bInvalidRes = true;
+    static const int mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
+    static bool first = true;
+    if (std::exchange(first, false))
+        a5 = mode == 0;
+    const auto nativeResolution = RequestedNativeResolution;
+    if (nativeResolution)
+    {
+        width = nativeResolution->first;
+        height = nativeResolution->second;
+    }
+    if (!a5 && mode == 2)
+    {
+        auto area = SCWindow::Monitor(pPresentParams ? pPresentParams->hDeviceWindow : nullptr).rcMonitor;
+        width = area.right - area.left;
+        height = area.bottom - area.top;
+    }
+
+    bool bInvalidRes = !nativeResolution;
     std::wstring resStr = std::to_wstring(width) + L"x" + std::to_wstring(height);
     for (const auto& it : ResList)
     {
-        if (resStr == it.first)
+        if (!nativeResolution && resStr == it.first)
         {
             swscanf_s(it.second.c_str(), L"%dx%d", &width, &height);
             bInvalidRes = false;
@@ -130,7 +150,7 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
         }
     }
 
-    if (bInvalidRes)
+    if (bInvalidRes && (a5 || mode != 2))
     {
         width = Screen.Width;
         height = Screen.Height;
@@ -138,9 +158,23 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
     }
 
     auto ret = shUD3DRenderDeviceSetRes.unsafe_fastcall<int>(UD3DRenderDevice, edx, UViewport, width, height, a5);
+    if (!ret || !pPresentParams)
+        return ret;
 
     Screen.Width = pPresentParams->BackBufferWidth;
     Screen.Height = pPresentParams->BackBufferHeight;
+    if (nativeResolution && UViewport)
+    {
+        const int actualWidth = *reinterpret_cast<int*>(static_cast<uint8_t*>(UViewport) + 0x80);
+        const int actualHeight = *reinterpret_cast<int*>(static_cast<uint8_t*>(UViewport) + 0x84);
+        if (actualWidth > 0 && actualHeight > 0 && actualWidth <= 16384 && actualHeight <= 16384)
+        {
+            Screen.Width = actualWidth;
+            Screen.Height = actualHeight;
+        }
+        FixSettings().Set("MAIN.ResX", std::to_string(Screen.Width), true);
+        FixSettings().Set("MAIN.ResY", std::to_string(Screen.Height), true);
+    }
     Screen.fWidth = static_cast<float>(Screen.Width);
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
@@ -223,34 +257,32 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
         }
     }
 
+    SCWindow::Track(pPresentParams->hDeviceWindow, mode, pPresentParams->Windowed != FALSE, Screen.Width, Screen.Height);
+    SCWindow::SquareCorners(pPresentParams->hDeviceWindow);
+
     if (Screen.Width < 640 || Screen.Height < 480)
         return ret;
 
-    CIniReader iniReader("");
+    auto& settings = FixSettings();
     auto [DesktopResW, DesktopResH] = GetDesktopRes();
     if (Screen.Width != DesktopResW || Screen.Height != DesktopResH)
     {
-        iniReader.WriteInteger("MAIN", "ResX", Screen.Width);
-        iniReader.WriteInteger("MAIN", "ResY", Screen.Height);
+        settings.Set("MAIN.ResX", std::to_string(Screen.Width));
+        settings.Set("MAIN.ResY", std::to_string(Screen.Height));
     }
     else
     {
-        iniReader.WriteInteger("MAIN", "ResX", 0);
-        iniReader.WriteInteger("MAIN", "ResY", 0);
+        settings.Set("MAIN.ResX", "0");
+        settings.Set("MAIN.ResY", "0");
     }
+
+    settings.Save();
 
     bIsWindowed = pPresentParams->Windowed ? true : false;
 
     if (bIsWindowed)
     {
-        tagRECT rect;
-        rect.left = (LONG)(((float)DesktopResW / 2.0f) - (Screen.fWidth / 2.0f));
-        rect.top = (LONG)(((float)DesktopResH / 2.0f) - (Screen.fHeight / 2.0f));
-        rect.right = (LONG)Screen.Width;
-        rect.bottom = (LONG)Screen.Height;
-        SetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE, GetWindowLong(pPresentParams->hDeviceWindow, GWL_STYLE) & ~WS_OVERLAPPEDWINDOW);
-        SetWindowPos(pPresentParams->hDeviceWindow, NULL, rect.left, rect.top, rect.right, rect.bottom, SWP_NOACTIVATE | SWP_NOZORDER);
-        SetWindowPos(pPresentParams->hDeviceWindow, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        SCWindow::Place(pPresentParams->hDeviceWindow, Screen.Width, Screen.Height, mode == 2);
         SetForegroundWindow(pPresentParams->hDeviceWindow);
         SetCursor(NULL);
     }
@@ -291,46 +323,30 @@ namespace UD3DRenderDevice
             }
         }
 
+        const auto bink = *reinterpret_cast<const int**>(reinterpret_cast<uintptr_t>(UCanvas) + 0x98);
+        if (bink)
+        {
+            const auto frame = PTMovie::Layout(Screen.Width, Screen.Height, bink[0], bink[1],
+                FixSettings().Int("MAIN.FMVWidescreenMode"));
+            if (frame.width > 0.0f && frame.height > 0.0f)
+            {
+                Screen.fFMVoffsetStartX = frame.x;
+                Screen.fFMVoffsetEndX = frame.x + frame.width;
+                Screen.fFMVoffsetStartY = frame.y;
+                Screen.fFMVoffsetEndY = frame.y + frame.height;
+            }
+        }
         shDisplayVideo.unsafe_fastcall(UD3DRenderDevice, edx, UCanvas, a3);
 
         IDirect3DDevice8* pD3DDevice = *(IDirect3DDevice8**)((uintptr_t)UD3DRenderDevice + 0x4694);
-
-        int W = Screen.Width;
-        int H = Screen.Height;
-
-        float targetX = Screen.fFMVoffsetStartX;
-        float targetY = Screen.fFMVoffsetStartY;
-        float targetW = Screen.fFMVoffsetEndX - Screen.fFMVoffsetStartX;
-        float targetH = Screen.fFMVoffsetEndY - Screen.fFMVoffsetStartY;
-
-        float targetAspect = 4.0f / 3.0f;
-        if (Screen.nFMVWidescreenMode && Screen.fAspectRatio > targetAspect)
-        {
-            int videoWidth = static_cast<int32_t*>(a3)[0];
-            int videoHeight = static_cast<int32_t*>(a3)[1];
-
-            // Calculate scale to remove black bars (fit height)
-            float scaleByHeight = 480.0f / videoHeight;
-
-            // Calculate scale to fit width
-            float scaleByWidth = Screen.fWidth / (videoWidth * (Screen.fHeight / 480.0f));
-
-            // Use the smaller scale to ensure video doesn't exceed screen bounds
-            float scale = std::min(scaleByHeight, scaleByWidth);
-
-            float contentHeight = Screen.fHeight * scale;
-            float contentWidth = contentHeight * targetAspect;
-
-            // Clamp contentWidth to screen width if needed
-            if (contentWidth > Screen.fWidth)
-                contentWidth = Screen.fWidth;
-
-            // Center the scaled content
-            Screen.fFMVoffsetStartX = (Screen.fWidth - contentWidth) / 2.0f;
-            Screen.fFMVoffsetEndX = Screen.fFMVoffsetStartX + contentWidth;
-            Screen.fFMVoffsetStartY = (Screen.fHeight - contentHeight) / 2.0f;
-            Screen.fFMVoffsetEndY = Screen.fFMVoffsetStartY + contentHeight;
-        }
+        if (!pD3DDevice)
+            return;
+        const int W = Screen.Width;
+        const int H = Screen.Height;
+        const float targetX = Screen.fFMVoffsetStartX;
+        const float targetY = Screen.fFMVoffsetStartY;
+        const float targetW = Screen.fFMVoffsetEndX - Screen.fFMVoffsetStartX;
+        const float targetH = Screen.fFMVoffsetEndY - Screen.fFMVoffsetStartY;
 
         // Clear pillar/letterbox areas
         if (targetX > 0.0f)
@@ -576,7 +592,7 @@ export void InitD3DDrv()
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 1C 24 56 56 FF 15");
     if (!pattern.empty())
     {
-        injector::WriteMemory<uint8_t>(pattern.get_first(-4), 0x56, true); //push esi
+        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(-4))) = 0x56; //push esi
         struct DisplayVideo_Hook
         {
             void operator()(injector::reg_pack& regs)
@@ -616,20 +632,20 @@ export void InitD3DDrv()
             if (pattern.size() == 8 && i == 2)
                 continue;
 
-            injector::WriteMemory(pattern.get(i).get<uint32_t>(1), Screen.nPostProcessFixedScale, true); //affects glass reflections
-            injector::WriteMemory(pattern.get(i).get<uint32_t>(6), Screen.nPostProcessFixedScale, true);
+            ProtectedGameRef<decltype(Screen.nPostProcessFixedScale)>(reinterpret_cast<decltype(Screen.nPostProcessFixedScale)*>(pattern.get(i).get<uint32_t>(1))) = Screen.nPostProcessFixedScale; //affects glass reflections
+            ProtectedGameRef<decltype(Screen.nPostProcessFixedScale)>(reinterpret_cast<decltype(Screen.nPostProcessFixedScale)*>(pattern.get(i).get<uint32_t>(6))) = Screen.nPostProcessFixedScale;
         }
 
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 00 02 00 00");
         if (!pattern.empty())
-            injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), Screen.nPostProcessFixedScale, true);
+            ProtectedGameRef<decltype(Screen.nPostProcessFixedScale)>(reinterpret_cast<decltype(Screen.nPostProcessFixedScale)*>(pattern.count(1).get(0).get<uint32_t>(1))) = Screen.nPostProcessFixedScale;
         else
         {
             pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 80 ? ? ? ? ? ? ? ? 56");
-            injector::WriteMemory(pattern.get_first(6), Screen.nPostProcessFixedScale, true);
+            ProtectedGameRef<decltype(Screen.nPostProcessFixedScale)>(reinterpret_cast<decltype(Screen.nPostProcessFixedScale)*>(pattern.get_first(6))) = Screen.nPostProcessFixedScale;
 
             pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "C7 80 ? ? ? ? ? ? ? ? 8B 45 ? 6A");
-            injector::WriteMemory(pattern.get_first(6), Screen.nPostProcessFixedScale, true);
+            ProtectedGameRef<decltype(Screen.nPostProcessFixedScale)>(reinterpret_cast<decltype(Screen.nPostProcessFixedScale)*>(pattern.get_first(6))) = Screen.nPostProcessFixedScale;
         }
     }
 
@@ -642,8 +658,8 @@ export void InitD3DDrv()
         auto rpattern = hook::range_pattern((uint32_t)pattern.get_first(), (uint32_t)pattern.get_first() + 0x488, "68 ? ? ? ? 68");
         for (size_t i = 0; i < rpattern.size(); i++)
         {
-            injector::WriteMemory(rpattern.get(i).get<uint32_t>(1), Screen.nShadowMapResolution, true);
-            injector::WriteMemory(rpattern.get(i).get<uint32_t>(6), Screen.nShadowMapResolution, true);
+            ProtectedGameRef<decltype(Screen.nShadowMapResolution)>(reinterpret_cast<decltype(Screen.nShadowMapResolution)*>(rpattern.get(i).get<uint32_t>(1))) = Screen.nShadowMapResolution;
+            ProtectedGameRef<decltype(Screen.nShadowMapResolution)>(reinterpret_cast<decltype(Screen.nShadowMapResolution)*>(rpattern.get(i).get<uint32_t>(6))) = Screen.nShadowMapResolution;
         }
     }
 
@@ -655,48 +671,48 @@ export void InitD3DDrv()
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? C7 04 81 ? ? ? ? 8B 07 8B 10 68 ? ? ? ? 50 FF 52 ? 6A ? 6A ? 8B CE FF 15 ? ? ? ? 8B 0E 68");
         if (!pattern.empty())
         {
-            injector::WriteMemory(pattern.get_first(1), Screen.nReflectionsResolution, true);
-            injector::WriteMemory(pattern.get_first(17), Screen.nReflectionsResolution, true);
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(pattern.get_first(1))) = Screen.nReflectionsResolution;
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(pattern.get_first(17))) = Screen.nReflectionsResolution;
 
             pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? C7 04 81 ? ? ? ? 8B 07 8B 10 68 ? ? ? ? 50 FF 52 ? 6A ? 6A ? 8B CE FF 15 ? ? ? ? 8B 0E C7 04 81");
-            injector::WriteMemory(pattern.get_first(1), Screen.nReflectionsResolution, true);
-            injector::WriteMemory(pattern.get_first(17), Screen.nReflectionsResolution, true);
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(pattern.get_first(1))) = Screen.nReflectionsResolution;
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(pattern.get_first(17))) = Screen.nReflectionsResolution;
         }
         else
         {
             auto rpattern = hook::range_pattern(shUD3DRenderDeviceSetRes.target_address(), shUD3DRenderDeviceSetRes.target_address() + 0x1AFB, "68 ? ? ? ? 68");
-            injector::WriteMemory(rpattern.get(10).get<uint32_t>(1), Screen.nReflectionsResolution, true);
-            injector::WriteMemory(rpattern.get(10).get<uint32_t>(6), Screen.nReflectionsResolution, true);
-            injector::WriteMemory(rpattern.get(11).get<uint32_t>(1), Screen.nReflectionsResolution, true);
-            injector::WriteMemory(rpattern.get(11).get<uint32_t>(6), Screen.nReflectionsResolution, true);
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(rpattern.get(10).get<uint32_t>(1))) = Screen.nReflectionsResolution;
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(rpattern.get(10).get<uint32_t>(6))) = Screen.nReflectionsResolution;
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(rpattern.get(11).get<uint32_t>(1))) = Screen.nReflectionsResolution;
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(rpattern.get(11).get<uint32_t>(6))) = Screen.nReflectionsResolution;
         }
 
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 8B CF", "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? FF 50 ? 8B 07");
         if (!pattern.empty())
         {
-            injector::WriteMemory(pattern.get_first(1), Screen.nReflectionsResolution, true);
-            injector::WriteMemory(pattern.get_first(6), Screen.nReflectionsResolution, true);
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(pattern.get_first(1))) = Screen.nReflectionsResolution;
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(pattern.get_first(6))) = Screen.nReflectionsResolution;
         }
 
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 8B CB FF 50", "68 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 8B CB FF 52 ? 68 ? ? ? ? 68 ? ? ? ? 53 8D 4C 24 ? FF 15 ? ? ? ? 8B 45 ? 85 C0");
         if (!pattern.empty())
         {
-            injector::WriteMemory(pattern.get_first(1), Screen.nReflectionsResolution, true);
-            injector::WriteMemory(pattern.get_first(6), Screen.nReflectionsResolution, true);
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(pattern.get_first(1))) = Screen.nReflectionsResolution;
+            ProtectedGameRef<decltype(Screen.nReflectionsResolution)>(reinterpret_cast<decltype(Screen.nReflectionsResolution)*>(pattern.get_first(6))) = Screen.nReflectionsResolution;
         }
     }
 
     if (Screen.nBloomResolutionMultiplier > 0)
     {
         auto rpattern = hook::range_pattern(shUD3DRenderDeviceSetRes.target_address(), shUD3DRenderDeviceSetRes.target_address() + 0x1AFB, "68 ? ? ? ? 68");
-        injector::WriteMemory(rpattern.get(1).get<uint32_t>(1), *rpattern.get(1).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier, true);
-        injector::WriteMemory(rpattern.get(1).get<uint32_t>(6), *rpattern.get(1).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier, true);
-        injector::WriteMemory(rpattern.get(2).get<uint32_t>(1), *rpattern.get(2).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier, true);
-        injector::WriteMemory(rpattern.get(2).get<uint32_t>(6), *rpattern.get(2).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier, true);
-        injector::WriteMemory(rpattern.get(3).get<uint32_t>(1), *rpattern.get(3).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier, true);
-        injector::WriteMemory(rpattern.get(3).get<uint32_t>(6), *rpattern.get(3).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier, true);
-        injector::WriteMemory(rpattern.get(4).get<uint32_t>(1), *rpattern.get(3).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier, true);
-        injector::WriteMemory(rpattern.get(4).get<uint32_t>(6), *rpattern.get(3).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier, true);
+        ProtectedGameRef<decltype(*rpattern.get(1).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier)>(reinterpret_cast<decltype(*rpattern.get(1).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier)*>(rpattern.get(1).get<uint32_t>(1))) = *rpattern.get(1).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier;
+        ProtectedGameRef<decltype(*rpattern.get(1).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier)>(reinterpret_cast<decltype(*rpattern.get(1).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier)*>(rpattern.get(1).get<uint32_t>(6))) = *rpattern.get(1).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier;
+        ProtectedGameRef<decltype(*rpattern.get(2).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier)>(reinterpret_cast<decltype(*rpattern.get(2).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier)*>(rpattern.get(2).get<uint32_t>(1))) = *rpattern.get(2).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier;
+        ProtectedGameRef<decltype(*rpattern.get(2).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier)>(reinterpret_cast<decltype(*rpattern.get(2).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier)*>(rpattern.get(2).get<uint32_t>(6))) = *rpattern.get(2).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier;
+        ProtectedGameRef<decltype(*rpattern.get(3).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier)>(reinterpret_cast<decltype(*rpattern.get(3).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier)*>(rpattern.get(3).get<uint32_t>(1))) = *rpattern.get(3).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier;
+        ProtectedGameRef<decltype(*rpattern.get(3).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier)>(reinterpret_cast<decltype(*rpattern.get(3).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier)*>(rpattern.get(3).get<uint32_t>(6))) = *rpattern.get(3).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier;
+        ProtectedGameRef<decltype(*rpattern.get(3).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier)>(reinterpret_cast<decltype(*rpattern.get(3).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier)*>(rpattern.get(4).get<uint32_t>(1))) = *rpattern.get(3).get<uint32_t>(1) * Screen.nBloomResolutionMultiplier;
+        ProtectedGameRef<decltype(*rpattern.get(3).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier)>(reinterpret_cast<decltype(*rpattern.get(3).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier)*>(rpattern.get(4).get<uint32_t>(6))) = *rpattern.get(3).get<uint32_t>(6) * Screen.nBloomResolutionMultiplier;
 
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "50 FF 51 ? 8B 45 ? 81 C6 ? ? ? ? 56 6A ? 6A", "50 FF 52 ? 8B 07 8B 10 8D 8B ? ? ? ? 51 6A ? 6A ? 6A ? 6A ? 6A 20 6A 20 50");
         static auto ResHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
@@ -726,8 +742,8 @@ export void InitD3DDrv()
     if (!pattern.empty())
     {
         bool bDigitalLayout = *pattern.get_first<uint8_t>(2) == 0x8B;
-        injector::WriteMemory(pattern.get_first(bDigitalLayout ? 9 : 7), Screen.Height, true);
-        injector::WriteMemory(pattern.get_first(bDigitalLayout ? 16 : 12), Screen.Width, true);
+        ProtectedGameRef<decltype(Screen.Height)>(reinterpret_cast<decltype(Screen.Height)*>(pattern.get_first(bDigitalLayout ? 9 : 7))) = Screen.Height;
+        ProtectedGameRef<decltype(Screen.Width)>(reinterpret_cast<decltype(Screen.Width)*>(pattern.get_first(bDigitalLayout ? 16 : 12))) = Screen.Width;
     }
 
     pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "8B 10 50 FF 92 ? ? ? ? 8B 9E 28 58 00 00", "8B 08 FF 91 ? ? ? ? FF 83 2C 58 00 00");
@@ -803,7 +819,7 @@ export void InitD3DDrv()
     // EOceanInfo "Ocean2" culling fix
     pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "3D 2C 01 00 00 77 43 85 C0 0F 84 ? ? ? ? 6A 08 6A 01", "F9 2C 01 00 00 77 ? 85 C9 0F 86");
     if (!pattern.empty())
-        injector::WriteMemory<uint8_t>(pattern.get_first(5), 0xEB, true); // ja -> jmp
+        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(5))) = 0xEB; // ja -> jmp
 
     RainSplashFix::Init();
     RainSplashFix::Apply();

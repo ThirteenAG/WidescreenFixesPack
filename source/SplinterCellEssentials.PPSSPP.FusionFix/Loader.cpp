@@ -146,7 +146,7 @@ int StartLoader(int id, unsigned size, void* arguments, int* status, void* optio
 }
 
 void InstallLoaderScreens() {
-    containImages = inireader.ReadInteger("MAIN", "ContainFullscreenImages", 1) != 0;
+    containImages = inireader.ReadBoolean("MAIN", "ContainFullscreenImages", true);
     if (!containImages) return;
     PatchLoader(pattern.text_addr, pattern.text_size);
 }

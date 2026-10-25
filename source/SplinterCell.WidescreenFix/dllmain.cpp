@@ -1,4 +1,8 @@
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "../Shared/SplinterCell/Window.hpp"
+
+ASI_SETTINGS_EXPORT(FixSettings())
 
 import ComVars;
 import CrashHandler;
@@ -13,29 +17,38 @@ import EchelonMenus;
 import Xidi;
 import Eax;
 
+#include "NativeMenu.hpp"
+
 void Init()
 {
+    SCWindow::EnableDpi();
     InitCrashHandler();
 
-    CIniReader iniReader("");
+    SettingsReader iniReader;
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);
     Screen.nShadowBufferResolution = iniReader.ReadInteger("MAIN", "ShadowBufferResolution", 0);
-    Screen.bDeferredInput = iniReader.ReadInteger("MAIN", "DeferredInput", 1) != 0;
-    Screen.fRawInputMouse = std::clamp(iniReader.ReadFloat("MAIN", "RawInputMouse", 1.0f), 0.0f, 5.0f);
-    Screen.bRawInputMouseRawData = iniReader.ReadInteger("MAIN", "RawInputMouseRawData", 0) != 0;
+    Screen.bDeferredInput = iniReader.ReadBoolean("MAIN", "DeferredInput", true);
+    Screen.bRawInputMouse = iniReader.ReadBoolean("MAIN", "RawInputMouse", true);
+    FixSettings().OnChange("MAIN.MouseSensitivity", []
+    {
+        RawInputHandler<int32_t>::SetSensitivity(FixSettings().Float("MAIN.MouseSensitivity"));
+    });
+    Screen.bRawInputMouseRawData = iniReader.ReadBoolean("MAIN", "RawInputMouseRawData", false);
     Screen.nFMVWidescreenMode = iniReader.ReadInteger("MAIN", "FMVWidescreenMode", 1);
     Screen.nHudWidescreenMode = iniReader.ReadInteger("MAIN", "HudWidescreenMode", 2);
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
     Screen.fGrainScale = std::clamp(iniReader.ReadFloat("MAIN", "GrainScale", 1.0f), 0.0f, 1.0f);
-    auto nFPSLimit = iniReader.ReadInteger("MISC", "FPSLimit", 1000);
-    bSkipIntro = iniReader.ReadInteger("MAIN", "SkipIntro", 0) != 0;
-    bSkipPressStartToContinue = iniReader.ReadInteger("MAIN", "SkipPressStartToContinue", 0) != 0;
-    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 0) != 0;
+    auto nFPSLimit = iniReader.ReadInteger("MAIN", "FPSLimit", 1000);
+    bSkipIntro = iniReader.ReadBoolean("MAIN", "SkipIntro", false);
+    bSkipPressStartToContinue = iniReader.ReadBoolean("MAIN", "SkipPressStart", false);
+    bRestoreCutsceneFOV = iniReader.ReadBoolean("MAIN", "RestoreCutsceneFOV", false);
     Screen.nCutsceneBorders = iniReader.ReadInteger("MAIN", "CutsceneBorders", 0);
     
-    if (!Screen.Width || !Screen.Height)
+    if (Screen.Width <= 0 || Screen.Height <= 0)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
+    if (Screen.Width <= 0 || Screen.Height <= 0)
+        std::tie(Screen.Width, Screen.Height) = std::make_tuple(640, 480);
 
     if (IsEnhanced())
     {
@@ -43,10 +56,6 @@ void Init()
     }
 
     auto exePath = GetExeModulePath();
-
-    mINI::INIStructure ini;
-    mINI::INIFile mIni(iniReader.GetIniPath());
-    mIni.read(ini);
 
     auto userIniPath = exePath / "SplinterCellUser.ini";
 
@@ -56,15 +65,9 @@ void Init()
     mINI::INIFile userIniFile(userIniPath);
     if (userIniFile.read(userIni))
     {
-        if (ini.has("Engine.Input"))
-        {
-            for (auto const& kv : ini["Engine.Input"])
-            {
-                std::string key = std::get<0>(kv);
-                std::string value = std::get<1>(kv);
-                userIni["Engine.Input"].setAll(key, value);
-            }
-        }
+        // Only native input commands are copied; the fix's legacy INI is never read.
+        for (auto key : { "Joy1", "Joy2", "Joy3", "Joy4", "Joy5", "Joy6", "Joy7", "Joy8", "Joy9", "Joy10", "Joy11", "Joy12", "Joy13", "Joy14", "Joy15", "Joy16", "JoyX", "JoyY", "JoyZ", "JoyV" })
+            userIni["Engine.Input"].setAll(key, FixSettings().String(std::string("INPUT.") + key));
         userIni["Engine.EPCGameOptions"]["Resolution"] = std::to_string(Screen.Width) + "x" + std::to_string(Screen.Height);
         userIniFile.generate(userIni);
     }
@@ -84,7 +87,7 @@ void Init()
         iniWriter.WriteString("WinDrv.WindowsClient", "UseJoystick", "True");
         iniWriter.WriteString("D3DDrv.D3DRenderDevice", "FullScreenVideo", "True");
 
-        auto shadowMode = iniReader.ReadInteger("MAIN", "ForceShadowBufferMode", 1);
+        auto shadowMode = iniReader.ReadBoolean("MAIN", "ForceShadowBufferMode", true);
         iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", shadowMode);
         if (shadowMode == 1) // GF2 mode must be off to render shadow buffers
             iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "EmulateGF2Mode", 0);
@@ -110,6 +113,17 @@ void Init()
         sscanf_s(rhs.c_str(), "%dx%d", &x2, &y2);
         return (x1 * y1) > (x2 * y2);
     });
+
+    NativeDisplayModes = { { 640, 480 }, { 800, 600 } };
+    for (const auto& resolution : list)
+    {
+        int width = 0, height = 0;
+        if (sscanf_s(resolution.c_str(), "%dx%d", &width, &height) == 2 &&
+            width >= 640 && height >= 480 && width <= 16384 && height <= 16384)
+            NativeDisplayModes.emplace_back(width, height);
+    }
+    std::sort(NativeDisplayModes.begin(), NativeDisplayModes.end());
+    NativeDisplayModes.erase(std::unique(NativeDisplayModes.begin(), NativeDisplayModes.end()), NativeDisplayModes.end());
 
     // Group resolutions by string length
     std::map<size_t, std::vector<std::string>> lengthToRes;
@@ -184,7 +198,7 @@ void Init()
         static float fFPSLimit = 1.0f / static_cast<float>(nFPSLimit);
         auto pattern = hook::pattern("8B 15 ? ? ? ? 89 55 D4 A1 ? ? ? ? 89 45 F8");
         if (!pattern.empty())
-            injector::WriteMemory(pattern.get_first(2), &fFPSLimit, true);
+            ProtectedGameRef<float*>(pattern.get_first<float*>(2)) = &fFPSLimit;
     }
 }
 
@@ -192,12 +206,14 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        FixSettings();
+        asi_settings::LiveLink::Start();
         CallbackHandler::RegisterCallback(Init);
         CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
         CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
         CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
         CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
-        CallbackHandler::RegisterCallback(L"Core.dll", InitCore);
+        CallbackHandler::RegisterCallback(L"Core.dll", [] { InitCore(); SCMenu::Init(); });
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
         CallbackHandler::RegisterCallback(L"EchelonHUD.dll", InitEchelonHUD);
         CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);

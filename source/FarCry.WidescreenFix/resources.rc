@@ -1,0 +1,6 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/FarCry/en.json"
+fr ASISETTINGS_TEXT "../../text/FarCry/fr.json"
+de ASISETTINGS_TEXT "../../text/FarCry/de.json"
+it ASISETTINGS_TEXT "../../text/FarCry/it.json"
+es ASISETTINGS_TEXT "../../text/FarCry/es.json"

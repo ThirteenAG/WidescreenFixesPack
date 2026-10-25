@@ -1,0 +1,14 @@
+{
+  "plugin.name": "Onimusha 3 Widescreen Fix",
+  "page.display": "Anzeige",
+  "page.advanced": "Erweitert",
+  "ResX": "Auflösungsbreite",
+  "ResX.description": "Breite des Bildschirms in Pixeln. 0 nimmt die Desktop-Auflösung.",
+  "ResY": "Auflösungshöhe",
+  "ResY.description": "Höhe des Bildschirms in Pixeln. 0 nimmt die Desktop-Auflösung.",
+  "FMVWidescreenMode": "Videomodus",
+  "FMVWidescreenMode.description": "Wie die 4:3-Videos auf breiteren Bildschirmen gezeigt werden: das ganze Video mit schwarzen Balken, bildschirmfüllend vergrößert (beschnitten) oder gestreckt.",
+  "FMVWidescreenMode.original": "Originalformat",
+  "FMVWidescreenMode.fill": "Füllen",
+  "FMVWidescreenMode.stretch": "Strecken"
+}

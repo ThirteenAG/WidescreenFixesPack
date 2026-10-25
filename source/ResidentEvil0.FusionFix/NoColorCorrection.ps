@@ -1,0 +1,25 @@
+// MAIN.DisableColorCorrection: replaces the colour correction pass (pixel shader CRC 0x59FA1317) with only
+// its colour matrix and per-channel tone curve
+ps_3_0
+dcl_texcoord v0.xy
+dcl_2d s0
+dcl_2d s1
+texld r0, v0, s0
+mul r0.xyz, r0, r0
+mov oC0.w, r0.w
+mul r1.xyz, r0.y, c2
+mad r1.xyz, r0.x, c1, r1
+mad r1.xyz, r0.z, c3, r1
+add r1.xyz, r1, c4
+texld r2, r1.x, s1
+mul r2.x, r2.x, r2.x
+texld r3, r1.y, s1
+texld r1, r1.z, s1
+mul r2.z, r1.z, r1.z
+mul r2.y, r3.y, r3.y
+rsq r0.x, r0.x
+rcp oC0.x, r0.x
+rsq r0.x, r0.y
+rsq r0.y, r0.z
+rcp oC0.z, r0.y
+rcp oC0.y, r0.x

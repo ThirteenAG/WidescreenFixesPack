@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
 
 export module Timecycle;
 
@@ -166,39 +167,39 @@ public:
         {
             if (Settings.visualStyle == VisualStyle::DE || !Settings.restoreWeatherColours)
                 return;
-            const auto initialise = hook::pattern("48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 55 41 54 41 55 41 56 41 57 48 8D AC 24 D0 FB FF FF").get_first();
+            const auto initialise = wfp::patterns::First("48 89 5C 24 08 48 89 74 24 10 48 89 7C 24 18 55 41 54 41 55 41 56 41 57 48 8D AC 24 D0 FB FF FF");
             const std::array<uint8_t*, 31> addresses{
-                hook::pattern("41 89 84 8C 70 59 04 05 8B 45 84 41 89 84 8C F0 57 04 05 8B 45 88 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C F0 57 04 05 8B 45 88 41 89 84 8C 70 56 04 05 8B 45 8C 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 70 56 04 05 8B 45 8C 41 89 84 8C 70 65 04 05 8B 45 90 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 70 65 04 05 8B 45 90 41 89 84 8C F0 63 04 05 8B 45 94 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C F0 63 04 05 8B 45 94 41 89 84 8C 70 62 04 05 8B 45 98 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 70 62 04 05 8B 45 98 41 89 84 8C F0 60 04 05 8B 45 9C 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C F0 60 04 05 8B 45 9C 41 89 84 8C 70 5F 04 05 8B 45 A0 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 70 5F 04 05 8B 45 A0 41 89 84 8C F0 5D 04 05 8B 45 A4 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C F0 5D 04 05 8B 45 A4 41 89 84 8C 70 5C 04 05 8B 45 A8 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 70 5C 04 05 8B 45 A8 41 89 84 8C F0 5A 04 05 8B 45 AC 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C F0 5A 04 05 8B 45 AC 41 89 84 8C 70 71 04 05 8B 45 B0 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 70 71 04 05 8B 45 B0 41 89 84 8C F0 6F 04 05 8B 45 B4 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C F0 6F 04 05 8B 45 B4 41 89 84 8C 70 6E 04 05 8B 45 B8 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 70 6E 04 05 8B 45 B8 41 89 84 8C F0 6C 04 05 8B 45 BC 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C F0 6C 04 05 8B 45 BC 41 89 84 8C 70 6B 04 05 8B 45 C0 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 70 6B 04 05 8B 45 C0 41 89 84 8C F0 69 04 05 8B 45 C4 41 89").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C F0 69 04 05 8B 45 C4 41 89 84 8C 70 68 04 05 0F B7 45 D4 66").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 70 68 04 05 0F B7 45 D4 66 41 89 84 4C F0 78 04 05 0F B7 45").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 30 87 04 05 8B 45 F0 F3 41 0F 11 84 8C F0 66 04 05 F3 0F 10").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C B0 85 04 05 8B 45 F4 F3 41 0F 11 84 8C 30 7B 04 05 F3 0F 10").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 30 84 04 05 8B 45 F8 F3 41 0F 11 84 8C B0 79 04 05 F3 0F 10").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C B0 82 04 05 8B 45 FC F3 41 0F 11 84 8C F0 75 04 05 F3 0F 10").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 30 81 04 05 8B 45 00 F3 41 0F 11 84 8C 70 74 04 05 F3 0F 10").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C B0 7F 04 05 8B 45 04 F3 41 0F 11 84 8C F0 72 04 05 F3 0F 10").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 30 7E 04 05 8B 45 08 F3 41 0F 11 84 8C B0 51 04 05 F3 0F 10").get_first<uint8_t>(4),
-                hook::pattern("F3 41 0F 11 84 8C B0 51 04 05 F3 0F 10 45 14 41 89 84 8C B0 7C 04 05 8B").get_first<uint8_t>(6),
-                hook::pattern("41 89 84 8C B0 7C 04 05 8B 45 0C 41 89 84 8C 30 53 04 05 F3 41 0F 11 84").get_first<uint8_t>(4),
-                hook::pattern("41 89 84 8C 30 53 04 05 F3 41 0F 11 84 8C 30 50 04 05 F3 0F 10 45 18 49").get_first<uint8_t>(4),
-                hook::pattern("F3 41 0F 11 84 8C 30 50 04 05 F3 0F 10 45 18 49 83 C6 04 F3 41 0F 11 84").get_first<uint8_t>(6),
-                hook::pattern("F3 41 0F 11 84 8C B0 4E 04 05 F3 0F 10 45 1C F3 41 0F 11 84 8C 30 4D 04").get_first<uint8_t>(6),
-                hook::pattern("F3 41 0F 11 84 8C 30 4D 04 05 49 83 FE 60 0F 8C ? ? ? ? 66 FF C6 66").get_first<uint8_t>(6),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 70 59 04 05 8B 45 84 41 89 84 8C F0 57 04 05 8B 45 88 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C F0 57 04 05 8B 45 88 41 89 84 8C 70 56 04 05 8B 45 8C 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 70 56 04 05 8B 45 8C 41 89 84 8C 70 65 04 05 8B 45 90 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 70 65 04 05 8B 45 90 41 89 84 8C F0 63 04 05 8B 45 94 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C F0 63 04 05 8B 45 94 41 89 84 8C 70 62 04 05 8B 45 98 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 70 62 04 05 8B 45 98 41 89 84 8C F0 60 04 05 8B 45 9C 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C F0 60 04 05 8B 45 9C 41 89 84 8C 70 5F 04 05 8B 45 A0 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 70 5F 04 05 8B 45 A0 41 89 84 8C F0 5D 04 05 8B 45 A4 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C F0 5D 04 05 8B 45 A4 41 89 84 8C 70 5C 04 05 8B 45 A8 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 70 5C 04 05 8B 45 A8 41 89 84 8C F0 5A 04 05 8B 45 AC 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C F0 5A 04 05 8B 45 AC 41 89 84 8C 70 71 04 05 8B 45 B0 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 70 71 04 05 8B 45 B0 41 89 84 8C F0 6F 04 05 8B 45 B4 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C F0 6F 04 05 8B 45 B4 41 89 84 8C 70 6E 04 05 8B 45 B8 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 70 6E 04 05 8B 45 B8 41 89 84 8C F0 6C 04 05 8B 45 BC 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C F0 6C 04 05 8B 45 BC 41 89 84 8C 70 6B 04 05 8B 45 C0 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 70 6B 04 05 8B 45 C0 41 89 84 8C F0 69 04 05 8B 45 C4 41 89", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C F0 69 04 05 8B 45 C4 41 89 84 8C 70 68 04 05 0F B7 45 D4 66", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 70 68 04 05 0F B7 45 D4 66 41 89 84 4C F0 78 04 05 0F B7 45", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 30 87 04 05 8B 45 F0 F3 41 0F 11 84 8C F0 66 04 05 F3 0F 10", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C B0 85 04 05 8B 45 F4 F3 41 0F 11 84 8C 30 7B 04 05 F3 0F 10", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 30 84 04 05 8B 45 F8 F3 41 0F 11 84 8C B0 79 04 05 F3 0F 10", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C B0 82 04 05 8B 45 FC F3 41 0F 11 84 8C F0 75 04 05 F3 0F 10", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 30 81 04 05 8B 45 00 F3 41 0F 11 84 8C 70 74 04 05 F3 0F 10", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C B0 7F 04 05 8B 45 04 F3 41 0F 11 84 8C F0 72 04 05 F3 0F 10", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 30 7E 04 05 8B 45 08 F3 41 0F 11 84 8C B0 51 04 05 F3 0F 10", 4),
+                wfp::patterns::First<uint8_t>("F3 41 0F 11 84 8C B0 51 04 05 F3 0F 10 45 14 41 89 84 8C B0 7C 04 05 8B", 6),
+                wfp::patterns::First<uint8_t>("41 89 84 8C B0 7C 04 05 8B 45 0C 41 89 84 8C 30 53 04 05 F3 41 0F 11 84", 4),
+                wfp::patterns::First<uint8_t>("41 89 84 8C 30 53 04 05 F3 41 0F 11 84 8C 30 50 04 05 F3 0F 10 45 18 49", 4),
+                wfp::patterns::First<uint8_t>("F3 41 0F 11 84 8C 30 50 04 05 F3 0F 10 45 18 49 83 C6 04 F3 41 0F 11 84", 6),
+                wfp::patterns::First<uint8_t>("F3 41 0F 11 84 8C B0 4E 04 05 F3 0F 10 45 1C F3 41 0F 11 84 8C 30 4D 04", 6),
+                wfp::patterns::First<uint8_t>("F3 41 0F 11 84 8C 30 4D 04 05 49 83 FE 60 0F 8C ? ? ? ? 66 FF C6 66", 6),
             };
             if (!initialise || std::ranges::any_of(addresses, [](const auto address) { return !address; }))
                 return;

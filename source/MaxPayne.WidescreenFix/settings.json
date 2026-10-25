@@ -1,0 +1,560 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Max Payne",
+        "exe": [
+          "MaxPayne.exe",
+          "maxpayne_steam.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "widescreen",
+      "title": "@page.widescreen",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "other"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@hudaspect.auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "16:10"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "4:3"
+        }
+      ],
+      "label": "@hudaspect",
+      "description": "@hudaspect.description",
+      "page": "widescreen",
+      "group": "@group.hud",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "decimals": 2,
+      "unit": "x",
+      "label": "@fovfactor",
+      "description": "@fovfactor.description",
+      "page": "widescreen",
+      "group": "@group.camera",
+      "control": [
+        "slider"
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@cutsceneborders.off"
+        },
+        {
+          "value": 1,
+          "label": "@cutsceneborders.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@cutsceneborders.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@cutsceneborders.both"
+        }
+      ],
+      "label": "@cutsceneborders",
+      "description": "@cutsceneborders.description",
+      "page": "widescreen",
+      "group": "@group.cutscenes",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
+      "id": "MAIN.AnimatedCutsceneBorders",
+      "type": "bool",
+      "default": 1,
+      "label": "@animatedborders",
+      "description": "@animatedborders.description",
+      "page": "widescreen",
+      "group": "@group.cutscenes",
+      "enabledIf": {
+        "setting": "MAIN.CutsceneBorders",
+        "notEquals": 0
+      },
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.GraphicNovelMode",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@graphicnovel.fill"
+        },
+        {
+          "value": 1,
+          "label": "@graphicnovel.original"
+        }
+      ],
+      "label": "@graphicnovel",
+      "description": "@graphicnovel.description",
+      "page": "widescreen",
+      "group": "@group.cutscenes",
+      "control": [
+        "segmented",
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.GraphicNovelModeKey",
+      "type": "key",
+      "default": "F2",
+      "devices": [
+        "keyboard"
+      ],
+      "label": "@graphicnovelkey",
+      "description": "@graphicnovelkey.description",
+      "page": "widescreen",
+      "group": "@group.cutscenes",
+      "control": [
+        "keycapture"
+      ],
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@windowmode.fullscreen"
+        },
+        {
+          "value": 1,
+          "label": "@windowmode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@windowmode.borderless"
+        }
+      ],
+      "label": "@windowmode",
+      "description": "@windowmode.description",
+      "page": "widescreen",
+      "group": "@group.window",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "restart"
+    },
+    {
+      "id": "GRAPHICS.AntiAliasing",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 1,
+          "label": "SMAA"
+        },
+        {
+          "value": 2,
+          "label": "TAA"
+        },
+        {
+          "value": 3,
+          "label": "DLAA"
+        },
+        {
+          "value": 4,
+          "label": "FSR"
+        }
+      ],
+      "label": "@antialiasing",
+      "description": "@antialiasing.description",
+      "page": "graphics",
+      "group": "@group.antialiasing",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 2
+      }
+    },
+    {
+      "id": "GRAPHICS.Sharpness",
+      "type": "float",
+      "default": 25,
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "label": "@aasharpness",
+      "description": "@aasharpness.description",
+      "page": "graphics",
+      "group": "@group.antialiasing",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "GRAPHICS.AntiAliasing",
+        "in": [
+          2,
+          3,
+          4
+        ]
+      },
+      "presets": {
+        "vanilla": 25,
+        "recommended": 25,
+        "enhanced": 25
+      }
+    },
+    {
+      "id": "MAIN.GraphicsAPI",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "Direct3D 9"
+        },
+        {
+          "value": 1,
+          "label": "Vulkan (DXVK)"
+        },
+        {
+          "value": 2,
+          "label": "D3D9on12"
+        }
+      ],
+      "label": "@graphicsapi",
+      "description": "@graphicsapi.description",
+      "page": "graphics",
+      "group": "@group.antialiasing",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "restart"
+    },
+    {
+      "id": "GRAPHICS.D3D9on12",
+      "type": "bool",
+      "default": 0,
+      "label": "D3D9on12",
+      "description": "@d3d9on12.description",
+      "page": "graphics",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "bool",
+      "default": 0,
+      "label": "@consolegamma",
+      "description": "@consolegamma.description",
+      "page": "graphics",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.VSync",
+      "type": "bool",
+      "default": 1,
+      "label": "@vsync",
+      "description": "@vsync.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@fpslimit.unlimited"
+        },
+        {
+          "value": -1,
+          "label": "@fpslimit.refreshrate"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
+        }
+      ],
+      "label": "@fpslimit",
+      "description": "@fpslimit.description",
+      "page": "graphics",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": -1,
+        "enhanced": -1
+      }
+    },
+    {
+      "id": "MAIN.MouseSmoothing",
+      "type": "bool",
+      "default": 0,
+      "label": "@mousesmoothing",
+      "description": "@mousesmoothing.description",
+      "page": "controls",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@gamepadicons.auto"
+        },
+        {
+          "value": 1,
+          "label": "Xbox"
+        },
+        {
+          "value": 2,
+          "label": "PlayStation"
+        },
+        {
+          "value": 3,
+          "label": "Nintendo"
+        }
+      ],
+      "label": "@gamepadicons",
+      "description": "@gamepadicons.description",
+      "page": "controls",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": 1,
+      "label": "@alttab",
+      "description": "@alttab.description",
+      "page": "game",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@skipintro",
+      "description": "@skipintro.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.LoadSaveSlot",
+      "type": "int",
+      "default": -1,
+      "min": -3,
+      "max": 12,
+      "special": [
+        {
+          "value": -1,
+          "label": "@loadsaveslot.off"
+        },
+        {
+          "value": -2,
+          "label": "@loadsaveslot.last"
+        },
+        {
+          "value": -3,
+          "label": "@loadsaveslot.recent"
+        }
+      ],
+      "label": "@loadsaveslot",
+      "description": "@loadsaveslot.description",
+      "page": "game",
+      "group": "@group.saves",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MISC.UseGameFolderForSavegames",
+      "type": "bool",
+      "default": 0,
+      "label": "@gamefoldersaves",
+      "description": "@gamefoldersaves.description",
+      "page": "game",
+      "group": "@group.saves",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.PortableSettings",
+      "type": "bool",
+      "default": 0,
+      "label": "@settingsfile",
+      "description": "@settingsfile.description",
+      "page": "game",
+      "group": "@group.saves",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MISC.SaveStringFormat",
+      "type": "string",
+      "default": "%a, %b %d %Y, %H:%M",
+      "label": "@savestringformat",
+      "description": "@savestringformat.description",
+      "page": "game",
+      "group": "@group.saves",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": 1,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "game",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    }
+  ]
+}

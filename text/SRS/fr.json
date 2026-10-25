@@ -1,0 +1,16 @@
+{
+  "plugin.name": "Street Racing Syndicate Widescreen Fix",
+  "page.display": "Affichage",
+  "page.camera": "CamÃ©ra",
+  "page.advanced": "AvancÃ©",
+  "ResX": "Largeur de rÃ©solution",
+  "ResX.description": "Largeur de sortie en pixels. ZÃ©ro utilise la rÃ©solution du bureau. Prend effet aprÃ¨s un redÃ©marrage.",
+  "ResY": "Hauteur de rÃ©solution",
+  "ResY.description": "Hauteur de sortie en pixels. ZÃ©ro utilise la rÃ©solution du bureau. Prend effet aprÃ¨s un redÃ©marrage.",
+  "FOVFactor": "Facteur de champ de vision",
+  "FOVFactor.description": "Multiplie le champ de vision corrigÃ©. 1.0 garde le cadrage prÃ©vu ; les valeurs plus grandes Ã©largissent la vue. S'applique immÃ©diatement.",
+  "FixHUD": "Corriger l'interface",
+  "FixHUD.description": "Garde les proportions de l'interface et la position du rÃ©troviseur correctes sur Ã©cran large. Prend effet aprÃ¨s un redÃ©marrage.",
+  "FixFOV": "Corriger le champ de vision",
+  "FixFOV.description": "Ã‰largit horizontalement la camÃ©ra de jeu sur Ã©cran large (Hor+) en gardant la vue verticale d'origine. Prend effet aprÃ¨s un redÃ©marrage."
+}

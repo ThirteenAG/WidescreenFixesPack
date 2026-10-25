@@ -1,8 +1,10 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include <ranges>
 #include "common.h"
+#include "FixSettings.hpp"
 #include "callargs.h"
 #include <Zydis.h>
 
@@ -451,6 +453,12 @@ namespace ScriptDraw
         auto wrap = hook::pattern(pattern_str(0xD8, '?', to_bytes(&lines->m_fWrapX)) + " D9 1C 24 E8 ? ? ? ?").count(2);
         auto print = hook::pattern(pattern_str(0xD8, '?', to_bytes(&lines->m_fAtX)) + " DE C9 DA 6C 24 ? D9 1C 24 E8 ? ? ? ?").count(2);
 
+        if (wrap.empty() || print.empty())
+        {
+            wfp::patterns::Report("Script text layout disabled: draw signatures unavailable.\n");
+            return;
+        }
+
         // Keep all script coordinates and font dimensions independent of custom HUD
         // scaling, including the pass that draws before the fade.
         for (auto field : { &lines->m_fScaleX, &lines->m_fWrapX, &lines->m_fCenterSize })
@@ -638,27 +646,54 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            static float fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f);
-            static float fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f);
-            static float fRadarWidth = iniReader.ReadFloat("MAIN", "RadarWidth", 94.0f);
-            static float fRadarHeight = iniReader.ReadFloat("MAIN", "RadarHeight", 76.0f);
-            static float fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f);
-            g_noBorderAnim = iniReader.ReadInteger("MAIN", "NoCutsceneBorderAnimation", 0) != 0;
+            // The HUD's, radar's and subtitles' sizes follow their settings while the game runs
+            auto& settings = FixSettings();
+            static auto& fHudWidthScale = settings.Float("MAIN.HudWidthScale");
+            static auto& fHudHeightScale = settings.Float("MAIN.HudHeightScale");
+            static auto& fRadarWidth = settings.Float("MAIN.RadarWidth");
+            static auto& fRadarHeight = settings.Float("MAIN.RadarHeight");
+            static auto& fSubtitlesScale = settings.Float("MAIN.SubtitlesScale");
+            g_noBorderAnim = !settings.Bool("MAIN.AnimatedCutsceneBorders");
+            OnSettingChange("MAIN.AnimatedCutsceneBorders", []() { g_noBorderAnim = !FixSettings().Bool("MAIN.AnimatedCutsceneBorders"); });
 
             auto pattern = hook::pattern("E8 ? ? ? ? 6A ? E8 ? ? ? ? 59 8D 8C 24 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? 8D 84 24 ? ? ? ? 50 E8 ? ? ? ? ? ? ? ? ? ? 59 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 8B 3D");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CFont::DrawFonts = (decltype(CFont::DrawFonts))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 3D ? ? ? ? ? ? ? ? 75 ? ? ? ? ? ? ? EB ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? A1");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CFont::SetColor = (decltype(CFont::SetColor))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? 39 C6 59 74");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CFont::ParseToken = (decltype(CFont::ParseToken))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
             pattern = hook::pattern("A1 ? ? ? ? 8A 15 ? ? ? ? A3");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             FontRenderStateBuf = *pattern.get_first<uint8_t*>(1);
 
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 18 80 3D ? ? ? ? ? D9 EE 89 74 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CFont::shPrintOutlinedString = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0)).as_int(), CFont::PrintOutlinedString);
 
             constexpr auto INV_DEFAULT_SCREEN_HEIGHT = 1.0f / (float)DEFAULT_SCREEN_HEIGHT;
@@ -745,29 +780,59 @@ public:
             // Brief additional fix
             static float fBriefWrapMult = 0.875f;
             pattern = hook::pattern("D8 0D ? ? ? ? DD D9 50 D9 14 24 DD D8");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &fBriefWrapMult, true);
 
             static float fBriefXMult = 0.15625f;
             pattern = hook::pattern("D8 0D ? ? ? ? DD D9 68 ? ? ? ? FF 74 24 ? 50 D9 14 24 DD D8 E8 ? ? ? ? 0F BF C0");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &fBriefXMult, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? DD DA A1 ? ? ? ? 3D C0 01 00 00 75 ? D9 44 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &fBriefXMult, true);
 
             // Stats additional fix
             static float fStatsXMult = 0.171875f;
             static float fStatsWrapMult = 0.82343751f;
             pattern = hook::pattern("D8 0D ? ? ? ? DD D9 68 ? ? ? ? FF 74 24 ? 50 D9 14 24 DD D8 E8 ? ? ? ? 83 C4 0C");
+            if (pattern.size() < 2)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.count(2).get(0).get<float*>(2), &fStatsXMult, true);
             injector::WriteMemory(pattern.count(2).get(1).get<float*>(2), &fStatsWrapMult, true);
 
             // Map Legend additional fix
             static float fLegendLeft = 0.25f;
             pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 C0 D9 7C 24 ? 8B 44 24 ? 80 4C 24 ? ? D9 6C 24 ? 89 44 24 ? 31 FF");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &fLegendLeft, true);
 
             static float fLegendRight = 0.171875f;
             pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 C0 D9 7C 24 ? 8B 44 24 ? 80 4C 24 ? ? D9 6C 24 ? 89 44 24 ? A1 ? ? ? ? DB 5C 24 ? D9 6C 24 ? 3D C0 01 00 00");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &fLegendRight, true);
 
             auto UpdateMenuLayout = [](int Width, int Height)
@@ -976,8 +1041,20 @@ public:
             //Menu fix
             static float fDefaultScale = 0.0015625f;
 
-            auto DrawBackgroundStart = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 44 24 ? DA 4C 24 ? DD DC 8B 15").get_first(0);
-            auto DrawBackgroundEnd = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 4C 24 ? DA 4C 24 ? DD DA D9 05 ? ? ? ? 81 FB C0 01 00 00 DD D9 74 ? D8 0D ? ? ? ? 89 5C 24 ? DA 4C 24 ? 8D 84 24").get_first(6);
+            auto requiredPattern0 = hook::pattern("D8 0D ? ? ? ? 89 44 24 ? DA 4C 24 ? DD DC 8B 15");
+            if (requiredPattern0.size() <= 0)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
+            auto DrawBackgroundStart = (uintptr_t)requiredPattern0.get_first(0);
+            auto requiredPattern1 = hook::pattern("D8 0D ? ? ? ? 89 4C 24 ? DA 4C 24 ? DD DA D9 05 ? ? ? ? 81 FB C0 01 00 00 DD D9 74 ? D8 0D ? ? ? ? 89 5C 24 ? DA 4C 24 ? 8D 84 24");
+            if (requiredPattern1.size() <= 0)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
+            auto DrawBackgroundEnd = (uintptr_t)requiredPattern1.get_first(6);
             pattern = hook::pattern(DrawBackgroundStart, DrawBackgroundEnd, pattern_str(0xD8, 0x0D, to_bytes(*(void**)(DrawBackgroundStart + 2))));
             pattern.for_each_result([&](hook::pattern_match match)
             {
@@ -986,8 +1063,20 @@ public:
 
             MenuBorders::Init(DrawBackgroundStart, DrawBackgroundEnd);
 
-            auto CMenuManagerDrawStart = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 BC 24 ? ? ? ? DA 8C 24 ? ? ? ? DD DD").get_first(0);
-            auto CMenuManagerDrawEnd = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 94 24 ? ? ? ? DA 8C 24 ? ? ? ? DD DB 81 FE C0 01 00 00").get_first(6);
+            auto requiredPattern2 = hook::pattern("D8 0D ? ? ? ? 89 BC 24 ? ? ? ? DA 8C 24 ? ? ? ? DD DD");
+            if (requiredPattern2.size() <= 0)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
+            auto CMenuManagerDrawStart = (uintptr_t)requiredPattern2.get_first(0);
+            auto requiredPattern3 = hook::pattern("D8 0D ? ? ? ? 89 94 24 ? ? ? ? DA 8C 24 ? ? ? ? DD DB 81 FE C0 01 00 00");
+            if (requiredPattern3.size() <= 0)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
+            auto CMenuManagerDrawEnd = (uintptr_t)requiredPattern3.get_first(6);
             pattern = hook::pattern(CMenuManagerDrawStart, CMenuManagerDrawEnd, pattern_str(0xD8, 0x0D, to_bytes(*(void**)(CMenuManagerDrawStart + 2))));
             pattern.for_each_result([&](hook::pattern_match match)
             {
@@ -997,25 +1086,35 @@ public:
             // Map rendering and input share one native menu canvas.
             MenuMap::Init();
 
-            if (fHudWidthScale || fHudHeightScale)
             {
-                fHudWidthScale = std::clamp(fHudWidthScale, 0.25f, 4.0f);
-                fHudHeightScale = std::clamp(fHudHeightScale, 0.25f, 4.0f);
-
                 static float fCustomWideScreenWidthScaleDown = 1.0f / 640.0f;
                 static float fCustomWideScreenHeightScaleDown = 1.0f / 480.0f;
 
                 onResChange() += [](int Width, int Height)
                 {
                     float fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
-                    fCustomWideScreenWidthScaleDown = INV_SCREEN_WIDTH(fAspectRatio) * fHudWidthScale;
-                    fCustomWideScreenHeightScaleDown = INV_DEFAULT_SCREEN_HEIGHT * fHudHeightScale;
+                    fCustomWideScreenWidthScaleDown = INV_SCREEN_WIDTH(fAspectRatio) * std::clamp(fHudWidthScale, 0.25f, 4.0f);
+                    fCustomWideScreenHeightScaleDown = INV_DEFAULT_SCREEN_HEIGHT * std::clamp(fHudHeightScale, 0.25f, 4.0f);
                 };
+                OnSettingChange("MAIN.HudWidthScale", []() { CDraw::Refresh(); });
+                OnSettingChange("MAIN.HudHeightScale", []() { CDraw::Refresh(); });
 
-                auto temp1 = *hook::pattern("D8 0D ? ? ? ? D8 8D ? ? ? ? D9 1C 24 E8 ? ? ? ? 8B 95").count(1).get(0).get<float*>(2);
+                auto requiredPattern4 = hook::pattern("D8 0D ? ? ? ? D8 8D ? ? ? ? D9 1C 24 E8 ? ? ? ? 8B 95");
+                if (requiredPattern4.size() <= 0)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
+                auto temp1 = *requiredPattern4.get(0).get<float*>(2);
                 auto DrawHudHorScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp1)));
 
-                auto temp2 = *hook::pattern("D8 0D ? ? ? ? D8 8D ? ? ? ? D8 0D").count(1).get(0).get<float*>(2);
+                auto requiredPattern5 = hook::pattern("D8 0D ? ? ? ? D8 8D ? ? ? ? D8 0D");
+                if (requiredPattern5.size() <= 0)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
+                auto temp2 = *requiredPattern5.get(0).get<float*>(2);
                 auto DrawHudVerScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp2)));
 
                 for (size_t i = 0; i < DrawHudHorScalePattern.size(); i++)
@@ -1036,10 +1135,22 @@ public:
                     }
                 }
 
-                auto temp3 = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 81 FB B8 0B 00 00").count(1).get(0).get<float*>(2);
+                auto requiredPattern6 = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 81 FB B8 0B 00 00");
+                if (requiredPattern6.size() <= 0)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
+                auto temp3 = *requiredPattern6.get(0).get<float*>(2);
                 auto CDarkelDrawMessagesPattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp3)));
 
-                auto temp4 = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 81 FB B8 0B 00 00").count(1).get(0).get<uint32_t*>(2);
+                auto requiredPattern7 = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 81 FB B8 0B 00 00");
+                if (requiredPattern7.size() <= 0)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
+                auto temp4 = *requiredPattern7.get(0).get<uint32_t*>(2);
                 auto CDarkelDrawMessagesPattern2 = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp4)));
 
                 CDarkelDrawMessagesPattern.for_each_result([&](const hook::pattern_match& match)
@@ -1058,6 +1169,11 @@ public:
 
             {
                 auto pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 C2 D8 C9 D8 0D ? ? ? ? D9 C1 D8 0D ? ? ? ? D8 05 ? ? ? ? DE C1 D9 5C 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 {
                     ProtectedGameRef<float> ref;
                     ref.SetAddress(*pattern.get_first<float*>(2));
@@ -1065,6 +1181,11 @@ public:
                 }
 
                 pattern = hook::pattern("D8 0D ? ? ? ? D8 05 ? ? ? ? D8 05 ? ? ? ? D9 9C 24 ? ? ? ? D9 05 ? ? ? ? D8 CA D8 C1 D8 05 ? ? ? ? D9 9C 24 ? ? ? ? DE D9 DD D8 E8 ? ? ? ? 8D 8C 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 {
                     ProtectedGameRef<float> ref;
                     ref.SetAddress(*pattern.get_first<float*>(2));
@@ -1072,6 +1193,11 @@ public:
                 }
 
                 pattern = hook::pattern("D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24 50 D9 14 24 FF 35 ? ? ? ? 56 DD D8 E8 ? ? ? ? 83 C4 14 85 C0 74 ? B8 01 00 00 00 E9 E6 00 00 00");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 {
                     ProtectedGameRef<float> ref;
                     ref.SetAddress(*pattern.get_first<float*>(2));
@@ -1079,6 +1205,11 @@ public:
                 }
 
                 pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 DD DB D9 C1 D8 CB D8 0D ? ? ? ? D9 C3 D8 0D ? ? ? ? D9 05 ? ? ? ? D8 CB DA 2C 24 DE C1 DE E1 D9 5C 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 {
                     ProtectedGameRef<float> ref;
                     ref.SetAddress(*pattern.get_first<float*>(2));
@@ -1086,6 +1217,11 @@ public:
                 }
 
                 pattern = hook::pattern("D9 05 ? ? ? ? D8 CA D8 C1 D8 05 ? ? ? ? D9 9C 24 ? ? ? ? DE D9 DD D8 E8 ? ? ? ? 8D 8C 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 {
                     ProtectedGameRef<float> ref;
                     ref.SetAddress(*pattern.get_first<float*>(2));
@@ -1093,6 +1229,11 @@ public:
                 }
 
                 pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 05 ? ? ? ? D8 CA DA 6C 24 ? DD DA D8 C1 D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24 50 D9 14 24 FF 35 ? ? ? ? 56 DD D8 E8 ? ? ? ? 83 C4 14 85 C0 74 ? B8 01 00 00 00 E9 E6 00 00 00");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 {
                     ProtectedGameRef<float> ref;
                     ref.SetAddress(*pattern.get_first<float*>(2));
@@ -1100,48 +1241,92 @@ public:
                 }
             }
 
-            for (auto& radarWidthRef : RadarWidthRefs)
+            static auto ApplyRadar = []()
             {
-                radarWidthRef = fRadarWidth * (((float)DEFAULT_SCREEN_WIDTH / (float)DEFAULT_SCREEN_HEIGHT) / (640.0f / 448.0f));
-            }
+                for (auto& radarWidthRef : RadarWidthRefs)
+                {
+                    radarWidthRef = fRadarWidth * (((float)DEFAULT_SCREEN_WIDTH / (float)DEFAULT_SCREEN_HEIGHT) / (640.0f / 448.0f));
+                }
 
-            for (auto& radarHeightRef : RadarHeightRefs)
+                for (auto& radarHeightRef : RadarHeightRefs)
+                {
+                    radarHeightRef = fRadarHeight;
+                }
+
+                // Match the gameplay subtitle margins to the constrained radar.
+                Subtitles::RadarReserve = std::max(140.0f, 40.0f + fRadarWidth + 6.0f) + 8.0f;
+            };
+            ApplyRadar();
+            OnSettingChange("MAIN.RadarWidth", []() { ApplyRadar(); });
+            OnSettingChange("MAIN.RadarHeight", []() { ApplyRadar(); });
+
             {
-                radarHeightRef = fRadarHeight;
-            }
-
-            if (fSubtitlesScale)
-            {
-                fSubtitlesScale = std::clamp(fSubtitlesScale, 0.25f, 4.0f);
-
-                ProtectedGameRef<float> SubtitlesWidth;
+                // The game's own sizes, which the setting scales
+                static ProtectedGameRef<float> SubtitlesWidth;
                 pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? A1");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 SubtitlesWidth.SetAddress(*pattern.get_first<float*>(2));
 
-                ProtectedGameRef<float> SubtitlesWidth2;
+                static ProtectedGameRef<float> SubtitlesWidth2;
                 pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 8B 3D");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 SubtitlesWidth2.SetAddress(*pattern.get_first<float*>(2));
 
-                ProtectedGameRef<float> SubtitlesHeight;
+                static ProtectedGameRef<float> SubtitlesHeight;
                 pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? A1");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 SubtitlesHeight.SetAddress(*pattern.get_first<float*>(2));
 
-                SubtitlesWidth *= fSubtitlesScale;
-                SubtitlesWidth2 *= fSubtitlesScale;
-                SubtitlesHeight *= fSubtitlesScale;
+                static const float fSubtitlesWidth = SubtitlesWidth;
+                static const float fSubtitlesWidth2 = SubtitlesWidth2;
+                static const float fSubtitlesHeight = SubtitlesHeight;
+                static auto ApplySubtitles = []()
+                {
+                    float scale = std::clamp(fSubtitlesScale, 0.25f, 4.0f);
+                    SubtitlesWidth = fSubtitlesWidth * scale;
+                    SubtitlesWidth2 = fSubtitlesWidth2 * scale;
+                    SubtitlesHeight = fSubtitlesHeight * scale;
+                };
+                ApplySubtitles();
+                OnSettingChange("MAIN.SubtitlesScale", []() { ApplySubtitles(); });
             }
 
             // Script text uses a centered canvas in both fade passes.
             pattern = hook::pattern("BE ? ? ? ? 66 83 BD");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ScriptDraw::Init(*pattern.get_first<intro_text_line*>(1));
 
-            // Match the gameplay subtitle margins to the constrained radar.
-            Subtitles::RadarReserve = std::max(140.0f, 40.0f + fRadarWidth + 6.0f) + 8.0f;
             pattern = hook::pattern("D9 1C 24 DE D9 E8 ? ? ? ? 8B 1D ? ? ? ?");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             Subtitles::hbSetCentreSize.fun = injector::MakeCALL(pattern.get_first(5), Subtitles::SetCentreSize, true).get();
 
             // Subtitles position
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 6A ? E8 ? ? ? ? ? ? ? ? ? ? ? ? ? 0F 84 ? ? ? ? 68 ? ? ? ? 68 ");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             hbPrintStringSubtitles.fun = injector::MakeCALL(pattern.get_first(), PrintStringSubtitles).get();
         };
     }

@@ -34,7 +34,9 @@ void SetFOV(float value) {
     const float baseAspect = area == 0 ? 16.0f / 9.0f : 4.0f / 3.0f;
     const float adjusted = (2.0f * atan2(settings.aspect / baseAspect * halfAngleTangent, 1.0f))
         * degreesPerRadian;
-    *reinterpret_cast<float*>(address::fov) = value * (adjusted / defaultFov);
+    // MAIN.FOVFactor widens gameplay cameras only; cutscenes return above.
+    *reinterpret_cast<float*>(address::fov) = console::bounded(value * (adjusted / defaultFov) * settings.fovFactor,
+        1.0f, 170.0f, value);
 }
 float CalculateAspectRatio() {
     *reinterpret_cast<float*>(address::aspect) = settings.aspect;
@@ -47,12 +49,12 @@ int GetWideScreenPreference(void*) {
 void DrawCutsceneBorders(void*) {
     const auto now = *reinterpret_cast<const uint32_t*>(0x4CD104);
     const bool dark = *reinterpret_cast<const float*>(address::camera + 2804) >= 255.0f;
-    borders.tick(now, CutsceneActive(), settings.cutsceneBorders, dark);
+    borders.tick(now, CutsceneActive(), settings.cutsceneBorders != 0, dark);
     DrawScope scope(DrawMode::None);
     TextureScope texture(false);
     const Color black{0,0,0,255};
     borders.draw(cinematic.window(settings.aspect, 480, 272), 480, 272,
-        [&](const Rect& rect) { drawRect(&rect, &black, true); });
+        [&](const Rect& rect) { drawRect(&rect, &black, true); }, settings.cutsceneBorders);
 }
 }
 void InstallCamera() {

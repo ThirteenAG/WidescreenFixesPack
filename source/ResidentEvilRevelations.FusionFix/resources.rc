@@ -1,0 +1,7 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/ResidentEvilRevelations/en.json"
+fr ASISETTINGS_TEXT "../../text/ResidentEvilRevelations/fr.json"
+de ASISETTINGS_TEXT "../../text/ResidentEvilRevelations/de.json"
+it ASISETTINGS_TEXT "../../text/ResidentEvilRevelations/it.json"
+es ASISETTINGS_TEXT "../../text/ResidentEvilRevelations/es.json"
+IDR_SHADER_MOVIE_VS RCDATA "shaders/Movie.vso"

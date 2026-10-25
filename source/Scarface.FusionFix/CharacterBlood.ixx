@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "FixSettings.hpp"
 #include "RTTI.h"
 #include <d3d9.h>
 #include <d3dx9.h>
@@ -191,8 +192,8 @@ export namespace CharacterBlood
 
     bool Initialize()
     {
-        CIniReader iniReader("");
-        const bool bRestoreCharacterBlood = iniReader.ReadInteger("GRAPHICS", "RestoreCharacterBlood", 0) != 0;
+        auto& settings = FixSettings();
+        const bool bRestoreCharacterBlood = settings.Bool("GRAPHICS.RestoreCharacterBlood");
         if (!bRestoreCharacterBlood) return false;
         d3dx = LoadLibraryW(L"d3dx9_43.dll");
         if (d3dx)

@@ -1,0 +1,329 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.SkipIntro",
+      "description": "@MAIN.SkipIntro.description",
+      "page": "gameplay",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.ForceAspectRatio",
+      "type": "string",
+      "default": "auto",
+      "label": "@MAIN.ForceAspectRatio",
+      "description": "@MAIN.ForceAspectRatio.description",
+      "page": "display",
+      "visibility": "editor",
+      "apply": "restart",
+      "maxLength": 14,
+      "suggestions": [
+        "auto",
+        "4:3",
+        "16:9",
+        "21:9",
+        "32:9"
+      ]
+    },
+    {
+      "id": "MAIN.Enable60FPS",
+      "type": "bool",
+      "default": 0,
+      "label": "@MAIN.Enable60FPS",
+      "description": "@MAIN.Enable60FPS.description",
+      "page": "gameplay",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.UnthrottleEmuDuringLoading",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.UnthrottleEmuDuringLoading",
+      "description": "@MAIN.UnthrottleEmuDuringLoading.description",
+      "page": "gameplay",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "CONTROLS.ModernControlScheme",
+      "type": "bool",
+      "default": 0,
+      "label": "@CONTROLS.ModernControlScheme",
+      "description": "@CONTROLS.ModernControlScheme.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "restart"
+    },
+    {
+      "id": "CONTROLS.PCCheats",
+      "type": "bool",
+      "default": 0,
+      "label": "@CONTROLS.PCCheats",
+      "description": "@CONTROLS.PCCheats.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.HudScale",
+      "type": "float",
+      "default": 0.75,
+      "label": "@HUD.HudScale",
+      "description": "@HUD.HudScale.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 0.75,
+        "enhanced": 0.75
+      },
+      "min": 0.1,
+      "max": 2,
+      "step": 0.05
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        }
+      ],
+      "label": "@hudaspect",
+      "description": "@hudaspect.description",
+      "page": "display",
+      "visibility": "editor",
+      "apply": "restart",
+      "maxLength": 14
+    },
+    {
+      "id": "RADAR.RadarScale",
+      "type": "float",
+      "default": 0.83,
+      "label": "@RADAR.RadarScale",
+      "description": "@RADAR.RadarScale.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 0.83,
+        "enhanced": 0.83
+      },
+      "min": 0.1,
+      "max": 2,
+      "step": 0.05
+    },
+    {
+      "id": "RADAR.RadarPosX",
+      "type": "float",
+      "default": 12,
+      "label": "@RADAR.RadarPosX",
+      "description": "@RADAR.RadarPosX.description",
+      "page": "advanced",
+      "visibility": "editor",
+      "apply": "restart",
+      "min": -480,
+      "max": 480,
+      "step": 1
+    },
+    {
+      "id": "RADAR.RadarPosY",
+      "type": "float",
+      "default": 196,
+      "label": "@RADAR.RadarPosY",
+      "description": "@RADAR.RadarPosY.description",
+      "page": "advanced",
+      "visibility": "editor",
+      "apply": "restart",
+      "min": -272,
+      "max": 272,
+      "step": 1
+    },
+    {
+      "id": "MPRADAR.RadarScale",
+      "type": "float",
+      "default": 0.63,
+      "label": "@MPRADAR.RadarScale",
+      "description": "@MPRADAR.RadarScale.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 0.63,
+        "enhanced": 0.63
+      },
+      "min": 0.1,
+      "max": 2,
+      "step": 0.05
+    },
+    {
+      "id": "MPRADAR.RadarPosY",
+      "type": "float",
+      "default": 170,
+      "label": "@MPRADAR.RadarPosY",
+      "description": "@MPRADAR.RadarPosY.description",
+      "page": "advanced",
+      "visibility": "editor",
+      "apply": "restart",
+      "min": -272,
+      "max": 272,
+      "step": 1
+    },
+    {
+      "id": "FOV.RestoreCutsceneFOV",
+      "type": "bool",
+      "default": 1,
+      "label": "@FOV.RestoreCutsceneFOV",
+      "description": "@FOV.RestoreCutsceneFOV.description",
+      "page": "camera",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@FOV.FOVFactor",
+      "description": "@FOV.FOVFactor.description",
+      "page": "camera",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      },
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@cutsceneborders.off"
+        },
+        {
+          "value": 1,
+          "label": "@cutsceneborders.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@cutsceneborders.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@cutsceneborders.both"
+        }
+      ],
+      "label": "@FOV.CutsceneBorders",
+      "description": "@FOV.CutsceneBorders.description",
+      "page": "camera",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        }
+      ],
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "menu",
+      "visibility": "editor"
+    }
+  ]
+}

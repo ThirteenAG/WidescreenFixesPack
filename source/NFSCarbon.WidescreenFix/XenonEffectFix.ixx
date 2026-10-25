@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/PatternPreflight.hpp"
 #include <d3d9.h>
 
 export module XenonEffectFix;
@@ -21,14 +22,18 @@ public:
     {
         WFP::onInitEventAsync() += []()
         {
-            CIniReader iniReader("");
-            bool bFixXenonEffects = iniReader.ReadInteger("GRAPHICS", "FixXenonEffects", 1) != 0;
-
-            if (bFixXenonEffects)
+            [&]()
             {
+                if (!PatternPreflight::Check("NFSCarbon XenonEffectFix", {
+                    { "E8 ? ? ? ? 8B CE E8 ? ? ? ? 8B 5B", 1, false },
+                }))
+                    return;
+
+                // The alpha blending of sparks and contrails
                 auto pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 8B 5B");
                 hb_sub_723380.fun = injector::MakeCALL(pattern.get_first(), sub_723380, true).get();
-            }
+            }();
+
         };
     }
 } XenonEffectFix;

@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Rendering;
 
@@ -14,11 +15,9 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            bool bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-            static bool bScaling = iniReader.ReadInteger("MAIN", "Scaling", 0);
+            // FOV Scale in the options, applied from the next frame on
+            static const int* pScaling = &FixSettings().Int("GRAPHICS.Scaling");
 
-            if (bFixFOV)
             {
                 static float flt1 = 0.0f;
                 static float flt2 = 0.0f;
@@ -39,10 +38,8 @@ public:
                         float f04525 = 0.4525f;
                         float f1 = 1.0f; // horizontal for vehicle reflection
 
-                        if (bScaling)
-                        {
+                        if (*pScaling)
                             hor3DScale /= 1.0252904893f;
-                        }
 
                         if (regs.eax == 1 || regs.eax == 4) //Headlights stretching, reflections etc
                         {

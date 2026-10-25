@@ -1,34 +1,50 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
+#include "FixSettings.hpp"
 
 import Legacy;
 import Draw;
 import MenuConstraint;
 import Movie;
+
+// The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
+ASI_SETTINGS_EXPORT(FixSettings())
+
 bool bUsingLegacy = false;
 
 void Init()
 {
-    CIniReader reader(L"GTAVC.WidescreenFixLegacy.ini");
-    if (std::filesystem::exists(reader.GetIniPath()))
+    FixSettings();
+    asi_settings::LiveLink::Start();
+    bUsingLegacy = FixSettings().Bool("COMPATIBILITY.LegacyMode");
+    if (bUsingLegacy)
     {
-        bUsingLegacy = true;
         InitLegacy();
         return;
     }
 
-    // VC has separate movie setup and focus-restoration paths.
     Movie::Init({
         "FF 15 ? ? ? ? 8B 84 24 0C 02 00 00 8B 8C 24 08 02 00 00 50 8B 84 24 08 02 00 00 8B 94 24 04 02 00 00 51 50 A1 ? ? ? ? 8B 18 52 50 FF 93 9C 00 00 00",
         "FF 15 ? ? ? ? 8B 44 24 ? 8B 5C 24 ? 50 8B 44 24 ? 8B 4C 24 ? 53 50 A1 ? ? ? ? 8B 28 51 50 FF 95 9C 00 00 00"
     });
 
     auto pattern = hook::pattern("BE ? ? ? ? 59 89 C7");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto WinMainHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         WFP::onInitEvent().executeAll();
     });
 
     pattern = hook::pattern("8D 44 24 ? 6A ? 6A ? 6A ? 6A ? 50 FF 15 ? ? ? ? 85 C0 74 ? 83 7C 24");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto MainLoopHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         static std::once_flag of;
@@ -41,17 +57,37 @@ void Init()
     });
 
     pattern = find_pattern<3>("68 ? ? ? ? 50 ? ? FF 52", "68 ? ? ? ? 50 ? ? FF 52");
+    if (pattern.size() < 3)
+    {
+        wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto _rwD3D8CameraClearBeforeResetHook = safetyhook::create_mid(pattern.get(0).get<void*>(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
     //static auto _rwD3D8BeginSceneBeforeResetHook = safetyhook::create_mid(pattern.get(1).get<void*>(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
     static auto _rwD3D8CameraBeginUpdateBeforeResetHook = safetyhook::create_mid(pattern.get(2).get<void*>(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
     pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? 3D");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto _rwD3D8BeginSceneBeforeResetHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
     pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? A1 ? ? ? ? 68 ? ? ? ? 50 ? ? FF 92 ? ? ? ? A1 ? ? ? ? 50 ? ? FF 51 ? A1 ? ? ? ? 68 ? ? ? ? 50 ? ? FF 92 ? ? ? ? A1 ? ? ? ? 50 ? ? FF 51 ? E8 ? ? ? ? 85 C0 0F 84");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto _rwD3D8RasterShowRasterBeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
     pattern = find_pattern("68 ? ? ? ? 50 ? ? FF 51 ? A1 ? ? ? ? 68 ? ? ? ? 50 ? ? FF 92 ? ? ? ? A1 ? ? ? ? 50 ? ? FF 51 ? A1 ? ? ? ? 68 ? ? ? ? 50 ? ? FF 92 ? ? ? ? A1 ? ? ? ? 50 ? ? FF 51 ? E8 ? ? ? ? 85 C0 74");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTAVC.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto _rwD3D8RasterShowRasterBeforeResetHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
 
     // Execute once at presentation, including frames whose camera update has

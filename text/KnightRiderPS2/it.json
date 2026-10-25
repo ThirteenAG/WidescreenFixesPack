@@ -1,0 +1,6 @@
+{
+  "plugin.name": "Knight Rider PCSX2F Widescreen Fix",
+  "page.display": "Schermo",
+  "enable": "Supporto widescreen",
+  "enable.description": "Corregge proiezione della telecamera, HUD e riquadri, sfondi e FMV per le proporzioni dell'emulatore. Attivo per impostazione predefinita. Riavvia il gioco emulato dopo aver modificato questa impostazione."
+}

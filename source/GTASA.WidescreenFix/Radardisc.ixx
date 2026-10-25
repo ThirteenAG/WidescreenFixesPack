@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 
 export module Radardisc;
 
@@ -57,31 +59,65 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            auto bHQRadarDisc = iniReader.ReadInteger("MISC", "HQRadarDisc", 0) != 0;
+            auto bHQRadarDisc = FixSettings().Bool("MISC.HQRadarDisc");
 
             if (!bHQRadarDisc)
                 return;
 
             auto pattern = hook::pattern("BF ? ? ? ? BE ? ? ? ? BB");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CHud::Sprites = *pattern.get_first<decltype(CHud::Sprites)>(1);
 
             pattern = hook::pattern("E8 ? ? ? ? 6A ? 6A ? 53 8B E8");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             RwRasterCreate = (decltype(RwRasterCreate))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? 6A ? 6A ? 55 8B F0");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             RwRasterLock = (decltype(RwRasterLock))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? 55 E8 ? ? ? ? 55 E8");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             RwRasterUnlock = (decltype(RwRasterUnlock))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 5F 5E 5D C6 40 ? ? 5B C3");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             RwTextureCreate = (decltype(RwTextureCreate))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 0F B7 4E");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             RwTextureDestroy = (decltype(RwTextureDestroy))injector::GetBranchDestination(pattern.get_first()).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? 83 C6 ? 83 C7 ? 4B");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto CHudInitialiseHook = safetyhook::create_mid(pattern.get_first(14), [](SafetyHookContext& regs)
             {
                 RwTexture* pDiscTex = CHud::Sprites[HUDSPRITE_RADARDISC].m_pTexture;

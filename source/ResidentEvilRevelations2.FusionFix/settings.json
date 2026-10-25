@@ -1,0 +1,321 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Resident Evil Revelations 2",
+        "exe": [
+          "rerev2.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "decimals": 2,
+      "unit": "x",
+      "label": "@fovfactor",
+      "description": "@fovfactor.description",
+      "page": "camera",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "slider"
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@fmv.original"
+        },
+        {
+          "value": 1,
+          "label": "@fmv.fill"
+        },
+        {
+          "value": 2,
+          "label": "@fmv.stretch"
+        }
+      ],
+      "label": "@fmv",
+      "description": "@fmv.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 0,
+      "min": -1,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": -1,
+          "label": "@fpslimit.refreshrate"
+        },
+        {
+          "value": 0,
+          "label": "@fpslimit.unlimited"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
+        }
+      ],
+      "label": "@fpslimit",
+      "description": "@fpslimit.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 120,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 2,
+      "choices": [
+        {
+          "value": 1,
+          "label": "@windowmode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@windowmode.borderless"
+        }
+      ],
+      "label": "@windowmode",
+      "description": "@windowmode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SplitScreenVertical",
+      "type": "bool",
+      "default": 0,
+      "label": "@SplitScreenVertical",
+      "description": "@SplitScreenVertical.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.SplitScreenSwapTopBottom",
+      "type": "bool",
+      "default": 0,
+      "label": "@SplitScreenSwapTopBottom",
+      "description": "@SplitScreenSwapTopBottom.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.DisableDamageOverlay",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableDamageOverlay",
+      "description": "@DisableDamageOverlay.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.DisableFilmGrain",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableFilmGrain",
+      "description": "@DisableFilmGrain.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.ForceLogo",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@ForceLogo.game"
+        },
+        {
+          "value": 1,
+          "label": "@ForceLogo.biohazard"
+        },
+        {
+          "value": 2,
+          "label": "@ForceLogo.registered"
+        },
+        {
+          "value": 3,
+          "label": "@ForceLogo.trademark"
+        },
+        {
+          "value": 4,
+          "label": "@ForceLogo.registered2"
+        }
+      ],
+      "label": "@ForceLogo",
+      "description": "@ForceLogo.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.LightSyncRGB",
+      "type": "bool",
+      "default": 1,
+      "label": "@LightSyncRGB",
+      "description": "@LightSyncRGB.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.DisableFade",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableFade",
+      "description": "@DisableFade.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.DisableCreateQuery",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableCreateQuery",
+      "description": "@DisableCreateQuery.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.DisableGUICommandFar",
+      "type": "bool",
+      "default": 0,
+      "label": "@DisableGUICommandFar",
+      "description": "@DisableGUICommandFar.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.Autoclicker",
+      "type": "bool",
+      "default": 0,
+      "label": "@Autoclicker",
+      "description": "@Autoclicker.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    }
+  ]
+}

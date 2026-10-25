@@ -41,7 +41,7 @@ uintptr_t Manager(uintptr_t object) {
 }
 }
 void InstallReplay() {
-    if (!inireader.ReadInteger("MAIN", "UnlockXinMissionsInReplayBoard", 0)) return;
+    if (!Option("UnlockXinMissionsInReplayBoard", 0)) return;
     SceKernelModuleInfo info{};
     if (!FindModule("CTW", info)) return;
     textBegin = info.text_addr; textEnd = textBegin + info.text_size;

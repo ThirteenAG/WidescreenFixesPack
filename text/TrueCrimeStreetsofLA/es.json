@@ -1,0 +1,11 @@
+{
+  "plugin.name": "True Crime: Streets of LA Widescreen Fix",
+  "page.display": "Pantalla",
+  "page.camera": "Cámara",
+  "ResX": "Ancho de resolución",
+  "ResX.description": "Ancho de salida en píxeles. Cero usa la resolución del escritorio. Se aplica tras reiniciar.",
+  "ResY": "Alto de resolución",
+  "ResY.description": "Alto de salida en píxeles. Cero usa la resolución del escritorio. Se aplica tras reiniciar.",
+  "FOVFactor": "Factor de campo de visión",
+  "FOVFactor.description": "Multiplica el campo de visión corregido. 1.0 mantiene el encuadre previsto; valores mayores amplían la vista. Se aplica al instante."
+}

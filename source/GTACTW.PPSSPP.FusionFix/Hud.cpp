@@ -285,7 +285,7 @@ void DrawPrimitive(uint32_t** context, int type, uint32_t format, unsigned count
 }
 
 void InstallHud() {
-    scale = console::bounded(inireader.ReadFloat("MAIN", "HUDScale", 1.0f), 0.5f, 1.0f, 1.0f);
+    scale = console::bounded(inireader.ReadFloat("MAIN", "HudScale", 1.0f), 0.5f, 1.0f, 1.0f);
     projectionWriter = safetymips::create_inline(Address<0x08988CA4>(), WriteProjection);
     writeProjection.fun = projectionWriter.original<void(*)(uint32_t**, const float*)>();
     const auto spriteManager = injector::GetBranchDestination(Address<0x0898D388>()).as_int();

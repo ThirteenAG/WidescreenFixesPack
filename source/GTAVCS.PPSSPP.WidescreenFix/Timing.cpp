@@ -60,7 +60,8 @@ void Tick(void*) {
         // cGU's similarly named frame-delay budget stays nonzero in gameplay.
         float black=*reinterpret_cast<float*>(Address<0x8BAD098>());
         float fade=*reinterpret_cast<float*>(Address<0x8BC7E30>()+0xA54);
-        console::portable::Unthrottle(!menu && (black!=0 || fade==255.0f));
+        console::portable::Unthrottle(!menu && (black!=0 || fade==255.0f ||
+            (settings.unthrottleMode==2 && fade>0.0f)));
     }
     if (concert) {
         uintptr_t text=*reinterpret_cast<uintptr_t*>(Address<0x8BAF748>());

@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
 #include <callargs.h>
 
@@ -48,6 +49,11 @@ public:
         WFP::onGameInitEvent() += []()
         {
             auto pattern = hook::pattern("E8 ? ? ? ? 8D 44 24 ? 83 C4 ? 8D 9C 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto HudDraw1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 g_wantsToMoveHudLeft = false;
@@ -55,6 +61,11 @@ public:
             });
 
             pattern = hook::pattern("66 83 3D ? ? ? ? ? ? ? 75 ? 66 83 3D");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto HudDraw2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 g_wantsToMoveHudRight = false;
@@ -62,6 +73,11 @@ public:
             });
 
             pattern = hook::pattern("80 3D ? ? ? ? ? 0F 85 ? ? ? ? 31 DB");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto HudDraw3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 g_wantsToMoveHudRight = false;
@@ -70,6 +86,11 @@ public:
 
             //MODE_ROCKETLAUNCHER
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? E9 ? ? ? ? 8D 84 20 ? ? ? ? 8D 8C 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto HudDraw4 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 using tRenderOneXLUSprite = void(__cdecl*)(float x, float y, float z, float halfWidth, float halfHeight, uint8_t red, uint8_t green, uint8_t blue, int16_t alpha, float rhw, uint8_t intensity);
@@ -82,6 +103,11 @@ public:
             });
 
             pattern = hook::pattern("66 83 3D ? ? ? ? ? 0F 84 ? ? ? ? 68");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto HudDrawAfterFade1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 g_wantsToMoveHudRight = false;
@@ -89,6 +115,11 @@ public:
             });
 
             pattern = hook::pattern("0F 84 ? ? ? ? 80 BD ? ? ? ? ? 0F 85 ? ? ? ? ? ? ? ? ? ? 50");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto HudDrawAfterFade2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 g_wantsToMoveHudRight = false;
@@ -96,6 +127,11 @@ public:
             });
 
             pattern = hook::pattern("E8 ? ? ? ? 59 E8 ? ? ? ? 6A ? E8 ? ? ? ? A1");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto HudDrawAfterFade3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 g_wantsToMoveHudRight = true;
@@ -103,6 +139,11 @@ public:
             });
 
             pattern = hook::pattern("83 C4 ? EB ? C7 05 ? ? ? ? ? ? ? ? 83 C4");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto HudDrawAfterFade4 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 g_wantsToMoveHudRight = false;
@@ -110,6 +151,11 @@ public:
             });
 
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? E9 ? ? ? ? 8D 84 20 ? ? ? ? FF 74 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CRadar::shShowRadarTrace = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CRadar::ShowRadarTrace);
 
             //static int SubtitleConstraint = 640;

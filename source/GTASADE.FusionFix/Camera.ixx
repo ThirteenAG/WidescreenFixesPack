@@ -12,6 +12,13 @@ import Controller;
 
 namespace
 {
+    // The pattern's first match, nullptr when it isn't found (a game update changed the code)
+    uint8_t* FindFirst(std::string_view signature, ptrdiff_t offset = 0)
+    {
+        auto pattern = hook::pattern(signature);
+        return pattern.empty() ? nullptr : pattern.get_first<uint8_t>(offset);
+    }
+
     struct CameraAngles
     {
         float alpha, alphaSpeed, fov, fovSpeed, beta, betaSpeed;
@@ -106,29 +113,34 @@ namespace
         // Recheck incoming branches across the actual overwritten ranges when
         // changing these sites; successful relocation alone is insufficient.
         // Validate the entire group before changing any camera code.
-        auto aimGain = hook::pattern("0F 28 C7 F3 0F 58 07 41 0F 28 CA F3 0F 58 4F 10 F3 0F 11 07 F3 0F 11 4F").get_first();
-        auto samplePed = hook::pattern("F3 44 0F 11 9D A0 00 00 00 4D 85 ED 74 ? 49 8B 4D 30 48 85 C9 74 ? 48").get_first();
-        auto betaPed = hook::pattern("F3 0F 11 4B 14 0F 54 CB 0F 2F 0D ? ? ? ? 73 ? 89 73 14 66 83 3D ?").get_first();
-        auto alphaPed = hook::pattern("F3 0F 58 33 F3 0F 10 7D 88 0F 2F F7 F3 0F 11 33 76 ? F3 0F 11 3B EB ?").get_first();
-        auto sourcePed = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 10 25 ? ? ? ? 0F 28 C1 F3 0F 10 1D ?").get_first();
-        auto controllerPedPitch = hook::pattern("F3 44 0F 58 E7 E8 ? ? ? ? 4C 8B AC 24 68 01 00 00 48 85 C0 74 ? F6").get_first();
-        auto beginCar = hook::pattern("83 3D ? ? ? ? 03 41 0F 28 FD 75 ? 48 8B 4C 24 68 33 C0 89 44 24 28").get_first();
-        auto sampleCar = hook::pattern("F3 0F 59 3D ? ? ? ? 41 0F 2F FD 76 ? F3 0F 59 3D ? ? ? ? 48 8B").get_first();
-        auto taskCar = hook::pattern("F3 41 0F 59 BC 1F ? ? ? ? E8 ? ? ? ? F3 45 0F 10 84 1F ? ? ?").get_first();
-        auto alphaCar = hook::pattern("F3 0F 58 36 F3 41 0F 59 C0 41 0F 2F F2 F3 0F 11 36 F3 44 0F 58 F0 76 ?").get_first();
-        auto sourceCar = hook::pattern("F3 0F 10 46 10 0F 57 C9 F3 41 0F 10 CA F3 44 0F 11 15 ? ? ? ? E8 ?").get_first();
-        auto betaCar = hook::pattern("48 8B C4 48 81 EC A8 00 00 00 83 3D ? ? ? ? 00 44 0F 29 40 C8 45 0F").get_first();
+        auto aimGain = FindFirst("0F 28 C7 F3 0F 58 07 41 0F 28 CA F3 0F 58 4F 10 F3 0F 11 07 F3 0F 11 4F");
+        auto samplePed = FindFirst("F3 44 0F 11 9D A0 00 00 00 4D 85 ED 74 ? 49 8B 4D 30 48 85 C9 74 ? 48");
+        auto betaPed = FindFirst("F3 0F 11 4B 14 0F 54 CB 0F 2F 0D ? ? ? ? 73 ? 89 73 14 66 83 3D ?");
+        auto alphaPed = FindFirst("F3 0F 58 33 F3 0F 10 7D 88 0F 2F F7 F3 0F 11 33 76 ? F3 0F 11 3B EB ?");
+        auto sourcePed = FindFirst("F3 0F 10 0D ? ? ? ? F3 0F 10 25 ? ? ? ? 0F 28 C1 F3 0F 10 1D ?");
+        auto controllerPedPitch = FindFirst("F3 44 0F 58 E7 E8 ? ? ? ? 4C 8B AC 24 68 01 00 00 48 85 C0 74 ? F6");
+        auto beginCar = FindFirst("83 3D ? ? ? ? 03 41 0F 28 FD 75 ? 48 8B 4C 24 68 33 C0 89 44 24 28");
+        auto sampleCar = FindFirst("F3 0F 59 3D ? ? ? ? 41 0F 2F FD 76 ? F3 0F 59 3D ? ? ? ? 48 8B");
+        auto taskCar = FindFirst("F3 41 0F 59 BC 1F ? ? ? ? E8 ? ? ? ? F3 45 0F 10 84 1F ? ? ?");
+        auto alphaCar = FindFirst("F3 0F 58 36 F3 41 0F 59 C0 41 0F 2F F2 F3 0F 11 36 F3 44 0F 58 F0 76 ?");
+        auto sourceCar = FindFirst("F3 0F 10 46 10 0F 57 C9 F3 41 0F 10 CA F3 44 0F 11 15 ? ? ? ? E8 ?");
+        auto betaCar = FindFirst("48 8B C4 48 81 EC A8 00 00 00 83 3D ? ? ? ? 00 44 0F 29 40 C8 45 0F");
         if (!aimGain || !samplePed || !betaPed || !alphaPed || !sourcePed || !controllerPedPitch || !beginCar
             || !sampleCar || !taskCar || !alphaCar || !sourceCar || !betaCar)
             return;
-        aimHorizontal = reinterpret_cast<AimAxis>(hook::pattern("48 89 5C 24 20 55 41 54 41 55 41 56 41 57 48 8B EC 48 81 EC 80 00 00 00").get_first());
-        disabledControls = reinterpret_cast<uint16_t*>((injector::ReadRelativeOffset(hook::pattern("66 44 09 15 ? ? ? ? E8 ? ? ? ? 44 38 35 ? ? ? ? 4D 8B D6 4C").get_first<uint8_t>(4)).as_int()));
-        timeStep = reinterpret_cast<float*>((injector::ReadRelativeOffset(hook::pattern("F3 44 0F 10 05 ? ? ? ? 48 8D 05 ? ? ? ? F3 0F 10 3D ? ? ? ?").get_first<uint8_t>(5)).as_int()));
-        direction = reinterpret_cast<int*>((injector::ReadRelativeOffset(hook::pattern("8B 05 ? ? ? ? 89 47 3C 0F B6 05 ? ? ? ? 48 69 C8 B8 01 00 00 48").get_first<uint8_t>(2)).as_int()));
-        scriptAngles = reinterpret_cast<bool*>((injector::ReadRelativeOffset(hook::pattern("C6 05 ? ? ? ? 00 E9 ? ? ? ? 48 8B CF E8 ? ? ? ? E9 ? ? ?").get_first<uint8_t>(2)).as_int() + 1));
-        carParameters = reinterpret_cast<const float*>((injector::ReadRelativeOffset(hook::pattern("F3 0F 59 35 ? ? ? ? F3 44 0F 10 44 24 38 F3 44 0F 10 5C 24 34 F3 0F").get_first<uint8_t>(4)).as_int()));
-        auto entryStick = hook::pattern("4C 8B DC 49 89 5B 18 49 89 6B 20 41 56 48 81 EC 90 00 00 00 48 8B 41 18 4D 8B F1").get_first();
-        if (!entryStick)
+        const auto relative = [](const char* signature, size_t offset, ptrdiff_t trailing = 0) -> uintptr_t
+        {
+            const auto operand = FindFirst(signature, offset);
+            return operand ? injector::ReadRelativeOffset(operand).as_int() + trailing : 0;
+        };
+        aimHorizontal = reinterpret_cast<AimAxis>(FindFirst("48 89 5C 24 20 55 41 54 41 55 41 56 41 57 48 8B EC 48 81 EC 80 00 00 00"));
+        disabledControls = reinterpret_cast<uint16_t*>((relative("66 44 09 15 ? ? ? ? E8 ? ? ? ? 44 38 35 ? ? ? ? 4D 8B D6 4C", 4)));
+        timeStep = reinterpret_cast<float*>((relative("F3 44 0F 10 05 ? ? ? ? 48 8D 05 ? ? ? ? F3 0F 10 3D ? ? ? ?", 5)));
+        direction = reinterpret_cast<int*>((relative("8B 05 ? ? ? ? 89 47 3C 0F B6 05 ? ? ? ? 48 69 C8 B8 01 00 00 48", 2)));
+        scriptAngles = reinterpret_cast<bool*>((relative("C6 05 ? ? ? ? 00 E9 ? ? ? ? 48 8B CF E8 ? ? ? ? E9 ? ? ?", 2, 1)));
+        carParameters = reinterpret_cast<const float*>((relative("F3 0F 59 35 ? ? ? ? F3 44 0F 10 44 24 38 F3 44 0F 10 5C 24 34 F3 0F", 4)));
+        auto entryStick = FindFirst("4C 8B DC 49 89 5B 18 49 89 6B 20 41 56 48 81 EC 90 00 00 00 48 8B 41 18 4D 8B F1");
+        if (!aimHorizontal || !disabledControls || !timeStep || !direction || !scriptAngles || !carParameters || !entryStick)
             return;
         entryStickHook = safetyhook::create_inline(entryStick, EntryStickModifier);
         if (!entryStickHook)

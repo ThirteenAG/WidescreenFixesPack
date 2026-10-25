@@ -26,7 +26,7 @@ export struct Screen
     uint32_t pFilmstripTex;
     std::filesystem::path szLoadscPath;
     const float fDefaultARforFOV = 16.0f / 9.0f;
-    float fRawInputMouse;
+    bool bRawInputMouse;
     bool bRawInputMouseRawData;
     bool bDeferredInput;
 } Screen;
@@ -38,6 +38,7 @@ export uint32_t gColor = 0;
 export uint32_t curAmmoInClip = 1;
 export uint32_t curClipCapacity = 1;
 export HWND hGameWindow = NULL;
+export std::function<bool(bool)> NativeWindowsMenuHelp;
 export bool bVideoStartedFromLoadMap = false;
 export std::wstring gCurrentCameraShotName;
 export bool bDisablePreCache = false;

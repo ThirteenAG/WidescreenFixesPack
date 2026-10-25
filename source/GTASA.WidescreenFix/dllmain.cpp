@@ -1,27 +1,44 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
+#include "FixSettings.hpp"
 
 import Legacy;
 import Draw;
 import MenuConstraint;
+
+// The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
+ASI_SETTINGS_EXPORT(FixSettings())
+
 bool bUsingLegacy = false;
 
 void Init()
 {
-    CIniReader reader(L"GTASA.WidescreenFixLegacy.ini");
-    if (std::filesystem::exists(reader.GetIniPath()))
+    FixSettings();
+    asi_settings::LiveLink::Start();
+    bUsingLegacy = FixSettings().Bool("COMPATIBILITY.LegacyMode");
+    if (bUsingLegacy)
     {
-        bUsingLegacy = true;
         InitLegacy();
         return;
     }
 
     auto pattern = hook::pattern("BF ? ? ? ? 83 C4 ? 3B EF 89 44 24");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto WinMainHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         WFP::onInitEvent().executeAll();
     });
 
     pattern = hook::pattern("8D 4C 24 ? 51 FF 15 ? ? ? ? 85 C0");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto MainLoopHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         static std::once_flag of;
@@ -34,12 +51,22 @@ void Init()
     });
 
     pattern = find_pattern("89 1D ? ? ? ? 74 ? 33 F6 8B 86 ? ? ? ? 3B C3 74 ? 50 A1");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         WFP::onBeforeReset().executeAll();
     });
 
     pattern = find_pattern("A1 ? ? ? ? 50 ? ? FF 91 ? ? ? ? C7 05");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         WFP::onEndScene().executeAll();

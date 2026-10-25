@@ -1,7 +1,12 @@
 #include "stdafx.h"
 #include "d3d9.h"
+#include "FixSettings.hpp"
+#include "../Shared/NFS/Cursor.hpp"
 
 import ComVars;
+
+// The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
+ASI_SETTINGS_EXPORT(FixSettings())
 
 std::once_flag of;
 
@@ -13,6 +18,7 @@ void __cdecl MainLoop(float TickerDifference)
         WFP::onGameInitEvent().executeAll();
     });
 
+    CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
 
     static bool oldMenuState = GameFlowManager::IsPaused();
@@ -39,6 +45,7 @@ void __cdecl MiniMainLoop()
         WFP::onGameInitEvent().executeAll();
     });
 
+    CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
 
     hbMiniMainLoop.fun();
@@ -46,6 +53,7 @@ void __cdecl MiniMainLoop()
 
 void Init()
 {
+    NFSCursor::Initialize();
     auto pattern = hook::pattern("A1 ? ? ? ? 68 ? ? ? ? 50 FF 15");
     hWnd.SetAddress(*pattern.get_first<HWND*>(1));
     WindowRect.SetAddress(*pattern.get_first<tagRECT*>(6));
@@ -79,30 +87,18 @@ void Init()
     pattern = hook::pattern("8B 15 ? ? ? ? ? ? ? 8B 41");
     pOptions = *pattern.get_first<void**>(2);
 
-    pattern = hook::pattern("DB 05 ? ? ? ? 56 D8 25");
-    cFEngGameInterface::GetMouseInfo = decltype(cFEngGameInterface::GetMouseInfo)(pattern.get_first());
-
-    pattern = hook::pattern("8B 0D ? ? ? ? 83 C4 ? 8D 54 24 ? 52 C6 44 24");
-    MoviePlayerInstance.SetAddress(*pattern.get_first<void**>(2));
-
     pattern = hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? 5F 5E 59");
     cFEng::pInstance = *pattern.get_first<void**>(2);
     cFEng::MakeLoadedPackagesDirty = (decltype(cFEng::MakeLoadedPackagesDirty))injector::GetBranchDestination(pattern.get_first(6)).as_int();
 
-    pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8B F0 A1 ? ? ? ? 57");
-    CreateResourceFile = (decltype(CreateResourceFile))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+    pattern = hook::pattern("8B 0D ? ? ? ? 83 C4 ? 8D 54 24 ? 52 C6 44 24");
+    MoviePlayerInstance.SetAddress(*pattern.get_first<void**>(2));
 
-    pattern = hook::pattern("E8 ? ? ? ? 6A ? E8 ? ? ? ? 83 C4 ? 85 C0 74 ? 8B 0D");
-    ResourceFileBeginLoading = (decltype(ResourceFileBeginLoading))injector::GetBranchDestination(pattern.get_first(0)).as_int();
-
-    pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 85 C0 75 ? A1 ? ? ? ? 85 C0 8B D0");
-    ServiceResourceLoading = (decltype(ServiceResourceLoading))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+    pattern = hook::pattern("83 3D ? ? ? ? 06 ? ? A1");
+    nGameState.SetAddress(*pattern.get_first<int32_t*>(2));
 
     pattern = hook::pattern("E8 ? ? ? ? C7 44 24 ? ? ? ? ? 8D 44 24");
     FEPackage::ForAllObjects = (decltype(FEPackage::ForAllObjects))injector::GetBranchDestination(pattern.get_first(0)).as_int();
-
-    pattern = hook::pattern("8B 8C 90 ? ? ? ? 85 C9 8D 84 90 ? ? ? ? 75");
-    gActionBindings = *pattern.get_first<ActionBindingData*>(3);
 
     pattern = hook::pattern("A1 ? ? ? ? ? ? 68 ? ? ? ? 50 FF 51 ? A1");
     Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));
@@ -118,6 +114,7 @@ void Init()
     });
 
     WFP::onInitEvent().executeAll();
+    asi_settings::LiveLink::Start();
 
     static auto futures = WFP::onInitEventAsync().executeAllAsync();
 

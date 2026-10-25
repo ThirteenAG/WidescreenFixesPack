@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Input;
 
@@ -119,14 +120,14 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            float fRightStickDeadzone = iniReader.ReadFloat("MISC", "RightStickDeadzone", 10.0f);
+            float fRightStickDeadzone = FixSettings().Float("MISC.RightStickDeadzone");
             fDeadzone = (fRightStickDeadzone > 0.0f) ? fRightStickDeadzone / 200.0f : 0.0f;
 
             Init();
 
             WFP::onGameProcessEvent() += []()
             {
+                fDeadzone = std::clamp(FixSettings().Float("MISC.RightStickDeadzone"), 0.0f, 50.0f) / 200.0f;
                 Update();
             };
         };

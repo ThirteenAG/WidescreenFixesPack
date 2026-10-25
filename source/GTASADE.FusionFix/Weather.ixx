@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
 
 export module Weather;
 
@@ -76,11 +77,11 @@ public:
         {
             if (Settings.visualStyle == VisualStyle::DE)
                 return;
-            auto coloursAddress = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 59 C2 F3 0F 59 CA F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 59 C2 F3 0F 11 0D ? ? ? ? F3 0F 10 0D").get_first<uint8_t>(4);
-            auto nightVisionAddress = hook::pattern("44 88 35 ? ? ? ? 44 88 35 ? ? ? ? 48 8B 87 F0 05 00 00 44 88 35").get_first<uint8_t>(3);
-            auto infraredAddress = hook::pattern("44 88 35 ? ? ? ? 48 8B 87 F0 05 00 00 44 88 35 ? ? ? ? 44 88 35").get_first<uint8_t>(3);
-            auto darknessAddress = hook::pattern("44 88 35 ? ? ? ? 48 8B 48 08 44 88 35 ? ? ? ? 4C 39 71 48 74 ?").get_first<uint8_t>(3);
-            const auto update = hook::pattern("4C 8B DC 55 56 49 8D 6B A1 48 81 EC C8 00 00 00 45 0F 29 4B A8 48 8B 05").get_first();
+            auto coloursAddress = wfp::patterns::First<uint8_t>("F3 0F 10 05 ? ? ? ? F3 0F 10 0D ? ? ? ? F3 0F 59 C2 F3 0F 59 CA F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 59 C2 F3 0F 11 0D ? ? ? ? F3 0F 10 0D", 4);
+            auto nightVisionAddress = wfp::patterns::First<uint8_t>("44 88 35 ? ? ? ? 44 88 35 ? ? ? ? 48 8B 87 F0 05 00 00 44 88 35", 3);
+            auto infraredAddress = wfp::patterns::First<uint8_t>("44 88 35 ? ? ? ? 48 8B 87 F0 05 00 00 44 88 35 ? ? ? ? 44 88 35", 3);
+            auto darknessAddress = wfp::patterns::First<uint8_t>("44 88 35 ? ? ? ? 48 8B 48 08 44 88 35 ? ? ? ? 4C 39 71 48 74 ?", 3);
+            const auto update = wfp::patterns::First("4C 8B DC 55 56 49 8D 6B A1 48 81 EC C8 00 00 00 45 0F 29 4B A8 48 8B 05");
             if (!update || !coloursAddress || !nightVisionAddress || !infraredAddress || !darknessAddress)
                 return;
             colours = reinterpret_cast<uint8_t*>(injector::ReadRelativeOffset(coloursAddress).as_int());

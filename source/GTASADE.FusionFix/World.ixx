@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
 
 export module World;
 
@@ -26,7 +27,8 @@ namespace
             // their proxies, street decals and native interior-area switching.
             // TConsoleVariableData<float> has game/render-thread value copies.
             auto values = *compositionDistance;
-            values[0] = values[1] = 100.0f;
+            *values = 100.0f;
+            values[1] = 100.0f;
         }
     }
     void UpdateComposition(void* world, float timeStep, const void* position, bool force)
@@ -45,8 +47,8 @@ public:
         {
             if (!Settings.classicLODsOnly)
                 return;
-            auto address = hook::pattern("48 8B 05 ? ? ? ? F3 41 0F 10 84 24 30 01 00 00 F3 44 0F 10 15 ? ? ? ? F3 0F 59 C0 4C 89 74 24 48 F3 44 0F 10 18 48 8B 05 ? ? ? ? 44 0F 29 AC 24 10 04 00 00").get_first<uint8_t>(43);
-            auto update = hook::pattern("40 55 41 54 41 55 48 8D AC 24 50 FC FF FF 48 81 EC B0 04 00 00").get_first();
+            auto address = wfp::patterns::First<uint8_t>("48 8B 05 ? ? ? ? F3 41 0F 10 84 24 30 01 00 00 F3 44 0F 10 15 ? ? ? ? F3 0F 59 C0 4C 89 74 24 48 F3 44 0F 10 18 48 8B 05 ? ? ? ? 44 0F 29 AC 24 10 04 00 00", 43);
+            auto update = wfp::patterns::First("40 55 41 54 41 55 48 8D AC 24 50 FC FF FF 48 81 EC B0 04 00 00");
             if (address && update && PrepareClassicLODPools())
             {
                 compositionDistance = reinterpret_cast<float**>(injector::ReadRelativeOffset(address).as_int());

@@ -1,0 +1,11 @@
+{
+  "plugin.name": "Second Sight Widescreen Fix",
+  "page.camera": "Camera",
+  "page.advanced": "Advanced",
+  "ResX": "Resolution width",
+  "ResX.description": "Width in pixels. Zero selects the desktop resolution. Restart required.",
+  "ResY": "Resolution height",
+  "ResY.description": "Height in pixels. Zero selects the desktop resolution. Restart required.",
+  "FOVFactor": "Field of view factor",
+  "FOVFactor.description": "Multiplies the corrected field of view. 1.0 keeps the intended framing; larger values widen the view. Wider views may reveal through-wall rendering in some locations."
+}

@@ -1,0 +1,601 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Mafia",
+        "exe": [
+          "Game.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "CAMERA.FreeCamera",
+      "type": "bool",
+      "default": true,
+      "label": "@CAMERA.FreeCamera",
+      "description": "@CAMERA.FreeCamera.description",
+      "page": "camera",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "CAMERA.CameraReturnTimeout",
+      "type": "float",
+      "default": 3.0,
+      "label": "@CAMERA.CameraReturnTimeout",
+      "description": "@CAMERA.CameraReturnTimeout.description",
+      "page": "camera",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 3.0,
+        "recommended": 3.0,
+        "enhanced": 3.0
+      },
+      "min": 0,
+      "max": 60,
+      "step": 0.1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.FreeCamera",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.CameraReturnSpeed",
+      "type": "float",
+      "default": 2.0,
+      "label": "@CAMERA.CameraReturnSpeed",
+      "description": "@CAMERA.CameraReturnSpeed.description",
+      "page": "camera",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 2.0,
+        "recommended": 2.0,
+        "enhanced": 2.0
+      },
+      "min": 0,
+      "max": 20,
+      "step": 0.1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "setting": "CAMERA.FreeCamera",
+        "equals": 1
+      }
+    },
+    {
+      "id": "MAIN.PortableSettings",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.PortableSettings",
+      "description": "@MAIN.PortableSettings.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "label": "@windowmode",
+      "description": "@windowmode.description",
+      "page": "display",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@windowmode.0"
+        },
+        {
+          "value": 1,
+          "label": "@windowmode.1"
+        },
+        {
+          "value": 2,
+          "label": "@windowmode.2"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.LeftStickDeadzone",
+      "type": "float",
+      "default": 10.0,
+      "label": "@MAIN.LeftStickDeadzone",
+      "description": "@MAIN.LeftStickDeadzone.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 10.0,
+        "recommended": 10.0,
+        "enhanced": 10.0
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.RightStickDeadzone",
+      "type": "float",
+      "default": 10.0,
+      "label": "@MAIN.RightStickDeadzone",
+      "description": "@MAIN.RightStickDeadzone.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 10.0,
+        "recommended": 10.0,
+        "enhanced": 10.0
+      },
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "bool",
+      "default": false,
+      "label": "@GRAPHICS.ConsoleGamma",
+      "description": "@GRAPHICS.ConsoleGamma.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "GRAPHICS.AntiAliasing",
+      "type": "choice",
+      "default": 1,
+      "label": "@GRAPHICS.AntiAliasing",
+      "description": "@GRAPHICS.AntiAliasing.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 1,
+          "label": "SMAA"
+        }
+      ]
+    },
+    {
+      "id": "GRAPHICS.RestoreEyeAnimations",
+      "type": "bool",
+      "default": true,
+      "label": "@GRAPHICS.RestoreEyeAnimations",
+      "description": "@GRAPHICS.RestoreEyeAnimations.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "GRAPHICS.RestoreCarScratches",
+      "type": "bool",
+      "default": true,
+      "label": "@GRAPHICS.RestoreCarScratches",
+      "description": "@GRAPHICS.RestoreCarScratches.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "HUD.RadarMap",
+      "type": "bool",
+      "default": true,
+      "label": "@HUD.RadarMap",
+      "description": "@HUD.RadarMap.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "WIDESCREEN.WidescreenHUD",
+      "type": "bool",
+      "default": true,
+      "label": "@WIDESCREEN.WidescreenHUD",
+      "description": "@WIDESCREEN.WidescreenHUD.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "WIDESCREEN.WidescreenMap",
+      "type": "bool",
+      "default": true,
+      "label": "@WIDESCREEN.WidescreenMap",
+      "description": "@WIDESCREEN.WidescreenMap.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@fmv",
+      "description": "@fmv.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@fmv.0"
+        },
+        {
+          "value": 1,
+          "label": "@fmv.1"
+        },
+        {
+          "value": 2,
+          "label": "@fmv.2"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "label": "@CUTSCENES.CutsceneBorders",
+      "description": "@CUTSCENES.CutsceneBorders.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@borders.0"
+        },
+        {
+          "value": 1,
+          "label": "@borders.1"
+        },
+        {
+          "value": 2,
+          "label": "@borders.2"
+        },
+        {
+          "value": 3,
+          "label": "@borders.3"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.AnimatedCutsceneBorders",
+      "type": "bool",
+      "default": true,
+      "label": "@borderanimation",
+      "description": "@borderanimation.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      },
+      "enabledIf": {
+        "setting": "MAIN.CutsceneBorders",
+        "notEquals": 0
+      }
+    },
+    {
+      "id": "DRAW_DISTANCE.Enable",
+      "type": "bool",
+      "default": true,
+      "label": "@DRAW_DISTANCE.Enable",
+      "description": "@DRAW_DISTANCE.Enable.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "GRAPHICS.DrawDistance",
+      "type": "float",
+      "default": 600.0,
+      "label": "@GRAPHICS.DrawDistance",
+      "description": "@GRAPHICS.DrawDistance.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 600.0,
+        "recommended": 600.0,
+        "enhanced": 600.0
+      },
+      "min": 0,
+      "max": 10000,
+      "step": 0.1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "setting": "DRAW_DISTANCE.Enable",
+        "equals": 1
+      }
+    },
+    {
+      "id": "DRAW_DISTANCE.SkipMinDistance",
+      "type": "float",
+      "default": 20.0,
+      "label": "@DRAW_DISTANCE.SkipMinDistance",
+      "description": "@DRAW_DISTANCE.SkipMinDistance.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 10000,
+      "step": 0.1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "setting": "DRAW_DISTANCE.Enable",
+        "equals": 1
+      }
+    },
+    {
+      "id": "DRAW_DISTANCE.SkipMaxDistance",
+      "type": "float",
+      "default": 450.0,
+      "label": "@DRAW_DISTANCE.SkipMaxDistance",
+      "description": "@DRAW_DISTANCE.SkipMaxDistance.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 10000,
+      "step": 0.1,
+      "control": [
+        "stepper"
+      ],
+      "enabledIf": {
+        "setting": "DRAW_DISTANCE.Enable",
+        "equals": 1
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.FPSLimit",
+      "description": "@MAIN.FPSLimit.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      },
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "menu",
+      "visibility": "editor",
+      "maxLength": 32
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@hudconstraint",
+      "description": "@hudconstraint.description",
+      "page": "display",
+      "apply": "live",
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
+      "enabledIf": {
+        "setting": "WIDESCREEN.WidescreenHUD",
+        "equals": true
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@fovfactor",
+      "description": "@fovfactor.description",
+      "page": "camera",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@skipintro",
+      "description": "@skipintro.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@pauseonfocusloss",
+      "description": "@pauseonfocusloss.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "editor",
+      "apply": "live"
+    }
+  ]
+}

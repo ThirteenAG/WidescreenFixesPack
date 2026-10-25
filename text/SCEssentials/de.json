@@ -1,0 +1,23 @@
+{
+  "plugin.name": "Splinter Cell Essentials PPSSPP Fusion Fix",
+  "SkipIntro": "Intro überspringen",
+  "SkipIntro.description": "Überspringt das erste Video des Loaders; das erforderliche zweite Video bleibt erhalten. Nach einer Änderung das emulierte Spiel neu starten.",
+  "StickDeadzone": "Stick-Totzone",
+  "StickDeadzone.description": "Legt die Totzone beider Analogsticks fest. Nach einer Änderung das emulierte Spiel neu starten.",
+  "SpeedStickControl": "Analoges Bewegungstempo",
+  "SpeedStickControl.description": "Steuert die Bewegungsgeschwindigkeit mit dem linken Stick. Nach einer Änderung das emulierte Spiel neu starten.",
+  "Enable60FPS": "60 FPS",
+  "Enable60FPS.description": "Nutzt die native Simulation nach verstrichener Zeit mit dem 60-FPS-Begrenzer der Hauptschleife. Nach einer Änderung das emulierte Spiel neu starten.",
+  "UnthrottleEmuDuringLoading": "Schnelleres Laden",
+  "UnthrottleEmuDuringLoading.description": "Hebt die Begrenzung während des Ladens auf. Nach einer Änderung das emulierte Spiel neu starten.",
+  "FOVFactor": "FOV-Faktor",
+  "FOVFactor.description": "Skaliert das Sichtfeld im Spiel; Nahansichten von Geräten behalten ihren nativen Overlay-Ausschnitt. Nach einer Änderung das emulierte Spiel neu starten.",
+  "ContainFullscreenImages": "Vollbilder einpassen",
+  "ContainFullscreenImages.description": "Zeigt Ladebilder, Briefing-Bildschirme und untertitelte Videos im nativen Seitenverhältnis mit seitlichen Balken. Nach einer Änderung das emulierte Spiel neu starten.",
+  "HudScale": "HUD-Größe",
+  "HudScale.description": "Skaliert das HUD innerhalb seiner Fläche mit korrektem Seitenverhältnis. Nach einer Änderung das emulierte Spiel neu starten.",
+  "page.gameplay": "Spiel",
+  "page.controls": "Steuerung",
+  "page.camera": "Kamera",
+  "page.display": "Anzeige"
+}

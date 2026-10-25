@@ -174,8 +174,8 @@ namespace BlacklistControls
             return;
         stateFunctions[Index][1] = *reinterpret_cast<StateFunction*>(vtable + 41 * 4);
         stateFunctions[Index][0] = *reinterpret_cast<StateFunction*>(vtable + 43 * 4);
-        injector::WriteMemory(vtable + 41 * 4, &CoverStateFunction<Index, true>, true);
-        injector::WriteMemory(vtable + 43 * 4, &CoverStateFunction<Index, false>, true);
+        ProtectedGameRef<decltype(&CoverStateFunction<Index, true>)>(reinterpret_cast<decltype(&CoverStateFunction<Index, true>)*>(vtable + 41 * 4)) = &CoverStateFunction<Index, true>;
+        ProtectedGameRef<decltype(&CoverStateFunction<Index, false>)>(reinterpret_cast<decltype(&CoverStateFunction<Index, false>)*>(vtable + 43 * 4)) = &CoverStateFunction<Index, false>;
     }
 
     template<size_t... Index>
@@ -213,7 +213,7 @@ namespace BlacklistControls
             if (auto vtable = FindVtable(DropStates[Index]))
             {
                 dropBeginState[Index] = *reinterpret_cast<StateFunction*>(vtable + 41 * 4);
-                injector::WriteMemory(vtable + 41 * 4, &DropStateBegin<Index>, true);
+                ProtectedGameRef<decltype(&DropStateBegin<Index>)>(reinterpret_cast<decltype(&DropStateBegin<Index>)*>(vtable + 41 * 4)) = &DropStateBegin<Index>;
             }
         }(), ...);
     }

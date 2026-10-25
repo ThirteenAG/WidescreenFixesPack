@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
 
 export module Cam;
@@ -17,6 +18,11 @@ public:
         WFP::onGameInitEvent() += []()
         {
             auto pattern = hook::pattern("74 ? D9 05 ? ? ? ? D8 0D ? ? ? ? D8 0D");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             struct Process_FollowPedWithMouse
             {
                 void operator()(injector::reg_pack& regs)
@@ -29,6 +35,11 @@ public:
             }; injector::MakeInline<Process_FollowPedWithMouse>(pattern.get_first(0), pattern.get_first(20));
 
             pattern = hook::pattern("D9 44 24 ? D8 CE D9 1C 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             struct Process_FollowPedWithMouse2
             {
                 void operator()(injector::reg_pack& regs)

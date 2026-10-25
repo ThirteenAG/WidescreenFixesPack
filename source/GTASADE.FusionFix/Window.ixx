@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "FixSettings.hpp"
 
 export module Window;
 
@@ -28,7 +29,7 @@ export void LockCursor()
 {
     std::scoped_lock lock(cursorMutex);
     const auto window = gameWindow.load();
-    if (!captureCursor.load() || !window || window != GetForegroundWindow())
+    if (!FixSettings().Bool("MAIN.ConfineCursor") || !captureCursor.load() || !window || window != GetForegroundWindow())
     {
         // An inactive game must not release another application's capture.
         if (ownsCursorClip)
@@ -93,6 +94,7 @@ class WindowModule
 public:
     WindowModule()
     {
+        FixSettings().OnChange("MAIN.ConfineCursor", []() { LockCursor(); });
         WFP::onInitEvent() += []()
         {
             if (auto address = WindowProcedureAddress())

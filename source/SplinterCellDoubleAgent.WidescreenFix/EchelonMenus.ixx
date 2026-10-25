@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "FixSettings.hpp"
 
 export module EchelonMenus;
 
@@ -8,13 +9,13 @@ import ComVars;
 
 export void InitEchelonMenus()
 {
-    CIniReader iniReader("");
-    bool bSkipIntro = iniReader.ReadInteger("MISC", "SkipIntro", 1);
+
+    bool bSkipIntro = FixSettings().Bool("MAIN.SkipIntro");
 
     if (bSkipIntro)
     {
         auto pattern = hook::module_pattern(GetModuleHandle(L"EchelonMenus"), "75 0A C7 05 ? ? ? ? ? ? ? ? 8B 4D F4");
-        injector::WriteMemory(pattern.get_first(8), 5, true);
+        ProtectedGameRef<int>(pattern.get_first<int>(8)) = 5;
 
 #ifdef DEBUG
         {
@@ -31,21 +32,36 @@ export void InitEchelonMenus()
 
     static std::vector<std::string> list;
     GetResolutionsList(list);
+    if (list.size() < 7)
+    {
+        OutputDebugStringA("Double Agent: fewer than seven display modes; native resolution labels retained.\n");
+        return;
+    }
     std::swap(list[list.size() - 5], list[list.size() - 6]);
     list[list.size() - 5] = std::format("{}x{}", Screen.Width, Screen.Height);
 
     auto pattern = hook::module_pattern(GetModuleHandle(L"EchelonMenus"), "C6 45 FC 10 33 F6 83 FE 07");
+    if (pattern.size() != 1)
+    {
+        OutputDebugStringA("Double Agent: resolution label pattern unavailable.\n");
+        return;
+    }
     auto rpattern = hook::range_pattern((uintptr_t)pattern.get_first(-850), (uintptr_t)pattern.get_first(0), "C7 45 E8");
+    if (rpattern.size() > list.size())
+    {
+        OutputDebugStringA("Double Agent: resolution label count unavailable.\n");
+        return;
+    }
     for (size_t i = 0; i < rpattern.size(); ++i)
     {
-        injector::WriteMemory(rpattern.get(i).get<uint32_t>(3), &list[list.size() - 1 - i][0], true);
+        ProtectedGameRef<char*>(rpattern.get(i).get<char*>(3)) = &list[list.size() - 1 - i][0];
     }
 
     static const auto wsz0 = 0;
     rpattern = hook::range_pattern((uintptr_t)pattern.get_first(-850), (uintptr_t)pattern.get_first(0), "8D ? E4 68");
     for (size_t i = 0; i < rpattern.size(); ++i)
     {
-        injector::WriteMemory(rpattern.get(i).get<uint32_t>(4), &wsz0, true);
+        ProtectedGameRef<const int*>(rpattern.get(i).get<const int*>(4)) = &wsz0;
     }
 
     struct ResListHook

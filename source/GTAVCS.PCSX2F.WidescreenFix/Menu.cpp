@@ -2,9 +2,11 @@
 #include "ButtonIcons.hpp"
 #include "../Shared/Console/Text.hpp"
 #include <cstring>
+#include "Settings.hpp"
+#include "../Shared/Console/PS2Settings.hpp"
+PCSX2F_CFG_PEER_SETTINGS();
 extern "C" {
 #include "../../external/injector/include/ps2/plugin_settings.h"
-PCSX2F_SETTINGS_API();
 }
 
 namespace vcs {
@@ -41,20 +43,55 @@ static_assert(sizeof(MenuItem) == 220 && sizeof(Widget) == 240 && sizeof(MenuPag
 // Plugin widgets use hook ids the game never assigns. Binding rows are Binding+row.
 enum Option { HudSize = 0x100, FastLoading, MouseSensitivity, InvertMouse, FrameRate,
     DisplayOptions, ControlOptions, Bindings, NextBindings, Back, CutsceneBorders,
-    PcControls, ResetBindings, OptionEnd, Binding = 0x200 };
+    PcControls, ResetBindings, Preset, ApplyPreset, LightsPage, VehicleLights, LightsDefaults, FixPage, FixDefaults, OptionEnd, Binding = 0x200 };
 constexpr unsigned widgetCount = OptionEnd - HudSize;
 constexpr unsigned maxItems = 32, maxPages = 4;
 constexpr char keys[4][16] = {"WF_HUD_SIZE", "WF_FAST_LOADING", "WF_MOUSE_SPEED", "WF_INVERT_MOUSE"};
 constexpr char16_t english[4][24] = {u"HUD size", u"Fast loading", u"Mouse sensitivity", u"Invert mouse Y"};
 constexpr unsigned extraCount = OptionEnd - FrameRate;
 constexpr char extraKeys[extraCount][20] = {"WF_FRAME_RATE", "WF_DISPLAY_OPTIONS", "WF_CONTROL_OPTIONS", "WF_BINDINGS",
-    "WF_NEXT_BINDINGS", "WF_BACK", "WF_CUTSCENE_BORDERS", "WF_PC_CONTROLS", "WF_RESET_BINDINGS"};
-constexpr char16_t extraText[extraCount][24] = {u"Frame rate", u"More display options", u"PC controls", u"Key bindings",
-    u"Next page", u"Back", u"Cutscene borders", u"Keyboard and mouse", u"Reset to defaults"};
+    "WF_NEXT_BINDINGS", "WF_BACK", "WF_CUTSCENE_BORDERS", "WF_PC_CONTROLS", "WF_RESET_BINDINGS", "WF_PRESET", "WF_APPLY_PRESET", "WF_LIGHTS_PAGE", "WF_LIGHTS", "WF_LIGHTS_DEFAULTS",
+    "WF_FIX_PAGE", "WF_FIX_DEFAULTS"};
+constexpr char16_t extraText[extraCount][24] = {u"Frame rate", u"Plugins", u"PC controls", u"Key bindings",
+    u"Next page", u"Back", u"Cutscene borders", u"Keyboard and mouse", u"Reset to defaults", u"Preset", u"Apply preset", u"Improved vehicle lights",
+    u"Lights (restart):", u"Restore defaults", u"Widescreen fix", u"Restore defaults"};
+constexpr char boolKeys[2][16] = {"WF_BOOL_OFF", "WF_BOOL_ON"};
+constexpr char16_t boolText[2][4] = {u"Off", u"On"};
+constexpr char bordersKeys[4][16] = {"WF_BORDERS_OFF", "WF_BORDERS_LB", "WF_BORDERS_PB", "WF_BORDERS_BOTH"};
+constexpr char16_t bordersText[4][12] = {u"Off", u"Letterbox", u"Pillarbox", u"Both"};
 constexpr char fpsKeys[2][12] = {"WF_FPS_30", "WF_FPS_60"};
 constexpr char16_t fpsText[2][4] = {u"30", u"60"};
+enum class MenuLanguage : uint8_t { Automatic, English };
+struct MenuTextState {
+    MenuLanguage requested = MenuLanguage::Automatic;
+    MenuLanguage catalog = MenuLanguage::English;
+} menuText;
+MenuLanguage ParseLanguage(const char* value) {
+    if (!value) return MenuLanguage::Automatic;
+    while (*value == ' ' || *value == '\t') ++value;
+    if (value[0] != 'e' || value[1] != 'n') return MenuLanguage::Automatic;
+    value += 2;
+    const bool separated = *value == ' ' || *value == '\t';
+    while (*value == ' ' || *value == '\t' || *value == '\r') ++value;
+    return !*value || (separated && *value == ';') ? MenuLanguage::English : MenuLanguage::Automatic;
+}
+void ReloadMenuLanguage() {
+    // One read-only own-CFG request in static module storage, never a full Load.
+    static PCSX2FIniRequest request;
+    request = {}; request.size = sizeof(request); request.version = 1;
+    request.operation = PCSX2F_SETTINGS_READ; request.count = 1;
+    std::strcpy(request.entries[0].section, "MAIN"); std::strcpy(request.entries[0].key, "TextLanguage");
+    const auto status = console::ps2settings::request(request);
+    request.entries[0].value[sizeof(request.entries[0].value) - 1] = 0;
+    menuText.requested = ParseLanguage(status == PCSX2F_SETTINGS_OK ? request.entries[0].value : config::values[10].value);
+    // English is the only shipped host/sibling catalog; Auto falls back to it.
+    switch (menuText.requested) {
+    case MenuLanguage::Automatic: case MenuLanguage::English: menuText.catalog = MenuLanguage::English; break;
+    }
+}
 bool IsAction(unsigned option) {
-    return (option >= DisplayOptions && option <= Back) || option == ResetBindings;
+    return (option >= DisplayOptions && option <= Back) || option == ResetBindings || option == ApplyPreset || option == LightsPage ||
+        option == LightsDefaults || option == FixPage || option == FixDefaults;
 }
 bool IsSlider(unsigned option) { return option == HudSize || option == MouseSensitivity; }
 
@@ -72,7 +109,11 @@ constexpr unsigned bindingsPerPage = 9;
 unsigned BindingPages() { return (available.count + bindingsPerPage - 1) / bindingsPerPage; }
 constexpr char bindingLabels[bindingsPerPage][16] = {"WF_BIND0", "WF_BIND1", "WF_BIND2", "WF_BIND3", "WF_BIND4", "WF_BIND5", "WF_BIND6", "WF_BIND7", "WF_BIND8"};
 constexpr char bindingValues[bindingsPerPage][16] = {"WF_KEY0", "WF_KEY1", "WF_KEY2", "WF_KEY3", "WF_KEY4", "WF_KEY5", "WF_KEY6", "WF_KEY7", "WF_KEY8"};
-constexpr unsigned actionWidgets = 6;
+constexpr unsigned actionWidgets = 12;
+constexpr char presetKeys[4][16] = {"WF_CUSTOM", "WF_VANILLA", "WF_RECOMMENDED", "WF_ENHANCED"};
+constexpr char16_t presetText[4][16] = {u"Custom", u"Vanilla", u"Recommended", u"Enhanced"};
+constexpr char lightsKeys[2][16] = {"WF_LIGHTS_OFF", "WF_LIGHTS_ON"};
+constexpr char16_t lightsText[2][4] = {u"Off", u"On"};
 struct PageExtension {
     MenuPage* page = nullptr;
     List<MenuItem*> original{};
@@ -81,11 +122,12 @@ struct PageExtension {
     MenuItem* items[maxItems]{};
     Widget widgets[widgetCount]{};
     Widget hints[bindingsPerPage]{};
-    String hintValues[bindingsPerPage]{}, fpsValues[2]{};
-    String actionValues[actionWidgets]{};
+    String hintValues[bindingsPerPage]{}, fpsValues[2]{}, presetValues[4]{}, boolValues[2]{}, bordersValues[4]{};
+    String actionValues[actionWidgets]{}, lightsValues[2]{};
     MenuItem* submenuItems[maxItems]{};
     List<MenuItem*> mainItems{};
     MenuItem* mainSelection = nullptr;
+    // 0 main list, 1 plugin list, 2 bindings, 3 PC controls, 4 lights, 5 the fix's page
     unsigned mode = 0, bindingPage = 0;
     bool controls = false;
 };
@@ -93,6 +135,54 @@ PageExtension pages[maxPages];
 Widget *sliderPrototype = nullptr, *togglePrototype = nullptr;
 PageExtension* textPage = nullptr;
 bool dirty = false;
+int selectedPreset = 0;
+bool confirmPreset = false, confirmDefaults = false;
+// Requested restart state only; the host resolves this exact loaded sibling.
+console::ps2settings::RestartBoolPeer lightsPeer("GTAVCS.PCSX2F.ImVehLM.elf", "MAIN", "VehicleLights");
+bool lightsAvailable = false, requestedLights = false, confirmLightsDefaults = false, lightsWriteRefused = false;
+bool ReadLights() {
+    bool requested = false;
+    const bool available = lightsPeer.Read(requested);
+    if (!available || available != lightsAvailable || requested != requestedLights) confirmLightsDefaults = false;
+    lightsAvailable = available;
+    if (available) requestedLights = requested;
+    return available;
+}
+bool RequestLights(bool requested) {
+    if (!ReadLights()) { lightsWriteRefused = true; return false; }
+    const bool saved = lightsPeer.Write(requested);
+    lightsWriteRefused = !saved;
+    if (saved) { requestedLights = requested; confirmLightsDefaults = false; }
+    else ReadLights();
+    return saved;
+}
+void RefreshLights(PageExtension& extension) {
+    auto& lights = extension.widgets[VehicleLights - HudSize];
+    lights.toggle.index = lights.toggle.previous = uint8_t(requestedLights);
+}
+// The descriptor's presets: 1 vanilla, 2 recommended (the defaults), 3 enhanced (0 = custom).
+// Controls, sensitivity, bindings and Skip Intro (not in this menu) are the player's choice; no preset changes them.
+struct PresetValues { bool sixtyFPS, unthrottle; float hudScale; int cutsceneBorders; };
+constexpr PresetValues presetValues[4] = {{}, {false, false, 1.0f, 1}, {false, true, 1.0f, 3}, {false, true, 1.0f, 3}};
+constexpr int recommendedPreset = 2;
+bool PresetMatches(int preset) {
+    if (preset < 1 || preset > 3) return false;
+    const auto& p = presetValues[preset];
+    return settings.sixtyFPS == p.sixtyFPS && settings.unthrottle == p.unthrottle &&
+        settings.cutsceneBorders == p.cutsceneBorders && std::fabs(settings.hudScale - p.hudScale) <= 0.001f;
+}
+int MatchingPreset() { return PresetMatches(2) ? 2 : PresetMatches(1) ? 1 : PresetMatches(3) ? 3 : 0; }
+// Press once to arm, again to apply; nothing happens when the values already match.
+bool ApplyPresetValues(int preset, bool& confirm) {
+    if (preset < 1 || preset > 3 || PresetMatches(preset)) { confirm = false; return false; }
+    if (!confirm) { confirm = true; return false; }
+    const auto& p = presetValues[preset];
+    settings.sixtyFPS = p.sixtyFPS; settings.unthrottle = p.unthrottle;
+    settings.hudScale = p.hudScale; settings.cutsceneBorders = p.cutsceneBorders;
+    ApplyFrameRate(); dirty = true; confirm = false;
+    return true;
+}
+unsigned ParentMode(unsigned mode) { return mode == 2 ? 3 : mode == 3 ? 5 : mode == 4 || mode == 5 ? 1 : 0; }
 unsigned renderedBindings = 0;
 // Key capture of the bindings page.
 unsigned bindingSlot = 0, captureFrames = 0;
@@ -139,6 +229,8 @@ int Value(unsigned option) {
     case FrameRate: return settings.sixtyFPS;
     case CutsceneBorders: return settings.cutsceneBorders;
     case PcControls: return settings.pcControls;
+    case Preset: return selectedPreset;
+    case VehicleLights: return requestedLights;
     default: return 0;
     }
 }
@@ -146,13 +238,24 @@ int GetValue(MenuItem* item, void* text) {
     return item->hook >= HudSize ? Value(item->hook) : getValue.call(item, text);
 }
 void SetValue(MenuItem* item, int value) {
+    if (item->hook == VehicleLights) {
+        auto* extension = Owner(item);
+        if (!extension || extension->mode != 4 || extension->page->selected != item ||
+            item != &extension->widgets[item->hook - HudSize].item) return;
+        if (value == 0 || value == 1) RequestLights(value != 0);
+        else lightsWriteRefused = true;
+        confirmLightsDefaults = false;
+        RefreshLights(*extension);
+        return;
+    }
     switch (item->hook) {
+    case Preset: selectedPreset = value; confirmPreset = false; return;
     case HudSize: settings.hudScale = console::bounded(value * 0.01f, 0.5f, 1.5f, 1.0f); break;
     case FastLoading: settings.unthrottle = value != 0; break;
     case MouseSensitivity: settings.mouseSensitivity = console::bounded(value * 0.0001f, 0.0001f, 0.02f, 0.002f); break;
     case InvertMouse: settings.invertMouse = value != 0; break;
     case FrameRate: settings.sixtyFPS = value != 0; ApplyFrameRate(); break;
-    case CutsceneBorders: settings.cutsceneBorders = value != 0; break;
+    case CutsceneBorders: settings.cutsceneBorders = value >= 0 && value <= 3 ? value : 3; break;
     case PcControls:
         if (settings.pcControls == (value != 0)) return;
         settings.pcControls = value != 0;
@@ -160,6 +263,7 @@ void SetValue(MenuItem* item, int value) {
         break;
     default: setValue.call(item, value); return;
     }
+    selectedPreset = MatchingPreset(); confirmPreset = false; confirmDefaults = false;
     dirty = true;
 }
 // Index into the available actions for a binding row of a page, or -1.
@@ -203,10 +307,24 @@ const char16_t* BindingText(unsigned row, bool focused) {
 const uint16_t* GetText(void* text, const char* key) {
     // Multistate widgets copy their value key before looking up its text.
     // Match our key contents; pointer identity only works for the item label.
-    if (key && key[0] == 'W' && key[1] == 'F' && key[2] == '_') {
+    if (menuText.catalog == MenuLanguage::English && key && key[0] == 'W' && key[1] == 'F' && key[2] == '_') {
         for (unsigned i=0; i<4; ++i) if (!std::strcmp(key, keys[i])) return reinterpret_cast<const uint16_t*>(english[i]);
-        for (unsigned i=0; i<extraCount; ++i) if (!std::strcmp(key, extraKeys[i])) return reinterpret_cast<const uint16_t*>(extraText[i]);
+        for (unsigned i=0; i<extraCount; ++i) if (!std::strcmp(key, extraKeys[i])) {
+            if (i == ApplyPreset - FrameRate && confirmPreset) return reinterpret_cast<const uint16_t*>(u"Confirm preset");
+            if (i == FixDefaults - FrameRate && confirmDefaults) return reinterpret_cast<const uint16_t*>(u"Confirm defaults");
+            if (i == LightsDefaults - FrameRate) {
+                if (!lightsAvailable) return reinterpret_cast<const uint16_t*>(u"Unavailable");
+                if (lightsWriteRefused) return reinterpret_cast<const uint16_t*>(u"Write refused");
+                if (confirmLightsDefaults) return reinterpret_cast<const uint16_t*>(u"Confirm defaults");
+            }
+            return reinterpret_cast<const uint16_t*>(extraText[i]);
+        }
+        for (unsigned i=0; i<4; ++i) if (!std::strcmp(key, presetKeys[i])) return reinterpret_cast<const uint16_t*>(presetText[i]);
+        for (unsigned i=0; i<2; ++i) if (!std::strcmp(key, boolKeys[i])) return reinterpret_cast<const uint16_t*>(boolText[i]);
         for (unsigned i=0; i<2; ++i) if (!std::strcmp(key, fpsKeys[i])) return reinterpret_cast<const uint16_t*>(fpsText[i]);
+        for (unsigned i=0; i<4; ++i) if (!std::strcmp(key, bordersKeys[i])) return reinterpret_cast<const uint16_t*>(bordersText[i]);
+        for (unsigned i=0; i<2; ++i) if (!std::strcmp(key, lightsKeys[i]))
+            return reinterpret_cast<const uint16_t*>(lightsAvailable ? lightsText[i] : u"Unavailable");
         if (textPage && textPage->mode == 2) for (unsigned i=0; i<bindingsPerPage; ++i) {
             const int action = RowAction(*textPage, i);
             if (action < 0) break;
@@ -250,9 +368,15 @@ void InitializeWidget(Widget& widget, const Widget& prototype, unsigned option, 
 }
 Widget& WidgetFor(PageExtension& extension, unsigned option) { return extension.widgets[option - HudSize]; }
 void OpenSubmenu(PageExtension& extension, unsigned mode) {
+    if (!extension.mode && mode == 1) ReloadMenuLanguage();
     CancelCapture();
+    // Synchronous host file requests occur only at page/input boundaries.
+    if (mode == 1 || mode == 4) ReadLights();
+    confirmLightsDefaults = false; lightsWriteRefused = false;
     auto& page = *extension.page;
     if (!extension.mode) extension.mainSelection = page.selected;
+    if (mode == 5) selectedPreset = MatchingPreset();
+    confirmPreset = false; confirmDefaults = false;
     extension.mode = mode;
     if (!mode) {
         page.items = extension.mainItems;
@@ -266,7 +390,13 @@ void OpenSubmenu(PageExtension& extension, unsigned mode) {
     unsigned row = 0;
     const int step = mode == 2 ? 15 : 17;
     const auto add = [&](MenuItem* item) { item->y = 46 + int(row++) * step; extension.submenuItems[count++] = item; };
-    const auto option = [&](unsigned id) { add(&WidgetFor(extension, id).item); };
+    const auto option = [&](unsigned id) {
+        auto& widget = WidgetFor(extension, id);
+        if (IsSlider(id)) widget.slider.value = console::bounded(float(Value(id) - widget.slider.minimum) /
+            float(widget.slider.maximum - widget.slider.minimum), 0.0f, 1.0f, 0.5f);
+        else if (!IsAction(id)) widget.toggle.index = widget.toggle.previous = uint8_t(Value(id));
+        add(&widget.item);
+    };
     if (mode == 2) {
         for (unsigned i=0; i<bindingsPerPage && RowAction(extension, i) >= 0; ++i) {
             // Refresh the multistate value so it never indexes past its strings.
@@ -275,10 +405,16 @@ void OpenSubmenu(PageExtension& extension, unsigned mode) {
         }
         if (BindingPages() > 1) option(NextBindings);
         option(ResetBindings);
-    } else if (extension.controls) {
+    } else if (mode == 4) {
+        option(VehicleLights); option(LightsDefaults);
+    } else if (mode == 3) {
         option(PcControls); option(MouseSensitivity); option(InvertMouse); option(Bindings);
+    } else if (mode == 5) {
+        option(Preset); option(ApplyPreset); option(FrameRate); option(HudSize); option(FastLoading); option(CutsceneBorders); option(ControlOptions); option(FixDefaults);
     } else {
-        option(HudSize); option(FastLoading); option(CutsceneBorders);
+        // The plugin list: this fix first, then the loaded siblings.
+        option(FixPage);
+        if (lightsAvailable) option(LightsPage);
     }
     option(Back);
     page.items = {extension.submenuItems, extension.submenuItems+count, 0, extension.submenuItems+maxItems};
@@ -302,9 +438,8 @@ void Attach(MenuPage* page) {
     const bool controls = page->name.begin && std::strncmp(page->name.begin, "CONTROLS_PAGE", 13) == 0;
     if (brightness && wide && wide->toggle.count == 2) {
         sliderPrototype = brightness; togglePrototype = wide;
-    } else if (controls) {
-        brightness = sliderPrototype; wide = togglePrototype;
     } else return;
+    if (controls) return;
     if (!brightness || !wide) return;
     PageExtension* extension = nullptr;
     for (auto& candidate : pages) {
@@ -319,8 +454,27 @@ void Attach(MenuPage* page) {
     extension->mode = extension->bindingPage = 0;
     for (unsigned i=0; i<widgetCount; ++i)
         InitializeWidget(extension->widgets[i], IsSlider(HudSize+i) ? *brightness : *wide, HudSize+i, wide->item);
+    for (unsigned i=0; i<2; ++i) extension->boolValues[i] = Literal(boolKeys[i]);
+    // Own boolean controls must not inherit the game's translated value keys.
+    for (unsigned option=HudSize; option<OptionEnd; ++option)
+        if (option == FastLoading || option == InvertMouse || option == PcControls) {
+            auto& widget = WidgetFor(*extension, option);
+            widget.toggle.strings = {extension->boolValues,extension->boolValues+2,0,extension->boolValues+2};
+            widget.toggle.count = 2;
+        }
+    for (unsigned i=0; i<4; ++i) extension->bordersValues[i] = Literal(bordersKeys[i]);
+    auto& borders = WidgetFor(*extension, CutsceneBorders);
+    borders.toggle.strings = {extension->bordersValues,extension->bordersValues+4,0,extension->bordersValues+4};
+    borders.toggle.count = 4;
     extension->fpsValues[0] = Literal(fpsKeys[0]); extension->fpsValues[1] = Literal(fpsKeys[1]);
     WidgetFor(*extension, FrameRate).toggle.strings = {extension->fpsValues,extension->fpsValues+2,0,extension->fpsValues+2};
+    for (unsigned i=0; i<4; ++i) extension->presetValues[i] = Literal(presetKeys[i]);
+    WidgetFor(*extension, Preset).toggle.strings = {extension->presetValues,extension->presetValues+4,0,extension->presetValues+4};
+    WidgetFor(*extension, Preset).toggle.count = 4;
+    for (unsigned i=0; i<2; ++i) extension->lightsValues[i] = Literal(lightsKeys[i]);
+    auto& lights = WidgetFor(*extension, VehicleLights);
+    lights.toggle.strings = {extension->lightsValues,extension->lightsValues+2,0,extension->lightsValues+2};
+    lights.toggle.count = 2;
     unsigned action = 0;
     for (unsigned option=HudSize; option<OptionEnd; ++option) if (IsAction(option)) {
         auto& value = extension->actionValues[action++];
@@ -344,29 +498,19 @@ void Attach(MenuPage* page) {
         hint.toggle.count = 1; hint.toggle.index = hint.toggle.previous = 0;
     }
     // XML/default-focus actions may still refer to the old Widescreen name.
-    WidgetFor(*extension, FrameRate).item.name = wide->item.name;
+    WidgetFor(*extension, DisplayOptions).item.name = wide->item.name;
     MenuItem* screenPosition = nullptr;
     unsigned mainCount = 0;
     for (unsigned i=0; i<unsigned(count); ++i) {
         auto* item = page->items.begin[i];
         extension->originalY[i] = item ? item->y : 0;
         if (!controls && item && item->hook == 16) screenPosition = item;
-        else extension->items[mainCount++] = !controls && item == &wide->item ? &WidgetFor(*extension, FrameRate).item : item;
+        else extension->items[mainCount++] = !controls && item == &wide->item ? &WidgetFor(*extension, DisplayOptions).item : item;
     }
-    extension->items[mainCount++] = &WidgetFor(*extension, controls ? ControlOptions : DisplayOptions).item;
     if (screenPosition) extension->items[mainCount++] = screenPosition;
     page->items = {extension->items, extension->items+mainCount, 0, extension->items+maxItems};
     extension->mainItems = page->items;
-    if (!controls && page->selected == &wide->item) page->selected = &WidgetFor(*extension, FrameRate).item;
-    if (controls) {
-        // The controller diagram and its callouts have fixed positions. Keep
-        // every native row in place and extend the compact group above it.
-        int lastY = 0;
-        for (auto p=extension->original.begin; p!=extension->original.end; ++p)
-            if (Selectable(*p) && (*p)->y > lastY) lastY = (*p)->y;
-        WidgetFor(*extension, ControlOptions).item.y = lastY + 13;
-        return;
-    }
+    if (!controls && page->selected == &wide->item) page->selected = &WidgetFor(*extension, DisplayOptions).item;
     // Fit display rows above the game's footer. Columns, fonts, slider bars,
     // highlights and page controls continue to use the native widgets.
     int firstY = 272, rows = 0;
@@ -414,10 +558,15 @@ void InputTrigger(MenuItem* item, int trigger) {
     auto* extension = Owner(item);
     if (extension && extension->page->selected == item && item->hook) {
         auto& page = *extension->page;
-        if (captureOwner && capture.active()) return;
-        if (trigger == 5 && extension->mode) {
-            OpenSubmenu(*extension, extension->mode == 2 ? 1 : 0); return;
+        if (item->hook >= LightsPage && item->hook <= LightsDefaults) {
+            if (item != &extension->widgets[item->hook - HudSize].item ||
+                (item->hook == LightsPage ? extension->mode != 1 : extension->mode != 4)) return;
         }
+        if (captureOwner && capture.active()) return;
+        if (item->hook != ApplyPreset || trigger != 4) confirmPreset = false;
+        if (item->hook != FixDefaults || trigger != 4) confirmDefaults = false;
+        if (item->hook != LightsDefaults || trigger != 4) confirmLightsDefaults = false;
+        if (trigger == 5 && extension->mode) { OpenSubmenu(*extension, ParentMode(extension->mode)); return; }
         if (trigger == 2 || trigger == 3) {
             const int count = int(page.items.end-page.items.begin), direction = trigger == 2 ? -1 : 1;
             int index = 0;
@@ -444,7 +593,10 @@ void InputTrigger(MenuItem* item, int trigger) {
         }
         if (IsAction(item->hook)) {
             if (trigger == 4) {
-                if (item->hook == DisplayOptions || item->hook == ControlOptions) OpenSubmenu(*extension,1);
+                if (item->hook == DisplayOptions) OpenSubmenu(*extension,1);
+                else if (item->hook == FixPage) OpenSubmenu(*extension,5);
+                else if (item->hook == LightsPage) OpenSubmenu(*extension,4);
+                else if (item->hook == ControlOptions) OpenSubmenu(*extension,3);
                 else if (item->hook == Bindings) { extension->bindingPage = 0; OpenSubmenu(*extension,2); }
                 else if (item->hook == NextBindings) {
                     extension->bindingPage = (extension->bindingPage+1)%BindingPages();
@@ -453,7 +605,21 @@ void InputTrigger(MenuItem* item, int trigger) {
                     for (auto p=page.items.begin; p!=page.items.end; ++p)
                         if (*p && (*p)->hook == NextBindings) page.selected = *p;
                 } else if (item->hook == ResetBindings) bindings.Reset();
-                else if (item->hook == Back) OpenSubmenu(*extension, extension->mode == 2 ? 1 : 0);
+                else if (item->hook == ApplyPreset) {
+                    // Reopen the page so every widget shows the applied values.
+                    if (ApplyPresetValues(selectedPreset, confirmPreset)) OpenSubmenu(*extension,5);
+                }
+                else if (item->hook == FixDefaults) {
+                    if (ApplyPresetValues(recommendedPreset, confirmDefaults)) OpenSubmenu(*extension,5);
+                }
+                else if (item->hook == LightsDefaults) {
+                    // Restore defaults requests the recommended lights setting.
+                    if (!ReadLights() || requestedLights) confirmLightsDefaults = false;
+                    else if (!confirmLightsDefaults) { lightsWriteRefused = false; confirmLightsDefaults = true; }
+                    else { RequestLights(true); confirmLightsDefaults = false; }
+                    RefreshLights(*extension);
+                }
+                else if (item->hook == Back) OpenSubmenu(*extension, ParentMode(extension->mode));
                 PlaySound();
                 return;
             }
@@ -464,7 +630,14 @@ void InputTrigger(MenuItem* item, int trigger) {
         }
         if (item->hook >= HudSize && item->hook < OptionEnd) {
             if (trigger == 0 || trigger == 1 || trigger == 4) {
+                const bool lighting = item->hook == VehicleLights;
+                if (lighting) {
+                    if (extension->mode != 4 || item != &extension->widgets[item->hook - HudSize].item) return;
+                    if (!ReadLights()) { lightsWriteRefused = true; RefreshLights(*extension); return; }
+                    RefreshLights(*extension);
+                }
                 reinterpret_cast<void (*)(MenuItem*)>(item->vtable[trigger == 0 ? 13 : 12])(item);
+                if (lighting) RefreshLights(*extension);
                 return;
             }
             if (trigger == 5) {
@@ -506,25 +679,25 @@ void SaveSettings() {
     request.size = sizeof(request); request.version = 1;
     request.operation = PCSX2F_SETTINGS_WRITE; request.count = 7;
     auto& entries = request.entries;
-    std::strcpy(entries[0].section, "HUD"); std::strcpy(entries[0].key, "HudScale");
+    std::strcpy(entries[0].section, "MAIN"); std::strcpy(entries[0].key, "HudScale");
     console::format(entries[0].value, "", settings.hudScale, 2);
     std::strcpy(entries[1].section, "MAIN"); std::strcpy(entries[1].key, "UnthrottleEmuDuringLoading");
     std::strcpy(entries[1].value, settings.unthrottle ? "1" : "0");
-    std::strcpy(entries[2].section, "CONTROLS"); std::strcpy(entries[2].key, "MouseSensitivity");
-    console::format(entries[2].value, "", settings.mouseSensitivity, 4);
-    std::strcpy(entries[3].section, "CONTROLS"); std::strcpy(entries[3].key, "InvertMouseY");
+    std::strcpy(entries[2].section, "MAIN"); std::strcpy(entries[2].key, "MouseSensitivity");
+    console::format(entries[2].value, "", settings.mouseSensitivity / 0.002f, 2);
+    std::strcpy(entries[3].section, "MAIN"); std::strcpy(entries[3].key, "InvertMouseY");
     std::strcpy(entries[3].value, settings.invertMouse ? "1" : "0");
     std::strcpy(entries[4].section, "MAIN"); std::strcpy(entries[4].key, "Enable60FPS");
     std::strcpy(entries[4].value, settings.sixtyFPS ? "1" : "0");
-    std::strcpy(entries[5].section, "DISPLAY"); std::strcpy(entries[5].key, "CutsceneBorders");
-    std::strcpy(entries[5].value, settings.cutsceneBorders ? "1" : "0");
+    std::strcpy(entries[5].section, "MAIN"); std::strcpy(entries[5].key, "CutsceneBorders");
+    entries[5].value[0] = char('0' + (settings.cutsceneBorders & 3)); entries[5].value[1] = 0;
     std::strcpy(entries[6].section, "CONTROLS"); std::strcpy(entries[6].key, "PCControlScheme");
     std::strcpy(entries[6].value, settings.pcControls ? "1" : "0");
-    const auto status = PCSX2F_IniRequest(&request);
+    const auto status = console::ps2settings::request(request);
     if (status == PCSX2F_SETTINGS_OK && bindingsSaved) { dirty = false; OSDText[1][0] = 0; }
     else std::strcpy(OSDText[1], status == PCSX2F_SETTINGS_UNSUPPORTED
-        ? "Menu settings apply this session. Update the fork and injector to save them to the INI."
-        : "Could not save plugin settings to the INI. Changes still apply this session.");
+        ? "Menu settings apply this session. Update the fork and injector to save them to the CFG."
+        : "Could not save plugin settings to the CFG. Changes still apply this session.");
 }
 void CloseMenu(void* menu, bool immediate) {
     // Closing the pause menu from a submenu would leave the page's item list
@@ -566,6 +739,7 @@ uint64_t Draw(void* menu) {
 }
 }
 void InstallMenu() {
+    ReloadMenuLanguage();
     InstallButtonIcons();
     drawMenu = safetymips::create_inline_game(0x3B53F8, Draw);
     parsePage = safetymips::create_inline_game(0x3CE550, ParsePage);

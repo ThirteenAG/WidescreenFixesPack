@@ -1,6 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+
+#include "GameplayCamera.hpp"
 
 export module Engine;
 
@@ -13,6 +16,8 @@ namespace UGameEngine
     SafetyHookInline shTick = {};
     void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
     {
+        RefreshHudConstraint();
+
         if (Screen.bDeferredInput)
         {
             while (!UWindowsViewport::deferredCauseInputEvent.empty())
@@ -22,7 +27,7 @@ namespace UGameEngine
             }
         }
 
-        if (Screen.fRawInputMouse > 0.0f && UWindowsViewport::deferredCauseInputEventForRawInput)
+        if (Screen.bRawInputMouse && UWindowsViewport::deferredCauseInputEventForRawInput)
         {
             UWindowsViewport::deferredCauseInputEventForRawInput(228, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaX.exchange(0)));
             UWindowsViewport::deferredCauseInputEventForRawInput(229, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaY.exchange(0)));
@@ -113,17 +118,17 @@ export void InitEngine()
 
     pattern = hook::pattern(pattern_str(0xD9, 0x05, to_bytes(dword_1120B6BC))); //fld
     for (size_t i = 0; i < pattern.size(); ++i)
-        injector::WriteMemory(pattern.get(i).get<uint32_t>(2), &Screen.fHUDScaleXDyn, true);
+        ProtectedGameRef<decltype(&Screen.fHUDScaleXDyn)>(reinterpret_cast<decltype(&Screen.fHUDScaleXDyn)*>(pattern.get(i).get<uint32_t>(2))) = &Screen.fHUDScaleXDyn;
 
     pattern = hook::pattern(pattern_str(0xA1, to_bytes(dword_1120B6BC))); //mov eax
-    injector::WriteMemory(pattern.get_first(1), &Screen.fHUDScaleXDyn, true);
+    ProtectedGameRef<decltype(&Screen.fHUDScaleXDyn)>(reinterpret_cast<decltype(&Screen.fHUDScaleXDyn)*>(pattern.get_first(1))) = &Screen.fHUDScaleXDyn;
 
     static float fHUDScaleXDynXref = 0.0f;
     static float fHudOffsetDynXref = 0.0f;
     pattern = hook::pattern("D8 0D ? ? ? ? D8 25 ? ? ? ? D9 05");
-    injector::WriteMemory(pattern.get_first(2), &fHUDScaleXDynXref, true);
-    injector::WriteMemory(pattern.get_first(8), &fHudOffsetDynXref, true);
-    injector::WriteMemory(pattern.get_first(14), &fHUDScaleXDynXref, true);
+    ProtectedGameRef<decltype(&fHUDScaleXDynXref)>(reinterpret_cast<decltype(&fHUDScaleXDynXref)*>(pattern.get_first(2))) = &fHUDScaleXDynXref;
+    ProtectedGameRef<decltype(&fHudOffsetDynXref)>(reinterpret_cast<decltype(&fHudOffsetDynXref)*>(pattern.get_first(8))) = &fHudOffsetDynXref;
+    ProtectedGameRef<decltype(&fHUDScaleXDynXref)>(reinterpret_cast<decltype(&fHUDScaleXDynXref)*>(pattern.get_first(14))) = &fHUDScaleXDynXref;
 
     static auto HudScaleRestorerHook = safetyhook::create_mid(pattern.get_first(-10), [](SafetyHookContext& regs)
     {
@@ -185,17 +190,17 @@ export void InitEngine()
 
     //TEXT
     pattern = hook::pattern("D8 3D ? ? ? ? D9 5C 24 68 DB");
-    injector::WriteMemory(pattern.get_first(2), &Screen.fTextScaleX, true); //0x10B149CE + 0x2
+    ProtectedGameRef<decltype(&Screen.fTextScaleX)>(reinterpret_cast<decltype(&Screen.fTextScaleX)*>(pattern.get_first(2))) = &Screen.fTextScaleX; //0x10B149CE + 0x2
     pattern = hook::pattern("D8 25 ? ? ? ? D9 44 24 24 D8 4C 24");
-    injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffset, true); //0x10B14BAD + 0x2
+    ProtectedGameRef<decltype(&Screen.fHudOffset)>(reinterpret_cast<decltype(&Screen.fHudOffset)*>(pattern.get_first(2))) = &Screen.fHudOffset; //0x10B14BAD + 0x2
 
     // Loading Bar
     pattern = hook::pattern("83 EC ? 53 56 57 8B F9 8B 47 ? 85 C0 0F 84 ? ? ? ? 8B 48");
     shDrawLoadingBar = safetyhook::create_inline(pattern.get_first(0), DrawLoadingBar);
     pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 DB 86");
-    injector::WriteMemory(pattern.get_first(2), &fLoadingBarScaleX, true);
+    ProtectedGameRef<decltype(&fLoadingBarScaleX)>(reinterpret_cast<decltype(&fLoadingBarScaleX)*>(pattern.get_first(2))) = &fLoadingBarScaleX;
     pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? D9 C9 D8 0D ? ? ? ? D9 5C 24 ? D9 05 ? ? ? ? D8 C9 D9 5C 24 ? D8 0D ? ? ? ? D9 5C 24 ? FF 92 ? ? ? ? 8B D8");
-    injector::WriteMemory(pattern.get_first(2), &fLoadingBarPosX, true);
+    ProtectedGameRef<decltype(&fLoadingBarPosX)>(reinterpret_cast<decltype(&fLoadingBarPosX)*>(pattern.get_first(2))) = &fLoadingBarPosX;
 
     if (Screen.nHudWidescreenMode == 1)
     {
@@ -223,44 +228,43 @@ export void InitEngine()
         }; injector::MakeInline<WSText>(pattern.get_first(0), pattern.get_first(5)); //0x10B149C4, 0x10B149C4 + 5
     }
 
-    //FOV
+    // FOV factors apply only to the player view and its matching projection helpers.
+    CTGameplayCamera::fullNameSource = &UObject::GetFullName;
+    const std::pair<const char*, int> cameraCallers[] =
+    {
+        { "8B 54 24 40 89 41 04 8B 44 24 28 50 89 51 08 57 8D 8C 24 44 01 00 00 E8 ? ? ? ?", 23 },
+        { "8B 54 24 3C 89 41 04 8B 44 24 50 50 89 51 08 57 8D 8C 24 50 01 00 00 E8 ? ? ? ?", 23 },
+        { "83 EC 0C 8B D4 89 32 50 89 5A 04 57 8D 8C 24 24 01 00 00 89 6A 08 E8 ? ? ? ?", 22 },
+        { "8B 4C 24 38 51 56 8B C8 E8 ? ? ? ? 89 44 24 18 EB 04 89 6C 24 18", 8 },
+    };
     pattern = hook::pattern("E8 ? ? ? ? 5F 5E 5D 8B C3 5B 83 C4 6C");
-    static auto FCameraSceneNodeCtorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    auto cameraProjection = pattern.get_first<void>();
+    auto cameraCtorPattern = hook::pattern("8B 44 24 04 83 EC 6C 53 55 56 57 50 8B D9 E8 ? ? ? ? 8B B4 24 88 00 00 00 8B BC 24 8C 00 00 00");
+    auto cameraCtor = cameraCtorPattern.size() == 1 ? cameraCtorPattern.get_first<void>() : nullptr;
+    for (size_t i = 0; i < std::size(cameraCallers); ++i)
     {
-        *(float*)(regs.ebx + 0x248) = AdjustFOV(*(float*)(regs.ebx + 0x248), Screen.fAspectRatio);
-    });
-
-    //windowed alt-tab fix
-    if (!bDisableAltTabFix)
-    {
-        pattern = hook::pattern("8B 84 24 ? ? ? ? 50 53 57 52 74 50 FF 15 ? ? ? ? 5F 5E 5D 5B 81 C4 ? ? ? ? C2 0C 00");
-        struct WndProcHook
+        auto caller = hook::pattern(cameraCallers[i].first);
+        if (cameraCtor && caller.size() == 1)
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.eax = *reinterpret_cast<uint32_t*>(regs.esp + 0x3A8);
-
-                if (bIsWindowed)
-                {
-                    if (regs.edi == WM_WINDOWPOSCHANGED)
-                    {
-                        auto lpwp = reinterpret_cast<LPWINDOWPOS>(regs.eax);
-                        auto hwnd = reinterpret_cast<HWND>(regs.edx);
-                        if (lpwp->x < 0 && lpwp->y < 0 && IsIconic(hwnd))
-                        {
-                            ShowWindow(hwnd, SW_RESTORE);
-                            SetForegroundWindow(hwnd);
-                        }
-                    }
-                }
-            }
-        }; injector::MakeInline<WndProcHook>(pattern.get_first(0), pattern.get_first(7)); //0x10CC4EEA
+            auto call = caller.get_first<void>(cameraCallers[i].second);
+            if (injector::GetBranchDestination(call).as_int() == reinterpret_cast<uintptr_t>(cameraCtor))
+                CTGameplayCamera::callers[i] = reinterpret_cast<uintptr_t>(call) + 5;
+        }
     }
+    CTGameplayCamera::FinalizeCallers();
+
+    static auto FCameraSceneNodeCtorHook = safetyhook::create_mid(cameraProjection, [](SafetyHookContext& regs)
+    {
+        static const auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
+        float factor = CTGameplayCamera::Factor(reinterpret_cast<void*>(regs.ebx), *reinterpret_cast<uintptr_t*>(regs.esp + 0x7C), fFOVFactor);
+        *(float*)(regs.ebx + 0x248) = std::clamp(AdjustFOV(*(float*)(regs.ebx + 0x248), Screen.fAspectRatio) * factor, 1.0f, 179.0f);
+    });
 
     pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 33 DB");
     static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         UObject::objectStates.clear();
+        CTGameplayCamera::Reset();
         UIntOverrides::ClearCache();
         UFloatOverrides::ClearCache();
         UByteOverrides::ClearCache();

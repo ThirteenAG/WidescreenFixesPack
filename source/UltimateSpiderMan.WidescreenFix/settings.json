@@ -1,0 +1,179 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Ultimate Spider-Man",
+        "exe": [
+          "USM.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN_SkipIntro",
+      "description": "@MAIN_SkipIntro.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@MAIN_HudAspectRatioConstraint",
+      "description": "@MAIN_HudAspectRatioConstraint.description",
+      "page": "advanced",
+      "visibility": "editor",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "label": "@MAIN_FPSLimit",
+      "description": "@MAIN_FPSLimit.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 60,
+        "recommended": 60,
+        "enhanced": 60
+      },
+      "min": 0,
+      "max": 1000
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "int",
+      "default": 0,
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@windowmode.fullscreen"
+        },
+        {
+          "value": 1,
+          "label": "@windowmode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@windowmode.borderless"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN_FOVFactor",
+      "description": "@MAIN_FOVFactor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      },
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05
+    },
+    {
+      "id": "GRAPHICS.DrawDistance",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN_DrawDistanceScale",
+      "description": "@MAIN_DrawDistanceScale.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "min": 1,
+      "max": 10
+    },
+    {
+      "id": "GRAPHICS.AntiAliasing",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "label": "@GRAPHICS_SMAA",
+      "description": "@GRAPHICS_SMAA.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "bool",
+      "default": false,
+      "label": "@GRAPHICS_ConsoleGamma",
+      "description": "@GRAPHICS_ConsoleGamma.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": true
+      }
+    }
+  ]
+}

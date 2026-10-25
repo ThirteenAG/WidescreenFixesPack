@@ -21,7 +21,11 @@ struct Settings {
     bool unthrottle = true, modernControls = true, pcControls = false;
     float aspect = 4.0f / 3.0f, baseAspect = 4.0f / 3.0f, hudScale = 1.0f;
     float mouseSensitivity = 0.002f;
-    bool invertMouse = false, cutsceneBorders = true;
+    bool invertMouse = false;
+    // MAIN.CutsceneBorders: 0 off, 1 letterbox, 2 pillarbox, 3 both.
+    int cutsceneBorders = 3;
+    // MAIN.FOVFactor (gameplay only) and MAIN.HudAspectRatioConstraint (0 = whole screen).
+    float fovFactor = 1.0f, hudAspect = 0.0f;
 };
 inline Settings settings;
 

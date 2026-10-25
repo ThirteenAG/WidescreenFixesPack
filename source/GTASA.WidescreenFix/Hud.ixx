@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 #include "callargs.h"
 
 export module Hud;
@@ -439,28 +441,55 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-
-            auto bScalingMode = iniReader.ReadInteger("MAIN", "ScalingMode", 1) != 0;
-            if (!bScalingMode)
+            if (!FixSettings().Bool("MAIN.ScalingMode"))
                 return;
 
             auto pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? 84 C0 74 ? A0 ? ? ? ? 84 C0 75 ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CFont::DrawFonts = (decltype(CFont::DrawFonts))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? A0 ? ? ? ? 84 C0 75 ? E8");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CHud::shDrawScriptText = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CHud::DrawScriptText);
 
             pattern = hook::pattern("E8 ? ? ? ? EB ? 8B CD E8 ? ? ? ? EB");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             shPrintRadioStationList = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), PrintRadioStationList);
 
             pattern = hook::pattern("E8 ? ? ? ? 84 DB 0F 84 ? ? ? ? 8A 85");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             shPrintStats = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), PrintStats);
 
             pattern = hook::pattern("E8 ? ? ? ? EB ? 8B CD E8 ? ? ? ? 84 DB");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             shPrintBriefs = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), PrintBriefs);
 
             pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 8B 7C 24 ? 85 FF 0F 84 ? ? ? ? ? ? ? 0F 84");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             hbDrawRect.fun = injector::MakeCALL(pattern.get_first(), DrawRect, true).get();
 
             ScriptTexts.SetAddress(reinterpret_cast<std::array<ScriptText, 96>*>(0xA913E8));
@@ -505,7 +534,7 @@ public:
             ScriptCommandHooks[21] = safetyhook::create_inline(0x470A90, ProcessScriptCommand<21>);
             ScriptCommandHooks[22] = safetyhook::create_inline(0x474900, ProcessScriptCommand<22>);
             ScriptCommandHooks[23] = safetyhook::create_inline(0x4762D0, ProcessScriptCommand<23>);
-            bScriptShadowToOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 1) != 0;
+            bScriptShadowToOutline = FixSettings().Int("MISC.ReplaceTextShadowWithOutline") != 0;
             GetStringWidth = reinterpret_cast<decltype(GetStringWidth)>(0x71A0E0);
             hbGetScriptLetterSize.fun = injector::MakeCALL(0x71A1DF, GetScriptLetterSize, true).get();
             ScriptTextDictionary = injector::ReadMemory<void*>(0x58C1AE + 1, true);
@@ -514,18 +543,53 @@ public:
 
             // Scope each element independently, including its buffered text.
             pattern = hook::pattern("81 EC A0 01 00 00 0F B6 05 ? ? ? ? 69 C0 90 01 00 00");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             HudDrawHooks[0] = safetyhook::create_inline(pattern.get_first(), DrawHudElement<0, false>);
             pattern = hook::pattern("A1 ? ? ? ? 83 EC 34 83 F8 01 0F 84 ? ? ? ? 83 F8 02");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             HudDrawHooks[1] = safetyhook::create_inline(pattern.get_first(), DrawHudElement<1, true>);
             pattern = hook::pattern("A0 ? ? ? ? 83 EC 28 3C 01 0F 84 ? ? ? ? A0");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             HudDrawHooks[2] = safetyhook::create_inline(pattern.get_first(), DrawHudElement<2, true>);
             pattern = hook::pattern("A0 ? ? ? ? 83 EC 18 84 C0 53 55 56 57 0F 84");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             HudDrawHooks[3] = safetyhook::create_inline(pattern.get_first(), DrawHudElement<3, true>);
             pattern = hook::pattern("51 8B 15 ? ? ? ? 57 33 FF 3B D7 0F 84 ? ? ? ? A1");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             HudDrawHooks[4] = safetyhook::create_inline(pattern.get_first(), DrawHudElement<4, false>);
             pattern = hook::pattern("51 8B 15 ? ? ? ? 57 33 FF 3B D7 75 1B 89 3D");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             HudDrawHooks[5] = safetyhook::create_inline(pattern.get_first(), DrawHudElement<5, false>);
             pattern = hook::pattern("A0 ? ? ? ? 81 EC F0 00 00 00 84 C0 74 0D A0");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             HudDrawHooks[6] = safetyhook::create_inline(pattern.get_first(), DrawHudElement<6, false>);
             // SkyUI replaces DrawTripSkip's entry. Hook its caller instead,
             // preserving the live callee without requiring the original prologue.

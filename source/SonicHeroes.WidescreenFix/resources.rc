@@ -1,0 +1,6 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/SonicHeroes/en.json"
+fr ASISETTINGS_TEXT "../../text/SonicHeroes/fr.json"
+de ASISETTINGS_TEXT "../../text/SonicHeroes/de.json"
+it ASISETTINGS_TEXT "../../text/SonicHeroes/it.json"
+es ASISETTINGS_TEXT "../../text/SonicHeroes/es.json"

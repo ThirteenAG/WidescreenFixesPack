@@ -1,0 +1,11 @@
+{
+  "plugin.name": "Parche panorámico Second Sight",
+  "page.camera": "Cámara",
+  "page.advanced": "Avanzado",
+  "ResX": "Ancho de resolución",
+  "ResX.description": "Ancho en píxeles. Cero usa la resolución del escritorio. Requiere reiniciar.",
+  "ResY": "Alto de resolución",
+  "ResY.description": "Alto en píxeles. Cero usa la resolución del escritorio. Requiere reiniciar.",
+  "FOVFactor": "Factor de campo de visión",
+  "FOVFactor.description": "Multiplica el campo de visión corregido. 1.0 mantiene el encuadre previsto; valores mayores amplían la vista. Una vista más amplia puede mostrar objetos a través de paredes en algunos lugares."
+}

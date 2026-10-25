@@ -1,0 +1,744 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Splinter Cell: Blacklist",
+        "exe": [
+          "Blacklist_DX11_game.exe",
+          "Blacklist_game.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "extraction",
+      "title": "@page.extraction",
+      "section": "gameplay"
+    },
+    {
+      "id": "hunter",
+      "title": "@page.hunter",
+      "section": "gameplay"
+    },
+    {
+      "id": "coop",
+      "title": "@page.coop",
+      "section": "gameplay"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.SkipIntro",
+      "description": "@MAIN.SkipIntro.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.SkipPressStart",
+      "description": "@MAIN.SkipPressStart.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.DisableNegativeMouseAcceleration",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.DisableNegativeMouseAcceleration",
+      "description": "@MAIN.DisableNegativeMouseAcceleration.description",
+      "page": "controls",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.TurnSpeed",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN.TurnSpeed",
+      "description": "@MAIN.TurnSpeed.description",
+      "page": "controls",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 0.5,
+      "max": 10,
+      "step": 0.05,
+      "decimals": 2
+    },
+    {
+      "id": "MAIN.UltraWideSupport",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.UltraWideSupport",
+      "description": "@MAIN.UltraWideSupport.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.Letterbox",
+      "type": "bool",
+      "default": 0,
+      "label": "@MAIN.Letterbox",
+      "description": "@MAIN.Letterbox.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN.FOVFactor",
+      "description": "@MAIN.FOVFactor.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "decimals": 2,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.ScreenCullBias",
+      "type": "float",
+      "default": 0.0,
+      "label": "@MAIN.ScreenCullBias",
+      "description": "@MAIN.ScreenCullBias.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 0,
+      "max": 1,
+      "step": 0.05,
+      "decimals": 2,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 0.0,
+        "enhanced": 0.0
+      }
+    },
+    {
+      "id": "MAIN.DisableNightVisionFlash",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.DisableNightVisionFlash",
+      "description": "@MAIN.DisableNightVisionFlash.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.DisablePerfectionistChecks",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.DisablePerfectionistChecks",
+      "description": "@MAIN.DisablePerfectionistChecks.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.DefaultMissionFilter",
+      "type": "int",
+      "default": 1,
+      "label": "@MAIN.DefaultMissionFilter",
+      "description": "@MAIN.DefaultMissionFilter.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 0,
+      "max": 3,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SMIMapDisableStartupAnimation",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.SMIMapDisableStartupAnimation",
+      "description": "@MAIN.SMIMapDisableStartupAnimation.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.ForceCPUAffinityToAllCores",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.ForceCPUAffinityToAllCores",
+      "description": "@MAIN.ForceCPUAffinityToAllCores.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.FPSLimit",
+      "description": "@MAIN.FPSLimit.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 0,
+      "max": 1000,
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "UNLOCKS.UnlockDLC",
+      "type": "bool",
+      "default": 1,
+      "label": "@UNLOCKS.UnlockDLC",
+      "description": "@UNLOCKS.UnlockDLC.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "UNLOCKS.UnlockAllNonCampaignMissions",
+      "type": "bool",
+      "default": 1,
+      "label": "@UNLOCKS.UnlockAllNonCampaignMissions",
+      "description": "@UNLOCKS.UnlockAllNonCampaignMissions.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "UNLOCKS.UnlockAllCampaignMissions",
+      "type": "bool",
+      "default": 0,
+      "label": "@UNLOCKS.UnlockAllCampaignMissions",
+      "description": "@UNLOCKS.UnlockAllCampaignMissions.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "EXTRACTION.ExtractionWaveConfigs",
+      "type": "string",
+      "default": "Default",
+      "label": "@EXTRACTION.ExtractionWaveConfigs",
+      "description": "@EXTRACTION.ExtractionWaveConfigs.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "suggestions": [
+        {
+          "value": "Default"
+        },
+        {
+          "value": "Random"
+        }
+      ]
+    },
+    {
+      "id": "EXTRACTION.ExtractionWaveEnemyMultiplier",
+      "type": "int",
+      "default": 1,
+      "label": "@EXTRACTION.ExtractionWaveEnemyMultiplier",
+      "description": "@EXTRACTION.ExtractionWaveEnemyMultiplier.description",
+      "page": "extraction",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 1,
+      "max": 9999,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "EXTRACTION.ExtractionWaveEnemyRandomRangeMin",
+      "type": "int",
+      "default": 0,
+      "label": "@EXTRACTION.ExtractionWaveEnemyRandomRangeMin",
+      "description": "@EXTRACTION.ExtractionWaveEnemyRandomRangeMin.description",
+      "page": "extraction",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 0,
+      "max": 9999,
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "EXTRACTION.ExtractionWaveEnemyRandomRangeMax",
+      "type": "int",
+      "default": 4,
+      "label": "@EXTRACTION.ExtractionWaveEnemyRandomRangeMax",
+      "description": "@EXTRACTION.ExtractionWaveEnemyRandomRangeMax.description",
+      "page": "extraction",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 1,
+      "max": 9999,
+      "presets": {
+        "vanilla": 4,
+        "recommended": 4,
+        "enhanced": 4
+      }
+    },
+    {
+      "id": "EXTRACTION.EnableKobinAndGrimMaps",
+      "type": "bool",
+      "default": 0,
+      "label": "@EXTRACTION.EnableKobinAndGrimMaps",
+      "description": "@EXTRACTION.EnableKobinAndGrimMaps.description",
+      "page": "extraction",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "EXTRACTION.EnableCoopCampaignMaps",
+      "type": "bool",
+      "default": 0,
+      "label": "@EXTRACTION.EnableCoopCampaignMaps",
+      "description": "@EXTRACTION.EnableCoopCampaignMaps.description",
+      "page": "extraction",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "KESTREL.EnableKestrelDLC",
+      "type": "bool",
+      "default": 0,
+      "label": "@KESTREL.EnableKestrelDLC",
+      "description": "@KESTREL.EnableKestrelDLC.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "HUNTER.ReinforcementsNumber",
+      "type": "string",
+      "default": "Default",
+      "label": "@HUNTER.ReinforcementsNumber",
+      "description": "@HUNTER.ReinforcementsNumber.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "suggestions": [
+        {
+          "value": "Default"
+        },
+        {
+          "value": "Random"
+        }
+      ]
+    },
+    {
+      "id": "HUNTER.ReinforcementsEnemyMultiplier",
+      "type": "int",
+      "default": 1,
+      "label": "@HUNTER.ReinforcementsEnemyMultiplier",
+      "description": "@HUNTER.ReinforcementsEnemyMultiplier.description",
+      "page": "hunter",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 1,
+      "max": 9999,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "HUNTER.ReinforcementsEnemyRandomRangeMin",
+      "type": "int",
+      "default": 1,
+      "label": "@HUNTER.ReinforcementsEnemyRandomRangeMin",
+      "description": "@HUNTER.ReinforcementsEnemyRandomRangeMin.description",
+      "page": "hunter",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 1,
+      "max": 9999,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "HUNTER.ReinforcementsEnemyRandomRangeMax",
+      "type": "int",
+      "default": 100,
+      "label": "@HUNTER.ReinforcementsEnemyRandomRangeMax",
+      "description": "@HUNTER.ReinforcementsEnemyRandomRangeMax.description",
+      "page": "hunter",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 1,
+      "max": 9999,
+      "presets": {
+        "vanilla": 100,
+        "recommended": 100,
+        "enhanced": 100
+      }
+    },
+    {
+      "id": "GHOST.DisableMissionFailOnDetection",
+      "type": "bool",
+      "default": 0,
+      "label": "@GHOST.DisableMissionFailOnDetection",
+      "description": "@GHOST.DisableMissionFailOnDetection.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "COOP.ReinforcementsNumber",
+      "type": "string",
+      "default": "Default",
+      "label": "@COOP.ReinforcementsNumber",
+      "description": "@COOP.ReinforcementsNumber.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "suggestions": [
+        {
+          "value": "Default"
+        },
+        {
+          "value": "Random"
+        }
+      ]
+    },
+    {
+      "id": "COOP.ReinforcementsEnemyMultiplier",
+      "type": "int",
+      "default": 1,
+      "label": "@COOP.ReinforcementsEnemyMultiplier",
+      "description": "@COOP.ReinforcementsEnemyMultiplier.description",
+      "page": "coop",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 1,
+      "max": 9999,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "COOP.ReinforcementsEnemyRandomRangeMin",
+      "type": "int",
+      "default": 10,
+      "label": "@COOP.ReinforcementsEnemyRandomRangeMin",
+      "description": "@COOP.ReinforcementsEnemyRandomRangeMin.description",
+      "page": "coop",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 1,
+      "max": 9999,
+      "presets": {
+        "vanilla": 10,
+        "recommended": 10,
+        "enhanced": 10
+      }
+    },
+    {
+      "id": "COOP.ReinforcementsEnemyRandomRangeMax",
+      "type": "int",
+      "default": 20,
+      "label": "@COOP.ReinforcementsEnemyRandomRangeMax",
+      "description": "@COOP.ReinforcementsEnemyRandomRangeMax.description",
+      "page": "coop",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 1,
+      "max": 9999,
+      "presets": {
+        "vanilla": 20,
+        "recommended": 20,
+        "enhanced": 20
+      }
+    },
+    {
+      "id": "COOP.DisableMissionFailOnDetection",
+      "type": "bool",
+      "default": 0,
+      "label": "@COOP.DisableMissionFailOnDetection",
+      "description": "@COOP.DisableMissionFailOnDetection.description",
+      "page": "coop",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "CAMPAIGN.DisableMissionFailOnDetection",
+      "type": "bool",
+      "default": 0,
+      "label": "@CAMPAIGN.DisableMissionFailOnDetection",
+      "description": "@CAMPAIGN.DisableMissionFailOnDetection.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "CAMPAIGN.EnableRunDuringForcedWalk",
+      "type": "bool",
+      "default": 1,
+      "label": "@CAMPAIGN.EnableRunDuringForcedWalk",
+      "description": "@CAMPAIGN.EnableRunDuringForcedWalk.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.LightSyncRGB",
+      "type": "bool",
+      "default": 1,
+      "label": "@LOGITECH.LightSyncRGB",
+      "description": "@LOGITECH.LightSyncRGB.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "SPLITSCREEN.Enable",
+      "type": "bool",
+      "default": 1,
+      "label": "@SPLITSCREEN.Enable",
+      "description": "@SPLITSCREEN.Enable.description",
+      "page": "coop",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "SPLITSCREEN.GamepadPlayer1",
+      "type": "int",
+      "default": 0,
+      "label": "@SPLITSCREEN.GamepadPlayer1",
+      "description": "@SPLITSCREEN.GamepadPlayer1.description",
+      "page": "controls",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 0,
+      "max": 4
+    },
+    {
+      "id": "SPLITSCREEN.GamepadPlayer2",
+      "type": "int",
+      "default": 1,
+      "label": "@SPLITSCREEN.GamepadPlayer2",
+      "description": "@SPLITSCREEN.GamepadPlayer2.description",
+      "page": "controls",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 1,
+      "max": 4
+    },
+    {
+      "id": "FILELOADER.DumpPackedFiles",
+      "type": "bool",
+      "default": 0,
+      "label": "@FILELOADER.DumpPackedFiles",
+      "description": "@FILELOADER.DumpPackedFiles.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "STARTUP.DedicatedServerExePath",
+      "type": "string",
+      "default": "",
+      "label": "@STARTUP.DedicatedServerExePath",
+      "description": "@STARTUP.DedicatedServerExePath.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "menu",
+      "visibility": "editor",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
+    }
+  ]
+}

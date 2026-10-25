@@ -1,4 +1,5 @@
 #pragma once
+#include "../Shared/CheckedPattern.hpp"
 #include <ddraw.h>
 
 namespace GTA2Movies
@@ -15,10 +16,27 @@ namespace GTA2Movies
     inline IUnknown** BinkDraw = nullptr;
     inline char** Video = nullptr;
 
+    // Videos: 0 original aspect (black bars), 1 fill (cropped at the aspect, the rectangle reaches past the output),
+    // 2 stretched over the output
     inline RECT Fit(int width, int height, int movieWidth, int movieHeight)
     {
+        static auto& nFMVWidescreenMode = FixSettings().Int("MAIN.FMVWidescreenMode");
+        if (nFMVWidescreenMode == 2 && width > 0 && height > 0)
+            return {0, 0, width, height};
+        if (nFMVWidescreenMode == 1 && width > 0 && height > 0 && movieWidth > 0 && movieHeight > 0)
+        {
+            double scale = std::max(double(width) / movieWidth, double(height) / movieHeight);
+            int w = std::max(width, int(std::lround(movieWidth * scale))), h = std::max(height, int(std::lround(movieHeight * scale)));
+            int x = (width - w) / 2, y = (height - h) / 2;
+            return {x, y, x + w, y + h};
+        }
         auto fitted = Desktop::Fit(width, height, movieWidth, movieHeight);
         return {fitted.left, fitted.top, fitted.right, fitted.bottom};
+    }
+    // The part of a rectangle inside the output
+    inline RECT Visible(RECT rect, int width, int height)
+    {
+        return {std::max(0L, rect.left), std::max(0L, rect.top), std::min(LONG(width), rect.right), std::min(LONG(height), rect.bottom)};
     }
 
     inline int WINAPI Copy(uint32_t* movie, void* destination, int pitch, uint32_t height,
@@ -52,13 +70,14 @@ namespace GTA2Movies
         if (!result) return result;
         memset(destination, 0, size_t(pitch) * outputHeight);
         auto rect = Fit(width, outputHeight, movie[0], movie[1]);
+        auto shown = Visible(rect, width, outputHeight);
         int w = rect.right - rect.left, h = rect.bottom - rect.top;
-        for (int row = 0; row < h; ++row)
+        for (int row = shown.top - rect.top; row < shown.bottom - rect.top; ++row)
         {
-            auto source = frame.data() + size_t(row * movie[1] / h) * sourcePitch;
+            auto source = frame.data() + size_t(int64_t(row) * movie[1] / h) * sourcePitch;
             auto output = static_cast<uint8_t*>(destination) + size_t(row + rect.top) * pitch + rect.left * bytes;
-            for (int col = 0; col < w; ++col)
-                memcpy(output + col * bytes, source + size_t(col * movie[0] / w) * bytes, bytes);
+            for (int col = shown.left - rect.left; col < shown.right - rect.left; ++col)
+                memcpy(output + col * bytes, source + size_t(int64_t(col) * movie[0] / w) * bytes, bytes);
         }
         return result;
     }
@@ -69,7 +88,7 @@ namespace GTA2Movies
         RECT client{};
         RECT fitted{};
         bool fit = width && height && GetClientRect(window, &client) && client.right > 0 && client.bottom > 0;
-        if (fit) fitted = Fit(client.right, client.bottom, width, height);
+        if (fit) fitted = Visible(Fit(client.right, client.bottom, width, height), client.right, client.bottom);
         // Older Bink primary buffers cannot scale. Allocate a movie output surface
         // at the fitted size and resample during decoding instead of stretching it.
         // GTA2 gives Bink an IDirectDraw4 interface, while this Bink version
@@ -99,7 +118,7 @@ namespace GTA2Movies
         auto offset = reinterpret_cast<int(WINAPI*)(void*, int, int)>(GetProcAddress(dll, "_BinkBufferSetOffset@12"));
         if (offset && GetClientRect(window, &client) && client.right > 0 && client.bottom > 0)
         {
-            auto rect = Fit(client.right, client.bottom, width, height);
+            auto rect = Visible(Fit(client.right, client.bottom, width, height), client.right, client.bottom);
             if (!WindowBuffer && (!scale || !scale(buffer, rect.right - rect.left, rect.bottom - rect.top)))
             {
                 if (scale) scale(buffer, width, height);
@@ -130,7 +149,13 @@ namespace GTA2Movies
         auto binkDraw = hook::module_pattern(GetModuleHandleW(L"binkw32.dll"),
             "8B 44 24 08 8B 08 68 ? ? ? ? 50 A3 ? ? ? ? FF 91 90 00 00 00");
         if (binkDraw.size() == 1) BinkDraw = *binkDraw.get_first<IUnknown**>(7);
-        Video = *hook::pattern("A1 ? ? ? ? 83 EC 08 50 FF 15 ? ? ? ? A1").get_first<char**>(1);
+        auto requiredPattern0 = hook::pattern("A1 ? ? ? ? 83 EC 08 50 FF 15 ? ? ? ? A1");
+        if (requiredPattern0.size() <= 0)
+        {
+            wfp::patterns::Report("GTA2.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        Video = *requiredPattern0.get_first<char**>(1);
         auto originals = IATHook::Replace(GetModuleHandleW(nullptr), "binkw32.dll",
             std::make_tuple("_BinkCopyToBuffer@28", Copy), std::make_tuple("_BinkBufferOpen@16", Open),
             std::make_tuple("_BinkBufferBlit@12", Blit), std::make_tuple("_BinkBufferClose@4", Close));

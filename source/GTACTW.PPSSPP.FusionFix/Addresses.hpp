@@ -149,7 +149,19 @@ inline constexpr uint32_t hintQueueWords[]={0xAFB70000u,0xAFBE0000u,0xAFBF0000u,
 inline constexpr uint8_t hintQueueMasks[]={1,1,1,2,1,1,0,0,1,1,0,1};
 inline constexpr uint32_t hintMiddleWords[]={0x3C130000u,0x3C1E0000u,0x0040B825u,0x8E640000u,0x12E0010Au,0x27DE0000u,0x8EE50000u,0x10A00107u,0xAFBE0000u,0x92E50022u,0x3406000Cu,0x00052C00u};
 inline constexpr uint8_t hintMiddleMasks[]={1,1,0,1,0,1,1,0,1,0,0,0};
-inline constexpr std::array<console::AddressRule,72> rules={{
+// Follow-camera FOV targets: the 30-degree half angle (0x1555) passed as
+// both ends of the range the camera's FOV eases towards each frame.
+inline constexpr uint32_t fov0Words[]={0x86D00068u,0x0040B825u,0xA7B00070u,0x27A40070u,0x34051555u,0x34061555u,0x0C000000u,0x34070080u,0x87A40070u,0x12040004u,0x00000000u,0x87A50070u};
+inline constexpr uint8_t fov0Masks[]={0,0,0,0,0,0,2,0,0,0,0,0};
+inline constexpr uint32_t fov1Words[]={0x86500068u,0xAFA4001Cu,0xA7B00020u,0x27A40020u,0x34051555u,0x34061555u,0x0C000000u,0x34070080u,0x87A40020u,0x12040004u,0x00000000u,0x87A50020u};
+inline constexpr uint8_t fov1Masks[]={0,0,0,0,0,0,2,0,0,0,0,0};
+// Boot sequence: opening the STINGS_SCEA.BIK logo movie.
+inline constexpr uint32_t introWords[]={0x3C050000u,0x02C02025u,0x00003025u,0x00003825u,0x0C000000u,0x24A50000u,0x3C040000u,0x0C000000u,0x24840000u,0x0C000000u,0x34130000u,0x00402025u};
+inline constexpr uint8_t introMasks[]={1,0,0,0,2,1,1,2,1,2,0,0};
+// Startup movie completion: native forced-stop argument, after normal loading.
+inline constexpr uint32_t introFinishWords[]={0xA2D200ACu,0x02C02025u,0x0C000000u,0x00002825u,0xA2C000ACu,0x0C000000u,0x34110000u,0x00402025u};
+inline constexpr uint8_t introFinishMasks[]={0,0,2,0,0,2,0,0};
+inline constexpr std::array<console::AddressRule,76> rules={{
     {0x0884F52Cu,0x0884F51Cu,words0,masks0,12,16,16,0,0,console::AddressKind::Code},
     {0x088559ACu,0x088559ACu,words59,masks59,12,0,0,0,0,console::AddressKind::Code},
     {0x088559F0u,0x088559E0u,words1,masks1,12,44,16,0,0,console::AddressKind::Code},
@@ -167,8 +179,12 @@ inline constexpr std::array<console::AddressRule,72> rules={{
     {0x08891160u,0x08891150u,words7,masks7,12,44,16,0,0,console::AddressKind::Code},
     {0x08891414u,0x08891404u,words8,masks8,12,24,16,0,0,console::AddressKind::Code},
     {0x088915D4u,0x088915C4u,words9,masks9,12,42,16,0,0,console::AddressKind::Code},
+    {0x088CA67Cu,0x088CA66Cu,fov0Words,fov0Masks,12,16,16,0,0,console::AddressKind::Code},
     {0x088CBFA8u,0x088CBF98u,words10,masks10,12,32,16,0,0,console::AddressKind::Code},
+    {0x088CD270u,0x088CD260u,fov1Words,fov1Masks,12,16,16,0,0,console::AddressKind::Code},
     {0x088CFC1Cu,0x088CFC0Cu,words11,masks11,12,26,16,0,0,console::AddressKind::Code},
+    {0x088D0C44u,0x088D0C34u,introWords,introMasks,12,4,16,0,0,console::AddressKind::Code},
+    {0x088D0D4Cu,0x088D0D40u,introFinishWords,introFinishMasks,8,0,12,0,0,console::AddressKind::Code},
     {0x088D8C70u,0x088D8C60u,words12,masks12,12,42,16,0,0,console::AddressKind::Code},
     {0x088D90E0u,0x088D90D0u,words13,masks13,12,4,16,0,0,console::AddressKind::Code},
     {0x088E12B8u,0x088E127Cu,spriteCallWords,spriteCallMasks,17,20,0x3C,0,0,console::AddressKind::Code},

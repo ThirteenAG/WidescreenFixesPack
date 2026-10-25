@@ -1,0 +1,446 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Need for Speed: The Run",
+        "exe": [
+          "Need For Speed The Run.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "gameplay"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.SkipIntro",
+      "description": "@MAIN.SkipIntro.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.ImproveWindowedMode",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.ImproveWindowedMode",
+      "description": "@MAIN.ImproveWindowedMode.description",
+      "page": "display",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN.FOVFactor",
+      "description": "@MAIN.FOVFactor.description",
+      "page": "camera",
+      "apply": "live",
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "CAMERA.Enable",
+      "type": "bool",
+      "default": 1,
+      "label": "@CAMERA.Enable",
+      "description": "@CAMERA.Enable.description",
+      "page": "camera",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "CAMERA.CameraReturnTimeout",
+      "type": "float",
+      "default": 3,
+      "label": "@CAMERA.CameraReturnTimeout",
+      "description": "@CAMERA.CameraReturnTimeout.description",
+      "page": "camera",
+      "apply": "live",
+      "min": 0,
+      "max": 10,
+      "step": 0.5,
+      "unit": "s",
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": 1
+      },
+      "presets": {
+        "vanilla": 3,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
+      "id": "CAMERA.CameraReturnSpeed",
+      "type": "float",
+      "default": 2,
+      "label": "@CAMERA.CameraReturnSpeed",
+      "description": "@CAMERA.CameraReturnSpeed.description",
+      "page": "camera",
+      "apply": "live",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": 1
+      },
+      "presets": {
+        "vanilla": 2,
+        "recommended": 2,
+        "enhanced": 2
+      }
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1,
+      "label": "@MAIN.GamepadCameraSpeed",
+      "description": "@MAIN.GamepadCameraSpeed.description",
+      "page": "camera",
+      "apply": "live",
+      "min": 0.1,
+      "max": 5,
+      "step": 0.1,
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": 1
+      }
+    },
+    {
+      "id": "MAIN.MouseSensitivity",
+      "type": "float",
+      "default": 1,
+      "label": "@MAIN.MouseSensitivity",
+      "description": "@MAIN.MouseSensitivity.description",
+      "page": "camera",
+      "apply": "live",
+      "min": 0.1,
+      "max": 5,
+      "step": 0.1,
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.InvertLook",
+      "type": "bool",
+      "default": 0,
+      "label": "@CAMERA.InvertLook",
+      "description": "@CAMERA.InvertLook.description",
+      "page": "camera",
+      "apply": "live",
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.OnlyAllowHorizontalStickMovement",
+      "type": "bool",
+      "default": 0,
+      "label": "@CAMERA.OnlyAllowHorizontalStickMovement",
+      "description": "@CAMERA.OnlyAllowHorizontalStickMovement.description",
+      "page": "camera",
+      "apply": "live",
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.CollisionOffset",
+      "type": "float",
+      "default": 0.3,
+      "label": "@CAMERA.CollisionOffset",
+      "description": "@CAMERA.CollisionOffset.description",
+      "page": "advanced",
+      "apply": "live",
+      "min": 0,
+      "max": 2,
+      "step": 0.05,
+      "unit": "m",
+      "visibility": "editor",
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": 1
+      }
+    },
+    {
+      "id": "CAMERA.MinCamDistance",
+      "type": "float",
+      "default": 1.5,
+      "label": "@CAMERA.MinCamDistance",
+      "description": "@CAMERA.MinCamDistance.description",
+      "page": "advanced",
+      "apply": "live",
+      "min": 0.1,
+      "max": 10,
+      "step": 0.1,
+      "unit": "m",
+      "visibility": "editor",
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": 1
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 0,
+      "label": "@MAIN.FPSLimit",
+      "description": "@MAIN.FPSLimit.description",
+      "page": "graphics",
+      "apply": "live",
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "unit": "fps",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "FRAMERATE.UnlockFrameRate",
+      "type": "bool",
+      "default": 1,
+      "label": "@FRAMERATE.UnlockFrameRate",
+      "description": "@FRAMERATE.UnlockFrameRate.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "FRAMERATE.UnlockCutscenes",
+      "type": "bool",
+      "default": 1,
+      "label": "@FRAMERATE.UnlockCutscenes",
+      "description": "@FRAMERATE.UnlockCutscenes.description",
+      "page": "graphics",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "FRAMERATE.UnlockFrameRate",
+        "equals": 1
+      },
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "FRAMERATE.SmoothReflections",
+      "type": "bool",
+      "default": 1,
+      "label": "@FRAMERATE.SmoothReflections",
+      "description": "@FRAMERATE.SmoothReflections.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "bool",
+      "default": 0,
+      "label": "@GRAPHICS.ConsoleGamma",
+      "description": "@GRAPHICS.ConsoleGamma.description",
+      "page": "graphics",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.MinimapFix",
+      "type": "bool",
+      "default": 1,
+      "label": "@GRAPHICS.MinimapFix",
+      "description": "@GRAPHICS.MinimapFix.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.AnisotropicFiltering",
+      "type": "int",
+      "default": 16,
+      "label": "@GRAPHICS.AnisotropicFiltering",
+      "description": "@GRAPHICS.AnisotropicFiltering.description",
+      "page": "graphics",
+      "apply": "nextLevel",
+      "min": 0,
+      "max": 16,
+      "step": 1,
+      "presets": {
+        "vanilla": 0,
+        "recommended": 16,
+        "enhanced": 16
+      }
+    },
+    {
+      "id": "GRAPHICS.ShadowResolution",
+      "type": "int",
+      "default": 0,
+      "label": "@GRAPHICS.ShadowResolution",
+      "description": "@GRAPHICS.ShadowResolution.description",
+      "page": "graphics",
+      "apply": "restart",
+      "min": 0,
+      "max": 8192,
+      "step": 256,
+      "unit": "px",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "GRAPHICS.ShadowDistance",
+      "type": "float",
+      "default": 0,
+      "label": "@GRAPHICS.ShadowDistance",
+      "description": "@GRAPHICS.ShadowDistance.description",
+      "page": "graphics",
+      "apply": "restart",
+      "min": 0,
+      "max": 2000,
+      "step": 25,
+      "unit": "m",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "UNLOCKS.UnlockAllCars",
+      "type": "bool",
+      "default": 0,
+      "label": "@UNLOCKS.UnlockAllCars",
+      "description": "@UNLOCKS.UnlockAllCars.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "UNLOCKS.UnlockChallenges",
+      "type": "bool",
+      "default": 0,
+      "label": "@UNLOCKS.UnlockChallenges",
+      "description": "@UNLOCKS.UnlockChallenges.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "UNLOCKS.UnlockEverything",
+      "type": "bool",
+      "default": 0,
+      "label": "@UNLOCKS.UnlockEverything",
+      "description": "@UNLOCKS.UnlockEverything.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MISC.RightStickDeadzone",
+      "type": "float",
+      "default": 10,
+      "label": "@MISC.RightStickDeadzone",
+      "description": "@MISC.RightStickDeadzone.description",
+      "page": "controls",
+      "apply": "live",
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "unit": "%"
+    }
+  ]
+}

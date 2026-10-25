@@ -1,10 +1,16 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "../Shared/PatternCheck.hpp"
+#include <atomic>
 
 export module FOV;
 
 import ComVars;
+
+static std::atomic<bool> FixFOV{ true };
+static SafetyHookInline SetFOVHook;
 
 struct OdinCamera
 {
@@ -21,6 +27,16 @@ struct OdinCamera
 
     static void __fastcall SetFOV(OdinCamera* OdinCamera, void* edx, float a_FovX, float a_AspectRatio)
     {
+        if (!FixFOV.load(std::memory_order_relaxed))
+        {
+            SetFOVHook.unsafe_fastcall(OdinCamera, edx, a_FovX, a_AspectRatio);
+            return;
+        }
+        if (!std::isfinite(a_AspectRatio) || a_AspectRatio <= 0.0f)
+            a_AspectRatio = 3.0f / 4.0f;
+        if (!std::isfinite(a_FovX) || a_FovX <= 0.0f || a_FovX >= static_cast<float>(M_PI))
+            a_FovX = 1.0471976f;
+
         // too high fov breaks rendering (sky and objects start to disappear)
         auto fAspectRatioDiff = std::clamp((1.0f / a_AspectRatio) / (4.0f / 3.0f), 0.0f, 2.1f); // 2.1 seems safe before that happens
         auto a_FovXa = a_FovX * 0.5f;
@@ -56,19 +72,18 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            auto bFixFOV = iniReader.ReadInteger("MAIN", "FixFOV", 1) != 0;
-
-            if (bFixFOV)
+            auto& settings = FixSettings();
+            FixFOV.store(settings.Bool("MAIN.FixFOV"), std::memory_order_relaxed);
+            settings.OnChange("MAIN.FixFOV", []()
             {
-                auto pattern = hook::pattern("D9 44 24 04 56 DC 0D ? ? ? ? 8B F1 D9 5C 24 08");
-                injector::MakeJMP(pattern.get_first(0), OdinCamera::SetFOV, true);
-
-                //auto pattern = hook::pattern("D9 44 24 0C 56 DC 0D ? ? ? ? 8B F1 D9 5C 24 10 D9 44 24 10 E8 ? ? ? ? D9 5C 24 10 D9 44 24 10 83 8E");
-                //injector::MakeJMP(pattern.get_first(0), OdinCamera::SetPerspective, true);
-
-                //pattern = hook::pattern("51 D9 81 ? ? ? ? D8 B1");
-                //injector::MakeJMP(pattern.get_first(0), OdinCamera::GetAspectRatio, true);
+                FixFOV.store(FixSettings().Bool("MAIN.FixFOV"), std::memory_order_relaxed);
+            });
+            auto pattern = hook::pattern("D9 44 24 04 56 DC 0D ? ? ? ? 8B F1 D9 5C 24 08");
+            if (PatternUnique(pattern, "TheSaboteur.FusionFix: FOV"))
+            {
+                SetFOVHook = safetyhook::create_inline(pattern.get_first(), OdinCamera::SetFOV, safetyhook::InlineHook::StartDisabled);
+                if (SetFOVHook && !SetFOVHook.enable())
+                    SetFOVHook.reset();
             }
         };
     }

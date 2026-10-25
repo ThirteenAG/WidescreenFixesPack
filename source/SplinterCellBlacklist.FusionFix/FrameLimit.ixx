@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module FrameLimit;
 
@@ -107,8 +108,8 @@ export void InitFrameLimit()
 {
     using namespace FrameLimit;
 
-    CIniReader iniReader("");
-    limit = iniReader.ReadInteger("MAIN", "FPSLimit", 0);
+    auto& settings = FixSettings();
+    limit = settings.Int("MAIN.FPSLimit");
     if (limit > 0)
         limit = std::clamp(limit, 30, 1000);
 

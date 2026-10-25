@@ -241,7 +241,7 @@ export void InitEchelon()
 
     // Camera acceleration
     pattern = find_module_pattern(GetModuleHandle(L"Echelon"), "7A ? D9 81 DC 03 00 00");
-    injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jp -> jmp
+    ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(0)) = 0xEB; // jp -> jmp
 
     // Camera minYaw/maxYaw
     pattern = find_module_pattern(GetModuleHandle(L"Echelon"), "E8 ? ? ? ? 89 44 24 ? 8A 86");

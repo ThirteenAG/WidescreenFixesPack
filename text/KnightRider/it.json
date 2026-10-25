@@ -1,0 +1,11 @@
+{
+  "plugin.name": "Knight Rider Widescreen Fix",
+  "page.camera": "Telecamera",
+  "page.advanced": "Avanzate",
+  "ResX": "Larghezza risoluzione",
+  "ResX.description": "Larghezza di uscita in pixel. Zero usa la risoluzione del desktop. Ha effetto dopo il riavvio.",
+  "ResY": "Altezza risoluzione",
+  "ResY.description": "Altezza di uscita in pixel. Zero usa la risoluzione del desktop. Ha effetto dopo il riavvio.",
+  "FOVFactor": "Fattore campo visivo",
+  "FOVFactor.description": "Moltiplica il campo visivo corretto. 1.0 mantiene l'inquadratura prevista; valori maggiori allargano la visuale. Si applica subito."
+}

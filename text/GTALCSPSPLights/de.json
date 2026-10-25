@@ -1,0 +1,6 @@
+{
+  "plugin.name": "GTA Liberty City Stories PPSSPP Improved Vehicle Lights",
+  "page.graphics": "Grafik",
+  "lights": "Fahrzeuglichter",
+  "lights.description": "Lässt Scheinwerfer, Rück-, Brems- und Rückfahrlichter auf den Karosserietexturen von Autos und Motorrädern leuchten. Standardmäßig aktiv. Nach einer Änderung das emulierte Spiel neu starten."
+}

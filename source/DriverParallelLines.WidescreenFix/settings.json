@@ -1,0 +1,453 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Driver: Parallel Lines",
+        "exe": [
+          "DriverParallelLines.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.MinResX",
+      "type": "int",
+      "default": 0,
+      "label": "@MinResX",
+      "description": "@MinResX.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384
+    },
+    {
+      "id": "MAIN.MinResY",
+      "type": "int",
+      "default": 0,
+      "label": "@MinResY",
+      "description": "@MinResY.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384
+    },
+    {
+      "id": "MAIN.MaxResX",
+      "type": "int",
+      "default": 0,
+      "label": "@MaxResX",
+      "description": "@MaxResX.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384
+    },
+    {
+      "id": "MAIN.MaxResY",
+      "type": "int",
+      "default": 0,
+      "label": "@MaxResY",
+      "description": "@MaxResY.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384
+    },
+    {
+      "id": "MAIN.ForceMaxRefreshRate",
+      "type": "bool",
+      "default": 1,
+      "label": "@ForceMaxRefreshRate",
+      "description": "@ForceMaxRefreshRate.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WindowMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@WindowMode.1"
+        },
+        {
+          "value": 2,
+          "label": "@WindowMode.2"
+        }
+      ],
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "min": 0,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@FPSLimit.unlimited"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
+        }
+      ],
+      "label": "@FPSLimit",
+      "description": "@FPSLimit.description",
+      "page": "display",
+      "apply": "restart",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 60,
+        "enhanced": 60
+      },
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "decimals": 2,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "controls",
+      "apply": "live",
+      "visibility": "menu"
+    },
+    {
+      "id": "GRAPHICS.AntiAliasing",
+      "type": "choice",
+      "default": 0,
+      "label": "@SMAA",
+      "description": "@SMAA.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@AntiAliasing.0"
+        },
+        {
+          "value": 1,
+          "label": "SMAA"
+        }
+      ]
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "bool",
+      "default": false,
+      "label": "@ConsoleGamma",
+      "description": "@ConsoleGamma.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "CAMERA.Enable",
+      "type": "bool",
+      "default": 1,
+      "label": "@Enable",
+      "description": "@Enable.description",
+      "page": "camera",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "CAMERA.CameraReturnTimeout",
+      "type": "float",
+      "default": 3.0,
+      "label": "@CameraReturnTimeout",
+      "description": "@CameraReturnTimeout.description",
+      "page": "camera",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 0,
+      "max": 60,
+      "step": 0.1,
+      "decimals": 1,
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": 1
+      },
+      "presets": {
+        "vanilla": 3.0,
+        "recommended": 3.0,
+        "enhanced": 3.0
+      }
+    },
+    {
+      "id": "CAMERA.CameraReturnSpeed",
+      "type": "float",
+      "default": 2.0,
+      "label": "@CameraReturnSpeed",
+      "description": "@CameraReturnSpeed.description",
+      "page": "camera",
+      "apply": "restart",
+      "visibility": "menu",
+      "min": 0,
+      "max": 20,
+      "step": 0.1,
+      "decimals": 1,
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": 1
+      },
+      "presets": {
+        "vanilla": 2.0,
+        "recommended": 2.0,
+        "enhanced": 2.0
+      }
+    },
+    {
+      "id": "TURNINDICATORS.TurnIndicators",
+      "type": "bool",
+      "default": 1,
+      "label": "@TurnIndicators",
+      "description": "@TurnIndicators.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "TURNINDICATORS.ManualTurnIndicators",
+      "type": "bool",
+      "default": 0,
+      "label": "@ManualTurnIndicators",
+      "description": "@ManualTurnIndicators.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "enabledIf": {
+        "setting": "TURNINDICATORS.TurnIndicators",
+        "equals": 1
+      },
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "TURNINDICATORS.LeftIndicatorKey",
+      "type": "int",
+      "default": 219,
+      "label": "@LeftIndicatorKey",
+      "description": "@LeftIndicatorKey.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 1,
+      "max": 255,
+      "enabledIf": {
+        "all": [
+          {
+            "setting": "TURNINDICATORS.TurnIndicators",
+            "equals": 1
+          },
+          {
+            "setting": "TURNINDICATORS.ManualTurnIndicators",
+            "equals": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "TURNINDICATORS.RightIndicatorKey",
+      "type": "int",
+      "default": 221,
+      "label": "@RightIndicatorKey",
+      "description": "@RightIndicatorKey.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 1,
+      "max": 255,
+      "enabledIf": {
+        "all": [
+          {
+            "setting": "TURNINDICATORS.TurnIndicators",
+            "equals": 1
+          },
+          {
+            "setting": "TURNINDICATORS.ManualTurnIndicators",
+            "equals": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "page": "compatibility",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "visibility": "editor",
+      "apply": "menu"
+    }
+  ]
+}

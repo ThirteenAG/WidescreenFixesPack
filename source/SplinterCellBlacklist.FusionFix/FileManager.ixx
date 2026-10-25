@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <fstream>
 #include <unordered_map>
 #include <numeric>
@@ -104,8 +105,7 @@ class ProgressDialog
         else
         {
             // no dialog, just wait for the work
-            while (!closing)
-                Sleep(100);
+            closing.wait(false);
         }
 
         if (activation != INVALID_HANDLE_VALUE)
@@ -154,6 +154,7 @@ public:
         if (!thread.joinable())
             return;
         closing = true;
+        closing.notify_all();
         thread.join();
     }
 };
@@ -1083,8 +1084,8 @@ namespace Dumper
 
 export void InitFileManager()
 {
-    CIniReader iniReader("");
-    auto bDumpPackedFiles = iniReader.ReadInteger("FILELOADER", "DumpPackedFiles", 0) != 0;
+    auto& settings = FixSettings();
+    auto bDumpPackedFiles = settings.Int("FILELOADER.DumpPackedFiles") != 0;
 
     ModuleList dlls;
     dlls.Enumerate(ModuleList::SearchLocation::LocalOnly);

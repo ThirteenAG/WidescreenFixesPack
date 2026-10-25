@@ -37,21 +37,6 @@ export struct bMatrix4
     bVector4 v3;
 };
 
-export struct MouseData
-{
-    int   DeltaX = 0;
-    int   DeltaY = 0;
-    int   Wheel = 0;
-} g_Mouse;
-
-export struct StickData
-{
-    int   RawX = 0;
-    int   RawY = 0;
-    float X = 0.0f;
-    float Y = 0.0f;
-} g_RightStick;
-
 export enum GameFlowState : int32_t
 {
     GAMEFLOW_STATE_NONE = 0x0,
@@ -74,9 +59,7 @@ export struct GameFlowManager
     static inline bool (*IsPaused)() = nullptr;
 };
 
-export bool bHideCursorForMouseLook = false;
-
-export int SimRate = -1;
+export int SimRate = 60;
 
 export uint32_t* Width = nullptr;
 export uint32_t* Height = nullptr;
@@ -95,19 +78,13 @@ export namespace Sim
     }
 }
 
-export int bStringHash(const char* str)
+export uint32_t bStringHash(const char* str)
 {
     if (!str)
-        return -1;
+        return uint32_t(-1);
 
-    int result = -1;
-    unsigned char c = *str;
-
-    while (c != 0)
-    {
-        result = c + 33 * result;
-        c = *(++str);
-    }
-
+    uint32_t result = uint32_t(-1);
+    for (; *str; ++str)
+        result = uint8_t(*str) + 33 * result;
     return result;
 }

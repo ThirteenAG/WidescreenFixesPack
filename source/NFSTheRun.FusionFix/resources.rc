@@ -1,0 +1,7 @@
+// ASI Settings description and translations.
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/NFSTheRun/en.json"
+fr ASISETTINGS_TEXT "../../text/NFSTheRun/fr.json"
+de ASISETTINGS_TEXT "../../text/NFSTheRun/de.json"
+it ASISETTINGS_TEXT "../../text/NFSTheRun/it.json"
+es ASISETTINGS_TEXT "../../text/NFSTheRun/es.json"

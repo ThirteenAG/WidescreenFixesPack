@@ -7,6 +7,7 @@ namespace GTA1Options
 {
     inline bool KeyMessage(UINT message, WPARAM key, LPARAM flags);
     inline bool Showing();
+    inline void ResetPause();
     inline void BeforeFrame();
     inline void Frame(int input);
     inline void BeforePresent();
@@ -15,6 +16,7 @@ namespace GTA1Options
     inline void GameplayPresent(uint8_t* pixels, int width, int height, int pitch, int bits);
     inline bool TakeQueuedEscape();
     inline bool TakeEscape();
+    inline bool SuppressNativePadPause();
 }
 
 namespace GTA1Presentation
@@ -75,6 +77,11 @@ namespace GTA1Presentation
         if (message == WM_KEYDOWN && !(flags & (1u << 30)) && !InputDevices::Frontend) GTA1Rotation::KeyDown(key);
         if (message == WM_KEYDOWN && !(flags & (1u << 30)) && !InputDevices::Frontend &&
             InputDevices::ModernControls && key == InputDevices::PauseKey) PendingKey = 64;
+        if (message == WM_KEYDOWN && GTA1Options::QuitPromptActive())
+        {
+            if (key == VK_RETURN) PendingKey = 28;
+            else if (key == VK_ESCAPE) PendingKey = 1;
+        }
         if (message == WM_KEYDOWN && InputDevices::Frontend && InputDevices::ModernControls && !TextEntry())
         {
             switch (key)
@@ -101,6 +108,7 @@ namespace GTA1Presentation
 
     inline int __cdecl DrawMenu(int action)
     {
+        if (GTA1Options::OverlayActive()) GTA1Options::ResetPause();
         InputDevices::Frontend = true;
         InputDevices::BeginInputFrame();
         RenderingFrontend = true;
@@ -179,7 +187,10 @@ namespace GTA1Presentation
         using namespace InputDevices;
         Poll();
         int queued = PendingKey.exchange(0);
+        const bool quitPrompt = GTA1Options::QuitPromptActive();
+        const bool suppressPadPause = GTA1Options::SuppressNativePadPause();
         if (Frontend && Focused() && queued) key = queued;
+        if (quitPrompt && Focused() && (queued == 28 || queued == 1)) key = queued;
         if (!Frontend && Focused() && queued == 64 && GTA1Input::Available()) key = 64;
         // Esc opens the options menu; Quit Game there passes one to the native quit prompt.
         if (!Frontend && key == 1 && GTA1Options::TakeEscape()) key = 0;
@@ -210,7 +221,7 @@ namespace GTA1Presentation
             y > 0.35f || Button(XINPUT_GAMEPAD_DPAD_DOWN),
             x < -0.35f || Button(XINPUT_GAMEPAD_DPAD_LEFT),
             x > 0.35f || Button(XINPUT_GAMEPAD_DPAD_RIGHT),
-            Button(XINPUT_GAMEPAD_A), Button(XINPUT_GAMEPAD_B) || Button(XINPUT_GAMEPAD_START) };
+            Button(XINPUT_GAMEPAD_A), Button(XINPUT_GAMEPAD_B) || Button(XINPUT_GAMEPAD_START) || (quitPrompt && Button(XINPUT_GAMEPAD_BACK)) };
         constexpr int scans[] = {328, 336, 331, 333, 28, 1};
         DWORD now = GetTickCount();
         for (int i = 0; i < 6; ++i)
@@ -222,8 +233,8 @@ namespace GTA1Presentation
                 else if (down[i] && static_cast<int32_t>(now - repeat[i]) >= 0)
                 { pressed = true; repeat[i] = now + 120; }
             }
-            if (!key && pressed && Frontend) key = scans[i];
-            else if (!key && pressed && i == 5 && Button(XINPUT_GAMEPAD_START) && GTA1Input::Available()) key = 64;
+            if (!key && pressed && (Frontend || (quitPrompt && i >= 4))) key = scans[i];
+            else if (!key && pressed && i == 5 && Button(XINPUT_GAMEPAD_START) && !suppressPadPause && GTA1Input::Available()) key = 64;
             held[i] = down[i];
         }
         return key;
@@ -231,7 +242,7 @@ namespace GTA1Presentation
 
     inline void Install()
     {
-        CIniReader ini("");
+        SettingsReader ini("");
         SoftwareBuffer = ini.ReadBoolean("MAIN", "SoftwareBuffer", true);
         auto mode = hook::pattern("8B 44 24 08 81 EC 70 05 00 00 83 F8 FF 90 53 56 57 55 74 34");
         if (mode.size() == 1) ModeHook = safetyhook::create_inline(mode.get_first(), CreateMode);

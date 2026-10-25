@@ -10,6 +10,7 @@ namespace GTA1Hud
     inline bool Enabled = true, Drawing = false, LabelsPending = false;
     inline int Width = 0, Height = 0, Bytes = 0;
     inline int SafeArea = 8;
+    inline std::optional<float> Constraint;        // HUD Aspect Ratio: a centred box of this aspect (Auto: the whole screen)
     inline std::vector<uint8_t> Canvas, Alpha;
     inline std::vector<std::pair<int, int>> Bounds;
     inline std::vector<void*> Projected;
@@ -64,9 +65,14 @@ namespace GTA1Hud
             }
             return DrawHook.call<char>();
         }
-        float scale = std::min(height / 480.0f, width / 640.0f);
-        int margin = std::clamp(int(std::lround(SafeArea * scale)), 0, std::min(width, height) / 4);
-        int outputWidth = width - margin * 2, outputHeight = height - margin * 2;
+        // The HUD keeps to its box; elements at its sides stay at the box's sides
+        int box = width;
+        if (Constraint && *Constraint > 0.0f && *Constraint <= 32.0f / 9.0f)
+            box = std::clamp(int(std::lround(height * ClampHudAspectRatio(*Constraint, float(width) / height))), 1, width);
+        int boxLeft = (width - box) / 2;
+        float scale = std::min(height / 480.0f, box / 640.0f);
+        int margin = std::clamp(int(std::lround(SafeArea * scale)), 0, std::min(box, height) / 4);
+        int outputWidth = box - margin * 2, outputHeight = height - margin * 2;
         Width = std::clamp(int(std::lround(outputWidth / scale)), 640 - SafeArea * 2, 7680);
         Height = std::clamp(int(std::lround(outputHeight / scale)), 480 - SafeArea * 2, 4320);
         Bytes = bytes;
@@ -116,7 +122,7 @@ namespace GTA1Hud
             int sy = int(int64_t(y) * Height / outputHeight);
             auto [left, right] = Bounds[sy];
             if (left >= right) continue;
-            auto output = pixels + size_t(y + margin) * pitch + margin * bytes;
+            auto output = pixels + size_t(y + margin) * pitch + (boxLeft + margin) * bytes;
             int first = int((int64_t(left) * outputWidth + Width - 1) / Width);
             int last = int((int64_t(right) * outputWidth + Width - 1) / Width);
             for (int x = first; x < last; ++x)
@@ -135,8 +141,15 @@ namespace GTA1Hud
 
     inline void Install()
     {
-        CIniReader ini("");
-        SafeArea = std::clamp(ini.ReadInteger("MAIN", "HudSafeArea", 8), 0, 32);
+        // Changes from FusionFixHub or a preset apply at once, as from the in-game options
+        static auto read = []
+        {
+            SafeArea = std::clamp(FixSettings().Int("MAIN.HudSafeArea"), 0, 32);
+            Constraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+        };
+        read();
+        FixSettings().OnChange("MAIN.HudSafeArea", read);
+        FixSettings().OnChange("MAIN.HudAspectRatioConstraint", read);
         if (!GTA1Raster::OriginalRows || !GTA1Presentation::DrawPixels) return;
         using GTA1Build::Find;
         auto draw = Find("A1 ? ? ? ? 55 33 ED 3B C5 0F 85 ? ? ? ? A1 ? ? ? ? 53 56 3B C5", "53 A1 ? ? ? ? 56 85 C0 57 55 0F 85 ? ? ? ? A1",

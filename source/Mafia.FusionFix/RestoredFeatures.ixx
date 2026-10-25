@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <cmath>
 #include <numbers>
 #include <string_view>
@@ -23,8 +24,7 @@ namespace RestoredFeatures
 
     export void InitEyeAnimations()
     {
-        CIniReader ini("");
-        if (!ini.ReadInteger("GRAPHICS", "RestoreEyeAnimations", 0))
+        if (!FixSettings().Bool("GRAPHICS.RestoreEyeAnimations"))
             return;
 
         // The gaze code survives the patch. A8.dta instead replaces the moving
@@ -89,8 +89,7 @@ namespace RestoredFeatures
 
     export void InitProjectorOpacity()
     {
-        CIniReader ini("");
-        if (!ini.ReadInteger("GRAPHICS", "RestoreCarScratches", 0))
+        if (!FixSettings().Bool("GRAPHICS.RestoreCarScratches"))
             return;
 
         // 1.1/1.2 omit the normalized-alpha -> byte conversion in BOTH default
@@ -345,8 +344,7 @@ namespace RestoredFeatures
 
     export void InitRadar()
     {
-        CIniReader ini("");
-        radarMap = ini.ReadInteger("HUD", "RadarMap", 0) != 0;
+        radarMap = FixSettings().Bool("HUD.RadarMap") != 0;
 
         // Same HUD draw sequence in all three PC versions, with different layout
         // and stack frame sizes in 1.0. Match the native radar's car-list fields.

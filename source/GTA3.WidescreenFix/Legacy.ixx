@@ -1,6 +1,9 @@
-﻿module;
+module;
 
 #include "stdafx.h"
+#include "../Shared/CheckedPattern.hpp"
+#include "FixSettings.hpp"
+#include <charconv>
 
 export module Legacy;
 
@@ -320,37 +323,40 @@ float* pfSkinX;
 
 void ReadSettings()
 {
-    CIniReader iniReader("GTA3.WidescreenFixLegacy.ini");
-    ResX = iniReader.ReadInteger("MAIN", "ResX", -1);
-    ResY = iniReader.ReadInteger("MAIN", "ResY", -1);
-    szForceAspectRatio = iniReader.ReadString("MAIN", "ForceAspectRatio", "auto");
-    szFrontendAspectRatio = iniReader.ReadString("MAIN", "FrontendAspectRatio", "auto");
-    bDontTouchFOV = iniReader.ReadInteger("MAIN", "DontTouchFOV", 0) != 0;
-    bRestoreCutsceneFOV = iniReader.ReadInteger("MAIN", "RestoreCutsceneFOV", 1) != 0;
+    ResX = static_cast<uint32_t>(FixSettings().Int("LEGACY.ResX"));
+    ResY = static_cast<uint32_t>(FixSettings().Int("LEGACY.ResY"));
+    szForceAspectRatio = FixSettings().String("LEGACY.ForceAspectRatio");
+    szFrontendAspectRatio = FixSettings().String("LEGACY.FrontendAspectRatio");
+    bDontTouchFOV = FixSettings().Bool("LEGACY.DontTouchFOV");
+    bRestoreCutsceneFOV = FixSettings().Bool("LEGACY.RestoreCutsceneFOV");
 
-    fHudWidthScale = iniReader.ReadFloat("MAIN", "HudWidthScale", 0.0f); fHudWidthScale == 0.0f ? fHudWidthScale = 1.0f : fHudWidthScale;
-    fHudHeightScale = iniReader.ReadFloat("MAIN", "HudHeightScale", 0.0f); fHudHeightScale == 0.0f ? fHudHeightScale = 1.0714285f : fHudHeightScale;
-    fRadarWidthScale = iniReader.ReadFloat("MAIN", "RadarWidthScale", 0.0f); fRadarWidthScale == 0.0f ? fRadarWidthScale = 1.0f : fRadarWidthScale;
-    fSubtitlesScale = iniReader.ReadFloat("MAIN", "SubtitlesScale", 0.0f); fSubtitlesScale == 0.0f ? fSubtitlesScale = 1.0f : fSubtitlesScale;
+    fHudWidthScale = FixSettings().Float("LEGACY.HudWidthScale");
+    fHudHeightScale = FixSettings().Float("LEGACY.HudHeightScale");
+    fRadarWidthScale = FixSettings().Float("LEGACY.RadarWidthScale");
+    fSubtitlesScale = FixSettings().Float("MAIN.SubtitlesScale");
+    if (fHudWidthScale == 0.0f) fHudWidthScale = 1.0f;
+    if (fHudHeightScale == 0.0f) fHudHeightScale = 1.0714285f;
+    if (fRadarWidthScale == 0.0f) fRadarWidthScale = 1.0f;
+    if (fSubtitlesScale == 0.0f) fSubtitlesScale = 1.0f;
 
-    bSmartCutsceneBorders = iniReader.ReadInteger("MISC", "SmartCutsceneBorders", 1) != 0;
-    nHideAABug = iniReader.ReadInteger("MISC", "HideAABug", 0);
-    bSmallerVehicleCorona = iniReader.ReadInteger("MISC", "SmallerVehicleCorona", 0);
-    bNoLightSquare = iniReader.ReadInteger("MISC", "NoLightSquare", 0);
-    szSelectedMultisamplingLevels = iniReader.ReadString("MISC", "ForceMultisamplingLevel", "");
-    bIVRadarScaling = iniReader.ReadInteger("MISC", "IVRadarScaling", 0) != 0;
-    ReplaceTextShadowWithOutline = iniReader.ReadInteger("MISC", "ReplaceTextShadowWithOutline", 0);
+    bSmartCutsceneBorders = FixSettings().Bool("LEGACY.SmartCutsceneBorders");
+    nHideAABug = FixSettings().Int("LEGACY.HideAABug");
+    bSmallerVehicleCorona = FixSettings().Bool("LEGACY.SmallerVehicleCorona");
+    bNoLightSquare = FixSettings().Bool("LEGACY.NoLightSquare");
+    szSelectedMultisamplingLevels = FixSettings().String("GRAPHICS.ForceMultisamplingLevel");
+    bIVRadarScaling = FixSettings().Bool("LEGACY.IVRadarScaling");
+    ReplaceTextShadowWithOutline = FixSettings().Int("LEGACY.ReplaceTextShadowWithOutline");
 
-    auto is_number = [](const std::string& s) -> bool
-    {
-        return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
-    };
-
-    if (is_number(szSelectedMultisamplingLevels))
-        SelectedMultisamplingLevels = iniReader.ReadInteger("MISC", "ForceMultisamplingLevel", 0);
+    SelectedMultisamplingLevels = 0;
+    const auto first = szSelectedMultisamplingLevels.data();
+    const auto last = first + szSelectedMultisamplingLevels.size();
+    uint32_t level = 0;
+    const auto result = std::from_chars(first, last, level);
+    if (result.ec == std::errc{} && result.ptr == last)
+        SelectedMultisamplingLevels = level;
 }
 
-void GetPatterns()
+bool GetPatterns()
 {
     dwGameLoadStatePattern = hook::pattern("C7 05 ? ? ? ? 09 00 00 00"); //0x582E78
     EmergencyVehiclesFixPattern = hook::pattern("D9 9B F0 00 00 00 D9 83 EC 00 00 00"); //0x4A42A0
@@ -369,46 +375,243 @@ void GetPatterns()
     MenuPattern2 = hook::pattern("FF 35 ? ? ? ? E8 ? ? ? ? 8D 84 24 ? ? 00 00 50"); //0x47E0FE
     MenuPattern3 = hook::pattern("6A 00 6A 00 6A 00 E8"); //black text
 
-    auto dword_temp = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DA 6C 24 0C D9 1C 24 ").count(1).get(0).get<uint32_t*>(2);
+    auto requiredPattern0 = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DA 6C 24 0C D9 1C 24 ");
+    if (requiredPattern0.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    auto dword_temp = *requiredPattern0.get(0).get<uint32_t*>(2);
     CDarkelDrawMessagesPattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x5ECD00
 
-    dword_temp = *hook::pattern("D8 0D ? ? ? ? 50 D8 0D ? ? ? ? D9 1C 24 A1 ? ? ? ? 89 44 24 08").count(1).get(0).get<uint32_t*>(2);
+    auto requiredPattern1 = hook::pattern("D8 0D ? ? ? ? 50 D8 0D ? ? ? ? D9 1C 24 A1 ? ? ? ? 89 44 24 08");
+    if (requiredPattern1.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    dword_temp = *requiredPattern1.get(0).get<uint32_t*>(2);
     CDarkelDrawMessagesPattern2 = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x5ECCF8
 
-    dword_temp = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? DD D9 D9 44 24 1C D8 C1 D9 1C 24").count(1).get(0).get<uint32_t*>(2);
+    auto requiredPattern2 = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? DD D9 D9 44 24 1C D8 C1 D9 1C 24");
+    if (requiredPattern2.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    dword_temp = *requiredPattern2.get(0).get<uint32_t*>(2);
     DrawHudHorScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x5FDB58
 
-    dword_temp = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? DD DA D9 44 24 1C D8 C2 D9 1C 24").count(1).get(0).get<uint32_t*>(2);
+    auto requiredPattern3 = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? DD DA D9 44 24 1C D8 C2 D9 1C 24");
+    if (requiredPattern3.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    dword_temp = *requiredPattern3.get(0).get<uint32_t*>(2);
     DrawHudVerScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x5FDB4C
 
-    dword_temp = *hook::pattern("D8 0D ? ? ? ? DD D9 D9 05 ? ? ? ? D8 C9 D9 1C 24 50").count(1).get(0).get<uint32_t*>(2);
+    auto requiredPattern4 = hook::pattern("D8 0D ? ? ? ? DD D9 D9 05 ? ? ? ? D8 C9 D9 1C 24 50");
+    if (requiredPattern4.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    dword_temp = *requiredPattern4.get(0).get<uint32_t*>(2);
     sub61DEB0Pattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x592969
 
-    dword_temp = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DD DA D9 00 D8 CA").count(1).get(0).get<uint32_t*>(2);
+    auto requiredPattern5 = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DD DA D9 00 D8 CA");
+    if (requiredPattern5.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    dword_temp = *requiredPattern5.get(0).get<uint32_t*>(2);
     CRadarHorScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x5F7148
 
-    dword_temp = *hook::pattern("D8 0D ? ? ? ? DD D9 D9 05 ? ? ? ? D8 C9 DD DA D9 40 04").count(1).get(0).get<uint32_t*>(2);
+    auto requiredPattern6 = hook::pattern("D8 0D ? ? ? ? DD D9 D9 05 ? ? ? ? D8 C9 DD DA D9 40 04");
+    if (requiredPattern6.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    dword_temp = *requiredPattern6.get(0).get<uint32_t*>(2);
     CRadarVerScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(dword_temp))); //0x5F7158
+    return true;
 }
 
-void GetMemoryAddresses()
+bool GetMemoryAddresses()
 {
-    RsGlobal = *hook::pattern("8B 0D ? ? ? ? 6A 00 6A 00 52 50").count(1).get(0).get<RsGlobalType*>(2); //0x8F4360
-    CDraw::pfScreenAspectRatio = *hook::pattern("FF 35 ? ? ? ? EB 0B").count(1).get(0).get<float*>(2); //0x5F53C0
-    pfScreenAspectRatioSkin = *hook::pattern("89 C0 8D 40 00 FF 35 ? ? ? ? 50 D9").count(1).get(0).get<float*>(7); //0x5F53C4
-    pfSkinX = *hook::pattern("A5 A5 A5 BE ? ? ? ? 8D 7C 24 1C A5 A5 A5").count(1).get(0).get<float*>(4); //0x6182B0
-    CDraw::pfScreenFieldOfView = *hook::pattern("D8 0D ? ? ? ? 53 83 EC 20 8A 44 24 28").count(1).get(0).get<float*>(2); //0x5FBC6C
-    CSprite2dDrawRect = (int(__cdecl*)(CRect const&, CRGBA const&)) hook::pattern("8B 44 24 04 53 8B 5C 24 0C 6A 00 53 53 53 53 50").count(1).get(0).get<uint32_t>(0); //0x51F970
-    bWideScreen = *hook::pattern("80 3D ? ? ? ? 00 DD D9 74 0D").count(1).get(0).get<bool*>(2);//0x95CD23
-    BordersVar1 = *hook::pattern("A1 ? ? ? ? 53 83 EC 30 85 C0 89 CB").count(1).get(0).get<uint32_t*>(1); //0x6FADA0
+    if (dwGameLoadStatePattern.size() < 1)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (EmergencyVehiclesFixPattern.size() < 1)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (RadarScalingPattern.size() < 1)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (RsSelectDevicePattern.size() < 1)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (DrawHudHorScalePattern.size() < 61)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (MenuPattern1.size() < 1)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (MenuPattern2.size() < 10)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (ResolutionPattern0.size() < 1)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (ResolutionPattern1.size() < 1)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (ResolutionPattern2.size() < 1)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (ResolutionPattern3.size() < 2)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (ResolutionPattern4.size() < 1)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (ResolutionPattern5.size() < 1)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (CRadarHorScalePattern.size() < 1)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    if (BordersPattern.size() < 18)
+    {
+        wfp::patterns::Report("Legacy mode disabled: required signature unavailable.\n");
+        return false;
+    }
+    auto requiredPattern7 = hook::pattern("8B 0D ? ? ? ? 6A 00 6A 00 52 50");
+    if (requiredPattern7.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    RsGlobal = *requiredPattern7.get(0).get<RsGlobalType*>(2); //0x8F4360
+    auto requiredPattern8 = hook::pattern("FF 35 ? ? ? ? EB 0B");
+    if (requiredPattern8.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    CDraw::pfScreenAspectRatio = *requiredPattern8.get(0).get<float*>(2); //0x5F53C0
+    auto requiredPattern9 = hook::pattern("89 C0 8D 40 00 FF 35 ? ? ? ? 50 D9");
+    if (requiredPattern9.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    pfScreenAspectRatioSkin = *requiredPattern9.get(0).get<float*>(7); //0x5F53C4
+    auto requiredPattern10 = hook::pattern("A5 A5 A5 BE ? ? ? ? 8D 7C 24 1C A5 A5 A5");
+    if (requiredPattern10.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    pfSkinX = *requiredPattern10.get(0).get<float*>(4); //0x6182B0
+    auto requiredPattern11 = hook::pattern("D8 0D ? ? ? ? 53 83 EC 20 8A 44 24 28");
+    if (requiredPattern11.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    CDraw::pfScreenFieldOfView = *requiredPattern11.get(0).get<float*>(2); //0x5FBC6C
+    auto requiredPattern12 = hook::pattern("8B 44 24 04 53 8B 5C 24 0C 6A 00 53 53 53 53 50");
+    if (requiredPattern12.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    CSprite2dDrawRect = (int(__cdecl*)(CRect const&, CRGBA const&)) requiredPattern12.get(0).get<uint32_t>(0); //0x51F970
+    auto requiredPattern13 = hook::pattern("80 3D ? ? ? ? 00 DD D9 74 0D");
+    if (requiredPattern13.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    bWideScreen = *requiredPattern13.get(0).get<bool*>(2);//0x95CD23
+    auto requiredPattern14 = hook::pattern("A1 ? ? ? ? 53 83 EC 30 85 C0 89 CB");
+    if (requiredPattern14.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    BordersVar1 = *requiredPattern14.get(0).get<uint32_t*>(1); //0x6FADA0
     BordersVar2 = BordersVar1;
-    bIsInCutscene = *hook::pattern("80 3D ? ? ? ? ? 0F 84 84 00 00 00 8B 35").count(1).get(0).get<bool*>(2); //0x6FAD68
+    auto requiredPattern15 = hook::pattern("80 3D ? ? ? ? ? 0F 84 84 00 00 00 8B 35");
+    if (requiredPattern15.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    bIsInCutscene = *requiredPattern15.get(0).get<bool*>(2); //0x6FAD68
     dwGameLoadState = *dwGameLoadStatePattern.count(1).get(0).get<uint32_t*>(2);
     fCRadarRadarRange = *RadarScalingPattern.count(1).get(0).get<float*>(2);
-    SetColorAddr = hook::pattern("53 83 EC 10 8B 5C 24 18 8A 13").count(1).get(0).get<uint32_t>(0);
-    nFontColor = *hook::pattern("88 15 ? ? ? ? 8A 43 01 A2 ? ? ? ? 8A 4B 02 88 0D ? ? ? ? 8A 43 03 A2 ? ? ? ? D9 EE").get(0).get<uint32_t*>(2);
-    bBackgroundOn = *hook::pattern("C6 05 ? ? ? ? 01 C3").count(3).get(2).get<uint8_t*>(2); //0x8F3197
-    bWantsToDrawHud = *hook::pattern("80 3D ? ? ? ? 01 8B 5C 24 64 8B 6C 24 54").count(1).get(0).get<bool*>(2); //0x4A5877
+    auto requiredPattern16 = hook::pattern("53 83 EC 10 8B 5C 24 18 8A 13");
+    if (requiredPattern16.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    SetColorAddr = requiredPattern16.get(0).get<uint32_t>(0);
+    auto requiredPattern17 = hook::pattern("88 15 ? ? ? ? 8A 43 01 A2 ? ? ? ? 8A 4B 02 88 0D ? ? ? ? 8A 43 03 A2 ? ? ? ? D9 EE");
+    if (requiredPattern17.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    nFontColor = *requiredPattern17.get(0).get<uint32_t*>(2);
+    auto requiredPattern18 = hook::pattern("C6 05 ? ? ? ? 01 C3");
+    if (requiredPattern18.size() <= 2)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    bBackgroundOn = *requiredPattern18.get(2).get<uint8_t*>(2); //0x8F3197
+    auto requiredPattern19 = hook::pattern("80 3D ? ? ? ? 01 8B 5C 24 64 8B 6C 24 54");
+    if (requiredPattern19.size() <= 0)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return false;
+    }
+    bWantsToDrawHud = *requiredPattern19.get(0).get<bool*>(2); //0x4A5877
+    return true;
 }
 
 void ShowRadarTrace(float fX, float fY, unsigned int nScale, BYTE r, BYTE g, BYTE b, BYTE a)
@@ -436,6 +639,11 @@ void SilentPatchCompatibility()
 {
     OverwriteResolution();
     auto pattern = hook::pattern("FF 74 24 60 FF 74 24 60 E8");
+    if (pattern.size() < 6)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeCALL(pattern.count(6).get(2).get<uint8_t*>(8), ShowRadarTrace, true); //0x4A45FC
     injector::MakeCALL(pattern.count(6).get(3).get<uint8_t*>(8), ShowRadarTrace, true); //0x4A47CD
     injector::MakeCALL(pattern.count(6).get(4).get<uint8_t*>(8), ShowRadarTrace, true); //0x4A4A0F
@@ -497,18 +705,38 @@ void CalculateAspectRatio2()
 void FixAspectRatio()
 {
     auto pattern = hook::pattern("80 3D ? ? ? ? 00 74 ? D9 05 ? ? ? ? EB");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(7), 2, true); //0x46B618
     pattern = hook::pattern("80 3D ? ? ? ? 00 DD D9 74 0A FF 35");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     //injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 7, true); //0x48D06B
     injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(9), 2, true); //0x48D074
 
     pattern = hook::pattern("EB 00 5D 5B C3"); //0x584B26
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(4), CalculateAspectRatio2, true);
 }
 
 void FixFOV()
 {
     auto pattern = hook::pattern("D9 44 24 04 D9 1D ? ? ? ? C3"); //0x4FE7B0
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeJMP(pattern.count(1).get(0).get<uint32_t>(0), CDraw::SetFOV, true);
 
     struct EmergencyVehiclesFix
@@ -587,12 +815,29 @@ void RsSelectDeviceHook()
 void FixCoronas()
 {
     auto pattern = hook::pattern("D8 0E D9 1E D9 05 ? ? ? ? D8 35 ? ? ? ? D8 0B D9 1B"); //0x51C46A
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x0B, true);
 
     if (bNoLightSquare)
     {
-        auto pfCAutoPreRender = (uint32_t)hook::pattern("81 EC F8 06 00 00 0F BF 45 5C 3D 83 00 00 00").count(1).get(0).get<uint32_t>(0);
-        auto pfCBrightLightsRegisterOne = (uint32_t)hook::pattern("D9 EE D9 EE 83 EC 20 8B 44 24").count(1).get(0).get<uint32_t>(0);
+        auto requiredPattern20 = hook::pattern("81 EC F8 06 00 00 0F BF 45 5C 3D 83 00 00 00");
+        if (requiredPattern20.size() <= 0)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        auto pfCAutoPreRender = (uint32_t)requiredPattern20.get(0).get<uint32_t>(0);
+        auto requiredPattern21 = hook::pattern("D9 EE D9 EE 83 EC 20 8B 44 24");
+        if (requiredPattern21.size() <= 0)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        auto pfCBrightLightsRegisterOne = (uint32_t)requiredPattern21.get(0).get<uint32_t>(0);
         pattern = hook::range_pattern(pfCAutoPreRender, pfCAutoPreRender + 0x4309, "E8 ? ? ? ?");
         for (size_t i = 0; i < pattern.size(); ++i)
         {
@@ -614,14 +859,34 @@ static void __fastcall DrawBordersForWideScreenHook(void* _this)
 void FixBorders()
 {
     auto pattern = hook::pattern("74 14 D9 05 ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? EB 12");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 2, true); //0x46086E
     //pattern = hook::pattern("74 08 D9 05 ? ? ? ? EB 06");
     //injector::MakeNOP(pattern.get(9).get<uint32_t>(0), 2, true); //0x46B618
     pattern = hook::pattern("D9 EE 74 15 80 3D ? ? ? ? 00 75 0C");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 2, true); //0x46EBB9
     pattern = hook::pattern("74 0D FF 35 ? ? ? ? EB 0B");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 2, true); //0x48CF81
     pattern = hook::pattern("80 3D ? ? ? ? 00 0F 84 84 00 00 00 8B 35 ? ? ? ? 89 F0");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(6), 1, true); //0x48D2D5
 
     hbDrawBorders.fun = injector::MakeCALL(BordersPattern.count(18).get(11).get<uint32_t>(7), DrawBordersForWideScreenHook).get();
@@ -629,6 +894,11 @@ void FixBorders()
 
     // #108 Gap when fading
     pattern = hook::pattern("0F 84 ? 00 00 00 8B 35 ? ? ? ? 89 F0");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::MakeNOP(pattern.count(1).get(0).get<uint32_t>(0), 1, true); //0x48D2D6
     injector::WriteMemory<uint16_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x84E9, true); //jmp 48D360
 }
@@ -643,25 +913,65 @@ void FixHUD()
 
     //sniper scope and rocketlauncher borders @Render2dStuff
     auto pattern = hook::pattern("D8 0D ? ? ? ? 89 44 24 04 50 D8 0D ? ? ? ? DA 6C 24 08"); //0x48E1E2, 0x48E29C
+    if (pattern.size() < 2)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //rocketlauncher top border
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //sniper scope top border
     pattern = hook::pattern("D8 0D ? ? ? ? 89 54 24 10 D8 0D ? ? ? ? DA 44 24 10"); //0x48E256
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //rocketlauncher bottom border
     pattern = hook::pattern("D8 0D ? ? ? ? 89 4C 24 10 D8 0D ? ? ? ? DA 44 24 10"); //0x48E30F
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //sniper scope bottom border
     pattern = hook::pattern("D8 0D ? ? ? ? 89 44 24 08 50 D8 0D ? ? ? ? DA 6C 24 0C"); //0x48E363
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //sniper scope & rocketlauncher left border
     pattern = hook::pattern("D8 0D ? ? ? ? 89 54 24 0C FF 35 ? ? ? ? D8 0D ? ? ? ? 50 DA 44 24 14"); //0x48E3CC
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //sniper scope & rocketlauncher right border
 
     //loading island screen text
     pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? 50 D9 1C 24 DB 05"); //0x48DBF3, 0x48DCC5
+    if (pattern.size() < 2)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //font height
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //font height
     pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? 50 D9 1C 24 E8 ? ? ? ? 59 59"); //0x48DC09, 0x48DCDB
+    if (pattern.size() < 2)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //font width
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenWidthScaleDown, true); //font width
     pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? DB 05 ? ? ? ? DE E1"); //0x48DC36, 0x48DCFF
+    if (pattern.size() < 2)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory(pattern.count(2).get(0).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //bottom screen offset
     injector::WriteMemory(pattern.count(2).get(1).get<uint32_t>(2), &fWideScreenHeightScaleDown, true); //bottom screen offset
     //right offsets would require injecting code, since they were compiled as 1 byte addition instruction
@@ -681,6 +991,11 @@ void FixHUD()
     }
 
     pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8"); // radio text
+    if (pattern.size() < 28)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory(pattern.count(28).get(24).get<uint32_t>(3), &fWideScreenWidthScaleDown, true);
     injector::WriteMemory(pattern.count(28).get(25).get<uint32_t>(3), &fWideScreenWidthScaleDown, true);
     injector::WriteMemory(pattern.count(28).get(27).get<uint32_t>(3), &fWideScreenWidthScaleDown, true);//0x595F45 replay
@@ -722,6 +1037,11 @@ void FixCrosshair()
     }
 
     auto pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 14 DB 05"); //0x50550D
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(2), &fCrosshairPosFactor, true);
 }
 
@@ -802,11 +1122,21 @@ void ApplyIniOptions()
         }
 
         auto pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8"); //0x57E954 radio text
+        if (pattern.size() < 28)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory(pattern.count(28).get(24).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
         //injector::WriteMemory(pattern.count(28).get(25).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);
         injector::WriteMemory(pattern.count(28).get(27).get<uint32_t>(3), &fCustomWideScreenWidthScaleDown, true);//0x595F45 replay
 
         pattern = hook::pattern("50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50"); //0x57E93E radio text
+        if (pattern.size() < 19)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory(pattern.count(19).get(16).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);
         injector::WriteMemory(pattern.count(19).get(18).get<uint32_t>(3), &fCustomWideScreenHeightScaleDown, true);//0x620C2F replay
 
@@ -834,14 +1164,29 @@ void ApplyIniOptions()
         injector::WriteMemory(pattern.get(2).get<uint32_t>(2), &fPlayerMarkerPos, true);
 
         pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 C0 D8 CA"); //0x4C5170 + 0x307 + 0x2 + 0x6
+        if (pattern.size() < 2)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory(pattern.get(1).get<uint32_t>(2), &fPlayerMarkerPos, true);*/
     }
 
     if (fSubtitlesScale)
     {
         auto pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24"); //0x5FDC7C
+        if (pattern.size() < 13)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory<float>(*pattern.count(13).get(12).get<uint32_t*>(2), 1.2f * fSubtitlesScale, true);
         pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59"); //0x5FDC80
+        if (pattern.size() < 13)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory<float>(*pattern.count(13).get(12).get<uint32_t*>(2), 0.47999999f * fSubtitlesScale, true);
     }
 
@@ -856,6 +1201,11 @@ void ApplyIniOptions()
     if (nHideAABug)
     {
         auto pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? C3 00 00 00 00"); //0x48E0DC
+        if (pattern.size() < 4)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::MakeJMP(pattern.count(4).get(3).get<uint32_t>(15), Hide1pxAABug, true);
     }
 
@@ -868,9 +1218,19 @@ void ApplyIniOptions()
     if (ReplaceTextShadowWithOutline)
     {
         auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 0C 89 E9 FF 35 ? ? ? ? E8 ? ? ? ? 89 E9");
+        if (pattern.size() < 2)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         auto dest = injector::GetBranchDestination(pattern.count(2).get(1).get<uint32_t>(0), true); //PrintString 500F50
 
         pattern = hook::pattern("66 C7 05 ? ? ? ? 00 00 59 C3 00 00 00 00 00 00");
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         auto newPrintString = pattern.count(1).get(0).get<uint32_t>(11); //0x500C24
 
         injector::WriteMemory((uint32_t)newPrintString, 0x55575653, true); //push    ebx,esi,edi,ebp
@@ -892,23 +1252,49 @@ void ApplyIniOptions()
             }
         }
         pattern = hook::pattern("52 8D 8C 24 34 01 00 00 50 E8 ? ? ? ? 8D 84 24 28 01 00 00 50");//48A03B
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(0), 0x51, true); //edx -> ecx to randomize color(controls page key on hover)
 
         pattern = hook::pattern("68 FF 00 00 00 6A 00 6A 00 6A 00 E8 ? ? ? ? 8D 84 24 5C 04 00 00 50 E8 ? ? ? ? 59");//48A03B
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), 0x00000000, true); //subtitles shadow alpha
 
         pattern = hook::pattern("6A 28 6A 28 6A 28");//50A0C2
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(1), 0x00, true);
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(3), 0x00, true);
         injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint32_t>(5), 0x00, true); //mission text shadow color
 
         pattern = hook::pattern("6A 32 6A 64 6A 64 6A 64");//0x47ACB7
+        if (pattern.size() < 2)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<uint32_t>(1), 0x00, true); // cursor shadow alpha
         //pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? D9 05 ? ? ? ? D8 4C 24 04 D9 3C 24");
         //injector::WriteMemory(pattern.get(0).get<uint32_t>(1), 0xFFFF885F, true); //0x50948D text box background disable
 
         //pager
-        auto pClr = hook::pattern("6A 42 68 A2 00 00 00 6A 20").count(1).get(0);
+        auto requiredPattern22 = hook::pattern("6A 42 68 A2 00 00 00 6A 20");
+        if (requiredPattern22.size() <= 0)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
+        auto pClr = requiredPattern22.get(0);
         injector::WriteMemory<uint8_t>(pClr.get<uint32_t>(1), 0x01, true);
         injector::WriteMemory<uint8_t>(pClr.get<uint32_t>(3), 0x01, true);
         injector::WriteMemory<uint8_t>(pClr.get<uint32_t>(8), 0x01, true);
@@ -933,6 +1319,11 @@ void ApplyIniOptions()
     if (bSmallerVehicleCorona)
     {
         pattern = hook::pattern("D9 C2 DE CB D9 C2 DE CB D9 05");
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(10), 2.0f, true); //car lights stretch 0x4F949C
     }
 
@@ -940,18 +1331,38 @@ void ApplyIniOptions()
     {
         fCustomRadarWidthIV = 94.0f - 5.5f;
         pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 00 D8 CA");
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarWidthIV, true); //0x4A505B
 
         fCustomRadarHeightIV = 76.0f + 5.0f;
         pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 DD DA D9 40 04 D8 CA");
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarHeightIV, true); //0x4A5093
 
         fCustomRadarRingWidthIV = 94.0f - 5.5f;
         pattern = hook::pattern("D8 0D ? ? ? ? D8 05 ? ? ? ? D8 05");
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarRingWidthIV, true); //0x5FDC70
 
         fCustomRadarRingHeightIV = 76.0f + 5.0f;
         pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 05 ? ? ? ? D8 CA DA 6C 24 34");
+        if (pattern.size() < 1)
+        {
+            wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+            return;
+        }
         injector::WriteMemory<float>(*pattern.count(1).get(0).get<uint32_t*>(2), fCustomRadarRingHeightIV, true); //0x5FDC68
     }
 }
@@ -1021,10 +1432,20 @@ void Fix2DSprites()
     }
 
     auto pattern = hook::pattern("E8 ? ? ? ? 89 D9 83 C4 18 E8 ? ? ? ? 6A 04"); //0x51ED62
+    if (pattern.size() < 3)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     hbSetVertices.fun = injector::MakeCALL(pattern.count(3).get(1).get<uint32_t>(0), SetVerticesHook).get();
     injector::MakeCALL(pattern.count(3).get(2).get<uint32_t>(0), SetVerticesHook); //0x51EE0E
 
     pattern = hook::pattern("E8 ? ? ? ? 59 59 6A 01 6A 0C E8");
+    if (pattern.size() < 1)
+    {
+        wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+        return;
+    }
     pRwRenderStateSet = (void*)injector::GetBranchDestination(pattern.get_first()).as_int(); //0x649BA0
 }
 
@@ -1047,9 +1468,11 @@ export void InitLegacy()
 {
     //Immediate changes
     ReadSettings();
-    GetPatterns();
+    if (!GetPatterns())
+        return;
+    if (!GetMemoryAddresses())
+        return;
     OverwriteResolution();
-    GetMemoryAddresses();
     FixAspectRatio();
     FixFOV();
     RsSelectDeviceHook();
@@ -1072,6 +1495,11 @@ export void InitLegacy()
 
                 //WIDESCREEN to BORDERS text
                 auto pattern = hook::pattern("B9 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? C2 04 00");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 auto GetTextCall = pattern.count(1).get(0).get<uint32_t>(10);
                 auto GetText = injector::GetBranchDestination(GetTextCall, true).as_int();
                 auto pfGetText = (wchar_t* (__thiscall*)(int, const char*))GetText;

@@ -78,11 +78,16 @@ namespace
 
 export namespace ShaderDump
 {
+    // Developer builds only: define SCARFACE_SHADER_DUMP as 1 (shaders) or 2 (shaders and skin captures)
+#ifdef SCARFACE_SHADER_DUMP
+    constexpr int Mode = SCARFACE_SHADER_DUMP;
+#else
+    constexpr int Mode = 0;
+#endif
+
     bool Initialize()
     {
-        CIniReader iniReader("");
-        const auto mode = std::clamp(iniReader.ReadInteger("DEBUG", "DumpShaders", 0), 0, 2);
-        enabled = mode != 0;
+        enabled = Mode != 0;
         if (!enabled) return false;
         dumpPath = GetExeModulePath() / "ShaderDumps" / "Scarface";
         std::error_code error;
@@ -92,7 +97,7 @@ export namespace ShaderDump
             OutputDebugStringA("Scarface ShaderDump: cannot create output directory.\n");
             return enabled = false;
         }
-        SkinCapture::Initialize(mode == 2, dumpPath);
+        SkinCapture::Initialize(Mode == 2, dumpPath);
         compiler = LoadLibraryW(L"d3dcompiler_47.dll");
         if (compiler) disassemble = reinterpret_cast<Disassemble>(GetProcAddress(compiler, "D3DDisassemble"));
         return true;

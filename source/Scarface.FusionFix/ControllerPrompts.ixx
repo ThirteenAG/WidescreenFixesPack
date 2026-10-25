@@ -1,5 +1,6 @@
 module;
 #include "stdafx.h"
+#include "FixSettings.hpp"
 #include "RTTI.h"
 #include "ButtonIcons.h"
 #include <atomic>
@@ -506,11 +507,11 @@ export namespace ControllerPrompts
 
     void Initialize()
     {
-        CIniReader iniReader("");
-        const bool bControllerPrompts=iniReader.ReadInteger("MAIN","ControllerPrompts",1)!=0;
+        auto& settings = FixSettings();
+        const bool bControllerPrompts=settings.Bool("MAIN.ControllerPrompts");
         if(!bControllerPrompts)return;
-        gamepadIcons=unsigned(std::clamp(iniReader.ReadInteger("MAIN","GamepadIcons",0),0,int(std::size(ScarfaceButtons::Names))-1));
-        modernControls=iniReader.ReadInteger("MAIN","ModernControlScheme",1)!=0;
+        gamepadIcons=unsigned(std::clamp(settings.Int("MAIN.GamepadIcons"),0,int(std::size(ScarfaceButtons::Names))-1));
+        modernControls=settings.Bool("MAIN.ModernControlScheme");
         auto font=ScarfaceRTTI::FindVtable(".?AVTextureFont@pure3d@@");
         auto pattern=hook::pattern("8B 44 24 04 83 F8 FF 74 11 8B 51 1C 8B 04 82 8B 49 20 D1 E8 8D 04 41 C2 04 00"); // 0x6A41E0
         if(!font || pattern.size()!=1)return;
@@ -553,6 +554,21 @@ export namespace ControllerPrompts
         if(glyphHook&&widthHook&&lineWidthHook&&wrapWidthHook&&maskHook&&drawHook&&wrapDrawHook&&beginHook&&endHook)
             lookupHook=safetyhook::create_inline(lookup,Lookup);
         enabled=bool(lookupHook);
+        if (!enabled)
+        {
+            lookupHook.reset();
+            glyphHook.reset();
+            widthHook.reset();
+            lineWidthHook.reset();
+            wrapWidthHook.reset();
+            maskHook.reset();
+            drawHook.reset();
+            wrapDrawHook.reset();
+            beginHook.reset();
+            endHook.reset();
+            OutputDebugStringA("Scarface: controller prompt font hooks unavailable.\n");
+            return;
+        }
         if(enabled)
         {
             auto tutorial=ScarfaceRTTI::FindVtable(".?AVLookTutorialHUD@@");

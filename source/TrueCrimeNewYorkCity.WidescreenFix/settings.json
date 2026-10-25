@@ -1,0 +1,554 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "Widescreen Fix",
+    "priority": 100,
+    "games": [
+      {
+        "name": "True Crime: New York City",
+        "exe": [
+          {
+            "path": "True Crime New York City.exe",
+            "label": "@exe.unprotected"
+          },
+          {
+            "path": "True Crime® New York City.exe",
+            "label": "@exe.retail"
+          }
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "compatibility",
+      "title": "@ui.compatibility",
+      "section": "compatibility"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "other"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.OverlayHotkey",
+      "type": "int",
+      "default": 121,
+      "min": 1,
+      "max": 255,
+      "label": "@ui.settingsoverlayhotkey",
+      "description": "@ui.settingsoverlayhotkey.description",
+      "page": "controls",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@ui.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@ui.textlanguage",
+      "description": "@ui.textlanguage.description",
+      "page": "compatibility",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@skipintro",
+      "description": "@skipintro.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.DoNotUseRegistryPath",
+      "type": "bool",
+      "default": 1,
+      "label": "@registrypath",
+      "description": "@registrypath.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.BorderlessWindowed",
+      "type": "bool",
+      "default": 1,
+      "label": "@borderless",
+      "description": "@borderless.description",
+      "page": "display",
+      "group": "@group.window",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.Language",
+      "type": "choice",
+      "default": -1,
+      "choices": [
+        {
+          "value": -1,
+          "label": "@language.game"
+        },
+        {
+          "value": 0,
+          "label": "@language.eng"
+        },
+        {
+          "value": 1,
+          "label": "@language.uk"
+        },
+        {
+          "value": 2,
+          "label": "@language.fre"
+        },
+        {
+          "value": 3,
+          "label": "@language.ger"
+        },
+        {
+          "value": 4,
+          "label": "@language.spa"
+        },
+        {
+          "value": 5,
+          "label": "@language.ita"
+        },
+        {
+          "value": 6,
+          "label": "@language.rus"
+        }
+      ],
+      "label": "@language",
+      "description": "@language.description",
+      "page": "game",
+      "control": [
+        "dropdown",
+        "cycler"
+      ],
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.FixHUD",
+      "type": "bool",
+      "default": 1,
+      "label": "@fixhud",
+      "description": "@fixhud.description",
+      "page": "display",
+      "group": "@group.hud",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@hudaspect.auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "label": "@hudaspect",
+      "description": "@hudaspect.description",
+      "page": "display",
+      "group": "@group.hud",
+      "enabledIf": {
+        "setting": "MAIN.FixHUD",
+        "equals": 1
+      },
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.FixFOV",
+      "type": "bool",
+      "default": 1,
+      "label": "@fixfov",
+      "description": "@fixfov.description",
+      "page": "display",
+      "group": "@group.hud",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@NYC.FOVFactor",
+      "description": "@NYC.FOVFactor.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "FRAMELIMIT.FrameLimitType",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": -1,
+          "label": "@limiter.external"
+        },
+        {
+          "value": 0,
+          "label": "@limiter.native"
+        },
+        {
+          "value": 1,
+          "label": "@limiter.realtime"
+        },
+        {
+          "value": 2,
+          "label": "@limiter.accurate"
+        }
+      ],
+      "label": "@limiter",
+      "description": "@limiter.description",
+      "page": "display",
+      "group": "@group.framerate",
+      "control": [
+        "dropdown",
+        "cycler"
+      ],
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "FRAMELIMIT.Enable60FPS",
+      "type": "bool",
+      "default": 1,
+      "label": "@fps60",
+      "description": "@fps60.description",
+      "page": "display",
+      "group": "@group.framerate",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.RawInputMouse",
+      "type": "bool",
+      "default": true,
+      "label": "@TCNYC.RawInputMouse",
+      "description": "@TCNYC.RawInputMouse.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.MouseSensitivity",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.1,
+      "max": 5.0,
+      "step": 0.05,
+      "decimals": 2,
+      "unit": "x",
+      "label": "@TCNYC.MouseSensitivity",
+      "description": "@TCNYC.MouseSensitivity.description",
+      "page": "controls",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.RawInputMouseRawData",
+      "type": "bool",
+      "default": true,
+      "label": "@TCNYC.RawInputMouseRawData",
+      "description": "@TCNYC.RawInputMouseRawData.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MOUSE.SensitivityFactor",
+      "type": "float",
+      "default": 0,
+      "min": 0,
+      "max": 10,
+      "step": 0.1,
+      "decimals": 1,
+      "unit": "x",
+      "special": [
+        {
+          "value": 0,
+          "label": "@sensfactor.game"
+        }
+      ],
+      "label": "@sensfactor",
+      "description": "@sensfactor.description",
+      "page": "controls",
+      "control": [
+        "slider"
+      ],
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MISC.HighResolutionShadows",
+      "type": "bool",
+      "default": 1,
+      "label": "@shadows",
+      "description": "@shadows.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.DistantBlur",
+      "type": "bool",
+      "default": 1,
+      "label": "@distantblur",
+      "description": "@distantblur.description",
+      "page": "graphics",
+      "group": "@group.postfx",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.Bloom",
+      "type": "bool",
+      "default": 1,
+      "label": "@bloom",
+      "description": "@bloom.description",
+      "page": "graphics",
+      "group": "@group.postfx",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.AntiAliasing",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 1,
+          "label": "SMAA"
+        },
+        {
+          "value": 2,
+          "label": "TAA"
+        },
+        {
+          "value": 3,
+          "label": "DLAA"
+        },
+        {
+          "value": 4,
+          "label": "FSR"
+        }
+      ],
+      "label": "@antialiasing",
+      "description": "@antialiasing.description",
+      "page": "graphics",
+      "group": "@group.antialiasing",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 2
+      }
+    },
+    {
+      "id": "GRAPHICS.Sharpness",
+      "type": "float",
+      "default": 25,
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "label": "@aasharpness",
+      "description": "@aasharpness.description",
+      "page": "graphics",
+      "group": "@group.antialiasing",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "GRAPHICS.AntiAliasing",
+        "in": [
+          2,
+          3,
+          4
+        ]
+      },
+      "presets": {
+        "vanilla": 25,
+        "recommended": 25,
+        "enhanced": 25
+      },
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.GraphicsAPI",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "Direct3D 9"
+        },
+        {
+          "value": 1,
+          "label": "Vulkan (DXVK)"
+        },
+        {
+          "value": 2,
+          "label": "D3D9on12"
+        }
+      ],
+      "label": "@graphicsapi",
+      "description": "@graphicsapi.description",
+      "page": "graphics",
+      "group": "@group.antialiasing",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "restart"
+    },
+    {
+      "id": "GRAPHICS.D3D9on12",
+      "type": "bool",
+      "default": 0,
+      "label": "D3D9on12",
+      "description": "@d3d9on12.description",
+      "page": "graphics",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "bool",
+      "default": false,
+      "label": "@consolegamma",
+      "description": "@consolegamma.description",
+      "page": "graphics",
+      "group": "@group.postfx",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": true
+      }
+    }
+  ]
+}

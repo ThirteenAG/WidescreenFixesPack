@@ -18,7 +18,8 @@ namespace
     uintptr_t ShouldShow(void* screen, void* frame, uint8_t* result)
     {
         const auto native = legalScreenHook.ccall<uintptr_t>(screen, frame, result);
-        *result = 0;
+        if (result)
+            *result = 0;
         return native;
     }
 }
@@ -39,8 +40,10 @@ public:
             const auto resume = ResumeGameAddress();
             if (!update || !resume)
                 return;
-                    gameState = reinterpret_cast<const int*>(GameStateAddress());
+            gameState = reinterpret_cast<const int*>(GameStateAddress());
             loginFlags = reinterpret_cast<const uint8_t*>(LoginFlagsAddress());
+            if (!gameState || !loginFlags)
+                return;
             resumeGame = reinterpret_cast<bool(*)(void*)>(resume);
             static auto updateHook = safetyhook::create_mid(update,
                 [](SafetyHookContext& context)

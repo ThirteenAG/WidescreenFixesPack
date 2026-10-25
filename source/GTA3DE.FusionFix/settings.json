@@ -1,0 +1,317 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Grand Theft Auto III - Definitive Edition",
+        "exe": [
+          "LibertyCity.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "advanced",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SkipMenu",
+      "type": "bool",
+      "default": 0,
+      "label": "@SkipMenu",
+      "description": "@SkipMenu.description",
+      "page": "advanced",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SaveSlot",
+      "type": "int",
+      "default": 5,
+      "label": "@SaveSlot",
+      "description": "@SaveSlot.description",
+      "page": "advanced",
+      "visibility": "editor",
+      "apply": "restart",
+      "min": 1,
+      "max": 8
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "min": 0.5,
+      "max": 2,
+      "step": 0.05,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.HudScale",
+      "type": "float",
+      "default": 0.8,
+      "label": "@HudScale",
+      "description": "@HudScale.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "min": 0.5,
+      "max": 1.5,
+      "step": 0.05,
+      "decimals": 2,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 0.8,
+        "enhanced": 0.8
+      }
+    },
+    {
+      "id": "MAIN.RadarScale",
+      "type": "float",
+      "default": 0.75,
+      "label": "@RadarScale",
+      "description": "@RadarScale.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "min": 0.5,
+      "max": 1.5,
+      "step": 0.05,
+      "decimals": 2,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 0.75,
+        "enhanced": 0.75
+      }
+    },
+    {
+      "id": "MAIN.DisableFirstPersonAimForRifles",
+      "type": "bool",
+      "default": 1,
+      "label": "@DisableFirstPersonAimForRifles",
+      "description": "@DisableFirstPersonAimForRifles.description",
+      "page": "advanced",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.RestoreOriginalCamera",
+      "type": "bool",
+      "default": 1,
+      "label": "@RestoreOriginalCamera",
+      "description": "@RestoreOriginalCamera.description",
+      "page": "advanced",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.ImproveCameraPC",
+      "type": "bool",
+      "default": 1,
+      "label": "@ImproveCameraPC",
+      "description": "@ImproveCameraPC.description",
+      "page": "advanced",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.CenteringDelay",
+      "type": "float",
+      "default": 5,
+      "label": "@CenteringDelay",
+      "description": "@CenteringDelay.description",
+      "page": "advanced",
+      "visibility": "menu",
+      "apply": "restart",
+      "min": 0,
+      "presets": {
+        "vanilla": 5,
+        "recommended": 5,
+        "enhanced": 5
+      }
+    },
+    {
+      "id": "MAIN.RawInputMouse",
+      "type": "bool",
+      "default": 1,
+      "label": "@RawMouseInput",
+      "description": "@RawMouseInput.description",
+      "page": "advanced",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.VisualStyle",
+      "type": "int",
+      "default": 1,
+      "label": "@VisualStyle",
+      "description": "@VisualStyle.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "min": 0,
+      "max": 2,
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.RestoreWeatherColours",
+      "type": "bool",
+      "default": 1,
+      "label": "@RestoreWeatherColours",
+      "description": "@RestoreWeatherColours.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.ColourFilterStrength",
+      "type": "float",
+      "default": 1,
+      "label": "@ColourFilterStrength",
+      "description": "@ColourFilterStrength.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "min": 0,
+      "max": 1,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.ClassicLODsOnly",
+      "type": "bool",
+      "default": 0,
+      "label": "@ClassicLODsOnly",
+      "description": "@ClassicLODsOnly.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": 1,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "Auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@TextLanguage",
+      "description": "@TextLanguage.description",
+      "page": "compatibility",
+      "visibility": "editor"
+    }
+  ]
+}

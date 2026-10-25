@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <cmath>
 
 export module Menu;
@@ -103,19 +104,19 @@ export void InitMenu()
 
     if (nGameVersion == MAFIA_1_0_ENG)
     {
-        injector::WriteMemory(pOnePCurBaseWidth4.get_first(0x2), &Screen.fInvBaseWidth, true);
+        ProtectedGameRef<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>{pOnePCurBaseWidth4.get_first<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>(0x2)} = &Screen.fInvBaseWidth;
     }
     else
     {
-        injector::WriteMemory(pOnePCurBaseWidth3.get_first(0x2), &Screen.fInvBaseWidth, true);
-        injector::WriteMemory(pOnePCurBaseWidth4.get_first(0x2), &Screen.fInvBaseWidth, true);
+        ProtectedGameRef<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>{pOnePCurBaseWidth3.get_first<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>(0x2)} = &Screen.fInvBaseWidth;
+        ProtectedGameRef<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>{pOnePCurBaseWidth4.get_first<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>(0x2)} = &Screen.fInvBaseWidth;
     }
 
     float fixMenuRight = (Screen.fBaseWidth - 800.0f) / 2.0f;
 
     static float menuPleaseWaitTextX = 780.0f + fixMenuRight;
-    injector::WriteMemory(pHudPleaseWaitTextX.get_first(0x2), &menuPleaseWaitTextX, true);
-    injector::WriteMemory(pHudPleaseWaitTextX2.get_first(0x2), &menuPleaseWaitTextX, true);
+    ProtectedGameRef<std::remove_cvref_t<decltype(&menuPleaseWaitTextX)>>{pHudPleaseWaitTextX.get_first<std::remove_cvref_t<decltype(&menuPleaseWaitTextX)>>(0x2)} = &menuPleaseWaitTextX;
+    ProtectedGameRef<std::remove_cvref_t<decltype(&menuPleaseWaitTextX)>>{pHudPleaseWaitTextX2.get_first<std::remove_cvref_t<decltype(&menuPleaseWaitTextX)>>(0x2)} = &menuPleaseWaitTextX;
     fMenuOffset = (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
     InstallMenuHooks();
 }

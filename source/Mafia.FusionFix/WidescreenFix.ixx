@@ -2,6 +2,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module WidescreenFix;
 
@@ -34,17 +35,22 @@ void SetHooks()
 
 export void InitWidescreenFix()
 {
-    CIniReader ini("");
-    bWidescreenHUD = ini.ReadInteger("WIDESCREEN", "WidescreenHUD", 1) != 0;
-    bWidescreenMap = ini.ReadInteger("WIDESCREEN", "WidescreenMap", 1) != 0;
-    bZoomFMVs = ini.ReadInteger("WIDESCREEN", "ZoomFMVs", 1) != 0;
-    nCutsceneBorders = std::clamp(ini.ReadInteger("CUTSCENES", "CutsceneBorders", 3), 0, 3);
-    bNoCutsceneBorderAnimation = ini.ReadInteger("CUTSCENES", "NoCutsceneBorderAnimation", 0);
-    bChangeDrawDistance = ini.ReadInteger("DRAW_DISTANCE", "Enable", 1);
-    fDrawDistance = ini.ReadFloat("DRAW_DISTANCE", "DrawDistance", 600.0f);
-    fDrawDistanceMin = ini.ReadFloat("DRAW_DISTANCE", "SkipMinDistance", 20.0f);
-    fDrawDistanceMax = ini.ReadFloat("DRAW_DISTANCE", "SkipMaxDistance", 450.0f);
-    nFPSLimit = ini.ReadInteger("MAIN", "FPSLimit", 0);
+    bWidescreenHUD = FixSettings().Bool("WIDESCREEN.WidescreenHUD") != 0;
+    bWidescreenMap = FixSettings().Bool("WIDESCREEN.WidescreenMap") != 0;
+    auto presentation = []()
+    {
+        nFMVWidescreenMode = std::clamp(FixSettings().Int("MAIN.FMVWidescreenMode"), 0, 2);
+        nCutsceneBorders = std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3);
+        bNoCutsceneBorderAnimation = !FixSettings().Bool("MAIN.AnimatedCutsceneBorders");
+    };
+    presentation();
+    for (const char* id : { "MAIN.FMVWidescreenMode", "MAIN.CutsceneBorders", "MAIN.AnimatedCutsceneBorders" })
+        FixSettings().OnChange(id, presentation);
+    bChangeDrawDistance = FixSettings().Bool("DRAW_DISTANCE.Enable");
+    fDrawDistance = FixSettings().Float("GRAPHICS.DrawDistance");
+    fDrawDistanceMin = FixSettings().Float("DRAW_DISTANCE.SkipMinDistance");
+    fDrawDistanceMax = FixSettings().Float("DRAW_DISTANCE.SkipMaxDistance");
+    nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
     auto pattern = find_pattern("A1 ? ? ? ? 8B 3D ? ? ? ? 52 89 4C 24 30");
     nGameVersion = MAFIA_1_0_ENG;
     if (pattern.empty())
@@ -75,9 +81,9 @@ export void InitWidescreenFix()
         auto pMatroxCamera = find_pattern("7E ? A1 ? ? ? ? 89 7C 24 14 50 8B 10 FF 52 70");
         if (pMatroxWidth.size() == 1 && pMatroxHeight.size() == 1 && pMatroxCamera.size() == 1)
         {
-            injector::WriteMemory(pMatroxWidth.get_first(), uint8_t{0xEB}, true);
-            injector::WriteMemory(pMatroxHeight.get_first(), uint8_t{0xEB}, true);
-            injector::WriteMemory(pMatroxCamera.get_first(), uint8_t{0xEB}, true);
+            ProtectedGameRef<std::remove_cvref_t<decltype(uint8_t{0xEB})>>{pMatroxWidth.get_first<std::remove_cvref_t<decltype(uint8_t{0xEB})>>()} = uint8_t{0xEB};
+            ProtectedGameRef<std::remove_cvref_t<decltype(uint8_t{0xEB})>>{pMatroxHeight.get_first<std::remove_cvref_t<decltype(uint8_t{0xEB})>>()} = uint8_t{0xEB};
+            ProtectedGameRef<std::remove_cvref_t<decltype(uint8_t{0xEB})>>{pMatroxCamera.get_first<std::remove_cvref_t<decltype(uint8_t{0xEB})>>()} = uint8_t{0xEB};
         }
     }
     static auto ResolutionHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
@@ -86,8 +92,8 @@ export void InitWidescreenFix()
         static std::once_flag flag;
         std::call_once(flag, []()
         {
-            Screen.fWidth = static_cast<float>(*pResolutionWidth);
-            Screen.fHeight = static_cast<float>(*pResolutionHeight);
+            Screen.fWidth = static_cast<float>(nWindowMode == 2 && nWindowWidth > 0 ? nWindowWidth : *pResolutionWidth);
+            Screen.fHeight = static_cast<float>(nWindowMode == 2 && nWindowHeight > 0 ? nWindowHeight : *pResolutionHeight);
             SetHooks();
         });
     });

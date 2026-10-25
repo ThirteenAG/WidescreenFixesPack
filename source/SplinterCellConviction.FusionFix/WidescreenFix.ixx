@@ -1,10 +1,53 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module WidescreenFix;
 
 import ComVars;
+
+namespace GameplayFOV
+{
+    SafetyHookInline CameraStep;
+    const float* Factor = nullptr;
+
+    void __fastcall Update(uintptr_t camera, void* edx)
+    {
+        CameraStep.fastcall<void>(camera, edx);
+        const float factor = std::isfinite(*Factor) ? std::clamp(*Factor, 0.5f, 2.0f) : 1.0f;
+        if (factor == 1.0f)
+            return;
+        const auto entity = *reinterpret_cast<uintptr_t*>(camera + 0x28);
+        if (!entity || *reinterpret_cast<int*>(entity + 8) != 2)
+            return;
+
+        // Only locomotion modes: fixed, cinematic, animated, aiming and gadget views keep their framing.
+        constexpr int gameplay[] =
+        {
+            2, 6, 9, 12, 13, 14, 17, 18, 19, 20, 22, 26, 29,
+            43, 47, 51, 53, 55, 57, 62, 67, 72, 77, 82
+        };
+        const int mode = *reinterpret_cast<int*>(entity + 12);
+        if (std::find(std::begin(gameplay), std::end(gameplay), mode) == std::end(gameplay))
+            return;
+
+        // The native mode step writes this angle afresh, before it is committed to the view actor.
+        const float angle = *reinterpret_cast<float*>(camera + 0x2C);
+        if (std::isfinite(angle) && angle > 0.0f && angle < 180.0f)
+            *reinterpret_cast<float*>(camera + 0x2C) = std::clamp(angle * factor, 1.0f, 179.0f);
+    }
+
+    void Init()
+    {
+        Factor = &FixSettings().Float("MAIN.FOVFactor");
+        auto pattern = hook::pattern("55 8B EC 83 EC 1C 53 8B D9 8B 4B 28 8B 01 FF 90 B4 00 00 00 83 F8 01");
+        if (pattern.size() == 1)
+            CameraStep = safetyhook::create_inline(pattern.get_first(), Update);
+        else
+            OutputDebugStringA("SplinterCellConviction: gameplay FOV pattern unavailable.\n");
+    }
+}
 
 SafetyHookInline shSetupMultiMon = {};
 void __fastcall SetupMultiMon(uintptr_t device, void* edx)
@@ -152,11 +195,12 @@ void __fastcall SetupPiPShown(uintptr_t manager, void* edx)
 
 export void InitWidescreenFix()
 {
+    GameplayFOV::Init();
     if (bUltraWideSupport)
     {
         // Fullscreen: don't letterbox the viewport to 16:9 of the desktop aspect and treat pixels as square, render to the whole backbuffer like windowed mode
         auto pattern = hook::pattern("74 73 39 3D ? ? ? ? F3 0F 2A 86");
-        injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
+        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>()) = 0xEB;
 
         // The engine has a multi-monitor mode (UD3DRenderDevice +0x110, set for Eyefinity or when aspect > MinTripleDispRatio):
         // the viewport gets Hor+ FOV from the 16:9 horizontal FOV (UViewport +0x2B0 -> sub_87B3A3), Flash menus/HUD are laid out

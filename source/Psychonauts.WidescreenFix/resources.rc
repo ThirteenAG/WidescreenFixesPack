@@ -1,0 +1,6 @@
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/Psychonauts/en.json"
+fr ASISETTINGS_TEXT "../../text/Psychonauts/fr.json"
+de ASISETTINGS_TEXT "../../text/Psychonauts/de.json"
+it ASISETTINGS_TEXT "../../text/Psychonauts/it.json"
+es ASISETTINGS_TEXT "../../text/Psychonauts/es.json"

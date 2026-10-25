@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "FixSettings.hpp"
 #include <d3d9.h>
 #include <D3dx9.h>
 #pragma comment(lib, "D3dx9.lib")
@@ -225,18 +226,18 @@ void ForceWindowed(D3DPRESENT_PARAMETERS* pPresentationParameters, D3DDISPLAYMOD
 
 export void InitOnline()
 {
-    CIniReader iniReader("");
-    bForceWindowedMode = iniReader.ReadInteger("ONLINE", "ForceWindowedMode", 0) != 0;
-    fFPSLimit = static_cast<float>(iniReader.ReadInteger("ONLINE", "FPSLimit", 60));
-    nFullScreenRefreshRateInHz = iniReader.ReadInteger("ONLINE", "FullScreenRefreshRateInHz", 0);
-    bUsePrimaryMonitor = iniReader.ReadInteger("FORCEWINDOWED", "UsePrimaryMonitor", 0) != 0;
-    bCenterWindow = iniReader.ReadInteger("FORCEWINDOWED", "CenterWindow", 1) != 0;
-    bAlwaysOnTop = iniReader.ReadInteger("FORCEWINDOWED", "AlwaysOnTop", 0) != 0;
-    nForceWindowStyle = iniReader.ReadInteger("FORCEWINDOWED", "ForceWindowStyle", 0);
+
+    bForceWindowedMode = FixSettings().Int("ONLINE.ForceWindowedMode") != 0;
+    fFPSLimit = static_cast<float>(FixSettings().Int("ONLINE.FPSLimit"));
+    nFullScreenRefreshRateInHz = FixSettings().Int("ONLINE.FullScreenRefreshRateInHz");
+    bUsePrimaryMonitor = FixSettings().Int("FORCEWINDOWED.UsePrimaryMonitor") != 0;
+    bCenterWindow = FixSettings().Int("FORCEWINDOWED.CenterWindow") != 0;
+    bAlwaysOnTop = FixSettings().Int("FORCEWINDOWED.AlwaysOnTop") != 0;
+    nForceWindowStyle = FixSettings().Int("FORCEWINDOWED.ForceWindowStyle");
 
     if (fFPSLimit)
     {
-        auto mode = (iniReader.ReadInteger("ONLINE", "FPSLimitMode", 1) == 2) ? FrameLimiter::FPSLimitMode::FPS_ACCURATE : FrameLimiter::FPSLimitMode::FPS_REALTIME;
+        auto mode = (FixSettings().Int("ONLINE.FPSLimitMode") == 2) ? FrameLimiter::FPSLimitMode::FPS_ACCURATE : FrameLimiter::FPSLimitMode::FPS_REALTIME;
         if (mode == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
             timeBeginPeriod(1);
 

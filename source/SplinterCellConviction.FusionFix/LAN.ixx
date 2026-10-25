@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
@@ -156,7 +157,8 @@ namespace LAN
         return received;
     }
 
-    // Agora log (Os::Log), level 0 (everything) when it's written to a file
+#ifdef LAN_LOG
+    // Agora log (Os::Log), level 0 (everything), written to Conviction_LAN.log (developer build only)
     std::ofstream logFile;
     SafetyHookInline shLog = {};
     void __cdecl Log(const char* category, int32_t level, const char* file, const char* function, int32_t line, void* message)
@@ -177,6 +179,7 @@ namespace LAN
     {
         return 0;
     }
+#endif
 
     // Address a session reply came from, while it's handled (Os::Agora address: IPv4 in network byte order, port at +4)
     std::optional<uint32_t> replySource;
@@ -200,11 +203,10 @@ namespace LAN
 
 export void InitLAN()
 {
-    CIniReader iniReader("");
-    auto sLANHelperExePath = iniReader.ReadString("LAN", "LANHelperExePath", "");
-    auto bFixLAN = iniReader.ReadInteger("LAN", "FixLAN", 1) != 0;
-    static auto sServerAddr = iniReader.ReadString("LAN", "ServerAddr", "127.0.0.1");
-    auto bLog = iniReader.ReadInteger("LAN", "Log", 0) != 0;
+
+    auto sLANHelperExePath = FixSettings().String("LAN.LANHelperExePath");
+    auto bFixLAN = FixSettings().Bool("LAN.FixLAN") != 0;
+    static auto sServerAddr = FixSettings().String("LAN.ServerAddr");
 
     if (!sLANHelperExePath.empty())
     {
@@ -294,9 +296,9 @@ export void InitLAN()
         LAN::shDeserializeSessionInfo = safetyhook::create_inline(pattern.get_first(), LAN::DeserializeSessionInfo);
     }
 
-    if (bLog)
+#ifdef LAN_LOG
+    if (auto pattern = hook::pattern("55 8B EC 51 53 56 57 E8 ? ? ? ? 8B 70 34 83 C0 2C 33 DB"); !pattern.empty())
     {
-        auto pattern = hook::pattern("55 8B EC 51 53 56 57 E8 ? ? ? ? 8B 70 34 83 C0 2C 33 DB");
         auto logger = injector::GetBranchDestination(pattern.get_first(7)).as_int();
         LAN::shLog = safetyhook::create_inline(pattern.get_first(), LAN::Log);
 
@@ -311,14 +313,15 @@ export void InitLAN()
             }
         }
     }
+#endif
 
     // gconnect.ubi.com
     if (!sServerAddr.empty())
     {
         auto pattern = hook::pattern("68 ? ? ? ? 8D 4D E0 E8 ? ? ? ? C7 45 ? ? ? ? ? E8");
-        injector::WriteMemory(pattern.get_first(1), sServerAddr.data(), true);
+        ProtectedGameRef<char*>(pattern.get_first<char*>(1)) = sServerAddr.data();
 
         pattern = hook::pattern("68 ? ? ? ? 8B CE E8 ? ? ? ? 68 ? ? ? ? 8B CE E8 ? ? ? ? 8B C6");
-        injector::WriteMemory(pattern.get_first(1), sServerAddr.data(), true);
+        ProtectedGameRef<char*>(pattern.get_first<char*>(1)) = sServerAddr.data();
     }
 }

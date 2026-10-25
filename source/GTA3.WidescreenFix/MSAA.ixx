@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 #include <minidx8/d3d8.h>
 
 export module MSAA;
@@ -40,9 +42,9 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            auto szSelectedMultisamplingLevels = iniReader.ReadString("GRAPHICS", "ForceMultisamplingLevel", "");
-            static auto nHideAABug = std::clamp(iniReader.ReadInteger("GRAPHICS", "HideAABug", 1), 0, 2);
+            // Multisampling applies after a restart, the edge lines while the game runs
+            auto szSelectedMultisamplingLevels = FixSettings().String("GRAPHICS.ForceMultisamplingLevel");
+            static auto& nHideAABugSetting = FixSettings().Int("GRAPHICS.HideAABug");
             static unsigned int MultisamplingLevel = 1;
 
             auto is_number = [](const std::string& s) -> bool
@@ -51,7 +53,7 @@ public:
             };
 
             if (is_number(szSelectedMultisamplingLevels))
-                MultisamplingLevel = iniReader.ReadInteger("GRAPHICS", "ForceMultisamplingLevel", 1);
+                MultisamplingLevel = std::atoi(szSelectedMultisamplingLevels.c_str());
             else if (iequals(szSelectedMultisamplingLevels, "max"))
                 MultisamplingLevel = 99999;
 
@@ -66,6 +68,11 @@ public:
             else
             {
                 pattern = hook::pattern("43 83 FB ? 76 ? ? ? ? 8B 74 24");
+                if (pattern.size() < 1)
+                {
+                    wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                    return;
+                }
                 static auto D3D8System1 = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
                 {
                     SelectedMultisamplingLevels = std::min(MultisamplingLevel, MaxMultisamplingLevels.get());
@@ -73,6 +80,11 @@ public:
             }
 
             pattern = find_pattern("8B C3 5E 5B 81 C4 30 04 00 00 C3 A1 ? ? ? ? 85 C0", "33 C0 ? ? ? 8B 74 24 ? 8B E5");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto D3D8System2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 SelectedMultisamplingLevels = std::min(MultisamplingLevel, MaxMultisamplingLevels.get());
@@ -89,6 +101,7 @@ public:
 
             WFP::onEndScene() += []()
             {
+                auto nHideAABug = std::clamp(nHideAABugSetting, 0, 2);
                 if (SelectedMultisamplingLevels <= 1 || !nHideAABug)
                     return;
 

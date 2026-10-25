@@ -1,7 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
 
 export module Draw;
 
@@ -75,6 +77,13 @@ public:
 
         onResChange().executeAll(RsGlobal->width, RsGlobal->height);
     }
+    // Computes the HUD offsets again (a setting they depend on changed)
+    static void Refresh()
+    {
+        auto ratio = ms_fAspectRatio;
+        ms_fAspectRatio = 0.0f;
+        SetAspectRatio(ratio);
+    }
     static float ScaleY(float y);
 
     static void SetNearClipZ(float nearclip) { ms_fNearClipZ = nearclip; }
@@ -87,16 +96,61 @@ public:
         WFP::onGameInitEvent() += []()
         {
             auto pattern = hook::pattern("D8 35 ? ? ? ? D8 0D");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ms_fFOV.SetAddress(*pattern.get_first<float*>(2));
 
             pattern = hook::pattern("E8 ? ? ? ? 80 7B ? ? 59 75 ? 8B 83");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             static auto SetFOV = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CDraw::SetFOV);
 
             pattern = hook::pattern("D8 1D ? ? ? ? DF E0 80 E4 05 80 FC 01 75 ? 30 C0 E9 BC 00 00 00");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ms_fNearClipZ.SetAddress(*pattern.get_first<float*>(2));
 
             pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 45 75 ? 30 C0 E9 A0 00 00 00");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             ms_fFarClipZ.SetAddress(*pattern.get_first<float*>(2));
+
+            // The game sets the far clip plane and fog start only after the camera update has begun, so every frame
+            // was drawn with the previous frame's values. They are set when the scene camera's update begins.
+            pattern = hook::pattern("A1 ? ? ? ? FF 35 ? ? ? ? 50 E8 ? ? ? ? D9 05 ? ? ? ? A1 ? ? ? ? 59 59 D9 98 88 00 00 00");
+            auto beginUpdate = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 83 C4 0C 50 E8 ? ? ? ? 85 C0");
+            if (pattern.size() < 1 || beginUpdate.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
+            static_assert(offsetof(RwCamera, fogPlane) == 0x88);
+            static auto sceneCamera = *pattern.get_first<RwCamera**>(1);
+            static auto farClip = *pattern.get_first<float*>(7);
+            static auto fogStart = *pattern.get_first<float*>(19);
+            static auto setFarClipPlane = (RwCamera*(__cdecl*)(RwCamera*, float))injector::GetBranchDestination(pattern.get_first(12)).as_int();
+            static SafetyHookInline cameraBeginUpdate = {};
+            cameraBeginUpdate = safetyhook::create_inline(injector::GetBranchDestination(beginUpdate.get_first(14)).as_int(), +[](RwCamera* camera) -> int
+            {
+                if (camera && camera == *sceneCamera)
+                {
+                    setFarClipPlane(camera, *farClip);
+                    camera->fogPlane = *fogStart;
+                }
+                return cameraBeginUpdate.unsafe_ccall<int>(camera);
+            });
         };
     }
 } Draw;
@@ -312,11 +366,28 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            CIniReader iniReader("");
-            fHudAspectRatioConstraint = ParseWidescreenHudOffset(iniReader.ReadString("MAIN", "HudAspectRatioConstraint", ""));
+            fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            OnSettingChange("MAIN.HudAspectRatioConstraint", []()
+            {
+                fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+                CDraw::Refresh();
+            });
+
+            // Field of View: a multiplier of the gameplay cameras' corrected field of view
+            static auto& fov = FixSettings().Float("MAIN.FOVFactor");
+            FOVManager::g_BaseFOVMultiplier = std::clamp(fov, 0.5f, 2.0f);
+            OnSettingChange("MAIN.FOVFactor", []()
+            {
+                FOVManager::g_BaseFOVMultiplier = std::clamp(fov, 0.5f, 2.0f);
+            });
 
             static float fScaledFOV = 0.0f;
             auto pattern = hook::pattern("D9 05 ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? DD DC");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(2), &fScaledFOV, true);
             injector::MakeNOP(pattern.get_first(6), 12, true);
             static auto CalculateDerivedValues = safetyhook::create_mid(pattern.get_first(-8), [](SafetyHookContext& regs)
@@ -326,6 +397,11 @@ public:
 
             static float fAspectRatio = 0.0f;
             pattern = hook::pattern("80 3D ? ? ? ? ? 74 ? D9 05 ? ? ? ? EB 06");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory(pattern.get_first(11), &fAspectRatio, true);
             injector::WriteMemory(pattern.get_first(19), &fAspectRatio, true);
             static auto Find3rdPersonCamTargetVector = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)

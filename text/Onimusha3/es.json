@@ -1,0 +1,14 @@
+{
+  "plugin.name": "Onimusha 3 Widescreen Fix",
+  "page.display": "Pantalla",
+  "page.advanced": "Avanzado",
+  "ResX": "Ancho de la resolución",
+  "ResX.description": "Ancho de la pantalla en píxeles. 0 usa la resolución del escritorio.",
+  "ResY": "Alto de la resolución",
+  "ResY.description": "Alto de la pantalla en píxeles. 0 usa la resolución del escritorio.",
+  "FMVWidescreenMode": "Modo de vídeo",
+  "FMVWidescreenMode.description": "Cómo se muestran los vídeos 4:3 en pantallas más anchas: el vídeo entero con bandas negras, ampliado para llenar la pantalla (recortado) o estirado.",
+  "FMVWidescreenMode.original": "Formato original",
+  "FMVWidescreenMode.fill": "Llenar",
+  "FMVWidescreenMode.stretch": "Estirar"
+}

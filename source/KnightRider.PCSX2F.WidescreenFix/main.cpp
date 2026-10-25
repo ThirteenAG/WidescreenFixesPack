@@ -2,6 +2,8 @@
 #include "../../external/injector/include/ps2/game_abi.hpp"
 #include "../Shared/Console/Viewport.hpp"
 #include "../Shared/Console/PS2Display.hpp"
+#include "../Shared/Console/PS2Settings.hpp"
+PCSX2F_CFG_SETTINGS()
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -376,6 +378,10 @@ void Rejected(pcsx2_hook_status status) {
 
 extern "C" void init() {
     if (injector::InitializeCheckedRuntime(Rejected) != PCSX2_HOOK_OK) return;
+    console::ps2settings::Value settings[] = {{"MAIN", "EnableWidescreenSupport", "1"}};
+    if (!console::ps2settings::load(settings))
+        std::snprintf(OSDText[0], OSDStringSize, "CFG settings unavailable: update the plugin injector for CFG support.");
+    if (!console::ps2settings::boolean(settings[0], true)) return;
     safetymips::Options replace;
     replace.execute_original = false;
     cameraDefaults = safetymips::create_mid<&CameraDefaults>(0x3E3600, nullptr, replace);

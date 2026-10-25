@@ -1,0 +1,99 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Just Cause",
+        "exe": [
+          "JustCause.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "label": "@ResX",
+      "description": "@ResX.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "label": "@ResY",
+      "description": "@ResY.description",
+      "page": "advanced",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384
+    },
+    {
+      "id": "MAIN.FullscreenFMVs",
+      "type": "bool",
+      "default": 1,
+      "label": "@FullscreenFMVs",
+      "description": "@FullscreenFMVs.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.ExtraBorders",
+      "type": "bool",
+      "default": 1,
+      "label": "@ExtraBorders",
+      "description": "@ExtraBorders.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    }
+  ]
+}

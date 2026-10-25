@@ -1,7 +1,10 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include "common.h"
+#include "FixSettings.hpp"
+#include "WaterFrustum.hpp"
 
 export module Main;
 
@@ -16,6 +19,52 @@ SafetyHookInline shCameraSize = {};
 void __cdecl CameraSize(RwCamera* camera, RwRect* rect, float viewWindow, float aspectRatio)
 {
     return shCameraSize.unsafe_ccall(camera, rect, SCREEN_VIEWWINDOW, SCREEN_ASPECT_RATIO);
+}
+
+namespace
+{
+    using WaterCallback = void(__cdecl*)(int, int);
+    char (__cdecl* WaterScanNative)(RwV2d*, int, WaterCallback){ nullptr };
+
+    char __cdecl ScanWater(RwV2d* points, int count, WaterCallback callback)
+    {
+        if (count != 5)
+            return WaterScanNative(points, count, callback);
+        std::array<RwV2d, 5> input{};
+        std::copy_n(points, input.size(), input.begin());
+        const auto polygon{ WaterFrustum::ConvexHull(input) };
+        if (polygon.count < 3)
+            return WaterScanNative(points, count, callback);
+
+        float minX{ input[0].x }, maxX{ minX }, minY{ input[0].y }, maxY{ minY };
+        for (const auto& point : input)
+        {
+            minX = std::min(minX, point.x);
+            maxX = std::max(maxX, point.x);
+            minY = std::min(minY, point.y);
+            maxY = std::max(maxY, point.y);
+        }
+        // Outside-water coordinates are stored in signed words by the game.
+        if (minX < -32768.0f || minY < -32768.0f || maxX >= 32767.0f || maxY >= 32767.0f)
+            return WaterScanNative(points, count, callback);
+
+        // Include every intersected cell, even when only a corner crosses the footprint.
+        for (int x{ int(std::floor(minX)) }; x <= int(std::floor(maxX)); ++x)
+            for (int y{ int(std::floor(minY)) }; y <= int(std::floor(maxY)); ++y)
+                if (WaterFrustum::Intersects(polygon, x, y))
+                    callback(x, y);
+        return 0;
+    }
+
+    void InitWaterFrustum()
+    {
+        auto scan{ hook::pattern("D9 44 24 78 D8 0D ? ? ? ? D8 05 ? ? ? ? D9 5C 24 40 E8 ? ? ? ? 81 C4 80 00 00 00 C3") };
+        if (scan.size() != 1)
+            return;
+        auto call{ scan.get_first<uint8_t>(20) };
+        WaterScanNative = reinterpret_cast<decltype(WaterScanNative)>(injector::GetBranchDestination(call).as_int());
+        injector::MakeCALL(call, ScanWater, true);
+    }
 }
 
 namespace CEntryExitManager
@@ -57,16 +106,45 @@ public:
             // default res
             auto [x, y] = GetDesktopRes();
             auto pattern = hook::pattern("BD ? ? ? ? BB ? ? ? ? BE");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory<int32_t>(pattern.get_first(1), x, true);
             injector::WriteMemory<int32_t>(pattern.get_first(6), y, true);
+
+            // Skip Intro: start with the loading screen and the main menu, without the title screens and logo videos
+            if (FixSettings().Bool("MAIN.SkipIntro"))
+            {
+                pattern = hook::pattern("89 35 ? ? ? ? B8 01 00 00 00 0F A2");
+                if (!pattern.empty())
+                {
+                    auto gGameState = *pattern.get_first<int32_t*>(2);
+                    if (*gGameState == 0)
+                        *gGameState = 5;
+                }
+            }
         };
 
         WFP::onGameInitEvent() += []()
         {
+            InitWaterFrustum();
+
             auto pattern = hook::pattern("E8 ? ? ? ? 8D 4C 24 ? 51 C7 44 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             shCameraSize = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CameraSize);
 
             pattern = hook::pattern("8B 15 ? ? ? ? 52 E8 ? ? ? ? E8 ? ? ? ? A1");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             Scene.SetAddress(*pattern.get_first<CScene*>(2));
 
             // Fix sky multitude
@@ -77,13 +155,28 @@ public:
             };
 
             pattern = hook::pattern("D8 0D ? ? ? ? 83 C4 40");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory<const void*>(pattern.get_first(2), &horizSpread, true);
 
             pattern = hook::pattern("D8 0D ? ? ? ? D9 C0 D9 44 24 ? D8 44 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::WriteMemory<const void*>(pattern.get_first(2), &horizSpread, true);
 
             //CCam::Process_WheelCam
             pattern = hook::pattern("C7 86 ? ? ? ? ? ? ? ? 8A 47 ? 24 07");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTASA.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             injector::MakeNOP(pattern.get_first(), 10, true);
             static auto Process_WheelCamFOV = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {

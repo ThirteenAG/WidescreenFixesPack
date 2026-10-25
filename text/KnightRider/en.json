@@ -1,0 +1,11 @@
+{
+  "plugin.name": "Knight Rider Widescreen Fix",
+  "page.camera": "Camera",
+  "page.advanced": "Advanced",
+  "ResX": "Resolution width",
+  "ResX.description": "Output width in pixels. Zero uses the desktop resolution. Takes effect after a restart.",
+  "ResY": "Resolution height",
+  "ResY.description": "Output height in pixels. Zero uses the desktop resolution. Takes effect after a restart.",
+  "FOVFactor": "Field of view factor",
+  "FOVFactor.description": "Multiplies the corrected field of view. 1.0 keeps the intended framing; larger values widen the view. Applies immediately."
+}

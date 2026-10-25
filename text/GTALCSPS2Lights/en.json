@@ -1,0 +1,6 @@
+{
+  "plugin.name": "GTA Liberty City Stories PCSX2F Improved Vehicle Lights",
+  "page.graphics": "Graphics",
+  "lights": "Vehicle lights",
+  "lights.description": "Light headlights, tail, brake and reverse lights on car and bike body textures, generated from the game textures. Enabled by default. Restart the emulated game after changing this setting."
+}

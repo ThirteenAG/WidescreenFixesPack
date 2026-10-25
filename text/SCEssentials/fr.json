@@ -1,0 +1,23 @@
+{
+  "plugin.name": "Splinter Cell Essentials PPSSPP Fusion Fix",
+  "SkipIntro": "Passer l'intro",
+  "SkipIntro.description": "Passe la première vidéo du chargeur ; la seconde, nécessaire, reste intacte. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "StickDeadzone": "Zone morte du stick",
+  "StickDeadzone.description": "Définit la zone morte des deux sticks analogiques. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "SpeedStickControl": "Vitesse analogique",
+  "SpeedStickControl.description": "Le stick gauche contrôle la vitesse de déplacement. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "Enable60FPS": "60 FPS",
+  "Enable60FPS.description": "Utilise la simulation native basée sur le temps écoulé avec le limiteur 60 FPS de la boucle principale. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "UnthrottleEmuDuringLoading": "Chargement accéléré",
+  "UnthrottleEmuDuringLoading.description": "Supprime la limite pendant les chargements. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "FOVFactor": "Facteur de FOV",
+  "FOVFactor.description": "Ajuste le champ de vision en jeu ; les gros plans sur les gadgets gardent leur cadrage d'overlay natif. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "ContainFullscreenImages": "Adapter images plein écran",
+  "ContainFullscreenImages.description": "Garde les images de chargement, les écrans de briefing et les vidéos sous-titrées dans leur format natif avec des bandes latérales. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "HudScale": "Taille du HUD",
+  "HudScale.description": "Met à l'échelle le HUD dans son canevas au format correct. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "page.gameplay": "Jeu",
+  "page.controls": "Commandes",
+  "page.camera": "Caméra",
+  "page.display": "Affichage"
+}

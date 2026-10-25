@@ -5,6 +5,7 @@ module;
 export module x_gameobjectsmfc;
 
 import ComVars;
+import AntiAliasing;
 import e2mfc;
 
 namespace X_LevelRuntimeCamera
@@ -41,6 +42,7 @@ namespace X_LevelRuntimeCamera
 
     void __fastcall setFOV(void* pCamera, void* edx, float fFOV)
     {
+        AntiAliasing::SetMainCamera(pCamera);
         setFOVOriginal(pCamera, edx, CalculateFOV(fFOV));
     }
 

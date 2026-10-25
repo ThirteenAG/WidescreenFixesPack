@@ -1,0 +1,96 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "options",
+      "title": "@page.options",
+      "section": "advanced"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.DualAnalogPatch",
+      "type": "bool",
+      "default": 1,
+      "label": "@DualAnalogPatch",
+      "description": "@DualAnalogPatch.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@skip",
+      "description": "@skip.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.Enable60FPS",
+      "type": "bool",
+      "default": 0,
+      "label": "@fps",
+      "description": "@fps.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.ForceAspectRatio",
+      "type": "string",
+      "default": "auto",
+      "label": "@aspect",
+      "description": "@aspect.description",
+      "page": "options",
+      "visibility": "editor",
+      "apply": "restart",
+      "maxLength": 14,
+      "suggestions": [
+        "auto",
+        "0",
+        "4:3",
+        "16:9",
+        "21:9",
+        "32:9"
+      ]
+    },
+    {
+      "id": "MAIN.UnthrottleEmuDuringLoading",
+      "type": "bool",
+      "default": 1,
+      "label": "@loading",
+      "description": "@loading.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    }
+  ]
+}

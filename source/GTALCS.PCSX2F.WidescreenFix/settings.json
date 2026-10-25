@@ -1,0 +1,619 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@main.skipintro",
+      "description": "@main.skipintro.description",
+      "page": "advanced",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.ImprovedWidescreenSupport",
+      "type": "bool",
+      "default": 1,
+      "label": "@main.improvedwidescreensupport",
+      "description": "@main.improvedwidescreensupport.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.Enable60FPS",
+      "type": "bool",
+      "default": 0,
+      "label": "@main.enable60fps",
+      "description": "@main.enable60fps.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
+      "id": "MAIN.UnthrottleEmuDuringLoading",
+      "type": "bool",
+      "default": 1,
+      "label": "@main.unthrottleemuduringloading",
+      "description": "@main.unthrottleemuduringloading.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.DisableBlur",
+      "type": "bool",
+      "default": 1,
+      "label": "@main.disableblur",
+      "description": "@main.disableblur.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "CONTROLS.PCControlScheme",
+      "type": "bool",
+      "default": 0,
+      "label": "@controls.pccontrolscheme",
+      "description": "@controls.pccontrolscheme.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.MouseSensitivity",
+      "type": "float",
+      "default": 1.0,
+      "label": "@controls.mousesensitivity",
+      "description": "@controls.mousesensitivity.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live",
+      "min": 0.05,
+      "max": 10.0,
+      "step": 0.25
+    },
+    {
+      "id": "MAIN.InvertMouseY",
+      "type": "bool",
+      "default": 0,
+      "label": "@controls.invertmousey",
+      "description": "@controls.invertmousey.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.HudScale",
+      "type": "float",
+      "default": 1.0,
+      "label": "@hud.hudscale",
+      "description": "@hud.hudscale.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "live",
+      "min": 0.5,
+      "max": 1.5,
+      "step": 0.1,
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@cutsceneborders.off"
+        },
+        {
+          "value": 1,
+          "label": "@cutsceneborders.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@cutsceneborders.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@cutsceneborders.both"
+        }
+      ],
+      "label": "@display.cutsceneborders",
+      "description": "@display.cutsceneborders.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        }
+      ],
+      "label": "@hudaspect",
+      "description": "@hudaspect.description",
+      "page": "graphics",
+      "visibility": "editor",
+      "apply": "restart",
+      "maxLength": 14
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@fovfactor",
+      "description": "@fovfactor.description",
+      "page": "graphics",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "BINDINGS.Forward",
+      "type": "string",
+      "default": "W",
+      "label": "@binding.forward",
+      "description": "@binding.forward.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Backward",
+      "type": "string",
+      "default": "S",
+      "label": "@binding.backward",
+      "description": "@binding.backward.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Left",
+      "type": "string",
+      "default": "A",
+      "label": "@binding.left",
+      "description": "@binding.left.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Right",
+      "type": "string",
+      "default": "D",
+      "label": "@binding.right",
+      "description": "@binding.right.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Sprint",
+      "type": "string",
+      "default": "SHIFT",
+      "label": "@binding.sprint",
+      "description": "@binding.sprint.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Walk",
+      "type": "string",
+      "default": "ALT",
+      "label": "@binding.walk",
+      "description": "@binding.walk.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Jump",
+      "type": "string",
+      "default": "SPACE",
+      "label": "@binding.jump",
+      "description": "@binding.jump.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Attack",
+      "type": "string",
+      "default": "LMB, NUM0",
+      "label": "@binding.attack",
+      "description": "@binding.attack.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Aim",
+      "type": "string",
+      "default": "RMB",
+      "label": "@binding.aim",
+      "description": "@binding.aim.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.NextTarget",
+      "type": "string",
+      "default": "E",
+      "label": "@binding.nexttarget",
+      "description": "@binding.nexttarget.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.PrevTarget",
+      "type": "string",
+      "default": "Q",
+      "label": "@binding.prevtarget",
+      "description": "@binding.prevtarget.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.EnterVehicle",
+      "type": "string",
+      "default": "F",
+      "label": "@binding.entervehicle",
+      "description": "@binding.entervehicle.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.NextWeapon",
+      "type": "string",
+      "default": "WHEELDOWN",
+      "label": "@binding.nextweapon",
+      "description": "@binding.nextweapon.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.PrevWeapon",
+      "type": "string",
+      "default": "WHEELUP",
+      "label": "@binding.prevweapon",
+      "description": "@binding.prevweapon.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.LookBehind",
+      "type": "string",
+      "default": "C, MMB",
+      "label": "@binding.lookbehind",
+      "description": "@binding.lookbehind.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Camera",
+      "type": "string",
+      "default": "V",
+      "label": "@binding.camera",
+      "description": "@binding.camera.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.ZoomIn",
+      "type": "string",
+      "default": "WHEELUP, PAGEUP",
+      "label": "@binding.zoomin",
+      "description": "@binding.zoomin.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.ZoomOut",
+      "type": "string",
+      "default": "WHEELDOWN, PAGEDOWN",
+      "label": "@binding.zoomout",
+      "description": "@binding.zoomout.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Phone",
+      "type": "string",
+      "default": "TAB",
+      "label": "@binding.phone",
+      "description": "@binding.phone.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Mission",
+      "type": "string",
+      "default": "2, NUMPLUS",
+      "label": "@binding.mission",
+      "description": "@binding.mission.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Accelerate",
+      "type": "string",
+      "default": "W",
+      "label": "@binding.accelerate",
+      "description": "@binding.accelerate.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Brake",
+      "type": "string",
+      "default": "S",
+      "label": "@binding.brake",
+      "description": "@binding.brake.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.SteerLeft",
+      "type": "string",
+      "default": "A",
+      "label": "@binding.steerleft",
+      "description": "@binding.steerleft.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.SteerRight",
+      "type": "string",
+      "default": "D",
+      "label": "@binding.steerright",
+      "description": "@binding.steerright.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Handbrake",
+      "type": "string",
+      "default": "SPACE",
+      "label": "@binding.handbrake",
+      "description": "@binding.handbrake.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Horn",
+      "type": "string",
+      "default": "H",
+      "label": "@binding.horn",
+      "description": "@binding.horn.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.VehicleFire",
+      "type": "string",
+      "default": "LMB, NUM0",
+      "label": "@binding.vehiclefire",
+      "description": "@binding.vehiclefire.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.NextRadio",
+      "type": "string",
+      "default": "WHEELUP",
+      "label": "@binding.nextradio",
+      "description": "@binding.nextradio.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.PrevRadio",
+      "type": "string",
+      "default": "WHEELDOWN",
+      "label": "@binding.prevradio",
+      "description": "@binding.prevradio.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.LookLeft",
+      "type": "string",
+      "default": "Q",
+      "label": "@binding.lookleft",
+      "description": "@binding.lookleft.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.LookRight",
+      "type": "string",
+      "default": "E",
+      "label": "@binding.lookright",
+      "description": "@binding.lookright.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.LeanForward",
+      "type": "string",
+      "default": "SHIFT, NUM8",
+      "label": "@binding.leanforward",
+      "description": "@binding.leanforward.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.LeanBack",
+      "type": "string",
+      "default": "CTRL, NUM5",
+      "label": "@binding.leanback",
+      "description": "@binding.leanback.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.TurretLeft",
+      "type": "string",
+      "default": "NUM4",
+      "label": "@binding.turretleft",
+      "description": "@binding.turretleft.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.TurretRight",
+      "type": "string",
+      "default": "NUM6",
+      "label": "@binding.turretright",
+      "description": "@binding.turretright.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.TurretUp",
+      "type": "string",
+      "default": "NUM8",
+      "label": "@binding.turretup",
+      "description": "@binding.turretup.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.TurretDown",
+      "type": "string",
+      "default": "NUM5",
+      "label": "@binding.turretdown",
+      "description": "@binding.turretdown.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "BINDINGS.Pause",
+      "type": "string",
+      "default": "ESC, BACKTICK",
+      "label": "@binding.pause",
+      "description": "@binding.pause.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "menu",
+      "visibility": "editor",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "Automatic (English fallback)"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        }
+      ]
+    }
+  ]
+}

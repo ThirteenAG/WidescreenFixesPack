@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include <d3d9.h>
 
 export module PostFX;
@@ -15,9 +16,9 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CIniReader iniReader("");
-            CPostFX::bConsoleGammaEnabled = iniReader.ReadInteger("GRAPHICS", "ConsoleGamma", 0) != 0;
-            CPostFX::bSmaaEnabled = iniReader.ReadInteger("GRAPHICS", "SMAA", 0) != 0;
+            auto& settings = FixSettings();
+            CPostFX::bConsoleGammaEnabled = settings.Int("GRAPHICS.ConsoleGamma") != 0;
+            CPostFX::bSmaaEnabled = settings.Int("GRAPHICS.AntiAliasing") != 0;
 
             if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
                 return;

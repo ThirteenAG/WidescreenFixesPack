@@ -15,7 +15,7 @@ void __fastcall UStrPropertyCopySingleValue(void* UStrProperty, void* edx, void*
     wchar_t buffer[256];
     auto sv = std::wstring_view(UObject::GetFullName(UStrProperty, edx, buffer));
 
-    if (sv == L"StrProperty UWindow.UWindowComboListItem.value")
+    if (!NativeResolutionListPublished && sv == L"StrProperty UWindow.UWindowComboListItem.value")
     {
         auto ptr = *reinterpret_cast<wchar_t**>(FArray2);
         if (ptr)

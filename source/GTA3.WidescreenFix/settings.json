@@ -1,0 +1,926 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Grand Theft Auto III",
+        "exe": [
+          "gta3.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "gameplay"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        }
+      ],
+      "label": "@hudaspect",
+      "description": "@hudaspect.description",
+      "page": "display",
+      "group": "@group.hud",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
+    },
+    {
+      "id": "MAIN.HudWidthScale",
+      "type": "float",
+      "default": 0.8,
+      "min": 0.5,
+      "max": 1.5,
+      "step": 0.05,
+      "decimals": 2,
+      "label": "@hudwidth",
+      "description": "@hudwidth.description",
+      "page": "display",
+      "group": "@group.hud",
+      "control": [
+        "slider"
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 0.8,
+        "enhanced": 0.8
+      }
+    },
+    {
+      "id": "MAIN.HudHeightScale",
+      "type": "float",
+      "default": 0.8,
+      "min": 0.5,
+      "max": 1.5,
+      "step": 0.05,
+      "decimals": 2,
+      "label": "@hudheight",
+      "description": "@hudheight.description",
+      "page": "display",
+      "group": "@group.hud",
+      "control": [
+        "slider"
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 0.8,
+        "enhanced": 0.8
+      }
+    },
+    {
+      "id": "MAIN.RadarWidth",
+      "type": "float",
+      "default": 97.5,
+      "min": 60,
+      "max": 140,
+      "step": 0.5,
+      "decimals": 1,
+      "label": "@radarwidth",
+      "description": "@radarwidth.description",
+      "page": "display",
+      "group": "@group.hud",
+      "control": [
+        "slider"
+      ],
+      "presets": {
+        "vanilla": 94.0,
+        "recommended": 97.5,
+        "enhanced": 97.5
+      }
+    },
+    {
+      "id": "MAIN.RadarHeight",
+      "type": "float",
+      "default": 91.0,
+      "min": 60,
+      "max": 140,
+      "step": 0.5,
+      "decimals": 1,
+      "label": "@radarheight",
+      "description": "@radarheight.description",
+      "page": "display",
+      "group": "@group.hud",
+      "control": [
+        "slider"
+      ],
+      "presets": {
+        "vanilla": 76.0,
+        "recommended": 91.0,
+        "enhanced": 91.0
+      }
+    },
+    {
+      "id": "MAIN.SubtitlesScale",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "decimals": 2,
+      "label": "@subtitlesscale",
+      "description": "@subtitlesscale.description",
+      "page": "display",
+      "group": "@group.hud",
+      "control": [
+        "slider"
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.AnimatedCutsceneBorders",
+      "type": "bool",
+      "default": 1,
+      "label": "@borderanim",
+      "description": "@borderanim.description",
+      "page": "display",
+      "group": "@group.hud",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.MenuAspectRatioConstraint",
+      "type": "string",
+      "default": "16:9",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "4:3"
+        }
+      ],
+      "label": "@menuaspect",
+      "description": "@menuaspect.description",
+      "page": "display",
+      "group": "@group.menus",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": "16:9",
+        "recommended": "16:9",
+        "enhanced": "16:9"
+      }
+    },
+    {
+      "id": "MAIN.FPSLimitMenus",
+      "type": "int",
+      "default": 60,
+      "min": 0,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@off"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
+        }
+      ],
+      "label": "@menufps",
+      "description": "@menufps.description",
+      "page": "display",
+      "group": "@group.menus",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 30,
+        "recommended": 60,
+        "enhanced": 60
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "decimals": 2,
+      "label": "@fov",
+      "description": "@fov.description",
+      "page": "camera",
+      "control": [
+        "slider"
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MISC.CarSpeedDependantFOV",
+      "type": "bool",
+      "default": 1,
+      "label": "@carspeedfov",
+      "description": "@carspeedfov.description",
+      "page": "camera",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.VCSCamShake",
+      "type": "bool",
+      "default": 0,
+      "label": "@vcscamshake",
+      "description": "@vcscamshake.description",
+      "page": "camera",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@fmvmode.original"
+        },
+        {
+          "value": 1,
+          "label": "@fmvmode.fill"
+        },
+        {
+          "value": 2,
+          "label": "@fmvmode.stretch"
+        }
+      ],
+      "label": "@fmvmode",
+      "description": "@fmvmode.description",
+      "page": "graphics",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.AntiAliasing",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 1,
+          "label": "SMAA"
+        }
+      ],
+      "label": "@antialiasing",
+      "description": "@antialiasing.description",
+      "page": "graphics",
+      "group": "@group.antialiasing",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.Sharpness",
+      "type": "float",
+      "default": 25,
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "label": "@aasharpness",
+      "description": "@aasharpness.description",
+      "page": "graphics",
+      "group": "@group.antialiasing",
+      "control": [
+        "slider"
+      ],
+      "enabledIf": {
+        "setting": "GRAPHICS.AntiAliasing",
+        "in": [
+          2,
+          3,
+          4
+        ]
+      },
+      "presets": {
+        "vanilla": 25,
+        "recommended": 25,
+        "enhanced": 25
+      },
+      "visibility": "file"
+    },
+    {
+      "id": "MAIN.GraphicsAPI",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "Direct3D 9"
+        },
+        {
+          "value": 1,
+          "label": "Vulkan (DXVK)"
+        },
+        {
+          "value": 2,
+          "label": "D3D9on12"
+        }
+      ],
+      "label": "@graphicsapi",
+      "description": "@graphicsapi.description",
+      "page": "graphics",
+      "group": "@group.antialiasing",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "bool",
+      "default": 0,
+      "label": "@consolegamma",
+      "description": "@consolegamma.description",
+      "page": "graphics",
+      "group": "@group.postfx",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.TransparentMenu",
+      "type": "bool",
+      "default": 0,
+      "label": "@transparentmenu",
+      "description": "@transparentmenu.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.FullscreenMenuBackground",
+      "type": "bool",
+      "default": 1,
+      "label": "@fullscreenbg",
+      "description": "@fullscreenbg.description",
+      "page": "graphics",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.HQRadarDisc",
+      "type": "bool",
+      "default": 1,
+      "label": "@hqradardisc",
+      "description": "@hqradardisc.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.ReplaceTextShadowWithOutline",
+      "type": "choice",
+      "default": 2,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 1,
+          "label": "@textoutline.thin"
+        },
+        {
+          "value": 2,
+          "label": "@textoutline.thick"
+        }
+      ],
+      "label": "@textoutline",
+      "description": "@textoutline.description",
+      "page": "graphics",
+      "control": [
+        "cycler"
+      ],
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 2,
+        "enhanced": 2
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@skipintro",
+      "description": "@skipintro.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.NoIslandLoading",
+      "type": "bool",
+      "default": 1,
+      "label": "@noislandloading",
+      "description": "@noislandloading.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.DisableZoneCull",
+      "type": "bool",
+      "default": 1,
+      "label": "@zonecull",
+      "description": "@zonecull.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.ForceMultisamplingLevel",
+      "type": "string",
+      "default": "0",
+      "special": [
+        {
+          "value": "0",
+          "label": "@off"
+        },
+        {
+          "value": "max",
+          "label": "@msaa.max"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "2"
+        },
+        {
+          "value": "4"
+        },
+        {
+          "value": "8"
+        }
+      ],
+      "label": "@msaa",
+      "description": "@msaa.description",
+      "page": "graphics",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "GRAPHICS.HideAABug",
+      "type": "choice",
+      "default": 2,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 1,
+          "label": "@hideaabug.topleft"
+        },
+        {
+          "value": 2,
+          "label": "@hideaabug.all"
+        }
+      ],
+      "label": "@hideaabug",
+      "description": "@hideaabug.description",
+      "page": "compatibility",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@textlanguage",
+      "description": "@textlanguage.description",
+      "page": "compatibility",
+      "visibility": "editor"
+    },
+    {
+      "id": "GRAPHICS.D3D9on12",
+      "type": "bool",
+      "default": 0,
+      "label": "D3D9on12",
+      "description": "@d3d9on12.description",
+      "page": "compatibility",
+      "visibility": "file",
+      "apply": "restart"
+    },
+    {
+      "id": "COMPATIBILITY.LegacyMode",
+      "type": "bool",
+      "default": 0,
+      "label": "@legacy.mode",
+      "description": "@legacy.mode.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "LEGACY.ResX",
+      "type": "int",
+      "default": -1,
+      "label": "@legacy.ResX",
+      "description": "@legacy.ResX.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      },
+      "min": -1,
+      "max": 16384
+    },
+    {
+      "id": "LEGACY.ResY",
+      "type": "int",
+      "default": -1,
+      "label": "@legacy.ResY",
+      "description": "@legacy.ResY.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      },
+      "min": -1,
+      "max": 16384
+    },
+    {
+      "id": "LEGACY.ForceAspectRatio",
+      "type": "string",
+      "default": "auto",
+      "label": "@legacy.ForceAspectRatio",
+      "description": "@legacy.ForceAspectRatio.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "LEGACY.FrontendAspectRatio",
+      "type": "string",
+      "default": "auto",
+      "label": "@legacy.FrontendAspectRatio",
+      "description": "@legacy.FrontendAspectRatio.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "LEGACY.DontTouchFOV",
+      "type": "bool",
+      "default": 0,
+      "label": "@legacy.DontTouchFOV",
+      "description": "@legacy.DontTouchFOV.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "LEGACY.RestoreCutsceneFOV",
+      "type": "bool",
+      "default": 1,
+      "label": "@legacy.RestoreCutsceneFOV",
+      "description": "@legacy.RestoreCutsceneFOV.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "LEGACY.HudWidthScale",
+      "type": "float",
+      "default": 1,
+      "label": "@legacy.HudWidthScale",
+      "description": "@legacy.HudWidthScale.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      },
+      "min": 0
+    },
+    {
+      "id": "LEGACY.HudHeightScale",
+      "type": "float",
+      "default": 1.0714285,
+      "label": "@legacy.HudHeightScale",
+      "description": "@legacy.HudHeightScale.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      },
+      "min": 0
+    },
+    {
+      "id": "LEGACY.RadarWidthScale",
+      "type": "float",
+      "default": 1,
+      "label": "@legacy.RadarWidthScale",
+      "description": "@legacy.RadarWidthScale.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      },
+      "min": 0
+    },
+    {
+      "id": "LEGACY.SmartCutsceneBorders",
+      "type": "bool",
+      "default": 1,
+      "label": "@legacy.SmartCutsceneBorders",
+      "description": "@legacy.SmartCutsceneBorders.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "LEGACY.HideAABug",
+      "type": "int",
+      "default": 0,
+      "label": "@legacy.HideAABug",
+      "description": "@legacy.HideAABug.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      },
+      "min": 0,
+      "max": 2
+    },
+    {
+      "id": "LEGACY.SmallerVehicleCorona",
+      "type": "bool",
+      "default": 0,
+      "label": "@legacy.SmallerVehicleCorona",
+      "description": "@legacy.SmallerVehicleCorona.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "LEGACY.NoLightSquare",
+      "type": "bool",
+      "default": 0,
+      "label": "@legacy.NoLightSquare",
+      "description": "@legacy.NoLightSquare.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "LEGACY.IVRadarScaling",
+      "type": "bool",
+      "default": 0,
+      "label": "@legacy.IVRadarScaling",
+      "description": "@legacy.IVRadarScaling.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "LEGACY.ReplaceTextShadowWithOutline",
+      "type": "int",
+      "default": 0,
+      "label": "@legacy.ReplaceTextShadowWithOutline",
+      "description": "@legacy.ReplaceTextShadowWithOutline.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "enabledIf": {
+        "setting": "COMPATIBILITY.LegacyMode",
+        "in": [
+          1
+        ]
+      },
+      "min": 0,
+      "max": 2
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "../Shared/CheckedPattern.hpp"
 #include <cstdint>
 #include "common.h"
 
@@ -110,9 +111,19 @@ public:
         WFP::onInitEvent() += []()
         {
             auto pattern = hook::pattern("E8 ? ? ? ? 0F B7 C0 83 E0 ? 83 F8 ? 74");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             CGeneral::GetRandomNumber = (decltype(CGeneral::GetRandomNumber))injector::GetBranchDestination(pattern.get_first(0)).as_int();
 
             pattern = hook::pattern("A1 ? ? ? ? 53 ? ? 6A ? FF 74 24");
+            if (pattern.size() < 1)
+            {
+                wfp::patterns::Report("GTA3.WidescreenFix: feature signature unavailable.\n");
+                return;
+            }
             pD3D8Device = *pattern.get_first<IUnknown**>(1);
         };
     }

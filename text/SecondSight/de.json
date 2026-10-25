@@ -1,0 +1,11 @@
+{
+  "plugin.name": "Second Sight Widescreen-Fix",
+  "page.camera": "Kamera",
+  "page.advanced": "Erweitert",
+  "ResX": "Auflösungsbreite",
+  "ResX.description": "Breite in Pixeln. Null wählt die Desktopauflösung. Neustart erforderlich.",
+  "ResY": "Auflösungshöhe",
+  "ResY.description": "Höhe in Pixeln. Null wählt die Desktopauflösung. Neustart erforderlich.",
+  "FOVFactor": "Sichtfeld-Faktor",
+  "FOVFactor.description": "Multipliziert das korrigierte Sichtfeld. 1.0 behält den vorgesehenen Bildausschnitt; größere Werte erweitern die Sicht. Breitere Ansichten können an manchen Orten Objekte hinter Wänden zeigen."
+}

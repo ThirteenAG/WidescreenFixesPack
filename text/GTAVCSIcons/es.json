@@ -1,0 +1,14 @@
+{
+  "plugin.name": "GTA Vice City Stories PPSSPP Gamepad Icons",
+  "page.controls": "Controles",
+  "icons": "Iconos del mando",
+  "icons.description": "Elige los gráficos del mando. El selector del menú de mando del juego también cambia y guarda este ajuste. Los cambios en el hub se aplican al próximo inicio del juego emulado.",
+  "set.PSP": "PSP original",
+  "set.360": "Xbox 360",
+  "set.XBO": "Xbox One",
+  "set.PS3": "PlayStation 3",
+  "set.PS4": "PlayStation 4",
+  "set.PS5": "PlayStation 5",
+  "set.SWI": "Nintendo Switch",
+  "set.DEK": "Steam Deck"
+}

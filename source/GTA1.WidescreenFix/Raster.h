@@ -32,7 +32,7 @@ namespace GTA1Raster
                 if ((operand[-1] & 0xC7) != 0x85 || (operand[-2] & 0xC7) != 0x04 ||
                     (operand[-3] != 0x8B && operand[-3] != 0x89 && operand[-3] != 0x03))
                     continue;
-                injector::WriteMemory(operand, reinterpret_cast<uint32_t>(Rows.data() + 1) + offset, true);
+                ProtectedGameRef<uint32_t>(reinterpret_cast<uint32_t*>(operand)) = reinterpret_cast<uint32_t>(Rows.data() + 1) + offset;
                 ++changed;
             }
         }

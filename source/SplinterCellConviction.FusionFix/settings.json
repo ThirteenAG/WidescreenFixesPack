@@ -1,0 +1,546 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Splinter Cell Conviction",
+        "exe": [
+          "conviction_game.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "coop",
+      "title": "@page.coop",
+      "section": "gameplay"
+    },
+    {
+      "id": "advanced",
+      "title": "@page.advanced",
+      "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "menu",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@GENERAL.SkipIntro",
+      "description": "@GENERAL.SkipIntro.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WindowMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@WindowMode.1"
+        },
+        {
+          "value": 2,
+          "label": "@WindowMode.2"
+        }
+      ]
+    },
+    {
+      "id": "GAMEPLAY.DisableNegativeMouseAcceleration",
+      "type": "bool",
+      "default": true,
+      "label": "@GAMEPLAY.DisableNegativeMouseAcceleration",
+      "description": "@GAMEPLAY.DisableNegativeMouseAcceleration.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "GENERAL.SkipSystemDetection",
+      "type": "bool",
+      "default": true,
+      "label": "@GENERAL.SkipSystemDetection",
+      "description": "@GENERAL.SkipSystemDetection.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "GENERAL.ForceCPUAffinityToAllCores",
+      "type": "bool",
+      "default": true,
+      "label": "@GENERAL.ForceCPUAffinityToAllCores",
+      "description": "@GENERAL.ForceCPUAffinityToAllCores.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "DISPLAY.UltraWideSupport",
+      "type": "bool",
+      "default": true,
+      "label": "@DISPLAY.UltraWideSupport",
+      "description": "@DISPLAY.UltraWideSupport.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "GRAPHICS.DisableBlackAndWhiteFilter",
+      "type": "bool",
+      "default": false,
+      "label": "@GRAPHICS.DisableBlackAndWhiteFilter",
+      "description": "@GRAPHICS.DisableBlackAndWhiteFilter.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
+    },
+    {
+      "id": "GAMEPLAY.BlacklistControlScheme",
+      "type": "bool",
+      "default": false,
+      "label": "@GAMEPLAY.BlacklistControlScheme",
+      "description": "@GAMEPLAY.BlacklistControlScheme.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
+    },
+    {
+      "id": "UNLOCKS.UnlockDLC",
+      "type": "bool",
+      "default": true,
+      "label": "@UNLOCKS.UnlockDLC",
+      "description": "@UNLOCKS.UnlockDLC.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "2INSTANCESPLITSCREEN.Enable",
+      "type": "bool",
+      "default": false,
+      "label": "@2INSTANCESPLITSCREEN.Enable",
+      "description": "@2INSTANCESPLITSCREEN.Enable.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 0,
+      "label": "@DISPLAY.FPSLimit",
+      "description": "@DISPLAY.FPSLimit.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      },
+      "min": 0,
+      "max": 1000,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.LightSyncRGB",
+      "type": "bool",
+      "default": true,
+      "label": "@LOGITECH.LightSyncRGB",
+      "description": "@LOGITECH.LightSyncRGB.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "FILELOADER.DumpPackedFiles",
+      "type": "bool",
+      "default": false,
+      "label": "@FILELOADER.DumpPackedFiles",
+      "description": "@FILELOADER.DumpPackedFiles.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "LAN.LANHelperExePath",
+      "type": "string",
+      "default": "",
+      "label": "@LAN.LANHelperExePath",
+      "description": "@LAN.LANHelperExePath.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "file"
+    },
+    {
+      "id": "LAN.FixLAN",
+      "type": "bool",
+      "default": true,
+      "label": "@LAN.FixLAN",
+      "description": "@LAN.FixLAN.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "LAN.ServerAddr",
+      "type": "string",
+      "default": "127.0.0.1",
+      "label": "@LAN.ServerAddr",
+      "description": "@LAN.ServerAddr.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "GRAPHICS.DisableDOF",
+      "type": "bool",
+      "default": true,
+      "label": "@GRAPHICS.DisableDOF",
+      "description": "@GRAPHICS.DisableDOF.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "GRAPHICS.DisableCharacterLighting",
+      "type": "bool",
+      "default": false,
+      "label": "@GRAPHICS.DisableCharacterLighting",
+      "description": "@GRAPHICS.DisableCharacterLighting.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
+    },
+    {
+      "id": "GRAPHICS.EnhancedSonarVision",
+      "type": "bool",
+      "default": false,
+      "label": "@GRAPHICS.EnhancedSonarVision",
+      "description": "@GRAPHICS.EnhancedSonarVision.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
+    },
+    {
+      "id": "GRAPHICS.BlacklistIndicators",
+      "type": "int",
+      "default": 0,
+      "label": "@GRAPHICS.BlacklistIndicators",
+      "description": "@GRAPHICS.BlacklistIndicators.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      },
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "MAIN.RawInputMouse",
+      "type": "bool",
+      "default": true,
+      "label": "@GAMEPLAY.RawMouseInput",
+      "description": "@GAMEPLAY.RawMouseInput.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.MouseSmoothing",
+      "type": "bool",
+      "default": false,
+      "label": "@MAIN.MouseSmoothing",
+      "description": "@MAIN.MouseSmoothing.description",
+      "page": "controls",
+      "apply": "restart",
+      "presets": {
+        "vanilla": true,
+        "recommended": false,
+        "enhanced": false
+      }
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1.0,
+      "label": "@MAIN.GamepadCameraSpeed",
+      "description": "@MAIN.GamepadCameraSpeed.description",
+      "page": "controls",
+      "apply": "live",
+      "min": 0,
+      "max": 5,
+      "step": 0.1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "2INSTANCESPLITSCREEN.Layout",
+      "type": "int",
+      "default": 0,
+      "label": "@2INSTANCESPLITSCREEN.Layout",
+      "description": "@2INSTANCESPLITSCREEN.Layout.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "2INSTANCESPLITSCREEN.GamepadInstance1",
+      "type": "int",
+      "default": 1,
+      "label": "@2INSTANCESPLITSCREEN.GamepadInstance1",
+      "description": "@2INSTANCESPLITSCREEN.GamepadInstance1.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "2INSTANCESPLITSCREEN.GamepadInstance2",
+      "type": "int",
+      "default": 2,
+      "label": "@2INSTANCESPLITSCREEN.GamepadInstance2",
+      "description": "@2INSTANCESPLITSCREEN.GamepadInstance2.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "2INSTANCESPLITSCREEN.ProfileInstance2",
+      "type": "string",
+      "default": "Guest",
+      "label": "@2INSTANCESPLITSCREEN.ProfileInstance2",
+      "description": "@2INSTANCESPLITSCREEN.ProfileInstance2.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "SPLITSCREEN.Enable",
+      "type": "bool",
+      "default": true,
+      "label": "@SPLITSCREEN.Enable",
+      "description": "@SPLITSCREEN.Enable.description",
+      "page": "coop",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "SPLITSCREEN.GamepadPlayer1",
+      "type": "int",
+      "default": 0,
+      "label": "@SPLITSCREEN.GamepadPlayer1",
+      "description": "@SPLITSCREEN.GamepadPlayer1.description",
+      "page": "coop",
+      "apply": "restart",
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SPLITSCREEN.GamepadPlayer2",
+      "type": "int",
+      "default": 1,
+      "label": "@SPLITSCREEN.GamepadPlayer2",
+      "description": "@SPLITSCREEN.GamepadPlayer2.description",
+      "page": "coop",
+      "apply": "restart",
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "SPLITSCREEN.InvertYPlayer2",
+      "type": "bool",
+      "default": false,
+      "label": "@SPLITSCREEN.InvertYPlayer2",
+      "description": "@SPLITSCREEN.InvertYPlayer2.description",
+      "page": "coop",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
+    },
+    {
+      "id": "SPLITSCREEN.ProfilePlayer2",
+      "type": "string",
+      "default": "Guest",
+      "label": "@SPLITSCREEN.ProfilePlayer2",
+      "description": "@SPLITSCREEN.ProfilePlayer2.description",
+      "page": "coop",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    }
+  ]
+}
