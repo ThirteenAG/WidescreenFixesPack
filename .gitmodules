@@ -25,6 +25,9 @@
 [submodule "external/ps2sdk"]
 	path = external/ps2sdk
 	url = https://github.com/ThirteenAG/ps2sdk
-[submodule "source/Manhunt.WidescreenFix"]
-	path = source/Manhunt.WidescreenFix
-	url = https://github.com/Fire-Head/MHWSF
+[submodule "external/FusionFixUtils"]
+	path = external/FusionFixUtils
+	url = https://github.com/ThirteenAG/FusionFixUtils.git
+[submodule "external/imgui"]
+	path = external/imgui
+	url = https://github.com/ocornut/imgui
