@@ -4,7 +4,7 @@
 
 **Far Cry Widescreen Fix** adds proper widescreen support, corrects aspect ratio, HUD, field of view and FMV playback, and adds optional post-processing effects.
 
-[Website](https://thirteenag.github.io/wfp#farcry) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/FarCry.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/FarCry.WidescreenFix/Bin32/FarCry.WidescreenFix.ini)
+[Website](https://thirteenag.github.io/wfp#farcry) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/FarCry.WidescreenFix/dllmain.cpp)
 
 </div>
 
@@ -22,8 +22,12 @@
 
 ## New Options
 
-- **HUD Aspect Ratio Constraint** - constrains the HUD to an aspect ratio via the `HudAspectRatioConstraint` option (Auto, 16:9, 21:9, or a custom ratio)
-- **FOV Factor** - makes the FOV higher or lower via the `FOVFactor` option, `1.0` by default
+- **HUD Aspect Ratio Constraint** - Keeps the HUD inside a centered 16:9, 21:9 or custom area. Auto uses the full screen.
+- **Skip intro** - skip the five startup logo/legal movies while retaining story videos and normal startup checks. Enabled by default; changes require restart.
+- **Movie framing** - Original keeps the picture’s proportions with black bars, Fill crops to fill the screen (the default), and Stretch fills the screen by changing its proportions. Changes apply while playing.
+- **Window mode** - Choose Fullscreen, Windowed or Borderless while playing. Alt+Enter switches between fullscreen and your last window mode. Window placement is remembered.
+- **Confine cursor** - Keeps the pointer inside the active game window and releases it when you switch away or turn the setting off. Changes apply while playing.
+- **FOV Factor** - Widens or narrows the gameplay view; 1.0 is the default.
 - **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
 - **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360
 
@@ -46,12 +50,35 @@
 
 ---
 
+## Settings and hub
+
+Open **Options → Plugins** for settings and per-plugin presets. FOV, HUD width, movie framing, window mode and cursor confinement change while the game runs. Use English for the in-game settings menu; text with unsupported characters may leave a page unavailable. Use FusionFixHub for localized settings.
+
+Choose the settings language on fusionfix.io or in FusionFixHub. The first launch writes the settings file next to the fix. FOV factor, HUD aspect constraint, movie framing, window mode and cursor confinement apply while the game runs; the other options require a restart. An old `FarCry.WidescreenFix.ini` or `FarCry64.WidescreenFix.ini` isn't used anymore and can be deleted.
+
+Texts are available in English, French, German, Italian and Spanish.
+
+## Known limits
+
+- All presets leave SMAA off; turn it on separately.
+- The game's own cutscene borders are kept.
+
+Movie framing also respects smaller videos embedded in menus. Original adds black bars, Fill crops the picture, and Stretch changes its proportions. Subtitles and other interface elements keep their normal placement.
+
+Skip intro removes only the startup logos. Story videos, menu music and normal startup checks remain.
+
+Window mode supports framed, borderless and fullscreen output. Framed placement is remembered, and the game restores the previous mode if a change fails.
+
+Cursor confinement follows focus and releases the pointer when disabled. Compatibility can depend on other input wrappers installed alongside the fix.
+
+The FOV multiplier follows the normal player view. Aiming, death views, camera overrides and scripted views keep their intended framing.
+
 ## Installation
 
 1. Download the `.zip` from this release.
 2. Extract the contents directly into the game folder - the same folder as `FarCry.exe` (use the `Bin32` files for the 32-bit version and the `Bin64` files for the 64-bit one).
-3. Optionally edit `FarCry.WidescreenFix.ini` (`FarCry64.WidescreenFix.ini` for the 64-bit version) to configure the available options.
-4. Launch the game.
+3. Launch the game once to create the settings file next to the fix: `FarCry.WidescreenFix.cfg` for 32-bit or `FarCry64.WidescreenFix.cfg` for 64-bit.
+4. Configure the fix on fusionfix.io or in FusionFixHub, then restart the game.
 
 > [!NOTE]
 > Installing [SilentPatch for Far Cry](https://github.com/CookiePLMonster/SilentPatchFarCry/releases/latest) is strongly recommended - it's the perfect companion to this fix.

@@ -4,38 +4,42 @@
 
 **Splinter Cell: Blacklist Fusion Fix** adds ultrawide and FOV options, startup skips, input adjustments, and configurable mission and game-mode changes.
 
-[Website](https://thirteenag.github.io/wfp#scb) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellBlacklist.FusionFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix.ini)
+[Website](https://thirteenag.github.io/wfp#scb) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellBlacklist.FusionFix/dllmain.cpp)
 
 </div>
 
 ---
 
-## Options
+## Settings
+
+Configure the fix in FusionFixHub or on fusionfix.io. Field of view applies while the game runs; restart the game after changing the other settings. The default setup enables split screen and keeps detection failure enabled in Ghost mode. There is no frame rate cap unless you set one.
+
+Menus, dialogs and fullscreen movies remain within a 16:9 area with black bars where needed. The 3D view fills the screen. Ambient occlusion is disabled during split screen, and player 1 controls the shared pause menu.
 
 ### Startup and input
 
 - **Skip intro** — Skip startup intros.
 - **Startup prompt** — Skip the “Press Any Key” screen and checkpoint selection.
 - **Mouse input** — Raw mouse input for camera turning, so high polling rate mice don't lose movement; optionally disable negative mouse acceleration.
-- **Turn speed** — `TurnSpeed` makes Sam turn faster toward the movement direction while moving, for snappier direction changes.
+- **Turn speed** — Makes Sam turn faster toward the movement direction while moving, for snappier direction changes.
 
 ### Display and camera
 
 - **Window modes** — Windowed, borderless and fullscreen list the same resolutions; windowed and borderless windows are centered and open in front, the window can be resized and the game remembers it.
 - **Ultrawide** — The HUD and menus stay 16:9 on screens wider or narrower than 16:9 (menus, dialogs and full screen movies get black bars), the 3D view fills the screen.
 - **Letterbox** — On screens narrower than 16:9 (4:3, 16:10), optionally letterbox the 3D view to 16:9.
-- **Frame rate limit** — Set a frame rate limit with `FPSLimit`.
-- **Field of view** — Adjust `FOVFactor` from 0.5 to 2.5.
-- **Draw distance** — Adjust `ScreenCullBias`; lower values keep distant objects visible for longer.
+- **Frame rate limit** — Set a frame rate limit.
+- **Field of view** — Adjust from 0.5 to 2.0. This setting changes while playing.
+- **Draw distance** — Adjust the screen cull bias; lower values keep distant objects visible for longer.
 
 ### Gameplay and files
 
-- **DLC** — Unlock DLC content made unavailable by the server shutdown.
-- **Mission unlocks** — Separate options unlock campaign and 4th Echelon missions from the start.
-- **Loose files** — Load unpacked files from the `update` folder. `DumpPackedFiles` unpacks all .umd archives into an `unpacked` folder next to the exe, its contents can be moved to `update` to run the game from loose files.
+- **DLC** — Restores DLC content made unavailable by the server shutdown.
+- **Missions** — Separate options make campaign and 4th Echelon missions available from the start.
+- **Loose files** — Load unpacked files from the `update` folder. The **Dump packed files** option (in the settings file) unpacks all .umd archives into an `unpacked` folder next to the exe, its contents can be moved to `update` to run the game from loose files.
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 - **Forced walking** — Allow running during forced walking sections.
-- **Split screen co-op** — Restores the console split screen co-op (`[SPLITSCREEN] Enable`), DX11 and DX9: pick a co-op mission in the SMI and choose SPLIT-SCREEN, player 2 joins with START on their gamepad in the lobby and customizes their gear with X (it's saved in the profile). `GamepadPlayer1`/`GamepadPlayer2` assign the gamepads, by default player 1 uses keyboard and mouse only and player 2 the first gamepad while player 2 is in; single player isn't affected. Each player gets their own HUD, button prompts and markers in their half, also on ultrawide screens; player 2 can open and close the pause menu with START, the menu itself is controlled by player 1. Ambient occlusion is turned off while in split screen.
+- **Split screen co-op** — Restores the console split screen co-op, DX11 and DX9: pick a co-op mission in the SMI and choose SPLIT-SCREEN, player 2 joins with START on their gamepad in the lobby and customizes their gear with X (it's saved in the profile). **Gamepad player 1** and **Gamepad player 2** assign the gamepads; by default player 1 uses keyboard and mouse only and player 2 the first gamepad while player 2 is in; single player isn't affected. Each player gets their own HUD, button prompts and markers in their half, also on ultrawide screens; player 2 can open and close the pause menu with START, the menu itself is controlled by player 1. Ambient occlusion is turned off while in split screen.
 
 ### Fixes
 
@@ -48,9 +52,9 @@ Difficulty tweaks: **Mark and Execute**, sonar and drop crates enabled on **Perf
 
 Plugin adds an ability to modify the number of enemies for the Extraction game mode with `ExtractionWaveEnemyMultiplier` option.
 
-New config for the Extraction game mode: Random, which randomizes the number and type of enemies in each wave using minimum and maximum values defined in the INI file.
+New config for the Extraction game mode: Random, which randomizes the number and type of enemies in each wave using minimum and maximum values defined on fusionfix.io or in FusionFixHub.
 
-To load custom configs for the Extraction game mode, create a folder inside `Splinter Cell Blacklist\src\SYSTEM\update\Data\ExtractionWaveConfigs\`, copy all XMLs into it, then set the name of the new folder in `ExtractionWaveConfigs` option in the INI file.
+To load custom configs for the Extraction game mode, create a folder inside `Splinter Cell Blacklist\src\SYSTEM\update\Data\ExtractionWaveConfigs\`, copy all XMLs into it, then set the name of the new folder in `ExtractionWaveConfigs` option on fusionfix.io or in FusionFixHub.
 
 E.g.:
 
@@ -83,7 +87,7 @@ Demo: https://youtu.be/su47XbCcVyw
 
 Plugin adds an ability to modify the number of reinforcements for the Hunter game mode and coop campaign with `ReinforcementsEnemyMultiplier` option.
 
-New config for the Hunter game mode and coop campaign: Random, which randomizes the total number of reinforcements between minimum and maximum values defined in the INI file.
+New config for the Hunter game mode and coop campaign: Random, which randomizes the total number of reinforcements between minimum and maximum values defined on fusionfix.io or in FusionFixHub.
 
 # Ghost Mode and Campaign
 
@@ -101,12 +105,22 @@ Put edited ini configs in `update` folder.
 
 ![scb](https://github.com/user-attachments/assets/96d6a1e7-457e-4ae4-a2f6-88cc9a632c80)
 
+## Known limits
+
+At frame rates above 100 FPS, guards may appear doubled. Some wall shadows can pop as the camera turns. After changing a setting, move to another row and back if its help line resets to "Plugins".
+
+## Configuration
+
+The added settings text is available in English, French, German, Italian and Spanish. Choose Text Language in FusionFixHub to override the automatic choice. If the game language cannot be identified, English is used.
+
+Recommended uses the default setup. Vanilla and Enhanced offer alternative presets. Settings marked for restart take effect on the next launch. If Plugins is unavailable in your game version, use FusionFixHub or the generated `.cfg` file.
+
 ## Installation
 
 1. Download the fix archive from this release.
 2. Extract the archive into the game’s installation folder, preserving its directory structure. The included files belong under `src/SYSTEM`.
-3. Optionally edit `src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix.ini` to configure the fix.
-4. Launch the game.
+3. Launch the game once to create the `src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix.cfg`.
+4. Configure the fix on fusionfix.io or in FusionFixHub. Field of view applies while the game runs; restart the game after changing the other settings. An old `src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix.ini` isn't used anymore and can be deleted.
 
 > [!WARNING]
 > Non-Windows users (Proton/Wine) need to perform a **DLL override**.
@@ -139,7 +153,5 @@ Put edited ini configs in `update` folder.
 > * [More on DLL overrides](https://wiki.winehq.org/Wine_User's_Guide#DLL_Overrides)
 > * [More on WINEDLLOVERRIDES method](https://wiki.winehq.org/Wine_User's_Guide#WINEDLLOVERRIDES.3DDLL_Overrides)
 > </details>
-
-
 
 <p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile-dark.svg"><source media="(max-width: 768px)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile.svg"><source media="(prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-dark.svg"><img width="100%" src="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>

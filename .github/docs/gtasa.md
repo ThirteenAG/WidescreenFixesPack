@@ -4,7 +4,7 @@
 
 **Grand Theft Auto: San Andreas Widescreen Fix** adds proper widescreen support, unlocks every resolution, corrects HUD, FOV and cutscene letterboxing, and includes a range of quality-of-life improvements.
 
-[Website](https://thirteenag.github.io/wfp#gtasa) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTASA.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTASA.WidescreenFix/scripts/GTASA.WidescreenFix.ini)
+[Website](https://thirteenag.github.io/wfp#gtasa) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTASA.WidescreenFix/dllmain.cpp)
 
 </div>
 
@@ -40,6 +40,12 @@
 <tr>
 <td width="58%" valign="middle">
 
+- **In-game menu** - the fix's settings are in the game's own menu, in the main menu and in the pause menu. Console gamma is a row of **Options > Display Setup** (after Brightness), field of view and SMAA rows of its **Advanced** screen (after Widescreen and the game's Anti Aliasing); the game's Restore Defaults there resets them too. Everything else is under **Options > Plugins**: the fix first, then every other plugin with settings (such as Xbox Rain Droplets and III.VC.SA.WindowedMode, which sets the window mode). Each plugin's page has its own Preset row (Vanilla, Recommended, Enhanced; press twice to apply), its settings and Restore defaults. Most settings apply at once, the others at the next start
+- **Settings** - stored in `GTASA.WidescreenFix.cfg` next to the `.asi`, which the fix writes on its first start with every setting and a comment above each. Change settings in the game, on fusionfix.io or in FusionFixHub (also while the game runs)
+- **Field of View** - a multiplier (0.5 to 2.0) of the gameplay cameras' field of view, on top of the widescreen correction; cutscenes keep theirs.
+- **Skip Intro** - starts with the loading screen and the main menu, without the title screens and logo videos (on by default, after restart)
+- **Videos** - the intro videos at their original aspect ratio with black bars, filling the screen at their aspect ratio (default), or stretched
+- **Animated Cutscene Borders** - the borders slide in and out
 - **In-Game Options** - a Cutscene Borders mode (off, letterbox, pillarbox, or both) and the Frame Limiter option turned into a full FPS selector (off, 30 up to 240 FPS), both available right in the Display menu
 
 </td>
@@ -68,7 +74,7 @@
 - **Transparent Menu** - makes the menu background transparent with a blur
 - **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360
 - **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by MSAA
-- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
+- **Anti-Aliasing** - Off or SMAA
 
 </td>
 <td width="42%" valign="middle" align="center">
@@ -80,7 +86,7 @@
 <tr>
 <td width="58%" valign="middle">
 
-- **Alt-Tab Without Pausing** - game keeps running when focus is lost in windowed mode
+- **Pause on Focus Loss** - off keeps the game running when focus is lost in windowed mode
 - **Crosshair Fix** - disables the small white dot shown while aiming with some weapons
 - **Text Outline** - replaces text shadows with an outline
 - **VCS Camera Shake** - enables GTA: Vice City Stories style camera shake in vehicles at high speed
@@ -118,8 +124,7 @@
 
 1. Download the `.zip` from this release.
 2. Extract the contents directly into the game folder - the same folder as `gta-sa.exe`.
-3. Optionally edit `GTASA.WidescreenFix.ini` to configure the available options.
-4. Launch the game.
+3. Launch the game. Change the settings in **Options > Display Setup** and **Options > Plugins**, on fusionfix.io, or in FusionFixHub. The fix creates `scripts\GTASA.WidescreenFix.cfg` on its first start. An old `scripts\GTASA.WidescreenFix.ini` isn't used anymore and can be deleted.
 
 > [!NOTE]
 > Installing [SilentPatch](https://silentsblog.com/mods/gta-sa/) is strongly recommended - it's the perfect companion to this fix and essentially required, fixing numerous bugs, crashes and progression issues.
@@ -131,42 +136,13 @@
   <summary> Legacy mode - click to expand </summary>
 <br>
 
-To use the previous version of the fix, place `GTASA.WidescreenFixLegacy.ini` next to the `.asi` file with the following content:
+Legacy mode supports the original 1.0 US executable layout. It is disabled when that layout cannot be recognized.
 
-```
-[MAIN]
-; Use this option to override the game resolution (-1|0|*).
-ResX = 0
-ResY = 0
-; Set game aspect ratio (auto|4:3|5:4|16:9|*:*).
-ForceAspectRatio = auto
-; Used to properly scale frontend textures, such as menu background or loading screens (auto|4:3|5:4|16:9|*:*).
-FrontendAspectRatio = auto 
-; Disable any FOV related fixes, it's not recommended (0|1).
-DontTouchFOV = 0
-; Use original FOV value during cutscenes (0|1).
-RestoreCutsceneFOV = 1
-; The settings below are used to scale parts of the game UI differently.
-; If set to "0.0" original values will be used.
-HudWidthScale = 0.8     ; Original value is 1.0.
-HudHeightScale = 0.8    ; Original value is 1.0.
-RadarWidthScale = 0.82  ; Original value is 1.0.
-RadarHeightScale = 0.0  ; Original value is 1.0.
-SubtitlesScale = 0.0    ; Original value is 1.0.
-ProportionalWeaponIcon = 0
+Enable **Legacy mode** on FusionFixHub's Compatibility page, or on fusionfix.io, then restart the game. This uses the older widescreen fix for compatibility with other mods.
 
-[MISC]
-; Same as in VCS PCE, cutscene border size will be adjusted to fit your resolution. On resolutions bigger than 16:9 vertical borders will be used. Note that you can enable or disable cutscene borders via 'WIDESCREEN'/'BORDERS' option in game menu (0|1).
-SmartCutsceneBorders = 1 
-; Game will not freeze when focus is lost (only in windowed mode).
-AllowAltTabbingWithoutPausing = 0 
-; Drawing 1px line at top and left sides of the screen to hide antialiasing bug caused by MSAA(0|1|2). (2) creates 4 lines to make picture symmetrical.
-HideAABug = 0
-; Disable the small white dot that appears while aiming with some weapons (0|1).
-DisableWhiteCrosshairDot = 0 
-; Replaces text shadow with outline (0|1|2).
-ReplaceTextShadowWithOutline = 2
-```
+Its options are on the Compatibility page and apply after a restart. By default the resolution follows the game's own choice (0 selects the desktop), the game and menu aspect ratio is automatic, HUD scales are 1, smart borders and field of view corrections are on, and proportional weapon icons, edge masking and text outlines are off.
+
+Subtitle scale, radar width and height, pause on focus loss and the white crosshair dot option also work in legacy mode; restart after changing them. Legacy mode is off by default. Enabling it uses the older widescreen fix for compatibility with other mods. Renderer effects and the added settings menus are unavailable in that mode.
 
 </details>
 

@@ -4,7 +4,7 @@
 
 **Ultimate Spider-Man Widescreen Fix** adds proper widescreen and ultrawide support, corrects the HUD, radar, map and field of view, and improves mouse camera movement.
 
-[Website](https://thirteenag.github.io/wfp#usm) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/tree/master/source/UltimateSpiderMan.WidescreenFix) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/UltimateSpiderMan.WidescreenFix/scripts/UltimateSpiderMan.WidescreenFix.ini)
+[Website](https://thirteenag.github.io/wfp#usm) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/tree/master/source/UltimateSpiderMan.WidescreenFix)
 
 </div>
 
@@ -52,12 +52,12 @@
 <tr>
 <td width="58%" valign="middle">
 
-Edit `scripts/UltimateSpiderMan.WidescreenFix.ini` to change these settings.
+Change these settings on fusionfix.io or in FusionFixHub.
 
-- **HUD Placement** - `HudAspectRatioConstraint = Auto` places the HUD toward the screen edges. Use `4:3` for the original placement, or a ratio such as `16:9` or `21:9` to bring it closer to the center
-- **Camera View** - `FOVFactor` changes how much of the world you see. `1.0` is the default; higher values give a wider view
-- **Windowed Mode** - `WindowedMode = 0` uses fullscreen; `1` uses a borderless window at your selected resolution; `2` fills the primary monitor with a borderless window. Restart the game to apply
-- **Keep Cursor in the Game** - `ClipCursor = 1` prevents the cursor from leaving the active game window. Alt+Tab releases it
+- **HUD Placement** - **Auto** places the HUD toward the screen edges. Use 4:3 for the original placement, or a ratio such as 16:9 or 21:9 to bring it closer to the center
+- **Camera View** - The field of view factor changes how much of the world you see. 1.0 is the default; higher values give a wider view
+- **Window Mode** - Fullscreen, a framed window, or a borderless window covering its monitor. Changes apply while the game runs; Alt+Enter switches between fullscreen and the last window mode, restoring the framed position and size
+- **Keep Cursor in the Game** - Keeps the cursor inside the window while the game is active. Alt+Tab releases it; turning it off applies immediately
 
 </td>
 <td width="42%" valign="middle" align="center">
@@ -69,11 +69,11 @@ Edit `scripts/UltimateSpiderMan.WidescreenFix.ini` to change these settings.
 <tr>
 <td width="58%" valign="middle">
 
-- **Draw Distance** - `DrawDistanceScale = 1.0` keeps the original distance. Raise it up to `2.0` for more distant detail, or above `2.0` up to `10.0` for the experimental extended-distance mode. Higher values can reduce performance, and some objects may still appear as you approach. Not fully tested, may cause crashes
-- **Frame Rate Limit** - `FPSLimit` sets the target frame rate; the default is `60`. Set `0` to keep the game's original limiter
-- **Smoother Edges** - under `[GRAPHICS]`, set `SMAA = 1` to reduce jagged edges in the game world without smoothing the HUD or menu text. Off by default; does not work with MSAA
-- **Console-Style Colors** - under `[GRAPHICS]`, set `ConsoleGamma = 1` for stronger contrast and deeper colors. Off by default
-- **Skip Startup Screens** - `SkipIntro = 1` skips the opening logos and copyright screen
+- **Draw Distance** - 1.0 keeps the original distance. Raise it up to 2.0 for more distant detail, or above 2.0 up to 10.0 for the experimental extended-distance mode. Higher values can reduce performance, and some objects may still appear as you approach. The extended-distance mode may cause crashes
+- **Frame Rate Limit** - Sets the target frame rate; the default is 60. Set 0 to keep the game's original limiter
+- **Smoother Edges** - SMAA reduces jagged edges in the game world without smoothing the HUD or menu text. Off by default; does not work with MSAA
+- **Console-Style Colors** - Console gamma gives stronger contrast and deeper colors. Off by default
+- **Skip Startup Screens** - Skips the opening logos and copyright screen
 
 </td>
 <td width="42%" valign="middle" align="center">
@@ -97,9 +97,9 @@ Edit `scripts/UltimateSpiderMan.WidescreenFix.ini` to change these settings.
 | <img src="https://thirteenag.github.io/screens/usm/vanilla_stretched_ultra.jpg" alt="Original ultrawide output"> | <img src="https://thirteenag.github.io/screens/usm/vanilla_fixed_ultra.jpg" alt="Corrected ultrawide output"> |
 | Original ultrawide output | Correct ultrawide view with an aligned radar and HUD |
 
-| `DrawDistanceScale = 1.0` | `DrawDistanceScale = 10.0` |
+| Draw distance 1.0 | Draw distance 10.0 |
 |:---:|:---:|
-| <img src="https://thirteenag.github.io/screens/usm/dd1.jpg" alt="Original draw distance at DrawDistanceScale 1.0"> | <img src="https://thirteenag.github.io/screens/usm/dd10.jpg" alt="Expanded draw distance at DrawDistanceScale 10.0"> |
+| <img src="https://thirteenag.github.io/screens/usm/dd1.jpg" alt="Original draw distance at 1.0"> | <img src="https://thirteenag.github.io/screens/usm/dd10.jpg" alt="Expanded draw distance at 10.0"> |
 | Original draw distance | More detail visible in the distance |
 
 <img src="https://thirteenag.github.io/screens/usm/demo.webp" alt="Demo">
@@ -108,12 +108,27 @@ Edit `scripts/UltimateSpiderMan.WidescreenFix.ini` to change these settings.
 
 ---
 
+**FOV factor** accepts 0.5–2.0 with 1.0 preserving corrected native framing. FOV and HUD aspect-constraint edits apply at the next game frame; Auto HUD uses the full screen width. The multiplier applies only to the player chase view, preserving comic, scripted and zoom framing.
+
+**Window modes** keep the chosen size on high-DPI displays and use square corners.
+
+**Confine cursor** is on by default in all window modes and applies while the game runs. The cursor is released when the game loses focus, while the window is dragged, in system menus or when the option is turned off.
+
 ## Installation
 
 1. Download the `.zip` from this release.
 2. Extract the contents into the game folder, beside `USM.exe`, preserving the folders in the archive.
-3. Optionally edit `scripts/UltimateSpiderMan.WidescreenFix.ini` to configure the available options.
-4. Launch the game.
+3. Launch the game once to create `scripts/UltimateSpiderMan.WidescreenFix.cfg`.
+4. Configure the fix on fusionfix.io or in FusionFixHub. Restart the game when an option requires it.
+
+## Settings
+
+SMAA, console gamma, cursor confinement, field of view, HUD aspect ratio and window mode apply while the game runs; FusionFixHub shows which options need a restart. Defaults include a 60 FPS limit and Auto HUD placement. An old `scripts/UltimateSpiderMan.WidescreenFix.ini` isn't used anymore and can be deleted.
+
+## Known limits
+
+- SMAA is off in every preset; turn it on separately.
+- No in-game options menu; use fusionfix.io or FusionFixHub.
 
 ---
 

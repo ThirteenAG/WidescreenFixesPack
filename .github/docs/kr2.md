@@ -4,7 +4,7 @@
 
 **Knight Rider 2: The Game Widescreen Fix** corrects resolution handling, aspect ratio, HUD scaling, field of view and video scaling for widescreen displays.
 
-[Website](https://thirteenag.github.io/wfp#kr2) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/KnightRider2.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/KnightRider2.WidescreenFix/scripts/KnightRider2.WidescreenFix.ini)
+[Website](https://thirteenag.github.io/wfp#kr2) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/KnightRider2.WidescreenFix/dllmain.cpp)
 
 </div>
 
@@ -12,20 +12,31 @@
 
 ## Fixes
 
-- **Resolution** — Set the output resolution with `ResX` and `ResY` in the INI file.
-- **Aspect ratio** — Correct widescreen aspect ratio scaling.
-- **HUD** — Correct HUD scaling for widescreen.
-- **Field of view** — Adjust the field of view for widescreen.
-- **Videos** — Correct FMV scaling for widescreen.
+- **Resolution** — Renders at the desktop resolution, or at the resolution set in the fix's options. Resolutions wider or taller than 2048 pixels work. Out-of-range values fall back to the desktop, then 640×480.
+- **Aspect ratio and field of view** — Hor+: the original vertical view, wider at the sides.
+- **HUD** — Kept at 4:3 proportions in a centered box; night vision and dialog faces stay in place.
+- **Videos** — **Correct videos** keeps movies centered at their original 4:3 proportions, with black bars where needed at any screen resolution or aspect ratio.
+- **Display scaling** — Scaled desktops neither crop nor blur the picture.
 
----
+## Options
+
+- **Correct videos** (restart) — on in every preset.
+- **Field of view factor** (0.5–2.0, live) — 1.0 in every preset.
+- **Resolution width/height** (restart).
+
+Settings are changed on fusionfix.io or in FusionFixHub; options marked live apply while the game runs, the others after a restart. Defaults are the Recommended preset; Vanilla and Enhanced are the other presets. No preset changes the resolution. The fix has no in-game menu. An old `scripts/KnightRider2.WidescreenFix.ini` isn't used anymore and can be deleted.
+
+## Known limits
+
+- The field of view factor also applies to scripted camera shots that use the same projection.
+- HUD is a centered 4:3 box (no HUD aspect setting); no window mode setting, skip intro or controller icons.
 
 ## Installation
 
 1. Download the fix archive from this release.
-2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
-3. Optionally edit `scripts/KnightRider2.WidescreenFix.ini` to configure the fix.
-4. Launch the game.
+2. Extract it into the game folder, beside the game executable, keeping the folders in the archive.
+3. Start the game once to create `scripts/KnightRider2.WidescreenFix.cfg`.
+4. Change settings on fusionfix.io or in FusionFixHub. Settings marked live apply while the game runs; the others after a restart.
 
 
 

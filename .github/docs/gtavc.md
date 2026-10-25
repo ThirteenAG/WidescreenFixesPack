@@ -4,7 +4,7 @@
 
 **Grand Theft Auto: Vice City Widescreen Fix** adds proper widescreen support, corrects HUD, FOV and cutscene letterboxing, and includes a range of quality-of-life improvements.
 
-[Website](https://thirteenag.github.io/wfp#gtavc) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVC.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/GTAVC.WidescreenFix/scripts/GTAVC.WidescreenFix.ini)
+[Website](https://thirteenag.github.io/wfp#gtavc) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVC.WidescreenFix/dllmain.cpp)
 
 </div>
 
@@ -20,6 +20,7 @@
 - **Aspect Ratio** - corrected for all rendered elements
 - **HUD** - repositioned and scaled to match the active aspect ratio; optional constraint (16:9, 21:9, or custom); configurable scale for HUD, radar and subtitles
 - **Field of View** - corrected for widescreen
+- **Resolution List** - every video mode of 640x480 and more is listed, whatever video memory the game detects
 - **Cutscenes** - FOV and letterboxing adjust properly with the aspect ratio
 
 </td>
@@ -39,6 +40,12 @@
 <tr>
 <td width="58%" valign="middle">
 
+- **In-game menu** - the fix's settings are in the game's own menu, in the main menu and in the pause menu, under **Options > Plugins**: the fix first, then every other plugin with settings (such as Xbox Rain Droplets and III.VC.SA.WindowedMode, which sets the window mode). Each plugin's page has its own Preset row (Vanilla, Recommended, Enhanced; press twice to apply), its settings and Restore defaults. Most settings apply at once, the others at the next start. Display Setup already holds the twelve rows a screen of the game can have, so none of them is placed there
+- **Settings** - stored in `GTAVC.WidescreenFix.cfg` next to the `.asi`, which the fix writes on its first start with every setting and a comment above each. Change settings in the game, on fusionfix.io or in FusionFixHub (also while the game runs)
+- **Field of View** - a multiplier (0.5 to 2.0) of the gameplay cameras' field of view, on top of the widescreen correction; cutscenes keep theirs.
+- **Skip Intro** - starts with the loading screen and the main menu, without the logo videos (on by default, after restart)
+- **Videos** - the intro videos at their original aspect ratio with black bars, filling the screen at their aspect ratio (default), or stretched
+- **Animated Cutscene Borders** - the borders slide in and out
 - **In-Game Options** - a Cutscene Borders mode (off, letterbox, pillarbox, or both) and a Frame Limiter selector (off, 30 up to 240 FPS) are available right in the Display menu
 
 </td>
@@ -64,9 +71,9 @@
 <tr>
 <td width="58%" valign="middle">
 
-- **Forced MSAA** - enables antialiasing at any supported level
+- **Forced MSAA** - enables multisampling at any supported level (in the settings file and FusionFixHub)
 - **AA Artifact Fix** - hides the 1px lines at the top and left of the screen caused by MSAA
-- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
+- **Anti-Aliasing** - Off or SMAA
 
 </td>
 <td width="42%" valign="middle" align="center">
@@ -131,8 +138,8 @@
 
 1. Download the `.zip` from this release.
 2. Extract the contents directly into the game folder - the same folder as `gta_vc.exe`.
-3. Optionally edit `GTAVC.WidescreenFix.ini` to configure the available options.
-4. Launch the game.
+3. Launch the game. Change the settings in **Options > Plugins**, on fusionfix.io, or in FusionFixHub. The fix creates `scripts\GTAVC.WidescreenFix.cfg` on its first start. An old `scripts\GTAVC.WidescreenFix.ini` isn't used anymore and can be deleted.
+4. Anti-aliasing, console gamma and the transparent menu need d3d8to9, which the included Ultimate ASI Loader (`d3d8.dll`) provides with `UseD3D8to9=1` in `scripts\global.ini`.
 
 > [!NOTE]
 > Installing [SilentPatch](https://silentsblog.com/mods/gta-vc/) is strongly recommended - it's the perfect companion to this fix and essentially required, fixing numerous bugs, crashes and progression issues.
@@ -144,46 +151,11 @@
   <summary> Legacy mode - click to expand </summary>
 <br>
 
-To use the previous version of the fix, place `GTAVC.WidescreenFixLegacy.ini` next to the `.asi` file with the following content:
+Enable **Legacy mode** on FusionFixHub's Compatibility page, or on fusionfix.io, then restart the game. This uses the older widescreen fix for compatibility with other mods.
 
-```
-[MAIN]
-; Use this option to override the game resolution (-1|0|*).
-ResX = 0
-ResY = 0
-; Set game aspect ratio (auto|4:3|5:4|16:9|*:*).
-ForceAspectRatio = auto
-; Used to properly scale frontend textures, such as menu background or loading screens (auto|4:3|5:4|16:9|*:*).
-FrontendAspectRatio = auto
-; Disable any FOV related fixes, it's not recommended (0|1).
-DontTouchFOV = 0
-; Use original FOV value during cutscenes (0|1).
-RestoreCutsceneFOV = 1 
-; The settings below are used to scale parts of the game UI differently.
-; If set to "0.0" original values will be used.
-HudWidthScale = 0.8     ; Original value is 1.0.
-HudHeightScale = 0.8    ; Original value is 1.0714285.
-RadarWidthScale = 0.9   ; Original value is 1.0.
-SubtitlesScale = 0.0    ; Original value is 1.0.
+Its options are on the Compatibility page and apply after a restart. By default the resolution follows the game's own choice (0 selects the desktop), the game and menu aspect ratio is automatic, field of view corrections and smart borders are on, and the extra corona, light, radar and outline options are off. Subtitle scale and forced multisampling also work in legacy mode; restart after changing them.
 
-[MISC]
-; Same as in VCS PCE, cutscene border size will be adjusted to fit your resolution. On resolutions bigger than 16:9 vertical borders will be used. Note that you can enable or disable cutscene borders via 'WIDESCREEN'/'BORDERS' option in game menu (0|1).
-SmartCutsceneBorders = 1 
-; Game will not freeze when focus is lost (only in windowed mode).
-AllowAltTabbingWithoutPausing = 0 
-; Drawing 1px line at top and left sides of the screen to hide antialiasing bug caused by MSAA(0|1|2). (2) creates 4 lines to make picture symmetrical.
-HideAABug = 1
-; Fixes vehicle lights coronas size. (0|1).
-SmallerVehicleCorona = 0
-; Remove vehicle light square. (0|1).
-NoLightSquare = 1
-; Enables antialiasing. Requires asi loader (max|0|*).
-ForceMultisamplingLevel = max
-; Makes radar size same as in GTA IV (0|1).
-IVRadarScaling = 1
-; Replaces text shadow with outline (0|1|2).
-ReplaceTextShadowWithOutline = 2
-```
+Legacy mode is off by default. Enabling it uses the older widescreen fix for compatibility with other mods. Renderer effects and the added settings menus are unavailable in that mode.
 
 </details>
 

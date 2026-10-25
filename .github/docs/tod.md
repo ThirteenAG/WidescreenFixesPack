@@ -2,9 +2,9 @@
 
 <img src="https://thirteenag.github.io/screens/tod/main2.jpg" width="760" alt="Total Overdose Widescreen Fix">
 
-**Total Overdose Widescreen Fix** corrects resolution handling, aspect ratio, HUD scaling, field of view and video scaling for widescreen displays.
+**Total Overdose Widescreen Fix** sets any resolution and corrects the widescreen aspect ratio.
 
-[Website](https://thirteenag.github.io/wfp#tod) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/TotalOverdose.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/TotalOverdose.WidescreenFix/scripts/TotalOverdose.WidescreenFix.ini)
+[Website](https://thirteenag.github.io/wfp#tod) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/TotalOverdose.WidescreenFix/dllmain.cpp)
 
 </div>
 
@@ -12,11 +12,17 @@
 
 ## Fixes
 
-- **Resolution** — Set the output resolution with `ResX` and `ResY` in the INI file.
-- **Aspect ratio** — Correct widescreen aspect ratio scaling.
-- **HUD** — Correct widescreen HUD scaling; the menu is not corrected.
-- **Field of view** — Adjust the field of view for widescreen.
-- **Videos** — Use vertical cropping (Vert−) for widescreen FMVs.
+- **Resolution** — Uses the desktop resolution, or the resolution set on fusionfix.io or in FusionFixHub (restart).
+- **Aspect ratio** — The game's two aspect-ratio values follow the screen instead of 4:3.
+- **Startup logos** — **Skip intro** skips the SCI and Deadline logos. The story intro and other videos still play (restart).
+
+Texts are available in English, French, German, Italian and Spanish. Resolution is a player choice and stays outside presets. Recommended and Enhanced skip startup logos; Vanilla keeps them.
+
+## Known limits
+
+- HUD, menus and videos get no separate correction; text scaling is unchanged.
+- No field-of-view multiplier or window-mode setting.
+- No in-game options menu; use fusionfix.io or FusionFixHub.
 
 ---
 
@@ -24,8 +30,8 @@
 
 1. Download the fix archive from this release.
 2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
-3. Optionally edit `scripts/TotalOverdose.WidescreenFix.ini` to configure the fix.
-4. Launch the game.
+3. Launch the game once to create `scripts/TotalOverdose.WidescreenFix.cfg`.
+4. Configure the fix on fusionfix.io or in FusionFixHub, then restart the game. An old `scripts/TotalOverdose.WidescreenFix.ini` isn't used anymore and can be deleted.
 
 
 

@@ -2,9 +2,9 @@
 
 <img src="https://thirteenag.github.io/screens/srs/main2.jpg" width="760" alt="Street Racing Syndicate Widescreen Fix">
 
-**Street Racing Syndicate Widescreen Fix** corrects resolution handling, aspect ratio, HUD scaling, field of view and video scaling for widescreen displays.
+**Street Racing Syndicate Widescreen Fix** corrects resolution handling, aspect ratio, HUD scaling, and field of view for widescreen displays.
 
-[Website](https://thirteenag.github.io/wfp#srs) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/StreetRacingSyndicate.WidescreenFix/dllmain.cpp) · [Default INI](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/data/StreetRacingSyndicate.WidescreenFix/Bin/scripts/StreetRacingSyndicate.WidescreenFix.ini)
+[Website](https://thirteenag.github.io/wfp#srs) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/StreetRacingSyndicate.WidescreenFix/dllmain.cpp)
 
 </div>
 
@@ -12,20 +12,33 @@
 
 ## Fixes
 
-- **Resolution** — Set the output resolution with `ResX` and `ResY` in the INI file.
-- **Aspect ratio** — Correct widescreen aspect ratio scaling.
-- **HUD** — Correct HUD scaling for widescreen.
-- **Field of view** — Adjust the field of view for widescreen.
-- **Videos** — Correct FMV scaling for widescreen.
+- **Resolution** — Renders at the desktop resolution, or at the resolution set in the fix's options (out-of-range values fall back to the desktop).
+- **Aspect ratio** — The 3D view and 2D layer use the screen's aspect.
+- **HUD** — HUD proportions and the rear-view mirror position stay correct.
+- **Field of view** — Hor+ for the gameplay camera.
+- **Display scaling** — The game stays sharp on scaled (high-DPI) desktops.
 
----
+## Options
+
+- **Correct HUD** and **Correct field of view** (restart) — on in every preset.
+- **Field of view factor** (0.5–2.0, live) — 1.0 in every preset; works with or without the Hor+ correction.
+- **Resolution width/height** (restart).
+
+Settings are changed on fusionfix.io or in FusionFixHub; options marked live apply while the game runs, the others after a restart. Defaults are the Recommended preset; Vanilla and Enhanced are the other presets. No preset changes the resolution. The fix has no in-game menu. An old `Bin/scripts/StreetRacingSyndicate.WidescreenFix.ini` isn't used anymore and can be deleted.
+
+## Known limits
+
+- The HUD stays in a centered 4:3 area; its width cannot be adjusted.
+- No skip intro, window mode setting or controller icons.
+- Videos are not corrected.
+- On some systems the game crashes when quitting; this also happens without the fix.
 
 ## Installation
 
 1. Download the fix archive from this release.
-2. Extract the archive into the game’s installation folder, preserving its directory structure. The included files belong under `Bin`.
-3. Optionally edit `Bin/scripts/StreetRacingSyndicate.WidescreenFix.ini` to configure the fix.
-4. Launch the game.
+2. Extract it into the game folder, beside the game executable, keeping the folders in the archive.
+3. Start the game once to create `Bin/scripts/StreetRacingSyndicate.WidescreenFix.cfg`.
+4. Change settings on fusionfix.io or in FusionFixHub. Settings marked live apply while the game runs; the others after a restart.
 
 
 
