@@ -416,7 +416,8 @@ public:
 
             // CBrightLights::Render, render only when far away
             pattern = hook::pattern("C6 44 24 ? ? EB ? ? ? ? ? ? ? DF E0");
-            if (!pattern.empty())
+            bool noLightSquare = iniReader.ReadInteger("MISC", "NoLightSquare", 1) != 0;
+            if (noLightSquare && !pattern.empty())
                 injector::WriteMemory<uint8_t>(pattern.get_first(4), 0, true);
         };
     }
