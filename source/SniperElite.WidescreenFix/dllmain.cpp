@@ -37,12 +37,17 @@ namespace Camera
     }
 }
 
+struct HudBlur
+{
+    float x, y, z;
+    float blurU, blurV;
+    float maskU, maskV;
+};
+
 struct HudQuad
 {
-    float x[4];
-    float y[4];
-    float u[4];
-    float v[4];
+    float x[4], y[4];
+    float u[4], v[4];
     uint32_t color[4];
     int32_t texture;
     uint32_t blend;
@@ -118,6 +123,7 @@ namespace UI
     enum DrawMode { Game, Menu, Info };
     DrawMode Mode = Game;
     bool CenteredText = false;
+    float ActionManagerTextScale = 0.5f, GameplayTextObjectScale = 0.65f;
     int32_t FontWidth;
     SafetyHookInline MenuDraw, MenuDrawOverlay, PrintText, PixelClip, DrawLine;
     SafetyHookMid MouseUpdate, MinimapIcons[3], MinimapRect, MinimapCenter;
@@ -224,6 +230,13 @@ namespace UI
         const float viewport[] = { area[0] * ratio, area[1],
             area[2] * ratio + Screen.fHudOffset / Screen.fWidth, area[3] };
         SetViewingArea(viewport);
+    }
+
+    const float ScaleText()
+    {
+        const float widthScale = Screen.fWidth / 1024.0f;
+        const float heightScale = Screen.fHeight / 768.0f;
+        return heightScale / sqrtf(sqrtf((widthScale * widthScale + heightScale * heightScale) * 0.5f));
     }
 
     void RedirectWidth(const uint8_t* begin, const uint8_t* end, uintptr_t nativeWidth, const int32_t* width)
@@ -524,6 +537,7 @@ void Init()
             "51 56 8B ? 8B ? ? 50 E8 ? ? ? ? 0F ? ? ? 8B",
             "56 57 8B ? 8B ? FF ? ? 8B ? ? 8B ? 3B",
             "A1 ? ? ? ? 56 8B ? ? ? 50 8B",
+            "BE ? ? ? ? F3 ? A1 ? ? ? ? 8B",
             "83 ? ? A1 ? ? ? ? 89 ? ? ? A0 ? ? ? ? 84 ? 0F ? ? ? ? ? A1 ? ? ? ? 84",
             "DB ? ? ? ? ? D8 ? ? ? ? ? DB ? ? ? ? ? D8 ? ? ? ? ? D9",
             "A1 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 6A",
@@ -548,6 +562,17 @@ void Init()
 
         auto pattern = hook::pattern("51 56 8B ? ? ? 85 ? 0F ? ? ? ? ? 80"); //408EE0
         Textures::RegisterTexture = safetyhook::create_inline(pattern.get_first(), Textures::Register);
+
+        pattern = hook::pattern("BE ? ? ? ? F3 ? A1 ? ? ? ? 8B"); //49B05D
+        const float uOffset = Screen.fHudOffset / Screen.fWidth43;
+        const float leftU = -uOffset;
+        const float rightU = 1.f + uOffset;
+        auto* vertices = reinterpret_cast<HudBlur*>(*reinterpret_cast<uintptr_t*>(pattern.count(1).get(0).get<uint8_t>(1)));
+        for (size_t i = 0; i < 4; ++i)
+        {
+            const float u = (i == 1 || i == 2) ? rightU : leftU;
+            injector::WriteMemory<float>(&vertices[i].maskU, u, true); //scopes and binos UV blur masks.
+        }
 
         pattern = hook::pattern("56 8B ? 56 E8 ? ? ? ? 8A"); //48B140
         uint8_t* drawHudQuad = pattern.count(1).get(0).get<uint8_t>(0);
@@ -668,6 +693,35 @@ void Init()
         auto profileViewportCall = pattern.get_first<uint8_t>(5);
         UI::SetViewingArea = reinterpret_cast<decltype(UI::SetViewingArea)>(injector::GetBranchDestination(profileViewportCall, true).as_int());
         injector::MakeCALL(profileViewportCall, UI::ProfileViewingArea, true); //profile viewport
+    }();
+
+    [&]()
+    {
+        constexpr auto cursorSize = "8B ? ? ? ? ? A1 ? ? ? ? 8B ? ? ? 52 8B";
+        if (!CheckPatterns("Sniper Elite: cursor scaling", { cursorSize }))
+            return;
+
+        auto pattern = hook::pattern(cursorSize); //46BD66
+        const float cursorScale = Screen.fHeight / 960.0f;
+        auto cursorHeight = *reinterpret_cast<float**>(pattern.get(0).get<uint8_t>(2));
+        auto cursorWidth = *reinterpret_cast<float**>(pattern.get(0).get<uint8_t>(7));
+        injector::WriteMemory(cursorWidth, *cursorWidth * cursorScale, true);
+        injector::WriteMemory(cursorHeight, *cursorHeight * cursorScale, true); //visible cursor size
+    }();
+
+    [&]()
+    {
+        constexpr auto actionManagerDrawPattern = "D8 ? ? ? ? ? 50 D9 ? ? ? E8 ? ? ? ? 50";
+        constexpr auto textObjectDrawPattern = "D8 ? ? ? ? ? 89 ? ? ? 8B ? ? ? D8 ? ? ? 89";
+        if (!CheckPatterns("Sniper Elite: gameplay text scaling", { actionManagerDrawPattern, textObjectDrawPattern }))
+            return;
+
+        const auto actionManagerDraw = hook::get_pattern<uint8_t>(actionManagerDrawPattern, 2); //5E880C
+        const auto textObjectDraw = hook::get_pattern<uint8_t>(textObjectDrawPattern, 2); //4FEDF1
+        UI::ActionManagerTextScale *= UI::ScaleText();
+        UI::GameplayTextObjectScale *= UI::ScaleText();
+        injector::WriteMemory(actionManagerDraw, &UI::ActionManagerTextScale, true); //compass pointer, interaction hints
+        injector::WriteMemory(textObjectDraw, &UI::GameplayTextObjectScale, true); //NPC quotes, objective alerts, weapon/scoring status
     }();
 
     [&]()
