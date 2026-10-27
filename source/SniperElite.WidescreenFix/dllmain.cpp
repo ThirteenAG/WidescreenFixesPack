@@ -123,6 +123,7 @@ namespace UI
     enum DrawMode { Game, Menu, Info };
     DrawMode Mode = Game;
     bool CenteredText = false;
+    float ActionManagerTextScale = 0.5f, GameplayTextObjectScale = 0.65f;
     int32_t FontWidth;
     SafetyHookInline MenuDraw, MenuDrawOverlay, PrintText, PixelClip, DrawLine;
     SafetyHookMid MouseUpdate, MinimapIcons[3], MinimapRect, MinimapCenter;
@@ -229,6 +230,13 @@ namespace UI
         const float viewport[] = { area[0] * ratio, area[1],
             area[2] * ratio + Screen.fHudOffset / Screen.fWidth, area[3] };
         SetViewingArea(viewport);
+    }
+
+    const float ScaleText()
+    {
+        const float widthScale = Screen.fWidth / 1024.0f;
+        const float heightScale = Screen.fHeight / 768.0f;
+        return heightScale / sqrtf(sqrtf((widthScale * widthScale + heightScale * heightScale) * 0.5f));
     }
 
     void RedirectWidth(const uint8_t* begin, const uint8_t* end, uintptr_t nativeWidth, const int32_t* width)
@@ -685,6 +693,35 @@ void Init()
         auto profileViewportCall = pattern.get_first<uint8_t>(5);
         UI::SetViewingArea = reinterpret_cast<decltype(UI::SetViewingArea)>(injector::GetBranchDestination(profileViewportCall, true).as_int());
         injector::MakeCALL(profileViewportCall, UI::ProfileViewingArea, true); //profile viewport
+    }();
+
+    [&]()
+    {
+        constexpr auto cursorSize = "8B ? ? ? ? ? A1 ? ? ? ? 8B ? ? ? 52 8B";
+        if (!CheckPatterns("Sniper Elite: cursor scaling", { cursorSize }))
+            return;
+
+        auto pattern = hook::pattern(cursorSize); //46BD66
+        const float cursorScale = Screen.fHeight / 960.0f;
+        auto cursorHeight = *reinterpret_cast<float**>(pattern.get(0).get<uint8_t>(2));
+        auto cursorWidth = *reinterpret_cast<float**>(pattern.get(0).get<uint8_t>(7));
+        injector::WriteMemory(cursorWidth, *cursorWidth * cursorScale, true);
+        injector::WriteMemory(cursorHeight, *cursorHeight * cursorScale, true); //visible cursor size
+    }();
+
+    [&]()
+    {
+        constexpr auto actionManagerDrawPattern = "D8 ? ? ? ? ? 50 D9 ? ? ? E8 ? ? ? ? 50";
+        constexpr auto textObjectDrawPattern = "D8 ? ? ? ? ? 89 ? ? ? 8B ? ? ? D8 ? ? ? 89";
+        if (!CheckPatterns("Sniper Elite: gameplay text scaling", { actionManagerDrawPattern, textObjectDrawPattern }))
+            return;
+
+        const auto actionManagerDraw = hook::get_pattern<uint8_t>(actionManagerDrawPattern, 2); //5E880C
+        const auto textObjectDraw = hook::get_pattern<uint8_t>(textObjectDrawPattern, 2); //4FEDF1
+        UI::ActionManagerTextScale *= UI::ScaleText();
+        UI::GameplayTextObjectScale *= UI::ScaleText();
+        injector::WriteMemory(actionManagerDraw, &UI::ActionManagerTextScale, true); //compass pointer, interaction hints
+        injector::WriteMemory(textObjectDraw, &UI::GameplayTextObjectScale, true); //NPC quotes, objective alerts, weapon/scoring status
     }();
 
     [&]()
