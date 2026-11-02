@@ -1,5 +1,5 @@
 #pragma once
-#include "../Shared/AsiSettings/asi_settings.hpp"
+#include "Shared/AsiSettings/asi_settings.hpp"
 
 inline asi_settings::Plugin& FixSettings()
 {

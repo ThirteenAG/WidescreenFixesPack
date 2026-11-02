@@ -1,0 +1,11 @@
+// Embedded settings description and translations; .cfg is written in full on first start.
+SETTINGS ASISETTINGS "settings.json"
+en ASISETTINGS_TEXT "../../text/TheGodfather/en.json"
+fr ASISETTINGS_TEXT "../../text/TheGodfather/fr.json"
+de ASISETTINGS_TEXT "../../text/TheGodfather/de.json"
+it ASISETTINGS_TEXT "../../text/TheGodfather/it.json"
+es ASISETTINGS_TEXT "../../text/TheGodfather/es.json"
+
+5100 RCDATA "../../textures/TheGodfather/Controller/xbox.dds"
+5101 RCDATA "../../textures/TheGodfather/Controller/playstation.dds"
+5102 RCDATA "../../textures/TheGodfather/Controller/nintendo.dds"

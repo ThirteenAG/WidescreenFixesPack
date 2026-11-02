@@ -32,21 +32,6 @@
   ],
   "settings": [
     {
-      "id": "MAIN.UnlockAllResolutions",
-      "type": "bool",
-      "default": 1,
-      "label": "@UnlockAllResolutions",
-      "description": "@UnlockAllResolutions.description",
-      "page": "display",
-      "visibility": "menu",
-      "apply": "restart",
-      "presets": {
-        "vanilla": false,
-        "recommended": 1,
-        "enhanced": 1
-      }
-    },
-    {
       "id": "MAIN.SkipIntro",
       "type": "bool",
       "default": 1,
@@ -62,14 +47,81 @@
       }
     },
     {
-      "id": "MAIN.UnlockFPS",
+      "id": "MAIN.SkipPressStart",
       "type": "bool",
-      "default": 0,
-      "label": "@UnlockFPS",
-      "description": "@UnlockFPS.description",
-      "page": "compatibility",
-      "visibility": "editor",
-      "apply": "restart"
+      "default": 1,
+      "label": "@SkipPressStart",
+      "description": "@SkipPressStart.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "min": 30,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@FPSLimit.unlimited"
+        },
+        {
+          "value": -1,
+          "label": "@fps.monitor"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
+        }
+      ],
+      "label": "@FPSLimit",
+      "description": "@FPSLimit.description",
+      "page": "display",
+      "apply": "live",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 120,
+        "recommended": 60,
+        "enhanced": 60
+      },
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": 1,
+      "label": "@PauseOnFocusLoss",
+      "description": "@PauseOnFocusLoss.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
     },
     {
       "id": "MAIN.HideMouseCursorAfterMs",
@@ -85,29 +137,42 @@
         "recommended": 5000,
         "enhanced": 5000
       },
-      "min": 0,
+      "special": [
+        { "value": -1, "label": "@HideMouseCursorAfterMs.always" }
+      ],
+      "suggestions": [
+        { "value": 0 },
+        { "value": 1000 },
+        { "value": 5000 },
+        { "value": 10000 }
+      ],
+      "min": -1,
       "max": 600000
     },
     {
       "id": "MAIN.DoorSkip",
       "type": "bool",
-      "default": 1,
+      "default": 0,
       "label": "@DoorSkip",
       "description": "@DoorSkip.description",
       "page": "display",
       "visibility": "menu",
       "apply": "restart",
       "presets": {
-        "vanilla": false,
-        "recommended": 1,
+        "vanilla": 0,
+        "recommended": 0,
         "enhanced": 1
       }
     },
     {
       "id": "MAIN.WindowMode",
       "type": "choice",
-      "default": 2,
+      "default": 0,
       "choices": [
+        {
+          "value": 0,
+          "label": "@WindowMode.fullscreen"
+        },
         {
           "value": 1,
           "label": "@WindowMode.windowed"
@@ -121,10 +186,20 @@
       "description": "@WindowMode.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "control": [
         "cycler"
       ]
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": 1,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
     },
     {
       "id": "MAIN.LightSyncRGB",
@@ -149,12 +224,7 @@
       "description": "@DisableNoise.description",
       "page": "graphics",
       "visibility": "menu",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
       "id": "MAIN.DisableColorCorrection",
@@ -164,12 +234,7 @@
       "description": "@DisableColorCorrection.description",
       "page": "graphics",
       "visibility": "menu",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
       "id": "MAIN.DisableFog",
@@ -179,22 +244,80 @@
       "description": "@DisableFog.description",
       "page": "graphics",
       "visibility": "menu",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
-      "id": "MAIN.DisableCreateQuery",
-      "type": "bool",
-      "default": 0,
-      "label": "@DisableCreateQuery",
-      "description": "@DisableCreateQuery.description",
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
       "page": "compatibility",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
       "visibility": "editor",
-      "apply": "restart"
+      "apply": "menu"
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "label": "@MAIN.GamepadIcons",
+      "description": "@MAIN.GamepadIcons.description",
+      "page": "display",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@menu.auto"
+        },
+        {
+          "value": 1,
+          "label": "Xbox"
+        },
+        {
+          "value": 2,
+          "label": "PlayStation"
+        },
+        {
+          "value": 3,
+          "label": "Nintendo"
+        }
+      ],
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@MAIN.CheckForUpdates",
+      "description": "@MAIN.CheckForUpdates.description",
+      "page": "compatibility",
+      "apply": "live"
     }
   ]
 }

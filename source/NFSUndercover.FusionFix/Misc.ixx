@@ -2,12 +2,14 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/NFS/FieldOfView.hpp"
+#include "Shared/NFS/FieldOfView.hpp"
 #include <d3d9.h>
 
 export module Misc;
 
 import ComVars;
+import PostFX;
+import Options;
 
 // Shadows: the cascades of the shadow map sit side by side in one texture, so its width is the
 // resolution times the number of cascades. The resolution is limited by the device and by memory,
@@ -231,28 +233,21 @@ namespace Scenery
     // Scenery LOD mask of the highest world detail: 0x0E, 0x0F shows the last LOD step too (more scenery far away)
     ProtectedGameRef<uint8_t> LodMask([]() -> uint8_t*
     {
-        auto pattern = hook::pattern("C6 44 24 ? ? 75 ? C6 44 24 ? ? 83 BF");
-        if (!pattern.empty() && *pattern.get_first<uint8_t>(4) == 0x0E)
-            return pattern.get_first<uint8_t>(4);
-        return nullptr;
+        return hook::pattern("C6 44 24 ? 0E 75 ? C6 44 24 ? ? 83 BF").get_first<uint8_t>(4);
     });
 
     // Preculler mode (1): the precomputed visibility of PrecullerBooBooScript.hoo; 0 turns it off
     ProtectedGameRef<int32_t> PrecullerMode([]() -> int32_t*
     {
         auto pattern = find_pattern("8B 0D ? ? ? ? 85 C9 B3 ? 0F 84", "8B 0D ? ? ? ? 85 C9 B3 ? 74 ? 83 F9");
-        if (!pattern.empty())
-            return *pattern.get_first<int32_t*>(2);
-        return nullptr;
+        return *pattern.get_first<int32_t*>(2);
     });
 
     // The jz that picks ScenerySectionHeader::TreeCull for the main views; without it CullBruteForce is used for all
     ProtectedGameRef<uint16_t> TreeCullBranch([]() -> uint16_t*
     {
         auto pattern = hook::pattern("84 C0 ? 8B CE 74 07 E8");
-        if (!pattern.empty())
-            return pattern.get_first<uint16_t>(5);
-        return nullptr;
+        return pattern.get_first<uint16_t>(5);
     });
 
     void Apply()
@@ -278,6 +273,27 @@ namespace Scenery
     }
 }
 
+// HUD width and position and the 3D view's widening for the aspect ratio of the picture: worked out when the
+// resolution is set, and again when a resizable window changes its shape
+namespace AspectRatio
+{
+    float fHudScale = 1.0f;
+    float fHudXPos = -1.0f;
+    float* fHudWidth = nullptr;
+    float fCurrent = 0.0f;
+
+    void Update()
+    {
+        float aspect = ScreenAspectRatio();
+        if (aspect == fCurrent || !fHudWidth)
+            return;
+        fCurrent = aspect;
+        fHudScale = 1280.0f / (720.0f * aspect);
+        *fHudWidth = 1280.0f / fHudScale;
+        fHudXPos = (aspect <= 1.34f ? -0.75f : -1.0f) * fHudScale;
+    }
+}
+
 // Extra field of view for the driving cameras, in percent, from the options menu
 namespace FieldOfView
 {
@@ -285,12 +301,10 @@ namespace FieldOfView
 }
 
 // Movies (all 16:9) are drawn as a quad over the whole screen on screens wider than 4:3, which stretched them on wider
-// ones, and over 75% of the height on others. The movie always takes the whole-screen quad, sized for the screen:
-// original aspect (0) with black bars, fill (1) keeping its aspect and cropped to cover the screen, or stretch (2).
-// Switched in the options menu at once.
+// ones, and over 75% of the height on others. The movie always takes the whole-screen quad, sized for the screen: the
+// whole movie at its aspect with black bars (MAIN.FMVWidescreenMode shows it this way in both modes).
 namespace Movie
 {
-    const int* pMode = nullptr;
     bool bDrawing = false;      // the movie's quad is drawn next
 
     // The movie's check for a widescreen screen
@@ -303,25 +317,12 @@ namespace Movie
     // Scales the quad's vertices ({x, y, z, w, u, v}, four of them) for the screen
     void Scale(float* vertices)
     {
-        if (!Width || !Height || !*Width || !*Height)
-            return;
-        float aspect = (static_cast<float>(*Width) / static_cast<float>(*Height)) / (16.0f / 9.0f);
+        float aspect = ScreenAspectRatio() / (16.0f / 9.0f);
         float x = 1.0f, y = 1.0f;
-        int mode = pMode ? *pMode : 1;
-        if (mode == 0)
-        {
-            if (aspect > 1.0f)
-                x = 1.0f / aspect;      // pillarboxes
-            else
-                y = aspect;             // letterboxes
-        }
-        else if (mode == 1)
-        {
-            if (aspect > 1.0f)
-                y = aspect;             // cropped at the top and bottom
-            else
-                x = 1.0f / aspect;      // cropped at the sides
-        }
+        if (aspect > 1.0f)
+            x = 1.0f / aspect;      // pillarboxes
+        else
+            y = aspect;             // letterboxes
         for (int i = 0; i < 4; ++i)
         {
             vertices[i * 6 + 0] *= x;
@@ -332,29 +333,19 @@ namespace Movie
 
 // In-engine cutscenes (the ICE scenes) have black bars above and below: the letterbox channel of a scene sets the
 // player camera's letterbox height (the bars' share of the screen height, up to 24%, eased in and out by the scene),
-// and the renderer draws the bars from it. Letterbox (1) keeps them; without it the height is 0 and the player view is
-// zoomed so that it shows what was between the bars, nothing that they hid. Every view of the scene's camera is zoomed
-// alike (the player view and the views drawn with it: depth texture, shadow matte, glow, ...), or their passes no longer
-// line up with the player view and parts of the picture stay black. Pillarbox (2) keeps the scenes at 16:9 on
-// wider screens: the sides are cleared before the frame is shown while a scene's camera runs. Animated borders off
-// shows the bars at their full height at once. All switched in the options menu at once.
+// and the renderer draws the bars over the picture from it. Letterbox (1) keeps them; without it the height is 0 and
+// the whole picture shows (Hor+). Pillarbox (2) keeps the scenes at 16:9 on wider screens: the sides are cleared
+// before the frame is shown while a scene's camera runs. Animated borders off shows the bars at their full height at
+// once. All switched in the options menu at once.
 namespace Cutscene
 {
     const int* pBorders = nullptr;
     const int* pAnimated = nullptr;
     uintptr_t* ICEManager = nullptr;    // TheICEManager; its camera mover (+0x90) exists while a scene's camera runs
-    float fLetterBox = 0.0f;            // the bars' height the game would show
-    bool bCameraView = false;           // the view whose projection is set up shows the scene's camera
 
     bool IsPlaying()
     {
         return ICEManager && *ICEManager && *reinterpret_cast<uintptr_t*>(*ICEManager + 0x90);
-    }
-
-    // The camera of the scene's camera mover
-    uintptr_t Camera()
-    {
-        return IsPlaying() ? *reinterpret_cast<uintptr_t*>(*reinterpret_cast<uintptr_t*>(*ICEManager + 0x90) + 4) : 0;
     }
 
     void DrawPillarbox(IDirect3DDevice9* device)
@@ -368,8 +359,9 @@ namespace Cutscene
         if (FAILED(hr))
             return;
 
+        // The render target's size: a resizable window keeps its back buffer and scales it to the window
         LONG width = static_cast<LONG>(desc.Width), height = static_cast<LONG>(desc.Height);
-        LONG bar = (width - static_cast<LONG>(std::lround(height * 16.0 / 9.0))) / 2;
+        LONG bar = static_cast<LONG>(std::lround(width * 0.5 * (1.0 - (16.0 / 9.0) / ScreenAspectRatio())));
         if (bar <= 0)
             return;
 
@@ -384,6 +376,71 @@ namespace Cutscene
         device->Clear(2, rects, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
         device->SetRenderState(D3DRS_SCISSORTESTENABLE, scissor);
         device->SetViewport(&viewport);
+    }
+}
+
+// Focus. When the window loses focus the game stops its sound (WM_ACTIVATE) and pauses (WM_ACTIVATEAPP: its main loop
+// waits until the window is active again). With MAIN.PauseOnFocusLoss off the game doesn't get these and keeps
+// running in the background; its controls are released while the window isn't focused.
+namespace Focus
+{
+    const int* pPauseOnFocusLoss = nullptr;
+
+    bool Paused()
+    {
+        return !pPauseOnFocusLoss || *pPauseOnFocusLoss;
+    }
+
+    // GameDevice::Poll: the action values (70 floats) at +0x20
+    uintptr_t ptrGameDevicePoll = 0;
+    void __fastcall GameDevicePoll(uint8_t* device, void*)
+    {
+        reinterpret_cast<void(__thiscall*)(uint8_t*)>(ptrGameDevicePoll)(device);
+        if (!Paused() && GetForegroundWindow() != hWnd)
+        {
+            if (auto values = *reinterpret_cast<float**>(device + 0x20))
+                std::fill_n(values, 70, 0.0f);
+        }
+    }
+
+    WNDPROC GameWndProc = nullptr;
+    LRESULT WINAPI WndProc(HWND window, UINT msg, WPARAM wParam, LPARAM lParam)
+    {
+        LRESULT result = 0;
+        if (DeveloperOverlay::Message(window, msg, wParam, lParam, result))
+            return result;
+        onWindowMessage().executeAll(window, msg, wParam, lParam);
+
+        if (!Paused() && ((msg == WM_ACTIVATEAPP && !wParam) || (msg == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE)))
+            return DefWindowProcA(window, msg, wParam, lParam);
+
+        return GameWndProc(window, msg, wParam, lParam);
+    }
+
+    void Install()
+    {
+        // The window class's procedure (WNDCLASSEXA: cbSize 0x30, style CS_OWNDC, lpfnWndProc)
+        auto wndProc = hook::pattern("C7 44 24 ? 30 00 00 00 C7 44 24 ? 40 00 00 00 C7 44 24 ? ? ? ? ?");
+        auto device = hook::pattern("64 A3 00 00 00 00 8B F1 89 74 24 10 8D 7E 2C C7 06");
+        auto procedure = wndProc.get_first<WNDPROC>(0x14);
+        GameWndProc = *procedure;
+        injector::WriteMemory(procedure, &WndProc, true);
+
+        auto vtable = *device.get_first<uintptr_t>(0x11);
+        ptrGameDevicePoll = *reinterpret_cast<uintptr_t*>(vtable + 0x10);
+        injector::WriteMemory(vtable + 0x10, &GameDevicePoll, true);
+
+        // Switched at once: the game gets the focus change it skipped (or missed) while the window is in the background
+        pPauseOnFocusLoss = &FixSettings().Int("MAIN.PauseOnFocusLoss");
+        FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+        {
+            auto window = hWnd.get();
+            if (!window || GetForegroundWindow() == window)
+                return;
+            bool active = !FixSettings().Bool("MAIN.PauseOnFocusLoss");
+            PostMessage(window, WM_ACTIVATE, active ? WA_ACTIVE : WA_INACTIVE, 0);
+            PostMessage(window, WM_ACTIVATEAPP, active ? TRUE : FALSE, 0);
+        });
     }
 }
 
@@ -417,25 +474,18 @@ void InitResolutionList()
 
     auto pattern = GetPattern("E8 ? ? ? ? 33 FF 39 ? ? ? ? ? 76"); //0x587291
     auto names = GetPattern("E8 ? ? ? ? 89 44 BC ? 83 C7 01 83 C4 04"); //0x5872AB
-    if (pattern.empty() || names.empty())
-        return;
-
     injector::MakeNOP(pattern.get_first(0), 5, true);
     injector::WriteMemory(*pattern.get_first<void*>(9), list3.size() - 1, true);//0x12AA194
 
     for (auto p : { "8B 14 8D ? ? ? ? ? ? 50", "8B 14 8D ? ? ? ? 8B 42 04 50", "8B 04 8D ? ? ? ? 8B 50", "8B 04 BD ? ? ? ? 8B 48", "8B 14 8D ? ? ? ? 39 3A" })
     {
         auto ref = GetPattern(p);
-        if (!ref.empty())
-            injector::WriteMemory(ref.get_first(3), &list3[0], true);
+        injector::WriteMemory(ref.get_first(3), &list3[0], true);
     }
 
     pattern = GetPattern("8B 0C 85 ? ? ? ? 89 4F 6C 8B 46 10"); //0x74006F
-    if (!pattern.empty())
-    {
-        injector::WriteMemory(pattern.get_first(3), &list2[0], true);
-        injector::WriteMemory(pattern.get_first(19), &list2[0].ResY, true);//0x74007F
-    }
+    injector::WriteMemory(pattern.get_first(3), &list2[0], true);
+    injector::WriteMemory(pattern.get_first(19), &list2[0].ResY, true);//0x74007F
 
     // The names of the resolutions. The options screen (case 20 of its state switch) collects them in a stack array of
     // 16 entries, and more display modes overran it into its other locals and up to the stack cookie. They go into an
@@ -477,9 +527,6 @@ void FixMusicStreamRace()
 {
     // mov eax, [esi+ecx]; cmp dword ptr [eax+220h], 0; jz next
     auto pattern = hook::pattern("83 3C 0E 00 74 ? 8B 04 0E 83 B8 20 02 00 00 00 74 1E 85 DB 8B 80 20 02 00 00");
-    if (pattern.empty())
-        return;
-
     auto site = reinterpret_cast<uintptr_t>(pattern.get_first(6));
     auto next = reinterpret_cast<uintptr_t>(pattern.get_first(0x12)) + 0x1E;
     auto resume = reinterpret_cast<uintptr_t>(pattern.get_first(0x12));
@@ -522,8 +569,7 @@ void Init1()
     static float fBloomIntensity = FixSettings().Float("GRAPHICS.BloomIntensity");
 
     pattern = GetPattern("D9 05 ? ? ? ? 50 83 EC 08 D9 5C 24 04"); //0x766FC5
-    if (!pattern.empty())
-        injector::WriteMemory(pattern.get_first(2), &fBloomIntensity, true);
+    injector::WriteMemory(pattern.get_first(2), &fBloomIntensity, true);
 }
 
 void Init2()
@@ -554,73 +600,64 @@ void Init2()
 
     // Every display mode of at least 640x480 is offered, instead of a few fixed ones
     pattern = hook::pattern("83 C0 08 83 F8 78 72 E8 E9 ? ? ? ? 8B 56 3C 8B 46 10");
-    if (!pattern.empty())
+    auto check = pattern.get_first<uint8_t>(-0x12);     // height in ecx, width in edx
+    auto reject = injector::GetBranchDestination(pattern.get_first(8)).as_int();
+    auto accept = reinterpret_cast<uintptr_t>(pattern.get_first(13));
+    std::vector<uint8_t> code = { 0x81, 0xF9, 0xE0, 0x01, 0x00, 0x00 };     // cmp ecx, 480
+    auto jb = [&](uintptr_t target)
     {
-        auto check = pattern.get_first<uint8_t>(-0x12);     // height in ecx, width in edx
-        auto reject = injector::GetBranchDestination(pattern.get_first(8)).as_int();
-        auto accept = reinterpret_cast<uintptr_t>(pattern.get_first(13));
-        std::vector<uint8_t> code = { 0x81, 0xF9, 0xE0, 0x01, 0x00, 0x00 };     // cmp ecx, 480
-        auto jb = [&](uintptr_t target)
-        {
-            int32_t rel = int32_t(target - (reinterpret_cast<uintptr_t>(check) + code.size() + 6));
-            code.insert(code.end(), { 0x0F, 0x82 });
-            code.insert(code.end(), reinterpret_cast<uint8_t*>(&rel), reinterpret_cast<uint8_t*>(&rel) + 4);
-        };
-        jb(reject);
-        code.insert(code.end(), { 0x81, 0xFA, 0x80, 0x02, 0x00, 0x00 });     // cmp edx, 640
-        jb(reject);
-        int8_t toAccept = int8_t(accept - (reinterpret_cast<uintptr_t>(check) + code.size() + 2));
-        code.insert(code.end(), { 0xEB, uint8_t(toAccept) });
-        injector::WriteMemoryRaw(check, code.data(), code.size(), true);
-    }
+        int32_t rel = int32_t(target - (reinterpret_cast<uintptr_t>(check) + code.size() + 6));
+        code.insert(code.end(), { 0x0F, 0x82 });
+        code.insert(code.end(), reinterpret_cast<uint8_t*>(&rel), reinterpret_cast<uint8_t*>(&rel) + 4);
+    };
+    jb(reject);
+    code.insert(code.end(), { 0x81, 0xFA, 0x80, 0x02, 0x00, 0x00 });     // cmp edx, 640
+    jb(reject);
+    int8_t toAccept = int8_t(accept - (reinterpret_cast<uintptr_t>(check) + code.size() + 2));
+    code.insert(code.end(), { 0xEB, uint8_t(toAccept) });
+    injector::WriteMemoryRaw(check, code.data(), code.size(), true);
 
     if (bSkipIntro)
     {
         // The title screen continues by itself once it's shown, as if Start was pressed after its minimum time
         auto padStart = hook::pattern("56 8B F1 8B 46 04 83 E8 12 0F 84 ? ? ? ? 83 E8 02 74");
         auto screenTick = hook::pattern("56 8B F1 83 7E 04 14 74 ? 8B 4E 58 8B 01 8B 50 08 FF D2");
-        auto realTimer = padStart.empty() ? padStart : hook::range_pattern(reinterpret_cast<uintptr_t>(padStart.get_first()), reinterpret_cast<uintptr_t>(padStart.get_first(0x100)), "A1 ? ? ? ? 2B 46 4C");
-        if (!padStart.empty() && !screenTick.empty() && !realTimer.empty())
-        {
-            static auto HandlePadStart = reinterpret_cast<void(__thiscall*)(uint8_t*)>(padStart.get_first());
-            static auto RealTimer = *realTimer.get_first<int32_t*>(1);
-            static SafetyHookInline shScreenTick = {};
+        auto realTimer = hook::range_pattern(reinterpret_cast<uintptr_t>(padStart.get_first()), reinterpret_cast<uintptr_t>(padStart.get_first(0x100)), "A1 ? ? ? ? 2B 46 4C");
+        static auto HandlePadStart = reinterpret_cast<void(__thiscall*)(uint8_t*)>(padStart.get_first());
+        static auto RealTimer = *realTimer.get_first<int32_t*>(1);
+        static SafetyHookInline shScreenTick = {};
 
-            struct BootFlow
+        struct BootFlow
+        {
+            static void __fastcall ScreenTick(uint8_t* self, void*)
             {
-                static void __fastcall ScreenTick(uint8_t* self, void*)
+                constexpr int32_t SplashScreenState = 20;
+                static bool bDone = false;
+                if (!bDone && *reinterpret_cast<int32_t*>(self + 4) == SplashScreenState)
                 {
-                    constexpr int32_t SplashScreenState = 20;
-                    static bool bDone = false;
-                    if (!bDone && *reinterpret_cast<int32_t*>(self + 4) == SplashScreenState)
-                    {
-                        bDone = true;
-                        *reinterpret_cast<int32_t*>(self + 0x4C) = *RealTimer - 4000 * 5;     // timer ticks, 4000 per second
-                        HandlePadStart(self);
-                        return;
-                    }
-                    shScreenTick.unsafe_thiscall(self);
+                    bDone = true;
+                    *reinterpret_cast<int32_t*>(self + 0x4C) = *RealTimer - 4000 * 5;     // timer ticks, 4000 per second
+                    HandlePadStart(self);
+                    return;
                 }
-            };
-            shScreenTick = safetyhook::create_inline(screenTick.get_first(), BootFlow::ScreenTick);
-        }
+                shScreenTick.unsafe_thiscall(self);
+            }
+        };
+        shScreenTick = safetyhook::create_inline(screenTick.get_first(), BootFlow::ScreenTick);
     }
 
     // Profiles are loaded like on the Xbox 360: only errors are shown, not "Load complete" with a button to press
     pattern = hook::pattern("8B 44 24 04 56 8B F1 89 46 20 C6 05 ? ? ? ? 00 8B 46 20 85 C0 0F 84");
-    if (!pattern.empty())
+    static SafetyHookInline shLoad = {};
+    struct Memcard
     {
-        static SafetyHookInline shLoad = {};
-        struct Memcard
+        // MemcardManager::Load(file, silent)
+        static void __fastcall Load(void* manager, void*, void* file, bool)
         {
-            // MemcardManager::Load(file, silent)
-            static void __fastcall Load(void* manager, void*, void* file, bool)
-            {
-                shLoad.unsafe_thiscall(manager, file, true);
-            }
-        };
-        shLoad = safetyhook::create_inline(pattern.get_first(), Memcard::Load);
-    }
+            shLoad.unsafe_thiscall(manager, file, true);
+        }
+    };
+    shLoad = safetyhook::create_inline(pattern.get_first(), Memcard::Load);
 }
 
 void Init4()
@@ -634,13 +671,10 @@ void Init4()
     injector::MakeNOP(pattern.get_first(7), 2, true);
 
     // HUD Width
-    static float fHudScale = 1.0f;
-    static float fHudXPos = -1.0f;
-
     uintptr_t loc_764436 = reinterpret_cast<uintptr_t>(hook::pattern("C7 41 04 06 00 00 00 C7 01 04 00 00 00 C7 81 BC 00 00 00 04 00 00 00").get_first(0)) + 0x20;
-    static float* fHudWidth = *reinterpret_cast<float**>(loc_764436 + 4);
+    AspectRatio::fHudWidth = *reinterpret_cast<float**>(loc_764436 + 4);
     DWORD oldprotect;
-    injector::UnprotectMemory(fHudWidth, sizeof(float), oldprotect);
+    injector::UnprotectMemory(AspectRatio::fHudWidth, sizeof(float), oldprotect);
 
     pattern = GetPattern("C7 40 ? ? ? ? ? 88 50 20");
     struct ResHook
@@ -653,12 +687,12 @@ void Init4()
                 Width = (uint32_t*)(regs.eax + 0x18);
                 Height = (uint32_t*)(regs.eax + 0x1C);
             }
-            float fAspectRatio = static_cast<float>(*Width) / static_cast<float>(*Height);
-            fHudScale = 1280.0f / (720.0f * fAspectRatio);
-            *fHudWidth = 1280.0f / fHudScale;
-            fHudXPos = (fAspectRatio <= 1.34f ? -0.75f : -1.0f) * fHudScale;
+            AspectRatio::fCurrent = 0.0f;
+            AspectRatio::Update();
         }
     }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(7));
+    if (bAspectFromWindow)
+        WFP::onGameProcessEvent() += []() { AspectRatio::Update(); };
 
     // 16:9 HUD settings for anything wider than 4:3
     pattern = GetPattern("D9 05 ? ? ? ? D9 C9 DF F1 DD D8 ? ?  B8 ? ? ? ? C3 33 C0 C3");
@@ -666,63 +700,50 @@ void Init4()
     {
         void operator()(injector::reg_pack& regs)
         {
-            float fAspectRatio = static_cast<float>(*Width) / static_cast<float>(*Height);
-            regs.eax = (fAspectRatio <= 1.333333373f) ? 0 : 1;
+            regs.eax = (ScreenAspectRatio() <= 1.333333373f) ? 0 : 1;
         }
     };
     injector::MakeInline<HUDWidescreenModeHook>(pattern.count(1).get(0).get<uint32_t>(12), pattern.count(1).get(0).get<uint32_t>(19)); // 7454F1
 
     //HUD X Pos
     pattern = GetPattern("F3 0F 11 44 24 0C E8 ? ? ? ? 0F 57 C0 F3 0F 10 0D ? ? ? ? F3 0F 10 15");
-    injector::WriteMemory(pattern.get_first(26), &fHudXPos, true);
+    injector::WriteMemory(pattern.get_first(26), &AspectRatio::fHudXPos, true);
 
     // HUD render width
     static float fRenderWidth_99999 = 99999.0f;
     pattern = hook::pattern("E8 ? ? ? ? 84 C0 74 0A F3 0F");
-    if (pattern.size() == 13)
-    {
-        injector::WriteMemory(pattern.get(3).get<uint32_t>(13), &fRenderWidth_99999, true);
-        injector::WriteMemory(pattern.get(11).get<uint32_t>(13), &fRenderWidth_99999, true);
-    }
+    injector::WriteMemory(pattern.get(3).get<uint32_t>(13), &fRenderWidth_99999, true);
+    injector::WriteMemory(pattern.get(11).get<uint32_t>(13), &fRenderWidth_99999, true);
 
     pattern = GetPattern("F3 0F 11 86 8C 05 00 00 F3 0F 11 86 90 05 00 00");
-    if (pattern.size() == 8)
+    struct HUDRenderHook
     {
-        struct HUDRenderHook
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(float*)(regs.esi + 0x58C) = -99999.0f;
-            }
-        };
-        injector::MakeInline<HUDRenderHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(8)); // 781C7D
-        injector::MakeInline<HUDRenderHook>(pattern.get(6).get<uint32_t>(0), pattern.get(6).get<uint32_t>(8)); // 7B1DD5
-    }
+            *(float*)(regs.esi + 0x58C) = -99999.0f;
+        }
+    };
+    injector::MakeInline<HUDRenderHook>(pattern.get(0).get<uint32_t>(0), pattern.get(0).get<uint32_t>(8)); // 781C7D
+    injector::MakeInline<HUDRenderHook>(pattern.get(6).get<uint32_t>(0), pattern.get(6).get<uint32_t>(8)); // 7B1DD5
 
     // GPS map background: the full width of the screen
     pattern = GetPattern("E8 ? ? ? ? D9 5C 24 0C E8 ? ? ? ? D9 5C 24 10 6A 00");
-    if (!pattern.empty())
-        injector::MakeCALL(pattern.get_first(0), FullWidth::LoadPositive, true); // 830301
+    injector::MakeCALL(pattern.get_first(0), FullWidth::LoadPositive, true); // 830301
 
     pattern = GetPattern("D9 EE D9 54 24 04 D9 1C 24 E8");
-    if (!pattern.empty())
-    {
-        // fldz; fst [esp+4] becomes fld -99999; fst [esp+4]
-        FullWidth::GPSMapExit = reinterpret_cast<uintptr_t>(pattern.get_first(6));
-        injector::MakeJMP(pattern.get_first(0), FullWidth::GPSMapCave, true); // 83037F
-        injector::MakeNOP(pattern.get_first(5), 1, true);
-    }
+    // fldz; fst [esp+4] becomes fld -99999; fst [esp+4]
+    FullWidth::GPSMapExit = reinterpret_cast<uintptr_t>(pattern.get_first(6));
+    injector::MakeJMP(pattern.get_first(0), FullWidth::GPSMapCave, true); // 83037F
+    injector::MakeNOP(pattern.get_first(5), 1, true);
 
     // Transition overlay: the full width of the screen
     pattern = GetPattern("E8 ? ? ? ? D9 5C 24 14 E8 ? ? ? ? D9 5C 24 1C");
     if (pattern.empty())
         pattern = GetPattern("E8 ? ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? 0F B6 44 24");
-    if (!pattern.empty())
-        injector::MakeCALL(pattern.get_first(0), FullWidth::LoadPositive, true); // 561A00
+    injector::MakeCALL(pattern.get_first(0), FullWidth::LoadPositive, true); // 561A00
 
     pattern = hook::pattern("D9 05 ? ? ? ? D9 54 24 04 D9 1C 24 E8 ? ? ? ? 8B 0D");
-    if (!pattern.empty())
-        injector::WriteMemory(pattern.get_first(2), &FullWidth::fNegative, true);
+    injector::WriteMemory(pattern.get_first(2), &FullWidth::fNegative, true);
 
     // FOV, HUD and movies are worked out for 16:9 and corrected for the screen
     static float fVertFOV = 1.777777777f;
@@ -752,8 +773,7 @@ void Init4()
         {
             static const float Corrected_Hor = 1.3f;
             pattern = hook::pattern("F3 0F 59 0D ? ? ? ? F3 0F 59 05 ? ? ? ? F3 0F 11 4C 24");
-            if (!pattern.empty())
-                injector::WriteMemory(pattern.get_first(4), &Corrected_Hor, true);
+            injector::WriteMemory(pattern.get_first(4), &Corrected_Hor, true);
         }
     }
 
@@ -765,7 +785,7 @@ void Init4()
         {
             void operator()(injector::reg_pack& regs)
             {
-                *(float*)(regs.esp + 0x38) *= fHudScale;
+                *(float*)(regs.esp + 0x38) *= AspectRatio::fHudScale;
                 regs.xmm0.f32[0] = *(float*)(regs.esp + 0x38);
             }
         }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6));
@@ -777,7 +797,7 @@ void Init4()
         {
             void operator()(injector::reg_pack& regs)
             {
-                *(float*)(regs.esp + 0x28) *= fHudScale;
+                *(float*)(regs.esp + 0x28) *= AspectRatio::fHudScale;
                 regs.xmm0.f32[0] = *(float*)(regs.esp + 0x28);
             }
         }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6));
@@ -786,101 +806,79 @@ void Init4()
     // Field of View option. DrivingCameraMover::Update, the camera mover of the driving views (chase, hood, bumper and
     // look back), writes the camera's field of view (bAngle at +0x1C4, 65536 = 360 degrees) from its smoothed value at
     // the end of each update, in two places. The extra field of view goes on top of it there, so it applies at once and
-    // the front end's, garage's and cutscenes' camera movers keep theirs.
+    // the front end's, garage's and cutscenes' camera movers keep theirs. On screens wider than 4:3 the player view's
+    // projection scales the half-angle by (1.175 - (degrees - 10) * 0.003) times the horizontal factor, and the FOV
+    // hook above widens its tangent by 1 / fHudScale.
     FieldOfView::pFovFactor = &FixSettings().Float("MAIN.FOVFactor");
     pattern = hook::pattern("75 ? 8B 86 2C 01 00 00 8B 56 28 F3 0F 2C 08 66 89 8A C4 01 00 00");
     static std::vector<SafetyHookMid> DrivingFOVHooks;
     NFSFieldOfView::InstallDrivingHooks(pattern, 15, 2, DrivingFOVHooks, +[](SafetyHookContext& regs)
     {
-        regs.ecx = NFSFieldOfView::ScaleDrivingAngle(regs.ecx, *FieldOfView::pFovFactor, float(0x7000));
+        bool wide = ScreenAspectRatio() > 1.34f;
+        float maximum = NFSFieldOfView::HorizontalLimit(float(0x7000), 1.0f / AspectRatio::fHudScale, [wide](float angle)
+        {
+            return wide ? (1.175f - (angle * 360.0f / 65536.0f - 10.0f) * 0.003f) * (nScaling ? 1.3f : 1.24f) : 1.0f;
+        });
+        regs.ecx = NFSFieldOfView::ScaleDrivingAngle(regs.ecx, *FieldOfView::pFovFactor, maximum);
     });
 
     // Movies: the movie's widescreen check (before its whole-screen quad) and the quad function's draw call
     pattern = GetPattern("E8 ? ? ? ? 84 C0 74 0C 8B CE E8 ? ? ? ? E9");
-    if (!pattern.empty())
+    auto quad = injector::GetBranchDestination(pattern.get_first(0xB)).as_int();
+    auto draw = hook::range_pattern(quad, quad + 0x180, "E8 ? ? ? ? 83 C4 78 C3");
+    injector::MakeCALL(pattern.get_first(0), Movie::IsWidescreen, true);
+    static auto MovieQuadHook = safetyhook::create_mid(draw.get_first(), [](SafetyHookContext& regs)
     {
-        auto quad = injector::GetBranchDestination(pattern.get_first(0xB)).as_int();
-        auto draw = hook::range_pattern(quad, quad + 0x180, "E8 ? ? ? ? 83 C4 78 C3");
-        if (!draw.empty())
+        // DrawPrimitiveUP's arguments: name, device, triangle fan, 2, vertices, stride
+        if (Movie::bDrawing)
         {
-            Movie::pMode = &FixSettings().Int("MAIN.FMVWidescreenMode");
-            injector::MakeCALL(pattern.get_first(0), Movie::IsWidescreen, true);
-            static auto MovieQuadHook = safetyhook::create_mid(draw.get_first(), [](SafetyHookContext& regs)
-            {
-                // DrawPrimitiveUP's arguments: name, device, triangle fan, 2, vertices, stride
-                if (Movie::bDrawing)
-                {
-                    Movie::bDrawing = false;
-                    Movie::Scale(*reinterpret_cast<float**>(regs.esp + 0x10));
+            Movie::bDrawing = false;
+            Movie::Scale(*reinterpret_cast<float**>(regs.esp + 0x10));
 
-                    // The bars of the original aspect are black, not what was drawn before
-                    if (*Movie::pMode == 0)
-                    {
-                        if (IDirect3DDevice9* device = Direct3DDevice)
-                            device->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-                    }
-                }
-            });
+            // The bars are black, not what was drawn before
+            if (IDirect3DDevice9* device = Direct3DDevice)
+                device->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
         }
-    }
+    });
 
     // Cutscene borders: the letterbox channel's frame update writes the camera's letterbox height (fstp [ecx+1A8h],
-    // the channel in edi), the view's projection setup takes the view (its camera at +0x40) and sets the projection's
-    // horizontal and vertical scales (+0x40/+0x54 and the copies at +0xC0/+0xD4) before multiplying the matrices
+    // the channel in edi)
     {
         auto iceManager = GetPattern("A1 ? ? ? ? 56 8B B0 90 00 00 00 85 F6 57 8B F9 74");
         auto letterbox = GetPattern("D9 99 A8 01 00 00 5F 5E C2 08 00");
-        auto projection = GetPattern("8B 44 24 ? F3 0F 10 40 04 D9 00 F3 0F 10 48 08 F3 0F 10 50 0C 53");
-        auto matrices = GetPattern("8D 9E 80 00 00 00 53 F3 0F 11 46 0C F3 0F 11 46 1C F3 0F 11 46 2C E8");
-        if (!iceManager.empty() && !letterbox.empty() && !projection.empty() && !matrices.empty())
+        Cutscene::pBorders = &FixSettings().Int("MAIN.CutsceneBorders");
+        Cutscene::pAnimated = &FixSettings().Int("MAIN.AnimatedCutsceneBorders");
+        Cutscene::ICEManager = *iceManager.get_first<uintptr_t*>(1);
+
+        static auto LetterBoxHook = safetyhook::create_mid(letterbox.get_first(6), [](SafetyHookContext& regs)
         {
-            Cutscene::pBorders = &FixSettings().Int("MAIN.CutsceneBorders");
-            Cutscene::pAnimated = &FixSettings().Int("MAIN.AnimatedCutsceneBorders");
-            Cutscene::ICEManager = *iceManager.get_first<uintptr_t*>(1);
+            float& height = *reinterpret_cast<float*>(regs.ecx + 0x1A8);
+            if (!*Cutscene::pAnimated && height > 0.0f)
+                height = *reinterpret_cast<float*>(regs.edi + 0x0C);   // the channel's full height
+            if (!(*Cutscene::pBorders & 1))
+                height = 0.0f;
+        });
 
-            static auto LetterBoxHook = safetyhook::create_mid(letterbox.get_first(6), [](SafetyHookContext& regs)
+        WFP::onEndScene() += []()
+        {
+            if ((*Cutscene::pBorders & 2) && Cutscene::IsPlaying())
             {
-                float& height = *reinterpret_cast<float*>(regs.ecx + 0x1A8);
-                if (!*Cutscene::pAnimated && height > 0.0f)
-                    height = *reinterpret_cast<float*>(regs.edi + 0x0C);   // the channel's full height
-                Cutscene::fLetterBox = height;
-                if (!(*Cutscene::pBorders & 1))
-                    height = 0.0f;
-            });
-
-            // mov eax, [esp+n] reads the argument after the view
-            static uint8_t ArgumentOffset = *projection.get_first<uint8_t>(3);
-            static auto ProjectionHook = safetyhook::create_mid(projection.get_first(4), [](SafetyHookContext& regs)
-            {
-                auto view = *reinterpret_cast<uintptr_t*>(regs.esp + ArgumentOffset - 4);
-                auto camera = Cutscene::Camera();
-                Cutscene::bCameraView = view && camera && *reinterpret_cast<uintptr_t*>(view + 0x40) == camera;
-            });
-
-            static auto MatricesHook = safetyhook::create_mid(matrices.get_first(0x16), [](SafetyHookContext& regs)
-            {
-                if (!Cutscene::IsPlaying())
-                {
-                    Cutscene::fLetterBox = 0.0f;
-                    return;
-                }
-                if (!Cutscene::bCameraView || (*Cutscene::pBorders & 1) || Cutscene::fLetterBox <= 0.0f || Cutscene::fLetterBox >= 0.5f)
-                    return;
-                float zoom = 1.0f / (1.0f - Cutscene::fLetterBox);
-                for (auto offset : { 0x40, 0x54, 0xC0, 0xD4 })
-                    *reinterpret_cast<float*>(regs.esi + offset) *= zoom;
-            });
-
-            WFP::onEndScene() += []()
-            {
-                if ((*Cutscene::pBorders & 2) && Cutscene::IsPlaying())
-                {
-                    if (IDirect3DDevice9* device = Direct3DDevice)
-                        Cutscene::DrawPillarbox(device);
-                }
-            };
-        }
+                if (IDirect3DDevice9* device = Direct3DDevice)
+                    Cutscene::DrawPillarbox(device);
+            }
+        };
     }
+
+    // The in-game main menu and the options menu are laid out for 16:9: on wider screens their decorations reach past
+    // it, so the sides are black there
+    WFP::onEndScene() += []()
+    {
+        if (ScreenAspectRatio() > 16.0f / 9.0f + 0.01f && MenuScreenShown())
+        {
+            if (IDirect3DDevice9* device = Direct3DDevice)
+                Cutscene::DrawPillarbox(device);
+        }
+    };
 
     // Cascade shadow maps: resolution and scale
     Shadows::iniShadowsRes = std::clamp(FixSettings().Int("GRAPHICS.ShadowResolution"), 256, 16384);
@@ -892,41 +890,32 @@ void Init4()
 
     // Shadow texture creation: push height, width
     pattern = hook::pattern("51 6A 01 68 00 04 00 00 C1 E0 0A");
-    if (!pattern.empty())
-    {
-        Shadows::TextureCaveExit = reinterpret_cast<uintptr_t>(pattern.get_first(3 + 9));
-        injector::MakeJMP(pattern.get_first(3), Shadows::TextureCave, true);
-    }
+    Shadows::TextureCaveExit = reinterpret_cast<uintptr_t>(pattern.get_first(3 + 9));
+    injector::MakeJMP(pattern.get_first(3), Shadows::TextureCave, true);
 
     // Shadow rendering viewports
     pattern = hook::pattern("8B 46 08 0F 57 C0 C1 E0 0A");
-    if (!pattern.empty())
+    struct ShadowsResHook2
     {
-        struct ShadowsResHook2
+        void operator()(injector::reg_pack& regs)
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                *(uint32_t*)(regs.esp + 4) = Shadows::ShadowsRes * regs.eax;
-                *(uint32_t*)(regs.esp + 0xC) = Shadows::ShadowsRes;
-                *(uint32_t*)(regs.esp + 0x10) = Shadows::ShadowsRes;
-            }
-        }; injector::MakeInline<ShadowsResHook2>(pattern.get_first(6), pattern.get_first(26));
-    }
+            *(uint32_t*)(regs.esp + 4) = Shadows::ShadowsRes * regs.eax;
+            *(uint32_t*)(regs.esp + 0xC) = Shadows::ShadowsRes;
+            *(uint32_t*)(regs.esp + 0x10) = Shadows::ShadowsRes;
+        }
+    }; injector::MakeInline<ShadowsResHook2>(pattern.get_first(6), pattern.get_first(26));
 
     // Cascade scales: the game's writes to CSM::fCSMScaleLevel[] are removed
     pattern = find_pattern("F3 0F 11 0D ? ? ? ? 0F 5A C8", "F3 0F 11 0D ? ? ? ? 56");
     auto pattern2 = find_pattern("F3 0F 11 0D ? ? ? ? F3 0F 11 05 ? ? ? ? E8 ? ? ? ? 8B C8", "F3 0F 11 0D ? ? ? ? F3 0F 11 05 ? ? ? ? E8 ? ? ? ? 8B C8");
-    if (!pattern.empty() && !pattern2.empty())
-    {
-        static float* CSM_fCSMScaleLevel = *pattern.get_first<float*>(4);
-        injector::MakeNOP(pattern.get_first(), 8);
-        injector::MakeNOP(pattern2.get_first(0), 8);
-        injector::MakeNOP(pattern2.get_first(8), 8);
+    static float* CSM_fCSMScaleLevel = *pattern.get_first<float*>(4);
+    injector::MakeNOP(pattern.get_first(), 8);
+    injector::MakeNOP(pattern2.get_first(0), 8);
+    injector::MakeNOP(pattern2.get_first(8), 8);
 
-        CSM_fCSMScaleLevel[0] = CSMScaleNear;
-        CSM_fCSMScaleLevel[1] = CSMScaleMid;
-        CSM_fCSMScaleLevel[2] = CSMScaleFar;
-    }
+    CSM_fCSMScaleLevel[0] = CSMScaleNear;
+    CSM_fCSMScaleLevel[1] = CSMScaleMid;
+    CSM_fCSMScaleLevel[2] = CSMScaleFar;
 
     // Shadows of meshes outside the view
     pattern = hook::pattern("77 ? F3 0F 5A C0 0F 5A C9");
@@ -935,17 +924,13 @@ void Init4()
     else
     {
         pattern = hook::pattern("77 ? 0F 2F CA 77 ? B0 01");
-        if (!pattern.empty())
-            injector::MakeJMP(pattern.get_first(), pattern.get_first(7), true);
+        injector::MakeJMP(pattern.get_first(), pattern.get_first(7), true);
     }
 
     // Shadow resolution during CSM::Update(), some distant shadows use it
     pattern = hook::pattern("68 00 04 00 00 68 00 04 00 00");
-    if (pattern.size() == 1)
-    {
-        static auto CSMUpdateHook = [](uint32_t, uint32_t) -> uint32_t { return Shadows::ShadowsRes; };
-        injector::MakeCALL(pattern.get_first(10), static_cast<uint32_t(__cdecl*)(uint32_t, uint32_t)>(CSMUpdateHook), true);
-    }
+    static auto CSMUpdateHook = [](uint32_t, uint32_t) -> uint32_t { return Shadows::ShadowsRes; };
+    injector::MakeCALL(pattern.get_first(10), static_cast<uint32_t(__cdecl*)(uint32_t, uint32_t)>(CSMUpdateHook), true);
 
     // Frame rate limit: -1 = monitor refresh rate, -2 = twice the refresh rate. The game needs a fixed rate, so it can't
     // be unlimited. The simulation runs at a whole multiple of it, at least 60 steps per second like the original (a
@@ -987,87 +972,74 @@ void Init4()
         auto steamCap = hook::pattern("83 F8 08 F3 0F 11 0D ? ? ? ? F3 0F 11 44 24 04 7E");
         auto retailCap = hook::pattern("83 F8 08 F3 0F 11 05 ? ? ? ? F3 0F 11 4C 24 04 7E");
 
-        bool bSteam = !steam.empty() && !steamDivisor.empty() && !steamUpdateState.empty() && !steamTick.empty() && !steamCap.empty();
-        bool bRetail = !retail.empty() && !retailRate.empty() && !retailUpdateState.empty() && !retailTick.empty() && !retailCap.empty();
-        if ((bSteam || bRetail) && !timeManager.empty() && !constructor.empty())
+        bool bSteam = !steam.empty();
+        auto& anchor = bSteam ? steam : retail;
+        FrameRate::SimActive = *anchor.get_first<int32_t*>(2);
+        FrameRate::TimeBank = *anchor.get_first<float*>(0x1B);
+        static auto QueueEventsHook = safetyhook::create_mid(anchor.get_first(-0x23), [](SafetyHookContext& regs)
         {
-            auto& anchor = bSteam ? steam : retail;
-            FrameRate::SimActive = *anchor.get_first<int32_t*>(2);
-            FrameRate::TimeBank = *anchor.get_first<float*>(0x1B);
-            static auto QueueEventsHook = safetyhook::create_mid(anchor.get_first(-0x23), [](SafetyHookContext& regs)
-            {
-                FrameRate::PrepareStep(*reinterpret_cast<float*>(regs.esp + 4));
-            });
+            FrameRate::PrepareStep(*reinterpret_cast<float*>(regs.esp + 4));
+        });
 
-            if (bSteam)
-            {
-                injector::WriteMemory(steam.get_first(0x31), &FrameRate::fStepTime, true);
-                injector::WriteMemory(steamDivisor.get_first(4), &FrameRate::dStepTime, true);
-                injector::WriteMemory(steamUpdateState.get_first(7), &FrameRate::dStepTime, true);
-                injector::WriteMemory(steamTick.get_first(12), &FrameRate::dStepTime, true);
-            }
-            else
-            {
-                injector::WriteMemory(retail.get_first(0x27), &FrameRate::fStepTime, true);
-                injector::WriteMemory(retailRate.get_first(7), &FrameRate::fStepRate, true);
-                injector::WriteMemory(retailUpdateState.get_first(9), &FrameRate::fStepTime, true);
-                injector::WriteMemory(retailTick.get_first(9), &FrameRate::fStepTime, true);
-            }
-            injector::WriteMemory(timeManager.get_first(4), &FrameRate::fStepTime, true);
-            injector::WriteMemory(constructor.get_first(9), &FrameRate::fStepTime, true);
+        if (bSteam)
+        {
+            injector::WriteMemory(steam.get_first(0x31), &FrameRate::fStepTime, true);
+            injector::WriteMemory(steamDivisor.get_first(4), &FrameRate::dStepTime, true);
+            injector::WriteMemory(steamUpdateState.get_first(7), &FrameRate::dStepTime, true);
+            injector::WriteMemory(steamTick.get_first(12), &FrameRate::dStepTime, true);
+        }
+        else
+        {
+            injector::WriteMemory(retail.get_first(0x27), &FrameRate::fStepTime, true);
+            injector::WriteMemory(retailRate.get_first(7), &FrameRate::fStepRate, true);
+            injector::WriteMemory(retailUpdateState.get_first(9), &FrameRate::fStepTime, true);
+            injector::WriteMemory(retailTick.get_first(9), &FrameRate::fStepTime, true);
+        }
+        injector::WriteMemory(timeManager.get_first(4), &FrameRate::fStepTime, true);
+        injector::WriteMemory(constructor.get_first(9), &FrameRate::fStepTime, true);
 
-            // The step cap keeps the same time as at 60 steps per second
-            auto cap = (bSteam ? steamCap : retailCap).get_first<uint8_t>();
-            size_t addOffset = 0x13, movOffset = bSteam ? 0x34 : 0x28;
-            if (cap[addOffset] == 0x83 && cap[addOffset + 1] == 0xC0 && cap[addOffset + 2] == 0xF8 && cap[movOffset] == 0xB8 && *reinterpret_cast<int32_t*>(cap + movOffset + 1) == 8)
-            {
-                injector::WriteMemory<int8_t>(cap + 2, int8_t(FrameRate::MaxSteps), true);
-                injector::WriteMemory<int8_t>(cap + addOffset + 2, int8_t(-FrameRate::MaxSteps), true);
-                injector::WriteMemory<int32_t>(cap + movOffset + 1, FrameRate::MaxSteps, true);
-            }
-            else
-                FrameRate::MaxSteps = 8;
+        // The step cap keeps the same time as at 60 steps per second
+        auto cap = (bSteam ? steamCap : retailCap).get_first<uint8_t>();
+        size_t addOffset = 0x13, movOffset = bSteam ? 0x34 : 0x28;
+        hook::range_pattern(uintptr_t(cap + addOffset), uintptr_t(cap + addOffset + 3), "83 C0 F8").get_first();
+        hook::range_pattern(uintptr_t(cap + movOffset), uintptr_t(cap + movOffset + 5), "B8 08 00 00 00").get_first();
+        injector::WriteMemory<int8_t>(cap + 2, int8_t(FrameRate::MaxSteps), true);
+        injector::WriteMemory<int8_t>(cap + addOffset + 2, int8_t(-FrameRate::MaxSteps), true);
+        injector::WriteMemory<int32_t>(cap + movOffset + 1, FrameRate::MaxSteps, true);
 
-            // The chase camera's springs (DC::Damp, DC::AngleDamp and the copies inlined into DrivingCameraMover): every
-            // read of 1/60 in the camera code between the first and the last of them. IDA shows 11 reads of the double
-            // and 1 of a float 1/60 on Steam and 9 of the float on retail, and no other code in between reads them.
-            auto steamFirst = hook::pattern("F3 0F 10 44 24 18 F2 0F 10 1D ? ? ? ? 8B 44 24 14 0F 5A C0 F2 0F 5E");
-            auto steamLast = hook::pattern("0F 8B ? ? ? ? F2 0F 10 25 ? ? ? ? 0F 5A C1 F2 0F 10 0D");
-            auto steamFloat = hook::pattern("E8 ? ? ? ? D9 05 ? ? ? ? 51 D9 1C 24 8D 4C 24 14");
-            auto retailFirst = hook::pattern("F3 0F 5E 4C 24 14 F3 0F 10 1D ? ? ? ? F3 0F 10 15");
-            auto retailLast = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 10 2D ? ? ? ? F3 0F 10 A6 5C 01 00 00");
-            if (bSteam && steamFirst.size() == 1 && !steamLast.empty() && steamFloat.size() == 1)
-            {
-                auto begin = reinterpret_cast<uintptr_t>(steamFirst.get_first());
-                auto end = reinterpret_cast<uintptr_t>(steamLast.get(steamLast.size() - 1).get<void>(14));
-                auto doubleConstant = *steamFirst.get_first<uintptr_t>(10);
-                auto floatConstant = *steamFloat.get_first<uintptr_t>(7);
-                FrameRate::RedirectConstant(begin, end, doubleConstant, &FrameRate::dCameraStep, 11);
-                FrameRate::RedirectConstant(begin, end, floatConstant, &FrameRate::fCameraStep, 1);
-            }
-            else if (bRetail && retailFirst.size() == 1 && retailLast.size() == 1)
-            {
-                auto begin = reinterpret_cast<uintptr_t>(retailFirst.get_first());
-                auto end = reinterpret_cast<uintptr_t>(retailLast.get_first(16));
-                FrameRate::RedirectConstant(begin, end, *retailFirst.get_first<uintptr_t>(10), &FrameRate::fCameraStep, 9);
-            }
+        // The chase camera's springs (DC::Damp, DC::AngleDamp and the copies inlined into DrivingCameraMover): every
+        // read of 1/60 in the camera code between the first and the last of them. IDA shows 11 reads of the double
+        // and 1 of a float 1/60 on Steam and 9 of the float on retail, and no other code in between reads them.
+        auto steamFirst = hook::pattern("F3 0F 10 44 24 18 F2 0F 10 1D ? ? ? ? 8B 44 24 14 0F 5A C0 F2 0F 5E");
+        auto steamLast = hook::pattern("0F 8B ? ? ? ? F2 0F 10 25 ? ? ? ? 0F 5A C1 F2 0F 10 0D");
+        auto steamFloat = hook::pattern("E8 ? ? ? ? D9 05 ? ? ? ? 51 D9 1C 24 8D 4C 24 14");
+        auto retailFirst = hook::pattern("F3 0F 5E 4C 24 14 F3 0F 10 1D ? ? ? ? F3 0F 10 15");
+        auto retailLast = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 10 2D ? ? ? ? F3 0F 10 A6 5C 01 00 00");
+        if (bSteam)
+        {
+            auto begin = reinterpret_cast<uintptr_t>(steamFirst.get_first());
+            auto end = reinterpret_cast<uintptr_t>(steamLast.get(steamLast.size() - 1).get<void>(14));
+            auto doubleConstant = *steamFirst.get_first<uintptr_t>(10);
+            auto floatConstant = *steamFloat.get_first<uintptr_t>(7);
+            FrameRate::RedirectConstant(begin, end, doubleConstant, &FrameRate::dCameraStep, 11);
+            FrameRate::RedirectConstant(begin, end, floatConstant, &FrameRate::fCameraStep, 1);
+        }
+        else
+        {
+            auto begin = reinterpret_cast<uintptr_t>(retailFirst.get_first());
+            auto end = reinterpret_cast<uintptr_t>(retailLast.get_first(16));
+            FrameRate::RedirectConstant(begin, end, *retailFirst.get_first<uintptr_t>(10), &FrameRate::fCameraStep, 9);
         }
 
         // Animated textures: the real-time tick count (cvtsi2ss xmm1, [count]) after the world's
         auto textures = hook::pattern("83 EC 14 83 3D ? ? ? ? 03");
-        if (textures.size() == 1)
+        auto load = hook::range_pattern(reinterpret_cast<uintptr_t>(textures.get_first()), reinterpret_cast<uintptr_t>(textures.get_first(0x40)), "F3 0F 2A 0D");
+        TextureAnimation::Update();
+        injector::WriteMemory(load.get_first(4), &TextureAnimation::RealTicks, true);
+        WFP::onGameProcessEvent() += []()
         {
-            auto load = hook::range_pattern(reinterpret_cast<uintptr_t>(textures.get_first()), reinterpret_cast<uintptr_t>(textures.get_first(0x40)), "F3 0F 2A 0D");
-            if (!load.empty())
-            {
-                TextureAnimation::Update();
-                injector::WriteMemory(load.get_first(4), &TextureAnimation::RealTicks, true);
-                WFP::onGameProcessEvent() += []()
-                {
-                    TextureAnimation::Update();
-                };
-            }
-        }
+            TextureAnimation::Update();
+        };
     }
 
     // Frames are paced to the limit before they're shown
@@ -1089,18 +1061,14 @@ void Init4()
     if (bDisableMotionBlur)
     {
         auto pattern = hook::pattern("0F 85 ? ? ? ? 6A ? B9 ? ? ? ? E8 ? ? ? ? 85 C0");
-        if (!pattern.empty())
-            injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jnz -> jmp
+        injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jnz -> jmp
     }
 
     // Online services are gone; the game doesn't try to log in
     {
         auto pattern = hook::pattern("E8 ? ? ? ? 84 C0 74 ? 39 5C 24 ? 75 ? 8B 0D");
-        if (!pattern.empty())
-        {
-            static auto OnlineLoginEnabled = []() -> bool { return false; };
-            static auto shOnlineLogin = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), static_cast<bool(*)()>(OnlineLoginEnabled));
-        }
+        static auto OnlineLoginEnabled = []() -> bool { return false; };
+        static auto shOnlineLogin = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), static_cast<bool(*)()>(OnlineLoginEnabled));
     }
 }
 
@@ -1111,6 +1079,31 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            Focus::Install();
+
+            // The 1.1 callback list has eight entries; an oversized count overwrites its count and adjacent data.
+            auto callbacks = hook::pattern("56 8D 4C 24 68 8B D8 E8 ? ? ? ? F3 0F 7E 44 24 38 8B 44 24 60");
+            if (!callbacks.empty()) // 1.1.2.1 executables
+            {
+                static auto CallbackCountHook = safetyhook::create_mid(callbacks.get_first(7), [](SafetyHookContext& context)
+                {
+                    context.ebx = static_cast<uint32_t>(std::min(static_cast<int32_t>(context.ebx), 8));
+                });
+            }
+            else
+            {
+                auto steam = hook::pattern("F3 0F 2A 44 24 ? 56");
+                if (steam.empty()) // 1.0.1.17
+                {
+                    auto retail = hook::pattern("51 E9 ? ? ? ? 50 E8");
+                    if (retail.empty())
+                    {
+                        retail.get_first();
+                        std::abort();
+                    }
+                }
+            }
+
             auto ModuleStart = (uintptr_t)GetModuleHandle(NULL);
             CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init1, hook::range_pattern(ModuleStart, RangeEnd, "C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52"));
             CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init2, hook::range_pattern(ModuleStart, RangeEnd, "E8 ? ? ? ? 8B 4E 04 83 C4 20 89 46 08 8B 15 ? ? ? ? 51 52 68 0B 20 00 00"));

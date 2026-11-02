@@ -9,7 +9,7 @@ namespace ScarfaceRawMouse
     inline ReadData* NativeSlot = nullptr;
     inline const int* Enabled = nullptr;
     inline const float* Sensitivity = nullptr;
-    inline HWND* Window = nullptr;
+    inline GameRef<HWND>* Window = nullptr;
     inline std::atomic<uint64_t> Pending{ 0 };
     inline std::atomic<bool> HaveRaw{ false };
     inline ULONGLONG NextProbe = 0;
@@ -20,7 +20,7 @@ namespace ScarfaceRawMouse
 
     inline bool Focused()
     {
-        return Window && *Window && GetForegroundWindow() == *Window;
+        return Window && Window->is_initialized() && Window->get() && GetForegroundWindow() == Window->get();
     }
 
     inline void Accumulate(LONG x, LONG y)
@@ -88,11 +88,8 @@ namespace ScarfaceRawMouse
             if (!(section.Characteristics & IMAGE_SCN_MEM_READ) || section.VirtualAddress >= nt->OptionalHeader.SizeOfImage)
                 continue;
             const size_t size = std::min(section.Misc.VirtualSize, nt->OptionalHeader.SizeOfImage - section.VirtualAddress);
-            std::vector<uint8_t> bytes(size);
-            SIZE_T copied = 0;
-            if (!ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<const void*>(base + section.VirtualAddress),
-                bytes.data(), size, &copied) || copied != size)
-                continue;
+            const auto begin = reinterpret_cast<const uint8_t*>(base + section.VirtualAddress);
+            std::vector<uint8_t> bytes(begin, begin + size);
             if (section.Characteristics & IMAGE_SCN_MEM_EXECUTE)
                 code.push_back(std::move(bytes));
             else
@@ -178,7 +175,7 @@ namespace ScarfaceRawMouse
                     return;
                 Original.store(*slot, std::memory_order_release);
                 NativeSlot = slot;
-                ProtectedGameRef<ReadData>{ slot } = Read;
+                injector::WriteMemory<ReadData>(slot, Read, true);
             }
             if (!NativeSlot && ++FailedProbes >= 10)
             {
@@ -241,10 +238,10 @@ namespace ScarfaceRawMouse
                 const auto counts = Pending.exchange(0, std::memory_order_acquire);
                 Motion = { static_cast<int32_t>(counts) * scale, -static_cast<float>(static_cast<int32_t>(counts >> 32)) * scale };
                 RECT client{};
-                if (Focused() && GetClientRect(*Window, &client))
+                if (Focused() && GetClientRect(Window->get(), &client))
                 {
                     POINT center{ (client.right - client.left) / 2, (client.bottom - client.top) / 2 };
-                    if (ClientToScreen(*Window, &center))
+                    if (ClientToScreen(Window->get(), &center))
                         SetCursorPos(center.x, center.y);
                 }
             }
@@ -265,7 +262,7 @@ namespace ScarfaceRawMouse
         return result;
     }
 
-    inline void Install(const int& enabled, const float& sensitivity, HWND* window, bool frameReady)
+    inline void Install(const int& enabled, const float& sensitivity, GameRef<HWND>* window, bool frameReady)
     {
         Enabled = &enabled;
         Sensitivity = &sensitivity;
@@ -277,7 +274,7 @@ namespace ScarfaceRawMouse
     inline void Shutdown()
     {
         if (NativeSlot && *NativeSlot == Read)
-            ProtectedGameRef<ReadData>{ NativeSlot } = Original.load(std::memory_order_acquire);
+            injector::WriteMemory<ReadData>(NativeSlot, Original.load(std::memory_order_acquire), true);
         NativeSlot = nullptr;
         FrameReady = false;
         HaveRaw.store(false, std::memory_order_release);

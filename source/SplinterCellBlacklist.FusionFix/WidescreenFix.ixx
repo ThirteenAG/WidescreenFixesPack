@@ -3,10 +3,15 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include <d3d9.h>
+#include <stdexcept>
 
 export module WidescreenFix;
 
 import ComVars;
+import Camera;
+import Cinematics;
+import Hud;
+import MovieFrame;
 
 namespace l3d
 {
@@ -21,7 +26,7 @@ namespace l3d
 // Scaleform batches (sub_17B1F30): the frame (ebx) has the vertices at +0Ch and the stride at +10h, the batch the vertex count at +14h.
 // Vertex positions are int16 for the 4, 8 and 12 bytes formats (1, 2, 7), floats otherwise.
 // A full screen overlay (blood, damage) is a single shape of up to 8 vertices (a quad, a frame) that reaches every edge of the stage.
-bool IsStageOverlayUnsafe(uintptr_t frame, uintptr_t batch, const float* m)
+bool IsStageOverlay(uintptr_t frame, uintptr_t batch, const float* m)
 {
     auto vertices = *reinterpret_cast<uint8_t**>(frame + 0xC);
     auto stride = *reinterpret_cast<int*>(frame + 0x10);
@@ -49,11 +54,6 @@ bool IsStageOverlayUnsafe(uintptr_t frame, uintptr_t batch, const float* m)
     return minX <= -edge && maxX >= edge;
 }
 
-bool IsStageOverlay(uintptr_t frame, uintptr_t batch, const float* m)
-{
-    __try { return IsStageOverlayUnsafe(frame, batch, m); }
-    __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
-}
 
 float fScreenCullBias = 0.0f;
 float fFOVDiff = 1.0f;
@@ -68,25 +68,19 @@ void __cdecl TriggerScreenCullBias(char bStickyCamState)
     //else
     //    options[130] = 1.0f;
 
-    if (!fScreenCullBias) // disable culling
-        options[130] = 0.0001f;
-    else
-        options[130] = fScreenCullBias / fFOVDiff;
+    options[130] = !fScreenCullBias ? 0.0001f : fScreenCullBias / fFOVDiff;
 }
 
 // a menu, dialog or loading screen covers the game
 bool bPillarbox = false;
-// a screen narrower than 16:9 letterboxes the 3D view
-bool bLetterbox = false;
-
 // the HUD viewport was cut to 16:9 (ScaleHUD)
 bool bHUDClipped = false;
 // a full screen movie was cut to 16:9, the screen around it is cleared
-bool bClearMovie = false;
+std::atomic<bool> bClearMovie{ false };
 
 bool IsWide() { return GetAspectRatio() > fDefaultAspectRatio + 0.01f; }
 bool IsNarrow() { return GetAspectRatio() < fDefaultAspectRatio - 0.01f; }
-bool ClipUI() { return (IsWide() && bPillarbox) || (IsNarrow() && (bPillarbox || bLetterbox)); }
+bool ClipUI() { return (IsWide() || IsNarrow()) && bPillarbox; }
 bool ScaleUI() { return (IsWide() || IsNarrow()) && !ClipUI(); }
 
 SafetyHookInline shLetterbox{};
@@ -99,11 +93,6 @@ BOOL __fastcall Letterbox(uintptr_t device, void* edx, int* x, int* y, int* widt
     *y = 0;
     *width = screenWidth;
     *height = screenHeight;
-    if (bLetterbox && screenHeight > 0 && float(screenWidth) / float(screenHeight) < fDefaultAspectRatio - 0.01f)
-    {
-        *height = int(screenWidth / fDefaultAspectRatio);
-        *y = (screenHeight - *height) / 2;
-    }
     return *width != screenWidth || *height != screenHeight;
 }
 
@@ -144,7 +133,7 @@ float* __fastcall Viewport2Movie(uintptr_t scene, void* edx, float* out, const f
         auto movieWidth = 720.0f * GetAspectRatio();
         out[0] = out[0] * movieWidth / 1280.0f - (movieWidth - 1280.0f) * 0.5f;
     }
-    else if (IsNarrow() && !bLetterbox)
+    else if (IsNarrow())
     {
         auto movieHeight = 1280.0f / GetAspectRatio();
         out[1] = out[1] * movieHeight / 720.0f - (movieHeight - 720.0f) * 0.5f;
@@ -152,76 +141,90 @@ float* __fastcall Viewport2Movie(uintptr_t scene, void* edx, float* out, const f
     return result;
 }
 
+SafetyHookInline shBootMovie{};
+SafetyHookMid FullScreenMovieRect{}, ClearMovie{};
+int __cdecl BootMovie(uintptr_t device, uintptr_t textures, float width, float height, int videoWidth, int videoHeight,
+    float left, float top, int nativeScaleX, int nativeScaleY, float opacity, int blend)
+{
+    Cinematics::Video();
+    if (std::isfinite(width) && std::isfinite(height) && width > 0.0f && height > 0.0f &&
+        videoWidth > 0 && videoHeight > 0 && videoWidth <= 16384 && videoHeight <= 16384)
+    {
+        RECT client{};
+        const bool window = WindowHandle && GetClientRect(WindowHandle, &client) && client.right > 0 && client.bottom > 0;
+        // Startup playback applies render-size changes after the movie ends.
+        const auto scale = MovieFrame::Layout(window ? float(client.right) : width, window ? float(client.bottom) : height,
+            videoWidth, videoHeight, FixSettings().Int("MAIN.FMVWidescreenMode"));
+        left = width * (1.0f - scale.x) * 0.5f;
+        top = height * (1.0f - scale.y) * 0.5f;
+    }
+    return shBootMovie.ccall<int>(device, textures, width, height, videoWidth, videoHeight,
+        left, top, nativeScaleX, nativeScaleY, opacity, blend);
+}
+
+void InitMovies()
+{
+    auto boot = find_pattern("55 8B EC 81 EC BC 00 00 00 A1 ? ? ? ? 33 C5 89 45 FC 53 8B 5D 08 56 E8 ? ? ? ? 83 7D 34 00 F3 0F 10 45 30 89 85 58 FF FF FF 0F 5A C0 F2 0F 59 05 ? ? ? ? F2 0F 2C C0 0F B6 C8 89 8D 54 FF FF FF", "55 8B EC 81 EC BC 00 00 00 A1 ? ? ? ? 33 C5 89 45 FC 53 56 8B 75 08 57 8B 7D 0C E8 ? ? ? ? F3 0F 10 45 30 8B 5D 34 89 85 58 FF FF FF 0F 5A C0 F2 0F 59 05 ? ? ? ? F2 0F 2C C0 0F B6 C8");
+    auto rect = hook::pattern("8B 8E BC 00 00 00 89 55 B8 89 45 B4 8B 11 8B 52 28");
+    auto clear11 = hook::pattern("6A 01 6A 00 6A 00 8B CE E8 ? ? ? ? 33 C9 51 51 6A 3E 56 E8");
+    auto clear9 = hook::pattern("6A 01 6A 00 6A 00 50 FF D2 33 D2 52 52 6A 3E 56 E8");
+    shBootMovie = safetyhook::create_inline(boot.get_first(), BootMovie);
+    FullScreenMovieRect = safetyhook::create_mid(rect.get_first(), [](SafetyHookContext& regs)
+    {
+        if (*reinterpret_cast<const uint8_t*>(regs.esi + 0x100) == 0)
+            return;
+        Cinematics::Video();
+        const auto renderer = *reinterpret_cast<const uintptr_t*>(regs.esi + 0xBC);
+        if (!renderer)
+            return;
+        const auto width = *reinterpret_cast<const int*>(renderer + 0x30);
+        const auto height = *reinterpret_cast<const int*>(renderer + 0x34);
+        const auto aspect = bHUDClipped ? fDefaultAspectRatio : GetAspectRatio();
+        const auto scale = MovieFrame::Layout(aspect, 1.0f, width, height, FixSettings().Int("MAIN.FMVWidescreenMode"));
+        auto quad = reinterpret_cast<float*>(regs.ebp - 0x60);
+        for (int i = 0; i < 4; ++i)
+            quad[i] *= i % 2 == 0 ? scale.x : scale.y;
+        bClearMovie = scale.x < 0.9999f || scale.y < 0.9999f;
+    });
+    // Native playback only clears viewport targets; clear the bars of full-screen movies too.
+    if (!clear11.empty())
+    {
+        static auto Clear = reinterpret_cast<void(__fastcall*)(uintptr_t, void*, uint32_t, void*, uint32_t, uint32_t, float, uint32_t)>(
+            injector::GetBranchDestination(clear11.get_first(8)).as_int());
+        ClearMovie = safetyhook::create_mid(clear11.get_first(15), [](SafetyHookContext& regs)
+        {
+            if (bClearMovie.exchange(false))
+                Clear(regs.esi, nullptr, 0, nullptr, 1, 0xFF000000, 1.0f, 0);
+        });
+    }
+    else
+    {
+        ClearMovie = safetyhook::create_mid(clear9.get_first(11), [](SafetyHookContext& regs)
+        {
+            if (bClearMovie.exchange(false))
+            {
+                auto device = *reinterpret_cast<IDirect3DDevice9**>(regs.esi + 0x34);
+                device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
+            }
+        });
+    }
+    if (!shBootMovie || !FullScreenMovieRect || !ClearMovie)
+    {
+        shBootMovie.reset();
+        FullScreenMovieRect.reset();
+        ClearMovie.reset();
+    }
+}
+
 export void InitWidescreenFix()
 {
     auto& settings = FixSettings();
-    auto bUltraWideSupport = settings.Int("MAIN.UltraWideSupport") != 0;
-    bLetterbox = settings.Int("MAIN.Letterbox") != 0;
-    static const auto& fFOVFactor = settings.Float("MAIN.FOVFactor");
     fScreenCullBias = std::clamp(settings.Float("MAIN.ScreenCullBias"), 0.0f, 1.0f);
+    InitMovies();
+    Cinematics::Init();
 
-    if (bUltraWideSupport)
     {
-        auto pattern = find_pattern("F3 0F 10 45 ? 0F 5A C9 0F 5A C0 F2 0F 5E C1 F2 0F 59 05", "F3 0F 10 45 ? 8B 46 34 0F 5A C9");
-        injector::MakeNOP(pattern.get_first(), 5, true);
-        static auto BootSeqCommon__Render_Bink_textures = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            if (GetAspectRatio() > fDefaultAspectRatio)
-                regs.xmm0.f32[0] = (((*(float*)(regs.ebp + 0x14)) * fDefaultAspectRatio) - regs.xmm1.f32[0]) * (-0.5f);
-            else
-                regs.xmm0.f32[0] = *(float*)(regs.ebp + 0x20);
-        });
-
-        // BinkVideoPlayer render (sub_1648F50): full screen movies (the player's +100h set by sub_1648450) are drawn at -1..1 in clip space,
-        // the rect (x0, y0, x1, y1 at [ebp-60h]) is cut to 16:9 here, the D3DVideoRenderer clears the screen black.
-        // Movies drawn in the UI (the title screen background) are already in the 16:9 HUD viewport when it's clipped.
-        pattern = hook::pattern("8B 8E BC 00 00 00 89 55 B8 89 45 B4 8B 11 8B 52 28");
-        static auto BinkFullScreenRect = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            if (*reinterpret_cast<uint8_t*>(regs.esi + 0x100) == 0 || bHUDClipped)
-                return;
-            auto rect = reinterpret_cast<float*>(regs.ebp - 0x60);
-            bClearMovie = IsWide() || IsNarrow();
-            if (IsWide())
-            {
-                auto scale = fDefaultAspectRatio / GetAspectRatio();
-                rect[0] *= scale;
-                rect[2] *= scale;
-            }
-            else if (IsNarrow())
-            {
-                auto scale = GetAspectRatio() / fDefaultAspectRatio;
-                rect[1] *= scale;
-                rect[3] *= scale;
-            }
-        });
-
-        // D3DVideoRenderer render (sub_16DD470) clears the screen only when it draws to a viewport's render target, the bars around
-        // a cut full screen movie would show the last frame. Cleared to black before the movie is drawn (esi is the device).
-        pattern = hook::pattern("6A 01 6A 00 6A 00 8B CE E8 ? ? ? ? 33 C9 51 51 6A 3E 56 E8");
-        if (!pattern.empty())
-        {
-            static auto Clear = reinterpret_cast<void(__fastcall*)(uintptr_t, void*, uint32_t, void*, uint32_t, uint32_t, float, uint32_t)>(injector::GetBranchDestination(pattern.get_first(8)).as_int());
-            static auto MovieClear = safetyhook::create_mid(pattern.get_first(15), [](SafetyHookContext& regs)
-            {
-                if (std::exchange(bClearMovie, false))
-                    Clear(regs.esi, nullptr, 0, nullptr, 1, 0xFF000000, 1.0f, 0);
-            });
-        }
-        else
-        {
-            pattern = hook::pattern("6A 01 6A 00 6A 00 50 FF D2 33 D2 52 52 6A 3E 56 E8");
-            static auto MovieClear = safetyhook::create_mid(pattern.get_first(11), [](SafetyHookContext& regs)
-            {
-                if (std::exchange(bClearMovie, false))
-                {
-                    auto device = *reinterpret_cast<IDirect3DDevice9**>(regs.esi + 0x34);
-                    device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
-                }
-            });
-        }
-
-        pattern = hook::pattern("F2 0F 10 0D ? ? ? ? F2 0F 10 15 ? ? ? ? 89 47 10");
+        auto pattern = hook::pattern("F2 0F 10 0D ? ? ? ? F2 0F 10 15 ? ? ? ? 89 47 10");
         injector::MakeNOP(pattern.get_first(), 8, true);
         static auto FCanvasUtil__SetViewport = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
@@ -233,17 +236,17 @@ export void InitWidescreenFix()
 
         // UD3DRenderDevice
         pattern = hook::pattern("76 23 8B 06");
-        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(0))) = 0xEB; // jbe -> jmp
+        injector::WriteMemory<uint8_t>(pattern.get_first(0), 0xEB, true); // jbe -> jmp
 
         // UD3DRenderDevice letterbox (sub_A804E0, x, y, width, height of the 3D view): the game uses the MonitorAspect setting
         // (video options, the pixel aspect ratio above is 1 now) and letterboxes and pillarboxes the 3D view to 16:9.
-        // Here only a screen narrower than 16:9 is letterboxed, with Letterbox on.
+        // The world uses the full viewport; cinematic framing is applied in its scene projection.
         pattern = hook::pattern("55 8B EC 83 EC 08 8B 81 B4 00 00 00 53 56 8B 75 10 89 06 8B 91 B8 00 00 00 8D 99 B4 00 00 00");
         shLetterbox = safetyhook::create_inline(pattern.get_first(), Letterbox);
 
         // The HUD viewport is full screen and the UI projection is scaled to keep the 1280x720 stage 16:9 in the middle (ScaleUI),
         // what the movies draw outside of it is shown. Screens covering the game (menus, dialogs, loading screens, bPillarbox) and
-        // the letterboxed 3D view are cut to 16:9 instead (ClipUI), with black bars.
+        // loading screens are cut to 16:9 instead (ClipUI), with black bars.
         static auto ScaleHUD = [](auto& x, auto& y, auto& w, auto& h)
         {
             bHUDClipped = ClipUI();
@@ -319,11 +322,16 @@ export void InitWidescreenFix()
         static auto CoveringScene = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             bPillarbox = (regs.ebx & 0xFF) != 0 || IsMenuCursor(); // dialogs over the game use the menu cursor
+            Cinematics::SetCovered((regs.ebx & 0xFF) != 0);
+            Hud::Update(regs.esi, bPillarbox);
         });
 
         // HUD primitive matrix, transposed at [ebp-84h]
-        pattern = find_pattern("E8 ? ? ? ? A1 ? ? ? ? 6A 40 8D 55 BC 52 83 E8 80 B9 10 00 00 00 8D B5 7C FF FF FF", "B9 10 00 00 00 8D 75 BC 8D BD 7C FF FF FF F3 A5");
-        static auto HUDPrimitiveMatrix = safetyhook::create_mid(pattern.get_first(*pattern.get_first<uint8_t>() == 0xE8 ? 5 : 16), [](SafetyHookContext& regs)
+        pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 6A 40 8D 55 BC 52 83 E8 80 B9 10 00 00 00 8D B5 7C FF FF FF");
+        const bool dx11Matrix = !pattern.empty(); // DX11 / DX9
+        if (!dx11Matrix)
+            pattern = hook::pattern("B9 10 00 00 00 8D 75 BC 8D BD 7C FF FF FF F3 A5");
+        static auto HUDPrimitiveMatrix = safetyhook::create_mid(pattern.get_first(dx11Matrix ? 5 : 16), [](SafetyHookContext& regs)
         {
             if (ScaleUI())
                 ScaleRow(reinterpret_cast<float*>(regs.ebp - 0x84));
@@ -382,8 +390,10 @@ export void InitWidescreenFix()
         {
             static bool dx9 = false;
             static int sidesSaved = 0, topSaved = 0;
-            pattern = hook::pattern("80 B8 ? 02 00 00 00 75 0D 80 BD 5F FF FF FF 00");
-            dx9 = *pattern.get_first<uint8_t>(2) == 0xAF;
+            pattern = hook::pattern("80 B8 AF 02 00 00 00 75 0D 80 BD 5F FF FF FF 00");
+            dx9 = !pattern.empty(); // DX9 / DX11
+            if (!dx9)
+                pattern = hook::pattern("80 B8 B3 02 00 00 00 75 0D 80 BD 5F FF FF FF 00");
             static ptrdiff_t sides = dx9 ? 0xB4 : 0xAC;
             static ptrdiff_t top = dx9 ? 0xAC : 0xC0;
             // before the split screen check (+2B3h, DX9 +2AFh), split screen skips the [ebp-A1h] check
@@ -412,8 +422,10 @@ export void InitWidescreenFix()
         }
 
         pattern = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 11 4C 24 ? 05 ? ? ? ? 66 0F 5A C0 F3 0F 11 04 24 50 8B 45 08 50 E8 ? ? ? ? 83 C4 10 5D C3");
-        injector::MakeNOP(pattern.count(2).get(0).get<void>(0), 8, true);
-        static auto ScreenFade1 = safetyhook::create_mid(pattern.count(2).get(0).get<void>(0), [](SafetyHookContext& regs)
+        if (pattern.size() != 2)
+            throw std::runtime_error("Screen-fade signatures not found");
+        injector::MakeNOP(pattern.get(0).get<void>(0), 8, true);
+        static auto ScreenFade1 = safetyhook::create_mid(pattern.get(0).get<void>(0), [](SafetyHookContext& regs)
         {
             if (GetAspectRatio() > fDefaultAspectRatio)
                 regs.xmm1.f32[0] = 1.0f / (GetAspectRatio() / fDefaultAspectRatio);
@@ -421,7 +433,7 @@ export void InitWidescreenFix()
                 regs.xmm1.f32[0] = 1.0f;
         });
 
-        static auto ScreenFade2 = safetyhook::create_mid(pattern.count(2).get(1).get<void>(0), [](SafetyHookContext& regs)
+        static auto ScreenFade2 = safetyhook::create_mid(pattern.get(1).get<void>(0), [](SafetyHookContext& regs)
         {
             if (GetAspectRatio() > fDefaultAspectRatio)
                 regs.xmm1.f32[0] = 1.0f / (GetAspectRatio() / fDefaultAspectRatio);
@@ -448,8 +460,6 @@ export void InitWidescreenFix()
             auto movieWidth = 1280.0f, movieHeight = 720.0f;
             if (aspect > fDefaultAspectRatio)
                 movieWidth = 720.0f * aspect;
-            else if (bLetterbox)
-                height = width / fDefaultAspectRatio; // the position is in the letterboxed 3D view already
             else
                 movieHeight = 1280.0f / aspect;
             *(float*)(regs.eax + 0) = x * movieWidth / width - (movieWidth - 1280.0f) * 0.5f;
@@ -467,40 +477,19 @@ export void InitWidescreenFix()
 
     }
 
-    // FOV
+    // Camera visibility follows the render projection's horizontal field of view.
     {
-        auto pattern = hook::pattern("F3 0F 10 46 ? 0F 57 E4 0F 2E C4");
-        struct CameraImpl__UpdateFOV
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                float val = 0.0f;
-
-                _asm { fstp dword ptr[val] }
-
-                fFOVDiff = val;
-                if (GetAspectRatio() > fDefaultAspectRatio)
-                    val = AdjustFOV(val, GetAspectRatio(), fDefaultAspectRatio);
-
-                val *= std::isfinite(fFOVFactor) ? std::clamp(fFOVFactor, 0.5f, 2.0f) : 1.0f;
-
-                if (val > 162.5f)
-                    val = 162.5f;
-
-                fFOVDiff = val / fFOVDiff;
-
-                *(float*)(regs.esi + 0x34) = val;
-                regs.xmm0.f32[0] = val;
-
-                _asm { fld dword ptr[val] }
-
-                TriggerScreenCullBias(false);
-            }
-        }; injector::MakeInline<CameraImpl__UpdateFOV>(pattern.get_first(0));
-
-        // Cull
-        pattern = hook::pattern("55 8B EC E8 ? ? ? ? 8B C8 E8 ? ? ? ? 80 7D 08 00");
+        auto pattern = hook::pattern("55 8B EC E8 ? ? ? ? 8B C8 E8 ? ? ? ? 80 7D 08 00");
         l3d::GetResource = (l3d::LeadOptions * (*)())injector::GetBranchDestination(pattern.get_first(3), true).as_int();
         shTriggerScreenCullBias = safetyhook::create_inline(pattern.get_first(), TriggerScreenCullBias);
+        UpdateCameraCullBias = [](float ratio)
+        {
+            if (std::isfinite(ratio) && ratio > 0.0f)
+            {
+                fFOVDiff = ratio;
+                TriggerScreenCullBias(false);
+            }
+        };
     }
+    InitCamera();
 }

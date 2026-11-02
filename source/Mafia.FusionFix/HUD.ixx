@@ -7,9 +7,22 @@ module;
 export module HUD;
 
 import ComVars;
+import FrameRate;
 
 export void InitHUD()
 {
+    static const bool legacyHudLayout = []()
+    {
+        auto legacy = hook::pattern("C7 44 24 30 00 00 3E 44 C7 44 24 34 00 00 BE 43");
+        if (!legacy.empty()) // 1.0 HUD layout
+        {
+            legacy.get_first();
+            return true;
+        }
+        auto current = hook::pattern("C7 44 24 30 00 00 20 C2 C7 44 24 34 00 00 5C C3");
+        current.get_first(); // 1.1/1.2 HUD layout
+        return false;
+    }();
     static auto pOnePCurBaseWidth = find_pattern("D8 0D ? ? ? ? D9 5C 24 18 8B 4C 24 18 89 8D C0 90 00 00",
         "D8 0D ? ? ? ? D9 5C 24 20 8B 4C 24 20 89 8E C0 40 00 00 A1 ? ? ? ? 50 8B 08 FF 51 74 89 44 24 20 A1 ? ? ? ? DB 44 24 20 8B 10 50 D8 0D ? ? ? ? D9 5C 24 14 FF 52 70 89 44 24 20 DB 44 24 20 D8 0D ? ? ? ? D9 5C 24 20 E9 ? ? ? ?");
     static auto pOnePCurBaseWidth2 = find_pattern("D8 0D ? ? ? ? 8B 44 24 10 8D 9D E4 91 00 00",
@@ -85,85 +98,31 @@ export void InitHUD()
     static auto pHudLiveBarX = find_pattern("D8 0D ? ? ? ? C7 84 24 84 00 00 00 00 00 00 00 C7 84 24 88 00 00 00 00 00 80 3F 89 9C 24 8C 00 00 00 C7 84 24 94 00 00 00 00 00 00 00 C7 84 24 98 00 00 00 00 00 40 3E");
     static auto pHudCreditsText2X6 = find_pattern("68 00 00 C3 43 52 B9 ? ? ? ? E8 ? ? ? ?");
 
-    if (pOnePCurBaseWidth.size() != 1 ||
-        pOnePCurBaseWidth2.size() != 1 ||
-        pHudSpeedometerX.size() != 1 ||
-        pHudTachometerX.size() != 1 ||
-        pHudSpeedLimiterX.size() != 1 ||
-        pHudTimerX.size() != 1 ||
-        pHudCompasX.size() != 1 ||
-        pHudMinimapX.size() != 1 ||
-        pHudTransmissionX.size() != 1 ||
-        pHudFuelLedX.size() != 1 ||
-        pHudActionBarX.size() != 1 ||
-        pHudHealthBarX.size() != 1 ||
-        pHudHealthBarTextX.size() != 1 ||
-        pHudAmmoBarX.size() != 1 ||
-        pHudAmmoBarTextX.size() != 1 ||
-        pHudSearchBarX.size() != 1 ||
-        pHudProgressBarX.size() != 1 ||
-        pHudProgressBar2X.size() != 1 ||
-        pHudLeftPopupTextX.size() != 1 ||
-        pHudMoneyRightTextX.size() != 1 ||
-        pHudRace321GoX.size() != 1 ||
-        pHudRace321GoX2.size() != 1 ||
-        pHudRaceWrongWayX.size() != 1 ||
-        pHudRaceCheckpointX.size() != 1 ||
-        pHudRaceRightTextX.size() != 1 ||
-        pHudMapTextX.size() != 1 ||
-        pHudBlackCentredTextX.size() != 1 ||
-        pHudCreditsText2X.size() != 1 ||
-        pHudCreditsText2X2.size() != 1 ||
-        pHudCreditsText2X3.size() != 1 ||
-        pHudCreditsText1X.size() != 1 ||
-        pHudCreditsText3X.size() != 1 ||
-        pHudCreditsText3X2.size() != 1 ||
-        pHudCreditsText2X4.size() != 1 ||
-        pHudCreditsText2X5.size() != 1 ||
-        pHudCreditsText1X2.size() != 1 ||
-        pHudCreditsText4X.size() != 1)
-        return;
-    if (nGameVersion == MAFIA_1_0_ENG && (pHudLiveBarX.size() != 1)) return;
-
-    ProtectedGameRef<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>{pOnePCurBaseWidth.get_first<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>(0x2)} = &Screen.fInvBaseWidth;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>{pOnePCurBaseWidth2.get_first<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>(0x2)} = &Screen.fInvBaseWidth;
+    injector::WriteMemory(pOnePCurBaseWidth.get_first(0x2), &Screen.fInvBaseWidth, true);
+    injector::WriteMemory(pOnePCurBaseWidth2.get_first(0x2), &Screen.fInvBaseWidth, true);
 
     const auto ratio = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
     const float hudAspect = ratio ? ClampHudAspectRatio(*ratio, Screen.fAspectRatio) : Screen.fAspectRatio;
     const float inset = (Screen.fBaseWidth - 600.0f * hudAspect) * 0.5f;
-    bWidescreenHUD = FixSettings().Bool("WIDESCREEN.WidescreenHUD");
     static const bool subscribed = []()
     {
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", InitHUD);
-        FixSettings().OnChange("WIDESCREEN.WidescreenHUD", InitHUD);
         return true;
     }();
     (void)subscribed;
 
-    float fixHudLeft;
-    float fixHudCenter;
-    float fixHudRight;
-    if (!bWidescreenHUD)
-    {
-        fixHudLeft = (Screen.fBaseWidth - 800.0f) / 2.0f;
-        fixHudCenter = (Screen.fBaseWidth - 800.0f) / 2.0f;
-        fixHudRight = (Screen.fBaseWidth - 800.0f) / 2.0f;
-    }
-    else
-    {
-        fixHudLeft = inset;
-        fixHudCenter = (Screen.fBaseWidth - 800.0f) / 2.0f;
-        fixHudRight = Screen.fBaseWidth - 800.0f - inset;
-    }
+    const float fixHudLeft = inset;
+    const float fixHudCenter = (Screen.fBaseWidth - 800.0f) / 2.0f;
+    const float fixHudRight = Screen.fBaseWidth - 800.0f - inset;
 
     static float hudSpeedometerX;
     hudSpeedometerX = 189.0f + fixHudLeft;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudSpeedometerX)>>{pHudSpeedometerX.get_first<std::remove_cvref_t<decltype(&hudSpeedometerX)>>(0x2)} = &hudSpeedometerX;
+    injector::WriteMemory(pHudSpeedometerX.get_first(0x2), &hudSpeedometerX, true);
     static float hudTachometerX;
     hudTachometerX = 259.0f + fixHudLeft;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudTachometerX)>>{pHudTachometerX.get_first<std::remove_cvref_t<decltype(&hudTachometerX)>>(0x2)} = &hudTachometerX;
+    injector::WriteMemory(pHudTachometerX.get_first(0x2), &hudTachometerX, true);
     float hudSpeedLimiterX;
-    if (nGameVersion == MAFIA_1_0_ENG)
+    if (legacyHudLayout)
     {
         hudSpeedLimiterX = 760.0f + fixHudRight;
     }
@@ -171,9 +130,9 @@ export void InitHUD()
     {
         hudSpeedLimiterX = -40.0f - fixHudLeft;
     }
-    ProtectedGameRef<std::remove_cvref_t<decltype(hudSpeedLimiterX)>>{pHudSpeedLimiterX.get_first<std::remove_cvref_t<decltype(hudSpeedLimiterX)>>(0x4)} = hudSpeedLimiterX;
+    injector::WriteMemory(pHudSpeedLimiterX.get_first(0x4), hudSpeedLimiterX, true);
     float hudTimerX;
-    if (nGameVersion == MAFIA_1_0_ENG)
+    if (legacyHudLayout)
     {
         hudTimerX = 694.0f + fixHudRight;
     }
@@ -181,15 +140,15 @@ export void InitHUD()
     {
         hudTimerX = -106.0f - fixHudLeft;
     }
-    ProtectedGameRef<std::remove_cvref_t<decltype(hudTimerX)>>{pHudTimerX.get_first<std::remove_cvref_t<decltype(hudTimerX)>>(0x4)} = hudTimerX;
+    injector::WriteMemory(pHudTimerX.get_first(0x4), hudTimerX, true);
     static float hudCompasX;
     hudCompasX = 0.0f + fixHudLeft;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudCompasX)>>{pHudCompasX.get_first<std::remove_cvref_t<decltype(&hudCompasX)>>(0x2)} = &hudCompasX;
+    injector::WriteMemory(pHudCompasX.get_first(0x2), &hudCompasX, true);
     static float hudMinimapX;
     hudMinimapX = 29.0f + fixHudLeft;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudMinimapX)>>{pHudMinimapX.get_first<std::remove_cvref_t<decltype(&hudMinimapX)>>(0x2)} = &hudMinimapX;
+    injector::WriteMemory(pHudMinimapX.get_first(0x2), &hudMinimapX, true);
     static float hudTransmissionX;
-    if (nGameVersion == MAFIA_1_0_ENG)
+    if (legacyHudLayout)
     {
         hudTransmissionX = 758.0f + fixHudRight;
     }
@@ -197,9 +156,9 @@ export void InitHUD()
     {
         hudTransmissionX = 42.0f + fixHudLeft;
     }
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudTransmissionX)>>{pHudTransmissionX.get_first<std::remove_cvref_t<decltype(&hudTransmissionX)>>(0x2)} = &hudTransmissionX;
+    injector::WriteMemory(pHudTransmissionX.get_first(0x2), &hudTransmissionX, true);
     static float hudFuelLedX;
-    if (nGameVersion == MAFIA_1_0_ENG)
+    if (legacyHudLayout)
     {
         hudFuelLedX = 668.0f + fixHudRight;
     }
@@ -207,78 +166,78 @@ export void InitHUD()
     {
         hudFuelLedX = 132.0f + fixHudLeft;
     }
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudFuelLedX)>>{pHudFuelLedX.get_first<std::remove_cvref_t<decltype(&hudFuelLedX)>>(0x2)} = &hudFuelLedX;
+    injector::WriteMemory(pHudFuelLedX.get_first(0x2), &hudFuelLedX, true);
     static float hudActionBarX;
     hudActionBarX = 9.0f + fixHudLeft;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudActionBarX)>>{pHudActionBarX.get_first<std::remove_cvref_t<decltype(&hudActionBarX)>>(0x2)} = &hudActionBarX;
+    injector::WriteMemory(pHudActionBarX.get_first(0x2), &hudActionBarX, true);
     static float hudHealthBarX;
     hudHealthBarX = 7.0f + fixHudLeft;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudHealthBarX)>>{pHudHealthBarX.get_first<std::remove_cvref_t<decltype(&hudHealthBarX)>>(0x2)} = &hudHealthBarX;
+    injector::WriteMemory(pHudHealthBarX.get_first(0x2), &hudHealthBarX, true);
     static float hudHealthBarTextX;
     hudHealthBarTextX = 42.0f + fixHudLeft;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudHealthBarTextX)>>{pHudHealthBarTextX.get_first<std::remove_cvref_t<decltype(&hudHealthBarTextX)>>(0x2)} = &hudHealthBarTextX;
+    injector::WriteMemory(pHudHealthBarTextX.get_first(0x2), &hudHealthBarTextX, true);
     static float hudAmmoBarX;
     hudAmmoBarX = 62.0f + fixHudLeft;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudAmmoBarX)>>{pHudAmmoBarX.get_first<std::remove_cvref_t<decltype(&hudAmmoBarX)>>(0x2)} = &hudAmmoBarX;
+    injector::WriteMemory(pHudAmmoBarX.get_first(0x2), &hudAmmoBarX, true);
     static float hudAmmoBarTextX;
     hudAmmoBarTextX = 112.0f + fixHudLeft;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudAmmoBarTextX)>>{pHudAmmoBarTextX.get_first<std::remove_cvref_t<decltype(&hudAmmoBarTextX)>>(0x2)} = &hudAmmoBarTextX;
+    injector::WriteMemory(pHudAmmoBarTextX.get_first(0x2), &hudAmmoBarTextX, true);
     static float hudSearchBarX;
     hudSearchBarX = 336.0f + fixHudCenter;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudSearchBarX)>>{pHudSearchBarX.get_first<std::remove_cvref_t<decltype(&hudSearchBarX)>>(0x2)} = &hudSearchBarX;
+    injector::WriteMemory(pHudSearchBarX.get_first(0x2), &hudSearchBarX, true);
     static float hudLiveBarX;
     hudLiveBarX = 368.0f + fixHudCenter;
-    if (nGameVersion == MAFIA_1_0_ENG)
+    if (legacyHudLayout)
     {
-        ProtectedGameRef<std::remove_cvref_t<decltype(&hudLiveBarX)>>{pHudLiveBarX.get_first<std::remove_cvref_t<decltype(&hudLiveBarX)>>(0x2)} = &hudLiveBarX;
+        injector::WriteMemory(pHudLiveBarX.get_first(0x2), &hudLiveBarX, true);
     }
     static float hudProgressBarX;
     hudProgressBarX = 250.0f + fixHudCenter;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudProgressBarX)>>{pHudProgressBarX.get_first<std::remove_cvref_t<decltype(&hudProgressBarX)>>(0x11)} = &hudProgressBarX;
+    injector::WriteMemory(pHudProgressBarX.get_first(0x11), &hudProgressBarX, true);
     static float hudProgressBar2X;
     hudProgressBar2X = 350.0f + fixHudCenter;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudProgressBar2X)>>{pHudProgressBar2X.get_first<std::remove_cvref_t<decltype(&hudProgressBar2X)>>(0x18)} = &hudProgressBar2X;
+    injector::WriteMemory(pHudProgressBar2X.get_first(0x18), &hudProgressBar2X, true);
     static float hudLeftPopupTextX;
     hudLeftPopupTextX = 9.0f + fixHudLeft;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudLeftPopupTextX)>>{pHudLeftPopupTextX.get_first<std::remove_cvref_t<decltype(&hudLeftPopupTextX)>>(0x2)} = &hudLeftPopupTextX;
+    injector::WriteMemory(pHudLeftPopupTextX.get_first(0x2), &hudLeftPopupTextX, true);
     static float hudMoneyRightTextX;
     hudMoneyRightTextX = 760.0f + fixHudRight;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudMoneyRightTextX)>>{pHudMoneyRightTextX.get_first<std::remove_cvref_t<decltype(&hudMoneyRightTextX)>>(0x2)} = &hudMoneyRightTextX;
+    injector::WriteMemory(pHudMoneyRightTextX.get_first(0x2), &hudMoneyRightTextX, true);
 
     static float hudRace321goX;
     hudRace321goX = 400.0f + fixHudCenter;
-    if (nGameVersion == MAFIA_1_0_ENG)
+    if (legacyHudLayout)
     {
-        ProtectedGameRef<std::remove_cvref_t<decltype(&hudRace321goX)>>{pHudRace321GoX.get_first<std::remove_cvref_t<decltype(&hudRace321goX)>>(0x2)} = &hudRace321goX;
-        ProtectedGameRef<std::remove_cvref_t<decltype(&hudRace321goX)>>{pHudRace321GoX2.get_first<std::remove_cvref_t<decltype(&hudRace321goX)>>(0x2)} = &hudRace321goX;
+        injector::WriteMemory(pHudRace321GoX.get_first(0x2), &hudRace321goX, true);
+        injector::WriteMemory(pHudRace321GoX2.get_first(0x2), &hudRace321goX, true);
     }
     else
     {
-        ProtectedGameRef<std::remove_cvref_t<decltype(hudRace321goX)>>{pHudRace321GoX.get_first<std::remove_cvref_t<decltype(hudRace321goX)>>(0x1)} = hudRace321goX;
-        ProtectedGameRef<std::remove_cvref_t<decltype(hudRace321goX)>>{pHudRace321GoX2.get_first<std::remove_cvref_t<decltype(hudRace321goX)>>(0x1)} = hudRace321goX;
+        injector::WriteMemory(pHudRace321GoX.get_first(0x1), hudRace321goX, true);
+        injector::WriteMemory(pHudRace321GoX2.get_first(0x1), hudRace321goX, true);
     }
     float hudRaceWrongWayX = 272.0f + fixHudCenter;
-    ProtectedGameRef<std::remove_cvref_t<decltype(hudRaceWrongWayX)>>{pHudRaceWrongWayX.get_first<std::remove_cvref_t<decltype(hudRaceWrongWayX)>>(0x1)} = hudRaceWrongWayX;
+    injector::WriteMemory(pHudRaceWrongWayX.get_first(0x1), hudRaceWrongWayX, true);
     float hudRaceCheckpointX = 390.0f + fixHudCenter;
-    if (nGameVersion == MAFIA_1_0_ENG)
+    if (legacyHudLayout)
     {
-        ProtectedGameRef<std::remove_cvref_t<decltype(hudRaceCheckpointX)>>{pHudRaceCheckpointX.get_first<std::remove_cvref_t<decltype(hudRaceCheckpointX)>>(0x4)} = hudRaceCheckpointX;
+        injector::WriteMemory(pHudRaceCheckpointX.get_first(0x4), hudRaceCheckpointX, true);
     }
     else
     {
-        ProtectedGameRef<std::remove_cvref_t<decltype(hudRaceCheckpointX)>>{pHudRaceCheckpointX.get_first<std::remove_cvref_t<decltype(hudRaceCheckpointX)>>(0x1)} = hudRaceCheckpointX;
+        injector::WriteMemory(pHudRaceCheckpointX.get_first(0x1), hudRaceCheckpointX, true);
     }
     static float hudRaceRightTextX;
     hudRaceRightTextX = 780.0f + fixHudRight;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudRaceRightTextX)>>{pHudRaceRightTextX.get_first<std::remove_cvref_t<decltype(&hudRaceRightTextX)>>(0x2)} = &hudRaceRightTextX;
+    injector::WriteMemory(pHudRaceRightTextX.get_first(0x2), &hudRaceRightTextX, true);
 
     static float hudMapTextX;
     hudMapTextX = 350.0f + fixHudCenter;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudMapTextX)>>{pHudMapTextX.get_first<std::remove_cvref_t<decltype(&hudMapTextX)>>(0x2)} = &hudMapTextX;
+    injector::WriteMemory(pHudMapTextX.get_first(0x2), &hudMapTextX, true);
 
     static float hudBlackCentredTextX;
     hudBlackCentredTextX = 400.0f + fixHudCenter;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudBlackCentredTextX)>>{pHudBlackCentredTextX.get_first<std::remove_cvref_t<decltype(&hudBlackCentredTextX)>>(0x2)} = &hudBlackCentredTextX;
+    injector::WriteMemory(pHudBlackCentredTextX.get_first(0x2), &hudBlackCentredTextX, true);
     static float hudCreditsText1X;
     hudCreditsText1X = 370.0f + fixHudCenter;
     fCreditsTextX = 390.0f + fixHudCenter;
@@ -286,20 +245,20 @@ export void InitHUD()
     hudCreditsText3X = 400.0f + fixHudCenter;
     static float hudCreditsText4X;
     hudCreditsText4X = 410.0f + fixHudCenter;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&fCreditsTextX)>>{pHudCreditsText2X.get_first<std::remove_cvref_t<decltype(&fCreditsTextX)>>(0x2)} = &fCreditsTextX;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&fCreditsTextX)>>{pHudCreditsText2X2.get_first<std::remove_cvref_t<decltype(&fCreditsTextX)>>(0x2)} = &fCreditsTextX;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&fCreditsTextX)>>{pHudCreditsText2X3.get_first<std::remove_cvref_t<decltype(&fCreditsTextX)>>(0x2)} = &fCreditsTextX;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudCreditsText1X)>>{pHudCreditsText1X.get_first<std::remove_cvref_t<decltype(&hudCreditsText1X)>>(0x2)} = &hudCreditsText1X;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudCreditsText3X)>>{pHudCreditsText3X.get_first<std::remove_cvref_t<decltype(&hudCreditsText3X)>>(0x2)} = &hudCreditsText3X;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudCreditsText3X)>>{pHudCreditsText3X2.get_first<std::remove_cvref_t<decltype(&hudCreditsText3X)>>(0x2)} = &hudCreditsText3X;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&fCreditsTextX)>>{pHudCreditsText2X4.get_first<std::remove_cvref_t<decltype(&fCreditsTextX)>>(0x2)} = &fCreditsTextX;
-    ProtectedGameRef<std::remove_cvref_t<decltype(fCreditsTextX)>>{pHudCreditsText2X5.get_first<std::remove_cvref_t<decltype(fCreditsTextX)>>(0x1)} = fCreditsTextX;
-    if (nGameVersion == MAFIA_1_2_ENG)
+    injector::WriteMemory(pHudCreditsText2X.get_first(0x2), &fCreditsTextX, true);
+    injector::WriteMemory(pHudCreditsText2X2.get_first(0x2), &fCreditsTextX, true);
+    injector::WriteMemory(pHudCreditsText2X3.get_first(0x2), &fCreditsTextX, true);
+    injector::WriteMemory(pHudCreditsText1X.get_first(0x2), &hudCreditsText1X, true);
+    injector::WriteMemory(pHudCreditsText3X.get_first(0x2), &hudCreditsText3X, true);
+    injector::WriteMemory(pHudCreditsText3X2.get_first(0x2), &hudCreditsText3X, true);
+    injector::WriteMemory(pHudCreditsText2X4.get_first(0x2), &fCreditsTextX, true);
+    injector::WriteMemory(pHudCreditsText2X5.get_first(0x1), fCreditsTextX, true);
+    if (!pHudCreditsText2X6.empty()) // 1.2 credits layout
     {
-        ProtectedGameRef<std::remove_cvref_t<decltype(fCreditsTextX)>>{pHudCreditsText2X6.get_first<std::remove_cvref_t<decltype(fCreditsTextX)>>(0x1)} = fCreditsTextX;
+        injector::WriteMemory(pHudCreditsText2X6.get_first(0x1), fCreditsTextX, true);
     }
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudCreditsText1X)>>{pHudCreditsText1X2.get_first<std::remove_cvref_t<decltype(&hudCreditsText1X)>>(0x2)} = &hudCreditsText1X;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&hudCreditsText4X)>>{pHudCreditsText4X.get_first<std::remove_cvref_t<decltype(&hudCreditsText4X)>>(0x2)} = &hudCreditsText4X;
+    injector::WriteMemory(pHudCreditsText1X2.get_first(0x2), &hudCreditsText1X, true);
+    injector::WriteMemory(pHudCreditsText4X.get_first(0x2), &hudCreditsText4X, true);
 
 }
 
@@ -309,8 +268,13 @@ export void InitMap()
         "D8 0D ? ? ? ? D9 44 24 14 D8 0D ? ? ? ? D9 44 24 10");
     auto pMapRightX = find_pattern("D8 0D ? ? ? ? 8B 54 24 50 C7 84 24 84 00 00 00 00 00 00 00",
         "D8 0D ? ? ? ? C7 84 24 94 00 00 00 00 00 00 00 C7 84 24 98 00 00 00 00 00 80 3F C7 84 24 D4 00 00 00 00 00 00 00");
-    auto pMapPlayer = find_pattern("D8 8D B8 90 00 00 D9 C9 D8 8D BC 90 00 00 D9 5C 24 44",
-        "D8 4C 24 10 D9 C9 D8 4C 24 14 D9 5C 24 58 DC C0");
+    auto pMapPlayer = hook::pattern("D8 8D B8 90 00 00 D9 C9 D8 8D BC 90 00 00 D9 5C 24 44");
+    bool legacyMapLayout = true;
+    if (pMapPlayer.empty()) // 1.1/1.2 map layout
+    {
+        pMapPlayer = hook::pattern("D8 4C 24 10 D9 C9 D8 4C 24 14 D9 5C 24 58 DC C0");
+        legacyMapLayout = false;
+    }
     auto pMapWidth = find_pattern("D8 0D ? ? ? ? 84 C9 D9 5C 24 40 D8 0D ? ? ? ?",
         "D8 0D ? ? ? ? 84 C9 D9 5C 24 54 D8 0D ? ? ? ?");
     auto pMapScaleX = find_pattern("D8 05 ? ? ? ? D8 1D ? ? ? ? DF E0 25 00 41 00 00 75 ? C7 44 24 34 9A 99 19 3F",
@@ -328,19 +292,6 @@ export void InitMap()
     auto pMapTargetPosX = find_pattern("D8 0D ? ? ? ? D9 5C 24 4C 8B 44 24 4C D8 0D ? ? ? ?",
         "D8 0D ? ? ? ? D9 5C 24 48 8B 44 24 48 D8 0D ? ? ? ?");
 
-    if (pMapLeftX.size() != 1 ||
-        pMapRightX.size() != 1 ||
-        pMapPlayer.size() != 1 ||
-        pMapWidth.size() != 1 ||
-        pMapScaleX.size() != 1 ||
-        pConstant10FMapScaleX.size() != 1 ||
-        pMapScaleX2.size() != 1 ||
-        pMapPosX.size() != 1 ||
-        pMapPosX2.size() != 1 ||
-        pMapPosX3.size() != 1 ||
-        pMapTargetPosX.size() != 1)
-        return;
-
     float fixMapLeft;
     if (!bWidescreenMap)
     {
@@ -351,16 +302,16 @@ export void InitMap()
         fixMapLeft = 0.0f;
     }
     static float mapLeftX = (800.0f * 0.1f + fixMapLeft) / Screen.fBaseWidth;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&mapLeftX)>>{pMapLeftX.get_first<std::remove_cvref_t<decltype(&mapLeftX)>>(0x2)} = &mapLeftX;
+    injector::WriteMemory(pMapLeftX.get_first(0x2), &mapLeftX, true);
     static float mapRightX = 1.0f - mapLeftX;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&mapRightX)>>{pMapRightX.get_first<std::remove_cvref_t<decltype(&mapRightX)>>(0x2)} = &mapRightX;
+    injector::WriteMemory(pMapRightX.get_first(0x2), &mapRightX, true);
     fMapPlayerWidth = Screen.fHeight * (4.0f / 3.0f);
-    if (nGameVersion == MAFIA_1_0_ENG)
+    if (legacyMapLayout)
     {
         // Replace FMUL [ebp+HUD.width] with FMUL [fMapPlayerWidth]. Both
         // encodings occupy six bytes; the following native FXCH stays intact.
-        ProtectedGameRef<std::remove_cvref_t<decltype(uint16_t{0x0DD8})>>{pMapPlayer.get_first<std::remove_cvref_t<decltype(uint16_t{0x0DD8})>>()} = uint16_t{0x0DD8};
-        ProtectedGameRef<std::remove_cvref_t<decltype(&fMapPlayerWidth)>>{pMapPlayer.get_first<std::remove_cvref_t<decltype(&fMapPlayerWidth)>>(0x2)} = &fMapPlayerWidth;
+        injector::WriteMemory(pMapPlayer.get_first(), uint16_t{0x0DD8}, true);
+        injector::WriteMemory(pMapPlayer.get_first(0x2), &fMapPlayerWidth, true);
     }
     else
     {
@@ -384,19 +335,19 @@ export void InitMap()
         }
     }
     static float mapWidth = mapRightX - mapLeftX;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&mapWidth)>>{pMapWidth.get_first<std::remove_cvref_t<decltype(&mapWidth)>>(0x2)} = &mapWidth;
+    injector::WriteMemory(pMapWidth.get_first(0x2), &mapWidth, true);
 
     float mapAspect = (mapWidth / (((800.0f * 0.9f + fixMapLeft) / Screen.fBaseWidth) - mapLeftX));
     static float mapScaleX = 0.4f * mapAspect;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&mapScaleX)>>{pMapScaleX.get_first<std::remove_cvref_t<decltype(&mapScaleX)>>(0x2)} = &mapScaleX;
-    ProtectedGameRef<std::remove_cvref_t<decltype(1.0f - mapScaleX)>>{pConstant10FMapScaleX.get_first<std::remove_cvref_t<decltype(1.0f - mapScaleX)>>(0x4)} = 1.0f - mapScaleX;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&mapScaleX)>>{pMapScaleX2.get_first<std::remove_cvref_t<decltype(&mapScaleX)>>(0x2)} = &mapScaleX;
+    injector::WriteMemory(pMapScaleX.get_first(0x2), &mapScaleX, true);
+    injector::WriteMemory(pConstant10FMapScaleX.get_first(0x4), 1.0f - mapScaleX, true);
+    injector::WriteMemory(pMapScaleX2.get_first(0x2), &mapScaleX, true);
     static float mapPosX = 0.2f * mapAspect;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&mapPosX)>>{pMapPosX.get_first<std::remove_cvref_t<decltype(&mapPosX)>>(0x2)} = &mapPosX;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&mapPosX)>>{pMapPosX2.get_first<std::remove_cvref_t<decltype(&mapPosX)>>(0x2)} = &mapPosX;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&mapPosX)>>{pMapPosX3.get_first<std::remove_cvref_t<decltype(&mapPosX)>>(0x2)} = &mapPosX;
+    injector::WriteMemory(pMapPosX.get_first(0x2), &mapPosX, true);
+    injector::WriteMemory(pMapPosX2.get_first(0x2), &mapPosX, true);
+    injector::WriteMemory(pMapPosX3.get_first(0x2), &mapPosX, true);
     static float mapTargetPosX = 2.5f / mapAspect;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&mapTargetPosX)>>{pMapTargetPosX.get_first<std::remove_cvref_t<decltype(&mapTargetPosX)>>(0x2)} = &mapTargetPosX;
+    injector::WriteMemory(pMapTargetPosX.get_first(0x2), &mapTargetPosX, true);
 }
 
 export void InitText()
@@ -414,51 +365,37 @@ export void InitText()
     auto pTextWidth6 = find_pattern("D8 0D ? ? ? ? D9 1C 24 55 E8 ? ? ? ? 8B F0 85 F6 75 ? 8B 93 00 94 00 00",
         "D8 0D ? ? ? ? 6A 00 51 51 8D 6E 01 8B CB D9 1C 24");
 
-    if (pTextWidth.size() != 1 ||
-        pTextWidth2.size() != 1 ||
-        pTextWidth3.size() != 1 ||
-        pTextWidth4.size() != 1 ||
-        pTextWidth5.size() != 1 ||
-        pTextWidth6.size() != 1)
-        return;
-
     static float textWidth;
-
     textWidth = (800.0f * 0.9f) / Screen.fBaseWidth;
 
-    ProtectedGameRef<std::remove_cvref_t<decltype(&textWidth)>>{pTextWidth.get_first<std::remove_cvref_t<decltype(&textWidth)>>(0x2)} = &textWidth;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&textWidth)>>{pTextWidth2.get_first<std::remove_cvref_t<decltype(&textWidth)>>(0x2)} = &textWidth;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&textWidth)>>{pTextWidth3.get_first<std::remove_cvref_t<decltype(&textWidth)>>(0x2)} = &textWidth;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&textWidth)>>{pTextWidth4.get_first<std::remove_cvref_t<decltype(&textWidth)>>(0x2)} = &textWidth;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&textWidth)>>{pTextWidth5.get_first<std::remove_cvref_t<decltype(&textWidth)>>(0x2)} = &textWidth;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&textWidth)>>{pTextWidth6.get_first<std::remove_cvref_t<decltype(&textWidth)>>(0x2)} = &textWidth;
+    injector::WriteMemory(pTextWidth.get_first(0x2), &textWidth, true);
+    injector::WriteMemory(pTextWidth2.get_first(0x2), &textWidth, true);
+    injector::WriteMemory(pTextWidth3.get_first(0x2), &textWidth, true);
+    injector::WriteMemory(pTextWidth4.get_first(0x2), &textWidth, true);
+    injector::WriteMemory(pTextWidth5.get_first(0x2), &textWidth, true);
+    injector::WriteMemory(pTextWidth6.get_first(0x2), &textWidth, true);
 }
 
 export void InitOthers()
 {
-    auto pFrameDelay = find_pattern("6A 10 8B 08 50 FF 91 F0 00 00 00 33 ED 89 44 24 10",
-        "6A 10 8B 08 50 FF 91 00 01 00 00 33 ED 89 44 24 10");
+    InitFrameRate();
     auto pCreditsCaseCount = find_pattern("83 F8 06 0F 87 ? ? ? ? FF 24 85 ? ? ? ? D9 05 ? ? ? ?");
 
-    if (nFPSLimit > 0 && pFrameDelay.size() == 1)
-        ProtectedGameRef<std::remove_cvref_t<decltype(static_cast<uint8_t>(std::clamp(1000 / nFPSLimit, 0, 127)))>>{pFrameDelay.get_first<std::remove_cvref_t<decltype(static_cast<uint8_t>(std::clamp(1000 / nFPSLimit, 0, 127)))>>(0x1)} = static_cast<uint8_t>(std::clamp(1000 / nFPSLimit, 0, 127));
-    if (pCreditsCaseCount.size() != 1) return;
-    auto dispatch = reinterpret_cast<uintptr_t>(pCreditsCaseCount.get_first()) + 9;
+    if (pCreditsCaseCount.empty()) // 1.2 has no corresponding credits dispatch
+        return;
     static uintptr_t creditsEnd;
     static uintptr_t creditsHUD;
     static uintptr_t creditsDraw;
-    creditsEnd = reinterpret_cast<uintptr_t>(pCreditsCaseCount.get_first()) + 9 + Field<int32_t>(reinterpret_cast<uintptr_t>(pCreditsCaseCount.get_first()), 5);
+    creditsEnd = reinterpret_cast<uintptr_t>(hook::get_pattern("D9 05 ? ? ? ? D8 0D ? ? ? ? 6A 00 6A 00 6A 04 6A FF 83 EC 10 8D ? 0C"));
     auto pDraw = find_pattern("8B 44 24 24 8B 54 24 20 D9 44 24 14 D8 89 C4 90 00 00",
         "8B 44 24 24 8B 54 24 20 D9 44 24 14 D8 89 C4 40 00 00");
-    auto draw = pDraw.size() == 1 ? reinterpret_cast<uintptr_t>(pDraw.get_first()) : 0;
-    // Native case C uses the same HUD singleton as the missing line.
-    auto table = Field<uintptr_t>(dispatch, 3);
-    auto nativeCase = Field<uintptr_t>(table, 8);
-    uintptr_t hud = 0;
-    for (size_t i = 0; i < 100; ++i)
-        if (Field<uint8_t>(nativeCase, i) == 0xB9 && Field<uint8_t>(nativeCase, i + 5) == 0xE8)
-        { hud = Field<uintptr_t>(nativeCase, i + 1); break; }
-    if (!draw || !hud) return;
+    auto draw = reinterpret_cast<uintptr_t>(pDraw.get_first());
+    auto hudSite = hook::pattern("D9 44 24 2C D8 05 ? ? ? ? D8 0D ? ? ? ? D9 5C 24 04 D9 05 ? ? ? ? D8 0D ? ? ? ? D9 1C 24 51 B9 ? ? ? ? E8 ? ? ? ? DD D8 D9 05");
+    uintptr_t hud;
+    if (!hudSite.empty()) // 1.0
+        hud = *hudSite.get_first<uintptr_t>(37);
+    else // 1.1
+        hud = *hook::pattern("D9 44 24 2C D8 05 ? ? ? ? D8 0D ? ? ? ? D9 5C 24 04 D9 05 ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24 51 B9 ? ? ? ? E8 ? ? ? ? DD D8 D9 05").get_first<uintptr_t>(43);
     creditsDraw = draw;
     creditsHUD = hud;
     static auto CreditsHook = safetyhook::create_mid(reinterpret_cast<uintptr_t>(pCreditsCaseCount.get_first()), [](SafetyHookContext& regs)

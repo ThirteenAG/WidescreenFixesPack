@@ -12,9 +12,7 @@ import ComVars;
 namespace Camera
 {
     struct Vector { float x, y, z; };
-    SafetyHookInline shInput, shUpdate, shPlace, shAim;
-    uint8_t *pControlFlags, *pInvertLook;
-    float *pSensitivityX, *pSensitivityY;
+    SafetyHookInline shUpdate, shPlace, shAim;
     uintptr_t input, owner, vehicle;
     uint32_t inputFrame, consumedFrame;
     DWORD inputTick, cameraTick;
@@ -38,24 +36,26 @@ namespace Camera
     {
         value = 0.0f;
         stick = false;
-        size_t actionsOffset = nGameVersion == MAFIA_1_0_ENG ? 192 : 196;
+        const size_t actionsOffset = InputBindingsOffset + 16;
         auto values = Field<uintptr_t>(input, actionsOffset);
         auto valuesEnd = Field<uintptr_t>(input, actionsOffset + 4);
         if (values && valuesEnd >= values + (action + 1) * sizeof(float))
         {
             float current = Field<float>(values, action * sizeof(float));
-            if (std::isfinite(current)) value = std::clamp(current, -1.0f, 1.0f);
+            if (std::isfinite(current)) value = current;
         }
-        size_t bindingsOffset = nGameVersion == MAFIA_1_0_ENG ? 176 : 180;
+        const size_t bindingsOffset = InputBindingsOffset;
         auto bindings = Field<uintptr_t>(input, bindingsOffset);
         auto bindingsEnd = Field<uintptr_t>(input, bindingsOffset + 4);
         if (bindings && bindingsEnd >= bindings + (action + 1) * 12)
             stick = Field<uint16_t>(bindings + action * 12, 4) == 3;
+        stick |= action >= 0 && static_cast<size_t>(action) < ModernPadActions.size() && ModernPadActions[action];
+        if (stick || !FixSettings().Bool("MAIN.RawInputMouse"))
+            value = std::clamp(value, -1.0f, 1.0f);
     }
 
-    void __fastcall UpdateInput(uintptr_t _this, void*, uint32_t poll)
+    void CaptureInput(uintptr_t _this)
     {
-        shInput.unsafe_thiscall(_this, poll);
         input = _this;
         // Read the same look actions as the native aiming camera, after their
         // configured mouse/joystick bindings, normalization and deadzones.
@@ -95,7 +95,7 @@ namespace Camera
             auto mode = Field<int>(_this, 16);
             auto car = Field<uintptr_t>(_this, 12);
             if (mode < 7 || mode > 9 || !car || Field<uint8_t>(_this, 32) ||
-                (*pControlFlags & 1) || std::abs(Field<float>(_this, 48)) > 0.001f ||
+                (nControlFlags & 1) || std::abs(Field<float>(_this, 48)) > 0.001f ||
                 (cameraTick && now - cameraTick > 250))
                 Reset();
             else if (owner != _this || vehicle != car)
@@ -110,7 +110,8 @@ namespace Camera
         const int result = shUpdate.unsafe_thiscall<int>(_this, elapsed);
         const int mode = Field<int>(_this, 16);
         GameplayCamera = Field<uintptr_t>(_this, 4);
-        GameplayFovEnabled = GameplayCamera && pControlFlags && !(*pControlFlags & 1) &&
+        GameplayDriving = mode >= 7 && mode <= 9 && Field<uintptr_t>(_this, 12) && !Field<uint8_t>(_this, 32);
+        GameplayFovEnabled = GameplayCamera && !(nControlFlags & 1) &&
             (mode == 1 || (mode >= 7 && mode <= 9)) && !Field<uint8_t>(_this, 32) &&
             !Field<uint8_t>(_this, 148) && std::abs(Field<float>(_this, 48)) <= 0.001f;
         return result;
@@ -129,9 +130,9 @@ namespace Camera
         if (!aiming)
         {
             ConsumeLook(deltaX, deltaY);
-            deltaX *= *pSensitivityX * 3.0f;
-            deltaY *= *pSensitivityY * 2.0f;
-            if (*pInvertLook) deltaY = -deltaY;
+            deltaX *= fMouseSensitivityX * 3.0f;
+            deltaY *= fMouseSensitivityY * 2.0f;
+            if (bInvertMouse) deltaY = -deltaY;
         }
         bool hasInput = std::abs(deltaX) + std::abs(deltaY) > 0.00001f;
         if (!engaged)
@@ -182,43 +183,41 @@ namespace Camera
     }
 }
 
-export void InitCamera()
+export void CaptureCameraInput(uintptr_t object)
+{
+    if (Camera::FreeCameraEnabled)
+        Camera::CaptureInput(object);
+}
+
+export void InitCamera(bool inputHookInstalled)
 {
     using namespace Camera;
-    auto update = find_pattern("81 EC ? ? ? ? 53 55 56 8B F1 33 ED 57 8B 46 04 8B 7E 1C 3B C5");
+    auto update = find_pattern(
+        "64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 64 89 25 00 00 00 00 81 EC ? ? ? ? 53 55 56 8B F1 33 ED 57 8B 46 04 8B 7E 1C 3B C5", // 1.0 SEH prologue
+        "81 EC ? ? ? ? 53 55 56 8B F1 33 ED 57 8B 46 04 8B 7E 1C 3B C5"); // 1.1 and 1.2
     auto aim = find_pattern("A0 ? ? ? ? 83 EC 24 A8 01 56 57 8B F9 0F 85");
-    if (update.size() != 1 || aim.size() != 1)
-    {
-        OutputDebugStringA("Mafia: gameplay camera state patterns unavailable.\n");
-        return;
-    }
-    pControlFlags = *aim.get_first<uint8_t*>(1);
+    nControlFlags.SetAddress(*aim.get_first<uint8_t*>(1));
     shUpdate = safetyhook::create_inline(update.get_first(), UpdateCamera);
     if (!shUpdate || !FixSettings().Bool("CAMERA.FreeCamera")) return;
     CameraReturnTimeout = std::max(FixSettings().Float("CAMERA.CameraReturnTimeout"), 0.0f);
     CameraReturnSpeed = std::max(FixSettings().Float("CAMERA.CameraReturnSpeed"), 0.0f);
 
-    auto input = find_pattern("83 EC ? 53 8A 5C 24 ? 55 8B E9 56 57 8B 45 08 85 C0 74 ? 8B 4D 0C 2B C8 B8 EB A0 0E EA");
     auto place = find_pattern("83 EC 3C 8B 44 24 44 56 8B F1 8B 08 89 4C 24 04 8B 50 04 89 54 24 08");
-    if (input.size() != 1 || update.size() != 1 || place.size() != 1 || aim.size() != 1) return;
     auto aimStart = reinterpret_cast<uintptr_t>(aim.get_first());
     auto horizontal = hook::range_pattern(aimStart, aimStart + 0x100,
         "D9 05 ? ? ? ? D8 4C 24 ? DF E0 D8 0D ? ? ? ? F6 C4 05 D8 2D");
     auto vertical = hook::range_pattern(aimStart, aimStart + 0x100,
         "D9 05 ? ? ? ? D8 4C 24 ? A0 ? ? ? ? 84 C0 DF E0 DC C0");
-    if (horizontal.size() != 1 || vertical.size() != 1) return;
-    pControlFlags = *aim.get_first<uint8_t*>(1);
-    pSensitivityX = *horizontal.get_first<float*>(2);
-    pSensitivityY = *vertical.get_first<float*>(2);
-    pInvertLook = *vertical.get_first<uint8_t*>(11);
-    shInput = safetyhook::create_inline(input.get_first(), UpdateInput);
+    nControlFlags.SetAddress(*aim.get_first<uint8_t*>(1));
+    fMouseSensitivityX.SetAddress(*horizontal.get_first<float*>(2));
+    fMouseSensitivityY.SetAddress(*vertical.get_first<float*>(2));
+    bInvertMouse.SetAddress(*vertical.get_first<uint8_t*>(11));
     shPlace = safetyhook::create_inline(place.get_first(), PlaceCamera);
     shAim = safetyhook::create_inline(aim.get_first(), AimCamera);
-    FreeCameraEnabled = shInput && shPlace && shAim;
+    FreeCameraEnabled = inputHookInstalled && shPlace && shAim;
     if (!FreeCameraEnabled)
     {
         shAim.reset();
         shPlace.reset();
-        shInput.reset();
     }
 }

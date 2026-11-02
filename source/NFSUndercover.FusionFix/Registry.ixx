@@ -3,7 +3,7 @@ module;
 #include <stdafx.h>
 #include <FunctionHookMinHook.hpp>
 #include "FixSettings.hpp"
-#include "../Shared/NFS/LanguageSetting.hpp"
+#include "Shared/NFS/LanguageSetting.hpp"
 
 export module Registry;
 
@@ -20,8 +20,14 @@ static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, 
         int folder = csidl & ~CSIDL_FLAG_CREATE;
         if (folder == CSIDL_PERSONAL)
         {
+            const auto path = CustomUserDir.u8string();
+            if (path.size() >= MAX_PATH)
+            {
+                pszPath[0] = '\0';
+                return HRESULT_FROM_WIN32(ERROR_FILENAME_EXCED_RANGE);
+            }
             CreateDirectoryW(CustomUserDir.c_str(), NULL);
-            memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
+            memcpy(pszPath, path.c_str(), path.size() + 1);
             return S_OK;
         }
     }
@@ -53,8 +59,7 @@ namespace Language
         { "Polish", 17 }, { "Finnish", 18 }, { "Russian", 15 },
     };
 
-    // The name of a language's text files, from the game's table ({id, type, name, filter, locale}); the Steam
-    // build's table when it isn't found
+    // The name of a language's text files, from the game's table ({id, type, name, filter, locale}).
     std::string FileName(int32_t id)
     {
         struct LanguageInfo
@@ -67,28 +72,13 @@ namespace Language
         };
         static_assert(sizeof(LanguageInfo) == 0x14);
 
-        auto pattern = hook::pattern("8B 54 24 04 33 C9 B8 ? ? ? ? EB 03 8D 49 00 39 10 74 12");
-        if (!pattern.empty())
+        static auto table = hook::pattern("8B 54 24 04 33 C9 B8 ? ? ? ? EB 03 8D 49 00 39 10 74 12").get_first<uint8_t>();
+        auto begin = *reinterpret_cast<LanguageInfo**>(table + 7);
+        auto end = *reinterpret_cast<LanguageInfo**>(table + 0x1B);
+        for (auto info = begin; info < end; ++info)
         {
-            auto begin = *pattern.get_first<LanguageInfo*>(7);
-            auto end = *pattern.get_first<LanguageInfo*>(0x1B);
-            for (auto info = begin; info < end; ++info)
-            {
-                if (info->id == id)
-                    return info->name ? info->name : "UNKNOWN";
-            }
-            return "UNKNOWN";
-        }
-
-        static const std::pair<int32_t, const char*> steam[] = {
-            { 0, "ENGLISH" }, { 1, "FRENCH" }, { 2, "GERMAN" }, { 3, "ITALIAN" }, { 4, "SPANISH" }, { 5, "DUTCH" },
-            { 6, "SWEDISH" }, { 17, "POLISH" }, { 18, "FINNISH" }, { 7, "DANISH" }, { 8, "HUNGARIAN" }, { 9, "CZECH" },
-            { 10, "MEXICAN" }, { 15, "RUSSIAN" }, { 19, "NORWEGIAN" }, { 14, "JAPANESE" },
-        };
-        for (auto& [languageId, name] : steam)
-        {
-            if (languageId == id)
-                return name;
+            if (info->id == id)
+                return info->name ? info->name : "UNKNOWN";
         }
         return "UNKNOWN";
     }

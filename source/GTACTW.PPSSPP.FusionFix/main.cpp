@@ -1,3 +1,4 @@
+#include "../Shared/Console/PatchNotice.hpp"
 #include "Game.hpp"
 #include "../Shared/Console/PortableCfg.hpp"
 extern "C" { PSP_MODULE_INFO("GTACTW.FusionFix", PSP_MODULE_USER, 2, 0); }
@@ -9,11 +10,25 @@ injector::hook_back<void()> boot;
 int Radio() { return 1; }
 void Boot() { boot.fun(); Unthrottle(false); }
 int Install() {
-    if (!BeginReported()) return -1;
+    if (!BeginWithNotice()) return -1;
     if (!InitializeAddresses())
     {
-        logger.Write("Fix disabled: unsupported game code. Use a supported game version.\n");
+        PatchNotice("Fusion Fix: unsupported game code; the fix is not installed. Use a supported game version.\n");
         return -1;
+    }
+    const bool radioEnabled = Option("RadioInAllVehicles", true);
+    constexpr auto radioCyclePattern = "01 00 A5 24 2A 20 85 00";
+    uintptr_t radioCycle = 0;
+    if (radioEnabled)
+    {
+        radioCycle = pattern.get_first(radioCyclePattern, 8);
+        if (!radioCycle || pattern.get(1, radioCyclePattern, 8) ||
+            pattern.text_size < 20 || radioCycle < pattern.text_addr ||
+            radioCycle - pattern.text_addr > pattern.text_size - 20)
+        {
+            radioCycle = 0;
+            PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
+        }
     }
     // Keep movie setup and the intervening loading/notice initialization. The
     // native completion call can stop the startup movie as soon as loading ends.
@@ -26,16 +41,14 @@ int Install() {
     InstallInput();
     InstallCamera();
     InstallReplay();
-    InstallHud();
-    InstallVideo();
+    if (InstallHud()) InstallVideo();
 #ifndef NDEBUG
     logger.WriteF("HUD patches: %u", unsigned(injector::detail::startup.error));
 #endif
-    if (Option("RadioInAllVehicles", 1)) {
+    if (radioCycle) {
         radio = safetymips::create_inline(Address<0x0884F52C>(), Radio);
         // Remove the two conditional skip tests, retaining their delay slots.
-        const auto cycle = pattern.get_first("01 00 A5 24 2A 20 85 00", 8);
-        injector::MakeNOP(cycle); injector::MakeNOP(cycle + 16);
+        injector::MakeNOP(radioCycle); injector::MakeNOP(radioCycle + 16);
     }
     if (Option("UnthrottleEmuDuringLoading", 1)) {
         boot.fun = injector::MakeCALL(Address<0x088CFC1C>(), Boot).get();
@@ -56,13 +69,16 @@ extern "C" int module_start(SceSize, void*) {
     // Only CFG is opened; the old fix INI is never read or migrated.
     console::portable::IniValue values[] = {
         {"MAIN", "SkipIntro", "1"},
-        {"MAIN", "ForceAspectRatio", "auto"},
+        {"MAIN", "ForceAspectRatio", "Auto"},
         {"MAIN", "ModernControls", "1"},
         {"MAIN", "Enable3rdPersonCamera", "1"},
         {"MAIN", "RadioInAllVehicles", "1"},
         {"MAIN", "UnthrottleEmuDuringLoading", "1"},
         {"MAIN", "UnlockXinMissionsInReplayBoard", "0"},
         {"MAIN", "HudScale", "1"},
+        {"MAIN", "HudAspectRatioConstraint", "Auto"},
+        {"MAIN", "FOVFactor", "1.0"},
+        {"MAIN", "CutsceneBorders", "3"},
     };
     (void)console::portable::CompleteCfg("ms0:/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.cfg", values);
     return ctw::Install();

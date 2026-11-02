@@ -2,7 +2,7 @@
 
 <img src="https://user-images.githubusercontent.com/4904157/196225002-83a52973-0588-4c65-8019-581bffc7c1b8.gif" width="760" alt="Scarface: The World Is Yours Fusion Fix">
 
-**Scarface: The World Is Yours Fusion Fix** corrects mouse look and framerate-dependent behavior, adds widescreen HUD placement and controller prompts, and provides native fullscreen, framed and borderless window modes and optional PS2 character blood effects.
+**Scarface: The World Is Yours Fusion Fix** adds in-game settings, widescreen framing and controller prompts, and corrects mouse input and framerate-dependent behavior.
 
 [Website](https://thirteenag.github.io/wfp#scarface) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/tree/master/source/Scarface.FusionFix)
 
@@ -10,98 +10,39 @@
 
 ---
 
-## Fixes
+## Settings
 
-- **Mouse look** — Correct mouse look behavior.
-- **Gamepad** — Support controllers through [Xidi](https://github.com/samuelgr/Xidi).
-- **Gamepad controls** — Use triggers to brake/accelerate and aim/shoot.
-- **Controller prompts** — Show button icons according to the last keyboard, mouse, or controller input. Icons and controls-menu binding names follow the active Xidi profile, including changes while a dialog is open.
-- **Weapon selection** — Scroll through weapons with the mouse wheel.
-- **Windowed mode** — Select fullscreen, a framed window at the chosen resolution, or desktop borderless through the game's native display path. Framing is DPI-aware and keeps full render dimensions, including a desktop-sized client.
-- **Widescreen HUD** — Reposition HUD elements and notifications for the chosen aspect ratio, with an option to retain the original 4:3 placement.
-- **Skip intro** — Skip the legal/license screen, intro movies, and press-to-start screen.
-- **Background startup** — Fix the input-acquisition loop that can hang the game when it launches without focus.
-- **High framerates** — Correct the animation update's minimum frame delta, rage depletion rate, and mortar up-force decay.
-- **Weapon recoil** — Correct the horizontal recoil maximum, which originally reads the minimum value.
+Use the bundled `vorbisfile.dll` ASI loader together with Xidi's `dinput8.dll`, `Xidi.32.dll` and `Xidi.ini`.
 
-## Options
+Open **Options → Plugins → Scarface Fusion Fix**. Other plugins with settings appear beside it. Left and Right change a value; Enter selects a page or confirms a preset. Move from an option to **Details** to read its help, with **More pages** for longer descriptions. Back returns through the pages. A separate restart line appears when a startup setting changes.
 
-- **Vehicle camera** — Delay automatic recentering after stick or mouse look; the default is 3 seconds. Right-mouse-button aim hold keeps its existing behavior.
-- **Character blood** — Restore the PS2-style blood texture pass on characters using the game's joint damage and blood texture.
-- **Console gamma** — Apply a custom gamma curve similar to GTA IV on Xbox 360.
-- **Antialiasing** — Enable SMAA post-processing antialiasing; it does not work with MSAA.
+The fix creates `scripts/Scarface.FusionFix.cfg` on first launch. FusionFixHub uses the same settings. FusionFixHub or the developer overlay can override the fix's text language; Auto follows the game's language when it is supported. Vanilla, Recommended and Enhanced presets apply the settings that list preset values; controller artwork and window mode remain personal choices.
 
-The fix creates `scripts/Scarface.FusionFix.cfg` on first launch. Configure it on fusionfix.io or in FusionFixHub; the FOV multiplier, HUD aspect constraint, window mode, raw mouse switch, mouse sensitivity and focus-pause policy, movie framing, cutscene borders, vehicle recenter delay and frame-rate limit apply while the game runs. Other settings apply after restarting the game. An old `scripts/Scarface.FusionFix.ini` isn't used anymore and can be deleted. Vanilla disables the added raw mouse input, cursor confinement and timing/recoil corrections; Recommended restores their defaults. Window mode, sensitivity and controller artwork remain the player’s choices.
+## Display and camera
 
-| Setting | Default | Behavior |
-|:---|:---|:---|
-| Frame Rate Limit | 60 | Frame cap from 30 to 1000, Unlimited, or the monitor's refresh rate; applies while playing. The game's vertical sync may set a lower cap. |
-| Cutscene Borders | Both | Letterboxed cinematic cameras: crop without bars, letterbox, pillarbox or both. |
-| Movie Framing | Fill | Original aspect with black bars, crop to fill, or stretch; applies while playing. |
-| Pause in Background | On | Pauses and mutes the game when it loses focus; turn off to keep it running. Applies while playing. |
-| Raw Mouse Input | On | Uses the mouse's raw movement; turn off to use cursor-based movement. |
-| Mouse Sensitivity Multiplier | 1.0 | Multiplier for the game's mouse slider, from 0.1 to 5.0; applies while playing. |
-| Field of view | 1.0 | Multiplies the normal gameplay field of view, from 0.5 to 2.0; applies while playing. |
-| Skip Intro | On | Skips the legal screen, intro movies and press-to-start screen. |
-| Modern Controls | On | Modern on-foot and vehicle controls for controllers (through the bundled Xidi). |
-| Controller Prompts | On | Switches between keyboard labels and controller icons with the last input. |
-| Gamepad Icons | Xbox 360 | Button artwork and controls-menu names: Xbox 360, Xbox One, PS3, PS4, PS5, Switch, Steam Deck or Steam Controller. Restart the game after changing it. |
-| Mouse Wheel Weapons | On | Selects weapons with the mouse wheel. |
-| Vehicle Camera Recenter Delay | 3.0 | Seconds before the vehicle camera recenters; 0 removes the delay. Applies while playing. |
-| Window Mode | Fullscreen | Fullscreen, framed window or desktop borderless. |
-| HUD Aspect Ratio | Auto | Auto uses the screen's aspect ratio; 4:3 keeps the original HUD placement; other ratios such as 16:9 work too. Applies while playing. |
-| Character Blood | On | Restores the character blood effects. |
-| Console Gamma | Off | Console-style gamma. |
-| SMAA | Off | SMAA anti-aliasing; turn the game's MSAA off first. |
+- **Window mode:** native fullscreen, a framed window at the selected resolution, or monitor-sized borderless. The native display path handles resolution changes and Alt+Enter. Window framing is DPI aware.
+- **Field of view:** multiplies the ordinary gameplay camera from 0.5 to 2, with an effective horizontal limit of 150°. 1 keeps the normal view unless it already exceeds the limit. Aiming, scoped views, cinematic cameras and blends keep their own camera behavior.
+- **Cutscene borders:** Both keeps the original cinematic frame on wide and narrow displays. Off fills the screen and extends the sides on wider displays. Letterbox and Pillarbox keep only the named borders.
+- **Movie framing:** Original fits the whole movie in a centered 4:3 area; Fill fits it to the screen.
+- **HUD aspect ratio:** Auto uses the screen width; a ratio places HUD elements within a centered area. Menus retain their authored layout.
+- **Frame-rate limit:** 30–1000 fps, monitor refresh, or Unlimited. Vehicle camera smoothing, animation timing, rage depletion and mortar force stay correct at any frame rate.
 
-The following compatibility fixes are on by default:
+## Input
 
-| Setting | Default |
-|:---|:---|
-| Vehicle camera smoothing | On |
-| Animation Timing Fix | On |
-| Rage Timing Fix | On |
-| Mortar Timing Fix | On |
-| Recoil Range Fix | On |
+Controllers use the game's DirectInput support through bundled Xidi, with its XInput backend. Modern controls provide separate on-foot and vehicle mappings. The native Controls menu retains sensitivity, inversion, vibration and binding options.
 
-The controls configuration screen rebinds the selected row when a controller button is pressed. Assigning a button already used by another row can leave that row **Unbound**. The controller exit prompt uses **Start**, matching the game's binding for that screen.
+**Gamepad Icons** applies live. Auto uses Xbox artwork; PlayStation and Nintendo are manual choices, with additional Xbox One, PS3/PS4 and Steam families. Prompts follow the last input device and active mappings. **Controller Camera Speed** multiplies the native right-stick values without changing mouse sensitivity. Turning off native Vibration or leaving the game window stops native feedback.
 
-The FOV multiplier applies immediately to normal follow/free-look and vehicle/boat cameras. Scripted views, aiming, sniper zoom and transitions keep their original framing. HUD width also changes immediately. Alt+Enter and Window Mode remember the framed window’s size and position; a failed mode change returns to the previous mode.
+Raw mouse input uses mouse movement directly, with a separate multiplier for the native mouse slider. Vehicle recenter delay defaults to three seconds. Cursor confinement releases on focus loss, window moves, system menus and while the developer overlay owns input. **Pause in Background** pauses and mutes the game; turn it off to keep the game running in the background. The game pauses while minimized and restores its display when reopened.
 
-Raw mouse input provides relative movement for the camera and map. Absolute pointing devices use the game’s cursor controls. Controller bindings and prompts follow the selected Xidi profile.
+## Other features
 
-Pause on Focus Loss pauses the game in the background. Disable it to keep playing and audio running while another application is active.
+Optional SMAA, console-style gamma and PS2 character blood use the native Direct3D 9 renderer. Skip Intro skips startup legal screens, logos and the single-button load-success notice. Skip Press Start separately bypasses the start screen. Weapons use their real maximum recoil. Ctrl+F10 opens the Supporter developer overlay; Debug → Info shows the version, build time, graphics API and resolution.
 
-Video Mode offers the original picture with black bars, crop to fill, or stretch. It preserves the source picture’s proportions unless Stretch is selected. This setting does not enable larger replacement movie files.
-
-Cutscene Borders applies to letterboxed cinematic views. Removing the bars crops the picture; pillarboxing keeps the original camera width. Subtitles remain above the bars. Other cinematic views keep their original framing. Bars switch immediately.
-
-The frame limit can change during play; the game’s vertical sync may impose a lower limit. Vehicle camera smoothing keeps the original feel as the frame rate changes.
-
-The native resolution picker uses detected Windows sizes supported by the active renderer instead of a fixed list. Native refresh queries select the highest matching rate. First launch and invalid saved dimensions use the physical desktop; valid saved sizes remain intact.
-
-**Confine cursor** keeps the pointer inside the game window. It can be changed while playing and is enabled by default. The pointer is released when you leave the game, drag its window, open a system menu or turn the option off.
+Check for Updates defaults to Off and makes no request while disabled. When enabled, a newer fix version produces a notice in Options. FusionFixHub opens on the update after the game exits when it is installed.
 
 ## Known limits
 
-- Anti-aliasing offers Off and SMAA through `GRAPHICS.AntiAliasing`; it remains off by default and has no sharpness control. Turn off the game’s MSAA before enabling SMAA.
-- Update notices and an in-game restart warning are not supported.
-
-- Controller icons follow the **Gamepad Icons** setting; the icon family isn't detected from the connected pad.
-- The default frame rate limit is 60 FPS: physics and scripted sequences weren't checked at higher frame rates.
-- Movies keep the resolution of their source files.
-- No in-game settings menu; FusionFixHub and fusionfix.io change the settings.
-
-## Installation
-
-Keep SilentPatch installed alongside FusionFix; it remains a required part of the installation.
-
-1. Download and install [SilentPatch](https://github.com/CookiePLMonster/SilentPatchScarface/releases/latest). It includes required [ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader).
-2. Download and unpack [Scarface.FusionFix.zip](https://github.com/ThirteenAG/WidescreenFixesPack/releases/download/scarface/Scarface.FusionFix.zip) to game's root folder.
-   Keep the bundled `Xidi.32.dll` and `Xidi.ini` in the game folder so controller prompts can resolve the active profile's mappings.
-3. After the first launch, use fusionfix.io or FusionFixHub to configure the fix.
-4. Launch the game.
-
-
-
-<p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile-dark.svg"><source media="(max-width: 768px)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile.svg"><source media="(prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-dark.svg"><img width="100%" src="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>
+- SMAA requires the game's MSAA to be disabled and has no sharpness control.
+- Modern controls, startup corrections and several graphics options need a restart; the in-game warning identifies a pending restart.
+- Controllers need XInput for the bundled mapping and activity tracking. Selecting an icon family changes the artwork, not the binding.

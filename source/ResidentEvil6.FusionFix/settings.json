@@ -56,12 +56,7 @@
       "apply": "live",
       "control": [
         "cycler"
-      ],
-      "presets": {
-        "vanilla": "Auto",
-        "recommended": "Auto",
-        "enhanced": "Auto"
-      }
+      ]
     },
     {
       "id": "MAIN.FOVFactor",
@@ -79,12 +74,7 @@
       "apply": "live",
       "control": [
         "slider"
-      ],
-      "presets": {
-        "vanilla": 1.0,
-        "recommended": 1.0,
-        "enhanced": 1.0
-      }
+      ]
     },
     {
       "id": "MAIN.CutsceneBorders",
@@ -124,9 +114,34 @@
       }
     },
     {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@fmv.original"
+        },
+        {
+          "value": 1,
+          "label": "@fmv.fill"
+        }
+      ],
+      "label": "@fmv",
+      "description": "@fmv.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "MAIN.FPSLimit",
       "type": "int",
-      "default": 0,
+      "default": 120,
       "min": -1,
       "max": 1000,
       "unit": "fps",
@@ -164,12 +179,7 @@
       "apply": "live",
       "control": [
         "cycler"
-      ],
-      "presets": {
-        "vanilla": 120,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      ]
     },
     {
       "id": "MAIN.WindowMode",
@@ -202,12 +212,7 @@
       "description": "@PauseOnFocusLoss.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "live",
-      "presets": {
-        "vanilla": 1,
-        "recommended": 1,
-        "enhanced": 1
-      }
+      "apply": "live"
     },
     {
       "id": "MAIN.SkipIntro",
@@ -252,12 +257,7 @@
       "description": "@DisableDamageOverlay.description",
       "page": "game",
       "visibility": "menu",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
       "id": "MAIN.DisableDBNOEffects",
@@ -267,12 +267,7 @@
       "description": "@DisableDBNOEffects.description",
       "page": "game",
       "visibility": "menu",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
       "id": "MAIN.DisableObjectiveIndicator",
@@ -282,12 +277,7 @@
       "description": "@DisableObjectiveIndicator.description",
       "page": "game",
       "visibility": "menu",
-      "apply": "live",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "live"
     },
     {
       "id": "MAIN.LightSyncRGB",
@@ -305,14 +295,103 @@
       }
     },
     {
-      "id": "MAIN.Autoclicker",
-      "type": "bool",
-      "default": 0,
-      "label": "@Autoclicker",
-      "description": "@Autoclicker.description",
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@textlanguage",
+      "description": "@textlanguage.description",
       "page": "compatibility",
-      "visibility": "file",
-      "apply": "restart"
+      "visibility": "editor",
+      "apply": "menu"
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@confinecursor",
+      "description": "@confinecursor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@MAIN.CheckForUpdates",
+      "description": "@MAIN.CheckForUpdates.description",
+      "page": "compatibility",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": true,
+      "label": "@skippressstart",
+      "description": "@skippressstart.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "label": "@MAIN.GamepadIcons",
+      "description": "@MAIN.GamepadIcons.description",
+      "page": "game",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@menu.auto"
+        },
+        {
+          "value": 1,
+          "label": "Xbox"
+        },
+        {
+          "value": 2,
+          "label": "PlayStation"
+        },
+        {
+          "value": 3,
+          "label": "Nintendo"
+        }
+      ],
+      "visibility": "menu"
     }
   ]
 }

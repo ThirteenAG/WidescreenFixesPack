@@ -11,6 +11,13 @@ export constexpr float defaultAspectRatio = 16.0f / 9.0f;
 // Game objects, found in dllmain before the modules initialize
 export GameRef<uintptr_t> pRender;  // renderer: resolution +0xB8, the device +0x98
 
+// Game singletons the modules read
+export GameRef<uint8_t*> pGameCamera;    // sGameCamera: the camera manager at +0xCE0
+export GameRef<uintptr_t> pPad;          // sPad
+export GameRef<uintptr_t> pSystem;       // the system object: online state
+export GameRef<uintptr_t> pInputManager; // the menu input manager
+export GameRef<uintptr_t> pHelpManager;  // the menu help text manager
+
 // The resolution the game renders at, caught when the game sets it (see Display)
 export int32_t nResX = 0;
 export int32_t nResY = 0;

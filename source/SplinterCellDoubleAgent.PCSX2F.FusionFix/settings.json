@@ -1,0 +1,234 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "gameplay",
+      "title": "@page.gameplay",
+      "section": "gameplay"
+    },
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "compatibility",
+      "title": "@PS2.page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@PS2.MAIN.SkipIntro",
+      "description": "@PS2.MAIN.SkipIntro.description",
+      "page": "gameplay",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.HudScale",
+      "type": "float",
+      "default": 1,
+      "label": "@PS2.HUD.HudScale",
+      "description": "@PS2.HUD.HudScale.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "min": 0.5,
+      "max": 1.5,
+      "step": 0.05
+    },
+    {
+      "id": "MAIN.ForceAspectRatio",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@PS2.auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "maxLength": 14,
+      "label": "@PS2.ForceAspectRatio",
+      "description": "@PS2.ForceAspectRatio.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@PS2.FOVFactor",
+      "description": "@PS2.FOVFactor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@PS2.auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "maxLength": 14,
+      "label": "@PS2.HudAspectRatioConstraint",
+      "description": "@PS2.HudAspectRatioConstraint.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@PS2.FMVWidescreenMode",
+      "description": "@PS2.FMVWidescreenMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@PS2.fmv.original"
+        },
+        {
+          "value": 1,
+          "label": "@PS2.fmv.fill"
+        }
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "label": "@PS2.cinema",
+      "description": "@PS2.cinema.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@PS2.cinema.off"
+        },
+        {
+          "value": 1,
+          "label": "@PS2.cinema.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@PS2.cinema.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@PS2.cinema.both"
+        }
+      ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
+      "id": "MAIN.AnimatedCutsceneBorders",
+      "type": "bool",
+      "default": true,
+      "label": "@PS2.cinema.animated",
+      "description": "@PS2.cinema.animated.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@PS2.language",
+      "description": "@PS2.language.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "live",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@PS2.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
+    }
+  ]
+}

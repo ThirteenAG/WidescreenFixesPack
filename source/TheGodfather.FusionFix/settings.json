@@ -1,0 +1,365 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "The Godfather",
+        "exe": [
+          "godfather.exe",
+          "godfather_German.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@window.fullscreen"
+        },
+        {
+          "value": 1,
+          "label": "@window.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@window.borderless"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.VSync",
+      "type": "bool",
+      "default": false,
+      "label": "@VSync",
+      "description": "@VSync.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": true,
+        "recommended": false,
+        "enhanced": false
+      }
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": 1,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": 1,
+      "label": "@PauseOnFocusLoss",
+      "description": "@PauseOnFocusLoss.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@HudAspectRatioConstraint",
+      "description": "@HudAspectRatioConstraint.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1,
+      "min": 0.5,
+      "max": 2,
+      "step": 0.05,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "camera",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@checkupdates",
+      "description": "@checkupdates.description",
+      "page": "compatibility",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "label": "@CutsceneBorders",
+      "description": "@CutsceneBorders.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "min": 0,
+      "max": 3,
+      "step": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@borders.off"
+        },
+        {
+          "value": 1,
+          "label": "@borders.letter"
+        },
+        {
+          "value": 2,
+          "label": "@borders.pillar"
+        },
+        {
+          "value": 3,
+          "label": "@borders.both"
+        }
+      ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
+      "id": "MAIN.AnimatedCutsceneBorders",
+      "type": "bool",
+      "default": true,
+      "label": "@AnimatedCutsceneBorders",
+      "description": "@AnimatedCutsceneBorders.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@FMVWidescreenMode",
+      "description": "@FMVWidescreenMode.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@fmv.original"
+        },
+        {
+          "value": 1,
+          "label": "@fmv.fill"
+        }
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "label": "@FPSLimit",
+      "description": "@FPSLimit.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "min": 30,
+      "max": 1000,
+      "step": 1,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@fps.unlimited"
+        },
+        {
+          "value": -1,
+          "label": "@fps.monitor"
+        }
+      ],
+      "presets": {
+        "vanilla": 30,
+        "recommended": 60,
+        "enhanced": 60
+      }
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "live",
+      "visibility": "editor",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "label": "@GamepadIcons",
+      "description": "@GamepadIcons.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@GamepadIcons.auto"
+        },
+        {
+          "value": 1,
+          "label": "Xbox"
+        },
+        {
+          "value": 2,
+          "label": "PlayStation"
+        },
+        {
+          "value": 3,
+          "label": "Nintendo"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1,
+      "min": 0.1,
+      "max": 5,
+      "step": 0.05,
+      "label": "@GamepadCameraSpeed",
+      "description": "@GamepadCameraSpeed.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.InvertGamepadY",
+      "type": "bool",
+      "default": false,
+      "label": "@InvertGamepadY",
+      "description": "@InvertGamepadY.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.Vibration",
+      "type": "bool",
+      "default": true,
+      "label": "@Vibration",
+      "description": "@Vibration.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    }
+  ]
+}

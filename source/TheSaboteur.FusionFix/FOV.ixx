@@ -2,15 +2,52 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
+#include "CameraMath.hpp"
+#include "RuntimeBridge.hpp"
 #include <atomic>
 
 export module FOV;
 
+import Bindings;
+
 import ComVars;
 
-static std::atomic<bool> FixFOV{ true };
+static std::atomic<float> FOVFactor{ 1.0f };
 static SafetyHookInline SetFOVHook;
+static GameRef<uintptr_t>* Renderer = nullptr;
+static GameRef<uintptr_t>* GameCamera = nullptr;
+static GameRef<int>* CameraCount = nullptr;
+static GameRef<uintptr_t>* Players = nullptr;
+static uintptr_t TrackingUpdate = 0;
+
+static bool GameplayLens()
+{
+    if (!GameCamera || !CameraCount || CameraCount->get() <= 0 || !Players || !Players->get() || !TrackingUpdate)
+        return false;
+    const auto camera = GameCamera->get();
+    if (!camera || *reinterpret_cast<int*>(camera + 44) != 0 || *reinterpret_cast<int*>(camera + 2772) != 1)
+        return false;
+    const auto index = *reinterpret_cast<int*>(camera + 2768);
+    if (index < 0 || index >= 4)
+        return false;
+    const auto transition = *reinterpret_cast<uintptr_t*>(camera + 592 + index * 544 + 528);
+    if (!transition || (*reinterpret_cast<uintptr_t**>(transition))[2] != TrackingUpdate)
+        return false;
+    const auto settings = transition ? *reinterpret_cast<uintptr_t*>(transition + 400) : 0;
+    const auto blueprint = settings ? *reinterpret_cast<uintptr_t*>(settings + 8) : 0;
+    if (!blueprint || !(*reinterpret_cast<uint8_t*>(blueprint + 260) & 2))
+        return false;
+    for (const auto action : { 23, 24 })
+    {
+        const auto state = Players->get() + 6824 + action * 20;
+        if (std::abs(*reinterpret_cast<float*>(state)) > 0.001f || *reinterpret_cast<uint32_t*>(state + 12))
+            return false;
+    }
+    const auto getFOV = reinterpret_cast<double(__thiscall*)(uintptr_t)>((*reinterpret_cast<uintptr_t**>(settings))[19]);
+    const auto intended = getFOV(settings);
+    const auto actual = *reinterpret_cast<float*>(camera + 176);
+    return std::isfinite(intended) && intended > 0.0 && std::abs(intended - actual) < 0.001;
+}
 
 struct OdinCamera
 {
@@ -25,45 +62,26 @@ struct OdinCamera
     float m_TanHalfFOVWidth;
     float m_TanHalfFOVHeight;
 
-    static void __fastcall SetFOV(OdinCamera* OdinCamera, void* edx, float a_FovX, float a_AspectRatio)
+    static void __fastcall SetFOV(OdinCamera* camera, void* edx, float a_FovX, float a_AspectRatio)
     {
-        if (!FixFOV.load(std::memory_order_relaxed))
+        const auto renderer = Renderer ? Renderer->get() : 0;
+        const auto mainCamera = renderer ? *reinterpret_cast<OdinCamera**>(renderer + 2980) : nullptr;
+        if (camera != mainCamera)
         {
-            SetFOVHook.unsafe_fastcall(OdinCamera, edx, a_FovX, a_AspectRatio);
+            SetFOVHook.unsafe_fastcall(camera, edx, a_FovX, a_AspectRatio);
             return;
         }
-        if (!std::isfinite(a_AspectRatio) || a_AspectRatio <= 0.0f)
-            a_AspectRatio = 3.0f / 4.0f;
-        if (!std::isfinite(a_FovX) || a_FovX <= 0.0f || a_FovX >= static_cast<float>(M_PI))
-            a_FovX = 1.0471976f;
-
-        // too high fov breaks rendering (sky and objects start to disappear)
-        auto fAspectRatioDiff = std::clamp((1.0f / a_AspectRatio) / (4.0f / 3.0f), 0.0f, 2.1f); // 2.1 seems safe before that happens
-        auto a_FovXa = a_FovX * 0.5f;
-        auto a_FovXb = tan(a_FovXa);
-        OdinCamera->m_Dirty |= 3u;
-        OdinCamera->m_bOrthographic = 0;
-        OdinCamera->m_TanHalfFOVWidth = a_FovXb * fAspectRatioDiff;
-        OdinCamera->m_TanHalfFOVHeight = a_FovXb * a_AspectRatio * fAspectRatioDiff;
-    }
-
-    static void __fastcall SetPerspective(OdinCamera* OdinCamera, void* edx, float a_NearPlane, float a_FarPlane, float a_FovX, float a_AspectRatio)
-    {
-        auto a_FovXa = a_FovX * 0.5f;
-        auto a_FovXb = tan(a_FovXa);
-        OdinCamera->m_Dirty |= 3u;
-        OdinCamera->m_bOrthographic = 0;
-        OdinCamera->m_NearPlane = a_NearPlane;
-        OdinCamera->m_FarPlane = a_FarPlane;
-        OdinCamera->m_TanHalfFOVWidth = a_FovXb;
-        OdinCamera->m_TanHalfFOVHeight = a_FovXb * a_AspectRatio;
-    }
-
-    static float __fastcall GetAspectRatio(OdinCamera* OdinCamera, void* edx)
-    {
-        return OdinCamera->m_TanHalfFOVHeight / OdinCamera->m_TanHalfFOVWidth;
+        const bool cinematic = SaboteurRuntime::Cinematic();
+        const auto factor = !cinematic && GameplayLens() ? FOVFactor.load(std::memory_order_relaxed) : 1.0f;
+        const auto projection = cinematic ? SaboteurCamera::Cinematic(a_FovX, a_AspectRatio, SaboteurRuntime::CutsceneBorders()) :
+            SaboteurCamera::Widescreen(a_FovX, a_AspectRatio, factor);
+        camera->m_Dirty |= 3u;
+        camera->m_bOrthographic = false;
+        camera->m_TanHalfFOVWidth = projection.Width;
+        camera->m_TanHalfFOVHeight = projection.Height;
     }
 };
+static_assert(offsetof(OdinCamera, m_TanHalfFOVWidth) == 272);
 
 class FOV
 {
@@ -73,18 +91,27 @@ public:
         WFP::onInitEvent() += []()
         {
             auto& settings = FixSettings();
-            FixFOV.store(settings.Bool("MAIN.FixFOV"), std::memory_order_relaxed);
-            settings.OnChange("MAIN.FixFOV", []()
+            FOVFactor.store(settings.Float("MAIN.FOVFactor"), std::memory_order_relaxed);
+            settings.OnChange("MAIN.FOVFactor", []()
             {
-                FixFOV.store(FixSettings().Bool("MAIN.FixFOV"), std::memory_order_relaxed);
+                FOVFactor.store(FixSettings().Float("MAIN.FOVFactor"), std::memory_order_relaxed);
             });
             auto pattern = hook::pattern("D9 44 24 04 56 DC 0D ? ? ? ? 8B F1 D9 5C 24 08");
-            if (PatternUnique(pattern, "TheSaboteur.FusionFix: FOV"))
+            Renderer = SaboteurBindings::Renderer();
+            auto cameras = hook::pattern("83 EC 50 56 57 8B 7C 24 5C 3B 3D ? ? ? ? 8B F1 7D 10 8B C7 69 C0 30 19 00 00 03 05 ? ? ? ? EB 02 33 C0 D9 40 50");
+            Players = SaboteurBindings::Players();
+            auto tracking = hook::pattern("53 D9 44 24 0C 56 57 8B 7C 24 10 0F B6 87 78 01 00 00 0F B6 D0 D0 EA 8B F1 8D 8F 68 01 00 00");
+            CameraCount = BindGameRef(fovCameraCount, *cameras.get_first<int*>(11));
+            GameCamera = BindGameRef(fovGameCamera, *cameras.get_first<uintptr_t*>(29));
+            TrackingUpdate = reinterpret_cast<uintptr_t>(tracking.get_first());
+            const bool lensAvailable = GameCamera && CameraCount && Players && TrackingUpdate;
+            settings.Availability("MAIN.FOVFactor", [lensAvailable](std::string_view value)
             {
-                SetFOVHook = safetyhook::create_inline(pattern.get_first(), OdinCamera::SetFOV, safetyhook::InlineHook::StartDisabled);
-                if (SetFOVHook && !SetFOVHook.enable())
-                    SetFOVHook.reset();
-            }
+                return value == "1" || value == "1.0" || lensAvailable;
+            });
+            SetFOVHook = safetyhook::create_inline(pattern.get_first(), OdinCamera::SetFOV, safetyhook::InlineHook::StartDisabled);
+            if (SetFOVHook && !SetFOVHook.enable())
+                SetFOVHook.reset();
         };
     }
 } FOV;

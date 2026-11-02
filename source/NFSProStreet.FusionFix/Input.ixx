@@ -4,16 +4,19 @@ module;
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 #include <dbt.h>
-#include "TexturePack.hpp"
 #include "FixSettings.hpp"
-#include "../Shared/NFS/StickDeadzone.hpp"
+#include "RawMouse.hpp"
+#include "Shared/NFS/StickDeadzone.hpp"
 
 export module Input;
 
 import ComVars;
+import TexturePack;
 
-// Gamepads are handled by Xidi (Xidi.32.dll, loaded by the ASI loader, with the SDL3 plugin for PlayStation,
-// Switch and other non-XInput pads). Xidi presents each pad as a "Xidi Virtual Controller". The bundled
+import PostFX;
+
+// Gamepads are handled by Xidi (Xidi.32.dll, loaded by the ASI loader). PlayStation and Switch pads use
+// Steam Input or DS4Windows. Xidi presents each pad as a "Xidi Virtual Controller". The bundled
 // Xidi.ini uses the XInputNative layout with each trigger on its own half axis: X/Y = left stick,
 // RotX/RotY = right stick, Z+ = LT, RotZ+ = RT, POV = d-pad, buttons 1-10 = A B X Y LB RB Back Start
 // LS RS. This module gives such pads the Xbox 360 version's default bindings, proper names in the
@@ -34,23 +37,6 @@ namespace
         BindRotationLow = 6,    // RotX, RotY, RotZ (index 0-2)
         BindRotationHigh = 7,
     };
-
-    struct Binding
-    {
-        int32_t type;
-        int32_t device;     // the key for keyboard bindings
-        int32_t index;
-    };
-
-    // Every action has a list of slots: two keyboard slots, then two for each joystick
-    struct ActionEntry
-    {
-        const char* name;
-        Binding* slots;
-    };
-
-    ActionEntry* Actions = nullptr;
-    int32_t* NumJoysticks = nullptr;
 
     enum Action
     {
@@ -101,7 +87,6 @@ namespace
 
     // Joystick devices of the game; the product name is at +0x114
     constexpr int MaxJoysticks = 8;
-    uintptr_t* Joysticks = nullptr;
 
     enum class IconStyle { Xbox, PlayStation };
     const int* pGamepadIcons = nullptr;   // 0 = auto, 1 = Xbox, 2 = PlayStation; also changed in the options menu
@@ -126,9 +111,9 @@ namespace
 
     bool IsXidiJoystick(int index)
     {
-        if (!Joysticks || index < 0 || index >= MaxJoysticks)
+        if (!Joysticks.is_initialized() || index < 0 || index >= MaxJoysticks)
             return false;
-        auto joystick = Joysticks[index];
+        auto joystick = Joysticks.get_ptr()[index];
         if (!joystick || joystick == uintptr_t(-4))
             return false;
         return strncmp(reinterpret_cast<const char*>(joystick + 0x114), "Xidi Virtual Controller", 23) == 0;
@@ -140,53 +125,7 @@ namespace
 {
     IconStyle DetectIconStyle()
     {
-        if (*pGamepadIcons == 1)
-            return IconStyle::Xbox;
-        if (*pGamepadIcons == 2)
-            return IconStyle::PlayStation;
-
-        // XInput pads are Xbox pads; the SDL3 plugin handles everything else, so look for Sony pads
-        static auto pXInputGetState = []() -> DWORD(WINAPI*)(DWORD, void*)
-        {
-            for (auto name : { "xinput1_4.dll", "xinput1_3.dll", "xinput9_1_0.dll" })
-            {
-                if (auto module = LoadLibraryA(name))
-                    return reinterpret_cast<DWORD(WINAPI*)(DWORD, void*)>(GetProcAddress(module, "XInputGetState"));
-            }
-            return nullptr;
-        }();
-
-        if (pXInputGetState)
-        {
-            uint8_t state[16];
-            for (DWORD i = 0; i < 4; ++i)
-            {
-                if (pXInputGetState(i, state) == ERROR_SUCCESS)
-                    return IconStyle::Xbox;
-            }
-        }
-
-        UINT count = 0;
-        if (GetRawInputDeviceList(nullptr, &count, sizeof(RAWINPUTDEVICELIST)) == 0 && count > 0)
-        {
-            std::vector<RAWINPUTDEVICELIST> devices(count);
-            if (GetRawInputDeviceList(devices.data(), &count, sizeof(RAWINPUTDEVICELIST)) != UINT(-1))
-            {
-                for (const auto& device : devices)
-                {
-                    if (device.dwType != RIM_TYPEHID)
-                        continue;
-
-                    RID_DEVICE_INFO info = { sizeof(RID_DEVICE_INFO) };
-                    UINT size = sizeof(info);
-                    if (GetRawInputDeviceInfoA(device.hDevice, RIDI_DEVICEINFO, &info, &size) != UINT(-1) &&
-                        info.hid.dwVendorId == 0x054C && info.hid.usUsagePage == 0x01 && (info.hid.usUsage == 0x04 || info.hid.usUsage == 0x05))
-                        return IconStyle::PlayStation;
-                }
-            }
-        }
-
-        return IconStyle::Xbox;
+        return std::clamp(*pGamepadIcons, 0, 2) == 2 ? IconStyle::PlayStation : IconStyle::Xbox;
     }
 }
 
@@ -217,6 +156,7 @@ export namespace Input
         float stickY = 0.0f;    // -1..1, down is positive
         int mouseX = 0;
         int mouseY = 0;
+        bool rawMouse = false;  // the mouse movement is raw input
     };
 
     LookInput Look;
@@ -227,6 +167,11 @@ export namespace Input
         LookInput result = Look;
         Look.mouseX = 0;
         Look.mouseY = 0;
+        result.rawMouse = RawMouse::Consume(result.mouseX, result.mouseY);
+        if (result.rawMouse && (result.mouseX || result.mouseY))
+            LastKeyboardMouseInput = SteadyClock::now();
+        if (DeveloperOverlay::BlocksInput())
+            return {};
         return result;
     }
 
@@ -239,13 +184,13 @@ export namespace Input
     // in the Xbox 360 layout. The camera then only turns sideways with the stick.
     bool RightStickVerticalBound()
     {
-        if (!Actions || !NumJoysticks)
+        if (!Actions.is_initialized() || !NumJoysticks.is_initialized())
             return false;
 
-        int slotCount = 2 + 2 * *NumJoysticks;
+        int slotCount = 2 + 2 * NumJoysticks.get();
         for (int action = ActionGas; action <= ActionLookBack; ++action)
         {
-            auto slots = Actions[action].slots;
+            auto slots = Actions.get_ptr()[action].slots;
             for (int slot = 2; slots && slot < slotCount; ++slot)
             {
                 const auto& binding = slots[slot];
@@ -264,12 +209,12 @@ namespace
 
     void Bind(int action, Binding primary, Binding secondary = {})
     {
-        if (!Actions || !NumJoysticks || action >= ActionCount)
+        if (!Actions.is_initialized() || !NumJoysticks.is_initialized() || action >= ActionCount)
             return;
 
-        auto slots = Actions[action].slots;
+        auto slots = Actions.get_ptr()[action].slots;
         int slot = 2 + 2 * DefaultsDevice;
-        if (!slots || slot + 1 >= 2 + 2 * *NumJoysticks)
+        if (!slots || slot + 1 >= 2 + 2 * NumJoysticks.get())
             return;
 
         primary.device = primary.type ? DefaultsDevice : 0;
@@ -429,7 +374,8 @@ namespace
     void LoadButtonTextures()
     {
         static bool bLoaded = false;
-        if (bLoaded || !LoadChunks)
+        static SteadyClock::time_point retryAfter{};
+        if (bLoaded || !LoadChunks || SteadyClock::now() < retryAfter)
             return;
         bLoaded = true;
 
@@ -441,7 +387,11 @@ namespace
         auto pack = TexturePack::Build(textures, "WFP_NFSPS_BUTTONS");
         auto buffer = static_cast<uint8_t*>(_aligned_malloc(pack.size(), 0x80));
         if (!buffer)
+        {
+            bLoaded = false;
+            retryAfter = SteadyClock::now() + std::chrono::seconds(5);
             return;
+        }
         memcpy(buffer, pack.data(), pack.size());
         LoadChunks(buffer, int(pack.size()), 0);
     }
@@ -479,6 +429,22 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            // Invalid controller indices use the game's empty-name path.
+            auto controllerName = hook::pattern("83 F8 FF 75 ? B8 ? ? ? ? C2 08 00 8B 04 85 ? ? ? ? 85 C0 74 ? 8D 48 04 85 C9 74 ?");
+            static auto emptyControllerName = reinterpret_cast<uintptr_t>(controllerName.get_first<uint8_t>(24) + *controllerName.get_first<int8_t>(23));
+            static auto controllerNameHook = safetyhook::create_mid(controllerName.get_first(13), [](SafetyHookContext& regs)
+            {
+                if (regs.eax >= 8)
+                    regs.eip = emptyControllerName;
+            });
+
+            // The controller-name scan must use the controller count, not the larger action-source count.
+            // Its pointer array holds eight controllers and is followed by keyboard state bytes.
+            auto controllerScan = hook::pattern("A1 ? ? ? ? 8B 5F 20 32 C9 8D 54 00 02 33 F6 85 D2 88 4C 24 12");
+            injector::WriteMemory<uint32_t>(controllerScan.get_first(10), 0x9090D08B, true); // mov edx, eax
+            controllerScan = hook::pattern("A1 ? ? ? ? 83 C6 01 8D 54 00 02 3B F2 7C ? 8A 4C 24 12 0F 57 C9");
+            injector::WriteMemory<uint32_t>(controllerScan.get_first(8), 0x9090D08B, true); // mov edx, eax
+
             pGamepadIcons = &FixSettings().Int("MAIN.GamepadIcons");
             FixSettings().OnChange("MAIN.GamepadIcons", [] { Input::RefreshIconStyle(); });
             CurrentIconStyle = DetectIconStyle();
@@ -492,23 +458,16 @@ public:
 
             // Binding table and the number of joysticks, set up by the input init
             auto pattern = hook::pattern("8B 1D ? ? ? ? BF ? ? ? ? BE ? ? ? ? 8B 4E FC 89 4F FC");
-            if (!pattern.empty())
-            {
-                NumJoysticks = *pattern.get_first<int32_t*>(2);
-                Actions = reinterpret_cast<ActionEntry*>(*pattern.get_first<uintptr_t>(7) - 4);
-            }
+            NumJoysticks.SetAddress(*pattern.get_first<int32_t*>(2));
+            Actions.SetAddress(*pattern.get_first<uintptr_t>(7) - 4);
 
             // Joystick defaults for a device, applied for a new device and by "Reset to defaults"
             pattern = hook::pattern("81 EC 20 04 00 00 53 55 56 57 8B BC 24 34 04 00 00 8B 04 BD");
-            if (!pattern.empty() && Actions)
-            {
-                Joysticks = *pattern.get_first<uintptr_t*>(20);
-                shSetJoystickDefaults = safetyhook::create_inline(pattern.get_first(), SetJoystickDefaults);
-            }
+            Joysticks.SetAddress(*pattern.get_first<uintptr_t*>(20));
+            shSetJoystickDefaults = safetyhook::create_inline(pattern.get_first(), SetJoystickDefaults);
 
             pattern = hook::pattern("81 EC 0C 02 00 00 A1 ? ? ? ? 33 C4 89 84 24 08 02 00 00 53 8B 9C 24 18 02 00 00 55 8B AC 24 24 02 00 00");
-            if (!pattern.empty() && Joysticks)
-                shGetBindingName = safetyhook::create_inline(pattern.get_first(), GetBindingName);
+            shGetBindingName = safetyhook::create_inline(pattern.get_first(), GetBindingName);
 
             // Joystick state, read by the game's input library: esi = device, DIJOYSTATE2 at ebp-0x13C
             pattern = hook::pattern("8B 85 ? ? ? ? 3B 86");
@@ -529,6 +488,35 @@ public:
                     return std::clamp((float(value) - 32767.5f) / 32767.5f, -1.0f, 1.0f);
                 };
 
+                // The overlay's pad: A B X Y LB RB Back Start LS RS and the d-pad in its own bits; while it's open
+                // the game sees a pad at rest
+                uint16_t overlayButtons = 0;
+                constexpr uint16_t overlayMapping[] = { 0x4000, 0x2000, 0x8000, 0x1000, 0x400, 0x800, 0x1, 0x8, 0x2, 0x4 };
+                for (int button = 0; button < PadButtonCount; ++button)
+                {
+                    if (state->rgbButtons[button] & 0x80)
+                        overlayButtons |= overlayMapping[button];
+                }
+                auto pov = state->rgdwPOV[0];
+                if (LOWORD(pov) != 0xFFFF)
+                {
+                    if (pov >= 31500 || pov <= 4500) overlayButtons |= 0x10;
+                    if (pov >= 4500 && pov <= 13500) overlayButtons |= 0x20;
+                    if (pov >= 13500 && pov <= 22500) overlayButtons |= 0x40;
+                    if (pov >= 22500 && pov <= 31500) overlayButtons |= 0x80;
+                }
+                DeveloperOverlay::Gamepad(overlayButtons, int8_t(std::clamp((state->lX - 32767) / 258, -127L, 127L)),
+                    int8_t(std::clamp((state->lY - 32767) / 258, -127L, 127L)));
+                if (DeveloperOverlay::BlocksInput())
+                {
+                    state->lX = state->lY = state->lZ = state->lRx = state->lRy = state->lRz = 32767;
+                    std::fill(std::begin(state->rgbButtons), std::end(state->rgbButtons), uint8_t(0));
+                    state->rgdwPOV[0] = DWORD(-1);
+                    Input::Look.stickX = 0.0f;
+                    Input::Look.stickY = 0.0f;
+                    return;
+                }
+
                 Input::Look.stickX = axis(state->lRx);
                 Input::Look.stickY = axis(state->lRy);
 
@@ -548,8 +536,17 @@ public:
                 if (hWnd != GetForegroundWindow())
                     return;
 
-                struct MouseState { int dx, dy, wheel; };
+                struct MouseState { int dx, dy, wheel; uint8_t button; };
                 auto state = reinterpret_cast<MouseState*>(regs.ebp - 0x14);
+                DeveloperOverlay::MouseButton((state->button & 0x80) != 0);
+                if (DeveloperOverlay::BlocksInput())
+                {
+                    state->dx = state->dy = state->wheel = 0;
+                    state->button = 0;
+                    regs.edx = regs.ecx = 0;    // dy and the wheel, already loaded
+                    RawMouse::Clear();
+                    return;
+                }
                 Input::Look.mouseX += state->dx;
                 Input::Look.mouseY += state->dy;
                 if (state->dx || state->dy || state->wheel)
@@ -560,10 +557,26 @@ public:
             pattern = hook::pattern("8B 83 64 04 00 00 8B 80 B0 00 00 00");
             static auto KeyboardStateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
-                auto keys = reinterpret_cast<const uint8_t*>(regs.ebp - 0x130);
+                auto keys = reinterpret_cast<uint8_t*>(regs.ebp - 0x130);
+                if (DeveloperOverlay::BlocksInput())
+                {
+                    std::fill_n(keys, 256, uint8_t(0));
+                    return;
+                }
                 if (std::any_of(keys, keys + 256, [](uint8_t key) { return (key & 0x80) != 0; }))
                     LastKeyboardMouseInput = SteadyClock::now();
             });
+
+            // Raw mouse movement for the free look camera
+            RawMouse::Enabled.store(FixSettings().Bool("MAIN.RawInputMouse"));
+            FixSettings().OnChange("MAIN.RawInputMouse", []()
+            {
+                RawMouse::Enabled.store(FixSettings().Bool("MAIN.RawInputMouse"));
+                RawMouse::Clear();
+            });
+            WFP::onGameProcessEvent() += []() { RawMouse::Update(hWnd.get()); };
+            WFP::onShutdownEvent() += []() { RawMouse::Release(); };
+            onWindowMessage() += RawMouse::Message;
 
             onWindowMessage() += [](HWND, UINT msg, WPARAM wParam, LPARAM)
             {
@@ -573,8 +586,7 @@ public:
 
             // Button textures and the front end icons
             pattern = hook::pattern("8B 44 24 0C 56 8B 74 24 08 57 8B 7C 24 10 50 57 56 E8");
-            if (!pattern.empty())
-                LoadChunks = reinterpret_cast<decltype(LoadChunks)>(pattern.get_first());
+            LoadChunks = reinterpret_cast<decltype(LoadChunks)>(pattern.get_first());
 
             WFP::onGameProcessEvent() += []()
             {

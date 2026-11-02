@@ -12,25 +12,29 @@
 
 ## Settings
 
-Configure the fix in FusionFixHub or on fusionfix.io. Field of view applies while the game runs; restart the game after changing the other settings. The default setup enables split screen and keeps detection failure enabled in Ghost mode. There is no frame rate cap unless you set one.
+Open Settings → Plugins → Splinter Cell Blacklist Fusion Fix in the title or pause menu. Use the page links for more options and F1 for full help. Restart-only changes show a restart notice. Presets apply to this plugin after confirmation. FusionFixHub and fusionfix.io also edit the settings. The default setup enables split screen and keeps detection failure enabled in Ghost mode. The default frame rate limit is 60 FPS.
 
-Menus, dialogs and fullscreen movies remain within a 16:9 area with black bars where needed. The 3D view fills the screen. Ambient occlusion is disabled during split screen, and player 1 controls the shared pause menu.
+Menus and dialogs remain in an undistorted, centered 16:9 area. The 3D view fills the screen, and HUD Aspect Ratio controls the width used by side HUD elements. Ambient occlusion is disabled during split screen, and player 1 controls the shared pause menu.
 
 ### Startup and input
 
 - **Skip intro** — Skip startup intros.
 - **Startup prompt** — Skip the “Press Any Key” screen and checkpoint selection.
-- **Mouse input** — Raw mouse input for camera turning, so high polling rate mice don't lose movement; optionally disable negative mouse acceleration.
+- **Mouse input** — Raw mouse input for camera turning, so high polling rate mice don't lose movement; negative mouse acceleration is removed.
 - **Turn speed** — Makes Sam turn faster toward the movement direction while moving, for snappier direction changes.
 
 ### Display and camera
 
-- **Window modes** — Windowed, borderless and fullscreen list the same resolutions; windowed and borderless windows are centered and open in front, the window can be resized and the game remembers it.
-- **Ultrawide** — The HUD and menus stay 16:9 on screens wider or narrower than 16:9 (menus, dialogs and full screen movies get black bars), the 3D view fills the screen.
-- **Letterbox** — On screens narrower than 16:9 (4:3, 16:10), optionally letterbox the 3D view to 16:9.
-- **Frame rate limit** — Set a frame rate limit.
-- **Field of view** — Adjust from 0.5 to 2.0. This setting changes while playing.
+- **Window modes** — Use the native video options. Windowed mode preserves the requested client size; borderless uses the monitor resolution. The windowed resolution list includes reported display modes and the current custom size.
+- **Ultrawide** — Keeps menus and dialogs at 16:9 without stretching while the 3D view fills the screen with the correct aspect.
+- **HUD aspect ratio** — Auto places side HUD elements at the screen edges. Choose 4:3, 16:9, 21:9 or a custom ratio to keep them in a centered area. Applies immediately.
+- **Cutscene borders** — Both preserves the original 16:9 framing on wide and narrow screens. Letterbox and Pillarbox apply borders on one axis; Off extends the view on widescreen displays.
+- **Video framing** — Original fits the whole movie in a centered 4:3 area; Fill fits it to the screen.
+- **Frame rate limit** — Change the limit while playing: 0 is unlimited, -1 follows the monitor refresh rate, and positive limits range from 30 to 1000 FPS. Native Vertical Sync can still limit the frame rate.
+- **Field of view** — Adjust the locomotion camera from 0.5 to 2.0 while playing, with a maximum horizontal view of 150 degrees and the game's normal camera smoothing.
+- **Pause when unfocused** — Enabled by default in single player. Disable it to keep the world running while the game window is unfocused.
 - **Draw distance** — Adjust the screen cull bias; lower values keep distant objects visible for longer.
+- **Developer overlay** — Press Ctrl+F10 to open the settings and diagnostics overlay, including Debug → Info.
 
 ### Gameplay and files
 
@@ -39,9 +43,12 @@ Menus, dialogs and fullscreen movies remain within a 16:9 area with black bars w
 - **Loose files** — Load unpacked files from the `update` folder. The **Dump packed files** option (in the settings file) unpacks all .umd archives into an `unpacked` folder next to the exe, its contents can be moved to `update` to run the game from loose files.
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 - **Forced walking** — Allow running during forced walking sections.
+- **Gamepad icons** — Auto uses Xbox prompts. PlayStation and Nintendo prompts can be selected separately; restart the game after changing the icon set.
 - **Split screen co-op** — Restores the console split screen co-op, DX11 and DX9: pick a co-op mission in the SMI and choose SPLIT-SCREEN, player 2 joins with START on their gamepad in the lobby and customizes their gear with X (it's saved in the profile). **Gamepad player 1** and **Gamepad player 2** assign the gamepads; by default player 1 uses keyboard and mouse only and player 2 the first gamepad while player 2 is in; single player isn't affected. Each player gets their own HUD, button prompts and markers in their half, also on ultrawide screens; player 2 can open and close the pause menu with START, the menu itself is controlled by player 1. Ambient occlusion is turned off while in split screen.
 
 ### Fixes
+
+Ultrawide correction, full CPU availability and the mouse speed-cap fix are always applied.
 
 - The grid transition no longer stays over the ending cutscene at high frame rates.
 - The game no longer crashes after about 30 minutes of play because of the shut down online servers (the failed logins used up its pool of network requests).
@@ -109,6 +116,8 @@ Put edited ini configs in `update` folder.
 
 At frame rates above 100 FPS, guards may appear doubled. Some wall shadows can pop as the camera turns. After changing a setting, move to another row and back if its help line resets to "Plugins".
 
+Render-resolution changes made during startup movies take effect after playback. Movie framing follows the current window size while the change is pending.
+
 ## Configuration
 
 The added settings text is available in English, French, German, Italian and Spanish. Choose Text Language in FusionFixHub to override the automatic choice. If the game language cannot be identified, English is used.
@@ -120,7 +129,7 @@ Recommended uses the default setup. Vanilla and Enhanced offer alternative prese
 1. Download the fix archive from this release.
 2. Extract the archive into the game’s installation folder, preserving its directory structure. The included files belong under `src/SYSTEM`.
 3. Launch the game once to create the `src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix.cfg`.
-4. Configure the fix on fusionfix.io or in FusionFixHub. Field of view applies while the game runs; restart the game after changing the other settings. An old `src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix.ini` isn't used anymore and can be deleted.
+4. Configure the fix in Settings → Plugins, on fusionfix.io or in FusionFixHub. Live options apply while playing; restart-only options show a restart notice.
 
 > [!WARNING]
 > Non-Windows users (Proton/Wine) need to perform a **DLL override**.

@@ -1,0 +1,392 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Silent Hill 2",
+        "exe": [
+          "sh2pc.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "gameplay"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 16384,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@desktop"
+        }
+      ],
+      "label": "@resx",
+      "description": "@resx.description",
+      "page": "display",
+      "group": "@group.resolution",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "min": 0,
+      "max": 16384,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@desktop"
+        }
+      ],
+      "label": "@resy",
+      "description": "@resy.description",
+      "page": "display",
+      "group": "@group.resolution",
+      "apply": "restart"
+    },
+    {
+      "id": "MISC.FullscreenImages",
+      "type": "bool",
+      "default": 1,
+      "label": "@images",
+      "description": "@sh2.fullscreenimages.description",
+      "page": "display",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@movies",
+      "description": "@movies.description",
+      "page": "display",
+      "group": "@group.cutscenes",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@movies.original"
+        },
+        {
+          "value": 1,
+          "label": "@movies.fill"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 1,
+          "label": "@sh2.letterbox"
+        }
+      ],
+      "label": "@sh2.cutsceneborders",
+      "description": "@sh2.cutsceneborders.description",
+      "page": "display",
+      "group": "@group.cutscenes",
+      "apply": "live"
+    },
+    {
+      "id": "MISC.IncreaseNoiseEffectRes",
+      "type": "int",
+      "default": 512,
+      "min": 0,
+      "max": 4096,
+      "unit": "px",
+      "special": [
+        {
+          "value": 0,
+          "label": "@original"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 512
+        },
+        {
+          "value": 640
+        },
+        {
+          "value": 960
+        },
+        {
+          "value": 1440
+        },
+        {
+          "value": 2048
+        }
+      ],
+      "label": "@sh2.noiseres",
+      "description": "@sh2.noiseres.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 512,
+        "enhanced": 1440
+      }
+    },
+    {
+      "id": "MISC.FastTransitions",
+      "type": "bool",
+      "default": 0,
+      "label": "@sh2.fasttransitions",
+      "description": "@sh2.fasttransitions.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MISC.PS2CameraSpeed",
+      "type": "bool",
+      "default": 1,
+      "label": "@sh2.ps2cameraspeed",
+      "description": "@sh2.ps2cameraspeed.description",
+      "page": "game",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 30,
+      "min": 30,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@sh2.unlimited"
+        },
+        {
+          "value": -1,
+          "label": "@sh2.monitor"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        }
+      ],
+      "label": "@sh2.fpslimit",
+      "description": "@sh2.fpslimit.description",
+      "page": "game",
+      "apply": "live"
+    },
+    {
+      "id": "MISC.SingleCoreAffinity",
+      "type": "bool",
+      "default": 0,
+      "label": "@sh2.singlecore",
+      "description": "@sh2.singlecore.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "label": "@displaymode",
+      "description": "@displaymode.description",
+      "page": "display",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@displaymode.fullscreen"
+        },
+        {
+          "value": 1,
+          "label": "@displaymode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@displaymode.borderless"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "Auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@textlanguage",
+      "description": "@textlanguage.description",
+      "page": "compatibility",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@display.pausefocus",
+      "description": "@display.pausefocus.description",
+      "page": "display",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@MAIN.CheckForUpdates",
+      "description": "@MAIN.CheckForUpdates.description",
+      "page": "compatibility",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@fovfactor",
+      "description": "@fovfactor.description",
+      "page": "display",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@intro.show"
+        },
+        {
+          "value": 1,
+          "label": "@intro.skip"
+        }
+      ],
+      "label": "@intro",
+      "description": "@sh2.skipintro.description",
+      "page": "game",
+      "control": [
+        "cycler",
+        "segmented"
+      ],
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "label": "@MAIN.GamepadIcons",
+      "description": "@sh2.gamepadicons.description",
+      "page": "game",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@ui.auto"
+        },
+        {
+          "value": 1,
+          "label": "Xbox"
+        },
+        {
+          "value": 2,
+          "label": "PlayStation"
+        },
+        {
+          "value": 3,
+          "label": "Nintendo"
+        }
+      ]
+    }
+  ]
+}

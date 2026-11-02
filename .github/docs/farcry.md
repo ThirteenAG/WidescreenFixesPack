@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/farcry/main2.jpg" width="760" alt="Far Cry Widescreen Fix">
+<img src="https://thirteenag.github.io/screens/farcry/main2.jpg" width="760" alt="Far Cry Fusion Fix">
 
-**Far Cry Widescreen Fix** adds proper widescreen support, corrects aspect ratio, HUD, field of view and FMV playback, and adds optional post-processing effects.
+**Far Cry Fusion Fix** adds proper widescreen support, corrects aspect ratio, HUD, field of view and FMV playback, and adds optional post-processing effects.
 
-[Website](https://thirteenag.github.io/wfp#farcry) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/FarCry.WidescreenFix/dllmain.cpp)
+[Website](https://thirteenag.github.io/wfp#farcry) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/FarCry.FusionFix/dllmain.cpp)
 
 </div>
 
@@ -13,7 +13,7 @@
 ## Fixes
 
 - **Aspect Ratio** - corrected for all rendered elements
-- **HUD** - repositioned and scaled to match the active aspect ratio; optional constraint (16:9, 21:9, or custom)
+- **HUD** - repositioned and scaled to match the active aspect ratio; optional constraint (4:3, 16:9, 21:9, 32:9 or custom)
 - **Field of View** - corrected for widescreen
 - **FMVs** - fullscreen videos are scaled and centered at the correct aspect ratio
 - **Text** - drawn without the widescreen HUD scaling, keeping it at its original proportions
@@ -22,12 +22,16 @@
 
 ## New Options
 
-- **HUD Aspect Ratio Constraint** - Keeps the HUD inside a centered 16:9, 21:9 or custom area. Auto uses the full screen.
+- **HUD Aspect Ratio Constraint** - Keeps the HUD inside a centered 4:3, 16:9, 21:9, 32:9 or custom area. Auto uses the full window width.
 - **Skip intro** - skip the five startup logo/legal movies while retaining story videos and normal startup checks. Enabled by default; changes require restart.
-- **Movie framing** - Original keeps the picture’s proportions with black bars, Fill crops to fill the screen (the default), and Stretch fills the screen by changing its proportions. Changes apply while playing.
+- **Movie framing** - Movies keep their proportions. Original shows them as the game does, whole inside its centred 4:3 frame with black bars around them; Fill fits the whole movie to the screen. Nothing is cut off or stretched. Changes apply while playing.
 - **Window mode** - Choose Fullscreen, Windowed or Borderless while playing. Alt+Enter switches between fullscreen and your last window mode. Window placement is remembered.
 - **Confine cursor** - Keeps the pointer inside the active game window and releases it when you switch away or turn the setting off. Changes apply while playing.
-- **FOV Factor** - Widens or narrows the gameplay view; 1.0 is the default.
+- **FOV Factor** - Scales the gameplay view from 0.5 to 2.0; 1.0 is neutral. The final horizontal view is limited to 150 degrees.
+- **Frame rate limit** - 0 is unlimited, -1 follows the monitor refresh rate, and positive values use 30–1000 FPS. Native Vertical Sync can impose a lower limit.
+- **Pause when unfocused** - Pauses single-player simulation and its timers while another window has focus. Existing manual pauses are preserved.
+- **Cutscene borders** - Both keeps the original cinematic frame on wide and narrow windows. Letterbox keeps top and bottom borders, Pillarbox keeps side borders, and Off extends the view. Borders can animate over a quarter of a second.
+- **Check for updates** - Disabled by default. When enabled, checks once per start and shows an update notice in Plugins.
 - **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
 - **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360
 
@@ -52,18 +56,22 @@
 
 ## Settings and hub
 
-Open **Options → Plugins** for settings and per-plugin presets. FOV, HUD width, movie framing, window mode and cursor confinement change while the game runs. Use English for the in-game settings menu; text with unsupported characters may leave a page unavailable. Use FusionFixHub for localized settings.
+Open **Options → Plugins → Far Cry Fusion Fix** from the title or pause menu. More pages and Previous pages move through the settings; F1 opens full help for the selected option. Vanilla, Recommended and Enhanced presets are available. Changes that need a restart show a notice until their original value is restored or the game is restarted.
 
-Choose the settings language on fusionfix.io or in FusionFixHub. The first launch writes the settings file next to the fix. FOV factor, HUD aspect constraint, movie framing, window mode and cursor confinement apply while the game runs; the other options require a restart. An old `FarCry.WidescreenFix.ini` or `FarCry64.WidescreenFix.ini` isn't used anymore and can be deleted.
+The native Plugins menu supports English, French, German, Italian and Spanish. Select the text language in FusionFixHub or the CFG and reopen Plugins. Ctrl+F10 opens the optional Supporter overlay; Debug → Info shows the build and graphics information.
+
+Choose the settings language on fusionfix.io or in FusionFixHub. The first launch writes the settings file next to the fix. FOV factor, HUD aspect constraint, movie framing, cutscene borders, frame rate limit, focus pause, update checks, window mode and cursor confinement apply while the game runs. Intro skipping, SMAA and console gamma require a restart.
 
 Texts are available in English, French, German, Italian and Spanish.
 
 ## Known limits
 
-- All presets leave SMAA off; turn it on separately.
-- The game's own cutscene borders are kept.
+- Vanilla turns SMAA off; Recommended and Enhanced turn it on.
+- Pause when unfocused applies to single-player; it does not pause multiplayer.
+- The PC game has no native gameplay controller bindings. This fix keeps the native keyboard and mouse controls; it does not emulate keys from a controller.
+- Use the supported patched executable.
 
-Movie framing also respects smaller videos embedded in menus. Original adds black bars, Fill crops the picture, and Stretch changes its proportions. Subtitles and other interface elements keep their normal placement.
+Movie framing also respects smaller videos embedded in menus: they are shown whole with black bars. Subtitles and other interface elements keep their normal placement.
 
 Skip intro removes only the startup logos. Story videos, menu music and normal startup checks remain.
 
@@ -76,9 +84,9 @@ The FOV multiplier follows the normal player view. Aiming, death views, camera o
 ## Installation
 
 1. Download the `.zip` from this release.
-2. Extract the contents directly into the game folder - the same folder as `FarCry.exe` (use the `Bin32` files for the 32-bit version and the `Bin64` files for the 64-bit one).
-3. Launch the game once to create the settings file next to the fix: `FarCry.WidescreenFix.cfg` for 32-bit or `FarCry64.WidescreenFix.cfg` for 64-bit.
-4. Configure the fix on fusionfix.io or in FusionFixHub, then restart the game.
+2. Extract the archive into the installation folder that contains `Bin32` and `Bin64`. Keep those folders: each contains the loader, its matching fix and FusionFixHub beside that version of `FarCry.exe`.
+3. Launch the game once to create the settings file next to the fix: `FarCry.FusionFix.cfg` for 32-bit or `FarCry64.FusionFix.cfg` for 64-bit.
+4. Configure the fix in Options → Plugins, on fusionfix.io or in FusionFixHub. Restart only when the settings menu requests it.
 
 > [!NOTE]
 > Installing [SilentPatch for Far Cry](https://github.com/CookiePLMonster/SilentPatchFarCry/releases/latest) is strongly recommended - it's the perfect companion to this fix.

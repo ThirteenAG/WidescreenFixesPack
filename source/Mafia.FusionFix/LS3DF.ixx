@@ -4,6 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include <cmath>
 #include <numbers>
+#include <stdexcept>
 
 export module LS3DF;
 
@@ -26,8 +27,7 @@ double CameraHalfAngle(uintptr_t camera, double angle)
     {
         const float value = FixSettings().Float("MAIN.FOVFactor");
         const float factor = std::isfinite(value) ? std::clamp(value, 0.5f, 2.0f) : 1.0f;
-        if (factor != 1.0f)
-            corrected = std::clamp(corrected * factor, 0.005, (std::numbers::pi - 0.01) * 0.5);
+        corrected = std::clamp(corrected * factor, 0.005, std::numbers::pi * (75.0 / 180.0));
     }
     return corrected;
 }
@@ -79,57 +79,59 @@ export void InitFOV()
 {
     auto module = GetLS3DF();
     if (!module) return;
-    std::vector<std::pair<uintptr_t, uintptr_t>> matches;
-    // 1.0 duplicates projection calculations in eight camera methods; later
-    // engines have a shared method. Find both FOV fields in either layout.
-    for (auto bytes : {"D9 85 40 01 00 00", "D9 83 40 01 00 00", "D9 82 40 01 00 00",
-                       "D9 85 4C 01 00 00", "D9 83 4C 01 00 00", "D9 82 4C 01 00 00"})
+    struct FovMatch
     {
-        auto pattern = find_module_pattern<UINT32_MAX>(module, bytes);
-        for (size_t i = 0; i < pattern.size(); ++i)
+        uintptr_t load;
+        uintptr_t multiply;
+        uint8_t cameraRegister;
+        uint32_t field;
+    };
+    std::vector<FovMatch> matches;
+    const auto collect = [&](const char* signature, size_t count, size_t multiplyOffset, uint8_t cameraRegister, uint32_t field)
+    {
+        auto pattern = hook::module_pattern(module, signature);
+        if (pattern.size() != count)
+            throw std::runtime_error("FOV signatures not found");
+        for (size_t i = 0; i < count; ++i)
         {
             auto load = reinterpret_cast<uintptr_t>(pattern.get(i).get<void>());
-            for (size_t offset : {6u, 8u, 11u})
-            {
-                auto multiply = load + offset;
-                if (Field<uint16_t>(multiply, 0) != 0x0DD8) continue;
-                auto* constant = Field<float*>(multiply, 2);
-                if (*constant != 0.5f) continue;
-                bool cosine = false, sine = false;
-                for (size_t j = 6; j < 22; ++j)
-                {
-                    cosine |= Field<uint16_t>(multiply, j) == 0xFFD9;
-                    sine |= Field<uint16_t>(multiply, j) == 0xFED9;
-                }
-                if (cosine && sine) matches.emplace_back(load, multiply);
-            }
+            matches.push_back({ load, load + multiplyOffset, cameraRegister, field });
         }
-    }
-    if (matches.size() != 2 && matches.size() != 16)
+    };
+    auto oldVersion = hook::module_pattern(module, "D9 85 40 01 00 00 B9 10 00 00 00 D8 0D ? ? ? ? 8D 95 64 03 00 00 33 C0 D9 C0 D9 FF D9 C9 D9 FE");
+    if (!oldVersion.empty()) // 1.0 has separate projection sites
     {
-        OutputDebugStringA("Mafia: camera projection patterns unavailable.\n");
-        return;
+        collect("D9 85 40 01 00 00 B9 10 00 00 00 D8 0D ? ? ? ? 8D 95 64 03 00 00 33 C0 D9 C0 D9 FF D9 C9 D9 FE", 1, 11, 5, 0x140);
+        collect("D9 83 40 01 00 00 8B F2 D8 0D ? ? ? ? B9 10 00 00 00 33 C0 D9 C0 D9 FF D9 C9 D9 FE", 3, 8, 3, 0x140);
+        collect("D9 83 40 01 00 00 33 C0 D8 0D ? ? ? ? D9 C0 D9 FF D9 C9 D9 FE", 2, 8, 3, 0x140);
+        collect("D9 82 40 01 00 00 B9 10 00 00 00 D8 0D ? ? ? ? 8B F3 33 C0 D9 C0 D9 FF D9 C9 D9 FE", 2, 11, 2, 0x140);
+        collect("D9 85 4C 01 00 00 D8 0D ? ? ? ? D9 C0 D9 FF D9 C9 D9 FE", 1, 6, 5, 0x14C);
+        collect("D9 82 4C 01 00 00 D8 0D ? ? ? ? D9 C0 D9 FF D9 C9 D9 FE", 1, 6, 2, 0x14C);
+        collect("D9 83 4C 01 00 00 D8 0D ? ? ? ? 5F D9 C0 5E D9 FF D9 C9 D9 FE", 5, 6, 3, 0x14C);
+        collect("D9 82 4C 01 00 00 D8 0D ? ? ? ? 5F D9 C0 D9 FF D9 C9 D9 FE", 1, 6, 2, 0x14C);
+    }
+    else // 1.1 and 1.2 share the projection sites
+    {
+        collect("D9 82 40 01 00 00 D8 0D ? ? ? ? D9 C0 D9 FF D9 C9 D9 FE", 1, 6, 2, 0x140);
+        collect("D9 82 4C 01 00 00 D8 0D ? ? ? ? D9 C0 5F D9 FF D9 C9 D9 FE", 1, 6, 2, 0x14C);
     }
     constexpr auto callbacks = FovCallbacks(std::make_index_sequence<16>{});
     for (size_t i = 0; i < matches.size(); ++i)
     {
-        auto [load, multiply] = matches[i];
+        const auto& [load, multiply, cameraRegister, field] = matches[i];
         auto& site = fovSites[i];
-        site.cameraRegister = Field<uint8_t>(load, 1) & 7;
-        site.field = Field<uint32_t>(load, 2);
+        site.cameraRegister = cameraRegister;
+        site.field = field;
         site.hook = safetyhook::create_mid(load, callbacks[i]);
-        if (site.hook) ProtectedGameRef<float*>{reinterpret_cast<float**>(multiply + 2)} = &site.multiplier;
+        if (site.hook) injector::WriteMemory<float*>(multiply + 2, &site.multiplier, true);
     }
     // Called for the active camera on every scene render, before the renderer
     // checks its revision. Projection setters alone miss cutscene transitions.
     auto pCamera = find_module_pattern(module,
         "56 8B F1 8B 86 F4 03 00 00 85 C0 8A 86 AC 00 00 00 74 ? A8 20");
-    if (pCamera.size() == 1)
     {
         static auto CameraFovHook = safetyhook::create_mid(pCamera.get_first(), RefreshCameraFov);
     }
-    else
-        OutputDebugStringA("Mafia: active camera refresh pattern unavailable.\n");
 }
 
 export void InitMovie()
@@ -139,23 +141,13 @@ export void InitMovie()
     auto pattern = find_module_pattern(module,
         "8B 4C 24 14 8B 54 24 00 8D 41 28 89 10 8B 54 24 04",
         "8B 4C 24 14 8B 54 24 00 8D 41 2C 89 10 8B 54 24 04");
-    if (pattern.size() != 1)
-    {
-        OutputDebugStringA("Mafia: movie position pattern unavailable.\n");
-        return;
-    }
     static auto MoviePositionHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         auto& rect = Field<RECT>(regs.esp, 0);
-        float width = Screen.fWidth, height = Screen.fHeight;
-        if (nFMVWidescreenMode != 2)
-        {
-            const float scaleX = Screen.fWidth / 4.0f;
-            const float scaleY = Screen.fHeight / 3.0f;
-            const float scale = nFMVWidescreenMode == 1 ? std::max(scaleX, scaleY) : std::min(scaleX, scaleY);
-            width = scale * 4.0f;
-            height = scale * 3.0f;
-        }
+        const float scaleX = Screen.fWidth / 4.0f;
+        const float scaleY = Screen.fHeight / 3.0f;
+        const float scale = std::min(scaleX, scaleY);
+        const float width = scale * 4.0f, height = scale * 3.0f;
         rect.left = static_cast<LONG>(std::nearbyint((Screen.fWidth - width) * 0.5f));
         rect.top = static_cast<LONG>(std::nearbyint((Screen.fHeight - height) * 0.5f));
         rect.right = static_cast<LONG>(std::nearbyint(width));

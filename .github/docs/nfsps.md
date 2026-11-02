@@ -14,11 +14,11 @@
 
 <img src="https://thirteenag.github.io/screens/nfsps/menu.jpg" width="460" align="right" style="margin: 0 0 16px 24px;" alt="Widescreen menu">
 
-- **Aspect Ratio** - corrected for all rendered elements, including ultrawide; the front end is scaled down to fit screens narrower than 16:9, and 16:10 is no longer stretched
+- **Aspect Ratio** - corrected for all rendered elements, including ultrawide; the front end is scaled down to fit screens narrower than 16:9, and 16:10 is no longer stretched. On screens wider than 16:9, loading screens, the race match-up and the Race Day map get black sides instead of the world or the parked menu objects beside them, dialogs dim the whole screen and the options menus' parked lists stay out of view; the resizable window follows its own shape
 - **HUD** - repositioned and scaled to match the active aspect ratio; **HUD Aspect Ratio** (Options > Interface, under the game's HUD options) is Auto (the whole screen, the HUD at its edges), 4:3, 16:9, 21:9, 32:9 or a custom ratio set on fusionfix.io or in FusionFixHub, applied live
 - **Field of View** - corrected for widescreen, matching the Xbox 360 version; **FOV Scale** also offers the original field of view or a mathematically correct hor+ one
-- **Movies** - **Movie Display** (Options > Plugins > Fusion Fix > Movies & Cutscenes, applied at once): Original Aspect shows the 16:9 movies whole with black bars, Fill Screen (the default) keeps their aspect and crops them to cover the screen, Stretch fills the screen
-- **Cutscenes** - the in-engine scenes (race intros, the kings' scenes, the endings) use the widened field of view like the game; **Cutscene Borders** Pillarbox (the default) keeps them at 16:9 on wider screens, outside the front end. The PC version draws no letterbox bars (its scenes' letterbox channel only feeds the camera), so there is no Letterbox choice
+- **Movies** - 16:9 movies are shown whole with black bars where needed
+- **Cutscenes** - the in-engine scenes (race intros, the kings' scenes, the endings) use the widened field of view like the game. **Cutscene Borders** (Options > Plugins > Fusion Fix > Movies & Cutscenes, applied at once): Off, Letterbox (the bars above and below of the console versions, which the PC version never drew), Pillarbox (side bars that keep the scenes at 16:9 on wider screens) or Both (the default). Off shows the whole picture across the screen, like the original. **Animated Borders** lets the bars slide in and out with the scene (the default) or shows them at once. The race intros have no letterbox in their data, so Letterbox shows bars only in scenes that have them
 - **Resolutions** - every display mode of at least 640x480 is listed in the video options, instead of a few fixed ones
 - **High frame rates** - the game simulates at the frame rate limit with precisely paced frames, so it runs smoothly at any refresh rate; speech and texture animations keep their timing, and the drag race burnout grip is the same at any frame rate
 - **Brake Lights** - come on with any amount of brake, not only when ABS pulsed the brake fully
@@ -50,13 +50,13 @@
 
 <img src="https://thirteenag.github.io/screens/nfsps/race2.jpg" width="360" align="left" style="margin: 0 24px 0px 0;" alt="Gameplay">
 
-- **In-Game Options** - settings that belong to one of the game's options are listed next to it: Console Gamma, SMAA, Frame Rate and Display Mode under Graphics > Advanced, Shadow Resolution and Motion Blur under Graphics > World, HUD Aspect Ratio under Interface. Everything else is under one new **Plugins** entry of the Options menu (in place of Credits, and at the end of the race's pause Options, where the fix's page also has the graphics settings): it lists Fusion Fix first and then every other loaded plugin with in-game settings. Each opens its page, split into screens by the settings' pages (Graphics, Movies & Cutscenes, Camera, Controls, Interface): a **Preset** row first, the settings, and **Restore Defaults** last (accept, then accept again to confirm; it resets only the settings on the current screen). Large plugin and section lists open through numbered ranges, keeping every entry reachable. All settings are stored in `NFSProStreet.FusionFix.cfg` next to the plugin, which the fix writes with every setting and a comment above each; settings can also be changed on fusionfix.io or in FusionFixHub. An old `scripts/NFSProStreet.FusionFix.ini` isn't used anymore and can be deleted
-- **Presets** - Vanilla (the original look: original FOV scale, no free look, the game's own 30 FPS limit in races, movies at their original aspect, no cutscene pillarbox, intros shown), Recommended (the defaults) or Enhanced (adds console gamma, SMAA and 4096 shadows), picked with left/right on the Preset row of the fix's page and applied with accept, then accept again to confirm; they never change window mode, language, sensitivities or controls
+- **In-Game Options** - settings that belong to one of the game's options are listed next to it: Console Gamma, SMAA, Frame Rate and Display Mode under Graphics > Advanced, Shadow Resolution and Motion Blur under Graphics > World, HUD Aspect Ratio under Interface. Everything else is under one new **Plugins** entry of the Options menu (in place of Credits, and at the end of the race's pause Options, where the fix's page also has the graphics settings): it lists Fusion Fix first and then every other loaded plugin with in-game settings. Each opens its page, split into screens by the settings' pages (Graphics, Movies & Cutscenes, Camera, Controls, Interface): a **Preset** row first, the settings, and **Restore Defaults** last (accept, then accept again to confirm; it resets only the settings on the current screen). Large plugin and section lists open through numbered ranges, keeping every entry reachable. All settings are stored in `NFSProStreet.FusionFix.cfg` next to the plugin, which the fix writes with every setting and a comment above each; settings can also be changed on fusionfix.io or in FusionFixHub.
+- **Presets** - Vanilla (no free look, a 60 FPS limit, no cutscene borders, no SMAA or raw mouse, intros shown), Recommended (the defaults) or Enhanced (adds console gamma and 4096 shadows), picked with left/right on the Preset row of the fix's page and applied with accept, then accept again to confirm; they never change window mode, language, sensitivities or controls
 - **Language** - the game's language on the fix's Interface screen (after a restart), offering only the languages whose text files are installed. Korean, Chinese and Thai crash this exe and aren't offered (#665)
 - **Skip Intro** - bypass startup FMVs and the title screen
 - **Display Mode** - borderless, bordered, resizable, or borderless fullscreen; in every mode the picture is neither cropped nor blurred on scaled desktops
 - **FPS Limit** - synced to the monitor refresh rate (the default), twice the refresh rate, or a fixed value from 30; the game itself limits races to 30 FPS
-- **Gamepad Support** - Xbox, PlayStation, Switch and other controllers through [Xidi](https://github.com/samuelgr/Xidi) with the [SDL3 plugin](https://github.com/RibShark/Xidi-SDL3-Plugin): the Xbox 360 version's default controls, controller button names in the controls menu and console button icons in the front end (Xbox or PlayStation icons, detected automatically or chosen in the menu)
+- **Gamepad Support** - Xbox, PlayStation, Switch and other controllers through [Xidi](https://github.com/samuelgr/Xidi) using XInput (PlayStation and Switch pads use Steam Input or DS4Windows): the Xbox 360 version's default controls, controller button names in the controls menu and console button icons in the front end (Xbox or PlayStation icons, Xbox in Auto, PlayStation when chosen in the menu)
 - **Stick Dead Zones** - separate dead zones for the left and right stick, in percent (default 10)
 - **Field of View** - multiplies the driving camera field of view from 0.5 to 2.0 (default 1.0) and applies while the game runs; native angle limits still apply; menus, movies and the garage keep theirs
 - **Custom Save Directory** - redirect user files to any subfolder in the game directory
@@ -64,7 +64,7 @@
 - **Shadow Resolution** - configurable dynamic shadow resolution (1024 / 2048 / 4096 / 8192 in the menu, up to 16384 on fusionfix.io or in FusionFixHub)
 - **Motion Blur** - turn motion blur off without affecting the other World FX
 - **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how GTA IV looked on the Xbox 360 (off by default, on in Enhanced)
-- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect (Off or SMAA), listed next to the game's own anti-aliasing
+- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect (Off or SMAA), listed next to the game's own anti-aliasing; on by default, off in the Vanilla preset
 - **AA Artifact Fix** - hides the 1px lines at the screen edges caused by MSAA (top and left, or all sides)
 <br clear="both">
 
@@ -92,25 +92,28 @@
 
 ---
 
-**Confine cursor** (on fusionfix.io and in FusionFixHub, on by default, applies while the game runs) keeps the pointer inside the game window. Switching away, moving the window, opening system menus or disabling the setting releases it.
+## Window and focus
 
-The added settings fall back to English when Russian is selected.
+- **Pause When Unfocused** (Interface screen) - on by default: the game pauses and mutes while another window is active, like the original. Turn it off to keep the game running in the background; it then ignores the keyboard and pads until you switch back.
+- **Confine Cursor** (on fusionfix.io and in FusionFixHub, on by default, applies while the game runs) keeps the pointer inside the game window. Switching away, moving the window, opening system menus or disabling the setting releases it.
+- **Raw Mouse Input** (Camera screen) - free look reads the mouse without Windows pointer acceleration and without losing movement at high polling rates.
+- **Check for Updates** (Interface screen) - off by default; when on, the game asks fusionfix.io once per start whether a newer version of the fix is out and tells you in the main menu.
+- In windowed modes the window opens centered on the monitor it is on.
 
-**Display Mode** offers Fullscreen, Windowed with borders or desktop Borderless, plus resizable, borderless-at-render-size and stretched modes. Changes apply after a restart. After updating from an older release, choose the mode again.
+**Display Mode** offers Fullscreen, Windowed with borders or desktop Borderless, plus resizable and borderless-at-render-size modes. Changes apply after a restart. After updating from an older release, choose the mode again.
 
 Shadow Resolution can keep the game’s original quality-dependent sizes with Original (used by Vanilla), or override them after a restart.
 
 ## Known limits
 
 - The frame-rate setting requires a restart and also selects the simulation rate. Unlimited rendering and separate limits for menus and loading are not supported.
-- Mouse camera movement uses the game’s input; raw mouse input is not supported.
 
 ---
 
 ## Installation
 
 1. Download the `.zip` from this release.
-2. Extract the contents directly into the game folder - the same folder as `nfsps.exe`. Keep `Xidi.32.dll`, `SDL.XidiPlugin.32.dll` and `Xidi.ini` next to it for gamepad support (`dinput8.dll` loads Xidi).
+2. Extract the contents directly into the game folder - the same folder as `nfsps.exe`. Keep `Xidi.32.dll` and `Xidi.ini` next to it for gamepad support (`dinput8.dll` loads Xidi).
 3. Remove NFS XtendedInput if it is installed; the fix replaces it.
 4. Launch the game once to create `scripts\NFSProStreet.FusionFix.cfg`.
 5. Change the settings in the game's Options menu under Plugins (and next to the game's own options), in FusionFixHub, or on fusionfix.io. Restart the game when an option requires it.

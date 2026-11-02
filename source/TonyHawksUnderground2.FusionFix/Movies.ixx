@@ -1,0 +1,15 @@
+module;
+
+#include <stdafx.h>
+#include "FixSettings.hpp"
+#include "Shared/TonyHawk/Bink9.hpp"
+
+export module Movies;
+
+export void InstallMovie()
+{
+    TonyBink9::Install(&FixSettings().Int("MAIN.FMVWidescreenMode"),
+        "81 EC 74 01 00 00 A1 ? ? ? ? 56 8B B4 24 7C 01 00 00 85 F6 89 84 24 74 01 00 00",
+        "D9 1D ? ? ? ? 85 C9 DB 44 24 ? 7D ? D8 05 ? ? ? ? 8B 15 ? ? ? ? D9 1D ? ? ? ? DB 05 ? ? ? ? 6A 00 8D 7C 24 ? 57 6A 01 D9 1D ? ? ? ? DB 05 ? ? ? ? 6A 16 6A 00 6A 01 51 D9 1D",
+        { 2, 28, 49, 68 });
+}

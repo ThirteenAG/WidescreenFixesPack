@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/kingkong/main2.jpg" width="760" alt="Peter Jackson&#x27;s King Kong Widescreen Fix">
+<img src="https://thirteenag.github.io/screens/kingkong/main2.jpg" width="760" alt="Peter Jackson&#x27;s King Kong Fusion Fix">
 
-**Peter Jackson's King Kong Widescreen Fix** corrects widescreen scaling and field of view, fixes timing and camera issues, and improves mouse and gamepad input in Gamer's Edition and Signature Edition.
+**Peter Jackson's King Kong Fusion Fix** corrects widescreen scaling and field of view, fixes timing and camera issues, and improves mouse and gamepad input in Gamer's Edition and Signature Edition.
 
-[Website](https://thirteenag.github.io/wfp#kingkong) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/KingKong.WidescreenFix/dllmain.cpp)
+[Website](https://thirteenag.github.io/wfp#kingkong) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/KingKong.FusionFix/dllmain.cpp)
 
 </div>
 
@@ -12,46 +12,54 @@
 
 ## Fixes
 
-- **Compatibility** — Compatible with Gamer's Edition and Signature Edition
-- **Resolution list** — More display resolutions in the settings application.
-- **Aspect ratio** — Correct widescreen aspect ratio scaling.
-- **HUD** — Correct HUD scaling for widescreen.
+- **Compatibility** — Works with Gamer's Edition and Signature Edition (DirectX 9 and DirectX 8 executables).
+- **Resolution list** — More display resolutions in the settings application. In a window the game uses the size you chose, also sizes your monitor has no display mode for.
+- **Aspect ratio** — Correct widescreen aspect ratio scaling with a wider field of view.
+- **HUD and menus** — Text, icons and menus keep their proportions. Menus stay in a centred 16:9 area on wider screens and the HUD can be kept in a centred box.
 - **Field of view** — Adjust the field of view for widescreen.
 - **Videos** — Correct FMV scaling for widescreen.
 
 ### Timing and input
 
 - **CPU timing** — Fix excessive game speed when CPU frequency exceeds 4.294 GHz.
-- **Frame rate limit** — Limit FPS to avoid game bugs; affected levels switch to 30 FPS to prevent crashes.
+- **Frame rate limit** — Limit FPS, or follow the monitor refresh rate.
+- **Physics** — Physics runs in fixed steps at any frame rate; Kong To The Rescue and Chased by V-Rex no longer need a 30 FPS limit.
 - **Camera shake** — Fix persistent shaking at 60 FPS after the first King Kong encounter and V-Rex encounters in the V-Rex and Call Kong levels.
 - **Mouse input** — Use raw input for cursor and camera movement.
-- **Gamepad** — Correct controller support in the game and settings application, including vibration.
+- **Swamp performance** — Fix very low frame rates in the Swamps and In the Mud levels on many graphics cards.
+- **Fast loading** — Gamer's Edition textures load quickly without a texture cache.
+- **Gamepad** — XInput controllers work through the included Xidi, in the game and in the settings application, including vibration.
 
 ## Options
 
-- **Blur** — Optionally disable blur in Necropolis, Brontosaurus, In The Mud, and New York, also correcting the obscured damage overlay.
-- **Field of view** — Adjust the FOV multiplier on fusionfix.io or in FusionFixHub.
+- **HUD aspect ratio** — Auto spreads the HUD and on-screen text over the whole screen; a ratio such as 16:9 keeps them in a centred box. Menus keep their 16:9 layout on wider screens. Applies while the game runs.
+- **Blur** — The stuck blur in Necropolis, Brontosaurus, In The Mud and New York is removed, and the damage overlay is no longer obscured.
+- **Field of view** — Widen or narrow the view in play; menus keep their framing. Applies while the game runs.
 - **Mouse sensitivity** — Adjust the raw mouse multiplier while playing; enabling or disabling raw input requires restarting.
-- **Video mode** — Original keeps the complete video at its correct aspect, Fill crops to cover the display, and Stretch fills it without preserving aspect. Applies while the game runs; Fill can crop subtitles drawn with the video.
-- **Broken geometry** — Optionally hide objects with broken geometry or textures in Gamer's Edition.
-- **Window modes** — Choose fullscreen, windowed or borderless.
+- **Broken geometry** — Objects with broken geometry or textures in Gamer's Edition are hidden.
+- **Window modes** — Choose fullscreen, windowed or borderless. The window keeps the size chosen in the settings application.
+- **Skip intro** — Skips the startup logo videos.
+- **Pause when unfocused** — The game pauses while its window is in the background; turn it off to keep it running.
 
 ## Settings and rendering
 
-Open **Options → Plugins** for settings and per-plugin presets. Field of view, video framing and the frame rate limit change while the game runs. Restart the game after changing other options. If Plugins is unavailable in your edition, configure the fix in FusionFixHub.
+Open **Options → Plugins** for settings and per-plugin presets (Gamer's Edition). In every edition the fix can be configured in FusionFixHub or in `scripts/KingKong.FusionFix.cfg`. Supporters can also press **Ctrl+F10** in the DirectX 9 executables for the settings overlay. Field of view, HUD aspect ratio and the frame rate limit change while the game runs. Restart the game after changing other options.
 
-The frame limiter method can only be changed in the settings file; it applies while playing. A limit of 0 is unlimited; -1 follows the monitor refresh rate. The game no longer needs the fix to restrict it to one CPU core. Custom aspect ratios accept values such as `16:9`; invalid values use the display aspect ratio. The fix doesn't write the game's video settings to the registry.
+The frame limiter method can only be changed in the settings file; it applies while playing. A limit of 0 is unlimited; -1 follows the monitor refresh rate. The game no longer needs the fix to restrict it to one CPU core. The fix doesn't write the game's video settings to the registry.
 
 Widescreen, HUD, videos, input, timing and existing Direct3D 9 shader replacements remain supported. Texts are available in English, French, German, Italian and Spanish.
 
 ## Known limits
 
+- The Plugins page is only in Gamer's Edition; in Signature Edition use FusionFixHub or the settings file.
+- Signature Edition: on screens wider than about 2.15:1 the dark background of the pause menu doesn't reach the sides of the screen.
+- No cutscene-border setting; cutscenes fill the screen with a wider view. The field-of-view multiplier also applies to scripted cameras.
+- The window can't be resized while the game runs (the game draws at the size it started with); choose the size in the settings application.
+- The "Press SPACE to continue" screen after the logos stays; press a key to continue.
+- The Ctrl+F10 overlay is not available in the DirectX 8 executable (kingkong8.exe of the Signature Edition).
 - Long menu entries can continue on another line or page. Changing a value can move nearby entries to a different page.
-- No cutscene-border or HUD aspect-ratio settings; the field-of-view multiplier also applies to scripted cameras.
-
-## Notes
-
-To make Gamer's Edition load faster, download [KingKongGamersEdition.TextureCache.zip](https://github.com/ThirteenAG/WidescreenFixesPack/releases/download/kingkong/KingKongGamersEdition.TextureCache.zip) and place `Textures` folder to the game root directory. Without it, the texture cache will be generated by Widescreen Fix on each loading screen and will only make subsequent loading faster
+- Controller bindings are configured with SettingsApplication.exe. Automatic full-game bindings and selectable controller prompt sets are not provided.
+- Some small effects, such as swinging chains, still move faster above 60 FPS.
 
 ---
 
@@ -59,7 +67,7 @@ To make Gamer's Edition load faster, download [KingKongGamersEdition.TextureCach
 
 1. Download the fix archive from this release.
 2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
-3. Launch the game once to create `scripts/KingKong.WidescreenFix.cfg`.
+3. Launch the game once to create `scripts/KingKong.FusionFix.cfg`.
 4. Configure the fix on fusionfix.io or in FusionFixHub. Restart the game when an option requires it.
 
 <details>

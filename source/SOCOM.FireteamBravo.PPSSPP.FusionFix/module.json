@@ -19,6 +19,9 @@
   ],
   "libraries": [
     "-lpsppower",
+    "-lpspgu",
+    "-lpspge",
+    "-lpsputility",
     "-lpspsystemctrl_user",
     "-lm"
   ],

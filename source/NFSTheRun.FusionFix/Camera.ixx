@@ -13,6 +13,7 @@ bool bFreeHeading = false;  // the free look has its own direction instead of th
 float WorldYaw = 0.0f;      // degrees, direction from the car to the camera in the world
 float PitchOffset = 0.0f;   // degrees, relative to the game's camera
 
+bool bCameraEnabled = true;    // CAMERA.Enable
 bool InvertLook = false;
 bool OnlyAllowHorizontalStickMovement = false;
 float StickLookSensitivity = 1.0f;
@@ -55,7 +56,8 @@ public:
         if (dx == 0 && dy == 0)
         {
             repeats = 0;
-            return !broken;
+            broken = false;
+            return true;
         }
 
         if (dx == lastX && dy == lastY)
@@ -130,6 +132,12 @@ namespace fb
         SafetyHookInline shCommitShot = {};
         void __fastcall commitShot(float* CinebotCamera, void* edx, void* CinebotCameraShot)
         {
+            if (!bCameraEnabled)
+            {
+                ResetLook();
+                return shCommitShot.unsafe_fastcall(CinebotCamera, edx, CinebotCameraShot);
+            }
+
             bHideCursorForMouseLook = true;
             LastCameraInputTime = SteadyClock::now();
 
@@ -198,7 +206,7 @@ namespace fb
 
             float mouseDeltaX = 0.0f;
             float mouseDeltaY = 0.0f;
-            if (MouseFilter.Accept(g_Mouse.DeltaX, g_Mouse.DeltaY))
+            if (g_Mouse.Raw || MouseFilter.Accept(g_Mouse.DeltaX, g_Mouse.DeltaY))
             {
                 mouseDeltaX = (float)g_Mouse.DeltaX;
                 mouseDeltaY = (float)g_Mouse.DeltaY;
@@ -357,22 +365,24 @@ public:
             // The aspect ratio comes from the viewport, so the view is Hor+ by itself. In races the field of view is
             // multiplied by MAIN.FOVFactor; cutscenes and scripted shots set their own after this and keep it.
             auto fovPattern = hook::pattern("D9 44 24 0C 51 8B CE D9 1C 24 E8 ? ? ? ? 8B 9B 84 0F 00 00");
-            if (!fovPattern.empty())
+            static auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
+            static auto FieldOfViewHook = safetyhook::create_mid(fovPattern.get_first(), [](SafetyHookContext& regs)
             {
-                static auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
-                static auto FieldOfViewHook = safetyhook::create_mid(fovPattern.get_first(), [](SafetyHookContext& regs)
+                bool inRace = GetTickCount64() - fb::Vehicle::LastUpdate < 500;
+                float factor = std::clamp(fFOVFactor, 0.5f, 2.0f);
+                auto fov = (float*)(regs.esp + 0xC);
+                if (inRace && factor != 1.0f)
                 {
-                    bool inRace = GetTickCount64() - fb::Vehicle::LastUpdate < 500;
-                    float factor = std::clamp(fFOVFactor, 0.5f, 2.0f);
-                    auto fov = (float*)(regs.esp + 0xC);
-                    if (inRace && factor != 1.0f)
-                        *fov = std::clamp(*fov * factor, 0.0002f, 2.96706f);   // below 170 degrees
-                });
-            }
+                    // The picture stays within 150 degrees across, or the game's own view if that is wider
+                    auto [width, height] = GetRes();
+                    float aspect = height > 0 ? float(width) / float(height) : 16.0f / 9.0f;
+                    float limit = 2.0f * std::atan(std::tan(1.308997f) / aspect);
+                    *fov = std::clamp(*fov * factor, 0.0002f, std::max(std::min(limit, 2.96706f), *fov));
+                }
+            });
 
-            if (!FixSettings().Int("CAMERA.Enable"))
-                return;
-
+            // The free look's hooks are always in place; CAMERA.Enable turns it on and off at once
+            bCameraEnabled = FixSettings().Bool("CAMERA.Enable");
             IdleTimeoutSeconds = FixSettings().Float("CAMERA.CameraReturnTimeout");
             ReturnSpeed = FixSettings().Float("CAMERA.CameraReturnSpeed");
             StickLookSensitivity = FixSettings().Float("MAIN.GamepadCameraSpeed");
@@ -397,20 +407,30 @@ public:
                 bLookBehind = *(uint8_t*)(regs.ecx + 0xE9);
             });
 
+            // The stick deflection that starts the game's own free look: out of reach while the fix's free look is on
             static double g_minStickDeviationForFreeLook = 2.0;
             pattern = hook::pattern("F2 0F 59 C8 F2 0F 58 D1 66 0F 2F 15");
+            static double gameMinStickDeviation = **pattern.get_first<double*>(12);
+            g_minStickDeviationForFreeLook = bCameraEnabled ? 2.0 : gameMinStickDeviation;
             injector::WriteMemory(pattern.get_first(12), &g_minStickDeviationForFreeLook, true);
 
             static auto FreeLookHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 bFreeLook = *(uint8_t*)(regs.esi + 0xEA);
 
+                static bool bWasEnabled = bCameraEnabled;
+                if (bWasEnabled != bCameraEnabled)
+                {
+                    bWasEnabled = bCameraEnabled;
+                    g_minStickDeviationForFreeLook = bCameraEnabled ? 2.0 : gameMinStickDeviation;
+                }
+
                 static bool bWasPressed = false;
-                if (bBothSticksClicked)
+                if (bBothSticksClicked && bCameraEnabled)
                 {
                     if (!bWasPressed)
                     {
-                        g_minStickDeviationForFreeLook = (g_minStickDeviationForFreeLook > 1.0) ? 0.25 : 2.0;
+                        g_minStickDeviationForFreeLook = (g_minStickDeviationForFreeLook > 1.0) ? gameMinStickDeviation : 2.0;
                         bWasPressed = true;
                     }
                 }
@@ -422,6 +442,7 @@ public:
 
             WFP::onGameProcessEvent() += []()
             {
+                bCameraEnabled = FixSettings().Bool("CAMERA.Enable");
                 IdleTimeoutSeconds = FixSettings().Float("CAMERA.CameraReturnTimeout");
                 ReturnSpeed = FixSettings().Float("CAMERA.CameraReturnSpeed");
                 StickLookSensitivity = FixSettings().Float("MAIN.GamepadCameraSpeed");

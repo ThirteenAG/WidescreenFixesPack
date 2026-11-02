@@ -207,8 +207,8 @@ export namespace CharacterBlood
         auto hardware = ScarfaceRTTI::FindVtable(".?AVd3dExtHardwareSkinning@pure3d@@");
         if (assemble && disassemble && characterVtable && textureVtable && primitive && hardware)
         {
-            primitiveHook = safetyhook::create_inline(injector::ReadMemory<void*>(primitive + 8 * sizeof(void*), true), DrawPrimitiveGroup);
-            hardwareHook = safetyhook::create_inline(injector::ReadMemory<void*>(hardware + 6 * sizeof(void*), true), DrawHardwareSkin);
+            primitiveHook = safetyhook::create_inline(*reinterpret_cast<void**>(primitive + 8 * sizeof(void*)), DrawPrimitiveGroup);
+            hardwareHook = safetyhook::create_inline(*reinterpret_cast<void**>(hardware + 6 * sizeof(void*)), DrawHardwareSkin);
         }
         enabled = primitiveHook && hardwareHook;
         if (!enabled) { primitiveHook.reset(); hardwareHook.reset(); }

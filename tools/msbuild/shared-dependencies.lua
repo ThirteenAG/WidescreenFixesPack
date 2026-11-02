@@ -10,25 +10,32 @@ local sources = {
    "external/injector/utility/FunctionHookMinHook.cpp",
    "external/injector/zydis/**.c"
 }
+-- The overlay's ImGui (premake5.lua overlay_imgui_files): linked only by the fixes that call add_overlay_imgui
+local imguiSources = overlay_imgui_files or {}
 local objects = {}
+local imguiObjects = {}
 local objectNames = {}
-local sharedSources = {}
-for _, pattern in ipairs(sources) do
-   for _, source in ipairs(os.matchfiles(path.join(root, pattern))) do
-      table.insert(sharedSources, source)
+local function addObjects(patterns, list)
+   local found = {}
+   for _, pattern in ipairs(patterns) do
+      for _, source in ipairs(os.matchfiles(path.join(root, pattern))) do
+         table.insert(found, source)
+      end
+   end
+   -- Preserve the source order used by the generated native projects.
+   table.sort(found)
+   for _, source in ipairs(found) do
+      local name = path.getbasename(source) .. ".obj"
+      assert(not objectNames[name:lower()], "Shared dependency object name collision: " .. name)
+      objectNames[name:lower()] = true
+      table.insert(list, "$(ProjectDir)obj\\shared\\$(Platform)\\$(Configuration)\\" .. name)
    end
 end
--- Preserve the source order used by the generated native projects.
-table.sort(sharedSources)
-for _, source in ipairs(sharedSources) do
-   local name = path.getbasename(source) .. ".obj"
-   assert(not objectNames[name:lower()], "Shared dependency object name collision: " .. name)
-   objectNames[name:lower()] = true
-   table.insert(objects, "$(ProjectDir)obj\\shared\\$(Platform)\\$(Configuration)\\" .. name)
-end
+addObjects(sources, objects)
+addObjects(imguiSources, imguiObjects)
 
 for wks in premake.global.eachWorkspace() do
-   local platform = ({ Win32 = "Win32", Win64 = "x64", Dolphin = "x64", CXBXR = "Win32" })[wks.name:match("^(.-)%.")]
+   local platform = ({ Win32 = "Win32", Win64 = "x64", Dolphin = "x64" })[wks.name:match("^(.-)%.")]
    if platform == "Win32" or platform == "x64" then
       local consumers = {}
       for _, prj in ipairs(wks.projects) do
@@ -38,11 +45,18 @@ for wks in premake.global.eachWorkspace() do
       workspace(wks.name)
       for _, prj in ipairs(consumers) do
          project(prj.name)
-         imports[prj.name] = { dependency = dependency }
+         local overlay = overlay_imgui_projects and overlay_imgui_projects[prj.name]
+         imports[prj.name] = { dependency = dependency, overlay = overlay }
          dependson { dependency }
          for _, source in ipairs(sources) do
             filter { "configurations:Release", "files:**/" .. source }
                excludefrombuild "On"
+         end
+         if overlay then
+            for _, source in ipairs(imguiSources) do
+               filter { "configurations:Release", "files:**/" .. source }
+                  excludefrombuild "On"
+            end
          end
          filter {}
       end
@@ -55,6 +69,9 @@ for wks in premake.global.eachWorkspace() do
          objdir(path.join(root, "build/obj/shared/%{cfg.platform}/%{cfg.buildcfg}"))
          targetdir(path.join(root, "build/obj/shared/%{cfg.platform}/%{cfg.buildcfg}"))
          removefiles { path.join(root, "includes/stdafx.cpp"), path.join(root, "Resources/*.rc") }
+         for _, source in ipairs(imguiSources) do
+            files { path.join(root, source) }
+         end
          imports[dependency] = { producer = true }
       filter {}
       group ""
@@ -70,7 +87,11 @@ premake.override(premake.vstudio.vc2010.elements, "project", function(base, prj)
          if settings.producer then
             premake.w('<WFPSharedDependencyProducer>true</WFPSharedDependencyProducer>')
          else
-            premake.w('<WFPSharedDependencyObjects>%s</WFPSharedDependencyObjects>', table.concat(objects, ";"))
+            local linked = table.concat(objects, ";")
+            if settings.overlay and #imguiObjects > 0 then
+               linked = linked .. ";" .. table.concat(imguiObjects, ";")
+            end
+            premake.w('<WFPSharedDependencyObjects>%s</WFPSharedDependencyObjects>', linked)
          end
          premake.pop('</PropertyGroup>')
          if settings.dependency then

@@ -2,10 +2,16 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <stdexcept>
 
 export module WidescreenFix;
 
 import ComVars;
+import Hud;
+import Cinematics;
+import Splitscreen;
+import GameplayFOV;
+import VideoFrame;
 
 namespace GameplayFOV
 {
@@ -15,18 +21,20 @@ namespace GameplayFOV
     void __fastcall Update(uintptr_t camera, void* edx)
     {
         CameraStep.fastcall<void>(camera, edx);
+        const auto entity = *reinterpret_cast<uintptr_t*>(camera + 0x28);
+        Cinematics::Camera(camera, entity && *reinterpret_cast<int*>(entity + 8) == 7);
         const float factor = std::isfinite(*Factor) ? std::clamp(*Factor, 0.5f, 2.0f) : 1.0f;
         if (factor == 1.0f)
             return;
-        const auto entity = *reinterpret_cast<uintptr_t*>(camera + 0x28);
         if (!entity || *reinterpret_cast<int*>(entity + 8) != 2)
             return;
 
         // Only locomotion modes: fixed, cinematic, animated, aiming and gadget views keep their framing.
         constexpr int gameplay[] =
         {
-            2, 6, 9, 12, 13, 14, 17, 18, 19, 20, 22, 26, 29,
-            43, 47, 51, 53, 55, 57, 62, 67, 72, 77, 82
+            2, 6, 9, 12, 13, 14, 17, 18, 19, 20, 22, 26, 29, 34,
+            43, 47, 51, 53, 55, 57, 62, 67, 72, 77, 82, 87, 92, 97,
+            102, 107, 112, 117, 118, 124, 137, 138, 214, 217, 220, 223, 226, 229
         };
         const int mode = *reinterpret_cast<int*>(entity + 12);
         if (std::find(std::begin(gameplay), std::end(gameplay), mode) == std::end(gameplay))
@@ -35,17 +43,20 @@ namespace GameplayFOV
         // The native mode step writes this angle afresh, before it is committed to the view actor.
         const float angle = *reinterpret_cast<float*>(camera + 0x2C);
         if (std::isfinite(angle) && angle > 0.0f && angle < 180.0f)
-            *reinterpret_cast<float*>(camera + 0x2C) = std::clamp(angle * factor, 1.0f, 179.0f);
+        {
+            const auto viewport = GetCameraViewport(camera);
+            const auto width = viewport.area.right - viewport.area.left;
+            const auto height = viewport.area.bottom - viewport.area.top;
+            const float aspect = width > 0 && height > 0 ? float(width) / height : GetAspectRatio();
+            *reinterpret_cast<float*>(camera + 0x2C) = Scale(angle, factor, aspect);
+        }
     }
 
     void Init()
     {
         Factor = &FixSettings().Float("MAIN.FOVFactor");
         auto pattern = hook::pattern("55 8B EC 83 EC 1C 53 8B D9 8B 4B 28 8B 01 FF 90 B4 00 00 00 83 F8 01");
-        if (pattern.size() == 1)
-            CameraStep = safetyhook::create_inline(pattern.get_first(), Update);
-        else
-            OutputDebugStringA("SplinterCellConviction: gameplay FOV pattern unavailable.\n");
+        CameraStep = safetyhook::create_inline(pattern.get_first(), Update);
     }
 }
 
@@ -90,18 +101,22 @@ void __fastcall HealthFeedbackDraw(uintptr_t healthFeedback, void* edx, float de
 {
     shHealthFeedbackDraw.fastcall<void>(healthFeedback, edx, deltaTime);
 
-    auto ratio = GetAspectRatio() / fDefaultAspectRatio;
-    if (ratio <= 1.0f)
+    float aspect = GetAspectRatio();
+    if (auto area = GetHudPlayerViewport(*reinterpret_cast<const uintptr_t*>(healthFeedback + 0x38)))
+        aspect = float(area->right - area->left) / (area->bottom - area->top);
+    auto ratio = aspect / fDefaultAspectRatio;
+    if (std::abs(ratio - 1.0f) < 0.001f)
         return;
 
     // same scale the game passes to SetHealthFeedback
     auto health = *reinterpret_cast<float*>(healthFeedback + 0x64);
     auto scale = health * 50.0f + 100.0f;
 
-    static constexpr char path[] = "_root.HealthFeedback._xscale";
-    FlashString str = { path, sizeof(path), sizeof(path), 0 };
+    const char* path = ratio > 1.0f ? "_root.HealthFeedback._xscale" : "_root.HealthFeedback._yscale";
+    const auto length = static_cast<int32_t>(std::strlen(path) + 1);
+    FlashString str = { path, length, length, 0 };
     auto vtable = *reinterpret_cast<uintptr_t**>(healthFeedback);
-    reinterpret_cast<void(__thiscall*)(uintptr_t, FlashString*, float)>(vtable[108 / 4])(healthFeedback, &str, scale * ratio);
+    reinterpret_cast<void(__thiscall*)(uintptr_t, FlashString*, float)>(vtable[108 / 4])(healthFeedback, &str, scale * (ratio > 1.0f ? ratio : 1.0f / ratio));
 }
 
 // GFxValue, number type
@@ -123,11 +138,14 @@ bool SetFlashNumber(uintptr_t movieView, const char* path, double value)
 // Sticky camera PiP Flash frame (FlashHudPiP): the game sets _root.PiP_Bar._x = progress * 356 while it slides, progress goes from 0 (hidden)
 // to 1 (shown) and the bar's graphics sit left of its origin, so hidden is just left of the 16:9 stage and nothing positions it before the first slide.
 // Hide and slide it from the left screen edge instead.
+std::tuple<int32_t, int32_t, int32_t, int32_t> GetHudRect();
 float PiPBarProgress = 0.0f;
 float GetPiPBarX(float progress)
 {
     auto extra = 640.0f * (GetAspectRatio() / fDefaultAspectRatio - 1.0f);
-    return progress * (356.0f + extra) - extra;
+    const auto [x, y, width, height] = GetHudRect();
+    const auto offset = Hud::Frame(BackBufferWidth, BackBufferHeight, x, y, width, height);
+    return progress * (356.0f + extra + static_cast<float>(offset.left)) - extra;
 }
 
 // Centered 16:9 rect of the backbuffer (x, y, w, h)
@@ -153,6 +171,9 @@ void LayoutPiP(uintptr_t manager, bool shown)
         return;
 
     auto [rectX, rectY, rectWidth, rectHeight] = GetHudRect();
+    const auto offset = Hud::Frame(BackBufferWidth, BackBufferHeight, rectX, rectY, rectWidth, rectHeight);
+    rectX += static_cast<int32_t>(std::lround(offset.left * rectWidth / 1280.0));
+    rectY += static_cast<int32_t>(std::lround(offset.top * rectHeight / 720.0));
     auto x0 = std::clamp(static_cast<int32_t>(rectWidth * 0.075f), 0, rectWidth);
     auto x1 = std::clamp(static_cast<int32_t>(rectWidth * 0.2f + x0), 0, rectWidth);
     auto y0 = std::clamp(static_cast<int32_t>(rectHeight * 0.072f), 0, rectHeight);
@@ -196,11 +217,48 @@ void __fastcall SetupPiPShown(uintptr_t manager, void* edx)
 export void InitWidescreenFix()
 {
     GameplayFOV::Init();
-    if (bUltraWideSupport)
+    Hud::Init();
     {
+        // Boot and loading videos use a separate renderer with decoded image dimensions and pixel scales.
+        auto boot = hook::pattern("55 8B EC F3 0F 10 4D 28 83 EC 70 53 56 57 8B 7D 2C 85 FF 74 05");
+        static auto bootVideo = safetyhook::create_mid(boot.get_first(), [](SafetyHookContext& regs)
+        {
+            Cinematics::Video();
+            const auto width = *reinterpret_cast<const uint32_t*>(regs.esp + 12);
+            const auto height = *reinterpret_cast<const uint32_t*>(regs.esp + 16);
+            auto& x = *reinterpret_cast<float*>(regs.esp + 20);
+            auto& y = *reinterpret_cast<float*>(regs.esp + 24);
+            auto& scaleX = *reinterpret_cast<float*>(regs.esp + 28);
+            auto& scaleY = *reinterpret_cast<float*>(regs.esp + 32);
+            if (!width || !height || width > 16384 || height > 16384 ||
+                !std::isfinite(scaleX) || !std::isfinite(scaleY) || scaleX <= 0 || scaleY <= 0)
+                return;
+            const float canvasWidth = width * scaleX, canvasHeight = height * scaleY;
+            const float aspect = GetPresentationAspectRatio();
+            const auto frame = SCVideoFrame::Fit(aspect, 1.0f, float(width), float(height), FixSettings().Int("MAIN.FMVWidescreenMode"));
+            x += frame.x * canvasWidth / aspect;
+            y += frame.y * canvasHeight;
+            scaleX *= frame.width / aspect;
+            scaleY *= frame.height;
+        });
+
         // Fullscreen: don't letterbox the viewport to 16:9 of the desktop aspect and treat pixels as square, render to the whole backbuffer like windowed mode
         auto pattern = hook::pattern("74 73 39 3D ? ? ? ? F3 0F 2A 86");
-        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>()) = 0xEB;
+        injector::WriteMemory<uint8_t>(pattern.get_first<uint8_t>(), 0xEB, true);
+
+        // Adjust only the scene projection: cinematic scripts can reuse the view actor's angle.
+        auto cinematicProjection = hook::pattern("FF B0 DC 00 00 00 D9 45 28 FF B0 D8 00 00 00 51 D9 1C 24 E8 ? ? ? ? D9 5D 28 83 C4 0C");
+        static auto cinematicFrame = safetyhook::create_mid(cinematicProjection.get_first(19), [](SafetyHookContext& regs)
+        {
+            auto& angle = *reinterpret_cast<float*>(regs.esp);
+            const auto width = *reinterpret_cast<const int*>(regs.esp + 4);
+            const auto height = *reinterpret_cast<const int*>(regs.esp + 8);
+            angle = Cinematics::Projection(regs.eax, angle, width, height);
+        });
+
+        // Use the same vertical field of view below 16:9 as above it.
+        auto projection = hook::pattern("55 8B EC F3 0F 2A 45 0C D9 45 08 F3 0F 2A 4D 10 F3 0F 5E C1 0F 2F 05 ? ? ? ? F3 0F 11 45 0C 76 25");
+        injector::MakeNOP(projection.get_first(32), 2, true);
 
         // The engine has a multi-monitor mode (UD3DRenderDevice +0x110, set for Eyefinity or when aspect > MinTripleDispRatio):
         // the viewport gets Hor+ FOV from the 16:9 horizontal FOV (UViewport +0x2B0 -> sub_87B3A3), Flash menus/HUD are laid out
@@ -271,18 +329,17 @@ export void InitWidescreenFix()
         // Sticky camera PiP
         {
             auto pattern = hook::pattern("55 8B EC 51 51 53 56 57 8B F1 E8 ? ? ? ? 8B 40 44 8B 10 8B C8 FF 92");
-            if (pattern.size() == 2)
-            {
-                shSetupPiPHidden = safetyhook::create_inline(pattern.get(0).get<void>(), SetupPiPHidden);
-                shSetupPiPShown = safetyhook::create_inline(pattern.get(1).get<void>(), SetupPiPShown);
+            if (pattern.size() != 2)
+                throw std::runtime_error("Sticky-camera signatures not found");
+            shSetupPiPHidden = safetyhook::create_inline(pattern.get(0).get<void>(), SetupPiPHidden);
+            shSetupPiPShown = safetyhook::create_inline(pattern.get(1).get<void>(), SetupPiPShown);
 
-                // UWindowsViewport: don't remap the PiP viewport into the HUD rect, it's already laid out in it
-                pattern = hook::pattern("E8 ? ? ? ? 3B C3 89 45 3C 0F 84");
-                static auto PiPViewportMultiMon = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
-                {
-                    regs.eax = 0;
-                });
-            }
+            // UWindowsViewport: don't remap the PiP viewport into the HUD rect, it's already laid out in it
+            pattern = hook::pattern("E8 ? ? ? ? 3B C3 89 45 3C 0F 84");
+            static auto PiPViewportMultiMon = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
+            {
+                regs.eax = 0;
+            });
 
             // Flash frame, see GetPiPBarX
             pattern = hook::pattern("F3 0F 10 45 08 F3 0F 59 05 ? ? ? ? 8B 06 51 8D 4D EC");
@@ -327,11 +384,24 @@ export void InitWidescreenFix()
                 args[3] = (args[1] - args[5]) / 2;
             }
 
+            const auto path = *reinterpret_cast<const char**>(regs.edi + 4);
+            const auto count = *reinterpret_cast<const int32_t*>(regs.edi + 8);
+            if (path && count > 1 && count <= 4096 && path[count - 1] == 0)
+            {
+                const auto name = std::string_view(path, count - 1);
+                const auto file = name.substr(name.find_last_of("\\/") + 1);
+                if (_strnicmp(std::string(file).c_str(), "3d_sp_pause.", 12) == 0 ||
+                    _strnicmp(std::string(file).c_str(), "3d_mainmenu_1024.", 17) == 0)
+                    Cinematics::Video();
+            }
+
             // Menu pages (sc5 components) dim the screen with Background.BG, a stage sized clip: stretch it over the whole screen.
             // The sticky camera PiP frame is kept at its remapped position (see GetPiPBarX).
             auto ratio = GetAspectRatio() / fDefaultAspectRatio;
             auto movieView = *reinterpret_cast<uintptr_t*>(regs.edi + 0x28);
-            if (!bUltraWideSupport || ratio <= 1.0f || !movieView)
+            if (movieView)
+                Hud::Render(regs.edi, movieView, args);
+            if (ratio <= 1.0f || !movieView)
                 return;
             if (SetFlashNumber(movieView, "_root.Background.BG._width", 1280.0 * ratio))
                 SetFlashNumber(movieView, "_root.Background.BG._x", -640.0 * (ratio - 1.0));

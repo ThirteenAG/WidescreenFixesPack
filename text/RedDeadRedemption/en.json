@@ -1,6 +1,6 @@
 {
   "plugin.name": "Red Dead Redemption Fusion Fix",
-  "page.advanced": "Advanced",
+  "page.game": "Game",
   "SkipIntro": "Skip intro",
-  "SkipIntro.description": "Skip the logos and legal screens at start-up."
+  "SkipIntro.description": "Starts at the title screen, past the Rockstar Games and Double Eleven logos. Off shows them as in the original game. Needs a restart."
 }

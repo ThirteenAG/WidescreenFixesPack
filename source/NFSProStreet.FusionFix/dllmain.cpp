@@ -1,9 +1,10 @@
 #include "stdafx.h"
 #include "d3d9.h"
 #include "FixSettings.hpp"
-#include "../Shared/NFS/Cursor.hpp"
+#include "Shared/NFS/Cursor.hpp"
 
 import ComVars;
+import PostFX;
 
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
 ASI_SETTINGS_EXPORT(FixSettings())
@@ -18,6 +19,7 @@ void __cdecl MainLoop(float TickerDifference)
         WFP::onGameInitEvent().executeAll();
     });
 
+    CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
     CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
 
@@ -45,6 +47,7 @@ void __cdecl MiniMainLoop()
         WFP::onGameInitEvent().executeAll();
     });
 
+    CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
     CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
 
@@ -61,8 +64,9 @@ void Init()
     ResX.SetAddress(*pattern.get_first<int*>(1));
     ResY.SetAddress(*pattern.get_first<int*>(7));
 
-    pattern = hook::pattern("A1 ? ? ? ? 85 C0 75 ? C3 8B 40");
-    TheGameFlowManager.SetAddress(*pattern.get_first<GameFlowManager*>(1));
+    // The game flow manager, from a check of its state (cmp CurrentGameFlowState, GAMEFLOW_STATE_RACING)
+    pattern = hook::pattern("E8 ? ? ? ? 83 3D ? ? ? ? 06 0F");
+    TheGameFlowManager.SetAddress(reinterpret_cast<GameFlowManager*>(*pattern.get_first<uint8_t*>(7) - offsetof(GameFlowManager, CurrentGameFlowState)));
 
     pattern = hook::pattern("8B 15 ? ? ? ? F7 DA 1B D2 83 E2 ? 3B C3");
     dwWindowedMode.SetAddress(*pattern.get_first<uint32_t*>(2));

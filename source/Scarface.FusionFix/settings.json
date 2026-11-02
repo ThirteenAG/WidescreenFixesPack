@@ -37,7 +37,7 @@
     {
       "id": "game",
       "title": "@page.game",
-      "section": "other"
+      "section": "gameplay"
     },
     {
       "id": "compatibility",
@@ -62,6 +62,21 @@
       }
     },
     {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipPressStart",
+      "description": "@SkipPressStart.description",
+      "page": "game",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
       "id": "MAIN.ModernControlScheme",
       "type": "bool",
       "default": 1,
@@ -69,76 +84,55 @@
       "description": "@ModernControlScheme.description",
       "page": "controls",
       "apply": "restart",
-      "visibility": "menu",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
-    },
-    {
-      "id": "MAIN.ControllerPrompts",
-      "type": "bool",
-      "default": 1,
-      "label": "@ControllerPrompts",
-      "description": "@ControllerPrompts.description",
-      "page": "controls",
-      "apply": "restart",
-      "visibility": "menu",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
+      "visibility": "menu"
     },
     {
       "id": "MAIN.GamepadIcons",
-      "type": "int",
+      "type": "choice",
       "default": 0,
       "label": "@GamepadIcons",
       "description": "@GamepadIcons.description",
       "page": "controls",
-      "apply": "restart",
+      "apply": "live",
       "visibility": "menu",
       "choices": [
         {
           "value": 0,
-          "label": "Xbox 360"
+          "label": "@GamepadIcons.auto"
         },
         {
           "value": 1,
-          "label": "Xbox One"
+          "label": "Xbox"
         },
         {
           "value": 2,
-          "label": "PS3"
+          "label": "PlayStation"
         },
         {
           "value": 3,
-          "label": "PS4"
+          "label": "Nintendo"
         },
         {
           "value": 4,
-          "label": "PS5"
+          "label": "Xbox One"
         },
         {
           "value": 5,
-          "label": "Switch"
+          "label": "PS3"
         },
         {
           "value": 6,
-          "label": "Steam Deck"
+          "label": "PS4"
         },
         {
           "value": 7,
+          "label": "Steam Deck"
+        },
+        {
+          "value": 8,
           "label": "Steam Controller"
         }
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      ]
     },
     {
       "id": "MAIN.ScrollWeaponsWithMouseWheel",
@@ -164,18 +158,13 @@
       "page": "camera",
       "apply": "live",
       "visibility": "menu",
-      "presets": {
-        "vanilla": 3,
-        "recommended": 3,
-        "enhanced": 3
-      },
       "min": 0,
       "max": 60,
       "step": 0.5
     },
     {
       "id": "MAIN.WindowMode",
-      "type": "int",
+      "type": "choice",
       "default": 0,
       "label": "@WindowMode",
       "description": "@WindowMode.description",
@@ -208,11 +197,6 @@
       "page": "display",
       "apply": "live",
       "visibility": "menu",
-      "presets": {
-        "vanilla": "Auto",
-        "recommended": "Auto",
-        "enhanced": "Auto"
-      },
       "suggestions": [
         {
           "value": "Auto"
@@ -249,16 +233,16 @@
     {
       "id": "GRAPHICS.AntiAliasing",
       "type": "choice",
-      "default": 0,
+      "default": 1,
       "label": "@AntiAliasing",
       "description": "@AntiAliasing.description",
       "page": "graphics",
-      "apply": "restart",
+      "apply": "live",
       "visibility": "menu",
       "presets": {
         "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
+        "recommended": 1,
+        "enhanced": 1
       },
       "choices": [
         {
@@ -278,87 +262,12 @@
       "label": "@ConsoleGamma",
       "description": "@ConsoleGamma.description",
       "page": "graphics",
-      "apply": "restart",
+      "apply": "live",
       "visibility": "menu",
       "presets": {
         "vanilla": false,
         "recommended": false,
         "enhanced": true
-      }
-    },
-    {
-      "id": "FRAMERATE.FixVehicleCameraSmoothing",
-      "type": "bool",
-      "default": 1,
-      "label": "@FixVehicleCameraSmoothing",
-      "description": "@FixVehicleCameraSmoothing.description",
-      "page": "compatibility",
-      "apply": "restart",
-      "visibility": "editor",
-      "presets": {
-        "recommended": 1,
-        "enhanced": 1,
-        "vanilla": false
-      }
-    },
-    {
-      "id": "FRAMERATE.FixAnimationDelta",
-      "type": "bool",
-      "default": 1,
-      "label": "@FixAnimationDelta",
-      "description": "@FixAnimationDelta.description",
-      "page": "compatibility",
-      "apply": "restart",
-      "visibility": "editor",
-      "presets": {
-        "recommended": 1,
-        "enhanced": 1,
-        "vanilla": false
-      }
-    },
-    {
-      "id": "FRAMERATE.FixRageDepletion",
-      "type": "bool",
-      "default": 1,
-      "label": "@FixRageDepletion",
-      "description": "@FixRageDepletion.description",
-      "page": "compatibility",
-      "apply": "restart",
-      "visibility": "editor",
-      "presets": {
-        "recommended": 1,
-        "enhanced": 1,
-        "vanilla": false
-      }
-    },
-    {
-      "id": "FRAMERATE.FixMortarForce",
-      "type": "bool",
-      "default": 1,
-      "label": "@FixMortarForce",
-      "description": "@FixMortarForce.description",
-      "page": "compatibility",
-      "apply": "restart",
-      "visibility": "editor",
-      "presets": {
-        "recommended": 1,
-        "enhanced": 1,
-        "vanilla": false
-      }
-    },
-    {
-      "id": "FIXES.FixRecoilRange",
-      "type": "bool",
-      "default": 1,
-      "label": "@FixRecoilRange",
-      "description": "@FixRecoilRange.description",
-      "page": "compatibility",
-      "apply": "restart",
-      "visibility": "editor",
-      "presets": {
-        "recommended": 1,
-        "enhanced": 1,
-        "vanilla": false
       }
     },
     {
@@ -375,12 +284,7 @@
       "control": [
         "slider",
         "stepper"
-      ],
-      "presets": {
-        "vanilla": 1.0,
-        "recommended": 1.0,
-        "enhanced": 1.0
-      }
+      ]
     },
     {
       "id": "MAIN.RawInputMouse",
@@ -429,7 +333,7 @@
     },
     {
       "id": "MAIN.FMVWidescreenMode",
-      "type": "int",
+      "type": "choice",
       "default": 1,
       "label": "@FMVWidescreenMode",
       "description": "@FMVWidescreenMode.description",
@@ -437,7 +341,7 @@
       "apply": "live",
       "visibility": "menu",
       "min": 0,
-      "max": 2,
+      "max": 1,
       "step": 1,
       "choices": [
         {
@@ -447,10 +351,6 @@
         {
           "value": 1,
           "label": "@fmv.fill"
-        },
-        {
-          "value": 2,
-          "label": "@fmv.stretch"
         }
       ],
       "presets": {
@@ -461,7 +361,7 @@
     },
     {
       "id": "MAIN.CutsceneBorders",
-      "type": "int",
+      "type": "choice",
       "default": 3,
       "label": "@CutsceneBorders",
       "description": "@CutsceneBorders.description",
@@ -536,7 +436,7 @@
         }
       ],
       "presets": {
-        "vanilla": 0,
+        "vanilla": -1,
         "recommended": 60,
         "enhanced": 60
       }
@@ -548,13 +448,67 @@
       "label": "@ConfineCursor",
       "description": "@ConfineCursor.description",
       "page": "display",
-      "visibility": "editor",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@checkupdates",
+      "description": "@checkupdates.description",
+      "page": "game",
       "apply": "live",
-      "presets": {
-        "recommended": true,
-        "enhanced": true,
-        "vanilla": false
-      }
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1,
+      "min": 0.1,
+      "max": 5,
+      "step": 0.1,
+      "label": "@GamepadCameraSpeed",
+      "description": "@GamepadCameraSpeed.description",
+      "page": "controls",
+      "apply": "live",
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@textlanguage",
+      "description": "@textlanguage.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "live"
     }
   ]
 }

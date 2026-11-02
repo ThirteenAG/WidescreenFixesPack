@@ -1,9 +1,10 @@
 #include "stdafx.h"
 #include "d3d9.h"
 #include "FixSettings.hpp"
-#include "../Shared/NFS/Cursor.hpp"
+#include "Shared/NFS/Cursor.hpp"
 
 import ComVars;
+import PostFX;
 #ifdef _DEBUG
 import Speedhack;
 #endif
@@ -26,6 +27,7 @@ void __cdecl MainLoop(int32_t TickerDifference)
         WFP::onGameInitEvent().executeAll();
     });
 
+    CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
     CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
 
@@ -57,6 +59,7 @@ void __cdecl MiniMainLoop()
         WFP::onGameInitEvent().executeAll();
     });
 
+    CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
     CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
 
@@ -70,14 +73,8 @@ void Init()
     InitSpeedhack();
     #endif
 
-    auto pattern = hook::pattern("A1 ? ? ? ? 52 33 FF");
-    if (!pattern.empty())
-        hWnd.SetAddress(*pattern.get_first<HWND*>(1));
-    else
-    {
-        pattern = hook::pattern("B9 ? ? ? ? A3 ? ? ? ? E8 ? ? ? ? 8B 15");
-        hWnd.SetAddress((HWND*)(*pattern.get_first<uintptr_t>(1) + 0x18));
-    }
+    auto pattern = hook::pattern("A1 ? ? ? ? 8D 54 24 14 52 66 0F EF C0 50 89 7C 24 1C 66 0F D6");
+    hWnd.SetAddress(*pattern.get_first<HWND*>(1));
 
     pattern = hook::pattern("A1 ? ? ? ? F7 D8 1B C0 83 E0");
     dwWindowedMode.SetAddress(*pattern.get_first<uint32_t*>(1));
@@ -131,15 +128,15 @@ CEXP void InitializeASI()
         for (size_t i = 0; i < pattern.size(); i++)
         {
             auto addr = injector::ReadMemory<uintptr_t>(pattern.get(i).get<void>(2), true);
-            VirtualQuery((PVOID)addr, &mbi, sizeof(MEMORY_BASIC_INFORMATION));
-            if (RangeEnd < addr && mbi.Protect == PAGE_EXECUTE_WRITECOPY && mbi.AllocationBase == (PVOID)ModuleStart)
+            if (VirtualQuery((PVOID)addr, &mbi, sizeof(MEMORY_BASIC_INFORMATION)) &&
+                RangeEnd < addr && mbi.Protect == PAGE_EXECUTE_WRITECOPY && mbi.AllocationBase == (PVOID)ModuleStart)
             {
                 RangeStart = (uintptr_t)mbi.BaseAddress;
                 RangeEnd = (uintptr_t)mbi.BaseAddress + mbi.RegionSize;
             }
         }
 
-        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::range_pattern(ModuleStart, RangeEnd, "C7 44 24 ? ? ? ? ? FF 15 ? ? ? ? 8D 54 24 0C 52"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::range_pattern(ModuleStart, RangeEnd, "E8 ? ? ? ? 84 C0 F3 0F 10 54 24"));
     });
 }
 

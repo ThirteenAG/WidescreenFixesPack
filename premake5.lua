@@ -166,6 +166,19 @@ function buildshaders(rules)
    end
 end
 
+-- The developer overlay: FusionFixUtils' ImGui (Win32 + DX9 backends), the version its overlay is written for
+overlay_imgui_files = { "external/FusionFixUtils/imgui/imgui.cpp", "external/FusionFixUtils/imgui/imgui_draw.cpp",
+   "external/FusionFixUtils/imgui/imgui_tables.cpp", "external/FusionFixUtils/imgui/imgui_widgets.cpp",
+   "external/FusionFixUtils/imgui/backends/imgui_impl_win32.cpp", "external/FusionFixUtils/imgui/backends/imgui_impl_dx9.cpp" }
+
+-- Release builds take these objects from the shared dependencies (tools/msbuild/shared-dependencies.lua)
+overlay_imgui_projects = {}
+function add_overlay_imgui()
+   overlay_imgui_projects[premake.api.scope.project.name] = true
+   includedirs { "external/FusionFixUtils/imgui" }
+   files(overlay_imgui_files)
+end
+
 function add_postfx(id_postfx, id_areatex, id_searchtex)
    id_postfx = id_postfx or 201
    id_areatex = id_areatex or id_postfx + 1
@@ -178,16 +191,6 @@ function add_postfx(id_postfx, id_areatex, id_searchtex)
    defines { "IDR_POSTFX=" .. id_postfx }
    defines { "IDR_AREATEX=" .. id_areatex }
    defines { "IDR_SEARCHTEX=" .. id_searchtex }
-end
-
--- The shared temporal anti-aliasing (source/Shared/AA: TAA, DLAA and FSR through FusionFixHub's bridge): its pixel
--- shaders, compiled at build time, and the resource file embedding them
-function add_antialiasing()
-   buildshaders {
-      { files = "source/Shared/AA/shaders/*.hlsl", args = "/T ps_3_0 /E main", ext = ".pso" }
-   }
-   -- The D3D9 resources only; D3D11 games (AntiAliasingD3D11.rc) add their own
-   files { "source/Shared/AA/*.h", "source/Shared/AA/*.hpp", "source/Shared/AA/AntiAliasing.rc", "source/Shared/AA/shaders/*.hlsl" }
 end
 
 function add_pspsdk()
@@ -293,9 +296,10 @@ function CommonWorkspaceSetup(platform, prefix)
       includedirs { "external/injector/include" }
       includedirs { "external/inireader" }
       includedirs { "external/spdlog/include" }
-      includedirs { "external/filewatch" }
       includedirs { "external/modutils" }
+      includedirs { "external/FusionFixUtils" }
       includedirs { "includes" }
+      includedirs { "source" }
 
       includedirs { "includes/LED" }
       libdirs { "includes/LED" }
@@ -340,96 +344,100 @@ end
 CommonWorkspaceSetup("Win32", "Win32")
 
 group ""
-project "Bully.WidescreenFix"
+project "Bully.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/Bully/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Bully/en.json') }
    setpaths("BULLY_SCHOLARSHIP_EDITION_DIR", "Bully.exe", "plugins/")
 
-project "CallOfCthulhu.WidescreenFix"
+project "CallOfCthulhu.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/CallOfCthulhu/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/CallOfCthulhu/en.json') }
    setpaths("CALL_OF_CTHULHU_DIR", "Engine/CoCMainWin32.exe", "Engine/scripts/")
+   add_overlay_imgui()
 
-project "ColdFear.WidescreenFix"
-   add_antialiasing()
+project "ColdFear.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/ColdFear/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/ColdFear/en.json') }
    setpaths("COLDFEAR_DIR", "ColdFear_retail.exe")
 
-project "Condemned.WidescreenFix"
+project "Condemned.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/Condemned/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Condemned/en.json') }
    setpaths("CONDEMNED_CRIMINAL_ORIGINS_DIR", "Condemned.exe")
+   add_overlay_imgui()
 
-project "DeerAvenger4.WidescreenFix"
+project "DeerAvenger4.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/DeerAvenger4/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/DeerAvenger4/en.json') }
    setpaths("DEER_AVENGER_4_DIR", "DA4.exe")
 
-project "Driv3r.WidescreenFix"
+project "Driv3r.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/Driv3r/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Driv3r/en.json') }
    add_postfx()
+   add_overlay_imgui()
    setpaths("DRIV3R_DIR", "driv3r.exe")
 
-project "DriverParallelLines.WidescreenFix"
+project "DriverParallelLines.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/DriverParallelLines/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/DriverParallelLines/en.json') }
+   add_overlay_imgui()
    add_postfx()
    setpaths("DRIVER_PARALLEL_LINES_DIR", "DriverParallelLines.exe")
 
-project "EnterTheMatrix.WidescreenFix"
+project "EnterTheMatrix.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/EnterTheMatrix/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/EnterTheMatrix/en.json') }
    setpaths("ENTER_THE_MATRIX_DIR", "Matrix.exe")
 
-project "FarCry.WidescreenFix"
-   files { "source/FarCry.WidescreenFix/resources.rc", "source/FarCry.WidescreenFix/settings.json", "source/FarCry.WidescreenFix/FixSettings.hpp", "text/FarCry/*.json" }
+project "FarCry.FusionFix"
+   files { "source/FarCry.FusionFix/resources.rc", "source/FarCry.FusionFix/settings.json", "source/FarCry.FusionFix/FixSettings.hpp", "text/FarCry/*.json" }
    dependson { "AsiSettingsValidator" }
-   prebuildcommands { settings_check('%{wks.location}../source/FarCry.WidescreenFix/settings.json', '%{wks.location}../text/FarCry/en.json') }
+   prebuildcommands { settings_check('%{wks.location}../source/FarCry.FusionFix/settings.json', '%{wks.location}../text/FarCry/en.json') }
    add_postfx()
+   add_overlay_imgui()
    setpaths("FAR_CRY_DIR", "Bin32/FarCry.exe", "Bin32/")
 
 group "GrandTheftAuto"
-project "GTA1.WidescreenFix"
+project "GTA1.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/GTAClassic/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTAClassic/en.json') }
    setpaths("GRAND_THEFT_AUTO_1_LONDON_1969_1961_DIR", "WINO/Grand Theft Auto.exe", "WINO/scripts/")
-project "GTA2.WidescreenFix"
+project "GTA2.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/GTA2/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTA2/en.json') }
    setpaths("GRAND_THEFT_AUTO_2_DIR", "gta2.exe")
-project "GTA3.WidescreenFix"
+project "GTA3.FusionFix"
    add_postfx()
-   add_antialiasing()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/Shared/RWGTA/*.hpp", "text/RWGTA/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/RWGTA/en.json') }
    setpaths("GTAIII_DIR", "gta3.exe")
-project "GTAVC.WidescreenFix"
+project "GTAVC.FusionFix"
    add_postfx()
-   add_antialiasing()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/Shared/RWGTA/*.hpp", "text/RWGTA/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/RWGTA/en.json') }
    setpaths("GRAND_THEFT_AUTO_VICE_CITY_DIR", "gta-vc.exe")
-project "GTASA.WidescreenFix"
+project "GTASA.FusionFix"
    add_postfx()
-   add_antialiasing()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/Shared/RWGTA/*.hpp", "text/RWGTA/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
@@ -437,25 +445,27 @@ project "GTASA.WidescreenFix"
    setpaths("GTA_SAN_ANDREAS_DIR", "gta_sa.exe")
 group ""
 
-project "Gun.WidescreenFix"
+project "Gun.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/Gun/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Gun/en.json') }
    setpaths("GUN_DIR", "Gun.exe")
+   add_overlay_imgui()
 
-project "HiddenandDangerous2.WidescreenFix"
+project "HiddenandDangerous2.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/HiddenandDangerous2/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/HiddenandDangerous2/en.json') }
    setpaths("HIDDEN_AND_DANGEROUS_2_DIR", "hd2.exe")
 
-project "JustCause.WidescreenFix"
+project "JustCause.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/JustCause/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/JustCause/en.json') }
    setpaths("JUST_CAUSE_DIR", "JustCause.exe")
+   add_overlay_imgui()
 
-project "KingKong.WidescreenFix"
+project "KingKong.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/KingKong/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/KingKong/en.json') }
@@ -468,20 +478,24 @@ project "KingKong.WidescreenFix"
    defines { "IDR_BLURVS=201" }
    defines { "IDR_REMANANCEPS=202" }
    setpaths("KING_KONG_GAMERS_EDITION_DIR", "KingKong8.exe")
+   add_overlay_imgui()
 
-project "KnightRider.WidescreenFix"
+project "KnightRider.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/KnightRider/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/KnightRider/en.json') }
    setpaths("KNIGHT_RIDER_DIR", "Knight Rider.exe")
 
-project "KnightRider2.WidescreenFix"
+project "KnightRider2.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/KnightRider2/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/KnightRider2/en.json') }
    setpaths("KNIGHT_RIDER_2_DIR", "KR2.exe")
 
-project "LARush.WidescreenFix"
+project "LARush.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/LARush/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/LARush/en.json') }
@@ -492,9 +506,10 @@ project "Mafia.FusionFix"
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Mafia/en.json') }
    add_postfx()
+    add_overlay_imgui()
    setpaths("MAFIA_DIR", "Game.exe")
 
-project "Manhunt.WidescreenFix"
+project "Manhunt.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/Shared/RWGTA/GameThread.hpp", "text/Manhunt/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
@@ -504,16 +519,18 @@ project "Manhunt.WidescreenFix"
 group "MaxPayne"
 project "MaxPayne.MSVCP60Wrapper"
    setpaths("MAX_PAYNE_DIR", "MaxPayne.exe", "")
-   targetdir "data/MaxPayne.WidescreenFix"
+   targetdir "data/MaxPayne.FusionFix"
    targetname "MSVCP60"
    targetextension ".dll"
    files { "source/%{prj.name}/*.def" }
    files { "source/%{prj.name}/*.rc" }
    files { "source/%{prj.name}/MemoryModule.h", "source/%{prj.name}/MemoryModule.c" }
-project "MaxPayne.WidescreenFix"
+project "MaxPayne.FusionFix"
+   -- D3DX loaded on first use, so a missing DirectX runtime gets the fix's own notice instead of no plugin at all
+   linkoptions { "/DELAYLOAD:d3dx9_43.dll" }
+   links { "delayimp" }
    dependson { "MaxPayne.MSVCP60Wrapper" }
    add_postfx()
-   add_antialiasing()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/Shared/MaxPayne/*.hpp", "text/MaxPayne/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
@@ -521,10 +538,13 @@ project "MaxPayne.WidescreenFix"
    debugargs { "-skipstartup -window -developer -screenshot -nodialog" }
    linkoptions { "/SAFESEH:NO" }
    libdirs { "includes/minidx8" }
+   add_overlay_imgui()
    setpaths("MAX_PAYNE_DIR", "MaxPayne.exe")
-project "MaxPayne2.WidescreenFix"
+project "MaxPayne2.FusionFix"
+   -- D3DX loaded on first use, so a missing DirectX runtime gets the fix's own notice instead of no plugin at all
+   linkoptions { "/DELAYLOAD:d3dx9_43.dll" }
+   links { "delayimp" }
    add_postfx()
-   add_antialiasing()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/Shared/MaxPayne/*.hpp", "text/MaxPayne/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
@@ -532,6 +552,7 @@ project "MaxPayne2.WidescreenFix"
    debugargs { "-skipstartup -developer -window -nodialog" }
    linkoptions { "/SAFESEH:NO" }
    libdirs { "includes/minidx8" }
+   add_overlay_imgui()
    setpaths("MAX_PAYNE_2_THE_FALL_OF_MAX_PAYNE_DIR", "MaxPayne2.exe")
 group ""
 
@@ -548,21 +569,23 @@ group ""
 
 group "NeedForSpeed"
 project "NFSTheRun.FusionFix"
+   add_overlay_imgui()
+   files { "external/FusionFixUtils/imgui/backends/imgui_impl_dx11.cpp" }
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/NFSTheRun/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/NFSTheRun/en.json') }
    setpaths("NEED_FOR_SPEED_THE_RUN_DIR", "Need For Speed The Run.exe", "plugins/")
-project "NFSCarbon.WidescreenFix"
+project "NFSCarbon.FusionFix"
    add_postfx()
-   add_antialiasing()
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "textures/NFS/NFSC/textures/*.dds", "text/NFS/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/NFS/en.json') }
    setpaths("NEED_FOR_SPEED_CARBON_DIR", "NFSC.exe")
-project "NFSMostWanted.WidescreenFix"
-   add_antialiasing()
+project "NFSMostWanted.FusionFix"
+   add_overlay_imgui()
    buildshaders {
       { files = "source/*/*.fx", args = "/T fx_2_0", ext = ".fxo" }
    }
@@ -577,6 +600,7 @@ project "NFSMostWanted.WidescreenFix"
    setpaths("NEED_FOR_SPEED_MOST_WANTED_DIR", "speed.exe")
 project "NFSProStreet.FusionFix"
    add_postfx()
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "textures/NFS/NFSPS/textures/*.dds", "text/NFS/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
@@ -584,23 +608,24 @@ project "NFSProStreet.FusionFix"
    setpaths("NEED_FOR_SPEED_PROSTREET_DIR", "nfsps.exe")
 project "NFSUndercover.FusionFix"
    add_postfx()
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "textures/NFS/NFSUC/textures/*.dds", "text/NFS/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/NFS/en.json') }
    setpaths("NEED_FOR_SPEED_UNDERCOVER_DIR", "nfs.exe")
-project "NFSUnderground.WidescreenFix"
+project "NFSUnderground.FusionFix"
    add_postfx()
-   add_antialiasing()
+   add_overlay_imgui()
    defines { "IDR_NFSUICON=200" }
    files { "textures/NFS/NFSU/icon.rc", "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "textures/NFS/NFSU/HudLayout.dat", "textures/NFS/NFSU/textures/*.dds", "text/NFS/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/NFS/en.json') }
    setpaths("NEED_FOR_SPEED_UNDERGROUND_DIR", "speed.exe")
-project "NFSUnderground2.WidescreenFix"
+project "NFSUnderground2.FusionFix"
    add_postfx()
-   add_antialiasing()
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "textures/NFS/NFSU2/HudLayout.dat", "textures/NFS/NFSU/textures/*.dds", "text/NFS/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
@@ -608,29 +633,35 @@ project "NFSUnderground2.WidescreenFix"
    setpaths("NEED_FOR_SPEED_UNDERGROUND_2_DIR", "speed2.exe")
 group ""
 
-project "Onimusha3.WidescreenFix"
+project "Onimusha3.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/Onimusha3/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Onimusha3/en.json') }
    setpaths("ONIMUSHA_3_DIR", "ONI3.exe")
-project "ParadiseCracked.WidescreenFix"
+project "ParadiseCracked.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/ParadiseCracked/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/ParadiseCracked/en.json') }
    setpaths("PARADISE_CRACKED_DIR", "game.exe")
-project "PsiOpsTheMindgateConspiracy.WidescreenFix"
+project "PsiOpsTheMindgateConspiracy.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/PsiOps/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/PsiOps/en.json') }
    setpaths("PSI_OPS_DIR", "PsiOps.exe")
-project "Psychonauts.WidescreenFix"
+    add_overlay_imgui()
+
+project "Psychonauts.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/Psychonauts/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Psychonauts/en.json') }
+   add_overlay_imgui()
    setpaths("PSYCHONAUTS_DIR", "Psychonauts.exe")
 
 group "ResidentEvil"
 project "ResidentEvil0.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/ResidentEvil0/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/ResidentEvil0/en.json') }
@@ -641,6 +672,7 @@ project "ResidentEvil0.FusionFix"
    files { "source/%{prj.name}/*.ps" }
    setpaths("RESIDENTEVIL0_DIR", "re0hd.exe", "scripts/")
 project "ResidentEvil.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/ResidentEvil/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/ResidentEvil/en.json') }
@@ -658,6 +690,7 @@ project "ResidentEvilRevelations.FusionFix"
    }
    files { "source/%{prj.name}/shaders/*.vs", "source/%{prj.name}/shaders/*.hlsl" }
    defines { "IDR_SHADER_MOVIE_VS=201" }
+   add_overlay_imgui()
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/ResidentEvilRevelations/en.json') }
    setpaths("RESIDENTEVILREVELATIONS_DIR", "rerev.exe", "scripts/")
@@ -670,6 +703,7 @@ project "ResidentEvilRevelations2.FusionFix"
    }
    files { "source/%{prj.name}/shaders/*.vs", "source/%{prj.name}/shaders/*.hlsl" }
    defines { "IDR_SHADER_OVERLAY_VS=200", "IDR_SHADER_MOVIE_VS=201" }
+   add_overlay_imgui()
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/ResidentEvilRevelations2/en.json') }
    setpaths("RESIDENTEVILREVELATIONS2_DIR", "rerev2.exe", "scripts/")
@@ -678,7 +712,9 @@ project "ResidentEvil5.FusionFix"
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/ResidentEvil5/en.json') }
    setpaths("RESIDENTEVIL5_DIR", "re5dx9.exe", "scripts/")
+   add_overlay_imgui()
 project "ResidentEvil6.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/ResidentEvil6/*.json" }
    -- Replacement shaders, assembled at build time
    buildshaders {
@@ -697,30 +733,31 @@ project "Scarface.FusionFix"
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Scarface/en.json') }
    add_postfx()
+   add_overlay_imgui()
    files { "source/%{prj.name}/ControllerIcons.rc", "textures/Scarface/Controller/*.dds" }
    setpaths("SCARFACE_DIR", "scarface.exe", "scripts/")
 
-project "SecondSight.WidescreenFix"
+project "SecondSight.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/SecondSight/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SecondSight/en.json') }
    setpaths("SECOND_SIGHT_DIR", "secondsight.exe")
+   add_overlay_imgui()
 
 group "SilentHill"
-project "SilentHill2.WidescreenFix"
+project "SilentHill2.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/SilentHill/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SilentHill/en.json') }
    setpaths("SILENT_HILL_2_DIR", "sh2pc.exe")
-project "SilentHill3.WidescreenFix"
-   add_antialiasing()
+project "SilentHill3.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/Shared/SilentHill/*.hpp", "text/SilentHill/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SilentHill/en.json') }
    setpaths("SILENT_HILL_3_DIR", "sh3.exe")
-project "SilentHill4.WidescreenFix"
+project "SilentHill4.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/Shared/SilentHill/*.hpp", "text/SilentHill/*.json" }
    -- A broken settings description fails the build
    dependson { "AsiSettingsValidator" }
@@ -728,40 +765,46 @@ project "SilentHill4.WidescreenFix"
    setpaths("SILENT_HILL_4_THE_ROOM_DIR", "Silent Hill 4.exe")
 group ""
 
-project "SniperElite.WidescreenFix"
+project "SniperElite.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/SniperElite/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SniperElite/en.json') }
    setpaths("SNIPER_ELITE_DIR", "SniperElite.exe")
+   add_overlay_imgui()
 
-project "SonicHeroes.WidescreenFix"
+project "SonicHeroes.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/SonicHeroes/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SonicHeroes/en.json') }
    setpaths("SONICHEROES_DIR", "Tsonic_win.exe")
 
 group "SplinterCell"
-project "SplinterCell.WidescreenFix"
+project "SplinterCell.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/SplinterCell/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SplinterCell/en.json') }
    setpaths("SPLINTER_CELL_DIR", "system/SplinterCell.exe", "system/scripts/")
-project "SplinterCellChaosTheory.WidescreenFix"
+project "SplinterCellChaosTheory.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/SplinterCellChaosTheory/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SplinterCellChaosTheory/en.json') }
    setpaths("SPLINTERCELL_CHAOS_THEORY_DIR", "system/splintercell3.exe", "system/scripts/")
 project "SplinterCellConviction.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/SplinterCellConviction/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SplinterCellConviction/en.json') }
    setpaths("TOM_CLANCYS_SPLINTER_CELL_CONVICTION_DIR", "src/system/conviction_game.exe", "src/system/scripts/")
 project "SplinterCellBlacklist.FusionFix"
+   add_overlay_imgui()
+   files { "external/FusionFixUtils/imgui/backends/imgui_impl_dx11.cpp" }
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/SplinterCellBlacklist/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SplinterCellBlacklist/en.json') }
    setpaths("SPLINTER_CELL_BLACKLIST_DIR", "src/SYSTEM/Blacklist_DX11_game.exe", "src/system/scripts/")
-project "SplinterCellDoubleAgent.WidescreenFix"
+project "SplinterCellDoubleAgent.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/settings.json", "text/SplinterCellDoubleAgent/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SplinterCellDoubleAgent/en.json') }
@@ -780,7 +823,7 @@ project "SplinterCellDoubleAgent.WidescreenFix"
    defines { "IDR_AREATEX=203" }
    defines { "IDR_SEARCHTEX=204" }
    setpaths("SPLINTER_CELL_DOUBLE_AGENT_DIR", "SCDA-Offline/System/SplinterCell4.exe", "SCDA-Offline/System/scripts/")
-project "SplinterCellPandoraTomorrow.WidescreenFix"
+project "SplinterCellPandoraTomorrow.FusionFix"
    files { "source/%{prj.name}/settings.json", "text/SplinterCellPandoraTomorrow/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SplinterCellPandoraTomorrow/en.json') }
@@ -795,88 +838,95 @@ project "SplinterCellPandoraTomorrow.WidescreenFix"
    setpaths("SPLINTER_CELL_PANDORA_TOMORROW_DIR", "system/SplinterCell2.exe", "system/scripts/")
 group ""
 
-project "StreetRacingSyndicate.WidescreenFix"
+project "StreetRacingSyndicate.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/SRS/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SRS/en.json') }
    setpaths("STREET_RACING_SYNDICATE_DIR", "Bin/srs.exe", "Bin/scripts/")
 
-project "TheGodfather.WidescreenFix"
+project "TheGodfather.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/TheGodfather/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TheGodfather/en.json') }
    setpaths("THE_GODFATHER_DIR", "godfather.exe")
+   add_overlay_imgui()
 
-project "TheMatrixPathOfNeo.WidescreenFix"
+project "TheMatrixPathOfNeo.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/TheMatrixPathOfNeo/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TheMatrixPathOfNeo/en.json') }
    setpaths("THE_MATRIX_PATH_OF_NEO_DIR", "Matrix3.exe")
 
-project "ThePunisher.WidescreenFix"
+project "ThePunisher.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/ThePunisher/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/ThePunisher/en.json') }
    setpaths("THE_PUNISHER_DIR", "pun.exe")
+   add_overlay_imgui()
 
 project "TheSaboteur.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/TheSaboteur/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TheSaboteur/en.json') }
    add_postfx()
+   add_overlay_imgui()
    setpaths("THE_SABOTEUR_DIR", "Saboteur.exe")
 
-project "TheSuffering.WidescreenFix"
+project "TheSuffering.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/TheSuffering/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TheSuffering/en.json') }
+   add_overlay_imgui()
    setpaths("THE_SUFFERING_DIR", "suffering.exe")
 
 group "TonyHawks"
-project "TonyHawksAmericanWasteland.WidescreenFix"
+project "TonyHawksAmericanWasteland.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/TonyHawksAmericanWasteland/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TonyHawksAmericanWasteland/en.json') }
    setpaths("TONY_HAWKS_AMERICAN_WASTELAND_DIR", "Game/THAW.exe", "Game/scripts/")
-project "TonyHawksProSkater2.WidescreenFix"
+project "TonyHawksProSkater2.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/TonyHawksProSkater2/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TonyHawksProSkater2/en.json') }
    setpaths("THPS2_DIR", "THawk2.exe")
-project "TonyHawksProSkater3.WidescreenFix"
+project "TonyHawksProSkater3.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/TonyHawksProSkater3/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TonyHawksProSkater3/en.json') }
    setpaths("PRO_SKATER_3_DIR", "Skate3.exe")
-project "TonyHawksProSkater4.WidescreenFix"
+project "TonyHawksProSkater4.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/TonyHawksProSkater4/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TonyHawksProSkater4/en.json') }
    setpaths("TONY_HAWKS_PRO_SKATER_4_DIR", "Game/Skate4.exe", "Game/scripts/")
-project "TonyHawksUnderground.WidescreenFix"
+project "TonyHawksUnderground.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/TonyHawksUnderground/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TonyHawksUnderground/en.json') }
    setpaths("TONY_HAWKS_UNDERGROUND_DIR", "Game/THUG.exe", "Game/scripts/")
-project "TonyHawksUnderground2.WidescreenFix"
+project "TonyHawksUnderground2.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/TonyHawksUnderground2/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TonyHawksUnderground2/en.json') }
    setpaths("TONY_HAWKS_UNDERGROUND_2_DIR", "Game/THUG2.exe", "Game/scripts/")
 group ""
 
-project "TotalOverdose.WidescreenFix"
+project "TotalOverdose.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/TotalOverdose/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TotalOverdose/en.json') }
    setpaths("TOTAL_OVERDOSE_DIR", "TOD.exe")
+   add_overlay_imgui()
 
-project "TrueCrimeNewYorkCity.WidescreenFix"
-   add_antialiasing()
-   includedirs { "external/imgui" }
-   files { "source/Shared/Overlay/*.hpp", "external/imgui/imgui.cpp", "external/imgui/imgui_draw.cpp",
-      "external/imgui/imgui_tables.cpp", "external/imgui/imgui_widgets.cpp", "external/imgui/backends/imgui_impl_win32.cpp",
-      "external/imgui/backends/imgui_impl_dx9.cpp" }
+project "TrueCrimeNewYorkCity.FusionFix"
+   add_overlay_imgui()
    buildshaders {
       { files = "source/*/*.fx", args = "/T fx_2_0", ext = ".fxo" }
    }
@@ -890,17 +940,20 @@ project "TrueCrimeNewYorkCity.WidescreenFix"
    defines { "IDR_SEARCHTEX=202" }
    setpaths("TRUE_CRIME_NEW_YORK_CITY_DIR", "True Crime New York City.exe")
 
-project "TrueCrimeStreetsofLA.WidescreenFix"
+project "TrueCrimeStreetsofLA.FusionFix"
+   add_overlay_imgui()
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/TrueCrimeStreetsofLA/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TrueCrimeStreetsofLA/en.json') }
    setpaths("TRUE_CRIME_STREETS_OF_LA_DIR", "TrueCrimeMB.exe")
+   add_postfx()
 
-project "UltimateSpiderMan.WidescreenFix"
+project "UltimateSpiderMan.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/UltimateSpiderMan/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/UltimateSpiderMan/en.json') }
    add_postfx()
+   add_overlay_imgui()
    setpaths("ULTIMATE_SPIDER_MAN_DIR", "USM.exe")
 group ""
 
@@ -913,14 +966,15 @@ group ""
 --   targetextension ".exe"
 --   files { "./source/%{prj.name}/*.h", "./source/%{prj.name}/*.c" }
 --   setpaths("./data/%{prj.name}/", "%{prj.name}.exe", "")
-project "FarCry64.WidescreenFix"
-   files { "source/FarCry.WidescreenFix/resources.rc", "source/FarCry.WidescreenFix/settings.json", "source/FarCry.WidescreenFix/FixSettings.hpp", "text/FarCry/*.json" }
+project "FarCry64.FusionFix"
+   files { "source/FarCry.FusionFix/resources.rc", "source/FarCry.FusionFix/settings.json", "source/FarCry.FusionFix/FixSettings.hpp", "text/FarCry/*.json" }
    dependson { "AsiSettingsValidator" }
-   prebuildcommands { settings_check('%{wks.location}../source/FarCry.WidescreenFix/settings.json', '%{wks.location}../text/FarCry/en.json') }
+   prebuildcommands { settings_check('%{wks.location}../source/FarCry.FusionFix/settings.json', '%{wks.location}../text/FarCry/en.json') }
    add_postfx()
-   files { "source/FarCry.WidescreenFix/*.cpp", "source/FarCry.WidescreenFix/*.ixx" }
+   add_overlay_imgui()
+   files { "source/FarCry.FusionFix/*.cpp", "source/FarCry.FusionFix/*.ixx" }
    setpaths("FAR_CRY_DIR", "Bin64/FarCry.exe", "Bin64/")
-   targetdir "data/FarCry.WidescreenFix/Bin64/"
+   targetdir "data/FarCry.FusionFix/Bin64/"
 
 group "GrandTheftAuto"
 project "GTA3DE.FusionFix"
@@ -940,11 +994,29 @@ project "GTASADE.FusionFix"
    setpaths("GTA_SAN_ANDREAS_DEFINITIVE_EDITION_DIR", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
 group ""
 
-project "SpyroReignitedTrilogy.WidescreenFix"
+project "SpyroReignitedTrilogy.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/SpyroReignitedTrilogy/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SpyroReignitedTrilogy/en.json') }
    setpaths("SPYRO_REIGNITED_TRILOGY_DIR", "Falcon/Binaries/Win64/Spyro-Win64-Shipping.exe", "Falcon/Binaries/Win64/scripts/")
+
+project "MafiaDefinitiveEdition.FusionFix"
+   files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/MafiaDefinitiveEdition/*.json" }
+   dependson { "AsiSettingsValidator" }
+   prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/MafiaDefinitiveEdition/en.json') }
+   setpaths("MAFIA_DEFINITIVE_EDITION_DIR", "mafiadefinitiveedition.exe", "plugins/")
+
+project "Mafia2DefinitiveEdition.FusionFix"
+   files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/Mafia2DefinitiveEdition/*.json" }
+   dependson { "AsiSettingsValidator" }
+   prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Mafia2DefinitiveEdition/en.json') }
+   setpaths("MAFIA_II_DEFINITIVE_EDITION_DIR", "pc/Mafia II Definitive Edition.exe", "pc/scripts/")
+
+project "Mafia3DefinitiveEdition.FusionFix"
+   files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/Mafia3DefinitiveEdition/*.json" }
+   dependson { "AsiSettingsValidator" }
+   prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Mafia3DefinitiveEdition/en.json') }
+   setpaths("MAFIA_III_DEFINITIVE_EDITION_DIR", "mafia3definitiveedition.exe", "plugins/")
 
 project "RedDeadRedemption.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/RedDeadRedemption/*.json" }
@@ -958,104 +1030,81 @@ group ""
 CommonWorkspaceSetup("PS2", "PCSX2F")
 
 group ""
-project "Burnout3.PCSX2F.WidescreenFix"
+project "Burnout3.PCSX2F.FusionFix"
    files { "source/%{prj.name}/settings.json", "text/Burnout3/*.json" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Burnout3/en.json') }
    kind "Makefile"
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "Burnout3.PCSX2F.WidescreenFix", "Burnout3")
-   writemakefile_ps2("Burnout3.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../external/injector/include/ps2/log.o",
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "Burnout3.PCSX2F.FusionFix", "Burnout3")
+   writemakefile_ps2("Burnout3.PCSX2F.FusionFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../external/injector/include/ps2/log.o",
    "../../external/injector/include/ps2/memalloc.o", "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o",
    "../../external/injector/include/ps2/inireader.o", "../../external/injector/include/ps2/mips.o")
-   writelinkfile_ps2("Burnout3.PCSX2F.WidescreenFix")
+   writelinkfile_ps2("Burnout3.PCSX2F.FusionFix")
 
 group "GrandTheftAuto"
-project "GTALCS.PCSX2F.WidescreenFix"
+project "GTALCS.PCSX2F.FusionFix"
    files { "source/%{prj.name}/settings.json", "text/GTALCSPS2/*.json" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTALCSPS2/en.json') }
    kind "Makefile"
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.WidescreenFix", "GTALCSPS2")
-   writemakefile_ps2("GTALCS.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "Camera.o", "Draw.o", "Hud.o", "../../external/injector/include/ps2/log.o",
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.FusionFix", "GTALCSPS2")
+   writemakefile_ps2("GTALCS.PCSX2F.FusionFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "Camera.o", "Draw.o", "Hud.o", "../../external/injector/include/ps2/log.o",
    "../../external/injector/include/ps2/memalloc.o", "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o",
    "../../external/injector/include/ps2/inireader.o", "../../external/injector/include/ps2/mips.o")
-   writelinkfile_ps2("GTALCS.PCSX2F.WidescreenFix")
+   writelinkfile_ps2("GTALCS.PCSX2F.FusionFix")
 
-project "GTAVCS.PCSX2F.WidescreenFix"
+project "GTAVCS.PCSX2F.FusionFix"
    files { "source/%{prj.name}/settings.json", "text/GTAVCSPS2/*.json" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTAVCSPS2/en.json') }
    kind "Makefile"
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.WidescreenFix", "GTAVCSPS2")
-   writemakefile_ps2("GTAVCS.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a", "Camera.o", "Cheats.o", "Controls.o", "Draw.o", "Hud.o", "Menu.o", "MouseCamera.o", "../../external/injector/include/ps2/memalloc.o",
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.FusionFix", "GTAVCSPS2")
+   writemakefile_ps2("GTAVCS.PCSX2F.FusionFix", "PLUGINS/", "-l:libc.a", "Camera.o", "Cheats.o", "Controls.o", "Draw.o", "Hud.o", "Menu.o", "MouseCamera.o", "../../external/injector/include/ps2/memalloc.o",
    "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o","../../external/injector/include/ps2/inireader.o",
    "../../external/injector/include/ps2/mips.o")
-   writelinkfile_ps2("GTAVCS.PCSX2F.WidescreenFix")
+   writelinkfile_ps2("GTAVCS.PCSX2F.FusionFix")
 
-project "GTAVCS.PCSX2F.ImVehLM"
-   files { "source/%{prj.name}/settings.json", "text/GTAVCSPS2Lights/*.json" }
-   prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTAVCSPS2Lights/en.json') }
-   kind "Makefile"
-   add_ps2sdk()
-   targetextension ".elf"
-   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PCSX2F.ImVehLM", "GTAVCSPS2Lights")
-   writemakefile_ps2("GTAVCS.PCSX2F.ImVehLM", "PLUGINS/", "-l:libc.a", "../../external/injector/include/ps2/memalloc.o",
-   "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o","../../external/injector/include/ps2/inireader.o",
-   "../../external/injector/include/ps2/mips.o")
-   writelinkfile_ps2("GTAVCS.PCSX2F.ImVehLM")
-
-project "GTALCS.PCSX2F.ImVehLM"
-   files { "source/%{prj.name}/settings.json", "text/GTALCSPS2Lights/*.json" }
-   prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTALCSPS2Lights/en.json') }
-   kind "Makefile"
-   add_ps2sdk()
-   targetextension ".elf"
-   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PCSX2F.ImVehLM", "GTALCSPS2Lights")
-   writemakefile_ps2("GTALCS.PCSX2F.ImVehLM", "PLUGINS/", "-l:libc.a", "../../external/injector/include/ps2/memalloc.o",
-   "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o","../../external/injector/include/ps2/inireader.o",
-   "../../external/injector/include/ps2/mips.o")
-   writelinkfile_ps2("GTALCS.PCSX2F.ImVehLM")
 group ""
 
-project "KnightRider.PCSX2F.WidescreenFix"
+project "KnightRider.PCSX2F.FusionFix"
    files { "source/%{prj.name}/settings.json", "text/KnightRiderPS2/*.json" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/KnightRiderPS2/en.json') }
    kind "Makefile"
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "KnightRider.PCSX2F.WidescreenFix", "KnightRiderPS2")
-   writemakefile_ps2("KnightRider.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../external/injector/include/ps2/log.o",
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "KnightRider.PCSX2F.FusionFix", "KnightRiderPS2")
+   writemakefile_ps2("KnightRider.PCSX2F.FusionFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../external/injector/include/ps2/log.o",
    "../../external/injector/include/ps2/memalloc.o", "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o",
    "../../external/injector/include/ps2/inireader.o", "../../external/injector/include/ps2/mips.o")
-   writelinkfile_ps2("KnightRider.PCSX2F.WidescreenFix")
+   writelinkfile_ps2("KnightRider.PCSX2F.FusionFix")
 
-project "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
+project "SplinterCellDoubleAgent.PCSX2F.FusionFix"
    files { "source/%{prj.name}/settings.json", "text/SCDAPS2/*.json" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SCDAPS2/en.json') }
    kind "Makefile"
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.WidescreenFix", "SCDAPS2")
-   writemakefile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../external/injector/include/ps2/log.o",
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "SplinterCellDoubleAgent.PCSX2F.FusionFix", "SCDAPS2")
+   writemakefile_ps2("SplinterCellDoubleAgent.PCSX2F.FusionFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "../../external/injector/include/ps2/log.o",
    "Hud.o",
    "../../external/injector/include/ps2/memalloc.o", "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o",
    "../../external/injector/include/ps2/inireader.o", "../../external/injector/include/ps2/mips.o")
-   writelinkfile_ps2("SplinterCellDoubleAgent.PCSX2F.WidescreenFix")
+   writelinkfile_ps2("SplinterCellDoubleAgent.PCSX2F.FusionFix")
 
-project "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix"
+project "TrueCrimeNewYorkCity.PCSX2F.FusionFix"
    files { "source/%{prj.name}/settings.json", "text/TCNYCPS2/*.json" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/TCNYCPS2/en.json') }
    kind "Makefile"
    add_ps2sdk()
    targetextension ".elf"
-   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix", "TCNYCPS2")
-   writemakefile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "Hud.o", "Timing.o",
+   setbuildpaths_ps2("PCSX2F_DIR", "pcsx2-qtx64-clang.exe", "PLUGINS/", "%{wks.location}/../external/ps2sdk/ee/bin/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TrueCrimeNewYorkCity.PCSX2F.FusionFix", "TCNYCPS2")
+   writemakefile_ps2("TrueCrimeNewYorkCity.PCSX2F.FusionFix", "PLUGINS/", "-l:libc.a -l:libm.a -l:libgcc.a", "Hud.o", "Timing.o",
    "../../external/injector/include/ps2/memalloc.o", "../../external/injector/include/ps2/patterns.o", "../../external/injector/include/ps2/injector.o", "../../external/injector/include/ps2/rini.o",
    "../../external/injector/include/ps2/inireader.o", "../../external/injector/include/ps2/mips.o")
-   writelinkfile_ps2("TrueCrimeNewYorkCity.PCSX2F.WidescreenFix")
+   writelinkfile_ps2("TrueCrimeNewYorkCity.PCSX2F.FusionFix")
 group ""
 
 -- ====================== PPSSPP SOLUTION ======================
@@ -1063,50 +1112,23 @@ CommonWorkspaceSetup("PSP", "PPSSPP")
 
 group ""
 group "GrandTheftAuto"
-project "GTALCS.PPSSPP.WidescreenFix"
+project "GTALCS.PPSSPP.FusionFix"
    files { "source/%{prj.name}/settings.json", "text/GTALCSPSP/*.json" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTALCSPSP/en.json') }
    kind "Makefile"
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.WidescreenFix", "GTALCSPSP")
-   writemakefile_psp("GTALCS.PPSSPP.WidescreenFix")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.FusionFix", "GTALCSPSP")
+   writemakefile_psp("GTALCS.PPSSPP.FusionFix")
 
-project "GTALCS.PPSSPP.ImVehLM"
-   files { "source/%{prj.name}/settings.json", "text/GTALCSPSPLights/*.json" }
-   prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTALCSPSPLights/en.json') }
-   kind "Makefile"
-   add_pspsdk()
-   targetextension ".prx"
-   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTALCS.PPSSPP.ImVehLM", "GTALCSPSPLights")
-   writemakefile_psp("GTALCS.PPSSPP.ImVehLM")
-
-project "GTAVCS.PPSSPP.WidescreenFix"
+project "GTAVCS.PPSSPP.FusionFix"
    files { "source/%{prj.name}/settings.json", "text/GTAVCSPSP/*.json" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTAVCSPSP/en.json') }
    kind "Makefile"
    add_pspsdk()
    targetextension ".prx"
-   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.WidescreenFix", "GTAVCSPSP")
-   writemakefile_psp("GTAVCS.PPSSPP.WidescreenFix")
-
-project "GTAVCS.PPSSPP.ImVehLM"
-   files { "source/%{prj.name}/settings.json", "text/GTAVCSPSPLights/*.json" }
-   prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTAVCSPSPLights/en.json') }
-   kind "Makefile"
-   add_pspsdk()
-   targetextension ".prx"
-   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.ImVehLM", "GTAVCSPSPLights")
-   writemakefile_psp("GTAVCS.PPSSPP.ImVehLM")
-
-project "GTAVCS.PPSSPP.GamepadIcons"
-   files { "source/%{prj.name}/settings.json", "text/GTAVCSIcons/*.json" }
-   prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTAVCSIcons/en.json') }
-   kind "Makefile"
-   add_pspsdk()
-   targetextension ".prx"
-   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.GamepadIcons", "GTAVCSIcons")
-   writemakefile_psp("GTAVCS.PPSSPP.GamepadIcons")
+   setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "GTAVCS.PPSSPP.FusionFix", "GTAVCSPSP")
+   writemakefile_psp("GTAVCS.PPSSPP.FusionFix")
 
 project "GTACTW.PPSSPP.FusionFix"
    files { "source/%{prj.name}/settings.json", "text/GTACTW/*.json" }
@@ -1171,17 +1193,6 @@ project "TheWarriors.PPSSPP.FusionFix"
    targetextension ".prx"
    setbuildpaths_psp("PPSSPP_DIR", "PPSSPPWindows64.exe", "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/", "%{wks.location}/../external/pspsdk/vsmake.ps1", "%{wks.location}/../source/%{prj.name}/", "TheWarriors.PPSSPP.FusionFix", "Warriors")
    writemakefile_psp("TheWarriors.PPSSPP.FusionFix")
-group ""
-
--- ====================== CXBXR SOLUTION ======================
-CommonWorkspaceSetup("Win32", "CXBXR")
-
-group ""
-project "SplinterCellDoubleAgent.CXBXR.WidescreenFix"
-   files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/SplinterCellDoubleAgentXbox/*.json" }
-   dependson { "AsiSettingsValidator" }
-   prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SplinterCellDoubleAgentXbox/en.json') }
-   setpaths("CXBXR_DIR", "cxbx.exe", "scripts/")
 group ""
 
 -- ====================== DOLPHIN SOLUTION ======================

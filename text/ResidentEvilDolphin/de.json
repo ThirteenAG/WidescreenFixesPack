@@ -3,9 +3,9 @@
   "page.gameplay": "Spiel",
   "page.graphics": "Grafik",
   "EnableDoorSkip": "Türen überspringen",
-  "EnableDoorSkip.description": "Überspringt Türanimationen. Nach einer Änderung Dolphin neu starten.",
+  "EnableDoorSkip.description": "Die Türanimation zwischen den Räumen wird übersprungen: Der nächste Raum erscheint, sobald er geladen ist. Funktioniert in Resident Evil 2 und Resident Evil 3. Aus zeigt die Türanimationen wie im Original. Nach einer Änderung Dolphin neu starten.",
   "UnthrottleEmuDuringDoorSkip": "Schnellere Türübergänge",
-  "UnthrottleEmuDuringDoorSkip.description": "Hebt die Bildratenbegrenzung des Emulators bei Türübergängen auf. Nach einer Änderung Dolphin neu starten.",
+  "UnthrottleEmuDuringDoorSkip.description": "Während das Spiel den nächsten Raum lädt, läuft Dolphin mit voller Geschwindigkeit statt mit der Konsolengeschwindigkeit, sodass Raumwechsel schneller enden. Das Spiel selbst läuft mit normaler Geschwindigkeit. Funktioniert mit und ohne übersprungene Türen. Nach einer Änderung Dolphin neu starten.",
   "LightSyncRGB": "RGB-Beleuchtung",
-  "LightSyncRGB.description": "Synchronisiert die Beleuchtung kompatibler Tastaturen mit der Gesundheit des Spielers. Nach einer Änderung Dolphin neu starten."
+  "LightSyncRGB.description": "Logitech-G-LIGHTSYNC-Tastaturen zeigen den Zustand des Spielers: Grün für Fine, Orange für Caution, Rot für Danger, Lila bei Vergiftung, mit einem Herzschlag-Effekt. Benötigt Logitech G HUB; ohne es hat diese Einstellung keine Wirkung. Nach einer Änderung Dolphin neu starten."
 }

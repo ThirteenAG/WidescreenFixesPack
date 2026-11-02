@@ -3,7 +3,7 @@ param([string]$Password = $env:SCCOMPILE_PASSWORD)
 $ErrorActionPreference = 'Stop'
 if (-not $Password) { throw 'Set SCCOMPILE_PASSWORD or supply -Password before invoking this manual compiler.' }
 $repository = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
-$source = Join-Path $repository 'source/SplinterCell.WidescreenFix'
+$source = Join-Path $repository 'source/SplinterCell.FusionFix'
 $work = Join-Path $repository ('build/sccompile/' + [Guid]::NewGuid())
 $null = New-Item -ItemType Directory -Force -Path $work
 $archive = Join-Path $source 'sccompile.bin'
@@ -26,7 +26,7 @@ foreach ($name in $outputs) {
     $file = Get-Item -LiteralPath (Join-Path $work "System/$name") -ErrorAction Stop
     if ($file.Length -eq 0) { throw "Compiler output is empty: $name" }
 }
-$destination = Join-Path $repository 'data/SplinterCell.WidescreenFix/system/update'
+$destination = Join-Path $repository 'data/SplinterCell.FusionFix/system/update'
 $null = New-Item -ItemType Directory -Force -Path $destination
 foreach ($name in $outputs) { Copy-Item -LiteralPath (Join-Path $work "System/$name") -Destination (Join-Path $destination $name) -Force }
 Write-Host "Updated $($outputs -join ', '). Review the changed .u files before committing."

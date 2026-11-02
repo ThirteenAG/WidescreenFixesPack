@@ -5,7 +5,7 @@
 #include <thread>
 #include <vector>
 #include <shellapi.h>
-#include "../AsiSettings/asi_settings.hpp"
+#include "Shared/AsiSettings/asi_settings.hpp"
 #include "Text.hpp"
 
 // The fixes' settings in the games' own options menus, built from their ASI Settings description (settings.json,

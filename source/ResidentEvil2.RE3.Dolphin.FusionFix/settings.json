@@ -21,7 +21,7 @@
     {
       "id": "MAIN.EnableDoorSkip",
       "type": "bool",
-      "default": 1,
+      "default": 0,
       "label": "@EnableDoorSkip",
       "description": "@EnableDoorSkip.description",
       "page": "gameplay",
@@ -29,14 +29,14 @@
       "apply": "restart",
       "presets": {
         "vanilla": 0,
-        "recommended": 1,
+        "recommended": 0,
         "enhanced": 1
       }
     },
     {
       "id": "MAIN.UnthrottleEmuDuringDoorSkip",
       "type": "bool",
-      "default": 1,
+      "default": 0,
       "label": "@UnthrottleEmuDuringDoorSkip",
       "description": "@UnthrottleEmuDuringDoorSkip.description",
       "page": "gameplay",
@@ -44,7 +44,7 @@
       "apply": "restart",
       "presets": {
         "vanilla": 0,
-        "recommended": 1,
+        "recommended": 0,
         "enhanced": 1
       }
     },
@@ -58,7 +58,7 @@
       "visibility": "menu",
       "apply": "restart",
       "presets": {
-        "vanilla": false,
+        "vanilla": 0,
         "recommended": 1,
         "enhanced": 1
       }

@@ -2,7 +2,7 @@
 
 <img src="https://thirteenag.github.io/screens/scc/main2.jpg" width="760" alt="Splinter Cell: Conviction Fusion Fix">
 
-**Splinter Cell: Conviction Fusion Fix** fixes DLC achievement crashes and adds controller support, startup skips, partial ultrawide support, and configurable visual and gameplay options.
+**Splinter Cell: Conviction Fusion Fix** fixes DLC achievement crashes and adds startup skips, widescreen presentation, and configurable visual and gameplay options.
 
 [Website](https://thirteenag.github.io/wfp#scc) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellConviction.FusionFix/dllmain.cpp)
 
@@ -12,21 +12,23 @@
 
 ## Fixes
 
-- **Gamepad** — Support controllers through [Xidi](https://github.com/samuelgr/Xidi).
+- **Gamepad** — Keep the game’s native XInput support, sensitivity, inversion and vibration controls. Auto icons use Xbox artwork; PlayStation and Nintendo artwork can be selected manually.
 - **DLC crash** — Prevent crashes when Xbox 360 achievement conditions are met in DLC levels, including “King of the Crypt” in New Orleans and “Watch the Soap” in Portland.
 - **Co-op frame rate** — Changed coop FPS limit to 60 (custom values can be set via `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter)
 - **Ammunition** — Disabled unlimited ammo for all weapons (restore original behavior by deleting `update/weapontuning.ini`)
 - **Window focus** — In windowed mode, the game window starts focused and shows the cursor without a click.
+- **Mouse acceleration** — Negative mouse acceleration is removed.
+- **Hardware detection** — Skip hardware detection messages on startup.
+- **CPU cores** — The game runs on all CPU cores.
+- **LAN** — Restore LAN support.
 
 ## Options
 
-- **Skip intro** — Skip startup intros and the "Press any key" screen.
-- **Windowed mode** — Run the game centered in a window.
-- **Frame rate limit** — Set a custom frame rate limit instead of the default 120 FPS.
-- **Mouse input** — Optionally disable negative mouse acceleration and mouse smoothing, and use raw mouse input so high polling rate mice don't lose movement.
+- **Startup skips** — Separately skip startup intros and the "Press any key" screen.
+- **Window mode** — Choose fullscreen, a framed window or monitor-sized borderless. The mode applies after restarting.
+- **Frame rate limit** — Defaults to 60 FPS and changes live. Use 0 for unlimited or -1 for the monitor refresh rate. Turn off Vertical Sync in Advanced Video Options for rates above the monitor refresh rate.
+- **Mouse input** — Optionally disable mouse smoothing, and use raw mouse input so high polling rate mice don't lose movement.
 - **Gamepad camera speed** — Adjust how fast the stick turns the camera.
-- **Hardware detection** — Skip hardware detection messages on startup.
-- **LAN** — Restore LAN support.
 
 ### Split screen
 
@@ -35,7 +37,9 @@
 
 ### Display and effects
 
-- **Ultrawide** — Enable partial ultrawide support.
+- **Widescreen** — Projection and UI placement are corrected on wide and narrow screens. HUD Aspect Ratio Constraint uses Auto for the full player view, or a selected safe-area ratio.
+- **Cinematics** — Cutscene Borders preserves the authored 16:9 frame. Both fits it with side bars on wide screens and top/bottom bars on narrow screens; Off fills the view.
+- **Videos** — Original fits the whole decoded movie in a centered 4:3 area; Fill fits it to the screen. Window resize requests made during a fullscreen video apply when playback finishes, keeping its picture and captions correctly proportioned.
 - **Depth of field** — Optionally disable the depth of field effect.
 - **Black and white filter** — Optionally disable the desaturation effect.
 - **Sonar vision** — Enable the enhanced sonar vision option.
@@ -54,9 +58,11 @@ https://user-images.githubusercontent.com/4904157/192846910-6ddfb3fb-3089-4553-b
 
 ## Settings
 
-Configure the fix in FusionFixHub or on fusionfix.io. Local split screen is enabled by default; launching a second instance is optional. Gamepad camera speed and the gameplay FOV multiplier can be changed while playing. Other options may require a restart.
+Open Settings → Plugins → Splinter Cell Conviction Fusion Fix, from the title or pause menu. More Pages reaches the remaining options; F1 opens complete, scrollable help. Back returns to the previous page. Restart options show a notice when changed. FusionFixHub and fusionfix.io offer the same settings.
 
-Ultrawide support is partial, so some screens may retain their original layout. If a plugin's text values are too long for the game's menu, edit them in FusionFixHub. In-game help is shortened to fit; full descriptions are available in FusionFixHub.
+Local split screen is enabled by default; launching a second instance is optional. Gamepad camera speed and the gameplay FOV multiplier change live. FOV 1.00 is neutral; extra widening is bounded to 150°. The multiplier affects locomotion views; aiming, gadgets and cinematic cameras keep their own framing. Controller artwork applies after restarting because the game caches its Flash image library.
+
+Pause on Focus Loss and Confine Cursor apply immediately. Check for Updates is off by default; enabling it allows an available-update notice in the game’s own menu. Ctrl+F10 opens the developer overlay when available; Debug → Info shows the build, graphics API and backbuffer resolution.
 
 ## Configuration
 
@@ -73,6 +79,8 @@ Open Settings → Plugins to change the fix options in game. Short plugin lists 
 3. Launch the game once to create the `src/system/scripts/SplinterCellConviction.FusionFix.cfg`.
 4. Configure the fix on fusionfix.io or in FusionFixHub. Restart the game when an option requires it.
 
+When upgrading from an older fix package that bundled Xidi, remove that package's `src/system/dinput8.dll`, `Xidi.32.dll` and `SDL.XidiPlugin.32.dll`. This release uses Conviction's native XInput support and the included `version.dll` loader.
+
 > [!WARNING]
 > Non-Windows users (Proton/Wine) need to perform a **DLL override**.
 >
@@ -86,9 +94,9 @@ Open Settings → Plugins to change the fix options in game. Short plugin lists 
 >
 > **Method 1**: `WINEDLLOVERRIDES` variable lets you temporarily specify DLL overrides. It can be used from a command line as well as in the Steam launcher. In the case of the command line, simply prepend the usual start command with:
 >    ```
->    WINEDLLOVERRIDES="dinput8,version,Xidi.32=n,b"
+>    WINEDLLOVERRIDES="version=n,b"
 >    ```
-> For Steam, head to the game's properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="dinput8,version,Xidi.32=n,b" %command%`.
+> For Steam, head to the game's properties and set `LAUNCH OPTIONS` to `WINEDLLOVERRIDES="version=n,b" %command%`.
 >
 >  ![steam-wine-dll-override](https://silentsblog.com/assets/img/setup/steam-wine-dll-override.png)
 >

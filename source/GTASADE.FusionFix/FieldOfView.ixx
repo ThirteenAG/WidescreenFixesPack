@@ -29,7 +29,8 @@ namespace
         static const auto& factor = FixSettings().Float("MAIN.FOVFactor");
         if (!std::isfinite(factor) || factor == 1.0f || !std::isfinite(fov) || fov <= 0.0f)
             return fov;
-        return std::min(fov * std::clamp(factor, 0.5f, 2.0f), 170.0f);
+        // Up to 150 degrees: wider, the perspective collapses on wide screens
+        return std::min(fov * std::clamp(factor, 0.5f, 2.0f), std::max(fov, 150.0f));
     }
 }
 
@@ -48,8 +49,6 @@ public:
             auto storePattern = hook::pattern("F3 0F 58 C1 F3 0F 11 05 ? ? ? ? C3");
             auto runningPattern = hook::pattern("38 15 ? ? ? ? 74 ? F3 0F 10 15 ? ? ? ? 0F 2F CA");
             auto cameraPattern = hook::pattern("48 8D 05 ? ? ? ? 0F B7 84 01 B0 01 00 00 66 83 F8 2E");
-            if (storePattern.empty() || runningPattern.empty() || cameraPattern.empty())
-                return;
             const auto store = storePattern.get_first(4);
             const auto running = runningPattern.get_first<uint8_t>(2);
             const auto camera = cameraPattern.get_first<uint8_t>(3);

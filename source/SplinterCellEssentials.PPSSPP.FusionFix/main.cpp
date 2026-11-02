@@ -1,4 +1,5 @@
 #include "Screens.hpp"
+#include "Shared/Console/PatchNotice.hpp"
 #include "../Shared/Console/PortableCfg.hpp"
 extern "C" {
 PSP_MODULE_INFO("SplinterCellPSP.FusionFix", PSP_MODULE_USER, 2, 0);
@@ -14,7 +15,7 @@ constexpr auto logPath = "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionF
 // The game's main thread already runs while plugins start, and it draws the
 // loading picture and mission briefing right away. Publish those hooks before
 // any file access (which lets the game thread run): they only search the
-// start of the executable, and the CFG option is applied afterwards.
+// start of the executable.
 // PPSSPP loads a fresh plugin image for every LoadExec (loader, then game),
 // so two "Loaded plugin" messages are expected. A duplicate plugin folder or
 // ini would start a second copy in the same stage; it must not hook twice.
@@ -23,13 +24,17 @@ void CompleteSettings() {
         {"MAIN", "SkipIntro", "1"},
         {"MAIN", "StickDeadzone", "0.1"},
         {"MAIN", "SpeedStickControl", "1"},
-        {"MAIN", "Enable60FPS", "1"},
+        {"MAIN", "FPSLimit", "60"},
         {"MAIN", "UnthrottleEmuDuringLoading", "1"},
         {"MAIN", "FOVFactor", "1"},
-        {"MAIN", "ContainFullscreenImages", "1"},
-        {"MAIN", "HudScale", "1"}
+        {"MAIN", "HudAspectRatioConstraint", "Auto"},
+        {"MAIN", "HudScale", "1"},
+        {"MAIN", "ForceAspectRatio", "Auto"}
     };
     console::portable::CompleteCfg(ini, defaults);
+    char text[64]{};
+    forced = console::parse_forced_aspect(inireader.ReadString("MAIN", "ForceAspectRatio", "Auto", text, sizeof(text)));
+    hudConstraint = console::parse_hud_aspect(inireader.ReadString("MAIN", "HudAspectRatioConstraint", "Auto", text, sizeof(text)));
 }
 
 bool AlreadyRunning() {
@@ -60,13 +65,21 @@ bool EarlyGame() {
     logger.SetPath(logPath);
     logger.WriteF("Early loading-screen hooks: %d", int(injector::LastError()));
 #endif
-    containImages = inireader.ReadBoolean("MAIN", "ContainFullscreenImages", true);
     return true;
 }
 int Install() {
+    if (!sites::DetectExecutable())
+    {
+        PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
+        return -1;
+    }
     if (!Begin()) return -1;
     InstallInput();
-    InstallHud();
+    if (!InstallHud())
+    {
+        PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
+        return -1;
+    }
     InstallCamera();
     InstallTiming();
     return Finish();
@@ -80,7 +93,14 @@ extern "C" int module_start(SceSize, void*) {
     if (essentials::Start("PSPLoader", ini, logPath) && essentials::Begin()) {
         CompleteSettings();
         if (inireader.ReadBoolean("MAIN", "SkipIntro", true))
-            injector::MakeNOP(pattern.get(0, "25 28 00 00 25 30 00 00 25 38 00 00", 12));
+        {
+            // Identify the first movie by its position before the second one.
+            const auto intro = sites::Unique("01 00 04 3C 25 28 00 00 25 30 00 00 25 38 00 00 ? ? ? ? ? ? 84 24 01 00 04 3C 25 28 00 00 25 30 00 00 25 38 00 00", 16);
+            if (intro)
+                injector::MakeNOP(intro);
+            else
+                PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
+        }
         essentials::InstallLoaderScreens();
         return essentials::Finish();
     }

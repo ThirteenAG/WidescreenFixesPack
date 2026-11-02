@@ -1,0 +1,30 @@
+{
+  "sources": [
+    "main.cpp",
+    "Camera.cpp",
+    "Aim.cpp",
+    "Draw.cpp",
+    "Hud.cpp",
+    "Menu.cpp",
+    "ButtonIcons.cpp",
+    "Controls.cpp",
+    "MouseCamera.cpp",
+    "Cheats.cpp",
+    "VehicleLights.cpp",
+    "../../external/injector/include/ps2/memalloc.c",
+    "../../external/injector/include/ps2/patterns.c",
+    "../../external/injector/include/ps2/injector.c",
+    "../../external/injector/include/ps2/mips.c"
+  ],
+  "output": "../../data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.elf",
+  "cxx_flags": [
+    "-std=gnu++17",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-strict-aliasing",
+    "-fno-threadsafe-statics"
+  ],
+  "cflags": [
+    "-ffp-contract=off"
+  ]
+}

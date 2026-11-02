@@ -2,9 +2,10 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "PlayerControls.hpp"
 
 export module KnifeParry;
+
+import PlayerControls;
 
 namespace
 {
@@ -112,11 +113,6 @@ public:
                 return;
             auto knife = find_pattern("55 8B EC 83 E4 F0 83 EC 34 8B 45 0C 53 56 8B 75 08 8B D9 89 43 20 83 BE 30 0E 00 00 01");
             auto damage = find_pattern("E8 ? ? ? ? 8B CE 84 C0 74 ? E8 ? ? ? ? 8B CE E8 ? ? ? ? EB ? 83 BE 44 13 00 00 00");
-            if (knife.size() != 1 || damage.size() != 1)
-            {
-                OutputDebugStringA("Resident Evil Revelations Fusion Fix: knife parry layout unavailable.\n");
-                return;
-            }
             KnifeHook = safetyhook::create_inline(knife.get_first(), BeginKnife, SafetyHookInline::StartDisabled);
             DamageHook = safetyhook::create_mid(damage.get_first(5), CheckDamage, SafetyHookMid::StartDisabled);
             if (!KnifeHook || !DamageHook)

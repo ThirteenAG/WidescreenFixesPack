@@ -6,6 +6,7 @@ module;
 export module Mouse;
 
 import ComVars;
+import DeveloperOverlay;
 
 // Mouse look comes from WM_MOUSEMOVE (UWindowsViewport's WndProc, sub_1AF55C0): the move from the middle of the window is sent as an
 // IK_MouseX/IK_MouseY axis input (UWindowsViewport::CauseInputEvent, virtual +78h, action 6) and the cursor is put back in the middle.
@@ -31,9 +32,19 @@ namespace Mouse
     using CauseInputEventFn = int(__fastcall*)(uintptr_t viewport, void* edx, uintptr_t input, int key, int action, float delta, int controller, int a7);
     CauseInputEventFn CauseInputEvent = nullptr;
 
+    bool Enabled()
+    {
+        return FixSettings().Bool("MAIN.RawInputMouse") && WindowHandle && GetForegroundWindow() == WindowHandle && !DeveloperOverlay::BlocksInput();
+    }
+
     int __fastcall CauseInputEventHook(uintptr_t viewport, void* edx, uintptr_t input, int key, int action, float delta, int controller, int a7)
     {
-        if (action == IST_Axis && (key == IK_MouseX || key == IK_MouseY))
+        if (DeveloperOverlay::BlocksInput())
+        {
+            DeveloperOverlay::MouseInput(key, action);
+            return 0;
+        }
+        if (Enabled() && action == IST_Axis && (key == IK_MouseX || key == IK_MouseY))
         {
             lookThisFrame = true;
             return 1;
@@ -41,10 +52,15 @@ namespace Mouse
         return CauseInputEvent(viewport, edx, input, key, action, delta, controller, a7);
     }
 
+    BOOL WINAPI SetCursorPosHook(int x, int y)
+    {
+        return DeveloperOverlay::BlocksInput() ? TRUE : SetCursorPos(x, y);
+    }
+
     WNDPROC GameWndProc = nullptr;
     LRESULT CALLBACK WndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
-        if (message == WM_INPUT)
+        if (message == WM_INPUT && Enabled())
         {
             RAWINPUT input = {};
             UINT size = sizeof(input);
@@ -82,30 +98,27 @@ namespace TurnSpeed
 
     bool IsLocalPlayerModel(uintptr_t model)
     {
-        __try
-        {
-            auto controller = *reinterpret_cast<uintptr_t*>(model + 0x12EC);
-            if (!controller)
-                return false;
-            uintptr_t animation = 0;
-            if (auto a = *reinterpret_cast<uintptr_t*>(controller + 0x1F0))
-                animation = *reinterpret_cast<uintptr_t*>(a + 0xC0);
-            else if (auto b = *reinterpret_cast<uintptr_t*>(controller + 0x1F8))
-                animation = *reinterpret_cast<uintptr_t*>(b + 0x60);
-            if (!animation)
-                return false;
-            auto pawn = *reinterpret_cast<uintptr_t*>(animation + 0xBC8);
-            // APawn::IsLocalPlayer
-            return pawn && (*reinterpret_cast<uint32_t*>(pawn + 0x5C) & 0x800000) != 0 && *reinterpret_cast<uint8_t*>(pawn + 0x4D) != 2;
-        }
-        __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+        auto controller = *reinterpret_cast<uintptr_t*>(model + 0x12EC);
+        if (!controller)
+            return false;
+        uintptr_t animation = 0;
+        if (auto a = *reinterpret_cast<uintptr_t*>(controller + 0x1F0))
+            animation = *reinterpret_cast<uintptr_t*>(a + 0xC0);
+        else if (auto b = *reinterpret_cast<uintptr_t*>(controller + 0x1F8))
+            animation = *reinterpret_cast<uintptr_t*>(b + 0x60);
+        if (!animation)
+            return false;
+        auto pawn = *reinterpret_cast<uintptr_t*>(animation + 0xBC8);
+        // APawn::IsLocalPlayer
+        return pawn && (*reinterpret_cast<uint32_t*>(pawn + 0x5C) & 0x800000) != 0 && *reinterpret_cast<uint8_t*>(pawn + 0x4D) != 2;
     }
 }
 
 export void InitMouse()
 {
+    IATHook::Replace(GetModuleHandleW(nullptr), "USER32.DLL",
+        std::forward_as_tuple("SetCursorPos", Mouse::SetCursorPosHook));
     auto& settings = FixSettings();
-    auto bDisableNegativeMouseAcceleration = settings.Int("MAIN.DisableNegativeMouseAcceleration") != 0;
     TurnSpeed::multiplier = std::clamp(settings.Float("MAIN.TurnSpeed"), 0.5f, 10.0f);
 
     if (TurnSpeed::multiplier != 1.0f)
@@ -119,7 +132,6 @@ export void InitMouse()
     }
 
     // CameraImpl mouse input (sub_D8E190) is clamped to +-500 * delta time
-    if (bDisableNegativeMouseAcceleration)
     {
         auto pattern = hook::pattern("0F 28 CA EB 13 0F 57 ED");
         injector::MakeNOP(pattern.get_first(0), 3, true);
@@ -138,7 +150,7 @@ export void InitMouse()
     auto pattern = hook::pattern("C7 06 ? ? ? ? C7 46 28 ? ? ? ? C7 46 2C ? ? ? ? 89 9E 30 08 00 00");
     auto vtable = *pattern.get_first<uintptr_t*>(2);
     Mouse::CauseInputEvent = reinterpret_cast<Mouse::CauseInputEventFn>(vtable[0x78 / 4]);
-    ProtectedGameRef<decltype(&Mouse::CauseInputEventHook)>(reinterpret_cast<decltype(&Mouse::CauseInputEventHook)*>(&vtable[0x78 / 4])) = &Mouse::CauseInputEventHook;
+    injector::WriteMemory(&vtable[0x78 / 4], &Mouse::CauseInputEventHook, true);
 
     // UWindowsViewport input update, after the DirectInput mouse and before the keys, esi is the viewport.
     // The input is the viewport's +58h, as in WndProc.
@@ -149,15 +161,26 @@ export void InitMouse()
         GameViewport = regs.esi;
         Register();
 
+        static bool wasEnabled = false;
+        static LONG lastX = 0, lastY = 0;
+        const bool enabled = Enabled();
+        if (!enabled || enabled != wasEnabled)
+        {
+            rawX = rawY = lastX = lastY = 0;
+            lookTime = 0;
+            lookThisFrame = false;
+            wasEnabled = enabled;
+            return;
+        }
+
         // mouse look stays on a little after the last cursor move, the raw input can come before or after the cursor in a frame
         auto now = GetTickCount64();
         if (std::exchange(lookThisFrame, false))
             lookTime = now;
         // the movement of the frame before mouse look turns on is kept for it
-        static LONG lastX = 0, lastY = 0;
         auto x = std::exchange(rawX, 0);
         auto y = std::exchange(rawY, 0);
-        if (now - lookTime > 250)
+        if (!lookTime || now - lookTime > 250)
         {
             lastX = x;
             lastY = y;

@@ -17,8 +17,8 @@ $gh=Get-Command gh.exe -ErrorAction SilentlyContinue
 if (!$gh -and (Test-Path 'C:\Program Files\GitHub CLI\gh.exe')) { $gh=Get-Item 'C:\Program Files\GitHub CLI\gh.exe' }
 $ghPath=if ($gh) { if ($gh.Source) { $gh.Source } else { $gh.FullName } } else { '' }
 $state=@{ Selected=@{}; Refreshing=$false; Pending=$null; Busy=$false; Dispatching=$false; RunUrl=''; SearchRun=$false; RequestId=''; PollCount=0 }
-$platformNames=@{ Win32='Windows x86'; Win64='Windows x64'; PPSSPP='PSP / PPSSPP'; PCSX2F='PS2 / PCSX2'; Dolphin='GameCube / Dolphin'; CXBXR='Xbox / Cxbx' }
-$platformBadges=@{ Win32='Windows x86'; Win64='Windows x64'; PPSSPP='PSP'; PCSX2F='PS2'; Dolphin='GameCube'; CXBXR='Xbox' }
+$platformNames=@{ Win32='Windows x86'; Win64='Windows x64'; PPSSPP='PSP / PPSSPP'; PCSX2F='PS2 / PCSX2'; Dolphin='GameCube / Dolphin' }
+$platformBadges=@{ Win32='Windows x86'; Win64='Windows x64'; PPSSPP='PSP'; PCSX2F='PS2'; Dolphin='GameCube' }
 foreach ($release in $catalog.releases) {
     $release | Add-Member -NotePropertyName Chosen -NotePropertyValue $false
     $release | Add-Member -NotePropertyName PlatformLabel -NotePropertyValue (@($release.platforms | ForEach-Object { $platformBadges[$_] }) -join ' + ')
@@ -30,7 +30,7 @@ $connect=$form.FindName('Connect'); $signIn=$form.FindName('SignIn'); $connectio
 $selectAll=$form.FindName('SelectAll'); $clearAll=$form.FindName('ClearAll'); $selectShown=$form.FindName('SelectShown'); $clearShown=$form.FindName('ClearShown')
 $publish=$form.FindName('Publish'); $openRun=$form.FindName('OpenRun'); $review=$form.FindName('Review'); $detail=$form.FindName('Detail'); $countLabel=$form.FindName('Count'); $status=$form.FindName('Status')
 $categoryItems=@([pscustomobject]@{Key='all'; Name="All releases     $($catalog.releases.Count)"})
-foreach ($platform in @('Win32','Win64','PPSSPP','PCSX2F','Dolphin','CXBXR')) {
+foreach ($platform in @('Win32','Win64','PPSSPP','PCSX2F','Dolphin')) {
     $total=@($catalog.releases | Where-Object { $platform -in $_.platforms }).Count
     $categoryItems += [pscustomobject]@{Key=$platform; Name="$($platformNames[$platform])     $total"}
 }

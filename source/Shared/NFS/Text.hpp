@@ -4,8 +4,8 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include "../AsiSettings/asi_settings.h"
-#include "../AsiSettings/asi_settings_json.hpp"
+#include "Shared/AsiSettings/asi_settings.h"
+#include "Shared/AsiSettings/asi_settings_json.hpp"
 #pragma comment(lib, "Normaliz.lib")
 
 // Text of the fixes' menu entries: text/<family>/<language tag>.json holds the entries of one language as

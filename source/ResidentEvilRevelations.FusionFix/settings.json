@@ -47,6 +47,23 @@
   ],
   "settings": [
     {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        { "value": 0, "label": "@icons.auto" },
+        { "value": 1, "label": "@icons.xbox" },
+        { "value": 2, "label": "@icons.playstation" },
+        { "value": 3, "label": "@icons.nintendo" }
+      ],
+      "label": "@icons",
+      "description": "@icons.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": ["cycler"]
+    },
+    {
       "id": "MAIN.FOVFactor",
       "type": "float",
       "default": 1.0,
@@ -62,33 +79,24 @@
       "apply": "live",
       "control": [
         "slider"
-      ],
-      "presets": {
-        "vanilla": 1.0,
-        "recommended": 1.0,
-        "enhanced": 1.0
-      }
+      ]
     },
     {
-      "id": "MAIN.FMVWidescreenMode",
+      "id": "MAIN.CutsceneBorders",
       "type": "choice",
-      "default": 1,
+      "default": 2,
       "choices": [
         {
           "value": 0,
-          "label": "@fmv.original"
-        },
-        {
-          "value": 1,
-          "label": "@fmv.fill"
+          "label": "@cutsceneborders.off"
         },
         {
           "value": 2,
-          "label": "@fmv.stretch"
+          "label": "@cutsceneborders.pillarbox"
         }
       ],
-      "label": "@fmv",
-      "description": "@fmv.description",
+      "label": "@cutsceneborders",
+      "description": "@cutsceneborders.description",
       "page": "display",
       "visibility": "menu",
       "apply": "live",
@@ -97,14 +105,14 @@
       ],
       "presets": {
         "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
+        "recommended": 2,
+        "enhanced": 2
       }
     },
     {
       "id": "MAIN.FPSLimit",
       "type": "int",
-      "default": 0,
+      "default": 120,
       "min": -1,
       "max": 1000,
       "unit": "fps",
@@ -142,12 +150,7 @@
       "apply": "live",
       "control": [
         "cycler"
-      ],
-      "presets": {
-        "vanilla": 120,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      ]
     },
     {
       "id": "MAIN.WindowMode",
@@ -173,11 +176,36 @@
       ]
     },
     {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@pauseonfocusloss",
+      "description": "@pauseonfocusloss.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
       "id": "MAIN.SkipIntro",
       "type": "bool",
       "default": 1,
       "label": "@SkipIntro",
       "description": "@SkipIntro.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipPressStart",
+      "description": "@SkipPressStart.description",
       "page": "display",
       "visibility": "menu",
       "apply": "restart",
@@ -195,12 +223,7 @@
       "description": "@DisableDamageOverlay.description",
       "page": "graphics",
       "visibility": "menu",
-      "apply": "live",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "live"
     },
     {
       "id": "MAIN.LightSyncRGB",
@@ -218,16 +241,6 @@
       }
     },
     {
-      "id": "MAIN.DisableCreateQuery",
-      "type": "bool",
-      "default": 0,
-      "label": "@DisableCreateQuery",
-      "description": "@DisableCreateQuery.description",
-      "page": "compatibility",
-      "visibility": "editor",
-      "apply": "restart"
-    },
-    {
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
@@ -235,7 +248,29 @@
       "description": "@hudaspect.description",
       "page": "display",
       "apply": "live",
-      "visibility": "editor"
+      "visibility": "menu",
+      "suggestions": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        },
+        {
+          "value": "4:3",
+          "label": "4:3"
+        },
+        {
+          "value": "16:9",
+          "label": "16:9"
+        },
+        {
+          "value": "21:9",
+          "label": "21:9"
+        },
+        {
+          "value": "32:9",
+          "label": "32:9"
+        }
+      ]
     },
     {
       "id": "MAIN.ModernControls",
@@ -245,12 +280,7 @@
       "description": "@ModernControls.description",
       "page": "controls",
       "visibility": "menu",
-      "apply": "live",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 1
-      }
+      "apply": "live"
     },
     {
       "id": "MAIN.KnifeParry",
@@ -260,12 +290,63 @@
       "description": "@KnifeParry.description",
       "page": "gameplay",
       "visibility": "menu",
-      "apply": "live",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 1
-      }
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@checkforupdates",
+      "description": "@checkforupdates.description",
+      "page": "compatibility",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@textlanguage",
+      "description": "@textlanguage.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "menu"
     }
   ]
 }

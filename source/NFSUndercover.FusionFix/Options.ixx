@@ -2,14 +2,16 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/NFS/PluginsMenu.hpp"
-#include "../Shared/NFS/SettingsMenu.hpp"
-#include "../Shared/NFS/Text.hpp"
-#include "../Shared/NFS/TextLanguage.hpp"
+#include "Shared/NFS/PluginsMenu.hpp"
+#include "Shared/NFS/SettingsMenu.hpp"
+#include "Shared/NFS/Text.hpp"
+#include "Shared/NFS/TextLanguage.hpp"
 
 export module Options;
 
 import ComVars;
+import UpdateNotice;
+
 import Input;
 
 // The plugins' settings in the game's options menus. The menus are a table of entries ({id, parent, label, unknown,
@@ -89,7 +91,7 @@ namespace
     using asi_settings::LoadedPlugin;
     using asi_settings::Setting;
 
-    enum class Kind { Category, Setting, Action, Preset, RestoreDefaults };
+    enum class Kind { Category, Setting, Action, Preset, RestoreDefaults, Notice };
 
     struct Entry
     {
@@ -413,6 +415,10 @@ namespace
     void (__cdecl* ShowYesNoDialog)(const char* text, bool unknown) = nullptr;
     void** ScreenManager = nullptr;
 
+    // The update notice: the one-button dialog and the dialog screen while one is open
+    void (__cdecl* ShowOKDialog)(const char* text, bool unknown1, bool unknown2) = nullptr;
+    void** DialogScreen = nullptr;
+
     // The state manager's handlers (vtable slots)
     constexpr int DialogResultSlot = 17;
     constexpr int HighlightSlot = 37;
@@ -450,7 +456,8 @@ namespace
             text = text.empty() ? warning : text + LineBreak + warning;
         if (text.empty() && !entry)
             return;
-        HelpText = GameText(text);
+        // An empty text is a missing one to the game: it would show the text's name
+        HelpText = text.empty() ? std::string(" ") : GameText(text);
         if (auto screen = GetScreen(*ScreenManager, nullptr, 39))
             CallScreenFunction(screen, "UpdatePauseMenuDesc", nullptr, 1, "~WFP_TEXT_HELP");
     }
@@ -461,7 +468,10 @@ namespace
         ShowHelp(FindEntry(id));
     }
 
-    // The yes/no dialog of Default Settings, for a preset or Restore Defaults
+    // The update notice's text, in the font's encoding
+    std::string NoticeText;
+
+    // The yes/no dialog of Default Settings, for a preset or Restore Defaults; the update notice in a one-button dialog
     struct Confirmation
     {
         Kind kind = Kind::Category;     // Category: none
@@ -472,11 +482,14 @@ namespace
     void Confirm(void** manager, Kind kind, const LoadedPlugin* plugin, int preset)
     {
         Pending = { kind, plugin, preset };
-        if (kind == Kind::Preset)
+        if (kind == Kind::Notice)
+            DialogText = NoticeText;
+        else if (kind == Kind::Preset)
             DialogText = WFPText::Get("WFP_PRESET") + ": " + WFPText::Get(WFPPlugins::PresetRow::Names[preset]) + LineBreak + WFPText::Get("WFP_PRESET_CONFIRM");
         else
             DialogText = WFPText::Get("WFP_RESTOREDEFAULTS_HELP") + LineBreak + WFPText::Get("WFP_PRESET_CONFIRM");
-        DialogText = GameText(DialogText);
+        if (kind != Kind::Notice)
+            DialogText = GameText(DialogText);
 
         // As the game's Default Settings: back to this state after the dialog
         auto vtable = *reinterpret_cast<uintptr_t**>(manager);
@@ -492,7 +505,10 @@ namespace
     {
         if (Pending.kind != Kind::Category && StateOf(manager) == ConfirmState)
         {
-            ShowYesNoDialog(DialogText.c_str(), true);
+            if (Pending.kind == Kind::Notice)
+                ShowOKDialog(DialogText.c_str(), true, false);
+            else
+                ShowYesNoDialog(DialogText.c_str(), true);
             return;
         }
         Original<void(__fastcall*)(void**, void*)>(ShowDialogSlot)(manager, edx);
@@ -505,7 +521,7 @@ namespace
             if (Pending.kind != Kind::Category)
             {
                 auto pending = std::exchange(Pending, {});
-                if (result)
+                if (result && pending.kind != Kind::Notice)
                 {
                     if (pending.kind == Kind::Preset)
                     {
@@ -733,6 +749,34 @@ namespace
     }
 }
 
+// The in-game main menu or the options menu is the top screen, or a dialog over one of them. Their decorations and
+// the dialog's backdrop end near a 16:9 picture, where nothing was meant to be seen.
+uintptr_t MainMenuVTable = 0;
+
+export bool MenuScreenShown()
+{
+    auto screens = ScreenManager ? static_cast<uint8_t*>(*ScreenManager) : nullptr;
+    if (!screens || !MainMenuVTable)
+        return false;
+    auto top = *reinterpret_cast<int32_t*>(screens + 0x130);
+    if (top < 0 || top >= 25)
+        return false;
+    auto at = [screens](int32_t index) { return *reinterpret_cast<uintptr_t**>(screens + 12 * index + 12); };
+    // The options screen as the top one; under a dialog it's known by its class
+    static uintptr_t OptionsVTable = 0;
+    auto menu = [screens](uintptr_t* screen)
+    {
+        if (!screen)
+            return false;
+        if (screen == GetScreen(screens, nullptr, 39))
+            OptionsVTable = *screen;
+        return *screen == MainMenuVTable || *screen == OptionsVTable;
+    };
+    if (menu(at(top)))
+        return true;
+    return top > 0 && DialogScreen && *DialogScreen && at(top) == *DialogScreen && menu(at(top - 1));
+}
+
 class Options
 {
 public:
@@ -757,29 +801,15 @@ public:
             // The description line's update (a call of the screen's script function) and the Default Settings dialog
             auto description = GetPattern("68 ? ? ? ? 6A 01 6A 00 68 ? ? ? ? 55 E8");
             auto dialog = GetPattern("68 71 90 CC 7E E8 ? ? ? ? 83 C4 04 50 E8");
-            if (children.empty() || highlight.empty() || highlightParent.empty() || stateManager.empty() || commit.empty() || createItem.empty() ||
-                addScreenLevel.empty() || getScreen.empty() || screenLookups.empty() || search.empty() || languages.empty() || language.empty() ||
-                description.empty() || dialog.empty())
-                return;
 
             auto getChildren = reinterpret_cast<uintptr_t>(children.get_first(-0x24));
             auto tableBegin = *children.get_first<TreeEntry*>(9);
             auto tableEnd = *reinterpret_cast<TreeEntry**>(getChildren + 0x8C);
-            if (*highlight.get_first<TreeEntry*>(3) != tableBegin || *highlight.get_first<TreeEntry*>(0x18) != tableEnd ||
-                *highlightParent.get_first<uintptr_t>(6) != reinterpret_cast<uintptr_t>(tableBegin) + 4)
-                return;
-
             AddScreenLevel = reinterpret_cast<decltype(AddScreenLevel)>(addScreenLevel.get_first());
             GetScreen = reinterpret_cast<decltype(GetScreen)>(getScreen.get_first());
             CallScreenFunction = reinterpret_cast<decltype(CallScreenFunction)>(injector::GetBranchDestination(description.get_first(15)).as_int());
             ShowYesNoDialog = reinterpret_cast<decltype(ShowYesNoDialog)>(injector::GetBranchDestination(dialog.get_first(14)).as_int());
-            for (size_t i = 0; i < screenLookups.size() && !ScreenManager; ++i)
-            {
-                if (injector::GetBranchDestination(screenLookups.get(i).get<void>(8)).as_int() == reinterpret_cast<uintptr_t>(getScreen.get_first()))
-                    ScreenManager = *screenLookups.get(i).get<void**>(2);
-            }
-            if (!ScreenManager)
-                return;
+            ScreenManager = *screenLookups.get_first<void**>(2);
             StateManager = *stateManager.get_first<void**>(0x16);
             Languages = *languages.get_first<LanguageInfo*>(7);
             LanguagesEnd = *languages.get_first<LanguageInfo*>(0x1B);
@@ -874,6 +904,57 @@ public:
                 ref = function;
             }
 
+        };
+
+        // The update notice in the game's one-button dialog, over the options menu's list once nothing else is open
+        // there: the options menus handle the dialog like their own (the in-game main menu ignores dialog results)
+        WFP::onInitEvent() += []()
+        {
+            auto okDialog = GetPattern("8A 4C 24 0C 8A 44 24 08 ? ? ? ? ? ? 8B 0D ? ? ? ? 85 C9 A2 ? ? ? ? B8 01 26 7B 41");
+            auto dialogScreen = GetPattern("A1 ? ? ? ? 85 C0 74 13 6A 00 6A 00 68 ? ? ? ? 50 E8");
+            auto mainMenu = GetPattern("8D 8E 98 00 00 00 89 5C 24 18 C7 06");
+            if (GetScreen)
+            {
+                MainMenuVTable = *mainMenu.get_first<uintptr_t>(0xC);
+                DialogScreen = *dialogScreen.get_first<void**>(1);
+            }
+            bool available = ScreenManager && StateManager && Originals[DialogResultSlot];
+            if (available)
+                ShowOKDialog = reinterpret_cast<decltype(ShowOKDialog)>(okDialog.get_first());
+            static auto playable = []()
+            {
+                auto manager = *StateManager;
+                if (!manager || *DialogScreen || Pending.kind != Kind::Category)
+                    return false;
+                auto state = StateOf(manager);
+                if (state == PageState || state == ConfirmState || state == 48 || state == 49)
+                    return false;
+                // The options screen is the top one of the screen manager's stack ({unknown, id, screen} from +4, the
+                // index of the top one at +0x130)
+                auto screens = static_cast<uint8_t*>(*ScreenManager);
+                auto options = screens ? GetScreen(screens, nullptr, 39) : nullptr;
+                if (!options)
+                    return false;
+                auto top = *reinterpret_cast<int32_t*>(screens + 0x130);
+                return top >= 0 && top < 25 && *reinterpret_cast<void**>(screens + 12 * top + 12) == options;
+            };
+            if (NFSUCUpdateNotice::Install(FixSettings(), available, playable,
+                [](const std::string& text)
+                {
+                    if (!playable())
+                        return;
+                    NoticeText = text;
+                    Confirm(static_cast<void**>(*StateManager), Kind::Notice, nullptr, -1);
+                },
+                [](const std::string& text)
+                {
+                    UpdateTexts();
+                    return GameText(text);
+                }))
+            {
+                WFP::onGameProcessEvent() += []() { NFSUCUpdateNotice::Tick(); };
+                WFP::onShutdownEvent() += []() { NFSUCUpdateNotice::OnExit(); };
+            }
         };
     }
 } Options;

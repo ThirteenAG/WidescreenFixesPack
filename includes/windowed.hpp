@@ -299,6 +299,7 @@ namespace WindowedModeWrapper
     static BOOL WINAPI SetWindowPos_Hook(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags)
     {
         BOOL res = SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags);
+        if (hWnd != GameHWND) return res;
         if (bBorderlessWindowed)
         {
             afterCreateWindow();

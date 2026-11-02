@@ -1,0 +1,10 @@
+{
+  "plugin.name": "Mafia II: Definitive Edition Fusion Fix",
+  "page.game": "Jeu",
+  "SkipIntro": "Passer l'intro",
+  "SkipIntro.description": "Démarre au menu principal, sans les vidéos des logos, l'écran des mentions légales ni « Appuyez sur une touche ». Désactivé, ils s'affichent comme dans le jeu d'origine. Nécessite un redémarrage.",
+  "page.compatibility": "Compatibilité",
+  "MAIN.TextLanguage": "Langue du texte",
+  "MAIN.TextLanguage.description": "Choisissez la langue du texte des paramètres du correctif. Auto suit la langue du jeu ou de l’éditeur.",
+  "ui.auto": "Auto"
+}

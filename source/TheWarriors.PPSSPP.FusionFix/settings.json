@@ -10,6 +10,11 @@
       "id": "options",
       "title": "@page.options",
       "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
     }
   ],
   "settings": [
@@ -44,37 +49,23 @@
       }
     },
     {
-      "id": "MAIN.Enable60FPS",
-      "type": "bool",
-      "default": 0,
+      "id": "MAIN.FPSLimit",
+      "type": "choice",
+      "default": 30,
       "label": "@fps",
       "description": "@fps.description",
       "page": "options",
       "visibility": "menu",
       "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 1
-      }
-    },
-    {
-      "id": "MAIN.ForceAspectRatio",
-      "type": "string",
-      "default": "auto",
-      "label": "@aspect",
-      "description": "@aspect.description",
-      "page": "options",
-      "visibility": "editor",
-      "apply": "restart",
-      "maxLength": 14,
-      "suggestions": [
-        "auto",
-        "0",
-        "4:3",
-        "16:9",
-        "21:9",
-        "32:9"
+      "choices": [
+        {
+          "value": 30,
+          "label": "30 FPS"
+        },
+        {
+          "value": 60,
+          "label": "60 FPS"
+        }
       ]
     },
     {
@@ -91,6 +82,117 @@
         "recommended": 1,
         "enhanced": 1
       }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@fov",
+      "description": "@fov.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@hudaspect",
+      "description": "@hudaspect.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "maxLength": 14
+    },
+    {
+      "id": "MAIN.ForceAspectRatio",
+      "type": "string",
+      "default": "Auto",
+      "label": "@aspect",
+      "description": "@aspect.description",
+      "page": "options",
+      "visibility": "editor",
+      "apply": "restart",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "maxLength": 14
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@language",
+      "description": "@language.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
     }
   ]
 }

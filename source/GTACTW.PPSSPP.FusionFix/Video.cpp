@@ -1,4 +1,5 @@
 #include "Game.hpp"
+#include "Shared/Console/PatchNotice.hpp"
 #include <cmath>
 
 namespace ctw {
@@ -20,12 +21,22 @@ void DrawMovieQuad(uint32_t** context, int x0, int16_t y0, int u0, int16_t v0,
     const auto x = [horizontal](int value) { return int(std::lround(240.0f + (value - 240.0f) * horizontal)); };
     const auto y = [vertical](int value) { return int16_t(std::lround(136.0f + (value - 136.0f) * vertical)); };
     movieQuad.fun(context, x(x0), y(y0), u0, v0, x(x1), y(y1), u1, v1, z);
+    // Nothing else draws beside the fitted picture; keep the bars black.
+    if (context == reinterpret_cast<uint32_t**>(Address<0x08C11EC0>()))
+        ClearOutside(unsigned(std::lround(240.0f * (1.0f - horizontal))), unsigned(std::lround(136.0f * (1.0f - vertical))));
 }
 }
 
 void InstallVideo() {
     const uintptr_t sites[] = {Address<0x08860650>(), Address<0x08860870>(), Address<0x08860A14>(),
                               Address<0x08860B1C>(), Address<0x08860CA8>(), Address<0x08860DB0>()};
+    const auto target = injector::GetBranchDestination(sites[0]).as_int();
+    for (auto site : sites) {
+        if (injector::GetBranchDestination(site).as_int() != target) {
+            PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
+            return;
+        }
+    }
     for (auto site : sites)
         movieQuad.fun = injector::MakeCALL(site, DrawMovieQuad).get();
 }

@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 
 export module Controls;
 
@@ -77,10 +76,10 @@ namespace
     // Actions
     constexpr uint32_t ActTurn180 = 0x09;
 
-    uintptr_t* pSPad = nullptr;
-    uintptr_t* pSession = nullptr;
-    uintptr_t* pPlayers = nullptr; // player manager: the four player characters at +0x24
-    uintptr_t* pActionButtons = nullptr; // context prompts: a manager per player at +0x40 (0x2D0 each)
+    GameRef<uintptr_t> SPad;
+    GameRef<uintptr_t> Session;
+    GameRef<uintptr_t> PlayerManager; // player manager: the four player characters at +0x24
+    GameRef<uintptr_t> ActionButtons; // context prompts: a manager per player at +0x40 (0x2D0 each)
     using AvoidFn = void(__cdecl*)(int, int, int, int);
     AvoidFn AvoidFront = nullptr, AvoidBack = nullptr, AvoidLeft = nullptr, AvoidRight = nullptr;
     using KeyFn = bool(__stdcall*)(int action, int player);
@@ -167,7 +166,7 @@ namespace
 
     LocalPlayer* PlayerFor(uintptr_t ch)
     {
-        auto players = pPlayers ? *pPlayers : 0;
+        auto players = PlayerManager.is_initialized() ? PlayerManager.get() : 0;
         if (!ch || !players)
             return nullptr;
         bool known = false;
@@ -189,13 +188,13 @@ namespace
 
     bool KeyboardPlayer(uintptr_t ch)
     {
-        auto spad = *pSPad;
+        uintptr_t spad = SPad;
         return spad && Field<uint8_t>(spad, 0x5F0) == 0 && Field<int32_t>(spad, 0x614) == Field<uint8_t>(ch, ChSlot);
     }
 
     uint32_t RawButtons(uintptr_t pad)
     {
-        auto spad = *pSPad;
+        uintptr_t spad = SPad;
         auto index = Field<uint32_t>(pad, PadIndex);
         if (!spad || index > 3 || Field<uint8_t>(spad, 0x5DC))
             return 0;
@@ -205,7 +204,7 @@ namespace
     // The player's camera invert option
     int CameraInvert(uintptr_t ch)
     {
-        auto session = pSession ? *pSession : 0;
+        auto session = Session.is_initialized() ? Session.get() : 0;
         auto options = session ? Field<uintptr_t>(session, 0x1042C) : 0;
         auto slot = Field<uint8_t>(ch, ChSlot);
         return options && slot < 4 ? Field<int32_t>(options, (61 * slot + 39) * 4) : 0;
@@ -214,7 +213,7 @@ namespace
     // A context prompt (door, item, finisher...) that the given raw buttons answer is up for this player
     bool PromptUp(uintptr_t ch, uint32_t buttons)
     {
-        auto prompts = *pActionButtons;
+        uintptr_t prompts = ActionButtons;
         auto slot = Field<uint8_t>(ch, ChSlot);
         if (!prompts || slot > 3)
             return false;
@@ -497,19 +496,17 @@ export namespace Controls
         auto actionButtons = hook::pattern("8B 15 ? ? ? ? 80 BA F8 0D 00 00 00");
         auto keyHeld = hook::pattern("6A 00 F3 0F 11 44 24 60 E8 ? ? ? ?");
         auto keyPressed = hook::pattern("8B 0D ? ? ? ? 50 6A 06 E8 ? ? ? ?");
-        if (!PatternAvailable(spad, "ResidentEvil5.FusionFix: Controls") || !PatternAvailable(session, "ResidentEvil5.FusionFix: Controls") || !PatternAvailable(players, "ResidentEvil5.FusionFix: Controls") || !PatternAvailable(actionButtons, "ResidentEvil5.FusionFix: Controls") || !PatternAvailable(keyHeld, "ResidentEvil5.FusionFix: Controls") || !PatternAvailable(keyPressed, "ResidentEvil5.FusionFix: Controls"))
-            return;
-        pSPad = *spad.get_first<uintptr_t*>(2);
-        pSession = *session.get_first<uintptr_t*>(11);
-        pPlayers = *players.get_first<uintptr_t*>(6);
-        pActionButtons = *actionButtons.get_first<uintptr_t*>(2);
+        SPad.SetAddress(*spad.get_first<uintptr_t*>(2));
+        Session.SetAddress(*session.get_first<uintptr_t*>(11));
+        PlayerManager.SetAddress(*players.get_first<uintptr_t*>(6));
+        ActionButtons.SetAddress(*actionButtons.get_first<uintptr_t*>(2));
         KeyHeld = (KeyFn)injector::GetBranchDestination(keyHeld.get_first(8)).as_int();
         KeyPressed = (KeyFn)injector::GetBranchDestination(keyPressed.get_first(9)).as_int();
 
         auto avoid = [](uint8_t id) -> AvoidFn
         {
             auto pattern = hook::pattern(std::format("6A 00 6A FF 6A 00 6A 00 6A {:02X} 8B CE FF D0 5F 5E 8B E5 5D C3", id));
-            return pattern.size() == 1 ? (AvoidFn)pattern.get_first(-0x105) : nullptr;
+            return (AvoidFn)pattern.get_first(-0x105);
         };
         AvoidFront = avoid(0x51);
         AvoidBack = avoid(0x52);
@@ -518,66 +515,52 @@ export namespace Controls
 
         // Command builder: after the PlayerPad update (ebx = builder, esi = character)
         auto pattern = hook::pattern("8D BB E8 04 00 00 8B CF E8 ? ? ? ? F3 0F 10 83 B4 06 00 00");
-        if (PatternUnique(pattern, "ResidentEvil5.FusionFix: Controls"))
+        static auto PadUpdatedHook = safetyhook::create_mid(pattern.get_first(13), [](SafetyHookContext& regs)
         {
-            static auto PadUpdatedHook = safetyhook::create_mid(pattern.get_first(13), [](SafetyHookContext& regs)
-            {
-                OnPadUpdated(regs.ebx, regs.esi);
-            });
-        }
+            OnPadUpdated(regs.ebx, regs.esi);
+        });
 
         // Command builder: the final stick values (pad and keyboard joined), before the commands are made
         pattern = hook::pattern("83 BB 0C 07 00 00 00 74 ? C6 83 14 07 00 00 00 83 BE A8 2D 00 00 00");
-        if (PatternUnique(pattern, "ResidentEvil5.FusionFix: Controls"))
+        static auto SticksHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            static auto SticksHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                auto& angle = *reinterpret_cast<float*>(regs.esp + 0x30);
-                auto& mag = *reinterpret_cast<float*>(regs.esp + 0x2C);
-                OnSticks(regs.ebx, regs.esi, angle, mag);
-            });
-        }
+            auto& angle = *reinterpret_cast<float*>(regs.esp + 0x30);
+            auto& mag = *reinterpret_cast<float*>(regs.esp + 0x2C);
+            OnSticks(regs.ebx, regs.esi, angle, mag);
+        });
 
         pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 24 53 56 57 8B F9 80 BF A0 02 00 00 00 0F 84");
-        if (PatternUnique(pattern, "ResidentEvil5.FusionFix: Controls"))
-            LookAroundHook = safetyhook::create_inline(pattern.get_first(), LookAround);
+        LookAroundHook = safetyhook::create_inline(pattern.get_first(), LookAround);
 
         pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 74 53 56 8B F1 80 BE B1 30 00 00 00 57 0F 85");
-        if (PatternUnique(pattern, "ResidentEvil5.FusionFix: Controls"))
-            ControllerHook = safetyhook::create_inline(pattern.get_first(), ControllerUpdate);
+        ControllerHook = safetyhook::create_inline(pattern.get_first(), ControllerUpdate);
 
         // MAIN.ForceLaserSight (live): keyboard/mouse aiming looks like the pad's. The aim update decides whether the
         // weapon's laser is drawn (laser +0x2FA; esi = character, edi = laser): drawn for keyboard/mouse too.
         pattern = hook::pattern("E8 ? ? ? ? 88 9F FA 02 00 00 33 DB 33 FF");
-        if (PatternUnique(pattern, "ResidentEvil5.FusionFix: Controls"))
+        static auto LaserHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
         {
-            static auto LaserHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
-            {
-                static auto& forceLaser = FixSettings().Int("MAIN.ForceLaserSight");
-                auto ch = regs.esi;
-                if (!forceLaser || !PlayerFor(ch) || !KeyboardPlayer(ch))
-                    return;
-                regs.ebx = (regs.ebx & ~0xFFu) | 1;
-            });
-        }
+            static auto& forceLaser = FixSettings().Int("MAIN.ForceLaserSight");
+            auto ch = regs.esi;
+            if (!forceLaser || !PlayerFor(ch) || !KeyboardPlayer(ch))
+                return;
+            regs.ebx = (regs.ebx & ~0xFFu) | 1;
+        });
 
         // The keyboard/mouse crosshair: the HUD cockpit (character +0x2640, its character at +0x1A0) shows its reticle
         // when it was asked for one this frame (+0x373), which it copies into its visible flag here (ecx = cockpit).
         // With the laser forced the request is dropped, as with a pad; the sniper scope keeps its reticle.
         pattern = hook::pattern("32 D2 38 91 C3 00 00 00 75 06 88 91 73 03 00 00");
-        if (PatternUnique(pattern, "ResidentEvil5.FusionFix: Controls"))
+        static auto ReticleHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            static auto ReticleHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                static auto& forceLaser = FixSettings().Int("MAIN.ForceLaserSight");
-                if (!forceLaser)
-                    return;
-                auto cockpit = regs.ecx;
-                auto ch = Field<uintptr_t>(cockpit, 0x1A0);
-                if (!PlayerFor(ch) || Field<uintptr_t>(ch, 0x2640) != cockpit || !KeyboardPlayer(ch) || (Field<uint32_t>(ch, ChStateFlags) & 0x80))
-                    return;
-                Field<uint8_t>(cockpit, 0x373) = 0;
-            });
-        }
+            static auto& forceLaser = FixSettings().Int("MAIN.ForceLaserSight");
+            if (!forceLaser)
+                return;
+            auto cockpit = regs.ecx;
+            auto ch = Field<uintptr_t>(cockpit, 0x1A0);
+            if (!PlayerFor(ch) || Field<uintptr_t>(ch, 0x2640) != cockpit || !KeyboardPlayer(ch) || (Field<uint32_t>(ch, ChStateFlags) & 0x80))
+                return;
+            Field<uint8_t>(cockpit, 0x373) = 0;
+        });
     }
 }

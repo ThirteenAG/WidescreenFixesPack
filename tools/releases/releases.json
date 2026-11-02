@@ -4,9 +4,9 @@
   "releases": [
     {
       "tag": "bully",
-      "name": "Bully Scholarship Edition Widescreen Fix",
+      "name": "Bully Scholarship Edition Fusion Fix",
       "packages": [
-        "Bully.WidescreenFix"
+        "Bully.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -16,9 +16,9 @@
     },
     {
       "tag": "burnout3",
-      "name": "Burnout 3 Takedown Widescreen Fix [PCSX2F]",
+      "name": "Burnout 3 Takedown Fusion Fix [PCSX2F]",
       "packages": [
-        "Burnout3.PCSX2F.WidescreenFix"
+        "Burnout3.PCSX2F.FusionFix"
       ],
       "platforms": [
         "PCSX2F"
@@ -28,9 +28,9 @@
     },
     {
       "tag": "callofcthulhu",
-      "name": "Call of Cthulhu Widescreen Fix",
+      "name": "Call of Cthulhu Fusion Fix",
       "packages": [
-        "CallOfCthulhu.WidescreenFix"
+        "CallOfCthulhu.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -40,9 +40,9 @@
     },
     {
       "tag": "coldfear",
-      "name": "Cold Fear Widescreen Fix",
+      "name": "Cold Fear Fusion Fix",
       "packages": [
-        "ColdFear.WidescreenFix"
+        "ColdFear.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -52,9 +52,9 @@
     },
     {
       "tag": "condemned",
-      "name": "Condemned Criminal Origins Widescreen Fix",
+      "name": "Condemned Criminal Origins Fusion Fix",
       "packages": [
-        "Condemned.WidescreenFix"
+        "Condemned.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -67,9 +67,9 @@
     },
     {
       "tag": "da4",
-      "name": "Deer Avenger 4 Widescreen Fix",
+      "name": "Deer Avenger 4 Fusion Fix",
       "packages": [
-        "DeerAvenger4.WidescreenFix"
+        "DeerAvenger4.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -79,9 +79,9 @@
     },
     {
       "tag": "driv3r",
-      "name": "DRIV3R Widescreen Fix",
+      "name": "DRIV3R Fusion Fix",
       "packages": [
-        "Driv3r.WidescreenFix"
+        "Driv3r.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -91,9 +91,9 @@
     },
     {
       "tag": "driverpl",
-      "name": "Driver Parallel Lines Widescreen Fix",
+      "name": "Driver Parallel Lines Fusion Fix",
       "packages": [
-        "DriverParallelLines.WidescreenFix"
+        "DriverParallelLines.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -103,9 +103,9 @@
     },
     {
       "tag": "enterthematrix",
-      "name": "Enter the Matrix Widescreen Fix",
+      "name": "Enter the Matrix Fusion Fix",
       "packages": [
-        "EnterTheMatrix.WidescreenFix"
+        "EnterTheMatrix.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -115,9 +115,9 @@
     },
     {
       "tag": "farcry",
-      "name": "Far Cry Widescreen Fix",
+      "name": "Far Cry Fusion Fix",
       "packages": [
-        "FarCry.WidescreenFix"
+        "FarCry.FusionFix"
       ],
       "platforms": [
         "Win32",
@@ -128,9 +128,9 @@
     },
     {
       "tag": "gta1",
-      "name": "Grand Theft Auto (1) Widescreen Fix",
+      "name": "Grand Theft Auto (1) Fusion Fix",
       "packages": [
-        "GTA1.WidescreenFix"
+        "GTA1.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -140,9 +140,9 @@
     },
     {
       "tag": "gta2",
-      "name": "Grand Theft Auto 2 Widescreen Fix",
+      "name": "Grand Theft Auto 2 Fusion Fix",
       "packages": [
-        "GTA2.WidescreenFix"
+        "GTA2.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -152,9 +152,9 @@
     },
     {
       "tag": "gta3",
-      "name": "Grand Theft Auto 3 Widescreen Fix",
+      "name": "Grand Theft Auto 3 Fusion Fix",
       "packages": [
-        "GTA3.WidescreenFix"
+        "GTA3.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -166,10 +166,9 @@
     },
     {
       "tag": "gtalcs",
-      "name": "Grand Theft Auto Liberty City Stories Widescreen Fix [PCSX2F]",
+      "name": "Grand Theft Auto Liberty City Stories Fusion Fix [PCSX2F]",
       "packages": [
-        "GTALCS.PCSX2F.WidescreenFix",
-        "GTALCS.PCSX2F.ImVehLM"
+        "GTALCS.PCSX2F.FusionFix"
       ],
       "platforms": [
         "PCSX2F"
@@ -179,9 +178,9 @@
     },
     {
       "tag": "gtasa",
-      "name": "Grand Theft Auto San Andreas Widescreen Fix",
+      "name": "Grand Theft Auto San Andreas Fusion Fix",
       "packages": [
-        "GTASA.WidescreenFix"
+        "GTASA.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -193,10 +192,9 @@
     },
     {
       "tag": "gtavcs",
-      "name": "Grand Theft Auto Vice City Stories Widescreen Fix [PCSX2F]",
+      "name": "Grand Theft Auto Vice City Stories Fusion Fix [PCSX2F]",
       "packages": [
-        "GTAVCS.PCSX2F.WidescreenFix",
-        "GTAVCS.PCSX2F.ImVehLM"
+        "GTAVCS.PCSX2F.FusionFix"
       ],
       "platforms": [
         "PCSX2F"
@@ -206,9 +204,9 @@
     },
     {
       "tag": "gtavc",
-      "name": "Grand Theft Auto Vice City Widescreen Fix",
+      "name": "Grand Theft Auto Vice City Fusion Fix",
       "packages": [
-        "GTAVC.WidescreenFix"
+        "GTAVC.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -244,10 +242,9 @@
     },
     {
       "tag": "gtalcspsp",
-      "name": "GTA Liberty City Stories Widescreen Fix [PPSSPP]",
+      "name": "GTA Liberty City Stories Fusion Fix [PPSSPP]",
       "packages": [
-        "GTALCS.PPSSPP.WidescreenFix",
-        "GTALCS.PPSSPP.ImVehLM"
+        "GTALCS.PPSSPP.FusionFix"
       ],
       "platforms": [
         "PPSSPP"
@@ -281,11 +278,9 @@
     },
     {
       "tag": "gtavcspsp",
-      "name": "GTA Vice City Stories Widescreen Fix [PPSSPP]",
+      "name": "GTA Vice City Stories Fusion Fix [PPSSPP]",
       "packages": [
-        "GTAVCS.PPSSPP.WidescreenFix",
-        "GTAVCS.PPSSPP.ImVehLM",
-        "GTAVCS.PPSSPP.GamepadIcons"
+        "GTAVCS.PPSSPP.FusionFix"
       ],
       "platforms": [
         "PPSSPP"
@@ -295,9 +290,9 @@
     },
     {
       "tag": "gun",
-      "name": "Gun Widescreen Fix",
+      "name": "Gun Fusion Fix",
       "packages": [
-        "Gun.WidescreenFix"
+        "Gun.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -307,9 +302,9 @@
     },
     {
       "tag": "hd2",
-      "name": "Hidden and Dangerous 2 Widescreen Fix",
+      "name": "Hidden and Dangerous 2 Fusion Fix",
       "packages": [
-        "HiddenandDangerous2.WidescreenFix"
+        "HiddenandDangerous2.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -319,9 +314,9 @@
     },
     {
       "tag": "justcause",
-      "name": "Just Cause Widescreen Fix",
+      "name": "Just Cause Fusion Fix",
       "packages": [
-        "JustCause.WidescreenFix"
+        "JustCause.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -331,9 +326,9 @@
     },
     {
       "tag": "kingkong",
-      "name": "King Kong Widescreen Fix",
+      "name": "King Kong Fusion Fix",
       "packages": [
-        "KingKong.WidescreenFix"
+        "KingKong.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -343,9 +338,9 @@
     },
     {
       "tag": "kr2",
-      "name": "Knight Rider The Game 2 Widescreen Fix",
+      "name": "Knight Rider The Game 2 Fusion Fix",
       "packages": [
-        "KnightRider2.WidescreenFix"
+        "KnightRider2.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -355,10 +350,10 @@
     },
     {
       "tag": "kr",
-      "name": "Knight Rider The Game Widescreen Fix [+PCSX2F]",
+      "name": "Knight Rider The Game Fusion Fix [+PCSX2F]",
       "packages": [
-        "KnightRider.WidescreenFix",
-        "KnightRider.PCSX2F.WidescreenFix"
+        "KnightRider.FusionFix",
+        "KnightRider.PCSX2F.FusionFix"
       ],
       "platforms": [
         "PCSX2F",
@@ -369,9 +364,9 @@
     },
     {
       "tag": "larush",
-      "name": "L.A. Rush Widescreen Fix",
+      "name": "L.A. Rush Fusion Fix",
       "packages": [
-        "LARush.WidescreenFix"
+        "LARush.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -392,10 +387,46 @@
       "unmanagedAssets": []
     },
     {
-      "tag": "manhunt",
-      "name": "Manhunt Widescreen Fix",
+      "tag": "mafiade",
+      "name": "Mafia: Definitive Edition Fusion Fix",
       "packages": [
-        "Manhunt.WidescreenFix"
+        "MafiaDefinitiveEdition.FusionFix"
+      ],
+      "platforms": [
+        "Win64"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "mafia2de",
+      "name": "Mafia II: Definitive Edition Fusion Fix",
+      "packages": [
+        "Mafia2DefinitiveEdition.FusionFix"
+      ],
+      "platforms": [
+        "Win64"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "mafia3de",
+      "name": "Mafia III: Definitive Edition Fusion Fix",
+      "packages": [
+        "Mafia3DefinitiveEdition.FusionFix"
+      ],
+      "platforms": [
+        "Win64"
+      ],
+      "available": true,
+      "unmanagedAssets": []
+    },
+    {
+      "tag": "manhunt",
+      "name": "Manhunt Fusion Fix",
+      "packages": [
+        "Manhunt.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -407,9 +438,9 @@
     },
     {
       "tag": "mp2",
-      "name": "Max Payne 2 Widescreen Fix",
+      "name": "Max Payne 2 Fusion Fix",
       "packages": [
-        "MaxPayne2.WidescreenFix"
+        "MaxPayne2.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -419,9 +450,9 @@
     },
     {
       "tag": "mp1",
-      "name": "Max Payne Widescreen Fix",
+      "name": "Max Payne Fusion Fix",
       "packages": [
-        "MaxPayne.WidescreenFix"
+        "MaxPayne.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -443,9 +474,9 @@
     },
     {
       "tag": "nfsc",
-      "name": "Need For Speed Carbon Widescreen Fix",
+      "name": "Need For Speed Carbon Fusion Fix",
       "packages": [
-        "NFSCarbon.WidescreenFix"
+        "NFSCarbon.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -455,9 +486,9 @@
     },
     {
       "tag": "nfsmw",
-      "name": "Need For Speed Most Wanted (2005) Widescreen Fix",
+      "name": "Need For Speed Most Wanted (2005) Fusion Fix",
       "packages": [
-        "NFSMostWanted.WidescreenFix"
+        "NFSMostWanted.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -503,9 +534,9 @@
     },
     {
       "tag": "nfsu2",
-      "name": "Need For Speed Underground 2 Widescreen Fix",
+      "name": "Need For Speed Underground 2 Fusion Fix",
       "packages": [
-        "NFSUnderground2.WidescreenFix"
+        "NFSUnderground2.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -515,9 +546,9 @@
     },
     {
       "tag": "nfsu",
-      "name": "Need For Speed Underground Widescreen Fix",
+      "name": "Need For Speed Underground Fusion Fix",
       "packages": [
-        "NFSUnderground.WidescreenFix"
+        "NFSUnderground.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -527,9 +558,9 @@
     },
     {
       "tag": "onimusha3",
-      "name": "Onimusha 3 Widescreen Fix",
+      "name": "Onimusha 3 Fusion Fix",
       "packages": [
-        "Onimusha3.WidescreenFix"
+        "Onimusha3.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -539,9 +570,9 @@
     },
     {
       "tag": "paradisecracked",
-      "name": "Paradise Cracked Widescreen Fix",
+      "name": "Paradise Cracked Fusion Fix",
       "packages": [
-        "ParadiseCracked.WidescreenFix"
+        "ParadiseCracked.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -551,9 +582,9 @@
     },
     {
       "tag": "psiops",
-      "name": "Psi-Ops The Mindgate Conspiracy Widescreen Fix",
+      "name": "Psi-Ops The Mindgate Conspiracy Fusion Fix",
       "packages": [
-        "PsiOpsTheMindgateConspiracy.WidescreenFix"
+        "PsiOpsTheMindgateConspiracy.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -563,9 +594,9 @@
     },
     {
       "tag": "psychonauts",
-      "name": "Psychonauts Widescreen Fix",
+      "name": "Psychonauts Fusion Fix",
       "packages": [
-        "Psychonauts.WidescreenFix"
+        "Psychonauts.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -683,9 +714,9 @@
     },
     {
       "tag": "secondsight",
-      "name": "Second Sight Widescreen Fix",
+      "name": "Second Sight Fusion Fix",
       "packages": [
-        "SecondSight.WidescreenFix"
+        "SecondSight.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -695,9 +726,9 @@
     },
     {
       "tag": "sh2",
-      "name": "Silent Hill 2 Widescreen Fix",
+      "name": "Silent Hill 2 Fusion Fix",
       "packages": [
-        "SilentHill2.WidescreenFix"
+        "SilentHill2.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -707,9 +738,9 @@
     },
     {
       "tag": "sh3",
-      "name": "Silent Hill 3 Widescreen Fix",
+      "name": "Silent Hill 3 Fusion Fix",
       "packages": [
-        "SilentHill3.WidescreenFix"
+        "SilentHill3.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -719,9 +750,9 @@
     },
     {
       "tag": "sh4",
-      "name": "Silent Hill 4 Widescreen Fix",
+      "name": "Silent Hill 4 Fusion Fix",
       "packages": [
-        "SilentHill4.WidescreenFix"
+        "SilentHill4.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -731,9 +762,9 @@
     },
     {
       "tag": "sniperelite",
-      "name": "Sniper Elite Widescreen Fix",
+      "name": "Sniper Elite Fusion Fix",
       "packages": [
-        "SniperElite.WidescreenFix"
+        "SniperElite.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -779,9 +810,9 @@
     },
     {
       "tag": "sonicheroes",
-      "name": "Sonic Heroes Widescreen Fix",
+      "name": "Sonic Heroes Fusion Fix",
       "packages": [
-        "SonicHeroes.WidescreenFix"
+        "SonicHeroes.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -803,9 +834,9 @@
     },
     {
       "tag": "scct",
-      "name": "Splinter Cell Chaos Theory Widescreen Fix",
+      "name": "Splinter Cell Chaos Theory Fusion Fix",
       "packages": [
-        "SplinterCellChaosTheory.WidescreenFix"
+        "SplinterCellChaosTheory.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -827,9 +858,9 @@
     },
     {
       "tag": "scda",
-      "name": "Splinter Cell Double Agent Widescreen Fix",
+      "name": "Splinter Cell Double Agent Fusion Fix",
       "packages": [
-        "SplinterCellDoubleAgent.WidescreenFix"
+        "SplinterCellDoubleAgent.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -839,9 +870,9 @@
     },
     {
       "tag": "scdaps2",
-      "name": "Splinter Cell Double Agent Widescreen Fix [PCSX2F]",
+      "name": "Splinter Cell Double Agent Fusion Fix [PCSX2F]",
       "packages": [
-        "SplinterCellDoubleAgent.PCSX2F.WidescreenFix"
+        "SplinterCellDoubleAgent.PCSX2F.FusionFix"
       ],
       "platforms": [
         "PCSX2F"
@@ -863,9 +894,9 @@
     },
     {
       "tag": "scpt",
-      "name": "Splinter Cell Pandora Tomorrow Widescreen Fix",
+      "name": "Splinter Cell Pandora Tomorrow Fusion Fix",
       "packages": [
-        "SplinterCellPandoraTomorrow.WidescreenFix"
+        "SplinterCellPandoraTomorrow.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -875,9 +906,9 @@
     },
     {
       "tag": "sc",
-      "name": "Splinter Cell Widescreen Fix",
+      "name": "Splinter Cell Fusion Fix",
       "packages": [
-        "SplinterCell.WidescreenFix"
+        "SplinterCell.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -887,9 +918,9 @@
     },
     {
       "tag": "spyro",
-      "name": "Spyro Reignited Trilogy Widescreen Fix",
+      "name": "Spyro Reignited Trilogy Fusion Fix",
       "packages": [
-        "SpyroReignitedTrilogy.WidescreenFix"
+        "SpyroReignitedTrilogy.FusionFix"
       ],
       "platforms": [
         "Win64"
@@ -899,9 +930,9 @@
     },
     {
       "tag": "srs",
-      "name": "Street Racing Syndicate Widescreen Fix",
+      "name": "Street Racing Syndicate Fusion Fix",
       "packages": [
-        "StreetRacingSyndicate.WidescreenFix"
+        "StreetRacingSyndicate.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -911,9 +942,9 @@
     },
     {
       "tag": "thegodfather",
-      "name": "The Godfather Widescreen Fix",
+      "name": "The Godfather Fusion Fix",
       "packages": [
-        "TheGodfather.WidescreenFix"
+        "TheGodfather.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -923,9 +954,9 @@
     },
     {
       "tag": "thematrixpathofneo",
-      "name": "The Matrix Path of Neo Widescreen Fix",
+      "name": "The Matrix Path of Neo Fusion Fix",
       "packages": [
-        "TheMatrixPathOfNeo.WidescreenFix"
+        "TheMatrixPathOfNeo.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -935,9 +966,9 @@
     },
     {
       "tag": "punisher",
-      "name": "The Punisher Widescreen Fix",
+      "name": "The Punisher Fusion Fix",
       "packages": [
-        "ThePunisher.WidescreenFix"
+        "ThePunisher.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -959,9 +990,9 @@
     },
     {
       "tag": "thesuffering",
-      "name": "The Suffering Widescreen Fix",
+      "name": "The Suffering Fusion Fix",
       "packages": [
-        "TheSuffering.WidescreenFix"
+        "TheSuffering.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -983,9 +1014,9 @@
     },
     {
       "tag": "thaw",
-      "name": "Tony Hawk's American Wasteland Widescreen Fix",
+      "name": "Tony Hawk's American Wasteland Fusion Fix",
       "packages": [
-        "TonyHawksAmericanWasteland.WidescreenFix"
+        "TonyHawksAmericanWasteland.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -995,9 +1026,9 @@
     },
     {
       "tag": "thps2",
-      "name": "Tony Hawk's Pro Skater 2 Widescreen Fix",
+      "name": "Tony Hawk's Pro Skater 2 Fusion Fix",
       "packages": [
-        "TonyHawksProSkater2.WidescreenFix"
+        "TonyHawksProSkater2.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -1007,9 +1038,9 @@
     },
     {
       "tag": "thps3",
-      "name": "Tony Hawk's Pro Skater 3 Widescreen Fix",
+      "name": "Tony Hawk's Pro Skater 3 Fusion Fix",
       "packages": [
-        "TonyHawksProSkater3.WidescreenFix"
+        "TonyHawksProSkater3.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -1019,9 +1050,9 @@
     },
     {
       "tag": "thps4",
-      "name": "Tony Hawk's Pro Skater 4 Widescreen Fix",
+      "name": "Tony Hawk's Pro Skater 4 Fusion Fix",
       "packages": [
-        "TonyHawksProSkater4.WidescreenFix"
+        "TonyHawksProSkater4.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -1031,9 +1062,9 @@
     },
     {
       "tag": "thug2",
-      "name": "Tony Hawk's Underground 2 Widescreen Fix",
+      "name": "Tony Hawk's Underground 2 Fusion Fix",
       "packages": [
-        "TonyHawksUnderground2.WidescreenFix"
+        "TonyHawksUnderground2.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -1043,9 +1074,9 @@
     },
     {
       "tag": "thug",
-      "name": "Tony Hawk's Underground Widescreen Fix",
+      "name": "Tony Hawk's Underground Fusion Fix",
       "packages": [
-        "TonyHawksUnderground.WidescreenFix"
+        "TonyHawksUnderground.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -1055,9 +1086,9 @@
     },
     {
       "tag": "tod",
-      "name": "Total Overdose Widescreen Fix",
+      "name": "Total Overdose Fusion Fix",
       "packages": [
-        "TotalOverdose.WidescreenFix"
+        "TotalOverdose.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -1067,10 +1098,10 @@
     },
     {
       "tag": "truecrimenyc",
-      "name": "True Crime New York City Widescreen Fix",
+      "name": "True Crime New York City Fusion Fix",
       "packages": [
-        "TrueCrimeNewYorkCity.WidescreenFix",
-        "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix"
+        "TrueCrimeNewYorkCity.FusionFix",
+        "TrueCrimeNewYorkCity.PCSX2F.FusionFix"
       ],
       "platforms": [
         "PCSX2F",
@@ -1081,9 +1112,9 @@
     },
     {
       "tag": "truecrimesola",
-      "name": "True Crime Streets of LA Widescreen Fix",
+      "name": "True Crime Streets of LA Fusion Fix",
       "packages": [
-        "TrueCrimeStreetsofLA.WidescreenFix"
+        "TrueCrimeStreetsofLA.FusionFix"
       ],
       "platforms": [
         "Win32"
@@ -1093,9 +1124,9 @@
     },
     {
       "tag": "usm",
-      "name": "Ultimate Spider-Man Widescreen Fix",
+      "name": "Ultimate Spider-Man Fusion Fix",
       "packages": [
-        "UltimateSpiderMan.WidescreenFix"
+        "UltimateSpiderMan.FusionFix"
       ],
       "platforms": [
         "Win32"

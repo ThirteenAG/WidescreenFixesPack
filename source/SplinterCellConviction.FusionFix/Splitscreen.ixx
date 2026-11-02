@@ -105,7 +105,6 @@ namespace Splitscreen
 
     // Pads are found with DirectInput (UWindowsViewport joystick init, sub_8F3E00), each one read with XInput or DirectInput,
     // only XInput is remapped: XInput for every pad
-    uint32_t* padsFound = nullptr;  // dword_1431E4C
     uint32_t* padXInput = nullptr;  // dword_1431E34[2]
 
     // the player whose HUD (FlashHud) is being updated in split screen, -1 outside of it
@@ -303,21 +302,10 @@ namespace Splitscreen
         return shCameraMovement.fastcall<int>(camera, edx);
     }
 
-    // UWindowsViewport, can the pad be read: has focus (+414h), pads were found, active (+388h, the second split screen viewport never is)
-    SafetyHookInline shCanReadPad = {};
-    int __fastcall CanReadPad(uintptr_t viewport, void* edx)
-    {
-        if (!bEnableSplitscreen && !localSplitscreenPlaying)
-            return shCanReadPad.fastcall<int>(viewport, edx);
-        auto& focus = *reinterpret_cast<int32_t*>(viewport + 0x414);
-        auto& active = *reinterpret_cast<int32_t*>(viewport + 0x388);
-        auto hadFocus = std::exchange(focus, 1);
-        auto wasActive = std::exchange(active, 1);
-        auto result = shCanReadPad.fastcall<int>(viewport, edx);
-        focus = hadFocus;
-        active = wasActive;
-        return result;
-    }
+    // UWindowsViewport, can the pad be read (sub_8EFF84): has focus (+414h), pads were found, active (+388h, the second split screen viewport
+    // never is). Its caller keeps the pad slot and then the DirectInput device in edx across the call, so the answer is given in a mid hook
+    // that leaves every other register as it was (a C++ replacement changed edx: a crash on Wine).
+    uintptr_t canReadPadReturn = 0;
 
     // UWindowsViewport input (sub_8F0A0B), the player's joystick id (virtual +A4h get, +A8h set) is the pad index.
     // In split screen (engine +1FCh & 100h, UGameEngine sub_79844B) player 1 is the client's first viewport and player 2 the one at engine +210h.
@@ -395,26 +383,76 @@ namespace Splitscreen
         auto getStateSlot = *pattern.get_first<decltype(GetState)*>(18);
         SetState = *setStateSlot;
         GetState = *getStateSlot;
-        ProtectedGameRef<decltype(&XInputSetState)>(reinterpret_cast<decltype(&XInputSetState)*>(setStateSlot)) = &XInputSetState;
-        ProtectedGameRef<decltype(&XInputGetState)>(reinterpret_cast<decltype(&XInputGetState)*>(getStateSlot)) = &XInputGetState;
+        injector::WriteMemory(setStateSlot, &XInputSetState, true);
+        injector::WriteMemory(getStateSlot, &XInputGetState, true);
 
         pattern = hook::pattern("89 BE ? ? ? ? 89 3D ? ? ? ? EB 06 89 9E ? ? ? ? 83 C6 04 83 FE 08 0F 8C ? ? ? ? 5F 5E 5B C9 C3");
         padXInput = *pattern.get_first<uint32_t*>(2) - 2; // dword_1431E3C - 8
-        padsFound = *pattern.get_first<uint32_t*>(8);
+        padsFound.SetAddress(*pattern.get_first<uint32_t*>(8));
         static auto PadsFoundHook = safetyhook::create_mid(pattern.get_first(32), [](SafetyHookContext& regs)
         {
             if (!bEnableSplitscreen)
                 return;
             // an instance without a pad doesn't find any
             if ((bInstance1 ? padInstance1 : padInstance2) <= 0)
-                *padsFound = 0;
+                padsFound = 0;
             else
                 padXInput[0] = padXInput[1] = 1;
         });
 
-        pattern = hook::pattern("33 C0 39 81 14 04 00 00 74 ? 39 05");
-        shCanReadPad = safetyhook::create_inline(pattern.get_first(), CanReadPad);
+        // its first jz goes to its ret
+        pattern = hook::pattern("33 C0 39 81 14 04 00 00 74 1B 39 05 ? ? ? ? 74 13 39 81 88 03 00 00 75 08 39 05 ? ? ? ? 74 03 33 C0 40 C3");
+        canReadPadReturn = reinterpret_cast<uintptr_t>(pattern.get_first(37));
+        static auto CanReadPadHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (!bEnableSplitscreen && !localSplitscreenPlaying)
+                return;
+            // without focus and for both viewports
+            regs.eax = padsFound != 0;
+            regs.eip = canReadPadReturn;
+        });
     }
+}
+
+export struct PlayerViewport
+{
+    int player = -1;
+    RECT area{};
+};
+
+export std::optional<RECT> GetLocalPlayerViewport(int player)
+{
+    if (!Splitscreen::localSplitscreenPlaying || player < 0 || player > 1)
+        return std::nullopt;
+    const auto viewport = player == 0 ? Splitscreen::viewportPlayer1 : Splitscreen::viewportPlayer2;
+    if (!viewport)
+        return std::nullopt;
+    const auto width = *reinterpret_cast<const int32_t*>(viewport + 0xD8);
+    const auto height = *reinterpret_cast<const int32_t*>(viewport + 0xDC);
+    const auto left = *reinterpret_cast<const int32_t*>(viewport + 0xE8);
+    const auto top = *reinterpret_cast<const int32_t*>(viewport + 0xEC);
+    if (width <= 0 || height <= 0 || left < 0 || top < 0 ||
+        left + width > BackBufferWidth || top + height > BackBufferHeight)
+        return std::nullopt;
+    return RECT{ left, top, left + width, top + height };
+}
+
+export PlayerViewport GetCameraViewport(uintptr_t camera)
+{
+    if (Splitscreen::localSplitscreenPlaying)
+    {
+        const auto controller = *reinterpret_cast<const uintptr_t*>(camera + 0x20);
+        const int player = controller ? Splitscreen::ControllerPlayer(controller) : -1;
+        if (auto area = GetLocalPlayerViewport(player))
+            return { player, *area };
+        return {};
+    }
+    return { 0, { 0, 0, BackBufferWidth, BackBufferHeight } };
+}
+
+export std::optional<RECT> GetHudPlayerViewport(uintptr_t hud)
+{
+    return hud ? GetLocalPlayerViewport(Splitscreen::HudPlayer(hud)) : std::nullopt;
 }
 
 // Half of the primary monitor this instance uses

@@ -19,6 +19,7 @@
   ],
   "libraries": [
     "-lpspsystemctrl_user",
+    "-lpsputility",
     "-lm"
   ],
   "cxx_flags": [

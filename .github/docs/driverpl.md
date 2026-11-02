@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/driverpl/attract.png" width="760" alt="Driver: Parallel Lines - Widescreen Fix">
+<img src="https://thirteenag.github.io/screens/driverpl/attract.png" width="760" alt="Driver: Parallel Lines - Fusion Fix">
 
-**Driver: Parallel Lines Widescreen Fix** improves ultrawide support, corrects aspect ratio, HUD, FOV, and radar scaling, and includes quality-of-life improvements such as free-look camera and functional turn indicators.
+**Driver: Parallel Lines Fusion Fix** improves ultrawide support, corrects aspect ratio, HUD, FOV, and radar scaling, and includes quality-of-life improvements such as free-look camera and functional turn indicators.
 
-[Website](https://fusionfix.io/wfp#driverpl) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/DriverParallelLines.WidescreenFix/dllmain.cpp)
+[Website](https://fusionfix.io/wfp#driverpl) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/DriverParallelLines.FusionFix/dllmain.cpp)
 
 </div>
 
@@ -25,15 +25,23 @@
 
 ## New Options
 
-Open **Options → Plugins** for the fix’s settings and presets. Field of view and cursor confinement change while the game runs; the other options need a restart. Each plugin has its own presets and Restore defaults.
+Open **Options → Plugins → Driver: Parallel Lines Fusion Fix** for the fix’s settings and presets. Plugins is also available through Options in the pause menu. Press **F1** for the selected option’s complete help; use **Up / Down** to scroll and **F1 / Esc** to return. Options that need a restart show a warning. Each plugin has its own presets and Restore defaults. Presets leave the refresh-rate list setting unchanged. Choose **More pages** or **Previous page** to move through the fix’s settings.
 
-On first launch the fix writes `scripts/DriverParallelLines.WidescreenFix.cfg`. The settings can also be changed on fusionfix.io or in FusionFixHub. An old `scripts/DriverParallelLines.WidescreenFix.ini` isn't used anymore and can be deleted. Defaults: free mouse look and automatic indicators on, field of view multiplier 1, highest refresh rate on, fullscreen, frame rate limit 60 FPS, SMAA and Xbox 360 gamma off. Free mouse look disables the native Look Left/Right/Back actions; camera return controls require it.
+On first launch the fix writes `scripts/DriverParallelLines.FusionFix.cfg`. The settings can also be changed on fusionfix.io or in FusionFixHub. Defaults: free mouse look and automatic indicators on, field of view multiplier 1, highest refresh rate on, fullscreen, frame rate limit 60 FPS, SMAA on and Xbox 360 gamma off. With the mouse action map, free mouse look replaces the native Look Left/Right/Back actions; camera return controls require it. The controller action map keeps its native look controls.
 
 SMAA requires the game's MSAA setting to be disabled.
 
-- **Skip Intro** - bypass startup intro movies
-- **Window Mode** - fullscreen, a framed window or a borderless window at the selected resolution; at the desktop resolution the window covers the screen
-- **Frame Rate Limit** - 60 FPS by default. Vanilla leaves the original uncapped rate; Recommended and Enhanced use 60. Higher rates can affect gameplay.
+- **Skip Intro** - bypass startup logos and notices while preserving story movies
+- **Window Mode** - fullscreen, a centered framed window at the selected resolution, or borderless at the monitor resolution. Alt+Enter switches between fullscreen and the last window mode.
+- **Frame Rate Limit** - choose 30–1000 FPS, Monitor or Unlimited. The default, Recommended and Enhanced use 60; Vanilla leaves the original uncapped rate. Higher rates can affect gameplay.
+- **Videos** - Movies keep their intended proportions, including anamorphic videos. Original shows them as the game does, whole inside its centred 4:3 frame with black bars around them; Fill fits the whole movie to the screen. Nothing is cut off or stretched. Default/Recommended/Enhanced use Fill; Vanilla uses Original aspect.
+- **HUD Aspect Ratio Constraint** - Auto uses the screen width. Choose an aspect ratio to keep side HUD elements inside a centered box.
+- **Pause When Unfocused** - choose whether play pauses while another window is active.
+- **Mouse Look Sensitivity** - multiply mouse camera movement while keeping the profile sensitivity as the base; applies live.
+- **Invert Mouse Y** - reverse vertical mouse look relative to the game profile; applies live.
+- **Raw Mouse Input** - apply native mouse counts directly for consistent camera movement.
+- **Controller Icons** - Xbox, PlayStation or Nintendo artwork on native binding names. Auto uses Xbox. Native XInput controls remain in use; deadzone and vibration are configurable.
+- **Check for Updates** - optional and off by default; an available release is announced in Plugins.
 - **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
 - **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360
 - **Confine cursor** - Keeps the pointer inside the active game window and releases it when the game loses focus.
@@ -45,7 +53,7 @@ SMAA requires the game's MSAA setting to be disabled.
 
 <img src="https://thirteenag.github.io/screens/driverpl/camera.gif" width="400" alt="Free-look camera">
 
-**Mouse Look** - reset timeout, return speed are configurable in Options → Plugins, on fusionfix.io or in FusionFixHub.
+**Mouse Look** - reset timeout and return speed are configurable in Options → Plugins, on fusionfix.io or in FusionFixHub.
 
 </div>
 
@@ -82,13 +90,13 @@ SMAA requires the game's MSAA setting to be disabled.
 
 1. Download the `.zip` from the release page.
 2. Extract the contents directly into the game folder - the same folder as `DriverParallelLines.exe`.
-3. Launch the game once to create `scripts/DriverParallelLines.WidescreenFix.cfg`.
+3. Launch the game once to create `scripts/DriverParallelLines.FusionFix.cfg`.
 4. Configure the fix in Options → Plugins, on fusionfix.io or in FusionFixHub. Restart the game when an option requires it.
 
 ## Known limits
 
-- No HUD aspect-ratio, window-mode, video-framing or cutscene-border settings.
-- All presets leave SMAA off; turn it on separately.
+- Story cinematics use prerecorded movies; there is no separate in-engine cutscene-border setting.
+- Borderless uses the monitor resolution; the native Video page can continue to show the profile’s selected resolution.
 
 ---
 

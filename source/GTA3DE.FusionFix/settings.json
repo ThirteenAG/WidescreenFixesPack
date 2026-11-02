@@ -8,7 +8,7 @@
       {
         "name": "Grand Theft Auto III - Definitive Edition",
         "exe": [
-          "LibertyCity.exe"
+          "Gameface/Binaries/Win64/LibertyCity.exe"
         ]
       }
     ]
@@ -84,12 +84,40 @@
       "apply": "live",
       "min": 0.5,
       "max": 2,
-      "step": 0.05,
-      "presets": {
-        "vanilla": 1,
-        "recommended": 1,
-        "enhanced": 1
-      }
+      "step": 0.05
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "label": "@hudaspect",
+      "description": "@hudaspect.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ]
     },
     {
       "id": "MAIN.HudScale",
@@ -99,7 +127,7 @@
       "description": "@HudScale.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "min": 0.5,
       "max": 1.5,
       "step": 0.05,
@@ -118,7 +146,7 @@
       "description": "@RadarScale.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "min": 0.5,
       "max": 1.5,
       "step": 0.05,
@@ -137,7 +165,7 @@
       "description": "@DisableFirstPersonAimForRifles.description",
       "page": "advanced",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 0,
         "recommended": 1,
@@ -152,22 +180,7 @@
       "description": "@RestoreOriginalCamera.description",
       "page": "advanced",
       "visibility": "menu",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
-    },
-    {
-      "id": "MAIN.ImproveCameraPC",
-      "type": "bool",
-      "default": 1,
-      "label": "@ImproveCameraPC",
-      "description": "@ImproveCameraPC.description",
-      "page": "advanced",
-      "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 0,
         "recommended": 1,
@@ -182,13 +195,8 @@
       "description": "@CenteringDelay.description",
       "page": "advanced",
       "visibility": "menu",
-      "apply": "restart",
-      "min": 0,
-      "presets": {
-        "vanilla": 5,
-        "recommended": 5,
-        "enhanced": 5
-      }
+      "apply": "live",
+      "min": 0
     },
     {
       "id": "MAIN.RawInputMouse",
@@ -198,7 +206,7 @@
       "description": "@RawMouseInput.description",
       "page": "advanced",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 0,
         "recommended": 1,
@@ -213,7 +221,7 @@
       "description": "@VisualStyle.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "min": 0,
       "max": 2,
       "presets": {
@@ -230,7 +238,7 @@
       "description": "@RestoreWeatherColours.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 0,
         "recommended": 1,
@@ -245,14 +253,9 @@
       "description": "@ColourFilterStrength.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "min": 0,
-      "max": 1,
-      "presets": {
-        "vanilla": 1,
-        "recommended": 1,
-        "enhanced": 1
-      }
+      "max": 1
     },
     {
       "id": "GRAPHICS.ClassicLODsOnly",
@@ -271,12 +274,15 @@
       "label": "@ConfineCursor",
       "description": "@ConfineCursor.description",
       "page": "display",
-      "apply": "live",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": 0,
+      "label": "@checkforupdates",
+      "description": "@checkforupdates.description",
+      "page": "advanced"
     },
     {
       "id": "MAIN.TextLanguage",
@@ -293,7 +299,7 @@
         },
         {
           "value": "fr",
-          "label": "Français"
+          "label": "FranÃ§ais"
         },
         {
           "value": "de",
@@ -305,7 +311,7 @@
         },
         {
           "value": "es",
-          "label": "Español"
+          "label": "EspaÃ±ol"
         }
       ],
       "label": "@TextLanguage",

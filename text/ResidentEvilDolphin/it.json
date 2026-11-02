@@ -3,9 +3,9 @@
   "page.gameplay": "Gioco",
   "page.graphics": "Grafica",
   "EnableDoorSkip": "Salta porte",
-  "EnableDoorSkip.description": "Salta le animazioni delle porte. Riavvia Dolphin dopo aver modificato questa impostazione.",
+  "EnableDoorSkip.description": "L'animazione della porta tra le stanze viene saltata: la stanza successiva appare appena è stata caricata. Funziona in Resident Evil 2 e Resident Evil 3. Disattivato mostra le animazioni delle porte come nell'originale. Riavvia Dolphin dopo aver modificato questa impostazione.",
   "UnthrottleEmuDuringDoorSkip": "Transizioni porte rapide",
-  "UnthrottleEmuDuringDoorSkip.description": "Rimuove il limite di fotogrammi dell'emulatore durante le transizioni delle porte. Riavvia Dolphin dopo aver modificato questa impostazione.",
+  "UnthrottleEmuDuringDoorSkip.description": "Mentre il gioco carica la stanza successiva, Dolphin va alla massima velocità invece che alla velocità della console, così i cambi di stanza finiscono prima. Il gioco vero e proprio va a velocità normale. Funziona con o senza porte saltate. Riavvia Dolphin dopo aver modificato questa impostazione.",
   "LightSyncRGB": "Illuminazione RGB",
-  "LightSyncRGB.description": "Sincronizza l'illuminazione delle tastiere compatibili con la salute del giocatore. Riavvia Dolphin dopo aver modificato questa impostazione."
+  "LightSyncRGB.description": "Le tastiere Logitech G LIGHTSYNC mostrano le condizioni del giocatore: verde per Fine, arancione per Caution, rosso per Danger, viola se avvelenato, con un effetto battito cardiaco. Richiede Logitech G HUB; senza di esso questa impostazione non ha effetto. Riavvia Dolphin dopo aver modificato questa impostazione."
 }

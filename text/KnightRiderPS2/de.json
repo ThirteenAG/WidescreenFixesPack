@@ -1,6 +1,24 @@
 {
   "plugin.name": "Knight Rider PCSX2F Widescreen Fix",
   "page.display": "Anzeige",
-  "enable": "Breitbildunterstützung",
-  "enable.description": "Korrigiert Kameraprojektion, HUD und eingeblendete Ansichten, Hintergründe und FMV für das Seitenverhältnis des Emulators. Standardmäßig aktiviert. Nach einer Änderung das emulierte Spiel neu starten."
+  "page.gameplay": "Spiel",
+  "auto": "Automatisch",
+  "ForceAspectRatio": "Seitenverhältnis",
+  "ForceAspectRatio.description": "Auto folgt der Anzeige des Emulators. Sonst Breite:Höhe oder eine Dezimalzahl eingeben und im Emulator dasselbe Format wählen. Änderungen gelten sofort im Spiel.",
+  "FOVFactor": "Sichtfeld",
+  "FOVFactor.description": "Multipliziert das Sichtfeld der Fahrkamera; 1.0 ist der Originalausschnitt. Die Szenen am Missionsbeginn behalten ihren eigenen Ausschnitt. Änderungen gelten sofort im Spiel.",
+  "HudAspectRatioConstraint": "HUD-Seitenverhältnis",
+  "HudAspectRatioConstraint.description": "Auto setzt die seitlichen HUD-Felder an die Bildschirmränder. Ein Verhältnis hält sie an den Rändern eines zentrierten Rahmens dieser Form. Die Cockpitansicht behält ihr HUD immer auf dem 4:3-Armaturenbrett. Änderungen gelten sofort im Spiel.",
+  "FMVWidescreenMode": "Videoanzeige",
+  "FMVWidescreenMode.description": "Original zeigt die Videos wie das Spiel, ein 4:3-Bild mit schwarzen Balken. Füllen zeigt das ganze Breitbild so groß, wie der Bildschirm erlaubt. Änderungen gelten sofort im Spiel.",
+  "fmv.original": "Original",
+  "fmv.fill": "Füllen",
+  "CutsceneBorders": "Szenenbalken",
+  "CutsceneBorders.description": "Schwarze Balken der Szenen am Missionsbeginn. Letterbox behält die Originalbalken oben und unten, Pillarbox behält den 4:3-Originalausschnitt mit Balken an den Seiten, Beide kombiniert sie, Aus füllt den Bildschirm. Änderungen gelten sofort im Spiel.",
+  "borders.off": "Aus",
+  "borders.letterbox": "Letterbox",
+  "borders.pillarbox": "Pillarbox",
+  "borders.both": "Beide",
+  "SkipIntro": "Intro überspringen",
+  "SkipIntro.description": "Überspringt das Davilex-Logo und das Eröffnungsvideo beim Start. Zum Übernehmen das Spiel neu starten."
 }

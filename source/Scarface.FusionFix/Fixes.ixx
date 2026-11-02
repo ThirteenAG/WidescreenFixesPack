@@ -21,33 +21,13 @@ public:
         {
             auto& settings = FixSettings();
             auto bSkipIntro = settings.Bool("MAIN.SkipIntro");
-            auto bFixRecoilRange = settings.Bool("FIXES.FixRecoilRange");
-
-            if (bSkipIntro)
-            {
-                for (const auto signature : {
-                    "0F 85 ? ? ? ? 6A ? 6A ? 6A ? 6A ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 ? 5E",
-                    "E8 ? ? ? ? 83 C4 20 5F 5E C7 45",
-                    "75 22 E8 ? ? ? ? 8B C8" })
-                {
-                    if (hook::pattern(signature).size() != 1)
-                    {
-                        bSkipIntro = false;
-                        OutputDebugStringA("Scarface: intro-skip patterns unavailable.\n");
-                        break;
-                    }
-                }
-            }
 
             // ControllerDirectInput's constructor spins on DIERR_OTHERAPPHASPRIO while
             // unfocused, preventing the main thread from pumping window messages.
             // Keep the initial Acquire; Update already retries it once per frame and
             // stops on failure, so focus can be acquired normally after background startup.
             auto pattern = hook::pattern("FF 51 1C 3D 05 00 07 80 74 ED 8B 95 ? ? ? ? 03 D2 03 D2"); // 0x6DDB9B + 8
-            if (pattern.size() == 1)
-                injector::MakeNOP(pattern.get_first(8), 2);
-            else
-                OutputDebugStringA("Scarface: background input-acquisition pattern unavailable.\n");
+            injector::MakeNOP(pattern.get_first(8), 2);
 
             if (bSkipIntro)
             {
@@ -55,19 +35,16 @@ public:
                 injector::MakeNOP(pattern.get_first(), 6); // Legal
                 pattern = hook::pattern("E8 ? ? ? ? 83 C4 20 5F 5E C7 45");
                 injector::MakeNOP(pattern.get_first(), 5); // Movies.
+            }
+            if (settings.Bool("MAIN.SkipPressStart"))
+            {
                 pattern = hook::pattern("75 22 E8 ? ? ? ? 8B C8");
-                injector::MakeNOP(pattern.get_first(), 2); // Press to start.
+                injector::MakeNOP(pattern.get_first(), 2);
             }
 
-            if (bFixRecoilRange)
-            {
-                // First pushed argument is MAX; the second call still supplies MIN.
-                auto pattern = hook::pattern("E8 ? ? ? ? 51 8B CE ? ? ? E8 ? ? ? ? 51 8B 0D ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? ? ? 8B 0D");
-                if (pattern.size() == 1)
-                    injector::MakeCALL(pattern.get_first(), GetBarrelCreepSideMax, true);
-                else
-                    OutputDebugStringA("Scarface: recoil-range pattern unavailable.\n");
-            }
+            // First pushed argument is MAX; the second call still supplies MIN.
+            auto recoilPattern = hook::pattern("E8 ? ? ? ? 51 8B CE ? ? ? E8 ? ? ? ? 51 8B 0D ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? ? ? 8B 0D");
+            injector::MakeCALL(recoilPattern.get_first(), GetBarrelCreepSideMax, true);
         };
     }
 } Fixes;

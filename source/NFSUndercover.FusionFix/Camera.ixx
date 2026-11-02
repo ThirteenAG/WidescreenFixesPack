@@ -65,7 +65,8 @@ namespace
             if (dx == 0 && dy == 0)
             {
                 repeats = 0;
-                return !broken;
+                broken = false;
+                return true;
             }
 
             if (dx == lastX && dy == lastY)
@@ -151,7 +152,7 @@ namespace
         float yawInput = -look.stickX * StickDegreesPerSecond * (*pStickSensitivity) * dt;
         float pitchInput = (*pOnlyHorizontalStick != 0) ? 0.0f : look.stickY * StickDegreesPerSecond * (*pStickSensitivity) * dt;
 
-        if (MouseFilter.Accept(look.mouseX, look.mouseY))
+        if (look.rawMouse || MouseFilter.Accept(look.mouseX, look.mouseY))
         {
             yawInput -= look.mouseX * MouseDegreesPerCount * (*pMouseSensitivity);
             pitchInput += look.mouseY * MouseDegreesPerCount * (*pMouseSensitivity);
@@ -230,8 +231,6 @@ public:
             // DrivingCameraMover::Update
             auto pattern = hook::pattern("E8 ? ? ? ? 0F 57 C0 83 C4 ? 0F 2F 86 ? ? ? ? 0F 82 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? 84 C0 75 ? 38 05 ? ? ? ? 74 ? 8B 56 ? 8D 8C 24 ? ? ? ? 51 52 E8 ? ? ? ? 83 C4 ? 8D 86 ? ? ? ? 50 8D 84 24 ? ? ? ? 50 8B CE E8 ? ? ? ? B9");
             auto cameraData = hook::pattern("8B 4E ? 8D 54 24 ? 52 8D 44 24 ? 50 F3 0F 11 44 24");
-            if (pattern.empty() || cameraData.empty())
-                return;
 
             hb_eCreateLookAtMatrix.fun = injector::MakeCALL(pattern.get_first(), eCreateLookAtMatrix, true).get();
 

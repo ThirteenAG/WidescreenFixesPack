@@ -1,0 +1,25 @@
+{
+  "sources": [
+    "main.cpp",
+    "Hud.cpp",
+    "MenuMovie.cpp",
+    "Loading.cpp",
+    "../../external/injector/include/ps2/log.c",
+    "../../external/injector/include/ps2/memalloc.c",
+    "../../external/injector/include/ps2/patterns.c",
+    "../../external/injector/include/ps2/injector.c",
+    "../../external/injector/include/ps2/mips.c"
+  ],
+  "output": "../../data/SplinterCellDoubleAgent.PCSX2F.FusionFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.elf",
+  "cxx_flags": [
+    "-std=gnu++17",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-strict-aliasing",
+    "-fno-threadsafe-statics",
+    "-ffp-contract=off"
+  ],
+  "cflags": [
+    "-ffp-contract=off"
+  ]
+}

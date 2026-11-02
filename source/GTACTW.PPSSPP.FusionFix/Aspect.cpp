@@ -1,10 +1,19 @@
 #include "Game.hpp"
+#include <cmath>
 #include <cstdlib>
 
 namespace ctw {
 namespace {
 SafetyMipsInline cameraBuilder;
 injector::hook_back<void(void*)> buildCamera;
+float builtScale = 1.0f;
+// Story scenes (application 54) keep the native angle; the FOV factor is for
+// gameplay.
+float TangentScale() {
+    float scale = targetAspect < nativeAspect ? nativeAspect / targetAspect : 1.0f;
+    if (!CutsceneApp()) scale *= fovFactor;
+    return scale;
+}
 void BuildCamera(void* object) {
     RefreshAspect();
     const auto camera = reinterpret_cast<uintptr_t>(object);
@@ -23,7 +32,32 @@ void BuildCamera(void* object) {
         at<int>(camera + 88) = aspect;
         at<uint8_t>(camera + 106) = 1;
     }
+    // The vertical half angle is kept as Q12 sine (+80) and cosine (+84); the
+    // builder derives the projection and the frustum planes from them. Narrow
+    // screens open the vertical angle so the native horizontal view stays
+    // (Vert+), and gameplay views get the FOV factor. The native pair is put
+    // back after the build, so the game's own zoom values stay unchanged.
+    const float tangentScale = TangentScale();
+    if (tangentScale != builtScale) {
+        builtScale = tangentScale;
+        at<uint8_t>(camera + 106) = 1;
+    }
+    if (tangentScale == 1.0f || !at<uint8_t>(camera + 106)) {
+        buildCamera.fun(object);
+        return;
+    }
+    auto& sine = at<int>(camera + 80);
+    auto& cosine = at<int>(camera + 84);
+    const int nativeSine = sine, nativeCosine = cosine;
+    if (nativeCosine > 0) {
+        const float tangent = float(nativeSine) / float(nativeCosine) * tangentScale;
+        const float scaledCosine = 1.0f / std::sqrt(1.0f + tangent * tangent);
+        sine = int(tangent * scaledCosine * 4096.0f + 0.5f);
+        cosine = int(scaledCosine * 4096.0f + 0.5f);
+    }
     buildCamera.fun(object);
+    sine = nativeSine;
+    cosine = nativeCosine;
 }
 }
 // Upper bound below 8:1 so the Q12 camera aspect fits a signed halfword.
@@ -45,6 +79,7 @@ void InstallAspect() {
         }
     }
     RefreshAspect();
+    fovFactor = console::bounded(inireader.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.0f, 1.0f);
 #ifndef NDEBUG
     logger.WriteF("Camera builder %08X words %08X %08X previous %08X", unsigned(Address<0x088559AC>()), injector::ReadMemory<uint32_t>(Address<0x088559AC>()), injector::ReadMemory<uint32_t>(Address<0x088559AC>()+4), injector::ReadMemory<uint32_t>(Address<0x088559AC>()-4));
 #endif

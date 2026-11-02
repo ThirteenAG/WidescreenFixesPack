@@ -1,0 +1,703 @@
+module;
+
+#include <stdafx.h>
+#include "common.h"
+#include "callargs.h"
+
+export module Sprite2d;
+
+import Skeleton;
+import Camera;
+import Draw;
+import Timer;
+import Menu;
+//import TransparentMenu;
+
+using RwIm2DVertex = void;
+
+class CSprite2d
+{
+public:
+    RwTexture* m_pTexture;
+};
+
+export bool g_noBorderAnim = false;
+float s_bordersMult = 0.0f;
+float s_topBar = 0.0f;
+float s_bottomBar = 0.0f;
+float s_pillarWidth = 0.0f;
+float s_cameraZoom = 1.0f;
+bool s_hasPillar = false;
+bool s_hasLetterbox = false;
+uint32_t s_lastActiveMs = 0;
+uint32_t s_lastTickMs = 0;
+uint32_t s_lastExitDrawMs = 0;
+constexpr float BORDER_ANIM_SECS = 0.35f;
+
+// vanilla 4:3 cutscene window geometry (22px top / 14px bottom border insets)
+constexpr float VANILLA_WINDOW_FRACTION = 0.7f + 8.0f / 480.0f;
+// vanilla content window sits this many px above the screen center at 4:3
+constexpr float VANILLA_CENTER_FUDGE_Y = 18.0f;
+// minimum visible top border (fraction of the bottom border height) in letterbox mode
+constexpr float MIN_TOP_BAR_BOTTOM_RATIO = 0.2f;
+
+export bool g_isMouseCursor = false;
+bool g_skipXCorrection = false;
+bool g_isFullscreen = false;
+bool g_hasTexture = false;
+uint8_t g_alpha = 255;
+CRect g_contentRect = {};
+bool g_drawingBars = false;
+export float g_drawOffsetX = 0.0f;
+
+static inline float CorrectX(float x)
+{
+    #if 0
+    float arScale = DEFAULT_ASPECT_RATIO / SCREEN_ASPECT_RATIO;
+    float offset = (SCREEN_WIDTH - SCREEN_WIDTH * arScale) / 2.0f;
+    return offset + x * arScale;
+    #endif
+
+    return x;
+}
+
+static inline bool IsFullscreen(const CRect* r)
+{
+    // A zoomed map tile can cover the screen; it is not a splash texture.
+    if (FrontendMenuManager->m_bDrawingMap) return false;
+    return r->left <= 0.5f
+        && r->top <= 0.5f
+        && r->right >= SCREEN_WIDTH - 0.5f
+        && r->bottom >= SCREEN_HEIGHT - 0.5f;
+}
+
+static inline float GetHudOffset()
+{
+    return g_drawOffsetX;
+}
+
+static inline CRect* ScaleRect(CRect* r)
+{
+    float offset = GetHudOffset();
+    if (g_skipXCorrection)
+    {
+        *r = CRect(r->left + offset, r->bottom, r->right + offset, r->top);
+        return r;
+    }
+
+    *r = CRect(CorrectX(r->left) + offset, r->bottom, CorrectX(r->right) + offset, r->top);
+    return r;
+}
+
+static CRect ComputeContentRect(CSprite2d* sprite2d, const CRect* rect)
+{
+    float w = DEFAULT_ASPECT_RATIO, h = 1.0f; // default 4:3
+
+    RwRaster* pRaster = RwTextureGetRaster(sprite2d->m_pTexture);
+    if (pRaster)
+    {
+        int32_t texW = RwRasterGetWidth(pRaster);
+        int32_t texH = RwRasterGetHeight(pRaster);
+        if (texW > 0 && texH > 0 && texW != texH && static_cast<int64_t>(texW) != 2LL * texH)
+        {
+            w = (float)texW;
+            h = (float)texH;
+        }
+    }
+
+    float aspect = w / h;
+    float centerX = SCREEN_WIDTH / 2.0f;
+    float halfW = (SCREEN_HEIGHT * aspect) / 2.0f;
+
+    return CRect(centerX - halfW, rect->bottom, centerX + halfW, rect->top);
+}
+
+static CRect ComputeLoadingBarRect(CSprite2d* sprite2d)
+{
+    CRect screen(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, 0.0f);
+    const auto content = ComputeContentRect(sprite2d, &screen);
+    const float contentWidth = content.right - content.left;
+    const auto texture = sprite2d->m_pTexture;
+    const auto raster = RwTextureGetRaster(texture);
+    const std::string_view name(texture->name, strnlen(texture->name, sizeof(texture->name)));
+    const bool isLoadingArtwork = name.starts_with("loadsc")
+        && ((name.size() == 7 && name[6] >= '1' && name[6] <= '9')
+            || (name.size() == 8 && name[6] == '1' && name[7] >= '0' && name[7] <= '4'));
+    if (isLoadingArtwork && raster && raster->width > 0 && raster->height > 0
+        && int64_t(raster->width) * 9 == int64_t(raster->height) * 16)
+    {
+        // LOADSCS widescreen artwork shares a logo at x=111..521 in 1920x1080.
+        // Transform its bounds with the splash, including pillarbox/crop offset.
+        const float left = std::round(content.left + contentWidth * (111.0f / 1920.0f));
+        const float right = std::round(content.left + contentWidth * (521.0f / 1920.0f));
+        const float top = std::round(SCREEN_HEIGHT * (984.0f / 1080.0f));
+        const float bottom = std::round(SCREEN_HEIGHT * (1008.0f / 1080.0f));
+        return CRect(left, bottom, right, top);
+    }
+    const float x = content.left + contentWidth * (50.0f / 640.0f);
+    const float y = SCREEN_HEIGHT * (408.0f / 448.0f);
+    return CRect(x, y + SCREEN_HEIGHT * (10.0f / 448.0f), x + contentWidth * (180.0f / 640.0f), y);
+}
+
+static CRect ComputeCoverRect(CSprite2d* sprite2d, const CRect* rect)
+{
+    float w = DEFAULT_ASPECT_RATIO, h = 1.0f;
+
+    RwRaster* pRaster = RwTextureGetRaster(sprite2d->m_pTexture);
+    if (pRaster)
+    {
+        int32_t texW = RwRasterGetWidth(pRaster);
+        int32_t texH = RwRasterGetHeight(pRaster);
+        if (texW > 0 && texH > 0)
+        {
+            w = (float)texW;
+            h = (float)texH;
+        }
+    }
+
+    float aspect = w / h;
+    float scaledH = SCREEN_WIDTH / aspect;
+    float centerY = SCREEN_HEIGHT / 2.0f;
+    float halfH = scaledH / 2.0f;
+
+    return CRect(0.0f, centerY + halfH, SCREEN_WIDTH, centerY - halfH);
+}
+
+export SafetyHookInline shDrawRect1 = {};
+static void DrawPillarBars(const CRect& content, float top, float bottom)
+{
+    g_drawingBars = true;
+
+    uint8_t black[4] = { 0, 0, 0, g_alpha };
+    CRect left (0.0f, top, content.left, bottom);
+    CRect right(content.right, top, SCREEN_WIDTH, bottom);
+
+    shDrawRect1.unsafe_ccall(&left, black);
+    shDrawRect1.unsafe_ccall(&right, black);
+
+    g_drawingBars = false;
+}
+
+export void DrawPillarBars43()
+{
+    if (std::abs(fWidescreenHudOffset43) > 0.0f)
+    {
+        g_drawingBars = true;
+        CRGBA black(0, 0, 0, 255);
+        CRect left(0.0f, 0.0f, -fWidescreenHudOffset43, SCREEN_HEIGHT);
+        CRect right(SCREEN_WIDTH + fWidescreenHudOffset43, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT);
+        shDrawRect1.unsafe_ccall(&left, &black);
+        shDrawRect1.unsafe_ccall(&right, &black);
+        g_drawingBars = false;
+    }
+}
+
+void TickBorderAnim(uint32_t now, bool active)
+{
+    if (!s_lastTickMs) { s_lastTickMs = now; return; }
+    float dt = std::min((now - s_lastTickMs) / 1000.0f, 0.1f);
+    s_lastTickMs = now;
+    if (active)
+        s_bordersMult = std::min(s_bordersMult + dt / BORDER_ANIM_SECS, 1.0f);
+    else
+        s_bordersMult = std::max(s_bordersMult - dt / BORDER_ANIM_SECS, 0.0f);
+}
+
+void RenderBorderBars()
+{
+    g_drawingBars = true;
+    float m = s_bordersMult;
+
+    if (s_hasLetterbox)
+    {
+        CRect top(0.0f, s_topBar * m, SCREEN_WIDTH, 0.0f);
+        CRect bottom(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT - s_bottomBar * m);
+        CRGBA black(0, 0, 0, 255);
+        shDrawRect1.unsafe_ccall(&top, &black);
+        shDrawRect1.unsafe_ccall(&bottom, &black);
+    }
+
+    if (s_hasPillar)
+    {
+        float w = s_pillarWidth * m;
+        CRect left(0.0f, 0.0f, w, SCREEN_HEIGHT);
+        CRect right(SCREEN_WIDTH - w, 0.0f, SCREEN_WIDTH, SCREEN_HEIGHT);
+        CRGBA black(0, 0, 0, 255);
+        shDrawRect1.unsafe_ccall(&left, &black);
+        shDrawRect1.unsafe_ccall(&right, &black);
+    }
+
+    g_drawingBars = false;
+}
+
+static inline int8_t GetTopCutsceneBorderHeightForHelpText()
+{
+    auto pref = FrontendMenuManager->m_bWidescreenOn;
+    if (!pref)
+        return 0;
+
+    if (pref == CutsceneBordersMode::Pillarbox)
+        return 0;
+
+    if (!s_hasLetterbox || s_bordersMult <= 0.01f)
+        return 0;
+
+    float topBorder = s_topBar * s_bordersMult;
+    if (topBorder <= 0.0f)
+        return 0;
+
+    int offset = (int)(topBorder + 0.5f);
+    if (offset > 127)
+        offset = 127;
+
+    return (int8_t)offset;
+}
+
+SafetyHookInline shDraw1 = {};
+void __fastcall Draw1(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col)
+{
+    // SetVertices may replace the rectangle. Splash fades reuse the caller's
+    // rectangle for a second texture and a fullscreen overlay.
+    CRect drawRect = *rect;
+    rect = &drawRect;
+    g_isFullscreen = IsFullscreen(rect);
+    g_hasTexture = sprite2d->m_pTexture != nullptr;
+    g_alpha = reinterpret_cast<uint8_t*>(col)[3];
+
+    bool needsPillarbox43 = g_hasTexture && sprite2d->m_pTexture->name
+        && (std::string_view(sprite2d->m_pTexture->name) == "tvcorn" ||
+            std::string_view(sprite2d->m_pTexture->name) == "backbet");
+
+    if (needsPillarbox43)
+        DrawPillarBars43();
+
+    //bool isCover = g_isFullscreen && g_hasTexture
+    //    && sprite2d->m_pTexture->name
+    //    && std::string_view(sprite2d->m_pTexture->name) == "background";
+
+    //if (isCover)
+    //{
+    //    // Stretch to cover: zoom in, no pillar bars needed
+    //    g_contentRect = ComputeCoverRect(sprite2d, rect);
+    //    shDraw1.unsafe_fastcall(sprite2d, edx, rect, col);
+    //}
+    //else
+    {
+        if (g_isFullscreen && g_hasTexture)
+        {
+            g_contentRect = ComputeContentRect(sprite2d, rect);
+            g_contentRect.top = 0.0f;
+            g_contentRect.bottom = SCREEN_HEIGHT;
+        }
+        shDraw1.unsafe_fastcall(sprite2d, edx, rect, col);
+        if (g_isFullscreen && g_hasTexture) DrawPillarBars(g_contentRect, rect->top, rect->bottom);
+    }
+
+    g_isFullscreen = false; g_hasTexture = false;
+}
+
+SafetyHookInline shDraw2 = {};
+void __fastcall Draw2(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* colorRight, CRGBA* colorBottom)
+{
+    g_isFullscreen = IsFullscreen(rect);
+    g_hasTexture = sprite2d->m_pTexture != nullptr;
+    g_alpha = reinterpret_cast<uint8_t*>(colorLeft)[3];
+    if (g_isFullscreen && g_hasTexture) g_contentRect = ComputeContentRect(sprite2d, rect);
+    shDraw2.unsafe_fastcall(sprite2d, edx, rect, colorLeft, colorTop, colorRight, colorBottom);
+    if (g_isFullscreen && g_hasTexture) DrawPillarBars(g_contentRect, rect->top, rect->bottom);
+    g_isFullscreen = false; g_hasTexture = false;
+}
+
+SafetyHookInline shDraw3 = {};
+void __fastcall Draw3(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col,
+    float u0, float v0, float u1, float v1, float u3, float v3, float u2, float v2)
+{
+    g_isFullscreen = IsFullscreen(rect);
+    g_hasTexture = sprite2d->m_pTexture != nullptr;
+    g_alpha = reinterpret_cast<uint8_t*>(col)[3];
+    if (g_isFullscreen && g_hasTexture) g_contentRect = ComputeContentRect(sprite2d, rect);
+    shDraw3.unsafe_fastcall(sprite2d, edx, rect, col, u0, v0, u1, v1, u3, v3, u2, v2);
+    if (g_isFullscreen && g_hasTexture) DrawPillarBars(g_contentRect, rect->top, rect->bottom);
+    g_isFullscreen = false; g_hasTexture = false;
+}
+
+SafetyHookInline shDraw4 = {};
+void __fastcall Draw4(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* color)
+{
+    g_hasTexture = sprite2d->m_pTexture != nullptr;
+    shDraw4.unsafe_fastcall(sprite2d, edx, rect, color);
+    g_hasTexture = false;
+}
+
+SafetyHookInline shDraw5 = {};
+void __fastcall Draw5(CSprite2d* sprite2d, void* edx, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, CRGBA* color)
+{
+    g_hasTexture = sprite2d->m_pTexture != nullptr;
+    shDraw5.unsafe_fastcall(sprite2d, edx, x1, y1, x2, y2, x3, y3, x4, y4, color);
+    g_hasTexture = false;
+}
+
+SafetyHookInline shDraw6 = {};
+void __fastcall Draw6(CSprite2d* sprite2d, void* edx, float xb, float yb, float w, float h, CRGBA* color)
+{
+    g_hasTexture = sprite2d->m_pTexture != nullptr;
+    shDraw6.unsafe_fastcall(sprite2d, edx, xb, yb, w, h, color);
+    g_hasTexture = false;
+}
+
+void __cdecl DrawRect1(CRect* r, CRGBA* col)
+{
+    CRect drawRect = *r;
+    r = &drawRect;
+    g_hasTexture = false;
+    g_isFullscreen = IsFullscreen(r);
+    shDrawRect1.unsafe_ccall(r, col);
+    g_isFullscreen = false;
+}
+
+SafetyHookInline shDrawRect2 = {};
+void __cdecl DrawRect2(CRect* r, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* colorRight, CRGBA* colorBottom)
+{
+    g_hasTexture = false;
+    g_skipXCorrection = true;
+    shDrawRect2.unsafe_ccall(r, colorLeft, colorTop, colorRight, colorBottom);
+    g_skipXCorrection = false;
+}
+
+SafetyHookInline shDrawRectXLU = {};
+void __fastcall DrawRectXLU(CRect* r, void* edx, float a2, float a3, float a4, float a5, CRGBA* color)
+{
+    g_hasTexture = false;
+    g_skipXCorrection = true;
+    shDrawRectXLU.unsafe_fastcall(r, edx, a2, a3, a4, a5, color);
+    g_skipXCorrection = false;
+}
+
+SafetyHookInline shAddToBuffer = {};
+void __cdecl AddToBuffer(const CRect* r, const CRGBA* c, float u0, float v0, float u1, float v1, float u3, float v3, float u2, float v2)
+{
+    return shAddToBuffer.unsafe_ccall(r, c, u0, v0, u1, v1, u3, v3, u2, v2);
+}
+
+SafetyHookInline shRenderOneXLUSprite_Rotate_Aspect{};
+void __cdecl RenderOneXLUSprite_Rotate_Aspect(float x, float y, float z, float w, float h, uint8_t r, uint8_t g, uint8_t b, int16_t intensity, float rz, float rotation, uint8_t alpha)
+{
+    g_hasTexture = false;
+    float off = GetHudOffset();
+    x = g_skipXCorrection ? (x + off) : (CorrectX(x) + off);
+    shRenderOneXLUSprite_Rotate_Aspect.unsafe_ccall(x, y, z, w, h, r, g, b, intensity, rz, rotation, alpha);
+}
+
+SafetyHookInline shSetVertices1 = {};
+void __cdecl SetVertices1(CRect* posn, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* colorRight, CRGBA* colorBottom, float u1, float v1, float u2, float v2, float u3, float v3, float u4, float v4)
+{
+    if (g_isFullscreen && g_hasTexture)
+        *posn = g_contentRect;
+    else
+        ScaleRect(posn);
+    return shSetVertices1.unsafe_ccall(posn, colorLeft, colorTop, colorRight, colorBottom, u1, v1, u2, v2, u3, v3, u4, v4);
+}
+
+SafetyHookInline shSetVertices2 = {};
+void __cdecl SetVertices2(CRect* posn, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* colorRight, CRGBA* colorBottom)
+{
+    if (g_isMouseCursor)
+    {
+        return shSetVertices2.unsafe_ccall(posn, colorLeft, colorTop, colorRight, colorBottom);
+    }
+
+    if (g_drawingBars)
+    {
+        // bar rects already in screen space, pass through
+    }
+    else if (g_isFullscreen && g_hasTexture)
+    {
+        // textured fullscreen: apply texture-aspect-derived rect
+        *posn = g_contentRect;
+    }
+    else if (!g_isFullscreen)
+    {
+        // normal UI element: scale
+        ScaleRect(posn);
+    }
+    // else: untextured fullscreen (fade/overlay): stretch, don't touch
+    return shSetVertices2.unsafe_ccall(posn, colorLeft, colorTop, colorRight, colorBottom);
+}
+
+SafetyHookInline shSetVertices3 = {};
+void __cdecl SetVertices3(RwIm2DVertex* vertices, CRect* posn, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* colorRight, CRGBA* colorBottom, float u1, float v1, float u2, float v2, float u3, float v3, float u4, float v4)
+{
+    return shSetVertices3.unsafe_ccall(vertices, ScaleRect(posn), colorLeft, colorTop, colorRight, colorBottom, u1, v1, u2, v2, u3, v3, u4, v4);
+}
+
+SafetyHookInline shSetVertices4 = {};
+void __cdecl SetVertices4(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* colorRight, CRGBA* colorBottom)
+{
+    float off = GetHudOffset();
+    return shSetVertices4.unsafe_ccall(CorrectX(x1) + off, y1, CorrectX(x2) + off, y2, CorrectX(x3) + off, y3, CorrectX(x4) + off, y4, colorLeft, colorTop, colorRight, colorBottom);
+}
+
+SafetyHookInline shSetVertices5 = {};
+void __cdecl SetVertices5(int numVerts, float* posn, float* texCoors, CRGBA* color)
+{
+    float off = GetHudOffset();
+    for (int i = 0; i < numVerts; i++)
+        posn[i * 2] = CorrectX(posn[i * 2]) + off;
+    return shSetVertices5.unsafe_ccall(numVerts, posn, texCoors, color);
+}
+
+SafetyHookInline shSetMaskVertices = {};
+void __cdecl SetMaskVertices(int numVerts, float* posn, float z)
+{
+    float off = GetHudOffset();
+    for (int i = 0; i < numVerts; i++)
+        posn[i * 2] = CorrectX(posn[i * 2]) + off;
+    return shSetMaskVertices.unsafe_ccall(numVerts, posn, z);
+}
+
+SafetyHookInline shShowRadarTraceWithHeight{};
+void __cdecl ShowRadarTraceWithHeight(float x, float y, uint32_t size, uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha, uint8_t mode)
+{
+    g_skipXCorrection = true;
+    shShowRadarTraceWithHeight.unsafe_ccall(CorrectX(x), y, size, red, green, blue, alpha, mode);
+    g_skipXCorrection = false;
+}
+
+SafetyHookInline shDrawBordersForWideScreen{};
+void __fastcall DrawBordersForWideScreen(CCamera* camera, void* edx)
+{
+    g_skipXCorrection = true;
+
+    uint32_t now = CTimer::m_snTimeInMilliseconds;
+
+    bool widescreenOn = camera->m_bWideScreenOn;
+    bool isFading = camera->GetFading();
+    float fadeAlpha = camera->m_fFadeAlpha;
+
+    static bool  s_prevIsFading = false;
+
+    bool fadeJustStarted = !s_prevIsFading && isFading;
+
+    // screen faded but m_bFading already cleared (zero-timeout fades get processed
+    // by ProcessFade before rendering, so their fade start edge is never seen here)
+    bool isFadedScreen = !isFading && fadeAlpha > 50.0f;
+
+    // sudden fades (zero-timeout or starting from a dark screen) remove the borders
+    // immediately; gradual fades animate them out via TickBorderAnim below
+    if ((fadeJustStarted && (fadeAlpha > 50.0f || camera->m_fFadeDuration == 0.0f)) || isFadedScreen)
+    {
+        s_bordersMult = 0.0f;
+    }
+
+    bool shouldBeActive = widescreenOn && !isFading && !isFadedScreen;
+
+    if (g_noBorderAnim)
+        s_bordersMult = widescreenOn ? 1.0f : 0.0f;
+    else
+        TickBorderAnim(now, shouldBeActive);
+
+    // compute geometry whenever the cutscene is active, even during fades, so
+    // the cutscene zoom is correct from the first frame (no FOV jump later)
+    bool shouldComputeGeometry = widescreenOn;
+    if (shouldComputeGeometry)
+    {
+        const float screenAspect = (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT;
+        const float contentAspect = DEFAULT_ASPECT_RATIO / VANILLA_WINDOW_FRACTION;
+
+        s_hasLetterbox = false;
+        s_hasPillar = false;
+        s_topBar = 0.0f;
+        s_bottomBar = 0.0f;
+        s_pillarWidth = 0.0f;
+        s_cameraZoom = 1.0f;
+
+        if (screenAspect > contentAspect)
+        {
+            // Pillarbox
+            s_hasPillar = true;
+            float contentWidth = SCREEN_HEIGHT * contentAspect;
+            s_pillarWidth = (SCREEN_WIDTH - contentWidth) * 0.5f;
+            s_cameraZoom = VANILLA_WINDOW_FRACTION * screenAspect / DEFAULT_ASPECT_RATIO;
+        }
+        else
+        {
+            // Letterbox
+            s_hasLetterbox = true;
+            float contentFractionTarget = screenAspect / contentAspect;
+            s_cameraZoom = std::max(1.0f,
+                contentFractionTarget + 1.5f * VANILLA_CENTER_FUDGE_Y * screenAspect / 480.0f
+                    * (1.0f + MIN_TOP_BAR_BOTTOM_RATIO) / (1.0f - MIN_TOP_BAR_BOTTOM_RATIO));
+            float contentFraction = contentFractionTarget / s_cameraZoom;
+            float windowCenter = 0.5f - 0.75f * VANILLA_CENTER_FUDGE_Y * screenAspect / (480.0f * s_cameraZoom);
+            s_topBar = std::max(windowCenter - contentFraction * 0.5f, 0.0f) * SCREEN_HEIGHT;
+            s_bottomBar = std::max(1.0f - windowCenter - contentFraction * 0.5f, 0.0f) * SCREEN_HEIGHT;
+        }
+
+        if (camera->m_nBlurType == eMotionBlurType::NONE || camera->m_nBlurType == eMotionBlurType::LIGHT_SCENE)
+            camera->m_nMotionBlurAddAlpha = 80;
+
+        s_lastActiveMs = now;
+    }
+
+    // Render whenever the animation multiplier is still visible
+    auto pref = FrontendMenuManager->m_bWidescreenOn;
+    bool canRender = s_bordersMult > 0.01f && (shouldComputeGeometry || !g_noBorderAnim);
+    if (pref && canRender)
+    {
+        bool renderBorders = false;
+        if (pref == CutsceneBordersMode::Letterbox && s_hasLetterbox)
+            renderBorders = true;
+        else if (pref == CutsceneBordersMode::Pillarbox && s_hasPillar)
+            renderBorders = true;
+        else if (pref == CutsceneBordersMode::Both)
+            renderBorders = true;
+
+        if (renderBorders)
+            RenderBorderBars();
+    }
+
+    s_prevIsFading = isFading;
+
+    // apply the cutscene FOV instantly, no animation
+    g_cutsceneCameraZoom = s_cameraZoom;
+
+    g_skipXCorrection = false;
+}
+
+class Sprite2d
+{
+public:
+    Sprite2d()
+    {
+        WFP::onGameInitEvent() += []()
+        {
+            {
+                // Anchor the loading bar in the same texture space as its logo.
+                // Widescreen LOADSCS artwork has its own logo bounds. Square
+                // and 2:1 legacy rasters retain the original 4:3 placement.
+                auto pattern = hook::pattern("8B 0D ? ? ? ? 8D 0C 8D ? ? ? ? E8 ? ? ? ? 83 C4 18 C3");
+                static GameRef<int32_t> currentSplash(*pattern.get_first<int32_t*>(2));
+                static auto splashes = *pattern.get_first<CSprite2d*>(9);
+                pattern = hook::pattern("E8 ? ? ? ? D9 05 ? ? ? ? D8 1D ? ? ? ? 83 C4 28 DF E0 F6 C4 44");
+                static auto LoadingBar = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    const int32_t index = *currentSplash;
+                    if (index < 0 || index >= 7 || !splashes[index].m_pTexture) return;
+                    const auto rect = ComputeLoadingBarRect(&splashes[index]);
+                    using DrawBarChart = void(__cdecl*)(float, float, uint16_t, uint8_t, float, int8_t, bool, bool, CRGBA, CRGBA);
+                    auto [x, y, width, height, progress, added, percentage, border, color, addedColor] = deduce_args<DrawBarChart>(regs);
+                    x = rect.left;
+                    y = rect.top;
+                    width = static_cast<uint16_t>(std::clamp(rect.right - rect.left, 1.0f, 65535.0f));
+                    height = static_cast<uint8_t>(std::clamp(rect.bottom - rect.top, 1.0f, 255.0f));
+                });
+            }
+
+            {
+                auto pattern = hook::pattern("E8 ? ? ? ? 8B 06 83 C4 34");
+                shSetVertices1 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices1);
+
+                pattern = hook::pattern("E8 ? ? ? ? 6A 04 68 ? ? ? ? 6A 05 E8 ? ? ? ? 83 C4 20 83 C4 08");
+                shSetVertices2 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices2);
+
+                pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 8D 4E");
+                shSetVertices3 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices3);
+
+                pattern = hook::pattern("E8 ? ? ? ? 8A 4E ? B0 FF");
+                shSetVertices4 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices4);
+
+                pattern = hook::pattern("E8 ? ? ? ? 83 C4 20 83 FF 02");
+                shSetVertices5 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetVertices5);
+
+                pattern = hook::pattern("E8 ? ? ? ? 6A 04 68 ? ? ? ? 6A 05 E8 ? ? ? ? 83 C4 18");
+                shSetMaskVertices = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), SetMaskVertices);
+            }
+
+            {
+                auto pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? ? ? ? 8D 56");
+                shDraw1 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw1);
+
+                //7284B0
+                //pattern = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? A1 ? ? ? ? 59 50 E8 ? ? ? ? 59 83 C4 28");
+                //shDraw2 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw2);
+
+                //728420
+                //pattern = hook::pattern("E8 ? ? ? ? E9 CB 09 00 00");
+                //shDraw3 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw3);
+
+                //pattern = hook::pattern("E8 ? ? ? ? 83 BB ? ? ? ? ? 0F 85 ? ? ? ? 8B 83");
+                //shDraw4 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw4);
+
+                pattern = hook::pattern("E8 ? ? ? ? 6A 00 6A FF E8 ? ? ? ? 83 C4 08 85 C0 74 ? 6A 00 6A FF E8 ? ? ? ? 8B 88");
+                shDraw5 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw5);
+
+                pattern = hook::pattern("E8 ? ? ? ? 8B 4C 24 ? 83 C1 2F");
+                shDraw6 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw6);
+
+                pattern = hook::pattern("9C A1 ? ? ? ? 51 8B 0D ? ? ? ? D3 C0 59 8B 00 9D E9 16 E4 31 00");
+                if (!pattern.empty())
+                {
+                    shDrawRect1 = safetyhook::create_inline(pattern.get_first(), DrawRect1);
+                }
+                else
+                {
+                    pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? A1 ? ? ? ? ? ? ? ? ? ? 99 ? ? 2B C2 ? ? ? ? ? ? ? ? 89 44 24");
+                    shDrawRect1 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawRect1);
+                }
+
+                pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? B0 ? 5B 83 C4");
+                shDrawRect2 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawRect2);
+
+                //727C50
+                //pattern = hook::pattern("E8 ? ? ? ? 80 7B ? ? 0F 85 ? ? ? ? 8B 83");
+                //shDrawRectXLU = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawRectXLU);
+
+                pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 5B 83 C4 ? C3 ? ? ? ? ? ? 8A 44 24");
+                shAddToBuffer = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), AddToBuffer);
+
+                pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 46 83 FE ? 89 74 24 ? 0F 8C ? ? ? ? 8B 44 24");
+                shRenderOneXLUSprite_Rotate_Aspect = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), RenderOneXLUSprite_Rotate_Aspect);
+
+            }
+
+            {
+                auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 5F 5E 5D 5B 83 C4 ? C3 56 6A");
+                shShowRadarTraceWithHeight = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), ShowRadarTraceWithHeight);
+            }
+
+            {
+                auto pattern = hook::pattern("74 ? A0 ? ? ? ? 84 C0 75 ? B9");
+                injector::MakeNOP(pattern.get_first(), 2, true);
+
+                pattern = hook::pattern("75 ? B9 ? ? ? ? E8 ? ? ? ? 56 6A");
+                injector::MakeNOP(pattern.get_first(), 2, true);
+
+                pattern = hook::pattern("74 ? B9 ? ? ? ? E8 ? ? ? ? 8B 44 24");
+                injector::MakeNOP(pattern.get_first(), 2, true);
+
+                pattern = hook::pattern("E8 ? ? ? ? 56 6A ? E8 ? ? ? ? 83 C4 ? 85 C0");
+                shDrawBordersForWideScreen = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), DrawBordersForWideScreen);
+
+                //CHud::DrawHelpText (help text is lower with widescreen borders, not needed)
+                pattern = hook::pattern("8A 0D ? ? ? ? 84 C9 75 ? B0");
+                injector::MakeNOP(pattern.get_first(), 12, true);
+                static auto DrawHelpTextHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+                {
+                    *(int8_t*)&regs.eax = GetTopCutsceneBorderHeightForHelpText();
+                });
+            }
+
+            {
+                //CFont::PrintChar (allow text that is shifted into the centered canvas)
+                static auto fZero = 0.0f;
+                auto pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 05 0F 8B ? ? ? ? DB 05 ? ? ? ? D8 5C 24 ? DF E0 F6 C4 05 0F 8B ? ? ? ? A0");
+                injector::WriteMemory(pattern.get_first(2), &fZero, true);
+
+                onResChange() += [](int Width, int Height)
+                {
+                    fZero = fWidescreenHudOffset43;
+                };
+            }
+        };
+    }
+} Sprite2d;

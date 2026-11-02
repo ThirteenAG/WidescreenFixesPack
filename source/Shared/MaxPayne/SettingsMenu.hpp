@@ -8,8 +8,8 @@
 #include <string_view>
 #include <tuple>
 #include <vector>
-#include "../AsiSettings/asi_settings.hpp"
-#include "../OtherPlugins.hpp"
+#include "Shared/AsiSettings/asi_settings.hpp"
+#include "Shared/OtherPlugins.hpp"
 
 // The settings of the fix and of the other plugins with an ASI Settings description in the Max Payne games' own options
 // menu (the same menu system in both games):
@@ -32,7 +32,8 @@
 // - Confirmations use the game's own "Are you sure?" menu with its Yes and No.
 // - Values go through each plugin's runtime interface, the fix's own included, so the menu, editors and the live link
 //   all change them the same way.
-// - The menu's fonts are bitmaps of the Latin-1 letters; other characters are replaced. Tooltips are one line.
+// - The menu's fonts are bitmaps of the Latin-1 letters; other characters are replaced. Long tooltips advance a line
+//   at a time in the native help area.
 namespace MaxPayneMenu
 {
     using asi_settings::LoadedPlugin;
@@ -83,6 +84,37 @@ namespace MaxPayneMenu
         void(__fastcall* textClear)(void* text, void* edx) = nullptr;
         void(__fastcall* textPrint)(void* text, void* edx, const char* string) = nullptr;
         std::string menuText;               // menu.txt with the fix's rows, between R_File::size and R_File::load
+        const char* (__fastcall* textString)(void* text, void* edx) = nullptr;
+        void* tooltip = nullptr;
+        std::string(*tipSource)(void*) = nullptr;
+        std::map<std::string, std::string> fullTips;
+        std::string activeTip, shownTip;
+        std::vector<std::string> tipPages;
+        size_t tipPage = 0;
+        ULONGLONG tipChanged = 0;
+        std::string notification;
+        void* (__fastcall* textConstruct)(void* text, void* edx, void* font, int reference) = nullptr;
+        void* (__fastcall* textFont)(void* text, void* edx) = nullptr;
+        float* (__fastcall* fontSize)(void* font, void* edx, float* size, const char* text) = nullptr;
+        const float* (__fastcall* textPosition)(void* text, void* edx) = nullptr;
+        const float* (__fastcall* textScale)(void* text, void* edx) = nullptr;
+        const void* (__fastcall* textColor)(void* text, void* edx) = nullptr;
+        void(__fastcall* textSetPosition)(void* text, void* edx, float x, float y) = nullptr;
+        void(__fastcall* textSetScale)(void* text, void* edx, float x, float y) = nullptr;
+        void(__fastcall* textSetColor)(void* text, void* edx, const void* color) = nullptr;
+        void(__fastcall* objectAddTo)(void* text, void* edx, void* scene) = nullptr;
+        void(__fastcall* objectEnable)(void* text, void* edx, bool enabled) = nullptr;
+        void* (__cdecl* allocate)(size_t size) = nullptr;
+        size_t textSize = 400;
+        ptrdiff_t textLayerOffset = 272;
+        ptrdiff_t fontHeightOffset = 76;
+        int* newCount = nullptr;
+        int* deleteCount = nullptr;
+        struct FooterLine
+        {
+            void* scene = nullptr;
+            void* text = nullptr;
+        } restartLine, notificationLine;
     };
 
     inline State& Get()
@@ -179,13 +211,14 @@ namespace MaxPayneMenu
 
     inline std::string FitTip(std::string text)
     {
-        if (text.size() <= MaxTip)
-            return text;
-        auto sentence = text.rfind(". ", MaxTip - 1);
-        if (sentence != std::string::npos && sentence > MaxTip / 3)
-            return text.substr(0, sentence + 1);
-        auto space = text.rfind(' ', MaxTip - 3);
-        return text.substr(0, space == std::string::npos ? MaxTip - 3 : space) + "...";
+        auto first = text;
+        if (text.size() > MaxTip)
+        {
+            auto space = text.rfind(' ', MaxTip - 3);
+            first = text.substr(0, space == std::string::npos ? MaxTip - 3 : space) + "...";
+        }
+        Get().fullTips[ToFont(first)] = ToFont(text);
+        return first;
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -236,8 +269,7 @@ namespace MaxPayneMenu
     // The longest slider name with its value that stays inside the menu (about "Horizontal Aiming Speed")
     constexpr size_t MaxSliderName = 23;
 
-    // The line's name: the setting's label and, for sliders and items, its value. A setting that applies after a
-    // restart says so while its value isn't the one the game started with.
+    // The line's name: the setting's label and, for sliders and items, its value.
     inline std::string RowText(const Row& row)
     {
         auto& s = Get();
@@ -254,13 +286,166 @@ namespace MaxPayneMenu
         // only the label then, the slider shows the value
         if (row.widget == Widget::Slider && text.size() > MaxSliderName)
             text = label;
-        if (row.setting->apply == "restart")
-        {
-            auto started = s.started.find(StartedKey(*plugin, *row.setting));
-            if (started != s.started.end() && started->second != OtherPlugins::Get(*plugin, *row.setting))
-                text += " " + HostText("WFP_RESTART");
-        }
+        if (row.widget == Widget::Slider) text += "  ";
         return text;
+    }
+
+    inline bool RestartPending()
+    {
+        auto& s = Get();
+        for (auto& plugin : s.plugins)
+        {
+            for (auto& setting : plugin.file.description.settings)
+            {
+                if (!setting.HasValue() || setting.apply != "restart")
+                    continue;
+                auto started = s.started.find(StartedKey(plugin, setting));
+                if (started != s.started.end() && started->second != OtherPlugins::Get(plugin, setting))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    namespace Footer
+    {
+        inline SafetyHookInline SceneDestructor;
+
+        inline void UpdateTip(void* tooltip)
+        {
+            auto& s = Get();
+            if (!s.textString || !s.textFont || !s.fontSize || !s.textScale || !s.textPosition)
+                return;
+            std::string current = s.tipSource ? s.tipSource(tooltip) : s.textString(tooltip, nullptr);
+            auto found = s.fullTips.find(current);
+            if (found == s.fullTips.end() && current != s.shownTip)
+            {
+                s.activeTip.clear();
+                s.shownTip.clear();
+                s.tipPages.clear();
+                return;
+            }
+            if (found != s.fullTips.end() && found->second != s.activeTip)
+            {
+                s.activeTip = found->second;
+                s.tipPages.clear();
+                s.tipPage = 0;
+                s.tipChanged = GetTickCount64();
+                auto font = s.textFont(tooltip, nullptr);
+                auto scale = s.textScale(tooltip, nullptr);
+                auto position = s.textPosition(tooltip, nullptr);
+                float width = std::max(1.0f, 640.0f - position[0] * 2.0f);
+                auto fits = [&](const std::string& text)
+                {
+                    float size[2]{};
+                    s.fontSize(font, nullptr, size, text.c_str());
+                    return size[0] * scale[0] <= width;
+                };
+                std::string remaining = s.activeTip;
+                while (!remaining.empty())
+                {
+                    size_t count = remaining.size();
+                    // Reserve room for the page indicator before splitting at a word boundary.
+                    while (count > 1 && !fits("[99/99] " + remaining.substr(0, count)))
+                        --count;
+                    if (count < remaining.size())
+                    {
+                        auto space = remaining.rfind(' ', count);
+                        if (space != std::string::npos && space > 0)
+                            count = space;
+                    }
+                    s.tipPages.push_back(remaining.substr(0, count));
+                    remaining.erase(0, count);
+                    while (!remaining.empty() && remaining.front() == ' ')
+                        remaining.erase(0, 1);
+                }
+            }
+            if (s.tipPages.empty())
+                return;
+            if (GetTickCount64() - s.tipChanged >= 5000)
+            {
+                s.tipPage = (s.tipPage + 1) % s.tipPages.size();
+                s.tipChanged = GetTickCount64();
+            }
+            s.shownTip = s.tipPages[s.tipPage];
+            if (s.tipPages.size() > 1)
+                s.shownTip = "[" + std::to_string(s.tipPage + 1) + "/" + std::to_string(s.tipPages.size()) + "] " + s.shownTip;
+            s.textPrint(tooltip, nullptr, s.shownTip.c_str());
+        }
+
+        inline void DestroyLine(State::FooterLine& line)
+        {
+            auto text = line.text;
+            line = {};
+            if (!text)
+                return;
+            auto table = *reinterpret_cast<void***>(text);
+            reinterpret_cast<void(__thiscall*)(void*, int)>(table[0])(text, 1);
+            ProtectedGameRef<int> count;
+            count.SetAddress(Get().deleteCount);
+            count = count.get() + 1;
+        }
+
+        inline void __fastcall DestroyScene(void* scene, void* edx)
+        {
+            auto& s = Get();
+            for (auto line : { &s.restartLine, &s.notificationLine })
+            {
+                if (line->scene == scene)
+                    DestroyLine(*line);
+            }
+            SceneDestructor.unsafe_fastcall(scene, edx);
+        }
+
+        inline void UpdateLine(State::FooterLine& line, void* scene, void* tooltip, const std::string& message, int row)
+        {
+            auto& s = Get();
+            if (!s.textConstruct || !s.textFont || !s.textPosition || !s.textScale || !s.textSetPosition ||
+                !s.textSetScale || !s.objectAddTo || !s.objectEnable || !s.allocate || !s.newCount || !s.deleteCount || !SceneDestructor)
+                return;
+            if (line.scene != scene)
+                DestroyLine(line);
+            if (!line.text && !message.empty())
+            {
+                auto memory = s.allocate(s.textSize);
+                if (!memory)
+                    return;
+                // The native text is released before its menu scene is destroyed.
+                line.text = s.textConstruct(memory, nullptr, s.textFont(tooltip, nullptr), 0);
+                ProtectedGameRef<int> count;
+                count.SetAddress(s.newCount);
+                count = count.get() + 1;
+                s.objectAddTo(line.text, nullptr, scene);
+                line.scene = scene;
+            }
+            if (!line.text)
+                return;
+            auto position = s.textPosition(tooltip, nullptr);
+            auto scale = s.textScale(tooltip, nullptr);
+            auto font = static_cast<uint8_t*>(s.textFont(tooltip, nullptr));
+            float height = static_cast<float>(*reinterpret_cast<int*>(font + s.fontHeightOffset)) * scale[1] + 2.0f;
+            s.textSetPosition(line.text, nullptr, position[0], position[1] - height * row);
+            s.textSetScale(line.text, nullptr, scale[0], scale[1]);
+            if (s.textColor && s.textSetColor)
+                s.textSetColor(line.text, nullptr, s.textColor(tooltip, nullptr));
+            ProtectedGameRef<uint32_t> layer;
+            layer.SetAddress(reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(line.text) + s.textLayerOffset));
+            layer = *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(tooltip) + s.textLayerOffset);
+            s.textPrint(line.text, nullptr, message.c_str());
+            s.objectEnable(line.text, nullptr, !message.empty());
+        }
+
+        inline void Update(void* scene, void* tooltip)
+        {
+            auto& s = Get();
+            s.tooltip = tooltip;
+            if (!scene || !tooltip)
+                return;
+            UpdateTip(tooltip);
+            bool pending = RestartPending();
+            UpdateLine(s.restartLine, scene, tooltip, pending ? HostText("WFP_RESTART_WARNING") : "", 1);
+            UpdateLine(s.notificationLine, scene, tooltip, s.notification, pending ? 2 : 1);
+        }
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -446,6 +631,15 @@ namespace MaxPayneMenu
         {
             s.plugins.clear();
             return false;
+        }
+        auto language = OtherPlugins::Fetch([&](char* buffer, uint32_t size)
+        {
+            return s.plugins.front().api->Get("MAIN.TextLanguage", buffer, size);
+        });
+        if (!language.empty() && language != "auto")
+        {
+            for (auto& plugin : s.plugins)
+                plugin.file.texts.Select(language);
         }
         s.hostTexts = s.plugins.front().file.texts;
         for (auto& plugin : s.plugins)
@@ -900,6 +1094,9 @@ namespace MaxPayneMenu
     struct MenuModeSlots
     {
         int setItem, isItemEnabled, setSlider, getSlider;
+        int update = -1;
+        ptrdiff_t tooltip = -1;
+        ptrdiff_t scene = -1;
     };
 
     // Where a menu line keeps its name (P_Text*) and ID, and the slot of the function updating it every frame
@@ -911,7 +1108,15 @@ namespace MaxPayneMenu
 
     namespace MenuMode
     {
-        inline SafetyHookInline shSetItem, shIsItemEnabled, shSetSlider, shGetSlider;
+        inline SafetyHookInline shSetItem, shIsItemEnabled, shSetSlider, shGetSlider, shUpdate;
+        inline ptrdiff_t TooltipOffset = -1, SceneOffset = -1;
+
+        inline int __fastcall update(uint8_t* _this, void* edx, uintptr_t time)
+        {
+            int result = shUpdate.unsafe_fastcall<int>(_this, edx, time);
+            Footer::Update(*reinterpret_cast<void**>(_this + SceneOffset), *reinterpret_cast<void**>(_this + TooltipOffset));
+            return result;
+        }
 
         inline void __fastcall setItem(void* _this, void* edx, int32_t id)
         {
@@ -966,6 +1171,12 @@ namespace MaxPayneMenu
         shIsItemEnabled = safetyhook::create_inline(menuMode[slots.isItemEnabled], isItemEnabled);
         shSetSlider = safetyhook::create_inline(menuMode[slots.setSlider], setSlider);
         shGetSlider = safetyhook::create_inline(menuMode[slots.getSlider], getSlider);
+        if (slots.update >= 0 && slots.tooltip >= 0 && slots.scene >= 0)
+        {
+            TooltipOffset = slots.tooltip;
+            SceneOffset = slots.scene;
+            shUpdate = safetyhook::create_inline(menuMode[slots.update], update);
+        }
         Lines::Layout = layout;
         Lines::shUpdate[0] = safetyhook::create_inline(item[layout.update], Lines::update<0>);
         Lines::shUpdate[1] = safetyhook::create_inline(slider[layout.update], Lines::update<1>);
@@ -979,6 +1190,23 @@ namespace MaxPayneMenu
         auto& s = Get();
         s.textClear = reinterpret_cast<decltype(s.textClear)>(GetProcAddress(e2mfc, "?clear@P_Text@@QAEXXZ"));
         s.textPrint = reinterpret_cast<decltype(s.textPrint)>(GetProcAddress(e2mfc, "?print@P_Text@@QAEXPBD@Z"));
+        s.textString = reinterpret_cast<decltype(s.textString)>(GetProcAddress(e2mfc, "?getString@P_Text@@QBEPBDXZ"));
+        s.textConstruct = reinterpret_cast<decltype(s.textConstruct)>(GetProcAddress(e2mfc, "??0P_Text@@QAE@PAVP_Font@@W4ReferencePoint@0@@Z"));
+        s.textFont = reinterpret_cast<decltype(s.textFont)>(GetProcAddress(e2mfc, "?getFont@P_Text@@QBEPAVP_Font@@XZ"));
+        s.fontSize = reinterpret_cast<decltype(s.fontSize)>(GetProcAddress(e2mfc, "?getViewportSize@P_Font@@QBE?AV?$M_Vector2Template@M@@PBD@Z"));
+        s.textPosition = reinterpret_cast<decltype(s.textPosition)>(GetProcAddress(e2mfc, "?getPosition@P_Text@@QAEABV?$M_Vector2Template@M@@XZ"));
+        s.textScale = reinterpret_cast<decltype(s.textScale)>(GetProcAddress(e2mfc, "?getScale@P_Text@@QBEABV?$M_Vector2Template@M@@XZ"));
+        s.textColor = reinterpret_cast<decltype(s.textColor)>(GetProcAddress(e2mfc, "?getColor@P_Text@@QBEABVG_FColor@@XZ"));
+        s.textSetPosition = reinterpret_cast<decltype(s.textSetPosition)>(GetProcAddress(e2mfc, "?setPosition@P_Text@@QAEXMM@Z"));
+        s.textSetScale = reinterpret_cast<decltype(s.textSetScale)>(GetProcAddress(e2mfc, "?setScale@P_Text@@QAEXMM@Z"));
+        s.textSetColor = reinterpret_cast<decltype(s.textSetColor)>(GetProcAddress(e2mfc, "?setColor@P_Text@@QAEXABVG_FColor@@@Z"));
+        s.objectAddTo = reinterpret_cast<decltype(s.objectAddTo)>(GetProcAddress(e2mfc, "?addTo@P_BaseObject@@UAEXPAVP_ObjectContainer@@@Z"));
+        s.objectEnable = reinterpret_cast<decltype(s.objectEnable)>(GetProcAddress(e2mfc, "?enable@P_BaseObject@@UAEX_N@Z"));
+        s.allocate = reinterpret_cast<decltype(s.allocate)>(GetProcAddress(GetModuleHandleW(L"msvcrt.dll"), "malloc"));
+        s.newCount = reinterpret_cast<int*>(GetProcAddress(rlmfc, "?sm_iNewCount@R_Memory@@2HA"));
+        s.deleteCount = reinterpret_cast<int*>(GetProcAddress(rlmfc, "?sm_iDeleteCount@R_Memory@@2HA"));
+        if (auto destructor = GetProcAddress(e2mfc, "??1P_Scene@@UAE@XZ"))
+            Footer::SceneDestructor = safetyhook::create_inline(destructor, Footer::DestroyScene);
         auto size = GetProcAddress(rlmfc, "?size@R_File@@QAEIPBD@Z");
         auto load = GetProcAddress(rlmfc, "?load@R_File@@QAEXPAXPBDI@Z");
         if (!host || !s.textClear || !s.textPrint || !size || !load)

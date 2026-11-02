@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/kr2/main2.jpg" width="760" alt="Knight Rider 2: The Game Widescreen Fix">
+<img src="https://thirteenag.github.io/screens/kr2/main2.jpg" width="760" alt="Knight Rider 2: The Game Fusion Fix">
 
-**Knight Rider 2: The Game Widescreen Fix** corrects resolution handling, aspect ratio, HUD scaling, field of view and video scaling for widescreen displays.
+**Knight Rider 2: The Game Fusion Fix** corrects resolution handling, aspect ratio, HUD scaling, field of view and video scaling for widescreen displays.
 
-[Website](https://thirteenag.github.io/wfp#kr2) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/KnightRider2.WidescreenFix/dllmain.cpp)
+[Website](https://thirteenag.github.io/wfp#kr2) Â· [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/KnightRider2.FusionFix/dllmain.cpp)
 
 </div>
 
@@ -12,31 +12,42 @@
 
 ## Fixes
 
-- **Resolution** — Renders at the desktop resolution, or at the resolution set in the fix's options. Resolutions wider or taller than 2048 pixels work. Out-of-range values fall back to the desktop, then 640×480.
-- **Aspect ratio and field of view** — Hor+: the original vertical view, wider at the sides.
-- **HUD** — Kept at 4:3 proportions in a centered box; night vision and dialog faces stay in place.
-- **Videos** — **Correct videos** keeps movies centered at their original 4:3 proportions, with black bars where needed at any screen resolution or aspect ratio.
-- **Display scaling** — Scaled desktops neither crop nor blur the picture.
+- **Resolution and aspect ratio** â€” Supports custom resolutions, including render targets larger than the original 2048-pixel limit. The gameplay view widens at the sides while retaining its original height.
+- **HUD** â€” Auto places the HUD near the screen edges; a choice of centered HUD boxes is available. The cockpit retains its original centered 4:3 view and instruments, with black side areas on wider screens. Menu artwork keeps its original proportions.
+- **Videos** â€” Original fits the whole video in the original 4:3 presentation. Fill preserves the picture and skips the black borders encoded in the intro and new game videos.
+- **Frame rate** â€” An adjustable limiter replaces the native limits, and game time follows real time.
+- **Window modes** â€” Choose fullscreen, framed windowed or borderless. Resolution and mode changes require a restart.
+- **Intro skip** â€” Skips the startup logos and legal screens; mission scenes remain available.
+- **Start-up abort** â€” Fixes the start-up abort on systems where the game's mouse setup fails.
 
 ## Options
 
-- **Correct videos** (restart) — on in every preset.
-- **Field of view factor** (0.5–2.0, live) — 1.0 in every preset.
-- **Resolution width/height** (restart).
+- **Field of view factor** â€” 0.5â€“2.0, live; 1.0 keeps the intended gameplay view. Story shots keep their own framing.
+- **Resolution width / height** â€” 0 uses the desktop resolution; restart required.
+- **Window mode** â€” Fullscreen, Windowed or Borderless; restart required. Borderless uses the desktop resolution.
+- **HUD aspect ratio constraint** â€” Auto uses the screen edges; 4:3, 16:9, 21:9 or 32:9 places the HUD inside a centered box. Applies live.
+- **Frame rate limit** â€” 0 is unlimited, âˆ’1 follows the display refresh rate, and a positive value selects the cap. Default 60; applies live.
+- **Cutscene borders** â€” Off or Pillarbox; applies live. Pillarbox keeps the original story framing with side borders.
+- **Video framing** â€” Original or Fill, as described above.
+- **Confine cursor** â€” Keeps the cursor inside the focused game window; applies live.
+- **Skip intro / Skip press start** â€” Enabled by default; restart required.
+- **Controller icons** â€” Auto, Xbox, PlayStation or Nintendo button labels; applies live. Auto uses Xbox labels because XInput does not identify the controller family.
+- **Text language** â€” Auto, English, French, German, Italian or Spanish for the fix's settings and help.
+- **Check for updates** â€” Optional update notice at the main menu; disabled by default.
 
-Settings are changed on fusionfix.io or in FusionFixHub; options marked live apply while the game runs, the others after a restart. Defaults are the Recommended preset; Vanilla and Enhanced are the other presets. No preset changes the resolution. The fix has no in-game menu. An old `scripts/KnightRider2.WidescreenFix.ini` isn't used anymore and can be deleted.
+Settings can be changed on fusionfix.io or in FusionFixHub. Recommended is the default preset; Vanilla and Enhanced are also available. No preset changes the resolution. Supporters can open the developer overlay with Ctrl+F10, or Start and View together on a controller. The game's fixed options scenes do not support an additional Plugins page.
 
-## Known limits
+## Controller
 
-- The field of view factor also applies to scripted camera shots that use the same projection.
-- HUD is a centered 4:3 box (no HUD aspect setting); no window mode setting, skip intro or controller icons.
+The archive includes Xidi for the game's native DirectInput controls. Connect an XInput controller, or expose a PlayStation or Nintendo controller through Steam Input or DS4Windows.
+
+Use the left stick to steer, RT to accelerate and LT to brake. A/B/X/Y select laser, plasma, rockets or no weapon; RB fires the selected offensive gadget, LB jumps, left-stick click resets the car, right-stick click scans and View changes camera. The right stick operates shield, micro jammer and target/camera cycling. The d-pad selects Super Pursuit Mode, targets and ski modes in gameplay; menus use the d-pad, A to confirm and B to go back. Menu pauses or continues. In the pause menu's quit question, A answers yes and B no. The Controls page and the front-end menus follow the last input device; the in-game pause, quit, retry and loading boxes keep their keyboard key pictures.
 
 ## Installation
 
-1. Download the fix archive from this release.
-2. Extract it into the game folder, beside the game executable, keeping the folders in the archive.
-3. Start the game once to create `scripts/KnightRider2.WidescreenFix.cfg`.
-4. Change settings on fusionfix.io or in FusionFixHub. Settings marked live apply while the game runs; the others after a restart.
+1. Extract the fix archive beside the game executable, preserving its folders and the included Xidi files.
+2. Start the game once to create `scripts/KnightRider2.FusionFix.cfg`.
+3. Change settings in FusionFixHub or on fusionfix.io.
 
 
 

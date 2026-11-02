@@ -8,7 +8,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>NDEBUG;UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\external\hooking;$(ProjectDir)..\external\injector\safetyhook\include;$(ProjectDir)..\external\injector\minhook\include;$(ProjectDir)..\external\injector\utility;$(ProjectDir)..\external\injector\zydis</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\external\hooking;$(ProjectDir)..\external\injector\safetyhook\include;$(ProjectDir)..\external\injector\minhook\include;$(ProjectDir)..\external\injector\utility;$(ProjectDir)..\external\injector\zydis;$(ProjectDir)..\external\FusionFixUtils\imgui</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>

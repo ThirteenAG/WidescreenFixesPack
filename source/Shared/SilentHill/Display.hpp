@@ -1,6 +1,6 @@
 #pragma once
 #include <minidx8/d3d8.h>
-#include "../CursorConfinement.hpp"
+#include "Shared/CursorConfinement.hpp"
 #include <functional>
 #include <mutex>
 #include <chrono>

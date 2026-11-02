@@ -6,8 +6,8 @@ namespace ScarfaceProfile
     struct Context
     {
         bool(__cdecl* isPaused)();
-        const uintptr_t* flowManager;
-        void* const* character;
+        const GameRef<uintptr_t>* flowManager;
+        const GameRef<void*>* character;
         uint32_t pilotOffset;
     };
 
@@ -25,10 +25,10 @@ namespace ScarfaceProfile
         const auto context = Bindings.load(std::memory_order_acquire);
         if (context && context->isPaused)
         {
-            const auto flow = context->flowManager ? *context->flowManager : 1;
+            const auto flow = context->flowManager && context->flowManager->is_initialized() ? context->flowManager->get() : 1;
             if (flow && flow != 0xDDDDDDDD && !context->isPaused())
             {
-                const auto player = context->character ? *context->character : nullptr;
+                const auto player = context->character && context->character->is_initialized() ? context->character->get() : nullptr;
                 if (player && reinterpret_cast<uintptr_t>(player) != 0xDDDDDDDD &&
                     *reinterpret_cast<const uint32_t*>(static_cast<const uint8_t*>(player) + context->pilotOffset))
                     profile = L"InCar";

@@ -1,7 +1,6 @@
 module;
 
 #include "stdafx.h"
-#include "../Shared/CheckedPattern.hpp"
 #include <d3d12.h>
 #include <wrl/client.h>
 
@@ -58,7 +57,7 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            if (auto address = wfp::patterns::First("80 3D ? ? ? ? 00 74 6D 4C 8B 89 D0 01 00 00 49 83 79 48 00 74 5F 45 0F B6 C0"))
+            if (auto address = hook::pattern("80 3D ? ? ? ? 00 74 6D 4C 8B 89 D0 01 00 00 49 83 79 48 00 74 5F 45 0F B6 C0").get_first())
                 shadingRateHook = safetyhook::create_inline(address, SetShadingRate);
             // DE's auxiliary views repeatedly alternate the requested height.
             // UE's grow-to-fit policy retains the largest allocation instead
@@ -66,7 +65,7 @@ public:
             // Install at the common join after native policy selection. DE
             // writes its console settings after plugin initialization, and
             // auxiliary views can take the branch bypassing the CVar read.
-            if (auto address = wfp::patterns::First("48 8B 0D ? ? ? ? 8B 51 04 85 D2 78 ? BE 03 00 00 00 3B D6 0F 4C F2", 24))
+            if (auto address = hook::pattern("48 8B 0D ? ? ? ? 8B 51 04 85 D2 78 ? BE 03 00 00 00 3B D6 0F 4C F2").get_first(24))
             {
                 resizePolicyHook = safetyhook::create_mid(address, [](SafetyHookContext& c)
                 {

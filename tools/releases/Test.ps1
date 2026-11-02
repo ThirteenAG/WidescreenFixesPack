@@ -15,7 +15,7 @@ Assert ('dmc3se' -notin $all.Tags -and 'mclarpsp' -in $all.Tags) 'DMC3 removal/M
 $psp=Resolve-ReleaseSelection $catalog @($catalog.releases | Where-Object { 'PPSSPP' -in $_.platforms } | ForEach-Object tag)
 Assert ('MidnightClubLARemix.PPSSPP.FusionFix' -in $psp.Packages) 'PSP selection excludes Midnight Club.'
 $selection=Resolve-ReleaseSelection $catalog @('gtalcspsp,gtavcspsp', 'gtalcspsp')
-Assert ($selection.Tags.Count -eq 2 -and $selection.Packages.Count -eq 5) 'Bundle selection or deduplication failed.'
+Assert ($selection.Tags.Count -eq 2 -and $selection.Packages.Count -eq 2) 'Bundle selection or deduplication failed.'
 $frontends=Resolve-ReleaseSelection $catalog @('gta3','gtavc')
 Assert ('GTA3.WidescreenFrontend' -notin $frontends.Packages -and 'GTAVC.WidescreenFrontend' -notin $frontends.Packages) 'Static frontend archives must be retained, not rebuilt.'
 Assert-Fails { Resolve-ReleaseSelection $catalog 'dmc3se' } 'Unknown'
@@ -56,7 +56,7 @@ Assert ($plans.Count -eq 1 -and $plans[0].Count -eq 2 -and $plans[0][0] -eq '-m'
 $projects=@($xml.SelectNodes('//Project') | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_.Path) } | Sort-Object)
 Assert (($projects -join ',') -eq (@($chosen.project | Sort-Object) -join ',')) 'Filtered solution has wrong producers.'
 Assert ($originalHash -eq (Get-FileHash (Join-Path $root 'build/PPSSPP.WidescreenFixesPack.slnx')).Hash) 'Original solution was modified.'
-$native=@($manifest.packages | Where-Object id -in @('Bully.WidescreenFix','GTAVCDE.FusionFix') | ForEach-Object producers)
+$native=@($manifest.packages | Where-Object id -in @('Bully.FusionFix','GTAVCDE.FusionFix') | ForEach-Object producers)
 $plans=@(New-SelectedSolutionPlans $manifest $native $root $work)
 Assert ($plans.Count -eq 2) 'Cross-architecture solution selection failed.'
 foreach ($plan in $plans) {

@@ -1,0 +1,21 @@
+{
+  "sources": [
+    "main.cpp",
+    "../../external/injector/include/ps2/log.c",
+    "../../external/injector/include/ps2/memalloc.c",
+    "../../external/injector/include/ps2/patterns.c",
+    "../../external/injector/include/ps2/injector.c",
+    "../../external/injector/include/ps2/mips.c"
+  ],
+  "output": "../../data/KnightRider.PCSX2F.FusionFix/PLUGINS/KnightRider.PCSX2F.FusionFix.elf",
+  "cxx_flags": [
+    "-std=gnu++17",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-strict-aliasing",
+    "-fno-threadsafe-statics"
+  ],
+  "cflags": [
+    "-ffp-contract=off"
+  ]
+}

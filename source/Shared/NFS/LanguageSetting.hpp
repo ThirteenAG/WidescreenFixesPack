@@ -2,7 +2,7 @@
 #include <filesystem>
 #include <string>
 #include <vector>
-#include "../AsiSettings/asi_settings.hpp"
+#include "Shared/AsiSettings/asi_settings.hpp"
 
 // The game's language as a setting of the fix: a choice of the names the game reads from the "Language" value of its
 // registry key, which the installer writes. The registry isn't changed: the game's own read of the value gets the

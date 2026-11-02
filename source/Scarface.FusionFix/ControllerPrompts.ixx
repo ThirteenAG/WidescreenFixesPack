@@ -3,11 +3,15 @@ module;
 #include "FixSettings.hpp"
 #include "RTTI.h"
 #include "ButtonIcons.h"
+#include "TextLookup.hpp"
 #include <atomic>
 #include <mutex>
 #include <map>
+#include <stdexcept>
 
 export module ControllerPrompts;
+
+import ComVars;
 
 namespace
 {
@@ -75,17 +79,16 @@ namespace
     const wchar_t* (__cdecl* lookupText)(const char*) = nullptr;
     bool enabled = false;
     unsigned gamepadIcons = 0;
+    const int* iconChoice = nullptr;
     std::atomic<bool> gamepad{false};
     std::atomic<uint64_t> lastKeyboardActivity{0};
     unsigned controller = 0;
-    uintptr_t* controllerDescription = nullptr;
     using QueryButton = uint32_t(__cdecl*)(unsigned,unsigned);
     QueryButton queryButton = nullptr;
     using QueryActivity = uint64_t(__cdecl*)(unsigned);
     QueryActivity queryActivity = nullptr;
     using QueryProfileButton = uint32_t(__cdecl*)(unsigned,unsigned,const wchar_t*);
     QueryProfileButton queryProfileButton = nullptr;
-    void** mainCharacter = nullptr;
     bool modernControls = false;
     IDirect3DDevice9* device = nullptr;
     std::array<ComPtr<IDirect3DTexture9>,20> icons;
@@ -449,6 +452,12 @@ export namespace ControllerPrompts
     void Update(IDirect3DDevice9* d)
     {
         if(!enabled||!d)return;
+        const auto style = ScarfaceButtons::Style(iconChoice ? *iconChoice : 0);
+        if (gamepadIcons != style)
+        {
+            gamepadIcons = style;
+            device = nullptr;
+        }
         if(device!=d)
         {
             for(auto& icon:icons)icon.Reset();device=d;
@@ -474,12 +483,12 @@ export namespace ControllerPrompts
         gameplayPhysical.fill(-1);
         for(auto& bindings:actionPhysical)bindings.fill(-1);
         const wchar_t* gameplayProfile=nullptr;
-        if(modernControls && mainCharacter && *mainCharacter)
-            gameplayProfile=*reinterpret_cast<const uintptr_t*>(static_cast<const uint8_t*>(*mainCharacter)+0x2E8)
+        if(modernControls && MainCharacter.is_initialized() && MainCharacter.get())
+            gameplayProfile=*reinterpret_cast<const uintptr_t*>(static_cast<const uint8_t*>(MainCharacter.get())+0x2E8)
                 ? L"InCar" : L"OnFoot";
-        if(queryButton && controllerDescription && *controllerDescription)
+        if(queryButton && controllerDescription.is_initialized() && controllerDescription.get())
         {
-            auto names=*reinterpret_cast<const char***>(*controllerDescription+4);
+            auto names=*reinterpret_cast<const char***>(controllerDescription.get()+4);
             if(names)for(int slot=5;slot<17;++slot)
             {
                 const char* name=names[slot];int button=-1;
@@ -505,44 +514,37 @@ export namespace ControllerPrompts
         }
     }
 
+    void Shutdown();
+
     void Initialize()
     {
         auto& settings = FixSettings();
-        const bool bControllerPrompts=settings.Bool("MAIN.ControllerPrompts");
-        if(!bControllerPrompts)return;
-        gamepadIcons=unsigned(std::clamp(settings.Int("MAIN.GamepadIcons"),0,int(std::size(ScarfaceButtons::Names))-1));
+        iconChoice = &settings.Int("MAIN.GamepadIcons");
+        gamepadIcons = ScarfaceButtons::Style(*iconChoice);
         modernControls=settings.Bool("MAIN.ModernControlScheme");
         auto font=ScarfaceRTTI::FindVtable(".?AVTextureFont@pure3d@@");
         auto pattern=hook::pattern("8B 44 24 04 83 F8 FF 74 11 8B 51 1C 8B 04 82 8B 49 20 D1 E8 8D 04 41 C2 04 00"); // 0x6A41E0
-        if(!font || pattern.size()!=1)return;
         auto lookup=pattern.get_first();
-        pattern=hook::pattern("55 8B 6C 24 08 56 57 BF ? ? ? ? 8B F5 B9 01 00 00 00 33 C0 F3 A6"); // 0x6783A0
-        if(pattern.empty())
-            pattern=hook::pattern("55 8B 6C 24 08 56 57 E9 ? ? ? ? 8B F5 B9 01 00 00 00 33 C0 F3 A6"); // Scarface2: 0x6783A0, protected MOV EDI.
-        if(pattern.size()!=1)return;
-        lookupText=reinterpret_cast<decltype(lookupText)>(pattern.get_first());
+        lookupText = ScarfaceText::Resolve();
         pattern=hook::pattern("83 3D ? ? ? ? 00 55 8B E9 74 ? 83 3D ? ? ? ? 00 74 ? 53 8B 1D"); // 0x42EC60 + 14
-        if(pattern.size()==1)
-            controllerDescription=*pattern.get_first<uintptr_t*>(14);
-        else if(pattern.empty())
+        if(pattern.empty())
         {
             // Find the same description through logical-to-device binding lookup;
             // Scarface2 protects the original getter's entry instructions.
             pattern=hook::pattern("8B 0D ? ? ? ? 8B 49 04 8D 04 7F 03 C0 8B 94 00 ? ? ? ? 8B 14 91 03 C0 8B 80 ? ? ? ? 89 54 24 18"); // Scarface2: 0x42EC25 + 2.
-            if(pattern.size()!=1)return;
-            controllerDescription=*pattern.get_first<uintptr_t*>(2);
+            controllerDescription.SetAddress(*pattern.get_first<uintptr_t*>(2));
         }
-        else return;
+        else
+            controllerDescription.SetAddress(*pattern.get_first<uintptr_t*>(14));
         pattern=hook::pattern("A1 ? ? ? ? 85 C0 74 50"); // MainCharacter: operand at +1.
-        if(pattern.size()==1)mainCharacter=*pattern.get_first<void**>(1);
+        MainCharacter.SetAddress(*pattern.get_first<void**>(1));
         pattern=hook::pattern("83 EC 10 8B 44 24 18 8B 48 1C 8B 50 24 53 8B 58 18 55 8B 68 20"); // 0x699DF0, font quad submission.
-        if(pattern.size()!=1)return;
         glyphHook=safetyhook::create_inline(pattern.get_first(),EmitGlyph);
         for(unsigned i=0;i<std::size(tokens);++i)tokens[i].marker[0]=markerBase+wchar_t(i);
         bindingPhysical.fill(-1);
         gameplayPhysical.fill(-1);
         for(auto& bindings:actionPhysical)bindings.fill(-1);
-        auto slot=[font](unsigned i){return injector::ReadMemory<void*>(font+i*sizeof(void*),true);};
+        auto slot=[font](unsigned i){return *reinterpret_cast<void**>(font+i*sizeof(void*));};
         widthHook=safetyhook::create_inline(slot(13),Width);
         lineWidthHook=safetyhook::create_inline(slot(26),LineWidth);
         wrapWidthHook=safetyhook::create_inline(slot(11),WrapWidth);
@@ -566,26 +568,29 @@ export namespace ControllerPrompts
             wrapDrawHook.reset();
             beginHook.reset();
             endHook.reset();
-            OutputDebugStringA("Scarface: controller prompt font hooks unavailable.\n");
-            return;
+            throw std::runtime_error("Controller prompt font hooks unavailable");
         }
         if(enabled)
         {
             auto tutorial=ScarfaceRTTI::FindVtable(".?AVLookTutorialHUD@@");
             pattern=hook::pattern("6A FF 6A 00 6A 00 6A 00 68 ? ? ? ? E8 ? ? ? ? 83 C4 14 C2 04 00 83 F8 01 75"); // 0x5B6380, Con::evaluate call at +13.
-            if(tutorial && pattern.size()==1)
+            if(tutorial)
             {
                 evaluateScript=reinterpret_cast<decltype(evaluateScript)>(injector::GetBranchDestination(pattern.get_first(13)).as_int());
-                lookTutorialUpdateHook=safetyhook::create_inline(injector::ReadMemory<void*>(tutorial+54*sizeof(void*),true),UpdateLookTutorial);
+                lookTutorialUpdateHook=safetyhook::create_inline(*reinterpret_cast<void**>(tutorial+54*sizeof(void*)),UpdateLookTutorial);
             }
             auto text=ScarfaceRTTI::FindVtable(".?AVFETextObject@@");
             pattern=hook::pattern("53 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 EB 05 B8 ? ? ? ? 8B 4E 38"); // 0x5E27D4 + 6
-            if(text && pattern.size()==1)
+            if(text)
             {
-                setTextHook=safetyhook::create_inline(injector::ReadMemory<void*>(text+39*sizeof(void*),true),SetText);
-                if(setTextHook)
-                    hbControlButtonLabel.fun=injector::MakeCALL(pattern.get_first(6),ControlButtonLabel,true).get();
+                setTextHook=safetyhook::create_inline(*reinterpret_cast<void**>(text+39*sizeof(void*)),SetText);
             }
+            if (!lookTutorialUpdateHook || !setTextHook)
+            {
+                Shutdown();
+                throw std::runtime_error("Controller prompt menu hooks unavailable");
+            }
+            hbControlButtonLabel.fun=injector::MakeCALL(pattern.get_first(6),ControlButtonLabel,true).get();
         }
     }
     void Shutdown()
@@ -597,5 +602,6 @@ export namespace ControllerPrompts
         lookTutorialUpdateHook.reset();evaluateScript=nullptr;boundTutorialMap=nullptr;
         savedTexture.Reset();for(auto& icon:icons)icon.Reset();device=nullptr;
         queryActivity=nullptr;queryButton=nullptr;queryProfileButton=nullptr;enabled=false;
+        iconChoice = nullptr;
     }
 }

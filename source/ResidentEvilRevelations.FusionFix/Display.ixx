@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 
 export module Display;
 
@@ -53,13 +52,6 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            // Per monitor DPI awareness, so the game gets real pixels on scaled desktops
-            using SetContext = BOOL(WINAPI*)(HANDLE);
-            if (auto set = reinterpret_cast<SetContext>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetProcessDpiAwarenessContext")))
-                set(reinterpret_cast<HANDLE>(-4));
-            else
-                SetProcessDPIAware();
-
             // The resolution list: the game offers a fixed list; the fix gives it every mode of the monitor
             struct ResList
             {
@@ -83,13 +75,10 @@ public:
 
             auto listRefs = hook::pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? EB 08 8D A4 24 00 00 00 00 90 83 BE");
             auto listRefs2 = hook::pattern("C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? 8B FF");
-            if (PatternAvailable(listRefs, "ResidentEvilRevelations.FusionFix: Display") && PatternAvailable(listRefs2, "ResidentEvilRevelations.FusionFix: Display"))
-            {
-                WriteGameValue(listRefs.get_first(4), resList.data());
-                WriteGameValue(listRefs.get_first(8 + 4), resList.size());
-                WriteGameValue(listRefs2.get_first(4), resList.data());
-                WriteGameValue(listRefs2.get_first(8 + 4), resList.size());
-            }
+            injector::WriteMemory(listRefs.get_first(4), resList.data(), true);
+            injector::WriteMemory(listRefs.get_first(8 + 4), resList.size(), true);
+            injector::WriteMemory(listRefs2.get_first(4), resList.data(), true);
+            injector::WriteMemory(listRefs2.get_first(8 + 4), resList.size(), true);
 
             // The render resolution. The game's Aspect option fits a fixed aspect into the screen; the fix always uses
             // the screen's own (the option's DEFAULT).

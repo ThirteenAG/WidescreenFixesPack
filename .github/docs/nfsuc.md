@@ -15,11 +15,12 @@
 <img src="https://thirteenag.github.io/screens/nfsuc/race1.jpg" width="460" align="right" style="margin: 0 0 16px 24px;" alt="Widescreen menu">
 
 - **Resolution** - every display mode of at least 640x480 is listed in the video options menu; long resolution lists no longer overflow the menu and crash
-- **HUD** - repositioned and scaled to match the active aspect ratio; **HUD Aspect Ratio** (Options > Gameplay, after GPS Mini-Map) is Auto (the whole screen, the HUD at its edges), 4:3, 16:9, 21:9, 32:9 or a custom ratio set on fusionfix.io or in FusionFixHub, applied with the HUD's next update; the GPS map background and screen transitions cover the full width
-- **Movies** - the 16:9 movies were stretched on screens wider than 16:9; **Movie Display** (Options > Plugins > Fusion Fix > Movies & Cutscenes, applied at once): Original Aspect shows them whole with black bars, Fill Screen (the default) keeps their aspect and crops them to cover the screen, Stretch fills the screen
-- **Cutscenes** - the in-engine scenes use the widened field of view like the game. **Cutscene Borders** (Options > Plugins > Fusion Fix > Movies & Cutscenes, applied at once): Letterbox keeps the game's bars above and below; without it the bars are gone and the view is zoomed to what was between them, so nothing they hid is shown; Pillarbox keeps the scenes at 16:9 on wider screens; Both (the default). **Animated Cutscene Borders** off shows the bars at full height at once instead of easing them in and out like the scene does
+- **HUD** - repositioned and scaled to match the active aspect ratio; **HUD Aspect Ratio** (Options > Gameplay, after GPS Mini-Map) is Auto (the whole screen, the HUD at its edges), 4:3, 16:9, 21:9, 32:9 or a custom ratio set on fusionfix.io or in FusionFixHub, applied at once; the GPS map background and screen transitions cover the full width
+- **Movies** - the 16:9 movies were stretched on screens wider than 16:9; **Movie Display** (Options > Plugins > Fusion Fix > Movies & Cutscenes, applied at once): Original Aspect and Fill Screen (the default) both show them whole with black bars where needed
+- **Cutscenes** - the in-engine scenes use the widened field of view like the game. **Cutscene Borders** (Options > Plugins > Fusion Fix > Movies & Cutscenes, applied at once): Letterbox keeps the game's bars above and below; without it the bars are gone and the scene fills the screen; Pillarbox keeps the scenes at 16:9 on wider screens; Both (the default). The Vanilla preset keeps the game's own bars. **Animated Cutscene Borders** off shows the bars at full height at once instead of easing them in and out like the scene does
 - **Field of View** - corrected for widescreen; **FOV Scale** chooses between the original field of view and a mathematically correct hor+ one
 - **High frame rates** - the game simulates at a multiple of the frame rate limit (at least 60 steps per second) with precisely paced frames, so it runs at the correct speed above 60 FPS instead of too fast; the chase camera's springs and animated textures (signs, screens) follow real time
+- **Menus** - on screens wider than 16:9 the in-game main menu, the options menu and their dialogs keep their 16:9 layout with black sides, so decorations that were never meant to be seen stay hidden
 - **Music Crash Fix** - the interactive music no longer crashes on streams that aren't set up yet, which happened mostly when loading a profile on the 1.1.2.1 executables
 - **Settings** - a crash no longer resets the game's settings on the next start
 - **Profiles** - load like on the Xbox 360, without the "Load complete" message
@@ -35,15 +36,17 @@
 - **Skip Intro** - bypass startup FMVs and the title screen
 - **Presets** - **Options > Plugins > Fusion Fix > Preset** selects Vanilla, Recommended or Enhanced for that plugin. Accept the game's confirmation dialog to apply it. Window mode, language, sensitivities and controls keep their current values. **Restore Defaults** resets the settings on that plugin's page; the game's **Default Settings** also resets the added rows on its graphics pages.
 - **Language** - the game's language under **Options > Plugins > Fusion Fix > Gameplay**, after a restart; only languages whose text files are installed are listed, so the game no longer crashes on a missing language
-- **Display Mode** - borderless, bordered, resizable, or borderless fullscreen; in every mode the picture is neither cropped nor blurred on scaled desktops
+- **Display Mode** - borderless, bordered, resizable, or borderless fullscreen; in every mode the picture is neither cropped nor blurred on scaled desktops. A bordered window's inner size is exactly the chosen resolution, and in the resizable window the HUD, field of view and movies follow the window's shape
+- **Pause When Unfocused** - on (the default) pauses and mutes the game while another window is active, like the original; off keeps it running in the background, without taking your keyboard, mouse or controller input
 - **FPS Limit** - synced to the monitor refresh rate, twice the refresh rate, or a fixed value
-- **Gamepad Support** - sharp Xbox or PlayStation button icons (detected automatically or chosen in the menu), the controller's buttons instead of keyboard keys in the front end, and the Xbox 360 default controls for newer Xbox controllers and other XInput pads, which had no default controls
+- **Gamepad Support** - controllers through Xidi with the game's Xbox 360 layout; PlayStation and Switch pads use Steam Input or DS4Windows. Keep `Xidi.32.dll` and `Xidi.ini` next to the game executable. Sharp Xbox or PlayStation button icons (Xbox in Auto, PlayStation when chosen in the menu), the controller's buttons instead of keyboard keys in the front end, and the Xbox 360 default controls for newer Xbox controllers and other XInput pads, which had no default controls
 <br clear="both">
 
 <img src="https://thirteenag.github.io/screens/nfsuc/race3.jpg" width="360" align="right" style="margin: 0 0 0 24px;" alt="Shadows">
 
 - **Stick Dead Zones** - separate dead zones for the left and right stick, in percent (default 10)
 - **Field of View** - multiplies the driving camera field of view from 0.5 to 2.0 (default 1.0) and applies while the game runs; native angle limits still apply
+- **Check for Updates** - off by default; when on, the fix asks fusionfix.io once per start whether a newer version is out and tells you in the game's own message box the next time you open Options
 - **Custom Save Directory** - redirect user files to any subfolder in the game directory
 - **Registry-Free Settings** - optionally saves all game settings to `settings.ini` instead of the registry
 <br clear="both">
@@ -62,7 +65,7 @@
 - **Precomputed Culling** - turn off the precomputed visibility, which hides some scenery that can be seen (World Detail menu)
 - **Thorough Scenery Culling** - checks every scenery section instead of the visibility tree: less missing scenery, but slower (World Detail menu)
 - **Console Gamma** - a custom gamma curve that creates a more contrasted image with deeper colors, similar to how GTA IV looked on the Xbox 360 (off by default, on in Enhanced)
-- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
+- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect (on by default, off in the Vanilla preset)
 - **AA Artifact Fix** - hides the 1px lines at the screen edges caused by MSAA (top and left, or all sides)
 <br clear="both">
 
@@ -72,27 +75,28 @@
 
 <img src="https://thirteenag.github.io/screens/nfsuc/camera.gif" width="400" align="right" style="margin: 0 0 16px 24px;" alt="Mouse look in-game">
 
-- **Mouse/Stick Look** - free look for the chase cameras with the right stick or the mouse. Like the car camera of GTA San Andreas, the look direction stays fixed in the world while the car turns; after the return delay the camera eases back behind the car. Experience *Need for Speed: Undercover* like never before with new camera angles. Free look, stick and mouse sensitivity, invert look, horizontal-only right stick, return delay, return speed and Field of View are under Options > Plugins > Fusion Fix > Camera.
+- **Mouse/Stick Look** - free look for the chase cameras with the right stick or the mouse. Like the car camera of GTA San Andreas, the look direction stays fixed in the world while the car turns; after the return delay the camera eases back behind the car. Experience *Need for Speed: Undercover* like never before with new camera angles. Free look, stick and mouse sensitivity, raw mouse input, invert look, horizontal-only right stick, return delay, return speed and Field of View are under Options > Plugins > Fusion Fix > Camera.
+- **Raw Mouse Input** - the free look reads the mouse directly (raw input): no Windows pointer acceleration and no lost movement with high polling rate mice. On by default, applies at once
 <br clear="both">
 
 ---
 
 **Confine cursor** (on fusionfix.io and in FusionFixHub, on by default, applies while the game runs) keeps the pointer inside the game window. Focus loss, dragging, system menus and disabling the setting release it. The cursor stays free while you use other windows.
 
-The driving FOV multiplier keeps the original field of view at 1.0 and adjusts the driving camera. If your game version is incompatible with this option, the camera keeps its original behavior and the other fixes remain available.
+The driving FOV multiplier keeps the original field of view at 1.0 and adjusts the driving camera.
 
-**Display Mode** offers Fullscreen, Windowed with borders or desktop Borderless, plus resizable, borderless-at-render-size and stretched modes. Changes apply after a restart. After updating from an older release, choose the mode again.
+**Display Mode** offers Fullscreen, Windowed with borders or desktop Borderless, plus resizable and borderless-at-render-size modes. Changes apply after a restart. After updating from an older release, choose the mode again.
 
 ## Known limits
 
+- In the resizable window, the menus and message boxes keep the shape of the chosen resolution; choose a resolution with the window's shape for undistorted menus.
 - The frame-rate setting requires a restart and also selects the simulation rate. Unlimited rendering and separate limits for menus and loading are not supported.
-- Mouse camera movement uses the game’s input; raw mouse input is not supported.
 
 ---
 
 ## Installation
 
-Keep the game executable and installed game data on the same game version. Mixing patch versions can cause missing scenery files and prevent the game from loading.
+Keep the game executable and installed game data on the same game version. Mixing patch versions can cause missing scenery files and prevent the game from loading. For example, the 1.1.2.1 executable needs the matching `TRACKS\L8R_MW2\MakeSceneryExtra.bin` file; verify or reinstall the matching patch if it is missing.
 
 1. Download the `.zip` from this release.
 2. Extract the contents directly into the game folder - the same folder as `nfs.exe`.

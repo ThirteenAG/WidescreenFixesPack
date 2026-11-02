@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include <atomic>
 
 export module Graphics;
 
@@ -9,7 +10,7 @@ import ComVars;
 injector::hook_back<void(__cdecl*)(float a1, float a2, int a3)> hb_8330DB;
 void __cdecl sub_8330DB(float a1, float a2, int a3)
 {
-    gVisibility = a1;
+    gVisibility.store(a1, std::memory_order_relaxed);
 
     if (!bDisableBlackAndWhiteFilter)
         return hb_8330DB.fun(a1, a2, a3);
@@ -18,9 +19,9 @@ void __cdecl sub_8330DB(float a1, float a2, int a3)
 export injector::hook_back<void(__cdecl*)(void* a1, int a2, int a3)> hb_100177B7;
 export void __cdecl sub_100177B7(void* a1, int a2, int a3)
 {
-    if (gBlacklistIndicators) //enables bloom in dark areas
+    if (gBlacklistIndicators.load(std::memory_order_relaxed)) //enables bloom in dark areas
     {
-        if (gVisibility == 1.0f)
+        if (gVisibility.load(std::memory_order_relaxed) == 1.0f)
             return hb_100177B7.fun(a1, a2, a3);
         else
             return;

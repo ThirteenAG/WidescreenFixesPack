@@ -3,9 +3,9 @@
   "page.gameplay": "Gameplay",
   "page.graphics": "Graphics",
   "EnableDoorSkip": "Skip doors",
-  "EnableDoorSkip.description": "Skip door animations. Restart Dolphin after changing this setting.",
+  "EnableDoorSkip.description": "The door animation between rooms is skipped: the next room appears as soon as it has loaded. Works in Resident Evil 2 and Resident Evil 3. Off shows the door animations like the original. Restart Dolphin after changing this setting.",
   "UnthrottleEmuDuringDoorSkip": "Faster door transitions",
-  "UnthrottleEmuDuringDoorSkip.description": "Unthrottle the emulator during door transitions. Restart Dolphin after changing this setting.",
+  "UnthrottleEmuDuringDoorSkip.description": "While the game loads the next room, Dolphin runs at full speed instead of the console's speed, so room changes finish sooner. Gameplay runs at normal speed. Works with or without skipped doors. Restart Dolphin after changing this setting.",
   "LightSyncRGB": "RGB lighting",
-  "LightSyncRGB.description": "Synchronize compatible keyboard lighting with player health. Restart Dolphin after changing this setting."
+  "LightSyncRGB.description": "Logitech G LIGHTSYNC keyboards show the player's condition: green for Fine, orange for Caution, red for Danger, purple when poisoned, with a heartbeat effect. Needs Logitech G HUB; without it this setting does nothing. Restart Dolphin after changing this setting."
 }

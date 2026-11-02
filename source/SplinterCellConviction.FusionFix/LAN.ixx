@@ -7,6 +7,7 @@ module;
 #include <iphlpapi.h>
 #include <fstream>
 #include <deque>
+#include <stdexcept>
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Iphlpapi.lib")
 
@@ -133,26 +134,43 @@ namespace LAN
         return result == SOCKET_ERROR ? ::sendto(s, buf, len, flags, to, tolen) : result;
     }
 
-    // A broadcast sent on every adapter comes back once per adapter on the same PC, the copies are dropped (the game would list a lobby twice)
-    // Sender of the last datagram, the game's own address of it is built with the wrong byte order (it's only logged)
-    uint32_t lastSender = 0;
+    // Keep the sender with the receive operation that processes its session reply.
+    thread_local std::optional<uint32_t> lastSender;
 
     int WINAPI recvfrom(SOCKET s, char* buf, int len, int flags, sockaddr* from, int* fromlen)
     {
         auto received = ::recvfrom(s, buf, len, flags, from, fromlen);
         if (received > 0)
         {
-            if (from && from->sa_family == AF_INET)
-                lastSender = reinterpret_cast<sockaddr_in*>(from)->sin_addr.s_addr;
-
-            static std::deque<std::pair<size_t, std::chrono::steady_clock::time_point>> recent;
-            auto now = std::chrono::steady_clock::now();
-            std::erase_if(recent, [&](auto& r) { return now - r.second > std::chrono::milliseconds(250); });
-            auto hash = std::hash<std::string_view>{}(std::string_view(buf, received));
-            if (std::ranges::any_of(recent, [&](auto& r) { return r.first == hash; }))
-                memset(buf, 0, received); // not an Agora message anymore, it's ignored
-            else
-                recent.emplace_back(hash, now);
+            const auto sender = from && fromlen && *fromlen >= sizeof(sockaddr_in) && from->sa_family == AF_INET ?
+                reinterpret_cast<const sockaddr_in*>(from) : nullptr;
+            lastSender = sender ? std::optional<uint32_t>(sender->sin_addr.s_addr) : std::nullopt;
+            if (sender)
+            {
+                struct Datagram
+                {
+                    SOCKET socket;
+                    uint32_t address;
+                    uint16_t port;
+                    std::string payload;
+                    std::chrono::steady_clock::time_point time;
+                };
+                thread_local std::deque<Datagram> recent;
+                const auto now = std::chrono::steady_clock::now();
+                std::erase_if(recent, [&](const auto& r) { return now - r.time > std::chrono::milliseconds(250); });
+                const std::string_view payload(buf, received);
+                if (std::ranges::any_of(recent, [&](const auto& r)
+                {
+                    return r.socket == s && r.address == sender->sin_addr.s_addr && r.port == sender->sin_port && r.payload == payload;
+                }))
+                {
+                    memset(buf, 0, received); // not an Agora message anymore, it's ignored
+                }
+                else
+                {
+                    recent.push_back({ s, sender->sin_addr.s_addr, sender->sin_port, std::string(payload), now });
+                }
+            }
         }
         return received;
     }
@@ -182,7 +200,7 @@ namespace LAN
 #endif
 
     // Address a session reply came from, while it's handled (Os::Agora address: IPv4 in network byte order, port at +4)
-    std::optional<uint32_t> replySource;
+    thread_local std::optional<uint32_t> replySource;
 
     SafetyHookInline shDeserializeSessionInfo = {};
     bool __fastcall DeserializeSessionInfo(uintptr_t sessionInfo, void* edx, void* buffer)
@@ -205,7 +223,6 @@ export void InitLAN()
 {
 
     auto sLANHelperExePath = FixSettings().String("LAN.LANHelperExePath");
-    auto bFixLAN = FixSettings().Bool("LAN.FixLAN") != 0;
     static auto sServerAddr = FixSettings().String("LAN.ServerAddr");
 
     if (!sLANHelperExePath.empty())
@@ -233,8 +250,17 @@ export void InitLAN()
         }
     }
 
-    if (bFixLAN)
+    // LAN play
     {
+        // The capture interface must be null if sound device creation fails before it is assigned.
+        auto soundSourceInit = hook::pattern("88 5E 25 89 5E 10 89 18 89 5E 14 88 5E 24 89 5E 20 89 5E 1C E8 ? ? ? ? 3B C3 7C ? 53 8D 4E 0C 51 53 E8 ? ? ? ? 3B C3 7C ?");
+        static auto soundSourceInitHook = safetyhook::create_mid(soundSourceInit.get_first(14), [](SafetyHookContext& regs)
+        {
+            *reinterpret_cast<void**>(regs.esi + 0x0C) = nullptr;
+        });
+        if (!soundSourceInitHook)
+            throw std::runtime_error("LAN sound initialization hook unavailable");
+
         // Quazal::DSoundSource destructors (voice chat): leaving the LAN lobby released an object that was already freed (+0Ch or +10h,
         // the call went through a garbage vtable). Objects whose Release (vtable +8) isn't code of a module are left alone.
         static auto IsCode = [](uintptr_t address)
@@ -249,11 +275,16 @@ export void InitLAN()
             return address && VirtualQuery(reinterpret_cast<void*>(address), &info, sizeof(info)) && info.State == MEM_COMMIT &&
                 !(info.Protect & (PAGE_NOACCESS | PAGE_GUARD));
         };
-        auto soundSource = hook::pattern("56 8B F1 8B 46 10 85 C0 C7 06 ? ? ? ? 74 08 8B 08 8B 51 08 50 FF D2 8B 46 0C 85 C0 74 08 8B 08 8B 51 08 50 FF D2");
-        static std::vector<SafetyHookMid> SoundSourceDestructors;
-        soundSource.for_each_result([](hook::pattern_match match)
+        const char* soundSourcePatterns[] =
         {
-            SoundSourceDestructors.push_back(safetyhook::create_mid(match.get<void>(3), [](SafetyHookContext& regs)
+            "56 8B F1 8B 46 10 85 C0 C7 06 ? ? ? ? 74 08 8B 08 8B 51 08 50 FF D2 8B 46 0C 85 C0 74 08 8B 08 8B 51 08 50 FF D2 8B 46 08 85 C0 74 08 8B 08 8B 51 08 50 FF D2 C7 46 28",
+            "56 8B F1 8B 46 10 85 C0 C7 06 ? ? ? ? 74 08 8B 08 8B 51 08 50 FF D2 8B 46 0C 85 C0 74 08 8B 08 8B 51 08 50 FF D2 8B 46 08 85 C0 74 08 8B 08 8B 51 08 50 FF D2 F6 44 24 08 01 C7 46 28"
+        };
+        static std::vector<SafetyHookMid> SoundSourceDestructors;
+        for (const auto* signature : soundSourcePatterns)
+        {
+            auto site = hook::pattern(signature).get_first(3);
+            SoundSourceDestructors.push_back(safetyhook::create_mid(site, [](SafetyHookContext& regs)
             {
                 for (auto offset : { 0x0C, 0x10 })
                 {
@@ -265,7 +296,7 @@ export void InitLAN()
                         object = 0;
                 }
             }));
-        });
+        }
 
         // the game connects before it sends the request, the server has to be up first
         std::thread(LAN::ConfigServer, sServerAddr == "127.0.0.1").detach();
@@ -297,8 +328,8 @@ export void InitLAN()
     }
 
 #ifdef LAN_LOG
-    if (auto pattern = hook::pattern("55 8B EC 51 53 56 57 E8 ? ? ? ? 8B 70 34 83 C0 2C 33 DB"); !pattern.empty())
     {
+        auto pattern = hook::pattern("55 8B EC 51 53 56 57 E8 ? ? ? ? 8B 70 34 83 C0 2C 33 DB");
         auto logger = injector::GetBranchDestination(pattern.get_first(7)).as_int();
         LAN::shLog = safetyhook::create_inline(pattern.get_first(), LAN::Log);
 
@@ -319,9 +350,9 @@ export void InitLAN()
     if (!sServerAddr.empty())
     {
         auto pattern = hook::pattern("68 ? ? ? ? 8D 4D E0 E8 ? ? ? ? C7 45 ? ? ? ? ? E8");
-        ProtectedGameRef<char*>(pattern.get_first<char*>(1)) = sServerAddr.data();
+        injector::WriteMemory<char*>(pattern.get_first<char*>(1), sServerAddr.data(), true);
 
         pattern = hook::pattern("68 ? ? ? ? 8B CE E8 ? ? ? ? 68 ? ? ? ? 8B CE E8 ? ? ? ? 8B C6");
-        ProtectedGameRef<char*>(pattern.get_first<char*>(1)) = sServerAddr.data();
+        injector::WriteMemory<char*>(pattern.get_first<char*>(1), sServerAddr.data(), true);
     }
 }

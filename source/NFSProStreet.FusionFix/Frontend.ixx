@@ -5,11 +5,12 @@ module;
 #include <d3d9.h>
 #include <atomic>
 #include <unordered_set>
-#include "Hud.hpp"
 
 export module Frontend;
 
 import ComVars;
+import Hud;
+
 
 namespace FE
 {
@@ -28,20 +29,15 @@ namespace cFEng
 
     void updateWidescreenOffset()
     {
-        auto Width = ResX;
-        auto Height = ResY;
+        auto Height = static_cast<float>(ResY);
+        auto Width = Height * ScreenAspectRatio();
 
         cFEng::fWidescreenHudOffset = -CalculateWidescreenOffset(static_cast<float>(Width), static_cast<float>(Height), 640.0f, 480.0f);
-        if (cFEng::fHudAspectRatioConstraint.has_value())
+        if (cFEng::fHudAspectRatioConstraint.has_value() && std::isfinite(*cFEng::fHudAspectRatioConstraint))
         {
             float value = cFEng::fHudAspectRatioConstraint.value();
-            if (value < 0.0f || value > (32.0f / 9.0f))
-                cFEng::fWidescreenHudOffset = value;
-            else
-            {
-                value = ClampHudAspectRatio(value, static_cast<float>(Width) / static_cast<float>(Height));
-                cFEng::fWidescreenHudOffset = -CalculateWidescreenOffset(static_cast<float>(Height) * value, static_cast<float>(Height), 640.0f, 480.0f);
-            }
+            value = std::min(std::clamp(value, 4.0f / 3.0f, 32.0f / 9.0f), static_cast<float>(Width) / static_cast<float>(Height));
+            cFEng::fWidescreenHudOffset = -CalculateWidescreenOffset(static_cast<float>(Height) * value, static_cast<float>(Height), 640.0f, 480.0f);
         }
     };
 
@@ -51,6 +47,68 @@ namespace cFEng
     static void* s_currentLeftGroup = nullptr;
     static void* s_currentRightGroup = nullptr;
     SafetyHookInline shDestroyGroup;
+
+    void UpdateDialogBackdrop()
+    {
+        if (!FE::Object::FindObject || !mInstance || !*mInstance || !*static_cast<void**>(*mInstance))
+            return;
+        // The dialog's dimmed backdrop is made for 16:9: three centered layers 1200 wide and a darker one (x 78, 887
+        // wide) that runs off the right side. On wider screens they grow to the screen's edges, the darker one keeps
+        // its left edge.
+        float halfScreen = 240.0f * ScreenAspectRatio() + 40.0f;
+        float width = std::max(1200.0f, 2.0f * halfScreen);
+        constexpr float DarkX = 78.0f, DarkWidth = 887.0f, DarkLeft = DarkX - DarkWidth / 2.0f;
+        float darkWidth = std::max(DarkWidth, halfScreen - DarkLeft);
+        struct Layer { uint32_t hash; float width; std::optional<float> x; };
+        for (auto& layer : { Layer{ 0xC6AFDD7Eu, width }, Layer{ 0xE03FF6FBu, width }, Layer{ 0xF019AE2Bu, width },
+            Layer{ 0xF019AE2Cu, darkWidth, DarkLeft + darkWidth / 2.0f } })
+        {
+            auto object = static_cast<FEObject*>(FE::Object::FindObject("FeDialog.fng", layer.hash));
+            if (!object || !object->pData)
+                continue;
+            auto& x = *reinterpret_cast<float*>(object->pData + 28);    // position
+            auto& size = *reinterpret_cast<float*>(object->pData + 56);
+            if (size != layer.width || (layer.x && x != *layer.x))
+            {
+                size = layer.width;
+                if (layer.x)
+                    x = *layer.x;
+                object->Flags |= 0x400000;
+            }
+        }
+    }
+
+    // Options pages park their value list (x 1145 in the page) and slider row (x 1307) right of a 16:9 screen until
+    // they're used; on screens wider than about 3:1 they showed at the right edge. They're parked further out there
+    // (the game puts them at the row when opened and back at the parked spot when closed).
+    void UpdateParkedOptions()
+    {
+        if (!FE::Object::FindObject || !mInstance || !*mInstance || !*static_cast<void**>(*mInstance))
+            return;
+        float extra = std::max(0.0f, 240.0f * ScreenAspectRatio() - 708.0f);
+        struct Parked { uint32_t hash; float x; };
+        constexpr float None = std::numeric_limits<float>::quiet_NaN();
+        static float written[2][2] = { { None, None }, { None, None } };
+        constexpr const char* Packages[] = { "FeMainMenu.fng", "FePauseMain.fng" };
+        constexpr Parked Groups[] = { { 0xDF4DFD48u, 1145.0f }, { 0x4322CEB6u, 1307.0f } };
+        for (size_t p = 0; p < std::size(Packages); ++p)
+        {
+            for (size_t g = 0; g < std::size(Groups); ++g)
+            {
+                auto object = static_cast<FEObject*>(FE::Object::FindObject(Packages[p], Groups[g].hash));
+                if (!object || !object->pData)
+                    continue;
+                auto& x = *reinterpret_cast<float*>(object->pData + 28);    // position
+                float parked = Groups[g].x + extra;
+                if (x != parked && (x == Groups[g].x || x == written[p][g]))
+                {
+                    x = parked;
+                    written[p][g] = parked;
+                    object->Flags |= 0x400000;
+                }
+            }
+        }
+    }
 
     int __fastcall DestroyGroup(void* object, void*)
     {
@@ -90,6 +148,8 @@ namespace cFEng
 
     void ServiceHud()
     {
+        UpdateDialogBackdrop();
+        UpdateParkedOptions();
         bool changed = HudAspectRatioPending.exchange(false);
         if (changed)
             fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
@@ -154,9 +214,6 @@ public:
             auto findObject = hook::pattern("E8 ? ? ? ? 83 C4 ? 50 57 68 ? ? ? ? 8B CD E8 ? ? ? ? ? ? 8B 50");
             auto queue = hook::pattern("E8 ? ? ? ? 5E 59 C3 8B 96");
             auto hudMessage = hook::pattern("52 68 ? ? ? ? E8 ? ? ? ? 5E 59");
-            if (destroyGroup.size() != 1 || hudFrame.size() != 1 || setCenter.size() != 1 || getCenter.size() != 1 ||
-                findObject.size() != 1 || queue.size() != 1 || hudMessage.size() != 1)
-                return;
             FE::Object::SetCenter = reinterpret_cast<decltype(FE::Object::SetCenter)>(injector::GetBranchDestination(setCenter.get_first()).as_int());
             FE::Object::GetCenter = reinterpret_cast<decltype(FE::Object::GetCenter)>(injector::GetBranchDestination(getCenter.get_first()).as_int());
             FE::Object::FindObject = reinterpret_cast<decltype(FE::Object::FindObject)>(injector::GetBranchDestination(findObject.get_first()).as_int());
@@ -169,7 +226,7 @@ public:
                 cFEng::shDestroyGroup.reset();
                 return;
             }
-            cFEng::mInstance = *queue.get_first<void**>(-9);
+            cFEng::mInstance.SetAddress(*queue.get_first<void**>(-9));
             cFEng::hbQueuePackageMessage.fun = injector::MakeCALL(queue.get_first(), cFEng::QueuePackageMessage, true).get();
             injector::MakeCALL(hudMessage.get_first(6), cFEng::QueuePackageMessage, true);
         };

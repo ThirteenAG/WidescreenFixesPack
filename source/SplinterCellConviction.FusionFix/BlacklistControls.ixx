@@ -155,27 +155,21 @@ namespace BlacklistControls
 
         // RTTI: type descriptor (name at +8) <- complete object locator (signature 0, offset 0, cd offset, type descriptor) <- vtable[-1]
         auto name = hook::range_pattern(base, end, hex(typeName.data(), typeName.size() + 1));
-        if (name.empty())
-            return 0;
         auto typeDescriptor = reinterpret_cast<uintptr_t>(name.get_first()) - 8;
         auto locator = hook::range_pattern(base, end, "00 00 00 00 00 00 00 00 ? ? ? ? " + hex(&typeDescriptor, 4));
-        if (locator.empty())
-            return 0;
         auto locatorAddress = reinterpret_cast<uintptr_t>(locator.get_first());
         auto vtable = hook::range_pattern(base, end, hex(&locatorAddress, 4));
-        return vtable.empty() ? 0 : reinterpret_cast<uintptr_t>(vtable.get_first()) + 4;
+        return reinterpret_cast<uintptr_t>(vtable.get_first()) + 4;
     }
 
     template<size_t Index>
     void HookCoverState(const char* typeName)
     {
         auto vtable = FindVtable(typeName);
-        if (!vtable)
-            return;
         stateFunctions[Index][1] = *reinterpret_cast<StateFunction*>(vtable + 41 * 4);
         stateFunctions[Index][0] = *reinterpret_cast<StateFunction*>(vtable + 43 * 4);
-        ProtectedGameRef<decltype(&CoverStateFunction<Index, true>)>(reinterpret_cast<decltype(&CoverStateFunction<Index, true>)*>(vtable + 41 * 4)) = &CoverStateFunction<Index, true>;
-        ProtectedGameRef<decltype(&CoverStateFunction<Index, false>)>(reinterpret_cast<decltype(&CoverStateFunction<Index, false>)*>(vtable + 43 * 4)) = &CoverStateFunction<Index, false>;
+        injector::WriteMemory(vtable + 41 * 4, &CoverStateFunction<Index, true>, true);
+        injector::WriteMemory(vtable + 43 * 4, &CoverStateFunction<Index, false>, true);
     }
 
     template<size_t... Index>
@@ -213,7 +207,7 @@ namespace BlacklistControls
             if (auto vtable = FindVtable(DropStates[Index]))
             {
                 dropBeginState[Index] = *reinterpret_cast<StateFunction*>(vtable + 41 * 4);
-                ProtectedGameRef<decltype(&DropStateBegin<Index>)>(reinterpret_cast<decltype(&DropStateBegin<Index>)*>(vtable + 41 * 4)) = &DropStateBegin<Index>;
+                injector::WriteMemory(vtable + 41 * 4, &DropStateBegin<Index>, true);
             }
         }(), ...);
     }

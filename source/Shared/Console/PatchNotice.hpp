@@ -2,7 +2,6 @@
 
 #include "PSP.hpp"
 #include <cstdio>
-#include <initializer_list>
 
 namespace console::portable
 {
@@ -27,18 +26,5 @@ namespace console::portable
     inline bool BeginWithNotice()
     {
         return injector::InitializeCheckedRuntime(PatchRejected) == PSP_HOOK_OK;
-    }
-
-    inline bool FeatureSites(std::initializer_list<uintptr_t> sites, const char* failure)
-    {
-        for (auto site : sites)
-        {
-            if (!site)
-            {
-                PatchNotice(failure);
-                return false;
-            }
-        }
-        return true;
     }
 }

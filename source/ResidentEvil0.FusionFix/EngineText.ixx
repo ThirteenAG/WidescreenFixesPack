@@ -1,0 +1,92 @@
+module;
+
+#include <stdafx.h>
+#include <algorithm>
+#include <array>
+#include <cstring>
+#include <limits>
+#include <string_view>
+
+export module EngineText;
+
+export namespace RE0Text
+{
+    template<class T> T Read(const void* object, size_t offset)
+    {
+        return *reinterpret_cast<const T*>(static_cast<const uint8_t*>(object) + offset);
+    }
+
+    template<class T> void Write(void* object, size_t offset, T value)
+    {
+        std::memcpy(static_cast<uint8_t*>(object) + offset, &value, sizeof(value));
+    }
+
+    using Factory = void* (__cdecl*)();
+    inline Factory factory = nullptr;
+    inline uintptr_t* textVtable = nullptr;
+
+    inline bool Bind()
+    {
+        auto current = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B 10 83 C4 04 8B C8 FF 35 ? ? ? ? 6A 10 68 80 01 00 00 FF 52 1C 85 C0 74 07 8B C8 E9 34 BA FF FF 33 C0 C3");
+        auto original = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B 10 83 C4 04 8B C8 FF 35 ? ? ? ? 6A 10 68 80 01 00 00 FF 52 1C 85 C0 74 07 8B C8 E9 54 B9 FF FF 33 C0 C3");
+        const auto entry = current.empty() ? original.get_first<uint8_t>() : current.get_first<uint8_t>();
+        const auto constructor = entry + 44 + Read<int32_t>(entry, 40);
+        factory = reinterpret_cast<Factory>(entry);
+        textVtable = Read<uintptr_t*>(constructor, 10);
+        const auto setter = textVtable[23];
+        hook::range_pattern(setter, setter + 256, "83 EC 74 56 8B F1 8B 06 FF 50 64").get_first();
+        return true;
+    }
+
+    // Nodes are allocated and destroyed by the game's GUI tree, including its font buffers.
+    inline void* Append(void* gui, void* parent, uint32_t priority)
+    {
+        if (!factory || !gui || !parent || !Read<void*>(gui, 240)) return nullptr;
+        auto node = factory();
+        if (!node) return nullptr;
+        Write(node, 8, priority);
+        Write(node, 104, parent);
+        Write(node, 108, gui);
+        // The options resource contains image labels. A null local resource selects the global UI font bank.
+        Write<void*>(node, 112, nullptr);
+        auto flags = Read<uint32_t>(node, 84) | 9;
+        if (Read<uint32_t>(gui, 328) & 0x400) flags |= 0x200000;
+        Write(node, 84, flags);
+        auto sibling = Read<void*>(parent, 96);
+        if (sibling)
+        {
+            while (auto next = Read<void*>(sibling, 100)) sibling = next;
+            Write(sibling, 100, node);
+        }
+        else Write(parent, 96, node);
+        Write(parent, 84, Read<uint32_t>(parent, 84) | 0x40000);
+        return node;
+    }
+
+    inline void Set(void* node, std::string_view value)
+    {
+        if (!node || value.size() > static_cast<size_t>(std::numeric_limits<int>::max())) return;
+        using SetText = void (__thiscall*)(void*, const char*, int, int);
+        // The instance overload in slot 23 owns a UTF-8 copy and its native glyph packet.
+        reinterpret_cast<SetText>(Read<uintptr_t*>(node, 0)[23])(
+            node, value.data(), static_cast<int>(value.size()), -1);
+    }
+
+    inline void Place(void* node, float x, float y, int size, uint32_t color = 0xFFFFFFFF)
+    {
+        if (!node) return;
+        Write(node, 160, x);
+        Write(node, 164, y);
+        Write(node, 228, color);
+        Write(node, 232, size);
+        Write(node, 236, size);
+        Write(node, 280, Read<uint32_t>(node, 280) | 0x10000);
+        Write(node, 84, Read<uint32_t>(node, 84) | 0x10000);
+    }
+
+    inline void Show(void* node, bool visible)
+    {
+        // Native page transitions deactivate nodes; visible generated text must resume update and drawing.
+        if (node) Write(node, 84, (Read<uint32_t>(node, 84) & ~1u) | (visible ? 9u : 0u));
+    }
+}

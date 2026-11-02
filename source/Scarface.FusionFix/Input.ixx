@@ -5,10 +5,14 @@ module;
 #include "Frame.hpp"
 #include "GamepadProfile.hpp"
 #include "RawMouse.hpp"
+#include "OverlayInput.hpp"
+#include "VibrationInput.hpp"
+#include <stdexcept>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
 export module Input;
+import ComVars;
 import ControllerPrompts;
 
 void InitXidi();
@@ -17,14 +21,12 @@ void InitScarfaceHook();
 class OptionManager
 {
 public:
-    static inline HWND* hWnd = nullptr;
-    static inline bool* bIsInvertX = nullptr;
-    static inline bool* bIsInvertY = nullptr;
-    static inline int* nMouseLookSensitivity = nullptr;
     static inline bool bGamepadUsed = false;
+    static inline const float* GamepadCameraSpeed = nullptr;
     static inline const float* VehicleCameraRecenterDelay = nullptr;
     static inline uint32_t nVehicleCameraAimHoldOffset = 0;
     static inline bool (*pScarfaceHook_GetMenuActive)() = nullptr;
+    static inline bool (*NativeMenuActive)() = nullptr;
 
     static inline float GetVehicleCameraRecenterDelay()
     {
@@ -37,29 +39,48 @@ public:
         bGamepadUsed = (std::isfinite(x) && x != 0.0f) || (std::isfinite(y) && y != 0.0f);
     }
 
+    __declspec(noinline) static void ScaleGamepadMotion(volatile float* x, volatile float* y)
+    {
+        alignas(16) unsigned char state[512];
+        _fxsave(state);
+        const float horizontal = *x, vertical = *y;
+        RecordGamepadMotion(horizontal, vertical);
+        const float speed = GamepadCameraSpeed && std::isfinite(*GamepadCameraSpeed)
+            ? std::clamp(*GamepadCameraSpeed, 0.1f, 5.0f) : 1.0f;
+        if (std::isfinite(horizontal))
+            *x = horizontal * speed;
+        if (std::isfinite(vertical))
+            *y = vertical * speed;
+        _fxrstor(state);
+    }
+
     static inline bool IsInvertX()
     {
-        return *bIsInvertX;
+        return bIsInvertX.get();
     }
     static inline bool IsInvertY()
     {
-        return *bIsInvertY;
+        return bIsInvertY.get();
     }
     static inline float GetMouseLookSensitivity()
     {
-        return *nMouseLookSensitivity / 10.0f;
+        return nMouseLookSensitivity.get() / 10.0f;
     }
     static inline bool ScarfaceHook_GetMenuActive()
     {
-        if (pScarfaceHook_GetMenuActive)
-            return pScarfaceHook_GetMenuActive();
-        return false;
+        return (pScarfaceHook_GetMenuActive && pScarfaceHook_GetMenuActive()) ||
+            (NativeMenuActive && NativeMenuActive());
     }
 };
 
 SafetyHookInline shWndProc = {};
 LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
+    if ((Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam)) && ScarfaceVibrationInput::stop)
+        ScarfaceVibrationInput::stop();
+    LRESULT result = 0;
+    if (ScarfaceOverlayInput::Message(hWnd, Msg, wParam, lParam, result))
+        return result;
     ControllerPrompts::OnMessage(hWnd, Msg, wParam, lParam);
     if (Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam))
         ScarfaceRawMouse::Clear();
@@ -75,7 +96,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 
 bool SetMouseInput(float* dest_x, float* dest_y, std::optional<float> baseline_x = {}, std::optional<float> baseline_y = {}, unsigned axes = 3)
 {
-    if (!OptionManager::hWnd || !*OptionManager::hWnd || *OptionManager::hWnd != GetForegroundWindow() || OptionManager::ScarfaceHook_GetMenuActive())
+    if (ScarfaceOverlayInput::BlocksInput() || !hWndInput.is_initialized() || !hWndInput.get() || hWndInput.get() != GetForegroundWindow() || OptionManager::ScarfaceHook_GetMenuActive())
     {
         ScarfaceRawMouse::Clear();
         return false;
@@ -161,60 +182,24 @@ void Init()
 {
     auto& settings = FixSettings();
     auto bScrollWeaponsWithMouseWheel = settings.Bool("MAIN.ScrollWeaponsWithMouseWheel");
-    for (const auto signature : {
-        "A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A3",
-        "E8 ? ? ? ? 56 68 ? ? ? ? E8 ? ? ? ? 83 C4 10",
-        "A3 ? ? ? ? 5B 74 0F",
-        "8B 0D ? ? ? ? 53 8B 5C 24 ? 55",
-        "D9 58 10 83 C4 5C C2 0C 00",
-        "83 EC 10 57 8B F9 80 BF",
-        "E8 ? ? ? ? 84 C0 74 0C C6 85",
-        "D9 59 10 88 41 19",
-        "E8 ? ? ? ? D9 5C 24 2C 83 C4 0C D9 05",
-        "E8 ? ? ? ? D9 5C 24 24 D9 05 ? ? ? ? 83",
-        "7A 0E D9 44 24 1C B1 01",
-        "75 2B 8B 44 24 20 89 44 24 10",
-        "75 2B 8B 44 24 18 89 44 24 10 21 54 24 10",
-        "7A 0E D9 44 24 1C D8 4C 24 18",
-        "7A 08 DD D8 D9 05 ? ? ? ? D9 44 24 20 8D BE ? ? ? ? D8 C9",
-        "B9 ? ? ? ? 21 4C 24 10 D9 44 24 10 89 54 24 14" })
-    {
-        if (hook::pattern(signature).size() != 1)
-        {
-            OutputDebugStringA("Scarface: mouse/input patterns unavailable.\n");
-            return;
-        }
-    }
-    if (bScrollWeaponsWithMouseWheel)
-    {
-        const auto data = hook::pattern("8B B7 ? ? ? ? 85 F6 74 21 90").size();
-        auto scroll = hook::pattern("0F BF 54 24 08 ? ? ? ? 03").size();
-        if (!scroll)
-            scroll = hook::pattern("0F BF 54 24 ? E9").size();
-        if (data != 1 || scroll != 1)
-        {
-            bScrollWeaponsWithMouseWheel = false;
-            OutputDebugStringA("Scarface: mouse-wheel weapon patterns unavailable.\n");
-        }
-    }
+    OptionManager::GamepadCameraSpeed = &settings.Float("MAIN.GamepadCameraSpeed");
     OptionManager::VehicleCameraRecenterDelay = &settings.Float("MAIN.VehicleCameraRecenterDelay");
+    auto menu = hook::pattern("E8 ? ? ? ? 84 C0 75 A4");
+    OptionManager::NativeMenuActive = reinterpret_cast<decltype(OptionManager::NativeMenuActive)>(injector::GetBranchDestination(menu.get_first()).as_int());
 
     auto pattern = hook::pattern("A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A3");
-    OptionManager::bIsInvertX = *pattern.get_first<bool*>(1);
-    OptionManager::bIsInvertY = *pattern.get_first<bool*>(6);
-    pattern = hook::pattern("E8 ? ? ? ? 56 68 ? ? ? ? E8 ? ? ? ? 83 C4 10");
-    OptionManager::nMouseLookSensitivity = *(int**)(injector::GetBranchDestination(pattern.get_first()).as_int() + 5);
+    bIsInvertX.SetAddress(*pattern.get_first<bool*>(1));
+    bIsInvertY.SetAddress(*pattern.get_first<bool*>(6));
+    pattern = hook::pattern("8B 44 24 04 A3 ? ? ? ? C3 CC CC CC CC CC CC A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 8A 44 24 04 A2 ? ? ? ? C3 CC CC CC CC CC CC A0 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 8A 44 24 04 A2 ? ? ? ? C3");
+    nMouseLookSensitivity.SetAddress(*pattern.get_first<int*>(5));
 
     pattern = hook::pattern("A3 ? ? ? ? 5B 74 0F");
-    OptionManager::hWnd = *pattern.get_first<HWND*>(1);
+    hWndInput.SetAddress(*pattern.get_first<HWND*>(1));
 
     pattern = hook::pattern("8B 0D ? ? ? ? 53 8B 5C 24 ? 55");
     shWndProc = safetyhook::create_inline(pattern.get_first(), WndProc);
     if (!shWndProc)
-    {
-        OutputDebugStringA("Scarface: mouse window hook unavailable.\n");
-        return;
-    }
+        throw std::runtime_error("Mouse window hook unavailable");
 
     pattern = hook::pattern("D9 58 10 83 C4 5C C2 0C 00");
     struct SetOutput_Update_FreeLook
@@ -269,7 +254,7 @@ void Init()
         void operator()(injector::reg_pack& regs)
         {
             regs.ecx = 0x7FFFFFFF;
-            OptionManager::RecordGamepadMotion(*reinterpret_cast<float*>(regs.esp + 0x1C), *reinterpret_cast<float*>(regs.esp + 0x18));
+            OptionManager::ScaleGamepadMotion(reinterpret_cast<float*>(regs.esp + 0x1C), reinterpret_cast<float*>(regs.esp + 0x18));
         }
     }; injector::MakeInline<GamepadCheck>(pattern.get_first(0));
 
@@ -289,11 +274,11 @@ void Init()
                     auto rgdod = (LPDIDEVICEOBJECTDATA)(regs.esp + 0x10);
                     if (rgdod)
                     {
-                        nMouseWheelValue = 0;
                         switch (rgdod->dwOfs)
                         {
                             case offsetof(DIMOUSESTATE, lZ):
-                                nMouseWheelValue = rgdod->dwData;
+                                nMouseWheelValue = int(std::clamp<int64_t>(int64_t(nMouseWheelValue) +
+                                    int32_t(rgdod->dwData), -120 * WHEEL_DELTA, 120 * WHEEL_DELTA));
                                 break;
                             default:
                                 break;
@@ -311,8 +296,12 @@ void Init()
             {
                 *(int32_t*)&regs.edx = *(int16_t*)(regs.esp + 0x8);
 
-                if (OptionManager::bGamepadUsed || OptionManager::ScarfaceHook_GetMenuActive())
+                if (ScarfaceOverlayInput::BlocksInput() || !hWndInput.is_initialized() || !hWndInput.get() ||
+                    GetForegroundWindow() != hWndInput.get() || OptionManager::bGamepadUsed || OptionManager::ScarfaceHook_GetMenuActive())
+                {
+                    nMouseWheelValue = 0;
                     return;
+                }
 
                 enum
                 {
@@ -320,24 +309,16 @@ void Init()
                     weaponright = 0xA
                 };
 
-                static auto counter = 0;
+                // Consume each physical detent once. Mouse motion events must not erase queued wheel input.
                 if (nMouseWheelValue >= WHEEL_DELTA)
-                    counter++;
-                else if (nMouseWheelValue <= -WHEEL_DELTA)
-                    counter--;
-                else
-                    counter = 0;
-
-                static constexpr auto duration = 30;
-                if (counter > 0 && counter < duration)
-                    *reinterpret_cast<int16_t*>(regs.ecx + weaponleft * 2) = 1;
-                else if (counter < 0 && counter > -duration)
-                    *reinterpret_cast<int16_t*>(regs.ecx + weaponright * 2) = 1;
-
-                if (counter < -duration || counter > duration)
                 {
-                    counter = 0;
-                    nMouseWheelValue = 0;
+                    *reinterpret_cast<int16_t*>(regs.ecx + weaponleft * 2) = 1;
+                    nMouseWheelValue -= WHEEL_DELTA;
+                }
+                else if (nMouseWheelValue <= -WHEEL_DELTA)
+                {
+                    *reinterpret_cast<int16_t*>(regs.ecx + weaponright * 2) = 1;
+                    nMouseWheelValue += WHEEL_DELTA;
                 }
             }
         }; injector::MakeInline<MouseScroll>(pattern.get_first(0));
@@ -345,14 +326,14 @@ void Init()
 
     ScarfaceFrame::Handlers.push_back([](void* display)
     {
-        if (OptionManager::hWnd && *OptionManager::hWnd &&
-            *reinterpret_cast<HWND*>(static_cast<uint8_t*>(display) + 0x1C8) == *OptionManager::hWnd)
+        if (hWndInput.is_initialized() && hWndInput.get() &&
+            *reinterpret_cast<HWND*>(static_cast<uint8_t*>(display) + 0x1C8) == hWndInput.get())
         {
             ScarfaceRawMouse::EndFrame();
             ScarfaceProfile::Update();
         }
     });
-    ScarfaceRawMouse::Install(settings.Int("MAIN.RawInputMouse"), settings.Float("MAIN.MouseSensitivity"), OptionManager::hWnd, bool(ScarfaceFrame::PresentHook));
+    ScarfaceRawMouse::Install(settings.Int("MAIN.RawInputMouse"), settings.Float("MAIN.MouseSensitivity"), &hWndInput, bool(ScarfaceFrame::PresentHook));
     WFP::onShutdownEvent() += []()
     {
         ScarfaceProfile::Shutdown();
@@ -371,10 +352,7 @@ void InitXidi()
     if (bModernControlScheme)
     {
         if (!ScarfaceFrame::PresentHook)
-        {
-            OutputDebugStringA("Scarface: controller profile frame boundary unavailable.\n");
-            return;
-        }
+            throw std::runtime_error("Controller profile frame boundary unavailable");
         typedef bool (*XidiRegisterProfileCallbackFunc)(const wchar_t* (*callback)());
         auto xidiModule = GetModuleHandleW(L"Xidi.32.dll");
 
@@ -383,28 +361,31 @@ void InitXidi()
             auto XidiRegisterProfileCallback = (XidiRegisterProfileCallbackFunc)GetProcAddress(xidiModule, "XidiRegisterProfileCallback");
             if (XidiRegisterProfileCallback)
             {
-                auto menu = hook::pattern("E8 ? ? ? ? 84 C0 75 A4");
+                auto menu = hook::pattern("A1 ? ? ? ? 80 B8 77 01 00 00 00 75 12 B9 80 00 00 00 39 48 44");
                 auto player = hook::pattern("A1 ? ? ? ? 85 C0 74 50");
-                if (menu.size() != 1 || player.size() != 1)
-                {
-                    OutputDebugStringA("Scarface: controller profile context unavailable.\n");
-                    return;
-                }
                 static const ScarfaceProfile::Context context = [&]()
                 {
-                    auto isPaused = reinterpret_cast<bool(__cdecl*)()>(injector::GetBranchDestination(menu.get_first()).as_int());
-                    const auto flow = *reinterpret_cast<const uint8_t*>(isPaused) == 0xA1
-                        ? *reinterpret_cast<const uintptr_t* const*>(reinterpret_cast<uintptr_t>(isPaused) + 1) : nullptr;
-                    return ScarfaceProfile::Context{ isPaused, flow, *player.get_first<void**>(1), 0x2E8 };
+                    auto isPaused = reinterpret_cast<bool(__cdecl*)()>(menu.get_first());
+                    const auto flow = *menu.get_first<uintptr_t*>(1);
+                    if (flow)
+                        profileFlowManager.SetAddress(const_cast<uintptr_t*>(flow));
+                    const auto character = *player.get_first<void**>(1);
+                    if (character)
+                        profileCharacter.SetAddress(character);
+                    return ScarfaceProfile::Context{ isPaused, &profileFlowManager, &profileCharacter, 0x2E8 };
                 }();
                 ScarfaceProfile::Bindings.store(&context, std::memory_order_release);
                 if (!XidiRegisterProfileCallback(ScarfaceProfile::Read))
                 {
                     ScarfaceProfile::Shutdown();
-                    OutputDebugStringA("Scarface: controller profile callback rejected.\n");
+                    throw std::runtime_error("Controller profile callback rejected");
                 }
             }
+            else
+                throw std::runtime_error("Controller profile callback unavailable");
         }
+        else
+            throw std::runtime_error("Controller proxy unavailable");
     }
 }
 

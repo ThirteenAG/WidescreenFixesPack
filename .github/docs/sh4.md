@@ -1,58 +1,39 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/sh4/main2.jpg" width="760" alt="Silent Hill 4: The Room Widescreen Fix">
+<img src="https://thirteenag.github.io/screens/sh4/main2.jpg" width="760" alt="Silent Hill 4: The Room Fusion Fix">
 
-**Silent Hill 4: The Room Widescreen Fix** brings the game to any resolution and aspect ratio, with an optional modern over-the-shoulder camera, analog gamepad controls, 30 FPS cutscenes and its settings in the game's own Options screen.
+**Silent Hill 4: The Room Fusion Fix** adds widescreen support, a modern camera, analog controller movement and settings in the game's Options screen.
 
-[Website](https://thirteenag.github.io/wfp#sh4) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SilentHill4.WidescreenFix/dllmain.cpp)
+[Website](https://thirteenag.github.io/wfp#sh4) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SilentHill4.FusionFix/dllmain.cpp)
 
 </div>
 
----
+## Installation
 
-## Fixes
+Extract the release archive beside `Silent Hill 4.exe`, preserving its folders. Launch the game to create `scripts/SilentHill4.FusionFix.cfg`. Settings are also available in FusionFixHub and on fusionfix.io. Restart when an option requires it.
 
-- **Resolution** — The desktop resolution by default, or a resolution set in the fix's options.
-- **Widescreen** — Hor+ field of view. The interface, text, menus and pictures stay in a centred 4:3 area, while effects placed in the world, screen effects (blur, depth of field, glow, film, map zoom) and full-screen fades cover the whole screen; peep holes and the door scope get black sides (#556). The mouse hit areas follow the 4:3 menus (#554).
-- **Cutscenes** — Run at 30 FPS instead of 15 and never show what the PS2's cinematic bars covered.
-- **Display** — Exclusive full screen, a borderless window or a framed window. Alt+Enter switches between fullscreen and the last window mode; the gamma setting also works in a window, and the game no longer minimizes when it loses the focus.
-- **Stability** — No registry needed, no "safe mode" reset to 640x480 after a crash, no failing hardware check (DirectSound effects and realtime shadows stay on), stereo sound that actually pans, and the French, German, Italian and Spanish text of the game can be chosen.
-- **Controllers** — Analog movement and camera, a modern Xidi layout, pad button names in the button configuration, rumble, and mouse movement without slowdown.
+## Settings
 
-## Notes
+The fourth Options page, **Plugins**, lists installed plugins with settings. Open **Fusion Fix** to change its options. Longer lists scroll as you move through them. **Preset** selects Vanilla, Recommended or Enhanced; **Restore Defaults** resets that plugin's settings. F1 or the map button opens the selected option's complete description. A separate notice identifies changes that need a restart. Camera mode remains the player's choice when changing presets.
 
-Modern anti-aliasing is not exposed in the settings.
+- **Display** chooses fullscreen, a framed window or borderless mode. Alt+Enter switches between fullscreen and the last window mode. Gamma also works in a window.
+- **Camera** retains the classic view or enables the modern camera outside the apartment, with speed, inversion, distance and field of view controls.
+- **Gameplay FOV** uses 1.0 as neutral and limits widening to 150 degrees across. Aiming and scripted camera shots retain their own projection.
+- **Cutscene borders** — Off fills the screen; Letterbox keeps the original top and bottom bars; Pillarbox keeps the 4:3 framing on wider screens; Both combines them.
+- **Movies** — Original shows them as the game does, whole inside its centred 4:3 frame with black bars around them; Fill fits the whole movie to the screen. Nothing is cut off or stretched.
+- **HUD width** moves the health, charge and interaction indicators to the screen edge or a centered aspect-ratio box. Other interface elements retain their centered layout.
+- **Pause in background** pauses gameplay while the game window is inactive.
+- **Confine cursor** keeps the pointer inside the active game window and releases it on focus loss, window dragging or system menus.
+- **Controller icons** offers Auto/Xbox, PlayStation and Nintendo. Auto uses Xbox; the other families are selected manually. Artwork applies to controller-binding fields.
+- **Check for Updates** is off by default. When enabled, available updates appear in the native Options screen.
 
-## Options
-
-- **In-game options** — The fourth Options page, **Option 4 (Plugins)** after Option 3 (the shoulder buttons or title arrows), lists plugins with settings, with Widescreen Fix first. Open a plugin to change its settings; longer lists continue on numbered pages. Its **Preset** row selects Vanilla, Recommended or Enhanced; accept twice to confirm. **Restore Defaults** resets that plugin's settings. Most changes apply at once; settings that need a restart say so. Open this page from the title or pause menu. Settings are saved in `scripts/SilentHill4.WidescreenFix.cfg` and can also be changed on fusionfix.io or in FusionFixHub.
-- **Camera** — Classic or a modern free camera over the shoulder outside the apartment (right stick or mouse), with its speed, inversion, distance and field of view.
-- **Cinematic bars** — Black bars in cutscenes as on the PS2.
-- **Movies** — Original shape or filling the screen.
-- **Intro** — Start at the title menu without the logos and the opening movie.
-
----
-
-HUD Aspect Ratio Constraint applies live to the left-anchored health indicator: Auto uses the screen edge and a ratio uses a centered box. Inventory HUD elements and controller prompt icons are not covered. Gameplay FOV, four cutscene-border modes and the Original/Fill/Stretch movie choices are available.
-
-Button prompts follow the keyboard, mouse or controller you last used. A held button does not switch them back after you use another device.
-
-**Confine cursor** keeps the pointer inside the game window. It can be changed while playing and is enabled by default in all window modes. The pointer is released when you leave the game, drag its window, open a system menu or turn the option off.
+The archive includes Xidi with its built-in XInput backend. Other controllers can use Steam Input or DS4Windows. Existing custom bindings are retained; the modern default layout replaces the retail layout when it is still unchanged. Analog movement and the modern camera use the game's controller input.
 
 ## Known limits
 
-- HUD width moves the health display; it does not reposition the inventory or every icon.
-- Resolution changes require a restart. Raw mouse input and a configurable frame-rate limiter are not supported.
-
----
-
-## Installation
-
-1. Download the fix archive from this release.
-2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
-3. Launch the game once to create `scripts/SilentHill4.WidescreenFix.cfg`.
-4. Optionally change the settings in the game's Options > Option 4 (Plugins), in FusionFixHub, or on fusionfix.io. Restart the game when an option requires it.
-
-
+- HUD width does not reposition the complete inventory or every interface element.
+- Hardcoded controller instructions retain the game's text; keyboard and mouse binding labels stay native.
+- Display resolution changes require a restart.
+- The native frame-rate limit remains. There is no developer overlay for Direct3D 8.
 
 <p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile-dark.svg"><source media="(max-width: 768px)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile.svg"><source media="(prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-dark.svg"><img width="100%" src="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>

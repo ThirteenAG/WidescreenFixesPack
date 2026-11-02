@@ -32,6 +32,106 @@
   ],
   "settings": [
     {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "min": 30,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@FPSLimit.unlimited"
+        },
+        {
+          "value": -1,
+          "label": "@fps.monitor"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
+        }
+      ],
+      "label": "@FPSLimit",
+      "description": "@FPSLimit.description",
+      "page": "display",
+      "apply": "live",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@FMVWidescreenMode.original"
+        },
+        {
+          "value": 1,
+          "label": "@FMVWidescreenMode.fill"
+        }
+      ],
+      "label": "@FMVWidescreenMode",
+      "description": "@FMVWidescreenMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "label": "@MAIN.GamepadIcons",
+      "description": "@MAIN.GamepadIcons.description",
+      "page": "display",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@menu.auto"
+        },
+        {
+          "value": 1,
+          "label": "Xbox"
+        },
+        {
+          "value": 2,
+          "label": "PlayStation"
+        },
+        {
+          "value": 3,
+          "label": "Nintendo"
+        }
+      ],
+      "visibility": "menu"
+    },
+    {
       "id": "MAIN.HideMouseCursorAfterMs",
       "type": "int",
       "default": 5000,
@@ -49,6 +149,26 @@
       "max": 600000
     },
     {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@PauseOnFocusLoss",
+      "description": "@PauseOnFocusLoss.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
       "id": "MAIN.SkipIntro",
       "type": "bool",
       "default": 1,
@@ -64,25 +184,44 @@
       }
     },
     {
-      "id": "MAIN.DoorSkip",
+      "id": "MAIN.SkipPressStart",
       "type": "bool",
       "default": 1,
+      "label": "@SkipPressStart",
+      "description": "@SkipPressStart.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.DoorSkip",
+      "type": "bool",
+      "default": 0,
       "label": "@DoorSkip",
       "description": "@DoorSkip.description",
       "page": "display",
       "visibility": "menu",
       "apply": "restart",
       "presets": {
-        "vanilla": false,
-        "recommended": 1,
+        "vanilla": 0,
+        "recommended": 0,
         "enhanced": 1
       }
     },
     {
       "id": "MAIN.WindowMode",
       "type": "choice",
-      "default": 2,
+      "default": 0,
       "choices": [
+        {
+          "value": 0,
+          "label": "@WindowMode.fullscreen"
+        },
         {
           "value": 1,
           "label": "@WindowMode.windowed"
@@ -124,12 +263,7 @@
       "description": "@DisableNoise.description",
       "page": "graphics",
       "visibility": "menu",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
       "id": "MAIN.DisableColorCorrection",
@@ -139,12 +273,7 @@
       "description": "@DisableColorCorrection.description",
       "page": "graphics",
       "visibility": "menu",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
       "id": "MAIN.DisableFog",
@@ -154,22 +283,52 @@
       "description": "@DisableFog.description",
       "page": "graphics",
       "visibility": "menu",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
-      "id": "MAIN.DisableCreateQuery",
-      "type": "bool",
-      "default": 0,
-      "label": "@DisableCreateQuery",
-      "description": "@DisableCreateQuery.description",
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
       "page": "compatibility",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
       "visibility": "editor",
-      "apply": "restart"
+      "apply": "menu"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@MAIN.CheckForUpdates",
+      "description": "@MAIN.CheckForUpdates.description",
+      "page": "display",
+      "apply": "live"
     }
   ]
 }

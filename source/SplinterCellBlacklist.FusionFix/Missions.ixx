@@ -5,6 +5,7 @@ module;
 #include <sstream>
 #include <format>
 #include <array>
+#include <stdexcept>
 
 export module Missions;
 
@@ -142,7 +143,7 @@ namespace ExtractionOnOtherMaps
         resettingCheckpoint = false;
         auto levelInfo = *reinterpret_cast<uint8_t**>(matchManager + 0x318);
         auto level = *reinterpret_cast<uint8_t**>(matchManager + 0x148);
-        if (!levelInfo || !level || !pExtractionSpawnerClass || !*pExtractionSpawnerClass || IsCharlieMap(level))
+        if (!levelInfo || !level || !*pExtractionSpawnerClass || IsCharlieMap(level))
             return;
         if (createdSpawner && createdSpawnerLevelInfo == levelInfo)
             return;
@@ -169,7 +170,7 @@ namespace ExtractionOnOtherMaps
     {
         auto level = *reinterpret_cast<uint8_t**>(spawner + 0x148);
         auto game = *reinterpret_cast<uint8_t**>(spawner + 0x144);
-        if (!level || !game || !spawningInfo || !pAttractionPointClass || !*pAttractionPointClass)
+        if (!level || !game || !spawningInfo || !*pAttractionPointClass)
             return false;
 
         std::vector<const float*> players;
@@ -493,7 +494,7 @@ namespace CharlieMissions
     int32_t __fastcall IsRemovedInGameMode(uint8_t* actor, void* edx, uint8_t gameMode)
     {
         using namespace ExtractionOnOtherMaps;
-        if (gameMode == EXTRACTION && pAIPawnClass && *pAIPawnClass && IsCoopCampaignCopy(launchedMission) && IsA(actor, *pAIPawnClass))
+        if (gameMode == EXTRACTION && *pAIPawnClass && IsCoopCampaignCopy(launchedMission) && IsA(actor, *pAIPawnClass))
             return 1;
         return shIsRemovedInGameMode.thiscall<int32_t>(actor, gameMode);
     }
@@ -529,7 +530,6 @@ namespace CharlieMissions
 
     // The map list of the lobby only has maps made for the mode (NetOnlineMapAsset +38h: game mode flags, Extraction 4); the map of a launched
     // copy is added for Extraction, so the lobby finds the map (its image, the starting waves). Assets: data manager +34h -> +5Ch count, +64h items.
-    uint8_t** pNetOnlineManager = nullptr;
     uint8_t* patchedMapAsset = nullptr;
     uint32_t patchedMapAssetModes = 0;
 
@@ -542,9 +542,9 @@ namespace CharlieMissions
         }
 
         auto it = IsCopy(mission) ? copyMapAssets.find(*reinterpret_cast<int32_t*>(mission + 164)) : copyMapAssets.end();
-        if (it == copyMapAssets.end() || !pNetOnlineManager || !*pNetOnlineManager)
+        if (it == copyMapAssets.end() || !NetOnlineManager)
             return;
-        auto dataManager = *reinterpret_cast<uint8_t**>(*pNetOnlineManager + 8);
+        auto dataManager = *reinterpret_cast<uint8_t**>(NetOnlineManager + 8);
         auto maps = dataManager ? *reinterpret_cast<uint8_t**>(dataManager + 0x34) : nullptr;
         if (!maps)
             return;
@@ -665,7 +665,6 @@ namespace KestrelMissions
     }
 
     // AECooperativeMatchManager (the match manager global if its EndMission, virtual 5F8h, is the co-op one)
-    uint8_t** pMatchManager = nullptr;
     void* EndMission = nullptr;
 
     int32_t HVTSkeletalMesh = 0;
@@ -679,8 +678,8 @@ namespace KestrelMissions
 
     void CompleteMission()
     {
-        auto manager = pMatchManager ? *pMatchManager : nullptr;
-        if (!manager || !EndMission || (*reinterpret_cast<void***>(manager))[0x5F8 / 4] != EndMission)
+        uint8_t* manager = MatchManager;
+        if (!manager || (*reinterpret_cast<void***>(manager))[0x5F8 / 4] != EndMission)
             return;
         // EndMission(ECoopMissionEndReason Success, instigator, instant end), what a map's CoopEndMission does
         reinterpret_cast<void(__thiscall*)(uint8_t*, int32_t, void*, int32_t)>(EndMission)(manager, 1, nullptr, 0);
@@ -835,72 +834,61 @@ export void InitMissions()
                                              std::tuple{ "68 38 04 00 00 68 ? ? ? ? E8", &ExtractionOnOtherMaps::pAttractionPointClass, "AEAIAttractionPoint" },
                                              std::tuple{ "68 38 0D 00 00 68 ? ? ? ? E8", &ExtractionOnOtherMaps::pAIPawnClass, "AEAIPawn" } })
         {
-            hook::pattern(size).for_each_result([out, className](hook::pattern_match match)
+            uintptr_t found = 0;
+            hook::pattern(std::string("68 ? ? ? ? ") + size).for_each_result([&found, className](hook::pattern_match match)
             {
-                auto name = *match.get<const char*>(-4);
-                if (*match.get<uint8_t>(-5) == 0x68 && !IsBadReadPtr(name, 1) && strcmp(name, className) == 0)
-                    *out = *match.get<void**>(6);
+                auto name = *match.get<const char*>(1);
+                if (strcmp(name, className) == 0)
+                    found = reinterpret_cast<uintptr_t>(match.get<void>(5));
             });
+            *out = *reinterpret_cast<void***>(found + 6); // a missing class crashes here
         }
 
         // UObject::StaticAllocateObject(class, ...), before it reads the class
         pattern = hook::pattern("8B 7D 08 85 FF 75 ? 8B 45 10 8B C8 C1 E9 13 51 8B 0D");
-        if (!pattern.empty() && ExtractionOnOtherMaps::pHunterSpawnerClass && ExtractionOnOtherMaps::pExtractionSpawnerClass)
+        static auto AllocateObject = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            static auto AllocateObject = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            auto& objectClass = *reinterpret_cast<void**>(regs.ebp + 8);
+            if (CurrentGameMode == EXTRACTION && objectClass && objectClass == *ExtractionOnOtherMaps::pHunterSpawnerClass)
             {
-                auto& objectClass = *reinterpret_cast<void**>(regs.ebp + 8);
-                if (CurrentGameMode == EXTRACTION && objectClass && objectClass == *ExtractionOnOtherMaps::pHunterSpawnerClass)
+                // the caller then runs the constructor of the class it asked for (UClass +140h), redirected by the object's class
+                using namespace ExtractionOnOtherMaps;
+                auto& constructor = *reinterpret_cast<void(__cdecl**)(void*)>(static_cast<uint8_t*>(objectClass) + 0x140);
+                if (constructor != ClassConstructor)
                 {
-                    // the caller then runs the constructor of the class it asked for (UClass +140h), redirected by the object's class
-                    using namespace ExtractionOnOtherMaps;
-                    auto& constructor = *reinterpret_cast<void(__cdecl**)(void*)>(static_cast<uint8_t*>(objectClass) + 0x140);
-                    if (constructor != ClassConstructor)
-                    {
-                        HunterConstructor = constructor;
-                        ExtractionConstructor = *reinterpret_cast<void(__cdecl**)(void*)>(static_cast<uint8_t*>(*pExtractionSpawnerClass) + 0x140);
-                        constructor = ClassConstructor;
-                    }
-                    objectClass = *pExtractionSpawnerClass;
+                    HunterConstructor = constructor;
+                    ExtractionConstructor = *reinterpret_cast<void(__cdecl**)(void*)>(static_cast<uint8_t*>(*pExtractionSpawnerClass) + 0x140);
+                    constructor = ClassConstructor;
                 }
-            });
-        }
+                objectClass = *pExtractionSpawnerClass;
+            }
+        });
 
         pattern = hook::pattern("55 8B EC 83 EC 08 57 8B F9 8B 87 20 05 00 00 83 78 14 00 74 05 8B 40 10 EB 05 B8 ? ? ? ? 50 E8 ? ? ? ? 83 C4 04 85 C0 7F 16 8B 45 0C 8B 4D 08 50 51 8B CF E8");
-        if (!pattern.empty())
-        {
-            ExtractionOnOtherMaps::SpawnFromAnyGroup = reinterpret_cast<decltype(ExtractionOnOtherMaps::SpawnFromAnyGroup)>(injector::GetBranchDestination(pattern.get_first(0x36)).as_int());
-            ExtractionOnOtherMaps::shSpawnFromGroup = safetyhook::create_inline(pattern.get_first(), ExtractionOnOtherMaps::SpawnFromGroup);
-        }
+        ExtractionOnOtherMaps::SpawnFromAnyGroup = reinterpret_cast<decltype(ExtractionOnOtherMaps::SpawnFromAnyGroup)>(injector::GetBranchDestination(pattern.get_first(0x36)).as_int());
+        ExtractionOnOtherMaps::shSpawnFromGroup = safetyhook::create_inline(pattern.get_first(), ExtractionOnOtherMaps::SpawnFromGroup);
 
         // AEchelonLevelInfo::GetBlackBoxInfo
         pattern = hook::pattern("55 8B EC 8B 91 F4 12 00 00 56 33 C0 57 85 D2 7E ? 8B B1 F0 12 00 00 8B 7D 08 8B CE");
-        if (!pattern.empty())
-            ExtractionOnOtherMaps::shGetBlackBoxInfo = safetyhook::create_inline(pattern.get_first(), ExtractionOnOtherMaps::GetBlackBoxInfo);
+        ExtractionOnOtherMaps::shGetBlackBoxInfo = safetyhook::create_inline(pattern.get_first(), ExtractionOnOtherMaps::GetBlackBoxInfo);
 
         // AEExtractionMatchManager::StartWave
         pattern = hook::pattern("8B F1 80 BE A8 04 00 00 04 0F 84 ? ? ? ? E8 ? ? ? ? 0F 57 C0");
-        if (!pattern.empty())
+        static auto StartWave = safetyhook::create_mid(pattern.get_first(2), [](SafetyHookContext& regs)
         {
-            static auto StartWave = safetyhook::create_mid(pattern.get_first(2), [](SafetyHookContext& regs)
-            {
-                if (CurrentGameMode == EXTRACTION)
-                    ExtractionOnOtherMaps::CreateSpawner(reinterpret_cast<uint8_t*>(regs.esi));
-            });
-        }
+            if (CurrentGameMode == EXTRACTION)
+                ExtractionOnOtherMaps::CreateSpawner(reinterpret_cast<uint8_t*>(regs.esi));
+        });
 
         // UESEQJobCoopObjectiveAddLocator::Start: the other mode's objective markers (Grim's A, B, C) are not added, as if there was no
         // co-op match manager
         pattern = hook::pattern("8B F1 E8 ? ? ? ? 8B F8 85 FF 0F 84 ? ? ? ? 8B 46 58 6A 00 6A 01");
-        if (!pattern.empty())
+        static auto CoopObjectiveAddLocator = safetyhook::create_mid(pattern.get_first(7), [](SafetyHookContext& regs)
         {
-            static auto CoopObjectiveAddLocator = safetyhook::create_mid(pattern.get_first(7), [](SafetyHookContext& regs)
-            {
-                auto level = regs.eax ? *reinterpret_cast<uint8_t**>(regs.eax + 0x148) : nullptr;
-                if (CurrentGameMode == EXTRACTION && level && !ExtractionOnOtherMaps::IsCharlieMap(level))
-                    regs.eax = 0;
-            });
-        }
+            auto level = regs.eax ? *reinterpret_cast<uint8_t**>(regs.eax + 0x148) : nullptr;
+            if (CurrentGameMode == EXTRACTION && level && !ExtractionOnOtherMaps::IsCharlieMap(level))
+                regs.eax = 0;
+        });
     }
 
     {
@@ -969,14 +957,14 @@ export void InitMissions()
         {
             static std::string s = xmlPath.string();
             auto pattern = find_pattern("68 ? ? ? ? E8 ? ? ? ? 83 C4 08 50 8D 4D D8 E8 ? ? ? ? BB");
-            ProtectedGameRef<decltype(s.data())>(reinterpret_cast<decltype(s.data())*>(pattern.get_first(1))) = s.data();
+            injector::WriteMemory(pattern.get_first(1), s.data(), true);
         }
 
         if (std::filesystem::exists(GetExeModulePath() / xmlPathDefault, ec))
         {
             static std::string s = xmlPathDefault.string();
             auto pattern = find_pattern("68 ? ? ? ? E8 ? ? ? ? 8B F0 83 C4 08 39 75 D8 74 3D 80 3E 00 74 0C 56 E8 ? ? ? ? 83 C4 04 40 EB 02 33 C0 89 45 DC 39 45 E0 7D 10 6A 01 8D 4D D8 89 45 E0 E8 ? ? ? ? 8B 45 DC 85 C0");
-            ProtectedGameRef<decltype(s.data())>(reinterpret_cast<decltype(s.data())*>(pattern.get_first(1))) = s.data();
+            injector::WriteMemory(pattern.get_first(1), s.data(), true);
         }
     }
 
@@ -989,114 +977,90 @@ export void InitMissions()
         bAddKestrelMissions = bEnableKestrelDLC;
 
         // SC6MissionSystem::LoadFromXML, after GFileManager->CreateFileReader("..\..\Data\Config\SC6MissionData.xml", 0, GError, 0)
-        hook::pattern("8B 15 ? ? ? ? 8B 0D ? ? ? ? 8B 01 8B 40 10 57 52 57 68 ? ? ? ? FF D0").for_each_result([](hook::pattern_match match)
+        auto pattern = hook::pattern("8B 15 ? ? ? ? 8B 0D ? ? ? ? 8B 01 8B 40 10 57 52 57 68 ? ? ? ? FF D0 57 57 6A 21");
+        static auto LoadFromXML = safetyhook::create_mid(pattern.get_first(0x1B), [](SafetyHookContext& regs)
         {
-            auto path = *match.get<const char*>(0x15);
-            if (IsBadReadPtr(path, 1) || !std::string_view(path).ends_with("SC6MissionData.xml"))
+            missionSystem = *reinterpret_cast<uint8_t**>(regs.ebp - 0x10);
+
+            auto reader = reinterpret_cast<FArchive*>(regs.eax);
+            if (!reader)
                 return;
+            std::string xml(std::max(reader->TotalSize(), 0), '\0');
+            reader->Serialize(xml.data(), int32_t(xml.size()));
+            reader->Release();
 
-            static auto LoadFromXML = safetyhook::create_mid(match.get<void>(0x1B), [](SafetyHookContext& regs)
-            {
-                missionSystem = *reinterpret_cast<uint8_t**>(regs.ebp - 0x10);
-
-                auto reader = reinterpret_cast<FArchive*>(regs.eax);
-                if (!reader)
-                    return;
-                std::string xml(std::max(reader->TotalSize(), 0), '\0');
-                reader->Serialize(xml.data(), int32_t(xml.size()));
-                reader->Release();
-
-                // read from memory instead
-                static MemoryArchive merged(AddMissions(xml));
-                regs.eax = reinterpret_cast<uintptr_t>(&merged);
-            });
+            // read from memory instead
+            static MemoryArchive merged(AddMissions(xml));
+            regs.eax = reinterpret_cast<uintptr_t>(&merged);
         });
 
         // UI::SetupCreationsParams(mission, ...): the mission launched from the SMI
-        auto pattern = hook::pattern("8B 81 98 00 00 00 48 83 F8 04 77 ? FF 24 85");
-        if (!pattern.empty())
+        pattern = hook::pattern("8B 81 98 00 00 00 48 83 F8 04 77 ? FF 24 85");
+        static auto SetupCreationsParams = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            static auto SetupCreationsParams = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                launchedMission = reinterpret_cast<uint8_t*>(regs.ecx);
-                if (IsCopy(launchedMission))
-                    UnlockWaves(launchedMission);
-                SetMapForExtraction(launchedMission);
-            });
-        }
+            launchedMission = reinterpret_cast<uint8_t*>(regs.ecx);
+            if (IsCopy(launchedMission))
+                UnlockWaves(launchedMission);
+            SetMapForExtraction(launchedMission);
+        });
 
         // UI::SMI::ShowSamMakesTheCall: the starting wave of the selected Charlie mission
         pattern = hook::pattern("83 B8 98 00 00 00 05 75 ? 83 B8 B4 00 00 00 03");
-        if (!pattern.empty())
+        static auto SamMakesTheCall = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            static auto SamMakesTheCall = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                if (IsCopy(reinterpret_cast<uint8_t*>(regs.eax)))
-                    UnlockWaves(reinterpret_cast<uint8_t*>(regs.eax));
-            });
-        }
+            if (IsCopy(reinterpret_cast<uint8_t*>(regs.eax)))
+                UnlockWaves(reinterpret_cast<uint8_t*>(regs.eax));
+        });
 
         // NetOnlineHelpers::GetMapId: the online manager
         pattern = hook::pattern("A1 ? ? ? ? 8B 40 08 83 C0 34 0F 84 ? ? ? ? 8B 38 89 7D ? 85 FF");
-        if (!pattern.empty())
-            pNetOnlineManager = *pattern.get_first<uint8_t**>(1);
+        NetOnlineManager.SetAddress(*pattern.get_first<uint8_t**>(1));
 
         // SC6MissionSystem::GetMissionInfoFromAssetId
         pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 83 EC 14 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 00 00 00 00 8D 79 04 33 F6 89 75 E8 8B 47 04 33 D2 89 7D E0");
-        if (!pattern.empty())
-            shGetMissionInfoFromAssetId = safetyhook::create_inline(pattern.get_first(), GetMissionInfoFromAssetId);
+        shGetMissionInfoFromAssetId = safetyhook::create_inline(pattern.get_first(), GetMissionInfoFromAssetId);
 
         pattern = hook::pattern("55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 83 EC 44 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 ? ? ? ? 89 4D F0 68");
-        if (!pattern.empty())
-            shGetMissionInfoFromMap = safetyhook::create_inline(pattern.get_first(), GetMissionInfoFromMap);
+        shGetMissionInfoFromMap = safetyhook::create_inline(pattern.get_first(), GetMissionInfoFromMap);
 
         // UI::SMIHubScreens::GetStaticValues
         pattern = hook::pattern("55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 83 EC 10 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 ? ? ? ? 8B F1 33 FF 89 7D E8");
-        if (!pattern.empty())
-            shGetStaticValues = safetyhook::create_inline(pattern.get_first(), GetStaticValues);
+        shGetStaticValues = safetyhook::create_inline(pattern.get_first(), GetStaticValues);
 
         // SC6MissionSystem::GetNumMissionsMastered
         pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 83 EC 10 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 00 00 00 00 8B 5D 08 8B 55 0C 8B 75 14 33 C0 89 03 89 02 8B 55 10 89 02");
-        if (!pattern.empty())
-            shGetNumMissionsMastered = safetyhook::create_inline(pattern.get_first(), GetNumMissionsMastered);
+        shGetNumMissionsMastered = safetyhook::create_inline(pattern.get_first(), GetNumMissionsMastered);
 
         // UI::BehaviorImageField::SetImage(text, width, height): the images of a mission are named by its id, a copy uses the original's
-        for (auto [imagePattern, offset] : { std::pair{ "8B F9 68 ? ? ? ? 8D 4D DC E8 ? ? ? ? 33 DB 89 5D FC 68 ? ? ? ? 8D 4D E8 E8 ? ? ? ? C6 45 FC 01 8B 45 0C 83 F8 FF 74", 0 },
-                                             std::pair{ "8B 5D 0C 8B F1 8B FA 68 ? ? ? ? 8D 4D DC E8 ? ? ? ? C7 45 FC 00 00 00 00 68 ? ? ? ? 8D 4D E8 E8 ? ? ? ? C6 45 FC 01 83 FE FF 74", 0 } })
+        pattern = hook::pattern("8B F9 68 ? ? ? ? 8D 4D DC E8 ? ? ? ? 33 DB 89 5D FC 68 ? ? ? ? 8D 4D E8 E8 ? ? ? ? C6 45 FC 01 8B 45 0C 83 F8 FF 74"); // DX11
+        if (pattern.empty()) // DX9
+            pattern = hook::pattern("8B 5D 0C 8B F1 8B FA 68 ? ? ? ? 8D 4D DC E8 ? ? ? ? C7 45 FC 00 00 00 00 68 ? ? ? ? 8D 4D E8 E8 ? ? ? ? C6 45 FC 01 83 FE FF 74");
+        static auto SetImage = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            pattern = hook::pattern(imagePattern);
-            if (pattern.empty())
-                continue;
-            static auto SetImage = safetyhook::create_mid(pattern.get_first(offset), [](SafetyHookContext& regs)
-            {
-                auto& text = *reinterpret_cast<const char**>(regs.ebp + 8);
-                if (!text || !strstr(text, "img://") || (!strstr(text, "FFC_") && !strstr(text, "FFK_")))
-                    return;
-                static std::string image;
-                image = text;
-                for (auto prefix : { "FFC_", "FFK_" })
-                    for (auto pos = image.find(prefix); pos != std::string::npos; pos = image.find(prefix, pos))
-                        image.erase(pos, 4);
-                text = image.c_str();
-            });
-            break;
-        }
+            auto& text = *reinterpret_cast<const char**>(regs.ebp + 8);
+            if (!text || !strstr(text, "img://") || (!strstr(text, "FFC_") && !strstr(text, "FFK_")))
+                return;
+            static std::string image;
+            image = text;
+            for (auto prefix : { "FFC_", "FFK_" })
+                for (auto pos = image.find(prefix); pos != std::string::npos; pos = image.find(prefix, pos))
+                    image.erase(pos, 4);
+            text = image.c_str();
+        });
 
         // CScoringSystem::LoadMapFromXml(mission id, map)
         pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 B8 C0 12 00 00 E8");
-        if (!pattern.empty())
-            shLoadMapFromXml = safetyhook::create_inline(pattern.get_first(), LoadMapFromXml);
+        shLoadMapFromXml = safetyhook::create_inline(pattern.get_first(), LoadMapFromXml);
 
         // CScoringSystem::GetMapScoringInfoIndex(mission id)
         pattern = hook::pattern("55 8B EC 53 56 8B F1 33 DB 57 39 9E D4 00 00 00 7E ? 33 FF");
-        if (!pattern.empty())
-            shGetMapScoringInfoIndex = safetyhook::create_inline(pattern.get_first(), GetMapScoringInfoIndex);
+        shGetMapScoringInfoIndex = safetyhook::create_inline(pattern.get_first(), GetMapScoringInfoIndex);
 
         // UESEQJobCoopSyncPoint::Update: the co-op campaign maps' sequences wait for the players at sync points, the network state only
         // advances in the co-op campaign mode (in Extraction the job gives up after 60 s): after the intro cutscene the screen stayed
         // black. In their Charlie copies (contextID 1000 + C01..C04's 13..16) it finishes right away.
         pattern = hook::pattern("8B F1 83 3D ? ? ? ? 00 75 1C 8B 06 8B 90 88 00 00 00 FF D2 8B 4D F4 64 89 0D 00 00 00 00 59 5E 8B E5 5D C2 08 00");
-        if (bAddCoopCampaignCopies && !pattern.empty())
+        if (bAddCoopCampaignCopies)
         {
             static uintptr_t finishSyncPoint = reinterpret_cast<uintptr_t>(pattern.get_first(11));
             static auto SyncPoint = safetyhook::create_mid(pattern.get_first(2), [](SafetyHookContext& regs)
@@ -1109,7 +1073,7 @@ export void InitMissions()
         // UESEQJobCoopActivateCoOpsObjective::Start: the co-op campaign's objective markers (where to go) aren't used in their Charlie copies
         // (push 0, call ECoOpsObjective::Activate skipped)
         pattern = hook::pattern("56 8B F1 8B 4E 38 85 C9 74 0F 6A 00 E8 ? ? ? ? 8B CE 5E E9");
-        if (bAddCoopCampaignCopies && !pattern.empty())
+        if (bAddCoopCampaignCopies)
         {
             static auto ActivateCoOpsObjective = safetyhook::create_mid(pattern.get_first(10), [](SafetyHookContext& regs)
             {
@@ -1121,28 +1085,25 @@ export void InitMissions()
         // SC6Mission::SerializeProfile(archive): the copies are not saved or loaded, they keep their initial state
         auto retn4 = hook::pattern("F7 D8 1B C0 40 5D C2 04 00");
         pattern = hook::pattern("55 8B EC 83 EC 0C 56 8B F1 83 7E 08 00 57 74 05 8B 46 04 EB 05 B8 ? ? ? ? 6A 05 50 8D 4D F4 E8");
-        if (!pattern.empty() && !retn4.empty())
+        returnFromSerialize = reinterpret_cast<uintptr_t>(retn4.get_first(6));
+        static auto SerializeProfile = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            returnFromSerialize = reinterpret_cast<uintptr_t>(retn4.get_first(6));
-            static auto SerializeProfile = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            if (IsCopy(reinterpret_cast<uint8_t*>(regs.ecx)))
             {
-                if (IsCopy(reinterpret_cast<uint8_t*>(regs.ecx)))
-                {
-                    UnlockWaves(reinterpret_cast<uint8_t*>(regs.ecx));
-                    regs.eax = 1;
-                    regs.eip = returnFromSerialize;
-                }
-            });
-        }
+                UnlockWaves(reinterpret_cast<uint8_t*>(regs.ecx));
+                regs.eax = 1;
+                regs.eip = returnFromSerialize;
+            }
+        });
 
         // AActor::IsRemovedInGameMode (its end is the retn 4 above, hooked after it's found)
         pattern = hook::pattern("55 8B EC 8B 45 08 50 81 C1 BC 02 00 00 E8 ? ? ? ? F7 D8 1B C0 40 5D C2 04 00");
-        if (bAddCoopCampaignCopies && !pattern.empty())
+        if (bAddCoopCampaignCopies)
             shIsRemovedInGameMode = safetyhook::create_inline(pattern.get_first(), IsRemovedInGameMode);
 
         // AEExtractionMatchManager::PreResetCheckpoint (vtable +48Ch)
         pattern = hook::pattern("56 8B F1 E8 ? ? ? ? 8B CE E8 ? ? ? ? 8B 86 54 04 00 00 85 C0 74 13 50 E8 ? ? ? ? 83 C4 04 C7 86 54 04 00 00 00 00 00 00 A1");
-        if (bCharlieOnOtherMaps && !pattern.empty())
+        if (bCharlieOnOtherMaps)
         {
             static auto PreResetCheckpoint = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
@@ -1152,7 +1113,7 @@ export void InitMissions()
 
         // AECoopExtractionSpawner::Destroy: the wave config's release, skipped for a created spawner in a checkpoint reset
         pattern = hook::pattern("8B CF E8 ? ? ? ? 57 E8 ? ? ? ? 83 C4 04 C7 86 20 05 00 00 00 00 00 00 E8 ? ? ? ? 5F 8B CE");
-        if (bCharlieOnOtherMaps && !pattern.empty())
+        if (bCharlieOnOtherMaps)
         {
             static auto SpawnerDestroy = safetyhook::create_mid(pattern.get_first(0x1A), [](SafetyHookContext& regs)
             {
@@ -1168,100 +1129,78 @@ export void InitMissions()
 
         // AECooperativeMatchManager::GetInstance (and the other co-op managers' ones, the same global) and EndMission
         auto pattern = hook::pattern("CC A1 ? ? ? ? 85 C0 74 3F 8B 15");
-        if (!pattern.empty())
-            pMatchManager = *pattern.get_first<uint8_t**>(2);
+        MatchManager.SetAddress(*pattern.get_first<uint8_t**>(2));
         pattern = hook::pattern("55 8B EC 80 79 4D 02 74 0B 8B 01 8B 80 F4 05 00 00 5D FF E0");
-        if (!pattern.empty())
-            EndMission = pattern.get_first();
+        EndMission = pattern.get_first();
 
         // The HVT is the pawn the level designers gave an HVT mesh (AEAIPawn +CB4h skeletal / +CB8h static, read from ScanForHVTLoad's test
         // of them); the HVT manager doesn't always have it as its target (OnHighValueTargetKilled wasn't called), it's checked on every kill
         pattern = hook::pattern("F7 40 5C 00 00 00 04 74 ? 83 B8 ? ? 00 00 00 75 ? 83 B8 ? ? 00 00 00 74");
-        if (!pattern.empty())
-        {
-            HVTSkeletalMesh = *pattern.get_first<int32_t>(11);
-            HVTStaticMesh = *pattern.get_first<int32_t>(20);
-        }
+        HVTSkeletalMesh = *pattern.get_first<int32_t>(11);
+        HVTStaticMesh = *pattern.get_first<int32_t>(20);
 
         // AECooperativeMatchManager::HandlePawnKilled(FKillMsg* message): +0 the killed (or knocked out) pawn
         pattern = hook::pattern("55 8B EC 53 56 57 8B 7D 08 8B 07 8B D9 85 C0 0F 84 ? ? ? ? F7 40 60 00 00 04 00");
-        if (!pattern.empty() && HVTSkeletalMesh && HVTStaticMesh)
+        static auto HandlePawnKilled = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            static auto HandlePawnKilled = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                auto message = *reinterpret_cast<uint8_t**>(regs.esp + 4);
-                auto pawn = message ? *reinterpret_cast<uint8_t**>(message) : nullptr;
-                if (pawn && IsHVT(pawn) && IsActive())
-                    CompleteMission();
-            });
-        }
+            auto message = *reinterpret_cast<uint8_t**>(regs.esp + 4);
+            auto pawn = message ? *reinterpret_cast<uint8_t**>(message) : nullptr;
+            if (pawn && IsHVT(pawn) && IsActive())
+                CompleteMission();
+        });
 
         // CHighValueTargetManager::ScanForHVTLoad: the target is set up when its map's definition isn't captured (+0) and has no state yet (+8),
         // in a Kestrel mission it's checked as never captured
         pattern = hook::pattern("8B D9 8B 43 04 85 C0 0F 84 ? ? ? ? 80 38 00 0F 85");
-        if (!pattern.empty())
+        static auto ScanForHVTLoad = safetyhook::create_mid(pattern.get_first(13), [](SafetyHookContext& regs)
         {
-            static auto ScanForHVTLoad = safetyhook::create_mid(pattern.get_first(13), [](SafetyHookContext& regs)
-            {
-                static uint8_t definition[0x20];
-                if (!IsActive() || !regs.eax)
-                    return;
-                memcpy(definition, reinterpret_cast<void*>(regs.eax), sizeof(definition));
-                definition[0] = 0;
-                regs.eax = reinterpret_cast<uintptr_t>(definition);
-            });
-        }
+            static uint8_t definition[0x20];
+            if (!IsActive() || !regs.eax)
+                return;
+            memcpy(definition, reinterpret_cast<void*>(regs.eax), sizeof(definition));
+            definition[0] = 0;
+            regs.eax = reinterpret_cast<uintptr_t>(definition);
+        });
 
         // Localize(section, key, package, ...)
         pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 B8 3C 11 00 00 E8 ? ? ? ? A1 ? ? ? ? 33 C5 89 45 F0 53 56 57 50 8D 45 F4 64 A3 00 00 00 00 8B 45 08 8B 4D 10 8B 5D 14 8B 7D 0C");
-        if (!pattern.empty())
-            shLocalize = safetyhook::create_inline(pattern.get_first(), Localize);
+        shLocalize = safetyhook::create_inline(pattern.get_first(), Localize);
 
         // CHighValueTargetManager::IsCurrentHVTTarget(pawn)
         pattern = hook::pattern("55 8B EC 32 C0 83 3D ? ? ? ? 00 56 8B F1 75 ? 83 7E 04 00 74");
-        if (!pattern.empty())
-            shIsCurrentHVTTarget = safetyhook::create_inline(pattern.get_first(), IsCurrentHVTTarget);
+        shIsCurrentHVTTarget = safetyhook::create_inline(pattern.get_first(), IsCurrentHVTTarget);
 
         // UEPECInventoryManager::ConstructAdvArmorBodyPartInfo(pawn, ..., head preset, ...): Briggs' co-op head (25h, 29h) is Kestrel's (26h)
         pattern = hook::pattern("8B 5D 14 8B 45 18 84 DB 75 ? 85 F6 74 ? 83 F8 25");
-        if (!pattern.empty())
+        static auto HeadPreset = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
         {
-            static auto HeadPreset = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
-            {
-                auto& head = *reinterpret_cast<int32_t*>(regs.ebp + 0x18);
-                if ((head == 0x25 || head == 0x29) && IsActive())
-                    head = 0x26;
-            });
-        }
+            auto& head = *reinterpret_cast<int32_t*>(regs.ebp + 0x18);
+            if ((head == 0x25 || head == 0x29) && IsActive())
+                head = 0x26;
+        });
 
         // ConstructAdvArmorBodyPartInfo: the goggles part of the head (Sam 4, Briggs 8, Kestrel 9); Kestrel's goggles have no textures in the
         // maps (not in their texture streams), he gets Sam's (loaded for player 1)
         pattern = hook::pattern("8B 55 18 B9 04 00 00 00 83 FA 25 74 ? 83 FA 29 74 ? 83 FA 26 75 ? 8D 4A E3 EB ? B9 08 00 00 00 6A 00");
-        if (!pattern.empty())
+        static auto GogglesPart = safetyhook::create_mid(pattern.get_first(0x21), [](SafetyHookContext& regs)
         {
-            static auto GogglesPart = safetyhook::create_mid(pattern.get_first(0x21), [](SafetyHookContext& regs)
-            {
-                if (regs.ecx == 9 && IsActive())
-                    regs.ecx = 4;
-            });
-        }
+            if (regs.ecx == 9 && IsActive())
+                regs.ecx = 4;
+        });
 
         // UEPECInventoryManager::LoadPackages: the packages of the co-op head preset (his head and goggles)
         pattern = hook::pattern("1B C0 83 E0 25 50 8B 45");
-        if (!pattern.empty())
+        static auto PackagesHeadPreset = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
         {
-            static auto PackagesHeadPreset = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
-            {
-                if (regs.eax == 0x25 && IsActive())
-                    regs.eax = 0x26;
-            });
-        }
+            if (regs.eax == 0x25 && IsActive())
+                regs.eax = 0x26;
+        });
     }
 
     // ExtractionWaveConfigXMLParser::LoadFile: a map without its own wave config (the maps of the other co-op modes) gets the 20 waves
     // of a random Charlie map instead of DefaultWaveConfig.xml (waves 1, 3, 4 and 6 only, the mission ends after wave 6)
     pattern = hook::pattern("50 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 50 8D 4D D8 E8 ? ? ? ? BB");
-    if (bCharlieOnOtherMaps && !pattern.empty())
+    if (bCharlieOnOtherMaps)
     {
         static auto WaveConfigMapName = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
@@ -1284,7 +1223,7 @@ export void InitMissions()
     if (bEnableRunDuringForcedWalk)
     {
         pattern = hook::pattern("74 18 8B 80 ? ? ? ? 85 C0 74 0E 8B 4E 3C 83 E1 01 51 8B C8 E8");
-        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first())) = 0xEB; // jz -> jmp
+        injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true); // jz -> jmp
     }
 
     if (bDisableNightVisionFlash)
@@ -1300,12 +1239,14 @@ export void InitMissions()
 
     {
         pattern = hook::pattern("B9 ? ? ? ? 89 8E ? ? ? ? F3 0F 7E 05");
-        ProtectedGameRef<decltype(nDefaultMissionFilter)>(reinterpret_cast<decltype(nDefaultMissionFilter)*>(pattern.get_first(1))) = nDefaultMissionFilter;
+        injector::WriteMemory(pattern.get_first(1), nDefaultMissionFilter, true);
     }
 
     if (bSMIMapDisableStartupAnimation)
     {
         pattern = hook::pattern("0F 8E ? ? ? ? 8D 8E ? ? ? ? E8 ? ? ? ? 80 BE");
-        ProtectedGameRef<uint16_t>(reinterpret_cast<uint16_t*>(pattern.count(2).get(1).get<void>())) = 0xE990; // jle -> jmp
+        if (pattern.size() != 2)
+            throw std::runtime_error("Map-animation signatures not found");
+        injector::WriteMemory<uint16_t>(pattern.get(1).get<void>(), 0xE990, true); // jle -> jmp
     }
 }

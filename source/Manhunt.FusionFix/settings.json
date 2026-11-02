@@ -1,0 +1,384 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Manhunt",
+        "exe": [
+          "manhunt.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "input",
+      "title": "@page.input",
+      "section": "controls"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "gameplay"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.RawInputMouse",
+      "type": "bool",
+      "default": true,
+      "label": "@rawinputmouse",
+      "description": "@rawinputmouse.description",
+      "page": "input",
+      "apply": "live",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        }
+      ],
+      "label": "@hudaspect",
+      "description": "@hudaspect.description",
+      "page": "display",
+      "group": "@group.hud",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@fmvmode.original"
+        },
+        {
+          "value": 1,
+          "label": "@fmvmode.fill"
+        }
+      ],
+      "label": "@fmvmode",
+      "description": "@fmvmode.description",
+      "page": "display",
+      "group": "@group.videos",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@borders.off"
+        },
+        {
+          "value": 1,
+          "label": "@borders.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@borders.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@borders.both"
+        }
+      ],
+      "label": "@borders",
+      "description": "@borders.description",
+      "page": "display",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@windowmode.fullscreen"
+        },
+        {
+          "value": 1,
+          "label": "@windowmode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@windowmode.borderless"
+        }
+      ],
+      "label": "@windowmode",
+      "description": "@windowmode.description",
+      "page": "display",
+      "group": "@group.window",
+      "apply": "restart",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@confinecursor",
+      "description": "@confinecursor.description",
+      "page": "display",
+      "group": "@group.window",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "min": 30,
+      "max": 200,
+      "unit": "fps",
+      "special": [
+        {
+          "value": -1,
+          "label": "@fpslimit.refresh"
+        },
+        {
+          "value": 0,
+          "label": "@fpslimit.game"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        }
+      ],
+      "label": "@fpslimit",
+      "description": "@fpslimit.description",
+      "page": "display",
+      "group": "@group.window",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 60,
+        "enhanced": 60
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "decimals": 2,
+      "label": "@fov",
+      "description": "@fov.description",
+      "page": "camera",
+      "control": [
+        "slider"
+      ]
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@skipintro",
+      "description": "@skipintro.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.ControllerLayout",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 1,
+          "label": "@padlayout.modern"
+        },
+        {
+          "value": 0,
+          "label": "@padlayout.original"
+        }
+      ],
+      "label": "@padlayout",
+      "description": "@padlayout.description",
+      "page": "input",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@auto"
+        },
+        {
+          "value": 1,
+          "label": "Xbox"
+        },
+        {
+          "value": 2,
+          "label": "PlayStation"
+        },
+        {
+          "value": 3,
+          "label": "Nintendo"
+        }
+      ],
+      "label": "@padicons",
+      "description": "@padicons.description",
+      "page": "input",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.1,
+      "max": 5.0,
+      "step": 0.1,
+      "decimals": 1,
+      "label": "@padcamera",
+      "description": "@padcamera.description",
+      "page": "input",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.Vibration",
+      "type": "bool",
+      "default": true,
+      "label": "@vibration",
+      "description": "@vibration.description",
+      "page": "input",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@pausefocus",
+      "description": "@pausefocus.description",
+      "page": "game",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@checkupdates",
+      "description": "@checkupdates.description",
+      "page": "compatibility",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@textlanguage",
+      "description": "@textlanguage.description",
+      "page": "compatibility",
+      "visibility": "editor"
+    }
+  ]
+}

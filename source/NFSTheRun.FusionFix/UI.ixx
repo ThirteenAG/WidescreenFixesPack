@@ -138,18 +138,15 @@ public:
                 // UIInputManager::processConceptInput: for each action, the "pressed" call (edi = action, ebx = input reader)
                 auto lookup = hook::pattern("6A 00 6A 01 57 8D 4D 0C 83 C6 14 E8");
                 auto pressed = hook::pattern("8B 4D 00 85 C9 0F 84 ? ? ? ? 8B 01 8B 10 57 6A 01 FF D2");
-                if (!lookup.empty() && !pressed.empty())
+                EscapeKey::GetConcept = (decltype(EscapeKey::GetConcept))injector::GetBranchDestination(lookup.get_first(11)).as_int();
+                static auto nextAction = (uintptr_t)pressed.get_first(11) + *pressed.get_first<int32_t>(7);
+                static auto ActivatePressedHook = safetyhook::create_mid(pressed.get_first(), [](SafetyHookContext& regs)
                 {
-                    EscapeKey::GetConcept = (decltype(EscapeKey::GetConcept))injector::GetBranchDestination(lookup.get_first(11)).as_int();
-                    static auto nextAction = (uintptr_t)pressed.get_first(11) + *pressed.get_first<int32_t>(7);
-                    static auto ActivatePressedHook = safetyhook::create_mid(pressed.get_first(), [](SafetyHookContext& regs)
-                    {
-                        // In a race Activate is the pause menu, which Escape opens
-                        bool inRace = GetTickCount64() - fb::Vehicle::LastUpdate < 500;
-                        if (regs.edi == EscapeKey::UIInputAction_Activate && !inRace && EscapeKey::IsBackPressed(regs.ebp, (void*)regs.ebx))
-                            regs.eip = nextAction;
-                    });
-                }
+                    // In a race Activate is the pause menu, which Escape opens
+                    bool inRace = GetTickCount64() - fb::Vehicle::LastUpdate < 500;
+                    if (regs.edi == EscapeKey::UIInputAction_Activate && !inRace && EscapeKey::IsBackPressed(regs.ebp, (void*)regs.ebx))
+                        regs.eip = nextAction;
+                });
             }
 
             auto bSkipIntro = FixSettings().Int("MAIN.SkipIntro") != 0;
@@ -169,11 +166,8 @@ public:
                 // when it isn't running (about 40 seconds in 1.0). Without the client it now fails right away,
                 // which the game handles the same way as after that wait.
                 pattern = hook::pattern("68 90 0C 00 00 53 89 54 24 ? C7 44 24 ? ? ? ? ? C7 44 24 ? ? ? ? ? E8");
-                if (!pattern.empty())
-                {
-                    Ebisu::EbisuStartup = injector::GetBranchDestination(pattern.get_first(26)).get<std::remove_pointer_t<decltype(Ebisu::EbisuStartup)>>();
-                    injector::MakeCALL(pattern.get_first(26), Ebisu::EbisuStartupHook, true);
-                }
+                Ebisu::EbisuStartup = injector::GetBranchDestination(pattern.get_first(26)).get<std::remove_pointer_t<decltype(Ebisu::EbisuStartup)>>();
+                injector::MakeCALL(pattern.get_first(26), Ebisu::EbisuStartupHook, true);
 
                 // UI.SkipSignIn
                 pattern = hook::pattern("6A ? E8 ? ? ? ? 5F 8A C3 5B 81 C4 ? ? ? ? C2 ? ? 8B 84 24");

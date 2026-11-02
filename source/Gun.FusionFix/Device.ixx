@@ -1,0 +1,239 @@
+module;
+
+#include <stdafx.h>
+#include "Shared/CursorConfinement.hpp"
+#include <d3d9.h>
+#include "FixSettings.hpp"
+#include "overlay/OverlayD3D9.hpp"
+
+export module Device;
+
+import Display;
+import Cutscene;
+
+#pragma comment(lib, "version.lib")
+
+export namespace GunDevice
+{
+    inline asi_overlay::D3D9Overlay Overlay;
+    inline IDirect3DDevice9* CurrentDevice = nullptr;
+    inline SafetyHookInline CreateDeviceHook, PresentHook, ResetHook, DrawHook, MovieHook;
+    inline SafetyHookInline InputCreateHook, InputDeviceHook, DeviceStateHook, DeviceDataHook;
+    inline IDirect3D9*(WINAPI* NativeCreate9)(UINT) = nullptr;
+    inline std::function<void()> Frame;
+    inline uint32_t** MovieHandle = nullptr;
+    inline thread_local bool DrawingMovie = false;
+    inline LONG HotkeyDown = 0, HotkeyRequested = 0;
+
+    inline HMODULE ThisModule()
+    {
+        HMODULE module = nullptr;
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(&ThisModule), &module);
+        return module;
+    }
+
+    inline std::string BuildTime()
+    {
+        wchar_t path[MAX_PATH]{};
+        GetModuleFileNameW(ThisModule(), path, DWORD(std::size(path)));
+        DWORD ignored = 0;
+        const auto size = GetFileVersionInfoSizeW(path, &ignored);
+        std::vector<uint8_t> data(size);
+        if (!size || !GetFileVersionInfoW(path, 0, size, data.data()))
+            return "Unknown";
+        wchar_t* value = nullptr;
+        UINT length = 0;
+        if (!VerQueryValueW(data.data(), L"\\StringFileInfo\\040004b0\\BuildTimeUtc", reinterpret_cast<void**>(&value), &length) || !value)
+            return "Unknown";
+        return asi_settings::text::Narrow(value);
+    }
+
+    inline bool BlocksInput()
+    {
+        return Overlay.BlocksInput();
+    }
+
+    inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
+    {
+        if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
+            wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
+        {
+            if (message == WM_KEYUP || message == WM_SYSKEYUP)
+                InterlockedExchange(&HotkeyDown, 0);
+            else if (!(lParam & (1u << 30)) && GetForegroundWindow() == window &&
+                !InterlockedCompareExchange(&HotkeyDown, 1, 0))
+                InterlockedExchange(&HotkeyRequested, 1);
+            result = 0;
+            return true;
+        }
+        return Overlay.Message(window, message, wParam, lParam, result);
+    }
+
+    inline void Keyboard(HWND window)
+    {
+        const bool down = window && GetForegroundWindow() == window &&
+            (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
+        if (down)
+        {
+            if (!InterlockedCompareExchange(&HotkeyDown, 1, 0))
+                InterlockedExchange(&HotkeyRequested, 1);
+        }
+        else
+            InterlockedExchange(&HotkeyDown, 0);
+        if (InterlockedExchange(&HotkeyRequested, 0) && window && GetForegroundWindow() == window)
+            Overlay.SetOpen(!Overlay.IsOpen());
+    }
+
+    inline HRESULT WINAPI Present(IDirect3DDevice9* device, const RECT* source, const RECT* destination, HWND window, const RGNDATA* dirty)
+    {
+        static const bool page = []()
+        {
+            asi_overlay::Overlay::AddPage("Debug", "Info", [](asi_overlay::OverlayUI& ui)
+            {
+                static const auto buildTime = BuildTime();
+                ui.Value("Version", rsc_ProductVersion);
+                ui.Value("BuildTimeUtc", buildTime.c_str());
+                ui.Value("Graphics API", "Direct3D 9");
+                IDirect3DSurface9* surface = nullptr;
+                if (CurrentDevice && SUCCEEDED(CurrentDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &surface)))
+                {
+                    D3DSURFACE_DESC desc{};
+                    surface->GetDesc(&desc);
+                    surface->Release();
+                    ui.Value("Resolution", std::to_string(desc.Width) + " x " + std::to_string(desc.Height));
+                }
+            });
+            return true;
+        }();
+        CurrentDevice = device;
+        Keyboard(GunDisplay::window);
+        GunCutscene::Draw(device);
+        Overlay.Present(device, ThisModule());
+        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !BlocksInput());
+        if (Frame)
+            Frame();
+        return PresentHook.stdcall<HRESULT>(device, source, destination, window, dirty);
+    }
+
+    inline HRESULT WINAPI Reset(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* parameters)
+    {
+        Overlay.BeforeReset();
+        return ResetHook.stdcall<HRESULT>(device, parameters);
+    }
+
+    // The movie player draws one pre-transformed strip over the whole screen with the full video texture.
+    inline HRESULT WINAPI DrawUP(IDirect3DDevice9* device, D3DPRIMITIVETYPE type, UINT count, const void* data, UINT stride)
+    {
+        const auto video = MovieHandle ? *MovieHandle : nullptr;
+        if (!DrawingMovie || type != D3DPT_TRIANGLESTRIP || count != 2 || stride != 28 || !data || !video || !video[0] || !video[1])
+            return DrawHook.stdcall<HRESULT>(device, type, count, data, stride);
+        std::array<float, 28> v{};
+        std::memcpy(v.data(), data, sizeof(v));
+        const float width = v[7], height = v[15];
+        if (width <= 0.0f || height <= 0.0f)
+            return DrawHook.stdcall<HRESULT>(device, type, count, data, stride);
+        const float videoAspect = static_cast<float>(video[0]) / static_cast<float>(video[1]);
+        // The whole movie at its own aspect: Original inside the game's centred 4:3 area, Fill inside the whole screen
+        static const auto& mode = FixSettings().Int("MAIN.FMVWidescreenMode");
+        const float areaWidth = mode == 0 ? std::min(width, height * 4.0f / 3.0f) : width;
+        const float areaHeight = mode == 0 ? std::min(height, width * 3.0f / 4.0f) : height;
+        float w = areaWidth, h = areaHeight;
+        if (areaWidth / areaHeight > videoAspect) w = areaHeight * videoAspect;
+        else h = areaWidth / videoAspect;
+        const float x = (width - w) * 0.5f, y = (height - h) * 0.5f;
+        v[0] = v[14] = x;
+        v[7] = v[21] = x + w;
+        v[1] = v[8] = y;
+        v[15] = v[22] = y + h;
+        return DrawHook.stdcall<HRESULT>(device, type, count, v.data(), stride);
+    }
+
+    inline void __cdecl DrawMovie(void* texture, float x, float y, float width, float height, float alpha)
+    {
+        DrawingMovie = true;
+        MovieHook.ccall<void>(texture, x, y, width, height, alpha);
+        DrawingMovie = false;
+    }
+
+    inline HRESULT WINAPI CreateDevice(IDirect3D9* d3d, UINT adapter, D3DDEVTYPE type, HWND window, DWORD behavior,
+        D3DPRESENT_PARAMETERS* parameters, IDirect3DDevice9** device)
+    {
+        const auto result = CreateDeviceHook.stdcall<HRESULT>(d3d, adapter, type, window, behavior, parameters, device);
+        if (SUCCEEDED(result) && device && *device && !PresentHook)
+        {
+            auto table = *reinterpret_cast<void***>(*device);
+            ResetHook = safetyhook::create_inline(table[16], Reset);
+            PresentHook = safetyhook::create_inline(table[17], Present);
+            if (MovieHook)
+                DrawHook = safetyhook::create_inline(table[83], DrawUP);
+        }
+        return result;
+    }
+
+    inline IDirect3D9* WINAPI Create9(UINT version)
+    {
+        auto result = NativeCreate9(version);
+        if (result && !CreateDeviceHook)
+            CreateDeviceHook = safetyhook::create_inline((*reinterpret_cast<void***>(result))[16], CreateDevice);
+        return result;
+    }
+
+    // The game reads keyboard and mouse through DirectInput; nothing reaches it while the overlay has input.
+    inline HRESULT WINAPI DeviceState(void* device, DWORD size, void* data)
+    {
+        const auto result = DeviceStateHook.stdcall<HRESULT>(device, size, data);
+        if (SUCCEEDED(result) && data && BlocksInput())
+            std::memset(data, 0, size);
+        return result;
+    }
+
+    inline HRESULT WINAPI DeviceData(void* device, DWORD size, void* data, DWORD* count, DWORD flags)
+    {
+        const auto result = DeviceDataHook.stdcall<HRESULT>(device, size, data, count, flags);
+        if (SUCCEEDED(result) && count && BlocksInput())
+            *count = 0;
+        return result;
+    }
+
+    inline HRESULT WINAPI InputDevice(void* input, const GUID* guid, void** device, void* outer)
+    {
+        const auto result = InputDeviceHook.stdcall<HRESULT>(input, guid, device, outer);
+        if (SUCCEEDED(result) && device && *device && !DeviceStateHook)
+        {
+            auto table = *reinterpret_cast<void***>(*device);
+            DeviceStateHook = safetyhook::create_inline(table[9], DeviceState);
+            DeviceDataHook = safetyhook::create_inline(table[10], DeviceData);
+        }
+        return result;
+    }
+
+    inline HRESULT WINAPI InputCreate(HINSTANCE instance, DWORD version, const IID* iid, void** output, void* outer)
+    {
+        const auto result = InputCreateHook.stdcall<HRESULT>(instance, version, iid, output, outer);
+        if (SUCCEEDED(result) && output && *output && !InputDeviceHook)
+            InputDeviceHook = safetyhook::create_inline((*reinterpret_cast<void***>(*output))[3], InputDevice);
+        return result;
+    }
+
+    inline void Init()
+    {
+        auto movie = hook::pattern("83 EC 70 56 8B 74 24 78 85 F6 0F 84 ? ? ? ? 57 6A 00 E8 ? ? ? ? 68 01 00 01 00 6A 04 E8");
+        auto handle = hook::pattern("E8 ? ? ? ? 3B C3 A3 ? ? ? ? 0F 84 ? ? ? ? 8B 48 04 8B 10");
+        MovieHandle = *handle.get_first<uint32_t**>(8);
+        MovieHook = safetyhook::create_inline(movie.get_first(), DrawMovie);
+
+        auto create = hook::pattern("6A 20 E8 ? ? ? ? 3B C7 A3 ? ? ? ? 75").get_first<uint8_t>(2);
+        NativeCreate9 = reinterpret_cast<decltype(NativeCreate9)>(injector::GetBranchDestination(create, true).as_int());
+        injector::MakeCALL(create, &Create9, true);
+        GunDisplay::messageHook = Message;
+
+        // The game loads DirectInput at run time.
+        CallbackHandler::RegisterCallback(L"dinput8.dll", []()
+        {
+            if (auto create = GetProcAddress(GetModuleHandleW(L"dinput8.dll"), "DirectInput8Create"))
+                InputCreateHook = safetyhook::create_inline(create, InputCreate);
+        });
+    }
+}
+

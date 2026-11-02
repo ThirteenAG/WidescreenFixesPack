@@ -15,9 +15,9 @@
   },
   "pages": [
     {
-      "id": "advanced",
-      "title": "@page.advanced",
-      "section": "advanced"
+      "id": "game",
+      "title": "@page.game",
+      "section": "gameplay"
     }
   ],
   "settings": [
@@ -27,7 +27,7 @@
       "default": true,
       "label": "@SkipIntro",
       "description": "@SkipIntro.description",
-      "page": "advanced",
+      "page": "game",
       "visibility": "menu",
       "apply": "restart",
       "presets": {

@@ -2,7 +2,8 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/NFS/PluginsMenu.hpp"
+#include "Shared/NFS/PluginsMenu.hpp"
+#include "Shared/RWGTA/UpdateCheck.hpp"
 
 export module Menu;
 
@@ -17,7 +18,9 @@ export module Menu;
 // next screen. They draw every frame with the menu's text and layout functions. The pages are drawn on the System
 // Settings screen: the PLUGINS row opens that screen as the game does for SYSTEM SETTINGS, and while it shows the
 // plugins its input and drawing are replaced, so the pages get the game's bars, highlight, arrows, help line,
-// button prompts and mouse areas. The game's raw text function knows ASCII only: accented letters lose their accent.
+// button prompts and mouse areas. Texts keep their accents through an extended glyph table of the raw text functions.
+// MAIN.CheckForUpdates: a newer version is announced in the help line of the plugin list; FusionFixHub opens when the
+// game exits.
 
 namespace
 {
@@ -104,8 +107,7 @@ namespace
         uintptr_t* Pad;         // +0x5B4 accept buttons, +0x614 player on keyboard/mouse
         uintptr_t* Mouse;       // +0x2E0/+0x2E4 cursor in 1280x720, +0x318 areas by screen
         uintptr_t* Fonts;
-        uintptr_t* System;      // +0x10428 input locked, +0x10434 busy flags
-        uintptr_t* Main;        // +0x2584 language
+        uintptr_t* System;      // +0x104CC text language (Steam's), +0x10428 input locked, +0x10434 busy flags
         uintptr_t* Session;
         uintptr_t* Layouts;
         uintptr_t* MouseDevices;   // the mouse states, next to the pad's
@@ -123,8 +125,14 @@ namespace
         // The language's English name for the fix's texts (the game's order: jpn, eng, ger, fra, spa, ita, ...)
         std::string Language()
         {
+            const auto selected = FixSettings().String("MAIN.TextLanguage");
+            if (selected == "en") return "english";
+            if (selected == "fr") return "french";
+            if (selected == "de") return "german";
+            if (selected == "it") return "italian";
+            if (selected == "es") return "spanish";
             static const char* names[] = { "japanese", "english", "german", "french", "spanish", "italian", "russian", "polish", "czech" };
-            uint32_t index = Main && *Main ? Field<uint32_t>(*Main, 0x2584) : 1;
+            uint32_t index = System && *System ? Field<uint32_t>(*System, 0x104CC) : 1;
             return index < std::size(names) ? names[index] : "english";
         }
 
@@ -170,8 +178,60 @@ namespace
 
     // Text
 
-    // The game's text function draws ASCII: other letters without their accents
-    std::string Ascii(const std::string& utf8)
+    // The game's raw text functions map each byte to a font glyph through one table of 128 ASCII entries, indexed
+    // with a signed byte. The fix gives them a table that also covers the bytes 0x80..0xFF: the accented letters of the
+    // European fonts get those bytes, so texts keep their accents.
+    struct Glyph
+    {
+        wchar_t letter;
+        uint16_t glyph;
+    };
+
+    constexpr Glyph Accented[] =
+    {
+        { L'\x00C0', 86 }, { L'\x00C1', 87 }, { L'\x00C2', 88 }, { L'\x00C4', 89 }, { L'\x00C7', 90 }, { L'\x00C8', 91 },
+        { L'\x00C9', 92 }, { L'\x00CA', 93 }, { L'\x00CB', 94 }, { L'\x00CC', 95 }, { L'\x00CD', 96 }, { L'\x00CE', 97 },
+        { L'\x00CF', 98 }, { L'\x00D1', 99 }, { L'\x00D2', 100 }, { L'\x00D3', 101 }, { L'\x00D4', 102 }, { L'\x00D6', 103 },
+        { L'\x00DA', 104 }, { L'\x00DB', 105 }, { L'\x00DC', 106 }, { L'\x00DF', 107 }, { L'\x00E0', 108 }, { L'\x00E1', 109 },
+        { L'\x00E2', 110 }, { L'\x00E4', 111 }, { L'\x00E7', 112 }, { L'\x00E8', 113 }, { L'\x00E9', 114 }, { L'\x00EA', 115 },
+        { L'\x00EB', 116 }, { L'\x00EC', 117 }, { L'\x00ED', 118 }, { L'\x00EE', 119 }, { L'\x00EF', 120 }, { L'\x00F1', 121 },
+        { L'\x00F2', 122 }, { L'\x00F3', 123 }, { L'\x00F4', 124 }, { L'\x00F6', 125 }, { L'\x00F9', 126 }, { L'\x00FA', 127 },
+        { L'\x00FB', 128 }, { L'\x00FC', 129 }, { L'\x0152', 130 }, { L'\x0153', 131 }, { L'\x00BF', 83 }, { L'\x00BA', 85 },
+        { L'\x00B0', 85 },
+    };
+
+    bool AccentedGlyphs = false;    // the game's tables were replaced
+    uint16_t GlyphTable[256];       // index 128 + signed byte
+
+    void InstallGlyphTable(uintptr_t textWidth, uintptr_t drawText)
+    {
+        // The table's address from the first lookup of the width function (movzx reg, table[reg*2])
+        auto first = hook::range_pattern(textWidth, textWidth + 0x100, "0F B7 ? ? ? ? ? 00");
+        const auto table = *first.get_first<uint16_t*>(4);
+        uint8_t address[4];
+        memcpy(address, &table, 4);
+        char text[64];
+        sprintf_s(text, "0F B7 ? ? %02X %02X %02X %02X", address[0], address[1], address[2], address[3]);
+        auto widthSites = hook::range_pattern(textWidth, textWidth + 0x260, text).count(5);
+        auto drawSites = hook::range_pattern(drawText, drawText + 0x200, text).count(1);
+
+        for (int i = 0; i < 128; ++i)
+        {
+            GlyphTable[128 + i] = table[i];
+            GlyphTable[i] = 0xFFFF;
+        }
+        for (size_t i = 0; i < std::size(Accented); ++i)
+            GlyphTable[i] = Accented[i].glyph;  // byte 0x80 + i
+
+        uint16_t* base = &GlyphTable[128];
+        for (size_t i = 0; i < widthSites.size(); ++i)
+            injector::WriteMemory<uint16_t*>(widthSites.get(i).get<uint16_t*>(4), base, true);
+        injector::WriteMemory<uint16_t*>(drawSites.get_first<uint16_t*>(4), base, true);
+        AccentedGlyphs = true;
+    }
+
+    // UTF-8 in the bytes of the game's text functions; letters without a glyph lose their accent
+    std::string GameText(const std::string& utf8)
     {
         std::string result;
         for (wchar_t c : WFPText::ToWide(utf8))
@@ -181,6 +241,15 @@ namespace
                 result += char(c);
                 continue;
             }
+            if (AccentedGlyphs)
+            {
+                auto it = std::find_if(std::begin(Accented), std::end(Accented), [c](const Glyph& g) { return g.letter == c; });
+                if (it != std::end(Accented))
+                {
+                    result += char(0x80 + (it - std::begin(Accented)));
+                    continue;
+                }
+            }
             switch (c)
             {
                 case L'\x00DF': result += "ss"; continue;
@@ -189,7 +258,8 @@ namespace
                 case L'\x0152': result += "OE"; continue;
                 case L'\x0153': result += "oe"; continue;
                 case L'\x2018': case L'\x2019': result += '\''; continue;
-                case L'\x201C': case L'\x201D': case L'\x00AB': case L'\x00BB': result += '"'; continue;
+                case L'\x201C': case L'\x201D': case L'\x201E': case L'\x00AB': case L'\x00BB': result += '"'; continue;
+                case L'\x201A': result += ','; continue;
                 case L'\x2013': case L'\x2014': result += '-'; continue;
                 case L'\x2026': result += "..."; continue;
                 case L'\x00A0': case L'\x202F': result += ' '; continue;
@@ -252,20 +322,19 @@ namespace
         return lines;
     }
 
-    // The help line under the list: two lines as the game's; a longer text gets a smaller font for a third line
+    // The help line under the list: two lines as the game's; a longer text gets a smaller font, so all of it shows
     void Help(Page page, const std::string& text, int centerY, uint32_t color, float size, bool fromTop = false)
     {
         constexpr float maxWidth = 1000.0f;
-        auto lines = Wrap(text, size, maxWidth);
-        if (lines.size() > 2)
+        constexpr struct { float scale; size_t lines; } steps[] = { { 1.0f, 2 }, { 0.8f, 3 }, { 0.68f, 4 }, { 0.58f, 5 }, { 0.5f, 99 } };
+        const float base = size;
+        std::vector<std::string> lines;
+        for (const auto& step : steps)
         {
-            size *= 0.8f;
+            size = base * step.scale;
             lines = Wrap(text, size, maxWidth);
-        }
-        if (lines.size() > 3)
-        {
-            lines.resize(3);
-            lines.back() += "...";
+            if (lines.size() <= step.lines)
+                break;
         }
         float lineHeight = size;
         float first = fromTop ? centerY + lineHeight / 2 : centerY - (lines.size() - 1) * lineHeight / 2;
@@ -287,7 +356,7 @@ namespace
 
     std::string Upper(const std::string& utf8)
     {
-        return Ascii(WFPText::Upper(utf8));
+        return GameText(WFPText::Upper(utf8));
     }
 
     // Plugins pages
@@ -324,7 +393,7 @@ namespace
     std::vector<std::string> Excluded(const WFPPlugins::LoadedPlugin& plugin)
     {
         HMODULE self = nullptr;
-        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&Ascii), &self);
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&GameText), &self);
         if (plugin.module != self)
             return {};
         return { "MAIN.FOVFactor", "MAIN.ModernControls", "MAIN.ForceLaserSight", "MAIN.KnifeParry" };
@@ -348,7 +417,7 @@ namespace
         if (auto wide = WFPText::Detail::Tag(WFPText::Language()))
             tag.assign(wide, wide + wcslen(wide));
         HMODULE self = nullptr;
-        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&Ascii), &self);
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&GameText), &self);
         pages.snapshot = WFPPlugins::Find(self, tag);
         pages.level = 0;
         pages.listCursor = 0;
@@ -357,7 +426,7 @@ namespace
 
     std::string RowLabel(const WFPPlugins::Row& row)
     {
-        return Ascii(WFPPlugins::Label(row));
+        return GameText(WFPPlugins::Label(row));
     }
 
     std::string RowValue(const WFPPlugins::Row& row)
@@ -378,7 +447,7 @@ namespace
                         return OtherPlugins::Text(*row.plugin, choice.label) == value;
                     });
                     if (!listed)
-                        return Ascii(value);
+                        return GameText(value);
                 }
                 return Upper(WFPPlugins::ValueText(row));
             default:
@@ -386,11 +455,16 @@ namespace
         }
     }
 
+    std::string UpdateNotice;
+    bool ListShown = false;
+
     std::string RowHelp(int index)
     {
         if (pages.level == 0)
         {
-            return Ascii(WFPText::Get("WFP_PLUGINS_HELP"));
+            if (!UpdateNotice.empty() && FixSettings().Bool("MAIN.CheckForUpdates"))
+                return GameText(UpdateNotice);
+            return GameText(WFPText::Get("WFP_PLUGINS_HELP"));
         }
         auto& row = pages.rows[index];
         auto text = WFPPlugins::Help(row);
@@ -400,7 +474,7 @@ namespace
             if (!warning.empty())
                 text = warning;
         }
-        return Ascii(text);
+        return GameText(text);
     }
 
     // Arrows of the selected row: 1 left, 2 right
@@ -480,6 +554,8 @@ namespace
 
     void DrawPage(Page page)
     {
+        ListShown = pages.level == 0;
+        RWGTA::UpdateCheck::Tick();
         int count = RowCount();
         int cursor = Field<int>(page, Cursor);
         int scroll = Field<int>(page, Scroll);
@@ -862,7 +938,7 @@ namespace
 
         WFPText::SetLanguage(Game::Language());
         auto label = Upper(WFPText::Get("WFP_PLUGINS"));
-        auto help = Ascii(WFPText::Get("WFP_PLUGINS_HELP"));
+        auto help = GameText(WFPText::Get("WFP_PLUGINS_HELP"));
         bool selected = pages.topSelected;
         if (!inGame)
         {
@@ -1026,7 +1102,7 @@ namespace
     HMODULE Self()
     {
         HMODULE self = nullptr;
-        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&Ascii), &self);
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&GameText), &self);
         return self;
     }
 
@@ -1085,7 +1161,7 @@ namespace
     {
         auto& row = joined.rows[index];
         if (row.setting->type == asi_settings::Type::Float || row.setting->type == asi_settings::Type::Int)
-            return Ascii(WFPPlugins::ValueText(row));
+            return GameText(WFPPlugins::ValueText(row));
         return Upper(WFPPlugins::ValueText(row));
     }
 
@@ -1136,7 +1212,7 @@ namespace
                 }
                 else
                 {
-                    Text(page, Ascii(WFPPlugins::Label(joined.rows[i - GameRows])), LabelX, y, color, FontSize * scale, 440.0f);
+                    Text(page, GameText(WFPPlugins::Label(joined.rows[i - GameRows])), LabelX, y, color, FontSize * scale, 440.0f);
                     Text(page, JoinedValue(i - GameRows), ValueX, y, color, FontSize * scale, 360.0f);
                     arrows = JoinedArrows(i - GameRows);
                 }
@@ -1154,7 +1230,7 @@ namespace
             if (selectedRow < GameRows)
                 HelpMessage(page, nullptr, gameTables.helps[selectedRow], 525);
             else
-                Help(page, Ascii(WFPPlugins::Help(joined.rows[selectedRow - GameRows])), 525, RowColor(page, true), FontSize);
+                Help(page, GameText(WFPPlugins::Help(joined.rows[selectedRow - GameRows])), 525, RowColor(page, true), FontSize);
             Game::Prompt(page, nullptr, 2, -1);
             Game::Prompt(page, nullptr, 0x10, -1);
             return;
@@ -1181,7 +1257,7 @@ namespace
             }
             else
             {
-                Text(page, Ascii(WFPPlugins::Label(joined.rows[i - GameRows])), LabelX, y, color, float(rowSize), 440.0f);
+                Text(page, GameText(WFPPlugins::Label(joined.rows[i - GameRows])), LabelX, y, color, float(rowSize), 440.0f);
                 Text(page, JoinedValue(i - GameRows), ValueX, y, color, float(rowSize), 360.0f);
                 arrows = JoinedArrows(i - GameRows);
             }
@@ -1194,7 +1270,7 @@ namespace
         if (selectedRow < GameRows)
             Game::DrawMessageCentered(page, nullptr, size, 640, helpY, &white, gameTables.helps[selectedRow], TextLayer);
         else
-            Help(page, Ascii(WFPPlugins::Help(joined.rows[selectedRow - GameRows])), helpY - size * 4 / 10, White, size * 0.8f, true);
+            Help(page, GameText(WFPPlugins::Help(joined.rows[selectedRow - GameRows])), helpY - size * 4 / 10, White, size * 0.8f, true);
         Game::PausePrompt(page, nullptr, 2);
         PauseRestorePrompt(page, nullptr);
     }
@@ -1340,10 +1416,7 @@ namespace
     template<class T>
     T Call(uintptr_t function, uint32_t offset)
     {
-        uintptr_t site = function + offset;
-        if (*reinterpret_cast<uint8_t*>(site) != 0xE8 && *reinterpret_cast<uint8_t*>(site) != 0xE9)
-            return T{};
-        return (T)injector::GetBranchDestination(site).as_int();
+        return (T)injector::GetBranchDestination(function + offset).as_int();
     }
 
     template<class T>
@@ -1357,6 +1430,23 @@ export namespace Menu
 {
     void Init()
     {
+        {
+            RWGTA::UpdateCheck::Config updates;
+            updates.pluginId = "ResidentEvil5.FusionFix";
+            updates.fileVersion = rsc_FileVersion;
+            updates.settings = &FixSettings();
+            updates.playable = []() { return ListShown; };
+            updates.show = [](const std::wstring& notice) { UpdateNotice = asi_settings::text::Narrow(notice); };
+            RWGTA::UpdateCheck::Init(std::move(updates));
+            static decltype(&ExitProcess) exitProcess = nullptr;
+            exitProcess = reinterpret_cast<decltype(&ExitProcess)>(GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "ExitProcess"));
+            IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", static_cast<void(WINAPI*)(UINT)>([](UINT code)
+            {
+                RWGTA::UpdateCheck::OnExit();
+                exitProcess(code);
+            })));
+        }
+
         auto topUpdate = hook::pattern("53 56 8B F1 33 DB 39 9E 8C 01 00 00");
         auto topDraw = hook::pattern("83 EC 0C 56 8B F1 83 BE 8C 01 00 00 00");
         auto systemUpdate = hook::pattern("83 EC 08 56 8B F1 83 BE 8C 01 00 00 00 74 40");
@@ -1370,10 +1460,6 @@ export namespace Menu
         auto pausePrompt = hook::pattern("51 A1 ? ? ? ? 53 55 56 8B D9 8B 88 2C 04 01 00 57 E8 ? ? ? ? 83 F8 01 75 1C 8B 0D ? ? ? ? F3 0F 10 81 70 30 00 00 F3 0F 59 05 ? ? ? ? F3 0F 2C E8 EB 0E");
         auto fontSize = hook::pattern("A1 ? ? ? ? 8B 88 2C 04 01 00 E8 ? ? ? ? 83 F8 01 75 23");
         auto drawCentered = hook::pattern("83 EC 10 53 8B 5C 24 28 56 8B 74 24 1C 57 6A FF 56 56 6A 00 8D 44 24 1C 50 53 8B F9 8B 0D ? ? ? ? 6A 00 E8 ? ? ? ? 8B 4C 24 34 F3 0F 10 05");
-        if (topUpdate.size() != 1 || topDraw.size() != 1 || systemUpdate.size() != 1 || systemDraw.size() != 1 || systemInit.size() != 1 ||
-            keyboardUpdate.size() != 1 || drawText.size() != 1 || textWidth.size() != 1 || highlightScale.size() != 1 || elementMove.size() != 1 ||
-            pausePrompt.size() != 1 || fontSize.size() != 1 || drawCentered.size() != 1)
-            return;
 
         uintptr_t top = uintptr_t(topDraw.get_first());
         uintptr_t update = uintptr_t(systemUpdate.get_first());
@@ -1416,6 +1502,8 @@ export namespace Menu
         ElementShow = Call<decltype(ElementShow)>(draw, 0x42F);
         DrawRawText = (decltype(DrawRawText))drawText.get_first();
         TextWidth = (decltype(TextWidth))textWidth.get_first();
+        auto drawGlyphs = hook::pattern("83 EC 2C 53 8B 5C 24 38 85 DB 55 56 57 8B E9 75 0C D9 EE");
+        InstallGlyphTable(uintptr_t(textWidth.get_first()), uintptr_t(drawGlyphs.get_first()));
         HighlightScale = (decltype(HighlightScale))highlightScale.get_first();
         ElementMove = (decltype(ElementMove))elementMove.get_first();
         PausePrompt = (decltype(PausePrompt))pausePrompt.get_first();
@@ -1433,7 +1521,6 @@ export namespace Menu
         TopLabelTable = labels;
         for (int i = 0; i < TopRows; ++i)
             TopLabels[i] = labels[i];
-        Main = Pointer<uintptr_t*>(update + 0x150 + 2);
         auto helps = Pointer<uint16_t*>(top + 0x1B0 + 4);
         for (int i = 0; i < TopRows; ++i)
             TopHelps[i] = helps[i];
@@ -1452,24 +1539,21 @@ export namespace Menu
         auto gameUpdate = hook::pattern("68 A5 00 00 00 6A 04 E8 ? ? ? ? 6A 01 68 A6 00 00 00");
         auto gameDraw = hook::pattern("83 EC 30 56 8B F1 83 BE 8C 01 00 00 00");
         auto gameRestore = hook::pattern("53 56 8B F1 57 33 FF 8D 9E 90 01 00 00");
-        if (gameUpdate.size() == 1 && gameDraw.size() == 1 && gameRestore.size() == 1)
+        uintptr_t settingsDraw = uintptr_t(gameDraw.get_first());
+        DrawMessage = Call<decltype(DrawMessage)>(top, 0x163);
+        HelpMessage = Call<decltype(HelpMessage)>(top, 0x1C0);
+        auto pauseDraw = Call<uintptr_t>(settingsDraw, 0x0F);
+        PauseRestorePrompt = Call<decltype(PauseRestorePrompt)>(pauseDraw, 0x32D);
+        gameTables.labels = Pointer<uint16_t*>(settingsDraw + 0x7A + 4);
+        gameTables.values[0] = Pointer<uint16_t*>(settingsDraw + 0xB4 + 4);
+        gameTables.values[1] = Pointer<uint16_t*>(settingsDraw + 0xD1 + 4);
+        gameTables.values[2] = Pointer<uint16_t*>(settingsDraw + 0xEE + 4);
+        gameTables.helps = Pointer<uint16_t*>(settingsDraw + 0x1A5 + 4);
+        if (DrawMessage && HelpMessage && PauseRestorePrompt)
         {
-            uintptr_t settingsDraw = uintptr_t(gameDraw.get_first());
-            DrawMessage = Call<decltype(DrawMessage)>(top, 0x163);
-            HelpMessage = Call<decltype(HelpMessage)>(top, 0x1C0);
-            auto pauseDraw = Call<uintptr_t>(settingsDraw, 0x0F);
-            PauseRestorePrompt = pauseDraw ? Call<decltype(PauseRestorePrompt)>(pauseDraw, 0x32D) : nullptr;
-            gameTables.labels = Pointer<uint16_t*>(settingsDraw + 0x7A + 4);
-            gameTables.values[0] = Pointer<uint16_t*>(settingsDraw + 0xB4 + 4);
-            gameTables.values[1] = Pointer<uint16_t*>(settingsDraw + 0xD1 + 4);
-            gameTables.values[2] = Pointer<uint16_t*>(settingsDraw + 0xEE + 4);
-            gameTables.helps = Pointer<uint16_t*>(settingsDraw + 0x1A5 + 4);
-            if (DrawMessage && HelpMessage && PauseRestorePrompt)
-            {
-                GameUpdateHook = safetyhook::create_inline(gameUpdate.get_first(-0x105), GameUpdate);
-                GameDrawHook = safetyhook::create_inline(gameDraw.get_first(), GameDraw);
-                GameRestoreHook = safetyhook::create_inline(gameRestore.get_first(), GameRestore);
-            }
+            GameUpdateHook = safetyhook::create_inline(gameUpdate.get_first(-0x105), GameUpdate);
+            GameDrawHook = safetyhook::create_inline(gameDraw.get_first(), GameDraw);
+            GameRestoreHook = safetyhook::create_inline(gameRestore.get_first(), GameRestore);
         }
 
         SystemInitHook = safetyhook::create_inline(systemInit.get_first(), SystemInit);

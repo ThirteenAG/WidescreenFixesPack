@@ -52,49 +52,111 @@
       "apply": "live",
       "control": [
         "slider"
-      ],
-      "presets": {
-        "vanilla": 1.0,
-        "recommended": 1.0,
-        "enhanced": 1.0
-      }
+      ]
     },
     {
-      "id": "MAIN.FMVWidescreenMode",
+      "id": "MAIN.GamepadIcons",
       "type": "choice",
-      "default": 1,
+      "default": 0,
       "choices": [
         {
           "value": 0,
-          "label": "@fmv.original"
+          "label": "@icons.auto"
         },
         {
           "value": 1,
-          "label": "@fmv.fill"
+          "label": "@icons.xbox"
         },
         {
           "value": 2,
-          "label": "@fmv.stretch"
+          "label": "@icons.playstation"
+        },
+        {
+          "value": 3,
+          "label": "@icons.nintendo"
         }
       ],
-      "label": "@fmv",
-      "description": "@fmv.description",
+      "label": "@icons",
+      "description": "@icons.description",
       "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@cutscene.off"
+        },
+        {
+          "value": 1,
+          "label": "@cutscene.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@cutscene.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@cutscene.both"
+        }
+      ],
+      "label": "@cutscene",
+      "description": "@cutscene.description",
+      "page": "camera",
       "visibility": "menu",
       "apply": "live",
       "control": [
         "cycler"
       ],
       "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
       }
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@hudaspect",
+      "description": "@hudaspect.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "suggestions": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        },
+        {
+          "value": "4:3",
+          "label": "4:3"
+        },
+        {
+          "value": "16:9",
+          "label": "16:9"
+        },
+        {
+          "value": "21:9",
+          "label": "21:9"
+        },
+        {
+          "value": "32:9",
+          "label": "32:9"
+        }
+      ]
     },
     {
       "id": "MAIN.FPSLimit",
       "type": "int",
-      "default": 0,
+      "default": 120,
       "min": -1,
       "max": 1000,
       "unit": "fps",
@@ -132,12 +194,7 @@
       "apply": "live",
       "control": [
         "cycler"
-      ],
-      "presets": {
-        "vanilla": 120,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      ]
     },
     {
       "id": "MAIN.WindowMode",
@@ -178,6 +235,21 @@
       }
     },
     {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipPressStart",
+      "description": "@SkipPressStart.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "MAIN.SplitScreenVertical",
       "type": "bool",
       "default": 0,
@@ -205,12 +277,7 @@
       "description": "@DisableDamageOverlay.description",
       "page": "graphics",
       "visibility": "menu",
-      "apply": "live",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "live"
     },
     {
       "id": "MAIN.DisableFilmGrain",
@@ -220,12 +287,7 @@
       "description": "@DisableFilmGrain.description",
       "page": "graphics",
       "visibility": "menu",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
       "id": "MAIN.ForceLogo",
@@ -272,7 +334,7 @@
       "visibility": "menu",
       "apply": "restart",
       "presets": {
-        "vanilla": false,
+        "vanilla": 0,
         "recommended": 1,
         "enhanced": 1
       }
@@ -308,14 +370,60 @@
       "apply": "live"
     },
     {
-      "id": "MAIN.Autoclicker",
-      "type": "bool",
-      "default": 0,
-      "label": "@Autoclicker",
-      "description": "@Autoclicker.description",
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "fr",
+          "label": "FranÃ§ais"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "EspaÃ±ol"
+        }
+      ],
+      "label": "@textlanguage",
+      "description": "@textlanguage.description",
       "page": "compatibility",
-      "visibility": "file",
-      "apply": "restart"
+      "visibility": "editor",
+      "apply": "menu"
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@pauseonfocusloss",
+      "description": "@pauseonfocusloss.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@checkforupdates",
+      "description": "@checkforupdates.description",
+      "page": "compatibility",
+      "visibility": "menu",
+      "apply": "live"
     }
   ]
 }

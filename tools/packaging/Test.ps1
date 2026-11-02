@@ -77,7 +77,7 @@ try {
             Assert (@(@($entry[0].files) + @($entry[0].producers) | Where-Object { $_.source -eq $file -or $_.destination -eq $relative }).Count -gt 0) "Missing asset: $file"
         }
     }
-    $farcry = $manifest.packages | Where-Object { $_.id -eq 'FarCry.WidescreenFix' }
+    $farcry = $manifest.packages | Where-Object { $_.id -eq 'FarCry.FusionFix' }
     Assert ($farcry.producers.Count -eq 2) 'FarCry must require both architectures.'
     Assert-Fails { & (Join-Path $root 'tools/compile-splintercell-scripts.ps1') -Password '' } 'SCCOMPILE_PASSWORD'
     $fakeSign = Join-Path $work 'fake-sign.cmd'

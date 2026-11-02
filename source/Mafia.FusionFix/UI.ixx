@@ -62,9 +62,9 @@ uint32_t __stdcall DrawUI(void* graph, int type, int count, const UIVertex* vert
 export HCURSOR WINAPI LoadCursorHook(HINSTANCE instance, LPCSTR name)
 {
     auto cursor = LoadCursorA(instance, name);
-    if (!instance && name == MAKEINTRESOURCEA(32512) && pResolutionHeight && *pResolutionHeight > 0)
+    if (!instance && name == MAKEINTRESOURCEA(32512) && nResolutionHeight.is_initialized() && nResolutionHeight > 0)
     {
-        float scale = static_cast<float>(*pResolutionHeight) / 600.0f;
+        float scale = static_cast<float>(nResolutionHeight) / 600.0f;
         int width = std::max(1, static_cast<int>(std::lround(GetSystemMetrics(SM_CXCURSOR) * scale)));
         int height = std::max(1, static_cast<int>(std::lround(GetSystemMetrics(SM_CYCURSOR) * scale)));
         // Shared stock cursors ignore requested sizes once cached. Copy the
@@ -82,7 +82,7 @@ export void InitUIScaling()
 {
     // The graphics pointer precedes the packed resolution fields in all three
     // versions. Use the object's native Draw method, including renamed engines.
-    auto graph = *reinterpret_cast<void**>(reinterpret_cast<uintptr_t>(pResolutionWidth) - 6);
+    auto graph = *reinterpret_cast<void**>(reinterpret_cast<uintptr_t>(nResolutionWidth.get_ptr()) - 6);
     if (!graph) return;
     // The engine can register its window class before the resolution hook
     // runs. Refresh its cached cursor once the actual game size is known;

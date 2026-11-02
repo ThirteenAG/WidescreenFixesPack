@@ -27,7 +27,8 @@ namespace
         static const auto& factor = FixSettings().Float("MAIN.FOVFactor");
         if (!std::isfinite(factor) || factor == 1.0f || !std::isfinite(fov) || fov <= 0.0f)
             return fov;
-        return std::min(fov * std::clamp(factor, 0.5f, 2.0f), 170.0f);
+        // Up to 150 degrees: wider, the perspective collapses on wide screens
+        return std::min(fov * std::clamp(factor, 0.5f, 2.0f), std::max(fov, 150.0f));
     }
 }
 
@@ -44,8 +45,6 @@ public:
             // which mouse and aim sensitivity use, stays the game's.
             auto storePattern = hook::pattern("F3 0F 11 1D ? ? ? ? F3 0F 11 45 C0 84 D2");
             auto runningPattern = hook::pattern("0F B6 15 ? ? ? ? 84 D2 75 ? 0F B6 05 ? ? ? ? 48 69 C8 58 01 00 00");
-            if (storePattern.empty() || runningPattern.empty())
-                return;
             const auto store = storePattern.get_first();
             const auto running = runningPattern.get_first<uint8_t>(3);
             cutsceneRunning = reinterpret_cast<const uint8_t*>(injector::ReadRelativeOffset(running).as_int());

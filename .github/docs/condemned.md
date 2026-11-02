@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/condemned/main2.jpg" width="760" alt="Condemned: Criminal Origins Widescreen Fix">
+<img src="https://thirteenag.github.io/screens/condemned/main2.jpg" width="760" alt="Condemned: Criminal Origins Fusion Fix">
 
-**Condemned: Criminal Origins Widescreen Fix** corrects ultrawide scaling, adds a field-of-view setting and skips the startup logos, with options for menu backgrounds, saved settings, frame rate drops and window modes.
+**Condemned: Criminal Origins Fusion Fix** corrects ultrawide scaling, adds a field-of-view setting and skips the startup logos, with options for saved settings and window modes.
 
-[Website](https://thirteenag.github.io/wfp#condemned) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Condemned.WidescreenFix/dllmain.cpp)
+[Website](https://thirteenag.github.io/wfp#condemned) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Condemned.FusionFix/dllmain.cpp)
 
 </div>
 
@@ -13,32 +13,39 @@
 ## Fixes
 
 - **Resolution** — More display resolutions in `Config.exe`.
-- **Aspect ratio** — Correct scaling on ultrawide displays.
-- **HUD** — Correct HUD scaling on ultrawide displays.
-- **Gamepad** — Support controllers through [Xidi](https://github.com/samuelgr/Xidi).
+- **Aspect ratio** — Correct scaling at any aspect ratio.
+- **HUD** — The HUD uses the whole screen, also on screens narrower than 16:9.
+- **Menus** — Menu backgrounds keep their proportions.
+- **Frame rate drops** — No drop to roughly 20–30 FPS after several minutes.
+- **Gamepad** — XInput controllers use [Xidi](https://github.com/samuelgr/Xidi). New profiles are configured with controller bindings alongside keyboard and mouse controls. If a controller does not respond, configure its bindings in the controls menu. Existing profiles keep their bindings. PlayStation and Switch controllers need an XInput mapping through Steam Input or DS4Windows.
 
 ## Options
 
-- **Menu backgrounds** — Correct stretched backgrounds by scaling them vertically.
-- **Frame rate drops** — Address the drop to roughly 20–30 FPS that can occur after several minutes.
-- **Saved settings** — Move the save location from Public Documents to My Documents so settings can be saved without administrator rights.
-- **Window mode** — Choose Fullscreen, Windowed or Borderless in the fix settings, then restart. No `autoexec.cfg` edit is needed. Borderless fills the current monitor; desktop-size framed windows keep their full client area.
-- **Field of view** — A multiplier (0.5–2.0, default 1.0) on the gameplay camera's field of view; it applies while the game runs. Scripted cameras and the scope zoom keep their own.
+- **Window mode** — Fullscreen, Windowed or Borderless, then restart. No `autoexec.cfg` edit is needed. Windowed gives a centred window whose picture area is exactly the chosen resolution; Borderless fills the current monitor.
+- **Field of view** — A multiplier (0.5–2.0, default 1.0) on the gameplay camera's field of view, limited to 150 degrees horizontally; it applies while the game runs. Scripted cameras and the scope zoom keep their own.
+- **HUD aspect ratio** — Auto spreads the HUD over the whole screen; a ratio such as 16:9 keeps it in a centred box of that shape. Needs a restart.
+- **Cutscene borders** — For cinematic cameras that show the game's black bars: Letterbox keeps them, Pillarbox adds side bars that keep the picture at 16:9 on wider screens, Both does both, Off removes them. Animated cutscene borders keeps the game's fade of the bars.
+- **Movies** — Movie screens show the whole video at its own aspect between bars, never cut off or stretched; the extras and credits videos are shown at 16:9.
+- **Frame rate limit** — Off, the monitor's refresh rate (default) or a number of frames per second; applies at once.
+- **Pause in background** — On by default: the game pauses while another window is active, as it always has. Off keeps it running in a window mode.
+- **Confine cursor** — Keeps the mouse cursor inside the game window while the game is active.
+- **Check for updates** — Off by default. When on, the fix asks fusionfix.io once per start and shows a line on its settings page when a newer version is out.
 - **Skip intro** — On by default; skips the startup logo videos, as pressing the skip button would.
+- **Saved settings** — Compatibility option: keeps saves and settings in My Documents so no administrator rights are needed.
 
 ---
 
 ## Settings and hub
 
-Open **Options → Plugins → Condemned Widescreen Fix** for the fix’s settings and presets. Field of view changes while the game runs; most other settings need a restart. Each plugin has its own presets and defaults.
+Open **Options → Plugins → Condemned Fusion Fix** (in the main menu or the pause menu) for the fix's settings, presets and help. A line at the bottom tells you when a change needs a restart. Press **Ctrl+F10** for the developer overlay with every setting and a Debug › Info page.
 
-The fix creates `scripts/Condemned.WidescreenFix.cfg` on first start; FusionFixHub can change it, also while the game runs. An old `scripts/Condemned.WidescreenFix.ini` isn't used anymore and can be deleted. Presets keep aspect and menu corrections enabled. Vanilla shows the intro; Recommended and Enhanced skip it. Window and compatibility settings aren't changed by presets. Texts are available in English, French, German, Italian and Spanish.
+The fix creates `scripts/Condemned.FusionFix.cfg` on first start; FusionFixHub can change it, also while the game runs. Vanilla shows the intro, the game's own bars and its own frame rate; Recommended and Enhanced skip the intro, add pillarbox bars and limit the frame rate to the monitor's. Window, input and compatibility settings aren't changed by presets. Texts are available in English, French, German, Italian and Spanish.
 
 ## Known limits
 
-- The game's own cutscene letterbox is kept; there is no cutscene-border or video setting.
-- There is no HUD aspect-ratio setting.
-- Window mode changes require restarting; Alt+Enter switching is not supported.
+- Only cinematic cameras that the game shows with black bars get borders; the others fill the screen, as in the original.
+- The HUD aspect ratio and window mode apply after a restart; Alt+Enter switching is not supported.
+- Existing profiles keep their controller bindings; configure them in the controls menu if needed. Button prompts show keyboard keys.
 - Auto uses English for the in-game settings menu. Select French, German, Italian or Spanish with the text-language setting, then reopen Plugins.
 - The bottom hint can retain the game's stock text; help for the selected fix setting appears above it.
 
@@ -46,7 +53,7 @@ The fix creates `scripts/Condemned.WidescreenFix.cfg` on first start; FusionFixH
 
 1. Download the fix archive from this release.
 2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
-3. Launch the game once to create `scripts/Condemned.WidescreenFix.cfg` with every setting.
+3. Launch the game once to create `scripts/Condemned.FusionFix.cfg` with every setting.
 4. Configure the fix in Options → Plugins, on fusionfix.io or in FusionFixHub. Restart when an option requires it.
 
 ## About steam files
@@ -59,7 +66,7 @@ Installation:
 - Download [Condemned.MissingSteamFilesFix.zip](https://github.com/ThirteenAG/WidescreenFixesPack/releases/download/condemned/Condemned.MissingSteamFilesFix.zip) for a full package **or** [Condemned.MissingSteamFilesFix.Lite.zip](https://github.com/ThirteenAG/WidescreenFixesPack/releases/download/condemned/Condemned.MissingSteamFilesFix.Lite.zip) if you don't care about having retail TheDark_4-5-04.bik and FinalCreds.bik.
 - Unpack everything to root directory, replacing **default.archcfg** in the process.
 
-Widescreen fix also contains **default.archcfg**, but they are identical between archives. It is used to make the game load arch00 archives without needing to replace them.
+Fusion Fix also contains **default.archcfg**, but they are identical between archives. It is used to make the game load arch00 archives without needing to replace them.
 
 Additionally, visit my [steam guide](https://steamcommunity.com/sharedfiles/filedetails/?id=1593741074) for more info about gamepad support in this game.
 

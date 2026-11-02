@@ -1,23 +1,9 @@
 #include "Game.hpp"
+#include "Shared/Console/PatchNotice.hpp"
 #include <pspthreadman.h>
 #include <cmath>
 namespace essentials {
 namespace {
-// Unreal FNames in this game are CRCs of the upper-cased name (FNameCRC).
-constexpr uint32_t CrcEntry(uint32_t index) {
-    uint32_t value = index << 24;
-    for (int bit = 0; bit < 8; ++bit) value = (value & 0x80000000u) ? (value << 1) ^ 0x04C11DB7u : value << 1;
-    return value;
-}
-constexpr uint32_t NameCrc(const char* name) {
-    uint32_t value = 0;
-    for (; *name; ++name) {
-        uint32_t c = uint8_t(*name);
-        if (c >= 'a' && c <= 'z') c -= 32;
-        value = (value >> 8) ^ CrcEntry((value ^ c) & 0xFF);
-    }
-    return value;
-}
 // AEPlayerController states that frame a 3D device for fixed 2D overlays
 // (hacking waves and bars, keypad and lock-pick close-ups, computer screens,
 // the optic cable mask). Their cameras are authored for the native FOV.
@@ -58,15 +44,43 @@ float CameraFov(float scripted) {
     // by FOVFactor. The projection-aspect hook below maps it to the display.
     const float gameplay = console::horizontal_fov(scripted, 4.0f / 3, 480.0f / 272) * fovFactor;
     if (deviceBlend <= 0) return gameplay;
-    // Device close-ups: the native PSP vertical FOV at any display aspect
-    // (FOVFactor 1, no expansion), which their fixed 2D overlays (hacking
-    // waves and bars, keypad, lock pick) were authored for.
-    const float device = console::horizontal_fov(scripted, 480.0f / 272, aspect);
+    // Device close-ups: the native PSP view (FOVFactor 1, no expansion) in the
+    // centered box their fixed 2D overlays (hacking waves and bars, keypad,
+    // lock pick) are drawn in; wider screens add to the sides.
+    const float device = console::horizontal_fov(scripted, nativeAspect, std::max(aspect, nativeAspect));
     return gameplay + (device - gameplay) * deviceBlend;
 }
 SafetyMipsMid camera;
 SafetyMipsInline draw, projectionAspect;
 uintptr_t cameraCallers[5];
+void RefreshDisplaySettings()
+{
+    static uint32_t lastRead;
+    const uint32_t now = sceKernelGetSystemTimeLow();
+    if (lastRead && now - lastRead < 1000000u) return;
+    lastRead = now;
+    const SceUID file = sceIoOpen(inireader.iniName, PSP_O_RDONLY, 0);
+    if (file < 0) return;
+    static char contents[8192];
+    const int size = sceIoRead(file, contents, sizeof(contents) - 1);
+    sceIoClose(file);
+    if (size <= 0 || size == int(sizeof(contents) - 1)) return;
+    contents[size] = '\0';
+    char fov[32]{}, scale[32]{}, box[64]{}, display[64]{};
+    if (!rini_get_key("MAIN", "FOVFactor", contents, size, fov, sizeof(fov), STRING_VAL) ||
+        !rini_get_key("MAIN", "HudScale", contents, size, scale, sizeof(scale), STRING_VAL) ||
+        !rini_get_key("MAIN", "HudAspectRatioConstraint", contents, size, box, sizeof(box), STRING_VAL) ||
+        !rini_get_key("MAIN", "ForceAspectRatio", contents, size, display, sizeof(display), STRING_VAL)) return;
+    char* end = nullptr;
+    const float nextFov = std::strtof(fov, &end);
+    if (end == fov || !std::isfinite(nextFov)) return;
+    const float nextScale = std::strtof(scale, &end);
+    if (end == scale || !std::isfinite(nextScale)) return;
+    fovFactor = console::bounded(nextFov, 0.5f, 2.0f, 1.0f);
+    hudScale = console::bounded(nextScale, 0.5f, 1.5f, 1.0f);
+    hudConstraint = console::parse_hud_aspect(box);
+    forced = console::parse_forced_aspect(display);
+}
 bool CameraReturns(uintptr_t function, size_t size, uintptr_t constructor, unsigned& count) {
     if (!function || !constructor) return false;
     for (uintptr_t at = function; at < function + size; at += 4) {
@@ -80,6 +94,7 @@ bool CameraReturns(uintptr_t function, size_t size, uintptr_t constructor, unsig
     return true;
 }
 void Draw(uintptr_t engine, uintptr_t viewport, int present, void* pixels, int* size) {
+    RefreshDisplaySettings();
     UpdateDisplay();
     UpdateFov(viewport);
     draw.call<void>(engine, viewport, present, pixels, size);
@@ -93,7 +108,13 @@ void InstallCamera() {
     const bool callers = CameraReturns(game, 0x500, constructor, count) &&
         CameraReturns(screen, 0x400, constructor, count) && CameraReturns(world, 0x400, constructor, count) &&
         CameraReturns(vectors, 0x140, constructor, count) && count == 5;
-    camera = safetymips::create_mid(callers ? constructor : 0, [](SafetyMipsContext& regs) {
+    constexpr auto projectionSignature = "80 3F 04 3C 08 00 E0 03 00 00 84 44";
+    const auto projection = pattern.get(2, projectionSignature, 0);
+    if (!callers || !projection || pattern.get(3, projectionSignature, 0)) {
+        PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
+        return;
+    }
+    camera = safetymips::create_mid(constructor, [](SafetyMipsContext& regs) {
         for (auto caller : cameraCallers) if (regs.ra == caller) {
             // The projection keeps the vertical FOV from this horizontal FOV and
             // the display aspect (see projectionAspect). UI portals and preview
@@ -105,7 +126,7 @@ void InstallCamera() {
     // The renderer asks this for its projection aspect. Match physical pixels,
     // including native WorldToScreen/ScreenToWorld matrices and culling.
     // Capture the complete leaf getter, including JR RA and its delay slot.
-    projectionAspect = safetymips::create_inline(pattern.get(2, "80 3F 04 3C 08 00 E0 03 00 00 84 44", 0),
+    projectionAspect = safetymips::create_inline(projection,
         +[]() -> float { return (480.0f / 272) / aspect; });
     draw = safetymips::create_inline(game, Draw);
 }

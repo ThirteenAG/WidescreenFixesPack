@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/scda/main2.jpg" width="760" alt="Splinter Cell: Double Agent Widescreen Fix (PC)">
+<img src="https://thirteenag.github.io/screens/scda/main2.jpg" width="760" alt="Splinter Cell: Double Agent Fusion Fix (PC)">
 
-**Splinter Cell: Double Agent Widescreen Fix (PC)** corrects widescreen scaling and field of view, adds raw mouse input and controller support, and offers shadow, glow, and lighting options.
+**Splinter Cell: Double Agent Fusion Fix (PC)** corrects widescreen scaling and field of view, adds raw mouse input and controller support, and offers shadow, glow, and lighting options.
 
-[Website](https://thirteenag.github.io/wfp#scda) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgent.WidescreenFix/dllmain.cpp)
+[Website](https://thirteenag.github.io/wfp#scda) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellDoubleAgent.FusionFix/dllmain.cpp)
 
 </div>
 
@@ -15,8 +15,9 @@
 - **Resolution** — Set the output resolution on fusionfix.io or in FusionFixHub.
 - **Aspect ratio** — Correct widescreen aspect ratio scaling.
 - **HUD** — Correct HUD scaling for widescreen.
-- **Field of view** — Adjust the field of view for widescreen.
-- **Videos** — Correct FMV scaling for widescreen.
+- **Field of view** — Adjust the normal following camera live; 1.00 is neutral and extra widening is bounded to 150°.
+- **Cinematics** — Cutscene Borders keeps the authored framing. Both adds side bars on wider screens and top/bottom bars on narrower screens; Off fills the screen with a Hor+ view.
+- **Videos** — Keep the movie’s own aspect ratio with borders where needed.
 
 ### Input and compatibility
 
@@ -25,6 +26,7 @@
 - **Audio** — Restore EAX support through [DSOAL](https://github.com/kcat/dsoal).
 - **AI hearing** — Fix the [AI hearing issue](https://www.youtube.com/watch?v=uX_FcPvM64c).
 - **Loading videos** — Press Enter to skip loading screens that are playing a video.
+- **Startup crash** — Fix the crash on startup that otherwise needs the `-ll` command line switch.
 
 ## Options
 
@@ -40,7 +42,7 @@
 
 ### Lighting
 
-- **Goggles** — Choose the goggles' light color.
+- **Goggles** — Choose Original, Green, Red or Orange for the goggles and suit lights.
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 - **Suit indicators** — Use Blacklist-style indicators that respond to the player's visibility.
 
@@ -48,28 +50,36 @@
 
 ## Settings
 
-Choose the resolution, HUD width and gameplay field of view in FusionFixHub or on fusionfix.io. HUD width changes apply immediately when widescreen HUD scaling is enabled. The gameplay FOV multiplier changes the normal following camera; aiming, cinematic and minimap views keep their own framing.
+Open Options > Plugins > Splinter Cell Double Agent Fusion Fix in the single-player menu, including from Pause > Options. On/off options show On or Off, while indicator and color choices use names. More Pages reaches the remaining settings; F1 opens the selected option’s full help, and Back returns. FusionFixHub and fusionfix.io also configure the fix. HUD width changes apply immediately: Auto puts the HUD at the screen edges, 4:3 keeps the original layout. The gameplay FOV multiplier changes the normal following camera; aiming, cinematic and minimap views keep their own framing.
 
-Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets. The default frame rate limit is 60 FPS.
+Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets. The live frame rate limit defaults to 60 FPS; 0 removes the limit and -1 follows the monitor refresh rate.
 
 Native Graphics Overrides lets the fix apply its graphics choices to the game. Disable it to keep the game's own graphics settings. Leave an individual override empty to leave that setting unchanged. A custom loading image can be placed beside the plugin with the same filename and a `.png` extension.
+
+Window Mode selects fullscreen, a framed window or borderless and applies on restart. A framed window uses the chosen client resolution; borderless renders at the target monitor’s resolution. Pause on Focus Loss and Confine Cursor apply immediately. Check for Updates is off by default; enabling it shows an available update in the game’s own menu.
+
+Gamepad Icons uses Xbox labels in Auto; PlayStation and Nintendo labels are selected manually. Gamepad Camera Speed scales the right stick live, with 1.00 preserving the game’s speed and deadzone. Use the game’s own Invert Look Up/Down option for vertical inversion. Vibration can be disabled independently. Controller input stays with the game and the bundled Xidi.
+
+Ctrl+F10 opens the developer overlay when available. Debug > Info reports the build, graphics API and back-buffer resolution.
 
 The online window and frame rate options apply to multiplayer. The added settings menu is for single-player.
 
 ## Configuration
 
-The added settings text is available in English, French, German, Italian and Spanish. Choose Text Language in FusionFixHub to override the automatic choice. If the game language cannot be identified, English is used.
+The added settings and help text are available in English, French, German, Italian and Spanish. Choose Text Language in FusionFixHub to override the automatic choice. If the game language cannot be identified, English is used.
 
 Recommended uses the default setup. Vanilla and Enhanced offer alternative presets. Settings marked for restart take effect on the next launch. If Plugins is unavailable in your game version, use FusionFixHub or the generated `.cfg` file.
 
-Vanilla uses the original shadow, glow and reflection resolutions and disables the added RGB lighting and run-during-forced-walk options. Single Core Affinity is an experimental compatibility option for loading hangs; it is off by default and can reduce performance.
+Vanilla uses the original shadow, glow and reflection resolutions and disables the added RGB lighting. Run during forced walk remains your choice when switching presets. Single Core Affinity is an experimental compatibility option for loading hangs; it is off by default and can reduce performance.
+
+Some custom window sizes are absent from the game’s resolution dropdown. Use the fix’s Horizontal Resolution and Vertical Resolution controls for those sizes. If the display reports fewer than seven modes, some entries can repeat.
 
 ## Installation
 
 1. Download the fix archive from this release.
 2. Extract the archive into the game’s installation folder, preserving its directory structure. The included files belong under `SCDA-Offline/System`.
-3. Launch the game to create `SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.cfg`.
-4. Configure on fusionfix.io or in FusionFixHub. Mouse sensitivity, HUD width and field of view apply while the game runs; restart the game after changing the other settings.
+3. Launch the game to create `SCDA-Offline/System/scripts/SplinterCellDoubleAgent.FusionFix.cfg`.
+4. Configure in Options > Plugins, on fusionfix.io or in FusionFixHub. Live settings apply while playing; the menu identifies settings that require a restart.
 
 > [!WARNING]
 > Non-Windows users (Proton/Wine) need to perform a **DLL override**.

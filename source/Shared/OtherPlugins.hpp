@@ -225,10 +225,9 @@ namespace OtherPlugins
         return current;
     }
 
-    // The value in effect as the menu shows it (UTF-8); on and off are the host's own words
-    inline std::string ValueText(const LoadedPlugin& plugin, const Setting& setting, const std::string& on, const std::string& off)
+    // A value as the menu shows it (UTF-8); on and off are the host's own words
+    inline std::string ValueText(const LoadedPlugin& plugin, const Setting& setting, std::string value, const std::string& on, const std::string& off)
     {
-        auto value = Get(plugin, setting);
         if (setting.type == asi_settings::Type::Bool)
         {
             int b = 0;
@@ -256,6 +255,12 @@ namespace OtherPlugins
                 value += setting.unit == "%" || setting.unit == "\xC2\xB0" ? setting.unit : " " + setting.unit;
         }
         return value;
+    }
+
+    // The value in effect as the menu shows it (UTF-8)
+    inline std::string ValueText(const LoadedPlugin& plugin, const Setting& setting, const std::string& on, const std::string& off)
+    {
+        return ValueText(plugin, setting, Get(plugin, setting), on, off);
     }
 
     // Presets: the preset the plugin's preset settings all match, or -1 for Custom

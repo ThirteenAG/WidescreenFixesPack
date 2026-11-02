@@ -18,6 +18,13 @@ class sc5.custom.containers.SettingsPage extends sc5.framework.containers.Page
       super.activate();
       _root.FlashMenu.sendCommand("FixMenuEntry","",this);
    }
+   function openFixNotice(title, text)
+   {
+      if(this.fixPage == null) { return false; }
+      this.onPageChanged("FixAdvancedOptions",true);
+      this.fixPage.showFixDetails(title,text);
+      return true;
+   }
    function deactivate()
    {
       super.deactivate();
@@ -181,7 +188,7 @@ class sc5.custom.containers.SettingsPage extends sc5.framework.containers.Page
          {
             _root.FlashMenu.sendCommand("FixMenuClose","",this);
             this.fixReady = false;
-            _root.FlashMenu.tickables.removeItem(this.fixTicker);
+            delete this.privateMenu.onEnterFrame;
             this.privateMenu.removeMovieClip();
             sc5.framework.containers.Page.prototype.destroy.call(this);
          };
@@ -205,6 +212,18 @@ class sc5.custom.containers.SettingsPage extends sc5.framework.containers.Page
          };
          page.resetFixMenu = function(title)
          {
+            if(this.fixHelpVisibility != undefined)
+            {
+               var restoreIndex = 0;
+               while(restoreIndex < this.fixHelpVisibility.length)
+               {
+                  this.privateMenu["Menu"+restoreIndex]._visible = this.fixHelpVisibility[restoreIndex];
+                  restoreIndex++;
+               }
+               this.fixHelpVisibility = undefined;
+            }
+            this.fixDetailsMode = false;
+            if(this.fixDetails != undefined) { this.fixDetails._visible = false; }
             this.fixReady = false;
             this.fixDescription.MenuItem.txtField.text = "";
             this.fixDescription._visible = false;
@@ -243,7 +262,7 @@ class sc5.custom.containers.SettingsPage extends sc5.framework.containers.Page
          };
          page.refreshFixLabels = function()
          {
-            if(!this.fixReady) { return; }
+            if(!this.fixReady || this.fixDetailsMode) { return; }
             var i = 0;
             while(i < this.fixRendered.length)
             {
@@ -322,6 +341,7 @@ class sc5.custom.containers.SettingsPage extends sc5.framework.containers.Page
          };
          page.describeFixMenu = function(description)
          {
+            if(this.fixDetailsMode) { return true; }
             description = description == null || description == undefined ? "" : String(description);
             if(description.length > 36)
             {
@@ -337,6 +357,45 @@ class sc5.custom.containers.SettingsPage extends sc5.framework.containers.Page
             this.fixDescription._visible = description.length > 0;
             return true;
          };
+         page.showFixDetails = function(title,description)
+         {
+            if(!this.fixDetailsMode)
+            {
+               this.fixHelpVisibility = new Array();
+               var saveIndex = 0;
+               while(saveIndex < 10)
+               {
+                  this.fixHelpVisibility.push(this.privateMenu["Menu"+saveIndex]._visible);
+                  saveIndex++;
+               }
+            }
+            this.fixDetailsMode = true;
+            this.fixDescription._visible = false;
+            var i = 0;
+            while(i < 10) { this.privateMenu["Menu"+i]._visible = false; i++; }
+            if(this.fixDetails == undefined)
+            {
+               this.fixDetails = this.privateMenu.Menu0.duplicateMovieClip("FixDetails",this.privateMenu.getNextHighestDepth());
+               this.fixDetails.Background._visible = false;
+               this.fixDetails.hitTestDisable = true;
+            }
+            this.fixDetails._y = firstY;
+            this.fixDetails._visible = true;
+            this.fixDetails._alpha = 100;
+            var field = this.fixDetails.MenuItem.txtField;
+            field.multiline = true;
+            field.wordWrap = true;
+            field.autoSize = "none";
+            field._height = spacing*7;
+            field.text = description;
+            field.scroll = 1;
+            this.title = title;
+            _root.FlashMenu.frame.refreshPageTitle();
+            var background = _root.FlashMenu.frame.background;
+            if(background != undefined) { background.setTitle(title); }
+            _root.FlashMenu.sendCommand("SetPageTitle","",_root.FlashMenu.frame);
+            return true;
+         };
          page.leaveFixMenu = function()
          {
             this.fixReady = false;
@@ -346,6 +405,25 @@ class sc5.custom.containers.SettingsPage extends sc5.framework.containers.Page
          page.handleInput = function(event)
          {
             var action = event.getAction(); var key = event.getKey();
+            if(this.fixDetailsMode)
+            {
+               if(action == sc5.framework.input.InputAction.PRESS && key == sc5.framework.input.InputKey.JOY_B)
+               {
+                  _root.FlashMenu.sendCommand("FixMenuHelpBack","",this);
+               }
+               if(action == sc5.framework.input.InputAction.PRESS || action == sc5.framework.input.InputAction.HOLD)
+               {
+                  var field = this.fixDetails.MenuItem.txtField;
+                  if(key == sc5.framework.input.InputKey.JOY_DOWN) { field.scroll = Math.min(field.maxscroll,field.scroll+1); }
+                  if(key == sc5.framework.input.InputKey.JOY_UP) { field.scroll = Math.max(1,field.scroll-1); }
+               }
+               return true;
+            }
+            if(action == sc5.framework.input.InputAction.PRESS && key == sc5.framework.input.InputKey.JOY_Y)
+            {
+               _root.FlashMenu.sendCommand("FixMenuHelp",String(this.menu.getSelectedIndex()),this);
+               return true;
+            }
             if(!this.fixReady)
             {
                if(action == sc5.framework.input.InputAction.PRESS && key == sc5.framework.input.InputKey.JOY_B)
@@ -389,11 +467,12 @@ class sc5.custom.containers.SettingsPage extends sc5.framework.containers.Page
             _root.FlashMenu.sendCommand("FixMenuDescription",String(this.getSelectedIndex()),page);
          };
          frame.addChild(page,"C");
-         // Tickables.getItemAt casts to native ITickable: use a native object
-         // that implements that interface, rather than an untyped Page.
-         page.fixTicker = new sc5.framework.input.InputLine(0);
-         page.fixTicker.tick = function(delta) { page.tick(delta); };
-         _root.FlashMenu.tickables.addItem(page.fixTicker);
+         // The movie advances while either native Settings page is open.
+         page.privateMenu.onEnterFrame = function()
+         {
+            page.tick(0);
+            if(owner.isActivated()) { _root.FlashMenu.sendCommand("FixMenuNotice","",owner); }
+         };
          page.privateMenu._visible = false;
          this.fixPage = page;
          this.fixIndex = this.menu.getItemCount();

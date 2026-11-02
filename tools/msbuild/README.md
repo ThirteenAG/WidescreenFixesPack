@@ -16,8 +16,8 @@ ordinary command to enable sharing again.
 The utility project's `ClCompile` target uses native MSBuild header, command,
 and output tracking. Project references support standalone plugin builds, and
 solution dependencies coordinate parallel builds. Missing shared objects are
-regenerated; shared object changes are tracked as linker inputs. Win32/CXBXR
-and Win64/Dolphin reuse their architecture's objects in the sequential CI build.
+regenerated; shared object changes are tracked as linker inputs. Win64/Dolphin
+reuses its architecture's objects in the sequential CI build.
 
 `shared-dependencies.targets` defines the common Release compilation settings.
 If a dependency needs a plugin-specific macro or compiler setting in the future,

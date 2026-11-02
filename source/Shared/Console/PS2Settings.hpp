@@ -10,6 +10,12 @@ extern "C" {
 
 #define PCSX2F_CFG_PEER_SETTINGS() extern "C" { uint32_t PCSX2FSettingsPeerVersion = 0; }
 
+// Save states restore the plugin's globals together with the game. The host
+// increments this word after loading a state; the plugin then reads its CFG
+// again so the current file wins over the restored values.
+#define PCSX2F_STATE_LOAD_GENERATION() extern "C" { uint32_t PCSX2FStateLoadGeneration = 0; }
+extern "C" uint32_t PCSX2FStateLoadGeneration;
+
 namespace console::ps2settings {
 struct Value { const char* section; const char* key; char value[64]; };
 inline bool copy(char* destination, const char* source) {
@@ -17,24 +23,6 @@ inline bool copy(char* destination, const char* source) {
     std::strcpy(destination, source);
     return true;
 }
-
-// Static instances keep request storage in the calling module's image.
-class RestartBoolPeer {
-    const char* module; const char* section; const char* key;
-    PCSX2FBoolPeerRequest data{};
-    bool invoke(uint32_t operation, bool& value) {
-        data = {}; data.size = sizeof(data); data.version = 2; data.operation = operation; data.count = 1;
-        if (!copy(data.module, module) || !copy(data.section, section) || !copy(data.key, key)) return false;
-        if (operation == PCSX2F_SETTINGS_WRITE) { data.value[0] = value ? '1' : '0'; data.value[1] = 0; }
-        if (PCSX2F_BoolPeerRequest(&data) != PCSX2F_SETTINGS_OK ||
-            (data.value[0] != '0' && data.value[0] != '1') || data.value[1]) return false;
-        value = data.value[0] == '1'; return true;
-    }
-public:
-    RestartBoolPeer(const char* peer, const char* group, const char* setting) : module(peer), section(group), key(setting) {}
-    bool Read(bool& value) { return invoke(PCSX2F_SETTINGS_READ, value); }
-    bool Write(bool value) { const bool requested = value; return invoke(PCSX2F_SETTINGS_WRITE, value) && value == requested; }
-};
 
 inline uint32_t request(PCSX2FIniRequest& data) {
     if (PCSX2FSettingsVersion != 2) return PCSX2F_SETTINGS_UNSUPPORTED;
@@ -67,6 +55,51 @@ template<size_t Count> bool load(Value (&values)[Count]) {
     }
     return saved;
 }
+// Reads the current values without writing anything back (refresh after a
+// state load, periodic checks). Missing keys keep their current value.
+template<size_t Count> bool read(Value (&values)[Count]) {
+    if (PCSX2FSettingsVersion != 2) return false;
+    static PCSX2FIniRequest data;
+    for (auto& value : values) {
+        data = {};
+        data.size = sizeof(data); data.version = 1; data.operation = PCSX2F_SETTINGS_READ; data.count = 1;
+        if (!copy(data.entries[0].section, value.section) || !copy(data.entries[0].key, value.key)) return false;
+        const auto status = request(data);
+        if (status == PCSX2F_SETTINGS_OK) { data.entries[0].value[sizeof(data.entries[0].value) - 1] = 0; copy(value.value, data.entries[0].value); }
+        else if (status != PCSX2F_SETTINGS_NOT_FOUND) return false;
+    }
+    return true;
+}
+// Call once per game frame: runs `refresh` when a save state was loaded since
+// the last call. The last-seen value is restored with the state too, so a
+// state saved before a pending refresh still refreshes.
+struct StateLoads {
+    uint32_t seen = 0;
+    template<class Refresh> void poll(Refresh refresh) {
+        const uint32_t current = *reinterpret_cast<volatile uint32_t*>(&PCSX2FStateLoadGeneration);
+        if (current == seen) return;
+        refresh();
+        seen = current;
+    }
+};
+// A setting another plugin's menu or a state load may change while the game
+// runs: read again at most once a second of game time, and after state loads.
+template<size_t Count> struct LiveValues {
+    Value (&values)[Count];
+    StateLoads stateLoads;
+    uint32_t lastRead = 0;
+    explicit LiveValues(Value (&list)[Count]) : values(list) {}
+    // True when the values were read again.
+    bool update(uint32_t nowMs) {
+        bool changed = false;
+        stateLoads.poll([&] { changed = read(values); });
+        if (nowMs - lastRead >= 1000 || nowMs < lastRead) {
+            lastRead = nowMs;
+            changed = read(values) || changed;
+        }
+        return changed;
+    }
+};
 inline bool boolean(const Value& value, bool fallback) {
     char token[64]{};
     const char* begin = value.value;

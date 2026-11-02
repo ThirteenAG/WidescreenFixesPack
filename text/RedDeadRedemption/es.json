@@ -1,6 +1,6 @@
 {
   "plugin.name": "Red Dead Redemption Fusion Fix",
-  "page.advanced": "Avanzado",
+  "page.game": "Juego",
   "SkipIntro": "Saltar introducción",
-  "SkipIntro.description": "Omite los logotipos y los avisos legales al iniciar."
+  "SkipIntro.description": "Empieza directamente en la pantalla de título, sin los logotipos de Rockstar Games y Double Eleven. Desactivado, se muestran como en el juego original. Requiere reiniciar."
 }

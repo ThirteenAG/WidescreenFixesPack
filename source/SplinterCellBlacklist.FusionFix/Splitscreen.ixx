@@ -20,7 +20,6 @@ import ComVars;
 namespace Splitscreen
 {
     uint8_t* (*GetEngine)() = nullptr;
-    int32_t* pLastPad = nullptr;
 
     uint8_t* GetProfileManager(uint8_t* engine)
     {
@@ -139,7 +138,6 @@ namespace Splitscreen
     uint8_t* firstInput = nullptr;
 
     // Gamepad mode (icons, no cursor), set by any input with a pad, pads are only read in it
-    int32_t* pGamepadMode = nullptr;
     void(__stdcall* SetKeyboardMode)(uint8_t* input, int32_t keyboard) = nullptr;
 
     // Player 1's input without a pad in split screen switches modes only by the plugin: the game also switches it by the profile's
@@ -181,27 +179,26 @@ namespace Splitscreen
     template<typename F>
     auto WithGamepadMode(bool player2, F&& f)
     {
-        if (!player2 || !IsPlaying() || *pGamepadMode)
+        if (!player2 || !IsPlaying() || GamepadMode)
             return f();
-        *pGamepadMode = 1;
+        GamepadMode = 1;
         auto result = f();
-        *pGamepadMode = 0;
+        GamepadMode = 0;
         return result;
     }
 
-    uint8_t** pUIManager = nullptr;
 
     // a screen owned by player 2: UI manager +78h locked to the controller at +7Ch
     bool IsPlayer2Screen()
     {
-        auto ui = pUIManager ? *pUIManager : nullptr;
+        auto ui = UIManager.is_initialized() ? UIManager.get() : nullptr;
         return ui && *reinterpret_cast<bool*>(ui + 0x78) && *reinterpret_cast<int32_t*>(ui + 0x7C) == controllerPlayer2;
     }
 
     // UI manager: menus blocking the players' input (mask at +5A0h)
     bool IsMenuBlockingInput()
     {
-        auto ui = pUIManager ? *pUIManager : nullptr;
+        auto ui = UIManager.is_initialized() ? UIManager.get() : nullptr;
         return ui && *reinterpret_cast<uint32_t*>(ui + 0x5A0) != 0;
     }
 
@@ -246,8 +243,6 @@ namespace Splitscreen
     // Software occlusion culling (the renderer's default, Lead option +420h = 2): visibility jobs for the camera and up to 3 shadow lights,
     // each run of a job reads the results of its last run. The split screen views take turns, each view has its own jobs (with the
     // shared ones the first view culled by the second's camera: missing geometry, shadow casters).
-    void*** pCameraJob = nullptr;
-    void**** pLightJobs = nullptr;
     void* (__cdecl* CreateVisibilityJob)(const uint32_t* params) = nullptr;
     char(__cdecl* DestroyVisibilityJob)(void* job) = nullptr;
 
@@ -298,9 +293,9 @@ namespace Splitscreen
     void UseJobs(const VisibilityJobs& jobs, bool swapped)
     {
         if (!jobsSwapped)
-            gameJobs = { *pCameraJob, *pLightJobs };
-        *pCameraJob = jobs.camera;
-        *pLightJobs = jobs.lights;
+            gameJobs = { CameraJob, LightJobs };
+        CameraJob = jobs.camera;
+        LightJobs = jobs.lights;
         jobsSwapped = swapped;
     }
 
@@ -325,7 +320,7 @@ namespace Splitscreen
     // A frame prepares each view (its jobs start), then renders each one (its jobs finish): the view's index (view parameters +26Ch)
     void SelectVisibilityJobs(int32_t view)
     {
-        if (!GetSplitViewport() || !*pCameraJob || view < 0)
+        if (!GetSplitViewport() || !CameraJob || view < 0)
         {
             if (jobsSwapped)
                 UseJobs(gameJobs, false);
@@ -481,7 +476,6 @@ namespace Splitscreen
     // Ambient occlusion (Lead options +3CCh, DX9 +3C8h, ResourceDB +8): a split screen view is smaller than the buffers, the game
     // takes its own SSAO instead of HBAO+ and it darkens a band along player 1's view that moves with the camera. It's off while
     // in split screen (applying the video options in the mission sets it again).
-    uint8_t** pResourceDB = nullptr;
     uintptr_t aoOffset = 0x3CC;
     float savedAO = 0.0f;
     bool aoOff = false;
@@ -491,19 +485,18 @@ namespace Splitscreen
     // player 2's half (player 2's camera seemed stuck) until the lobby. It's laid out again when player 1's viewport is wider than player 2's
     // origin (+4A0h width, +4A8h x) outside a cinematic (byte_310A450 player 1 full width, engine +27Ch cinematic count).
     void(__fastcall* SplitLayout)(uint8_t* engine, void* edx, int32_t fullWidth) = nullptr;
-    uint8_t* pPlayer1FullWidth = nullptr;
 
     void KeepSplitLayout(uint8_t* viewport)
     {
         auto engine = GetEngine();
         auto split = GetSplitViewport();
-        if (!SplitLayout || !pPlayer1FullWidth || !engine || !split || viewport != GetFirstViewport() || *pPlayer1FullWidth ||
+        if (!engine || !split || viewport != GetFirstViewport() || Player1FullWidth ||
             *reinterpret_cast<int32_t*>(engine + 0x27C) != 0)
             return;
         auto origin = *reinterpret_cast<int32_t*>(split + 0x4A8);
         if (origin > 0 && *reinterpret_cast<int32_t*>(viewport + 0x4A0) > origin)
         {
-            *pPlayer1FullWidth = 1; // the layout returns when it's already the asked state
+            Player1FullWidth = 1; // the layout returns when it's already the asked state
             SplitLayout(engine, nullptr, 0);
         }
     }
@@ -515,9 +508,9 @@ namespace Splitscreen
 
     void UpdateReflections()
     {
-        if (!pResourceDB || !*pResourceDB)
+        if (!ResourceDB.is_initialized() || !ResourceDB)
             return;
-        auto& reflections = *(*reinterpret_cast<uint8_t**>(*pResourceDB + 8) + 0x26D);
+        auto& reflections = *(*reinterpret_cast<uint8_t**>(ResourceDB + 8) + 0x26D);
         if (bSplitscreen)
         {
             if (reflections != 0)
@@ -536,9 +529,9 @@ namespace Splitscreen
 
     void UpdateAmbientOcclusion()
     {
-        if (!pResourceDB || !*pResourceDB)
+        if (!ResourceDB.is_initialized() || !ResourceDB)
             return;
-        auto& ao = *reinterpret_cast<float*>(*reinterpret_cast<uint8_t**>(*pResourceDB + 8) + aoOffset);
+        auto& ao = *reinterpret_cast<float*>(*reinterpret_cast<uint8_t**>(ResourceDB + 8) + aoOffset);
         if (bSplitscreen)
         {
             if (ao != 0.0f)
@@ -557,12 +550,11 @@ namespace Splitscreen
 
     // Player 2 is a guest with the guest loadout (CLoadoutManager, flag +2Ch), +2Dh makes it customizable in the lobby's gear screen
     // and saved in the profile (its own section, by name)
-    uint8_t** pLoadoutGlobal = nullptr;
     uint8_t* (__fastcall* GetGuestLoadout)(void* loadouts, void* edx) = nullptr;
 
     void UnlockGuestLoadout()
     {
-        auto global = pLoadoutGlobal ? *pLoadoutGlobal : nullptr;
+        auto global = LoadoutGlobal.is_initialized() ? LoadoutGlobal.get() : nullptr;
         auto loadouts = global ? *reinterpret_cast<uint8_t**>(global + 0x2C) : nullptr;
         auto guest = loadouts && GetGuestLoadout ? GetGuestLoadout(loadouts, nullptr) : nullptr;
         if (guest)
@@ -628,7 +620,7 @@ namespace Splitscreen
             // the menus switch to gamepad mode the game's way when player 2's pad was used last, the UI updates its prompts
             auto gamepad = IsPlaying() && lastInputPad && (shared || IsPlayer2Screen());
             // the gamepad mode can be on already (set by a pad event) with the input still in the keyboard layout
-            if ((*pGamepadMode != 0) != gamepad || (gamepad && HasKeyboardLayout(input)))
+            if ((GamepadMode != 0) != gamepad || (gamepad && HasKeyboardLayout(input)))
             {
                 SwitchMode(input, !gamepad);
 
@@ -645,13 +637,13 @@ namespace Splitscreen
             }
             if (shared)
             {
-                auto mode = *pGamepadMode;
-                *pGamepadMode = 1;
+                int32_t mode = GamepadMode;
+                GamepadMode = 1;
                 sharedUpdate = true;
                 sharedUpdateTime = GetTickCount64();
                 shUpdateInput.thiscall<void>(viewport, input, delta1, delta2, a4);
                 sharedUpdate = false;
-                *pGamepadMode = mode;
+                GamepadMode = mode;
                 return;
             }
         }
@@ -719,19 +711,19 @@ namespace Splitscreen
             // X customizes player 2's gear (in gamepad mode the button bar takes X before the lobby, then does nothing for player 2)
             // it opens once the input update switched to gamepad mode and out of the keyboard layout
             static bool pendingX = false;
-            auto ui = pUIManager ? *pUIManager : nullptr;
+            auto ui = UIManager.is_initialized() ? UIManager.get() : nullptr;
             if (pressed & XINPUT_GAMEPAD_X)
             {
                 lastInputPad = true;
                 pendingX = true;
             }
             pendingX = pendingX && lastInputPad;
-            if (pendingX && *pGamepadMode && !HasKeyboardLayout(firstInput))
+            if (pendingX && GamepadMode && !HasKeyboardLayout(firstInput))
             {
                 pendingX = false;
                 if (ui && !ui[0x78])
                 {
-                    *pLastPad = controllerPlayer2;
+                    LastPad = controllerPlayer2;
                     ButtonX(lobby, nullptr);
                 }
             }
@@ -743,7 +735,7 @@ namespace Splitscreen
             return;
 
         *reinterpret_cast<int32_t*>(GetProfileManager(GetEngine()) + 0x14) = controllerPlayer1;
-        *pLastPad = controllerPlayer2;
+        LastPad = controllerPlayer2;
         StartPressed(lobby, nullptr);
         if (IsPlaying())
         {
@@ -849,10 +841,10 @@ namespace Splitscreen
 
         if (IsPlayer2Scene(scene))
         {
-            auto mode = *pGamepadMode;
-            *pGamepadMode = 1;
+            int32_t mode = GamepadMode;
+            GamepadMode = 1;
             auto result = shSceneTick[N].thiscall<bool>(scene, slot, delta);
-            *pGamepadMode = mode;
+            GamepadMode = mode;
             return result;
         }
         return shSceneTick[N].thiscall<bool>(scene, slot, delta);
@@ -877,13 +869,13 @@ namespace Splitscreen
         if (!scene)
             return shActionIcon.thiscall<char>(behavior, input);
 
-        auto mode = *pGamepadMode;
+        int32_t mode = GamepadMode;
         if (IsPlayer2Scene(scene))
-            *pGamepadMode = 1;
+            GamepadMode = 1;
         else if (!padPlayer1)
-            *pGamepadMode = 0;
+            GamepadMode = 0;
         auto result = shActionIcon.thiscall<char>(behavior, input);
-        *pGamepadMode = mode;
+        GamepadMode = mode;
         return result;
     }
 
@@ -942,7 +934,7 @@ namespace Splitscreen
         wasSplit = false;
         auto controller = GetController(1);
         shEndSplitScreen.thiscall<void>(engine);
-        if (split && controller != -1 && RemoveSecondaryLocalPlayer)
+        if (split && controller != -1)
             RemoveSecondaryLocalPlayer(engine, nullptr, controller);
     }
 
@@ -963,14 +955,13 @@ namespace Splitscreen
     }
 
     // EnterSplitscreen sets GIsRequestingExit when the second player can't be spawned (a map without a second player start)
-    uint32_t* pRequestingExit = nullptr;
     SafetyHookInline shEnter{};
     void __fastcall Enter(void* engine, void* edx)
     {
-        auto requested = *pRequestingExit;
+        uint32_t requested = GIsRequestingExit;
         shEnter.thiscall<void>(engine);
         if (!requested)
-            *pRequestingExit = 0;
+            GIsRequestingExit = 0;
     }
 
     // co-op launch box, adds the split screen button: options {id, FString label} at ebp - boxOptions, the count 40h after, up to 4
@@ -1023,8 +1014,6 @@ export void InitSplitscreen()
     auto box9 = hook::pattern("8D 95 68 FF FF FF 8D 8E BC 05 00 00 52");
     auto uiManager = hook::pattern("A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC A1 ? ? ? ? 85 C0 74 0C 83 78 04 00 74 06");
     auto uiManager9 = hook::pattern("8B 0D ? ? ? ? 80 79 78 00 75 ? 84 DB");
-    if ((start.empty() && start9.empty()) || (buttonX.empty() && buttonX9.empty()) || (box.empty() && box9.empty()) || (uiManager.empty() && uiManager9.empty()))
-        return;
 
     auto engine = hook::pattern("83 3D ? ? ? ? 00 75 09 A1 ? ? ? ? 85 C0 75 05 A1 ? ? ? ? C3");
     auto solo = hook::pattern("53 53 53 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 88 5D ? C7 45 ? 01 00 00 00 C7 45 ? 06 00 00 00 E8 ? ? ? ? 83 C4 18 50 8D 8D ? ? ? ? E8");
@@ -1052,37 +1041,33 @@ export void InitSplitscreen()
     auto repaint = hook::pattern("55 8B EC 83 3D ? ? ? ? 00 56 8B F1 74 12 83 7E 30 00 74 4F 8B 46 18 8B 48 28 8B 45 0C 50 EB 30 8B 46 30 85 C0 74 3C 83 B8 10 03 00 00 00 75 18 80 78 4D 00");
     auto moveStick = hook::pattern("55 8B EC F3 0F 10 81 6C 03 00 00 83 EC 08 83 3D ? ? ? ? 00 0F 5A C0 F2 0F 59 C0 74 1C F3 0F 10 89 68 03 00 00");
     auto viewportEvent = hook::pattern("55 8B EC 83 3D ? ? ? ? 00 57 8B F9 74 28 8B 45 1C F3 0F 10 45 14");
-    if (engine.empty() || solo.empty() || lobbyTick.empty() || viewportController.empty() || exitRequest.empty() || enter.empty() || xinputPad.empty() ||
-        keyboardMode.empty() || resourceDB.empty() || createJob.empty() || destroyJobs.empty() || prepareView.empty() || renderView.empty() || guest.empty() || primary.empty() || bindings.empty() || hudViewport.empty() || sceneTicks.empty() ||
-        controllerTick.empty() || pawnTick.empty() || cameraUpdate.empty() || repaint.empty() || moveStick.empty() || keyboardModeOn.empty() || gamepadModeOn.empty() || viewportEvent.empty())
-        return;
 
     Splitscreen::GetEngine = engine.get_first<uint8_t*()>();
     if (!start.empty())
     {
         Splitscreen::StartPressed = start.get_first<void(__fastcall)(void*, void*)>();
-        Splitscreen::pLastPad = *start.get_first<int32_t*>(4);
+        LastPad.SetAddress(*start.get_first<int32_t*>(4));
     }
     else
     {
         Splitscreen::StartPressed = start9.get_first<void(__fastcall)(void*, void*)>();
-        Splitscreen::pLastPad = *start9.get_first<int32_t*>(12);
+        LastPad.SetAddress(*start9.get_first<int32_t*>(12));
     }
     Splitscreen::ButtonX = !buttonX.empty() ? buttonX.get_first<void(__fastcall)(void*, void*)>() : buttonX9.get_first<void(__fastcall)(void*, void*)>();
-    Splitscreen::pUIManager = !uiManager.empty() ? *uiManager.get_first<uint8_t**>(1) : *uiManager9.get_first<uint8_t**>(2);
+    UIManager.SetAddress(!uiManager.empty() ? *uiManager.get_first<uint8_t**>(1) : *uiManager9.get_first<uint8_t**>(2));
     Splitscreen::padIsXInput = *xinputPad.get_first<int32_t*>(12);
-    Splitscreen::pGamepadMode = *xinputPad.get_first<int32_t*>(25);
+    GamepadMode.SetAddress(*xinputPad.get_first<int32_t*>(25));
     Splitscreen::SetKeyboardMode = keyboardMode.get_first<void(__stdcall)(uint8_t*, int32_t)>();
     Splitscreen::shKeyboardModeOn = safetyhook::create_inline(keyboardModeOn.get_first(), Splitscreen::KeyboardModeOn);
     Splitscreen::shGamepadModeOn = safetyhook::create_inline(gamepadModeOn.get_first(), Splitscreen::GamepadModeOn);
-    Splitscreen::pRequestingExit = *exitRequest.get_first<uint32_t*>(18);
-    Splitscreen::pResourceDB = *resourceDB.get_first<uint8_t**>(1);
+    GIsRequestingExit.SetAddress(*exitRequest.get_first<uint32_t*>(18));
+    ResourceDB.SetAddress(*resourceDB.get_first<uint8_t**>(1));
     Splitscreen::aoOffset = !box.empty() ? 0x3CC : 0x3C8;
     Splitscreen::CreateVisibilityJob = reinterpret_cast<decltype(Splitscreen::CreateVisibilityJob)>(branch(createJob.get_first(21)));
-    Splitscreen::pCameraJob = *destroyJobs.get_first<void***>(1);
+    CameraJob.SetAddress(*destroyJobs.get_first<void***>(1));
     Splitscreen::DestroyVisibilityJob = reinterpret_cast<decltype(Splitscreen::DestroyVisibilityJob)>(branch(destroyJobs.get_first(7)));
-    Splitscreen::pLightJobs = *destroyJobs.get_first<void****>(19);
-    Splitscreen::pLoadoutGlobal = *guest.get_first<uint8_t**>(2);
+    LightJobs.SetAddress(*destroyJobs.get_first<void****>(19));
+    LoadoutGlobal.SetAddress(*guest.get_first<uint8_t**>(2));
     Splitscreen::GetGuestLoadout = reinterpret_cast<decltype(Splitscreen::GetGuestLoadout)>(branch(guest.get_first(9)));
     Splitscreen::GetHudViewport = hudViewport.get_first<uint8_t*(__fastcall)(void*, void*)>();
 
@@ -1124,61 +1109,49 @@ export void InitSplitscreen()
     // the sun's cascades (DirPasses) go through the same composite: player 1's view lost all but the nearest (shorter shadow distance)
     auto sunComposite = hook::pattern("E8 ? ? ? ? 83 BE 8C 01 00 00 00 7E 08 53 8B CE E8");
     auto sunComposite9 = hook::pattern("E8 ? ? ? ? 83 BE 54 01 00 00 00 7E 08 53 8B CE E8");
-    auto& composite = spotComposite.size() == 2 ? spotComposite : spotComposite9;
+    auto& composite = !spotComposite.empty() ? spotComposite : spotComposite9; // DX11 : DX9
     auto& sun = !sunComposite.empty() ? sunComposite : sunComposite9;
-    if (composite.size() == 2 && (!stencilEnable.empty() || !stencilEnable9.empty()))
+    static auto CompositeStart = safetyhook::create_mid(composite.get(0).get<void>(5), [](SafetyHookContext& regs)
     {
-        static auto CompositeStart = safetyhook::create_mid(composite.get(0).get<void>(5), [](SafetyHookContext& regs)
+        Splitscreen::inShadowComposite = true;
+    });
+    static auto CompositeEnd = safetyhook::create_mid(composite.get(0).get<void>(0x16), [](SafetyHookContext& regs)
+    {
+        Splitscreen::inShadowComposite = false;
+    });
+    static auto SunCompositeStart = safetyhook::create_mid(sun.get_first(5), [](SafetyHookContext& regs)
+    {
+        Splitscreen::inShadowComposite = true;
+    });
+    static auto SunCompositeEnd = safetyhook::create_mid(sun.get_first(0x16), [](SafetyHookContext& regs)
+    {
+        Splitscreen::inShadowComposite = false;
+    });
+    if (!stencilEnable.empty()) // DX11
+    {
+        static auto StencilEnable = safetyhook::create_mid(stencilEnable.get_first(6), [](SafetyHookContext& regs)
         {
-            Splitscreen::inShadowComposite = true;
+            Splitscreen::StencilEnable(reinterpret_cast<uint32_t*>(regs.esp + 4));
         });
-        static auto CompositeEnd = safetyhook::create_mid(composite.get(0).get<void>(0x16), [](SafetyHookContext& regs)
+    }
+    else // DX9
+    {
+        static auto StencilEnable = safetyhook::create_mid(stencilEnable9.get_first(5), [](SafetyHookContext& regs)
         {
-            Splitscreen::inShadowComposite = false;
+            Splitscreen::StencilEnable(reinterpret_cast<uint32_t*>(regs.esp + 8));
         });
-        if (!sun.empty())
-        {
-            static auto SunCompositeStart = safetyhook::create_mid(sun.get_first(5), [](SafetyHookContext& regs)
-            {
-                Splitscreen::inShadowComposite = true;
-            });
-            static auto SunCompositeEnd = safetyhook::create_mid(sun.get_first(0x16), [](SafetyHookContext& regs)
-            {
-                Splitscreen::inShadowComposite = false;
-            });
-        }
-        if (!stencilEnable.empty())
-        {
-            static auto StencilEnable = safetyhook::create_mid(stencilEnable.get_first(6), [](SafetyHookContext& regs)
-            {
-                Splitscreen::StencilEnable(reinterpret_cast<uint32_t*>(regs.esp + 4));
-            });
-        }
-        else
-        {
-            static auto StencilEnable = safetyhook::create_mid(stencilEnable9.get_first(5), [](SafetyHookContext& regs)
-            {
-                Splitscreen::StencilEnable(reinterpret_cast<uint32_t*>(regs.esp + 8));
-            });
-        }
     }
 
     auto splitLayout = hook::pattern("55 8B EC 8B 41 44 83 EC 10 85 C0 0F 84 ? ? ? ? 56 0F B6 35 ? ? ? ? 57 8B 7D 08");
-    if (!splitLayout.empty())
-    {
-        Splitscreen::SplitLayout = splitLayout.get_first<void(__fastcall)(uint8_t*, void*, int32_t)>();
-        Splitscreen::pPlayer1FullWidth = *splitLayout.get_first<uint8_t*>(0x15);
-    }
+    Splitscreen::SplitLayout = splitLayout.get_first<void(__fastcall)(uint8_t*, void*, int32_t)>();
+    Player1FullWidth.SetAddress(*splitLayout.get_first<uint8_t*>(0x15));
 
     // the view pool reset once a frame (RenderContext in ecx)
     auto viewPoolReset = hook::pattern("33 C0 89 81 ? ? 00 00 89 41 1C 89 81 ? ? 00 00");
-    if (!viewPoolReset.empty())
+    static auto ViewPoolReset = safetyhook::create_mid(viewPoolReset.get_first(), [](SafetyHookContext& regs)
     {
-        static auto ViewPoolReset = safetyhook::create_mid(viewPoolReset.get_first(), [](SafetyHookContext& regs)
-        {
-            Splitscreen::ResetViewOrders();
-        });
-    }
+        Splitscreen::ResetViewOrders();
+    });
     Splitscreen::ResetViewOrders();
 
     static auto DestroyJobs = safetyhook::create_mid(destroyJobs.get_first(), [](SafetyHookContext& regs)
@@ -1194,34 +1167,31 @@ export void InitSplitscreen()
     auto issueFlare = hook::pattern("25 01 00 00 80 79 05 48 83 C8 FE 40 8D 54 50 10 8B 04 97");
     auto issueGodray = hook::pattern("25 01 00 00 80 79 05 48 83 C8 FE 40 8D 14 50 8B 84 96 CC 02 00 00");
     auto readQueries = hook::pattern("25 01 00 00 80 79 05 48 83 C8 FE 40 8B 4B 04 83 F9 02");
-    if (!createFlare.empty() && !createGodray.empty() && !issueFlare.empty() && !issueGodray.empty() && !readQueries.empty())
+    Splitscreen::CreateQuery = reinterpret_cast<decltype(Splitscreen::CreateQuery)>(branch(createFlare.get_first(-0x13)));
+    Splitscreen::queryType = *createFlare.get_first<int8_t>(-0x14);
+    static auto CreateFlareQueries = safetyhook::create_mid(createFlare.get_first(), [](SafetyHookContext& regs)
     {
-        Splitscreen::CreateQuery = reinterpret_cast<decltype(Splitscreen::CreateQuery)>(branch(createFlare.get_first(-0x13)));
-        Splitscreen::queryType = *createFlare.get_first<int8_t>(-0x14);
-        static auto CreateFlareQueries = safetyhook::create_mid(createFlare.get_first(), [](SafetyHookContext& regs)
-        {
-            Splitscreen::CreateSecondViewQueries(reinterpret_cast<uint8_t*>(regs.esi), reinterpret_cast<void**>(*reinterpret_cast<uint8_t**>(regs.ebp + 8) + 0x60));
-        });
-        static auto CreateGodrayQueries = safetyhook::create_mid(createGodray.get_first(), [](SafetyHookContext& regs)
-        {
-            Splitscreen::CreateSecondViewQueries(reinterpret_cast<uint8_t*>(regs.esi), reinterpret_cast<void**>(*reinterpret_cast<uint8_t**>(regs.ebp + 8) + 0x2EC));
-        });
-        static auto IssueFlare = safetyhook::create_mid(issueFlare.get_first(12), [](SafetyHookContext& regs)
-        {
-            Splitscreen::SecondViewQuerySlot(regs, reinterpret_cast<void**>(regs.edi + 0x40), regs.edx);
-        });
-        static auto IssueGodray = safetyhook::create_mid(issueGodray.get_first(12), [](SafetyHookContext& regs)
-        {
-            Splitscreen::SecondViewQuerySlot(regs, reinterpret_cast<void**>(regs.esi + 0x2CC), regs.edx);
-        });
-        static auto ReadQueries = safetyhook::create_mid(readQueries.get_first(12), [](SafetyHookContext& regs)
-        {
-            auto node = *reinterpret_cast<uint8_t**>(regs.ebp - 8);
-            auto type = *reinterpret_cast<int32_t*>(regs.ebx + 4);
-            if (node && (type == 2 || type == 4))
-                Splitscreen::SecondViewQuerySlot(regs, reinterpret_cast<void**>(node + (type == 2 ? 0x40 : 0x2CC)), *reinterpret_cast<uint32_t*>(regs.ebp - 0x14));
-        });
-    }
+        Splitscreen::CreateSecondViewQueries(reinterpret_cast<uint8_t*>(regs.esi), reinterpret_cast<void**>(*reinterpret_cast<uint8_t**>(regs.ebp + 8) + 0x60));
+    });
+    static auto CreateGodrayQueries = safetyhook::create_mid(createGodray.get_first(), [](SafetyHookContext& regs)
+    {
+        Splitscreen::CreateSecondViewQueries(reinterpret_cast<uint8_t*>(regs.esi), reinterpret_cast<void**>(*reinterpret_cast<uint8_t**>(regs.ebp + 8) + 0x2EC));
+    });
+    static auto IssueFlare = safetyhook::create_mid(issueFlare.get_first(12), [](SafetyHookContext& regs)
+    {
+        Splitscreen::SecondViewQuerySlot(regs, reinterpret_cast<void**>(regs.edi + 0x40), regs.edx);
+    });
+    static auto IssueGodray = safetyhook::create_mid(issueGodray.get_first(12), [](SafetyHookContext& regs)
+    {
+        Splitscreen::SecondViewQuerySlot(regs, reinterpret_cast<void**>(regs.esi + 0x2CC), regs.edx);
+    });
+    static auto ReadQueries = safetyhook::create_mid(readQueries.get_first(12), [](SafetyHookContext& regs)
+    {
+        auto node = *reinterpret_cast<uint8_t**>(regs.ebp - 8);
+        auto type = *reinterpret_cast<int32_t*>(regs.ebx + 4);
+        if (node && (type == 2 || type == 4))
+            Splitscreen::SecondViewQuerySlot(regs, reinterpret_cast<void**>(node + (type == 2 ? 0x40 : 0x2CC)), *reinterpret_cast<uint32_t*>(regs.ebp - 0x14));
+    });
 
     static auto LobbyTick = safetyhook::create_mid(lobbyTick.get_first(), [](SafetyHookContext& regs)
     {
@@ -1230,61 +1200,46 @@ export void InitSplitscreen()
 
     Splitscreen::shViewportInput = safetyhook::create_inline(viewportEvent.get_first(), Splitscreen::ViewportInput);
 
-    auto actionIcon = hook::pattern("3B ? 74 21 8B 41 20 3B ? 4C 75 19 8B ? 38 50 E8 ? ? ? ? 83 ? 38 6F 89 ? 34 75 07 C7 ? 34 82 00 00 00");
-    if (!actionIcon.empty())
-    {
-        // the function's start (push ebp, mov ebp esp, push -1)
-        static constexpr uint8_t prologue[] = { 0x55, 0x8B, 0xEC, 0x6A, 0xFF };
-        auto start = actionIcon.get_first<uint8_t>();
-        for (int i = 0; i < 0x60 && memcmp(start, prologue, sizeof(prologue)) != 0; i++)
-            start--;
-        if (memcmp(start, prologue, sizeof(prologue)) == 0)
-            Splitscreen::shActionIcon = safetyhook::create_inline(start, Splitscreen::ActionIcon);
-    }
+    auto actionIcon = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 83 EC 20 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 00 00 00 00 8B 7D 08 33 DB 3B ? 74 21 8B 41 20 3B ? 4C 75 19 8B ? 38 50 E8 ? ? ? ? 83 ? 38 6F 89 ? 34 75 07 C7 ? 34 82 00 00 00"); // DX9
+    if (actionIcon.empty()) // DX11
+        actionIcon = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 83 EC 20 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 00 00 00 00 8B D9 89 5D EC 8B 4D 08 33 FF 3B ? 74 21 8B 41 20 3B ? 4C 75 19 8B ? 38 50 E8 ? ? ? ? 83 ? 38 6F 89 ? 34 75 07 C7 ? 34 82 00 00 00");
+    Splitscreen::shActionIcon = safetyhook::create_inline(actionIcon.get_first(), Splitscreen::ActionIcon);
 
     // Menus' mouse position (movie 1280x720 by the viewport's size, mid frame player 1's half in split screen): the menus are drawn over
     // the whole window, the position is by the whole width (+4B0h), the buttons answered on the left half only
     auto menuMouse = hook::pattern("85 C0 74 06 8B 7D F8 8B 5D FC F3 0F 10 46 3C");
-    if (!menuMouse.empty())
+    static auto MenuMouse = safetyhook::create_mid(menuMouse.get_first(10), [](SafetyHookContext& regs)
     {
-        static auto MenuMouse = safetyhook::create_mid(menuMouse.get_first(10), [](SafetyHookContext& regs)
-        {
-            auto viewport = reinterpret_cast<uint8_t*>(regs.esi);
-            auto split = Splitscreen::GetSplitViewport();
-            auto width = *reinterpret_cast<int32_t*>(viewport + 0x4A0);
-            auto full = *reinterpret_cast<int32_t*>(viewport + 0x4B0);
-            if (split && viewport != split && int32_t(regs.edi) == width && full > width)
-                regs.edi = full;
-        });
-    }
+        auto viewport = reinterpret_cast<uint8_t*>(regs.esi);
+        auto split = Splitscreen::GetSplitViewport();
+        auto width = *reinterpret_cast<int32_t*>(viewport + 0x4A0);
+        auto full = *reinterpret_cast<int32_t*>(viewport + 0x4B0);
+        if (split && viewport != split && int32_t(regs.edi) == width && full > width)
+            regs.edi = full;
+    });
 
     static void* sceneTickHandlers[] = { &Splitscreen::SceneTick<0>, &Splitscreen::SceneTick<1>, &Splitscreen::SceneTick<2>, &Splitscreen::SceneTick<3>,
                                          &Splitscreen::SceneTick<4>, &Splitscreen::SceneTick<5>, &Splitscreen::SceneTick<6>, &Splitscreen::SceneTick<7> };
     Splitscreen::shSceneTick.resize(std::size(sceneTickHandlers));
-    for (size_t i = 0; i < sceneTicks.size() && i < std::size(sceneTickHandlers); i++)
-        Splitscreen::shSceneTick[i] = safetyhook::create_inline(sceneTicks.get(i).get<void>(), sceneTickHandlers[i]);
+    size_t sceneTick = 0;
+    do
+    {
+        Splitscreen::shSceneTick[sceneTick] = safetyhook::create_inline(sceneTicks.get(sceneTick).get<void>(), sceneTickHandlers[sceneTick]);
+    } while (++sceneTick < sceneTicks.size() && sceneTick < std::size(sceneTickHandlers));
 
     // the calls after the width is doubled
-    for (auto restores : { hook::pattern("8B ? A4 04 00 00 8B ? A0 04 00 00 50 51 03 D2 52 8B CF E8"), hook::pattern("8B ? A0 04 00 00 50 8B ? A4 04 00 00 03 C9 50 51 8B CE E8") })
-    {
-        restores.for_each_result([](hook::pattern_match match)
-        {
-            Splitscreen::resolutionRestores.push_back(match.get<uint8_t>(0x18));
-        });
-    }
+    for (const auto& [signature, offset] :
+        { std::pair{ "89 9E 5C 02 00 00 38 1D ? ? ? ? 75 26 8B 17 8B 82 C4 00 00 00 6A FF 8B CF FF D0 8B ? A4 04 00 00 8B ? A0 04 00 00 50 51 03 D2 52 8B CF E8", 52 },
+          std::pair{ "3B FB 74 2E 38 1D ? ? ? ? 75 26 8B 17 8B 82 C4 00 00 00 6A FF 8B CF FF D0 8B ? A4 04 00 00 8B ? A0 04 00 00 50 51 03 D2 52 8B CF E8", 50 },
+          std::pair{ "89 BB 5C 02 00 00 8B 06 8B 90 C4 00 00 00 6A FF 8B CE FF D2 8B ? A0 04 00 00 50 8B ? A4 04 00 00 03 C9 50 51 8B CE E8", 44 } })
+        Splitscreen::resolutionRestores.push_back(hook::pattern(signature).get_first<uint8_t>(offset));
     auto endSplit = hook::pattern("56 8B F1 83 A6 EC 01 00 00 EF E8 ? ? ? ? C7 86 7C 02 00 00 00 00 00 00 5E C3");
     auto removePlayer = hook::pattern("55 8B EC 56 57 8B F9 8B 47 44 33 F6 39 70 30 7E ? 8B 40 2C 8B 0C B0 6A FF E8");
-    if (!endSplit.empty() && !removePlayer.empty())
-    {
-        Splitscreen::RemoveSecondaryLocalPlayer = removePlayer.get_first<void(__fastcall)(uint8_t*, void*, int32_t)>();
-        Splitscreen::shEndSplitScreen = safetyhook::create_inline(endSplit.get_first(), Splitscreen::EndSplitScreen);
-    }
+    Splitscreen::RemoveSecondaryLocalPlayer = removePlayer.get_first<void(__fastcall)(uint8_t*, void*, int32_t)>();
+    Splitscreen::shEndSplitScreen = safetyhook::create_inline(endSplit.get_first(), Splitscreen::EndSplitScreen);
 
-    if (!Splitscreen::resolutionRestores.empty())
-    {
-        auto call = reinterpret_cast<uintptr_t>(Splitscreen::resolutionRestores.front()) - 5;
-        Splitscreen::shRequestResolution = safetyhook::create_inline(reinterpret_cast<void*>(branch(reinterpret_cast<void*>(call))), Splitscreen::RequestResolution);
-    }
+    auto call = reinterpret_cast<uintptr_t>(Splitscreen::resolutionRestores.front()) - 5;
+    Splitscreen::shRequestResolution = safetyhook::create_inline(reinterpret_cast<void*>(branch(reinterpret_cast<void*>(call))), Splitscreen::RequestResolution);
 
     Splitscreen::shDefaultController = safetyhook::create_inline(viewportController.get_first(), Splitscreen::DefaultController);
     Splitscreen::shEnter = safetyhook::create_inline(enter.get_first(), Splitscreen::Enter);

@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/sh3/main2.jpg" width="760" alt="Silent Hill 3 Widescreen Fix">
+<img src="https://thirteenag.github.io/screens/sh3/main2.jpg" width="760" alt="Silent Hill 3 Fusion Fix">
 
-**Silent Hill 3 Widescreen Fix** brings the game to any resolution and aspect ratio, with an optional modern over-the-shoulder camera, gamepad support, higher quality effects and its settings in the game's own Options screen.
+**Silent Hill 3 Fusion Fix** brings the game to any resolution and aspect ratio, with an optional modern over-the-shoulder camera, gamepad support, higher quality effects and its settings in the game's own Options screen.
 
-[Website](https://thirteenag.github.io/wfp#sh3) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SilentHill3.WidescreenFix/dllmain.cpp)
+[Website](https://thirteenag.github.io/wfp#sh3) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SilentHill3.FusionFix/dllmain.cpp)
 
 </div>
 
@@ -13,29 +13,28 @@
 ## Fixes
 
 - **Resolution** — The desktop resolution by default, or a resolution set in the fix's options; the 3D scene can render at its own resolution.
-- **Widescreen** — Hor+ field of view. The interface, text, menus, items and map markers stay in a centred 4:3 area; effects placed from the 3D view (particles, blood, lens flares, haze, fog) and full-screen fades cover the whole screen. The mouse follows the 4:3 menus.
-- **Cutscenes** — Never show what the PS2's cinematic bars covered: with the bars off the picture is enlarged to fill the screen.
-- **Movies** — Keep their 14:9 shape or fill the screen; replacement movies keep their own shape.
+- **Widescreen** — Hor+ field of view. The low-health cross sits in the screen's corner (or in the corner of the chosen HUD box); text, menus, items and map markers stay in a centred 4:3 area; effects placed from the 3D view (particles, blood, lens flares, haze, fog) and full-screen fades cover the whole screen. The mouse follows the 4:3 menus.
+- **Cutscenes** — With Both the original shot is kept exactly at any aspect ratio: the game's black bars above and below, and bars at the sides on wider screens. Off removes all bars and fills the screen Hor+.
+- **Movies** — Shown whole at their 14:9 shape (replacement movies at their own): Original inside the game's centred 4:3 frame, Fill fitted to the screen.
 - **Display** — No white window border. **Window mode** sets the startup display mode (fullscreen, windowed or borderless); Alt+Enter switches between fullscreen and the last window mode. Framed windows keep the chosen size on high-DPI displays, also when the window is as large as the desktop.
 - **Stability** — No registry needed, no "safe mode" reset of the display settings after a crash, no long freeze each time Options opens, a steady 60 FPS, sound effects that went missing on some systems (#421), Father Vincent's glasses (#758).
-- **Controllers** — Xidi with a modern layout, analog sticks without the stacked dead zones, pad button names in the button configuration, rumble.
+- **Controllers** — Xidi with a modern layout, analog sticks without the stacked dead zones, controller-binding artwork and native rumble.
 
 ## Options
 
-- **In-game options** — The fourth Options page, **Plugins** (LB/RB, Page Up/Down or the title arrows), lists plugins with settings, with Widescreen Fix first. Open a plugin to change its settings; longer lists continue on numbered pages. Its **Preset** row selects Vanilla, Recommended or Enhanced; accept twice to confirm. **Restore Defaults** resets that plugin's settings. Most changes apply at once; settings that need a restart say so. Open this page from the title menu. Settings are saved in `scripts/SilentHill3.WidescreenFix.cfg` and can also be changed on fusionfix.io or in FusionFixHub.
+- **In-game options** — The fourth Options page, **Plugins** (LB/RB, Page Up/Down or the title arrows), lists plugins with settings, with Fusion Fix first. Open a plugin to change its settings; longer lists scroll within the same plugin page. Its **Preset** row selects Vanilla, Recommended or Enhanced; accept twice to confirm. **Restore Defaults** resets that plugin's settings. F1 or the native Map button opens the selected option's complete help; Up/Down scroll long help and Escape goes back. Most changes apply at once; one footer notice marks changes that require a restart. Open this page from the title menu. Settings are saved in `scripts/SilentHill3.FusionFix.cfg` and can also be changed on fusionfix.io or in FusionFixHub. Camera mode remains the player's choice when changing presets.
+- **Field of view** — The gameplay multiplier changes live, with 1.0 preserving the normal view and widening bounded to 150 degrees across. Scripted cameras and aiming keep their own framing.
 - **Camera** — Classic fixed angles or a modern free camera over the shoulder (right stick or mouse), with its speed, inversion, distance and field of view.
-- **Cinematic bars** — Black bars in cutscenes as on the PS2.
-- **Movies and pictures** — Original framing or filling the screen, for the movies and for notes, pictures and the pause screen.
+- **Cutscene borders** — Letterbox keeps the game's bars above and below, Pillarbox keeps the original 4:3 picture with bars at the sides, Both keeps the original framing exactly, Off uses the full screen Hor+. Changes apply at once, also during a cutscene.
+- **Movies and pictures** — Movies are shown whole in both choices; notes, pictures and the pause screen keep their original framing or fill the screen.
 - **Effects** — Resolution of the soft shadows, the blur and depth of field and the pause background; finer fog; anisotropic filtering.
-- **Intro** — Start at the title menu without the logos and the opening movie.
+- **Intro** — Start at the title menu without the logos, the content warning and the opening movie (the opening movie still plays when the title menu is left idle).
 
 ## Notes
 
-The anti-aliasing option offers TAA, DLAA and FSR; it needs d3d8to9. DLAA and FSR need DXVK and the files from FusionFixHub's Anti-Aliasing page; they aren't part of the fix's archive. Anti-aliasing is off by default.
+Controller Icons offers Auto/Xbox, PlayStation and Nintendo. Auto uses Xbox; other families are chosen manually. Keyboard and mouse binding names remain unchanged. The archive uses Xidi's built-in XInput backend; other pads can use Steam Input or DS4Windows.
 
----
-
-Button prompts follow the keyboard, mouse or controller you last used. A held button does not switch them back after you use another device.
+**Pause in background** pauses gameplay while the window is inactive. Turn it off to keep the game running. **Check for Updates** is off by default; enabling it shows available updates in the native Options screen.
 
 **Confine cursor** keeps the pointer inside the game window. It can be changed while playing and is enabled by default in all window modes. The pointer is released when you leave the game, drag its window, open a system menu or turn the option off.
 
@@ -43,8 +42,12 @@ Long labels may be shortened with an ellipsis to leave room for their values.
 
 ## Known limits
 
-- HUD width moves the health cross; other HUD elements and menus keep their centered 4:3 layout.
-- Resolution changes require a restart. Raw mouse input and a configurable frame-rate limiter are not supported.
+- The game's only corner HUD element is the low-health cross; messages, menus and the inventory keep their centred 4:3 layout.
+- The native resolution picker retains its original slots. Set custom display and render sizes in the fix's CFG, FusionFixHub or fusionfix.io, then restart.
+- The native 60 FPS cap remains. The modern camera uses native DirectInput mouse counts.
+- Artwork covers native controller-binding names; hardcoded instructions retain the game's text.
+- No Ctrl+F10 developer overlay: the game draws with Direct3D 8, which the overlay doesn't support. Every setting is in the game's Options > Plugins page, FusionFixHub and fusionfix.io.
+- The window size is set at startup; resizing the window by dragging isn't supported.
 
 ---
 
@@ -52,7 +55,7 @@ Long labels may be shortened with an ellipsis to leave room for their values.
 
 1. Download the fix archive from this release.
 2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
-3. Launch the game once to create `scripts/SilentHill3.WidescreenFix.cfg`.
+3. Launch the game once to create `scripts/SilentHill3.FusionFix.cfg`.
 4. Optionally change the settings in the game's Options > Plugins, in FusionFixHub, or on fusionfix.io. Restart the game when an option requires it.
 
 

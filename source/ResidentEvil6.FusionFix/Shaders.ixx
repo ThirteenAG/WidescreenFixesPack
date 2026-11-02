@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 #include <d3d9.h>
 
 export module Shaders;
@@ -95,8 +94,7 @@ public:
         WFP::onInitEvent() += []()
         {
             auto pattern = hook::pattern("E8 ? ? ? ? 89 47 08 0F B7 44 24");
-            if (PatternAvailable(pattern, "ResidentEvil6.FusionFix: Shaders"))
-                shCreateVertexShader = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CreateVertexShader);
+            shCreateVertexShader = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CreateVertexShader);
 
             // MAIN.DisableDamageOverlay / MAIN.DisableDBNOEffects: the player's condition skips the low health (20) and
             // the dying (10) states, whose screen effects then aren't shown
@@ -106,61 +104,50 @@ public:
                 for (auto ref : { "C6 46 38 14 E9 ? ? ? ? F3 0F 10 05", "C6 46 38 14 8B 4E 40" })
                 {
                     auto state = hook::pattern(ref);
-                    if (PatternAvailable(state, "ResidentEvil6.FusionFix: Shaders"))
-                        WriteGameValue<uint8_t>(state.get_first(3), 0x16);
+                    injector::WriteMemory<uint8_t>(state.get_first(3), 0x16, true);
                 }
             }
             if (settings.Bool("MAIN.DisableDBNOEffects"))
             {
                 auto state = hook::pattern("C6 46 38 0A 8B 4E 40");
-                if (PatternAvailable(state, "ResidentEvil6.FusionFix: Shaders"))
-                    WriteGameValue<uint8_t>(state.get_first(3), 0x16);
+                injector::WriteMemory<uint8_t>(state.get_first(3), 0x16, true);
             }
 
             // Film grain (uTVNoiseFilter): the noise is tiled one texel per screen pixel and the rolling band is sized
             // and moved in pixels, both made for 720p: at higher resolutions the grain got finer and the band thinner
             // and slower. The fix keeps them at their 720p size relative to the screen height.
             pattern = hook::pattern("56 E8 ? ? ? ? F3 0F 10 05 ? ? ? ? 83 C4 20");
-            if (PatternAvailable(pattern, "ResidentEvil6.FusionFix: Shaders"))
+            // The noise's texture coordinate scale (viewport size / mask texture size) at esp+0x14 and esp+0x18
+            static auto GrainScaleHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
-                // The noise's texture coordinate scale (viewport size / mask texture size) at esp+0x14 and esp+0x18
-                static auto GrainScaleHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    const int32_t height = *(int32_t*)(regs.esi + 200) - *(int32_t*)(regs.esi + 192);
-                    if (height <= 0)
-                        return;
-                    const float scale = 720.0f / (float)height;
-                    *(float*)(regs.esp + 0x14) *= scale;
-                    *(float*)(regs.esp + 0x18) *= scale;
-                });
-            }
+                const int32_t height = *(int32_t*)(regs.esi + 200) - *(int32_t*)(regs.esi + 192);
+                if (height <= 0)
+                    return;
+                const float scale = 720.0f / (float)height;
+                *(float*)(regs.esp + 0x14) *= scale;
+                *(float*)(regs.esp + 0x18) *= scale;
+            });
 
             // The rolling band: its position, size and speed are in 720p pixels (the screen height at esp+0x1C)
             pattern = hook::pattern("F3 0F 10 8A 94 00 00 00 F3 0F 59 0D ? ? ? ?");
-            if (PatternAvailable(pattern, "ResidentEvil6.FusionFix: Shaders"))
+            static auto GrainBandHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
-                static auto GrainBandHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    *(float*)(regs.esp + 0x1C) = 720.0f;
-                });
-            }
+                *(float*)(regs.esp + 0x1C) = 720.0f;
+            });
 
             // The renderer sets a new vertex shader (eax): the overlay shader's horizontal scale
             pattern = hook::pattern("89 47 24 8B 4D 00");
-            if (PatternAvailable(pattern, "ResidentEvil6.FusionFix: Shaders"))
+            static auto SetVertexShaderHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
-                static auto SetVertexShaderHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    auto shader = (IDirect3DVertexShader9*)regs.eax;
-                    if (!shader || (shader != pOverlayShader && shader != pDamageOverlayShader))
-                        return;
-                    float scale[4] = { IsSplitScreenActive() ? SplitScreen::GetDiff() : GetDiff(), 0.0f, 0.0f, 0.0f };
-                    if (scale[0] < 1.0f)
-                        scale[0] = 1.0f;
-                    if (auto device = GetD3DDevice())
-                        device->SetVertexShaderConstantF(230, scale, 1);
-                });
-            }
+                auto shader = (IDirect3DVertexShader9*)regs.eax;
+                if (!shader || (shader != pOverlayShader && shader != pDamageOverlayShader))
+                    return;
+                float scale[4] = { IsSplitScreenActive() ? SplitScreen::GetDiff() : GetDiff(), 0.0f, 0.0f, 0.0f };
+                if (scale[0] < 1.0f)
+                    scale[0] = 1.0f;
+                if (auto device = GetD3DDevice())
+                    device->SetVertexShaderConstantF(230, scale, 1);
+            });
         };
     }
 } Shaders;

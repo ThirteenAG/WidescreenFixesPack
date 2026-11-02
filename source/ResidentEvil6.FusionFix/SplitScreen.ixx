@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 
 export module SplitScreen;
 
@@ -71,8 +70,6 @@ public:
             // of SetPlayerViewport (cutscenes, single view) stay as they are.
             auto pattern = hook::pattern("E8 ? ? ? ? 8B 44 24 14 89 44 24 24");
             auto pattern2 = hook::pattern("E8 ? ? ? ? C7 86 ? ? ? ? ? ? ? ? C7 86 ? ? ? ? ? ? ? ? 8B 0D");
-            if (!PatternAvailable(pattern, "ResidentEvil6.FusionFix: SplitScreen") || !PatternAvailable(pattern2, "ResidentEvil6.FusionFix: SplitScreen"))
-                return;
 
             SetPlayerViewport = (decltype(SetPlayerViewport))injector::GetBranchDestination(pattern.get_first()).as_int();
             injector::MakeCALL(pattern.get_first(), SetSplitViewport, true);

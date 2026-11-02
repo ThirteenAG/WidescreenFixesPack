@@ -17,11 +17,6 @@ export namespace LightSync
             return;
 
         auto player = hook::pattern("8B 0D ? ? ? ? 56 E8 ? ? ? ? A1 ? ? ? ? 8B 48 20 69 C9 ? ? ? ? 8B 94 01");
-        if (player.size() != 1)
-        {
-            OutputDebugStringA("Resident Evil 5: health lighting pattern unavailable.\n");
-            return;
-        }
         static auto sPlayerPtr = *player.get_first<void*>(2);
 
         LEDEffects::Inject([]()

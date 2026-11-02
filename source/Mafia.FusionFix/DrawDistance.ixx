@@ -21,12 +21,6 @@ export void InitDrawDistance()
     auto pDrawDistValue12 = find_pattern("C7 44 24 14 00 00 48 43 C7 44 24 50 00 00 66 43");
     auto pDrawDistValue26 = find_pattern("C7 44 24 50 00 00 66 43 8B 11 89 56 2C 8B 41 04");
 
-    if (pDrawDistance.size() != 1 ||
-        pDrawDistValue.size() != 1)
-        return;
-    if (nGameVersion == MAFIA_1_0_ENG && (pDrawDistValue1.size() != 1 || pDrawDistValue2.size() != 1 || pDrawDistValue22.size() != 1 || pDrawDistValue23.size() != 1 || pDrawDistValue24.size() != 1 || pDrawDistValue25.size() != 1)) return;
-    if (nGameVersion != MAFIA_1_0_ENG && (pDrawDistValue12.size() != 1 || pDrawDistValue26.size() != 1)) return;
-
     static float drawDistValue1 = fDrawDistance - 50.0f;
     static float drawDistValue2 = fDrawDistance - 20.0f;
 
@@ -39,23 +33,23 @@ export void InitDrawDistance()
 
     if ((300.0f > fDrawDistanceMin) && (300.0f < fDrawDistanceMax))
     {
-        ProtectedGameRef<std::remove_cvref_t<decltype(fDrawDistance)>>{pDrawDistValue.get_first<std::remove_cvref_t<decltype(fDrawDistance)>>(0x1)} = fDrawDistance;
+        injector::WriteMemory(pDrawDistValue.get_first(0x1), fDrawDistance, true);
     }
 
-    if (nGameVersion == MAFIA_1_0_ENG)
+    if (!pDrawDistValue1.empty()) // 1.0 draw-distance layout
     {
-        ProtectedGameRef<std::remove_cvref_t<decltype(drawDistValue1)>>{pDrawDistValue1.get_first<std::remove_cvref_t<decltype(drawDistValue1)>>(0x1)} = drawDistValue1;
+        injector::WriteMemory(pDrawDistValue1.get_first(0x1), drawDistValue1, true);
 
-        ProtectedGameRef<std::remove_cvref_t<decltype(&drawDistValue2)>>{pDrawDistValue2.get_first<std::remove_cvref_t<decltype(&drawDistValue2)>>(0x2)} = &drawDistValue2;
-        ProtectedGameRef<std::remove_cvref_t<decltype(&drawDistValue2)>>{pDrawDistValue22.get_first<std::remove_cvref_t<decltype(&drawDistValue2)>>(0x2)} = &drawDistValue2;
-        ProtectedGameRef<std::remove_cvref_t<decltype(&drawDistValue2)>>{pDrawDistValue23.get_first<std::remove_cvref_t<decltype(&drawDistValue2)>>(0x2)} = &drawDistValue2;
-        ProtectedGameRef<std::remove_cvref_t<decltype(&drawDistValue2)>>{pDrawDistValue24.get_first<std::remove_cvref_t<decltype(&drawDistValue2)>>(0x2)} = &drawDistValue2;
-        ProtectedGameRef<std::remove_cvref_t<decltype(&drawDistValue2)>>{pDrawDistValue25.get_first<std::remove_cvref_t<decltype(&drawDistValue2)>>(0x2)} = &drawDistValue2;
+        injector::WriteMemory(pDrawDistValue2.get_first(0x2), &drawDistValue2, true);
+        injector::WriteMemory(pDrawDistValue22.get_first(0x2), &drawDistValue2, true);
+        injector::WriteMemory(pDrawDistValue23.get_first(0x2), &drawDistValue2, true);
+        injector::WriteMemory(pDrawDistValue24.get_first(0x2), &drawDistValue2, true);
+        injector::WriteMemory(pDrawDistValue25.get_first(0x2), &drawDistValue2, true);
     }
     else
     {
-        ProtectedGameRef<std::remove_cvref_t<decltype(drawDistValue1)>>{pDrawDistValue12.get_first<std::remove_cvref_t<decltype(drawDistValue1)>>(0x4)} = drawDistValue1;
+        injector::WriteMemory(pDrawDistValue12.get_first(0x4), drawDistValue1, true);
 
-        ProtectedGameRef<std::remove_cvref_t<decltype(drawDistValue2)>>{pDrawDistValue26.get_first<std::remove_cvref_t<decltype(drawDistValue2)>>(0x4)} = drawDistValue2;
+        injector::WriteMemory(pDrawDistValue26.get_first(0x4), drawDistValue2, true);
     }
 }

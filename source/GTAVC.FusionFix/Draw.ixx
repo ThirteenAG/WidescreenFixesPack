@@ -1,0 +1,394 @@
+module;
+
+#include <stdafx.h>
+#include "common.h"
+#include "FixSettings.hpp"
+
+export module Draw;
+
+import Skeleton;
+import CutsceneMgr;
+import Camera;
+
+template<typename... Args>
+class ResChange : public WFP::Event<Args...>
+{
+public:
+    using WFP::Event<Args...>::Event;
+};
+
+export __declspec(noinline) ResChange<int, int>& onResChange()
+{
+    static ResChange<int, int> ResChangeEvent;
+    return ResChangeEvent;
+}
+
+std::optional<float> fHudAspectRatioConstraint;
+export float fWidescreenHudOffset = 0.0f;
+export float fMenuAspectRatio = 0.0f;
+
+// current cutscene camera zoom (tan-space), maintained by the border system
+// (Sprite2d writes it each frame so the FOV conversion can follow the border animation)
+export float g_cutsceneCameraZoom = 1.0f;
+
+export class CDraw
+{
+private:
+    static inline GameRef<float> ms_fFOV;
+    static inline GameRef<float> ms_fNearClipZ;
+    static inline GameRef<float> ms_fFarClipZ;
+    static inline GameRef<float> ms_fAspectRatio;
+
+    static inline float ms_fScaledFOV;
+public:
+    static inline bool ms_bProperScaling = true;
+    static inline bool ms_bFixRadar = true;
+    static inline bool ms_bFixSprites = true;
+
+    static void SetFOV(float fov);
+    static void CalculateAspectRatio();
+    static float GetFOV() { return ms_fFOV; }
+    static float GetScaledFOV() { return ms_fScaledFOV; }
+
+    static float FindAspectRatio();
+    static float ConvertFOV(float fov);
+    static float ConvertFOVforCutscene(float fov);
+    static float ConvertFOVInverse(float fov);
+    static float GetAspectRatio() { return ms_fAspectRatio; }
+    static void SetAspectRatio(float ratio)
+    {
+        if (ms_fAspectRatio == ratio)
+            return;
+
+        ms_fAspectRatio = ratio;
+
+        fWidescreenHudOffset = CalculateWidescreenOffset(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0, true);
+        if (fHudAspectRatioConstraint.has_value())
+        {
+            float value = fHudAspectRatioConstraint.value();
+            if (value < 0.0f || value > (32.0f / 9.0f))
+                fWidescreenHudOffset = value;
+            else
+            {
+                value = ClampHudAspectRatio(value, FindAspectRatio());
+                fWidescreenHudOffset = CalculateWidescreenOffset(SCREEN_HEIGHT * value, SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0, true);
+            }
+        }
+
+        onResChange().executeAll(RsGlobal->width, RsGlobal->height);
+    }
+    // Computes the HUD offsets again (a setting they depend on changed)
+    static void Refresh()
+    {
+        auto ratio = ms_fAspectRatio;
+        ms_fAspectRatio = 0.0f;
+        SetAspectRatio(ratio);
+    }
+    static float ScaleY(float y);
+
+    static void SetNearClipZ(float nearclip) { ms_fNearClipZ = nearclip; }
+    static float GetNearClipZ(void) { return ms_fNearClipZ; }
+    static void SetFarClipZ(float farclip) { ms_fFarClipZ = farclip; }
+    static float GetFarClipZ(void) { return ms_fFarClipZ; }
+
+    CDraw()
+    {
+        WFP::onGameInitEvent() += []()
+        {
+            auto pattern = hook::pattern("D8 0D ? ? ? ? 8A 44 24 ? 88 5C 24");
+            ms_fFOV.SetAddress(*pattern.get_first<float*>(2));
+
+            pattern = hook::pattern("FF 35 ? ? ? ? 50 A1 ? ? ? ? 6A ? 50 E8 ? ? ? ? A1 ? ? ? ? 83 C4 ? 50 E8 ? ? ? ? A1 ? ? ? ? 59 6A");
+            ms_fAspectRatio.SetAddress(*pattern.get_first<float*>(2));
+
+            pattern = hook::pattern("E8 ? ? ? ? 59 C7 05 ? ? ? ? ? ? ? ? 6A 00 E8");
+            static auto SetFOV = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CDraw::SetFOV);
+
+            pattern = hook::pattern("E8 ? ? ? ? DD D8 D9 05 ? ? ? ? D8 0D ? ? ? ? D9 F2");
+            static auto CalculateAspectRatio = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CDraw::CalculateAspectRatio);
+
+            pattern = hook::pattern("D8 1D ? ? ? ? DF E0 80 E4 05 80 FC 01 75 ? 30 C0 E9 F2 01 00 00");
+            ms_fNearClipZ.SetAddress(*pattern.get_first<float*>(2));
+
+            pattern = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 45 75 ? 30 C0 E9 D6 01 00 00");
+            ms_fFarClipZ.SetAddress(*pattern.get_first<float*>(2));
+
+            // The game sets the far clip plane and fog start only after the camera update has begun, so every frame
+            // was drawn with the previous frame's values. They are set when the scene camera's update begins.
+            pattern = hook::pattern("A1 ? ? ? ? FF 35 ? ? ? ? 50 E8 ? ? ? ? D9 05 ? ? ? ? A1 ? ? ? ? 59 59 D9 98 88 00 00 00");
+            auto beginUpdate = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 83 C4 0C 50 E8 ? ? ? ? 85 C0");
+            static_assert(offsetof(RwCamera, fogPlane) == 0x88);
+            static GameRef<RwCamera*> sceneCamera(*pattern.get_first<RwCamera**>(1));
+            static GameRef<float> farClip(*pattern.get_first<float*>(7));
+            static GameRef<float> fogStart(*pattern.get_first<float*>(19));
+            static auto setFarClipPlane = (RwCamera*(__cdecl*)(RwCamera*, float))injector::GetBranchDestination(pattern.get_first(12)).as_int();
+            static SafetyHookInline cameraBeginUpdate = {};
+            cameraBeginUpdate = safetyhook::create_inline(injector::GetBranchDestination(beginUpdate.get_first(14)).as_int(), +[](RwCamera* camera) -> int
+            {
+                if (camera && camera == *sceneCamera)
+                {
+                    setFarClipPlane(camera, *farClip);
+                    camera->fogPlane = *fogStart;
+                }
+                return cameraBeginUpdate.unsafe_ccall<int>(camera);
+            });
+        };
+    }
+} Draw;
+
+export namespace MenuCanvas
+{
+    inline std::optional<float> Constraint;
+    inline bool Enabled = false;
+    inline bool Drawing = false;
+    inline int PhysicalWidth = 0;
+    inline int PhysicalMaximumWidth = 0;
+    inline int Depth = 0;
+    inline int Suspensions = 0;
+    inline float Offset = 0.0f;
+
+    __declspec(noinline) ResChange<int, int>& onLayoutChange()
+    {
+        static ResChange<int, int> event;
+        return event;
+    }
+
+    int GetWidth(int width, int height)
+    {
+        if (!Enabled || !Constraint || height <= 0)
+            return width;
+        const float value = *Constraint;
+        // Match the HUD option's ratio and legacy pixel-offset forms.
+        const float result = value < 0.0f || value > 32.0f / 9.0f
+            ? width + value * 2.0f
+            : height * ClampHudAspectRatio(value, float(width) / height);
+        const int minimum = std::min(width, int(std::lround(height * (4.0f / 3.0f))));
+        int canvasWidth = int(std::lround(std::clamp(result, float(minimum), float(width))));
+        // Native mouse positions are integers. Keep the inset integral too.
+        if ((width - canvasWidth) & 1) ++canvasWidth;
+        return canvasWidth;
+    }
+
+    // Frontend scaling may use a narrower canvas; 3D FOV always uses CDraw.
+    float GetCurrentAspectRatio()
+    {
+        return fMenuAspectRatio != 0.0f ? fMenuAspectRatio : CDraw::GetAspectRatio();
+    }
+
+    float GetAspectRatio()
+    {
+        const int width = Depth && !Suspensions ? PhysicalWidth : RsGlobal->width;
+        return float(GetWidth(width, RsGlobal->height)) / RsGlobal->height;
+    }
+
+    int GetMouseX(int x)
+    {
+        // Input remains relative to the menu canvas, including the empty space
+        // beside it. Only the physical screen edges limit cursor movement.
+        const int inset = int(Offset);
+        return std::clamp(x, -inset, PhysicalWidth - inset);
+    }
+
+    void Apply()
+    {
+        PhysicalWidth = RsGlobal->width;
+        PhysicalMaximumWidth = RsGlobal->maximumWidth;
+        const int width = GetWidth(PhysicalWidth, RsGlobal->height);
+        Offset = float(PhysicalWidth - width) * 0.5f;
+        RsGlobal->width = width;
+        RsGlobal->maximumWidth = width;
+        fMenuAspectRatio = float(width) / RsGlobal->height;
+        onLayoutChange().executeAll(width, RsGlobal->height);
+    }
+
+    void Restore()
+    {
+        RsGlobal->width = PhysicalWidth;
+        RsGlobal->maximumWidth = PhysicalMaximumWidth;
+        fMenuAspectRatio = 0.0f;
+        onLayoutChange().executeAll(RsGlobal->width, RsGlobal->height);
+    }
+
+    class Scope
+    {
+        bool active;
+        bool previousDrawing;
+    public:
+        explicit Scope(bool drawing = false, bool enabled = true) : active(Enabled && enabled), previousDrawing(Drawing)
+        {
+            if (!active) return;
+            if (!Depth++) Apply();
+            Drawing = drawing || Drawing;
+        }
+        ~Scope()
+        {
+            if (!active) return;
+            Drawing = previousDrawing;
+            if (!--Depth) Restore();
+        }
+        Scope(const Scope&) = delete;
+        Scope& operator=(const Scope&) = delete;
+    };
+
+    // Backgrounds, OS cursor warps and renderer resets use the real viewport.
+    // Apply again on return so a newly selected video mode is retained.
+    class Suspend
+    {
+        bool active;
+    public:
+        Suspend() : active(Depth != 0)
+        {
+            if (active && !Suspensions++) Restore();
+        }
+        ~Suspend()
+        {
+            if (active && !--Suspensions) Apply();
+        }
+        Suspend(const Suspend&) = delete;
+        Suspend& operator=(const Suspend&) = delete;
+    };
+}
+
+float CDraw::FindAspectRatio()
+{
+    return SCREEN_WIDTH / SCREEN_HEIGHT;
+}
+
+float CDraw::ConvertFOV(float hfov)
+{
+    float ar1 = DEFAULT_ASPECT_RATIO;
+    float ar2 = GetAspectRatio();
+    hfov = DEGTORAD(hfov);
+    float vfov = Atan(tan(hfov / 2) / ar1) * 2;
+    hfov = Atan(tan(vfov / 2) * ar2) * 2;
+    return RADTODEG(hfov);
+}
+
+float CDraw::ConvertFOVforCutscene(float fov)
+{
+    if (g_cutsceneCameraZoom != 1.0f)
+    {
+        float hfov = DEGTORAD(fov);
+        return RADTODEG(2.0f * Atan(tan(hfov / 2.0f) * g_cutsceneCameraZoom));
+    }
+    return fov;
+}
+
+float CDraw::ConvertFOVInverse(float fov)
+{
+    const float arFrom = DEFAULT_ASPECT_RATIO;
+    const float arTo = GetAspectRatio();
+
+    const float rad = DEGTORAD(fov);
+    const float out = 2.0f * Atan(tan(rad * 0.5f) * (arFrom / arTo));
+    return RADTODEG(out);
+}
+
+export namespace FOVManager
+{
+    // Internal storage: hash -> multiplier
+    inline std::unordered_map<uintptr_t, float> g_FOVMultipliers;
+    inline float g_BaseFOVMultiplier = 1.0f; // fallback
+
+    // Recalculate current total multiplier
+    float GetCurrentMultiplier()
+    {
+        float total = g_BaseFOVMultiplier;
+        for (const auto& [hash, mult] : g_FOVMultipliers)
+            total *= mult;
+        return total;
+    }
+
+    // API Exports
+    void __cdecl GetCurrentFOV(float* out)
+    {
+        if (out)
+            *out = RADTODEG(2.0f * Atan(tan(DEGTORAD(CDraw::GetFOV()) / 2.0f) * GetCurrentMultiplier()));
+    }
+
+    void __cdecl SetFOVMultiplier(void* hash, float value)
+    {
+        if (!hash) return;
+        uintptr_t key = reinterpret_cast<uintptr_t>(hash);
+        g_FOVMultipliers[key] = std::clamp(value, 0.5f, 2.0f);
+    }
+
+    void __cdecl RemoveFOVMultiplier(void* hash)
+    {
+        if (!hash) return;
+        uintptr_t key = reinterpret_cast<uintptr_t>(hash);
+        g_FOVMultipliers.erase(key);
+    }
+}
+
+void CDraw::SetFOV(float fov)
+{
+    if (!CCutsceneMgr::IsRunning() && !TheCamera->m_WideScreenOn)
+    {
+        g_cutsceneCameraZoom = 1.0f;
+        // The multiplier widens the view's width (the tangent of the half angle): 2.0 shows twice as much. The
+        // widened view stops at 150 degrees, past which the perspective collapses on wide screens.
+        constexpr float MaxWidth = 3.7320508f; // tan(75 degrees)
+        float width = tan(DEGTORAD(ConvertFOV(fov)) / 2.0f);
+        float scaled = width * FOVManager::GetCurrentMultiplier();
+        if (scaled > MaxWidth)
+            scaled = std::max(width, MaxWidth);
+        ms_fScaledFOV = RADTODEG(2.0f * Atan(scaled));
+    }
+    else
+    {
+        ms_fScaledFOV = ConvertFOVforCutscene(fov);
+    }
+    ms_fFOV = fov;
+}
+
+void CDraw::CalculateAspectRatio()
+{
+    // Once per frame, gameplay and frontend: changed settings apply here (FixSettings.hpp)
+    RWGTA::GameThread::Run();
+    SetAspectRatio(CDraw::FindAspectRatio());
+}
+
+float CDraw::ScaleY(float y)
+{
+    return ms_bProperScaling ? y : y * ((float)DEFAULT_SCREEN_HEIGHT / SCREEN_HEIGHT_NTSC);
+}
+
+class Camera
+{
+public:
+    Camera()
+    {
+        WFP::onGameInitEvent() += []()
+        {
+            fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            OnSettingChange("MAIN.HudAspectRatioConstraint", []()
+            {
+                fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+                CDraw::Refresh();
+            });
+
+            // Field of View: a multiplier of the gameplay cameras' corrected field of view
+            static auto& fov = FixSettings().Float("MAIN.FOVFactor");
+            FOVManager::g_BaseFOVMultiplier = std::clamp(fov, 0.5f, 2.0f);
+            OnSettingChange("MAIN.FOVFactor", []()
+            {
+                FOVManager::g_BaseFOVMultiplier = std::clamp(fov, 0.5f, 2.0f);
+            });
+
+            static float fScaledFOV = 0.0f;
+            auto pattern = hook::pattern("D9 05 ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? DD DC D9 C3");
+            injector::WriteMemory(pattern.get_first(2), &fScaledFOV, true);
+            injector::MakeNOP(pattern.get_first(6), 12, true);
+            static auto CalculateDerivedValues = safetyhook::create_mid(pattern.get_first(-8), [](SafetyHookContext& regs)
+            {
+                fScaledFOV = DEGTORAD(CDraw::GetScaledFOV() / 2.0f);
+            });
+
+            // CBrightLights::Render, render only when far away
+            pattern = hook::pattern("C6 44 24 ? ? EB ? ? ? ? ? ? ? DF E0");
+
+                injector::WriteMemory<uint8_t>(pattern.get_first(4), 0, true);
+        };
+    }
+} Camera;

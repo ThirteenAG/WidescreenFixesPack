@@ -1,0 +1,13 @@
+{
+  "plugin.name": "Mafia III: Definitive Edition Fusion Fix",
+  "page.display": "Affichage",
+  "page.game": "Jeu",
+  "BorderlessWindowed": "Fenêtre sans bordure",
+  "BorderlessWindowed.description": "Quand PLEIN ÉCRAN est désactivé dans les options d'affichage du jeu, le jeu tourne dans une fenêtre sans bordure qui couvre son écran à la résolution du bureau. Désactivé, la fenêtre avec cadre du jeu s'affiche. S'applique immédiatement.",
+  "SkipIntro": "Passer l'intro",
+  "SkipIntro.description": "Démarre directement au menu principal, sans les logos des middlewares et des studios ni l'écran d'avertissement de sauvegarde. Désactivé, ils s'affichent comme dans le jeu d'origine. Nécessite un redémarrage.",
+  "page.compatibility": "Compatibilité",
+  "MAIN.TextLanguage": "Langue du texte",
+  "MAIN.TextLanguage.description": "Choisissez la langue du texte des paramètres du correctif. Auto suit la langue du jeu ou de l’éditeur.",
+  "ui.auto": "Auto"
+}

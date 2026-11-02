@@ -3,7 +3,7 @@ module;
 #include <stdafx.h>
 #include <FunctionHookMinHook.hpp>
 #include "FixSettings.hpp"
-#include "../Shared/NFS/LanguageSetting.hpp"
+#include "Shared/NFS/LanguageSetting.hpp"
 
 export module Registry;
 
@@ -20,8 +20,14 @@ static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, 
         int folder = csidl & ~CSIDL_FLAG_CREATE;
         if (folder == CSIDL_PERSONAL)
         {
+            const auto path = CustomUserDir.u8string();
+            if (path.size() >= MAX_PATH)
+            {
+                pszPath[0] = '\0';
+                return HRESULT_FROM_WIN32(ERROR_FILENAME_EXCED_RANGE);
+            }
             CreateDirectoryW(CustomUserDir.c_str(), NULL);
-            memcpy(pszPath, CustomUserDir.u8string().data(), CustomUserDir.u8string().size() + 1);
+            memcpy(pszPath, path.c_str(), path.size() + 1);
             return S_OK;
         }
     }
@@ -38,33 +44,16 @@ static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, 
 // speech is English only and LANGUAGES\LanguageTextures.bin is shared.
 static std::vector<WFPLanguageSetting::Entry> GameLanguages()
 {
-    struct RegistryName
-    {
-        const char* name;
-        int32_t id;
-        int32_t region;
-    };
-
-    struct LanguageInfo
-    {
-        int32_t id;
-        const char* name;
-        const char* code;
-        const char* files[4];
-        uint32_t unknown[2];
-    };
-    static_assert(sizeof(LanguageInfo) == 0x24);
-
     auto names = hook::pattern("33 F6 39 35 ? ? ? ? 74 ? B8 ? ? ? ? 8B 08 51");
     auto info = hook::pattern("8B 54 24 04 33 C9 B8 ? ? ? ? EB 03 8D 49 00 39 10 74 10 83 C0 24 83 C1 01 3D ? ? ? ? 7C EF 33 C0 C3");
-    if (names.empty() || info.empty())
-        return {};
-
-    auto infoBegin = *info.get_first<LanguageInfo*>(7);
-    auto infoEnd = *info.get_first<LanguageInfo*>(0x1B);
+    RegistryLanguageBegin.SetAddress(*info.get_first<LanguageInfo*>(7));
+    auto infoBegin = RegistryLanguageBegin.get_ptr();
+    RegistryLanguageEnd.SetAddress(*info.get_first<LanguageInfo*>(0x1B));
+    auto infoEnd = RegistryLanguageEnd.get_ptr();
 
     std::vector<WFPLanguageSetting::Entry> entries;
-    for (auto name = *names.get_first<RegistryName*>(4); name->name; ++name)
+    RegistryNames.SetAddress(*names.get_first<RegistryName*>(4));
+    for (auto name = RegistryNames.get_ptr(); name->name; ++name)
     {
         auto language = std::find_if(infoBegin, infoEnd, [&](const LanguageInfo& entry) { return entry.id == name->id; });
         if (language == infoEnd)

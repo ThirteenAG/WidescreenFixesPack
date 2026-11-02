@@ -2,32 +2,13 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "RawMouse.hpp"
+#include "Shared/PadInput.hpp"
 
 export module Input;
 
 import ComVars;
 
-struct XI_GAMEPAD
-{
-    WORD  wButtons;
-    BYTE  bLeftTrigger;
-    BYTE  bRightTrigger;
-    SHORT sThumbLX;
-    SHORT sThumbLY;
-    SHORT sThumbRX;
-    SHORT sThumbRY;
-};
-struct XI_STATE
-{
-    DWORD      dwPacketNumber;
-    XI_GAMEPAD Gamepad;
-};
-
-typedef DWORD(WINAPI* PFN_XInputGetState)(DWORD dwUserIndex, XI_STATE* pState);
-
-HMODULE            hXInputLib = nullptr;
-PFN_XInputGetState pfnXInputGetState = nullptr;
-bool               bActive = false;
 constexpr WORD XI_LEFT_THUMB = 0x0040;
 constexpr WORD XI_RIGHT_THUMB = 0x0080;
 constexpr WORD XI_BOTH_THUMBS = XI_LEFT_THUMB | XI_RIGHT_THUMB;
@@ -40,28 +21,20 @@ float fDeadzone = 0.0f;
 
 void Init()
 {
-    const char* xinputDlls[] = { "xinput1_4.dll", "xinput1_3.dll", "xinput9_1_0.dll" };
-    for (auto dll : xinputDlls)
-    {
-        hXInputLib = LoadLibraryA(dll);
-        if (hXInputLib) break;
-    }
-
-    if (hXInputLib)
-        pfnXInputGetState = reinterpret_cast<PFN_XInputGetState>(
-            GetProcAddress(hXInputLib, "XInputGetState"));
-
-    bActive = (pfnXInputGetState != nullptr);
+    (void)PadInput::XInput();
 }
 
 void Update()
 {
+    g_RightStick.RawX = g_RightStick.RawY = 32768;
+    g_RightStick.X = g_RightStick.Y = 0.0f;
+    bBothSticksClicked = false;
     if (hWnd != GetForegroundWindow())
         return;
 
-    // --- Right stick via XInput (port 0) ---
-    XI_STATE state = {};
-    if (bActive && pfnXInputGetState(0, &state) == 0 /*ERROR_SUCCESS*/)
+    XINPUT_STATE state{};
+    DWORD slot{};
+    if (PadInput::Read(state, slot))
     {
         // Convert XInput signed (-32768..32767) to DInput unsigned (0..65535)
         // DInput Y axis is inverted (down = higher value), XInput Y up = positive
@@ -84,7 +57,16 @@ void Update()
     POINT ptCurrent;
     GetCursorPos(&ptCurrent);
 
-    if (!bFirstFrame)
+    // The mouse's raw movement when raw input is on, else the cursor's
+    int rawX = 0, rawY = 0;
+    g_Mouse.Raw = RawMouse::Consume(rawX, rawY);
+    if (g_Mouse.Raw)
+    {
+        g_Mouse.DeltaX = bFirstFrame ? 0 : rawX;
+        g_Mouse.DeltaY = bFirstFrame ? 0 : rawY;
+        bFirstFrame = false;
+    }
+    else if (!bFirstFrame)
     {
         g_Mouse.DeltaX = ptCurrent.x - ptLastCursor.x;
         g_Mouse.DeltaY = ptCurrent.y - ptLastCursor.y;
@@ -128,6 +110,8 @@ public:
             WFP::onGameProcessEvent() += []()
             {
                 fDeadzone = std::clamp(FixSettings().Float("MISC.RightStickDeadzone"), 0.0f, 50.0f) / 200.0f;
+                RawMouse::Enabled = FixSettings().Bool("MAIN.RawInputMouse") && FixSettings().Bool("CAMERA.Enable");
+                RawMouse::Update(hWnd.get());
                 Update();
             };
         };

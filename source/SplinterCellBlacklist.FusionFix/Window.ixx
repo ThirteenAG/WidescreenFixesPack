@@ -1,12 +1,16 @@
 module;
 
 #include <stdafx.h>
-#include "../Shared/SplinterCell/Window.hpp"
+#include "FixSettings.hpp"
+#include "Shared/SplinterCell/Window.hpp"
+#include "Shared/WindowCursor.hpp"
 #include <intrin.h>
+#include <ShlObj.h>
 
 export module Window;
 
 import ComVars;
+import DeveloperOverlay;
 
 // Window modes (UWindowsClient +B4h, WindowStyleFinal in videoSettings.ini): 0 windowed, 1 exclusive fullscreen, 2 borderless.
 // The main window is made by UWindowsClient::CreateMainWindow, UWindowsViewport::OpenWindow sets the resolution (UD3DRenderDevice::SetRes)
@@ -21,9 +25,8 @@ import ComVars;
 // - always uses the desktop resolution in borderless and stretches the window over the monitor
 // - goes to windowed when it can't present in exclusive fullscreen (alt-tab, sub_529110) and stays there
 // - doesn't save a resized window
-// Here the mode only sets the window style: every mode lists the display resolutions and uses the one picked, a borderless window
-// is as big as its resolution and centered, a windowed one is centered (its client area on the monitor when it doesn't fit, the frame
-// goes past the edges). Leaving exclusive fullscreen to alt-tab goes back to it when the window is active again.
+// Borderless uses the monitor's resolution for both rendering and the client area. A windowed one is centered (its client area on
+// the monitor when it doesn't fit, the frame goes past the edges). Leaving exclusive fullscreen goes back to it when active again.
 // The video options are saved whenever they're applied and when the window is resized, the game starts the way it was left.
 namespace Window
 {
@@ -44,10 +47,72 @@ namespace Window
     int& OptionsHeight(uint8_t* options, int mode) { return *reinterpret_cast<int*>(options + Options::Height + 4 * mode); }
 
     int lastMode = -1;          // of the last SetRes
-    uintptr_t renderDevice = 0;
     bool fullscreenLost = false; // exclusive fullscreen was left because the window isn't active
 
     void Subclass();
+
+    SafetyHookInline shInitialRenderer{};
+    std::atomic<bool> initialRenderer{ true }, initialSetRes{ true };
+    std::atomic<bool> windowReady{ false };
+    struct Preferences
+    {
+        int mode = -1, width = -1, height = -1;
+    };
+    Preferences initialPreferences;
+
+    void WindowPreferences(int& mode, int& width, int& height)
+    {
+        wchar_t documents[MAX_PATH]{};
+        if (FAILED(SHGetFolderPathW(nullptr, CSIDL_PERSONAL, nullptr, SHGFP_TYPE_CURRENT, documents)))
+            return;
+        const auto profile = std::filesystem::path(documents) / L"Ubisoft" / L"Blacklist" / L"videoSettings.ini";
+        const auto savedMode = int(GetPrivateProfileIntW(L"WinDrv.WindowsClient", L"WindowStyleFinal", mode, profile.c_str()));
+        if (savedMode < Windowed || savedMode > Borderless)
+            return;
+        mode = savedMode;
+        const auto widthKey = mode == Windowed ? L"WindowedViewportX" : mode == Borderless ? L"FakeFullscreenViewportX" : L"FullscreenViewportX";
+        const auto heightKey = mode == Windowed ? L"WindowedViewportY" : mode == Borderless ? L"FakeFullscreenViewportY" : L"FullscreenViewportY";
+        const auto savedWidth = int(GetPrivateProfileIntW(L"WinDrv.WindowsClient", widthKey, width, profile.c_str()));
+        const auto savedHeight = int(GetPrivateProfileIntW(L"WinDrv.WindowsClient", heightKey, height, profile.c_str()));
+        if (savedWidth > 0 && savedHeight > 0)
+        {
+            width = savedWidth;
+            height = savedHeight;
+        }
+    }
+
+    void InitialWindowPreferences(int& mode, int& width, int& height)
+    {
+        if (initialPreferences.mode >= Windowed && initialPreferences.mode <= Borderless)
+        {
+            mode = initialPreferences.mode;
+            if (initialPreferences.width > 0 && initialPreferences.height > 0)
+            {
+                width = initialPreferences.width;
+                height = initialPreferences.height;
+            }
+        }
+        else
+            WindowPreferences(mode, width, height);
+    }
+
+    char __cdecl InitialRenderer(uint8_t* options, void* arguments)
+    {
+        if (options && initialRenderer.exchange(false))
+        {
+            auto mode = OptionsMode(options);
+            if (mode >= Windowed && mode <= Borderless)
+            {
+                auto width = OptionsWidth(options, mode);
+                auto height = OptionsHeight(options, mode);
+                InitialWindowPreferences(mode, width, height);
+                OptionsMode(options) = mode;
+                OptionsWidth(options, mode) = width;
+                OptionsHeight(options, mode) = height;
+            }
+        }
+        return shInitialRenderer.ccall<char>(options, arguments);
+    }
 
     // The work area / whole area of the monitor the window is on (the primary one before there's a window)
     MONITORINFO Monitor(HWND window)
@@ -62,16 +127,6 @@ namespace Window
     RECT Frame(DWORD style, DWORD exStyle)
     {
         return SCWindow::Frame(WindowHandle, style, exStyle);
-    }
-
-    // A resolution that fits in the area, the aspect ratio is kept
-    void Fit(int& width, int& height, int maxWidth, int maxHeight)
-    {
-        if (width <= 0 || height <= 0 || (width <= maxWidth && height <= maxHeight))
-            return;
-        auto scale = std::min(float(maxWidth) / width, float(maxHeight) / height);
-        width = std::max(1, int(width * scale)) & ~1;
-        height = std::max(1, int(height * scale)) & ~1;
     }
 
     // A display mode of the monitor the window is on
@@ -114,7 +169,11 @@ namespace Window
     // Saves the applied video options, with the mode the player picked
     void Save()
     {
-        if (!pOptions || !SaveOptions)
+        if (!pOptions || !SaveOptions || !windowReady.load())
+            return;
+        const auto mode = OptionsMode(pOptions);
+        if (mode < Windowed || mode > Borderless || mode != lastMode ||
+            OptionsWidth(pOptions, mode) <= 0 || OptionsHeight(pOptions, mode) <= 0)
             return;
         std::vector<uint8_t> options(pOptions, pOptions + Options::Size);
         if (fullscreenLost)
@@ -124,17 +183,44 @@ namespace Window
 
     // UD3DRenderDevice::SetRes(viewport, width, height, mode, refresh, adapter)
     SafetyHookInline shSetRes{};
+    SafetyHookInline shValidateResolution{};
+    void __fastcall ValidateResolution(uintptr_t device, void* edx, uintptr_t viewport, int* width, int* height,
+        int* mode, unsigned int* refresh, int* format, int* depth, int* samples, int* aspect)
+    {
+        const int requestedWidth = *width, requestedHeight = *height;
+        const bool windowed = *mode == Windowed && requestedWidth > 0 && requestedHeight > 0;
+        shValidateResolution.fastcall(device, edx, viewport, width, height, mode, refresh, format, depth, samples, aspect);
+        // A stale graphics profile also replaces valid windowed dimensions with a desktop-derived default.
+        if (windowed && *mode == Windowed)
+        {
+            *width = requestedWidth;
+            *height = requestedHeight;
+        }
+    }
+
     int __fastcall SetRes(uintptr_t device, void* edx, uintptr_t viewport, int width, int height, int mode, int refresh, int adapter)
     {
-        renderDevice = device;
         auto newMode = (mode == -1 || mode == 4) ? *reinterpret_cast<int*>(device + 176) : mode;
+        if (initialSetRes.exchange(false))
+        {
+            InitialWindowPreferences(newMode, width, height);
+            mode = newMode;
+        }
         if (newMode == Borderless)
         {
             auto area = Monitor(WindowHandle).rcMonitor;
-            Fit(width, height, area.right - area.left, area.bottom - area.top);
+            width = area.right - area.left;
+            height = area.bottom - area.top;
+            if (pOptions)
+            {
+                OptionsWidth(pOptions, Borderless) = width;
+                OptionsHeight(pOptions, Borderless) = height;
+            }
         }
         lastMode = newMode;
         auto result = shSetRes.fastcall<int>(device, edx, viewport, width, height, mode, refresh, adapter);
+        if (result && viewport)
+            windowReady.store(true);
         Subclass();
         return result;
     }
@@ -177,23 +263,11 @@ namespace Window
         return MoveWindow(window, x, y, width, height, repaint);
     }
 
-    // ResizeViewport puts the borderless window over the monitor (SWP_FRAMECHANGED), it's made as big as the resolution and centered
+    // Keep the native monitor placement for borderless.
     BOOL WINAPI SetWindowPosHook(HWND window, HWND after, int x, int y, int width, int height, UINT flags)
     {
         if (window == WindowHandle)
             SCWindow::SquareCorners(window);
-        if (window == WindowHandle && flags == SWP_FRAMECHANGED && lastMode == Borderless && renderDevice)
-        {
-            auto area = Monitor(window).rcMonitor;
-            if (x == area.left && y == area.top && width == area.right - area.left && height == area.bottom - area.top)
-            {
-                width = *reinterpret_cast<int*>(renderDevice + 180);
-                height = *reinterpret_cast<int*>(renderDevice + 184);
-                auto position = Centered(area, width, height);
-                x = position.x;
-                y = position.y;
-            }
-        }
         return SetWindowPos(window, after, x, y, width, height, flags);
     }
 
@@ -201,7 +275,13 @@ namespace Window
     SafetyHookInline shRequestOptions{};
     void __cdecl RequestOptionsHook(uint8_t* options)
     {
-        if (pOptions && OptionsMode(options) == Windowed && OptionsMode(pOptions) == ExclusiveFullscreen && GetForegroundWindow() != WindowHandle)
+        if (OptionsMode(options) == Borderless)
+        {
+            auto area = Monitor(WindowHandle).rcMonitor;
+            OptionsWidth(options, Borderless) = area.right - area.left;
+            OptionsHeight(options, Borderless) = area.bottom - area.top;
+        }
+        if (pOptions && lastMode == ExclusiveFullscreen && OptionsMode(options) == Windowed && OptionsMode(pOptions) == ExclusiveFullscreen && GetForegroundWindow() != WindowHandle)
             fullscreenLost = true;
         else if (GetForegroundWindow() == WindowHandle)
             fullscreenLost = false;
@@ -214,10 +294,12 @@ namespace Window
     SafetyHookInline shModeLists{};
     int __cdecl ModeLists(uintptr_t lists, int mode, int a3)
     {
-        auto result = shModeLists.ccall<int>(lists, ExclusiveFullscreen, a3);
+        auto result = shModeLists.ccall<int>(lists, mode == Borderless ? Borderless : ExclusiveFullscreen, a3);
+        if (mode == Borderless)
+            return result;
         if (!pOptions)
             return result;
-        for (auto m : { Windowed, Borderless })
+        for (auto m : { Windowed })
         {
             Resolution resolution = { OptionsWidth(pOptions, m), OptionsHeight(pOptions, m), 0 };
             auto data = *reinterpret_cast<Resolution**>(lists);
@@ -245,6 +327,16 @@ namespace Window
     LRESULT CALLBACK WndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
         static bool sizing = false;
+        if (message == WM_KEYDOWN && wParam == VK_F1 && !(lParam & (1LL << 30)) && NativeMenuOpen.load())
+        {
+            NativeHelpRequested.store(true);
+            return 0;
+        }
+        LRESULT overlayResult = 0;
+        const bool consumed = DeveloperOverlay::Message(window, message, wParam, lParam, overlayResult);
+        CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
+        if (consumed)
+            return overlayResult;
         auto result = CallWindowProcA(GameWndProc, window, message, wParam, lParam);
         switch (message)
         {
@@ -279,9 +371,10 @@ namespace Window
                 auto height = int(client.bottom - client.top);
                 if (width > 0 && height > 0 && (width != OptionsWidth(pOptions, Windowed) || height != OptionsHeight(pOptions, Windowed)))
                 {
-                    OptionsWidth(pOptions, Windowed) = width;
-                    OptionsHeight(pOptions, Windowed) = height;
-                    Save();
+                    std::vector<uint8_t> options(pOptions, pOptions + Options::Size);
+                    OptionsWidth(options.data(), Windowed) = width;
+                    OptionsHeight(options.data(), Windowed) = height;
+                    RequestOptions(options.data());
                 }
             }
             break;
@@ -296,6 +389,7 @@ namespace Window
             return;
         GameWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(WindowHandle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&WndProc)));
         subclassed = WindowHandle;
+        WindowCursor::Attach(WindowHandle);
 
         // the windowed window can open behind other windows, it's brought to the front once
         if (lastMode == Windowed)
@@ -310,17 +404,26 @@ namespace Window
 export void InitWindow()
 {
     SCWindow::EnableDpi();
+    WindowCursor::Initialize(FixSettings());
     using namespace Window;
+
+    WindowPreferences(initialPreferences.mode, initialPreferences.width, initialPreferences.height);
+
+    // Bootstrap creates a device before the normal video preferences are loaded.
+    auto initial = find_pattern(
+        "55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 81 EC 5C 01 00 00 A1 ? ? ? ? 33 C5 89 45 F0 53 56 57 50 8D 45 F4 64 A3 00 00 00 00 8B 45 0C 8B 75 08 33 DB 68 ? ? ? ? 89 75 B4 89 45 C8",
+        "55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 81 EC 4C 01 00 00 A1 ? ? ? ? 33 C5 89 45 F0 53 56 57 50 8D 45 F4 64 A3 00 00 00 00 8B 45 0C 8B 75 08 33 DB 68 ? ? ? ? 89 75 B4 89 45 C8");
+    shInitialRenderer = safetyhook::create_inline(initial.get_first(), InitialRenderer);
 
     // Resizable window with a maximize box: the editor style check in CreateMainWindow, OpenWindow, ResizeViewport and EndFullscreen
     auto pattern = hook::pattern("BE 00 00 CF 10 E8 ? ? ? ? 85 C0 75 05 BE 00 00 CA 10");
-    ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(12))) = 0xEB; // jnz -> jmp
+    injector::WriteMemory<uint8_t>(pattern.get_first(12), 0xEB, true); // jnz -> jmp
 
-    pattern = hook::pattern("E8 ? ? ? ? 85 C0 75 ? 81 E7 FF FF FA FF");
-    pattern.count(3).for_each_result([](hook::pattern_match match)
-    {
-        ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(match.get<void>(7))) = 0xEB; // jnz -> jmp
-    });
+    for (const auto& [signature, offset] :
+        { std::pair{ "8B 8E 2C 08 00 00 8B 51 04 8B 1D ? ? ? ? 83 E0 F7 50 6A EC 52 FF D3 81 E7 FF FF 30 7F 81 CF 00 00 CF 00 E8 ? ? ? ? 85 C0 75 ? 81 E7 FF FF FA FF", 43 },
+          std::pair{ "FF 86 3C 08 00 00 8B 51 04 8B 1D ? ? ? ? 83 E0 F7 50 6A EC 52 FF D3 81 E7 FF FF 30 7F 81 CF 00 00 CF 00 E8 ? ? ? ? 85 C0 75 ? 81 E7 FF FF FA FF", 43 },
+          std::pair{ "BF 00 00 CF 00 89 7D DC E8 ? ? ? ? 85 C0 75 ? 81 E7 FF FF FA FF", 15 } })
+        injector::WriteMemory<uint8_t>(hook::pattern(signature).get_first(offset), 0xEB, true); // jnz -> jmp
 
     // CreateMainWindow: x, y (CW_USEDEFAULT windowed) and the window size in eax, ecx, the client at [ebp-14h]
     pattern = hook::pattern("BA 00 00 00 80 8B FA 8B 1D");
@@ -337,10 +440,16 @@ export void InitWindow()
     pattern = find_pattern("55 8B EC 83 EC 2C 83 7D 0C 00 53 56 57 8B F1 7F 09 8B 86 B4 00 00 00", "55 8B EC 83 EC 2C A1 ? ? ? ? 33 C5 89 45 FC 83 7D 0C 00 8B 45 08 53");
     shSetRes = safetyhook::create_inline(pattern.get_first(), SetRes);
 
+    pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 83 EC 10 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 00 00 00 00 8B D9 89 5D F0 33 F6 39 35 ? ? ? ?");
+    shValidateResolution = safetyhook::create_inline(pattern.get_first(), ValidateResolution);
+
     IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
         std::forward_as_tuple("MoveWindow", MoveWindowHook),
         std::forward_as_tuple("SetWindowPos", SetWindowPosHook)
     );
+    CursorConfinement::OriginalClip.store(ClipCursor);
+    IATHook::Replace(GetModuleHandleW(nullptr), "USER32.DLL",
+        std::forward_as_tuple("ClipCursor", CursorConfinement::NativeClip));
 
     pattern = find_pattern("55 8B EC 83 EC 08 80 3D ? ? ? ? 00 57 0F 85 ? ? ? ? E8", "55 8B EC 83 EC 14 80 3D ? ? ? ? 00 53 56 57 0F 85");
     shCreateVideoTextures = safetyhook::create_inline(pattern.get_first(), CreateVideoTextures);
@@ -371,8 +480,7 @@ export void InitWindow()
         Save();
     });
 
-    // The resolution lists of the video options menu (sub_670000) are the display modes (the exclusive fullscreen list) for every mode,
-    // with the windowed and borderless resolutions in use (a resized window), the menu shows the resolution as unknown and greys it out otherwise
+    // Keep the native desktop-only list for borderless. Windowed lists also include a custom client size.
     pattern = hook::pattern("51 8B 4D 08 89 55 E0 89 45 E4 E8");
     AddResolution = reinterpret_cast<decltype(AddResolution)>(injector::GetBranchDestination(pattern.get_first(10)).as_int());
     pattern = hook::pattern("55 8B EC 83 EC 30 53 33 DB 56 57 8B 7D 08 89 5F 04");
@@ -381,8 +489,6 @@ export void InitWindow()
     // Changing the mode in the menu (sub_1ACAC30) keeps the resolution instead of using the mode's default one (edx, eax),
     // exclusive fullscreen only when the display has it. The menu's resolution is at +20h of the menu options (esi) in the DX11 exe,
     // in globals in the DX9 one, the new mode is edi / esi.
-    static int* pMenuWidth = nullptr;
-    static int* pMenuHeight = nullptr;
     static bool modeInEdi = false;
     pattern = hook::pattern("89 56 20 89 46 24 83 FF 01");
     if (!pattern.empty())
@@ -393,53 +499,25 @@ export void InitWindow()
     else
     {
         pattern = hook::pattern("89 15 ? ? ? ? A3 ? ? ? ? 83 FE 01 75");
-        pMenuWidth = *pattern.get_first<int*>(2);
-        pMenuHeight = *pattern.get_first<int*>(7);
+        MenuWidth.SetAddress(*pattern.get_first<int*>(2));
+        MenuHeight.SetAddress(*pattern.get_first<int*>(7));
         injector::MakeNOP(pattern.get_first(), 11, true);
     }
     static auto MenuModeResolution = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        auto& width = pMenuWidth ? *pMenuWidth : *reinterpret_cast<int*>(regs.esi + 0x20);
-        auto& height = pMenuHeight ? *pMenuHeight : *reinterpret_cast<int*>(regs.esi + 0x24);
+        auto& width = MenuWidth.is_initialized() ? MenuWidth.get() : *reinterpret_cast<int*>(regs.esi + 0x20);
+        auto& height = MenuHeight.is_initialized() ? MenuHeight.get() : *reinterpret_cast<int*>(regs.esi + 0x24);
         auto mode = int(modeInEdi ? regs.edi : regs.esi);
-        if (mode == ExclusiveFullscreen && !IsDisplayMode(width, height))
+        if (mode == Borderless)
+        {
+            auto area = Monitor(WindowHandle).rcMonitor;
+            width = area.right - area.left;
+            height = area.bottom - area.top;
+        }
+        else if (mode == ExclusiveFullscreen && !IsDisplayMode(width, height))
         {
             width = int(regs.edx);
             height = int(regs.eax);
-        }
-    });
-
-    // The resolution list isn't greyed out in borderless (sub_1ACC1B0)
-    pattern = hook::pattern("83 3D ? ? ? ? 02 8D ? 50 02 00 00 C7 45 ? FF FF FF FF 0F 95");
-    ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(6))) = 0x7F;
-
-    // SetRes: the display mode match (sub_A81C00) makes the borderless resolution the monitor's
-    pattern = find_pattern("83 38 02 75 ? 8B 4D 10 8B 55 0C 6A 00 6A 02", "83 3A 02 75 ? 8B 45 10 6A 00 6A 02 50 57 E8");
-    ProtectedGameRef<uint8_t>(reinterpret_cast<uint8_t*>(pattern.get_first(3))) = 0xEB; // jnz -> jmp
-
-    // Borderless uses the desktop resolution (sub_66AAB0) instead of its own, in the menu (sub_1AC9FB0) and at startup (sub_530A10)
-    pattern = hook::pattern("8D 8D 9C FE FF FF 51 E8 ? ? ? ? 8B 46 0C 83 C4 04 83 F8 02");
-    static auto MenuBorderlessResolution = safetyhook::create_mid(pattern.get_first(12), [](SafetyHookContext& regs)
-    {
-        auto width = OptionsWidth(pOptions, Borderless);
-        auto height = OptionsHeight(pOptions, Borderless);
-        if (width > 0 && height > 0)
-        {
-            *reinterpret_cast<int*>(regs.ebp - 0x164) = width;
-            *reinterpret_cast<int*>(regs.ebp - 0x160) = height;
-        }
-    });
-
-    pattern = hook::pattern("8D 45 8C 50 E8 ? ? ? ? 8B 86 AC 00 00 00");
-    static auto StartupBorderlessResolution = safetyhook::create_mid(pattern.get_first(9), [](SafetyHookContext& regs)
-    {
-        auto options = reinterpret_cast<uint8_t*>(regs.esi);
-        auto width = OptionsWidth(options, Borderless);
-        auto height = OptionsHeight(options, Borderless);
-        if (width > 0 && height > 0)
-        {
-            *reinterpret_cast<int*>(regs.ebp - 0x74) = width;
-            *reinterpret_cast<int*>(regs.ebp - 0x70) = height;
         }
     });
 
@@ -452,19 +530,19 @@ export void InitWindow()
 
     // WindowStyle
     pattern = hook::pattern("83 3D ? ? ? ? ? 0F 85 ? ? ? ? A1 ? ? ? ? 3B 46 08");
-    pWindowStyle = *pattern.get_first<int*>(2);
+    WindowStyle.SetAddress(*pattern.get_first<int*>(2));
 
     // Resolution
     pattern = hook::pattern("A3 ? ? ? ? 8B 8E ? ? ? ? 89 0D ? ? ? ? 85 DB 74 13 83 BE");
     if (!pattern.empty())
     {
-        pViewportResolutionWidth = *pattern.get_first<int*>(1);
-        pViewportResolutionHeight = *pattern.get_first<int*>(13);
+        ViewportResolutionWidth.SetAddress(*pattern.get_first<int*>(1));
+        ViewportResolutionHeight.SetAddress(*pattern.get_first<int*>(13));
     }
     else
     {
         pattern = hook::pattern("89 0D ? ? ? ? 8B 96 ? ? ? ? 89 15 ? ? ? ? 85 DB 74 13");
-        pViewportResolutionWidth = *pattern.get_first<int*>(2);
-        pViewportResolutionHeight = *pattern.get_first<int*>(14);
+        ViewportResolutionWidth.SetAddress(*pattern.get_first<int*>(2));
+        ViewportResolutionHeight.SetAddress(*pattern.get_first<int*>(14));
     }
 }

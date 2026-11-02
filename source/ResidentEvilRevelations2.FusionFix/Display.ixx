@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 
 export module Display;
 
@@ -26,38 +25,37 @@ public:
 
             // The resolution list: the game drops modes above 4096x2160
             auto pattern = hook::pattern("77 5F 3D 70 08 00 00 77 58");
-            if (PatternAvailable(pattern, "ResidentEvilRevelations2.FusionFix: Display"))
-            {
-                injector::MakeNOP(pattern.get_first(0), 2);
-                injector::MakeNOP(pattern.get_first(7), 2);
-            }
+            injector::MakeNOP(pattern.get_first(0), 2);
+            injector::MakeNOP(pattern.get_first(7), 2);
 
             // The render resolution. The game's Aspect option fits a fixed aspect into the screen; the fix always uses
             // the screen's own (the option's DEFAULT). Screens narrower than 16:9 get a 16:9 image (the HUD and menus
             // are laid out for 16:9 and would be cut off otherwise).
-            hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 8E").for_each_result([](hook::pattern_match match)
+            // get_first() stops scanning after one match; use a fresh pattern for the
+            // full scan so every resolution path receives the same correction.
+            hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 8E B8 00 00 00").get_first();
+            auto resolutionECX = hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 8E");
+            resolutionECX.for_each_result([](hook::pattern_match match)
             {
                 injector::MakeNOP(match.get<void>(0), 12, true);
                 static std::vector<SafetyHookMid> hooks;
                 hooks.emplace_back(safetyhook::create_mid(match.get<void>(0), [](SafetyHookContext& regs)
                 {
-                    nResX = regs.ecx;
-                    nResY = regs.edx;
-                    if ((float)nResX / (float)nResY < defaultAspectRatio)
-                        regs.edx = nResY = 9 * nResX / 16;
+                    if (regs.edx && (float)regs.ecx / (float)regs.edx < defaultAspectRatio)
+                        regs.edx = 9 * regs.ecx / 16;
                 }));
             });
 
-            hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 9E").for_each_result([](hook::pattern_match match)
+            hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 9E B8 00 00 00").get_first();
+            auto resolutionEBX = hook::pattern("0F 84 ? ? ? ? 48 ? ? 48 ? ? 89 9E");
+            resolutionEBX.for_each_result([](hook::pattern_match match)
             {
                 injector::MakeNOP(match.get<void>(0), 12, true);
                 static std::vector<SafetyHookMid> hooks;
                 hooks.emplace_back(safetyhook::create_mid(match.get<void>(0), [](SafetyHookContext& regs)
                 {
-                    nResX = regs.ebx;
-                    nResY = regs.edi;
-                    if ((float)nResX / (float)nResY < defaultAspectRatio)
-                        regs.edi = nResY = 9 * nResX / 16;
+                    if (regs.edi && (float)regs.ebx / (float)regs.edi < defaultAspectRatio)
+                        regs.edi = 9 * regs.ebx / 16;
                 }));
             });
 

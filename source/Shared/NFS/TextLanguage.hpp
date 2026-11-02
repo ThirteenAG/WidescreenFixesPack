@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "../AsiSettings/asi_settings.hpp"
+#include "Shared/AsiSettings/asi_settings.hpp"
 
 // Menu hosts choose the language of every plugin's texts; auto follows the game's language.
 namespace WFPMenu

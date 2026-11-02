@@ -133,6 +133,17 @@ public:
             {
                 static float gameMaxFps = -1.0f;
                 nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
+                if (nFPSLimit < 0)
+                {
+                    // The display's refresh rate
+                    static int refreshRate = []()
+                    {
+                        DEVMODEW mode{};
+                        mode.dmSize = sizeof(mode);
+                        return EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1 ? int(mode.dmDisplayFrequency) : 60;
+                    }();
+                    nFPSLimit = refreshRate;
+                }
                 if (nFPSLimit <= 0 && gameMaxFps < 0.0f)
                     return;
                 if (auto maxFps = fb::Settings::Field<float>("GameTimeSettings", "MaxVariableFps"))
@@ -178,21 +189,27 @@ public:
                         }
                     });
                 }
+                else // 1.0: the race update uses the older layout without forced VSync
+                {
+                    auto olderLayout = hook::pattern("80 B8 A8 00 00 00 00 75 ? A1 ? ? ? ? 80 78 40 00");
+                    if (olderLayout.empty())
+                    {
+                        olderLayout.get_first();
+                        std::abort();
+                    }
+                }
             }
 
             // The engine sound's pitch glides to each new value. Above 30 frames per second a new value comes before
             // the glide moves, the glide starts over and the pitch stays where it was, so the engine sounds stuck at one
             // tone. Then the glide carries on to the new value instead of starting over.
             auto pattern = hook::pattern("D9 83 C8 01 00 00 F3 0F 11 8B CC 01 00 00 D9 9B C0 01 00 00");
-            if (!pattern.empty())
+            static auto skip = (uintptr_t)pattern.get_first(14);
+            static auto PitchGlideHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
             {
-                static auto skip = (uintptr_t)pattern.get_first(14);
-                static auto PitchGlideHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
-                {
-                    if (AboveThirtyFps())
-                        regs.eip = skip;
-                });
-            }
+                if (AboveThirtyFps())
+                    regs.eip = skip;
+            });
 
             // On the frames between the ticks the cutscene cameras play their animation on to the frame's time, which
             // is up to a tick ahead of everything else, drawn between the last two ticks. Objects in the shot shake
@@ -204,7 +221,7 @@ public:
             // cuts.
             auto frameUpdate = hook::pattern("E8 ? ? ? ? 8D 77 10 C6 44 24 2C 00 0F 28 46 30");                 // ClientCameraManager::update, after the camera's own update
             auto afterUpdate = hook::pattern("8B 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? D9 43 04 51 D9 1C 24");        // after ClientCameraManager::update
-            if (!frameUpdate.empty() && !afterUpdate.empty() && bUnlockFrameRate && bUnlockCutscenes)
+            if (bUnlockFrameRate && bUnlockCutscenes)
             {
                 struct CameraState
                 {
@@ -348,16 +365,10 @@ public:
             }
 
             pattern = hook::pattern("80 7E 39 00 F3 0F 10 46 34 0F C6 C0 00");
-            if (!pattern.empty())
-            {
-                static auto InheritSpeedHook1 = safetyhook::create_mid(pattern.get_first(9), ScaleInheritedSpeed);
-            }
+            static auto InheritSpeedHook1 = safetyhook::create_mid(pattern.get_first(9), ScaleInheritedSpeed);
 
             pattern = hook::pattern("80 78 39 00 F3 0F 10 40 34 0F C6 C0 00");
-            if (!pattern.empty())
-            {
-                static auto InheritSpeedHook2 = safetyhook::create_mid(pattern.get_first(9), ScaleInheritedSpeed);
-            }
+            static auto InheritSpeedHook2 = safetyhook::create_mid(pattern.get_first(9), ScaleInheritedSpeed);
         };
     }
 } FrameRate;

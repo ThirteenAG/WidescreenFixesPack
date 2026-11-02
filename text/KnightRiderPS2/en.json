@@ -1,6 +1,24 @@
 {
   "plugin.name": "Knight Rider PCSX2F Widescreen Fix",
   "page.display": "Display",
-  "enable": "Widescreen support",
-  "enable.description": "Correct camera projection, HUD and inset views, backgrounds and FMV for the emulator aspect ratio. Enabled by default. Restart the emulated game after changing this setting."
+  "page.gameplay": "Gameplay",
+  "auto": "Automatic",
+  "ForceAspectRatio": "Display aspect ratio",
+  "ForceAspectRatio.description": "Auto follows the emulator display. Override with a width:height ratio or decimal; set the emulator display to the same ratio. Changes apply during play.",
+  "FOVFactor": "Field of view",
+  "FOVFactor.description": "Multiplies the driving camera's field of view; 1.0 is the original framing. Mission start scenes keep their own framing. Changes apply during play.",
+  "HudAspectRatioConstraint": "HUD aspect ratio",
+  "HudAspectRatioConstraint.description": "Auto places the side HUD panels at the screen edges. A ratio keeps them at the edges of a centered box of that shape. The cockpit view always keeps its HUD on the 4:3 dashboard. Changes apply during play.",
+  "FMVWidescreenMode": "Video display",
+  "FMVWidescreenMode.description": "Original shows the videos as the game does, a 4:3 picture with black bars. Fill shows the whole widescreen picture as large as the screen allows. Changes apply during play.",
+  "fmv.original": "Original",
+  "fmv.fill": "Fill",
+  "CutsceneBorders": "Cutscene borders",
+  "CutsceneBorders.description": "Black bars for the scenes at the start of a mission. Letterbox keeps the original bars above and below, Pillarbox keeps the original 4:3 framing with bars at the sides, Both combines them, Off fills the screen. Changes apply during play.",
+  "borders.off": "Off",
+  "borders.letterbox": "Letterbox",
+  "borders.pillarbox": "Pillarbox",
+  "borders.both": "Both",
+  "SkipIntro": "Skip intro",
+  "SkipIntro.description": "Skips the Davilex logo and the opening video at startup. Restart the game to apply."
 }

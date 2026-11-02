@@ -171,7 +171,7 @@ export namespace SkinCapture
         if (d3dx) saveTexture = reinterpret_cast<SaveTexture>(GetProcAddress(d3dx, "D3DXSaveTextureToFileW"));
         const auto vtable = ScarfaceRTTI::FindVtable(".?AVd3dExtHardwareSkinning@pure3d@@");
         if (vtable)
-            matrixHook = safetyhook::create_inline(injector::ReadMemory<void*>(vtable + 5 * sizeof(void*), true), SetMatrix);
+            matrixHook = safetyhook::create_inline(*reinterpret_cast<void**>(vtable + 5 * sizeof(void*)), SetMatrix);
     }
 
     bool IsEnabled() { return enabled; }

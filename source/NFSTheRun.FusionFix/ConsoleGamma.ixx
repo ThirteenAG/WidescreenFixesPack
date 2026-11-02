@@ -13,6 +13,8 @@ module;
 export module consolegamma;
 
 import ComVars;
+import DevOverlay;
+import Borders;
 
 bool bConsoleGammaEnabled = false;
 
@@ -324,6 +326,8 @@ public:
                 bConsoleGammaEnabled = FixSettings().Bool("GRAPHICS.ConsoleGamma");
                 IDXGISwapChain* pSwapChain = (IDXGISwapChain*)regs.eax;
                 ConsoleGammaDX11::Render(pSwapChain);
+                CutsceneBorders::Present(pSwapChain);
+                DeveloperOverlay::Present(pSwapChain);
             });
         };
     }

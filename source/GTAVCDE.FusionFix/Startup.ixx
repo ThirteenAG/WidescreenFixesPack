@@ -38,22 +38,19 @@ public:
                 return;
             const auto update = InterfaceUpdateAddress();
             const auto resume = ResumeGameAddress();
-            if (!update || !resume)
-                return;
             gameState = reinterpret_cast<const int*>(GameStateAddress());
             loginFlags = reinterpret_cast<const uint8_t*>(LoginFlagsAddress());
-            if (!gameState || !loginFlags)
-                return;
             resumeGame = reinterpret_cast<bool(*)(void*)>(resume);
             static auto updateHook = safetyhook::create_mid(update,
                 [](SafetyHookContext& context)
             {
                 if (startupComplete)
                     return;
-                if (*gameState > GS_FRONTEND)
+                // Ask every frame until the game leaves the front end: early requests are ignored
+                if (*gameState == GS_FRONTEND && (*loginFlags & 2) != 0)
+                    resumeGame(reinterpret_cast<void*>(context.rcx));
+                else if (*gameState > GS_FRONTEND)
                     startupComplete = true;
-                else if (*gameState == GS_FRONTEND && (*loginFlags & 2) != 0)
-                    startupComplete = resumeGame(reinterpret_cast<void*>(context.rcx));
             });
         };
     }

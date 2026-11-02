@@ -83,6 +83,7 @@
       "step": 0.1,
       "decimals": 1,
       "label": "@WFP_STICKSENSITIVITY",
+      "description": "@WFP_DESC_STICKSENSITIVITY",
       "page": "camera",
       "control": [
         "slider"
@@ -101,6 +102,7 @@
       "step": 0.1,
       "decimals": 1,
       "label": "@WFP_MOUSESENSITIVITY",
+      "description": "@WFP_DESC_MOUSESENSITIVITY",
       "page": "camera",
       "control": [
         "slider"
@@ -111,10 +113,25 @@
       }
     },
     {
+      "id": "MAIN.RawInputMouse",
+      "type": "bool",
+      "default": 1,
+      "label": "@WFP_RAWINPUT",
+      "description": "@WFP_DESC_RAWINPUT",
+      "page": "camera",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "CAMERA.InvertLook",
       "type": "bool",
       "default": 0,
       "label": "@WFP_INVERTLOOK",
+      "description": "@WFP_DESC_INVERTLOOK",
       "page": "camera",
       "enabledIf": {
         "setting": "CAMERA.FreeLook",
@@ -151,11 +168,6 @@
       "enabledIf": {
         "setting": "CAMERA.FreeLook",
         "equals": 1
-      },
-      "presets": {
-        "vanilla": 3.0,
-        "recommended": 3.0,
-        "enhanced": 3.0
       }
     },
     {
@@ -191,11 +203,6 @@
       "control": [
         "slider"
       ],
-      "presets": {
-        "vanilla": 1.0,
-        "recommended": 1.0,
-        "enhanced": 1.0
-      },
       "apply": "live"
     },
     {
@@ -222,12 +229,7 @@
       "control": [
         "segmented",
         "cycler"
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      ]
     },
     {
       "id": "GAMEPAD.LeftStickDeadzone",
@@ -274,6 +276,28 @@
       }
     },
     {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": 1,
+      "label": "@WFP_PAUSEONFOCUSLOSS",
+      "description": "@WFP_DESC_PAUSEONFOCUSLOSS",
+      "page": "gameplay",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": 0,
+      "label": "@checkforupdates",
+      "description": "@checkforupdates.description",
+      "page": "gameplay",
+      "control": [
+        "checkbox",
+        "cycler"
+      ],
+      "apply": "live"
+    },
+    {
       "id": "LANGUAGE.Language",
       "type": "choice",
       "default": "Engish (US)",
@@ -316,7 +340,7 @@
         },
         {
           "value": "Czech",
-          "label": "ÄŒeÅ¡tina"
+          "label": "Čeština"
         },
         {
           "value": "Hungarian",
@@ -469,10 +493,6 @@
         {
           "value": 4,
           "label": "@WFP_WINDOWED_BORDERLESS"
-        },
-        {
-          "value": 5,
-          "label": "@WFP_WINDOWED_STRETCHED"
         }
       ],
       "label": "@WFP_WINDOWED",
@@ -505,12 +525,7 @@
         "segmented",
         "cycler"
       ],
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
       "id": "GRAPHICS.DisableMotionBlur",
@@ -533,12 +548,7 @@
         "segmented",
         "cycler"
       ],
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
       "id": "GRAPHICS.ConsoleGamma",
@@ -556,13 +566,13 @@
     {
       "id": "GRAPHICS.AntiAliasing",
       "type": "choice",
-      "default": 0,
+      "default": 1,
       "label": "@WFP_SMAA",
       "description": "@WFP_DESC_SMAA",
       "page": "video",
       "presets": {
         "vanilla": 0,
-        "recommended": 0,
+        "recommended": 1,
         "enhanced": 1
       },
       "choices": [
@@ -675,12 +685,7 @@
       "control": [
         "segmented",
         "cycler"
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      ]
     },
     {
       "id": "GRAPHICS.BruteforceCulling",
@@ -688,12 +693,7 @@
       "default": 0,
       "label": "@WFP_BRUTEFORCECULLING",
       "description": "@WFP_DESC_BRUTEFORCECULLING",
-      "page": "world",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "page": "world"
     },
     {
       "id": "MAIN.HudAspectRatioConstraint",
@@ -729,12 +729,7 @@
       "control": [
         "cycler",
         "dropdown"
-      ],
-      "presets": {
-        "vanilla": "Auto",
-        "recommended": "Auto",
-        "enhanced": "Auto"
-      }
+      ]
     },
     {
       "id": "MAIN.FMVWidescreenMode",
@@ -748,10 +743,6 @@
         {
           "value": 1,
           "label": "@WFP_FMVMODE_FILL"
-        },
-        {
-          "value": 2,
-          "label": "@WFP_FMVMODE_STRETCH"
         }
       ],
       "label": "@WFP_FMVMODE",
@@ -808,12 +799,7 @@
       "default": 1,
       "label": "@WFP_ANIMATEDBORDERS",
       "description": "@WFP_DESC_ANIMATEDBORDERS",
-      "page": "movies",
-      "presets": {
-        "vanilla": 1,
-        "recommended": 1,
-        "enhanced": 1
-      }
+      "page": "movies"
     },
     {
       "id": "MAIN.CustomUserFilesDirectoryInGameDir",

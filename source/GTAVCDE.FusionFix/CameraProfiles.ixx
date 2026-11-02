@@ -9,11 +9,10 @@ import Settings;
 
 namespace
 {
-    // The pattern's first match, nullptr when it isn't found (a game update changed the code)
+    // The pattern's first match
     uint8_t* FindFirst(std::string_view signature, ptrdiff_t offset = 0)
     {
-        auto pattern = hook::pattern(signature);
-        return pattern.empty() ? nullptr : pattern.get_first<uint8_t>(offset);
+        return hook::pattern(signature).get_first<uint8_t>(offset);
     }
 
     int(*getVehicleAppearance)(uintptr_t) = nullptr;
@@ -26,8 +25,6 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            if (!Settings.restoreOriginalCamera)
-                return;
             const auto appearance = FindFirst("48 8B 81 E0 01 00 00 8B 88 CC 00 00 00 81 E1 00 00 0F 00 74 ? 81 F9 00");
             const auto carZoom = FindFirst("F3 0F 11 A3 EC 00 00 00 75 ? 85 C9 75 ? B8 10 00 00 00 66 89 05 ? ?");
             if (appearance && carZoom)
@@ -35,7 +32,7 @@ public:
                 getVehicleAppearance = reinterpret_cast<decltype(getVehicleAppearance)>(appearance);
                 static auto carDistanceHook = safetyhook::create_mid(carZoom, [](SafetyHookContext& c)
                 {
-                    if (c.rcx < 1 || c.rcx > 3)
+                    if (!Settings.restoreOriginalCamera || c.rcx < 1 || c.rcx > 3)
                         return;
                     const auto vehicle = *reinterpret_cast<const uintptr_t*>(c.rbx + 1736);
                     if (!vehicle || (*reinterpret_cast<const uint32_t*>(vehicle + 108) & 7) != 2)
@@ -55,6 +52,8 @@ public:
             {
                 static auto distanceHook = safetyhook::create_mid(address, [](SafetyHookContext& c)
                 {
+                    if (!Settings.restoreOriginalCamera)
+                        return;
                     // revc Process_FollowPedWithMouse: 2 + PedZoomValue.
                     // VC's collision placement uses this distance directly.
                     constexpr std::array distances{2.25f, 3.5f, 4.9f};

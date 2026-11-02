@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/driv3r/attract.png" width="760" alt="DRIV3R - Widescreen Fix">
+<img src="https://thirteenag.github.io/screens/driv3r/attract.png" width="760" alt="DRIV3R - Fusion Fix">
 
-**DRIV3R Widescreen Fix** improves widescreen support, corrects aspect ratio, HUD, FOV, and radar scaling, and includes quality-of-life improvements such as a free-look camera, modern controls, increased draw distance and functional turn indicators.
+**DRIV3R Fusion Fix** improves widescreen support, corrects aspect ratio, HUD, FOV, and radar scaling, and includes quality-of-life improvements such as a free-look camera, modern controls, increased draw distance and functional turn indicators.
 
-[Website](https://fusionfix.io/wfp#driv3r) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Driv3r.WidescreenFix/dllmain.cpp)
+[Website](https://fusionfix.io/wfp#driv3r) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Driv3r.FusionFix/dllmain.cpp)
 
 </div>
 
@@ -26,13 +26,14 @@
 
 ## New Options
 
-- **Skip Intro** - bypass startup intro movies
+- **Skip Intro** - bypass startup logos and notices while keeping story cinematics and Extras videos available
+- **Videos** - Movies keep their proportions. Original shows them as the game does, whole inside its centred 4:3 frame with black bars around them; Fill fits the whole movie to the screen. Nothing is cut off or stretched. Recommended and Enhanced use Fill; Vanilla uses Original aspect.
 - **Draw Distance** - added an option to increase draw distance
 - **Window Mode** - choose fullscreen, a framed window or borderless
-- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
-- **Frame Rate Limit** - even frame pacing at 60 FPS by default; Unlimited is the original behaviour
+- **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect; restart to change
+- **Frame Rate Limit** - choose a limit from 30 to 1000 FPS, follow the monitor refresh rate, or use Unlimited. The default is 60 FPS; demanding scenes may run below the selected limit.
 - **Anisotropic Filtering** - sharper textures at steep viewing angles, up to 16x
-- **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360
+- **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360; restart to change
 - **Clip Cursor** - Locks the mouse cursor to the game window
 - **Modern Controls** - keyboard, mouse and Xbox controller bindings laid out like in modern games, used by new profiles and by Reset in the controls menu; the controller can also pause the game with Start
 ---
@@ -76,23 +77,29 @@
 
 ## Settings
 
-Configure the fix in FusionFixHub or on fusionfix.io. The first launch creates `scripts/Driv3r.WidescreenFix.cfg`.
+Open **Options → Plugins → DRIV3R Fusion Fix** from the main menu, or **Pause → Plugins → DRIV3R Fusion Fix** while playing. Press **F1** for the selected option's help; use **Up / Down** to scroll long help and **F1 / Esc** to return. FusionFixHub and fusionfix.io offer the same settings. The first launch creates `scripts/Driv3r.FusionFix.cfg`.
 
 Window Mode offers Fullscreen, a fixed-size centered Windowed mode, and Borderless at the monitor resolution. Restart to change it. The game remembers the selected resolution and refresh rate.
 
-The gameplay FOV multiplier can be changed while playing. Confine Cursor keeps the pointer inside the active game window and releases it when the game loses focus. Modern Controls applies to new profiles and when resetting the game's controls.
+The gameplay FOV multiplier can be changed while playing. A value of 1.0 keeps the corrected default view; the horizontal field of view is capped at 150 degrees. Confine Cursor keeps the pointer inside the active game window and releases it when the game loses focus. Modern Controls applies to new profiles and when resetting the game's controls.
+
+Pause When Unfocused stops the game while another window is active. Turning it off lets the game continue in the background. **Ctrl + F10** toggles the developer overlay.
+
+Gamepad Icons offers Xbox, PlayStation and Nintendo artwork; Auto uses Xbox artwork. The bundled Xidi mapper connects XInput controllers to the game's native DirectInput controls. Modern Controls changes defaults for new profiles and Reset; it preserves existing saved bindings. A disconnected controller does not require changing the icon setting.
+
+Check for Updates is optional and disabled by default. When enabled, an available release is announced in the game's Plugins page.
 
 ## Configuration
 
 The added settings text is available in English, French, German, Italian and Spanish. Choose Text Language in FusionFixHub to override the automatic choice. If the game language cannot be identified, English is used.
 
-Recommended uses the default setup. Vanilla and Enhanced offer alternative presets. Settings marked for restart take effect on the next launch. If Plugins is unavailable in your game version, use FusionFixHub or the generated `.cfg` file.
+Recommended uses the default setup. Vanilla and Enhanced offer alternative presets; none changes Modern Controls or the refresh-rate list setting. Settings marked for restart take effect on the next launch. If Plugins is unavailable in your game version, use FusionFixHub or the generated `.cfg` file.
 
 ## Installation
 
 1. Download the `.zip` from the release page.
 2. Extract the contents directly into the game folder - the same folder as `Driv3r.exe` (Update 2 is required).
-3. Launch the game once to create the `scripts/Driv3r.WidescreenFix.cfg`.
+3. Launch the game once to create the `scripts/Driv3r.FusionFix.cfg`.
 4. Configure the fix in FusionFixHub or on fusionfix.io. Restart the game when an option requires it.
 
 ---

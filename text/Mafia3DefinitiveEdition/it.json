@@ -1,0 +1,13 @@
+{
+  "plugin.name": "Mafia III: Definitive Edition Fusion Fix",
+  "page.display": "Schermo",
+  "page.game": "Gioco",
+  "BorderlessWindowed": "Finestra senza bordi",
+  "BorderlessWindowed.description": "Con SCHERMO INTERO disattivato nelle opzioni video del gioco, il gioco gira in una finestra senza bordi che copre il suo monitor alla risoluzione del desktop. Disattivato mostra la finestra con cornice del gioco. Si applica subito.",
+  "SkipIntro": "Salta introduzione",
+  "SkipIntro.description": "Avvia direttamente al menu principale, senza i loghi dei middleware e degli studi né la schermata di avviso sul salvataggio. Disattivato li mostra come nel gioco originale. Richiede il riavvio.",
+  "page.compatibility": "Compatibilità",
+  "MAIN.TextLanguage": "Lingua del testo",
+  "MAIN.TextLanguage.description": "Scegli la lingua del testo delle impostazioni della correzione. Auto segue la lingua del gioco o dell’editor.",
+  "ui.auto": "Auto"
+}
