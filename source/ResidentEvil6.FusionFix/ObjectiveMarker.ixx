@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 
 export module ObjectiveMarker;
 
@@ -52,8 +51,7 @@ public:
             pDisableObjectiveIndicator = &FixSettings().Int("MAIN.DisableObjectiveIndicator");
 
             auto pattern = hook::pattern("E8 ? ? ? ? D9 00 0F 57 C0 D9 5E 40 D9 40 04 5F");
-            if (PatternAvailable(pattern, "ResidentEvil6.FusionFix: ObjectiveMarker"))
-                injector::MakeCALL(pattern.get_first(), ObjectiveIndicator, true);
+            injector::MakeCALL(pattern.get_first(), ObjectiveIndicator, true);
         };
     }
 } ObjectiveMarker;

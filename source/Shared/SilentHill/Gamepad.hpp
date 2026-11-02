@@ -11,8 +11,8 @@
 
 // Gamepad support shared by the Silent Hill 3 and 4 fixes.
 //
-// Pads are handled by Xidi (Xidi.32.dll, loaded by the ASI loader named dinput8.dll, with the SDL3 plugin for
-// PlayStation, Switch and other pads). Xidi presents each pad as a DirectInput joystick using its XInputNative
+// Pads are handled by Xidi (Xidi.32.dll, loaded by the ASI loader named dinput8.dll).
+// Xidi presents each XInput pad as a DirectInput joystick using its XInputNative
 // layout: X/Y = left stick, RotX/RotY = right stick, Z = LT, RotZ = RT, POV = d-pad, buttons 1-10 = A B X Y LB RB
 // Back Start LS RS. This header intercepts the game's DirectInput joystick reads for such pads, publishes a
 // normalised snapshot of the pad for the fix's modules (camera, menus) and lets them rewrite what the game
@@ -403,60 +403,12 @@ namespace SHPad
         Detail::LastInputWasPad = false;
     }
 
-    // Whether the connected pad is a PlayStation controller (for button names): no XInput pad, but a Sony HID gamepad
-    inline bool IsPlayStation()
+    // XInput cannot identify the controller's artwork family. Auto is Xbox.
+    inline std::atomic<int> IconFamily = 0;
+
+    inline void SetIconFamily(int family)
     {
-        static std::atomic<int> cached = -1;
-        static std::atomic<uint64_t> checked = 0;
-        uint64_t now = GetTickCount64();
-        if (cached >= 0 && now - checked < 3000)
-            return cached != 0;
-        checked = now;
-
-        using XInputGetStateFn = DWORD(WINAPI*)(DWORD, void*);
-        static auto getState = []() -> XInputGetStateFn
-        {
-            for (auto dll : { "xinput1_4.dll", "xinput1_3.dll", "xinput9_1_0.dll" })
-            {
-                if (auto module = LoadLibraryA(dll))
-                    return reinterpret_cast<XInputGetStateFn>(GetProcAddress(module, "XInputGetState"));
-            }
-            return nullptr;
-        }();
-        if (getState)
-        {
-            uint8_t state[16] = {};
-            for (DWORD i = 0; i < 4; ++i)
-            {
-                if (getState(i, state) == ERROR_SUCCESS)
-                {
-                    cached = 0;
-                    return false;
-                }
-            }
-        }
-
-        UINT count = 0;
-        bool sony = false;
-        if (GetRawInputDeviceList(nullptr, &count, sizeof(RAWINPUTDEVICELIST)) == 0 && count)
-        {
-            std::vector<RAWINPUTDEVICELIST> devices(count);
-            if (GetRawInputDeviceList(devices.data(), &count, sizeof(RAWINPUTDEVICELIST)) != UINT(-1))
-            {
-                for (UINT i = 0; i < count && !sony; ++i)
-                {
-                    if (devices[i].dwType != RIM_TYPEHID)
-                        continue;
-                    RID_DEVICE_INFO info = { sizeof(RID_DEVICE_INFO) };
-                    UINT size = sizeof(info);
-                    if (GetRawInputDeviceInfoA(devices[i].hDevice, RIDI_DEVICEINFO, &info, &size) == UINT(-1))
-                        continue;
-                    sony = info.hid.dwVendorId == 0x054C && info.hid.usUsagePage == 1 && (info.hid.usUsage == 4 || info.hid.usUsage == 5);
-                }
-            }
-        }
-        cached = sony ? 1 : 0;
-        return sony;
+        IconFamily = std::clamp(family, 0, 3);
     }
 
     // Short name of a pad button for the game's button configuration screens
@@ -464,7 +416,8 @@ namespace SHPad
     {
         static const char* xbox[] = { "A", "B", "X", "Y", "LB", "RB", "Back", "Start", "LS", "RS", "LT", "RT" };
         static const char* sony[] = { "Cross", "Circle", "Square", "Triangle", "L1", "R1", "Share", "Options", "L3", "R3", "L2", "R2" };
-        return (IsPlayStation() ? sony : xbox)[button];
+        static const char* nintendo[] = { "B", "A", "Y", "X", "L", "R", "Minus", "Plus", "LS", "RS", "ZL", "ZR" };
+        return (IconFamily == 2 ? sony : IconFamily == 3 ? nintendo : xbox)[button];
     }
 
     // Rumble through Xidi (0..1 per motor)

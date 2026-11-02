@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include <atomic>
 
 export module ComVars;
 
@@ -10,10 +11,17 @@ export constexpr float defaultAspectRatio = 16.0f / 9.0f;
 // Game objects, found in dllmain before the modules initialize
 export GameRef<uintptr_t> pGameMode;    // game mode manager; mode 1 = local split screen (+0x8F4)
 export GameRef<uintptr_t> pRender;      // renderer: resolution +0x1E0, split viewport size +0x50, player viewports from +0x48
+export GameRef<uint8_t*> pCameraSystem; // sBioCamera: the players' cameras every 400 bytes from +52
 
-// The resolution the game renders at, caught when the game sets it (see Display)
-export int32_t nResX = 0;
-export int32_t nResY = 0;
+// The backbuffer size is published together so a live device reset cannot mix two resolutions.
+std::atomic<uint64_t> nBackBufferSize{ 0 };
+
+export void SetBackBufferSize(uint32_t width, uint32_t height)
+{
+    if (!width || !height)
+        return;
+    nBackBufferSize.store((uint64_t(width) << 32) | height, std::memory_order_relaxed);
+}
 
 export bool IsSplitScreenActive()
 {
@@ -23,17 +31,21 @@ export bool IsSplitScreenActive()
 
 export int32_t GetResX()
 {
-    return nResX ? nResX : *(int32_t*)(pRender.get() + 0x1E0);
+    const auto size = nBackBufferSize.load(std::memory_order_relaxed);
+    return size ? int32_t(size >> 32) : *(int32_t*)(pRender.get() + 0x1E0);
 }
 
 export int32_t GetResY()
 {
-    return nResY ? nResY : *(int32_t*)(pRender.get() + 0x1E4);
+    const auto size = nBackBufferSize.load(std::memory_order_relaxed);
+    return size ? int32_t(uint32_t(size)) : *(int32_t*)(pRender.get() + 0x1E4);
 }
 
 export float GetAspectRatio()
 {
-    const auto width = GetResX(), height = GetResY();
+    const auto size = nBackBufferSize.load(std::memory_order_relaxed);
+    const auto width = size ? int32_t(size >> 32) : GetResX();
+    const auto height = size ? int32_t(uint32_t(size)) : GetResY();
     return width > 0 && height > 0 ? (float)width / (float)height : defaultAspectRatio;
 }
 

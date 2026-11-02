@@ -65,7 +65,8 @@ namespace
             if (dx == 0 && dy == 0)
             {
                 repeats = 0;
-                return !broken;
+                broken = false;
+                return true;
             }
 
             if (dx == lastX && dy == lastY)
@@ -154,7 +155,7 @@ namespace
         bool onlyHorizontalStick = *pOnlyHorizontalStick != 0 || Input::RightStickVerticalBound();
         float pitchInput = onlyHorizontalStick ? 0.0f : look.stickY * StickDegreesPerSecond * (*pStickSensitivity) * dt;
 
-        if (MouseFilter.Accept(look.mouseX, look.mouseY))
+        if (look.rawMouse || MouseFilter.Accept(look.mouseX, look.mouseY))
         {
             yawInput -= look.mouseX * MouseDegreesPerCount * (*pMouseSensitivity);
             pitchInput += look.mouseY * MouseDegreesPerCount * (*pMouseSensitivity);
@@ -247,12 +248,10 @@ public:
         {
             // FEngHud::Update
             auto pattern = hook::pattern("56 8B F1 83 BE D4 02 00 00 00 0F 84 ? ? ? ? 80 BE 70 03 00 00 00");
-            if (!pattern.empty())
-                shHudUpdate = safetyhook::create_inline(pattern.get_first(), HudUpdate);
+            shHudUpdate = safetyhook::create_inline(pattern.get_first(), HudUpdate);
 
             pattern = hook::pattern("55 8B EC 83 E4 ? 81 EC ? ? ? ? 80 3D ? ? ? ? ? 53 56");
-            if (!pattern.empty() && shHudUpdate)
-                shDrawCursor = safetyhook::create_inline(pattern.get_first(), DrawCursor);
+            shDrawCursor = safetyhook::create_inline(pattern.get_first(), DrawCursor);
 
             pFreeLook = &FixSettings().Int("CAMERA.FreeLook");
             pInvertLook = &FixSettings().Int("CAMERA.InvertLook");

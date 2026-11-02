@@ -1,6 +1,9 @@
 #include "Game.hpp"
 #include <cmath>
 #include <cstring>
+extern "C" {
+#include <pspdisplay.h>
+}
 
 // 2D output is corrected in framebuffer space, after the game has laid it out
 // for 480x272. Two paths reach the GE:
@@ -15,8 +18,8 @@ namespace mc3 {
 namespace {
 uintptr_t context;          // GE context: +8 command cursor, +12 vertex top (grows downward)
 uintptr_t currentViewport;  // address of the engine's current-viewport pointer
-SafetyMipsInline viewportHook, spriteHook, glyphHook, rectHook, movieHook, flashGlyphHook, pageHook, videoHook, promptHook;
-SafetyMipsMid elementHooks[40];
+SafetyMipsInline viewportHook, spriteHook, glyphHook, rectHook, movieHook, flashGlyphHook, pageHook, videoHook, promptHook, frameHook;
+SafetyMipsMid elementHooks[maxHudElementHooks];
 injector::hook_back<uint32_t(uintptr_t)> applyViewport;
 injector::hook_back<uint32_t(int, int, int, int, int, int, int, int, unsigned, int, int, int)> sprite;
 injector::hook_back<uint32_t(uintptr_t, uintptr_t, uintptr_t, int, unsigned)> glyphs;
@@ -26,6 +29,7 @@ injector::hook_back<uint32_t(uintptr_t, int, int, int, float)> flashGlyph;
 injector::hook_back<uint32_t(uintptr_t)> page;
 injector::hook_back<uint32_t(unsigned)> video;
 injector::hook_back<void(uintptr_t)> prompt;
+injector::hook_back<void()> endFrame;
 bool videoFrame;
 
 // The engine's GE OFFSET places screen pixel 0 at 2048-240 / 2048-136.
@@ -102,7 +106,7 @@ uint32_t ApplyViewport(uintptr_t viewport) {
 // Re-emit the current viewport so the GE state follows a transform change.
 void Reapply() {
     const auto viewport = at<uintptr_t>(currentViewport);
-    if (!Guest(viewport, 0x1C0)) return;
+    if (!viewport) return;
     at<uint32_t>(viewport + 0x130) |= 1;
     ApplyViewport(viewport);
 }
@@ -142,10 +146,33 @@ uint32_t FlashGlyph(uintptr_t font, int x, int y, int glyph, float scale) {
     return Through<16, 8>(false, [&] { return flashGlyph.fun(font, x, y, glyph, scale); });
 }
 
+// Black bars outside the centered native frame: sides on wide screens
+// (pillarbox, bit 1), top and bottom on narrow ones (letterbox, bit 0).
+void ClearOutside(int bars) {
+    const float k = Widening();
+    constexpr unsigned black = 0xFF000000u;
+    if (k > 1.001f && (bars & 2)) {
+        const int side = int(std::ceil((screenWidth - screenWidth / k) * 0.5f));
+        rect.fun(0, 0, side, 272, black, 1);
+        rect.fun(480 - side, 0, side, 272, black, 1);
+    } else if (k < 0.999f && (bars & 1)) {
+        const int band = int(std::ceil((screenHeight - screenHeight * k) * 0.5f));
+        rect.fun(0, 0, 480, band, black, 1);
+        rect.fun(0, 272 - band, 480, band, black, 1);
+    }
+}
+
+// Loading screens draw no 3D scene and no full-screen clear: the area beside
+// the centered layout would keep the last 3D frame.
+void ClearWithoutScene() {
+    if (sceDisplayGetVcount() - sceneVcount > 4) ClearOutside(3);
+}
+
 // Flash menus, loading screens and overlays keep their proportions, centred.
 uint32_t Movie(uintptr_t object, int flag) {
     if (screen.active) return movie.fun(object, flag);
     RefreshAspect();
+    ClearWithoutScene();
     SetTransform(ScreenTransform::around(240.0f, 136.0f, 1.0f));
     const auto result = movie.fun(object, flag);
     SetTransform({});
@@ -155,7 +182,9 @@ uint32_t Movie(uintptr_t object, int flag) {
 // Menu pages: the Flash frame and the native-font items drawn over it.
 uint32_t Page(uintptr_t widget) {
     if (screen.active) return page.fun(widget);
+    MenuFrame();
     RefreshAspect();
+    ClearWithoutScene();
     SetTransform(ScreenTransform::around(240.0f, 136.0f, 1.0f));
     const auto result = page.fun(widget);
     SetTransform({});
@@ -167,7 +196,7 @@ uint32_t Page(uintptr_t widget) {
 uint32_t Video(unsigned texture) {
     RefreshAspect();
     const auto t = ScreenTransform::around(240.0f, 136.0f, 1.0f);
-    if (screen.active || !t.active || t.ax >= 1.0f) return video.fun(texture);
+    if (screen.active || !t.active) return video.fun(texture);
     screen = t; videoFrame = true;
     const auto result = video.fun(texture);
     videoFrame = false; screen = {};
@@ -175,12 +204,34 @@ uint32_t Video(unsigned texture) {
 }
 
 // "To skip/pause camera" prompt: right-aligned text above the bottom edge.
+// During the opening fly-by it stays inside the bordered picture.
 void Prompt(uintptr_t object) {
     if (screen.active) return prompt.fun(object);
     RefreshAspect();
-    SetTransform(ScreenTransform::around(480.0f, 272.0f, hudScale));
+    const float box = hudAspect;
+    const bool framed = Cutscene();
+    if (framed && (cutsceneBorders & 2) && (box == 0.0f || box > nativeAspect)) hudAspect = nativeAspect;
+    auto t = ScreenTransform::around(480.0f, 272.0f, hudScale, true);
+    hudAspect = box;
+    const float k = Widening();
+    if (framed && (cutsceneBorders & 1) && k < 0.999f) {
+        t.by -= std::ceil((screenHeight - screenHeight * k) * 0.5f);
+        t.active = true;
+    }
+    SetTransform(t);
     prompt.fun(object);
     SetTransform({});
+}
+
+// End of the frame's display list: the opening fly-by gets its borders over
+// everything drawn this frame.
+void EndFrame() {
+    RefreshDisplayOptions();
+    if (Cutscene()) {
+        RefreshAspect();
+        ClearOutside(cutsceneBorders);
+    }
+    endFrame.fun();
 }
 
 // HUD elements are laid out by the engine's split-screen layout: relative
@@ -190,7 +241,7 @@ ScreenTransform ElementTransform(uintptr_t object) {
     bool known = false;
     const auto layout = at<uintptr_t>(object + 24);
     const int index = at<int>(object + 28);
-    if (Guest(layout, 0x400) && index >= 0 && index < 16) {
+    if (layout && index >= 0 && index < 16) {
         const auto entry = layout + 156 + 24 * index;
         const float rx = at<float>(entry), ry = at<float>(entry + 12);
         const int mx = at<int>(entry + 8), my = at<int>(entry + 20);
@@ -200,6 +251,10 @@ ScreenTransform ElementTransform(uintptr_t object) {
             // (full-screen overlays, the centred mirror): keep it centred.
             if (mx < 1000) anchorX = rx < 0.4f ? 0.0f : rx > 0.6f ? 480.0f : 240.0f;
             if (my < 1000) anchorY = ry < 0.4f ? 0.0f : ry > 0.6f ? 272.0f : 136.0f;
+            // The power-up icon shares the minimap's entry but sits beside
+            // the speedometer.
+            const int x = at<int>(object + 16);
+            if (anchorX == 0.0f && x > 320 && x < 480) anchorX = screenWidth;
         }
     }
     if (!known) {
@@ -207,11 +262,11 @@ ScreenTransform ElementTransform(uintptr_t object) {
         anchorX = x < 160 ? 0.0f : x > 320 ? 480.0f : 240.0f;
         anchorY = y < 90 ? 0.0f : y > 182 ? 272.0f : 136.0f;
     }
-    return ScreenTransform::around(anchorX, anchorY, hudScale);
+    return ScreenTransform::around(anchorX, anchorY, hudScale, true);
 }
 
 void DrawElement(uintptr_t object, uintptr_t function) {
-    if (screen.active || !Guest(object, 0x40)) {
+    if (screen.active) {
         reinterpret_cast<void (*)(uintptr_t)>(function)(object);
         return;
     }
@@ -223,7 +278,6 @@ void DrawElement(uintptr_t object, uintptr_t function) {
 }
 
 void InstallHud() {
-    if (!inireader.ReadBoolean("MAIN", "FixHUD", true)) return;
     const auto rectSite = pattern.get_first("FF 00 2A 31 ?? ?? 09 3C 1D 00 40 15 ?? ?? 29 25 40 52 04 00", 0);
     const auto viewportSite = pattern.get_first("F0 FF BD 27 30 01 85 8C 00 00 B0 AF 25 80 80 00 01 00 A4 30", 0);
     const auto selectSite = pattern.get_first("F0 FF BD 27 ?? ?? 85 8F 00 00 BF AF 05 00 85 10", 0);
@@ -235,14 +289,9 @@ void InstallHud() {
     const auto videoSite = pattern.get_first("E0 FF BD 27 ?? ?? 05 3C 10 00 B0 AF ?? ?? B0 24 08 00 05 8E 00 CC 06 3C 00 00 A6 AC", 0);
     const auto promptSite = pattern.get_first("90 FF BD 27 54 00 B0 AF 25 80 80 00 ?? ?? 84 8F 7F 43 07 3C 04 00 86 8C", 0);
     const auto manager = pattern.get_first("D0 FF BD 27 0C 00 B1 AF ?? ?? 11 3C ?? ?? 31 26 08 00 25 8E 00 C9 06 3C", 0);
-    if (!rectSite || !viewportSite || !selectSite || !spriteSite || !glyphSite || !movieSite || !flashGlyphSite || !pageSite || !videoSite || !promptSite || !manager) {
-        PatchNotice("Midnight Club: HUD correction unavailable.\n");
-#ifndef NDEBUG
-        logger.WriteF("HUD sites missing: %X %X %X %X %X %X %X", rectSite, viewportSite, selectSite, spriteSite, glyphSite, movieSite, manager);
-#endif
-        return;
-    }
+    const auto frameSite = pattern.get_first("F0 FF BD 27 04 00 B1 AF ?? ?? 11 3C ?? ?? 31 26 48 00 24 92 00 00 B0 AF 08 00 B2 AF", 0);
     context = Absolute(rectSite, 4, 12);
+    raceDirector = gameGP + int16_t(injector::ReadMemory<uint16_t>(promptSite + 12));
     currentViewport = gameGP + int16_t(injector::ReadMemory<uint16_t>(selectSite + 4));
 
     viewportHook = safetymips::create_inline(viewportSite, ApplyViewport);
@@ -263,6 +312,8 @@ void InstallHud() {
     video.fun = videoHook.original<decltype(video.fun)>();
     promptHook = safetymips::create_inline(promptSite, Prompt);
     prompt.fun = promptHook.original<decltype(prompt.fun)>();
+    frameHook = safetymips::create_inline(frameSite, EndFrame);
+    endFrame.fun = frameHook.original<decltype(endFrame.fun)>();
 
     // Each HUD element draw is a virtual call: lw a1,4(a1); jalr a1; addu a0,a2.
     // The wrapper performs the same call inside the element's transform.

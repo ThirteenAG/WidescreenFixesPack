@@ -6,7 +6,7 @@ inline uintptr_t Unique(const char* signature, int offset = 0) {
     return first && !pattern.get(1, signature, offset) ? first : 0;
 }
 // DirectAxis, original reference 089B4924.
-inline uintptr_t DirectAxis() { return pattern.get_first("70 FF BD 27 68 00 B0 AF 25 80 80 00 00 21 05 00 21 20 04 02 B0 02 84 24 78 00 B4 AF 04 00 85 8C", 0); }
+inline uintptr_t DirectAxis() { return Unique("70 FF BD 27 68 00 B0 AF 25 80 80 00 00 21 05 00 21 20 04 02 B0 02 84 24 78 00 B4 AF 04 00 85 8C"); }
 // GroundSpeed, original reference 088EA548.
 inline uintptr_t GroundSpeed() { return Unique("E0 FF BD 27 10 00 B4 E7 14 00 B0 AF 18 00 BF AF 25 80 80 00 ?? ?? 0C C6 02 63 0C 46 ?? ?? 0D C6"); }
 // CameraConstructor, original reference 089F3FC8.
@@ -14,7 +14,7 @@ inline uintptr_t CameraConstructor() { return pattern.get_first("B0 FE BD 27 44 
 // DrawTile, original reference 089FB9E4.
 inline uintptr_t DrawTile() { return pattern.get_first("80 FF BD 27 80 00 A0 C7 D8 00 87 8C 84 00 A6 AF 86 70 00 46 38 00 A0 E7 34 00 A2 E7 06 78 00 46", 0); }
 // MainLoop, original reference 08805BC4.
-inline uintptr_t MainLoop() { return pattern.get_first("A0 FB BD 27 38 04 B0 AF 25 80 80 00 01 00 04 34 ? ? 05 3C 3C 04 B1 AF 40 04 B2 AF ? ? A4 AC", 0); }
+inline uintptr_t MainLoop() { return Unique("A0 FB BD 27 38 04 B0 AF 25 80 80 00 01 00 04 34 ? ? 05 3C 3C 04 B1 AF 40 04 B2 AF ? ? A4 AC"); }
 // GameDraw, original reference 089AD9D4.
 inline uintptr_t GameDraw() { return pattern.get_first("C0 FA BD 27 0C 05 B0 AF 25 80 80 00 ? ? 04 3C ? ? 84 8C 10 05 B1 AF 14 05 B2 AF 18 05 B3 AF", 0); }
 // WorldToScreen, original reference 089B6F64.
@@ -26,8 +26,16 @@ inline uintptr_t VectorWorldToScreen() {
     const auto disc = Unique("40 FC BD 27 B0 03 B6 AF B8 03 BE AF 25 B0 A0 00 30 00 9E 8C B4 03 B7 AF 25 28 C0 00 30 00 B7 27");
     return disc ? disc : Unique("40 FC BD 27 B8 03 BE AF 30 00 9E 8C 9C 03 B1 AF A4 03 B3 AF B0 03 B6 AF B4 03 B7 AF 30 00 B7 27");
 }
-// The PSN build changes object layouts and instruction scheduling, not just addresses.
-inline bool IsPsn(uintptr_t ground) { return injector::ReadMemory<uint16_t>(ground + 0x14) == 0x50C; }
+// The multiplayer executable (SPLINTERCELL_M, also used for the title menus)
+// changes object layouts and instruction scheduling, not just addresses.
+inline bool multiplayer;
+inline bool DetectExecutable()
+{
+    const bool single = Unique("E0 FF BD 27 10 00 B4 E7 14 00 B0 AF 18 00 BF AF 25 80 80 00 24 05 0C C6 02 63 0C 46 28 05 0D C6") != 0;
+    const bool multi = Unique("08 3D 04 3C 89 88 84 34 00 60 84 44 1E 00 90 2A 01 65 14 46") != 0;
+    multiplayer = multi;
+    return single != multi;
+}
 inline uintptr_t ScreenTransform(uintptr_t screen) {
     return screen ? range_pattern.get_first(screen, 0x400,
         "D0 03 A4 27 30 03 A5 27 ?? ?? ?? ?? 25 30 C0 03", 0) : 0;

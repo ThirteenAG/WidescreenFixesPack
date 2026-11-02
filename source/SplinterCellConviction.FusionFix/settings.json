@@ -88,6 +88,20 @@
       ]
     },
     {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": true,
+      "label": "@GENERAL.SkipPressStart",
+      "description": "@GENERAL.SkipPressStart.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
       "id": "MAIN.SkipIntro",
       "type": "bool",
       "default": true,
@@ -125,51 +139,61 @@
       ]
     },
     {
-      "id": "GAMEPLAY.DisableNegativeMouseAcceleration",
-      "type": "bool",
-      "default": true,
-      "label": "@GAMEPLAY.DisableNegativeMouseAcceleration",
-      "description": "@GAMEPLAY.DisableNegativeMouseAcceleration.description",
-      "page": "controls",
-      "apply": "restart",
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "label": "@CutsceneBorders",
+      "description": "@CutsceneBorders.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@ui.off"
+        },
+        {
+          "value": 1,
+          "label": "@ui.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@ui.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@ui.both"
+        }
+      ],
       "presets": {
-        "vanilla": false,
-        "recommended": true,
-        "enhanced": true
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
       }
     },
     {
-      "id": "GENERAL.SkipSystemDetection",
-      "type": "bool",
-      "default": true,
-      "label": "@GENERAL.SkipSystemDetection",
-      "description": "@GENERAL.SkipSystemDetection.description",
-      "page": "compatibility",
-      "apply": "restart",
-      "visibility": "editor"
-    },
-    {
-      "id": "GENERAL.ForceCPUAffinityToAllCores",
-      "type": "bool",
-      "default": true,
-      "label": "@GENERAL.ForceCPUAffinityToAllCores",
-      "description": "@GENERAL.ForceCPUAffinityToAllCores.description",
-      "page": "compatibility",
-      "apply": "restart",
-      "visibility": "editor"
-    },
-    {
-      "id": "DISPLAY.UltraWideSupport",
-      "type": "bool",
-      "default": true,
-      "label": "@DISPLAY.UltraWideSupport",
-      "description": "@DISPLAY.UltraWideSupport.description",
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@FMVWidescreenMode",
+      "description": "@FMVWidescreenMode.description",
       "page": "display",
-      "apply": "restart",
+      "apply": "live",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@FMVWidescreenMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@FMVWidescreenMode.1"
+        }
+      ],
       "presets": {
-        "vanilla": false,
-        "recommended": true,
-        "enhanced": true
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
       }
     },
     {
@@ -179,12 +203,7 @@
       "label": "@GRAPHICS.DisableBlackAndWhiteFilter",
       "description": "@GRAPHICS.DisableBlackAndWhiteFilter.description",
       "page": "graphics",
-      "apply": "restart",
-      "presets": {
-        "vanilla": false,
-        "recommended": false,
-        "enhanced": false
-      }
+      "apply": "restart"
     },
     {
       "id": "GAMEPLAY.BlacklistControlScheme",
@@ -193,12 +212,7 @@
       "label": "@GAMEPLAY.BlacklistControlScheme",
       "description": "@GAMEPLAY.BlacklistControlScheme.description",
       "page": "controls",
-      "apply": "restart",
-      "presets": {
-        "vanilla": false,
-        "recommended": false,
-        "enhanced": false
-      }
+      "apply": "restart"
     },
     {
       "id": "UNLOCKS.UnlockDLC",
@@ -207,12 +221,7 @@
       "label": "@UNLOCKS.UnlockDLC",
       "description": "@UNLOCKS.UnlockDLC.description",
       "page": "gameplay",
-      "apply": "restart",
-      "presets": {
-        "vanilla": false,
-        "recommended": true,
-        "enhanced": true
-      }
+      "apply": "restart"
     },
     {
       "id": "2INSTANCESPLITSCREEN.Enable",
@@ -227,17 +236,17 @@
     {
       "id": "MAIN.FPSLimit",
       "type": "int",
-      "default": 0,
+      "default": 60,
       "label": "@DISPLAY.FPSLimit",
       "description": "@DISPLAY.FPSLimit.description",
       "page": "display",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
+        "recommended": 60,
+        "enhanced": 60
       },
-      "min": 0,
+      "min": -1,
       "max": 1000,
       "step": 1,
       "control": [
@@ -275,16 +284,6 @@
       "visibility": "file"
     },
     {
-      "id": "LAN.FixLAN",
-      "type": "bool",
-      "default": true,
-      "label": "@LAN.FixLAN",
-      "description": "@LAN.FixLAN.description",
-      "page": "compatibility",
-      "apply": "restart",
-      "visibility": "editor"
-    },
-    {
       "id": "LAN.ServerAddr",
       "type": "string",
       "default": "127.0.0.1",
@@ -315,12 +314,7 @@
       "label": "@GRAPHICS.DisableCharacterLighting",
       "description": "@GRAPHICS.DisableCharacterLighting.description",
       "page": "graphics",
-      "apply": "restart",
-      "presets": {
-        "vanilla": false,
-        "recommended": false,
-        "enhanced": false
-      }
+      "apply": "restart"
     },
     {
       "id": "GRAPHICS.EnhancedSonarVision",
@@ -329,32 +323,16 @@
       "label": "@GRAPHICS.EnhancedSonarVision",
       "description": "@GRAPHICS.EnhancedSonarVision.description",
       "page": "graphics",
-      "apply": "restart",
-      "presets": {
-        "vanilla": false,
-        "recommended": false,
-        "enhanced": false
-      }
+      "apply": "restart"
     },
     {
       "id": "GRAPHICS.BlacklistIndicators",
-      "type": "int",
-      "default": 0,
+      "type": "bool",
+      "default": false,
       "label": "@GRAPHICS.BlacklistIndicators",
       "description": "@GRAPHICS.BlacklistIndicators.description",
       "page": "graphics",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      },
-      "min": 0,
-      "max": 2,
-      "step": 1,
-      "control": [
-        "stepper"
-      ]
+      "apply": "restart"
     },
     {
       "id": "MAIN.RawInputMouse",
@@ -363,12 +341,7 @@
       "label": "@GAMEPLAY.RawMouseInput",
       "description": "@GAMEPLAY.RawMouseInput.description",
       "page": "controls",
-      "apply": "restart",
-      "presets": {
-        "vanilla": true,
-        "recommended": true,
-        "enhanced": true
-      }
+      "apply": "restart"
     },
     {
       "id": "MAIN.MouseSmoothing",
@@ -387,7 +360,7 @@
     {
       "id": "MAIN.GamepadCameraSpeed",
       "type": "float",
-      "default": 1.0,
+      "default": 1,
       "label": "@MAIN.GamepadCameraSpeed",
       "description": "@MAIN.GamepadCameraSpeed.description",
       "page": "controls",
@@ -464,41 +437,68 @@
       "label": "@SPLITSCREEN.Enable",
       "description": "@SPLITSCREEN.Enable.description",
       "page": "coop",
-      "apply": "restart",
-      "presets": {
-        "vanilla": false,
-        "recommended": true,
-        "enhanced": true
-      }
+      "apply": "restart"
     },
     {
       "id": "SPLITSCREEN.GamepadPlayer1",
-      "type": "int",
+      "type": "choice",
       "default": 0,
       "label": "@SPLITSCREEN.GamepadPlayer1",
       "description": "@SPLITSCREEN.GamepadPlayer1.description",
       "page": "coop",
       "apply": "restart",
-      "min": 0,
-      "max": 4,
-      "step": 1,
-      "control": [
-        "stepper"
+      "choices": [
+        {
+          "value": 0,
+          "label": "@SPLITSCREEN.GamepadPlayer1.0"
+        },
+        {
+          "value": 1,
+          "label": "@pad.controller1"
+        },
+        {
+          "value": 2,
+          "label": "@pad.controller2"
+        },
+        {
+          "value": 3,
+          "label": "@pad.controller3"
+        },
+        {
+          "value": 4,
+          "label": "@pad.controller4"
+        }
       ]
     },
     {
       "id": "SPLITSCREEN.GamepadPlayer2",
-      "type": "int",
+      "type": "choice",
       "default": 1,
       "label": "@SPLITSCREEN.GamepadPlayer2",
       "description": "@SPLITSCREEN.GamepadPlayer2.description",
       "page": "coop",
       "apply": "restart",
-      "min": 0,
-      "max": 4,
-      "step": 1,
-      "control": [
-        "stepper"
+      "choices": [
+        {
+          "value": 0,
+          "label": "@SPLITSCREEN.GamepadPlayer2.0"
+        },
+        {
+          "value": 1,
+          "label": "@pad.controller1"
+        },
+        {
+          "value": 2,
+          "label": "@pad.controller2"
+        },
+        {
+          "value": 3,
+          "label": "@pad.controller3"
+        },
+        {
+          "value": 4,
+          "label": "@pad.controller4"
+        }
       ]
     },
     {
@@ -508,12 +508,7 @@
       "label": "@SPLITSCREEN.InvertYPlayer2",
       "description": "@SPLITSCREEN.InvertYPlayer2.description",
       "page": "coop",
-      "apply": "restart",
-      "presets": {
-        "vanilla": false,
-        "recommended": false,
-        "enhanced": false
-      }
+      "apply": "restart"
     },
     {
       "id": "SPLITSCREEN.ProfilePlayer2",
@@ -528,19 +523,98 @@
     {
       "id": "MAIN.FOVFactor",
       "type": "float",
-      "default": 1.0,
+      "default": 1,
       "min": 0.5,
-      "max": 2.0,
+      "max": 2,
       "step": 0.05,
       "label": "@FOVFactor",
       "description": "@FOVFactor.description",
       "page": "display",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.PauseOnFocusLoss",
+      "description": "@MAIN.PauseOnFocusLoss.description",
+      "page": "controls",
       "apply": "live",
-      "presets": {
-        "vanilla": 1.0,
-        "recommended": 1.0,
-        "enhanced": 1.0
-      }
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.ConfineCursor",
+      "description": "@MAIN.ConfineCursor.description",
+      "page": "controls",
+      "apply": "live",
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@MAIN.CheckForUpdates",
+      "description": "@MAIN.CheckForUpdates.description",
+      "page": "advanced",
+      "apply": "live",
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "label": "@MAIN.GamepadIcons",
+      "description": "@MAIN.GamepadIcons.description",
+      "page": "controls",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@ui.auto"
+        },
+        {
+          "value": 1,
+          "label": "Xbox"
+        },
+        {
+          "value": 2,
+          "label": "PlayStation"
+        },
+        {
+          "value": 3,
+          "label": "Nintendo"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@HudAspectRatioConstraint",
+      "description": "@HudAspectRatioConstraint.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ]
     }
   ]
 }

@@ -15,25 +15,87 @@
       "id": "controls",
       "title": "@page.controls",
       "section": "controls"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
     }
   ],
   "settings": [
     {
       "id": "MAIN.ForceAspectRatio",
       "type": "string",
-      "default": "auto",
+      "default": "Auto",
       "label": "@ForceAspectRatio",
       "description": "@ForceAspectRatio.description",
       "page": "display",
       "visibility": "editor",
-      "apply": "restart",
+      "apply": "live",
       "maxLength": 14,
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
       "suggestions": [
-        "auto",
-        "4:3",
-        "16:9",
-        "21:9",
-        "32:9"
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@HudAspectRatioConstraint",
+      "description": "@HudAspectRatioConstraint.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "maxLength": 14,
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
       ]
     },
     {
@@ -44,15 +106,58 @@
       "description": "@HUDScale.description",
       "page": "display",
       "visibility": "menu",
+      "apply": "live",
+      "min": 0.5,
+      "max": 1.5,
+      "step": 0.05
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "label": "@CutsceneBorders",
+      "description": "@CutsceneBorders.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@borders.off"
+        },
+        {
+          "value": 1,
+          "label": "@borders.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@borders.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@borders.both"
+        }
+      ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "display",
+      "visibility": "menu",
       "apply": "restart",
       "presets": {
-        "vanilla": 1.0,
-        "recommended": 1.0,
-        "enhanced": 1.0
-      },
-      "min": 0.5,
-      "max": 1.0,
-      "step": 0.05
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
     },
     {
       "id": "MAIN.DualAnalogPatch",
@@ -70,19 +175,40 @@
       }
     },
     {
-      "id": "MAIN.FixHUD",
-      "type": "bool",
-      "default": 1,
-      "label": "@FixHUD",
-      "description": "@FixHUD.description",
-      "page": "display",
-      "visibility": "menu",
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@TextLanguage",
+      "description": "@TextLanguage.description",
+      "page": "compatibility",
+      "visibility": "editor",
       "apply": "restart",
-      "presets": {
-        "vanilla": 1,
-        "recommended": 1,
-        "enhanced": 1
-      }
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
     }
   ]
 }

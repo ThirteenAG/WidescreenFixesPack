@@ -14,29 +14,23 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            const auto mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 5);
-            constexpr int32_t nativeModes[] = { 0, 2, 4, 3, 1, 5 };
+            const auto mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 4);
+            constexpr int32_t nativeModes[] = { 0, 2, 4, 3, 1 };
             int32_t nWindowedMode = nativeModes[mode];
 
             // Per monitor DPI awareness, so the game gets real pixels on scaled desktops
-            using SetContext = BOOL(WINAPI*)(HANDLE);
-            if (auto set = reinterpret_cast<SetContext>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetProcessDpiAwarenessContext")))
-                set(reinterpret_cast<HANDLE>(-4));
-            else
-                SetProcessDPIAware();
+            WindowedModeWrapper::EnableDpiAwareness();
 
             if (nWindowedMode)
             {
                 switch (nWindowedMode)
                 {
-                    case 5:
-                        WindowedModeWrapper::bStretchWindow = true;
-                        break;
                     case 4:
                         WindowedModeWrapper::bScaleWindow = true;
                         break;
                     case 3:
                         WindowedModeWrapper::bEnableWindowResize = true;
+                        bAspectFromWindow = true;
                     case 2:
                         WindowedModeWrapper::bBorderlessWindowed = false;
                         break;

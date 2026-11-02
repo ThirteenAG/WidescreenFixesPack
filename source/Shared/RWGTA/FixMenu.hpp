@@ -8,8 +8,8 @@
 #include <thread>
 #include <vector>
 #include <shellapi.h>
-#include "../AsiSettings/asi_settings.hpp"
-#include "../OtherPlugins.hpp"
+#include "Shared/AsiSettings/asi_settings.hpp"
+#include "Shared/OtherPlugins.hpp"
 
 // The settings of the fix and of the other plugins with an ASI Settings description, as pages
 // of the game's own frontend. Nothing here knows the game: each fix's menu module puts the rows into its menu screens

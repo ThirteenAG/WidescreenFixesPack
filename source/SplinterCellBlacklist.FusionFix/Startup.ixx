@@ -15,18 +15,17 @@ export void InitStartup()
 
     // skip systemdetection
     auto pattern = hook::pattern("0F 84 ? ? ? ? 68 ? ? ? ? 89 B5");
-    ProtectedGameRef<uint16_t>(reinterpret_cast<uint16_t*>(pattern.get_first())) = 0xE990; // jz -> jmp
+    injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true); // jz -> jmp
 
     // UnrealMain
     pattern = hook::pattern("0F 84 ? ? ? ? 56 56 56 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 18 50 8D 8D");
-    ProtectedGameRef<uint16_t>(reinterpret_cast<uint16_t*>(pattern.get_first())) = 0xE990; // jz -> jmp
+    injector::WriteMemory<uint16_t>(pattern.get_first(), 0xE990, true); // jz -> jmp
 
     // NetOnlineManager keeps a pool of NetOverlapped (async network requests, 24h bytes, made in its constructor: 20 of them, free list +E4h,
     // count +F4h). Every login attempt to the rendezvous server (nsOnlineConnection::StateLoggingInToRdv) takes one and a failed attempt
     // doesn't give it back: with the servers gone the pool is empty after about 30 minutes and the next attempt gets none, the state reads it
     // and the game crashes. Taking one from an empty pool now adds a new one first, the game's own way (an online server emulator still works).
     pattern = hook::pattern("8D 45 ? 50 8D 8E E4 00 00 00 E8 ? ? ? ? FF 4D");
-    if (!pattern.empty() && *pattern.get_first<uint8_t>(-0x57) == 0xE8)
     {
         static auto PoolAlloc = reinterpret_cast<void*(__cdecl*)(uint32_t, const char*, int32_t, int32_t, int32_t)>(injector::GetBranchDestination(pattern.get_first(-0x57)).as_int());
         static auto PushBack = reinterpret_cast<void(__fastcall*)(uint8_t*, void*, void*, void**, void*, void*)>(injector::GetBranchDestination(pattern.get_first(10)).as_int());
@@ -51,8 +50,7 @@ export void InitStartup()
         };
 
         auto take = hook::pattern("55 8B EC 83 EC 08 56 57 8B F9 33 C0 39 87 F4 00 00 00 76 ? 83 BF F4 00 00 00 00");
-        if (!take.empty())
-            shTakeOverlapped = safetyhook::create_inline(take.get_first(), Overlapped::Take);
+        shTakeOverlapped = safetyhook::create_inline(take.get_first(), Overlapped::Take);
     }
 
     // InitBootVideos
@@ -81,12 +79,12 @@ export void InitStartup()
 
         // the input sign in waits for the engine to be ready (+2ECh & 2) and the tick counter to be past 60
         pattern = hook::pattern("F6 80 EC 02 00 00 02 74 ? 83 3D ? ? ? ? 00 7C ? 7F ? 83 3D ? ? ? ? 3C");
-        static auto TickCounter = *pattern.get_first<int64_t*>(22);
+        TickCounter.SetAddress(*pattern.get_first<int64_t*>(22));
 
         // UI::SceneStart sets a flag that makes the next Escape key release quit the game (sub_19AF330), the first key release clears it.
         // With no key pressed it would stay set until Escape is pressed in the game.
         pattern = hook::pattern("A3 ? ? ? ? 38 1D ? ? ? ? 0F 84");
-        static auto pEscapeQuits = *pattern.get_first<uint8_t*>(7);
+        EscapeQuits.SetAddress(*pattern.get_first<uint8_t*>(7));
 
         // UI::SceneStart::SceneTick, after it waited for the movie to be ready, esi is the scene
         pattern = find_pattern("83 3D ? ? ? ? 00 56 8B F1 7E 0A FF 0D ? ? ? ? 5E C2 04 00 53 C6 86 66 05 00 00 01", "83 3D ? ? ? ? 00 56 8B F1 7E 0A FF 0D ? ? ? ? 5E C2 04 00 53 57 56 C6 86 66 05 00 00 01");
@@ -94,11 +92,11 @@ export void InitStartup()
         {
             static bool pressed = false;
             if (pressed && *reinterpret_cast<int32_t*>(regs.esi + 0x568) != 2)
-                *pEscapeQuits = 0; // not on a later "Press any key" (quit to title screen), Escape quits there as usual
+                EscapeQuits = 0; // not on a later "Press any key" (quit to title screen), Escape quits there as usual
             if (pressed || *reinterpret_cast<int32_t*>(regs.esi + 0x568) != 2)
                 return;
             auto engine = GetEngine();
-            if (!engine || (*reinterpret_cast<uint8_t*>(engine + 0x2EC) & 2) == 0 || *TickCounter <= 60)
+            if (!engine || (*reinterpret_cast<uint8_t*>(engine + 0x2EC) & 2) == 0 || TickCounter <= 60)
                 return;
             pressed = true;
             auto profileManager = engine ? reinterpret_cast<uintptr_t(__thiscall*)(uintptr_t)>((*reinterpret_cast<uintptr_t**>(engine))[0x1F0 / 4])(engine) : 0;
@@ -108,7 +106,7 @@ export void InitStartup()
                 SignIn(profileManager, nullptr, 0, 0);
             }
             PressStartHandler(regs.esi, nullptr, 0, 0);
-            *pEscapeQuits = 0;
+            EscapeQuits = 0;
         });
 
         // sub_19949E0: the resume message box is made after the state is set to 12, the jnz goes to the end of the function.
@@ -124,10 +122,19 @@ export void InitStartup()
             ResumeStdcall = reinterpret_cast<decltype(ResumeStdcall)>(injector::GetBranchDestination(pattern.get_first(9)).as_int());
         }
 
-        pattern = hook::pattern("C7 86 68 05 00 00 0C 00 00 00 38 9E 5C 05 00 00 75 ? 3B FB");
-        static auto ResumeMessageBoxEnd = reinterpret_cast<uintptr_t>(pattern.get_first(18)) + *pattern.get_first<int8_t>(17);
-        auto messageBox = pattern.get_first<uint8_t>(20);
-        messageBox += (*messageBox == 0x74) ? 2 : 6; // jz short / near
+        pattern = hook::pattern("C7 86 68 05 00 00 0C 00 00 00 38 9E 5C 05 00 00 75 ? 3B FB 74 ? 8D 8D");
+        int messageBoxOffset = 22;
+        if (pattern.empty()) // DX9
+        {
+            pattern = hook::pattern("C7 86 68 05 00 00 0C 00 00 00 38 9E 5C 05 00 00 75 ? 3B FB 0F 84 ? ? ? ? 8D 54 24");
+            messageBoxOffset = 26;
+        }
+        auto resumeSite = reinterpret_cast<uintptr_t>(pattern.get_first());
+        auto resumeEnd = hook::range_pattern(resumeSite - 0x100, resumeSite, "E8 ? ? ? ? B0 01 8B 4D F4 64 89 0D 00 00 00 00 59 5F 5E 5B");
+        if (resumeEnd.empty()) // DX9
+            resumeEnd = hook::range_pattern(resumeSite - 0x100, resumeSite, "E8 ? ? ? ? B0 01 8B 8C 24 E0 00 00 00 64 89 0D 00 00 00 00 59 5F 5B");
+        static auto ResumeMessageBoxEnd = reinterpret_cast<uintptr_t>(resumeEnd.get_first());
+        auto messageBox = pattern.get_first<uint8_t>(messageBoxOffset);
         static auto ResumeMessageBox = safetyhook::create_mid(messageBox, [](SafetyHookContext& regs)
         {
             static bool resumed = false;

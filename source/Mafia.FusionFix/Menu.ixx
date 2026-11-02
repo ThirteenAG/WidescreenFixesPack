@@ -23,21 +23,14 @@ void InstallMenuHooks()
     auto pMenuImagesNew = find_pattern("E8 ? ? ? ? C7 06 ? ? ? ? 8B C6 8B 4C 24 10 5F 5E 5B 64 89 0D 00 00 00 00 83 C4 10 C3 90 90 90 90 90 90 B8 63 6E 69 77");
     if (menuHooksInstalled) return;
     menuHooksInstalled = true;
-    if (nGameVersion == MAFIA_1_0_ENG)
+    if (!pMenuImagesOld.empty()) // 1.0 menu layout
     {
-        if (pMenuImagesOld.size() != 1 ||
-            pMenuPanelsOld.size() != 1 ||
-            pMenuGarageOld.size() != 1 ||
-            pMenuRaceOld.size() != 1 ||
-            pMenuCarsOld.size() != 1)
-            return;
         menuCallers = {reinterpret_cast<uintptr_t>(pMenuImagesOld.get_first()) + 5, reinterpret_cast<uintptr_t>(pMenuPanelsOld.get_first()) + 5,
             reinterpret_cast<uintptr_t>(pMenuGarageOld.get_first()) + 5, reinterpret_cast<uintptr_t>(pMenuRaceOld.get_first()) + 5, reinterpret_cast<uintptr_t>(pMenuCarsOld.get_first()) + 5};
         auto pCoordinateMode = find_pattern("8A 15 ? ? ? ? 3A D1 74 ? 8B 50 08 89 56 10");
-        auto flag = pCoordinateMode.size() == 1 ? reinterpret_cast<uintptr_t>(pCoordinateMode.get_first()) : 0;
+        auto flag = reinterpret_cast<uintptr_t>(pCoordinateMode.get_first());
         auto pPosition = find_pattern("8B 50 1C 89 4C 24 08 89 56 20 8B 50 20");
-        auto position = pPosition.size() == 1 ? reinterpret_cast<uintptr_t>(pPosition.get_first()) : 0;
-        if (!flag || !position) return;
+        auto position = reinterpret_cast<uintptr_t>(pPosition.get_first());
         menuRawCoordinates = Field<uintptr_t>(flag, 2);
         static auto MenuPositionHook = safetyhook::create_mid(position, [](SafetyHookContext& regs)
         {
@@ -59,16 +52,12 @@ void InstallMenuHooks()
     }
     else
     {
-        if (pMenuPanelsNew.size() != 1 ||
-            pMenuImagesNew.size() != 1)
-            return;
         menuCallers[0] = reinterpret_cast<uintptr_t>(pMenuPanelsNew.get_first()) + 5;
         menuCallers[1] = reinterpret_cast<uintptr_t>(pMenuImagesNew.get_first()) + 5;
         // Both X copies and Y are stored here; the x87 stack is empty. Shift
         // before the native constructor attaches the object to its parent.
         auto pPosition = find_pattern("D9 5E 18 D9 05 ? ? ? ? D8 48 10 D9 5E 1C D9 05 ? ? ? ? D8 48 14");
-        auto position = pPosition.size() == 1 ? reinterpret_cast<uintptr_t>(pPosition.get_first()) : 0;
-        if (!position) return;
+        auto position = reinterpret_cast<uintptr_t>(pPosition.get_first());
         static auto MenuPositionHook = safetyhook::create_mid(position + 3, [](SafetyHookContext& regs)
         {
             auto caller = Field<uintptr_t>(regs.esp, 0x18);
@@ -95,28 +84,21 @@ export void InitMenu()
         "D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24 50 E8 ? ? ? ? A1 ? ? ? ? 50 8B 08");
     auto pHudPleaseWaitTextX2 = find_pattern("D8 0D ? ? ? ? D9 1C 24 50 E8 ? ? ? ? A1 ? ? ? ? 50 8B 08",
         "D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24 50 E8 ? ? ? ? A1 ? ? ? ? 50 8B 10");
-    if (pOnePCurBaseWidth4.size() != 1 ||
-        pHudPleaseWaitTextX.size() != 1 ||
-        pHudPleaseWaitTextX2.size() != 1)
-        return;
-    if (nGameVersion != MAFIA_1_0_ENG && (pOnePCurBaseWidth3.size() != 1)) return;
 
-
-    if (nGameVersion == MAFIA_1_0_ENG)
+    if (!pOnePCurBaseWidth3.empty()) // 1.1/1.2 menu layout
+        injector::WriteMemory(pOnePCurBaseWidth3.get_first(0x2), &Screen.fInvBaseWidth, true);
+    else // 1.0 menu layout
     {
-        ProtectedGameRef<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>{pOnePCurBaseWidth4.get_first<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>(0x2)} = &Screen.fInvBaseWidth;
+        auto legacyWidth = hook::pattern("D8 0D ? ? ? ? D9 1D ? ? ? ? 8B 10 FF 52 70");
+        legacyWidth.get_first();
     }
-    else
-    {
-        ProtectedGameRef<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>{pOnePCurBaseWidth3.get_first<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>(0x2)} = &Screen.fInvBaseWidth;
-        ProtectedGameRef<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>{pOnePCurBaseWidth4.get_first<std::remove_cvref_t<decltype(&Screen.fInvBaseWidth)>>(0x2)} = &Screen.fInvBaseWidth;
-    }
+    injector::WriteMemory(pOnePCurBaseWidth4.get_first(0x2), &Screen.fInvBaseWidth, true);
 
     float fixMenuRight = (Screen.fBaseWidth - 800.0f) / 2.0f;
 
     static float menuPleaseWaitTextX = 780.0f + fixMenuRight;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&menuPleaseWaitTextX)>>{pHudPleaseWaitTextX.get_first<std::remove_cvref_t<decltype(&menuPleaseWaitTextX)>>(0x2)} = &menuPleaseWaitTextX;
-    ProtectedGameRef<std::remove_cvref_t<decltype(&menuPleaseWaitTextX)>>{pHudPleaseWaitTextX2.get_first<std::remove_cvref_t<decltype(&menuPleaseWaitTextX)>>(0x2)} = &menuPleaseWaitTextX;
+    injector::WriteMemory(pHudPleaseWaitTextX.get_first(0x2), &menuPleaseWaitTextX, true);
+    injector::WriteMemory(pHudPleaseWaitTextX2.get_first(0x2), &menuPleaseWaitTextX, true);
     fMenuOffset = (Screen.fWidth - (Screen.fHeight * (4.0f / 3.0f))) / 2.0f;
     InstallMenuHooks();
 }

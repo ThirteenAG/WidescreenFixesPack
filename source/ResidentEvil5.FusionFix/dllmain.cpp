@@ -3,12 +3,16 @@
 
 import Camera;
 import System;
+import Bosses;
+import FrameRate;
 import LightSync;
 import Graphics;
 import AimWalk;
 import Controls;
 import KnifeParry;
 import Menu;
+import Hud;
+import Overlay;
 
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
 ASI_SETTINGS_EXPORT(FixSettings())
@@ -22,12 +26,17 @@ void Init()
 
     Camera::Init();
     System::Init();
+    Bosses::Register();
+    FrameRate::Register();
+    WFP::onInitEvent().executeAll();
     LightSync::Init();
     Graphics::Init();
     AimWalk::Init();
     Controls::Init();
     KnifeParry::Init();
     Menu::Init();
+    Hud::Init();
+    Overlay::Init();
 }
 
 CEXP void InitializeASI()

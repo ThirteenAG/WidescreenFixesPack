@@ -4,9 +4,9 @@
 
 * **Resolution** - native support for any display resolution, including ultrawide
 * **Aspect Ratio** - corrected for all rendered elements
-* **HUD** - repositioned and scaled to match the active aspect ratio; optional constraint (16:9, 21:9, or custom)
-* **Field of View** - corrected FOV to match the 4:3 values
-* **FMVs** - expanded to fill the screen at widescreen resolutions, with an option to keep the original 4:3 display; 480p playback limit removed
+* **HUD** - repositioned and scaled to match the active aspect ratio; at the screen edges or in a centred box (4:3, 16:9, 21:9 or custom)
+* **Field of View** - corrected FOV to match the 4:3 values; cinematics keep their original framing at any aspect ratio
+* **FMVs** - Fill enlarges the movies past the black bars of the game's 4:3 movie area until the picture fits the screen, without cutting it; Original keeps the 4:3 display; 480p playback limit removed
 * **Framerate Issues** - animated textures, camera shake, cloth physics and AI pathing no longer have issues at higher framerates
 * **Resolution Scale** - vision mode grain, thermal vision, rain particles now correctly scale at higher resolutions
 
@@ -20,24 +20,32 @@
 
 ## Miscellaneous
 
-* **FPS Limit** - added an option to limit FPS to avoid game-breaking bugs
+* **FPS Limit** - frame rate limit (60 by default; 0 = unlimited, -1 = the monitor's refresh rate), changes apply while playing
 * **Skip Intro** - added an option to skip intro
 * **Skip Prompt** - added an option to skip "Press Fire to Continue" prompt
-* **Cutscene Borders** - added an option to disable cutscene borders
+* **Cutscene Borders** - cinematics keep their 16:9 picture: Letterbox bars on screens narrower than 16:9, Pillarbox bars on wider ones, Both, or Off to fill the screen
 * **Mouse Acceleration** - disabled mouse acceleration
 * **Raw Mouse Input** - added raw input support for mouse
-* **Gamepad Support** - improved gamepad support via [Xidi](https://github.com/samuelgr/Xidi)
+* **Confine Cursor** - keeps the mouse cursor inside the game window while the game is active
+* **Pause on Focus Loss** - the game pauses while another window is active, as the original does; turn it off to keep the game running in the background in windowed and borderless modes
+* **Update Check** - optional: once per start, asks fusionfix.io whether a newer version is out and tells you in the main menu
+* **Gamepad Support** - improved gamepad support via [Xidi](https://github.com/samuelgr/Xidi), with adjustable right-stick camera speed, vertical look inversion and a vibration toggle
+* **Controller Prompts** - training hints follow the last input device and use the pad’s button names in English, French, German, Italian and Spanish. Auto uses Xbox names; select PlayStation or Nintendo manually
 * **EAX Support** - restored EAX support via [DSOAL](https://github.com/kcat/dsoal)
 
 ## Settings
 
 Open Options → Plugins to change the fix’s settings in the game. Window Mode is on the Video page, and the added mouse options are on Controls. Select an option and press F1 or choose Details to read its full explanation. In Details, Left/Right changes pages; Escape or F1 returns.
 
-Choose the resolution, HUD width, gameplay field of view and video framing in FusionFixHub or on fusionfix.io. Video framing offers the original aspect ratio, cropped Fill and Stretch.
+Choose the resolution, HUD width, gameplay field of view and video framing in FusionFixHub or on fusionfix.io. Video framing offers the original 4:3 display or Fill, which never cuts the picture.
 
-Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets. The default frame rate limit is 60 FPS.
+HUD Aspect Ratio and Vision Grain Scaling apply while playing. Shadow, reflection and post-process buffer sizes require a restart because the renderer creates those textures at startup.
 
-The gameplay FOV multiplier changes the normal following camera. Aiming, gadgets, mirrors and cinematic views keep their own framing. Restore Cutscene FOV and Cutscene Borders control cinematic presentation separately.
+Gamepad Icons, Gamepad Camera Speed, Invert Gamepad Y and Vibration are under Options → Plugins → this fix. Choose More pages until the controller rows appear. Camera speed, inversion and vibration changes apply while playing. Keyboard and mouse input returns the training hints to keyboard keys. The prompts assume the supplied Xidi mappings and the default keyboard bindings.
+
+Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets. The default frame rate limit is 60 FPS; higher rates can affect AI and physics.
+
+The gameplay FOV multiplier changes the normal following camera and widens it up to 150 degrees across, so very wide screens keep a usable picture. Aiming, gadgets, mirrors and cinematic views keep their own framing. Cutscene Borders sets how cinematics are framed and changes while playing.
 
 ## Configuration
 
@@ -47,9 +55,11 @@ Recommended uses the default setup. Vanilla and Enhanced offer alternative prese
 
 ## Installation
 
-1. Download `SplinterCellPandoraTomorrow.WidescreenFix.zip` from this release.
+Retail and current digital executables are supported. Buffered-shadow corrections apply to retail; use projector shadows (`ForceShadowMode=0`, or automatic selection) in the current digital release. Forcing buffered shadows there can prevent startup. The native Direct3D 8 renderer is retained; the Direct3D 9/11 developer overlay does not apply.
+
+1. Download `SplinterCellPandoraTomorrow.FusionFix.zip` from this release.
 2. Extract the contents directly into the game folder.
-3. Launch once to create the `system/scripts/SplinterCellPandoraTomorrow.WidescreenFix.cfg`, then configure the fix on fusionfix.io or in FusionFixHub. Restart when an option asks you to.
+3. Launch once to create the `system/scripts/SplinterCellPandoraTomorrow.FusionFix.cfg`, then configure the fix on fusionfix.io or in FusionFixHub. Restart when an option asks you to.
 4. Launch the game.
 
 <details>
@@ -92,6 +102,8 @@ Recommended uses the default setup. Vanilla and Enhanced offer alternative prese
 > * [More on WINEDLLOVERRIDES method](https://wiki.winehq.org/Wine_User's_Guide#WINEDLLOVERRIDES.3DDLL_Overrides)
 > </details>
 
-[Website](https://thirteenag.github.io/wfp#scpt) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellPandoraTomorrow.WidescreenFix/dllmain.cpp)
+[Website](https://thirteenag.github.io/wfp#scpt) | [Source](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellPandoraTomorrow.FusionFix/dllmain.cpp)
 
 <p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile-dark.svg"><source media="(max-width: 768px)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile.svg"><source media="(prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-dark.svg"><img width="100%" src="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>
+
+Goggles Light Color offers named color presets. Choose Custom RGB to use the separate packed RGB value in FusionFixHub or the configuration file. Changing the color requires a restart.

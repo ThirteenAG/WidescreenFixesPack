@@ -1,10 +1,12 @@
 #include "stdafx.h"
 #include "FixSettings.hpp"
+#include "Shared/NFS/Cursor.hpp"
 
 // Runtime settings interface for menu hosts and the hub.
 ASI_SETTINGS_EXPORT(FixSettings())
 
 import ComVars;
+import DevOverlay;
 
 std::once_flag of;
 
@@ -28,6 +30,8 @@ namespace fb
                 fb::GameTimer::frameDeltaTime = std::min(float(double(now.QuadPart - last.QuadPart) / double(frequency.QuadPart)), 0.1f);
             last = now;
 
+            CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
+            CursorConfinement::Frame(hWnd.get());
             WFP::onGameProcessEvent().executeAll();
 
             shinternalUpdate.unsafe_fastcall(Main, edx, lowLatencyUpdate);
@@ -37,6 +41,8 @@ namespace fb
 
 void Init()
 {
+    NFSCursor::Initialize();
+
     auto pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 ? 50 FF 15 ? ? ? ? 85 C0");
     hWnd.SetAddress(*pattern.get_first<HWND*>(1));
 
@@ -54,22 +60,16 @@ void Init()
 
     // The settings manager and its lookup, where the game reads GameTimeSettings
     pattern = hook::pattern("A1 ? ? ? ? 85 C0 75 ? 8B 0D ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? A3 ? ? ? ? 8A 48 40");
-    if (!pattern.empty())
-    {
-        fb::Settings::pManager = *pattern.get_first<void**>(11);
-        fb::Settings::getContainer = (decltype(fb::Settings::getContainer))injector::GetBranchDestination(pattern.get_first(20)).as_int();
-    }
+    fb::Settings::pManager = *pattern.get_first<void**>(11);
+    fb::Settings::getContainer = (decltype(fb::Settings::getContainer))injector::GetBranchDestination(pattern.get_first(20)).as_int();
 
     // The update of the player's car control
     pattern = hook::pattern("80 7E ? ? 57 74 ? 33 C0");
-    if (!pattern.empty())
+    static auto VehicleControlHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        static auto VehicleControlHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            fb::Vehicle::bHasControl = *(uint8_t*)(regs.esi + 0x4) != 0;
-            fb::Vehicle::LastUpdate = GetTickCount64();
-        });
-    }
+        fb::Vehicle::bHasControl = *(uint8_t*)(regs.esi + 0x4) != 0;
+        fb::Vehicle::LastUpdate = GetTickCount64();
+    });
 
     pattern = hook::pattern("8B 8E ? ? ? ? 3B ? 74 ? E8 ? ? ? ? E8");
     static auto GetActualDeltaTime = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

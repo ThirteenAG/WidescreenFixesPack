@@ -1,12 +1,19 @@
 #include "stdafx.h"
 #include "FixSettings.hpp"
-#include "Camera.hpp"
 #include "Frame.hpp"
-#include "Focus.hpp"
-#include "Video.hpp"
-#include "Pacing.hpp"
-#include "DisplayModes.hpp"
+#include "Shared/D3D9Options.hpp"
 
+import Video;
+import DisplayModes;
+import Pacing;
+import Camera;
+import DeveloperOverlay;
+import Vibration;
+import Updates;
+import Cutscene;
+import Focus;
+import NativeMenu;
+import Intro;
 import ComVars;
 import Input;
 import Windowed;
@@ -24,6 +31,12 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime([]()
         {
             WindowedModeWrapper::EnableDpiAwareness();
+            D3D9Options::presentParameters = [](D3DPRESENT_PARAMETERS* parameters, HWND)
+            {
+                // The presentation limiter owns pacing, including rates above the monitor refresh rate.
+                parameters->PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+            };
+            D3D9Options::HookCreation();
             FixSettings();
             asi_settings::LiveLink::Start();
             ScarfaceCamera::Install(FixSettings().Float("MAIN.FOVFactor"));
@@ -33,8 +46,14 @@ CEXP void InitializeASI()
             ScarfaceCutscene::Install(FixSettings().Int("MAIN.CutsceneBorders"), bool(ScarfaceCamera::ProjectionHook));
             ScarfaceVideo::Install(FixSettings().Int("MAIN.FMVWidescreenMode"));
             ScarfaceFocus::Install(FixSettings().Int("MAIN.PauseOnFocusLoss"));
+            ScarfaceIntro::Install();
+            ScarfaceMenu::Install();
+            ScarfaceFrame::Handlers.push_back([](void*) { ScarfaceMenu::Tick(); });
+            ScarfaceUpdates::Install();
+            ScarfaceOverlay::Install();
+            ScarfaceVibration::Install();
             WFP::onInitEvent().executeAll();
-        }, hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 5E C3"));
+        }, hook::pattern("53 56 8B F1 33 DB F6 46 60 08 0F 84 ? ? ? ? 6A FF 53 53 53"));
     });
 }
 

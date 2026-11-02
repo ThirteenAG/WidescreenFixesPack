@@ -44,7 +44,7 @@ namespace TonyBink9
                     device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
             }
         }
-        const auto box = TonyVideo::Layout(targetWidth, targetHeight, *MovieWidth, *MovieHeight, Mode ? std::clamp(*Mode, 0, 2) : 1);
+        const auto box = TonyVideo::Layout(targetWidth, targetHeight, *MovieWidth, *MovieHeight, Mode ? std::clamp(*Mode, 0, 1) : 1);
         const auto result = DrawHook.ccall<int>(texture, box.x, box.y, box.width / *FrameWidth, box.height / *FrameHeight, alpha);
         if (device)
         {
@@ -61,11 +61,6 @@ namespace TonyBink9
         Mode = mode;
         auto draw = hook::module_pattern(module, drawSignature);
         auto dimensions = hook::module_pattern(module, dimensionsSignature);
-        if (draw.size() != 1 || dimensions.size() != 1)
-        {
-            OutputDebugStringA("Tony Hawk: fullscreen movie patterns unavailable.\n");
-            return;
-        }
         MovieWidth = *dimensions.get_first<const float*>(offsets[0]);
         MovieHeight = *dimensions.get_first<const float*>(offsets[1]);
         FrameWidth = *dimensions.get_first<const float*>(offsets[2]);

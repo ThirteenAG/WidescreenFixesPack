@@ -2,9 +2,16 @@
 #include <d3d9.h>
 #include <d3dx9.h>
 #include <wrl/client.h>
+#include <array>
 
 namespace ScarfaceButtons
 {
+    inline unsigned Style(int choice)
+    {
+        constexpr std::array<unsigned, 9> styles{ 0, 0, 4, 5, 1, 2, 3, 6, 7 };
+        return choice >= 0 && size_t(choice) < styles.size() ? styles[choice] : 0;
+    }
+
     // Physical element order shared with XidiGetPhysicalButtonMask.
     // Style order matches Max Payne 3's GamepadIcons option.
     inline constexpr const char* Names[][20] = {

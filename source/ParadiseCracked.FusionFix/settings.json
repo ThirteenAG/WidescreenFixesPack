@@ -1,0 +1,237 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Paradise Cracked",
+        "exe": [
+          "game.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "gameplay"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@windowmode.fullscreen"
+        },
+        {
+          "value": 1,
+          "label": "@windowmode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@windowmode.borderless"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "label": "@ResX",
+      "description": "@ResX.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384,
+      "step": 1
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "label": "@ResY",
+      "description": "@ResY.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384,
+      "step": 1
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@HudAspectRatioConstraint",
+      "description": "@HudAspectRatioConstraint.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "suggestions": [
+        {
+          "value": "Auto",
+          "label": "@HudAspectRatioConstraint.auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@FMVWidescreenMode",
+      "description": "@FMVWidescreenMode.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@fmv.original"
+        },
+        {
+          "value": 1,
+          "label": "@fmv.fill"
+        }
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "camera",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "game",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@PauseOnFocusLoss",
+      "description": "@PauseOnFocusLoss.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@CheckForUpdates",
+      "description": "@CheckForUpdates.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "menu",
+      "visibility": "editor",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
+    }
+  ]
+}

@@ -70,6 +70,38 @@ export GameRef<IDirect3DDevice9*> Direct3DDevice;
 
 export uint32_t ShadowLevel = 3;
 
+// The resizable window: the picture keeps the game's resolution and is scaled to the window, so the aspect ratio
+// follows the window
+export bool bAspectFromWindow = false;
+
+// The aspect ratio of the picture on the screen
+export float ScreenAspectRatio()
+{
+    if (bAspectFromWindow)
+    {
+        RECT rect{};
+        if (auto window = hWnd.get(); window && GetClientRect(window, &rect) && rect.right > 0 && rect.bottom > 0)
+            return static_cast<float>(rect.right) / static_cast<float>(rect.bottom);
+    }
+    if (!Width || !Height || !*Width || !*Height)
+        return 16.0f / 9.0f;
+    return static_cast<float>(*Width) / static_cast<float>(*Height);
+}
+
+template<typename... Args>
+class WindowMessage : public WFP::Event<Args...>
+{
+public:
+    using WFP::Event<Args...>::Event;
+};
+
+// Every message of the game window, before the game handles it
+export __declspec(noinline) WindowMessage<HWND, UINT, WPARAM, LPARAM>& onWindowMessage()
+{
+    static WindowMessage<HWND, UINT, WPARAM, LPARAM> WindowMessageEvent;
+    return WindowMessageEvent;
+}
+
 export namespace Sim
 {
     namespace Internal

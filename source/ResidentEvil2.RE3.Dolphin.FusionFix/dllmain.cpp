@@ -11,8 +11,6 @@ void Init()
 {
     // Settings described in settings.json and stored in the plugin's .cfg, read at start-up
     FixSettings();
-    asi_settings::LiveLink::Start();
-
     LightSync::Init();
     Game::Init();
 }

@@ -1,5 +1,5 @@
 #pragma once
-#include "../CursorConfinement.hpp"
+#include "Shared/CursorConfinement.hpp"
 
 namespace NFSCursor
 {

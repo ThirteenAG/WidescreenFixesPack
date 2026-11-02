@@ -1,0 +1,30 @@
+#pragma once
+
+inline Profile profiles[]
+{
+    { "E0 FE BD 27 10 01 B6 AF 08 00 96 8C 0C 01 B5 AF 88 01 D5 8E 14 01 B7 AF", Role::World, 0 },
+    { "E0 FF BD 27 04 00 B0 AF 25 80 A0 00 00 00 B4 E7 08 00 B1 AF 0C 00 B2 AF", Role::Contained, 0 },
+    { "90 FF BD 27 58 00 B0 AF 5C 00 B1 AF 25 80 80 00 25 88 A0 00 54 00 B4 E7", Role::Scope, 0 },
+    { "E0 FF BD 27 08 00 B1 AF 25 88 80 00 10 00 24 26 00 00 86 8C 00 00 B4 E7", Role::RightBottom, 0 },
+    { "E0 FF BD 27 70 00 8C C4 00 00 B4 E7 00 A0 80 44 08 00 B1 AF 7C 00 8D C4", Role::RightBottom, 0 },
+    { "C0 FF BD 27 30 00 86 8C 20 00 B4 AF 25 A0 80 00 04 00 B4 E7 08 00 B6 E7", Role::Message, 0 },
+    { "70 FF BD 27 20 00 8C C4 00 68 80 44 84 00 B1 AF 25 88 80 00 3E 60 0D 46", Role::RightTop, 0 },
+    { "F0 FF BD 27 00 00 B0 AF 25 80 80 00 08 00 04 8E 04 00 B1 AF 25 88 A0 00 24 00 85 8C", Role::CenterBottom, 0 },
+    { "50 FF BD 27 88 00 B2 AF 25 90 A0 00 78 00 B4 E7 7C 00 B6 E7 80 00 B0 AF", Role::LeftBottom, 0 },
+    { "90 FF BD 27 4C 00 B3 AF 25 98 80 00 50 00 B4 AF 25 A0 A0 00 08 00 64 8E", Role::Map, 0 },
+    { "70 FF BD 27 68 00 B2 AF 25 90 80 00 44 00 44 8E 60 00 B0 AF 25 80 A0 00", Role::Center, 0 },
+    { "D0 FF BD 27 18 00 86 8C 14 00 B1 AF 25 88 80 00 10 00 B0 AF 18 00 B2 AF", Role::CenterBottom, 0 },
+    { "A0 FF BD 27 14 00 86 8C 48 00 B2 AF 00 00 D2 8C 40 00 B0 AF 25 80 80 00", Role::Contained, 0 },
+    { "F0 FD BD 27 E8 01 B1 AF 25 88 A0 00 E4 01 B0 AF EC 01 B2 AF F0 01 B3 AF", Role::Stats, 0 },
+    { "B0 FF BD 27 2C 00 B0 AF 25 80 80 00 98 00 04 8E 20 00 06 92 34 00 B2 AF", Role::CenterBottom, 0 },
+    { "A0 FF BD 27 1C 01 86 8C 38 00 B0 AF 25 80 80 00 34 00 B4 E7 3C 00 B1 AF", Role::RightTop, 0 },
+    { "F0 FF BD 27 59 00 07 34 00 00 BF AF ? ? ? ? 2C 00 86 24 00 00 BF 8F", Role::Contained, 0 },
+    { "D0 FF BD 27 10 00 8C C4 1C 00 8E C4 14 00 B0 AF 3E 60 0E 46 18 00 B1 AF", Role::RightBottom, 0 },
+    { "B0 FE BD 27 1C 00 86 90 24 01 B1 AF 25 88 80 00 20 01 B0 AF 28 01 B2 AF", Role::Mixed, 0 },
+    { "F0 FF BD 27 C8 00 07 34 00 00 BF AF ? ? ? ? 24 00 86 24 00 00 BF 8F", Role::LeftBottom, 0 },
+    { "F0 FF BD 27 C8 00 07 34 00 00 BF AF ? ? ? ? 18 00 86 24 00 00 BF 8F", Role::LeftBottom, 0 },
+    { "F0 FF BD 27 14 00 07 34 00 00 BF AF ? ? ? ? 24 00 86 24 00 00 BF 8F", Role::LeftTop, 0 },
+    { "20 FF BD 27 D4 00 BE AF 25 F0 80 00 9C 00 B4 E7 A0 00 B6 E7 A4 00 B8 E7", Role::Contained, 0 },
+    { "F0 FF BD 27 00 00 B0 AF 04 00 B1 AF 25 88 80 00 25 80 A0 00 08 00 BF AF ? ? ? ? 02 00 04 34", Role::Contained, 0 },
+    { "C0 FE BD 27 18 01 B0 AF 1C 01 B1 AF 25 80 80 00 25 88 A0 00 18 00 05 8E", Role::Mixed, 0 },
+};

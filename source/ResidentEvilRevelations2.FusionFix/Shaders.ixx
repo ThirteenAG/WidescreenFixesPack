@@ -2,26 +2,25 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 #include <d3d9.h>
 
 export module Shaders;
 
 import ComVars;
+import Runtime;
 
 // Shader replacements (the shaders folder, compiled at build time):
 // - 2D overlays (vertex shader 4F0EE939): widened to the whole screen.
 // - Film grain: kept at its 720p size at any resolution.
 // - Movies: the game stretches the 16:9 video over the whole screen. A second screen vertex shader, used only while
-//   the movie pixel shader draws, keeps its aspect (MAIN.FMVWidescreenMode: 0 = the whole video with black bars,
-//   1 = filling the screen, cropped; 2 = stretched as the game does).
+//   the movie pixel shader draws, keeps its aspect: the whole video with black bars. The movies are all 16:9, so
+//   Original and Fill would be the same picture; there is no setting for it.
 
 namespace
 {
     IDirect3DVertexShader9* pScreenVertexShader = nullptr;   // the game's full-screen quad
     IDirect3DPixelShader9* pMoviePixelShader = nullptr;      // the WMV YUV decoder
     IDirect3DVertexShader9* pMovieVertexShader = nullptr;    // the fix's scaled quad
-    const int* pFMVWidescreenMode = nullptr;
     bool bMovieVertexShaderBound = false;                    // set for one draw, restored right after it
 
     uint32_t GetShaderCrc(IUnknown* shader, bool vertex)
@@ -59,6 +58,7 @@ namespace
         IDirect3DDevice9* device = nullptr;
         if (FAILED(shader->GetDevice(&device)) || !device)
             return shader;
+        Rev2Runtime::AttachDevice(device);
         device->Release();
 
         switch (GetShaderCrc(shader, true))
@@ -103,8 +103,6 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            pFMVWidescreenMode = &FixSettings().Int("MAIN.FMVWidescreenMode");
-
             // Film grain (uTVNoiseFilter): the noise is tiled one texel per screen pixel and the rolling band is sized
             // and moved in pixels, both made for 720p: at higher resolutions the grain got finer and the band thinner
             // and slower. The fix keeps them at their 720p size relative to the screen height.
@@ -118,100 +116,79 @@ public:
                         bytes += std::format("{:02X} ", (uint8_t)*c);
                     bytes += "00";
                     auto pattern = hook::pattern(bytes);
-                    if (PatternAvailable(pattern, "ResidentEvilRevelations2.FusionFix: Shaders"))
-                        WriteGameValue<uint8_t>(pattern.get_first(), 'r');
+                    injector::WriteMemory<uint8_t>(pattern.get_first(), 'r', true);
                 }
             }
             else
             {
                 // The noise's texture coordinate scale (xmm1, xmm2 = viewport size / mask texture size), esi = the context
                 auto pattern = hook::pattern("A1 ? ? ? ? 83 EC 14 8B CC F3 0F 11 54 24 10");
-                if (PatternAvailable(pattern, "ResidentEvilRevelations2.FusionFix: Shaders"))
+                static auto GrainScaleHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
-                    static auto GrainScaleHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                    {
-                        const int32_t height = *(int32_t*)(regs.esi + 200) - *(int32_t*)(regs.esi + 192);
-                        if (height <= 0)
-                            return;
-                        const float scale = 720.0f / (float)height;
-                        regs.xmm1.f32[0] *= scale;
-                        regs.xmm2.f32[0] *= scale;
-                    });
-                }
+                    const int32_t height = *(int32_t*)(regs.esi + 200) - *(int32_t*)(regs.esi + 192);
+                    if (height <= 0)
+                        return;
+                    const float scale = 720.0f / (float)height;
+                    regs.xmm1.f32[0] *= scale;
+                    regs.xmm2.f32[0] *= scale;
+                });
 
                 // The rolling band: its position, size and speed are in 720p pixels (xmm1 = the screen height)
                 pattern = hook::pattern("F3 0F 10 4C 24 20 0F 28 C3 F3 0F 58 C3");
-                if (PatternAvailable(pattern, "ResidentEvilRevelations2.FusionFix: Shaders"))
+                static auto GrainBandHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
                 {
-                    static auto GrainBandHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
-                    {
-                        regs.xmm1.f32[0] = 720.0f;
-                    });
-                }
+                    regs.xmm1.f32[0] = 720.0f;
+                });
             }
 
             auto pattern = hook::pattern("E8 ? ? ? ? 89 47 08 66 8B 4C 24 30");
-            if (PatternAvailable(pattern, "ResidentEvilRevelations2.FusionFix: Shaders"))
-                shCreateVertexShader = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CreateVertexShader);
+            shCreateVertexShader = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CreateVertexShader);
 
             pattern = hook::pattern("E8 ? ? ? ? 89 47 08 66 8B 4C 24 32");
-            if (PatternAvailable(pattern, "ResidentEvilRevelations2.FusionFix: Shaders"))
-                shCreatePixelShader = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CreatePixelShader);
+            shCreatePixelShader = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), CreatePixelShader);
 
             // DrawPrimitive of the screen quads (edi = the device)
             pattern = hook::pattern("57 FF 90 44 01 00 00 8B 9C 24 60 0E 00 00");
-            if (PatternAvailable(pattern, "ResidentEvilRevelations2.FusionFix: Shaders"))
+            static auto DrawPrimitiveHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
-                static auto DrawPrimitiveHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    auto device = (IDirect3DDevice9*)regs.edi;
-                    if (!device || !pMovieVertexShader || !pMoviePixelShader)
-                        return;
+                auto device = (IDirect3DDevice9*)regs.edi;
+                if (!device || !pMovieVertexShader || !pMoviePixelShader)
+                    return;
 
-                    IDirect3DPixelShader9* ps = nullptr;
-                    if (FAILED(device->GetPixelShader(&ps)))
-                        return;
-                    if (ps)
-                        ps->Release();
-                    if (ps != pMoviePixelShader)
-                        return;
+                IDirect3DPixelShader9* ps = nullptr;
+                if (FAILED(device->GetPixelShader(&ps)))
+                    return;
+                if (ps)
+                    ps->Release();
+                if (ps != pMoviePixelShader)
+                    return;
 
-                    IDirect3DVertexShader9* vs = nullptr;
-                    if (FAILED(device->GetVertexShader(&vs)))
-                        return;
-                    if (vs)
-                        vs->Release();
-                    if (vs != pScreenVertexShader)
-                        return;
+                IDirect3DVertexShader9* vs = nullptr;
+                if (FAILED(device->GetVertexShader(&vs)))
+                    return;
+                if (vs)
+                    vs->Release();
+                if (vs != pScreenVertexShader)
+                    return;
 
-                    const float ratio = GetAspectRatio() / defaultAspectRatio;  // > 1: the screen is wider than the video
-                    float scale[4] = { 1.0f, 1.0f, 0.0f, 0.0f };
-                    switch (*pFMVWidescreenMode)
-                    {
-                    case 0: // the whole video
-                        if (ratio > 1.0f) scale[0] = 1.0f / ratio; else scale[1] = ratio;
-                        break;
-                    case 1: // filling the screen
-                        if (ratio > 1.0f) scale[1] = ratio; else scale[0] = 1.0f / ratio;
-                        break;
-                    default:
-                        return;
-                    }
-                    device->SetVertexShader(pMovieVertexShader);
-                    device->SetVertexShaderConstantF(20, scale, 1);
-                    bMovieVertexShaderBound = true;
-                });
+                const float ratio = GetAspectRatio() / defaultAspectRatio;  // > 1: the screen is wider than the video
+                float scale[4] = { 1.0f, 1.0f, 0.0f, 0.0f };
+                // The whole video in both modes
+                if (ratio > 1.0f) scale[0] = 1.0f / ratio; else scale[1] = ratio;
+                device->SetVertexShader(pMovieVertexShader);
+                device->SetVertexShaderConstantF(20, scale, 1);
+                bMovieVertexShaderBound = true;
+            });
 
-                // After the draw: give the game its own shader back, it may skip setting a shader it thinks is bound
-                static auto DrawPrimitiveDoneHook = safetyhook::create_mid(pattern.get_first(7), [](SafetyHookContext& regs)
-                {
-                    if (!bMovieVertexShaderBound)
-                        return;
-                    bMovieVertexShaderBound = false;
-                    if (auto device = (IDirect3DDevice9*)regs.edi)
-                        device->SetVertexShader(pScreenVertexShader);
-                });
-            }
+            // After the draw: give the game its own shader back, it may skip setting a shader it thinks is bound
+            static auto DrawPrimitiveDoneHook = safetyhook::create_mid(pattern.get_first(7), [](SafetyHookContext& regs)
+            {
+                if (!bMovieVertexShaderBound)
+                    return;
+                bMovieVertexShaderBound = false;
+                if (auto device = (IDirect3DDevice9*)regs.edi)
+                    device->SetVertexShader(pScreenVertexShader);
+            });
         };
     }
 } Shaders;

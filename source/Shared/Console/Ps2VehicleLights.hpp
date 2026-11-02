@@ -4,7 +4,7 @@
 #include <cstring>
 
 // Stories games on the PS2: lit car textures generated from the game's own
-// rasters (see VehicleLights.hpp). Shared by the VCS and LCS ImVehLM plugins.
+// rasters (see VehicleLights.hpp). Shared by the VCS and LCS PS2 Fusion Fixes.
 namespace console::ps2lights {
 struct Raster { uint32_t unknown[2]; uint8_t* data; uint32_t flags; };
 struct Texture { Raster* raster; void* dictionary; void* links[2]; char name[32], mask[32]; };

@@ -1,4 +1,5 @@
 #include "Screens.hpp"
+#include "Shared/Console/PatchNotice.hpp"
 // PSPLoader stage: the boot "Loading, please wait." picture and every FMV
 // (intros and mission briefings) are shown by the loader, not by the game.
 // PPSSPP stretches the 480x272 frame to the window, so both are contained at
@@ -26,8 +27,8 @@ float* subtitle;         // position (x at [0]) and scale (x at [3])
 void Emit(uint32_t*& list, uint32_t command) { *list++ = command; }
 // Opaque black through-mode rectangle, written into the player's own list
 // with the same inline-vertex layout its sprite helper uses.
-void BlackBar(int x0, int x1) {
-    if (x1 <= x0) return;
+void BlackBar(int x0, int y0, int x1, int y1) {
+    if (x1 <= x0 || y1 <= y0) return;
     auto context = *reinterpret_cast<uint8_t**>(spriteContext);
     auto& list = *reinterpret_cast<uint32_t**>(context + 8);
     auto p = list;
@@ -38,8 +39,8 @@ void BlackBar(int x0, int x1) {
     Emit(p, 0x08000000 | (end & 0xFFFFFF));              // JUMP over vertices
     struct Vertex { uint32_t color; int16_t x, y, z, pad; };
     auto vertex = reinterpret_cast<Vertex*>(data);
-    vertex[0] = {0xFF000000u, int16_t(x0), 0, 0, 0};
-    vertex[1] = {0xFF000000u, int16_t(x1), 272, 0, 0};
+    vertex[0] = {0xFF000000u, int16_t(x0), int16_t(y0), 0, 0};
+    vertex[1] = {0xFF000000u, int16_t(x1), int16_t(y1), 0, 0};
     p = after;
     const auto at = uintptr_t(data);
     Emit(p, 0x12000000 | 1u << 23 | 7u << 2 | 2u << 7); // VTYPE through, 8888, s16
@@ -49,35 +50,41 @@ void BlackBar(int x0, int x1) {
     Emit(p, 0x1E000001);                                 // texture on
     list = p;
 }
-float stripScale = 1;
+float stripX = 1, stripY = 1;
 int DrawStrip(int x, int y, int z, int u, int v, int flip, int rotate) {
-    if (x == 0) stripScale = Contain(); // once per frame
-    const float scale = stripScale;
-    if (scale >= 1) return drawStrip.fun(x, y, z, u, v, flip, rotate);
-    if (x >= 480) { // the 17th column lies beyond the frame; cover the sides instead
-        const int left = ContainX(0, scale);
-        BlackBar(0, left);
-        BlackBar(480 - left, 480);
+    if (x == 0) { stripX = ContainScaleX(); stripY = ContainScaleY(); } // once per frame
+    const float sx = stripX, sy = stripY;
+    if (sx >= 1 && sy >= 1) return drawStrip.fun(x, y, z, u, v, flip, rotate);
+    if (x >= 480) { // the 17th column lies beyond the frame; cover the borders instead
+        const int left = ContainX(0, sx), top = ContainY(0, sy);
+        BlackBar(0, 0, left, 272);
+        BlackBar(480 - left, 0, 480, 272);
+        BlackBar(0, 0, 480, top);
+        BlackBar(0, 272 - top, 480, 272);
         return 0;
     }
     // Sixteen 32-pixel columns; place each at its rounded edges so they abut.
-    const int x0 = ContainX(float(x), scale), x1 = ContainX(float(x + 32), scale);
+    const int x0 = ContainX(float(x), sx), x1 = ContainX(float(x + 32), sx);
     auto context = *reinterpret_cast<uint8_t**>(spriteContext);
     auto& width = *reinterpret_cast<int*>(context + 0x40);
-    const int native = width;
-    width = x1 - x0;
-    const int result = drawStrip.fun(x0, y, z, u, v, flip, rotate);
-    width = native;
+    auto& height = *reinterpret_cast<int*>(context + 0x44);
+    const int nativeWidth = width, nativeHeight = height;
+    const int y0 = ContainY(float(y), sy), y1 = ContainY(float(y + nativeHeight), sy);
+    width = x1 - x0; height = y1 - y0;
+    const int result = drawStrip.fun(x0, y0, z, u, v, flip, rotate);
+    width = nativeWidth; height = nativeHeight;
     return result;
 }
 void DrawSubtitles() {
-    const float scale = stripScale;
-    if (scale >= 1 || !subtitle) return drawSubtitles.fun();
+    const float sx = stripX, sy = stripY;
+    if ((sx >= 1 && sy >= 1) || !subtitle) return drawSubtitles.fun();
     // The subtitle quad is placed around the centre of the projection.
-    const float x = subtitle[0], width = subtitle[3];
-    subtitle[0] = x * scale; subtitle[3] = width * scale;
+    float saved[6];
+    std::memcpy(saved, subtitle, sizeof(saved));
+    subtitle[0] *= sx; subtitle[3] *= sx;
+    subtitle[1] *= sy; subtitle[4] *= sy;
     drawSubtitles.fun();
-    subtitle[0] = x; subtitle[3] = width;
+    std::memcpy(subtitle, saved, sizeof(saved));
 }
 uintptr_t HighLow(uint32_t high, uint32_t low) { return (uintptr_t(high & 0xFFFF) << 16) + int16_t(low & 0xFFFF); }
 uintptr_t JalTarget(uintptr_t at) {
@@ -122,11 +129,19 @@ int StartModule(int id, unsigned size, void* arguments, int* status, void* optio
 namespace {
 void PatchLoader(uintptr_t text, size_t size) {
     // LOADING_IMAGE: sceIoRead into a buffer, then memcpy to the frame buffer.
-    const auto copy = range_pattern.get_first(text, size, "5C 00 A5 8F 25 20 20 02 ?? ?? ?? ?? 25 30 00 02 ?? ?? ?? ?? 00 00 00 00 ?? ?? ?? ?? 00 00 00 00 25 20 40 00 00 02 05 34", 8);
-    if (copy) pictureCopy.fun = injector::MakeCALL(copy, CopyPicture).get();
+    constexpr auto copySignature = "5C 00 A5 8F 25 20 20 02 ?? ?? ?? ?? 25 30 00 02 ?? ?? ?? ?? 00 00 00 00 ?? ?? ?? ?? 00 00 00 00 25 20 40 00 00 02 05 34";
+    constexpr auto startSignature = "18 02 B2 8F 01 00 45 24 14 02 A7 27 25 20 40 02 25 30 20 02 ?? ?? ?? ?? 25 40 00 00";
+    const auto copy = range_pattern.get_first(text, size, copySignature, 8);
+    const auto start = range_pattern.get_first(text, size, startSignature, 20);
+    if (copy && !range_pattern.get(1, text, size, copySignature, 8))
+        pictureCopy.fun = injector::MakeCALL(copy, CopyPicture).get();
+    else
+        PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
     // The movie player is the only module the loader starts.
-    const auto start = range_pattern.get_first(text, size, "18 02 B2 8F 01 00 45 24 14 02 A7 27 25 20 40 02 25 30 20 02 ?? ?? ?? ?? 25 40 00 00", 20);
-    if (start) startModule.fun = injector::MakeCALL(start, StartModule).get();
+    if (start && !range_pattern.get(1, text, size, startSignature, 20))
+        startModule.fun = injector::MakeCALL(start, StartModule).get();
+    else
+        PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
 #ifndef NDEBUG
     logger.WriteF("Loader %08X: picture copy %08X, start module %08X", unsigned(text), unsigned(copy), unsigned(start));
 #endif
@@ -146,13 +161,15 @@ int StartLoader(int id, unsigned size, void* arguments, int* status, void* optio
 }
 
 void InstallLoaderScreens() {
-    containImages = inireader.ReadBoolean("MAIN", "ContainFullscreenImages", true);
-    if (!containImages) return;
     PatchLoader(pattern.text_addr, pattern.text_size);
 }
 
 void InstallLoaderRestart(uintptr_t text, size_t size) {
-    const auto start = range_pattern.get_first(text, size, "01 00 45 24 25 20 00 02 25 30 20 02 25 38 40 02 ?? ?? ?? ?? 25 40 00 00", 16);
-    if (start) startLoader.fun = injector::MakeCALL(start, StartLoader).get();
+    constexpr auto signature = "01 00 45 24 25 20 00 02 25 30 20 02 25 38 40 02 ?? ?? ?? ?? 25 40 00 00";
+    const auto start = range_pattern.get_first(text, size, signature, 16);
+    if (start && !range_pattern.get(1, text, size, signature, 16))
+        startLoader.fun = injector::MakeCALL(start, StartLoader).get();
+    else
+        PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
 }
 }

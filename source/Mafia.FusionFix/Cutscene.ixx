@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include <stdexcept>
 #include <cmath>
 
 export module Cutscene;
@@ -12,7 +13,6 @@ namespace Cutscene
     enum BordersMode { Off, Letterbox, Pillarbox, Both };
     uintptr_t hud, drawEnd;
     size_t flagsOffset, targetOffset, fadeOffset;
-    void** graphics;
     bool enabled;
     float aspect = 0.540540516376495f;
     float bordersMult;
@@ -70,7 +70,7 @@ namespace Cutscene
         // its flag, allowing the 350 ms slide to finish when returning to play.
         regs.eip = drawEnd;
         TickBorderAnim(GetTickCount(), IsActive(), Field<float>(hud, fadeOffset));
-        if (nCutsceneBorders == Off || bordersMult <= 0.0f || !*graphics)
+        if (nCutsceneBorders == Off || bordersMult <= 0.0f || !pHudIGraph)
             return;
 
         auto rect = GetContentRect();
@@ -103,7 +103,7 @@ namespace Cutscene
                     Screen.fWidth + 2.0f, Screen.fHeight + 2.0f);
         }
         if (!count) return;
-        auto graph = *graphics;
+        void* graph = pHudIGraph;
         auto table = *reinterpret_cast<uintptr_t**>(graph);
         using SetTexture = void(__stdcall*)(void*, void*);
         using Draw = void(__stdcall*)(void*, int, int, const Vertex*, uint32_t);
@@ -119,29 +119,42 @@ export bool IsCutsceneCamera()
 
 export float GetCameraFovScale()
 {
-    // As in the GTA fixes, border preferences and their animation never animate
-    // the camera zoom. Off reveals the surrounding image at the same shot FOV.
     if (Cutscene::IsActive())
-        return Cutscene::GetContentRect().fovScale;
+    {
+        const auto rect = Cutscene::GetContentRect();
+        const float nativeVisible = 801.0f * Cutscene::aspect / 600.0f;
+        const float visible = (nCutsceneBorders & Cutscene::Letterbox) ?
+            (rect.bottom - rect.top) / Screen.fHeight : 1.0f;
+        // Fit the director's visible vertical frame. With top/bottom bars off,
+        // it fills the height; without side bars the view widens horizontally.
+        return Screen.fAspectRatio / (4.0f / 3.0f) * nativeVisible / visible;
+    }
     return Screen.fAspectRatio / (4.0f / 3.0f);
 }
 
 export void InitCutscenes()
 {
     auto pStart = find_pattern<2>("68 DD 60 0A 3F B9 ? ? ? ? E8 ? ? ? ? 68 FA 00 00 00 6A 01 B9 ? ? ? ? E8 ? ? ? ?");
-    auto pDraw = find_pattern<2>("8B 85 ? ? ? ? F6 C4 40 74 ? A1 ? ? ? ? 57 50 8B 10 FF 52 0C A1 ? ? ? ? 6A 01 68 ? ? ? ? 6A 04 8B 08 6A 03 50 FF 51 58 F7 85");
-    if (pStart.size() != 1 || pDraw.size() != 1) return;
+    auto pDraw = hook::pattern("8B 85 A4 90 00 00 F6 C4 40 74 ? A1 ? ? ? ? 57 50 8B 10 FF 52 0C A1 ? ? ? ? 6A 01 68 ? ? ? ? 6A 04 8B 08 6A 03 50 FF 51 58 F7 85");
+    auto pDrawEnd = hook::pattern("F7 85 A4 90 00 00 00 00 00 02 74 ? 39 BD 4C 94 00 00");
+    auto pAspect = hook::pattern("83 EC 08 D9 81 C0 90 00 00 D8 0D ? ? ? ? 56 57 B8 FF 00 00 AF");
+    bool legacyLayout = true;
+    if (pDraw.empty()) // 1.1/1.2 cutscene layout
+    {
+        pDraw = hook::pattern("8B 85 A4 40 00 00 F6 C4 40 74 ? A1 ? ? ? ? 57 50 8B 10 FF 52 0C A1 ? ? ? ? 6A 01 68 ? ? ? ? 6A 04 8B 08 6A 03 50 FF 51 58 F7 85");
+        pDrawEnd = hook::pattern("F7 85 A4 40 00 00 00 00 00 02 74 ? 39 BD 54 44 00 00");
+        pAspect = hook::pattern("83 EC 0C D9 81 C0 40 00 00 D8 0D ? ? ? ? A1 ? ? ? ? 56 89 44 24 08 57 B8 FF 00 00 AF");
+        legacyLayout = false;
+    }
     auto start = reinterpret_cast<uintptr_t>(pStart.get_first());
     auto draw = reinterpret_cast<uintptr_t>(pDraw.get_first());
-    Cutscene::flagsOffset = Field<uint32_t>(draw, 2);
-    bool old = Cutscene::flagsOffset == 0x90A4;
-    if (!old && Cutscene::flagsOffset != 0x40A4) return;
-    Cutscene::targetOffset = Cutscene::flagsOffset + (old ? 960 : 968);
-    Cutscene::fadeOffset = Cutscene::flagsOffset + (old ? 984 : 992);
+    Cutscene::flagsOffset = legacyLayout ? 0x90A4 : 0x40A4;
+    Cutscene::targetOffset = Cutscene::flagsOffset + (legacyLayout ? 960 : 968);
+    Cutscene::fadeOffset = Cutscene::flagsOffset + (legacyLayout ? 984 : 992);
     Cutscene::hud = Field<uintptr_t>(start, 6);
-    Cutscene::graphics = *pDraw.get_first<void**>(12);
-    Cutscene::drawEnd = draw + 11 + Field<int8_t>(draw, 10);
-    auto aspect = start + 15 + Field<int32_t>(start, 11);
+    pHudIGraph.SetAddress(*pDraw.get_first<void**>(12));
+    Cutscene::drawEnd = reinterpret_cast<uintptr_t>(pDrawEnd.get_first());
+    auto aspect = reinterpret_cast<uintptr_t>(pAspect.get_first());
     static auto AspectHook = safetyhook::create_mid(aspect, [](SafetyHookContext& regs)
     {
         if (regs.ecx != Cutscene::hud) return;
@@ -149,12 +162,15 @@ export void InitCutscenes()
         if (std::isfinite(ratio) && ratio > 0.0f && ratio < 0.75f)
             Cutscene::aspect = ratio;
     });
-    if (!AspectHook) return;
+    if (!AspectHook)
+    {
+        throw std::runtime_error("Cutscene aspect hook unavailable");
+    }
     static auto BordersHook = safetyhook::create_mid(draw, Cutscene::DrawBorders);
     if (!BordersHook)
     {
         AspectHook.reset();
-        return;
+        throw std::runtime_error("Cutscene borders hook unavailable");
     }
     Cutscene::enabled = true;
 }

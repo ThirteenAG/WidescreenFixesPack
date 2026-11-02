@@ -103,7 +103,7 @@ namespace asi_overlay
         }
 
         // The player's choice of a setting: Get returns the value in effect, which differs
-        // when the choice can't be used now (DLAA without its DLLs runs as SMAA). The runtime interface has no call
+        // when the choice can't be used now (a choice that is unavailable falls back to another). The runtime interface has no call
         // for the choice, so it is read from the plugin's settings file, read-only, as editors do; the plugin wrote
         // it. Settings not in the file (or not stored in a cfg) fall back to the value in effect.
         bool Stored(size_t index, const asi_settings::Setting& s, std::string& value) const

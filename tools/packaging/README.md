@@ -46,7 +46,7 @@ coordinator and preserves its exit code.
 powershell -NoProfile -File tools/packaging/Release.ps1 -Mode after-build
 powershell -NoProfile -File tools/packaging/Release.ps1 -Mode as-ready
 powershell -NoProfile -File tools/packaging/Release.ps1 -Packages GTAVCDE.FusionFix -Signing off
-powershell -NoProfile -File tools/packaging/Release.ps1 -Existing -Packages FarCry.WidescreenFix -Signing off
+powershell -NoProfile -File tools/packaging/Release.ps1 -Existing -Packages FarCry.FusionFix -Signing off
 ```
 
 `-NoDownload` uses previously downloaded dependency archives. `-Existing` packages

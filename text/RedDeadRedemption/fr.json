@@ -1,6 +1,6 @@
 {
   "plugin.name": "Red Dead Redemption Fusion Fix",
-  "page.advanced": "Avancé",
+  "page.game": "Jeu",
   "SkipIntro": "Passer l'intro",
-  "SkipIntro.description": "Passe les logos et les mentions légales au démarrage."
+  "SkipIntro.description": "Démarre directement à l'écran titre, sans les logos Rockstar Games et Double Eleven. Désactivé, ils s'affichent comme dans le jeu d'origine. Nécessite un redémarrage."
 }

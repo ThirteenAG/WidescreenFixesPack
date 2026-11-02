@@ -14,29 +14,23 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            const auto mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 5);
-            constexpr int32_t nativeModes[] = { 0, 2, 4, 3, 1, 5 };
+            const auto mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 4);
+            constexpr int32_t nativeModes[] = { 0, 2, 4, 3, 1 };
             int32_t nWindowedMode = nativeModes[mode];
 
             // Per monitor DPI awareness, so the game gets real pixels on scaled desktops
-            using SetContext = BOOL(WINAPI*)(HANDLE);
-            if (auto set = reinterpret_cast<SetContext>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetProcessDpiAwarenessContext")))
-                set(reinterpret_cast<HANDLE>(-4));
-            else
-                SetProcessDPIAware();
+            WindowedModeWrapper::EnableDpiAwareness();
 
             if (nWindowedMode)
             {
                 switch (nWindowedMode)
                 {
-                    case 5:
-                        WindowedModeWrapper::bStretchWindow = true;
-                        break;
                     case 4:
                         WindowedModeWrapper::bScaleWindow = true;
                         break;
                     case 3:
                         WindowedModeWrapper::bEnableWindowResize = true;
+                        bAspectFromWindow = true;
                     case 2:
                         WindowedModeWrapper::bBorderlessWindowed = false;
                         break;
@@ -140,16 +134,24 @@ public:
                 }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
 
                 pattern = hook::pattern("A3 ? ? ? ? 89 35 ? ? ? ? 88 1D ? ? ? ? B9 ? ? ? ? 74 0B 6A 15");
-                static auto Width = *pattern.get_first<int32_t*>(1);
-                static auto Height = *pattern.get_first<int32_t*>(7);
+                WindowWidth.SetAddress(*pattern.get_first<int32_t*>(1));
+                WindowHeight.SetAddress(*pattern.get_first<int32_t*>(7));
                 struct ResHook
                 {
                     void operator()(injector::reg_pack& regs)
                     {
-                        *Width = regs.eax;
-                        *Height = regs.esi;
+                        WindowWidth.get() = regs.eax;
+                        WindowHeight.get() = regs.esi;
 
-                        WindowedModeWrapper::CenterWindowPosition(*Width, *Height);
+                        // A window with a frame gets the resolution as its client size, the frame around it
+                        if (WindowedModeWrapper::bBorderlessWindowed)
+                            WindowedModeWrapper::CenterWindowPosition(WindowWidth.get(), WindowHeight.get());
+                        else
+                        {
+                            WindowedModeWrapper::desiredClientWidth = WindowWidth.get();
+                            WindowedModeWrapper::desiredClientHeight = WindowHeight.get();
+                            WindowedModeWrapper::afterCreateWindow();
+                        }
                     }
                 }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(11));
             }

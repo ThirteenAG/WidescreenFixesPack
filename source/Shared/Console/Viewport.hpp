@@ -37,9 +37,8 @@ inline float bounded(float value, float low, float high, float fallback) {
     return value < low ? low : value > high ? high : value;
 }
 
-// MAIN.HudAspectRatioConstraint: "Auto" (or anything unparsable) = 0, the HUD
-// uses the whole screen; "W:H" or a decimal is clamped to 4:3 .. 32:9.
-inline float parse_hud_aspect(const char* text) {
+// "W:H" or a decimal, clamped to low .. high; "Auto" (or anything unparsable) = 0.
+inline float parse_aspect(const char* text, float low, float high) {
     if (!text) return 0.0f;
     char* end = nullptr;
     float value = std::strtof(text, &end);
@@ -52,8 +51,12 @@ inline float parse_hud_aspect(const char* text) {
     }
     while (*end == ' ' || *end == '\t' || *end == '\r') ++end;
     if (*end && *end != ';') return 0.0f;
-    return bounded(value, 4.0f / 3.0f, 32.0f / 9.0f, 0.0f);
+    return bounded(value, low, high, 0.0f);
 }
+// MAIN.HudAspectRatioConstraint: 0 = the HUD uses the whole screen.
+inline float parse_hud_aspect(const char* text) { return parse_aspect(text, 4.0f / 3.0f, 32.0f / 9.0f); }
+// MAIN.ForceAspectRatio: "Auto" (0) follows the emulator's display aspect.
+inline float parse_forced_aspect(const char* text) { return parse_aspect(text, 1.0f, 4.0f); }
 // Where an edge-anchored HUD element goes when the HUD is kept in a centered
 // box of the constraint aspect. Screens narrower than the box are unchanged.
 inline float hud_edge(float anchorX, float width, float aspect, float constraint) {

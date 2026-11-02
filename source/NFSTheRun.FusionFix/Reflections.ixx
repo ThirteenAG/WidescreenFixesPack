@@ -125,13 +125,8 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            if (FixSettings().Int("FRAMERATE.SmoothReflections") == 0)
-                return;
-
             auto pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 3C F3 0F 7E 84 24 80 00 00 00 66 0F D6 40 20");
             auto chassis = hook::pattern("8B 54 24 04 56 8B F1 8B 8E ? ? ? ? 8B 01 8B 40 1C 52 FF D0 8B CE E8 ? ? ? ? 8B CE E8 ? ? ? ? 8B CE E8");
-            if (pattern.empty() || chassis.empty())
-                return;
 
             pEnvmapEntity = *pattern.get_first<uintptr_t*>(1);
             shFrameInterpolationUpdate = safetyhook::create_inline(chassis.get_first(), FrameInterpolationUpdate);

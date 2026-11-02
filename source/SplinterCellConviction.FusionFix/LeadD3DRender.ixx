@@ -1,33 +1,43 @@
 module;
 
 #include <stdafx.h>
+#include <atomic>
 #include "FixSettings.hpp"
 
 export module LeadD3DRender;
 
 import ComVars;
 import Graphics;
+import Cinematics;
+import VideoFrame;
 
 // D3DVideoRenderer: quad is left, top, right, bottom in clip space, +0x14 is the render target texture (null for the screen)
 SafetyHookInline shVideoRender = {};
 void __fastcall VideoRender(void* renderer, void* edx, float* quad)
 {
     auto renderTarget = reinterpret_cast<void**>(quad)[5];
-    auto ratio = GetAspectRatio() / fDefaultAspectRatio;
-    if (renderTarget || std::abs(ratio - 1.0f) < 0.01f)
+    if (!renderTarget)
+    {
+        FullscreenVideo.store(true, std::memory_order_relaxed);
+        Cinematics::Video();
+    }
+    // The decoded dimensions precede the padded luma and chroma texture sizes.
+    const auto videoWidth = *reinterpret_cast<const uint32_t*>(static_cast<const uint8_t*>(renderer) + 28);
+    const auto videoHeight = *reinterpret_cast<const uint32_t*>(static_cast<const uint8_t*>(renderer) + 32);
+    const float videoAspect = videoWidth && videoHeight && videoWidth <= 16384 && videoHeight <= 16384 ?
+        float(videoWidth) / float(videoHeight) : fDefaultAspectRatio;
+    // The native player can defer resetting its backbuffer until playback finishes.
+    if (renderTarget)
         return shVideoRender.fastcall<void>(renderer, edx, quad);
-
+    const float aspect = GetPresentationAspectRatio();
+    const auto frame = SCVideoFrame::Fit(aspect, 1.0f, videoAspect, 1.0f, FixSettings().Int("MAIN.FMVWidescreenMode"));
+    if (aspect <= 0.0f || frame.width <= 0.0f || frame.height <= 0.0f)
+        return shVideoRender.fastcall<void>(renderer, edx, quad);
     float saved[4] = { quad[0], quad[1], quad[2], quad[3] };
-    if (ratio > 1.0f)
-    {
-        quad[0] /= ratio;
-        quad[2] /= ratio;
-    }
-    else
-    {
-        quad[1] *= ratio;
-        quad[3] *= ratio;
-    }
+    quad[0] *= frame.width / aspect;
+    quad[2] *= frame.width / aspect;
+    quad[1] *= frame.height;
+    quad[3] *= frame.height;
     shVideoRender.fastcall<void>(renderer, edx, quad);
     std::copy(std::begin(saved), std::end(saved), quad);
 }
@@ -39,7 +49,7 @@ export void InitLeadD3DRender()
     auto bDisableBlackAndWhiteFilter = FixSettings().Bool("GRAPHICS.DisableBlackAndWhiteFilter") != 0;
     auto bDisableCharacterLighting = FixSettings().Bool("GRAPHICS.DisableCharacterLighting") != 0;
     auto bEnhancedSonarVision = FixSettings().Bool("GRAPHICS.EnhancedSonarVision") != 0;
-    gBlacklistIndicators = FixSettings().Int("GRAPHICS.BlacklistIndicators");
+    gBlacklistIndicators.store(FixSettings().Bool("GRAPHICS.BlacklistIndicators"), std::memory_order_relaxed);
 
     if (bDisableDOF)
     {
@@ -47,7 +57,7 @@ export void InitLeadD3DRender()
         injector::MakeNOP(pattern.get_first(0), 5);
     }
 
-    if (bDisableBlackAndWhiteFilter)
+    if (bDisableBlackAndWhiteFilter || gBlacklistIndicators.load(std::memory_order_relaxed))
     {
         auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "E8 ? ? ? ? 8B 06 8B 08 83 C4 34");
         hb_100177B7.fun = injector::MakeCALL(pattern.get_first(), sub_100177B7, true).get();
@@ -56,7 +66,7 @@ export void InitLeadD3DRender()
     if (bDisableCharacterLighting)
     {
         auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "80 78 44 00");
-        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(3)) = 1;
+        injector::WriteMemory<uint8_t>(pattern.get_first<uint8_t>(3), 1, true);
     }
 
     if (bEnhancedSonarVision)
@@ -96,7 +106,7 @@ export void InitLeadD3DRender()
 
         //to do: add bNightVision check
         pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "75 15 8B 80");
-        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>()) = 0xEB;
+        injector::WriteMemory<uint8_t>(pattern.get_first<uint8_t>(), 0xEB, true);
 
         //to do: add bNightVision check
         pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "80 B8 ? ? ? ? ? 74 65");
@@ -107,15 +117,14 @@ export void InitLeadD3DRender()
         injector::MakeNOP(pattern.get_first(2), 7);
     }
 
-    if (FixSettings().Bool("DISPLAY.UltraWideSupport") != 0)
     {
         // Flash pass: don't restrict the viewport to the multi-monitor HUD rect (l3d::Options +0x1F8 enable, +0x1FC rect),
         // the Flash renderer places the stage into that rect itself (see InitWidescreenFix)
         auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "38 98 F8 01 00 00 74");
-        ProtectedGameRef<uint8_t>(pattern.get_first<uint8_t>(6)) = 0xEB;
+        injector::WriteMemory<uint8_t>(pattern.get_first<uint8_t>(6), 0xEB, true);
 
-        // Videos are drawn in that pass as a clip space quad covering the whole viewport, keep them in the 16:9 rect
-        pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "55 8D 6C 24 8C 81 EC ? ? ? ? 53 56 57 89 4D 28 E8");
-        shVideoRender = safetyhook::create_inline(pattern.get_first(), VideoRender);
     }
+
+    auto video = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "55 8D 6C 24 8C 81 EC ? ? ? ? 53 56 57 89 4D 28 E8");
+    shVideoRender = safetyhook::create_inline(video.get_first(), VideoRender);
 }

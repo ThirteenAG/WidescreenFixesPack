@@ -11,7 +11,32 @@ import ComVars;
 // FPSLimit limits the frame rate.
 namespace FrameLimit
 {
-    int limit = 0;
+    int previousLimit = 0;
+
+    int EffectiveLimit()
+    {
+        const int selected = FixSettings().Int("MAIN.FPSLimit");
+        if (selected >= 0)
+            return selected == 0 ? 0 : std::clamp(selected, 30, 1000);
+        static HMONITOR previousMonitor = nullptr;
+        static ULONGLONG checked = 0;
+        static int refresh = 60;
+        const auto monitor = MonitorFromWindow(WindowHandle, MONITOR_DEFAULTTOPRIMARY);
+        const auto now = GetTickCount64();
+        if (monitor != previousMonitor || now - checked >= 2000)
+        {
+            previousMonitor = monitor;
+            checked = now;
+            MONITORINFOEXW info{};
+            info.cbSize = sizeof(info);
+            DEVMODEW mode{};
+            mode.dmSize = sizeof(mode);
+            if (GetMonitorInfoW(monitor, &info) && EnumDisplaySettingsW(info.szDevice, ENUM_CURRENT_SETTINGS, &mode) &&
+                mode.dmDisplayFrequency > 1)
+                refresh = std::clamp(int(mode.dmDisplayFrequency), 30, 1000);
+        }
+        return refresh;
+    }
 
     HANDLE timer = nullptr;
     LARGE_INTEGER frequency = {};
@@ -55,6 +80,21 @@ namespace FrameLimit
     }
 }
 
+export void PaceFrame()
+{
+    using namespace FrameLimit;
+    const auto limit = EffectiveLimit();
+    if (limit != previousLimit)
+    {
+        previousLimit = limit;
+        next = 0;
+    }
+    if (limit > 0)
+        Wait(limit);
+    else
+        next = 0;
+}
+
 // The SMI grid (UI::SMIGridReveal, the tiles covering the screen between the game and the SMI screens) is shown and hidden with the
 // GridShow signal (339C2AC, 1 = show, 0 = hide: sub_1971470, no automatic reveal) and the GridTransition signal (339C264: sub_19AC740,
 // reveals by itself once it's in, ignored while the grid is moving). The SMI state (dword_344DB44) has +347h set when the grid is in and
@@ -64,14 +104,13 @@ namespace FrameLimit
 // ignored and nothing hides the grid, it stays over the ending cutscene and the credits (#1600). Its hide is sent once the grid is in.
 namespace GridFix
 {
-    uint8_t** pSMIState = nullptr;
     uintptr_t pGridShow = 0;
     char(__fastcall* SendSignal)(uintptr_t signal, void* edx, int value, char a3) = nullptr;
 
     bool pendingHide = false;
     ULONGLONG pendingTime = 0;
 
-    uint8_t* State() { return pSMIState ? *pSMIState : nullptr; }
+    uint8_t* State() { return SMIState.is_initialized() ? SMIState.get() : nullptr; }
 
     SafetyHookInline shSvMManual{};
     char __fastcall SvMManual(uintptr_t scene, void* edx)
@@ -108,11 +147,6 @@ export void InitFrameLimit()
 {
     using namespace FrameLimit;
 
-    auto& settings = FixSettings();
-    limit = settings.Int("MAIN.FPSLimit");
-    if (limit > 0)
-        limit = std::clamp(limit, 30, 1000);
-
     QueryPerformanceFrequency(&frequency);
     timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
 
@@ -120,11 +154,11 @@ export void InitFrameLimit()
     {
         auto pattern = hook::pattern("8B F1 8A 86 9F 01 00 00 83 CB FF 84 C0 A1");
         if (!pattern.empty())
-            GridFix::pSMIState = *pattern.get_first<uint8_t**>(14);
+            SMIState.SetAddress(*pattern.get_first<uint8_t**>(14));
         else
         {
             pattern = hook::pattern("8B F1 8A 86 9F 01 00 00 8B 0D ? ? ? ? 84 C0");
-            GridFix::pSMIState = *pattern.get_first<uint8_t**>(10);
+            SMIState.SetAddress(*pattern.get_first<uint8_t**>(10));
         }
         GridFix::shSvMManual = safetyhook::create_inline(pattern.get_first(-0x28), GridFix::SvMManual);
 
@@ -139,9 +173,5 @@ export void InitFrameLimit()
     static auto EngineTick = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         GridFix::Tick();
-        if (limit > 0)
-            Wait(limit);
-        else
-            next = 0;
     });
 }

@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "../OtherPlugins.hpp"
+#include "Shared/OtherPlugins.hpp"
 #include "Text.hpp"
 
 // The one row the NFS fixes add to a game's options menu: "Plugins" (WFP_PLUGINS). It lists the fix first, then every

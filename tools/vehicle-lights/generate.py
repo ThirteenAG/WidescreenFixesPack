@@ -1,4 +1,4 @@
-"""Offline generator for the Stories ImVehLM plugins.
+"""Offline generator for the vehicle lights of the Stories Fusion Fixes.
 
 Builds per-texture light rectangles (headlight / tail / brake / reverse) from
   * the hand-painted replacement packs in textures/GTAVCS and textures/GTALCS
@@ -272,11 +272,11 @@ def main():
                 dumps.setdefault(n, []).append(f)
     vcs = os.path.join(ROOT, 'textures', 'GTAVCS', 'replacements')
     lcs = os.path.join(ROOT, 'textures', 'GTALCS', 'replacements')
-    jobs = [('GTAVCS.PCSX2F.ImVehLM', vcs, True, 'textures/GTAVCS and the carlist lights.png outlines'),
-            ('GTAVCS.PPSSPP.ImVehLM', vcs, False, 'textures/GTAVCS'),
-            ('GTALCS.PPSSPP.ImVehLM', lcs, False, 'textures/GTALCS')]
-    if os.path.isfile(os.path.join(ROOT, 'source', 'GTALCS.PCSX2F.ImVehLM', 'Models.hpp')):
-        jobs.append(('GTALCS.PCSX2F.ImVehLM', lcs, False, 'textures/GTALCS'))
+    jobs = [('GTAVCS.PCSX2F.FusionFix', vcs, True, 'textures/GTAVCS and the carlist lights.png outlines'),
+            ('GTAVCS.PPSSPP.FusionFix', vcs, False, 'textures/GTAVCS'),
+            ('GTALCS.PPSSPP.FusionFix', lcs, False, 'textures/GTALCS')]
+    if os.path.isfile(os.path.join(ROOT, 'source', 'GTALCS.PCSX2F.FusionFix', 'Models.hpp')):
+        jobs.append(('GTALCS.PCSX2F.FusionFix', lcs, False, 'textures/GTALCS'))
     if a.only:
         jobs = [j for j in jobs if j[0] in a.only.split(',')]
     for plugin, pack, outlines, src, *header in jobs:

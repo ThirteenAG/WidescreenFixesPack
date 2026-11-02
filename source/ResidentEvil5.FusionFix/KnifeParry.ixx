@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 
 export module KnifeParry;
 
@@ -36,7 +35,7 @@ namespace
 
     constexpr double Window = 0.35; // seconds after the knife came up or swung
 
-    uintptr_t* pSession = nullptr;
+    GameRef<uintptr_t> Session;
     using RumbleFn = void(__fastcall*)(uintptr_t player, void* edx, int id, int flag);
     RumbleFn Rumble = nullptr;
 
@@ -62,7 +61,7 @@ namespace
 
     bool Online()
     {
-        auto session = pSession ? *pSession : 0;
+        auto session = Session.is_initialized() ? Session.get() : 0;
         auto state = session ? Field<uintptr_t>(session, 0x1042C) : 0;
         return state && Field<uint8_t>(state, 0x56C) != 0;
     }
@@ -165,21 +164,15 @@ export namespace KnifeParry
     {
         // Without the session the online check can't be made: no parry then
         auto session = hook::pattern("33 FF 8B F1 89 BE EC 2D 00 00 A1 ? ? ? ?");
-        if (!PatternAvailable(session, "ResidentEvil5.FusionFix: KnifeParry"))
-            return;
-        pSession = *session.get_first<uintptr_t*>(11);
+        Session.SetAddress(*session.get_first<uintptr_t*>(11));
         auto rumble = hook::pattern("83 EC 10 56 8B F1 83 BE A8 2D 00 00 00 0F 85 EB 00 00 00");
-        if (PatternUnique(rumble, "ResidentEvil5.FusionFix: KnifeParry"))
-            Rumble = (RumbleFn)rumble.get_first();
+        Rumble = (RumbleFn)rumble.get_first();
 
         // The player's update, after it decided whether this machine applies the player's hits (esi = player)
         auto pattern = hook::pattern("84 C0 74 07 8B CE E8 ? ? ? ? 8B 06 8B 90 F0 00 00 00");
-        if (PatternUnique(pattern, "ResidentEvil5.FusionFix: KnifeParry"))
+        static auto PlayerUpdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            static auto PlayerUpdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                OnPlayerUpdate(regs.esi, (regs.eax & 0xFF) != 0);
-            });
-        }
+            OnPlayerUpdate(regs.esi, (regs.eax & 0xFF) != 0);
+        });
     }
 }

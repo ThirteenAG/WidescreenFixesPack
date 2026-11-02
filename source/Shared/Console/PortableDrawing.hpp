@@ -1,9 +1,10 @@
 #pragma once
 #include "PSP.hpp"
+#include <algorithm>
 #include <cstdint>
 
 namespace console::portable {
-enum class DrawAnchor { None, Center, TopRight, BottomRight, Radar, World };
+enum class DrawAnchor { None, Center, TopRight, BottomRight, Radar, World, TopLeft };
 struct StoryDrawingSettings {
     float aspect = 16.0f / 9.0f, hud = 1.0f, radar = 1.0f, radarX = 12.0f, radarY = 196.0f;
     float multiplayerRadar = 1.0f, multiplayerRadarY = 196.0f;
@@ -34,6 +35,7 @@ template<class Game> struct StoryDrawing {
     inline static StoryDrawingProfile profile;
     inline static DrawAnchor anchor = DrawAnchor::None;
     inline static bool textured, worldText;
+    inline static bool containUi = false;
     inline static Point textAnchor;
     inline static SafetyMipsInline rectHook, texturedHook, bufferedHook, polygonHook,
         arrayHook, maskHook, spriteHook, spriteUVHook, spriteColorsHook, solidHook, printHook,
@@ -59,8 +61,22 @@ template<class Game> struct StoryDrawing {
     }
     static float Width(bool physical) { return physical ? float(*reinterpret_cast<int*>(profile.width)) : 480.0f; }
     static float Height(bool physical) { return physical ? float(*reinterpret_cast<int*>(profile.height)) : 272.0f; }
+    static Transform Contained(bool physical, bool centered = true)
+    {
+        const float ratio = (480.0f / 272.0f) / settings.aspect;
+        const float sx = std::min(ratio, 1.0f), sy = std::min(1.0f / ratio, 1.0f);
+        return {sx, sy, centered ? Width(physical) * 0.5f * (1.0f - sx) : 0.0f,
+            centered ? Height(physical) * 0.5f * (1.0f - sy) : 0.0f};
+    }
     static Transform TransformFor(bool physical, float centerX = 240.0f, float centerY = 136.0f) {
         if (anchor == DrawAnchor::None) return {};
+        if (anchor == DrawAnchor::TopLeft) {
+            // The left edge of the constrained HUD box (the screen edge in Auto).
+            auto transform = Contained(physical, false);
+            transform.offsetX = hud_edge(0.0f, Width(physical), settings.aspect, settings.hudAspect);
+            return transform;
+        }
+        if (containUi && anchor == DrawAnchor::Center) return Contained(physical);
         const float w = Width(physical), h = Height(physical);
         float x = w * 0.5f, y = h * 0.5f, size = 1.0f;
         switch (anchor) {
@@ -87,9 +103,7 @@ template<class Game> struct StoryDrawing {
         if (r.left <= 0 && r.right >= w) {
             if (!textured) return r; // Native fades and cutscene/weapon masks cover the viewport.
             if (r.top <= 0 && r.bottom >= h) {
-                float sx = (480.0f / 272.0f) / settings.aspect, sy = 1.0f;
-                if (sx > 1) { sy = 1 / sx; sx = 1; }
-                return Transform{sx, sy, w * 0.5f * (1 - sx), h * 0.5f * (1 - sy)}.rect(r);
+                return Contained(physical).rect(r);
             }
         }
         return TransformFor(physical, (r.left+r.right)*0.5f, (r.top+r.bottom)*0.5f).rect(r);

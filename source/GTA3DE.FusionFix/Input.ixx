@@ -46,8 +46,6 @@ public:
             // only after native viewport/menu/wheel/device gates have passed.
             const auto sample = MouseSampleAddress();
             const auto start = PadUpdateAddress();
-            if (!sample || !start)
-                return;
             baseUpdatePadHook = safetyhook::create_inline(start, BaseUpdatePad);
             if (!baseUpdatePadHook)
                 return;

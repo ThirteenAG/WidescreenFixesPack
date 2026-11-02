@@ -10,10 +10,10 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 test('selected release packages reach the coordinator without uploading Actions artifacts', async t => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'wfp-upload-selection-'));
   t.after(() => fs.rm(root, {recursive: true, force: true}));
-  await github({root, packages: 'Bully.WidescreenFix,MidnightClubLARemix.PPSSPP.FusionFix',
+  await github({root, packages: 'Bully.FusionFix,MidnightClubLARemix.PPSSPP.FusionFix',
     uploader: async () => assert.fail('Selected releases use the release upload steps'),
     spawnProcess: (command, args) => {
-      assert.equal(args[args.indexOf('-Packages') + 1], 'Bully.WidescreenFix,MidnightClubLARemix.PPSSPP.FusionFix');
+      assert.equal(args[args.indexOf('-Packages') + 1], 'Bully.FusionFix,MidnightClubLARemix.PPSSPP.FusionFix');
       const child = new EventEmitter();
       const work = args[args.indexOf('-WorkDirectory') + 1];
       setTimeout(async () => {

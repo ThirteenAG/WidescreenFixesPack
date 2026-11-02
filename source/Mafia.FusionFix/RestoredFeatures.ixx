@@ -4,6 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include <cmath>
 #include <numbers>
+#include <stdexcept>
 #include <string_view>
 
 export module RestoredFeatures;
@@ -36,9 +37,6 @@ namespace RestoredFeatures
         // Keep native archive decoding, file handles, timestamps and loose mods.
         auto pattern = find_module_pattern(GetModuleHandleW(L"rw_data.dll"),
             "8B 84 2E 18 01 00 00 85 C0 0F 84 ? ? ? ? 8B 8C 2E 1C 01 00 00");
-        if (pattern.size() != 1)
-            return;
-
         static SafetyHookMid hook = safetyhook::create_mid(pattern.get_first(7), [](SafetyHookContext& regs)
         {
             auto archive = regs.ebp + regs.esi;
@@ -96,11 +94,11 @@ namespace RestoredFeatures
         // projector paths (perspective and orthographic). 1.0 has no such sequence.
         auto pattern = find_module_pattern<2>(GetLS3DF(),
             "8B 85 E8 01 00 00 89 44 24 10 EB 08 C7 44 24 10 00 00 7F 43 D9 44 24 10 DB 5C 24 10 D9 85 EC 01 00 00");
-        if (pattern.size() != 2)
+        if (pattern.empty()) // 1.0 has no projector conversion
             return;
 
         static std::vector<SafetyHookMid> hooks;
-        for (size_t i = 0; i < pattern.size(); ++i)
+        for (size_t i = 0; i < 2; ++i)
         {
             hooks.emplace_back(safetyhook::create_mid(pattern.get(i).get<void>(20), [](SafetyHookContext& regs)
             {
@@ -118,8 +116,17 @@ namespace RestoredFeatures
     };
     static RadarLayout radar;
     static bool radarMap;
-    static void** graphics;
+    static GameRef<void*> pGameManager;
     static SafetyHookInline radarUpdateHook, radarDrawHook;
+
+    bool IsRaceTrack()
+    {
+        const auto manager = reinterpret_cast<uintptr_t>(pGameManager.get());
+        if (!manager)
+            return false;
+        const auto scene = Field<const char*>(manager, 104);
+        return scene && (!_stricmp(scene, "mise06-autodrom") || !_stricmp(scene, "mise06-autodrom_mirror"));
+    }
 
     float GetRadarZoom(uintptr_t hud)
     {
@@ -273,7 +280,9 @@ namespace RestoredFeatures
 
     void DrawRadarMap(SafetyHookContext& regs)
     {
-        auto igraph = *graphics;
+        if (IsRaceTrack())
+            return;
+        void* igraph = pRadarIGraph;
         if (!igraph)
             return;
         float scale = Field<float>(regs.ebp, radar.scale);
@@ -342,7 +351,7 @@ namespace RestoredFeatures
         Virtual<SetTexture>(igraph, 12)(igraph, nullptr);
     }
 
-    export void InitRadar()
+    void InitRadar()
     {
         radarMap = FixSettings().Bool("HUD.RadarMap") != 0;
 
@@ -350,35 +359,36 @@ namespace RestoredFeatures
         // and stack frame sizes in 1.0. Match the native radar's car-list fields.
         auto old = find_pattern("A1 ? ? ? ? 6A 01 6A 0C 50 8B 10 FF 52 44 8B 9D 94 94 00 00 8B 85 98 94 00 00");
         auto newer = find_pattern("A1 ? ? ? ? 6A 01 6A 0C 50 8B 10 FF 52 44 8B 9D 9C 44 00 00 8B 85 A0 44 00 00");
-        if (old.size() + newer.size() != 1)
-            return;
         auto pDraw = find_pattern("A1 ? ? ? ? 81 EC ? ? ? ? 53 55 56 57 33 FF 8B E9 8B 08 6A 01 57 50 FF 51 44");
-        if (pDraw.size() != 1)
-            return;
-        radar = old.size() == 1 ? RadarLayout{ 37008, 38072, 0xAF4, 0x18, 0x4C, 0x64, 37228 }
+        const bool oldLayout = !old.empty(); // 1.0; the alternative is 1.1/1.2
+        radar = oldLayout ? RadarLayout{ 37008, 38072, 0xAF4, 0x18, 0x4C, 0x64, 37228 }
             : RadarLayout{ 16528, 17600, 0xB04, 0x20, 0x6C, 0x74, 16756 };
         radarDrawHook = safetyhook::create_inline(pDraw.get_first(), DrawRadar);
-        if (!radarDrawHook || !radarMap)
+        if (!radarDrawHook)
+            throw std::runtime_error("Radar draw hook unavailable");
+        if (!radarMap)
             return;
+        auto manager = find_pattern("8B 0D ? ? ? ? 6A 01 6A FF 6A 00 68 ? ? ? ? E8 ? ? ? ? 8D 94 24 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 52");
+        pGameManager.SetAddress(*manager.get_first<void**>(2));
         auto pUpdate = find_pattern("83 EC 24 53 55 56 57 8B 7C 24 38 33 DB 89 7C 24 2C 89 5C 24 30 DF 6C 24 2C 8B E9");
         auto pCars = find_pattern("D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 8C 24 ? ? ? ? 8D 54 24 ? 51 52");
         auto pModels = find_pattern<2>(
             "D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 94 24 ? ? ? ? 8D 44 24 ? 52 50 D9 5C 24 ? 56 E8",
             "D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 94 24 ? ? ? ? 8D 84 24 ? ? ? ? 52 50 D9 5C 24 ? 56 E8");
-        if (pUpdate.size() != 1 || pCars.size() != 1 || pModels.size() != 2)
+        if (pModels.size() != 2)
         {
-            radarMap = false;
-            return;
+            radarDrawHook.reset();
+            throw std::runtime_error("Radar model sites unavailable");
         }
         void* target;
-        if (old.size() == 1)
+        if (oldLayout)
         {
-            graphics = *old.get_first<void**>(1);
+            pRadarIGraph.SetAddress(*old.get_first<void**>(1));
             target = old.get_first(15);
         }
         else
         {
-            graphics = *newer.get_first<void**>(1);
+            pRadarIGraph.SetAddress(*newer.get_first<void**>(1));
             target = newer.get_first(15);
         }
         // The second model sequence is a redundant legacy transform before
@@ -394,14 +404,36 @@ namespace RestoredFeatures
             CarsHook.reset();
             radarMap = false;
             radarUpdateHook.reset();
-            return;
+            radarDrawHook.reset();
+            throw std::runtime_error("Radar map hook unavailable");
         }
         auto pMask = find_pattern(
             "8B 10 51 50 FF 52 0C A1 ? ? ? ? 8D 8C 24 8C 00 00 00 6A 01 51 8B 10 6A 02 6A 05 50 FF 52 58 D9 44 24 ? D8 05",
             "8B 10 51 50 FF 52 0C A1 ? ? ? ? 8D 4C 24 7C 6A 01 51 8B 10 6A 02 6A 05 50 FF 52 58 D9 44 24 ? D8 05");
-        if (pMask.size() == 1)
         {
-            static auto RadarMaskHook = safetyhook::create_mid(pMask.get_first(old.size() == 1 ? 26 : 29), DrawRadarMask);
+            static auto RadarMaskHook = safetyhook::create_mid(pMask.get_first(oldLayout ? 26 : 29), DrawRadarMask);
+            if (!RadarMaskHook)
+            {
+                MapHook.reset();
+                ModelsHook.reset();
+                CarsHook.reset();
+                radarUpdateHook.reset();
+                radarDrawHook.reset();
+                radarMap = false;
+                throw std::runtime_error("Radar mask hook unavailable");
+            }
         }
     }
 }
+
+class RestoredFeaturesInit
+{
+public:
+    RestoredFeaturesInit()
+    {
+        WFP::onInitEvent() += []()
+        {
+            RestoredFeatures::InitRadar();
+        };
+    }
+} RestoredFeaturesInit;

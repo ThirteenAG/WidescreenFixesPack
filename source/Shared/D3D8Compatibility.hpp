@@ -3,10 +3,13 @@
 
 namespace D3D8Compatibility
 {
-    inline SafetyHookInline Create9Hook, CreateDeviceHook, PresentHook, CreateTextureHook;
+    inline SafetyHookInline Create9Hook, CreateDeviceHook, PresentHook, ResetHook, CreateTextureHook;
     inline bool HybridAdapter = false;
     inline bool GenerateMipmaps = false;
     inline int (*FrameLimit)() = nullptr;
+    // Optional: called before every Present and before a device reset (overlays).
+    inline void (*Frame)(IDirect3DDevice9*) = nullptr;
+    inline void (*BeforeReset)() = nullptr;
 
     inline void SelectHybridAdapter(HMODULE module)
     {
@@ -20,6 +23,8 @@ namespace D3D8Compatibility
     inline HRESULT WINAPI Present(IDirect3DDevice9* device, const RECT* source, const RECT* destination,
         HWND window, const RGNDATA* dirty)
     {
+        if (Frame)
+            Frame(device);
         const int limit = FrameLimit ? FrameLimit() : 0;
         static LARGE_INTEGER frequency = []()
         {
@@ -52,6 +57,13 @@ namespace D3D8Compatibility
         return PresentHook.stdcall<HRESULT>(device, source, destination, window, dirty);
     }
 
+    inline HRESULT WINAPI Reset(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* parameters)
+    {
+        if (BeforeReset)
+            BeforeReset();
+        return ResetHook.stdcall<HRESULT>(device, parameters);
+    }
+
     inline HRESULT WINAPI CreateTexture(IDirect3DDevice9* device, UINT width, UINT height, UINT levels,
         DWORD usage, D3DFORMAT format, D3DPOOL pool, IDirect3DTexture9** texture, HANDLE* shared)
     {
@@ -73,8 +85,10 @@ namespace D3D8Compatibility
         if (SUCCEEDED(result) && device && *device)
         {
             auto table = *reinterpret_cast<void***>(*device);
-            if (FrameLimit && !PresentHook)
+            if ((FrameLimit || Frame) && !PresentHook)
                 PresentHook = safetyhook::create_inline(table[17], Present);
+            if (BeforeReset && !ResetHook)
+                ResetHook = safetyhook::create_inline(table[16], Reset);
             if (GenerateMipmaps && !CreateTextureHook)
                 CreateTextureHook = safetyhook::create_inline(table[23], CreateTexture);
         }
@@ -102,7 +116,7 @@ namespace D3D8Compatibility
             auto module = GetModuleHandleW(L"d3d9.dll");
             if (HybridAdapter)
                 SelectHybridAdapter(module);
-            if (GenerateMipmaps || FrameLimit)
+            if (GenerateMipmaps || FrameLimit || Frame)
             {
                 if (auto create = GetProcAddress(module, "Direct3DCreate9"))
                     Create9Hook = safetyhook::create_inline(create, Create9);

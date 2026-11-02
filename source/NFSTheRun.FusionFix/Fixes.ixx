@@ -6,9 +6,7 @@ export module Fixes;
 
 import ComVars;
 
-// The render job that builds the primitives of the world's entities sometimes meets an entity whose mesh was already
-// freed by streaming, and crashes (GitHub issue #2099, the crashes during races). Such an entity is skipped like the
-// ones the job skips on its own.
+// The render job skips entities whose mesh information cannot be read, using the game's existing skip path.
 namespace
 {
     bool HasMeshData(uintptr_t entity)
@@ -43,15 +41,12 @@ public:
         WFP::onInitEvent() += []()
         {
             auto pattern = hook::pattern("0F 84 ? ? ? ? 8B 57 50 8B 0A 8B 51 10 8B 4A 04 D1 E9");
-            if (!pattern.empty())
+            static auto skipEntity = injector::GetBranchDestination(pattern.get_first()).as_int();
+            static auto BuildEntityPrimitivesHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
             {
-                static auto skipEntity = injector::GetBranchDestination(pattern.get_first()).as_int();
-                static auto BuildEntityPrimitivesHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
-                {
-                    if (!HasMeshData(regs.edi))
-                        regs.eip = skipEntity;
-                });
-            }
+                if (!HasMeshData(regs.edi))
+                    regs.eip = skipEntity;
+            });
         };
     }
 } Fixes;

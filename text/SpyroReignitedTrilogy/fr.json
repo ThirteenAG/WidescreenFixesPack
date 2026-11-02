@@ -1,8 +1,9 @@
 {
-  "plugin.name": "Spyro Reignited Trilogy Widescreen Fix",
-  "page.advanced": "Avancé",
-  "OverrideFOV": "Champ de vision fixe",
-  "OverrideFOV.description": "Un champ de vision horizontal fixe en degrés en 16:9, avant la correction grand écran. -1 garde celui du jeu.",
+  "plugin.name": "Spyro Reignited Trilogy Fusion Fix",
+  "page.camera": "Caméra",
   "FOVFactor": "Champ de vision",
-  "FOVFactor.description": "Multiplie le champ de vision de la caméra, qui s'élargit déjà avec l'écran (Hor+). Les vues scriptées utilisent la même caméra et changent aussi."
+  "FOVFactor.description": "Multiplie le champ de vision en plus de la correction grand écran, qui montre déjà davantage sur les côtés sur les écrans plus larges que 16:9. 1.0 garde le cadrage du jeu ; une valeur plus élevée montre plus, une valeur plus basse rapproche l'image. Les cinématiques et les autres vues scriptées utilisent la même caméra et changent aussi. S'applique immédiatement.",
+  "OverrideFOV": "Champ de vision fixe",
+  "OverrideFOV.description": "Remplace le champ de vision de la caméra par un angle horizontal fixe en degrés, tel qu'il serait en 16:9 ; la correction grand écran et le multiplicateur du champ de vision s'appliquent toujours par-dessus. Toutes les vues l'utilisent, y compris les cinématiques et les effets de zoom du jeu. Désactivé garde le champ de vision propre à la caméra. S'applique immédiatement.",
+  "OverrideFOV.off": "Désactivé"
 }

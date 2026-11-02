@@ -1,5 +1,5 @@
 #pragma once
-#include "../WindowCursor.hpp"
+#include "Shared/WindowCursor.hpp"
 
 namespace TonyDisplay
 {
@@ -131,11 +131,6 @@ namespace TonyDisplay
     void Intro(const char* signature, int callOffset, int resumeOffset)
     {
         auto pattern = hook::pattern(signature);
-        if (pattern.size() != 1)
-        {
-            OutputDebugStringA("Tony Hawk: intro movie pattern unavailable.\n");
-            return;
-        }
         static const uintptr_t resume = reinterpret_cast<uintptr_t>(pattern.get_first(resumeOffset));
         MovieHook = safetyhook::create_mid(pattern.get_first(callOffset), [](SafetyHookContext& regs)
         {

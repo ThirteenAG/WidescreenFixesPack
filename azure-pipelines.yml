@@ -71,13 +71,6 @@ jobs:
       configuration: Release
       maximumCpuCount: true
 
-  - task: MSBuild@1
-    displayName: Build CXBXR
-    inputs:
-      solution: 'build/CXBXR.WidescreenFixesPack.slnx'
-      configuration: Release
-      maximumCpuCount: true
-
   - task: CmdLine@2
     displayName: Before package
     inputs:

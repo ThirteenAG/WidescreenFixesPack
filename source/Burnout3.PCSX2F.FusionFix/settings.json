@@ -1,0 +1,226 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.ForceAspectRatio",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "maxLength": 14,
+      "label": "@ForceAspectRatio",
+      "description": "@ForceAspectRatio.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ],
+      "maxLength": 14,
+      "label": "@HudAspectRatioConstraint",
+      "description": "@HudAspectRatioConstraint.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.HudScale",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 1.5,
+      "step": 0.05,
+      "label": "@HudScale",
+      "description": "@HudScale.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@FMVWidescreenMode",
+      "description": "@FMVWidescreenMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@fmv.original"
+        },
+        {
+          "value": 1,
+          "label": "@fmv.fill"
+        }
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.MouseSensitivity",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.1,
+      "max": 5.0,
+      "step": 0.05,
+      "label": "@MouseSensitivity",
+      "description": "@MouseSensitivity.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.InvertMouseY",
+      "type": "bool",
+      "default": false,
+      "label": "@InvertMouseY",
+      "description": "@InvertMouseY.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.25,
+      "max": 4.0,
+      "step": 0.05,
+      "label": "@GamepadCameraSpeed",
+      "description": "@GamepadCameraSpeed.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.InvertGamepadY",
+      "type": "bool",
+      "default": false,
+      "label": "@InvertGamepadY",
+      "description": "@InvertGamepadY.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.SplitScreenSideBySide",
+      "type": "bool",
+      "default": false,
+      "label": "@SplitScreenSideBySide",
+      "description": "@SplitScreenSideBySide.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "choice",
+      "default": 60,
+      "label": "@FPSLimit",
+      "description": "@FPSLimit.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 30,
+          "label": "@fps.original"
+        },
+        {
+          "value": 60,
+          "label": "@fps.60"
+        }
+      ],
+      "presets": {
+        "vanilla": 30,
+        "recommended": 60,
+        "enhanced": 60
+      }
+    }
+  ]
+}

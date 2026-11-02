@@ -84,9 +84,18 @@ export void InstallClassicOrbit(const ClassicOrbitSites& verified)
         if (MouseOrbitAllowed())
             c.xmm0.f32[0] *= 25.0f / 6.0f;
     });
-    add(4, [](SafetyHookContext& c) { c.xmm1.f32[0] = Settings.centeringDelay; });
-    add(5, [](SafetyHookContext&) { *sites.carPitchHold = Settings.centeringDelay; });
-    add(6, [](SafetyHookContext&) { *sites.carPitchHold = Settings.centeringDelay; });
+    add(4, [](SafetyHookContext& c)
+    {
+        c.xmm1.f32[0] = Settings.centeringDelay;
+    });
+    add(5, [](SafetyHookContext&)
+    {
+        *sites.carPitchHold = Settings.centeringDelay;
+    });
+    add(6, [](SafetyHookContext&)
+    {
+        *sites.carPitchHold = Settings.centeringDelay;
+    });
     add(7, [](SafetyHookContext& c)
     {
         if (MouseOrbitAllowed())

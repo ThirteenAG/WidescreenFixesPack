@@ -2,7 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
+#include <atomic>
 
 export module SplitScreen;
 
@@ -17,15 +17,19 @@ namespace
 {
     const int* pVertical = nullptr;
     const int* pSwap = nullptr;
+    // HUD transforms must use the layout actually installed for this session.
+    std::atomic<bool> bAppliedVertical{ false };
 
     void(__stdcall* VirtualToScreenRect)(void* out, int32_t* rect) = nullptr;
 
     void SetHalf(int32_t* rect, int32_t half)
     {
+        const bool vertical = *pVertical != 0;
+        bAppliedVertical.store(vertical, std::memory_order_relaxed);
         if (*pSwap)
             half = 1 - half;
         const int32_t w = (int32_t)(720.0f * GetAspectRatio());
-        if (*pVertical)
+        if (vertical)
         {
             rect[0] = half == 0 ? 0 : w / 2;
             rect[1] = 0;
@@ -56,7 +60,7 @@ namespace
 
 export bool IsSplitScreenVertical()
 {
-    return pVertical && *pVertical;
+    return bAppliedVertical.load(std::memory_order_relaxed);
 }
 
 class SplitScreenFix
@@ -72,8 +76,6 @@ public:
 
             auto top = hook::pattern("E8 ? ? ? ? 6A 01 6A 00 8B CE E8 ? ? ? ? 8D 44 24 30");
             auto bottom = hook::pattern("E8 ? ? ? ? 6A 01 6A 01 8B CE E8 ? ? ? ? 8D 44 24 30");
-            if (!PatternAvailable(top, "ResidentEvilRevelations2.FusionFix: SplitScreen") || !PatternAvailable(bottom, "ResidentEvilRevelations2.FusionFix: SplitScreen"))
-                return;
 
             VirtualToScreenRect = (decltype(VirtualToScreenRect))injector::GetBranchDestination(top.get_first()).as_int();
             injector::MakeCALL(top.get_first(), SplitScreenSetupTop, true);

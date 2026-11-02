@@ -3,6 +3,8 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include <d3d9.h>
+#include <atomic>
+#include <unordered_set>
 
 export module Frontend;
 
@@ -24,20 +26,23 @@ namespace cFEng
     float fWidescreenHudOffset = 120.0f;
     float fRadarOffset = 0.0f;
 
+    // How far the side groups move out. Up to 16:9 as before; on wider boxes they keep their 16:9 distance from the
+    // edges (the HUD's units are 1/720 of the screen height there)
+    float WidescreenOffset(float aspect)
+    {
+        constexpr float wide = 16.0f / 9.0f;
+        float offset = -CalculateWidescreenOffset(480.0f * std::min(aspect, wide), 480.0f, 480.0f, 480.0f);
+        return offset + 360.0f * std::max(aspect - wide, 0.0f);
+    }
+
     void updateWidescreenOffset()
     {
-        cFEng::fWidescreenHudOffset = -CalculateWidescreenOffset(static_cast<float>(*Width), static_cast<float>(*Height), 640.0f * 0.75f, 480.0f);
-        if (cFEng::fHudAspectRatioConstraint.has_value())
-        {
-            float value = cFEng::fHudAspectRatioConstraint.value();
-            if (value < 0.0f || value > (32.0f / 9.0f))
-                cFEng::fWidescreenHudOffset = value;
-            else
-            {
-                value = ClampHudAspectRatio(value, static_cast<float>(*Width) / static_cast<float>(*Height));
-                cFEng::fWidescreenHudOffset = -CalculateWidescreenOffset(static_cast<float>(*Height) * value, static_cast<float>(*Height), 640.0f * 0.75f, 480.0f);
-            }
-        }
+        if (!Height || !*Height)
+            return;
+        float aspect = ScreenAspectRatio();
+        if (cFEng::fHudAspectRatioConstraint.has_value() && std::isfinite(*cFEng::fHudAspectRatioConstraint))
+            aspect = std::min(std::clamp(*cFEng::fHudAspectRatioConstraint, 4.0f / 3.0f, 32.0f / 9.0f), aspect);
+        cFEng::fWidescreenHudOffset = WidescreenOffset(aspect);
     };
 
     void updateRadarOffset()
@@ -45,65 +50,91 @@ namespace cFEng
         fRadarOffset = fWidescreenHudOffset - 20.0f;
     };
 
-    std::unordered_map<void*, std::pair<float, float>> originalCenterCache;
-
-    void** mInstance = nullptr;
-
-    static void* s_currentLeftGroup = nullptr;
-    static void* s_currentRightGroup = nullptr;
-
-    injector::hook_back<void(__fastcall*)(void*, void*, int, char const*, int)> hbQueuePackageMessage;
-    void __fastcall QueuePackageMessage(void* instance, void* edx, int MessageHash, char const* packageName, int a4)
+    // The radar map's x as the HUD left it and as moved, for each radar
+    struct RadarPosition
     {
+        float original;
+        float moved;
+    };
+    std::unordered_map<uintptr_t, RadarPosition> RadarPositions;
+    std::unordered_map<uintptr_t, uint32_t> HudRevisions;
+    uint32_t HudRevision = 0;
+
+    float RadarX(uintptr_t radar, float x)
+    {
+        updateRadarOffset();
+        auto it = RadarPositions.find(radar);
+        float original = (it != RadarPositions.end() && it->second.moved == x) ? it->second.original : x;
+        float moved = original - fRadarOffset;
+        RadarPositions[radar] = { original, moved };
+        return moved;
+    }
+
+    struct Position
+    {
+        float originalX;
+    };
+    std::unordered_map<void*, Position> originalCenterCache;
+    std::unordered_set<std::string> HudPackages;
+    std::atomic_bool HudLayoutChanged = false;
+    void** mInstance = nullptr;
+    SafetyHookInline shDestroyGroup;
+
+    int __fastcall DestroyGroup(void* object, void*)
+    {
+        originalCenterCache.erase(object);
+        return shDestroyGroup.unsafe_thiscall<int>(object);
+    }
+
+    bool ApplyHudPackage(const char* packageName)
+    {
+        bool found = false;
+        for (bool right : { false, true })
+        {
+            auto object = FE::Object::FindObject(packageName, right ? 0x5D0101F1 : 0x1603009E);
+            if (!object)
+                continue;
+            found = true;
+            float x{}, y{};
+            FE::Object::GetCenter(object, &x, &y);
+            // Group bounds can change after SetCenter as their children animate. Keep the
+            // authored anchor for this object's lifetime instead of accumulating that change.
+            auto& saved = originalCenterCache.try_emplace(object, Position{ x }).first->second;
+            float target = saved.originalX + (right ? fWidescreenHudOffset : -fWidescreenHudOffset);
+            if (std::abs(x - target) > 0.001f)
+                FE::Object::SetCenter(object, target, y);
+        }
+        return found;
+    }
+
+    void ServiceHud()
+    {
+        bool changed = HudLayoutChanged.exchange(false);
+        if (changed)
+            fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+        float previous = fWidescreenHudOffset;
         updateWidescreenOffset();
-
-        hbQueuePackageMessage.fun(instance, edx, MessageHash, packageName, a4);
-
-        void* leftGroup = FE::Object::FindObject(packageName, 0x1603009E);
-        void* rightGroup = FE::Object::FindObject(packageName, 0x5D0101F1);
-
-        if (leftGroup && leftGroup != s_currentLeftGroup)
+        if (!changed && previous == fWidescreenHudOffset)
+            return;
+        ++HudRevision;
+        for (auto it = HudPackages.begin(); it != HudPackages.end();)
         {
-            originalCenterCache.erase(s_currentLeftGroup);
-            s_currentLeftGroup = leftGroup;
-        }
-
-        if (rightGroup && rightGroup != s_currentRightGroup)
-        {
-            originalCenterCache.erase(s_currentRightGroup);
-            s_currentRightGroup = rightGroup;
-        }
-
-        if (leftGroup)
-        {
-            auto it = originalCenterCache.find(leftGroup);
-            if (it == originalCenterCache.end())
-            {
-                float x = 0.0f, y = 0.0f;
-                FE::Object::GetCenter(leftGroup, &x, &y);
-                originalCenterCache[leftGroup] = { x, y };
-                it = originalCenterCache.find(leftGroup);
-            }
-
-            const auto& [origX, origY] = it->second;
-            FE::Object::SetCenter(leftGroup, origX - fWidescreenHudOffset, origY);
-        }
-
-        if (rightGroup)
-        {
-            auto it = originalCenterCache.find(rightGroup);
-            if (it == originalCenterCache.end())
-            {
-                float x = 0.0f, y = 0.0f;
-                FE::Object::GetCenter(rightGroup, &x, &y);
-                originalCenterCache[rightGroup] = { x, y };
-                it = originalCenterCache.find(rightGroup);
-            }
-
-            const auto& [origX, origY] = it->second;
-            FE::Object::SetCenter(rightGroup, origX + fWidescreenHudOffset, origY);
+            if (ApplyHudPackage(it->c_str()))
+                ++it;
+            else
+                it = HudPackages.erase(it);
         }
     }
+
+    injector::hook_back<void(__fastcall*)(void*, void*, int, char const*, int)> hbQueuePackageMessage;
+    void __fastcall QueuePackageMessage(void* instance, void* edx, int messageHash, const char* packageName, int argument)
+    {
+        hbQueuePackageMessage.fun(instance, edx, messageHash, packageName, argument);
+        updateWidescreenOffset();
+        if (packageName && ApplyHudPackage(packageName))
+            HudPackages.emplace(packageName);
+    }
+
 }
 
 class Frontend
@@ -115,11 +146,16 @@ public:
         {
             cFEng::fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
 
-            // A changed HUD aspect ratio moves the HUD groups with their package's next message
+            // Settings callbacks defer native layout work to the game thread.
             FixSettings().OnChange("MAIN.HudAspectRatioConstraint", []()
             {
-                cFEng::fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+                cFEng::HudLayoutChanged = true;
             });
+            WFP::onGameProcessEvent() += cFEng::ServiceHud;
+
+            // Some protected builds relocate the destructor's first call after this shared prologue.
+            auto destroyGroup = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 51 56 A1 ? ? ? ? 33 C4 50 8D 44 24 0C 64 A3 00 00 00 00 8B F1 89 74 24 08 8D 4E 5C C7 44 24 14 00 00 00 00 C7 01 ? ? ? ?");
+            cFEng::shDestroyGroup = safetyhook::create_inline(destroyGroup.get_first(), cFEng::DestroyGroup);
 
             auto pattern = hook::pattern("E8 ? ? ? ? 6A ? 57 E8 ? ? ? ? 83 C4 ? EB ? 8B 7C 24");
             FE::Object::SetCenter = (decltype(FE::Object::SetCenter))injector::GetBranchDestination(pattern.get_first()).as_int();
@@ -138,19 +174,17 @@ public:
             injector::MakeCALL(pattern.get_first(), cFEng::QueuePackageMessage, true);
 
             pattern = find_pattern("74 ? 68 ? ? ? ? E8 ? ? ? ? 85 F6");
-            if (!pattern.empty())
-            {
-                injector::MakeNOP(pattern.get_first(), 2, true);
-            }
+            injector::MakeNOP(pattern.get_first(), 2, true);
 
+            // FEngHud::SetWideScreenMode moves the radar's map once per HUD (x at +0xBC, esi): by the offset that applies
+            // now, from where the HUD put it, also when it runs again for a changed HUD box
             pattern = find_pattern("F2 0F 5C 05 ? ? ? ? EB ? 68");
             if (!pattern.empty())
             {
                 injector::MakeNOP(pattern.get_first(0), 8);
                 static auto SetWideScreenModeHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
-                    cFEng::updateRadarOffset();
-                    regs.xmm0.f64[0] -= cFEng::fRadarOffset;
+                    regs.xmm0.f64[0] = cFEng::RadarX(regs.esi, static_cast<float>(regs.xmm0.f64[0]));
                 });
             }
             else
@@ -159,10 +193,22 @@ public:
                 injector::MakeNOP(pattern.get_first(0), 8);
                 static auto SetWideScreenModeHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
-                    cFEng::updateRadarOffset();
-                    regs.xmm0.f32[0] -= cFEng::fRadarOffset;
+                    regs.xmm0.f32[0] = cFEng::RadarX(regs.esi, regs.xmm0.f32[0]);
                 });
             }
+
+            // FEngHud's update calls SetWideScreenMode while its flag (byte at +0x371) is clear: cleared again once for
+            // each HUD after the HUD box changed
+            pattern = GetPattern("80 BE 71 03 00 00 00 75 ? 8B CE E8");
+            static auto WideScreenModeCheckHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                auto& revision = cFEng::HudRevisions[regs.esi];
+                if (revision != cFEng::HudRevision)
+                {
+                    revision = cFEng::HudRevision;
+                    *reinterpret_cast<uint8_t*>(regs.esi + 0x371) = 0;
+                }
+            });
 
             //pattern = find_pattern("F2 0F 58 05 ? ? ? ? 8B 86");
             //if (!pattern.empty())

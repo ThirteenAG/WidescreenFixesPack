@@ -1,0 +1,1177 @@
+module;
+
+#include <stdafx.h>
+#include <ranges>
+#include "common.h"
+#include "FixSettings.hpp"
+#include "callargs.h"
+#include <Zydis.h>
+
+export module Frontend;
+
+import Skeleton;
+import Sprite2d;
+import Draw;
+import Menu;
+import Timer;
+import Camera;
+
+auto INV_SCREEN_WIDTH = [](float fAspectRatio) { return (1.0f / 640.0f) / (fAspectRatio / (4.0f / 3.0f)); };
+
+#pragma pack(push, 1)
+export struct CFontDetails
+{
+    CRGBA color;
+    float scaleX;
+    float scaleY;
+    float slant;
+    float slantRefX;
+    float slantRefY;
+    uint8_t justify;
+    uint8_t centre;
+    uint8_t rightJustify;
+    uint8_t background;
+    uint8_t backgroundOnlyText;
+    uint8_t proportional;
+    uint8_t bIsShadow;
+    uint8_t bFlash;
+    uint8_t bBold;
+    uint8_t pad41[3];
+    float alphaFade;
+    CRGBA backgroundColor;
+    float wrapX;
+    float centreSize;
+    float rightJustifyWrap;
+    uint16_t style;
+    uint8_t bFontHalfTexture;
+    uint8_t pad3B_3F[5];
+    int16_t dropShadowPosition;
+    CRGBA dropColor;
+    uint8_t bFlashState;
+    uint8_t pad67;
+    int nFlashTimer;
+    uint8_t anonymous_23;
+    uint8_t pad6D_6F[3];
+    uint32_t anonymous_25;
+};
+#pragma pack(pop)
+
+export struct CFontRenderState
+{
+    uint32_t anonymous_0;
+    float fTextPosX;
+    float fTextPosY;
+    float scaleX;
+    float scaleY;
+    CRGBA color;
+    float fExtraSpace;
+    float slant;
+    float slantRefX;
+    float slantRefY;
+    uint8_t bIsShadow;
+    uint8_t bFontHalfTexture;
+    uint8_t proportional;
+    uint8_t anonymous_14;
+    int16_t style;
+};
+
+export union tFontRenderStatePointer
+{
+    CFontRenderState* pRenderState;
+    wchar_t* pStr;
+
+    void Align()
+    {
+        if ((uintptr_t)pStr % 4)
+            pStr++;
+    }
+};
+
+export GameRef<tFontRenderStatePointer> FontRenderStatePointer([]() -> tFontRenderStatePointer*
+{
+    auto pattern = hook::pattern("B8 ? ? ? ? 29 F2 81 FA ? ? ? ? 83 DA ? ? ? 83 C2");
+    return *pattern.get_first<tFontRenderStatePointer*>(1);
+});
+
+export constexpr size_t FontRenderStateBufSize = 1024;
+export uint8_t* FontRenderStateBuf = nullptr;
+
+export int ReplaceTextShadowWithOutline = 0;
+
+namespace Subtitles
+{
+    float RadarReserve = 140.0f;
+    injector::hook_back<void(__cdecl*)(float)> hbSetCentreSize;
+
+    void __cdecl SetCentreSize(float width)
+    {
+        if (!TheCamera->m_WideScreenOn)
+        {
+            // Reserve the radar inside the same centered canvas as the HUD.
+            const float hudWidth = SCREEN_WIDTH + 2.0f * std::min(fWidescreenHudOffset, 0.0f);
+            width = std::max(1.0f, std::min(width, hudWidth - 2.0f * SCREEN_SCALE_X(RadarReserve)));
+        }
+        hbSetCentreSize.fun(width);
+    }
+}
+
+float KeepSubtitlesOnScreen(float x, float y, unsigned short* text);
+
+injector::hook_back<void(__cdecl*)(float, float, unsigned short*)> hbPrintStringSubtitles;
+void __cdecl PrintStringSubtitles(float PosX, float PosY, unsigned short* c)
+{
+    if (!TheCamera->m_WideScreenOn) PosX = SCREEN_WIDTH * 0.5f;
+
+    // Vanilla 4:3 places subtitles inside the bottom bar (H - SCALE_Y(80)), and
+    // the vanilla bar is 0.15H + SCALE_Y(14) tall. At wider aspects the bar
+    // shrinks and that position no longer fits, so move subtitles up by exactly
+    // how much smaller the current bar is than the vanilla 4:3 one. At 4:3 the
+    // mod bar equals the vanilla bar, so nothing moves.
+    float bottomBorder = GetCurrentBottomBorderSize();
+    if (bottomBorder > 0.0f)
+    {
+        float vanillaBar = SCREEN_HEIGHT * 0.15f + SCREEN_SCALE_Y(14.0f);
+        if (bottomBorder < vanillaBar)
+            PosY -= vanillaBar - bottomBorder;
+    }
+
+    PosY = KeepSubtitlesOnScreen(PosX, PosY, c);
+    return hbPrintStringSubtitles.fun(PosX, PosY, c);
+}
+
+export namespace CFont
+{
+    void (__cdecl* DrawFonts)() = nullptr;
+    void (__cdecl* SetColor)(CRGBA* color) = nullptr;
+    wchar_t* (__cdecl* ParseToken)(wchar_t* s) = nullptr;
+
+    GameRef<CFontRenderState> RenderState([]() -> CFontRenderState*
+    {
+        auto pattern = hook::pattern("A3 ? ? ? ? A0 ? ? ? ? D9 1D");
+        return *pattern.get_first<CFontRenderState*>(1);
+    });
+
+    GameRef<CFontDetails> Details([]() -> CFontDetails*
+    {
+        auto pattern = hook::pattern("80 3D ? ? ? ? ? 75 ? 80 3D ? ? ? ? ? 75 ? 80 3D ? ? ? ? ? 0F 84");
+        return *pattern.get_first<CFontDetails*>(2);
+    });
+
+    enum
+    {
+        FONT_BANK,
+        FONT_STANDARD,
+        FONT_HEADING,
+
+        MAX_FONTS = FONT_HEADING
+    };
+
+    SafetyHookInline shPrintOutlinedString = {};
+
+    void __cdecl PrintOutlinedString(float x, float y, uint32_t, wchar_t* start, wchar_t* end, float spwidth)
+    {
+        if (RenderState->style != Details->style)
+        {
+            CFont::DrawFonts();
+            RenderState->style = Details->style;
+        }
+
+        float dropShadowPosition = Details->dropShadowPosition;
+        if (dropShadowPosition != 0.0f && (Details->style == FONT_BANK || Details->style == FONT_STANDARD))
+        {
+            CRGBA color = Details->color;
+            uint8_t originalIsShadow = Details->bIsShadow;
+
+            // Disable original shadow recursion for all custom passes
+            Details->dropShadowPosition = 0;
+
+            if (ReplaceTextShadowWithOutline)
+            {
+                const int sampleCount = 16;
+
+                // 16-direction ring (smoother edge)
+                static constexpr float dirs16[][2] = {
+                    { 1.0000f,  0.0000f}, { 0.9239f,  0.3827f}, { 0.7071f,  0.7071f}, { 0.3827f,  0.9239f},
+                    { 0.0000f,  1.0000f}, {-0.3827f,  0.9239f}, {-0.7071f,  0.7071f}, {-0.9239f,  0.3827f},
+                    {-1.0000f,  0.0000f}, {-0.9239f, -0.3827f}, {-0.7071f, -0.7071f}, {-0.3827f, -0.9239f},
+                    { 0.0000f, -1.0000f}, { 0.3827f, -0.9239f}, { 0.7071f, -0.7071f}, { 0.9239f, -0.3827f}
+                };
+
+                const float targetAlpha = (float)color.a / 255.0f;
+                const float perPassAlphaF = 1.0f - std::pow(1.0f - targetAlpha, 1.0f / (float)sampleCount);
+
+                constexpr float kOutlineAlphaBoost = 2.0f;
+                const uint8_t perPassAlpha = (uint8_t)std::clamp(perPassAlphaF * 255.0f * kOutlineAlphaBoost, (float)std::min<uint8_t>(0, color.a), (float)color.a);
+
+                float outlineStrength = (ReplaceTextShadowWithOutline > 1) ? 0.5f : 0.25f;
+
+                Details->bIsShadow = true;
+
+                for (int i = 0; i < sampleCount; ++i)
+                {
+                    CRGBA outlineColor = Details->dropColor;
+                    outlineColor.a = perPassAlpha;
+                    Details->color = outlineColor;
+
+                    const float ox = SCREEN_SCALE_X(dropShadowPosition * dirs16[i][0] * outlineStrength);
+                    const float oy = SCREEN_SCALE_Y(dropShadowPosition * dirs16[i][1] * outlineStrength);
+
+                    if (Details->slant != 0.0f)
+                    {
+                        Details->slantRefX += ox;
+                        Details->slantRefY += oy;
+                        PrintOutlinedString(x + ox, y + oy, Details->anonymous_25, start, end, spwidth);
+                        Details->slantRefX -= ox;
+                        Details->slantRefY -= oy;
+                    }
+                    else
+                    {
+                        PrintOutlinedString(x + ox, y + oy, Details->anonymous_25, start, end, spwidth);
+                    }
+                }
+
+                #if 0
+                Details->color = Details->dropColor;
+                Details->bIsShadow = true;
+
+                struct Offset { float x, y; };
+                static constexpr Offset offsets[] = {
+                    { 1.f,  1.f }, { 1.f, -1.f },
+                    { -1.f, 1.f }, { -1.f, -1.f },
+                    { 2.f,  0.f }, { -2.f, 0.f },
+                    { 0.f,  2.f }, { 0.f, -2.f }
+                };
+
+                const int offsetCount = (ReplaceTextShadowWithOutline > 1) ? 8 : 4;
+
+                // Compensate alpha so N blended passes ~= original single-pass alpha
+                const float targetAlpha = static_cast<float>(color.a) / 255.0f;
+                const float perPassAlphaF = 1.0f - std::pow(1.0f - targetAlpha, 1.0f / static_cast<float>(offsetCount));
+                const uint8_t perPassAlpha = static_cast<uint8_t>(std::clamp(perPassAlphaF * 255.0f, 0.0f, 255.0f));
+
+                for (int i = 0; i < offsetCount; ++i)
+                {
+                    CRGBA outlineColor = Details->dropColor;
+                    outlineColor.a = perPassAlpha;
+                    Details->color = outlineColor;
+
+                    const float outlineStrength = 0.25f;
+                    const float ox = SCREEN_SCALE_X(dropShadowPosition * offsets[i].x * outlineStrength);
+                    const float oy = SCREEN_SCALE_Y(dropShadowPosition * offsets[i].y * outlineStrength);
+
+                    if (Details->slant != 0.0f)
+                    {
+                        Details->slantRefX += ox;
+                        Details->slantRefY += oy;
+                        PrintOutlinedString(x + ox, y + oy, Details->anonymous_25, start, end, spwidth);
+                        Details->slantRefX -= ox;
+                        Details->slantRefY -= oy;
+                    }
+                    else
+                    {
+                        PrintOutlinedString(x + ox, y + oy, Details->anonymous_25, start, end, spwidth);
+                    }
+                }
+                #endif
+            }
+            else
+            {
+                Details->color = Details->dropColor;
+                Details->bIsShadow = true;
+
+                if (Details->slant != 0.0f)
+                {
+                    Details->slantRefX += SCREEN_SCALE_X(dropShadowPosition);
+                    Details->slantRefY += SCREEN_SCALE_Y(dropShadowPosition);
+                    PrintOutlinedString(SCREEN_SCALE_X(dropShadowPosition) + x, SCREEN_SCALE_Y(dropShadowPosition) + y, Details->anonymous_25, start, end, spwidth);
+                    Details->slantRefX -= SCREEN_SCALE_X(dropShadowPosition);
+                    Details->slantRefY -= SCREEN_SCALE_Y(dropShadowPosition);
+                }
+                else
+                {
+                    PrintOutlinedString(SCREEN_SCALE_X(dropShadowPosition) + x, SCREEN_SCALE_Y(dropShadowPosition) + y, Details->anonymous_25, start, end, spwidth);
+                }
+            }
+
+            Details->color = color;
+            Details->dropShadowPosition = static_cast<int16_t>(dropShadowPosition);
+            Details->bIsShadow = originalIsShadow;
+        }
+
+        // Reserve 27 wchars: 24 for the block header, 1 for the trailing space below, 1 for the
+        // terminator and 1 for Align().
+        if (FontRenderStatePointer->pStr >= (wchar_t*)(FontRenderStateBuf + FontRenderStateBufSize) - (end - start + 27))
+            CFont::DrawFonts();
+
+        CFontRenderState* pRenderState = FontRenderStatePointer->pRenderState;
+        pRenderState->fTextPosX = x;
+        pRenderState->fTextPosY = y;
+        pRenderState->scaleX = Details->scaleX;
+        pRenderState->scaleY = Details->scaleY;
+        pRenderState->color = Details->color;
+        pRenderState->fExtraSpace = spwidth;
+        pRenderState->slant = Details->slant;
+        pRenderState->slantRefX = Details->slantRefX;
+        pRenderState->slantRefY = Details->slantRefY;
+        pRenderState->bFontHalfTexture = Details->bFontHalfTexture;
+        pRenderState->proportional = Details->proportional;
+        pRenderState->style = Details->style;
+        pRenderState->bIsShadow = Details->bIsShadow;
+        FontRenderStatePointer->pRenderState++;
+
+        for (auto s = start; s < end;)
+        {
+            if (*s == '~')
+            {
+                for (wchar_t* i = ParseToken(s); s != i; FontRenderStatePointer->pStr++)
+                {
+                    *FontRenderStatePointer->pStr = *(s++);
+                }
+                if (Details->bFlash)
+                {
+                    if (CTimer::m_snTimeInMilliseconds - Details->nFlashTimer > 300)
+                    {
+                        Details->bFlashState = !Details->bFlashState;
+                        Details->nFlashTimer = CTimer::m_snTimeInMilliseconds;
+                    }
+                    Details->color.a = Details->bFlashState ? 0 : 255;
+                }
+            }
+            else
+            {
+                *(FontRenderStatePointer->pStr++) = *(s++);
+            }
+        }
+
+        // A block's string must never end on a '~'. RenderFontBuffer()'s block walker treats the
+        // character following a token as a printable one, so for a string that ends with a token it
+        // consumes the block's terminating NUL as that character and then tests the word 2 bytes
+        // past it for the end of the block. Those 2 bytes are Align() padding (only skipped, never
+        // written) or the next block's first field (never written either), so if they are non-zero
+        // the walker does not see the block end, keeps printing the next block's header as text and
+        // resynchronises at a wrong offset - every following block is then misread and
+        // RenderState.style ends up holding a text character ('~'), which makes
+        // Sprite[RenderState.style] read out of bounds in the next RenderFontBuffer() call.
+        // The walk and the write agree again if the token is followed by a real character.
+        if (end > start && FontRenderStatePointer->pStr[-1] == '~')
+            *(FontRenderStatePointer->pStr++) = ' ';
+
+        *(FontRenderStatePointer->pStr++) = '\0';
+        FontRenderStatePointer->Align();
+    }
+}
+
+// Bigger subtitles grow downwards from their top: kept above the screen's bottom edge
+int16_t (__cdecl* GetNumberLines)(float, float, unsigned short*) = nullptr;
+float KeepSubtitlesOnScreen(float x, float y, unsigned short* text)
+{
+    if (!text)
+        return y;
+    float lineHeight = 18.0f * CFont::Details->scaleY;
+    float bottom = y + GetNumberLines(x, y, text) * lineHeight;
+    float limit = SCREEN_HEIGHT - SCREEN_SCALE_Y(6.0f);
+    return bottom > limit ? y - (bottom - limit) : y;
+}
+
+export enum FrontendClass
+{
+    eCDarkel,
+    eCGarages,
+    eCMenuManager,
+    eLoadingScreen,
+    eCRadar,
+    eCHud,
+    eCParticle,
+    eCSpecialFX,
+    ecMusicManager,
+    eCSceneEdit,
+    eConvertingTexturesScreen,
+    eCReplay,
+
+    FrontendClassCount
+};
+
+export std::array<ProtectedGameRef<float>, FrontendClassCount> ResXInvRefs;
+export std::array<ProtectedGameRef<float>, FrontendClassCount> ResYInvRefs;
+
+void StretchX(SafetyHookContext& ctx)
+{
+    float f = (MenuCanvas::GetCurrentAspectRatio() / (4.0f / 3.0f));
+    _asm {fdiv dword ptr[f]}
+}
+
+enum
+{
+    SCRIPT_TEXT_MAX_LENGTH = 100
+};
+
+struct intro_text_line
+{
+    float m_fScaleX;
+    float m_fScaleY;
+    CRGBA m_sColor;
+    bool m_bJustify;
+    bool m_bCentered;
+    bool m_bBackground;
+    bool m_bBackgroundOnly;
+    float m_fWrapX;
+    float m_fCenterSize;
+    CRGBA m_sBackgroundColor;
+    bool m_bTextProportional;
+    bool m_bTextBeforeFade;
+    bool m_bRightJustify;
+    int32_t m_nFont;
+    float m_fAtX;
+    float m_fAtY;
+    wchar_t m_Text[SCRIPT_TEXT_MAX_LENGTH];
+};
+
+static_assert(offsetof(intro_text_line, m_fWrapX) == 0x10);
+static_assert(offsetof(intro_text_line, m_fAtX) == 0x24);
+static_assert(offsetof(intro_text_line, m_Text) == 0x2C);
+
+namespace ScriptDraw
+{
+    constexpr float ScreenHeight = DEFAULT_SCREEN_HEIGHT;
+    injector::hook_back<void(__cdecl*)(float)> hbSetWrapX;
+    injector::hook_back<void(__cdecl*)(float, float, wchar_t*)> hbPrintString;
+
+    float GetOffsetX()
+    {
+        return (SCREEN_WIDTH - SCREEN_SCALE_X(DEFAULT_SCREEN_WIDTH)) * 0.5f;
+    }
+
+    void __cdecl SetWrapX(float x)
+    {
+        // WrapX is an absolute right edge; CentreSize is a width and needs no offset.
+        hbSetWrapX.fun(x + GetOffsetX());
+    }
+
+    void __cdecl PrintString(float x, float y, wchar_t* text)
+    {
+        // The native renderer measures positions from the right edge of the screen.
+        // Move that origin into the same centered 4:3 canvas as WrapX.
+        hbPrintString.fun(x - GetOffsetX(), y, text);
+    }
+
+    void Init(intro_text_line* lines)
+    {
+        // Both CHud::Draw and DrawAfterFade use these fields. Match their native
+        // operands rather than assuming a particular loop register or text index.
+        auto wrap = hook::pattern(pattern_str(0xD8, '?', to_bytes(&lines->m_fWrapX)) + " D9 1C 24 E8 ? ? ? ?").count(2);
+        auto print = hook::pattern(pattern_str(0xD8, '?', to_bytes(&lines->m_fAtX)) + " DE C9 DA 6C 24 ? D9 1C 24 E8 ? ? ? ?").count(2);
+
+
+        // Keep all script coordinates and font dimensions independent of custom HUD
+        // scaling, including the pass that draws before the fade.
+        for (auto field : { &lines->m_fScaleX, &lines->m_fWrapX, &lines->m_fCenterSize })
+        {
+            auto pattern = hook::pattern("D8 0D ? ? ? ? " + pattern_str(0xD8, '?', to_bytes(field))).count(2);
+            pattern.for_each_result([](hook::pattern_match match)
+            {
+                injector::WriteMemory(match.get<void*>(2), ResXInvRefs[eCHud].get_ptr(), true);
+            });
+        }
+        for (auto field : { &lines->m_fAtX, &lines->m_fAtY })
+        {
+            auto pattern = hook::pattern("D8 0D ? ? ? ? D9 05 ? ? ? ? " + pattern_str(0xD8, '?', to_bytes(field))).count(2);
+            pattern.for_each_result([field, lines](hook::pattern_match match)
+            {
+                auto scale = field == &lines->m_fAtX ? ResXInvRefs[eCHud].get_ptr() : ResYInvRefs[eCHud].get_ptr();
+                injector::WriteMemory(match.get<void*>(2), scale, true);
+                if (field == &lines->m_fAtY)
+                {
+                    // The native bottom origin is 448, but script coordinates use 480.
+                    injector::WriteMemory(match.get<void*>(8), &ScreenHeight, true);
+                }
+            });
+        }
+        auto scaleY = hook::pattern("D8 0D ? ? ? ? " + pattern_str(0xD8, '?', to_bytes(&lines->m_fScaleY))).count(2);
+        scaleY.for_each_result([](hook::pattern_match match)
+        {
+            injector::WriteMemory(match.get<void*>(2), ResYInvRefs[eCHud].get_ptr(), true);
+        });
+
+        hbSetWrapX.fun = reinterpret_cast<decltype(hbSetWrapX.fun)>(injector::GetBranchDestination(wrap.get_first(9)).as_int());
+        hbPrintString.fun = reinterpret_cast<decltype(hbPrintString.fun)>(injector::GetBranchDestination(print.get_first(15)).as_int());
+        wrap.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(9), SetWrapX, true); });
+        print.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(15), PrintString, true); });
+    }
+}
+
+export bool g_externalMenuMap = false;
+
+namespace MenuMap
+{
+    constexpr float Height = 448.0f;
+    float CenterX = 320.0f;
+    float ScaleX = 1.0f / 640.0f;
+    float ScaleY = 1.0f / Height;
+    ProtectedGameRef<float> InitialCenterX;
+    injector::hook_back<void(__thiscall*)(CMenuManager*)> hbPrintMap;
+
+    void UpdateCanvas()
+    {
+        const float oldCenter = CenterX;
+        CenterX = Height * MenuCanvas::GetAspectRatio() * 0.5f;
+        ScaleX = 1.0f / (Height * MenuCanvas::GetAspectRatio());
+        InitialCenterX = CenterX;
+        FrontendMenuManager->m_fMapCenterX += CenterX - oldCenter;
+    }
+
+    void __fastcall PrintMap(CMenuManager* menu, void*)
+    {
+        // Tile drawing and radar projection share the native map origin. Give
+        // both the 448-high menu canvas while preserving gameplay radar scaling.
+        const float radarX = ResXInvRefs[eCRadar];
+        const float radarY = ResYInvRefs[eCRadar];
+        ResXInvRefs[eCRadar] = ScaleX;
+        ResYInvRefs[eCRadar] = 1.0f / Height;
+        hbPrintMap.fun(menu);
+        ResXInvRefs[eCRadar] = radarX;
+        ResYInvRefs[eCRadar] = radarY;
+    }
+
+    void Init()
+    {
+        static_assert(offsetof(CMenuManager, m_fMapSize) == 0x40);
+        static_assert(offsetof(CMenuManager, m_fMapCenterX) == 0x44);
+        // Replacement frontends can remove the native map calls altogether.
+        // Keep their map in physical coordinates unless the complete native
+        // renderer and input layout are recognized before applying any patch.
+        g_externalMenuMap = true;
+        auto calls = hook::pattern("83 BE F8 00 00 00 06 75 ? 89 F1 E8 ? ? ? ?");
+        calls.count(2);
+        auto begin = injector::GetBranchDestination(calls.get(0).get<void>(11)).get<uint8_t>();
+        if (injector::GetBranchDestination(calls.get(1).get<void>(11)).get<uint8_t>() != begin) return;
+
+        HMODULE module = nullptr;
+        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(begin), &module) || module != GetModuleHandleW(nullptr)) return;
+        // Any detoured renderer owns its canvas, including renamed MenuMapVC
+        // copies and versions without the optional GPS exports.
+        if (*begin == 0xE9) return;
+
+        auto init = hook::pattern("C7 43 40 00 00 22 43 C7 43 44 00 00 A0 43 C7 43 48");
+        auto endPattern = hook::pattern("E8 ? ? ? ? 80 7B 21 00 0F 84");
+        auto inputBeginPattern = hook::pattern("D9 46 44 DD DA D9 C1 D8 1D");
+        auto inputEndPattern = hook::pattern("D9 5E 44 30 C0 DD D8 88 86");
+        inputBeginPattern.count(2).get(1).get<void>();
+        inputEndPattern.count(2).get(1).get<void>();
+        const auto start = reinterpret_cast<uintptr_t>(begin);
+        const auto end = reinterpret_cast<uintptr_t>(endPattern.get_first());
+        const auto inputBegin = reinterpret_cast<uintptr_t>(inputBeginPattern.get(0).get<void>());
+        const auto inputEnd = reinterpret_cast<uintptr_t>(inputEndPattern.get(1).get<void>());
+        if (end <= start || inputEnd <= inputBegin) return;
+
+        std::array scales{
+            hook::pattern(start, end, pattern_str(0xD8, 0x0D, to_bytes(ResXInvRefs[eCMenuManager].get_ptr()))),
+            hook::pattern(start, end, pattern_str(0xD8, 0x0D, to_bytes(ResYInvRefs[eCMenuManager].get_ptr())))
+        };
+        auto widths = hook::pattern(start, end, "81 ? 80 02 00 00").count_hint(27);
+        auto center = *reinterpret_cast<float**>(inputBegin + 9);
+        auto centers = hook::pattern(inputBegin, inputEnd, pattern_str(0xD8, '?', to_bytes(center)));
+        auto centerLoad = hook::pattern(inputBegin, inputEnd, pattern_str(0xD9, 0x05, to_bytes(center))).count_hint(1);
+        scales[0].count(27).get(26).get<void>();
+        scales[1].count(27).get(26).get<void>();
+        widths.count(27).get(26).get<void>();
+        centers.count(7).get(6).get<void>();
+        centerLoad.count(1).get(0).get<void>();
+
+        g_externalMenuMap = false;
+        InitialCenterX.SetAddress(init.get_first<float>(10));
+        const std::array correctedScales{ &ScaleX, &ScaleY };
+        for (size_t i = 0; i < scales.size(); ++i)
+        {
+            scales[i].for_each_result([corrected = correctedScales[i]](hook::pattern_match match)
+            {
+                injector::WriteMemory(match.get<void*>(2), corrected, true);
+            });
+        }
+
+        // A 640-wide mode can still have a different aspect ratio. Its tiles
+        // must take the scaling branch just like the radar markers do.
+        widths.for_each_result([](hook::pattern_match match)
+        {
+            injector::WriteMemory<int32_t>(match.get<void*>(2), -1, true);
+        });
+
+        // Zoom-out and horizontal panning use the same center as initialization
+        // and rendering. Preserve the player's pan offset across res changes.
+        centers.for_each_result([](hook::pattern_match match)
+        {
+            injector::WriteMemory(match.get<void*>(2), &CenterX, true);
+        });
+        centerLoad.for_each_result([](hook::pattern_match match)
+        {
+            injector::WriteMemory(match.get<void*>(2), &CenterX, true);
+        });
+
+        // Replace only the menu's calls; leave the native entry point intact.
+        hbPrintMap.fun = reinterpret_cast<decltype(hbPrintMap.fun)>(begin);
+        calls.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(11), PrintMap, true); });
+        UpdateCanvas();
+        onResChange() += [](int Width, int Height) { UpdateCanvas(); };
+    }
+}
+
+namespace MenuBorders
+{
+    injector::hook_back<int(__cdecl*)(float, float, float, float, float, float, float, float, CRGBA*)> hbDraw;
+
+    int __cdecl Draw(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, CRGBA* color)
+    {
+        // These animated masks frame the physical background, independently
+        // of the menu canvas. Their coordinates already use its current width.
+        const float scale = MenuCanvas::Depth && !MenuCanvas::Suspensions
+            ? float(MenuCanvas::PhysicalWidth) / RsGlobal->width : 1.0f;
+        MenuCanvas::Suspend physicalViewport;
+        return hbDraw.fun(x1 * scale, y1, x2 * scale, y2, x3 * scale, y3, x4 * scale, y4, color);
+    }
+
+    void Init(uintptr_t start, uintptr_t end)
+    {
+        if (end <= start) return;
+        // The final mask follows the last background coordinate calculation.
+        auto last = hook::pattern(end, end + 0x100, "DE D9 DE D9 E8 ? ? ? ? 83 C4 24 80 3D ? ? ? ? 00");
+
+        auto calls = hook::pattern(start, reinterpret_cast<uintptr_t>(last.get_first(12)), "DE D9 DE D9 E8 ? ? ? ? 83 C4 24");
+        // Both transition branches share the last of their four masks.
+        // Leave a replacement renderer untouched if any call differs.
+        calls.count(7).get(6).get<void>();
+        auto target = injector::GetBranchDestination(calls.get(0).get<void>(4)).as_int();
+        for (size_t i = 0; i < calls.size(); ++i)
+            if (injector::GetBranchDestination(calls.get(i).get<void>(4)).as_int() != target) return;
+        hbDraw.fun = reinterpret_cast<decltype(hbDraw.fun)>(target);
+        calls.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(4), Draw, true); });
+    }
+}
+
+class Frontend
+{
+public:
+    Frontend()
+    {
+        WFP::onGameInitEvent() += []()
+        {
+            // The HUD's, radar's and subtitles' sizes follow their settings while the game runs
+            auto& settings = FixSettings();
+            static auto& fHudWidthScale = settings.Float("MAIN.HudWidthScale");
+            static auto& fHudHeightScale = settings.Float("MAIN.HudHeightScale");
+            static auto& fRadarWidth = settings.Float("MAIN.RadarWidth");
+            static auto& fRadarHeight = settings.Float("MAIN.RadarHeight");
+            static auto& fSubtitlesScale = settings.Float("MAIN.SubtitlesScale");
+            g_noBorderAnim = !settings.Bool("MAIN.AnimatedCutsceneBorders");
+            OnSettingChange("MAIN.AnimatedCutsceneBorders", []() { g_noBorderAnim = !FixSettings().Bool("MAIN.AnimatedCutsceneBorders"); });
+
+            auto pattern = hook::pattern("E8 ? ? ? ? 6A ? E8 ? ? ? ? 59 8D 8C 24 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? 8D 84 24 ? ? ? ? 50 E8 ? ? ? ? ? ? ? ? ? ? 59 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 8B 3D");
+            CFont::DrawFonts = (decltype(CFont::DrawFonts))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+            pattern = hook::pattern("E8 ? ? ? ? A1 ? ? ? ? 59 3D ? ? ? ? ? ? ? ? 75 ? ? ? ? ? ? ? EB ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? A1");
+            CFont::SetColor = (decltype(CFont::SetColor))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+            pattern = hook::pattern("E8 ? ? ? ? 39 C6 59 74");
+            CFont::ParseToken = (decltype(CFont::ParseToken))injector::GetBranchDestination(pattern.get_first(0)).as_int();
+
+            pattern = hook::pattern("A1 ? ? ? ? 8A 15 ? ? ? ? A3");
+            FontRenderStateBuf = *pattern.get_first<uint8_t*>(1);
+
+            pattern = hook::pattern("E8 ? ? ? ? 83 C4 18 80 3D ? ? ? ? ? D9 EE 89 74 24");
+            CFont::shPrintOutlinedString = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0)).as_int(), CFont::PrintOutlinedString);
+
+            constexpr auto INV_DEFAULT_SCREEN_HEIGHT = 1.0f / (float)DEFAULT_SCREEN_HEIGHT;
+            constexpr auto INV_DEFAULT_SCREEN_HEIGHT_MENU = 1.0f / 448.0f;
+
+            auto SetResX = [](hook::pattern pattern, FrontendClass id)
+            {
+                ResXInvRefs[id].SetAddress(*pattern.get_first<float*>(2));
+            };
+
+            auto SetResY = [](hook::pattern pattern, FrontendClass id)
+            {
+                ResYInvRefs[id].SetAddress(*pattern.get_first<float*>(2));
+            };
+
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 81 FB B8 0B 00 00");
+            SetResX(pattern, FrontendClass::eCDarkel);
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 81 FB B8 0B 00 00");
+            SetResY(pattern, FrontendClass::eCDarkel);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? A1");
+            SetResX(pattern, FrontendClass::eCGarages);
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? A1");
+            SetResY(pattern, FrontendClass::eCGarages);
+
+            //flt_68AEDC
+            //CCamera::DrawBordersForWideScreen
+            //CCamera::GetScreenRect
+
+            pattern = hook::pattern("D8 0D ? ? ? ? 89 74 24 ? DA 4C 24 ? DD DA 89 74 24");
+            SetResX(pattern, FrontendClass::eCMenuManager);
+            pattern = hook::pattern("D8 0D ? ? ? ? DA 4C 24 ? DD D9 FF 34 24");
+            SetResY(pattern, FrontendClass::eCMenuManager);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? DD DB D9 05 ? ? ? ? D8 CB DD DA D9 C1 D8 25");
+            SetResX(pattern, FrontendClass::eLoadingScreen);
+            pattern = hook::pattern("D8 0D ? ? ? ? DD DC D9 05 ? ? ? ? D8 CC DA 6C 24 ? 89 4C 24");
+            SetResY(pattern, FrontendClass::eLoadingScreen);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? DE C9 D9 5C 24 ? D9 05 ? ? ? ? D8 C9");
+            SetResX(pattern, FrontendClass::eCRadar);
+            pattern = hook::pattern("D8 0D ? ? ? ? DE C9 EB 75");
+            SetResY(pattern, FrontendClass::eCRadar);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 8D ? ? ? ? D9 1C 24 E8 ? ? ? ? 8B 95");
+            SetResX(pattern, FrontendClass::eCHud);
+            pattern = hook::pattern("D8 0D ? ? ? ? D9 05 ? ? ? ? D8 A5 ? ? ? ? DE C9 DA 6C 24 ? D9 1C 24 A1");
+            SetResY(pattern, FrontendClass::eCHud);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 43 ? D8 4C 24 ? D8 CA D8 2B D9 7C 24 ? 8B 44 24 ? 80 4C 24 ? ? D9 6C 24 ? 89 44 24 ? DB 5C 24 ? D9 6C 24 ? DB 05 ? ? ? ? 8B 44 24 ? 89 44 24 ? 8D 7C 24");
+            SetResX(pattern, FrontendClass::eCParticle);
+            pattern = hook::pattern("D8 0D ? ? ? ? 57 DD D9");
+            SetResY(pattern, FrontendClass::eCParticle);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C0 EC 89 44 24 ? 50 DB 44 24 ? D9 1C 24 E8 ? ? ? ? 59 E8 ? ? ? ? E8 ? ? ? ? 8D 4C 24 ? 68 C8 00 00 00 6A 00");
+            SetResX(pattern, FrontendClass::eCSpecialFX);
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C0 EC 89 44 24 ? 50 DB 44 24 ? D9 1C 24 E8 ? ? ? ? 59 E8 ? ? ? ? E8 ? ? ? ? 8D 4C 24 ? 68 C8 00 00 00 6A 00");
+            SetResY(pattern, FrontendClass::eCSpecialFX);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 6A ? E8 ? ? ? ? 59");
+            SetResX(pattern, FrontendClass::ecMusicManager);
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 6A");
+            SetResY(pattern, FrontendClass::ecMusicManager);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? FF 35 ? ? ? ? E8 ? ? ? ? 59 E8 ? ? ? ? 6A 01");
+            SetResX(pattern, FrontendClass::eCSceneEdit);
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? FF 35 ? ? ? ? E8 ? ? ? ? 59 E8 ? ? ? ? 6A 01");
+            SetResY(pattern, FrontendClass::eCSceneEdit);
+
+            //flt_6D72CC
+
+            pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 05 ? ? ? ? D8 C9 DD DA D9 C1");
+            SetResX(pattern, FrontendClass::eConvertingTexturesScreen);
+            pattern = hook::pattern("D8 0D ? ? ? ? DD DA D9 05 ? ? ? ? D8 CA D9 5C 24 ? D9 05");
+            SetResY(pattern, FrontendClass::eConvertingTexturesScreen);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C0 EC 89 04 24");
+            SetResX(pattern, FrontendClass::eCReplay);
+            pattern = hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C0 EC 89 04 24");
+            SetResY(pattern, FrontendClass::eCReplay);
+
+            // Brief additional fix
+            static float fBriefWrapMult = 0.875f;
+            pattern = hook::pattern("D8 0D ? ? ? ? DD D9 50 D9 14 24 DD D8");
+            injector::WriteMemory(pattern.get_first(2), &fBriefWrapMult, true);
+
+            static float fBriefXMult = 0.15625f;
+            pattern = hook::pattern("D8 0D ? ? ? ? DD D9 68 ? ? ? ? FF 74 24 ? 50 D9 14 24 DD D8 E8 ? ? ? ? 0F BF C0");
+            injector::WriteMemory(pattern.get_first(2), &fBriefXMult, true);
+
+            pattern = hook::pattern("D8 0D ? ? ? ? DD DA A1 ? ? ? ? 3D C0 01 00 00 75 ? D9 44 24");
+            injector::WriteMemory(pattern.get_first(2), &fBriefXMult, true);
+
+            // Stats additional fix
+            static float fStatsXMult = 0.171875f;
+            static float fStatsWrapMult = 0.82343751f;
+            pattern = hook::pattern("D8 0D ? ? ? ? DD D9 68 ? ? ? ? FF 74 24 ? 50 D9 14 24 DD D8 E8 ? ? ? ? 83 C4 0C");
+            injector::WriteMemory(pattern.count(2).get(0).get<float*>(2), &fStatsXMult, true);
+            injector::WriteMemory(pattern.count(2).get(1).get<float*>(2), &fStatsWrapMult, true);
+
+            // Map Legend additional fix
+            static float fLegendLeft = 0.25f;
+            pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 C0 D9 7C 24 ? 8B 44 24 ? 80 4C 24 ? ? D9 6C 24 ? 89 44 24 ? 31 FF");
+            injector::WriteMemory(pattern.get_first(2), &fLegendLeft, true);
+
+            static float fLegendRight = 0.171875f;
+            pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 C0 D9 7C 24 ? 8B 44 24 ? 80 4C 24 ? ? D9 6C 24 ? 89 44 24 ? A1 ? ? ? ? DB 5C 24 ? D9 6C 24 ? 3D C0 01 00 00");
+            injector::WriteMemory(pattern.get_first(2), &fLegendRight, true);
+
+            auto UpdateMenuLayout = [](int Width, int Height)
+            {
+                float fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
+
+                // The radio carousel keeps a pixel position initialized when
+                // textures load, outside the constrained menu. Keep its scroll
+                // progress relative to the canvas, including background suspends.
+                // Retain the fraction across unchanged round-trips to avoid drift.
+                static int radioWidth = 0;
+                static int radioPosition = 0;
+                static float radioFraction = 0.0f;
+                auto& x = FrontendMenuManager->m_LeftMostRadioX;
+                if (!radioWidth || x != radioPosition)
+                    radioFraction = float(x) / (radioWidth ? radioWidth : Width);
+                radioWidth = Width;
+                x = static_cast<int>(std::lround(radioFraction * Width));
+                radioPosition = x;
+
+                for (auto [index, resXInv] : std::views::enumerate(ResXInvRefs))
+                {
+                    resXInv = INV_SCREEN_WIDTH(fAspectRatio);
+                }
+
+                for (auto [index, resYInv] : std::views::enumerate(ResYInvRefs))
+                {
+                    if (index != FrontendClass::eCMenuManager)
+                        resYInv = INV_DEFAULT_SCREEN_HEIGHT;
+                    else
+                        resYInv = INV_DEFAULT_SCREEN_HEIGHT_MENU;
+                }
+
+                float boxW = fmin(static_cast<float>(Width), static_cast<float>(Height) * (4.0f / 3.0f));
+                float offset = (static_cast<float>(Width) - boxW) * 0.5f;
+                fBriefXMult = (offset + boxW * (100.0f / 640.0f)) / static_cast<float>(Width);
+                fBriefWrapMult = (offset + boxW * (560.0f / 640.0f)) / static_cast<float>(Width);
+
+                fStatsXMult = (offset + boxW * (110.0f / 640.0f)) / static_cast<float>(Width);
+                fStatsWrapMult = (offset + boxW * (530.0f / 640.0f)) / static_cast<float>(Width);
+
+                fLegendLeft = (offset + boxW * (160.0f / 640.0f)) / static_cast<float>(Width);
+                fLegendRight = (offset + boxW * (350.0f / 640.0f)) / static_cast<float>(Width);
+            };
+            onResChange() += UpdateMenuLayout;
+            MenuCanvas::onLayoutChange() += UpdateMenuLayout;
+
+            std::vector<void*> StretchXRefs;
+
+            auto ptr = &RsGlobal->maximumWidth;
+            pattern = hook::pattern(pattern_str(0xA1, to_bytes(ptr))); //mov eax
+            pattern.for_each_result([&](hook::pattern_match match)
+            {
+                StretchXRefs.push_back(match.get<void*>());
+            });
+
+            pattern = hook::pattern(pattern_str(0x8B, '?', to_bytes(ptr))); //mov
+            pattern.for_each_result([&](hook::pattern_match match)
+            {
+                StretchXRefs.push_back(match.get<void*>());
+            });
+
+            // Store hooks to keep them alive
+            static std::vector<SafetyHookMid> stretchHooks;
+
+            for (auto address : StretchXRefs)
+            {
+                ZydisDecoder decoder;
+                ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LEGACY_32, ZYDIS_STACK_WIDTH_32);
+
+                ZydisDecodedInstruction instruction;
+                ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT];
+
+                bool foundMov = false;
+                bool foundCmp = false;
+                bool foundFmul = false;
+                bool foundFimul = false;  // NEW: separate flag
+                ZydisRegister targetRegister = ZYDIS_REGISTER_NONE;
+                void* fmulOperandAddress = nullptr;
+                uint8_t* fmulInstructionAddress = nullptr;
+
+                uint8_t* currentAddress = (uint8_t*)address;
+                const int maxInstructions = 30;
+
+                for (int instrCount = 0; instrCount < maxInstructions && !foundFmul; instrCount++)
+                {
+                    ZyanStatus status = ZydisDecoderDecodeFull(
+                        &decoder,
+                        currentAddress,
+                        ZYDIS_MAX_INSTRUCTION_LENGTH,
+                        &instruction,
+                        operands
+                    );
+
+                    if (!ZYAN_SUCCESS(status))
+                        break;
+
+                    if (instrCount == 0)
+                    {
+                        if (instruction.mnemonic == ZYDIS_MNEMONIC_MOV &&
+                            instruction.operand_count >= 2 &&
+                            operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER &&
+                            operands[1].type == ZYDIS_OPERAND_TYPE_MEMORY)
+                        {
+                            foundMov = true;
+                            targetRegister = operands[0].reg.value;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    if (foundMov && !foundCmp &&
+                        instruction.mnemonic == ZYDIS_MNEMONIC_CMP &&
+                        instruction.operand_count >= 2)
+                    {
+                        if (operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER &&
+                            operands[0].reg.value == targetRegister &&
+                            operands[1].type == ZYDIS_OPERAND_TYPE_IMMEDIATE &&
+                            operands[1].imm.value.u == 0x280)
+                        {
+                            foundCmp = true;
+                        }
+                    }
+
+                    if (foundMov && foundCmp &&
+                        instruction.mnemonic == ZYDIS_MNEMONIC_FMUL &&
+                        instruction.operand_count >= 1)
+                    {
+                        if (operands[0].type == ZYDIS_OPERAND_TYPE_MEMORY)
+                        {
+                            foundFmul = true;
+                            fmulInstructionAddress = currentAddress;
+
+                            ZyanU64 operandAddr = 0;
+                            ZydisCalcAbsoluteAddress(&instruction, &operands[0],
+                                (ZyanU64)currentAddress, &operandAddr);
+                            fmulOperandAddress = (void*)operandAddr;
+
+                            // Check if followed by FIMUL
+                            uint8_t* nextAddr = currentAddress + instruction.length;
+                            ZydisDecodedInstruction nextInstr;
+                            ZydisDecodedOperand nextOps[ZYDIS_MAX_OPERAND_COUNT];
+
+                            for (int j = 0; j < 5; j++)
+                            {
+                                if (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, nextAddr,
+                                    ZYDIS_MAX_INSTRUCTION_LENGTH, &nextInstr, nextOps)))
+                                {
+                                    if (nextInstr.mnemonic == ZYDIS_MNEMONIC_FIMUL)
+                                    {
+                                        foundFimul = true;
+                                        break;
+                                    }
+                                    nextAddr += nextInstr.length;
+                                }
+                                else
+                                    break;
+                            }
+                        }
+                        break;
+                    }
+
+                    currentAddress += instruction.length;
+                }
+
+                if (foundMov && foundCmp && foundFmul)
+                {
+                    const float menu_scaling_floats[] = {
+                        0.0009375000373f,   // fMenuTextScale
+                        0.00062499999f,     // fMenuControlsOptionsTextScale
+                        0.00039062501f,     // fMenuControlsOptionsTextScale2
+                        0.0046875002f,      // fMenuBarsScale
+                        0.0014062499f,      // fMenuHeadersSkinsScale
+                        0.2453125f,         // fvcLogoScale
+                        0.001015625f,       // fMapLegendTextScale
+                        0.000859375f,       // fMapLegendIconsTextScale
+                        0.00046875002f,     // fMapBottomTextScale
+                        0.00075000001f,     // fSaveLoadListTextScale
+                        0.00065625005f,     // fLoadingGameTextScale
+                        0.0546875f,         // fCursorScale
+                        0.0703125f,         // fCursorShadowScale
+                        0.00067187502f,     // fStatsText
+                        0.00078125001f,     // fStatsHeader
+                        0.09375f,           // fRadioIcons
+                    };
+
+                    auto IsMenuScalingFloat = [&menu_scaling_floats](float value) -> bool
+                    {
+                        for (float target : menu_scaling_floats)
+                        {
+                            if (std::abs(value - target) <= FLT_EPSILON)
+                                return true;
+                        }
+                        return false;
+                    };
+
+                    if (IsMenuScalingFloat(*(float*)fmulOperandAddress))
+                    {
+                        stretchHooks.emplace_back(safetyhook::create_mid(fmulInstructionAddress, StretchX));
+                    }
+                }
+            }
+
+            //Menu fix
+            static float fDefaultScale = 0.0015625f;
+
+            auto DrawBackgroundStart = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 44 24 ? DA 4C 24 ? DD DC 8B 15").get_first(0);
+            auto DrawBackgroundEnd = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 4C 24 ? DA 4C 24 ? DD DA D9 05 ? ? ? ? 81 FB C0 01 00 00 DD D9 74 ? D8 0D ? ? ? ? 89 5C 24 ? DA 4C 24 ? 8D 84 24").get_first(6);
+            pattern = hook::pattern(DrawBackgroundStart, DrawBackgroundEnd, pattern_str(0xD8, 0x0D, to_bytes(*(void**)(DrawBackgroundStart + 2))));
+            pattern.for_each_result([&](hook::pattern_match match)
+            {
+                injector::WriteMemory(match.get<void*>(2), &fDefaultScale, true);
+            });
+
+            MenuBorders::Init(DrawBackgroundStart, DrawBackgroundEnd);
+
+            auto CMenuManagerDrawStart = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 BC 24 ? ? ? ? DA 8C 24 ? ? ? ? DD DD").get_first(0);
+            auto CMenuManagerDrawEnd = (uintptr_t)hook::pattern("D8 0D ? ? ? ? 89 94 24 ? ? ? ? DA 8C 24 ? ? ? ? DD DB 81 FE C0 01 00 00").get_first(6);
+            pattern = hook::pattern(CMenuManagerDrawStart, CMenuManagerDrawEnd, pattern_str(0xD8, 0x0D, to_bytes(*(void**)(CMenuManagerDrawStart + 2))));
+            pattern.for_each_result([&](hook::pattern_match match)
+            {
+                injector::WriteMemory(match.get<void*>(2), &fDefaultScale, true);
+            });
+
+            // Map rendering and input share one native menu canvas.
+            MenuMap::Init();
+
+            {
+                static float fCustomWideScreenWidthScaleDown = 1.0f / 640.0f;
+                static float fCustomWideScreenHeightScaleDown = 1.0f / 480.0f;
+
+                onResChange() += [](int Width, int Height)
+                {
+                    float fAspectRatio = static_cast<float>(Width) / static_cast<float>(Height);
+                    fCustomWideScreenWidthScaleDown = INV_SCREEN_WIDTH(fAspectRatio) * std::clamp(fHudWidthScale, 0.25f, 4.0f);
+                    fCustomWideScreenHeightScaleDown = INV_DEFAULT_SCREEN_HEIGHT * std::clamp(fHudHeightScale, 0.25f, 4.0f);
+                };
+                OnSettingChange("MAIN.HudWidthScale", []() { CDraw::Refresh(); });
+                OnSettingChange("MAIN.HudHeightScale", []() { CDraw::Refresh(); });
+
+                auto temp1 = *hook::pattern("D8 0D ? ? ? ? D8 8D ? ? ? ? D9 1C 24 E8 ? ? ? ? 8B 95").count(1).get(0).get<float*>(2);
+                auto DrawHudHorScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp1)));
+
+                auto temp2 = *hook::pattern("D8 0D ? ? ? ? D8 8D ? ? ? ? D8 0D").count(1).get(0).get<float*>(2);
+                auto DrawHudVerScalePattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp2)));
+
+                for (size_t i = 0; i < DrawHudHorScalePattern.size(); i++)
+                {
+                    if (i > 3 && i != 20 && i != 66 && i != 67 && i != 15 && i != 16 && i != 17) //15 16 17 - crosshair
+                    {
+                        uint32_t* pCustomScaleHor = DrawHudHorScalePattern.get(i).get<uint32_t>(2);
+                        injector::WriteMemory(pCustomScaleHor, &fCustomWideScreenWidthScaleDown, true);
+                    }
+                }
+
+                for (size_t i = 0; i < DrawHudVerScalePattern.size(); i++)
+                {
+                    if (i > 1 && i != 18 && i != 57 && i != 58 && i != 13 && i != 14 && i != 15) //13 14 15 - crosshair
+                    {
+                        uint32_t* pCustomScaleVer = DrawHudVerScalePattern.get(i).get<uint32_t>(2);
+                        injector::WriteMemory(pCustomScaleVer, &fCustomWideScreenHeightScaleDown, true);
+                    }
+                }
+
+                auto temp3 = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 81 FB B8 0B 00 00").count(1).get(0).get<float*>(2);
+                auto CDarkelDrawMessagesPattern = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp3)));
+
+                auto temp4 = *hook::pattern("D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 59 59 E8 ? ? ? ? 81 FB B8 0B 00 00").count(1).get(0).get<uint32_t*>(2);
+                auto CDarkelDrawMessagesPattern2 = hook::pattern(pattern_str(0xD8, 0x0D, to_bytes(temp4)));
+
+                CDarkelDrawMessagesPattern.for_each_result([&](const hook::pattern_match& match)
+                {
+                    injector::WriteMemory(match.get<void*>(2), &fCustomWideScreenWidthScaleDown, true);
+                });
+
+                CDarkelDrawMessagesPattern2.for_each_result([&](const hook::pattern_match& match)
+                {
+                    injector::WriteMemory(match.get<void*>(2), &fCustomWideScreenHeightScaleDown, true);
+                });
+            }
+
+            static std::vector<ProtectedGameRef<float>> RadarWidthRefs;
+            static std::vector<ProtectedGameRef<float>> RadarHeightRefs;
+
+            {
+                auto pattern = hook::pattern("D8 0D ? ? ? ? DD D9 D9 C2 D8 C9 D8 0D ? ? ? ? D9 C1 D8 0D ? ? ? ? D8 05 ? ? ? ? DE C1 D9 5C 24");
+                {
+                    ProtectedGameRef<float> ref;
+                    ref.SetAddress(*pattern.get_first<float*>(2));
+                    RadarWidthRefs.push_back(std::move(ref));
+                }
+
+                pattern = hook::pattern("D8 0D ? ? ? ? D8 05 ? ? ? ? D8 05 ? ? ? ? D9 9C 24 ? ? ? ? D9 05 ? ? ? ? D8 CA D8 C1 D8 05 ? ? ? ? D9 9C 24 ? ? ? ? DE D9 DD D8 E8 ? ? ? ? 8D 8C 24");
+                {
+                    ProtectedGameRef<float> ref;
+                    ref.SetAddress(*pattern.get_first<float*>(2));
+                    RadarWidthRefs.push_back(std::move(ref));
+                }
+
+                pattern = hook::pattern("D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24 50 D9 14 24 FF 35 ? ? ? ? 56 DD D8 E8 ? ? ? ? 83 C4 14 85 C0 74 ? B8 01 00 00 00 E9 E6 00 00 00");
+                {
+                    ProtectedGameRef<float> ref;
+                    ref.SetAddress(*pattern.get_first<float*>(2));
+                    RadarWidthRefs.push_back(std::move(ref));
+                }
+
+                pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 DD DB D9 C1 D8 CB D8 0D ? ? ? ? D9 C3 D8 0D ? ? ? ? D9 05 ? ? ? ? D8 CB DA 2C 24 DE C1 DE E1 D9 5C 24");
+                {
+                    ProtectedGameRef<float> ref;
+                    ref.SetAddress(*pattern.get_first<float*>(2));
+                    RadarHeightRefs.push_back(std::move(ref));
+                }
+
+                pattern = hook::pattern("D9 05 ? ? ? ? D8 CA D8 C1 D8 05 ? ? ? ? D9 9C 24 ? ? ? ? DE D9 DD D8 E8 ? ? ? ? 8D 8C 24");
+                {
+                    ProtectedGameRef<float> ref;
+                    ref.SetAddress(*pattern.get_first<float*>(2));
+                    RadarHeightRefs.push_back(std::move(ref));
+                }
+
+                pattern = hook::pattern("D9 05 ? ? ? ? D8 C9 D9 05 ? ? ? ? D8 CA DA 6C 24 ? DD DA D8 C1 D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 1C 24 50 D9 14 24 FF 35 ? ? ? ? 56 DD D8 E8 ? ? ? ? 83 C4 14 85 C0 74 ? B8 01 00 00 00 E9 E6 00 00 00");
+                {
+                    ProtectedGameRef<float> ref;
+                    ref.SetAddress(*pattern.get_first<float*>(2));
+                    RadarHeightRefs.push_back(std::move(ref));
+                }
+            }
+
+            static auto ApplyRadar = []()
+            {
+                for (auto& radarWidthRef : RadarWidthRefs)
+                {
+                    radarWidthRef = fRadarWidth * (((float)DEFAULT_SCREEN_WIDTH / (float)DEFAULT_SCREEN_HEIGHT) / (640.0f / 448.0f));
+                }
+
+                for (auto& radarHeightRef : RadarHeightRefs)
+                {
+                    radarHeightRef = fRadarHeight;
+                }
+
+                // Match the gameplay subtitle margins to the constrained radar.
+                Subtitles::RadarReserve = std::max(140.0f, 40.0f + fRadarWidth + 6.0f) + 8.0f;
+            };
+            ApplyRadar();
+            OnSettingChange("MAIN.RadarWidth", []() { ApplyRadar(); });
+            OnSettingChange("MAIN.RadarHeight", []() { ApplyRadar(); });
+
+            {
+                // The game's own sizes, which the setting scales
+                static ProtectedGameRef<float> SubtitlesWidth;
+                pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? A1");
+                SubtitlesWidth.SetAddress(*pattern.get_first<float*>(2));
+
+                static ProtectedGameRef<float> SubtitlesWidth2;
+                pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 DB 05 ? ? ? ? 50 D8 0D ? ? ? ? D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? 8B 3D");
+                SubtitlesWidth2.SetAddress(*pattern.get_first<float*>(2));
+
+                static ProtectedGameRef<float> SubtitlesHeight;
+                pattern = hook::pattern("D8 0D ? ? ? ? D9 1C 24 E8 ? ? ? ? A1");
+                SubtitlesHeight.SetAddress(*pattern.get_first<float*>(2));
+
+                static const float fSubtitlesWidth = SubtitlesWidth;
+                static const float fSubtitlesWidth2 = SubtitlesWidth2;
+                static const float fSubtitlesHeight = SubtitlesHeight;
+                static auto ApplySubtitles = []()
+                {
+                    float scale = std::clamp(fSubtitlesScale, 0.25f, 4.0f);
+                    SubtitlesWidth = fSubtitlesWidth * scale;
+                    SubtitlesWidth2 = fSubtitlesWidth2 * scale;
+                    SubtitlesHeight = fSubtitlesHeight * scale;
+                };
+                ApplySubtitles();
+                OnSettingChange("MAIN.SubtitlesScale", []() { ApplySubtitles(); });
+            }
+
+            // Script text uses a centered canvas in both fade passes.
+            pattern = hook::pattern("BE ? ? ? ? 66 83 BD");
+            ScriptDraw::Init(*pattern.get_first<intro_text_line*>(1));
+
+            pattern = hook::pattern("D9 1C 24 DE D9 E8 ? ? ? ? 8B 1D ? ? ? ?");
+            Subtitles::hbSetCentreSize.fun = injector::MakeCALL(pattern.get_first(5), Subtitles::SetCentreSize, true).get();
+
+            // Subtitles position
+            pattern = hook::pattern("E8 ? ? ? ? 83 C4 ? 6A ? E8 ? ? ? ? ? ? ? ? ? ? ? ? ? 0F 84 ? ? ? ? 68 ? ? ? ? 68 ");
+            hbPrintStringSubtitles.fun = injector::MakeCALL(pattern.get_first(), PrintStringSubtitles).get();
+            GetNumberLines = reinterpret_cast<decltype(GetNumberLines)>(hook::pattern("53 56 55 31 ED 83 EC 20").get_first());
+        };
+    }
+} Frontend;

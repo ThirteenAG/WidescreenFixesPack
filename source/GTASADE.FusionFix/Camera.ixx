@@ -12,11 +12,10 @@ import Controller;
 
 namespace
 {
-    // The pattern's first match, nullptr when it isn't found (a game update changed the code)
+    // The pattern's first match
     uint8_t* FindFirst(std::string_view signature, ptrdiff_t offset = 0)
     {
-        auto pattern = hook::pattern(signature);
-        return pattern.empty() ? nullptr : pattern.get_first<uint8_t>(offset);
+        return hook::pattern(signature).get_first<uint8_t>(offset);
     }
 
     struct CameraAngles
@@ -288,8 +287,7 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            if (Settings.improveCameraPC)
-                InstallMouseOrbit();
+            InstallMouseOrbit();
         };
         WFP::onGameInitEvent() += []() { ped = {}; car = {}; };
     }

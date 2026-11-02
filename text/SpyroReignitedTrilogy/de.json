@@ -1,8 +1,9 @@
 {
-  "plugin.name": "Spyro Reignited Trilogy Widescreen Fix",
-  "page.advanced": "Erweitert",
-  "OverrideFOV": "Festes Sichtfeld",
-  "OverrideFOV.description": "Ein festes horizontales Sichtfeld in Grad bei 16:9, vor der Breitbildkorrektur. -1 behält das des Spiels.",
+  "plugin.name": "Spyro Reignited Trilogy Fusion Fix",
+  "page.camera": "Kamera",
   "FOVFactor": "Sichtfeld",
-  "FOVFactor.description": "Vervielfacht das Sichtfeld der Kamera, das sich bereits mit dem Bildschirm verbreitert (Hor+). Skriptansichten verwenden dieselbe Kamera und ändern sich mit."
+  "FOVFactor.description": "Vervielfacht das Sichtfeld zusätzlich zur Breitbildkorrektur, die auf Bildschirmen breiter als 16:9 bereits mehr zu den Seiten zeigt. 1.0 behält den Bildausschnitt des Spiels; höhere Werte zeigen mehr, niedrigere zoomen heran. Zwischensequenzen und andere Skriptansichten verwenden dieselbe Kamera und ändern sich mit. Wirkt sofort.",
+  "OverrideFOV": "Festes Sichtfeld",
+  "OverrideFOV.description": "Ersetzt das Sichtfeld der Kamera durch einen festen horizontalen Winkel in Grad, wie er bei 16:9 wäre; Breitbildkorrektur und Sichtfeld-Faktor wirken weiterhin zusätzlich. Alle Ansichten verwenden ihn, auch Zwischensequenzen und die Zoomeffekte des Spiels. Aus behält das eigene Sichtfeld der Kamera. Wirkt sofort.",
+  "OverrideFOV.off": "Aus"
 }

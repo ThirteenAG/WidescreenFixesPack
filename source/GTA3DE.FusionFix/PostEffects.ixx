@@ -1,7 +1,6 @@
 module;
 
 #include "stdafx.h"
-#include "../Shared/CheckedPattern.hpp"
 
 export module PostEffects;
 
@@ -132,10 +131,8 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            if (Settings.visualStyle == VisualStyle::DE)
-                return;
-            const auto applyValues = wfp::patterns::First("48 8B C4 55 53 57 41 56 48 8D 68 88 48 81 EC 58 01 00 00 4C 89 60 D8 48");
-            const auto colourOptions = wfp::patterns::First("48 8B C4 55 41 56 48 8D 68 A1 48 81 EC E8 00 00 00 48 83 3D ? ? ? ?");
+            const auto applyValues = hook::pattern("48 8B C4 55 53 57 41 56 48 8D 68 88 48 81 EC 58 01 00 00 4C 89 60 D8 48").get_first();
+            const auto colourOptions = hook::pattern("48 8B C4 55 41 56 48 8D 68 A1 48 81 EC E8 00 00 00 48 83 3D ? ? ? ?").get_first();
             if (!applyValues || !colourOptions)
                 return;
             colourOptionsHook = safetyhook::create_inline(colourOptions, UpdateColorOptions);

@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 #include <LEDEffects.h>
 
 export module LightSync;
@@ -21,8 +20,6 @@ public:
 
             auto playerPattern = hook::pattern("8B 0D ? ? ? ? 85 C9 75 14 68 ? ? ? ? 6A 3E 68 ? ? ? ? E8 ? ? ? ? 83 C4 0C 8B 0D ? ? ? ? 8D 54 24 0A");
             auto valuePattern = hook::pattern("A1 ? ? ? ? 81 C6");
-            if (!PatternAvailable(playerPattern, "ResidentEvilRevelations.FusionFix: LightSync") || !PatternAvailable(valuePattern, "ResidentEvilRevelations.FusionFix: LightSync"))
-                return;
             static auto sPlayerPtr = *playerPattern.get_first<void*>(2);
             static auto dword_116F398 = *valuePattern.get_first<void*>(1);
 

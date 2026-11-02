@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "FixSettings.hpp"
-#include <utility/Scan.hpp>
 
 ASI_SETTINGS_EXPORT(FixSettings())
 
@@ -15,8 +14,8 @@ namespace rdrFlashIntroHandler
     SafetyHookInline FlashIntroHandlerHook{};
     void __fastcall Update(FlashIntroHandler* smp_Instance)
     {
-        if (smp_Instance)
-            smp_Instance->bLegalsCompleted = 1;
+        // The startup logos count as finished; the title screen follows right away
+        smp_Instance->bLegalsCompleted = 1;
     }
 }
 
@@ -26,15 +25,9 @@ void Init()
 
     if (bSkipIntro)
     {
-        auto LegalsCompletedRef = utility::find_function_from_string_ref(GetModuleHandleW(NULL), "LegalsCompleted");
-        if (LegalsCompletedRef)
-        {
-            auto func_start = utility::find_function_start_with_call(LegalsCompletedRef.value());
-            if (func_start)
-                rdrFlashIntroHandler::FlashIntroHandlerHook = safetyhook::create_inline(func_start.value(), rdrFlashIntroHandler::Update);
-        }
-        if (!rdrFlashIntroHandler::FlashIntroHandlerHook)
-            OutputDebugStringA("Red Dead Redemption Fusion Fix: intro handler unavailable; startup screens retained.\n");
+        // rdrFlashIntroHandler::Update
+        auto pattern = hook::pattern("40 56 57 41 57 48 83 EC 30 48 89 6C 24 58 45 33 FF 40 32 ED 48 8B F9 81 79 08 E8 03 00 00");
+        rdrFlashIntroHandler::FlashIntroHandlerHook = safetyhook::create_inline(pattern.get_first(), rdrFlashIntroHandler::Update);
     }
 }
 
@@ -53,10 +46,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)
     if (reason == DLL_PROCESS_ATTACH)
     {
         if (!IsUALPresent()) { InitializeASI(); }
-    }
-    else if (reason == DLL_PROCESS_DETACH)
-    {
-
     }
     return TRUE;
 }

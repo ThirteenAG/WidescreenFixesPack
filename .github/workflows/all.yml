@@ -86,21 +86,21 @@ jobs:
         tag: gtavcde
         artifacts: data/Archives/GTAVCDE.FusionFix.zip
 
-    - name: Grand Theft Auto Vice City Stories Widescreen Fix [PCSX2F]
+    - name: Grand Theft Auto Vice City Stories Fusion Fix [PCSX2F]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtavcs
-        artifacts: data/Archives/GTAVCS.PCSX2F.WidescreenFix.zip, data/Archives/GTAVCS.PCSX2F.ImVehLM.zip
+        artifacts: data/Archives/GTAVCS.PCSX2F.FusionFix.zip
 
-    - name: GTA Liberty City Stories Widescreen Fix [PPSSPP]
+    - name: GTA Liberty City Stories Fusion Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtalcspsp
-        artifacts: data/Archives/GTALCS.PPSSPP.WidescreenFix.zip, data/Archives/GTALCS.PPSSPP.ImVehLM.zip
+        artifacts: data/Archives/GTALCS.PPSSPP.FusionFix.zip
 
     - name: GTA Chinatown Wars Fusion Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
@@ -110,37 +110,37 @@ jobs:
         tag: gtactwpsp
         artifacts: data/Archives/GTACTW.PPSSPP.FusionFix.zip
 
-    - name: GTA Vice City Stories Widescreen Fix [PPSSPP]
+    - name: GTA Vice City Stories Fusion Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtavcspsp
-        artifacts: data/Archives/GTAVCS.PPSSPP.WidescreenFix.zip, data/Archives/GTAVCS.PPSSPP.ImVehLM.zip, data/Archives/GTAVCS.PPSSPP.GamepadIcons.zip
+        artifacts: data/Archives/GTAVCS.PPSSPP.FusionFix.zip
 
-    - name: Grand Theft Auto Liberty City Stories Widescreen Fix [PCSX2F]
+    - name: Grand Theft Auto Liberty City Stories Fusion Fix [PCSX2F]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtalcs
-        artifacts: data/Archives/GTALCS.PCSX2F.WidescreenFix.zip, data/Archives/GTALCS.PCSX2F.ImVehLM.zip
+        artifacts: data/Archives/GTALCS.PCSX2F.FusionFix.zip
 
-    - name: Grand Theft Auto San Andreas Widescreen Fix
+    - name: Grand Theft Auto San Andreas Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtasa
-        artifacts: data/Archives/GTASA.WidescreenFix.zip
+        artifacts: data/Archives/GTASA.FusionFix.zip
 
-    - name: Splinter Cell Double Agent Widescreen Fix [PCSX2F]
+    - name: Splinter Cell Double Agent Fusion Fix [PCSX2F]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: scdaps2
-        artifacts: data/Archives/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.zip
+        artifacts: data/Archives/SplinterCellDoubleAgent.PCSX2F.FusionFix.zip
 
     - name: Splinter Cell Essentials Fusion Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
@@ -150,45 +150,45 @@ jobs:
         tag: sce
         artifacts: data/Archives/SplinterCellEssentials.PPSSPP.FusionFix.zip
 
-    - name: Burnout 3 Takedown Widescreen Fix [PCSX2F]
+    - name: Burnout 3 Takedown Fusion Fix [PCSX2F]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: burnout3
-        artifacts: data/Archives/Burnout3.PCSX2F.WidescreenFix.zip
+        artifacts: data/Archives/Burnout3.PCSX2F.FusionFix.zip
 
-    - name: Condemned Criminal Origins Widescreen Fix
+    - name: Condemned Criminal Origins Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: condemned
-        artifacts: data/Archives/Condemned.WidescreenFix.zip
+        artifacts: data/Archives/Condemned.FusionFix.zip
 
-    - name: Knight Rider The Game 2 Widescreen Fix
+    - name: Knight Rider The Game 2 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: kr2
-        artifacts: data/Archives/KnightRider2.WidescreenFix.zip
+        artifacts: data/Archives/KnightRider2.FusionFix.zip
 
-    - name: Knight Rider The Game Widescreen Fix [+PCSX2F]
+    - name: Knight Rider The Game Fusion Fix [+PCSX2F]
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: kr
-        artifacts: data/Archives/KnightRider.WidescreenFix.zip, data/Archives/KnightRider.PCSX2F.WidescreenFix.zip
+        artifacts: data/Archives/KnightRider.FusionFix.zip, data/Archives/KnightRider.PCSX2F.FusionFix.zip
 
-    - name: Far Cry Widescreen Fix
+    - name: Far Cry Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: farcry
-        artifacts: data/Archives/FarCry.WidescreenFix.zip
+        artifacts: data/Archives/FarCry.FusionFix.zip
 
     - name: Need for Speed Undercover Fusion Fix
       uses: ./.github/workflows/release_tag
@@ -206,85 +206,85 @@ jobs:
         tag: nfsps
         artifacts: data/Archives/NFSProStreet.FusionFix.zip
 
-    - name: Bully Scholarship Edition Widescreen Fix
+    - name: Bully Scholarship Edition Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: bully
-        artifacts: data/Archives/Bully.WidescreenFix.zip
+        artifacts: data/Archives/Bully.FusionFix.zip
 
-    - name: L.A. Rush Widescreen Fix
+    - name: L.A. Rush Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: larush
-        artifacts: data/Archives/LARush.WidescreenFix.zip
+        artifacts: data/Archives/LARush.FusionFix.zip
 
-    - name: The Godfather Widescreen Fix
+    - name: The Godfather Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: thegodfather
-        artifacts: data/Archives/TheGodfather.WidescreenFix.zip
+        artifacts: data/Archives/TheGodfather.FusionFix.zip
 
-    - name: Psychonauts Widescreen Fix
+    - name: Psychonauts Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: psychonauts
-        artifacts: data/Archives/Psychonauts.WidescreenFix.zip
+        artifacts: data/Archives/Psychonauts.FusionFix.zip
 
-    - name: Just Cause Widescreen Fix
+    - name: Just Cause Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: justcause
-        artifacts: data/Archives/JustCause.WidescreenFix.zip
+        artifacts: data/Archives/JustCause.FusionFix.zip
 
-    - name:  The Matrix Path of Neo Widescreen Fix
+    - name:  The Matrix Path of Neo Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: thematrixpathofneo
-        artifacts: data/Archives/TheMatrixPathOfNeo.WidescreenFix.zip
+        artifacts: data/Archives/TheMatrixPathOfNeo.FusionFix.zip
 
-    - name: Enter the Matrix Widescreen Fix
+    - name: Enter the Matrix Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: enterthematrix
-        artifacts: data/Archives/EnterTheMatrix.WidescreenFix.zip
+        artifacts: data/Archives/EnterTheMatrix.FusionFix.zip
 
-    - name: Hidden and Dangerous 2 Widescreen Fix
+    - name: Hidden and Dangerous 2 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: hd2
-        artifacts: data/Archives/HiddenandDangerous2.WidescreenFix.zip
+        artifacts: data/Archives/HiddenandDangerous2.FusionFix.zip
 
-    - name: Ultimate Spider-Man Widescreen Fix
+    - name: Ultimate Spider-Man Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: usm
-        artifacts: data/Archives/UltimateSpiderMan.WidescreenFix.zip
+        artifacts: data/Archives/UltimateSpiderMan.FusionFix.zip
 
-    - name: DRIV3R Widescreen Fix
+    - name: DRIV3R Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: driv3r
-        artifacts: data/Archives/Driv3r.WidescreenFix.zip
+        artifacts: data/Archives/Driv3r.FusionFix.zip
 
     - name: The Saboteur Fusion Fix
       uses: ./.github/workflows/release_tag
@@ -294,13 +294,13 @@ jobs:
         tag: thesaboteur
         artifacts: data/Archives/TheSaboteur.FusionFix.zip
 
-    - name: The Suffering Widescreen Fix
+    - name: The Suffering Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: thesuffering
-        artifacts: data/Archives/TheSuffering.WidescreenFix.zip
+        artifacts: data/Archives/TheSuffering.FusionFix.zip
 
     - name: The Warriors Fusion Fix [PPSSPP]
       uses: ./.github/workflows/release_tag
@@ -310,109 +310,109 @@ jobs:
         tag: thewarriors
         artifacts: data/Archives/TheWarriors.PPSSPP.FusionFix.zip
 
-    - name: Silent Hill 4 Widescreen Fix
+    - name: Silent Hill 4 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: sh4
-        artifacts: data/Archives/SilentHill4.WidescreenFix.zip
+        artifacts: data/Archives/SilentHill4.FusionFix.zip
 
-    - name: Driver Parallel Lines Widescreen Fix
+    - name: Driver Parallel Lines Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: driverpl
-        artifacts: data/Archives/DriverParallelLines.WidescreenFix.zip
+        artifacts: data/Archives/DriverParallelLines.FusionFix.zip
 
-    - name: Call of Cthulhu Widescreen Fix
+    - name: Call of Cthulhu Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: callofcthulhu
-        artifacts: data/Archives/CallOfCthulhu.WidescreenFix.zip
+        artifacts: data/Archives/CallOfCthulhu.FusionFix.zip
 
-    - name: King Kong Widescreen Fix
+    - name: King Kong Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: kingkong
-        artifacts: data/Archives/KingKong.WidescreenFix.zip
+        artifacts: data/Archives/KingKong.FusionFix.zip
 
-    - name: Onimusha 3 Widescreen Fix
+    - name: Onimusha 3 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: onimusha3
-        artifacts: data/Archives/Onimusha3.WidescreenFix.zip
+        artifacts: data/Archives/Onimusha3.FusionFix.zip
 
-    - name: Silent Hill 3 Widescreen Fix
+    - name: Silent Hill 3 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: sh3
-        artifacts: data/Archives/SilentHill3.WidescreenFix.zip
+        artifacts: data/Archives/SilentHill3.FusionFix.zip
 
-    - name: Silent Hill 2 Widescreen Fix
+    - name: Silent Hill 2 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: sh2
-        artifacts: data/Archives/SilentHill2.WidescreenFix.zip
+        artifacts: data/Archives/SilentHill2.FusionFix.zip
 
-    - name: Cold Fear Widescreen Fix
+    - name: Cold Fear Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: coldfear
-        artifacts: data/Archives/ColdFear.WidescreenFix.zip
+        artifacts: data/Archives/ColdFear.FusionFix.zip
 
-    - name: Paradise Cracked Widescreen Fix
+    - name: Paradise Cracked Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: paradisecracked
-        artifacts: data/Archives/ParadiseCracked.WidescreenFix.zip
+        artifacts: data/Archives/ParadiseCracked.FusionFix.zip
 
-    - name: Need For Speed Underground Widescreen Fix
+    - name: Need For Speed Underground Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: nfsu
-        artifacts: data/Archives/NFSUnderground.WidescreenFix.zip
+        artifacts: data/Archives/NFSUnderground.FusionFix.zip
 
-    - name: Need For Speed Underground 2 Widescreen Fix
+    - name: Need For Speed Underground 2 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: nfsu2
-        artifacts: data/Archives/NFSUnderground2.WidescreenFix.zip
+        artifacts: data/Archives/NFSUnderground2.FusionFix.zip
 
-    - name: Need For Speed Most Wanted (2005) Widescreen Fix
+    - name: Need For Speed Most Wanted (2005) Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: nfsmw
-        artifacts: data/Archives/NFSMostWanted.WidescreenFix.zip
+        artifacts: data/Archives/NFSMostWanted.FusionFix.zip
 
-    - name: Need For Speed Carbon Widescreen Fix
+    - name: Need For Speed Carbon Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: nfsc
-        artifacts: data/Archives/NFSCarbon.WidescreenFix.zip
+        artifacts: data/Archives/NFSCarbon.FusionFix.zip
 
     - name: Need For Speed The Run Fusion Fix
       uses: ./.github/workflows/release_tag
@@ -422,21 +422,21 @@ jobs:
         tag: nfstherun
         artifacts: data/Archives/NFSTheRun.FusionFix.zip
 
-    - name: Manhunt Widescreen Fix
+    - name: Manhunt Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: manhunt
-        artifacts: data/Archives/Manhunt.WidescreenFix.zip
+        artifacts: data/Archives/Manhunt.FusionFix.zip
 
-    - name: Gun Widescreen Fix
+    - name: Gun Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: gun
-        artifacts: data/Archives/Gun.WidescreenFix.zip
+        artifacts: data/Archives/Gun.FusionFix.zip
 
     - name: SOCOM U.S. Navy SEALs Fireteam Bravo Fusion Fix
       uses: ./.github/workflows/release_tag
@@ -471,13 +471,13 @@ jobs:
         release_name: 'Midnight Club: LA Remix Fusion Fix [PPSSPP]'
         artifacts: data/Archives/MidnightClubLARemix.PPSSPP.FusionFix.zip
 
-    - name: Deer Avenger 4 Widescreen Fix
+    - name: Deer Avenger 4 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: da4
-        artifacts: data/Archives/DeerAvenger4.WidescreenFix.zip
+        artifacts: data/Archives/DeerAvenger4.FusionFix.zip
 
     - name: Mafia Fusion Fix
       uses: ./.github/workflows/release_tag
@@ -487,69 +487,96 @@ jobs:
         tag: mafia
         artifacts: data/Archives/Mafia.FusionFix.zip
 
-    - name: Total Overdose Widescreen Fix
+    - name: Mafia Definitive Edition Fusion Fix
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ steps.selection.outputs.tags }}
+        tag: mafiade
+        release_name: 'Mafia: Definitive Edition Fusion Fix'
+        artifacts: data/Archives/MafiaDefinitiveEdition.FusionFix.zip
+
+    - name: Mafia II Definitive Edition Fusion Fix
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ steps.selection.outputs.tags }}
+        tag: mafia2de
+        release_name: 'Mafia II: Definitive Edition Fusion Fix'
+        artifacts: data/Archives/Mafia2DefinitiveEdition.FusionFix.zip
+
+    - name: Mafia III Definitive Edition Fusion Fix
+      uses: ./.github/workflows/release_tag
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_list: ${{ steps.selection.outputs.tags }}
+        tag: mafia3de
+        release_name: 'Mafia III: Definitive Edition Fusion Fix'
+        artifacts: data/Archives/Mafia3DefinitiveEdition.FusionFix.zip
+
+    - name: Total Overdose Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: tod
-        artifacts: data/Archives/TotalOverdose.WidescreenFix.zip
+        artifacts: data/Archives/TotalOverdose.FusionFix.zip
 
-    - name: Tony Hawk's Underground 2 Widescreen Fix
+    - name: Tony Hawk's Underground 2 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: thug2
-        artifacts: data/Archives/TonyHawksUnderground2.WidescreenFix.zip
+        artifacts: data/Archives/TonyHawksUnderground2.FusionFix.zip
 
-    - name: Tony Hawk's Underground Widescreen Fix
+    - name: Tony Hawk's Underground Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: thug
-        artifacts: data/Archives/TonyHawksUnderground.WidescreenFix.zip
+        artifacts: data/Archives/TonyHawksUnderground.FusionFix.zip
 
-    - name: Tony Hawk's Pro Skater 4 Widescreen Fix
+    - name: Tony Hawk's Pro Skater 4 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: thps4
-        artifacts: data/Archives/TonyHawksProSkater4.WidescreenFix.zip
+        artifacts: data/Archives/TonyHawksProSkater4.FusionFix.zip
 
-    - name: Tony Hawk's Pro Skater 3 Widescreen Fix
+    - name: Tony Hawk's Pro Skater 3 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: thps3
-        artifacts: data/Archives/TonyHawksProSkater3.WidescreenFix.zip
+        artifacts: data/Archives/TonyHawksProSkater3.FusionFix.zip
 
-    - name: Tony Hawk's Pro Skater 2 Widescreen Fix
+    - name: Tony Hawk's Pro Skater 2 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: thps2
-        artifacts: data/Archives/TonyHawksProSkater2.WidescreenFix.zip
+        artifacts: data/Archives/TonyHawksProSkater2.FusionFix.zip
 
-    - name: Tony Hawk's American Wasteland Widescreen Fix
+    - name: Tony Hawk's American Wasteland Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: thaw
-        artifacts: data/Archives/TonyHawksAmericanWasteland.WidescreenFix.zip
+        artifacts: data/Archives/TonyHawksAmericanWasteland.FusionFix.zip
 
-    - name: The Punisher Widescreen Fix
+    - name: The Punisher Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: punisher
-        artifacts: data/Archives/ThePunisher.WidescreenFix.zip
+        artifacts: data/Archives/ThePunisher.FusionFix.zip
 
     - name: Scarface Fusion Fix
       uses: ./.github/workflows/release_tag
@@ -559,109 +586,109 @@ jobs:
         tag: scarface
         artifacts: data/Archives/Scarface.FusionFix.zip
 
-    - name: Second Sight Widescreen Fix
+    - name: Second Sight Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: secondsight
-        artifacts: data/Archives/SecondSight.WidescreenFix.zip
+        artifacts: data/Archives/SecondSight.FusionFix.zip
 
-    - name: Psi-Ops The Mindgate Conspiracy Widescreen Fix
+    - name: Psi-Ops The Mindgate Conspiracy Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: psiops
-        artifacts: data/Archives/PsiOpsTheMindgateConspiracy.WidescreenFix.zip
+        artifacts: data/Archives/PsiOpsTheMindgateConspiracy.FusionFix.zip
 
-    - name: Max Payne 2 Widescreen Fix
+    - name: Max Payne 2 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: mp2
-        artifacts: data/Archives/MaxPayne2.WidescreenFix.zip
+        artifacts: data/Archives/MaxPayne2.FusionFix.zip
 
-    - name: Max Payne Widescreen Fix
+    - name: Max Payne Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: mp1
-        artifacts: data/Archives/MaxPayne.WidescreenFix.zip
+        artifacts: data/Archives/MaxPayne.FusionFix.zip
 
-    - name: Grand Theft Auto Vice City Widescreen Fix
+    - name: Grand Theft Auto Vice City Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: gtavc
-        artifacts: data/Archives/GTAVC.WidescreenFix.zip
+        artifacts: data/Archives/GTAVC.FusionFix.zip
 
-    - name: Grand Theft Auto 3 Widescreen Fix
+    - name: Grand Theft Auto 3 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: gta3
-        artifacts: data/Archives/GTA3.WidescreenFix.zip
+        artifacts: data/Archives/GTA3.FusionFix.zip
 
-    - name: Grand Theft Auto 2 Widescreen Fix
+    - name: Grand Theft Auto 2 Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: gta2
-        artifacts: data/Archives/GTA2.WidescreenFix.zip
+        artifacts: data/Archives/GTA2.FusionFix.zip
 
-    - name: Grand Theft Auto (1) Widescreen Fix
+    - name: Grand Theft Auto (1) Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: gta1
-        artifacts: data/Archives/GTA1.WidescreenFix.zip
+        artifacts: data/Archives/GTA1.FusionFix.zip
 
-    - name: True Crime Streets of LA Widescreen Fix
+    - name: True Crime Streets of LA Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: truecrimesola
-        artifacts: data/Archives/TrueCrimeStreetsofLA.WidescreenFix.zip
+        artifacts: data/Archives/TrueCrimeStreetsofLA.FusionFix.zip
 
-    - name: True Crime New York City Widescreen Fix
+    - name: True Crime New York City Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: truecrimenyc
-        artifacts: data/Archives/TrueCrimeNewYorkCity.WidescreenFix.zip, data/Archives/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.zip
+        artifacts: data/Archives/TrueCrimeNewYorkCity.FusionFix.zip, data/Archives/TrueCrimeNewYorkCity.PCSX2F.FusionFix.zip
 
-    - name: Street Racing Syndicate Widescreen Fix
+    - name: Street Racing Syndicate Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: srs
-        artifacts: data/Archives/StreetRacingSyndicate.WidescreenFix.zip
+        artifacts: data/Archives/StreetRacingSyndicate.FusionFix.zip
 
-    - name: Splinter Cell Double Agent Widescreen Fix
+    - name: Splinter Cell Double Agent Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: scda
-        artifacts: data/Archives/SplinterCellDoubleAgent.WidescreenFix.zip
+        artifacts: data/Archives/SplinterCellDoubleAgent.FusionFix.zip
 
-    - name: Splinter Cell Chaos Theory Widescreen Fix
+    - name: Splinter Cell Chaos Theory Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: scct
-        artifacts: data/Archives/SplinterCellChaosTheory.WidescreenFix.zip
+        artifacts: data/Archives/SplinterCellChaosTheory.FusionFix.zip
 
     - name: Splinter Cell Conviction Fusion Fix
       uses: ./.github/workflows/release_tag
@@ -679,45 +706,45 @@ jobs:
         tag: scb
         artifacts: data/Archives/SplinterCellBlacklist.FusionFix.zip
 
-    - name: Splinter Cell Pandora Tomorrow Widescreen Fix
+    - name: Splinter Cell Pandora Tomorrow Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: scpt
-        artifacts: data/Archives/SplinterCellPandoraTomorrow.WidescreenFix.zip
+        artifacts: data/Archives/SplinterCellPandoraTomorrow.FusionFix.zip
 
-    - name: Splinter Cell Widescreen Fix
+    - name: Splinter Cell Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: sc
-        artifacts: data/Archives/SplinterCell.WidescreenFix.zip
+        artifacts: data/Archives/SplinterCell.FusionFix.zip
 
-    - name: Spyro Reignited Trilogy Widescreen Fix
+    - name: Spyro Reignited Trilogy Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: spyro
-        artifacts: data/Archives/SpyroReignitedTrilogy.WidescreenFix.zip
+        artifacts: data/Archives/SpyroReignitedTrilogy.FusionFix.zip
 
-    - name: Sniper Elite Widescreen Fix
+    - name: Sniper Elite Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: sniperelite
-        artifacts: data/Archives/SniperElite.WidescreenFix.zip
+        artifacts: data/Archives/SniperElite.FusionFix.zip
 
-    - name: Sonic Heroes Widescreen Fix
+    - name: Sonic Heroes Fusion Fix
       uses: ./.github/workflows/release_tag
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_list: ${{ steps.selection.outputs.tags }}
         tag: sonicheroes
-        artifacts: data/Archives/SonicHeroes.WidescreenFix.zip
+        artifacts: data/Archives/SonicHeroes.FusionFix.zip
 
     - name: Red Dead Redemption Fusion Fix
       uses: ./.github/workflows/release_tag

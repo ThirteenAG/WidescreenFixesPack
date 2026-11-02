@@ -2,10 +2,17 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
+#include "Timing.hpp"
+#include "RuntimeBridge.hpp"
+#include <stdexcept>
 
 export module Misc;
 
+import Bindings;
+
+import FrameRate;
+import Window;
+import Startup;
 import ComVars;
 
 static int WINAPI GetSystemMetrics_Hook(int nIndex)
@@ -17,9 +24,16 @@ static int WINAPI GetSystemMetrics_Hook(int nIndex)
 
 static HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
 {
+    if (IS_INTRESOURCE(lpClassName) || strcmp(lpClassName, "WSClass"))
+        return CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    if (!WindowedModeWrapper::bBorderlessWindowed)
+        dwStyle &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
     auto hWnd = WindowedModeWrapper::CreateWindowExA_Hook(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
     if (hWnd && hWnd == WindowedModeWrapper::GameHWND)
+    {
         WindowedModeWrapper::SetWindowLongA_Hook(hWnd, GWL_STYLE, GetWindowLong(hWnd, GWL_STYLE));
+        SaboteurRuntime::AttachWindow(hWnd);
+    }
     return hWnd;
 }
 
@@ -30,73 +44,56 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            WindowedModeWrapper::EnableDpiAwareness();
             auto nWindowMode = FixSettings().Int("MAIN.WindowMode");
-            auto nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
+            SaboteurWindow::Install();
+            SaboteurStartup::Install();
+            SaboteurFrameRate::Install();
 
             // Unlock resolutions with any refresh rate
             [&]()
             {
-                if (!CheckPatterns("The Saboteur: refresh rates", {
-                    "74 ? 83 C6 01 83 C0 20",
-                }))
-                    return;
-
                 auto pattern = hook::pattern("74 ? 83 C6 01 83 C0 20");
-                ProtectedGameRef<uint8_t>{pattern.get_first<uint8_t>(0)} = 0xEB;
+                injector::WriteMemory<uint8_t>(pattern.get_first<uint8_t>(0), 0xEB, true);
             }();
 
             // Whole section below is for fixing the game above 1080p. God this game is broken.
-            auto pattern = hook::pattern("8B ? A8 02 00 00 3D 00 04 00 00");
+            static constexpr auto nMaxDraws = 1024u;
+            static constexpr auto nDrawCountOffset = 0x2A8;
             static std::vector<SafetyHookMid> HudDrawCountHooks;
-            for (size_t i = 0; i < pattern.size(); i++)
+            auto ecxSite = hook::pattern("8B 81 A8 02 00 00 3D 00 04 00 00");
+            HudDrawCountHooks.emplace_back(safetyhook::create_mid(ecxSite.get_first(6), [](SafetyHookContext& regs)
             {
-                static constexpr auto nMaxDraws = 1024u;
-                static constexpr auto nDrawCountOffset = 0x2A8;
-                auto match = pattern.get(i);
-                switch (*match.get<uint8_t>(1) & 7)
+                if (regs.eax >= nMaxDraws)
                 {
-                    case 1:
-                        HudDrawCountHooks.emplace_back(safetyhook::create_mid(match.get<void>(6), [](SafetyHookContext& regs)
-                        {
-                            if (regs.eax >= nMaxDraws)
-                            {
-                                regs.eax = nMaxDraws - 1;
-                                *reinterpret_cast<uint32_t*>(regs.ecx + nDrawCountOffset) = regs.eax;
-                            }
-                        }));
-                        break;
-                    case 6:
-                        HudDrawCountHooks.emplace_back(safetyhook::create_mid(match.get<void>(6), [](SafetyHookContext& regs)
-                        {
-                            if (regs.eax >= nMaxDraws)
-                            {
-                                regs.eax = nMaxDraws - 1;
-                                *reinterpret_cast<uint32_t*>(regs.esi + nDrawCountOffset) = regs.eax;
-                            }
-                        }));
-                        break;
-                    case 7:
-                        HudDrawCountHooks.emplace_back(safetyhook::create_mid(match.get<void>(6), [](SafetyHookContext& regs)
-                        {
-                            if (regs.eax >= nMaxDraws)
-                            {
-                                regs.eax = nMaxDraws - 1;
-                                *reinterpret_cast<uint32_t*>(regs.edi + nDrawCountOffset) = regs.eax;
-                            }
-                        }));
-                        break;
-                    default:
-                        break;
+                    regs.eax = nMaxDraws - 1;
+                    *reinterpret_cast<uint32_t*>(regs.ecx + nDrawCountOffset) = regs.eax;
                 }
-            }
+            }));
+            auto esiSites = hook::pattern("8B 86 A8 02 00 00 3D 00 04 00 00");
+            if (esiSites.size() != 2)
+                throw std::runtime_error("HUD draw-count signatures not found");
+            for (size_t i = 0; i < 2; ++i)
+                HudDrawCountHooks.emplace_back(safetyhook::create_mid(esiSites.get(i).get<void>(6), [](SafetyHookContext& regs)
+                {
+                    if (regs.eax >= nMaxDraws)
+                    {
+                        regs.eax = nMaxDraws - 1;
+                        *reinterpret_cast<uint32_t*>(regs.esi + nDrawCountOffset) = regs.eax;
+                    }
+                }));
+            auto ediSite = hook::pattern("8B 87 A8 02 00 00 3D 00 04 00 00");
+            HudDrawCountHooks.emplace_back(safetyhook::create_mid(ediSite.get_first(6), [](SafetyHookContext& regs)
+            {
+                if (regs.eax >= nMaxDraws)
+                {
+                    regs.eax = nMaxDraws - 1;
+                    *reinterpret_cast<uint32_t*>(regs.edi + nDrawCountOffset) = regs.eax;
+                }
+            }));
 
             [&]()
             {
-                if (!CheckPatterns("The Saboteur: font cache", {
-                    "C7 44 24 1C 30 00 00 00 89 54 24 20 C7 44 24 24 00 01 00 00 E8",
-                }))
-                    return;
-
                 auto pattern = hook::pattern("C7 44 24 1C 30 00 00 00 89 54 24 20 C7 44 24 24 00 01 00 00 E8");
                 static auto FontCacheConfigHook = safetyhook::create_mid(pattern.get_first(20), [](SafetyHookContext& regs)
                 {
@@ -120,26 +117,18 @@ public:
 
             [&]()
             {
-                if (!CheckPatterns("The Saboteur: cursor scaling", {
-                    "A1 ? ? ? ? 8B 88 74 06 00 00 DB 80 74 06 00 00",
-                    "D9 9E 24 02 00 00 D9 EE D8 96 24 02 00 00",
-                    "D9 9E 28 02 00 00 D8 96 28 02 00 00",
-                }))
-                    return;
-
-                auto pattern = hook::pattern("A1 ? ? ? ? 8B 88 74 06 00 00 DB 80 74 06 00 00");
-                static auto ppRenderer = *pattern.get_first<uintptr_t*>(1);
+                static auto ppRenderer = SaboteurBindings::Renderer();
 
                 static auto GetCursorSpeedBoost = []() -> float
                 {
-                    auto pRenderer = *ppRenderer;
+                    auto pRenderer = ppRenderer->get();
                     if (!pRenderer)
                         return 0.0f;
                     auto fHeight = static_cast<float>(*(uint32_t*)(pRenderer + 0x678));
                     return std::max(fHeight / 1080.0f, 1.0f) - 1.0f;
                 };
 
-                pattern = hook::pattern("D9 9E 24 02 00 00 D9 EE D8 96 24 02 00 00");
+                auto pattern = hook::pattern("D9 9E 24 02 00 00 D9 EE D8 96 24 02 00 00");
                 static auto CursorXHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
                 {
                     *reinterpret_cast<float*>(regs.esi + 0x224) = *(float*)(regs.esi + 0x224) + static_cast<float>(*(int32_t*)(regs.esi + 0x100)) * GetCursorSpeedBoost();
@@ -154,22 +143,20 @@ public:
 
             [&]()
             {
-                if (!CheckPatterns("The Saboteur: map circles", {
-                    "D9 05 ? ? ? ? DE D9 DF E0 F6 C4 41 75 49 8B 0D",
-                    "56 D9 58 04 E8 ? ? ? ? 83 C4 14 EB 14",
-                }))
-                    return;
-
                 auto pattern = hook::pattern("D9 05 ? ? ? ? DE D9 DF E0 F6 C4 41 75 49 8B 0D");
-                static auto pMapCanvasHeight = *pattern.get_first<float*>(2);
-                static auto pMapCanvasWidth = pMapCanvasHeight - 1;
+                static const auto mapCanvasBound = [&]()
+                {
+                    mapCanvasHeight.SetAddress(*pattern.get_first<float*>(2));
+                    mapCanvasWidth.SetAddress(mapCanvasHeight.get_ptr() - 1);
+                    return true;
+                }();
 
                 pattern = hook::pattern("56 D9 58 04 E8 ? ? ? ? 83 C4 14 EB 14");
                 static auto DrawMapCircle = (int(__cdecl*)(void*, float, float, float, int))injector::GetBranchDestination(pattern.get_first(4), true).as_int();
                 static auto DrawMapCircleHook = [](void* pDrawContext, float fPosX, float fPosY, float fRadius, int nColor) -> int
                 {
-                    auto fWidth = *pMapCanvasWidth;
-                    auto fHeight = *pMapCanvasHeight;
+                    auto fWidth = mapCanvasWidth.get();
+                    auto fHeight = mapCanvasHeight.get();
                     if (std::isfinite(fWidth) && std::isfinite(fHeight) && fWidth > 0.0f && fHeight > 0.0f)
                     {
                         float mat0[4] = { 2.0f / fWidth, 0.0f, 0.0f, -1.0f };
@@ -189,28 +176,29 @@ public:
             // This section fixes the audio stuttering that happens sometimes when you close the game
             [&]()
             {
-                if (!CheckPatterns("The Saboteur: shutdown", {
-                    "83 EC 28 80 7C 24 2C 00 56 8B 35 ? ? ? ? 74 2C 6A 00 68",
-                    "8B 0D ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 50 FF 15 ? ? ? ? 8B 35",
-                    "8B C6 5E 88 1D ? ? ? ? C6 05 ? ? ? ? 01 5B",
-                }))
-                    return;
-
                 auto pattern = hook::pattern("83 EC 28 80 7C 24 2C 00 56 8B 35 ? ? ? ? 74 2C 6A 00 68");
                 static auto EnableAccessibilityShortcuts = (int(__cdecl*)(char))pattern.get_first(0);
 
                 pattern = hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 50 FF 15 ? ? ? ? 8B 35");
-                static auto pJobSystem = *pattern.get_first<uintptr_t*>(2);
+                static const auto jobSystemBound = [&]()
+                {
+                    jobSystem.SetAddress(*pattern.get_first<uintptr_t*>(2));
+                    return true;
+                }();
 
                 pattern = hook::pattern("8B C6 5E 88 1D ? ? ? ? C6 05 ? ? ? ? 01 5B");
-                static auto pGameIsRunning = *pattern.get_first<uint8_t*>(5);
+                static const auto gameIsRunningBound = [&]()
+                {
+                    gameIsRunning.SetAddress(*pattern.get_first<uint8_t*>(5));
+                    return true;
+                }();
                 static auto CloseWindowHook = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
                 {
-                    *pGameIsRunning = 0;
+                    gameIsRunning = 0;
 
                     EnableAccessibilityShortcuts(1);
 
-                    if (*pJobSystem)
+                    if (jobSystem.get())
                     {
                         static constexpr auto nWorkerThreads = 7;
                         static constexpr auto nFirstThreadHandleOffset = 0x44;
@@ -219,7 +207,7 @@ public:
                         DWORD nCount = 0;
                         for (auto i = 0; i < nWorkerThreads; i++)
                         {
-                            auto hThread = *(HANDLE*)(*pJobSystem + nFirstThreadHandleOffset + i * nWorkerSize);
+                            auto hThread = *(HANDLE*)(jobSystem.get() + nFirstThreadHandleOffset + i * nWorkerSize);
                             if (hThread && GetThreadId(hThread) != GetCurrentThreadId())
                                 hThreads[nCount++] = hThread;
                         }
@@ -234,11 +222,6 @@ public:
 
             [&]()
             {
-                if (!CheckPatterns("The Saboteur: race HUD", {
-                    "83 EC 44 55 56 8B E9 8B 85 04 02 00 00 57 33 F6 83 CF FF",
-                }))
-                    return;
-
                 auto pattern = hook::pattern("83 EC 44 55 56 8B E9 8B 85 04 02 00 00 57 33 F6 83 CF FF");
                 static auto RaceHUDHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
                 {
@@ -296,12 +279,6 @@ public:
 
             [&]()
             {
-                if (!CheckPatterns("The Saboteur: civilian props", {
-                    "8B 55 1C 8D 7E 1C 50 8B CE 89 17 E8",
-                    "56 50 51 53 8B CF E8 ? ? ? ? 84 C0 0F 85",
-                }))
-                    return;
-
                 auto pattern = hook::pattern("8B 55 1C 8D 7E 1C 50 8B CE 89 17 E8");
                 static auto CivilianPropMaskHook = safetyhook::create_mid(pattern.get_first(11), [](SafetyHookContext& regs)
                 {
@@ -314,15 +291,15 @@ public:
                 pattern = hook::pattern("56 50 51 53 8B CF E8 ? ? ? ? 84 C0 0F 85");
                 static constexpr uint8_t skipPropCheck[] = { 0x83, 0xC4, 0x10, 0x32, 0xC0 };
                 for (size_t i = 0; i < sizeof(skipPropCheck); ++i)
-                    ProtectedGameRef<uint8_t>{pattern.get_first<uint8_t>(6 + i)} = skipPropCheck[i];
+                    injector::WriteMemory<uint8_t>(pattern.get_first<uint8_t>(6 + i), skipPropCheck[i], true);
             }();
 
-            // MAIN.WindowMode: the window when the game's own fullscreen option is off; 1 = with a frame, 2 = borderless.
+            // Native startup configuration selects fullscreen, framed or borderless mode.
             // A framed window as big as the screen is placed with its frame outside the screen; no rounded corners.
             {
                 WindowedModeWrapper::bBorderlessWindowed = nWindowMode != 1;
-                if (WindowedModeWrapper::bBorderlessWindowed)
-                    IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL", std::forward_as_tuple("GetSystemMetrics", GetSystemMetrics_Hook));
+                // The game adds frame metrics before CreateWindowEx; the wrapper adds the DPI-aware frame itself.
+                IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL", std::forward_as_tuple("GetSystemMetrics", GetSystemMetrics_Hook));
                 IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
                     std::forward_as_tuple("CreateWindowExA", CreateWindowExA_Hook),
                     std::forward_as_tuple("CreateWindowExW", WindowedModeWrapper::CreateWindowExW_Hook),
@@ -334,68 +311,56 @@ public:
                 );
             }
 
-            if (nFPSLimit > 0)
+            [&]()
             {
-                static float f = 1.0f / static_cast<float>(nFPSLimit);
-                [&]()
+                auto pattern = hook::pattern("8B 54 24 0C 01 56 40 D9 6C 24 04");
+                static auto GameClockHook = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& regs)
                 {
-                    if (!CheckPatterns("The Saboteur: frame rate", {
-                        "D9 05 ? ? ? ? A2 ? ? ? ? D9 1D ? ? ? ? E8",
-                        "8B 54 24 0C 01 56 40 D9 6C 24 04",
-                        "DB 86 BC 08 00 00 D9 05 ? ? ? ? D9 C0 DE CA D9 46 0C",
-                        "D9 C9 DC 0D ? ? ? ? EB 0A DD D9 D9 07 DC 0D ? ? ? ? D9 1F",
-                        "83 EC 1C D9 EE 56 8B F1 D9 54 24 04 80 BE B8 09 00 00 00",
-                        "D9 86 2C 02 00 00 DD 05 ? ? ? ? DC C9",
-                    }))
+                    static std::mutex remainderMutex;
+                    static std::unordered_map<uintptr_t, double> remainders;
+                    const std::lock_guard lock(remainderMutex);
+                    auto& fRemainder = remainders[regs.esi];
+                    auto fMilliseconds = static_cast<double>(*(float*)(regs.esi + 0x18)) * 1000.0 + fRemainder;
+                    if (!std::isfinite(fMilliseconds) || fMilliseconds < 0.0 || fMilliseconds > static_cast<double>(UINT32_MAX))
                         return;
+                    auto nMilliseconds = static_cast<uint32_t>(fMilliseconds);
+                    fRemainder = fMilliseconds - static_cast<double>(nMilliseconds);
+                    regs.edx = nMilliseconds;
+                });
+            }();
 
-                    auto pattern = hook::pattern("D9 05 ? ? ? ? A2 ? ? ? ? D9 1D ? ? ? ? E8");
-                    ProtectedGameRef<float*>{pattern.get_first<float*>(2)} = &f;
+            [&]()
+            {
+                auto pattern = hook::pattern("DB 86 BC 08 00 00 D9 05 ? ? ? ? D9 C0 DE CA D9 46 0C");
+                static constexpr uint8_t skipDriveSpeed[] = { 0x5E, 0xC2, 0x14, 0x00, 0x90, 0x90 };
+                for (size_t i = 0; i < sizeof(skipDriveSpeed); ++i)
+                    injector::WriteMemory<uint8_t>(pattern.get_first<uint8_t>(i), skipDriveSpeed[i], true);
 
-                    pattern = hook::pattern("8B 54 24 0C 01 56 40 D9 6C 24 04");
-                    static auto GameClockHook = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& regs)
-                    {
-                        static std::unordered_map<uintptr_t, double> remainders;
-                        auto& fRemainder = remainders[regs.esi];
-                        auto fMilliseconds = static_cast<double>(*(float*)(regs.esi + 0x18)) * 1000.0 + fRemainder;
-                        if (!std::isfinite(fMilliseconds) || fMilliseconds < 0.0 || fMilliseconds > static_cast<double>(UINT32_MAX))
-                            return;
-                        auto nMilliseconds = static_cast<uint32_t>(fMilliseconds);
-                        fRemainder = fMilliseconds - static_cast<double>(nMilliseconds);
-                        regs.edx = nMilliseconds;
-                    });
+                static double fDriveSpeedDamping = 0.9990000128746033;
+                static double fDriveSpeedDampingSlow = 0.9900000095367432;
+                pattern = hook::pattern("D9 C9 DC 0D ? ? ? ? EB 0A DD D9 D9 07 DC 0D ? ? ? ? D9 1F");
+                injector::WriteMemory<double*>(pattern.get_first<double*>(4), &fDriveSpeedDamping, true);
+                injector::WriteMemory<double*>(pattern.get_first<double*>(16), &fDriveSpeedDampingSlow, true);
 
-                    pattern = hook::pattern("DB 86 BC 08 00 00 D9 05 ? ? ? ? D9 C0 DE CA D9 46 0C");
-                    static constexpr uint8_t skipDriveSpeed[] = { 0x5E, 0xC2, 0x14, 0x00, 0x90, 0x90 };
-                    for (size_t i = 0; i < sizeof(skipDriveSpeed); ++i)
-                        ProtectedGameRef<uint8_t>{pattern.get_first<uint8_t>(i)} = skipDriveSpeed[i];
+                pattern = hook::pattern("83 EC 1C D9 EE 56 8B F1 D9 54 24 04 80 BE B8 09 00 00 00");
+                static auto BrakeForceHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+                {
+                    const auto frameTime = *(float*)(regs.esp + 0x04);
+                    fDriveSpeedDamping = SaboteurTiming::Damping(0.9990000128746033, frameTime);
+                    fDriveSpeedDampingSlow = SaboteurTiming::Damping(0.9900000095367432, frameTime);
+                });
+            }();
 
-                    static double fDriveSpeedDamping = 0.9990000128746033;
-                    static double fDriveSpeedDampingSlow = 0.9900000095367432;
-                    pattern = hook::pattern("D9 C9 DC 0D ? ? ? ? EB 0A DD D9 D9 07 DC 0D ? ? ? ? D9 1F");
-                    ProtectedGameRef<double*>{pattern.get_first<double*>(4)} = &fDriveSpeedDamping;
-                    ProtectedGameRef<double*>{pattern.get_first<double*>(16)} = &fDriveSpeedDampingSlow;
-
-                    pattern = hook::pattern("83 EC 1C D9 EE 56 8B F1 D9 54 24 04 80 BE B8 09 00 00 00");
-                    static auto BrakeForceHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
-                    {
-                        auto fFrames = static_cast<double>(*(float*)(regs.esp + 0x04)) * 60.0;
-                        fDriveSpeedDamping = std::pow(0.9990000128746033, fFrames);
-                        fDriveSpeedDampingSlow = std::pow(0.9900000095367432, fFrames);
-                    });
-
-                    static double fMouseAxisScale = 0.04;
-                    pattern = hook::pattern("D9 86 2C 02 00 00 DD 05 ? ? ? ? DC C9");
-                    ProtectedGameRef<double*>{pattern.get_first<double*>(8)} = &fMouseAxisScale;
-                    static auto MouseLookHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
-                    {
-                        auto fFrameTime = *(float*)(regs.esp + 0x18);
-                        if (std::isfinite(fFrameTime) && fFrameTime > 0.0f)
-                            fMouseAxisScale = 0.04 * ((1.0 / 60.0) / static_cast<double>(fFrameTime));
-                    });
-                }();
-
-            }
+            [&]()
+            {
+                auto pattern = hook::pattern("D9 86 2C 02 00 00 DD 05 ? ? ? ? DC C9");
+                static double fMouseAxisScale = 0.04;
+                injector::WriteMemory<double*>(pattern.get_first<double*>(8), &fMouseAxisScale, true);
+                static auto MouseLookHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
+                {
+                    fMouseAxisScale = SaboteurTiming::MouseScale(*(float*)(regs.esp + 0x18));
+                });
+            }();
         };
     }
 } Misc;

@@ -1,0 +1,13 @@
+{
+  "plugin.name": "Mafia III: Definitive Edition Fusion Fix",
+  "page.display": "Display",
+  "page.game": "Game",
+  "BorderlessWindowed": "Borderless window",
+  "BorderlessWindowed.description": "When FULLSCREEN is off in the game's display options, the game runs in a borderless window covering its monitor at the desktop resolution. Off shows the game's framed window. Applies at once.",
+  "SkipIntro": "Skip intro",
+  "SkipIntro.description": "Starts straight at the main menu, without the middleware and studio logos and the save warning screen. Off shows them as in the original game. Needs a restart.",
+  "page.compatibility": "Compatibility",
+  "MAIN.TextLanguage": "Text language",
+  "MAIN.TextLanguage.description": "Choose the language used for the fix’s settings text. Auto follows the game or editor language.",
+  "ui.auto": "Auto"
+}

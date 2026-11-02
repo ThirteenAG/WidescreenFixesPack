@@ -2,17 +2,17 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "PlayerControls.hpp"
 #include <array>
 
 export module Controls;
+
+import ComVars;
+import PlayerControls;
 
 namespace
 {
     using namespace RevPlayer;
     constexpr float Pi{ 3.14159265358979323846f };
-    uintptr_t* pPad{};
-    uintptr_t* pCamera{};
     bool (__thiscall* QuickTurn)(uintptr_t, int){};
     SafetyHookInline InputHook;
     SafetyHookInline ViewHook;
@@ -69,7 +69,7 @@ namespace
 
     uintptr_t Manager(uintptr_t ch)
     {
-        auto root = pCamera ? *pCamera : 0;
+        auto root = pGameCamera.is_initialized() ? reinterpret_cast<uintptr_t>(pGameCamera.get()) : 0;
         auto manager = root ? Field<uintptr_t>(root, 0xCE0) : 0;
         if (!manager || Field<uintptr_t>(manager, 0x78) != ch || Field<uintptr_t>(manager, 0x74) != ch)
             return 0;
@@ -145,7 +145,7 @@ namespace
         if (!Offline(ch) || !Ordinary(ch))
             return result;
         auto manager = Manager(ch);
-        auto pad = pPad ? *pPad : 0;
+        auto pad = pPad.is_initialized() ? pPad.get() : 0;
         if (pad && Field<uint8_t>(pad, 0x882) && Dodge(ch, pad))
             return result;
         if (!manager || !pad || !Field<uint8_t>(pad, 0x882))
@@ -232,7 +232,7 @@ namespace
             return;
         }
         Sync(ch, manager);
-        auto pad = pPad ? *pPad : 0;
+        auto pad = pPad.is_initialized() ? pPad.get() : 0;
         if (!pad || !Field<uint8_t>(pad, 0x882))
         {
             ViewHook.unsafe_thiscall(camera, arg);
@@ -283,10 +283,10 @@ namespace
 
     bool __fastcall ReloadPressed(uintptr_t control, void*, int slot)
     {
-        auto root = pCamera ? *pCamera : 0;
+        auto root = pGameCamera.is_initialized() ? reinterpret_cast<uintptr_t>(pGameCamera.get()) : 0;
         auto manager = root ? Field<uintptr_t>(root, 0xCE0) : 0;
         auto ch = manager ? Field<uintptr_t>(manager, 0x78) : 0;
-        auto pad = pPad ? *pPad : 0;
+        auto pad = pPad.is_initialized() ? pPad.get() : 0;
         if (!Offline(ch) || !Ordinary(ch) || !pad || slot < 0 || slot >= 2 || Field<int>(control, 16) == 6)
             return ReloadHook.unsafe_thiscall<bool>(control, slot);
         auto active = Field<uint32_t>(pad, 0x870);
@@ -321,13 +321,8 @@ public:
             auto quick = find_pattern("8B CE E8 ? ? ? ? 50 8B CF E8 ? ? ? ? 84 C0 74 ? 6A 06 8B CD E8");
             auto reload = find_pattern("51 53 56 8B F1 8B 46 10 32 DB 83 F8 06 0F 87 ? ? ? ? 57 FF 24 85 ? ? ? ? 8B 44 24 14 50 E8");
             auto legs = find_pattern("8B 8E 3C 0F 00 00 C1 E9 14 F6 C1 01 0F 85 ? ? ? ? 8B 3D ? ? ? ? 8B CE E8 ? ? ? ? 50 8B CF E8");
-            if (input.size() != 1 || camera.size() != 1 || pad.size() != 1 || root.size() != 1 || quick.size() != 1 || legs.size() != 1 || reload.size() != 1)
-            {
-                OutputDebugStringA("Resident Evil Revelations Fusion Fix: modern controls layout unavailable.\n");
-                return;
-            }
-            pPad = *pad.get_first<uintptr_t*>(2);
-            pCamera = *root.get_first<uintptr_t*>(2);
+            pPad.SetAddress(*pad.get_first<uintptr_t*>(2));
+            pGameCamera.SetAddress(*root.get_first<uint8_t**>(2));
             QuickTurn = reinterpret_cast<decltype(QuickTurn)>(injector::GetBranchDestination(quick.get_first(10)).as_int());
             ReloadHook = safetyhook::create_inline(reload.get_first(), ReloadPressed, SafetyHookInline::StartDisabled);
             InputHook = safetyhook::create_inline(input.get_first(), UpdateInput, SafetyHookInline::StartDisabled);

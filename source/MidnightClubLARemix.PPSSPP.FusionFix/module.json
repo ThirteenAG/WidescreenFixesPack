@@ -3,6 +3,8 @@
     "main.cpp",
     "Hud.cpp",
     "Camera.cpp",
+    "Intro.cpp",
+    "NativeMenu.cpp",
     "../../external/injector/include/psp/injector.c",
     "../../external/injector/include/psp/log.c",
     "../../external/injector/include/psp/patterns.c",
@@ -21,6 +23,7 @@
   ],
   "libraries": [
     "-lpspsystemctrl_user",
+    "-lpsputility",
     "-lm"
   ],
   "cxx_flags": [

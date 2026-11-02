@@ -1,4 +1,4 @@
-"""Offline converter for GTAVCS.PPSSPP.GamepadIcons.
+"""Offline converter for the controller icons of GTAVCS.PPSSPP.FusionFix.
 
 Turns the PPSSPP replacement art in textures/GTAVCS/replacements/buttons/<set>
 into the game's native rasters (same size, 4-bit, RGBA8888 palette, GE
@@ -158,8 +158,8 @@ def runs(original, new, gap=8):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--originals', required=True)
-    ap.add_argument('--out', default=os.path.join(ROOT, 'data', 'GTAVCS.PPSSPP.GamepadIcons', 'memstick', 'PSP', 'PLUGINS',
-                                                  'GTAVCS.PPSSPP.GamepadIcons', 'icons'))
+    ap.add_argument('--out', default=os.path.join(ROOT, 'data', 'GTAVCS.PPSSPP.FusionFix', 'memstick', 'PSP', 'PLUGINS',
+                                                  'GTAVCS.PPSSPP.FusionFix', 'icons'))
     ap.add_argument('--preview', default=None)
     a = ap.parse_args()
     infos = json.load(open(os.path.join(a.originals, 'info.json')))

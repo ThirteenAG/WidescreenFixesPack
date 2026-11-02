@@ -13,6 +13,10 @@ export GameRef<uintptr_t> pGameMode;        // game mode manager; mode 1 = local
 export GameRef<uintptr_t> pRender;          // renderer: device +0x100, resolution +0x120, relative resolution +0x128
 export GameRef<uintptr_t> pViewports;       // viewport manager: 400 bytes per player from +0x48, game mode +0xCE0
 
+// The menu manager and the text manager, found by the native menu
+export GameRef<void*> pMenuManager;
+export GameRef<void*> pTextManager;
+
 export bool IsSplitScreenActive()
 {
     auto ptr = pGameMode.get();

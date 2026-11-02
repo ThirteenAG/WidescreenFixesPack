@@ -52,6 +52,24 @@
   ],
   "settings": [
     {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "menu",
+      "choices": [
+        { "value": "auto", "label": "@MAIN.TextLanguage.auto" },
+        { "value": "en", "label": "English" },
+        { "value": "fr", "label": "Français" },
+        { "value": "de", "label": "Deutsch" },
+        { "value": "it", "label": "Italiano" },
+        { "value": "es", "label": "Español" }
+      ]
+    },
+    {
       "id": "MAIN.SkipIntro",
       "type": "bool",
       "default": 1,
@@ -66,6 +84,43 @@
       }
     },
     {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "special": [
+        {
+          "value": "Auto",
+          "label": "@HUD.Auto"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": "4:3",
+          "label": "4:3"
+        },
+        {
+          "value": "16:9",
+          "label": "16:9"
+        },
+        {
+          "value": "21:9",
+          "label": "21:9"
+        },
+        {
+          "value": "32:9",
+          "label": "32:9"
+        }
+      ],
+      "label": "@MAIN.HudAspectRatioConstraint",
+      "description": "@MAIN.HudAspectRatioConstraint.description",
+      "page": "display",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "live"
+    },
+    {
       "id": "MAIN.ImproveWindowedMode",
       "type": "bool",
       "default": 1,
@@ -75,21 +130,58 @@
       "apply": "restart"
     },
     {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.ConfineCursor",
+      "description": "@MAIN.ConfineCursor.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "editor"
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@MAIN.CutsceneBorders.0"
+        },
+        {
+          "value": 1,
+          "label": "@MAIN.CutsceneBorders.1"
+        },
+        {
+          "value": 2,
+          "label": "@MAIN.CutsceneBorders.2"
+        },
+        {
+          "value": 3,
+          "label": "@MAIN.CutsceneBorders.3"
+        }
+      ],
+      "label": "@MAIN.CutsceneBorders",
+      "description": "@MAIN.CutsceneBorders.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
       "id": "MAIN.FOVFactor",
       "type": "float",
-      "default": 1.0,
+      "default": 1,
       "label": "@MAIN.FOVFactor",
       "description": "@MAIN.FOVFactor.description",
       "page": "camera",
       "apply": "live",
       "min": 0.5,
-      "max": 2.0,
-      "step": 0.05,
-      "presets": {
-        "vanilla": 1.0,
-        "recommended": 1.0,
-        "enhanced": 1.0
-      }
+      "max": 2,
+      "step": 0.05
     },
     {
       "id": "CAMERA.Enable",
@@ -98,7 +190,7 @@
       "label": "@CAMERA.Enable",
       "description": "@CAMERA.Enable.description",
       "page": "camera",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 0,
         "recommended": 1,
@@ -120,11 +212,6 @@
       "enabledIf": {
         "setting": "CAMERA.Enable",
         "equals": 1
-      },
-      "presets": {
-        "vanilla": 3,
-        "recommended": 3,
-        "enhanced": 3
       }
     },
     {
@@ -141,11 +228,6 @@
       "enabledIf": {
         "setting": "CAMERA.Enable",
         "equals": 1
-      },
-      "presets": {
-        "vanilla": 2,
-        "recommended": 2,
-        "enhanced": 2
       }
     },
     {
@@ -178,6 +260,24 @@
       "enabledIf": {
         "setting": "CAMERA.Enable",
         "equals": 1
+      }
+    },
+    {
+      "id": "MAIN.RawInputMouse",
+      "type": "bool",
+      "default": 1,
+      "label": "@MAIN.RawInputMouse",
+      "description": "@MAIN.RawInputMouse.description",
+      "page": "camera",
+      "apply": "live",
+      "enabledIf": {
+        "setting": "CAMERA.Enable",
+        "equals": 1
+      },
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
       }
     },
     {
@@ -250,15 +350,55 @@
       "description": "@MAIN.FPSLimit.description",
       "page": "graphics",
       "apply": "live",
-      "min": 0,
+      "min": 30,
       "max": 1000,
       "step": 1,
       "unit": "fps",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "special": [
+        {
+          "value": 0,
+          "label": "@MAIN.FPSLimit.game"
+        },
+        {
+          "value": -1,
+          "label": "@MAIN.FPSLimit.refresh"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 75
+        },
+        {
+          "value": 90
+        },
+        {
+          "value": 100
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 200
+        },
+        {
+          "value": 240
+        },
+        {
+          "value": 360
+        }
+      ]
     },
     {
       "id": "FRAMERATE.UnlockFrameRate",
@@ -293,20 +433,6 @@
       }
     },
     {
-      "id": "FRAMERATE.SmoothReflections",
-      "type": "bool",
-      "default": 1,
-      "label": "@FRAMERATE.SmoothReflections",
-      "description": "@FRAMERATE.SmoothReflections.description",
-      "page": "graphics",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 1,
-        "recommended": 1,
-        "enhanced": 1
-      }
-    },
-    {
       "id": "GRAPHICS.ConsoleGamma",
       "type": "bool",
       "default": 0,
@@ -317,20 +443,6 @@
       "presets": {
         "vanilla": 0,
         "recommended": 0,
-        "enhanced": 1
-      }
-    },
-    {
-      "id": "GRAPHICS.MinimapFix",
-      "type": "bool",
-      "default": 1,
-      "label": "@GRAPHICS.MinimapFix",
-      "description": "@GRAPHICS.MinimapFix.description",
-      "page": "display",
-      "apply": "live",
-      "presets": {
-        "vanilla": 1,
-        "recommended": 1,
         "enhanced": 1
       }
     },
@@ -362,30 +474,7 @@
       "min": 0,
       "max": 8192,
       "step": 256,
-      "unit": "px",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
-    },
-    {
-      "id": "GRAPHICS.ShadowDistance",
-      "type": "float",
-      "default": 0,
-      "label": "@GRAPHICS.ShadowDistance",
-      "description": "@GRAPHICS.ShadowDistance.description",
-      "page": "graphics",
-      "apply": "restart",
-      "min": 0,
-      "max": 2000,
-      "step": 25,
-      "unit": "m",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "unit": "px"
     },
     {
       "id": "UNLOCKS.UnlockAllCars",
@@ -394,12 +483,7 @@
       "label": "@UNLOCKS.UnlockAllCars",
       "description": "@UNLOCKS.UnlockAllCars.description",
       "page": "game",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
       "id": "UNLOCKS.UnlockChallenges",
@@ -408,12 +492,7 @@
       "label": "@UNLOCKS.UnlockChallenges",
       "description": "@UNLOCKS.UnlockChallenges.description",
       "page": "game",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
     },
     {
       "id": "UNLOCKS.UnlockEverything",
@@ -422,12 +501,20 @@
       "label": "@UNLOCKS.UnlockEverything",
       "description": "@UNLOCKS.UnlockEverything.description",
       "page": "game",
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "apply": "restart"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": 0,
+      "label": "@MAIN.CheckForUpdates",
+      "description": "@MAIN.CheckForUpdates.description",
+      "page": "game",
+      "control": [
+        "checkbox",
+        "cycler"
+      ],
+      "apply": "live"
     },
     {
       "id": "MISC.RightStickDeadzone",

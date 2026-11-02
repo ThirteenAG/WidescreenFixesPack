@@ -1,4 +1,6 @@
 #include "Game.hpp"
+#include "Shared/Console/PatchNotice.hpp"
+#include <algorithm>
 
 namespace ctw {
 namespace {
@@ -119,9 +121,11 @@ void EmitProjection(uint32_t** context, const float* matrix) {
 
 void FitProjection(float* output, const float* input) {
     memcpy(output, input, sizeof(currentProjection));
-    const float horizontal = HorizontalScale();
-    for (unsigned column = 0; column != 4; ++column)
+    const float horizontal = FitX(), vertical = FitY();
+    for (unsigned column = 0; column != 4; ++column) {
         output[column * 4] = input[column * 4] * horizontal;
+        output[column * 4 + 1] = input[column * 4 + 1] * vertical;
+    }
 }
 
 // The native writer copies matrix values into GE commands immediately. These
@@ -160,10 +164,12 @@ bool AnchoredProjection(HudAnchor anchor) {
     memcpy(adjusted, base, sizeof(adjusted));
     const float x = (base[0] * anchor.x + base[4] * anchor.y + base[12]) / w;
     const float y = (base[1] * anchor.x + base[5] * anchor.y + base[13]) / w;
-    const float horizontal = scale * HorizontalScale();
+    const float horizontal = scale * FitX(), vertical = scale * FitY();
+    // Side anchors land on the screen edges, or on the edges of the HUD box.
+    const float target = x * HudBox();
     for (unsigned column = 0; column != 4; ++column) {
-        adjusted[column * 4] = base[column * 4] * horizontal + (1.0f - horizontal) * x * base[column * 4 + 3];
-        adjusted[column * 4 + 1] = base[column * 4 + 1] * scale + (1.0f - scale) * y * base[column * 4 + 3];
+        adjusted[column * 4] = base[column * 4] * horizontal + (target - horizontal * x) * base[column * 4 + 3];
+        adjusted[column * 4 + 1] = base[column * 4 + 1] * vertical + (1.0f - vertical) * y * base[column * 4 + 3];
     }
     EmitProjection(reinterpret_cast<uint32_t**>(Address<0x08C11EC0>()), adjusted);
     hud.adjusted = true;
@@ -195,35 +201,50 @@ void UseHudAnchor(HudAnchor anchor) {
 // before the sprite passes; after each sprite pass the framebuffer columns
 // outside the native 480-unit area are cleared to black with the game's own
 // clear-mode rectangles (as its screen clear helper, US 0x08910C1C, draws
-// them), so the room stays centred with clean pillarbox bars like the PDA
-// screens at any pan position.
+// them), so the room stays centred with clean bars like the PDA screens at
+// any pan position. Narrow screens get the same bars above and below.
 bool ApartmentApp() {
     const auto app = at<uintptr_t>(Address<0x08C11258>());
     return Guest(app, 200) && at<int>(app + 196) == 50;
 }
 
-void ClearSideBars() {
-    const float horizontal = HorizontalScale();
-    if (horizontal >= 1.0f || !ApartmentApp()) return;
-    // Framebuffer columns covered by native x 0..480 under the fitted projection.
-    const unsigned left = unsigned(240.0f * (1.0f - horizontal) + 0.5f);
-    if (left == 0 || left >= 240 || !GeRoom(2)) return;
+}
+
+// Black through-mode rectangles over framebuffer columns (left) or rows
+// (bottom) at both sides of the native 480x272 area.
+void ClearOutside(unsigned left, unsigned bottom) {
+    if ((left == 0 && bottom == 0) || left >= 240 || bottom >= 136 || !GeRoom(2)) return;
     const auto context = reinterpret_cast<uint32_t**>(Address<0x08C11EC0>());
     // Two through-mode rectangles, 12-byte vertices (colour, x | y << 16, depth),
     // taken from the top of the frame's vertex area like the native helper.
     auto& top = at<uintptr_t>(Address<0x08C11EC0>() + 12);
     top = (top - 4 * 12) & ~uintptr_t(3);
     const auto vertices = reinterpret_cast<uint32_t*>(top);
-    const uint32_t right = 480 - left;
-    const uint32_t corners[4][2] = {{0, 0}, {left, 272}, {right, 0}, {480, 272}};
+    const uint32_t corners[2][4][2] = {
+        {{0, 0}, {left, 272}, {480 - left, 0}, {480, 272}},
+        {{0, 0}, {480, bottom}, {0, 272 - bottom}, {480, 272}},
+    };
+    const auto& corner = corners[left ? 0 : 1];
     for (unsigned i = 0; i != 4; ++i) {
         vertices[i * 3] = 0xFF000000u;
-        vertices[i * 3 + 1] = corners[i][0] | corners[i][1] << 16;
+        vertices[i * 3 + 1] = corner[i][0] | corner[i][1] << 16;
         vertices[i * 3 + 2] = 0;
     }
     *(*context)++ = 0xD3000101u;   // CLEAR on, colour buffer only
     primitive.fun(context, 6, 0x80011C, 4, 0, top);
     *(*context)++ = 0xD3000000u;   // CLEAR off
+}
+namespace {
+
+// Framebuffer columns (wide screens) or rows (narrow screens) outside the
+// native area under the fitted projection.
+unsigned SideColumns() { return unsigned(240.0f * (1.0f - FitX()) + 0.5f); }
+unsigned EdgeRows() { return unsigned(136.0f * (1.0f - FitY()) + 0.5f); }
+
+void ClearApartment() {
+    if (!ApartmentApp()) return;
+    const unsigned left = SideColumns();
+    ClearOutside(left, left ? 0 : EdgeRows());
 }
 
 void DrawSprites(void* manager, int layer, float alpha) {
@@ -232,7 +253,12 @@ void DrawSprites(void* manager, int layer, float alpha) {
     if (drawingHudSprites) FindHintCluster();
     sprites.fun(manager, layer, alpha);
     if (drawingHudSprites) RestoreHudProjection();
-    else ClearSideBars();
+    else {
+        ClearApartment();
+        // Pillarbox: story scenes (comic panels and in-engine shots) keep
+        // the native 16:9 frame on wider screens.
+        if ((cutsceneBorders & 2) && CutsceneApp()) ClearOutside(SideColumns(), 0);
+    }
     drawingHudSprites = previous;
 }
 
@@ -258,7 +284,7 @@ void DrawRadar(void* instance) {
 void DrawPrimitive(uint32_t** context, int type, uint32_t format, unsigned count, uintptr_t indices, uintptr_t vertices) {
     // Both the rectangle helper and the cinematic renderer submit solid quads
     // here. Textured artwork and world geometry retain their own projection.
-    bool fullWidth = false;
+    bool fullWidth = false, edgeStrip = false;
     if (haveProjection && context == reinterpret_cast<uint32_t**>(Address<0x08C11EC0>()) &&
         currentProjection[3] == 0 && currentProjection[7] == 0 && currentProjection[11] == 0 &&
         currentProjection[15] != 0 && !indices && vertices &&
@@ -267,14 +293,26 @@ void DrawPrimitive(uint32_t** context, int type, uint32_t format, unsigned count
         const unsigned stride = format == 0x100 ? 6 : 12;
         const unsigned offset = format == 0x100 ? 0 : 4;
         if (Guest(vertices, stride * count)) {
-            int left = 32767, right = -32768;
+            int left = 32767, right = -32768, bottom = 32767, top = -32768;
             for (unsigned i = 0; i != count; ++i) {
                 const int x = at<int16_t>(vertices + stride * i + offset);
+                const int y = at<int16_t>(vertices + stride * i + offset + 2);
                 if (x < left) left = x;
                 if (x > right) right = x;
+                if (y < bottom) bottom = y;
+                if (y > top) top = y;
             }
             fullWidth = left <= 0 && right >= 480;
+            edgeStrip = fullWidth && ((bottom <= 0 && top > 0 && top < 96) || (top >= 272 && bottom < 272 && bottom > 176));
         }
+    }
+    // Story scenes (comic panels and in-engine shots) draw the game's
+    // cinematic bars as full-width strips along the top and bottom edges. On
+    // screens narrower than 16:9, Letterbox keeps them in the native frame
+    // with black rows outside it; otherwise they span the screen edges.
+    if (edgeStrip && CutsceneApp() && (cutsceneBorders & 1) && EdgeRows()) {
+        ClearOutside(0, EdgeRows());
+        fullWidth = false;
     }
     if (!fullWidth || !GeRoom(2)) { primitive.fun(context,type,format,count,indices,vertices); return; }
     float saved[16]; memcpy(saved,activeProjection,sizeof(saved));
@@ -284,19 +322,25 @@ void DrawPrimitive(uint32_t** context, int type, uint32_t format, unsigned count
 }
 }
 
-void InstallHud() {
+bool InstallHud() {
     scale = console::bounded(inireader.ReadFloat("MAIN", "HudScale", 1.0f), 0.5f, 1.0f, 1.0f);
+    cutsceneBorders = std::clamp(int(inireader.ReadInteger("MAIN", "CutsceneBorders", 3)), 0, 3);
+    char box[16]{};
+    hudAspect = console::parse_hud_aspect(inireader.ReadString("MAIN", "HudAspectRatioConstraint", "Auto", box, sizeof(box)));
+    // Both sprite hooks must refer to the same manager before installing the HUD group.
+    const auto spriteManager = injector::GetBranchDestination(Address<0x0898D388>()).as_int();
+    if (Address<0x088E12B8>() != spriteManager + 0x3C) {
+        PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
+        return false;
+    }
     projectionWriter = safetymips::create_inline(Address<0x08988CA4>(), WriteProjection);
     writeProjection.fun = projectionWriter.original<void(*)(uint32_t**, const float*)>();
-    const auto spriteManager = injector::GetBranchDestination(Address<0x0898D388>()).as_int();
     sprites.fun = injector::MakeCALL(Address<0x0898D388>(), DrawSprites).get();
-    // The per-instance draw call is fingerprinted by its own address rule; only
-    // hook it when it is the call inside the manager the layer call reaches.
-    if (Address<0x088E12B8>() == spriteManager + 0x3C)
-        sprite.fun = injector::MakeCALL(Address<0x088E12B8>(), DrawSprite).get();
+    sprite.fun = injector::MakeCALL(Address<0x088E12B8>(), DrawSprite).get();
     radarRenderer = safetymips::create_inline(Address<0x089E7270>(), DrawRadar);
     radar.fun = radarRenderer.original<void(*)(void*)>();
     primitiveRenderer = safetymips::create_inline(Address<0x089100C0>(), DrawPrimitive);
     primitive.fun = primitiveRenderer.original<void(*)(uint32_t**, int, uint32_t, unsigned, uintptr_t, uintptr_t)>();
+    return true;
 }
 }

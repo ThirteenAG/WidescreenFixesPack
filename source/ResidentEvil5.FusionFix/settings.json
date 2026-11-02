@@ -33,6 +33,11 @@
       "id": "gameplay",
       "title": "@page.gameplay",
       "section": "gameplay"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
     }
   ],
   "settings": [
@@ -52,12 +57,35 @@
       "apply": "live",
       "control": [
         "slider"
-      ],
-      "presets": {
-        "vanilla": 1.0,
-        "recommended": 1.0,
-        "enhanced": 1.0
-      }
+      ]
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@HudAspectRatioConstraint",
+      "description": "@HudAspectRatioConstraint.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "suggestions": [
+        {
+          "value": "Auto",
+          "label": "@HudAspectRatioConstraint.auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ]
     },
     {
       "id": "MAIN.SkipIntro",
@@ -72,6 +100,35 @@
         "vanilla": 0,
         "recommended": 1,
         "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "min": -1,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        { "value": -1, "label": "@FPSLimit.monitor" },
+        { "value": 0, "label": "@FPSLimit.unlimited" }
+      ],
+      "suggestions": [
+        { "value": 30 },
+        { "value": 60 },
+        { "value": 120 },
+        { "value": 144 },
+        { "value": 240 }
+      ],
+      "label": "@FPSLimit",
+      "description": "@FPSLimit.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 60,
+        "enhanced": 60
       }
     },
     {
@@ -96,6 +153,16 @@
       "control": [
         "cycler"
       ]
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": 1,
+      "label": "@PauseOnFocusLoss",
+      "description": "@PauseOnFocusLoss.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
     },
     {
       "id": "MAIN.LightSyncRGB",
@@ -135,12 +202,7 @@
       "description": "@ModernControls.description",
       "page": "controls",
       "visibility": "menu",
-      "apply": "live",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 1
-      }
+      "apply": "live"
     },
     {
       "id": "MAIN.ForceLaserSight",
@@ -150,12 +212,7 @@
       "description": "@ForceLaserSight.description",
       "page": "controls",
       "visibility": "menu",
-      "apply": "live",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 1
-      }
+      "apply": "live"
     },
     {
       "id": "MAIN.KnifeParry",
@@ -165,12 +222,45 @@
       "description": "@KnifeParry.description",
       "page": "gameplay",
       "visibility": "menu",
-      "apply": "live",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 1
-      }
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        { "value": "auto", "label": "@TextLanguage.auto" },
+        { "value": "en", "label": "English" },
+        { "value": "fr", "label": "Français" },
+        { "value": "de", "label": "Deutsch" },
+        { "value": "it", "label": "Italiano" },
+        { "value": "es", "label": "Español" }
+      ],
+      "label": "@TextLanguage",
+      "description": "@TextLanguage.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "menu"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": 0,
+      "label": "@checkupdates",
+      "description": "@checkupdates.description",
+      "page": "gameplay",
+      "visibility": "menu",
+      "apply": "live"
     }
   ]
 }

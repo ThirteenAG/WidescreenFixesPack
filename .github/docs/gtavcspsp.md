@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="https://thirteenag.github.io/screens/gtavcspsp/main2.jpg" width="760" alt="Grand Theft Auto: Vice City Stories Widescreen Fix (PPSSPP)">
+<img src="https://thirteenag.github.io/screens/gtavcspsp/main2.jpg" width="760" alt="Grand Theft Auto: Vice City Stories Fusion Fix (PPSSPP)">
 
-**Grand Theft Auto: Vice City Stories Widescreen Fix (PPSSPP)** adds HUD scaling, right-stick controls, and optional 60 FPS support, and fixes the Little Willie camera and cars disappearing from garages.
+**Grand Theft Auto: Vice City Stories Fusion Fix (PPSSPP)** adds HUD scaling, right-stick controls, and optional 60 FPS support, and fixes the Little Willie camera and cars disappearing from garages.
 
-[Website](https://thirteenag.github.io/wfp#gtavcspsp) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PPSSPP.WidescreenFix/main.cpp)
+[Website](https://thirteenag.github.io/wfp#gtavcspsp) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/GTAVCS.PPSSPP.FusionFix/main.cpp)
 
 </div>
 
@@ -13,10 +13,11 @@
 ## Fixes
 
 - **Widescreen** - Matches the display shape selected in PPSSPP. You can also choose an aspect ratio in FusionFixHub.
-- **Field of view** - Widens the gameplay view for your screen. Gameplay FOV ranges from 0.5 to 2.0. Restore Cutscene FOV keeps cutscenes at their original 16:9 framing.
-- **HUD** - Adjust the HUD, radar and multiplayer radar sizes separately. HUD Aspect Ratio Constraint keeps the HUD inside a centered area, or uses the whole screen with Auto. Radar positions can be changed in FusionFixHub.
+- **Field of view** - Widens the gameplay view for your screen. Gameplay FOV ranges from 0.5 to 2.0. The gameplay FOV multiplier does not change cutscenes.
+- **HUD** - Adjust the HUD, radar and multiplayer radar sizes separately. HUD Aspect Ratio keeps the HUD inside a centered 4:3, 16:9, 21:9 or 32:9 area, or uses the whole screen with Auto. Radar positions can be changed in FusionFixHub.
 - **Menu artwork** - Keeps its proportions with black bars at the sides when needed.
 - **Cutscene borders** - Choose Off, Letterbox, Pillarbox or Both. Letterbox adds top and bottom bars on narrower screens; Pillarbox adds side bars on wider screens.
+- **Videos** - The logo and title videos keep their proportions, with black bars at the sides on wider screens and above and below on narrower ones.
 
 - **Little Willie camera** - Corrects the camera distance for the Little Willie helicopter.
 - **Garages** - Prevents saved cars from disappearing from garages.
@@ -25,34 +26,33 @@
 
 - **Dual analog controls** - right-stick camera and aim.
 - **Controls** - Modern Control Scheme changes the driving controls.
-- **60 FPS** - off by default; mission timers that depend on the frame rate are adjusted, the concert mission stays at 30 FPS.
+- **Frame rate** - 30 or 60 FPS (`MAIN.FPSLimit` in the cfg); 30 FPS by default. At 60 FPS, mission timers that depend on the frame rate are adjusted, and the concert mission stays at 30 FPS.
 - **Loading** - temporarily unthrottles the emulator during loading (mode 2 also during fades).
 - **Skip intro** - skips the startup intros.
 - **PC cheats** - enable keyboard cheat codes with PC Cheats.
+- **Vehicle lights** - lit headlights, tail, brake and reverse lights on car and bike bodies. Vehicle Lights is on by default; the Vanilla preset turns it off. A change applies the next time the emulated game starts.
+- **Controller icons** - Auto (default) uses Xbox 360 artwork. Original PSP, Xbox 360, Xbox One, PlayStation 3/4/5, Nintendo Switch and Steam Deck sets are also available. Scroll through the configuration option in the game's Controls menu, or choose the set on the fix's Game page; both apply at once. Changes made on fusionfix.io or in FusionFixHub apply the next time the emulated game starts. The sets replace the US version's artwork; other versions keep the original icons.
 
 ![image](https://user-images.githubusercontent.com/4904157/211559646-964ac702-d4e5-45e7-ad26-acb7eb24bdf6.png)
-
-The vehicle-light add-on keeps the original artwork in its Vanilla preset. Recommended and Enhanced enable the replacement lights. Changing the add-on setting requires restarting the emulated game.
 
 ## Installation
 
 1. Download the fix archive from this release.
 2. Extract the archive into the directory containing PPSSPP's `memstick` folder, preserving the folders in the archive.
 3. Launch the game in PPSSPP.
+4. If an older `memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix`, `GTAVCS.PPSSPP.ImVehLM` or `GTAVCS.PPSSPP.GamepadIcons` folder is still there, delete it. All three are part of this Fusion Fix now; while one of them is installed, the Fusion Fix stays off and its log says why.
 
 ## Settings
 
-The fix creates `memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.cfg` on the first launch. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that lists this fix first, then Improved Vehicle Lights and Gamepad Icons when they are installed. The fix's page has its preset (Vanilla, Recommended, Enhanced), Display and Camera (HUD, radar and multiplayer radar size, field of view, cutscene borders, original cutscene FOV), Game (frame rate, fast loading, skip intro) and Restore Defaults. Menu changes are saved when the menu closes; skip intro needs a restart, as do changes made on fusionfix.io or in FusionFixHub. Use FusionFixHub or fusionfix.io for HUD width, radar positions, aspect ratio, controls and PC cheats.
+The fix creates `memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.cfg` on the first launch. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), Display and Camera (HUD size, HUD aspect ratio, radar and multiplayer radar size, field of view, cutscene borders, video aspect ratio), Game (frame rate, fast loading, skip intro, vehicle lights, controller icons) and Restore Defaults. Menu changes are saved when the menu closes; skip intro and vehicle lights need a restart, as do changes made on fusionfix.io or in FusionFixHub. Use FusionFixHub or fusionfix.io for radar positions, aspect ratio, controls and PC cheats.
 
-- **Presets** - Vanilla keeps the original look (HUD, radar and multiplayer radar at full size, cutscene letterbox, intros, normal loading); Recommended is the default; Enhanced adds 60 FPS.
+- **Presets** - Vanilla keeps the original look (HUD, radar and multiplayer radar at full size, cutscene letterbox, PSP controller icons, intros, normal loading, no vehicle lights); Recommended is the default; Enhanced adds 60 FPS.
 
 After updating from an older release, reapply your preferences in FusionFixHub.
 
 ## Not covered
 
 - **Resolution, anti-aliasing, window modes and Alt+Tab** - handled by PPSSPP.
-- **Videos** - not aspect-corrected; Skip intro skips the startup videos.
-- **Controller icons** - the original PSP art by default; the Gamepad Icons plugin replaces it with Xbox, PlayStation, Nintendo Switch or Steam Deck sets.
 
 # Project2DFX
 
@@ -61,29 +61,11 @@ After updating from an older release, reapply your preferences in FusionFixHub.
   <img src="https://user-images.githubusercontent.com/4904157/156879759-6bd08507-f30b-4890-ae69-b0503b998aa6.png" width="652px" />
 </details>
 
-# ImVehLM (Improved Vehicle Lights Mod) & Gamepad Icons
+# Vehicle lights and controller icons
 
 https://user-images.githubusercontent.com/4904157/218305955-3a8a244f-aae8-456b-a7ef-dac9d5ca7118.mp4
 
-Installation:
-- Download and extract the archive to the directory, where PPSSPP's memory stick is located (File -> Open Memory Stick).
-- Inside TEXTURES folder, rename ULUS10160 to the ID, that matches your game (ULUS10160, ULES00502, ULES00503, ULJM05297, ULJM05395, ULJM05884).
-- **textures.zip** is the same between two plugins, overwrite it when installing both.
-- Enable **Game Settings -> Tools -> Developer Tools -> Replace Textures**.
-- Launch the game.
-
-**Gamepad Icons**, allows to select various controller icon styles (Xbox 360, Xbox One, PS3, PS4, PS5, Nintendo Switch, Steam Deck).
-Scroll through the configuration option in CONTROLS menu to switch between them.
-
 ![](https://github.com/ThirteenAG/WidescreenFixesPack/assets/4904157/e3042763-6bf8-419c-ba3a-9bb4e2dfa419)
-
-## Improved vehicle lights settings
-
-Vehicle Lights is on by default. Change it on the Improved Vehicle Lights page under Plugins or in FusionFixHub, then restart the emulated game.
-
-## Gamepad icon settings
-
-Gamepad Icons selects the icon set: original PSP (default), Xbox 360, Xbox One, PS3, PS4, PS5, Nintendo Switch or Steam Deck. Change it in the game's Controls menu, on its page under Plugins, on fusionfix.io or in FusionFixHub; changes outside the Controls menu need a restart.
 
 ## Presets and FusionFixHub
 

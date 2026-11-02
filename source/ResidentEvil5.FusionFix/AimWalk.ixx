@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 
 export module AimWalk;
 
@@ -47,8 +46,8 @@ namespace
     {
         return SetMotionHook.unsafe_thiscall<bool>(model, slot, motion, inter, start, speed, flags);
     }
-    uintptr_t* pSession = nullptr;
-    uintptr_t* pPlayers = nullptr; // player manager: the four player characters at +0x24
+    GameRef<uintptr_t> Session;
+    GameRef<uintptr_t> PlayerManager; // player manager: the four player characters at +0x24
 
     // Clips of a weapon set: forward, left, back, right
     constexpr uint8_t AxisClip[4] = { 0x01, 0x0C, 0x07, 0x0D };
@@ -95,7 +94,7 @@ namespace
 
     bool Online()
     {
-        auto session = pSession ? *pSession : 0;
+        auto session = Session.is_initialized() ? Session.get() : 0;
         auto state = session ? Field<uintptr_t>(session, 0x1042C) : 0;
         return state && Field<uint8_t>(state, 0x56C) != 0;
     }
@@ -109,7 +108,7 @@ namespace
 
     bool InPlayerList(uintptr_t ch)
     {
-        auto players = pPlayers ? *pPlayers : 0;
+        auto players = PlayerManager.is_initialized() ? PlayerManager.get() : 0;
         if (!ch || !players)
             return false;
         for (int i = 0; i < 4; i++)
@@ -378,18 +377,15 @@ export namespace AimWalk
 
     void Init()
     {
-        // The online check and the player list are needed: without them no legs
+        // The online check and the player list
         auto session = hook::pattern("33 FF 8B F1 89 BE EC 2D 00 00 A1 ? ? ? ?");
         auto players = hook::pattern("8B 44 24 08 8B 0D ? ? ? ? 56 50 E8 ? ? ? ? 8B F0 85 F6 74 ? 8B 86 64 2D 00 00");
         auto pattern = hook::pattern("8B 54 24 04 53 8B D9 3B 93 74 03 00 00 72 06 32 C0 5B C2 18 00");
-        if (pattern.size() != 1 || !PatternAvailable(session, "ResidentEvil5.FusionFix: AimWalk") || !PatternAvailable(players, "ResidentEvil5.FusionFix: AimWalk"))
-            return;
-        pSession = *session.get_first<uintptr_t*>(11);
-        pPlayers = *players.get_first<uintptr_t*>(6);
+        Session.SetAddress(*session.get_first<uintptr_t*>(11));
+        PlayerManager.SetAddress(*players.get_first<uintptr_t*>(6));
         SetMotionHook = safetyhook::create_inline(pattern.get_first(), SetMotionDetour);
 
         pattern = hook::pattern("55 8B EC 83 E4 F0 81 EC D4 01 00 00 53 56 57 8B D9 E8");
-        if (PatternUnique(pattern, "ResidentEvil5.FusionFix: AimWalk"))
-            BlendHook = safetyhook::create_inline(pattern.get_first(), Blend);
+        BlendHook = safetyhook::create_inline(pattern.get_first(), Blend);
     }
 }

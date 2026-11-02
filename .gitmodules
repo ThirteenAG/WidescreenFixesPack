@@ -10,9 +10,6 @@
 [submodule "external/spdlog"]
 	path = external/spdlog
 	url = https://github.com/gabime/spdlog
-[submodule "external/filewatch"]
-	path = external/filewatch
-	url = https://github.com/ThomasMonkman/filewatch
 [submodule "external/modutils"]
 	path = external/modutils
 	url = https://github.com/CookiePLMonster/ModUtils
@@ -28,6 +25,3 @@
 [submodule "external/FusionFixUtils"]
 	path = external/FusionFixUtils
 	url = https://github.com/ThirteenAG/FusionFixUtils.git
-[submodule "external/imgui"]
-	path = external/imgui
-	url = https://github.com/ocornut/imgui

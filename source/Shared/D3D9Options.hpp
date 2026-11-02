@@ -10,6 +10,8 @@
 //   the device supports.
 // - presentParameters: called with the parameters (and the focus window, null on a reset) of every CreateDevice and
 //   Reset, and may change them (windowed).
+// - frame: called before every Present, on the game's render thread (overlays, per-frame window work).
+// - beforeReset: called before every Reset, to release what the fix created on the device.
 // Set them before installing: a method is hooked only when its option is on. The hooks are on the methods' code, not
 // on a device's method table, which the runtime keeps per device and may replace; they stay for later devices.
 // - HookCreation(): before the game creates its device; the devices created afterwards get the options.
@@ -19,6 +21,8 @@ namespace D3D9Options
     inline int frameLimit = 0;
     inline int anisotropy = 0;
     inline void (*presentParameters)(D3DPRESENT_PARAMETERS*, HWND) = nullptr;
+    inline void (*frame)(IDirect3DDevice9*) = nullptr;
+    inline void (*beforeReset)(IDirect3DDevice9*) = nullptr;
 
     namespace detail
     {
@@ -71,12 +75,17 @@ namespace D3D9Options
 
         inline HRESULT STDMETHODCALLTYPE Present(IDirect3DDevice9* device, const RECT* source, const RECT* dest, HWND window, const RGNDATA* dirty)
         {
-            Limit();
+            if (frame)
+                frame(device);
+            if (frameLimit > 0)
+                Limit();
             return present.unsafe_stdcall<HRESULT>(device, source, dest, window, dirty);
         }
 
         inline HRESULT STDMETHODCALLTYPE Reset(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* params)
         {
+            if (beforeReset)
+                beforeReset(device);
             if (presentParameters && params)
                 presentParameters(params, nullptr);
             return reset.unsafe_stdcall<HRESULT>(device, params);
@@ -110,9 +119,9 @@ namespace D3D9Options
         if (!device)
             return;
         auto methods = *reinterpret_cast<void***>(device);
-        if (presentParameters)
+        if (presentParameters || beforeReset)
             detail::Hook(detail::reset, methods[IDirect3DDevice9VTBL::Reset], reinterpret_cast<void*>(&detail::Reset));
-        if (frameLimit > 0)
+        if (frameLimit > 0 || frame)
             detail::Hook(detail::present, methods[IDirect3DDevice9VTBL::Present], reinterpret_cast<void*>(&detail::Present));
         if (anisotropy > 1)
         {
@@ -142,7 +151,7 @@ namespace D3D9Options
     // Loads the d3d9.dll the game will use if it isn't loaded yet; false when nothing is on or D3D9 is unavailable
     inline bool HookCreation()
     {
-        if (frameLimit <= 0 && anisotropy <= 1 && !presentParameters)
+        if (frameLimit <= 0 && anisotropy <= 1 && !presentParameters && !frame && !beforeReset)
             return false;
         auto module = GetModuleHandleW(L"d3d9.dll");
         if (!module)

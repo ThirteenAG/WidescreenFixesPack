@@ -1,4 +1,5 @@
 #include "Game.hpp"
+#include "Shared/Console/PatchNotice.hpp"
 namespace essentials {
 namespace {
 SafetyMipsInline directAxis, groundSpeed;
@@ -64,18 +65,29 @@ void GroundSpeed(uintptr_t controller) {
 void InstallInput() {
     deadzone = console::bounded(inireader.ReadFloat("MAIN", "StickDeadzone", 0.1f), 0, 0.95f, 0.1f);
     {
-        sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
-        directAxis = safetymips::create_inline(sites::DirectAxis(), DirectAxis);
-        // Hide the original left-stick camera help when using separate camera axes.
-        injector::MakeJMP(pattern.get_first("B0 FF BD 27 B0 03 8C C4", 0), +[]() {});
+        const auto axis = sites::DirectAxis();
+        const auto help = sites::Unique("B0 FF BD 27 B0 03 8C C4");
+        if (axis && help) {
+            sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
+            directAxis = safetymips::create_inline(axis, DirectAxis);
+            // Hide the original left-stick camera help when using separate camera axes.
+            injector::MakeJMP(help, +[]() {});
+        } else {
+            PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
+        }
     }
     if (inireader.ReadBoolean("MAIN", "SpeedStickControl", true)) {
         // The PSP controller tick snaps the stick magnitude to zero, walk or run
         // after the circular filter. Keep the filtered axes, so every native and
         // script speed calculation (holstered, armed, aiming) sees the real tilt.
-        if (const auto walk = sites::WalkQuantization()) injector::MakeNOP(walk + 12, 8);
+        const auto walk = sites::WalkQuantization();
         const auto ground = sites::GroundSpeed();
-        layout = sites::IsPsn(ground) ? ControllerLayout{0x9A0, 0x954, 0x5D0, 0x5D0, 0x978}
+        if (!walk || !ground) {
+            PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
+            return;
+        }
+        injector::MakeNOP(walk + 12, 8);
+        layout = sites::multiplayer ? ControllerLayout{0x9A0, 0x954, 0x5D0, 0x5D0, 0x978}
                                      : ControllerLayout{0x9AC, 0x964, 0x5E0, 0x5F0, 0x988};
         // The armed branch otherwise assigns a fixed speed and skips Bias.
         // Correct it after the native routine, including input below its threshold.

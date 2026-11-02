@@ -1,26 +1,29 @@
 #include "stdafx.h"
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
+#include "RuntimeBridge.hpp"
+#include <d3d9.h>
 
+
+import NativeMenu;
+import DeveloperOverlay;
 import ComVars;
 
 void Init()
 {
     FixSettings();
     asi_settings::LiveLink::Start();
+    SaboteurMenu::Install();
+    SaboteurRuntime::Install();
+    SaboteurOverlay::Install();
     [&]()
     {
-        if (!CheckPatterns("The Saboteur: renderer events", {
-            "8B 91 ? ? ? ? 50 FF D2 8B CE",
-            "8B 85 ? ? ? ? 8D B0 ? ? ? ? 8B 85",
-        }))
-            return;
-
         auto pattern = hook::pattern("8B 91 ? ? ? ? 50 FF D2 8B CE");
         static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
             Direct3DDevice = (IDirect3DDevice9*)regs.eax;
             WFP::onEndScene().executeAll();
+            SaboteurOverlay::Frame(Direct3DDevice);
+            SaboteurMenu::Frame(SaboteurOverlay::BlocksInput());
         });
 
         pattern = hook::pattern("8B 85 ? ? ? ? 8D B0 ? ? ? ? 8B 85");
@@ -31,15 +34,6 @@ void Init()
         });
     }();
 
-    static auto futures = WFP::onInitEventAsync().executeAllAsync();
-
-    WFP::onGameInitEvent() += []() //todo: add onGameInitEvent hook
-    {
-        for (auto& f : futures.get())
-            f.wait();
-        futures.get().clear();
-    };
-
     WFP::onInitEvent().executeAll();
 }
 
@@ -49,7 +43,11 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("D9 44 24 04 56 DC 0D ? ? ? ? 8B F1 D9 5C 24 08"));
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime([]()
+        {
+            SaboteurMenu::InstallEarly();
+            Init();
+        }, hook::pattern("D9 44 24 04 56 DC 0D ? ? ? ? 8B F1 D9 5C 24 08"));
     });
 }
 

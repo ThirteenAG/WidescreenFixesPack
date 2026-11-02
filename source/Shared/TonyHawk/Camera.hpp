@@ -30,7 +30,6 @@ namespace TonyCamera
     inline std::map<uintptr_t, Owner> Cameras;
     inline const float* Factor = nullptr;
     inline const float* NativeZoomScale = nullptr;
-    inline bool FixHorPlus = true;
     inline SafetyHookMid RegisterHook, ConstructHook, UpdateHook, DestroyHook;
 
     inline void Log(const char* message)
@@ -50,37 +49,19 @@ namespace TonyCamera
                 NativeZoomScale && std::abs(*NativeZoomScale - 1.0f) < 0.001f && Factor && std::isfinite(*Factor))
                 factor = std::clamp(*Factor, 0.5f, 2.0f);
         }
-        return std::clamp((FixHorPlus ? AdjustFOV(fov, aspect) : fov) * factor, 1.0f, 179.0f);
+        // The factor scales the 4:3 angle, so wide screens widen it Hor+ from there
+        return std::clamp(AdjustFOV(std::clamp(fov * factor, 1.0f, 179.0f), aspect), 1.0f, 179.0f);
     }
 
-    inline void Install(const Bindings& bindings, const float* factor, bool fixHorPlus, HMODULE module = GetModuleHandleW(nullptr))
+    inline void Install(const Bindings& bindings, const float* factor, HMODULE module = GetModuleHandleW(nullptr))
     {
         Native = bindings;
         Factor = factor;
-        FixHorPlus = fixHorPlus;
         auto registration = hook::module_pattern(module, Native.registration);
         auto construction = hook::module_pattern(module, Native.construction);
         auto update = hook::module_pattern(module, Native.update);
         auto zoomScale = hook::module_pattern(module, Native.zoomScale);
-        if (registration.size() != 1 || construction.size() != 1 || update.size() != 1 || zoomScale.empty())
-        {
-            Log("gameplay camera ownership patterns unavailable.");
-            return;
-        }
         auto getter = injector::GetBranchDestination(zoomScale.get_first()).as_int();
-        for (size_t i = 1; i < zoomScale.size(); ++i)
-        {
-            if (injector::GetBranchDestination(zoomScale.get(i).get<void>()).as_int() != getter)
-            {
-                Log("camera zoom scale is ambiguous.");
-                return;
-            }
-        }
-        if (*reinterpret_cast<uint16_t*>(getter) != 0x05D9 || *reinterpret_cast<uint8_t*>(getter + 6) != 0xC3)
-        {
-            Log("camera zoom scale unavailable.");
-            return;
-        }
         NativeZoomScale = *reinterpret_cast<const float**>(getter + 2);
         auto table = *construction.get_first<uintptr_t*>(2);
         RegisterHook = safetyhook::create_mid(registration.get_first(Native.registrationOffset), [](SafetyHookContext& regs)

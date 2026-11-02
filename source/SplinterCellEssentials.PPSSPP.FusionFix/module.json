@@ -1,4 +1,5 @@
 {
+  "includes": [".."],
   "sources": [
     "main.cpp",
     "Input.cpp",

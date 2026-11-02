@@ -38,6 +38,15 @@ struct Input {
     int axis(unsigned negative, unsigned positive, int range = 128) const {
         return (int(held(positive)) - int(held(negative))) * range;
     }
+    // A key or mouse button went down, the mouse moved or the wheel turned in
+    // this frame. Unlike active(), a state that never changes doesn't count.
+    bool touched() const {
+        if (mouse.x || mouse.y || mouse.wheel) return true;
+        if ((mouse.left && !previousMouse.left) || (mouse.right && !previousMouse.right) ||
+            (mouse.middle && !previousMouse.middle)) return true;
+        for (unsigned key = 1; key < 256; ++key) if (keys[key] && !previousKeys[key]) return true;
+        return false;
+    }
     bool active() const {
         if (mouse.x || mouse.y || mouse.wheel || mouse.left || mouse.right || mouse.middle) return true;
         for (auto key : keys) if (key) return true;

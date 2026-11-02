@@ -6,6 +6,9 @@ module;
 export module ComVars;
 
 export HWND WindowHandle = nullptr;
+export void (*UpdateCameraCullBias)(float) = nullptr;
+export std::atomic<bool> NativeMenuOpen{ false };
+export std::atomic<bool> NativeHelpRequested{ false };
 
 // UWindowsViewport, set by the viewport's input update every frame
 export uintptr_t GameViewport = 0;
@@ -26,11 +29,35 @@ export enum eWindowStyle
     ExclusiveFullscreen,
     Borderless
 };
-export int* pWindowStyle = nullptr;
+export GameRef<int> WindowStyle;
 
 // Viewport resolution, set by UD3DRenderDevice::SetRes
-export int* pViewportResolutionWidth = nullptr;
-export int* pViewportResolutionHeight = nullptr;
+export GameRef<int> ViewportResolutionWidth;
+export GameRef<int> ViewportResolutionHeight;
+
+// The video options menu's resolution (DX9 exe; the DX11 one keeps it in the menu options)
+export GameRef<int> MenuWidth;
+export GameRef<int> MenuHeight;
+
+// UI::SceneStart: the next Escape key release quits the game
+export GameRef<uint8_t> EscapeQuits;
+// The engine's tick counter, the input sign in waits for it to be past 60
+export GameRef<int64_t> TickCounter;
+// UI::SMISvMManual's state
+export GameRef<uint8_t*> SMIState;
+export GameRef<uint8_t*> NetOnlineManager;
+export GameRef<uint8_t*> MatchManager;
+
+// Split screen
+export GameRef<int32_t> LastPad;
+export GameRef<int32_t> GamepadMode;
+export GameRef<uint8_t*> UIManager;
+export GameRef<void**> CameraJob;
+export GameRef<void***> LightJobs;
+export GameRef<uint8_t*> ResourceDB;
+export GameRef<uint8_t> Player1FullWidth;
+export GameRef<uint8_t*> LoadoutGlobal;
+export GameRef<uint32_t> GIsRequestingExit;
 
 export constexpr float fDefaultAspectRatio = 16.0f / 9.0f;
 
@@ -39,9 +66,9 @@ export bool bSplitscreen = false;
 
 export float GetAspectRatio()
 {
-    if (!pViewportResolutionWidth || !pViewportResolutionHeight || *pViewportResolutionWidth <= 0 || *pViewportResolutionHeight <= 0)
+    if (!ViewportResolutionWidth.is_initialized() || !ViewportResolutionHeight.is_initialized() || ViewportResolutionWidth <= 0 || ViewportResolutionHeight <= 0)
         return fDefaultAspectRatio;
-    return static_cast<float>(*pViewportResolutionWidth) / static_cast<float>(*pViewportResolutionHeight);
+    return static_cast<float>(ViewportResolutionWidth) / static_cast<float>(ViewportResolutionHeight);
 }
 
 export enum eGameMode

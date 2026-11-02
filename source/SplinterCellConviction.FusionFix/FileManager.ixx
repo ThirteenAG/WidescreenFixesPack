@@ -16,6 +16,7 @@ export module FileManager;
 
 import ComVars;
 import BlacklistControls;
+import Gamepad;
 
 // A task dialog with a progress bar and a Cancel button, shown on its own thread while the caller does the work.
 // Games don't have a comctl32 v6 manifest, the dialog thread loads it through an activation context (shell32's manifest, resource 124).
@@ -320,6 +321,13 @@ namespace FileLoader
         if (!path || !*path || !GetOverloadedFilePathA)
             return nullptr;
 
+        if (auto artwork = GamepadArtworkOverride(path))
+        {
+            thread_local std::string overridePath;
+            overridePath = std::move(*artwork);
+            return overridePath.c_str();
+        }
+
         if (bBlacklistControlScheme)
         {
             if (auto blacklistPath = BlacklistControlsOverride(path))
@@ -453,9 +461,10 @@ namespace FFileManagerLinear
 
 namespace Dumper
 {
-    FFileManager** GFileManager = nullptr;
-    void** GFileManagerWindows = nullptr;
-    void** GError = nullptr;
+    // The game's file manager chain, its last (Windows) file manager and the error output device
+    GameRef<FFileManager*> GFileManager;
+    GameRef<FFileManager*> GFileManagerWindows;
+    GameRef<void*> GError;
     void* (__cdecl* appMalloc)(int32_t size) = nullptr;
     FArchive* (__cdecl* CreatePackReader)(FArchive* reader, int32_t owns, int32_t a3, int32_t a4, int32_t a5) = nullptr; // returns a PACK decompressing reader that owns 'reader', or 'reader' itself
     void(__thiscall* PackReaderPrecache)(FArchive* reader, int32_t size) = nullptr;
@@ -666,8 +675,8 @@ namespace Dumper
 
     FArchive* OpenArchive(const char* path, int32_t flags, int32_t a3, int32_t a4, bool pack = true)
     {
-        auto windows = reinterpret_cast<FFileManager*>(*GFileManagerWindows);
-        auto reader = windows->CreateFileReader(path, flags, *GError, 0x10000);
+        FFileManager* windows = GFileManagerWindows;
+        auto reader = windows->CreateFileReader(path, flags, GError, 0x10000);
         if (!reader || !pack)
             return reader;
         auto packReader = CreatePackReader(reader, 1, a3, a4, 0);
@@ -700,8 +709,8 @@ namespace Dumper
     // Archives that are mounted in the chain (the active Loc-<lang>.umd)
     void DumpMountedArchives(std::vector<std::string>& dumped)
     {
-        auto windowsVTable = *reinterpret_cast<uintptr_t*>(*GFileManagerWindows);
-        for (auto fileManager = *GFileManager; fileManager; fileManager = fileManager->Inner())
+        auto windowsVTable = *reinterpret_cast<uintptr_t*>(GFileManagerWindows.get());
+        for (FFileManager* fileManager = GFileManager; fileManager; fileManager = fileManager->Inner())
         {
             auto vtable = *reinterpret_cast<uintptr_t*>(fileManager);
             if (vtable == windowsVTable)
@@ -1056,8 +1065,7 @@ export void InitFileManager()
 
         // FArchiveFileReaderLoadLinear constructor
         pattern = hook::pattern("89 46 1C 89 46 10 C7 06 ? ? ? ? 8B C6 5E C2 10 00");
-        if (!pattern.empty())
-            FFileManagerLinear::LinearReaderVTable = *pattern.get_first<uintptr_t>(8);
+        FFileManagerLinear::LinearReaderVTable = *pattern.get_first<uintptr_t>(8);
 
         pattern = hook::pattern("55 8B EC 83 EC 30 53 56 57 FF 75 08 8B F1 8D 4D E4 33 DB 33 FF E8");
         FFileManagerLinear::shCreateFileReader = safetyhook::create_inline(pattern.get_first(), FFileManagerLinear::CreateFileReader);
@@ -1076,10 +1084,10 @@ export void InitFileManager()
     if (bDumpPackedFiles)
     {
         auto pattern = hook::pattern("A1 ? ? ? ? A3 ? ? ? ? E8 ? ? ? ? 50 68");
-        Dumper::GFileManagerWindows = *pattern.get_first<void**>(1);
+        Dumper::GFileManagerWindows.SetAddress(*pattern.get_first<FFileManager**>(1));
 
         pattern = hook::pattern("68 00 00 01 00 FF 35 ? ? ? ? 53 50 FF 52 10 8B D8");
-        Dumper::GError = *pattern.get_first<void**>(7);
+        Dumper::GError.SetAddress(*pattern.get_first<void**>(7));
 
         pattern = hook::pattern("6A 00 B8 00 00 08 00 50 50 6A 01 53 E8");
         Dumper::CreatePackReader = (decltype(Dumper::CreatePackReader))injector::GetBranchDestination(pattern.get_first(12)).as_int();
@@ -1119,7 +1127,7 @@ export void InitFileManager()
 
         // GFileManager->Mount("UMDs\Conviction.umd")
         pattern = hook::pattern("8B 0D ? ? ? ? 8B 01 74 07 68");
-        Dumper::GFileManager = *pattern.get_first<FFileManager**>(2);
+        Dumper::GFileManager.SetAddress(*pattern.get_first<FFileManager**>(2));
 
         // mg::common::WatchDog crashes the game when a registered thread (the main thread) doesn't report in time, which it can't while dumping.
         // Its check (every second): if (GetTickCount() - thread.lastReport >= thread.timeout) crash, mark the threads as reported instead.

@@ -49,18 +49,23 @@
   },
   "packages": [
     {
-      "id": "Bully.WidescreenFix",
+      "id": "Bully.FusionFix",
       "producers": [
         {
-          "project": "Bully.WidescreenFix",
+          "project": "Bully.FusionFix",
           "solution": "Win32",
-          "source": "data/Bully.WidescreenFix/plugins/Bully.WidescreenFix.asi",
-          "destination": "plugins/Bully.WidescreenFix.asi",
+          "source": "data/Bully.FusionFix/plugins/Bully.FusionFix.asi",
+          "destination": "plugins/Bully.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/Bully.FusionFix/plugins/Bully.FusionFix/buttons.nft",
+          "destination": "plugins/Bully.FusionFix/buttons.nft"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
@@ -70,35 +75,35 @@
       ]
     },
     {
-      "id": "Burnout3.PCSX2F.WidescreenFix",
+      "id": "Burnout3.PCSX2F.FusionFix",
       "producers": [
         {
-          "project": "Burnout3.PCSX2F.WidescreenFix",
+          "project": "Burnout3.PCSX2F.FusionFix",
           "solution": "PCSX2F",
-          "source": "data/Burnout3.PCSX2F.WidescreenFix/PLUGINS/Burnout3.PCSX2F.WidescreenFix.elf",
-          "destination": "PLUGINS/Burnout3.PCSX2F.WidescreenFix.elf"
+          "source": "data/Burnout3.PCSX2F.FusionFix/PLUGINS/Burnout3.PCSX2F.FusionFix.elf",
+          "destination": "PLUGINS/Burnout3.PCSX2F.FusionFix.elf"
         }
       ],
       "files": [
         {
-          "source": "data/Burnout3.PCSX2F.WidescreenFix/PLUGINS/Burnout3.PCSX2F.WidescreenFix.asisettings.json",
-          "destination": "PLUGINS/Burnout3.PCSX2F.WidescreenFix.asisettings.json"
+          "source": "data/Burnout3.PCSX2F.FusionFix/PLUGINS/Burnout3.PCSX2F.FusionFix.asisettings.json",
+          "destination": "PLUGINS/Burnout3.PCSX2F.FusionFix.asisettings.json"
         },
         {
-          "source": "data/Burnout3.PCSX2F.WidescreenFix/PLUGINS/Burnout3.PCSX2F.WidescreenFix.asisettings.en.json",
-          "destination": "PLUGINS/Burnout3.PCSX2F.WidescreenFix.asisettings.en.json"
+          "source": "data/Burnout3.PCSX2F.FusionFix/PLUGINS/Burnout3.PCSX2F.FusionFix.asisettings.en.json",
+          "destination": "PLUGINS/Burnout3.PCSX2F.FusionFix.asisettings.en.json"
         }
       ],
       "dependencies": []
     },
     {
-      "id": "CallOfCthulhu.WidescreenFix",
+      "id": "CallOfCthulhu.FusionFix",
       "producers": [
         {
-          "project": "CallOfCthulhu.WidescreenFix",
+          "project": "CallOfCthulhu.FusionFix",
           "solution": "Win32",
-          "source": "data/CallOfCthulhu.WidescreenFix/Engine/scripts/CallOfCthulhu.WidescreenFix.asi",
-          "destination": "Engine/scripts/CallOfCthulhu.WidescreenFix.asi",
+          "source": "data/CallOfCthulhu.FusionFix/Engine/scripts/CallOfCthulhu.FusionFix.asi",
+          "destination": "Engine/scripts/CallOfCthulhu.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -113,53 +118,63 @@
       ]
     },
     {
-      "id": "ColdFear.WidescreenFix",
+      "id": "ColdFear.FusionFix",
       "producers": [
         {
-          "project": "ColdFear.WidescreenFix",
+          "project": "ColdFear.FusionFix",
           "solution": "Win32",
-          "source": "data/ColdFear.WidescreenFix/scripts/ColdFear.WidescreenFix.asi",
-          "destination": "scripts/ColdFear.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [],
-      "dependencies": [
-        {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "winmm.dll"
-        }
-      ]
-    },
-    {
-      "id": "Condemned.WidescreenFix",
-      "producers": [
-        {
-          "project": "Condemned.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/Condemned.WidescreenFix/scripts/Condemned.WidescreenFix.asi",
-          "destination": "scripts/Condemned.WidescreenFix.asi",
+          "source": "data/ColdFear.FusionFix/scripts/ColdFear.FusionFix.asi",
+          "destination": "scripts/ColdFear.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/Condemned.WidescreenFix/Game/CondemnedZ.Arch00",
+          "source": "data/ColdFear.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "winmm.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "Condemned.FusionFix",
+      "producers": [
+        {
+          "project": "Condemned.FusionFix",
+          "solution": "Win32",
+          "source": "data/Condemned.FusionFix/scripts/Condemned.FusionFix.asi",
+          "destination": "scripts/Condemned.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/Condemned.FusionFix/Game/CondemnedZ.Arch00",
           "destination": "Game/CondemnedZ.Arch00"
         },
         {
-          "source": "data/Condemned.WidescreenFix/Xidi.ini",
+          "source": "data/Condemned.FusionFix/Xidi.ini",
           "destination": "Xidi.ini"
         },
         {
-          "source": "data/Condemned.WidescreenFix/default.archcfg",
+          "source": "data/Condemned.FusionFix/default.archcfg",
           "destination": "default.archcfg"
         },
         {
-          "source": "data/Condemned.WidescreenFix/scripts/Xbox360ControlScheme.png",
+          "source": "data/Condemned.FusionFix/scripts/Xbox360ControlScheme.png",
           "destination": "scripts/Xbox360ControlScheme.png"
         }
       ],
@@ -178,22 +193,17 @@
           "id": "xidi",
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
         }
       ]
     },
     {
-      "id": "DeerAvenger4.WidescreenFix",
+      "id": "DeerAvenger4.FusionFix",
       "producers": [
         {
-          "project": "DeerAvenger4.WidescreenFix",
+          "project": "DeerAvenger4.FusionFix",
           "solution": "Win32",
-          "source": "data/DeerAvenger4.WidescreenFix/scripts/DeerAvenger4.WidescreenFix.asi",
-          "destination": "scripts/DeerAvenger4.WidescreenFix.asi",
+          "source": "data/DeerAvenger4.FusionFix/scripts/DeerAvenger4.FusionFix.asi",
+          "destination": "scripts/DeerAvenger4.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -204,22 +214,72 @@
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "ddraw.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput.dll",
+          "destination": "dinput.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
     {
-      "id": "Driv3r.WidescreenFix",
+      "id": "Driv3r.FusionFix",
       "producers": [
         {
-          "project": "Driv3r.WidescreenFix",
+          "project": "Driv3r.FusionFix",
           "solution": "Win32",
-          "source": "data/Driv3r.WidescreenFix/scripts/Driv3r.WidescreenFix.asi",
-          "destination": "scripts/Driv3r.WidescreenFix.asi",
+          "source": "data/Driv3r.FusionFix/scripts/Driv3r.FusionFix.asi",
+          "destination": "scripts/Driv3r.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/Driv3r.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        },
+        {
+          "source": "data/Driv3r.FusionFix/scripts/Driv3r.FusionFix/buttons.dds",
+          "destination": "scripts/Driv3r.FusionFix/buttons.dds"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "DriverParallelLines.FusionFix",
+      "producers": [
+        {
+          "project": "DriverParallelLines.FusionFix",
+          "solution": "Win32",
+          "source": "data/DriverParallelLines.FusionFix/scripts/DriverParallelLines.FusionFix.asi",
+          "destination": "scripts/DriverParallelLines.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/DriverParallelLines.FusionFix/scripts/DriverParallelLines.FusionFix/buttons.dds",
+          "destination": "scripts/DriverParallelLines.FusionFix/buttons.dds"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
@@ -229,63 +289,57 @@
       ]
     },
     {
-      "id": "DriverParallelLines.WidescreenFix",
+      "id": "EnterTheMatrix.FusionFix",
       "producers": [
         {
-          "project": "DriverParallelLines.WidescreenFix",
+          "project": "EnterTheMatrix.FusionFix",
           "solution": "Win32",
-          "source": "data/DriverParallelLines.WidescreenFix/scripts/DriverParallelLines.WidescreenFix.asi",
-          "destination": "scripts/DriverParallelLines.WidescreenFix.asi",
+          "source": "data/EnterTheMatrix.FusionFix/scripts/EnterTheMatrix.FusionFix.asi",
+          "destination": "scripts/EnterTheMatrix.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
-      "files": [],
-      "dependencies": [
+      "files": [
         {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "EnterTheMatrix.WidescreenFix",
-      "producers": [
-        {
-          "project": "EnterTheMatrix.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/EnterTheMatrix.WidescreenFix/scripts/EnterTheMatrix.WidescreenFix.asi",
-          "destination": "scripts/EnterTheMatrix.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
+          "source": "data/EnterTheMatrix.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
         }
       ],
-      "files": [],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "d3d9.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
     {
-      "id": "FarCry.WidescreenFix",
+      "id": "FarCry.FusionFix",
       "producers": [
         {
-          "project": "FarCry.WidescreenFix",
+          "project": "FarCry.FusionFix",
           "solution": "Win32",
-          "source": "data/FarCry.WidescreenFix/Bin32/FarCry.WidescreenFix.asi",
-          "destination": "Bin32/FarCry.WidescreenFix.asi",
+          "source": "data/FarCry.FusionFix/Bin32/FarCry.FusionFix.asi",
+          "destination": "Bin32/FarCry.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         },
         {
-          "project": "FarCry64.WidescreenFix",
+          "project": "FarCry64.FusionFix",
           "solution": "Win64",
-          "source": "data/FarCry.WidescreenFix/Bin64/FarCry64.WidescreenFix.asi",
-          "destination": "Bin64/FarCry64.WidescreenFix.asi",
+          "source": "data/FarCry.FusionFix/Bin64/FarCry64.FusionFix.asi",
+          "destination": "Bin64/FarCry64.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -305,13 +359,13 @@
       ]
     },
     {
-      "id": "GTA1.WidescreenFix",
+      "id": "GTA1.FusionFix",
       "producers": [
         {
-          "project": "GTA1.WidescreenFix",
+          "project": "GTA1.FusionFix",
           "solution": "Win32",
-          "source": "data/GTA1.WidescreenFix/WINO/scripts/GTA1.WidescreenFix.asi",
-          "destination": "WINO/scripts/GTA1.WidescreenFix.asi",
+          "source": "data/GTA1.FusionFix/WINO/scripts/GTA1.FusionFix.asi",
+          "destination": "WINO/scripts/GTA1.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -326,13 +380,13 @@
       ]
     },
     {
-      "id": "GTA2.WidescreenFix",
+      "id": "GTA2.FusionFix",
       "producers": [
         {
-          "project": "GTA2.WidescreenFix",
+          "project": "GTA2.FusionFix",
           "solution": "Win32",
-          "source": "data/GTA2.WidescreenFix/scripts/GTA2.WidescreenFix.asi",
-          "destination": "scripts/GTA2.WidescreenFix.asi",
+          "source": "data/GTA2.FusionFix/scripts/GTA2.FusionFix.asi",
+          "destination": "scripts/GTA2.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -347,20 +401,20 @@
       ]
     },
     {
-      "id": "GTA3.WidescreenFix",
+      "id": "GTA3.FusionFix",
       "producers": [
         {
-          "project": "GTA3.WidescreenFix",
+          "project": "GTA3.FusionFix",
           "solution": "Win32",
-          "source": "data/GTA3.WidescreenFix/scripts/GTA3.WidescreenFix.asi",
-          "destination": "scripts/GTA3.WidescreenFix.asi",
+          "source": "data/GTA3.FusionFix/scripts/GTA3.FusionFix.asi",
+          "destination": "scripts/GTA3.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/GTA3.WidescreenFix/scripts/global.ini",
+          "source": "data/GTA3.FusionFix/scripts/global.ini",
           "destination": "scripts/global.ini"
         }
       ],
@@ -382,7 +436,7 @@
         "destination": "GTA3.WidescreenFrontend"
       },
       "associatedPackages": [
-        "GTA3.WidescreenFix"
+        "GTA3.FusionFix"
       ]
     },
     {
@@ -437,117 +491,129 @@
       "dependencies": []
     },
     {
-      "id": "GTALCS.PCSX2F.ImVehLM",
+      "id": "GTALCS.PCSX2F.FusionFix",
       "producers": [
         {
-          "project": "GTALCS.PCSX2F.ImVehLM",
+          "project": "GTALCS.PCSX2F.FusionFix",
           "solution": "PCSX2F",
-          "source": "data/GTALCS.PCSX2F.ImVehLM/PLUGINS/GTALCS.PCSX2F.ImVehLM.elf",
-          "destination": "PLUGINS/GTALCS.PCSX2F.ImVehLM.elf"
+          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.elf",
+          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.elf"
         }
       ],
       "files": [
         {
-          "source": "data/GTALCS.PCSX2F.ImVehLM/PLUGINS/GTALCS.PCSX2F.ImVehLM.asisettings.json",
-          "destination": "PLUGINS/GTALCS.PCSX2F.ImVehLM.asisettings.json"
+          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.json",
+          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.json"
         },
         {
-          "source": "data/GTALCS.PCSX2F.ImVehLM/PLUGINS/GTALCS.PCSX2F.ImVehLM.asisettings.en.json",
-          "destination": "PLUGINS/GTALCS.PCSX2F.ImVehLM.asisettings.en.json"
+          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.en.json",
+          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.en.json"
+        },
+        {
+          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.de.json",
+          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.de.json"
+        },
+        {
+          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.fr.json",
+          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.fr.json"
+        },
+        {
+          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.it.json",
+          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.it.json"
+        },
+        {
+          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.es.json",
+          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.es.json"
         }
       ],
       "dependencies": []
     },
     {
-      "id": "GTALCS.PCSX2F.WidescreenFix",
+      "id": "GTALCS.PPSSPP.FusionFix",
       "producers": [
         {
-          "project": "GTALCS.PCSX2F.WidescreenFix",
-          "solution": "PCSX2F",
-          "source": "data/GTALCS.PCSX2F.WidescreenFix/PLUGINS/GTALCS.PCSX2F.WidescreenFix.elf",
-          "destination": "PLUGINS/GTALCS.PCSX2F.WidescreenFix.elf"
-        }
-      ],
-      "files": [
-        {
-          "source": "data/GTALCS.PCSX2F.WidescreenFix/PLUGINS/GTALCS.PCSX2F.WidescreenFix.asisettings.json",
-          "destination": "PLUGINS/GTALCS.PCSX2F.WidescreenFix.asisettings.json"
-        },
-        {
-          "source": "data/GTALCS.PCSX2F.WidescreenFix/PLUGINS/GTALCS.PCSX2F.WidescreenFix.asisettings.en.json",
-          "destination": "PLUGINS/GTALCS.PCSX2F.WidescreenFix.asisettings.en.json"
-        }
-      ],
-      "dependencies": []
-    },
-    {
-      "id": "GTALCS.PPSSPP.ImVehLM",
-      "producers": [
-        {
-          "project": "GTALCS.PPSSPP.ImVehLM",
+          "project": "GTALCS.PPSSPP.FusionFix",
           "solution": "PPSSPP",
-          "source": "data/GTALCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/GTALCS.PPSSPP.ImVehLM.prx",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/GTALCS.PPSSPP.ImVehLM.prx"
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.prx",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.prx"
         }
       ],
       "files": [
         {
-          "source": "data/GTALCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/lights-hd.bin",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/lights-hd.bin"
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/plugin.ini"
         },
         {
-          "source": "data/GTALCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/lights.bin",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/lights.bin"
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.json",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.json"
         },
         {
-          "source": "data/GTALCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/plugin.ini",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/plugin.ini"
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.en.json",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.en.json"
         },
         {
-          "source": "data/GTALCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/GTALCS.PPSSPP.ImVehLM.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/GTALCS.PPSSPP.ImVehLM.asisettings.json"
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.de.json",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.de.json"
         },
         {
-          "source": "data/GTALCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/GTALCS.PPSSPP.ImVehLM.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM/GTALCS.PPSSPP.ImVehLM.asisettings.en.json"
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.fr.json",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.fr.json"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.it.json",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.it.json"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.es.json",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.es.json"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/360.bin",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/360.bin"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/XBO.bin",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/XBO.bin"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/PS3.bin",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/PS3.bin"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/PS4.bin",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/PS4.bin"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/PS5.bin",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/PS5.bin"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/SWI.bin",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/SWI.bin"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/DEK.bin",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/DEK.bin"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/lights.bin",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/lights.bin"
+        },
+        {
+          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/lights-hd.bin",
+          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/lights-hd.bin"
         }
       ],
       "dependencies": []
     },
     {
-      "id": "GTALCS.PPSSPP.WidescreenFix",
+      "id": "GTASA.FusionFix",
       "producers": [
         {
-          "project": "GTALCS.PPSSPP.WidescreenFix",
-          "solution": "PPSSPP",
-          "source": "data/GTALCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.prx",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.prx"
-        }
-      ],
-      "files": [
-        {
-          "source": "data/GTALCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/plugin.ini",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/plugin.ini"
-        },
-        {
-          "source": "data/GTALCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.asisettings.json"
-        },
-        {
-          "source": "data/GTALCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix/GTALCS.PPSSPP.WidescreenFix.asisettings.en.json"
-        }
-      ],
-      "dependencies": []
-    },
-    {
-      "id": "GTASA.WidescreenFix",
-      "producers": [
-        {
-          "project": "GTASA.WidescreenFix",
+          "project": "GTASA.FusionFix",
           "solution": "Win32",
-          "source": "data/GTASA.WidescreenFix/scripts/GTASA.WidescreenFix.asi",
-          "destination": "scripts/GTASA.WidescreenFix.asi",
+          "source": "data/GTASA.FusionFix/scripts/GTASA.FusionFix.asi",
+          "destination": "scripts/GTASA.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -583,20 +649,20 @@
       ]
     },
     {
-      "id": "GTAVC.WidescreenFix",
+      "id": "GTAVC.FusionFix",
       "producers": [
         {
-          "project": "GTAVC.WidescreenFix",
+          "project": "GTAVC.FusionFix",
           "solution": "Win32",
-          "source": "data/GTAVC.WidescreenFix/scripts/GTAVC.WidescreenFix.asi",
-          "destination": "scripts/GTAVC.WidescreenFix.asi",
+          "source": "data/GTAVC.FusionFix/scripts/GTAVC.FusionFix.asi",
+          "destination": "scripts/GTAVC.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/GTAVC.WidescreenFix/scripts/global.ini",
+          "source": "data/GTAVC.FusionFix/scripts/global.ini",
           "destination": "scripts/global.ini"
         }
       ],
@@ -618,7 +684,7 @@
         "destination": "GTAVC.WidescreenFrontend"
       },
       "associatedPackages": [
-        "GTAVC.WidescreenFix"
+        "GTAVC.FusionFix"
       ]
     },
     {
@@ -643,219 +709,179 @@
       ]
     },
     {
-      "id": "GTAVCS.PCSX2F.ImVehLM",
+      "id": "GTAVCS.PCSX2F.FusionFix",
       "producers": [
         {
-          "project": "GTAVCS.PCSX2F.ImVehLM",
+          "project": "GTAVCS.PCSX2F.FusionFix",
           "solution": "PCSX2F",
-          "source": "data/GTAVCS.PCSX2F.ImVehLM/PLUGINS/GTAVCS.PCSX2F.ImVehLM.elf",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.ImVehLM.elf"
+          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.elf",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.elf"
         }
       ],
       "files": [
         {
-          "source": "data/GTAVCS.PCSX2F.ImVehLM/PLUGINS/GTAVCS.PCSX2F.ImVehLM.asisettings.json",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.ImVehLM.asisettings.json"
-        },
-        {
-          "source": "data/GTAVCS.PCSX2F.ImVehLM/PLUGINS/GTAVCS.PCSX2F.ImVehLM.asisettings.en.json",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.ImVehLM.asisettings.en.json"
-        }
-      ],
-      "dependencies": []
-    },
-    {
-      "id": "GTAVCS.PCSX2F.WidescreenFix",
-      "producers": [
-        {
-          "project": "GTAVCS.PCSX2F.WidescreenFix",
-          "solution": "PCSX2F",
-          "source": "data/GTAVCS.PCSX2F.WidescreenFix/PLUGINS/GTAVCS.PCSX2F.WidescreenFix.elf",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.WidescreenFix.elf"
-        }
-      ],
-      "files": [
-        {
-          "source": "data/GTAVCS.PCSX2F.WidescreenFix/PLUGINS/vcscheats.txt",
+          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/vcscheats.txt",
           "destination": "PLUGINS/vcscheats.txt"
         },
         {
-          "source": "data/GTAVCS.PCSX2F.WidescreenFix/PLUGINS/GTAVCS.PCSX2F.WidescreenFix.asisettings.json",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.WidescreenFix.asisettings.json"
+          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.json",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.json"
         },
         {
-          "source": "data/GTAVCS.PCSX2F.WidescreenFix/PLUGINS/GTAVCS.PCSX2F.WidescreenFix.asisettings.en.json",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.WidescreenFix.asisettings.en.json"
+          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.en.json",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.en.json"
+        },
+        {
+          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.de.json",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.de.json"
+        },
+        {
+          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.fr.json",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.fr.json"
+        },
+        {
+          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.it.json",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.it.json"
+        },
+        {
+          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.es.json",
+          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.es.json"
         }
       ],
       "dependencies": []
     },
     {
-      "id": "GTAVCS.PPSSPP.GamepadIcons",
+      "id": "GTAVCS.PPSSPP.FusionFix",
       "producers": [
         {
-          "project": "GTAVCS.PPSSPP.GamepadIcons",
+          "project": "GTAVCS.PPSSPP.FusionFix",
           "solution": "PPSSPP",
-          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.prx",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.prx"
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.prx",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.prx"
         }
       ],
       "files": [
         {
-          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/360.bin",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/360.bin"
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/plugin.ini",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/plugin.ini"
         },
         {
-          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/DEK.bin",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/DEK.bin"
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/vcscheats.txt",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/vcscheats.txt"
         },
         {
-          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS3.bin",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS3.bin"
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.asisettings.json",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.asisettings.json"
         },
         {
-          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS4.bin",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS4.bin"
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.asisettings.en.json",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.asisettings.en.json"
         },
         {
-          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS5.bin",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/PS5.bin"
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/lights.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/lights.bin"
         },
         {
-          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/SWI.bin",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/SWI.bin"
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/lights-hd.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/lights-hd.bin"
         },
         {
-          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/XBO.bin",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/icons/XBO.bin"
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/360.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/360.bin"
         },
         {
-          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/plugin.ini",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/plugin.ini"
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/XBO.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/XBO.bin"
         },
         {
-          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.asisettings.json"
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/PS3.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/PS3.bin"
         },
         {
-          "source": "data/GTAVCS.PPSSPP.GamepadIcons/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.GamepadIcons/GTAVCS.PPSSPP.GamepadIcons.asisettings.en.json"
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/PS4.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/PS4.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/PS5.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/PS5.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/SWI.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/SWI.bin"
+        },
+        {
+          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/DEK.bin",
+          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/DEK.bin"
         }
       ],
       "dependencies": []
     },
     {
-      "id": "GTAVCS.PPSSPP.ImVehLM",
+      "id": "Gun.FusionFix",
       "producers": [
         {
-          "project": "GTAVCS.PPSSPP.ImVehLM",
-          "solution": "PPSSPP",
-          "source": "data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/GTAVCS.PPSSPP.ImVehLM.prx",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/GTAVCS.PPSSPP.ImVehLM.prx"
-        }
-      ],
-      "files": [
-        {
-          "source": "data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/lights-hd.bin",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/lights-hd.bin"
-        },
-        {
-          "source": "data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/lights.bin",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/lights.bin"
-        },
-        {
-          "source": "data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/plugin.ini",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/plugin.ini"
-        },
-        {
-          "source": "data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/GTAVCS.PPSSPP.ImVehLM.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/GTAVCS.PPSSPP.ImVehLM.asisettings.json"
-        },
-        {
-          "source": "data/GTAVCS.PPSSPP.ImVehLM/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/GTAVCS.PPSSPP.ImVehLM.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.ImVehLM/GTAVCS.PPSSPP.ImVehLM.asisettings.en.json"
-        }
-      ],
-      "dependencies": []
-    },
-    {
-      "id": "GTAVCS.PPSSPP.WidescreenFix",
-      "producers": [
-        {
-          "project": "GTAVCS.PPSSPP.WidescreenFix",
-          "solution": "PPSSPP",
-          "source": "data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.prx",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.prx"
-        }
-      ],
-      "files": [
-        {
-          "source": "data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/plugin.ini",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/plugin.ini"
-        },
-        {
-          "source": "data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/vcscheats.txt",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/vcscheats.txt"
-        },
-        {
-          "source": "data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.asisettings.json"
-        },
-        {
-          "source": "data/GTAVCS.PPSSPP.WidescreenFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix/GTAVCS.PPSSPP.WidescreenFix.asisettings.en.json"
-        }
-      ],
-      "dependencies": []
-    },
-    {
-      "id": "Gun.WidescreenFix",
-      "producers": [
-        {
-          "project": "Gun.WidescreenFix",
+          "project": "Gun.FusionFix",
           "solution": "Win32",
-          "source": "data/Gun.WidescreenFix/scripts/Gun.WidescreenFix.asi",
-          "destination": "scripts/Gun.WidescreenFix.asi",
+          "source": "data/Gun.FusionFix/scripts/Gun.FusionFix.asi",
+          "destination": "scripts/Gun.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/Gun.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "d3d9.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
     {
-      "id": "HiddenandDangerous2.WidescreenFix",
+      "id": "HiddenandDangerous2.FusionFix",
       "producers": [
         {
-          "project": "HiddenandDangerous2.WidescreenFix",
+          "project": "HiddenandDangerous2.FusionFix",
           "solution": "Win32",
-          "source": "data/HiddenandDangerous2.WidescreenFix/scripts/HiddenandDangerous2.WidescreenFix.asi",
-          "destination": "scripts/HiddenandDangerous2.WidescreenFix.asi",
+          "source": "data/HiddenandDangerous2.FusionFix/scripts/HiddenandDangerous2.FusionFix.asi",
+          "destination": "scripts/HiddenandDangerous2.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
+        { "source": "data/HiddenandDangerous2.FusionFix/Xidi.ini", "destination": "Xidi.ini" },
         {
-          "source": "data/HiddenandDangerous2.WidescreenFix/Maps/2e_camra.tga",
+          "source": "data/HiddenandDangerous2.FusionFix/Maps/2e_camra.tga",
           "destination": "Maps/2e_camra.tga"
         },
         {
-          "source": "data/HiddenandDangerous2.WidescreenFix/Maps/2e_scope.tga",
+          "source": "data/HiddenandDangerous2.FusionFix/Maps/2e_scope.tga",
           "destination": "Maps/2e_scope.tga"
         },
         {
-          "source": "data/HiddenandDangerous2.WidescreenFix/Maps/e_zamer.tga",
+          "source": "data/HiddenandDangerous2.FusionFix/Maps/e_zamer.tga",
           "destination": "Maps/e_zamer.tga"
         }
       ],
       "dependencies": [
+        { "id": "xidi", "member": "Xidi-*/Win32/dinput.dll", "destination": "dinput.dll" },
+        { "id": "xidi", "member": "Xidi-*/Win32/Xidi.32.dll", "destination": "Xidi.32.dll" },
         {
           "id": "loader-x86",
           "member": "*.dll",
@@ -864,45 +890,60 @@
       ]
     },
     {
-      "id": "JustCause.WidescreenFix",
+      "id": "JustCause.FusionFix",
       "producers": [
         {
-          "project": "JustCause.WidescreenFix",
+          "project": "JustCause.FusionFix",
           "solution": "Win32",
-          "source": "data/JustCause.WidescreenFix/scripts/JustCause.WidescreenFix.asi",
-          "destination": "scripts/JustCause.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [],
-      "dependencies": [
-        {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "KingKong.WidescreenFix",
-      "producers": [
-        {
-          "project": "KingKong.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/KingKong.WidescreenFix/scripts/KingKong.WidescreenFix.asi",
-          "destination": "scripts/KingKong.WidescreenFix.asi",
+          "source": "data/JustCause.FusionFix/scripts/JustCause.FusionFix.asi",
+          "destination": "scripts/JustCause.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/KingKong.WidescreenFix/Xidi.ini",
+          "source": "data/JustCause.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d9.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "KingKong.FusionFix",
+      "producers": [
+        {
+          "project": "KingKong.FusionFix",
+          "solution": "Win32",
+          "source": "data/KingKong.FusionFix/scripts/KingKong.FusionFix.asi",
+          "destination": "scripts/KingKong.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/KingKong.FusionFix/Xidi.ini",
           "destination": "Xidi.ini"
         },
         {
-          "source": "data/KingKong.WidescreenFix/scripts/Xbox360ControlScheme.png",
+          "source": "data/KingKong.FusionFix/scripts/Xbox360ControlScheme.png",
           "destination": "scripts/Xbox360ControlScheme.png"
         }
       ],
@@ -910,107 +951,129 @@
         {
           "id": "loader-x86",
           "member": "*.dll",
-          "destination": "dinput8.dll"
-        },
-        {
-          "id": "xidi",
-          "member": "Xidi-*/Win32/winmm.dll",
           "destination": "winmm.dll"
         },
         {
           "id": "xidi",
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
         }
       ]
     },
     {
-      "id": "KnightRider.PCSX2F.WidescreenFix",
+      "id": "KnightRider.PCSX2F.FusionFix",
       "producers": [
         {
-          "project": "KnightRider.PCSX2F.WidescreenFix",
+          "project": "KnightRider.PCSX2F.FusionFix",
           "solution": "PCSX2F",
-          "source": "data/KnightRider.PCSX2F.WidescreenFix/PLUGINS/KnightRider.PCSX2F.WidescreenFix.elf",
-          "destination": "PLUGINS/KnightRider.PCSX2F.WidescreenFix.elf"
+          "source": "data/KnightRider.PCSX2F.FusionFix/PLUGINS/KnightRider.PCSX2F.FusionFix.elf",
+          "destination": "PLUGINS/KnightRider.PCSX2F.FusionFix.elf"
         }
       ],
       "files": [
         {
-          "source": "data/KnightRider.PCSX2F.WidescreenFix/PLUGINS/KnightRider.PCSX2F.WidescreenFix.asisettings.json",
-          "destination": "PLUGINS/KnightRider.PCSX2F.WidescreenFix.asisettings.json"
+          "source": "data/KnightRider.PCSX2F.FusionFix/PLUGINS/KnightRider.PCSX2F.FusionFix.asisettings.json",
+          "destination": "PLUGINS/KnightRider.PCSX2F.FusionFix.asisettings.json"
         },
         {
-          "source": "data/KnightRider.PCSX2F.WidescreenFix/PLUGINS/KnightRider.PCSX2F.WidescreenFix.asisettings.en.json",
-          "destination": "PLUGINS/KnightRider.PCSX2F.WidescreenFix.asisettings.en.json"
+          "source": "data/KnightRider.PCSX2F.FusionFix/PLUGINS/KnightRider.PCSX2F.FusionFix.asisettings.en.json",
+          "destination": "PLUGINS/KnightRider.PCSX2F.FusionFix.asisettings.en.json"
         }
       ],
       "dependencies": []
     },
     {
-      "id": "KnightRider.WidescreenFix",
+      "id": "KnightRider.FusionFix",
       "producers": [
         {
-          "project": "KnightRider.WidescreenFix",
+          "project": "KnightRider.FusionFix",
           "solution": "Win32",
-          "source": "data/KnightRider.WidescreenFix/scripts/KnightRider.WidescreenFix.asi",
-          "destination": "scripts/KnightRider.WidescreenFix.asi",
+          "source": "data/KnightRider.FusionFix/scripts/KnightRider.FusionFix.asi",
+          "destination": "scripts/KnightRider.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
-      "files": [],
+      "files": [{ "source": "data/KnightRider.FusionFix/Xidi.ini", "destination": "Xidi.ini" }],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "winmm.dll"
-        }
+        },
+        { "id": "xidi", "member": "Xidi-*/Win32/dinput.dll", "destination": "dinput.dll" },
+        { "id": "xidi", "member": "Xidi-*/Win32/Xidi.32.dll", "destination": "Xidi.32.dll" }
       ]
     },
     {
-      "id": "KnightRider2.WidescreenFix",
+      "id": "KnightRider2.FusionFix",
       "producers": [
         {
-          "project": "KnightRider2.WidescreenFix",
+          "project": "KnightRider2.FusionFix",
           "solution": "Win32",
-          "source": "data/KnightRider2.WidescreenFix/scripts/KnightRider2.WidescreenFix.asi",
-          "destination": "scripts/KnightRider2.WidescreenFix.asi",
+          "source": "data/KnightRider2.FusionFix/scripts/KnightRider2.FusionFix.asi",
+          "destination": "scripts/KnightRider2.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/KnightRider2.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "winmm.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput.dll",
+          "destination": "dinput.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
     {
-      "id": "LARush.WidescreenFix",
+      "id": "LARush.FusionFix",
       "producers": [
         {
-          "project": "LARush.WidescreenFix",
+          "project": "LARush.FusionFix",
           "solution": "Win32",
-          "source": "data/LARush.WidescreenFix/plugins/LARush.WidescreenFix.asi",
-          "destination": "plugins/LARush.WidescreenFix.asi",
+          "source": "data/LARush.FusionFix/plugins/LARush.FusionFix.asi",
+          "destination": "plugins/LARush.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/LARush.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
+          "destination": "winmm.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
           "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
@@ -1042,6 +1105,14 @@
         {
           "source": "data/Mafia.FusionFix/rw_data.dll",
           "destination": "rw_data.dll"
+        },
+        {
+          "source": "data/Mafia.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        },
+        {
+          "source": "data/Mafia.FusionFix/scripts/Mafia.FusionFix/buttons.dds",
+          "destination": "scripts/Mafia.FusionFix/buttons.dds"
         }
       ],
       "dependencies": [
@@ -1049,27 +1120,51 @@
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "d3d8.dll"
+        },
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
     {
-      "id": "Manhunt.WidescreenFix",
+      "id": "Manhunt.FusionFix",
       "producers": [
         {
-          "project": "Manhunt.WidescreenFix",
+          "project": "Manhunt.FusionFix",
           "solution": "Win32",
-          "source": "data/Manhunt.WidescreenFix/scripts/Manhunt.WidescreenFix.asi",
-          "destination": "scripts/Manhunt.WidescreenFix.asi",
+          "source": "data/Manhunt.FusionFix/scripts/Manhunt.FusionFix.asi",
+          "destination": "scripts/Manhunt.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/Manhunt.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        },
+        {
+          "source": "data/Manhunt.FusionFix/scripts/Manhunt.FusionFix/buttons.txd",
+          "destination": "scripts/Manhunt.FusionFix/buttons.txd"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
@@ -1083,44 +1178,48 @@
         "destination": "Manhunt.WidescreenFrontend"
       },
       "associatedPackages": [
-        "Manhunt.WidescreenFix"
+        "Manhunt.FusionFix"
       ]
     },
     {
-      "id": "MaxPayne.WidescreenFix",
+      "id": "MaxPayne.FusionFix",
       "producers": [
         {
           "project": "MaxPayne.MSVCP60Wrapper",
           "solution": "Win32",
-          "source": "data/MaxPayne.WidescreenFix/MSVCP60.dll",
+          "source": "data/MaxPayne.FusionFix/MSVCP60.dll",
           "destination": "MSVCP60.dll",
           "sign": true
         },
         {
-          "project": "MaxPayne.WidescreenFix",
+          "project": "MaxPayne.FusionFix",
           "solution": "Win32",
-          "source": "data/MaxPayne.WidescreenFix/scripts/MaxPayne.WidescreenFix.asi",
-          "destination": "scripts/MaxPayne.WidescreenFix.asi",
+          "source": "data/MaxPayne.FusionFix/scripts/MaxPayne.FusionFix.asi",
+          "destination": "scripts/MaxPayne.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/MaxPayne.WidescreenFix/Xidi.ini",
+          "source": "data/MaxPayne.FusionFix/Xidi.ini",
           "destination": "Xidi.ini"
         },
         {
-          "source": "data/MaxPayne.WidescreenFix/alsoft.ini",
+          "source": "data/MaxPayne.FusionFix/alsoft.ini",
           "destination": "alsoft.ini"
         },
         {
-          "source": "data/MaxPayne.WidescreenFix/scripts/ControlScheme.png",
+          "source": "data/MaxPayne.FusionFix/scripts/ControlScheme.png",
           "destination": "scripts/ControlScheme.png"
         },
         {
-          "source": "data/MaxPayne.WidescreenFix/d3d8.ini",
+          "source": "data/MaxPayne.FusionFix/d3d8.ini",
           "destination": "d3d8.ini"
+        },
+        {
+          "source": "data/MaxPayne.FusionFix/dinput.ini",
+          "destination": "dinput.ini"
         }
       ],
       "dependencies": [
@@ -1130,8 +1229,8 @@
           "destination": "d3d8.dll"
         },
         {
-          "id": "xidi",
-          "member": "Xidi-*/Win32/dinput.dll",
+          "id": "loader-x86",
+          "member": "*.dll",
           "destination": "dinput.dll"
         },
         {
@@ -1139,11 +1238,7 @@
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
         },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
-        },
+
         {
           "id": "dsoal",
           "member": "DSOAL+HRTF/Win32/dsound.dll",
@@ -1157,29 +1252,33 @@
       ]
     },
     {
-      "id": "MaxPayne2.WidescreenFix",
+      "id": "MaxPayne2.FusionFix",
       "producers": [
         {
-          "project": "MaxPayne2.WidescreenFix",
+          "project": "MaxPayne2.FusionFix",
           "solution": "Win32",
-          "source": "data/MaxPayne2.WidescreenFix/scripts/MaxPayne2.WidescreenFix.asi",
-          "destination": "scripts/MaxPayne2.WidescreenFix.asi",
+          "source": "data/MaxPayne2.FusionFix/scripts/MaxPayne2.FusionFix.asi",
+          "destination": "scripts/MaxPayne2.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/MaxPayne2.WidescreenFix/Xidi.ini",
+          "source": "data/MaxPayne2.FusionFix/Xidi.ini",
           "destination": "Xidi.ini"
         },
         {
-          "source": "data/MaxPayne2.WidescreenFix/scripts/ControlScheme.png",
+          "source": "data/MaxPayne2.FusionFix/scripts/ControlScheme.png",
           "destination": "scripts/ControlScheme.png"
         },
         {
-          "source": "data/MaxPayne2.WidescreenFix/d3d8.ini",
+          "source": "data/MaxPayne2.FusionFix/d3d8.ini",
           "destination": "d3d8.ini"
+        },
+        {
+          "source": "data/MaxPayne2.FusionFix/dinput.ini",
+          "destination": "dinput.ini"
         }
       ],
       "dependencies": [
@@ -1189,8 +1288,8 @@
           "destination": "d3d8.dll"
         },
         {
-          "id": "xidi",
-          "member": "Xidi-*/Win32/dinput.dll",
+          "id": "loader-x86",
+          "member": "*.dll",
           "destination": "dinput.dll"
         },
         {
@@ -1198,11 +1297,7 @@
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
         },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
-        },
+
         {
           "id": "dsoal",
           "member": "DSOAL+HRTF/Win32/dsound.dll",
@@ -1242,20 +1337,20 @@
       "dependencies": []
     },
     {
-      "id": "NFSCarbon.WidescreenFix",
+      "id": "NFSCarbon.FusionFix",
       "producers": [
         {
-          "project": "NFSCarbon.WidescreenFix",
+          "project": "NFSCarbon.FusionFix",
           "solution": "Win32",
-          "source": "data/NFSCarbon.WidescreenFix/scripts/NFSCarbon.WidescreenFix.asi",
-          "destination": "scripts/NFSCarbon.WidescreenFix.asi",
+          "source": "data/NFSCarbon.FusionFix/scripts/NFSCarbon.FusionFix.asi",
+          "destination": "scripts/NFSCarbon.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/NFSCarbon.WidescreenFix/Xidi.ini",
+          "source": "data/NFSCarbon.FusionFix/Xidi.ini",
           "destination": "Xidi.ini"
         }
       ],
@@ -1269,29 +1364,24 @@
           "id": "xidi",
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
         }
       ]
     },
     {
-      "id": "NFSMostWanted.WidescreenFix",
+      "id": "NFSMostWanted.FusionFix",
       "producers": [
         {
-          "project": "NFSMostWanted.WidescreenFix",
+          "project": "NFSMostWanted.FusionFix",
           "solution": "Win32",
-          "source": "data/NFSMostWanted.WidescreenFix/scripts/NFSMostWanted.WidescreenFix.asi",
-          "destination": "scripts/NFSMostWanted.WidescreenFix.asi",
+          "source": "data/NFSMostWanted.FusionFix/scripts/NFSMostWanted.FusionFix.asi",
+          "destination": "scripts/NFSMostWanted.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/NFSMostWanted.WidescreenFix/Xidi.ini",
+          "source": "data/NFSMostWanted.FusionFix/Xidi.ini",
           "destination": "Xidi.ini"
         }
       ],
@@ -1305,11 +1395,6 @@
           "id": "xidi",
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
         }
       ]
     },
@@ -1341,11 +1426,6 @@
           "id": "xidi",
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
         }
       ]
     },
@@ -1382,30 +1462,9 @@
           "sign": true
         }
       ],
-      "files": [],
-      "dependencies": [
-        {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "NFSUnderground.WidescreenFix",
-      "producers": [
-        {
-          "project": "NFSUnderground.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/NFSUnderground.WidescreenFix/scripts/NFSUnderground.WidescreenFix.asi",
-          "destination": "scripts/NFSUnderground.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
       "files": [
         {
-          "source": "data/NFSUnderground.WidescreenFix/Xidi.ini",
+          "source": "data/NFSUndercover.FusionFix/Xidi.ini",
           "destination": "Xidi.ini"
         }
       ],
@@ -1419,29 +1478,24 @@
           "id": "xidi",
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
         }
       ]
     },
     {
-      "id": "NFSUnderground2.WidescreenFix",
+      "id": "NFSUnderground.FusionFix",
       "producers": [
         {
-          "project": "NFSUnderground2.WidescreenFix",
+          "project": "NFSUnderground.FusionFix",
           "solution": "Win32",
-          "source": "data/NFSUnderground2.WidescreenFix/scripts/NFSUnderground2.WidescreenFix.asi",
-          "destination": "scripts/NFSUnderground2.WidescreenFix.asi",
+          "source": "data/NFSUnderground.FusionFix/scripts/NFSUnderground.FusionFix.asi",
+          "destination": "scripts/NFSUnderground.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/NFSUnderground2.WidescreenFix/Xidi.ini",
+          "source": "data/NFSUnderground.FusionFix/Xidi.ini",
           "destination": "Xidi.ini"
         }
       ],
@@ -1455,43 +1509,79 @@
           "id": "xidi",
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
         }
       ]
     },
     {
-      "id": "Onimusha3.WidescreenFix",
+      "id": "NFSUnderground2.FusionFix",
       "producers": [
         {
-          "project": "Onimusha3.WidescreenFix",
+          "project": "NFSUnderground2.FusionFix",
           "solution": "Win32",
-          "source": "data/Onimusha3.WidescreenFix/scripts/Onimusha3.WidescreenFix.asi",
-          "destination": "scripts/Onimusha3.WidescreenFix.asi",
+          "source": "data/NFSUnderground2.FusionFix/scripts/NFSUnderground2.FusionFix.asi",
+          "destination": "scripts/NFSUnderground2.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/NFSUnderground2.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
     {
-      "id": "ParadiseCracked.WidescreenFix",
+      "id": "Onimusha3.FusionFix",
       "producers": [
         {
-          "project": "ParadiseCracked.WidescreenFix",
+          "project": "Onimusha3.FusionFix",
           "solution": "Win32",
-          "source": "data/ParadiseCracked.WidescreenFix/scripts/ParadiseCracked.WidescreenFix.asi",
-          "destination": "scripts/ParadiseCracked.WidescreenFix.asi",
+          "source": "data/Onimusha3.FusionFix/scripts/Onimusha3.FusionFix.asi",
+          "destination": "scripts/Onimusha3.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/Onimusha3.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "ParadiseCracked.FusionFix",
+      "producers": [
+        {
+          "project": "ParadiseCracked.FusionFix",
+          "solution": "Win32",
+          "source": "data/ParadiseCracked.FusionFix/scripts/ParadiseCracked.FusionFix.asi",
+          "destination": "scripts/ParadiseCracked.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -1506,13 +1596,13 @@
       ]
     },
     {
-      "id": "PsiOpsTheMindgateConspiracy.WidescreenFix",
+      "id": "PsiOpsTheMindgateConspiracy.FusionFix",
       "producers": [
         {
-          "project": "PsiOpsTheMindgateConspiracy.WidescreenFix",
+          "project": "PsiOpsTheMindgateConspiracy.FusionFix",
           "solution": "Win32",
-          "source": "data/PsiOpsTheMindgateConspiracy.WidescreenFix/scripts/PsiOpsTheMindgateConspiracy.WidescreenFix.asi",
-          "destination": "scripts/PsiOpsTheMindgateConspiracy.WidescreenFix.asi",
+          "source": "data/PsiOpsTheMindgateConspiracy.FusionFix/scripts/PsiOpsTheMindgateConspiracy.FusionFix.asi",
+          "destination": "scripts/PsiOpsTheMindgateConspiracy.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -1527,13 +1617,13 @@
       ]
     },
     {
-      "id": "Psychonauts.WidescreenFix",
+      "id": "Psychonauts.FusionFix",
       "producers": [
         {
-          "project": "Psychonauts.WidescreenFix",
+          "project": "Psychonauts.FusionFix",
           "solution": "Win32",
-          "source": "data/Psychonauts.WidescreenFix/scripts/Psychonauts.WidescreenFix.asi",
-          "destination": "scripts/Psychonauts.WidescreenFix.asi",
+          "source": "data/Psychonauts.FusionFix/scripts/Psychonauts.FusionFix.asi",
+          "destination": "scripts/Psychonauts.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -1542,6 +1632,69 @@
       "dependencies": [
         {
           "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "Mafia3DefinitiveEdition.FusionFix",
+      "producers": [
+        {
+          "project": "Mafia3DefinitiveEdition.FusionFix",
+          "solution": "Win64",
+          "source": "data/Mafia3DefinitiveEdition.FusionFix/plugins/Mafia3DefinitiveEdition.FusionFix.asi",
+          "destination": "plugins/Mafia3DefinitiveEdition.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [],
+      "dependencies": [
+        {
+          "id": "loader-x64",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "Mafia2DefinitiveEdition.FusionFix",
+      "producers": [
+        {
+          "project": "Mafia2DefinitiveEdition.FusionFix",
+          "solution": "Win64",
+          "source": "data/Mafia2DefinitiveEdition.FusionFix/pc/scripts/Mafia2DefinitiveEdition.FusionFix.asi",
+          "destination": "pc/scripts/Mafia2DefinitiveEdition.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [],
+      "dependencies": [
+        {
+          "id": "loader-x64",
+          "member": "*.dll",
+          "destination": "pc/dinput8.dll"
+        }
+      ]
+    },
+    {
+      "id": "MafiaDefinitiveEdition.FusionFix",
+      "producers": [
+        {
+          "project": "MafiaDefinitiveEdition.FusionFix",
+          "solution": "Win64",
+          "source": "data/MafiaDefinitiveEdition.FusionFix/plugins/MafiaDefinitiveEdition.FusionFix.asi",
+          "destination": "plugins/MafiaDefinitiveEdition.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [],
+      "dependencies": [
+        {
+          "id": "loader-x64",
           "member": "*.dll",
           "destination": "dinput8.dll"
         }
@@ -1580,7 +1733,12 @@
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/ResidentEvil.FusionFix/scripts/ResidentEvil.FusionFix/buttons.dds",
+          "destination": "scripts/ResidentEvil.FusionFix/buttons.dds"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
@@ -1601,7 +1759,12 @@
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/ResidentEvil0.FusionFix/scripts/ResidentEvil0.FusionFix/buttons.dds",
+          "destination": "scripts/ResidentEvil0.FusionFix/buttons.dds"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
@@ -1664,7 +1827,12 @@
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/ResidentEvil6.FusionFix/scripts/ResidentEvil6.FusionFix/buttons.dds",
+          "destination": "scripts/ResidentEvil6.FusionFix/buttons.dds"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
@@ -1735,6 +1903,11 @@
       ],
       "dependencies": [
         {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "vorbisfile.dll"
+        },
+        {
           "id": "xidi",
           "member": "Xidi-*/Win32/dinput8.dll",
           "destination": "dinput8.dll"
@@ -1743,22 +1916,17 @@
           "id": "xidi",
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
         }
       ]
     },
     {
-      "id": "SecondSight.WidescreenFix",
+      "id": "SecondSight.FusionFix",
       "producers": [
         {
-          "project": "SecondSight.WidescreenFix",
+          "project": "SecondSight.FusionFix",
           "solution": "Win32",
-          "source": "data/SecondSight.WidescreenFix/scripts/SecondSight.WidescreenFix.asi",
-          "destination": "scripts/SecondSight.WidescreenFix.asi",
+          "source": "data/SecondSight.FusionFix/scripts/SecondSight.FusionFix.asi",
+          "destination": "scripts/SecondSight.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -1773,47 +1941,29 @@
       ]
     },
     {
-      "id": "SilentHill2.WidescreenFix",
+      "id": "SilentHill2.FusionFix",
       "producers": [
         {
-          "project": "SilentHill2.WidescreenFix",
+          "project": "SilentHill2.FusionFix",
           "solution": "Win32",
-          "source": "data/SilentHill2.WidescreenFix/scripts/SilentHill2.WidescreenFix.asi",
-          "destination": "scripts/SilentHill2.WidescreenFix.asi",
+          "source": "data/SilentHill2.FusionFix/scripts/SilentHill2.FusionFix.asi",
+          "destination": "scripts/SilentHill2.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/SilentHill2.WidescreenFix/scripts/SilentHill2.WidescreenFix.dat",
-          "destination": "scripts/SilentHill2.WidescreenFix.dat"
-        }
-      ],
-      "dependencies": [
+          "source": "data/SilentHill2.FusionFix/scripts/SilentHill2.FusionFix.dat",
+          "destination": "scripts/SilentHill2.FusionFix.dat"
+        },
         {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "SilentHill3.WidescreenFix",
-      "producers": [
-        {
-          "project": "SilentHill3.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/SilentHill3.WidescreenFix/scripts/SilentHill3.WidescreenFix.asi",
-          "destination": "scripts/SilentHill3.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [
-        {
-          "source": "data/SilentHill3.WidescreenFix/Xidi.ini",
+          "source": "data/SilentHill2.FusionFix/Xidi.ini",
           "destination": "Xidi.ini"
+        },
+        {
+          "source": "data/SilentHill2.FusionFix/scripts/SilentHill2.FusionFix/buttons.dds",
+          "destination": "scripts/SilentHill2.FusionFix/buttons.dds"
         }
       ],
       "dependencies": [
@@ -1826,30 +1976,29 @@
           "id": "xidi",
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
         }
       ]
     },
     {
-      "id": "SilentHill4.WidescreenFix",
+      "id": "SilentHill3.FusionFix",
       "producers": [
         {
-          "project": "SilentHill4.WidescreenFix",
+          "project": "SilentHill3.FusionFix",
           "solution": "Win32",
-          "source": "data/SilentHill4.WidescreenFix/scripts/SilentHill4.WidescreenFix.asi",
-          "destination": "scripts/SilentHill4.WidescreenFix.asi",
+          "source": "data/SilentHill3.FusionFix/scripts/SilentHill3.FusionFix.asi",
+          "destination": "scripts/SilentHill3.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/SilentHill4.WidescreenFix/Xidi.ini",
+          "source": "data/SilentHill3.FusionFix/Xidi.ini",
           "destination": "Xidi.ini"
+        },
+        {
+          "source": "data/SilentHill3.FusionFix/scripts/SilentHill3.FusionFix/buttons.dds",
+          "destination": "scripts/SilentHill3.FusionFix/buttons.dds"
         }
       ],
       "dependencies": [
@@ -1862,30 +2011,64 @@
           "id": "xidi",
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "SDL.XidiPlugin.32.dll"
         }
       ]
     },
     {
-      "id": "SniperElite.WidescreenFix",
+      "id": "SilentHill4.FusionFix",
       "producers": [
         {
-          "project": "SniperElite.WidescreenFix",
+          "project": "SilentHill4.FusionFix",
           "solution": "Win32",
-          "source": "data/SniperElite.WidescreenFix/scripts/SniperElite.WidescreenFix.asi",
-          "destination": "scripts/SniperElite.WidescreenFix.asi",
+          "source": "data/SilentHill4.FusionFix/scripts/SilentHill4.FusionFix.asi",
+          "destination": "scripts/SilentHill4.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/SniperElite.WidescreenFix/scripts/global.ini",
+          "source": "data/SilentHill4.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        },
+        {
+          "source": "data/SilentHill4.FusionFix/scripts/SilentHill4.FusionFix/buttons.dds",
+          "destination": "scripts/SilentHill4.FusionFix/buttons.dds"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "SniperElite.FusionFix",
+      "producers": [
+        {
+          "project": "SniperElite.FusionFix",
+          "solution": "Win32",
+          "source": "data/SniperElite.FusionFix/scripts/SniperElite.FusionFix.asi",
+          "destination": "scripts/SniperElite.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/SniperElite.FusionFix/scripts/global.ini",
           "destination": "scripts/global.ini"
+        },
+        {
+          "source": "data/SniperElite.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
         }
       ],
       "dependencies": [
@@ -1893,6 +2076,16 @@
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "d3d8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
@@ -1975,21 +2168,25 @@
       "dependencies": []
     },
     {
-      "id": "SonicHeroes.WidescreenFix",
+      "id": "SonicHeroes.FusionFix",
       "producers": [
         {
-          "project": "SonicHeroes.WidescreenFix",
+          "project": "SonicHeroes.FusionFix",
           "solution": "Win32",
-          "source": "data/SonicHeroes.WidescreenFix/scripts/SonicHeroes.WidescreenFix.asi",
-          "destination": "scripts/SonicHeroes.WidescreenFix.asi",
+          "source": "data/SonicHeroes.FusionFix/scripts/SonicHeroes.FusionFix.asi",
+          "destination": "scripts/SonicHeroes.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/SonicHeroes.WidescreenFix/scripts/icon.ico",
+          "source": "data/SonicHeroes.FusionFix/scripts/icon.ico",
           "destination": "scripts/icon.ico"
+        },
+        {
+          "source": "data/SonicHeroes.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
         }
       ],
       "dependencies": [
@@ -1997,56 +2194,66 @@
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "winmm.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
     {
-      "id": "SplinterCell.WidescreenFix",
+      "id": "SplinterCell.FusionFix",
       "producers": [
         {
-          "project": "SplinterCell.WidescreenFix",
+          "project": "SplinterCell.FusionFix",
           "solution": "Win32",
-          "source": "data/SplinterCell.WidescreenFix/system/scripts/SplinterCell.WidescreenFix.asi",
-          "destination": "system/scripts/SplinterCell.WidescreenFix.asi",
+          "source": "data/SplinterCell.FusionFix/system/scripts/SplinterCell.FusionFix.asi",
+          "destination": "system/scripts/SplinterCell.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/SplinterCell.WidescreenFix/system/Xidi.ini",
+          "source": "data/SplinterCell.FusionFix/system/Xidi.ini",
           "destination": "system/Xidi.ini"
         },
         {
-          "source": "data/SplinterCell.WidescreenFix/system/alsoft.ini",
+          "source": "data/SplinterCell.FusionFix/system/alsoft.ini",
           "destination": "system/alsoft.ini"
         },
         {
-          "source": "data/SplinterCell.WidescreenFix/system/update/Echelon.u",
+          "source": "data/SplinterCell.FusionFix/system/update/Echelon.u",
           "destination": "system/update/Echelon.u"
         },
         {
-          "source": "data/SplinterCell.WidescreenFix/system/update/EchelonHUD.u",
+          "source": "data/SplinterCell.FusionFix/system/update/EchelonHUD.u",
           "destination": "system/update/EchelonHUD.u"
         },
         {
-          "source": "data/SplinterCell.WidescreenFix/system/update/EchelonIngredient.u",
+          "source": "data/SplinterCell.FusionFix/system/update/EchelonIngredient.u",
           "destination": "system/update/EchelonIngredient.u"
         },
         {
-          "source": "data/SplinterCell.WidescreenFix/system/update/UWindow.u",
+          "source": "data/SplinterCell.FusionFix/system/update/UWindow.u",
           "destination": "system/update/UWindow.u"
         },
         {
-          "source": "data/SplinterCell.WidescreenFix/system/update/Videos/gd_wallmine.bik",
+          "source": "data/SplinterCell.FusionFix/system/update/Videos/gd_wallmine.bik",
           "destination": "system/update/Videos/gd_wallmine.bik"
         },
         {
-          "source": "data/SplinterCell.WidescreenFix/system/update/textures/ETexRenderer.utx",
+          "source": "data/SplinterCell.FusionFix/system/update/textures/ETexRenderer.utx",
           "destination": "system/update/textures/ETexRenderer.utx"
         },
         {
-          "source": "data/SplinterCell.WidescreenFix/system/update/textures/ETexSFX.utx",
+          "source": "data/SplinterCell.FusionFix/system/update/textures/ETexSFX.utx",
           "destination": "system/update/textures/ETexSFX.utx"
         }
       ],
@@ -2070,11 +2277,6 @@
           "id": "xidi",
           "member": "Xidi-*/Win32/Xidi.32.dll",
           "destination": "system/Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "system/SDL.XidiPlugin.32.dll"
         },
         {
           "id": "dsoal",
@@ -2144,6 +2346,134 @@
         {
           "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/update/difficultyconfiguration.ini",
           "destination": "src/SYSTEM/update/difficultyconfiguration.ini"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY1.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY1.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY10.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY10.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY11.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY11.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY12.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY12.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY13.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY13.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY14.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY14.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY15.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY15.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY16.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY16.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY2.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY2.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY3.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY3.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY4.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY4.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY5.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY5.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY6.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY6.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY7.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY7.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY8.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY8.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY9.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/Nintendo/ICON_IK_JOY9.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY1.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY1.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY10.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY10.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY11.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY11.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY12.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY12.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY13.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY13.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY14.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY14.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY15.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY15.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY16.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY16.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY2.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY2.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY3.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY3.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY4.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY4.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY5.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY5.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY6.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY6.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY7.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY7.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY8.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY8.dds"
+        },
+        {
+          "source": "data/SplinterCellBlacklist.FusionFix/src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY9.dds",
+          "destination": "src/SYSTEM/scripts/SplinterCellBlacklist.FusionFix/Controller/PlayStation/ICON_IK_JOY9.dds"
         }
       ],
       "dependencies": [
@@ -2155,24 +2485,24 @@
       ]
     },
     {
-      "id": "SplinterCellChaosTheory.WidescreenFix",
+      "id": "SplinterCellChaosTheory.FusionFix",
       "producers": [
         {
-          "project": "SplinterCellChaosTheory.WidescreenFix",
+          "project": "SplinterCellChaosTheory.FusionFix",
           "solution": "Win32",
-          "source": "data/SplinterCellChaosTheory.WidescreenFix/system/scripts/SplinterCellChaosTheory.WidescreenFix.asi",
-          "destination": "system/scripts/SplinterCellChaosTheory.WidescreenFix.asi",
+          "source": "data/SplinterCellChaosTheory.FusionFix/system/scripts/SplinterCellChaosTheory.FusionFix.asi",
+          "destination": "system/scripts/SplinterCellChaosTheory.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/SplinterCellChaosTheory.WidescreenFix/System/Xidi.ini",
+          "source": "data/SplinterCellChaosTheory.FusionFix/System/Xidi.ini",
           "destination": "System/Xidi.ini"
         },
         {
-          "source": "data/SplinterCellChaosTheory.WidescreenFix/System/alsoft.ini",
+          "source": "data/SplinterCellChaosTheory.FusionFix/System/alsoft.ini",
           "destination": "System/alsoft.ini"
         }
       ],
@@ -2227,10 +2557,6 @@
         }
       ],
       "files": [
-        {
-          "source": "data/SplinterCellConviction.FusionFix/src/system/Xidi.ini",
-          "destination": "src/system/Xidi.ini"
-        },
         {
           "source": "data/SplinterCellConviction.FusionFix/src/system/update/actionscheme.ini",
           "destination": "src/system/update/actionscheme.ini"
@@ -2446,6 +2772,14 @@
         {
           "source": "data/SplinterCellConviction.FusionFix/src/system/update/weapontuning.ini",
           "destination": "src/system/update/weapontuning.ini"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Flash/Ingame/buttons-playstation.gfx",
+          "destination": "src/system/update/data/Flash/Ingame/buttons-playstation.gfx"
+        },
+        {
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Flash/Ingame/buttons-nintendo.gfx",
+          "destination": "src/system/update/data/Flash/Ingame/buttons-nintendo.gfx"
         }
       ],
       "dependencies": [
@@ -2453,66 +2787,51 @@
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "src/system/version.dll"
-        },
-        {
-          "id": "xidi",
-          "member": "Xidi-*/Win32/dinput8.dll",
-          "destination": "src/system/dinput8.dll"
-        },
-        {
-          "id": "xidi",
-          "member": "Xidi-*/Win32/Xidi.32.dll",
-          "destination": "src/system/Xidi.32.dll"
-        },
-        {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "src/system/SDL.XidiPlugin.32.dll"
         }
       ]
     },
     {
-      "id": "SplinterCellDoubleAgent.PCSX2F.WidescreenFix",
+      "id": "SplinterCellDoubleAgent.PCSX2F.FusionFix",
       "producers": [
         {
-          "project": "SplinterCellDoubleAgent.PCSX2F.WidescreenFix",
+          "project": "SplinterCellDoubleAgent.PCSX2F.FusionFix",
           "solution": "PCSX2F",
-          "source": "data/SplinterCellDoubleAgent.PCSX2F.WidescreenFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.elf",
-          "destination": "PLUGINS/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.elf"
+          "source": "data/SplinterCellDoubleAgent.PCSX2F.FusionFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.elf",
+          "destination": "PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.elf"
         }
       ],
       "files": [
         {
-          "source": "data/SplinterCellDoubleAgent.PCSX2F.WidescreenFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.asisettings.json",
-          "destination": "PLUGINS/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.asisettings.json"
+          "source": "data/SplinterCellDoubleAgent.PCSX2F.FusionFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.asisettings.json",
+          "destination": "PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.asisettings.json"
         },
         {
-          "source": "data/SplinterCellDoubleAgent.PCSX2F.WidescreenFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.asisettings.en.json",
-          "destination": "PLUGINS/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.asisettings.en.json"
+          "source": "data/SplinterCellDoubleAgent.PCSX2F.FusionFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.asisettings.en.json",
+          "destination": "PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.asisettings.en.json"
         }
       ],
       "dependencies": []
     },
     {
-      "id": "SplinterCellDoubleAgent.WidescreenFix",
+      "id": "SplinterCellDoubleAgent.FusionFix",
       "producers": [
         {
-          "project": "SplinterCellDoubleAgent.WidescreenFix",
+          "project": "SplinterCellDoubleAgent.FusionFix",
           "solution": "Win32",
-          "source": "data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.asi",
-          "destination": "SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.asi",
+          "source": "data/SplinterCellDoubleAgent.FusionFix/SCDA-Offline/System/scripts/SplinterCellDoubleAgent.FusionFix.asi",
+          "destination": "SCDA-Offline/System/scripts/SplinterCellDoubleAgent.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/Xidi.ini",
+          "source": "data/SplinterCellDoubleAgent.FusionFix/SCDA-Offline/System/Xidi.ini",
           "destination": "SCDA-Offline/System/Xidi.ini"
         },
         {
-          "source": "data/SplinterCellDoubleAgent.WidescreenFix/SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.png",
-          "destination": "SCDA-Offline/System/scripts/SplinterCellDoubleAgent.WidescreenFix.png"
+          "source": "data/SplinterCellDoubleAgent.FusionFix/SCDA-Offline/System/scripts/SplinterCellDoubleAgent.FusionFix.png",
+          "destination": "SCDA-Offline/System/scripts/SplinterCellDoubleAgent.FusionFix.png"
         }
       ],
       "dependencies": [
@@ -2580,60 +2899,60 @@
       "dependencies": []
     },
     {
-      "id": "SplinterCellPandoraTomorrow.WidescreenFix",
+      "id": "SplinterCellPandoraTomorrow.FusionFix",
       "producers": [
         {
-          "project": "SplinterCellPandoraTomorrow.WidescreenFix",
+          "project": "SplinterCellPandoraTomorrow.FusionFix",
           "solution": "Win32",
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/scripts/SplinterCellPandoraTomorrow.WidescreenFix.asi",
-          "destination": "system/scripts/SplinterCellPandoraTomorrow.WidescreenFix.asi",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/scripts/SplinterCellPandoraTomorrow.FusionFix.asi",
+          "destination": "system/scripts/SplinterCellPandoraTomorrow.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/Xidi.ini",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/Xidi.ini",
           "destination": "system/Xidi.ini"
         },
         {
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/alsoft.ini",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/alsoft.ini",
           "destination": "system/alsoft.ini"
         },
         {
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/GUI.u",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/update/GUI.u",
           "destination": "system/update/GUI.u"
         },
         {
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/English/HUD.int",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/update/Localization/English/HUD.int",
           "destination": "system/update/Localization/English/HUD.int"
         },
         {
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/English/P_0_0_1_Handcuff.int",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/update/Localization/English/P_0_0_1_Handcuff.int",
           "destination": "system/update/Localization/English/P_0_0_1_Handcuff.int"
         },
         {
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/English/P_1_1_1_EMBASSY.int",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/update/Localization/English/P_1_1_1_EMBASSY.int",
           "destination": "system/update/Localization/English/P_1_1_1_EMBASSY.int"
         },
         {
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/English/P_3_1_1_MARKET.int",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/update/Localization/English/P_3_1_1_MARKET.int",
           "destination": "system/update/Localization/English/P_3_1_1_MARKET.int"
         },
         {
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/French/HUD.fra",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/update/Localization/French/HUD.fra",
           "destination": "system/update/Localization/French/HUD.fra"
         },
         {
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/German/HUD.deu",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/update/Localization/German/HUD.deu",
           "destination": "system/update/Localization/German/HUD.deu"
         },
         {
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/Italian/HUD.ita",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/update/Localization/Italian/HUD.ita",
           "destination": "system/update/Localization/Italian/HUD.ita"
         },
         {
-          "source": "data/SplinterCellPandoraTomorrow.WidescreenFix/system/update/Localization/Spanish/HUD.esp",
+          "source": "data/SplinterCellPandoraTomorrow.FusionFix/system/update/Localization/Spanish/HUD.esp",
           "destination": "system/update/Localization/Spanish/HUD.esp"
         }
       ],
@@ -2659,11 +2978,6 @@
           "destination": "system/Xidi.32.dll"
         },
         {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "system/SDL.XidiPlugin.32.dll"
-        },
-        {
           "id": "dsoal",
           "member": "DSOAL+HRTF/Win32/dsound.dll",
           "destination": "system/dsound.dll"
@@ -2676,13 +2990,13 @@
       ]
     },
     {
-      "id": "SpyroReignitedTrilogy.WidescreenFix",
+      "id": "SpyroReignitedTrilogy.FusionFix",
       "producers": [
         {
-          "project": "SpyroReignitedTrilogy.WidescreenFix",
+          "project": "SpyroReignitedTrilogy.FusionFix",
           "solution": "Win64",
-          "source": "data/SpyroReignitedTrilogy.WidescreenFix/Falcon/Binaries/Win64/scripts/SpyroReignitedTrilogy.WidescreenFix.asi",
-          "destination": "Falcon/Binaries/Win64/scripts/SpyroReignitedTrilogy.WidescreenFix.asi",
+          "source": "data/SpyroReignitedTrilogy.FusionFix/Falcon/Binaries/Win64/scripts/SpyroReignitedTrilogy.FusionFix.asi",
+          "destination": "Falcon/Binaries/Win64/scripts/SpyroReignitedTrilogy.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -2697,13 +3011,13 @@
       ]
     },
     {
-      "id": "StreetRacingSyndicate.WidescreenFix",
+      "id": "StreetRacingSyndicate.FusionFix",
       "producers": [
         {
-          "project": "StreetRacingSyndicate.WidescreenFix",
+          "project": "StreetRacingSyndicate.FusionFix",
           "solution": "Win32",
-          "source": "data/StreetRacingSyndicate.WidescreenFix/Bin/scripts/StreetRacingSyndicate.WidescreenFix.asi",
-          "destination": "Bin/scripts/StreetRacingSyndicate.WidescreenFix.asi",
+          "source": "data/StreetRacingSyndicate.FusionFix/Bin/scripts/StreetRacingSyndicate.FusionFix.asi",
+          "destination": "Bin/scripts/StreetRacingSyndicate.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -2714,66 +3028,106 @@
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "Bin/d3d9.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "Bin/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Bin/Xidi.32.dll"
         }
       ]
     },
     {
-      "id": "TheGodfather.WidescreenFix",
+      "id": "TheGodfather.FusionFix",
       "producers": [
         {
-          "project": "TheGodfather.WidescreenFix",
+          "project": "TheGodfather.FusionFix",
           "solution": "Win32",
-          "source": "data/TheGodfather.WidescreenFix/scripts/TheGodfather.WidescreenFix.asi",
-          "destination": "scripts/TheGodfather.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [],
-      "dependencies": [
-        {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "TheMatrixPathOfNeo.WidescreenFix",
-      "producers": [
-        {
-          "project": "TheMatrixPathOfNeo.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/TheMatrixPathOfNeo.WidescreenFix/scripts/TheMatrixPathOfNeo.WidescreenFix.asi",
-          "destination": "scripts/TheMatrixPathOfNeo.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [],
-      "dependencies": [
-        {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "ThePunisher.WidescreenFix",
-      "producers": [
-        {
-          "project": "ThePunisher.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/ThePunisher.WidescreenFix/scripts/ThePunisher.WidescreenFix.asi",
-          "destination": "scripts/ThePunisher.WidescreenFix.asi",
+          "source": "data/TheGodfather.FusionFix/scripts/TheGodfather.FusionFix.asi",
+          "destination": "scripts/TheGodfather.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/ThePunisher.WidescreenFix/d3d8.ini",
+          "source": "data/TheGodfather.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dsound.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "TheMatrixPathOfNeo.FusionFix",
+      "producers": [
+        {
+          "project": "TheMatrixPathOfNeo.FusionFix",
+          "solution": "Win32",
+          "source": "data/TheMatrixPathOfNeo.FusionFix/scripts/TheMatrixPathOfNeo.FusionFix.asi",
+          "destination": "scripts/TheMatrixPathOfNeo.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TheMatrixPathOfNeo.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "dsound.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "ThePunisher.FusionFix",
+      "producers": [
+        {
+          "project": "ThePunisher.FusionFix",
+          "solution": "Win32",
+          "source": "data/ThePunisher.FusionFix/scripts/ThePunisher.FusionFix.asi",
+          "destination": "scripts/ThePunisher.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/ThePunisher.FusionFix/d3d8.ini",
           "destination": "d3d8.ini"
         }
       ],
@@ -2797,7 +3151,296 @@
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_accept.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_accept.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_cancel.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_cancel.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_down.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_down.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_left.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_left.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_right.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_right.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_up.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_button_up.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_down.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_down.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_left.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_left.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_leftright.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_leftright.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_right.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_right.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_up.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_up.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_updown.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_dpad_updown.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_joystick_L.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_joystick_L.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_joystick_R.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_joystick_R.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_L3.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_L3.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_LB.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_LB.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_LT.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_LT.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_R3.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_R3.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_RB.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_RB.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_RT.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_RT.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_select_back.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_select_back.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_start.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/1/FF_Saboteur_1_icn_start.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_accept.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_accept.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_cancel.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_cancel.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_down.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_down.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_left.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_left.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_right.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_right.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_up.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_button_up.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_down.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_down.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_left.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_left.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_leftright.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_leftright.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_right.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_right.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_up.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_up.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_updown.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_dpad_updown.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_joystick_L.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_joystick_L.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_joystick_R.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_joystick_R.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_L3.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_L3.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_LB.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_LB.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_LT.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_LT.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_R3.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_R3.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_RB.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_RB.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_RT.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_RT.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_select_back.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_select_back.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_start.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/2/FF_Saboteur_2_icn_start.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_accept.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_accept.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_cancel.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_cancel.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_down.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_down.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_left.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_left.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_right.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_right.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_up.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_button_up.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_down.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_down.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_left.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_left.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_leftright.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_leftright.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_right.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_right.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_up.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_up.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_updown.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_dpad_updown.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_joystick_L.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_joystick_L.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_joystick_R.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_joystick_R.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_L3.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_L3.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_LB.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_LB.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_LT.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_LT.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_R3.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_R3.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_RB.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_RB.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_RT.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_RT.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_select_back.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_select_back.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_start.dds",
+          "destination": "scripts/TheSaboteur.FusionFix/buttons/3/FF_Saboteur_3_icn_start.dds"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/FusionFixInterface.gfx",
+          "destination": "scripts/TheSaboteur.FusionFix/FusionFixInterface.gfx"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/PauseMenu.gfx",
+          "destination": "scripts/TheSaboteur.FusionFix/PauseMenu.gfx"
+        },
+        {
+          "source": "data/TheSaboteur.FusionFix/scripts/TheSaboteur.FusionFix/StartScreen.gfx",
+          "destination": "scripts/TheSaboteur.FusionFix/StartScreen.gfx"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
@@ -2807,13 +3450,13 @@
       ]
     },
     {
-      "id": "TheSuffering.WidescreenFix",
+      "id": "TheSuffering.FusionFix",
       "producers": [
         {
-          "project": "TheSuffering.WidescreenFix",
+          "project": "TheSuffering.FusionFix",
           "solution": "Win32",
-          "source": "data/TheSuffering.WidescreenFix/scripts/TheSuffering.WidescreenFix.asi",
-          "destination": "scripts/TheSuffering.WidescreenFix.asi",
+          "source": "data/TheSuffering.FusionFix/scripts/TheSuffering.FusionFix.asi",
+          "destination": "scripts/TheSuffering.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
@@ -2854,42 +3497,57 @@
       "dependencies": []
     },
     {
-      "id": "TonyHawksAmericanWasteland.WidescreenFix",
+      "id": "TonyHawksAmericanWasteland.FusionFix",
       "producers": [
         {
-          "project": "TonyHawksAmericanWasteland.WidescreenFix",
+          "project": "TonyHawksAmericanWasteland.FusionFix",
           "solution": "Win32",
-          "source": "data/TonyHawksAmericanWasteland.WidescreenFix/Game/scripts/TonyHawksAmericanWasteland.WidescreenFix.asi",
-          "destination": "Game/scripts/TonyHawksAmericanWasteland.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [],
-      "dependencies": [
-        {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "Game/dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "TonyHawksProSkater2.WidescreenFix",
-      "producers": [
-        {
-          "project": "TonyHawksProSkater2.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/TonyHawksProSkater2.WidescreenFix/scripts/TonyHawksProSkater2.WidescreenFix.asi",
-          "destination": "scripts/TonyHawksProSkater2.WidescreenFix.asi",
+          "source": "data/TonyHawksAmericanWasteland.FusionFix/Game/scripts/TonyHawksAmericanWasteland.FusionFix.asi",
+          "destination": "Game/scripts/TonyHawksAmericanWasteland.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/TonyHawksProSkater2.WidescreenFix/wndmode.ini",
-          "destination": "wndmode.ini"
+          "source": "data/TonyHawksAmericanWasteland.FusionFix/Game/Xidi.ini",
+          "destination": "Game/Xidi.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "Game/d3d9.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "Game/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Game/Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "TonyHawksProSkater2.FusionFix",
+      "producers": [
+        {
+          "project": "TonyHawksProSkater2.FusionFix",
+          "solution": "Win32",
+          "source": "data/TonyHawksProSkater2.FusionFix/scripts/TonyHawksProSkater2.FusionFix.asi",
+          "destination": "scripts/TonyHawksProSkater2.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TonyHawksProSkater2.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
         }
       ],
       "dependencies": [
@@ -2897,46 +3555,75 @@
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "ddraw.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput.dll",
+          "destination": "dinput.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
     {
-      "id": "TonyHawksProSkater3.WidescreenFix",
+      "id": "TonyHawksProSkater3.FusionFix",
       "producers": [
         {
-          "project": "TonyHawksProSkater3.WidescreenFix",
+          "project": "TonyHawksProSkater3.FusionFix",
           "solution": "Win32",
-          "source": "data/TonyHawksProSkater3.WidescreenFix/scripts/TonyHawksProSkater3.WidescreenFix.asi",
-          "destination": "scripts/TonyHawksProSkater3.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [],
-      "dependencies": [
-        {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "TonyHawksProSkater4.WidescreenFix",
-      "producers": [
-        {
-          "project": "TonyHawksProSkater4.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/TonyHawksProSkater4.WidescreenFix/Game/scripts/TonyHawksProSkater4.WidescreenFix.asi",
-          "destination": "Game/scripts/TonyHawksProSkater4.WidescreenFix.asi",
+          "source": "data/TonyHawksProSkater3.FusionFix/scripts/TonyHawksProSkater3.FusionFix.asi",
+          "destination": "scripts/TonyHawksProSkater3.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/TonyHawksProSkater4.WidescreenFix/Game/d3d8.ini",
+          "source": "data/TonyHawksProSkater3.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "TonyHawksProSkater4.FusionFix",
+      "producers": [
+        {
+          "project": "TonyHawksProSkater4.FusionFix",
+          "solution": "Win32",
+          "source": "data/TonyHawksProSkater4.FusionFix/Game/scripts/TonyHawksProSkater4.FusionFix.asi",
+          "destination": "Game/scripts/TonyHawksProSkater4.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TonyHawksProSkater4.FusionFix/Game/d3d8.ini",
           "destination": "Game/d3d8.ini"
+        },
+        {
+          "source": "data/TonyHawksProSkater4.FusionFix/Game/Xidi.ini",
+          "destination": "Game/Xidi.ini"
         }
       ],
       "dependencies": [
@@ -2944,122 +3631,216 @@
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "Game/d3d8.dll"
-        }
-      ]
-    },
-    {
-      "id": "TonyHawksUnderground.WidescreenFix",
-      "producers": [
-        {
-          "project": "TonyHawksUnderground.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/TonyHawksUnderground.WidescreenFix/Game/scripts/TonyHawksUnderground.WidescreenFix.asi",
-          "destination": "Game/scripts/TonyHawksUnderground.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [
-        {
-          "source": "data/TonyHawksUnderground.WidescreenFix/Game/scripts/TonyHawksUnderground.SafeDiscCheck.dll",
-          "destination": "Game/scripts/TonyHawksUnderground.SafeDiscCheck.dll"
-        }
-      ],
-      "dependencies": [
-        {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "Game/dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "TonyHawksUnderground2.WidescreenFix",
-      "producers": [
-        {
-          "project": "TonyHawksUnderground2.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/TonyHawksUnderground2.WidescreenFix/Game/scripts/TonyHawksUnderground2.WidescreenFix.asi",
-          "destination": "Game/scripts/TonyHawksUnderground2.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [],
-      "dependencies": [
-        {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "Game/dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "TotalOverdose.WidescreenFix",
-      "producers": [
-        {
-          "project": "TotalOverdose.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/TotalOverdose.WidescreenFix/scripts/TotalOverdose.WidescreenFix.asi",
-          "destination": "scripts/TotalOverdose.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [],
-      "dependencies": [
-        {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix",
-      "producers": [
-        {
-          "project": "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix",
-          "solution": "PCSX2F",
-          "source": "data/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix/PLUGINS/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.elf",
-          "destination": "PLUGINS/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.elf"
-        }
-      ],
-      "files": [
-        {
-          "source": "data/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix/PLUGINS/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.asisettings.json",
-          "destination": "PLUGINS/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.asisettings.json"
         },
         {
-          "source": "data/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix/PLUGINS/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.asisettings.en.json",
-          "destination": "PLUGINS/TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.asisettings.en.json"
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "Game/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Game/Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "TonyHawksUnderground.FusionFix",
+      "producers": [
+        {
+          "project": "TonyHawksUnderground.FusionFix",
+          "solution": "Win32",
+          "source": "data/TonyHawksUnderground.FusionFix/Game/scripts/TonyHawksUnderground.FusionFix.asi",
+          "destination": "Game/scripts/TonyHawksUnderground.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TonyHawksUnderground.FusionFix/Game/scripts/TonyHawksUnderground.SafeDiscCheck.dll",
+          "destination": "Game/scripts/TonyHawksUnderground.SafeDiscCheck.dll"
+        },
+        {
+          "source": "data/TonyHawksUnderground.FusionFix/Game/Xidi.ini",
+          "destination": "Game/Xidi.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "Game/d3d9.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "Game/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Game/Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "TonyHawksUnderground2.FusionFix",
+      "producers": [
+        {
+          "project": "TonyHawksUnderground2.FusionFix",
+          "solution": "Win32",
+          "source": "data/TonyHawksUnderground2.FusionFix/Game/scripts/TonyHawksUnderground2.FusionFix.asi",
+          "destination": "Game/scripts/TonyHawksUnderground2.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TonyHawksUnderground2.FusionFix/Game/Xidi.ini",
+          "destination": "Game/Xidi.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "Game/d3d9.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "Game/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Game/Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "TotalOverdose.FusionFix",
+      "producers": [
+        {
+          "project": "TotalOverdose.FusionFix",
+          "solution": "Win32",
+          "source": "data/TotalOverdose.FusionFix/scripts/TotalOverdose.FusionFix.asi",
+          "destination": "scripts/TotalOverdose.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TotalOverdose.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d9.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "TrueCrimeNewYorkCity.PCSX2F.FusionFix",
+      "producers": [
+        {
+          "project": "TrueCrimeNewYorkCity.PCSX2F.FusionFix",
+          "solution": "PCSX2F",
+          "source": "data/TrueCrimeNewYorkCity.PCSX2F.FusionFix/PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.elf",
+          "destination": "PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.elf"
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TrueCrimeNewYorkCity.PCSX2F.FusionFix/PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.asisettings.json",
+          "destination": "PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.asisettings.json"
+        },
+        {
+          "source": "data/TrueCrimeNewYorkCity.PCSX2F.FusionFix/PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.asisettings.en.json",
+          "destination": "PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.asisettings.en.json"
         }
       ],
       "dependencies": []
     },
     {
-      "id": "TrueCrimeNewYorkCity.WidescreenFix",
+      "id": "TrueCrimeNewYorkCity.FusionFix",
       "producers": [
         {
-          "project": "TrueCrimeNewYorkCity.WidescreenFix",
+          "project": "TrueCrimeNewYorkCity.FusionFix",
           "solution": "Win32",
-          "source": "data/TrueCrimeNewYorkCity.WidescreenFix/scripts/TrueCrimeNewYorkCity.WidescreenFix.asi",
-          "destination": "scripts/TrueCrimeNewYorkCity.WidescreenFix.asi",
+          "source": "data/TrueCrimeNewYorkCity.FusionFix/scripts/TrueCrimeNewYorkCity.FusionFix.asi",
+          "destination": "scripts/TrueCrimeNewYorkCity.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
       "files": [
         {
-          "source": "data/TrueCrimeNewYorkCity.WidescreenFix/diactfrm.dll",
+          "source": "data/TrueCrimeNewYorkCity.FusionFix/diactfrm.dll",
           "destination": "diactfrm.dll"
         },
         {
-          "source": "data/TrueCrimeNewYorkCity.WidescreenFix/dimap.dll",
+          "source": "data/TrueCrimeNewYorkCity.FusionFix/dimap.dll",
           "destination": "dimap.dll"
         },
         {
-          "source": "data/TrueCrimeNewYorkCity.WidescreenFix/d3d8.ini",
+          "source": "data/TrueCrimeNewYorkCity.FusionFix/d3d8.ini",
+          "destination": "d3d8.ini"
+        },
+        {
+          "source": "data/TrueCrimeNewYorkCity.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "loader-x86",
+          "member": "*.dll",
+          "destination": "d3d8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
+        }
+      ]
+    },
+    {
+      "id": "TrueCrimeStreetsofLA.FusionFix",
+      "producers": [
+        {
+          "project": "TrueCrimeStreetsofLA.FusionFix",
+          "solution": "Win32",
+          "source": "data/TrueCrimeStreetsofLA.FusionFix/scripts/TrueCrimeStreetsofLA.FusionFix.asi",
+          "destination": "scripts/TrueCrimeStreetsofLA.FusionFix.asi",
+          "embedPdb": "if-present",
+          "sign": true
+        }
+      ],
+      "files": [
+        {
+          "source": "data/TrueCrimeStreetsofLA.FusionFix/d3d8.ini",
           "destination": "d3d8.ini"
         }
       ],
@@ -3072,44 +3853,38 @@
       ]
     },
     {
-      "id": "TrueCrimeStreetsofLA.WidescreenFix",
+      "id": "UltimateSpiderMan.FusionFix",
       "producers": [
         {
-          "project": "TrueCrimeStreetsofLA.WidescreenFix",
+          "project": "UltimateSpiderMan.FusionFix",
           "solution": "Win32",
-          "source": "data/TrueCrimeStreetsofLA.WidescreenFix/scripts/TrueCrimeStreetsofLA.WidescreenFix.asi",
-          "destination": "scripts/TrueCrimeStreetsofLA.WidescreenFix.asi",
+          "source": "data/UltimateSpiderMan.FusionFix/scripts/UltimateSpiderMan.FusionFix.asi",
+          "destination": "scripts/UltimateSpiderMan.FusionFix.asi",
           "embedPdb": "if-present",
           "sign": true
         }
       ],
-      "files": [],
-      "dependencies": [
+      "files": [
         {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "dinput8.dll"
-        }
-      ]
-    },
-    {
-      "id": "UltimateSpiderMan.WidescreenFix",
-      "producers": [
-        {
-          "project": "UltimateSpiderMan.WidescreenFix",
-          "solution": "Win32",
-          "source": "data/UltimateSpiderMan.WidescreenFix/scripts/UltimateSpiderMan.WidescreenFix.asi",
-          "destination": "scripts/UltimateSpiderMan.WidescreenFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
+          "source": "data/UltimateSpiderMan.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
         }
       ],
-      "files": [],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "dsound.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     }

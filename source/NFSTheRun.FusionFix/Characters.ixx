@@ -195,8 +195,6 @@ public:
             auto tickDt = hook::pattern("F3 0F 10 47 0C F2 0F 10 0D ? ? ? ? 8B 35 ? ? ? ? 0F 5A C0 F2 0F 5C C8 F3 0F 10 47 08 0F 5A C0 F2 0F 58 C8 F3 0F 10 07");
             auto frame = hook::pattern("55 8B EC 83 E4 F0 81 EC C4 00 00 00 53 8B 1D ? ? ? ? 56 57 85 DB 0F 84");
             auto getBones = hook::pattern("83 B9 88 01 00 00 02 75 08 8A 81 44 02 00 00 EB 0D 8B 81 B4 00 00 00 85 C0 74 11 8A 40 40 84 C0 74 0A 8B 81 B4 00 00 00 8B 40 24 C3");
-            if (tick.empty() || tickDt.empty() || frame.empty() || getBones.empty())
-                return;
 
             pAnimationManager = *tick.get_first<uintptr_t*>(13);
 

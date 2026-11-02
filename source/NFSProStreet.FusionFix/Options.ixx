@@ -3,20 +3,23 @@ module;
 #include <stdafx.h>
 #include <deque>
 #include <unordered_set>
-#include "../Shared/NFS/MenuOwner.hpp"
-#include "../Shared/NFS/MenuLayout.hpp"
-#include "../Shared/NFS/LegacyText.hpp"
+#include "Shared/NFS/MenuOwner.hpp"
+#include "Shared/NFS/MenuLayout.hpp"
+#include "Shared/NFS/LegacyText.hpp"
 #include "FixSettings.hpp"
-#include "Help.hpp"
-#include "Dialog.hpp"
-#include "../Shared/NFS/PluginsMenu.hpp"
-#include "../Shared/NFS/SettingsMenu.hpp"
-#include "../Shared/NFS/Text.hpp"
-#include "../Shared/NFS/TextLanguage.hpp"
+#include "Shared/NFS/PluginsMenu.hpp"
+#include "Shared/NFS/SettingsMenu.hpp"
+#include "Shared/NFS/Text.hpp"
+#include "Shared/NFS/TextLanguage.hpp"
 
 export module Options;
 
 import ComVars;
+import Help;
+import Dialog;
+import UpdateNotice;
+import StaticText;
+
 
 // The plugins' settings in the game's options menu. The menus are a table of entries ({id, parent, label, type, DAL
 // id}, at 0xA52AE8) and every screen lists the entries of one parent, so the fix adds entries of its own:
@@ -49,16 +52,6 @@ namespace
         TypeList = 2,
     };
 
-    struct TreeEntry
-    {
-        int32_t id;
-        int32_t parent;
-        uint32_t label;
-        int32_t type;
-        int32_t dalId;
-    };
-    static_assert(sizeof(TreeEntry) == 0x14);
-
     constexpr int32_t OptionsMenu = 30;         // the game's options menu
     constexpr int32_t PauseOptionsMenu = 60;    // the options menu of the pause menu in a race
     constexpr uint32_t GraphicsTitle = 0x5DD8F55B;
@@ -85,8 +78,6 @@ namespace
     constexpr int32_t InterfaceScreen = 178;    // the one of those screens the pause menu has too
 
     // The game's table of menu entries
-    TreeEntry* Table = nullptr;
-    TreeEntry* TableEnd = nullptr;
 
     // The Plugins entries: the options menu's and the pause menu's
     constexpr int32_t PluginsMenu = 900;
@@ -199,8 +190,6 @@ namespace
         WFPMenu::Owner::Token replacement{};
     };
     thread_local DefaultsContext NativeDefaults;
-    uint8_t** DefaultsMainContext = nullptr;
-    uint8_t** DefaultsPauseContext = nullptr;
 
     bool InGameDefaults()
     {
@@ -302,23 +291,11 @@ namespace
     }
 
     // The game's language: its id and the table of languages
-    int32_t* CurrentLanguage = nullptr;
-    struct LanguageInfo
-    {
-        int32_t id;
-        const char* name;
-        const char* code;
-        const char* files[4];
-        uint32_t unknown[2];
-    };
-    static_assert(sizeof(LanguageInfo) == 0x24);
-    LanguageInfo* Languages = nullptr;
-    LanguageInfo* LanguagesEnd = nullptr;
     std::string LanguageName;
 
     std::string FindLanguageName(int32_t id)
     {
-        for (auto info = Languages; info && info < LanguagesEnd; ++info)
+        for (auto info = Languages.is_initialized() ? Languages.get_ptr() : nullptr; info && info < LanguagesEnd.get_ptr(); ++info)
         {
             if (info->id == id && info->name)
             {
@@ -335,7 +312,7 @@ namespace
     // the Latin letters: the texts are English there.
     std::string TextLanguage()
     {
-        auto name = WFPMenu::TextLanguage(FixSettings(), FindLanguageName(CurrentLanguage ? *CurrentLanguage : 0));
+        auto name = WFPMenu::TextLanguage(FixSettings(), FindLanguageName(CurrentLanguage.is_initialized() ? CurrentLanguage.get() : 0));
         return name == "russian" ? "english" : name;
     }
 
@@ -350,7 +327,7 @@ namespace
 
     float RenderScale(uint32_t font)
     {
-        auto language = CurrentLanguage ? *CurrentLanguage : 0;
+        auto language = CurrentLanguage.is_initialized() ? CurrentLanguage.get() : 0;
         return (language == 11 || language == 12 || language == 13) && font == 0x9583AA1A ? 2.0f : 1.0f;
     }
 
@@ -938,7 +915,7 @@ namespace
         if (parent == OptionsMenu)
         {
             auto plugins = FindById(PluginsMenu);
-            for (auto entry = Table; entry < TableEnd; ++entry)
+            for (auto entry = OptionsTable.get_ptr(); entry < OptionsTableEnd.get_ptr(); ++entry)
             {
                 if (entry->parent == OptionsMenu)
                     AppendNode(list, entry->id == CreditsEntry ? &plugins->entry : entry);
@@ -959,7 +936,7 @@ namespace
         {
             auto& joined = JoinedSettings[PauseMenuActive ? 1 : 0][parent];
             joined.clear();
-            for (auto entry = Table; entry < TableEnd; ++entry)
+            for (auto entry = OptionsTable.get_ptr(); entry < OptionsTableEnd.get_ptr(); ++entry)
             {
                 if (entry->parent != parent)
                     continue;
@@ -1196,7 +1173,6 @@ namespace
     }
 
     // The option commands: a list's items and a slider's range
-    void* FastMem = nullptr;
     void* (__fastcall* FastMemAlloc)(void* fastMem, void* edx, size_t size, int unknown) = nullptr;
     void* (__fastcall* ListItem)(void* item, void* edx, const char* text, float value) = nullptr;
 
@@ -1221,7 +1197,7 @@ namespace
 
     void AddItem(ListLink* items, const std::string& text, float value)
     {
-        auto item = FastMemAlloc(FastMem, nullptr, 0x14, 0);
+        auto item = FastMemAlloc(FastMem.get_ptr(), nullptr, 0x14, 0);
         if (!item)
             return;
         ListItem(item, nullptr, GameText(text).c_str(), value);
@@ -1286,16 +1262,14 @@ namespace
     template<typename T>
     void HookSlot(uintptr_t* vtable, int slot, T replacement, T& original)
     {
-        ProtectedGameRef<uintptr_t> ref(&vtable[slot]);
         original = reinterpret_cast<T>(vtable[slot]);
-        ref = reinterpret_cast<uintptr_t>(replacement);
+        injector::WriteMemory<uintptr_t>(&vtable[slot], reinterpret_cast<uintptr_t>(replacement), true);
     }
 
     void HookSlot(uintptr_t* vtable, int slot, void* replacement, void*& original)
     {
-        ProtectedGameRef<uintptr_t> ref(&vtable[slot]);
         original = reinterpret_cast<void*>(vtable[slot]);
-        ref = reinterpret_cast<uintptr_t>(replacement);
+        injector::WriteMemory<uintptr_t>(&vtable[slot], reinterpret_cast<uintptr_t>(replacement), true);
     }
 
     // An option page ({vtable, ...}, 0x975F18) holds copies of the entries' nodes ({vtable, link, id, label, label
@@ -1439,18 +1413,50 @@ namespace
         return shFormat.unsafe_ccall<int>(destination, text, arguments);
     }
 
-    void** PackageManager = nullptr;
     uint8_t* (__thiscall* FindPackage)(void*, const char*) = nullptr;
     uint8_t* (__thiscall* FindObject)(void*, uint32_t) = nullptr;
     int (__cdecl* SetLanguageHash)(void*, uint32_t) = nullptr;
 
+    void* (__thiscall* PackageHeader)(void* entry, int) = nullptr;
+
+    // The game's lookup also moves the package it finds to the front of the manager's list, which the render thread
+    // (the help and the bars are drawn there) must not do: this one only reads the list
     uint8_t* LoadedPackage(const std::string& name)
     {
-        auto manager = PackageManager ? *PackageManager : nullptr;
-        if (!manager || !FindPackage)
+        auto manager = PackageManager.is_initialized() ? static_cast<uint8_t*>(PackageManager.get()) : nullptr;
+        if (!manager || !PackageHeader)
             return nullptr;
-        auto entry = FindPackage(manager, name.c_str());
-        return entry ? *reinterpret_cast<uint8_t**>(entry + 0x20) : nullptr;
+        auto hash = [](const char* text)
+        {
+            uint32_t result = 0xFFFFFFFF;
+            for (; *text; ++text)
+            {
+                auto c = uint8_t(*text);
+                result = result * 33 + (c >= 'a' && c <= 'z' ? c - 32 : c);
+            }
+            return result;
+        };
+        auto slash = name.find_last_of('\\');
+        auto wanted = hash(name.c_str() + (slash == std::string::npos ? 0 : slash + 1));
+        auto link = *reinterpret_cast<uint8_t**>(manager + 4);
+        for (size_t guard = 0; link && link - 4 != manager && guard < 4096; ++guard)
+        {
+            auto entry = link - 4;
+            auto chunk = *reinterpret_cast<uint32_t**>(entry + 0x18);
+            uint32_t found = 0;
+            if (chunk && chunk[0] == 0x30203)
+            {
+                auto header = static_cast<uint32_t*>(PackageHeader(entry, 0));
+                if (header && header[0] == 0xE76E4546 && header[2] == 0x64486B50 && header[4] >= 0x20000)
+                    found = hash(reinterpret_cast<const char*>(header + 10));
+            }
+            else if (chunk && chunk[0] == 0x30210)
+                found = chunk[2];
+            if (found == wanted)
+                return *reinterpret_cast<uint8_t**>(entry + 0x20);
+            link = *reinterpret_cast<uint8_t**>(entry + 4);
+        }
+        return nullptr;
     }
 
     struct LayoutRecord
@@ -1651,8 +1657,6 @@ namespace
         void* header{};
     };
     std::unordered_map<uint8_t*, ValuePages> ContinuedValues;
-    uint8_t** ActiveCharset = nullptr;
-    uint32_t* RawCharset = nullptr;
 
     void ClearValuePages()
     {
@@ -1663,10 +1667,10 @@ namespace
     {
         auto state = *reinterpret_cast<float**>(object + 0x2C);
         auto font = FindFont ? FindFont(*reinterpret_cast<uint32_t*>(object + 0x24)) : nullptr;
-        auto gameLanguage = CurrentLanguage ? *CurrentLanguage : 0;
+        auto gameLanguage = CurrentLanguage.is_initialized() ? CurrentLanguage.get() : 0;
         auto& pages = ContinuedValues[object];
-        auto charset = ActiveCharset ? *ActiveCharset : nullptr;
-        auto rawCharset = RawCharset ? *RawCharset : 0;
+        auto charset = ActiveCharset.is_initialized() ? ActiveCharset.get() : nullptr;
+        auto rawCharset = RawCharset.is_initialized() ? RawCharset.get() : 0;
         auto header = font ? *reinterpret_cast<void**>(static_cast<uint8_t*>(font) + 24) : nullptr;
         if (pages.raw != raw || pages.language != LanguageName || pages.font != font || pages.scale != state[14] ||
             pages.width != width || pages.gameLanguage != gameLanguage || pages.charset != charset ||
@@ -1878,7 +1882,7 @@ namespace
     {
         static std::string metricsLanguage;
         static int metricsGameLanguage = INT_MIN;
-        auto gameLanguage = CurrentLanguage ? *CurrentLanguage : 0;
+        auto gameLanguage = CurrentLanguage.is_initialized() ? CurrentLanguage.get() : 0;
         if (metricsLanguage != LanguageName || metricsGameLanguage != gameLanguage)
         {
             metricsLanguage = LanguageName;
@@ -1889,7 +1893,7 @@ namespace
         auto owner = PageOwner.Capture();
         auto pin = Plugins;
         auto active = [&]() { return PageOwner.Matches(owner) && Plugins == pin; };
-        if ((NFSPSDialog::Pending && NFSPSDialog::Busy()) ||
+        if ((DialogPending.is_initialized() && NFSPSDialog::Busy()) ||
             !page || owner.screen != page || !Pages.count(page) || !FindObject ||
             *reinterpret_cast<int32_t*>(page + 0x1C) <= 0 ||
             (*reinterpret_cast<uintptr_t**>(page) == OptionsPageTable && *reinterpret_cast<int32_t*>(page + PageState) != 0))
@@ -1978,8 +1982,8 @@ namespace
         if (!active())
             return;
         auto header = font ? *reinterpret_cast<void**>(static_cast<uint8_t*>(font) + 24) : nullptr;
-        auto charset = ActiveCharset ? *ActiveCharset : nullptr;
-        auto rawCharset = RawCharset ? *RawCharset : 0;
+        auto charset = ActiveCharset.is_initialized() ? ActiveCharset.get() : nullptr;
+        auto rawCharset = RawCharset.is_initialized() ? RawCharset.get() : 0;
         if (Help.text != text || Help.language != LanguageName || Help.generation != owner.generation || Help.id != entry->entry.id ||
             Help.width != width || Help.scale != state[14] || Help.rows != captions.size() || Help.font != font ||
             Help.header != header || Help.charset != charset || Help.rawCharset != rawCharset || Help.gameLanguage != gameLanguage)
@@ -2205,7 +2209,7 @@ namespace
 
     uint8_t* __fastcall ConstructDialog(uint8_t* dialog, void*, void* screen)
     {
-        auto own = NFSPSDialog::Pending && NFSPSDialog::Publishing && *NFSPSDialog::Pending == NFSPSDialog::Publishing;
+        auto own = DialogPending.is_initialized() && NFSPSDialog::Publishing && DialogPending.get() == NFSPSDialog::Publishing;
         NFSPSDialog::OwnedInstance = own ? dialog : nullptr;
         if (own)
             NFSPSDialog::Publishing = nullptr;
@@ -2214,7 +2218,7 @@ namespace
 
     int __fastcall DialogNotify(uint8_t* dialog, void*, uint32_t message, uintptr_t data, int controller, int extra)
     {
-        if (dialog == NFSPSDialog::OwnedInstance && NFSPSDialog::Instance && *NFSPSDialog::Instance == dialog &&
+        if (dialog == NFSPSDialog::OwnedInstance && DialogInstance.is_initialized() && DialogInstance.get() == dialog &&
             (message == 0x911AB364 || message == 0x0C407210 || message == 0x406415E3) && dialog[0x28] == 1 && CloseDialog)
         {
             // The stock acknowledgement belongs to its Options controller's current state.
@@ -2359,7 +2363,7 @@ namespace
         auto owner = PageOwner.Capture();
         auto page = static_cast<uint8_t*>(owner.screen);
         auto origin = PageParents.find(page);
-        auto context = *reinterpret_cast<int32_t*>(manager + 8) == 2 ? DefaultsPauseContext : DefaultsMainContext;
+        auto context = *reinterpret_cast<int32_t*>(manager + 8) == 2 ? (DefaultsPauseContext.is_initialized() ? DefaultsPauseContext.get_ptr() : nullptr) : (DefaultsMainContext.is_initialized() ? DefaultsMainContext.get_ptr() : nullptr);
         auto pin = Plugins;
         std::vector<int32_t> entries;
         if (page && Pages.count(page) && origin != PageParents.end() && context && *context &&
@@ -2498,7 +2502,7 @@ namespace
         NativeScope native;
         auto source = PageParents.find(page);
         if (!page || !Pages.count(page) || source == PageParents.end() || !RepaintRows ||
-            (NFSPSDialog::Pending && NFSPSDialog::Busy()))
+            (DialogPending.is_initialized() && NFSPSDialog::Busy()))
             return true;
         auto table = *reinterpret_cast<uintptr_t**>(page);
         if ((table != BasePageTable && table != OptionsPageTable) ||
@@ -2986,7 +2990,7 @@ namespace
         auto node = page ? OwnNode(page) : nullptr;
         if (!node || Help.generation != PageOwner.Capture().generation ||
             Help.id != *reinterpret_cast<int32_t*>(node + 0x0C) ||
-            (NFSPSDialog::Pending && NFSPSDialog::Busy()) ||
+            (DialogPending.is_initialized() && NFSPSDialog::Busy()) ||
             (*reinterpret_cast<uintptr_t**>(page) == OptionsPageTable && *reinterpret_cast<int32_t*>(page + PageState) != 0))
             HideHelp();
     }
@@ -3102,7 +3106,7 @@ namespace
         }
         if (!PageOwner.Matches(owner))
             return;
-        if (page && !(NFSPSDialog::Pending && NFSPSDialog::Busy()) && ((*reinterpret_cast<uintptr_t**>(page) == OptionsPageTable &&
+        if (page && !(DialogPending.is_initialized() && NFSPSDialog::Busy()) && ((*reinterpret_cast<uintptr_t**>(page) == OptionsPageTable &&
             *reinterpret_cast<int32_t*>(page + PageState) == 0) || *reinterpret_cast<uintptr_t**>(page) == BasePageTable))
             Refresh(page);
         if (PageOwner.Matches(owner))
@@ -3111,6 +3115,12 @@ namespace
         RefreshNeeded = false;
     }
 
+}
+
+// Whether a front end package is loaded (shown)
+export bool FEPackageLoaded(const char* name)
+{
+    return LoadedPackage(name) != nullptr;
 }
 
 class Options
@@ -3135,62 +3145,40 @@ public:
             auto fontLookup = hook::pattern("8B 54 24 04 56 FF 25 ? ? ? ? EB 03 8D 49 00 8B C6 3D ? ? ? ? 74 15 8D A4 24 00 00 00 00");
             auto glyphAdvance = hook::pattern("66 3D 99 00 75 07 B8 22 21 00 00 EB 18 66 3D 9C 00 75 07 B8 53 01 00 00 EB 0B 66 3D A0 00 75 05");
             auto localizedWide = hook::pattern("8B 0D ? ? ? ? 85 C9 56 57 8B 7C 24 14 8B C7 74 ? 57 FF D1 83 C4 04 50 E8 ? ? ? ? 8B F0 83 C4 04");
-            if (fontLookup.size() != 1 || glyphAdvance.size() != 1 || localizedWide.size() != 1)
-                return;
             auto packageLookup = hook::pattern("8B 0D ? ? ? ? 57 56 E8 ? ? ? ? 85 C0 74 29 8B 78 20 85 FF 75 1A");
             auto objectLookup = hook::pattern("8B 44 24 04 85 C0 74 26 8B 0D ? ? ? ? 50 E8 ? ? ? ? 85 C0 74 16 8B 4C 24 08 51 8B C8 E8 ? ? ? ? 85 C0 74 06 83 78 18 02");
             auto setHash = hook::pattern("56 8B 74 24 08 85 F6 74 32 8B 46 60 8B 4C 24 0C 3B C1 BA 00 00 40 00 74 0A 09 56 1C");
             auto renderString = hook::pattern("55 8B EC 83 E4 F0 81 EC F4 08 00 00 A1 ? ? ? ? 33 C4 89 84 24 F0 08 00 00 8B 45 0C 53 56 8B 75 08 8B D9");
             auto stringConstructor = hook::pattern("56 8B F1 E8 ? ? ? ? 33 C0 89 46 5C C7 06 ? ? ? ? C7 46 60 FF FF FF FF 89 46 64 89 46 68 89 46 6C 89 46 70 89 46 74 C7 46 18 02 00 00 00");
             auto stateAllocation = hook::pattern("55 B9 ? ? ? ? 89 7E 2C E8 ? ? ? ? 89 46 2C 89 6E 30 8B 4B 30 8B 53 2C");
-            if (renderString.size() != 1 || stringConstructor.size() != 1 || stateAllocation.size() != 1 || *renderString.get_first<uint8_t>(0xB4) != 0xE8)
-                return;
+            hook::range_pattern(reinterpret_cast<uintptr_t>(renderString.get_first(0xB4)), reinterpret_cast<uintptr_t>(renderString.get_first(0xB4)) + 5, "E8 ? ? ? ?").get_first();
             auto popupItem = hook::pattern("8B 4C 24 20 33 C0 89 46 0C 89 4E 10 C6 46 14 01 88 46 15 88 46 16 88 46 17");
             auto popupDraw = hook::pattern("8B 44 24 0C 56 8B 74 24 08 57 8B F9 8B 4C 24 10 50 51 56 8B CF E8 ? ? ? ? 85 F6 74 33 8B 46 0C");
-            if (popupItem.size() != 1 || popupDraw.size() != 1)
-                return;
             auto dialogConstructor = hook::pattern("53 56 57 6A 28 E8 ? ? ? ? 33 FF 83 C4 04 3B C7 74 26 C7 00 ? ? ? ? C6 40 04 00 C6 40 05 01 89 78 14 89 78 18 89 78 1C 89 78 24 C7 40 20 80 00 00 00 89 78 08 EB 02 33 C0 8B 74 24 10 56 A3");
             auto dialogOpen = hook::pattern("8B 0D ? ? ? ? 85 C9 74 05 E9 ? ? ? ? 8B 0D ? ? ? ? 56 68 ? ? ? ? 8B F1 E8");
             auto dialogScreen = hook::pattern("6A 15 6A 01 C7 44 24 20 00 00 00 00 C7 06 ? ? ? ? C7 46 20 00 00 00 00 E8 ? ? ? ? A1 ? ? ? ? 83 40 28 01 8B 50 28 8B C8 83 C0 28");
             auto dollarMode = hook::pattern("80 3D ? ? ? ? 00 75 3E 80 3D ? ? ? ? 00 75 35 66 83 F9 24");
-            if (packageLookup.size() != 1 || objectLookup.size() != 1 || setHash.size() != 1 || renderString.size() != 1 || dollarMode.size() != 1)
-                return;
-            if (*localizedWide.get_first<uint8_t>(0x9A) != 0xE8)
-                return;
+            hook::range_pattern(reinterpret_cast<uintptr_t>(localizedWide.get_first(0x9A)), reinterpret_cast<uintptr_t>(localizedWide.get_first(0x9A)) + 5, "E8 ? ? ? ?").get_first();
             auto converter = injector::GetBranchDestination(localizedWide.get_first(0x9A)).as_int();
-            if (*reinterpret_cast<uint16_t*>(converter + 0x32) != 0x3D83)
-                return;
+            hook::range_pattern(converter + 0x32, converter + 0x34, "83 3D").get_first();
             auto formatter = hook::pattern("83 EC 10 8B 44 24 18 53 55 33 D2 56 32 DB 38 10 57 89 54 24 14 C7 44 24 10 FF FF FF FF 0F 84");
-            if (formatter.size() != 1)
-                return;
             auto basePage = hook::pattern("8D 7E 0C C7 06 ? ? ? ? 89 3F 89 7F 04 8B 4C 24 24 8B 44 24 28 33 DB 57 51 8B CE");
             auto repaintRows = hook::pattern("56 8B F1 8B 06 8B 50 08 6A 00 FF D2 8B 46 20 6A 01 50 8B CE E8 ? ? ? ? 8B 4E 14 C6 41 32 00 5E C3");
-            if (repaintRows.size() != 1)
-                return;
             RepaintRows = reinterpret_cast<decltype(RepaintRows)>(repaintRows.get_first());
             auto createPreview = hook::pattern("8B F9 8B 74 24 1C 85 F6 74 6C 39 36 74 68 83 7F 34 00 75 62 80 7F 30 00 74 5C 56 E8 ? ? ? ? 83 C4 04 84 C0");
-            if (createPreview.size() != 1)
-                return;
-            auto clearNodes = hook::pattern("56 8B F1 8B 06 3B C6 74 26 8D A4 24 00 00 00 00 8B 08 8B 50 04 89 0A 89 51 04 8D 48 FC");
-            if (basePage.size() != 1 || clearNodes.size() != 1)
-                return;
+            auto clearNodes = hook::pattern("56 8B F1 8B 06 3B C6 74 26 ? ? ? ? ? ? ? 8B 08 8B 50 04 89 0A 89 51 04 8D 48 FC 85 C9 74 08 8B 01 8B 10 6A 01 FF D2");
             auto contextNotify = hook::pattern("53 55 56 57 8B 7C 24 14 81 FF 4B 0A 1C 91 8B F1 0F 87 ? ? ? ? 0F 84 ? ? ? ? 81 FF 10 9F 4D 5E");
             auto sliderDraw = hook::pattern("83 EC 18 56 57 8B F1 8B 56 20 8D 44 24 08 50 8D 4C 24 10 51 52 E8 ? ? ? ? D9 46 04");
-            if (contextNotify.size() != 1 || sliderDraw.size() != 1)
-                return;
-            if (children.size() != 1 || dataNode.size() != 1 || parentId.size() != 1 || dal.size() != 1 || listCommand.size() != 1 || rangeCommand.size() != 1 ||
-                item.size() != 1 || fastMem.size() != 1 || search.size() != 1 || language.size() != 1 || languageEnd.size() != 1 || page.size() != 1)
-                return;
 
             // The credits entry of the options menu, in the table the parent ID lookup goes through
-            Table = *parentId.get_first<TreeEntry*>(7);
-            TableEnd = *parentId.get_first<TreeEntry*>(0x1B);
-            if (std::none_of(Table, TableEnd, [](const TreeEntry& entry)
+            OptionsTable.SetAddress(*parentId.get_first<TreeEntry*>(7));
+            OptionsTableEnd.SetAddress(*parentId.get_first<TreeEntry*>(0x1B));
+            if (std::none_of(OptionsTable.get_ptr(), OptionsTableEnd.get_ptr(), [](const TreeEntry& entry)
             {
                 return entry.id == CreditsEntry && entry.parent == OptionsMenu && entry.label == CreditsTitle && entry.type == TypeMenu;
             }))
                 return;
-            bPauseOptions = std::any_of(Table, TableEnd, [](const TreeEntry& entry)
+            bPauseOptions = std::any_of(OptionsTable.get_ptr(), OptionsTableEnd.get_ptr(), [](const TreeEntry& entry)
             {
                 return entry.parent == PauseOptionsMenu && entry.label == GraphicsTitle;
             });
@@ -3202,17 +3190,19 @@ public:
             FindFont = reinterpret_cast<decltype(FindFont)>(fontLookup.get_first());
             GlyphAdvance = reinterpret_cast<decltype(GlyphAdvance)>(glyphAdvance.get_first(-0x3C));
             LocalizedWide = reinterpret_cast<decltype(LocalizedWide)>(localizedWide.get_first());
-            ActiveCharset = *localizedWide.get_first<uint8_t**>(0x58);
-            RawCharset = *reinterpret_cast<uint32_t**>(converter + 0x34);
-            PackageManager = *packageLookup.get_first<void**>(2);
+            ActiveCharset.SetAddress(*localizedWide.get_first<uint8_t**>(0x58));
+            RawCharset.SetAddress(*reinterpret_cast<uint32_t**>(converter + 0x34));
+            PackageManager.SetAddress(*packageLookup.get_first<void**>(2));
             FindPackage = reinterpret_cast<decltype(FindPackage)>(injector::GetBranchDestination(packageLookup.get_first(8)).as_int());
+            auto lookup = reinterpret_cast<uintptr_t>(FindPackage);
+            auto packageHeaderCall = hook::range_pattern(lookup + 0x63, lookup + 0x68, "E8 ? ? ? ?").get_first();
+            PackageHeader = reinterpret_cast<decltype(PackageHeader)>(injector::GetBranchDestination(packageHeaderCall).as_int());
             FindObject = reinterpret_cast<decltype(FindObject)>(injector::GetBranchDestination(objectLookup.get_first(0x1F)).as_int());
             SetLanguageHash = reinterpret_cast<decltype(SetLanguageHash)>(setHash.get_first());
-            if (*renderString.get_first<uint8_t>(0x56) != 0xE8)
-                return;
+            hook::range_pattern(reinterpret_cast<uintptr_t>(renderString.get_first(0x56)), reinterpret_cast<uintptr_t>(renderString.get_first(0x56)) + 5, "E8 ? ? ? ?").get_first();
             CreateFontCache = reinterpret_cast<decltype(CreateFontCache)>(injector::GetBranchDestination(renderString.get_first(0x56)).as_int());
             NFSPSStaticText::Construct = reinterpret_cast<decltype(NFSPSStaticText::Construct)>(stringConstructor.get_first());
-            NFSPSStaticText::StatePool = *stateAllocation.get_first<void*>(2);
+            StaticTextStatePool.SetAddress(*stateAllocation.get_first<void*>(2));
             NFSPSStaticText::AllocateState = reinterpret_cast<decltype(NFSPSStaticText::AllocateState)>(injector::GetBranchDestination(stateAllocation.get_first(9)).as_int());
             NFSPSHelp::ReadWide = reinterpret_cast<decltype(NFSPSHelp::ReadWide)>(injector::GetBranchDestination(renderString.get_first(0xB4)).as_int());
             NFSPSHelp::Advance = reinterpret_cast<decltype(NFSPSHelp::Advance)>(&StockGlyphAdvance);
@@ -3220,11 +3210,11 @@ public:
             LiteralFontControls.SetAddress(*dollarMode.get_first<uint8_t*>(2));
             FontModesReady = true;
             ListItem = reinterpret_cast<decltype(ListItem)>(item.get_first());
-            FastMem = *fastMem.get_first<void*>(0x1E);
+            FastMem.SetAddress(*fastMem.get_first<void*>(0x1E));
             FastMemAlloc = reinterpret_cast<decltype(FastMemAlloc)>(injector::GetBranchDestination(fastMem.get_first(0x24)).as_int());
-            CurrentLanguage = *language.get_first<int32_t*>(2);
-            Languages = *languageEnd.get_first<LanguageInfo*>(7);
-            LanguagesEnd = *languageEnd.get_first<LanguageInfo*>(0x1B);
+            CurrentLanguage.SetAddress(*language.get_first<int32_t*>(2));
+            Languages.SetAddress(*languageEnd.get_first<LanguageInfo*>(7));
+            LanguagesEnd.SetAddress(*languageEnd.get_first<LanguageInfo*>(0x1B));
 
             // Options > Plugins (listed in the place of the credits, and last in the race's pause menu); the plugins'
             // pages are added when a menu is first shown
@@ -3276,24 +3266,21 @@ public:
             HookSlot(baseTable, 11, &BaseShow, OriginalBaseShow);
 
             auto dialogClose = hook::pattern("8B 15 ? ? ? ? 8B 02 05 D8 00 00 00 56 74 14 8B 70 0C 85 F6 74 0D 83 7E 20 00 75 13");
-            if (dialogConstructor.size() == 1 && dialogOpen.size() == 1 && dialogScreen.size() == 1 && dialogClose.size() == 1)
+            auto table = *dialogScreen.get_first<uintptr_t*>(0x0E);
+            shConstructDialog = safetyhook::create_inline(dialogScreen.get_first(-0x37), ConstructDialog);
+            shDialogNotify = safetyhook::create_inline(reinterpret_cast<void*>(table[1]), DialogNotify);
+            if (shConstructDialog && shDialogNotify)
             {
-                auto table = *dialogScreen.get_first<uintptr_t*>(0x0E);
-                shConstructDialog = safetyhook::create_inline(dialogScreen.get_first(-0x37), ConstructDialog);
-                shDialogNotify = safetyhook::create_inline(reinterpret_cast<void*>(table[1]), DialogNotify);
-                if (shConstructDialog && shDialogNotify)
-                {
-                    CloseDialog = reinterpret_cast<decltype(CloseDialog)>(dialogClose.get_first());
-                    NFSPSDialog::Table = *dialogConstructor.get_first<void*>(0x15);
-                    NFSPSDialog::Pending = *dialogConstructor.get_first<NFSPSDialog::Configuration**>(0x41);
-                    NFSPSDialog::Instance = *dialogOpen.get_first<void**>(2);
-                    NFSPSDialog::Open = reinterpret_cast<decltype(NFSPSDialog::Open)>(dialogOpen.get_first());
-                }
-                else
-                {
-                    shConstructDialog.reset();
-                    shDialogNotify.reset();
-                }
+                CloseDialog = reinterpret_cast<decltype(CloseDialog)>(dialogClose.get_first());
+                NFSPSDialog::Table = *dialogConstructor.get_first<void*>(0x15);
+                DialogPending.SetAddress(*dialogConstructor.get_first<NFSPSDialog::Configuration**>(0x41));
+                DialogInstance.SetAddress(*dialogOpen.get_first<void**>(2));
+                NFSPSDialog::Open = reinterpret_cast<decltype(NFSPSDialog::Open)>(dialogOpen.get_first());
+            }
+            else
+            {
+                shConstructDialog.reset();
+                shDialogNotify.reset();
             }
 
             // The game's CRT, which allocates the texts of the menu's nodes
@@ -3318,13 +3305,10 @@ public:
             HookSlot(*listCommand.get_first<uintptr_t*>(4), 2, reinterpret_cast<void*>(&ListExecute), OriginalListExecute);
             HookSlot(*rangeCommand.get_first<uintptr_t*>(0xD), 2, reinterpret_cast<void*>(&RangeExecute), OriginalRangeExecute);
             auto gameDefaults = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 83 EC 08 56 A1 ? ? ? ? 33 C4 50 8D 44 24 10 64 A3 00 00 00 00 8B F1 8D 44 24 08 8B C8 89 44 24 08 89 4C 24 0C 83 7E 08 02");
-            if (gameDefaults.size() == 1)
-            {
-                DefaultsPauseContext = *gameDefaults.get_first<uint8_t**>(0x43);
-                DefaultsMainContext = *gameDefaults.get_first<uint8_t**>(0x78);
-                shGameDefaults = safetyhook::create_inline(gameDefaults.get_first(), &GameDefaults);
-                OriginalGameDefaults = shGameDefaults.original<GameDefaultsFn>();
-            }
+            DefaultsPauseContext.SetAddress(*gameDefaults.get_first<uint8_t**>(0x43));
+            DefaultsMainContext.SetAddress(*gameDefaults.get_first<uint8_t**>(0x78));
+            shGameDefaults = safetyhook::create_inline(gameDefaults.get_first(), &GameDefaults);
+            OriginalGameDefaults = shGameDefaults.original<GameDefaultsFn>();
             auto pageVTable = *page.get_first<uintptr_t*>(0x0F);
             OptionsPageTable = pageVTable;
             HookSlot(pageVTable, 1, &Notify, OriginalNotify);
@@ -3338,6 +3322,38 @@ public:
             {
                 ServiceHelp();
             };
+        };
+
+        // The update notice in the game's one-button dialog over the main menu, once nothing else is open there
+        WFP::onInitEvent() += []()
+        {
+            bool available = NFSPSDialog::Open && NFSPSDialog::Table && NFSPSDialog::Allocate && NFSPSDialog::Free &&
+                LocalizedWide && FindFont && PackageHeader && PackageManager.is_initialized();
+            static auto playable = []()
+            {
+                return IsFrontEnd() && !NFSPSDialog::Busy() && LoadedPackage(NFSPSUpdateNotice::MainMenu) &&
+                    !LoadedPackage("FeDialog.fng") && !LoadedPackage("FeMainMenu_Sub.fng");
+            };
+            if (NFSPSUpdateNotice::Install(FixSettings(), available, playable,
+                [](const std::string& text)
+                {
+                    std::vector<wchar_t> body;
+                    std::array<wchar_t, 256> button{};
+                    if (!DecodeText(text, body) || !LocalizedWide(button.data(), int(button.size()), 0x13950307))
+                        return;
+                    button.back() = L'\0';
+                    NFSPSDialog::Show(body.data(), button.data(), playable);
+                },
+                [](const std::string& text)
+                {
+                    std::array<uint8_t, 120> style{};
+                    *reinterpret_cast<uint32_t*>(style.data() + 0x24) = 0x94AF4029;
+                    return FontText(style.data(), text, false);
+                }))
+            {
+                WFP::onGameProcessEvent() += []() { NFSPSUpdateNotice::Tick(); };
+                WFP::onShutdownEvent() += []() { NFSPSUpdateNotice::OnExit(); };
+            }
         };
     }
 } Options;

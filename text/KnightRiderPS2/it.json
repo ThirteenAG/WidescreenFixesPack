@@ -1,6 +1,24 @@
 {
   "plugin.name": "Knight Rider PCSX2F Widescreen Fix",
   "page.display": "Schermo",
-  "enable": "Supporto widescreen",
-  "enable.description": "Corregge proiezione della telecamera, HUD e riquadri, sfondi e FMV per le proporzioni dell'emulatore. Attivo per impostazione predefinita. Riavvia il gioco emulato dopo aver modificato questa impostazione."
+  "page.gameplay": "Gioco",
+  "auto": "Automatico",
+  "ForceAspectRatio": "Proporzioni dello schermo",
+  "ForceAspectRatio.description": "Auto segue lo schermo dell’emulatore. Altrimenti inserisci larghezza:altezza o un numero decimale e scegli lo stesso formato nell’emulatore. Le modifiche si applicano durante il gioco.",
+  "FOVFactor": "Campo visivo",
+  "FOVFactor.description": "Moltiplica il campo visivo della telecamera di guida; 1.0 è l’inquadratura originale. Le scene a inizio missione mantengono la propria inquadratura. Le modifiche si applicano durante il gioco.",
+  "HudAspectRatioConstraint": "Proporzioni dell’HUD",
+  "HudAspectRatioConstraint.description": "Auto mette i pannelli laterali dell’HUD ai bordi dello schermo. Un rapporto li tiene ai bordi di un riquadro centrato di quella forma. La visuale abitacolo mantiene sempre l’HUD sul cruscotto 4:3. Le modifiche si applicano durante il gioco.",
+  "FMVWidescreenMode": "Visualizzazione video",
+  "FMVWidescreenMode.description": "Originale mostra i video come il gioco, un’immagine 4:3 con bande nere. Riempi mostra l’intera immagine panoramica grande quanto lo schermo consente. Le modifiche si applicano durante il gioco.",
+  "fmv.original": "Originale",
+  "fmv.fill": "Riempi",
+  "CutsceneBorders": "Bande delle scene",
+  "CutsceneBorders.description": "Bande nere delle scene a inizio missione. Letterbox mantiene le bande originali sopra e sotto, Pillarbox mantiene l’inquadratura 4:3 originale con bande ai lati, Entrambi le combina, Disattivato riempie lo schermo. Le modifiche si applicano durante il gioco.",
+  "borders.off": "Disattivato",
+  "borders.letterbox": "Letterbox",
+  "borders.pillarbox": "Pillarbox",
+  "borders.both": "Entrambi",
+  "SkipIntro": "Salta introduzione",
+  "SkipIntro.description": "Salta il logo Davilex e il video di apertura all’avvio. Riavvia il gioco per applicare."
 }

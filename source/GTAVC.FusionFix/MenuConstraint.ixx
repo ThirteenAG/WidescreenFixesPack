@@ -1,0 +1,297 @@
+module;
+
+#include <stdafx.h>
+#include "common.h"
+#include "FixSettings.hpp"
+
+export module MenuConstraint;
+
+import Skeleton;
+import Draw;
+import Menu;
+import Frontend;
+
+namespace MenuConstraintHooks
+{
+    // Switching screens draws the outgoing menu into the transition buffer.
+    constexpr bool InputDrawsMenu = true;
+    constexpr const char* TransitionSignature = "53 55 89 CD 8B 5C 24 0C 68 FF 00 00 00 6A 00 6A 00 6A 00 6A 00 6A 00 6A 00 C6 85 10 01 00 00 01";
+    bool IsCurrentFrontend() { return true; }
+    // The menu frame limiter replaces the first call with a mid-hook jump.
+    constexpr const char* DrawSignature = "53 89 CB FF 35 ? ? ? ? ? ? ? ? ? 59 E8 ? ? ? ? E8 ? ? ? ? 6A 00 6A 06";
+    constexpr const char* InputSignature = "30 D2 53 56 57 55 89 CD 83 EC 30 88 54 24 2F 8A 44 24 2F";
+    constexpr const char* MouseSignature = "C6 44 24 14 00 8B 85 F8 00 00 00 83 F8 15 74 ? 83 F8 1E";
+    void* MouseManager(SafetyHookContext& regs) { return reinterpret_cast<void*>(regs.ebp); }
+    constexpr const char* VideoSignature = "53 83 EC 10 6A 00 E8 ? ? ? ? 59 B9 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 6A 00 6A 16";
+    constexpr const char* CentreSignature = nullptr;
+    constexpr const char* PreviewSignature = "53 56 57 83 EC 28 80 3D ? ? ? ? 00 75 11 C6 05 ? ? ? ? 01 C7 05 ? ? ? ? 00 00 00 00 BE";
+    int __cdecl RenderPreview();
+    constexpr auto PreviewCallback = RenderPreview;
+    constexpr const char* FontSignature = "E8 ? ? ? ? 6A ? E8 ? ? ? ? 59 8D 8C 24 ? ? ? ? 68 ? ? ? ? 6A ? 6A ? 6A ? E8 ? ? ? ? 8D 84 24 ? ? ? ? 50 E8 ? ? ? ? ? ? ? ? ? ? 59 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 50 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? 8B 3D";
+    constexpr std::array<size_t, 3> MouseFields{ offsetof(CMenuManager, m_nMousePosX), offsetof(CMenuManager, m_nMouseTempPosX), offsetof(CMenuManager, m_nMouseOldPosX) };
+    static_assert(MouseFields == std::array<size_t, 3>{ 0x12C, 0x64, 0x134 });
+    uintptr_t FontAddress(uintptr_t address) { return injector::GetBranchDestination(address).as_int(); }
+    bool UsesNativeCanvas(void* menu)
+    {
+        // A replacement map owns both its drawing and pixel-space input.
+        return !g_externalMenuMap || static_cast<CMenuManager*>(menu)->m_nCurrScreen != 6;
+    }
+}
+
+// No hooks are installed for the default Auto setting.
+namespace MenuConstraintHooks
+{
+    struct Vertex
+    {
+        float x, y, z, rhw;
+        uint32_t color;
+        float u, v;
+    };
+    static_assert(sizeof(Vertex) == 28);
+
+    SafetyHookInline Draw, Input, Transition, ChangeVideoMode, CentreMouse, Preview;
+    SafetyHookInline Primitive, Indexed, Line, Triangle;
+    SafetyHookMid Mouse;
+    void (__cdecl* FlushFonts)() = nullptr;
+
+    void RestoreMouseRange(SafetyHookContext& regs)
+    {
+        if (!MenuCanvas::Depth || MenuCanvas::Suspensions) return;
+        auto menu = static_cast<uint8_t*>(MouseManager(regs));
+        auto& x = *reinterpret_cast<int*>(menu + MouseFields[0]);
+        const int raw = *reinterpret_cast<int*>(menu + MouseFields[1]);
+        // Native input has just clamped x to the narrower menu. Recover the
+        // unclamped position before hover, click and drag handling use it.
+        x = MenuCanvas::GetMouseX(raw);
+    }
+
+    class MouseScope
+    {
+        void* menu;
+        int offset;
+    public:
+        explicit MouseScope(void* manager) : menu(manager), offset(MenuCanvas::Depth ? int(MenuCanvas::Offset) : 0)
+        {
+            for (auto field : MouseFields)
+                *reinterpret_cast<int*>(static_cast<uint8_t*>(menu) + field) -= offset;
+        }
+        ~MouseScope()
+        {
+            for (auto field : MouseFields)
+                *reinterpret_cast<int*>(static_cast<uint8_t*>(menu) + field) += offset;
+        }
+    };
+
+    void __fastcall DrawMenu(void* menu, void*)
+    {
+        FlushFonts();
+        MenuCanvas::Scope canvas(true, UsesNativeCanvas(menu));
+        MouseScope mouse(menu);
+        Draw.unsafe_thiscall(menu);
+        // Error/help text can be queued after the menu's own font flush.
+        FlushFonts();
+    }
+
+    void __fastcall ProcessInput(void* menu, void*)
+    {
+        const bool nativeCanvas = UsesNativeCanvas(menu);
+        const bool drawing = InputDrawsMenu && nativeCanvas;
+        if (drawing) FlushFonts();
+        MenuCanvas::Scope canvas(drawing, nativeCanvas);
+        MouseScope mouse(menu);
+        Input.unsafe_thiscall(menu);
+        if (drawing) FlushFonts();
+    }
+
+    int __fastcall SwitchScreen(void* menu, void*, int screen)
+    {
+        FlushFonts();
+        const bool translateMouse = MenuCanvas::Depth == 0;
+        MenuCanvas::Scope canvas(true, UsesNativeCanvas(menu));
+        std::optional<MouseScope> mouse;
+        if (translateMouse) mouse.emplace(menu);
+        // VC also captures transitions after load/save operations, outside
+        // UserInput. Both captures must use the same canvas as the live menu.
+        const int result = Transition.unsafe_thiscall<int>(menu, screen);
+        FlushFonts();
+        return result;
+    }
+
+    void __cdecl SetVideoMode(int mode)
+    {
+        MenuCanvas::Suspend physicalViewport;
+        ChangeVideoMode.unsafe_ccall(mode);
+    }
+
+    void __cdecl CentreMousePointer()
+    {
+        MenuCanvas::Suspend physicalViewport;
+        CentreMouse.unsafe_ccall();
+    }
+
+    std::vector<Vertex> Translate(Vertex* vertices, int count)
+    {
+        if (!MenuCanvas::Drawing || MenuCanvas::Suspensions || MenuCanvas::Offset == 0.0f || !vertices || count <= 0)
+            return {};
+        std::vector<Vertex> translated(vertices, vertices + count);
+        // Native black clears still cover the physical background;
+        // menu textures and map tiles keep their shape.
+        const bool mask = count == 4 && std::ranges::all_of(translated, [](const Vertex& vertex) { return (vertex.color & 0x00FFFFFF) == 0; });
+        const auto [top, bottom] = std::ranges::minmax_element(translated, {}, &Vertex::y);
+        const bool fullHeight = top->y <= 0.5f && bottom->y >= RsGlobal->height - 0.5f;
+        for (auto& vertex : translated)
+        {
+            if (mask && fullHeight)
+            {
+                if (vertex.x <= 0.5f) vertex.x -= MenuCanvas::Offset;
+                else if (vertex.x >= RsGlobal->width - 0.5f) vertex.x += MenuCanvas::Offset;
+            }
+            vertex.x += MenuCanvas::Offset;
+        }
+        return translated;
+    }
+
+    int __cdecl RenderPrimitive(int type, Vertex* vertices, int count)
+    {
+        auto translated = Translate(vertices, count);
+        return Primitive.unsafe_ccall<int>(type, translated.empty() ? vertices : translated.data(), count);
+    }
+    int __cdecl RenderIndexed(int type, Vertex* vertices, int count, uint16_t* indices, int indexCount)
+    {
+        auto translated = Translate(vertices, count);
+        return Indexed.unsafe_ccall<int>(type, translated.empty() ? vertices : translated.data(), count, indices, indexCount);
+    }
+    int __cdecl RenderLine(Vertex* vertices, int count, int a, int b)
+    {
+        auto translated = Translate(vertices, count);
+        return Line.unsafe_ccall<int>(translated.empty() ? vertices : translated.data(), count, a, b);
+    }
+    int __cdecl RenderTriangle(Vertex* vertices, int count, int a, int b, int c)
+    {
+        auto translated = Translate(vertices, count);
+        return Triangle.unsafe_ccall<int>(translated.empty() ? vertices : translated.data(), count, a, b, c);
+    }
+
+    uintptr_t FindUnique(const char* signature)
+    {
+        auto pattern = hook::pattern(signature);
+        return reinterpret_cast<uintptr_t>(pattern.get_first());
+    }
+
+    // Found when the plugin starts: the menu's other hooks (frame limiter, scroll indicators) change these entries
+    // before a ratio may be chosen in the menu
+    struct Located
+    {
+        uintptr_t draw, input, mouse, transition, video, font, primitive, centre, preview;
+    };
+    Located& Locate()
+    {
+        static Located located = []()
+        {
+            Located l{};
+            l.draw = FindUnique(DrawSignature);
+            l.input = FindUnique(InputSignature);
+            l.mouse = FindUnique(MouseSignature);
+            l.transition = TransitionSignature ? FindUnique(TransitionSignature) : 0;
+            l.video = FindUnique(VideoSignature);
+            l.font = FindUnique(FontSignature);
+            l.primitive = FindUnique("A1 ? ? ? ? FF 60 30 90 90 90 90 90 90 90 90");
+            l.centre = CentreSignature ? FindUnique(CentreSignature) : 0;
+            l.preview = PreviewSignature ? FindUnique(PreviewSignature) : 0;
+            return l;
+        }();
+        return located;
+    }
+
+    bool Install()
+    {
+        auto& l = Locate();
+        const auto draw = l.draw, input = l.input, mouse = l.mouse, transition = l.transition, video = l.video, font = l.font;
+        const auto primitive = l.primitive, centre = l.centre, preview = l.preview;
+        auto engine = **reinterpret_cast<uintptr_t***>(primitive + 1);
+        if (!engine) return false;
+        FlushFonts = reinterpret_cast<decltype(FlushFonts)>(FontAddress(font));
+        if (!FlushFonts) return false;
+
+        // Prepare every hook before enabling any of them so drawing and input
+        // switch to the same menu canvas together.
+        const auto flags = SafetyHookInline::StartDisabled;
+        Draw = safetyhook::create_inline(draw, DrawMenu, flags);
+        Input = safetyhook::create_inline(input, ProcessInput, flags);
+        Mouse = safetyhook::create_mid(mouse, RestoreMouseRange, SafetyHookMid::StartDisabled);
+        if (transition) Transition = safetyhook::create_inline(transition, SwitchScreen, flags);
+        ChangeVideoMode = safetyhook::create_inline(video, SetVideoMode, flags);
+        if (centre) CentreMouse = safetyhook::create_inline(centre, CentreMousePointer, flags);
+        if (preview) Preview = safetyhook::create_inline(preview, PreviewCallback, flags);
+        Line = safetyhook::create_inline(engine[0x28 / 4], RenderLine, flags);
+        Triangle = safetyhook::create_inline(engine[0x2C / 4], RenderTriangle, flags);
+        Primitive = safetyhook::create_inline(engine[0x30 / 4], RenderPrimitive, flags);
+        Indexed = safetyhook::create_inline(engine[0x34 / 4], RenderIndexed, flags);
+        std::vector hooks{ &Draw, &Input, &ChangeVideoMode, &Line, &Triangle, &Primitive, &Indexed };
+        if (centre) hooks.push_back(&CentreMouse);
+        if (transition) hooks.push_back(&Transition);
+        if (preview) hooks.push_back(&Preview);
+        if (!Mouse)
+        {
+            for (auto installed : hooks) installed->reset();
+            return false;
+        }
+        for (auto hook : hooks)
+        {
+            if (!*hook || !hook->enable())
+            {
+                for (auto installed : hooks) installed->reset();
+                Mouse.reset();
+                return false;
+            }
+        }
+        if (!Mouse.enable())
+        {
+            for (auto installed : hooks) installed->reset();
+            Mouse.reset();
+            return false;
+        }
+        return true;
+    }
+}
+
+class MenuConstraint
+{
+public:
+    MenuConstraint()
+    {
+        WFP::onInitEvent() += []()
+        {
+            MenuConstraintHooks::Locate();
+        };
+
+        WFP::onGameInitEvent() += []()
+        {
+            if (!MenuConstraintHooks::IsCurrentFrontend()) return;
+            // The hooks are installed once a ratio is chosen (at start or later in the menu); Auto keeps the
+            // whole screen through them
+            static auto Apply = []()
+            {
+                MenuCanvas::Constraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.MenuAspectRatioConstraint"));
+                if (MenuCanvas::Constraint && !std::isfinite(*MenuCanvas::Constraint))
+                    MenuCanvas::Constraint.reset();
+                static bool installed = false;
+                if (MenuCanvas::Constraint && !installed)
+                {
+                    installed = true;
+                    MenuCanvas::Enabled = MenuConstraintHooks::Install();
+                }
+                if (MenuCanvas::Enabled)
+                    onResChange().executeAll(RsGlobal->width, RsGlobal->height);
+            };
+            Apply();
+            OnSettingChange("MAIN.MenuAspectRatioConstraint", []() { Apply(); });
+        };
+    }
+} MenuConstraint;
+
+int __cdecl MenuConstraintHooks::RenderPreview()
+{
+    MenuCanvas::Suspend physicalViewport;
+    return Preview.unsafe_ccall<int>();
+}

@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 #include <LEDEffects.h>
 
 export module LightSync;
@@ -20,8 +19,6 @@ public:
                 return;
 
             auto playerPattern = hook::pattern("8B 0D ? ? ? ? 85 C9 74 07 6A 01 E8 ? ? ? ? FE 86");
-            if (!PatternAvailable(playerPattern, "ResidentEvil6.FusionFix: LightSync"))
-                return;
             static auto sPlayerPtr = *playerPattern.get_first<void*>(2);
 
             LEDEffects::Inject([]()

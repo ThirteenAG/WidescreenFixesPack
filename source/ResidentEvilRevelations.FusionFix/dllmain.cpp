@@ -2,6 +2,7 @@
 #include "FixSettings.hpp"
 
 import ComVars;
+import SystemState;
 
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
 ASI_SETTINGS_EXPORT(FixSettings())
@@ -9,13 +10,7 @@ ASI_SETTINGS_EXPORT(FixSettings())
 void Init()
 {
     // The game objects the modules use
-    // Every module needs the renderer: without it the fix stays off.
     auto pattern = hook::pattern("8B 3D ? ? ? ? 6A 08");
-    if (pattern.empty())
-    {
-        OutputDebugStringA("Resident Evil Revelations Fusion Fix: unsupported game version.\n");
-        return;
-    }
     pRender.SetAddress(*pattern.get_first<uintptr_t*>(2));
 
     WFP::onInitEvent().executeAll();
@@ -28,6 +23,13 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        using SetContext = BOOL(WINAPI*)(HANDLE);
+        if (const auto set = reinterpret_cast<SetContext>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetProcessDpiAwarenessContext")))
+            set(reinterpret_cast<HANDLE>(-4));
+        else
+            SetProcessDPIAware();
+
+        RevSystemState::Init();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("8B 4E 68 85 C9 75 47"));
     });
 }

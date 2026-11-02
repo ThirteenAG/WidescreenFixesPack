@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "../Shared/PatternCheck.hpp"
 #include <thread>
 #include <dolphin/dolphin.h>
 
@@ -59,7 +58,7 @@ namespace
         auto pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "38 ? 00 01 3c 60 ? ? 38 ? ? ? 90 ? ? ? 3c ? ? ? 38 63 ? ? 80 63 00 00 88 ? 00 09 28 ? 00 0b ? ? ? ? 3c 60 ? ? 38 ? ? ? 54 ? ? ? 7c ? ? ? 7c");
         if (gameVersion == RE3)
             pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "38 00 00 01 3c 60 ? ? 38 63 ? ? 98 03 00 00 3c 60 ? ? 38 63 ? ? 93 83 21 58 3c 60");
-        if (PatternAvailable(pattern, "ResidentEvil2.RE3.Dolphin.FusionFix: Game"))
+        if (pattern.size() >= 1)
         {
             memcheck = pattern.get(0).get<uint32_t>(4);
             bytes = injector::ReadMemory<uint32_t>(memcheck, true);
@@ -75,7 +74,7 @@ namespace
             if (gameVersion == RE3)
             {
                 auto pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "7c 7e 1b 78 7c 9d 23 78 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 2c 03 00 00 ? ? ? ? 2c 1e 00 0a ? ? ? ? 2c 1e 00 64 ? ? ? ? 3b de 00 0a");
-                if (PatternAvailable(pattern, "ResidentEvil2.RE3.Dolphin.FusionFix: Game"))
+                if (pattern.size() >= 1)
                 {
                     uint16_t a = swap16(*pattern.get(0).get<uint16_t>(10));
                     uint16_t b = swap16(*pattern.get(0).get<uint16_t>(14));
@@ -88,7 +87,7 @@ namespace
             else if (gameVersion == RE2)
             {
                 auto pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "3c 60 ? ? 38 63 ? ? ? ? ? ? 2c 00 00 00 ? ? ? ? 38 00 ? ? 3c 60 ? ? 38 63 ? ? ? ? ? ? 3c 60 ? ? 38 63 ? ? ? ? ? ? 54 00 02 94");
-                if (PatternAvailable(pattern, "ResidentEvil2.RE3.Dolphin.FusionFix: Game"))
+                if (pattern.size() >= 1)
                 {
                     uint16_t a = swap16(*pattern.get(0).get<uint16_t>(2));
                     uint16_t b = swap16(*pattern.get(0).get<uint16_t>(6));
@@ -103,19 +102,19 @@ namespace
         {
             if (gameVersion == RE3)
             {
-                auto pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "94 21 ff f0 7c 08 02 a6 ? ? ? ? ? ? ? ? 38 60 00 01");
-                if (pattern.size() > 1)
+                auto pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "94 21 ff f0 7c 08 02 a6 ? ? ? ? ? ? ? ? 38 60 00 01 ? ? ? ? 3c 60 ? ? 38 63 ? ? 80 ? ? ? 54 ? ? ? 28 ? 00 00");
+                if (!pattern.empty())
                 {
-                    ProtectedGameRef<uint32_t>{pattern.get(0).get<uint32_t>(0)} = blr(); //return
+                    injector::WriteMemory<uint32_t>(pattern.get(0).get<uint32_t>(0), blr(), true);
                     Dolphin::MenuBarClearCache();
                 }
             }
             else if (gameVersion == RE2)
             {
                 auto pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "28 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 54 00 03 9c 28 00 00 00 ? ? ? ? 38 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 48 00 ? ? 48 00");
-                if (PatternAvailable(pattern, "ResidentEvil2.RE3.Dolphin.FusionFix: Game"))
+                if (pattern.size() >= 1)
                 {
-                    ProtectedGameRef<uint16_t>{pattern.get(0).get<uint16_t>(4)} = 0x0048; // bne -> b
+                    injector::WriteMemory<uint16_t>(pattern.get(0).get<uint16_t>(4), 0x0048, true); // bne -> b
                     Dolphin::MenuBarClearCache();
                 }
             }

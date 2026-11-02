@@ -16,6 +16,7 @@ export struct MouseData
     int   DeltaX = 0;
     int   DeltaY = 0;
     int   Wheel = 0;
+    bool  Raw = false;    // the deltas are the mouse's raw movement
 } g_Mouse;
 
 export struct StickData
@@ -53,6 +54,12 @@ export namespace fb
         }
     }
 
+    // The race's pause menu: when it was last opened (GetTickCount64)
+    namespace PauseMenu
+    {
+        ULONGLONG OpenedAt = 0;
+    }
+
     GameRef<void**> g_profileOptionsManager;
 
     namespace ProfileOptions
@@ -87,85 +94,64 @@ export namespace fb
             }* fields;
         };
 
-        struct Region { uintptr_t begin, end; };
-
-        std::vector<Region> ReadableRegions()
-        {
-            std::vector<Region> regions;
-            auto base = (uintptr_t)GetModuleHandle(NULL);
-            auto nt = (IMAGE_NT_HEADERS*)(base + ((IMAGE_DOS_HEADER*)base)->e_lfanew);
-            auto end = base + nt->OptionalHeader.SizeOfImage;
-            MEMORY_BASIC_INFORMATION mbi;
-            for (auto address = base; address < end && VirtualQuery((void*)address, &mbi, sizeof(mbi)); address = (uintptr_t)mbi.BaseAddress + mbi.RegionSize)
-            {
-                constexpr DWORD readable = PAGE_READONLY | PAGE_READWRITE | PAGE_WRITECOPY | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY;
-                if (mbi.State == MEM_COMMIT && (mbi.Protect & readable) && !(mbi.Protect & PAGE_GUARD))
-                    regions.push_back({ (uintptr_t)mbi.BaseAddress, std::min((uintptr_t)mbi.BaseAddress + mbi.RegionSize, end) });
-            }
-            return regions;
-        }
-
-        bool InImage(const std::vector<Region>& regions, uintptr_t address, size_t size = 4)
-        {
-            for (auto& r : regions)
-                if (address >= r.begin && address + size <= r.end)
-                    return true;
-            return false;
-        }
-
-        template<typename Fn>
-        void ForEachDword(const std::vector<Region>& regions, uintptr_t value, Fn&& fn)
-        {
-            for (auto& r : regions)
-                for (auto p = (r.begin + 3) & ~uintptr_t(3); p + 4 <= r.end; p += 4)
-                    if (*(uintptr_t*)p == value && fn(p))
-                        return;
-        }
-
         struct TypeEntry
         {
             void* typeInfo = nullptr;
             ClassInfoData* data = nullptr;
         };
 
+        std::pair<uintptr_t, uintptr_t> ImageSection(const char* name)
+        {
+            const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+            const auto dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+            const auto nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
+            const auto sections = IMAGE_FIRST_SECTION(nt);
+            for (WORD i = 0; i < nt->FileHeader.NumberOfSections; ++i)
+            {
+                if (std::strncmp(reinterpret_cast<const char*>(sections[i].Name), name, IMAGE_SIZEOF_SHORT_NAME) == 0)
+                {
+                    const auto begin = base + sections[i].VirtualAddress;
+                    return { begin, begin + sections[i].Misc.VirtualSize };
+                }
+            }
+            std::terminate();
+        }
+
+        std::string PatternBytes(const void* bytes, size_t length)
+        {
+            static constexpr char digits[] = "0123456789ABCDEF";
+            std::string pattern;
+            const auto data = static_cast<const uint8_t*>(bytes);
+            for (size_t i = 0; i < length; ++i)
+            {
+                pattern += digits[data[i] >> 4];
+                pattern += digits[data[i] & 15];
+                pattern += ' ';
+            }
+            return pattern;
+        }
+
         TypeEntry FindType(const char* name)
         {
             static std::map<std::string, TypeEntry, std::less<>> cache;
-            if (auto it = cache.find(name); it != cache.end())
-                return it->second;
-
-            TypeEntry entry;
-            auto regions = ReadableRegions();
-            std::string needle = std::string(1, '\0') + name + std::string(1, '\0');
-            for (auto& r : regions)
+            static std::mutex cacheMutex;
+            std::lock_guard lock(cacheMutex);
+            auto it = cache.find(name);
+            if (it == cache.end())
             {
-                auto first = (const char*)r.begin, last = (const char*)r.end;
-                for (auto it = std::search(first, last, needle.begin(), needle.end()); it != last && !entry.data; it = std::search(it + 1, last, needle.begin(), needle.end()))
-                {
-                    auto string = (uintptr_t)(it + 1);
-                    ForEachDword(regions, string, [&](uintptr_t candidate)
-                    {
-                        auto data = (ClassInfoData*)candidate;
-                        if (!InImage(regions, candidate, sizeof(ClassInfoData)) || data->fieldCount == 0 || !InImage(regions, (uintptr_t)data->fields, data->fieldCount * sizeof(ClassInfoData::FieldInfoData)))
-                            return false;
-                        // The type's TypeInfo: its data, the next type in the list and its id
-                        ForEachDword(regions, candidate, [&](uintptr_t typeInfo)
-                        {
-                            if (!InImage(regions, typeInfo, 16) || ((uint32_t*)typeInfo)[2] >= 0x100000)
-                                return false;
-                            entry.typeInfo = (void*)typeInfo;
-                            entry.data = data;
-                            return true;
-                        });
-                        return entry.data != nullptr;
-                    });
-                }
-                if (entry.data)
-                    break;
+                const auto [stringsBegin, stringsEnd] = ImageSection(".rdata");
+                const auto [typesBegin, typesEnd] = ImageSection("typeinfo");
+                const std::string typeName = std::string(1, '\0') + name + std::string(1, '\0');
+                auto stringAddress = reinterpret_cast<uintptr_t>(hook::range_pattern(stringsBegin, stringsEnd,
+                    PatternBytes(typeName.data(), typeName.size())).get_first(1));
+                auto data = hook::range_pattern(typesBegin, typesEnd, PatternBytes(&stringAddress, sizeof(stringAddress))).get_first<ClassInfoData>();
+                const auto dataAddress = reinterpret_cast<uintptr_t>(data);
+                const auto initializer = hook::pattern("68 " + PatternBytes(&dataAddress, sizeof(dataAddress)) + "B9 ? ? ? ? E8 ? ? ? ?").get_first<uint8_t>();
+                auto typeInfo = *reinterpret_cast<void**>(initializer + 6);
+                it = cache.emplace(name, TypeEntry{ typeInfo, data }).first;
             }
-
-            cache.emplace(name, entry);
-            return entry;
+            // The initializer constructs the TypeInfo before the settings manager can use it.
+            return *reinterpret_cast<ClassInfoData**>(it->second.typeInfo) == it->second.data ? it->second : TypeEntry{};
         }
 
         // The settings object of the type, or nullptr; on the game's thread
@@ -213,8 +199,26 @@ export std::pair<int, int> GetRes()
 
     if (Width <= 0 || Height <= 0)
     {
-        Width = PtrWalkthrough<int>(&pRenderDevice, 0, 0x84, 0x18).value_or(1280);
-        Height = PtrWalkthrough<int>(&pRenderDevice, 0, 0x84, 0x20).value_or(720);
+        Width = 1280;
+        Height = 720;
+        if (pRenderDevice.is_initialized())
+        {
+            const auto device = static_cast<uint8_t*>(pRenderDevice.get());
+            if (device)
+            {
+                const auto settings = *reinterpret_cast<uint8_t**>(device + 0x84);
+                if (settings)
+                {
+                    const int width = *reinterpret_cast<int*>(settings + 0x18);
+                    const int height = *reinterpret_cast<int*>(settings + 0x20);
+                    if (width > 0 && height > 0)
+                    {
+                        Width = width;
+                        Height = height;
+                    }
+                }
+            }
+        }
     }
 
     return { Width, Height };

@@ -27,7 +27,20 @@ inline bool Option(const char* key, bool fallback) {
 inline constexpr float nativeAspect = 480.0f / 272.0f;
 inline float targetAspect = nativeAspect;
 inline bool automaticAspect = true;
+// MAIN.HudAspectRatioConstraint: 0 = the HUD uses the whole screen width.
+inline float hudAspect = 0.0f;
+// MAIN.FOVFactor: multiplies the tangent of the gameplay view angle.
+inline float fovFactor = 1.0f;
+// MAIN.CutsceneBorders: story scenes keep the native 16:9 frame, bit 0 with
+// bars above and below on narrower screens, bit 1 with side bars on wider ones.
+inline int cutsceneBorders = 3;
 inline float HorizontalScale() { return nativeAspect / targetAspect; }
+// 2D layout fitted to the screen: wider screens narrow the native layout,
+// narrower screens shrink it vertically, so it always keeps its proportions.
+inline float FitX() { const float h = HorizontalScale(); return h < 1.0f ? h : 1.0f; }
+inline float FitY() { const float h = HorizontalScale(); return h > 1.0f ? 1.0f / h : 1.0f; }
+// Where a screen-edge anchor lands, as a fraction of the half screen width.
+inline float HudBox() { return console::hud_edge(2.0f, 2.0f, targetAspect, hudAspect) - 1.0f; }
 void RefreshAspect();
 template<class T> inline T& at(uintptr_t address) { return *reinterpret_cast<T*>(address); }
 inline bool Guest(uintptr_t address, unsigned size = 4) {
@@ -51,14 +64,21 @@ inline bool GameplayApp() {
     const auto app = at<uintptr_t>(Address<0x08C11258>());
     return Guest(app, 200) && at<int>(app + 196) == 16;
 }
+// Story scenes: comic panels and in-engine shots between the game's own
+// cinematic bars.
+inline bool CutsceneApp() {
+    const auto app = at<uintptr_t>(Address<0x08C11258>());
+    return Guest(app, 200) && at<int>(app + 196) == 54;
+}
 inline bool GameplayCamera() {
     const auto player = Player();
     return player && Vehicle() && !at<uint8_t>(player + 0xE31);
 }
+void ClearOutside(unsigned left, unsigned bottom);
 void InstallInput();
 void InstallCamera();
 void InstallAspect();
 void InstallReplay();
-void InstallHud();
+bool InstallHud();
 void InstallVideo();
 }

@@ -78,6 +78,7 @@
       "step": 0.1,
       "decimals": 1,
       "label": "@WFP_STICKSENSITIVITY",
+      "description": "@WFP_DESC_STICKSENSITIVITY",
       "page": "camera",
       "control": [
         "slider"
@@ -96,6 +97,7 @@
       "step": 0.1,
       "decimals": 1,
       "label": "@WFP_MOUSESENSITIVITY",
+      "description": "@WFP_DESC_MOUSESENSITIVITY",
       "page": "camera",
       "control": [
         "slider"
@@ -106,10 +108,25 @@
       }
     },
     {
+      "id": "MAIN.RawInputMouse",
+      "type": "bool",
+      "default": 1,
+      "label": "@WFP_RAWINPUT",
+      "description": "@WFP_DESC_RAWINPUT",
+      "page": "camera",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "CAMERA.InvertLook",
       "type": "bool",
       "default": 0,
       "label": "@WFP_INVERTLOOK",
+      "description": "@WFP_DESC_INVERTLOOK",
       "page": "camera",
       "enabledIf": {
         "setting": "CAMERA.FreeLook",
@@ -146,11 +163,6 @@
       "enabledIf": {
         "setting": "CAMERA.FreeLook",
         "equals": 1
-      },
-      "presets": {
-        "vanilla": 3.0,
-        "recommended": 3.0,
-        "enhanced": 3.0
       }
     },
     {
@@ -170,11 +182,6 @@
       "enabledIf": {
         "setting": "CAMERA.FreeLook",
         "equals": 1
-      },
-      "presets": {
-        "vanilla": 2.0,
-        "recommended": 2.0,
-        "enhanced": 2.0
       }
     },
     {
@@ -190,11 +197,6 @@
       "control": [
         "slider"
       ],
-      "presets": {
-        "vanilla": 1.0,
-        "recommended": 1.0,
-        "enhanced": 1.0
-      },
       "apply": "live"
     },
     {
@@ -251,12 +253,7 @@
       "control": [
         "segmented",
         "cycler"
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      ]
     },
     {
       "id": "MAIN.SkipIntro",
@@ -271,6 +268,28 @@
         "recommended": 1,
         "enhanced": 1
       }
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": 1,
+      "label": "@WFP_PAUSEONFOCUSLOSS",
+      "description": "@WFP_DESC_PAUSEONFOCUSLOSS",
+      "page": "interface",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": 0,
+      "label": "@checkforupdates",
+      "description": "@checkforupdates.description",
+      "page": "interface",
+      "control": [
+        "checkbox",
+        "cycler"
+      ],
+      "apply": "live"
     },
     {
       "id": "LANGUAGE.Language",
@@ -423,7 +442,7 @@
       ],
       "apply": "restart",
       "presets": {
-        "vanilla": 30,
+        "vanilla": 60,
         "recommended": -1,
         "enhanced": -1
       }
@@ -479,12 +498,7 @@
       "control": [
         "segmented",
         "cycler"
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      ]
     },
     {
       "id": "GRAPHICS.ConsoleGamma",
@@ -502,7 +516,7 @@
     {
       "id": "GRAPHICS.AntiAliasing",
       "type": "choice",
-      "default": 0,
+      "default": 1,
       "choices": [
         {
           "value": 0,
@@ -518,7 +532,7 @@
       "page": "graphics",
       "presets": {
         "vanilla": 0,
-        "recommended": 0,
+        "recommended": 1,
         "enhanced": 1
       }
     },
@@ -618,10 +632,6 @@
         {
           "value": 4,
           "label": "@WFP_WINDOWED_BORDERLESS"
-        },
-        {
-          "value": 5,
-          "label": "@WFP_WINDOWED_STRETCHED"
         }
       ],
       "label": "@WFP_WINDOWED",
@@ -667,56 +677,28 @@
       "control": [
         "cycler",
         "dropdown"
-      ],
-      "presets": {
-        "vanilla": "Auto",
-        "recommended": "Auto",
-        "enhanced": "Auto"
-      }
-    },
-    {
-      "id": "MAIN.FMVWidescreenMode",
-      "type": "choice",
-      "default": 1,
-      "choices": [
-        {
-          "value": 0,
-          "label": "@WFP_FMVMODE_ORIGINAL"
-        },
-        {
-          "value": 1,
-          "label": "@WFP_FMVMODE_FILL"
-        },
-        {
-          "value": 2,
-          "label": "@WFP_FMVMODE_STRETCH"
-        }
-      ],
-      "label": "@WFP_FMVMODE",
-      "description": "@WFP_DESC_FMVMODE",
-      "page": "movies",
-      "control": [
-        "segmented",
-        "cycler"
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
+      ]
     },
     {
       "id": "MAIN.CutsceneBorders",
       "type": "choice",
-      "default": 2,
+      "default": 3,
       "choices": [
         {
           "value": 0,
           "label": "@WFP_OFF"
         },
         {
+          "value": 1,
+          "label": "@WFP_BORDERS_LETTERBOX"
+        },
+        {
           "value": 2,
           "label": "@WFP_BORDERS_PILLARBOX"
+        },
+        {
+          "value": 3,
+          "label": "@WFP_BORDERS_BOTH"
         }
       ],
       "label": "@WFP_CUTSCENEBORDERS",
@@ -728,9 +710,17 @@
       ],
       "presets": {
         "vanilla": 0,
-        "recommended": 2,
-        "enhanced": 2
+        "recommended": 3,
+        "enhanced": 3
       }
+    },
+    {
+      "id": "MAIN.AnimatedCutsceneBorders",
+      "type": "bool",
+      "default": 1,
+      "label": "@WFP_ANIMATEDBORDERS",
+      "description": "@WFP_DESC_ANIMATEDBORDERS",
+      "page": "movies"
     },
     {
       "id": "MAIN.CustomUserFilesDirectoryInGameDir",

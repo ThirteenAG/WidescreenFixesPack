@@ -37,10 +37,10 @@ from generate import VARIANTS, models, ROOT
 
 # plugin, game, native depth, native mip levels, HD mip levels, opaque alpha, output
 PLUGINS = [
-    ('GTAVCS.PCSX2F.ImVehLM', 'GTAVCS', 4, 1, 1, 128, 'header'),
-    ('GTAVCS.PPSSPP.ImVehLM', 'GTAVCS', 4, 8, 8, 255, 'file'),
-    ('GTALCS.PPSSPP.ImVehLM', 'GTALCS', 8, 8, 8, 255, 'file'),
-    ('GTALCS.PCSX2F.ImVehLM', 'GTALCS', 8, 5, 5, 128, 'header'),
+    ('GTAVCS.PCSX2F.FusionFix', 'GTAVCS', 4, 1, 1, 128, 'header'),
+    ('GTAVCS.PPSSPP.FusionFix', 'GTAVCS', 4, 8, 8, 255, 'file'),
+    ('GTALCS.PPSSPP.FusionFix', 'GTALCS', 8, 8, 8, 255, 'file'),
+    ('GTALCS.PCSX2F.FusionFix', 'GTALCS', 8, 5, 5, 128, 'header'),
 ]
 HD_LIMIT = 256
 

@@ -1,0 +1,13 @@
+{
+  "plugin.name": "Mafia III: Definitive Edition Fusion Fix",
+  "page.display": "Anzeige",
+  "page.game": "Spiel",
+  "BorderlessWindowed": "Randloses Fenster",
+  "BorderlessWindowed.description": "Ist VOLLBILD in den Anzeigeoptionen des Spiels aus, läuft das Spiel in einem randlosen Fenster, das seinen Monitor in der Desktop-Auflösung ausfüllt. Aus zeigt das gerahmte Fenster des Spiels. Wirkt sofort.",
+  "SkipIntro": "Intro überspringen",
+  "SkipIntro.description": "Startet direkt im Hauptmenü, ohne die Middleware- und Studio-Logos und den Speicherhinweis. Aus zeigt sie wie im Originalspiel. Erfordert einen Neustart.",
+  "page.compatibility": "Kompatibilität",
+  "MAIN.TextLanguage": "Textsprache",
+  "MAIN.TextLanguage.description": "Wählt die Sprache der Einstellungstexte des Fixes. Auto folgt der Sprache des Spiels oder Editors.",
+  "ui.auto": "Auto"
+}

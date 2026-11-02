@@ -1,5 +1,8 @@
 #include "stdafx.h"
 #include "FixSettings.hpp"
+#include "Shared/SplinterCell/Window.hpp"
+
+ASI_SETTINGS_EXPORT(FixSettings())
 
 import ComVars;
 import FileManager;
@@ -7,13 +10,16 @@ import Window;
 import Startup;
 import Mouse;
 import FrameLimit;
+import Focus;
 import WidescreenFix;
+import Hud;
 import Missions;
 import Unlocks;
 import LED;
 import Splitscreen;
+import DeveloperOverlay;
+import NativeMenu;
 
-#include "NativeMenu.hpp"
 
 SafetyHookInline shSetProcessAffinityMask{};
 BOOL WINAPI SetProcessAffinityMaskHook(HANDLE hProcess, DWORD_PTR dwProcessAffinityMask)
@@ -59,10 +65,9 @@ void LaunchDedicatedServer(const std::string& exePath)
 void Init()
 {
     auto& settings = FixSettings();
-    asi_settings::LiveLink::Start();
-    // Validate/install before this fix's other executable hooks alter prefixes.
+    // Install before this fix's other executable hooks alter prefixes.
     BlacklistMenu::Init();
-    auto bForceCPUAffinityToAllCores = settings.Int("MAIN.ForceCPUAffinityToAllCores") != 0;
+    asi_settings::LiveLink::Start();
     auto sDedicatedServerExePath = settings.Get("STARTUP.DedicatedServerExePath");
 
     if (!sDedicatedServerExePath.empty())
@@ -70,26 +75,27 @@ void Init()
 
     InitFileManager();
     InitWindow();
+    InitFocus();
     InitStartup();
     InitMouse();
     InitFrameLimit();
     InitMissions();
     InitUnlocks();
+    Hud::Init();
     InitWidescreenFix();
     InitSplitscreen();
+    DeveloperOverlay::Init();
+    WFP::onInitEvent().executeAll();
 
-    if (bForceCPUAffinityToAllCores)
-        shSetProcessAffinityMask = safetyhook::create_inline(SetProcessAffinityMask, SetProcessAffinityMaskHook);
+    shSetProcessAffinityMask = safetyhook::create_inline(SetProcessAffinityMask, SetProcessAffinityMaskHook);
 }
-
-ASI_SETTINGS_EXPORT(FixSettings())
 
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("0F 84 ? ? ? ? 56 56 56 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 18 50 8D 8D"));
-        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(InitLED, hook::pattern("E8 ? ? ? ? 83 C4 08 85 C0 0F 84 ? ? ? ? 46 83 FE 0A"));
+        SCWindow::EnableDpi();
     });
 }
 

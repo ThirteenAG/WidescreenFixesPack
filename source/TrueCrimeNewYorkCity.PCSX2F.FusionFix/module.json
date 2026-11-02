@@ -1,0 +1,24 @@
+{
+  "sources": [
+    "main.cpp",
+    "Hud.cpp",
+    "Timing.cpp",
+    "Cutscene.cpp",
+    "Launcher.cpp",
+    "../../external/injector/include/ps2/memalloc.c",
+    "../../external/injector/include/ps2/patterns.c",
+    "../../external/injector/include/ps2/injector.c",
+    "../../external/injector/include/ps2/mips.c"
+  ],
+  "output": "../../data/TrueCrimeNewYorkCity.PCSX2F.FusionFix/PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.elf",
+  "cxx_flags": [
+    "-std=gnu++17",
+    "-fno-exceptions",
+    "-fno-rtti",
+    "-fno-strict-aliasing",
+    "-fno-threadsafe-statics"
+  ],
+  "cflags": [
+    "-ffp-contract=off"
+  ]
+}

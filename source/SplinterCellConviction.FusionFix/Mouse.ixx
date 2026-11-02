@@ -6,6 +6,7 @@ module;
 export module Mouse;
 
 import ComVars;
+import DeveloperOverlay;
 
 // Mouse look goes through UWindowsViewport's WM_MOUSEMOVE handler (sub_8F199B): while the mouse is captured, it sums the cursor
 // movement from the window center over the queued WM_MOUSEMOVE messages, sends it as IK_MouseX/IK_MouseY axis input and puts the
@@ -31,7 +32,7 @@ namespace RawMouse
 
         auto x = RawInput::RawMouseDeltaX.exchange(0);
         auto y = RawInput::RawMouseDeltaY.exchange(0);
-        if (viewport && captured && IsCapturingInput(viewport))
+        if (!DeveloperOverlay::BlocksInput() && viewport && captured && IsCapturingInput(viewport))
         {
             // split screen: the window's mouse messages may go to player 2's viewport, the mouse is player 1's
             auto target = GetMouseViewport ? GetMouseViewport() : nullptr;
@@ -55,7 +56,7 @@ export void InitMouse()
     auto bRawMouseInput = FixSettings().Bool("MAIN.RawInputMouse") != 0;
     auto bDisableMouseSmoothing = !FixSettings().Bool("MAIN.MouseSmoothing");
 
-    if (bDisableNegativeMouseAcceleration)
+    // no negative mouse acceleration
     {
         auto pattern = hook::pattern("76 05 0F 28 D9 EB 08 0F 2F DA");
         injector::MakeNOP(pattern.get_first(0), 2, true);
@@ -73,10 +74,9 @@ export void InitMouse()
         // take the branch the game uses when that's off (it only resets the history)
         auto pattern = hook::pattern("F6 80 04 06 00 00 02 0F 85 ? ? ? ? 8B 86 34 04 00 00");
         auto jnz = pattern.get_first<uint8_t>(7);
-        auto target = jnz + 6 + *reinterpret_cast<int32_t*>(jnz + 2);
-        ProtectedGameRef<uint8_t>{jnz} = 0xE9;
-        ProtectedGameRef<int32_t>(reinterpret_cast<int32_t*>(jnz + 1)) = int32_t(target - (jnz + 5));
-        ProtectedGameRef<uint8_t>(jnz + 5) = 0x90;
+        auto target = hook::pattern("33 C0 8D BE 48 04 00 00 AB 8D BE 38 04 00 00 AB 5F 5B 5E C2 08 00").get_first();
+        injector::MakeJMP(jnz, target, true);
+        injector::WriteMemory<uint8_t>(jnz + 5, 0x90, true);
     }
 
     static const float& fGamepadCameraSpeed = FixSettings().Float("MAIN.GamepadCameraSpeed");

@@ -1,0 +1,452 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "True Crime: Streets of LA",
+        "exe": [
+          "TrueCrime.exe",
+          "TrueCrimeMB.exe",
+          "TrueCrime_.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "camera",
+      "title": "@page.camera",
+      "section": "camera"
+    },
+    {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
+      "id": "game",
+      "title": "@page.game",
+      "section": "other"
+    },
+    {
+      "id": "compatibility",
+      "title": "@ui.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "label": "@ResX",
+      "description": "@ResX.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384,
+      "step": 1
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "label": "@ResY",
+      "description": "@ResY.description",
+      "page": "display",
+      "apply": "restart",
+      "visibility": "editor",
+      "min": 0,
+      "max": 16384,
+      "step": 1
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "camera",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "label": "@HudAspectRatioConstraint",
+      "description": "@HudAspectRatioConstraint.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "suggestions": [
+        {
+          "value": "Auto"
+        },
+        {
+          "value": "4:3"
+        },
+        {
+          "value": "16:9"
+        },
+        {
+          "value": "21:9"
+        },
+        {
+          "value": "32:9"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "label": "@CutsceneBorders",
+      "description": "@CutsceneBorders.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@borders.off"
+        },
+        {
+          "value": 1,
+          "label": "@borders.letter"
+        },
+        {
+          "value": 2,
+          "label": "@borders.pillar"
+        },
+        {
+          "value": 3,
+          "label": "@borders.both"
+        }
+      ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
+      "id": "MAIN.AnimatedCutsceneBorders",
+      "type": "bool",
+      "default": true,
+      "label": "@AnimatedCutsceneBorders",
+      "description": "@AnimatedCutsceneBorders.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@FMVWidescreenMode",
+      "description": "@FMVWidescreenMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@video.original"
+        },
+        {
+          "value": 1,
+          "label": "@video.fill"
+        }
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.AntiAliasing",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 1,
+          "label": "SMAA"
+        }
+      ],
+      "label": "@antialiasing",
+      "description": "@antialiasing.description",
+      "page": "graphics",
+      "group": "@group.antialiasing",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.ConsoleGamma",
+      "type": "bool",
+      "default": false,
+      "label": "@consolegamma",
+      "description": "@consolegamma.description",
+      "page": "graphics",
+      "group": "@group.postfx",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@window.fullscreen"
+        },
+        {
+          "value": 1,
+          "label": "@window.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@window.borderless"
+        }
+      ]
+    },
+    {
+      "id": "GAMEPAD.LeftStickDeadzone",
+      "type": "float",
+      "default": 0.23954,
+      "min": 0.0,
+      "max": 0.5,
+      "step": 0.01,
+      "decimals": 3,
+      "label": "@LeftStickDeadzone",
+      "description": "@LeftStickDeadzone.description",
+      "page": "controls",
+      "apply": "live"
+    },
+    {
+      "id": "GAMEPAD.RightStickDeadzone",
+      "type": "float",
+      "default": 0.26518,
+      "min": 0.0,
+      "max": 0.5,
+      "step": 0.01,
+      "decimals": 3,
+      "label": "@RightStickDeadzone",
+      "description": "@RightStickDeadzone.description",
+      "page": "controls",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.1,
+      "max": 3.0,
+      "step": 0.05,
+      "decimals": 2,
+      "unit": "x",
+      "label": "@GamepadCameraSpeed",
+      "description": "@GamepadCameraSpeed.description",
+      "page": "controls",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.InvertGamepadY",
+      "type": "bool",
+      "default": false,
+      "label": "@InvertGamepadY",
+      "description": "@InvertGamepadY.description",
+      "page": "controls",
+      "apply": "live"
+    },
+    {
+      "id": "CAMERA.ReturnDelay",
+      "type": "float",
+      "default": 5.0,
+      "min": 0.1,
+      "max": 30.0,
+      "step": 0.5,
+      "decimals": 1,
+      "unit": "s",
+      "label": "@CameraReturnDelay",
+      "description": "@CameraReturnDelay.description",
+      "page": "controls",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.MouseSensitivity",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.1,
+      "max": 5.0,
+      "step": 0.05,
+      "decimals": 2,
+      "unit": "x",
+      "label": "@MouseSensitivity",
+      "description": "@MouseSensitivity.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.InvertMouseY",
+      "type": "bool",
+      "default": false,
+      "label": "@InvertMouseY",
+      "description": "@InvertMouseY.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.MouseSteering",
+      "type": "bool",
+      "default": false,
+      "label": "@MouseSteering",
+      "description": "@MouseSteering.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@PauseOnFocusLoss",
+      "description": "@PauseOnFocusLoss.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "label": "@FPSLimit",
+      "description": "@FPSLimit.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "live",
+      "min": -1,
+      "max": 1000,
+      "step": 1,
+      "presets": {
+        "vanilla": 0,
+        "recommended": 60,
+        "enhanced": 60
+      }
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@CheckForUpdates",
+      "description": "@CheckForUpdates.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@ui.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@ui.textlanguage",
+      "description": "@ui.textlanguage.description",
+      "page": "compatibility",
+      "visibility": "editor"
+    }
+  ]
+}

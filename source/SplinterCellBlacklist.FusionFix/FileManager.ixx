@@ -15,6 +15,7 @@ module;
 export module FileManager;
 
 import ComVars;
+import ControllerArtwork;
 
 // A task dialog with a progress bar and a Cancel button, shown on its own thread while the caller does the work.
 // Games don't have a comctl32 v6 manifest, the dialog thread loads it through an activation context (shell32's manifest, resource 124).
@@ -202,6 +203,34 @@ struct FFileManager
 namespace FileLoader
 {
     std::filesystem::path exePath;
+    std::array<std::string, 16> controllerArtwork;
+
+    void ReadControllerArtwork(int family)
+    {
+        if (family != 2 && family != 3)
+            return;
+        const auto directory = GetThisModulePath() / L"SplinterCellBlacklist.FusionFix" / L"Controller" /
+            (family == 2 ? L"PlayStation" : L"Nintendo");
+        std::array<std::string, 16> paths;
+        for (size_t i = 0; i < paths.size(); ++i)
+        {
+            const auto path = directory / ("ICON_IK_JOY" + std::to_string(i + 1) + ".dds");
+            std::error_code error;
+            if (!std::filesystem::is_regular_file(path, error))
+            {
+                OutputDebugStringA("SplinterCellBlacklist: controller artwork files unavailable.\n");
+                return;
+            }
+            paths[i] = path.string();
+        }
+        controllerArtwork = std::move(paths);
+    }
+
+    const char* ControllerOverride(std::string_view path)
+    {
+        const auto index = ControllerArtwork::Index(path);
+        return index && !controllerArtwork[index - 1].empty() ? controllerArtwork[index - 1].c_str() : nullptr;
+    }
     std::unordered_map<std::string, std::string> packagePaths; // extension -> directory, from [Core.System] Paths= in Blacklist.ini
     FString* (__stdcall* NormalizeName)(FString* out, const char* path, int32_t packagesByName) = nullptr; // the name linear tables use
     void(__thiscall* FStringDestructor)(FString* string) = nullptr;
@@ -273,6 +302,9 @@ namespace FileLoader
         if (GetOverloadedFilePathA(path, nullptr, 0))
             return path;
 
+        if (auto artwork = ControllerOverride(path))
+            return artwork;
+
         if (!NormalizeName)
             return nullptr;
 
@@ -281,6 +313,9 @@ namespace FileLoader
         thread_local std::string diskPath;
         diskPath = DiskPathFor(std::string(normalized.view()));
         FStringDestructor(&normalized);
+
+        if (auto artwork = ControllerOverride(diskPath))
+            return artwork;
 
         if (_stricmp(diskPath.c_str(), path) != 0 && GetOverloadedFilePathA(diskPath.c_str(), nullptr, 0))
             return diskPath.c_str();
@@ -438,8 +473,9 @@ namespace FFileManagerLinear
 
 namespace Dumper
 {
-    FFileManager** GFileManager = nullptr;
-    void** GError = nullptr;
+    // The game's file manager chain and the error output device
+    GameRef<FFileManager*> GFileManager;
+    GameRef<void*> GError;
     FArchive* (__cdecl* CreatePackReader)(FArchive* reader, int32_t owns, void* a3, void* a4, int32_t a5) = nullptr; // returns a PACK decompressing reader that owns 'reader', or 'reader' itself
     void(__thiscall* PackReaderPrecache)(FArchive* reader, int32_t size) = nullptr;
     uintptr_t FFileManagerArcVTable = 0;
@@ -681,10 +717,10 @@ namespace Dumper
     FArchive* OpenArchive(const char* path, int32_t flags)
     {
         // the last file manager in the chain is FFileManagerWindows
-        auto windows = *GFileManager;
+        FFileManager* windows = GFileManager;
         while (windows && windows->Inner())
             windows = windows->Inner();
-        auto reader = windows ? windows->CreateFileReader(path, flags, *GError, 0x10000) : nullptr;
+        auto reader = windows ? windows->CreateFileReader(path, flags, GError, 0x10000) : nullptr;
         if (!reader)
             return nullptr;
         return CreatePackReader(reader, 1, nullptr, nullptr, 0);
@@ -949,7 +985,7 @@ namespace Dumper
 
         // the mounted named archives (the active loc-<lang>.umd, dynamicflash.umd, dynamicwin.umd)
         std::vector<std::string> mounted;
-        for (auto fileManager = *GFileManager; fileManager; fileManager = fileManager->Inner())
+        for (FFileManager* fileManager = GFileManager; fileManager; fileManager = fileManager->Inner())
         {
             if (*reinterpret_cast<uintptr_t*>(fileManager) != FFileManagerArcVTable)
                 continue;
@@ -1103,6 +1139,7 @@ export void InitFileManager()
     if (!FileLoader::exePath.has_filename())
         FileLoader::exePath = FileLoader::exePath.parent_path();
     FileLoader::ReadPackagePaths();
+    FileLoader::ReadControllerArtwork(settings.Int("MAIN.GamepadIcons"));
 
     // FFileManagerLinear::FileSize: NormalizeName (stdcall) and the FString destructor
     auto pattern = hook::pattern("6A 01 57 8D 4D E8 51 8B 4C 96 2C E8");
@@ -1117,13 +1154,13 @@ export void InitFileManager()
 
     // FFileManagerArc init: GError, the PACK reader and its precache, GFileManager (archives read by the dumper and ExtractLinearFile)
     pattern = hook::pattern("8B 3D ? ? ? ? 8B 4E 04 8B 11 68 00 00 01 00 57 6A 00 50 8B 42 10 FF D0");
-    Dumper::GError = *pattern.get_first<void**>(2);
+    Dumper::GError.SetAddress(*pattern.get_first<void**>(2));
     pattern = hook::pattern("6A 00 51 6A 00 8B F8 6A 01 57 E8");
     Dumper::CreatePackReader = (decltype(Dumper::CreatePackReader))injector::GetBranchDestination(pattern.get_first(10)).as_int();
     pattern = hook::pattern("68 FF FF FF 7F E8 ? ? ? ? 8B 4E 48 8B 11 8B 42 48");
     Dumper::PackReaderPrecache = (decltype(Dumper::PackReaderPrecache))injector::GetBranchDestination(pattern.get_first(5)).as_int();
     pattern = hook::pattern("8B 0D ? ? ? ? 8B 11 8B 82 88 00 00 00 56 56 68 ? ? ? ? FF D0 E8 ? ? ? ? 84 C0");
-    Dumper::GFileManager = *pattern.get_first<FFileManager**>(2);
+    Dumper::GFileManager.SetAddress(*pattern.get_first<FFileManager**>(2));
 
     // Load files from the loader's overload folder instead of the archives
     if (GetOverloadedFilePathA)
@@ -1137,8 +1174,7 @@ export void InitFileManager()
         auto linearVTable = *pattern.get_first<uintptr_t*>(2);
         // linear archive file reader constructor
         pattern = hook::pattern("89 4E 0C 8B 4D 14 89 56 10 8B 55 0C C7 06 ? ? ? ? 89 4E 14");
-        if (!pattern.empty())
-            FFileManagerLinear::LinearReaderVTable = *pattern.get_first<uintptr_t>(14);
+        FFileManagerLinear::LinearReaderVTable = *pattern.get_first<uintptr_t>(14);
         FFileManagerLinear::shCreateFileReader = safetyhook::create_inline(linearVTable[0x10 / 4], FFileManagerLinear::CreateFileReader);
         FFileManagerLinear::shFileSize = safetyhook::create_inline(linearVTable[0x18 / 4], FFileManagerLinear::FileSize);
         FFileManagerLinear::shResolveAlias = safetyhook::create_inline(linearVTable[0x4C / 4], FFileManagerLinear::ResolveAlias);

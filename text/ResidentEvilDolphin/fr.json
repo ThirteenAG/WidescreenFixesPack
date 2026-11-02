@@ -3,9 +3,9 @@
   "page.gameplay": "Jeu",
   "page.graphics": "Graphismes",
   "EnableDoorSkip": "Passer les portes",
-  "EnableDoorSkip.description": "Passe les animations de porte. Redémarrez Dolphin après avoir modifié ce réglage.",
+  "EnableDoorSkip.description": "L'animation de porte entre les pièces est passée : la pièce suivante apparaît dès qu'elle est chargée. Fonctionne dans Resident Evil 2 et Resident Evil 3. Désactivé, les animations de porte s'affichent comme dans l'original. Redémarrez Dolphin après avoir modifié ce réglage.",
   "UnthrottleEmuDuringDoorSkip": "Transitions de porte rapides",
-  "UnthrottleEmuDuringDoorSkip.description": "Supprime la limite d'images de l'émulateur pendant les transitions de porte. Redémarrez Dolphin après avoir modifié ce réglage.",
+  "UnthrottleEmuDuringDoorSkip.description": "Pendant que le jeu charge la pièce suivante, Dolphin tourne à pleine vitesse au lieu de la vitesse de la console, les changements de pièce sont donc plus rapides. Le jeu lui-même tourne à vitesse normale. Fonctionne avec ou sans passage des portes. Redémarrez Dolphin après avoir modifié ce réglage.",
   "LightSyncRGB": "Éclairage RGB",
-  "LightSyncRGB.description": "Synchronise l'éclairage des claviers compatibles avec la santé du joueur. Redémarrez Dolphin après avoir modifié ce réglage."
+  "LightSyncRGB.description": "Les claviers Logitech G LIGHTSYNC affichent l'état du joueur : vert pour Fine, orange pour Caution, rouge pour Danger, violet en cas d'empoisonnement, avec un effet de battement de cœur. Nécessite Logitech G HUB ; sans lui, ce réglage n'a aucun effet. Redémarrez Dolphin après avoir modifié ce réglage."
 }

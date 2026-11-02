@@ -2,9 +2,10 @@ module;
 #include "stdafx.h"
 #include "FixSettings.hpp"
 #include "RTTI.h"
-#include "Cutscene.hpp"
 
 export module HUD;
+
+import Cutscene;
 import ComVars;
 
 namespace
@@ -14,10 +15,6 @@ namespace
     void* (__thiscall* getElement)(void*, int);
     void (__thiscall* updateBox)(void*);
     injector::hook_back<void(__thiscall*)(void*, const void*)> hbSubmitMapIcon;
-    void** hudManager;
-    void** currentDisplay;
-    void** application;
-    bool* frontendDraw;
     uintptr_t groupVtable, layerVtable, pageVtable, boxVtable, p3dVtable;
     uintptr_t objectVtable, textVtable, spriteVtable, roundedRectangleVtable;
     std::atomic<float> constraint{ std::numeric_limits<float>::quiet_NaN() };
@@ -156,8 +153,7 @@ namespace
         const float ratio = constraint.load(std::memory_order_relaxed);
         if (std::isfinite(ratio))
         {
-            // Also accept the repository's pixel-width form, e.g. 1920x1080.
-            target = ClampHudAspectRatio(ratio > 32.0f / 9.0f ? ratio / height : ratio, aspect);
+            target = ClampHudAspectRatio(ratio, aspect);
         }
         // Layer::Display (67A910) fits 640x480 and applies its native 448/480 scale.
         const float pixelsPerUnit = std::min(width / 640.0f, height / 480.0f) * (448.0f / 480.0f);
@@ -166,7 +162,7 @@ namespace
 
     float MapOffset(void* map, void* display)
     {
-        // UpdateCamera clamps the map width to [0,640]; the shipped minimap is 90 units.
+        // UpdateCamera clamps the map width to [0,640].
         const float width = Game::Field<int16_t>(map, 0x8C);
         return Offset(display) * std::clamp((640.0f - width) / 550.0f, 0.0f, 1.0f);
     }
@@ -201,8 +197,8 @@ namespace
         // Waypoint sprites have per-instance coordinates, independent of FEObject positions.
         std::array<uint32_t, 4> data;
         memcpy(data.data(), instance, sizeof(data));
-        auto manager = *hudManager;
-        auto display = *currentDisplay;
+        auto manager = hudManager.get();
+        auto display = hudDisplay.get();
         if (manager && display)
         {
             if (auto map = Element(manager, 27))
@@ -213,11 +209,11 @@ namespace
 
     void __fastcall Draw(void* handler, void*)
     {
-        auto manager = *hudManager;
-        auto display = *currentDisplay;
-        auto app = *application;
-        ScarfaceCutscene::DrawScope cutscene(*frontendDraw && manager && app ? display : nullptr);
-        if (!manager || !display || !app || !*frontendDraw)
+        auto manager = hudManager.get();
+        auto display = hudDisplay.get();
+        auto app = application.get();
+        ScarfaceCutscene::DrawScope cutscene(frontendDraw.get() && manager && app ? display : nullptr);
+        if (!manager || !display || !app || !frontendDraw.get())
             return hbDraw.fun(handler);
         const float offset = Offset(display);
         if (offset == 0.0f) return hbDraw.fun(handler);
@@ -334,25 +330,6 @@ public:
             };
             updateConstraint();
             settings.OnChange("MAIN.HudAspectRatioConstraint", updateConstraint);
-            // Validate the complete draw group before installing any of its calls.
-            for (const auto signature : {
-                "E8 ? ? ? ? 83 C4 ? 8D 4C 24 ? 8B F8 ? ? 51",
-                "E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 74 ? E8 ? ? ? ? 84 C0 74 ? F6 86",
-                "E8 ? ? ? ? 80 7E ? ? 74 ? 8B 4E ? ? ? FF 50 ? 5E C2 ? ? E8",
-                "8B 0D ? ? ? ? 6A ? E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 74 ? E8 ? ? ? ? 84 C0 74 ? F6 86",
-                "8B 15 ? ? ? ? 8B B2",
-                "8B 35 ? ? ? ? 85 F6 74 ? 56",
-                "C6 05 ? ? ? ? ? E8 ? ? ? ? 6A ? 6A ? E8",
-                "8B 48 ? E8 ? ? ? ? 5F 5E 83 C4",
-                "E8 ? ? ? ? 80 7E ? ? 0F 84 ? ? ? ? 8B 7C 24",
-                "E8 ? ? ? ? 80 7E ? ? 74 ? 8B 4E ? ? ? 55" })
-            {
-                if (hook::pattern(signature).size() != 1)
-                {
-                    OutputDebugStringA("Scarface: HUD draw patterns unavailable.\n");
-                    return;
-                }
-            }
             moved.reserve(256);
             group.reserve(128);
 
@@ -366,16 +343,16 @@ public:
             updateBox = reinterpret_cast<decltype(updateBox)>(injector::GetBranchDestination(pattern.get_first()).as_int());
 
             pattern = hook::pattern("8B 0D ? ? ? ? 6A ? E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 74 ? E8 ? ? ? ? 84 C0 74 ? F6 86");
-            hudManager = *pattern.get_first<void**>(2);
+            hudManager.SetAddress(*pattern.get_first<void**>(2));
 
             pattern = hook::pattern("8B 15 ? ? ? ? 8B B2");
-            currentDisplay = *pattern.get_first<void**>(2);
+            hudDisplay.SetAddress(*pattern.get_first<void**>(2));
 
             pattern = hook::pattern("8B 35 ? ? ? ? 85 F6 74 ? 56");
-            application = *pattern.get_first<void**>(2);
+            application.SetAddress(*pattern.get_first<void**>(2));
 
             pattern = hook::pattern("C6 05 ? ? ? ? ? E8 ? ? ? ? 6A ? 6A ? E8");
-            frontendDraw = *pattern.get_first<bool*>(2);
+            frontendDraw.SetAddress(*pattern.get_first<bool*>(2));
 
             // RTTI
             groupVtable = ScarfaceRTTI::FindVtable(".?AVFEGroupObject@@");
@@ -391,10 +368,7 @@ public:
             const auto drawHandlerVtable = ScarfaceRTTI::FindVtable(".?AVDrawHandler@FrontEndManager@@");
 
             if (!drawHandlerVtable || !groupVtable || !layerVtable || !pageVtable || !boxVtable || !p3dVtable || !objectVtable || !textVtable || !spriteVtable || !roundedRectangleVtable)
-            {
-                OutputDebugStringA("Scarface: HUD draw tables unavailable.\n");
                 return;
-            }
 
             pattern = hook::pattern("8B 48 ? E8 ? ? ? ? 5F 5E 83 C4");
             hbSubmitMapIcon.fun = injector::MakeCALL(pattern.get_first(3), SubmitMapIcon, true).get();
@@ -405,8 +379,8 @@ public:
             pattern = hook::pattern("E8 ? ? ? ? 80 7E ? ? 74 ? 8B 4E ? ? ? 55");
             hbSubmitMapIcon.fun = injector::MakeCALL(pattern.get_first(), SubmitMapIcon, true).get();
 
-            hbDraw.fun = injector::ReadMemory<decltype(hbDraw.fun)>(drawHandlerVtable, true);
-            ProtectedGameRef<decltype(&Draw)>{reinterpret_cast<decltype(&Draw)*>(drawHandlerVtable)} = &Draw;
+            hbDraw.fun = *reinterpret_cast<decltype(hbDraw.fun)*>(drawHandlerVtable);
+            injector::WriteMemory<decltype(&Draw)>(reinterpret_cast<decltype(&Draw)*>(drawHandlerVtable), &Draw, true);
             ScarfaceCutscene::DrawReady = true;
         };
     }

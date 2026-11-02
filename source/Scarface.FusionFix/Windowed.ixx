@@ -3,16 +3,19 @@ module;
 #include "FixSettings.hpp"
 #include "RTTI.h"
 #include "Frame.hpp"
-#include "../Shared/CursorConfinement.hpp"
+#include "OverlayInput.hpp"
+#include "Shared/CursorConfinement.hpp"
 #include <d3d9.h>
+#include <stdexcept>
 
 export module Windowed;
+
+import Focus;
 import ComVars;
 
 namespace
 {
     int mode = 0;
-    HWND* gameWindow;
     SafetyHookInline settingsHook;
     SafetyHookInline displayHook;
     SafetyHookMid resetHook;
@@ -101,14 +104,14 @@ namespace
         const auto height = Game::Field<int>(settings, 4);
         if (width < 640 || width > 16384 || height < 480 || height > 16384)
         {
-            const auto info = Monitor(gameWindow ? *gameWindow : nullptr);
+            const auto info = Monitor(hWndWindowed.is_initialized() ? hWndWindowed.get() : nullptr);
             Game::Field<int>(settings, 0) = std::max(info.rcMonitor.right - info.rcMonitor.left, 640L);
             Game::Field<int>(settings, 4) = std::max(info.rcMonitor.bottom - info.rcMonitor.top, 480L);
         }
         Game::Field<int>(settings, 0x18) = mode ? 1 : 0;
         if (mode == 2)
         {
-            const auto info = Monitor(*gameWindow);
+            const auto info = Monitor(hWndWindowed.get());
             Game::Field<int>(settings, 0) = info.rcMonitor.right - info.rcMonitor.left;
             Game::Field<int>(settings, 4) = info.rcMonitor.bottom - info.rcMonitor.top;
         }
@@ -264,6 +267,7 @@ namespace
         if (currentDisplay != display)
             return;
         ApplyPending();
+        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !ScarfaceOverlayInput::BlocksInput());
         CursorConfinement::Update(boundWindow);
         CursorConfinement::Bind();
     }
@@ -283,36 +287,21 @@ public:
             CursorConfinement::SetEnabled(settings.Bool("MAIN.ConfineCursor"));
             settings.OnChange("MAIN.ConfineCursor", []()
             {
-                CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+                CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !ScarfaceOverlayInput::BlocksInput());
             });
             const auto displayVtable = ScarfaceRTTI::FindVtable(".?AVd3dDisplay@pure3d@@");
-            if (!displayVtable)
-            {
-                OutputDebugStringA("Scarface: native display table unavailable.\n");
-                return;
-            }
+            if (!displayVtable) return;
 
             auto pattern = hook::pattern("A3 ? ? ? ? 5B 74");
             auto buildSettings = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 83 C4 ? 8D 54 24 ? 52 E8");
-            if (pattern.size() != 1 || buildSettings.size() != 1)
-            {
-                OutputDebugStringA("Scarface: native window patterns unavailable.\n");
-                return;
-            }
-            gameWindow = *pattern.get_first<HWND*>(1);
+            hWndWindowed.SetAddress(*pattern.get_first<HWND*>(1));
             pattern = buildSettings;
             settingsHook = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), BuildSettings);
 
             // d3dDisplay's display-settings method occupies vtable slot 10.
             const auto displaySlot = displayVtable + 10 * sizeof(void*);
-            const auto displayMethod = injector::ReadMemory<uintptr_t>(displaySlot, true);
+            const auto displayMethod = *reinterpret_cast<uintptr_t*>(displaySlot);
             auto reset = hook::range_pattern(displayMethod, displayMethod + 4096, "FF 51 40 8B D8 53 E8 ? ? ? ? 83 C4 04 3B DF 75 ? E8");
-            if (reset.size() != 1)
-            {
-                settingsHook.reset();
-                OutputDebugStringA("Scarface: native display reset status unavailable.\n");
-                return;
-            }
             resetResume = reinterpret_cast<uintptr_t>(reset.get_first(14));
             resetHook = safetyhook::create_mid(reset.get_first(3), CaptureReset);
             displayHook = safetyhook::create_inline(reinterpret_cast<void*>(displayMethod), ApplyDisplay);
@@ -321,10 +310,18 @@ public:
                 settingsHook.reset();
                 displayHook.reset();
                 resetHook.reset();
-                OutputDebugStringA("Scarface: native window hooks unavailable.\n");
-                return;
+                throw std::runtime_error("Native window hooks unavailable");
             }
             ScarfaceFrame::Handlers.push_back(CompleteFrame);
+            ScarfaceFocus::RestoreDisplay = []()
+            {
+                if (!currentDisplay || !haveSettings)
+                    return false;
+                changing = true;
+                const auto restored = ApplyDisplay(currentDisplay, nullptr, lastSettings.data());
+                changing = false;
+                return restored != FALSE;
+            };
             onModeChanged = [](int value)
             {
                 FixSettings().Set("MAIN.WindowMode", std::to_string(value));

@@ -1,6 +1,24 @@
 {
   "plugin.name": "Knight Rider PCSX2F Widescreen Fix",
   "page.display": "Affichage",
-  "enable": "Écran large",
-  "enable.description": "Corrige la projection de la caméra, le HUD et les vues incrustées, les arrière-plans et les FMV pour le format de l'émulateur. Activé par défaut. Redémarrez le jeu émulé après avoir modifié ce réglage."
+  "page.gameplay": "Jeu",
+  "auto": "Automatique",
+  "ForceAspectRatio": "Format de l’image",
+  "ForceAspectRatio.description": "Auto suit l’affichage de l’émulateur. Sinon, saisir largeur:hauteur ou un nombre décimal et choisir le même format dans l’émulateur. Les changements s’appliquent en jeu.",
+  "FOVFactor": "Champ de vision",
+  "FOVFactor.description": "Multiplie le champ de vision de la caméra de conduite ; 1.0 correspond au cadrage d’origine. Les scènes de début de mission gardent leur propre cadrage. Les changements s’appliquent en jeu.",
+  "HudAspectRatioConstraint": "Format de l’interface",
+  "HudAspectRatioConstraint.description": "Auto place les panneaux latéraux de l’interface aux bords de l’écran. Un format les garde aux bords d’un cadre centré de ce format. La vue cockpit garde toujours son interface sur le tableau de bord 4:3. Les changements s’appliquent en jeu.",
+  "FMVWidescreenMode": "Affichage des vidéos",
+  "FMVWidescreenMode.description": "Original montre les vidéos comme le jeu, une image 4:3 avec des bandes noires. Adapter montre toute l’image large aussi grande que l’écran le permet. Les changements s’appliquent en jeu.",
+  "fmv.original": "Original",
+  "fmv.fill": "Adapter",
+  "CutsceneBorders": "Bandes des scènes",
+  "CutsceneBorders.description": "Bandes noires des scènes de début de mission. Letterbox garde les bandes d’origine en haut et en bas, Pillarbox garde le cadrage 4:3 d’origine avec des bandes sur les côtés, Les deux combine les deux, Désactivé remplit l’écran. Les changements s’appliquent en jeu.",
+  "borders.off": "Désactivé",
+  "borders.letterbox": "Letterbox",
+  "borders.pillarbox": "Pillarbox",
+  "borders.both": "Les deux",
+  "SkipIntro": "Passer l’introduction",
+  "SkipIntro.description": "Passe le logo Davilex et la vidéo d’ouverture au démarrage. Redémarrer le jeu pour appliquer."
 }

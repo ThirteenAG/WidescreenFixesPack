@@ -1,0 +1,416 @@
+{
+  "format": "asi-settings",
+  "version": "1.0",
+  "plugin": {
+    "name": "@plugin.name",
+    "priority": 100,
+    "games": [
+      {
+        "name": "Onimusha 3: Demon Siege",
+        "exe": [
+          "ONI3.exe"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "id": "display",
+      "title": "@page.display",
+      "section": "display"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    }
+  ],
+  "settings": [
+    {
+      "id": "MAIN.ResX",
+      "type": "int",
+      "default": 0,
+      "label": "@ResX",
+      "description": "@ResX.description",
+      "page": "display",
+      "visibility": "editor",
+      "apply": "live",
+      "min": 0,
+      "max": 16384
+    },
+    {
+      "id": "MAIN.ResY",
+      "type": "int",
+      "default": 0,
+      "label": "@ResY",
+      "description": "@ResY.description",
+      "page": "display",
+      "visibility": "editor",
+      "apply": "live",
+      "min": 0,
+      "max": 16384
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@FMVWidescreenMode.original"
+        },
+        {
+          "value": 1,
+          "label": "@FMVWidescreenMode.fill"
+        }
+      ],
+      "label": "@FMVWidescreenMode",
+      "description": "@FMVWidescreenMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.HudAspectRatioConstraint",
+      "type": "string",
+      "default": "Auto",
+      "choices": [
+        {
+          "value": "Auto",
+          "label": "@HudAspectRatioConstraint.auto"
+        },
+        {
+          "value": "4:3",
+          "label": "4:3"
+        },
+        {
+          "value": "16:9",
+          "label": "16:9"
+        },
+        {
+          "value": "21:9",
+          "label": "21:9"
+        },
+        {
+          "value": "32:9",
+          "label": "32:9"
+        }
+      ],
+      "label": "@HudAspectRatioConstraint",
+      "description": "@HudAspectRatioConstraint.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WindowMode.fullscreen"
+        },
+        {
+          "value": 1,
+          "label": "@WindowMode.windowed"
+        },
+        {
+          "value": 2,
+          "label": "@WindowMode.borderless"
+        }
+      ],
+      "label": "@WindowMode",
+      "description": "@WindowMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ]
+    },
+    {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.FOVFactor",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "label": "@FOVFactor",
+      "description": "@FOVFactor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "slider"
+      ]
+    },
+    {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@PauseOnFocusLoss",
+      "description": "@PauseOnFocusLoss.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipPressStart",
+      "description": "@SkipPressStart.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@TextLanguage",
+      "description": "@TextLanguage.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ],
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@TextLanguage.auto"
+        },
+        {
+          "value": "en",
+          "label": "@TextLanguage.en"
+        },
+        {
+          "value": "fr",
+          "label": "@TextLanguage.fr"
+        },
+        {
+          "value": "de",
+          "label": "@TextLanguage.de"
+        },
+        {
+          "value": "it",
+          "label": "@TextLanguage.it"
+        },
+        {
+          "value": "es",
+          "label": "@TextLanguage.es"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.CheckForUpdates",
+      "type": "bool",
+      "default": false,
+      "label": "@checkupdates",
+      "description": "@checkupdates.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "label": "@CutsceneBorders",
+      "description": "@CutsceneBorders.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@CutsceneBorders.off"
+        },
+        {
+          "value": 1,
+          "label": "@CutsceneBorders.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@CutsceneBorders.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@CutsceneBorders.both"
+        }
+      ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
+      "id": "MAIN.AnimatedCutsceneBorders",
+      "type": "bool",
+      "default": true,
+      "label": "@AnimatedCutsceneBorders",
+      "description": "@AnimatedCutsceneBorders.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "label": "@GamepadIcons",
+      "description": "@GamepadIcons.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@GamepadIcons.auto"
+        },
+        {
+          "value": 1,
+          "label": "@GamepadIcons.xbox"
+        },
+        {
+          "value": 2,
+          "label": "@GamepadIcons.playstation"
+        }
+      ]
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "label": "@FPSLimit",
+      "description": "@FPSLimit.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "min": -1,
+      "max": 1000,
+      "step": 1,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@FPSLimit.unlimited"
+        },
+        {
+          "value": -1,
+          "label": "@FPSLimit.monitor"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
+        },
+        {
+          "value": 360
+        },
+        {
+          "value": 1000
+        }
+      ],
+      "control": [
+        "cycler",
+        "dropdown"
+      ]
+    },
+    {
+      "id": "MAIN.GameLanguage",
+      "type": "choice",
+      "default": 0,
+      "label": "@GameLanguage",
+      "description": "@GameLanguage.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@TextLanguage.auto"
+        },
+        {
+          "value": 1,
+          "label": "@TextLanguage.en"
+        },
+        {
+          "value": 2,
+          "label": "@TextLanguage.fr"
+        },
+        {
+          "value": 3,
+          "label": "@TextLanguage.de"
+        },
+        {
+          "value": 4,
+          "label": "@TextLanguage.it"
+        },
+        {
+          "value": 5,
+          "label": "@TextLanguage.es"
+        }
+      ]
+    }
+  ]
+}

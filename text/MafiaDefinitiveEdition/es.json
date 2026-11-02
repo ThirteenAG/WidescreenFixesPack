@@ -1,0 +1,10 @@
+{
+  "plugin.name": "Mafia: Definitive Edition Fusion Fix",
+  "page.game": "Juego",
+  "SkipIntro": "Saltar introducción",
+  "SkipIntro.description": "Pasa directamente al menú principal, sin los logotipos de middleware, la página de aviso, el vídeo de los logotipos de 2K y Hangar 13 ni la pantalla «Pulsa Intro». Desactivado, se muestran como en el juego original. Requiere reiniciar.",
+  "page.compatibility": "Compatibilidad",
+  "MAIN.TextLanguage": "Idioma del texto",
+  "MAIN.TextLanguage.description": "Elige el idioma del texto de configuración de la corrección. Auto sigue el idioma del juego o del editor.",
+  "ui.auto": "Auto"
+}
