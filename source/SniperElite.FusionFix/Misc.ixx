@@ -153,8 +153,6 @@ public:
                 if (auto* bars = *reinterpret_cast<void***>(cinematicFraming + 0xB1))
                     BarsOverride.SetAddress(bars);
                 Camera::CinematicBars = safetyhook::create_inline(cinematicFraming + 0xB0, Camera::DrawCinematicBars);
-                const auto subtitle = hook::get_pattern("83 EC 10 C7 04 24 9A 99 99 3D C7 44 24 08 44 8B 6C 3F E8"); //475080
-                Camera::Subtitle = safetyhook::create_inline(subtitle, Camera::DrawSubtitle);
 
                 const auto cameraEffects = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 83 ? ? D9"); //600570
                 if (auto* band = *reinterpret_cast<int32_t**>(cameraEffects + 0x0A))
