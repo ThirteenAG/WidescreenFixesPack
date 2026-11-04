@@ -153,6 +153,8 @@ public:
                 if (auto* bars = *reinterpret_cast<void***>(cinematicFraming + 0xB1))
                     BarsOverride.SetAddress(bars);
                 Camera::CinematicBars = safetyhook::create_inline(cinematicFraming + 0xB0, Camera::DrawCinematicBars);
+                const auto subtitle = hook::get_pattern("83 EC 10 C7 04 24 9A 99 99 3D C7 44 24 08 44 8B 6C 3F E8"); //475080
+                Camera::Subtitle = safetyhook::create_inline(subtitle, Camera::DrawSubtitle);
 
                 const auto cameraEffects = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 83 ? ? D9"); //600570
                 if (auto* band = *reinterpret_cast<int32_t**>(cameraEffects + 0x0A))
@@ -215,6 +217,10 @@ public:
 
                 Hud::Update();
                 settings.OnChange("MAIN.HudAspectRatioConstraint", Hud::Update);
+                const auto heartRatePanelDraw = hook::get_pattern<uint8_t>("8B 15 ? ? ? ? 56 8B F1 8B 46 60 85 C0 74 ? 8B 48 04 85 C9 74 ? 83 B9 88 00 00 00 01"); //504840
+                LocalPlayers.SetAddress(*reinterpret_cast<int32_t**>(heartRatePanelDraw + 2));
+                Hud::IsPlayerScoped = reinterpret_cast<decltype(Hud::IsPlayerScoped)>(injector::GetBranchDestination(heartRatePanelDraw + 0x27, true).as_int());
+                Hud::HeartRatePanelDraw = reinterpret_cast<uintptr_t>(heartRatePanelDraw);
                 Hud::Anchor = safetyhook::create_mid(hook::get_pattern("8B 46 08 85 C0 74 2A 8B 46 0C 33"), Hud::AnchorElement); //50227B
 
                 auto minimapIcons = hook::pattern("E8 ? ? ? ? 8B ? 8B ? 04 8B ? ? 89 ? ? ? 8B ? ? 8D"); //50BB91, 50C10B

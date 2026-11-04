@@ -34,4 +34,5 @@ export GameRef<int32_t> UpdateFont;
 export GameRef<uint8_t> WindowedMode;
 export GameRef<int32_t> StartupState;
 export GameRef<uint32_t> StartupStep;
+export GameRef<int32_t> LocalPlayers;
 export ProtectedGameRef<float> GameplayFOV;
