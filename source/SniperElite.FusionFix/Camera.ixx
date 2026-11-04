@@ -15,7 +15,7 @@ export namespace Camera
     float CinematicAspect = 2.35f, EffectAspect = 2.35f;
     float NativeHalf = 0.0f, AdjustedHalf = 0.0f;
     SafetyHookMid CutsceneFOVCapture;
-    SafetyHookInline CinematicBars, EffectBars;
+    SafetyHookInline CinematicBars, EffectBars, Subtitle;
     void(__cdecl* SetProjection)(float, float) = nullptr;
 
     struct Picture { float width, height, fit; };
@@ -80,6 +80,15 @@ export namespace Camera
         const auto result = CinematicBars.unsafe_ccall<int32_t>();
         if (!replaced)
             SideBars(CinematicBand.is_initialized() ? CinematicBand.get() : 2.35f, 0xFF000000);
+        return result;
+    }
+
+    // Cutscene subtitles keep the native layout across the cinematic frame instead of the HUD's 4:3 canvas
+    int32_t __fastcall DrawSubtitle(void* cutscene, void*, const wchar_t* text)
+    {
+        UI::SubtitleWidth = Frame(CinematicBand.is_initialized() ? CinematicBand.get() : 2.35f).width;
+        const auto result = Subtitle.unsafe_thiscall<int32_t>(cutscene, text);
+        UI::SubtitleWidth = 0.0f;
         return result;
     }
 

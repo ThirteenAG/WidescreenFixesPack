@@ -32,6 +32,8 @@ namespace D3D8Compatibility
             QueryPerformanceFrequency(&value);
             return value;
         }();
+        // Sleep(1) waits a whole 15.6 ms scheduler tick, which makes the frame pacing uneven
+        static HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
         static thread_local LONGLONG next = 0;
         static thread_local int previous = 0;
         if (limit > 0 && frequency.QuadPart > 0)
@@ -41,10 +43,17 @@ namespace D3D8Compatibility
             const auto period = frequency.QuadPart / limit;
             if (previous != limit || next == 0 || now.QuadPart > next + period)
                 next = now.QuadPart + period;
+            // Wait on the timer until about 1 ms is left, then spin to the exact time
+            const auto spin = frequency.QuadPart / 1000;
             while (now.QuadPart < next)
             {
-                if (next - now.QuadPart > frequency.QuadPart / 500)
-                    Sleep(1);
+                const auto left = next - now.QuadPart;
+                if (timer && left > spin)
+                {
+                    LARGE_INTEGER due{ .QuadPart = -((left - spin) * 10000000 / frequency.QuadPart) };
+                    if (SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
+                        WaitForSingleObject(timer, INFINITE);
+                }
                 else
                     YieldProcessor();
                 QueryPerformanceCounter(&now);

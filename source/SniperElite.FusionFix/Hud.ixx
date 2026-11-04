@@ -180,14 +180,28 @@ namespace UI
     }
 
     float TextShift = 0.0f; //game text in the HUD box
+    float SubtitleWidth = 0.0f; //cutscene subtitles span the cinematic frame
     int32_t __cdecl DrawMenu();
 
     char __cdecl Print(const wchar_t* text, const float* clip, float x, float y,
         float spacing, float scale, uint32_t color, uint32_t format);
 
+    inline bool Subtitle()
+    {
+        return Mode == Game && SubtitleWidth > 0.0f;
+    }
+
+    // The width the game's text maps its coordinates to
+    inline int32_t TextCanvas(uint32_t format)
+    {
+        if (Subtitle())
+            return static_cast<int32_t>(SubtitleWidth);
+        return (Mode != Game || (format & 1)) ? Screen.Width43 : static_cast<int32_t>(Hud::TextWidth);
+    }
+
     float* __cdecl GetPixelClip(float* rect, float* x, float* y, const float* clip, uint32_t format)
     {
-        auto width = std::exchange(FontWidth, (Mode != Game || (format & 1)) ? Screen.Width43 : static_cast<int32_t>(Hud::TextWidth));
+        auto width = std::exchange(FontWidth, TextCanvas(format));
         auto result = PixelClip.unsafe_ccall<float*>(rect, x, y, clip, format);
         FontWidth = width;
         return result;
@@ -232,6 +246,22 @@ namespace Hud
     std::atomic<float> Shift{ 0.0f };
     float TextWidth = 0.0f, TextOffset = 0.0f;
     SafetyHookMid Anchor;
+    uintptr_t HeartRatePanelDraw = 0;
+    bool(__fastcall* IsPlayerScoped)(uintptr_t player, uintptr_t) = nullptr;
+
+    // With the Nagant scope up the game hides the heart rate panel's frame and puts its pulse into the scope's window
+    bool InNagantScope(uintptr_t node)
+    {
+        if ((*reinterpret_cast<const uintptr_t* const*>(node))[8] != HeartRatePanelDraw)
+            return false;
+        const auto context = *reinterpret_cast<uintptr_t*>(node + 0x60);
+        if (!context)
+            return false;
+        const auto root = *reinterpret_cast<uintptr_t*>(context + 0x04);
+        constexpr int32_t Nagant = 1;
+        return root && *reinterpret_cast<int32_t*>(root + 0x88) == Nagant && LocalPlayers == 1 &&
+            IsPlayerScoped(*reinterpret_cast<uintptr_t*>(context), 0);
+    }
 
     void Update()
     {
@@ -255,8 +285,8 @@ namespace Hud
             return; //only the HUD's 4:3 canvas
         auto* rect = reinterpret_cast<float*>(node);
         const float width = rect[8], center = rect[6] + width / 2.0f;
-        if (width > 0.6f)
-            return;
+        if (width > 0.6f || InNagantScope(node))
+            return; //full-width elements and the scope's own elements stay on the 4:3 canvas
         const float shift = Shift.load(std::memory_order_relaxed);
         const float side = center < 0.45f ? -1.0f : center > 0.55f ? 1.0f : 0.0f;
         rect[10] += side * shift; //the element's pictures; its text moves in Print
@@ -275,15 +305,24 @@ int32_t __cdecl UI::DrawMenu()
 char __cdecl UI::Print(const wchar_t* text, const float* clip, float x, float y,
     float spacing, float scale, uint32_t color, uint32_t format)
 {
-    auto centered = std::exchange(CenteredText, Mode != Game || (format & 1));
-    auto width = std::exchange(FontWidth, CenteredText ? Screen.Width43 : static_cast<int32_t>(Hud::TextWidth));
+    const bool subtitle = Subtitle();
+    auto centered = std::exchange(CenteredText, !subtitle && (Mode != Game || (format & 1)));
+    auto width = std::exchange(FontWidth, TextCanvas(format));
     float side = 0.0f;
-    if (Mode == Game && (format & 1)) //HUD text on the 4:3 canvas: with its element at the side it is on
+    if (CenteredText && Mode == Game) //HUD text on the 4:3 canvas: with its element at the side it is on
     {
-        const float position = x > 1.5f ? x / Screen.fWidth43 : x;
+        float position = x;
+        if ((format & 0x100) && clip) //x is relative to the text's box
+            position = (clip[0] + clip[2]) * 0.5f;
+        position = position > 1.5f ? position / Screen.fWidth43 : position;
         side = position < 0.45f ? -1.0f : position > 0.55f ? 1.0f : 0.0f;
     }
-    auto shift = std::exchange(TextShift, CenteredText ? side * Hud::Shift.load(std::memory_order_relaxed) : Hud::TextOffset);
+    float textShift = Hud::TextOffset;
+    if (subtitle)
+        textShift = (Screen.fWidth - SubtitleWidth) / 2.0f;
+    else if (CenteredText)
+        textShift = side * Hud::Shift.load(std::memory_order_relaxed);
+    auto shift = std::exchange(TextShift, textShift);
     auto result = PrintText.unsafe_ccall<char>(text, clip, x, y, spacing, scale, color, format);
     TextShift = shift;
     FontWidth = width;
