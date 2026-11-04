@@ -142,25 +142,9 @@ public:
                 injector::MakeCALL(cutsceneFOVEvent, Camera::Projection, true);
                 Camera::CutsceneFOVCapture = safetyhook::create_mid(cutsceneFOVCapture, Camera::CaptureCutsceneFOV);
 
-                const auto cinematicFraming = hook::get_pattern<uint8_t>("D9 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D8 ? ? ? ? ? D9 ? D8 ? D8 ? ? ? ? ? DE ? C3"); //4797B0
-                if (auto* band = *reinterpret_cast<const float**>(cinematicFraming + 0x0E))
-                    CinematicBand.SetAddress(const_cast<float*>(band));
-                Camera::Update();
-                FixSettings().OnChange("MAIN.CutsceneBorders", Camera::Update);
-                for (size_t offset : { 0x8, 0xCA }) //subtitle position and bar height
-                    injector::WriteMemory<const float*>(reinterpret_cast<const float**>(cinematicFraming + offset), &Camera::CinematicAspect, true);
-                injector::WriteMemory<const float*>(reinterpret_cast<const float**>(cinematicFraming + 0x38), &Camera::LetterboxProbe, true); //marks letterboxed scenes
-                if (auto* bars = *reinterpret_cast<void***>(cinematicFraming + 0xB1))
-                    BarsOverride.SetAddress(bars);
-                Camera::CinematicBars = safetyhook::create_inline(cinematicFraming + 0xB0, Camera::DrawCinematicBars);
-
-                const auto cameraEffects = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 83 ? ? D9"); //600570
-                if (auto* band = *reinterpret_cast<int32_t**>(cameraEffects + 0x0A))
-                    EffectBand.SetAddress(band);
-                if (auto* alpha = *reinterpret_cast<uint8_t**>(cameraEffects + 0x9D + 3))
-                    EffectAlpha.SetAddress(alpha);
-                injector::WriteMemory<const float*>(reinterpret_cast<const float**>(cameraEffects + 0x51), &Camera::EffectAspect, true);
-                Camera::EffectBars = safetyhook::create_inline(cameraEffects, Camera::DrawEffectBars);
+                const auto cinematicBars = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 83 ? ? D9"); //600570
+                injector::WriteMemory<const float*>(reinterpret_cast<const float**>(cinematicBars + 0x51), &Camera::CinematicAspect, true);
+                Camera::CinematicBars = safetyhook::create_inline(cinematicBars, Camera::DrawCinematicBars);
             }
 
             Screen.fHudOffset = (Screen.fWidth - Screen.Width43) / 2.0f;

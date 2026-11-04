@@ -28,9 +28,7 @@
   "HudAspectRatioConstraint.auto": "Auto",
   "CutsceneBorders": "Bande delle scene d'intermezzo",
   "CutsceneBorders.off": "Disattivato",
-  "CutsceneBorders.letterbox": "Letterbox",
-  "CutsceneBorders.pillarbox": "Bande laterali",
-  "CutsceneBorders.both": "Entrambe",
+  "CutsceneBorders.on": "Attivo",
   "SkipIntro": "Salta i loghi iniziali",
   "FPSLimit": "Limite fotogrammi",
   "FPSLimit.unlimited": "Illimitato",
@@ -39,7 +37,7 @@
   "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
   "update.title": "Aggiornamento disponibile",
   "page.camera": "Telecamera",
-  "CutsceneBorders.description": "Le scene d'intermezzo mantengono l'inquadratura larga originale su qualsiasi schermo. Letterbox: bande sopra e sotto dove lo schermo è più stretto. Pillarbox: bande ai lati dove è più largo. Entrambi: l'inquadratura originale con le bande necessarie. Disattivato: la scena riempie lo schermo. Si applica subito.",
+  "CutsceneBorders.description": "Le barre nere delle scene animate mantengono la loro cornice originale, più ampia, indipendentemente dalle proporzioni dello schermo. Attivo: scene animate originali con barre nere. Disattivo: scene animate senza barre nere. Si applica immediatamente.",
   "SkipIntro.description": "Salta all'avvio la schermata legale e il video del logo Rebellion; il video introduttivo viene comunque riprodotto e si può saltare con il tasto del gioco. Riavvio necessario.",
   "FPSLimit.description": "Limita la frequenza dei fotogrammi. Si applica subito."
 }
