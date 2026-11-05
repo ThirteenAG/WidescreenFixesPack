@@ -28,9 +28,7 @@
   "HudAspectRatioConstraint.auto": "Auto",
   "CutsceneBorders": "Zwischensequenz-Balken",
   "CutsceneBorders.off": "Aus",
-  "CutsceneBorders.letterbox": "Letterbox",
-  "CutsceneBorders.pillarbox": "Seitenbalken",
-  "CutsceneBorders.both": "Beide",
+  "CutsceneBorders.on": "Ein",
   "SkipIntro": "Intro-Logos überspringen",
   "FPSLimit": "Bildratenbegrenzung",
   "FPSLimit.unlimited": "Unbegrenzt",
@@ -39,7 +37,7 @@
   "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
   "update.title": "Update verfügbar",
   "page.camera": "Kamera",
-  "CutsceneBorders.description": "Zwischensequenzen behalten ihren breiten Originalausschnitt bei jedem Bildschirmformat. Letterbox: Balken oben und unten, wo der Bildschirm schmaler ist. Pillarbox: Balken an den Seiten, wo er breiter ist. Beide: der Originalausschnitt mit Balken nach Bedarf. Aus: die Sequenz füllt den Bildschirm. Wirkt sofort.",
+  "CutsceneBorders.description": "Die schwarzen Balken in Zwischensequenzen behalten bei jedem Bildschirmseitenverhältnis ihr ursprüngliches Breitbildformat bei. Ein: Die ursprünglichen Zwischensequenzen mit schwarzen Balken. Aus: Zwischensequenzen ohne schwarze Balken. Die Einstellung wird sofort wirksam.",
   "SkipIntro.description": "Überspringt beim Start den Rechtshinweis und das Rebellion-Logovideo; das Intro-Video läuft weiter und lässt sich mit der Taste des Spiels überspringen. Neustart nötig.",
   "FPSLimit.description": "Begrenzt die Bildrate. Wirkt sofort."
 }

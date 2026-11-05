@@ -28,9 +28,7 @@
   "HudAspectRatioConstraint.auto": "Auto",
   "CutsceneBorders": "Cutscene borders",
   "CutsceneBorders.off": "Off",
-  "CutsceneBorders.letterbox": "Letterbox",
-  "CutsceneBorders.pillarbox": "Pillarbox",
-  "CutsceneBorders.both": "Both",
+  "CutsceneBorders.on": "On",
   "SkipIntro": "Skip intro logos",
   "FPSLimit": "Frame Rate Limit",
   "FPSLimit.unlimited": "Unlimited",
@@ -39,7 +37,7 @@
   "update.availablesite": "{name} {version} is available at fusionfix.io.",
   "update.title": "Update available",
   "page.camera": "Camera",
-  "CutsceneBorders.description": "Cinematics keep their original wide frame at any screen shape. Letterbox: bars above and below where the screen is narrower than the frame. Pillarbox: bars at the sides where it is wider. Both: the original frame with bars as needed. Off: the cinematic fills the screen. Applies immediately.",
+  "CutsceneBorders.description": "Cutscene black bars keep their original wide frame at any screen aspect ratio. On: the original cutscenes with black bars. Off: cutscenes without black bars. Applies immediately.",
   "SkipIntro.description": "Skips the legal screen and the Rebellion logo movie at startup; the intro movie still plays and can be skipped with the game's own button. Restart required.",
   "FPSLimit.description": "Limits the frame rate. Applies immediately."
 }
