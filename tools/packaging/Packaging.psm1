@@ -288,13 +288,16 @@ function Select-ArchiveMember([string[]]$Members, [string]$Pattern) {
     return $found[0]
 }
 function Invoke-PackagingRequest([string]$Uri, $Headers, [string]$OutputFile) {
-    for ($attempt = 1; $attempt -le 3; $attempt++) {
+    # Gateway errors (502-504) from GitHub's download servers pass after a while: up to five tries over about two minutes
+    $waits = @(5, 15, 30, 60)
+    for ($attempt = 1; $attempt -le $waits.Count + 1; $attempt++) {
         try {
             if ($OutputFile) { Invoke-WebRequest -UseBasicParsing -Uri $Uri -OutFile $OutputFile -TimeoutSec 120; return }
             return Invoke-RestMethod -Uri $Uri -Headers $Headers -TimeoutSec 120
         } catch {
-            if ($attempt -eq 3) { throw }
-            Start-Sleep -Milliseconds (500 * $attempt)
+            if ($attempt -gt $waits.Count) { throw }
+            Write-Host "Download of $Uri failed ($($_.Exception.Message)); trying again in $($waits[$attempt - 1]) s"
+            Start-Sleep -Seconds $waits[$attempt - 1]
         }
     }
 }
