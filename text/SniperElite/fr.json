@@ -28,9 +28,7 @@
   "HudAspectRatioConstraint.auto": "Auto",
   "CutsceneBorders": "Bandes des cinématiques",
   "CutsceneBorders.off": "Désactivé",
-  "CutsceneBorders.letterbox": "Letterbox",
-  "CutsceneBorders.pillarbox": "Bandes latérales",
-  "CutsceneBorders.both": "Les deux",
+  "CutsceneBorders.on": "Activé",
   "SkipIntro": "Passer les logos d'introduction",
   "FPSLimit": "Limite d'images par seconde",
   "FPSLimit.unlimited": "Illimitée",
@@ -39,7 +37,7 @@
   "update.availablesite": "{name} {version} est disponible sur fusionfix.io.",
   "update.title": "Mise à jour disponible",
   "page.camera": "Caméra",
-  "CutsceneBorders.description": "Les cinématiques gardent leur cadrage large d'origine sur tout format d'écran. Letterbox : bandes en haut et en bas quand l'écran est plus étroit. Pillarbox : bandes sur les côtés quand il est plus large. Les deux : le cadrage d'origine avec les bandes nécessaires. Désactivé : la cinématique remplit l'écran. S'applique immédiatement.",
+  "CutsceneBorders.description": "Les barres noires des cinématiques conservent leur format large d'origine, quel que soit le format d'écran. Activé : les cinématiques d'origine avec barres noires. Désactivé : les cinématiques sans barres noires. S'applique immédiatement.",
   "SkipIntro.description": "Passe au démarrage l'écran légal et la vidéo du logo Rebellion ; la vidéo d'introduction est toujours jouée et peut être passée avec la touche du jeu. Redémarrage requis.",
   "FPSLimit.description": "Limite la fréquence d'images. S'applique immédiatement."
 }
