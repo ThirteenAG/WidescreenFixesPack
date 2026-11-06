@@ -85,8 +85,11 @@ function Test-Ready($Package) {
 }
 function Read-Completions {
     foreach ($file in Get-ChildItem -LiteralPath $completion -Filter '*.ready') {
-        $record = [IO.File]::ReadAllText($file.FullName).Trim([char]0xfeff, [char]13, [char]10).Split('|')
-        if (-not $producers.ContainsKey($record[0])) { continue }
+        # Tools built by several solutions replace their record during the build: only unread producers are opened
+        if (-not $producers.ContainsKey($file.BaseName) -or $state.Completed.ContainsKey($file.BaseName)) { continue }
+        # MSBuild may still be moving it into place: the next poll reads it
+        try { $record = [IO.File]::ReadAllText($file.FullName).Trim([char]0xfeff, [char]13, [char]10).Split('|') }
+        catch [IO.IOException] { continue }
         if ($record.Count -ne 5 -or $record[1] -ne 'Release') { throw "Invalid build completion: $($file.Name)" }
         $output = if ($record[4]) {$record[4]} else {$record[3]}
         if ([IO.Path]::GetFullPath($output) -ne (Resolve-PackagePath $RepositoryRoot $producers[$record[0]].source)) { throw "Build output differs from manifest: $($record[0])" }
