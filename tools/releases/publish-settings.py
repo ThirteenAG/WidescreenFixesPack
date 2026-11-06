@@ -4,10 +4,10 @@ GitHub Actions OIDC token (permissions: id-token: write).
     python tools/releases/publish-settings.py --channel release|dev [--tags gta3,gtavc|all]
 
 Reads the zips under data/Archives, the release tag of each package from tools/releases/releases.json. A PC plugin's
-description is its ASISETTINGS resource (translations: ASISETTINGS_TEXT); an emulator plugin's are the
-<id>.asisettings.json / <id>.asisettings.<lang>.json files next to it in the zip.
+description is its ASISETTINGS resource (translations: ASISETTINGS_TEXT); an emulator plugin's are the ELF sections
+.asisettings / .asisettings.<lang> of its .elf or .prx.
 """
-import argparse, hashlib, json, os, subprocess, sys, urllib.error, urllib.request, zipfile
+import argparse, hashlib, json, os, struct, subprocess, sys, urllib.error, urllib.request, zipfile
 
 root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -50,6 +50,31 @@ def from_pe(data):
     }
 
 
+def from_elf(data):
+    if data[:6] != b"\x7fELF\x01\x01" or len(data) < 52:
+        return None
+    table = struct.unpack_from("<I", data, 32)[0]
+    size, count, names_index = struct.unpack_from("<HHH", data, 46)
+
+    def section(i):
+        name, kind, _, _, offset, length = struct.unpack_from("<6I", data, table + i * size)
+        return name, kind, data[offset:offset + length]
+
+    names = section(names_index)[2]
+    description, translations = None, {}
+    for i in range(count):
+        at, kind, content = section(i)
+        name = names[at:names.index(b"\0", at)].decode()
+        if kind == 8 or not (name == ".asisettings" or name.startswith(".asisettings.")):  # SHT_NOBITS
+            continue
+        found = json.loads(content.split(b"\0")[0].decode("utf-8-sig"))
+        if name == ".asisettings":
+            description = found
+        else:
+            translations[tag_case(name[len(".asisettings."):])] = found
+    return {"description": description, "translations": translations} if description else None
+
+
 def commit_time():
     # Emulator plugins have no version resource: the build's commit time stands for the build time
     out = subprocess.run(["git", "-C", root, "log", "-1", "--format=%cd", "--date=format-local:%Y-%m-%dT%H:%M:%SZ"],
@@ -59,23 +84,16 @@ def commit_time():
 
 def plugins_in(zip_path):
     with zipfile.ZipFile(zip_path) as z:
-        names = z.namelist()
-        for name in names:
+        for name in z.namelist():
             base = name.rsplit("/", 1)[-1]
             if base.lower().endswith(".asi"):
                 found = from_pe(z.read(name))
                 if found:
                     yield base[:-4], found
-            elif base.endswith(".asisettings.json"):
-                fix = base[: -len(".asisettings.json")]
-                folder = name[: len(name) - len(base)]
-                translations = {}
-                for other in names:
-                    prefix = folder + fix + ".asisettings."
-                    if other.startswith(prefix) and other.endswith(".json") and other != name:
-                        translations[tag_case(other[len(prefix):-5])] = json.loads(z.read(other).decode("utf-8-sig"))
-                yield fix, {"description": json.loads(z.read(name).decode("utf-8-sig")), "translations": translations,
-                            "version": "", "buildTimeUtc": commit_time()}
+            elif base.lower().endswith((".elf", ".prx")):
+                found = from_elf(z.read(name))
+                if found:
+                    yield base[:-4], {**found, "version": "", "buildTimeUtc": commit_time()}
 
 
 def oidc_token():

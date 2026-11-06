@@ -51,24 +51,16 @@ function Get-HubDestinations($Package) {
     if (-not $folders.Count) { $folders = @($native | ForEach-Object { $_.destination -replace '/?[^/]*$', '' -replace '(^|/)(?i:scripts|plugins)$', '' }) }
     return @($folders | Sort-Object -Unique | ForEach-Object { if ($_) { $_ + '/FusionFixHub.exe' } else { 'FusionFixHub.exe' } })
 }
-function Get-PackageFiles($Package, [string]$Root) {
-    # An emulator plugin's English settings text (<id>.asisettings.en.json) brings the other languages built beside it
-    $files = @($Package.files)
-    foreach ($file in @($Package.files | Where-Object { $_.destination -match '\.asisettings\.en\.json$' })) {
-        $source = Resolve-PackagePath $Root $file.source
-        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { continue }
-        $prefix = [IO.Path]::GetFileName($source) -replace 'en\.json$', ''
-        foreach ($language in @(Get-ChildItem -LiteralPath (Split-Path -Parent $source) -Filter "$prefix*.json" -File | Where-Object { $_.Name -ne [IO.Path]::GetFileName($source) -and $_.Name -match '\.asisettings\.[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*\.json$' } | Sort-Object Name)) {
-            $files += [pscustomobject]@{ source = ($file.source -replace '[^/]+$', $language.Name); destination = ($file.destination -replace '[^/]+$', $language.Name) }
-        }
-    }
-    return $files
-}
 function Test-EmbeddedSettings([byte[]]$Bytes) {
     # The settings description is a resource of type ASISETTINGS; its type name is stored as UTF-16 in the resource directory.
     $name = [Text.Encoding]::Unicode.GetBytes('ASISETTINGS')
     $text = [Text.Encoding]::GetEncoding(28591)
     return $text.GetString($Bytes).Contains($text.GetString($name))
+}
+function Test-ConsoleSettings([byte[]]$Bytes) {
+    # The description of a PS2 or PSP plugin is an ELF section, named in the file's section names.
+    $text = [Text.Encoding]::GetEncoding(28591)
+    return $text.GetString($Bytes).Contains(".asisettings`0")
 }
 function Get-ByteHash([byte[]]$Bytes) {
     $sha = [Security.Cryptography.SHA256]::Create()
@@ -352,7 +344,7 @@ function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Wor
             $pfx = Join-Path $packageWork 'certificate.pfx'
             [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String(($env:CODE_SIGNING_PFX -replace '\s', '')))
         }
-        foreach ($file in @(Get-PackageFiles $Package $Root)) {
+        foreach ($file in @($Package.files)) {
             $source = Resolve-PackagePath $Root $file.source; Assert-PackageFile $source
             $target = Resolve-PackagePath $stage $file.destination
             $null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target)
@@ -372,6 +364,7 @@ function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Wor
                 if ($source -match '\.asi$' -and -not (Test-EmbeddedSettings $bytes)) { throw "No embedded settings description: $($producer.project)" }
             } elseif ($source -match '\.(elf|prx)$') {
                 if ($bytes.Length -lt 52 -or [BitConverter]::ToUInt32($bytes, 0) -ne 0x464c457f -or $bytes[4] -ne 1 -or $bytes[5] -ne 1 -or [BitConverter]::ToUInt16($bytes, 18) -ne 8) { throw "Not a MIPS ELF module: $($producer.project)" }
+                if ((Test-Path -LiteralPath (Join-Path $Root "source/$($producer.project)/settings.json")) -and -not (Test-ConsoleSettings $bytes)) { throw "No embedded settings description: $($producer.project)" }
             }
             if ($producer.embedPdb -and ($info.Pdb -or $producer.embedPdb -eq 'required')) {
                 if (-not $info.Pdb) { throw "No CodeView PDB reference: $($producer.project)" }
