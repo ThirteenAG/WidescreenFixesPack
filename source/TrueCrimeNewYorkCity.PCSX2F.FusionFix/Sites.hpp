@@ -37,8 +37,8 @@ namespace tcny::sites
     inline uintptr_t at_20B780() { return pattern.get(0, "64 00 00 46 00 08 06 44 ? ? ? 0C FF FF 4A 35 50 00 04 3C ? ? 84 8C", 0); }
     // Bars shown at once (cinematic start): bar height, the world pointer.
     inline uintptr_t at_20B430() { return pattern.get(0, "F0 FF BD 27 88 42 01 3C 00 00 81 44 00 00 BF FF 14 00 80 AC 18 00 80 E4 50 00 04 3C ? ? 84 8C", 0); }
-    // Cinematic start: sets the world's cinematic flag.
-    inline uintptr_t at_1F1318() { return pattern.get(0, "2D 90 A0 00 F0 00 BF FF ? ? 02 AE ? ? ? 0C ? ? 04 8E", 0); }
+    // Cinematic start: sets the world's cinematic flag. The Xbox Rain Droplets plugin hooks the first two instructions.
+    inline uintptr_t at_1F1318() { return pattern.get(0, "? ? 02 AE ? ? ? 0C ? ? 04 8E ? ? ? 0C ? ? 04 8E", -8); }
     // Game camera constructor: its update function.
     inline uintptr_t at_16B4D8() { return pattern.get(0, "CC 3F 01 3C CD CC 21 34 00 00 81 44 ? ? 03 3C 04 00 26 8E ? ? ? ? ? ? 63 24 0A 00 07 24", 0); }
     // Screen setup: the 2D manager (lui s0, hi ... addiu s0, s0, lo).

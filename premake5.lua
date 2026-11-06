@@ -68,23 +68,23 @@ function settings_check(description, text)
       'echo asi-settings-validate : warning : settings not checked, build AsiSettingsValidator in the Win32 solution first'
 end
 
--- The settings description and every language of its text next to an emulator plugin, as
--- <plugin>.asisettings.json and <plugin>.asisettings.<lang>.json (the languages present at build time)
-function settings_sidecars(scriptspath, prj_name, settingsText)
-   local output = ('%{wks.location}../data/%{prj.name}/' .. scriptspath):gsub('/', '\\')
+-- Puts the settings description and every language of its text into an emulator plugin's file, as sections that
+-- aren't loaded (tools/embed-settings.ps1)
+function settings_embed(scriptspath, prj_name, settingsText, extension, arguments)
+   local module = ('%{wks.location}../data/%{prj.name}/' .. scriptspath .. prj_name .. extension):gsub('/', '\\')
    local description = ('%{wks.location}../source/%{prj.name}/settings.json'):gsub('/', '\\')
    local text = ('%{wks.location}../text/' .. settingsText):gsub('/', '\\')
-   return { 'copy /y "' .. description .. '" "' .. output .. prj_name .. '.asisettings.json" || exit /b 1',
-      'for %%f in ("' .. text .. '\\*.json") do copy /y "%%f" "' .. output .. prj_name .. '.asisettings.%%~nf.json" || exit /b 1' }
+   return 'powershell -NoProfile -ExecutionPolicy Bypass -File "%{wks.location}/../tools/embed-settings.ps1" -Module "' .. module ..
+      '" -Description "' .. description .. '" -Text "' .. text .. '"' .. (arguments or '') .. ' || exit /b 1'
 end
 
 function setbuildpaths_psp(key, exepath, scriptspath, pspsdkpath, sourcepath, prj_name, settingsText)
    local command = 'powershell -NoProfile -ExecutionPolicy Bypass -File "%{wks.location}/../external/pspsdk/plugins/build-module.ps1" -Project "' .. sourcepath .. 'module.json" -Configuration "%{cfg.buildcfg}"'
    local validate = {}
-   local sidecars = {}
+   local embed = {}
    if settingsText then
       validate = { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/' .. settingsText .. '/en.json') }
-      sidecars = settings_sidecars(scriptspath, prj_name, settingsText)
+      embed = { settings_embed(scriptspath, prj_name, settingsText, '.prx') }
    end
    local gamepath = envdir(key)
    local deploy = {}
@@ -95,8 +95,8 @@ function setbuildpaths_psp(key, exepath, scriptspath, pspsdkpath, sourcepath, pr
       debugdir(gamepath)
       debugcommand(path.join(gamepath, exepath))
    end
-   buildcommands { validate, command .. ' || exit /b 1', sidecars, deploy }
-   rebuildcommands { validate, command .. ' -Clean || exit /b 1', command .. ' || exit /b 1', sidecars, deploy }
+   buildcommands { validate, command .. ' || exit /b 1', embed, deploy }
+   rebuildcommands { validate, command .. ' -Clean || exit /b 1', command .. ' || exit /b 1', embed, deploy }
    cleancommands { command .. ' -Clean' }
    targetdir("data/%{prj.name}/" .. scriptspath)
 end
@@ -104,10 +104,10 @@ end
 function setbuildpaths_ps2(key, exepath, scriptspath, ps2sdkpath, sourcepath, prj_name, settingsText)
    local command = 'powershell -NoProfile -ExecutionPolicy Bypass -File "%{wks.location}/../external/ps2sdk/plugins/build-module.ps1" -Project "' .. sourcepath .. 'module.json"'
    local validate = {}
-   local sidecars = {}
+   local embed = {}
    if settingsText then
       validate = { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/' .. settingsText .. '/en.json') }
-      sidecars = settings_sidecars(scriptspath, prj_name, settingsText)
+      embed = { settings_embed(scriptspath, prj_name, settingsText, '.elf', ' -Objcopy "%{wks.location}/../external/ps2sdk/ee/bin/mips64r5900el-ps2-elf-objcopy.exe"') }
    end
    local gamepath = envdir(key)
    local deploy = {}
@@ -118,8 +118,8 @@ function setbuildpaths_ps2(key, exepath, scriptspath, ps2sdkpath, sourcepath, pr
       debugdir(gamepath)
       debugcommand(path.join(gamepath, os.isfile(path.join(gamepath, "pcsx2-qtx64.exe")) and "pcsx2-qtx64.exe" or "pcsx2-qt.exe"))
    end
-   buildcommands { validate, command .. ' || exit /b 1', sidecars, deploy }
-   rebuildcommands { validate, command .. ' -Clean || exit /b 1', command .. ' || exit /b 1', sidecars, deploy }
+   buildcommands { validate, command .. ' || exit /b 1', embed, deploy }
+   rebuildcommands { validate, command .. ' -Clean || exit /b 1', command .. ' || exit /b 1', embed, deploy }
    cleancommands { command .. ' -Clean' }
    targetdir("data/%{prj.name}/" .. scriptspath)
 end

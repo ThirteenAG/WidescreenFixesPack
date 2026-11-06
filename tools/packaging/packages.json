@@ -84,16 +84,7 @@
           "destination": "PLUGINS/Burnout3.PCSX2F.FusionFix.elf"
         }
       ],
-      "files": [
-        {
-          "source": "data/Burnout3.PCSX2F.FusionFix/PLUGINS/Burnout3.PCSX2F.FusionFix.asisettings.json",
-          "destination": "PLUGINS/Burnout3.PCSX2F.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/Burnout3.PCSX2F.FusionFix/PLUGINS/Burnout3.PCSX2F.FusionFix.asisettings.en.json",
-          "destination": "PLUGINS/Burnout3.PCSX2F.FusionFix.asisettings.en.json"
-        }
-      ],
+      "files": [],
       "dependencies": []
     },
     {
@@ -478,14 +469,6 @@
         {
           "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/plugin.ini",
           "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/plugin.ini"
-        },
-        {
-          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.asisettings.en.json"
         }
       ],
       "dependencies": []
@@ -500,32 +483,7 @@
           "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.elf"
         }
       ],
-      "files": [
-        {
-          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.json",
-          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.en.json",
-          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.en.json"
-        },
-        {
-          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.de.json",
-          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.de.json"
-        },
-        {
-          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.fr.json",
-          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.fr.json"
-        },
-        {
-          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.it.json",
-          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.it.json"
-        },
-        {
-          "source": "data/GTALCS.PCSX2F.FusionFix/PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.es.json",
-          "destination": "PLUGINS/GTALCS.PCSX2F.FusionFix.asisettings.es.json"
-        }
-      ],
+      "files": [],
       "dependencies": []
     },
     {
@@ -542,30 +500,6 @@
         {
           "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/plugin.ini",
           "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/plugin.ini"
-        },
-        {
-          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.en.json"
-        },
-        {
-          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.de.json",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.de.json"
-        },
-        {
-          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.fr.json",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.fr.json"
-        },
-        {
-          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.it.json",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.it.json"
-        },
-        {
-          "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.es.json",
-          "destination": "memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.asisettings.es.json"
         },
         {
           "source": "data/GTALCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/360.bin",
@@ -722,30 +656,6 @@
         {
           "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/vcscheats.txt",
           "destination": "PLUGINS/vcscheats.txt"
-        },
-        {
-          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.json",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.en.json",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.en.json"
-        },
-        {
-          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.de.json",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.de.json"
-        },
-        {
-          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.fr.json",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.fr.json"
-        },
-        {
-          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.it.json",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.it.json"
-        },
-        {
-          "source": "data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.es.json",
-          "destination": "PLUGINS/GTAVCS.PCSX2F.FusionFix.asisettings.es.json"
         }
       ],
       "dependencies": []
@@ -768,14 +678,6 @@
         {
           "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/vcscheats.txt",
           "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/vcscheats.txt"
-        },
-        {
-          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.asisettings.en.json"
         },
         {
           "source": "data/GTAVCS.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/lights.bin",
@@ -970,16 +872,7 @@
           "destination": "PLUGINS/KnightRider.PCSX2F.FusionFix.elf"
         }
       ],
-      "files": [
-        {
-          "source": "data/KnightRider.PCSX2F.FusionFix/PLUGINS/KnightRider.PCSX2F.FusionFix.asisettings.json",
-          "destination": "PLUGINS/KnightRider.PCSX2F.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/KnightRider.PCSX2F.FusionFix/PLUGINS/KnightRider.PCSX2F.FusionFix.asisettings.en.json",
-          "destination": "PLUGINS/KnightRider.PCSX2F.FusionFix.asisettings.en.json"
-        }
-      ],
+      "files": [],
       "dependencies": []
     },
     {
@@ -1324,14 +1217,6 @@
         {
           "source": "data/MidnightClubLARemix.PPSSPP.FusionFix/memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/plugin.ini",
           "destination": "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/plugin.ini"
-        },
-        {
-          "source": "data/MidnightClubLARemix.PPSSPP.FusionFix/memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/MidnightClubLARemix.PPSSPP.FusionFix/memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.asisettings.en.json"
         }
       ],
       "dependencies": []
@@ -2103,14 +1988,6 @@
         {
           "source": "data/SOCOM.FireteamBravo.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/plugin.ini",
           "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/plugin.ini"
-        },
-        {
-          "source": "data/SOCOM.FireteamBravo.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/SOCOM.FireteamBravo.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.asisettings.en.json"
         }
       ],
       "dependencies": []
@@ -2129,14 +2006,6 @@
         {
           "source": "data/SOCOM.FireteamBravo2.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/plugin.ini",
           "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/plugin.ini"
-        },
-        {
-          "source": "data/SOCOM.FireteamBravo2.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/SOCOM.FireteamBravo2.PPSSPP.FusionFix.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/SOCOM.FireteamBravo2.PPSSPP.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/SOCOM.FireteamBravo2.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/SOCOM.FireteamBravo2.PPSSPP.FusionFix.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/SOCOM.FireteamBravo2.PPSSPP.FusionFix.asisettings.en.json"
         }
       ],
       "dependencies": []
@@ -2155,14 +2024,6 @@
         {
           "source": "data/SOCOM.FireteamBravo3.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/plugin.ini",
           "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/plugin.ini"
-        },
-        {
-          "source": "data/SOCOM.FireteamBravo3.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/SOCOM.FireteamBravo3.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.asisettings.en.json"
         }
       ],
       "dependencies": []
@@ -2800,16 +2661,7 @@
           "destination": "PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.elf"
         }
       ],
-      "files": [
-        {
-          "source": "data/SplinterCellDoubleAgent.PCSX2F.FusionFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.asisettings.json",
-          "destination": "PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/SplinterCellDoubleAgent.PCSX2F.FusionFix/PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.asisettings.en.json",
-          "destination": "PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.asisettings.en.json"
-        }
-      ],
+      "files": [],
       "dependencies": []
     },
     {
@@ -2886,14 +2738,6 @@
         {
           "source": "data/SplinterCellEssentials.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/plugin.ini",
           "destination": "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/plugin.ini"
-        },
-        {
-          "source": "data/SplinterCellEssentials.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/SplinterCellEssentials.PPSSPP.FusionFix.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/SplinterCellEssentials.PPSSPP.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/SplinterCellEssentials.PPSSPP.FusionFix/memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/SplinterCellEssentials.PPSSPP.FusionFix.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionFix/SplinterCellEssentials.PPSSPP.FusionFix.asisettings.en.json"
         }
       ],
       "dependencies": []
@@ -3484,14 +3328,6 @@
         {
           "source": "data/TheWarriors.PPSSPP.FusionFix/memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/plugin.ini",
           "destination": "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/plugin.ini"
-        },
-        {
-          "source": "data/TheWarriors.PPSSPP.FusionFix/memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.asisettings.json",
-          "destination": "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/TheWarriors.PPSSPP.FusionFix/memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.asisettings.en.json",
-          "destination": "memstick/PSP/PLUGINS/TheWarriors.PPSSPP.FusionFix/TheWarriors.PPSSPP.FusionFix.asisettings.en.json"
         }
       ],
       "dependencies": []
@@ -3766,16 +3602,7 @@
           "destination": "PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.elf"
         }
       ],
-      "files": [
-        {
-          "source": "data/TrueCrimeNewYorkCity.PCSX2F.FusionFix/PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.asisettings.json",
-          "destination": "PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.asisettings.json"
-        },
-        {
-          "source": "data/TrueCrimeNewYorkCity.PCSX2F.FusionFix/PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.asisettings.en.json",
-          "destination": "PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.asisettings.en.json"
-        }
-      ],
+      "files": [],
       "dependencies": []
     },
     {

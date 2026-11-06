@@ -23,9 +23,10 @@ there) or `../FusionFixHub-App/bin/Release/FusionFixHub.exe`, and is never re-si
 `-Hub required|optional|off` (or `WFP_HUB_POLICY`) decides whether a missing hub
 fails; public releases require it.
 
-PSP and PS2 builds refresh the module's settings description and the sidecars of every
-language from their validated sources after compilation. Validation, compilation and sidecar
-copy failures stop the build before deployment or release completion.
+PSP and PS2 builds put the settings description and every language from their validated
+sources into the module after compilation, as ELF sections that aren't loaded
+(`.asisettings`, `.asisettings.<lang>`). Validation, compilation and embedding failures stop
+the build before deployment or release completion.
 
 ## Local commands
 
