@@ -4,7 +4,7 @@
   "page.controls": "Steuerung",
   "page.compatibility": "Kompatibilität",
   "ForceAspectRatio": "Seitenverhältnis",
-  "ForceAspectRatio.description": "Auto folgt dem Anzeigeverhältnis von PPSSPP. B:H oder eine Dezimalzahl (1:1 bis 4:1) ersetzt es. Änderungen gelten während des Spiels.",
+  "ForceAspectRatio.description": "Auto folgt dem Anzeigeverhältnis von PPSSPP. Für Breitbild in der Bildschirmanordnung von PPSSPP „Strecken“ aktivieren. B:H oder eine Dezimalzahl (1:1 bis 4:1) ersetzt es. Änderungen gelten während des Spiels.",
   "FOVFactor": "Sichtfeld-Faktor",
   "FOVFactor.description": "Skaliert das Sichtfeld der 3D-Ansicht von 0,5 bis 2,0; 1,0 behält den Originalwinkel. Der Eröffnungsflug vor Rennen behält seinen Bildausschnitt. Änderungen gelten während des Spiels.",
   "HudAspectRatioConstraint": "HUD-Seitenverhältnis",

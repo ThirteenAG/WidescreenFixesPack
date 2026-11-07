@@ -46,108 +46,109 @@ void* __fastcall VideoContent(float* _this, void* edx, uintptr_t ctx, float x, f
     return hbsub_10077470.fun(_this, edx, ctx, x, y, w, h, u1, v1, u2, v2);
 }
 
-float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V)
+namespace SuitLights
 {
-    auto bChangeColor = ((H == 0x41 && S == 0x33) || (H == 0x5B && S == 0 && V == 0xFF) || (H == 0x2B && S == 0x40 && V == 0xFF)); //goggles || green ind || yellow ind
-    if (bChangeColor)
+    const wchar_t* (__thiscall* GetObjectName)(void* object) = nullptr;
+    ptrdiff_t DeviceOffset = 0; // UD3DRenderDevice: IDirect3DDevice9*
+    bool GlowPassGoggles = false;
+
+    bool HasColor()
     {
-        if (gColor)
+        return gColor >= 1 && gColor <= SuitLightColors.size();
+    }
+
+    // SCX_glow_material: Hue and Saturation bytes
+    bool IsGoggles(uintptr_t material)
+    {
+        return *reinterpret_cast<uint8_t*>(material + 0x51) == 0x41 && *reinterpret_cast<uint8_t*>(material + 0x52) == 0x33;
+    }
+
+    // The suit's visibility light, whose hue the game switches between green and yellow
+    bool IsSuitLight(uintptr_t material)
+    {
+        return IsGoggles(material) || wcscmp(GetObjectName(reinterpret_cast<void*>(material)), L"GlowWhite3_SC4") == 0;
+    }
+
+    // The goggle lens texture is yellow-green with no blue, so the tint alone can't reach blue, pink, violet or white.
+    // A copy that keeps each texel's brightest channel takes any colour.
+    IDirect3DTexture9* NeutralTexture(IDirect3DDevice9* device)
+    {
+        static std::unordered_map<IDirect3DBaseTexture9*, IDirect3DTexture9*> copies;
+
+        IDirect3DBaseTexture9* current = nullptr;
+        device->GetTexture(0, &current);
+        if (!current)
+            return nullptr;
+        current->Release();
+        if (auto it = copies.find(current); it != copies.end())
+            return it->second;
+
+        IDirect3DTexture9*& neutral = copies[current];
+        D3DSURFACE_DESC desc = {};
+        auto texture = static_cast<IDirect3DTexture9*>(current);
+        if (current->GetType() != D3DRTYPE_TEXTURE || FAILED(texture->GetLevelDesc(0, &desc)))
+            return nullptr;
+        if (FAILED(device->CreateTexture(desc.Width, desc.Height, texture->GetLevelCount(), 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &neutral, nullptr)))
+            return nullptr;
+
+        IDirect3DSurface9* from = nullptr;
+        IDirect3DSurface9* to = nullptr;
+        texture->GetSurfaceLevel(0, &from);
+        neutral->GetSurfaceLevel(0, &to);
+        bool copied = from && to && SUCCEEDED(D3DXLoadSurfaceFromSurface(to, nullptr, nullptr, from, nullptr, nullptr, D3DX_FILTER_NONE, 0));
+        if (from)
+            from->Release();
+        if (to)
+            to->Release();
+
+        D3DLOCKED_RECT rect = {};
+        if (copied && SUCCEEDED(neutral->LockRect(0, &rect, nullptr, 0)))
         {
-            switch (gColor)
+            for (UINT y = 0; y < desc.Height; y++)
             {
-                case 2:
-                    dest[0] = 1.0f;
-                    dest[1] = 0.0f;
-                    dest[2] = 0.0f;
-                    dest[3] = 1.0f;
-                    break;
-                case 3:
-                    dest[0] = 1.0f;
-                    dest[1] = 0.5f;
-                    dest[2] = 0.0f;
-                    dest[3] = 1.0f;
-                    break;
-                default:
-                    dest[0] = 0.0f;
-                    dest[1] = 1.0f;
-                    dest[2] = 0.0f;
-                    dest[3] = 1.0f;
-                    break;
+                auto row = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(rect.pBits) + y * rect.Pitch);
+                for (UINT x = 0; x < desc.Width; x++)
+                {
+                    const uint32_t c = row[x];
+                    const uint32_t m = (std::max)({ (c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF });
+                    row[x] = (c & 0xFF000000) | (m << 16) | (m << 8) | m;
+                }
             }
-            if (gBlacklistIndicators)
-            {
-                const float visibility = gVisibility.load(std::memory_order_relaxed);
-                dest[0] *= visibility;
-                dest[1] *= visibility;
-                dest[2] *= visibility;
-                dest[3] *= visibility;
-            }
-            return dest;
+            neutral->UnlockRect(0);
+            if (neutral->GetLevelCount() > 1)
+                D3DXFilterTexture(neutral, nullptr, 0, D3DX_DEFAULT);
+        }
+        else
+        {
+            neutral->Release();
+            neutral = nullptr;
+        }
+        return neutral;
+    }
+
+    // Runs on the game's HSV result for a glow material (base pass and glow pass)
+    void Apply(float* color, uintptr_t material)
+    {
+        if (!IsSuitLight(material))
+            return;
+
+        if (HasColor())
+        {
+            // Keep the game's brightness (distance amplification, glow pass), replace the colour
+            const float brightness = (std::max)({ color[0], color[1], color[2] });
+            const auto rgb = SuitLightColors[gColor - 1];
+            color[0] = static_cast<float>((rgb >> 16) & 0xFF) / 255.0f * brightness;
+            color[1] = static_cast<float>((rgb >> 8) & 0xFF) / 255.0f * brightness;
+            color[2] = static_cast<float>(rgb & 0xFF) / 255.0f * brightness;
+        }
+
+        if (gBlacklistIndicators)
+        {
+            const float visibility = gVisibility.load(std::memory_order_relaxed);
+            for (int i = 0; i < 4; i++)
+                color[i] *= visibility;
         }
     }
-
-    float r, g, b, a = 1.0f;
-    float v14 = (float)H * 6.0f * 0.00390625f;
-    float v4 = floor(v14);
-    float v5 = (float)(255 - S) * 0.0039215689f;
-    float v6 = (float)V * 0.0039215689f;
-    float v16 = (1.0f - v5) * v6;
-    float v10 = (1.0f - (v5 * (v14 - v4))) * v6;
-    float v7 = (1.0f - (v14 - v4)) * v5;
-    float v15 = (float)V * 0.0039215689f;
-    float v17 = (1.0f - v7) * v6;
-
-    switch ((uint32_t)v4)
-    {
-        case 0:
-            r = v15;
-            g = v17;
-            b = v16;
-            break;
-        case 1:
-            r = v10;
-            g = v15;
-            b = v16;
-            break;
-        case 2:
-            r = v16;
-            g = v15;
-            b = v17;
-            break;
-        case 3:
-            r = v16;
-            g = v10;
-            b = v15;
-            break;
-        case 4:
-            r = v17;
-            g = v16;
-            b = v15;
-            break;
-        case 5:
-            r = v15;
-            g = v16;
-            b = v10;
-            break;
-        default:
-            break;
-    }
-
-    dest[0] = r;
-    dest[1] = g;
-    dest[2] = b;
-    dest[3] = a;
-
-    if (bChangeColor && gBlacklistIndicators)
-    {
-        const float visibility = gVisibility.load(std::memory_order_relaxed);
-        dest[0] *= visibility;
-        dest[1] *= visibility;
-        dest[2] *= visibility;
-        dest[3] *= visibility;
-    }
-
-    return dest;
 }
 
 int nGlowResolutionMultiplier = 0;
@@ -479,16 +480,47 @@ export void InitD3DDrv()
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 A5 8B 90 30 02 00 00");
     injector::MakeNOP(pattern.get_first(0), 2, true);
 
-    //Goggles Light Color
+    // Goggles and suit light colour
     if (gColor || gBlacklistIndicators)
     {
-        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 83 C4 10 8D AE ? ? ? ? 6A 01 8B CD 8B D8 E8");
-        injector::MakeNOP(pattern.get(0).get<void>(0), 6, true);
-        injector::MakeCALL(pattern.get(0).get<void>(0), FGetHSV, true);
+        SuitLights::GetObjectName = reinterpret_cast<decltype(SuitLights::GetObjectName)>(GetProcAddress(GetModuleHandle(L"Core"), "?GetName@UObject@@QBEPBGXZ"));
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 86 ? ? ? ? 83 86 ? ? ? ? 01 8B 08 50 FF 91 78 01 00 00");
+        SuitLights::DeviceOffset = *pattern.get_first<int32_t>(2);
 
+        // Base pass, after FGetHSV and the base texture; the material is on the stack, esi is the render device
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 83 C4 10 8D AE ? ? ? ? 6A 01 8B CD 8B D8 E8");
+        static auto SuitLightBaseHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
+        {
+            const auto material = *reinterpret_cast<uintptr_t*>(regs.esp + 0x114);
+            SuitLights::Apply(reinterpret_cast<float*>(regs.eax), material);
+            if (SuitLights::HasColor() && SuitLights::IsGoggles(material))
+            {
+                auto device = *reinterpret_cast<IDirect3DDevice9**>(regs.esi + SuitLights::DeviceOffset);
+                if (auto neutral = SuitLights::NeutralTexture(device))
+                    device->SetTexture(0, neutral);
+            }
+        });
+
+        // Glow pass, after FGetHSV; the material is in ebp
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "FF 15 ? ? ? ? 8B 6D 5C 0F 57 C0 83 C4 10 85 ED F3 0F 11 44 24 ? 0F 84 ? ? ? ? 8B 44 24 10 F3 0F 10 40");
-        injector::MakeNOP(pattern.get(0).get<void>(0), 6, true);
-        injector::MakeCALL(pattern.get(0).get<void>(0), FGetHSV, true);
+        static auto SuitLightGlowHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
+        {
+            SuitLights::Apply(reinterpret_cast<float*>(regs.eax), regs.ebp);
+            SuitLights::GlowPassGoggles = SuitLights::HasColor() && SuitLights::IsGoggles(regs.ebp);
+        });
+
+        // Glow pass draw, after its base texture and effect pass; edi is the actor, +0x304 its render device
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "E8 ? ? ? ? 8B 13 57 8B CB FF 52 1C");
+        static auto SuitLightGlowDrawHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
+        {
+            if (!SuitLights::GlowPassGoggles)
+                return;
+            SuitLights::GlowPassGoggles = false;
+            auto renderDevice = *reinterpret_cast<uintptr_t*>(regs.edi + 0x304);
+            auto device = *reinterpret_cast<IDirect3DDevice9**>(renderDevice + SuitLights::DeviceOffset);
+            if (auto neutral = SuitLights::NeutralTexture(device))
+                device->SetTexture(0, neutral);
+        });
     }
 
     {

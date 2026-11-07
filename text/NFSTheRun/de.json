@@ -15,7 +15,7 @@
   "MAIN.ImproveWindowedMode": "Rahmenloses Fenster",
   "MAIN.ImproveWindowedMode.description": "Macht den Fenstermodus rahmenlos und passt das Fenster an die gewählte Auflösung an.",
   "CAMERA.Enable": "Freie Kamera",
-  "CAMERA.Enable.description": "Umsehen mit Maus und rechtem Stick für die Verfolgerkamera. Entferne im Spiel kollidierende Belegungen des rechten Sticks.",
+  "CAMERA.Enable.description": "Umsehen mit Maus und rechtem Stick für die Verfolgerkamera. Entferne im Spiel kollidierende Belegungen des rechten Sticks. LS und RS zusammen drücken wechselt zwischen dem Umsehen des Spiels und diesem.",
   "CAMERA.CameraReturnTimeout": "Verzögerung der Kamerarückkehr",
   "CAMERA.CameraReturnTimeout.description": "Sekunden ohne Kameraeingabe, bevor die Kamera hinter das Auto zurückkehrt.",
   "CAMERA.CameraReturnSpeed": "Geschwindigkeit der Kamerarückkehr",

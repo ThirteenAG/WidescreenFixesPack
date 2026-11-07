@@ -87,7 +87,8 @@ void Init()
     UpdateFrameLimit();
     settings.OnChange("MAIN.FPSLimit", UpdateFrameLimit);
     const auto gogglesColor = settings.Int("BONUS.GogglesLightColor");
-    gColor = gogglesColor == -1 ? settings.Int("BONUS.CustomGogglesLightColor") : gogglesColor;
+    if (gogglesColor > 0 && gogglesColor <= static_cast<int32_t>(SuitLightColors.size()))
+        gColor = SuitLightColors[gogglesColor - 1];
     gBlacklistIndicators = settings.Int("BONUS.BlacklistIndicators");
     bLightSyncRGB = settings.Int("MAIN.LightSyncRGB");
     auto bSkipIntro = settings.Int("MAIN.SkipIntro") != 0;

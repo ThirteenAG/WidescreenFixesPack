@@ -450,42 +450,46 @@
           "label": "@GogglesLightColor.color0"
         },
         {
-          "value": 65280,
+          "value": 1,
           "label": "@GogglesLightColor.color1"
         },
         {
-          "value": 16711680,
+          "value": 2,
           "label": "@GogglesLightColor.color2"
         },
         {
-          "value": 16744448,
+          "value": 3,
           "label": "@GogglesLightColor.color3"
         },
         {
-          "value": 255,
+          "value": 4,
           "label": "@GogglesLightColor.color4"
         },
         {
-          "value": 16777215,
+          "value": 5,
           "label": "@GogglesLightColor.color5"
         },
         {
-          "value": -1,
+          "value": 6,
           "label": "@GogglesLightColor.color6"
+        },
+        {
+          "value": 7,
+          "label": "@GogglesLightColor.color7"
+        },
+        {
+          "value": 8,
+          "label": "@GogglesLightColor.color8"
+        },
+        {
+          "value": 9,
+          "label": "@GogglesLightColor.color9"
+        },
+        {
+          "value": 10,
+          "label": "@GogglesLightColor.color10"
         }
       ]
-    },
-    {
-      "id": "BONUS.CustomGogglesLightColor",
-      "type": "int",
-      "default": 0,
-      "label": "@GogglesLightColor.customvalue",
-      "description": "@GogglesLightColor.customdescription",
-      "page": "graphics",
-      "apply": "restart",
-      "visibility": "editor",
-      "min": 0,
-      "max": 16777215
     },
     {
       "id": "INPUT.Aliases14",

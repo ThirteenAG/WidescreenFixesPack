@@ -6,6 +6,9 @@ module;
 #include <functional>
 #include <stdexcept>
 #include <unordered_map>
+#include <unordered_set>
+#include <string>
+#include <algorithm>
 #include <vector>
 
 #include "Shared/CursorConfinement.hpp"
@@ -541,6 +544,289 @@ namespace UTexture
     }
 }
 
+// Sam's suit and goggle lights are EGlow materials in ETexCharacter.Sam. Each one draws part of a face or body
+// texture unlit in the scene (Material) and again into the glow buffer (GlowMaterial). Both are pointed at a copy of
+// that texture where every texel keeps its brightness and takes the chosen hue, so the light and its glow match.
+namespace SuitLights
+{
+    // Blacklist suit light colours at full brightness, in menu order (setting values 1..10)
+    constexpr uint32_t kColors[] =
+    {
+        0x37FF4F, // Classic Green
+        0xFFB137, // Topaz
+        0xFF3737, // Voron Red
+        0x3766FF, // Navy
+        0xFF3795, // Pink
+        0xB137FF, // Violet
+        0xFFFFFF, // White
+        0xF3FF37, // Gold
+        0xFFB137, // Amber
+        0x37E0FF, // Ghost Blue
+    };
+
+    // The original lights peak at about 80% brightness; lift them so the brightest texels reach the full colour
+    constexpr float kIntensityGain = 1.25f;
+
+    constexpr uintptr_t kObjectOuterOff      = 0x18;
+    constexpr uintptr_t kModifierMaterialOff = 0x4C;
+    constexpr uintptr_t kGlowMaterialOff     = 0x50;
+
+    constexpr uintptr_t kTexFormatOff        = 0x4C;
+    constexpr uintptr_t kTexUClampModeOff    = 0x4D;
+    constexpr uintptr_t kTexVClampModeOff    = 0x4E;
+    constexpr uintptr_t kTexUSizeOff         = 0x58;
+    constexpr uintptr_t kTexVSizeOff         = 0x5C;
+    constexpr uintptr_t kTexFlagsOff         = 0x90;
+    constexpr uintptr_t kTexMipsOff          = 0xB0;
+    constexpr uintptr_t kMipLazyLoaderOff    = 0x10;
+    constexpr uintptr_t kMipLazyArchiveOff   = 0x14;
+    constexpr uintptr_t kMipDataOff          = 0x1C;
+    constexpr uintptr_t kMipDataNumOff       = 0x20;
+
+    constexpr uint8_t TEXF_DXT1  = 3;
+    constexpr uint8_t TEXF_RGBA8 = 5;
+    constexpr uint8_t TEXF_DXT3  = 7;
+    constexpr uint8_t TEXF_DXT5  = 8;
+
+    // Upload the new data like UGameEngine::LoadTgaTexture does
+    constexpr uint32_t kTexRealtimeFlags = 0x60;
+
+    uint32_t gColor = 0;
+    void* TextureClass = nullptr;
+    void** GError = nullptr;
+    int(__fastcall* IsA)(void* object, void* edx, void* cls) = nullptr;
+    const wchar_t* (__fastcall* GetName)(void* object, void* edx) = nullptr;
+    void* (__cdecl* GetTransientPackage)() = nullptr;
+    void* (__cdecl* StaticConstructObject)(void* cls, void* outer, int name, uint32_t flags, void* objectTemplate, void* error, int subobjectRoot) = nullptr;
+    void(__fastcall* AddToRoot)(void* object, void* edx) = nullptr;
+    void(__fastcall* TextureInit)(void* texture, void* edx, int width, int height) = nullptr;
+    void(__fastcall* TexturePostLoad)(void* texture, void* edx) = nullptr;
+
+    std::unordered_map<std::wstring, void*> coloredBySource;
+    std::unordered_set<void*> colored;
+
+    // Lazy loader vtable: [0] Load, [1] Unload
+    void CallMipLoader(uint8_t* mip, int index)
+    {
+        auto loader = mip + kMipLazyLoaderOff;
+        (*reinterpret_cast<void(__fastcall***)(void*, void*)>(loader))[index](loader, nullptr);
+    }
+
+    bool LoadMipData(uint8_t* mip)
+    {
+        if (*reinterpret_cast<int*>(mip + kMipDataNumOff) != 0 || !*reinterpret_cast<void**>(mip + kMipLazyArchiveOff))
+            return false;
+        CallMipLoader(mip, 0);
+        return true;
+    }
+
+    void DecodeColorBlock(const uint8_t* block, bool alwaysFourColors, uint32_t* out)
+    {
+        const uint32_t c0 = block[0] | (block[1] << 8);
+        const uint32_t c1 = block[2] | (block[3] << 8);
+        uint32_t r[4], g[4], b[4], a[4] = { 255, 255, 255, 255 };
+        r[0] = (c0 >> 11) * 255 / 31; g[0] = ((c0 >> 5) & 63) * 255 / 63; b[0] = (c0 & 31) * 255 / 31;
+        r[1] = (c1 >> 11) * 255 / 31; g[1] = ((c1 >> 5) & 63) * 255 / 63; b[1] = (c1 & 31) * 255 / 31;
+        if (alwaysFourColors || c0 > c1)
+        {
+            r[2] = (2 * r[0] + r[1]) / 3; g[2] = (2 * g[0] + g[1]) / 3; b[2] = (2 * b[0] + b[1]) / 3;
+            r[3] = (r[0] + 2 * r[1]) / 3; g[3] = (g[0] + 2 * g[1]) / 3; b[3] = (b[0] + 2 * b[1]) / 3;
+        }
+        else
+        {
+            r[2] = (r[0] + r[1]) / 2; g[2] = (g[0] + g[1]) / 2; b[2] = (b[0] + b[1]) / 2;
+            r[3] = g[3] = b[3] = a[3] = 0;
+        }
+        const uint32_t bits = block[4] | (block[5] << 8) | (block[6] << 16) | (block[7] << 24);
+        for (int i = 0; i < 16; i++)
+        {
+            const uint32_t index = (bits >> (2 * i)) & 3;
+            out[i] = (a[index] << 24) | (r[index] << 16) | (g[index] << 8) | b[index];
+        }
+    }
+
+    void DecodeAlphaBlock(const uint8_t* block, uint8_t format, uint32_t* out)
+    {
+        for (int i = 0; i < 16; i++)
+        {
+            uint32_t alpha = 0;
+            if (format == TEXF_DXT3)
+                alpha = ((block[i / 2] >> ((i & 1) * 4)) & 15) * 17;
+            else
+            {
+                const uint32_t a0 = block[0], a1 = block[1];
+                uint64_t bits = 0;
+                for (int k = 0; k < 6; k++)
+                    bits |= uint64_t(block[2 + k]) << (8 * k);
+                const uint32_t index = (bits >> (3 * i)) & 7;
+                if (index == 0)
+                    alpha = a0;
+                else if (index == 1)
+                    alpha = a1;
+                else if (a0 > a1)
+                    alpha = ((8 - index) * a0 + (index - 1) * a1) / 7;
+                else if (index < 6)
+                    alpha = ((6 - index) * a0 + (index - 1) * a1) / 5;
+                else
+                    alpha = index == 6 ? 0 : 255;
+            }
+            out[i] = (out[i] & 0x00FFFFFF) | (alpha << 24);
+        }
+    }
+
+    bool Decode(uint8_t format, const uint8_t* data, int dataSize, int width, int height, std::vector<uint32_t>& pixels)
+    {
+        pixels.assign(width * height, 0);
+        if (format == TEXF_RGBA8)
+        {
+            if (dataSize < width * height * 4)
+                return false;
+            memcpy(pixels.data(), data, width * height * 4);
+            return true;
+        }
+
+        if (format != TEXF_DXT1 && format != TEXF_DXT3 && format != TEXF_DXT5)
+            return false;
+        const int blockSize = format == TEXF_DXT1 ? 8 : 16;
+        const int blocksX = (width + 3) / 4, blocksY = (height + 3) / 4;
+        if (dataSize < blocksX * blocksY * blockSize)
+            return false;
+
+        for (int by = 0; by < blocksY; by++)
+        {
+            for (int bx = 0; bx < blocksX; bx++)
+            {
+                const uint8_t* block = data + (by * blocksX + bx) * blockSize;
+                uint32_t texels[16];
+                DecodeColorBlock(block + blockSize - 8, format != TEXF_DXT1, texels);
+                if (format != TEXF_DXT1)
+                    DecodeAlphaBlock(block, format, texels);
+                for (int i = 0; i < 16; i++)
+                {
+                    const int x = bx * 4 + (i & 3), y = by * 4 + i / 4;
+                    if (x < width && y < height)
+                        pixels[y * width + x] = texels[i];
+                }
+            }
+        }
+        return true;
+    }
+
+    uint32_t Tint(uint32_t texel)
+    {
+        const uint32_t r = (texel >> 16) & 255, g = (texel >> 8) & 255, b = texel & 255;
+        const float intensity = std::min(1.0f, std::max({ r, g, b }) / 255.0f * kIntensityGain);
+        auto channel = [&](int shift) { return static_cast<uint32_t>(((gColor >> shift) & 255) * intensity + 0.5f) << shift; };
+        return (texel & 0xFF000000) | channel(16) | channel(8) | channel(0);
+    }
+
+    void* MakeColoredCopy(uint8_t* source)
+    {
+        const std::wstring key = GetName(source, nullptr);
+        if (auto it = coloredBySource.find(key); it != coloredBySource.end())
+            return it->second;
+
+        const uint8_t format = source[kTexFormatOff];
+        const int width = *reinterpret_cast<int*>(source + kTexUSizeOff);
+        const int height = *reinterpret_cast<int*>(source + kTexVSizeOff);
+        auto mip = *reinterpret_cast<uint8_t**>(source + kTexMipsOff);
+        if (!mip || width <= 0 || height <= 0)
+            return nullptr;
+
+        // The renderer streams the source data in and out on its own; leave it as it was found
+        const bool loaded = LoadMipData(mip);
+        std::vector<uint32_t> pixels;
+        const bool decoded = Decode(format, *reinterpret_cast<uint8_t**>(mip + kMipDataOff), *reinterpret_cast<int*>(mip + kMipDataNumOff), width, height, pixels);
+        if (loaded)
+            CallMipLoader(mip, 1);
+        if (!decoded)
+            return nullptr;
+        for (auto& texel : pixels)
+            texel = Tint(texel);
+
+        auto texture = static_cast<uint8_t*>(StaticConstructObject(TextureClass, GetTransientPackage(), 0, 0, nullptr, *GError, 0));
+        texture[kTexFormatOff] = TEXF_RGBA8;
+        texture[kTexUClampModeOff] = source[kTexUClampModeOff];
+        texture[kTexVClampModeOff] = source[kTexVClampModeOff];
+        TextureInit(texture, nullptr, width, height);
+        TexturePostLoad(texture, nullptr);
+        auto newMip = *reinterpret_cast<uint8_t**>(texture + kTexMipsOff);
+        LoadMipData(newMip);
+        memcpy(*reinterpret_cast<void**>(newMip + kMipDataOff), pixels.data(), pixels.size() * 4);
+        *reinterpret_cast<uint32_t*>(texture + kTexFlagsOff) |= kTexRealtimeFlags;
+
+        // Shared by every level that loads the same light texture
+        AddToRoot(texture, nullptr);
+        coloredBySource.emplace(key, texture);
+        colored.insert(texture);
+        return texture;
+    }
+
+    bool IsSamGlow(uint8_t* glow)
+    {
+        auto group = *reinterpret_cast<void**>(glow + kObjectOuterOff);
+        auto package = group ? *reinterpret_cast<void**>(static_cast<uint8_t*>(group) + kObjectOuterOff) : nullptr;
+        return package && _wcsicmp(GetName(group, nullptr), L"Sam") == 0 && _wcsicmp(GetName(package, nullptr), L"ETexCharacter") == 0;
+    }
+
+    void Recolor(uint8_t* glow)
+    {
+        auto& material = *reinterpret_cast<void**>(glow + kModifierMaterialOff);
+        auto& glowMaterial = *reinterpret_cast<void**>(glow + kGlowMaterialOff);
+        if ((!material || colored.contains(material)) && (!glowMaterial || colored.contains(glowMaterial)))
+            return;
+        if (!IsSamGlow(glow))
+            return;
+
+        for (void** slot : { &material, &glowMaterial })
+        {
+            if (*slot && !colored.contains(*slot) && IsA(*slot, nullptr, TextureClass))
+            {
+                if (auto copy = MakeColoredCopy(static_cast<uint8_t*>(*slot)))
+                    *slot = copy;
+            }
+        }
+    }
+
+    // Called for every material D3DDrv sets up; returns the EGlow modifier of the material, if any
+    SafetyHookInline shRetreiveGlowModifier = {};
+    void* __cdecl RetreiveGlowModifier(void* material)
+    {
+        auto glow = shRetreiveGlowModifier.ccall<uint8_t*>(material);
+        if (glow)
+            Recolor(glow);
+        return glow;
+    }
+
+    void Init()
+    {
+        if (nSuitLightColor <= 0 || nSuitLightColor > static_cast<int>(std::size(kColors)))
+            return;
+
+        // Normalise to full brightness so a dimmer table entry keeps its hue
+        const uint32_t color = kColors[nSuitLightColor - 1];
+        const uint32_t peak = std::max({ (color >> 16) & 255, (color >> 8) & 255, color & 255 });
+        for (int shift : { 16, 8, 0 })
+            gColor |= std::min(255u, ((color >> shift) & 255) * 255 / std::max(peak, 1u)) << shift;
+
+        auto core = GetModuleHandle(L"Core");
+        auto engine = GetModuleHandle(L"Engine");
+        TextureClass = GetProcAddress(engine, "?PrivateStaticClass@UTexture@@0VUClass@@A");
+        GError = reinterpret_cast<void**>(GetProcAddress(core, "?GError@@3PAVFOutputDeviceError@@A"));
+        IsA = reinterpret_cast<decltype(IsA)>(GetProcAddress(core, "?IsA@UObject@@QBEHPAVUClass@@@Z"));
+        GetName = reinterpret_cast<decltype(GetName)>(FindProcAddress(core, "?GetName@UObject@@QBEPBGXZ", "?GetName@UObject@@QBEPB_WXZ"));
+        GetTransientPackage = reinterpret_cast<decltype(GetTransientPackage)>(GetProcAddress(core, "?GetTransientPackage@UObject@@SAPAVUPackage@@XZ"));
+        StaticConstructObject = reinterpret_cast<decltype(StaticConstructObject)>(GetProcAddress(core, "?StaticConstructObject@UObject@@SAPAV1@PAVUClass@@PAV1@VFName@@K1PAVFOutputDevice@@H@Z"));
+        AddToRoot = reinterpret_cast<decltype(AddToRoot)>(GetProcAddress(core, "?AddToRoot@UObject@@QAEXXZ"));
+        TextureInit = reinterpret_cast<decltype(TextureInit)>(GetProcAddress(engine, "?Init@UTexture@@UAEXHH@Z"));
+        TexturePostLoad = reinterpret_cast<decltype(TexturePostLoad)>(GetProcAddress(engine, "?PostLoad@UTexture@@UAEXXZ"));
+        if (!TextureClass || !GError || !IsA || !GetName || !GetTransientPackage || !StaticConstructObject || !AddToRoot || !TextureInit || !TexturePostLoad)
+            throw std::runtime_error("Suit light exports not found");
+
+        shRetreiveGlowModifier = safetyhook::create_inline(GetProcAddress(engine, "?RetreiveGlowModifier@UEGlow@@SAPAV1@PAVUMaterial@@@Z"), RetreiveGlowModifier);
+    }
+}
+
 export void InitEngine()
 {
     auto digitalHealth = hook::module_pattern(GetModuleHandle(L"Engine"), "6A 0A 6A 00 6A 01 8D 85 ? ? ? ? 50 57 E8 ? ? ? ? 8B 35 ? ? ? ? 83 C4 20");
@@ -665,37 +951,7 @@ export void InitEngine()
         injector::WriteMemory<uint8_t>(thermalDispatch.get_first(9), 2, true);
     }
 
-    if (gColor.RGBA)
-    {
-        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "B0 7F 88 45 24 88 45 25 88 45 26 C6 45 27 FF 8B 45 24 50 8B CB FF 52 40"); //104070CF
-        if (!pattern.empty())
-        {
-            struct USkeletalMeshInstanceRenderHook
-            {
-                void operator()(injector::reg_pack& regs)
-                {
-                    *(uint8_t*)(regs.ebp + 0x24) = gColor.B;
-                    *(uint8_t*)(regs.ebp + 0x25) = gColor.G;
-                    *(uint8_t*)(regs.ebp + 0x26) = gColor.R;
-                    *(uint8_t*)(regs.ebp + 0x27) = 0xFF;
-                }
-            }; injector::MakeInline<USkeletalMeshInstanceRenderHook>(pattern.get_first(0), pattern.get_first(15));
-        }
-        else
-        {
-            pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "C7 85 ? ? ? ? ? ? ? ? FF B5 ? ? ? ? FF 50");
-            struct USkeletalMeshInstanceRenderHook
-            {
-                void operator()(injector::reg_pack& regs)
-                {
-                    *(uint8_t*)(regs.ebp - 0xA8) = gColor.B;
-                    *(uint8_t*)(regs.ebp - 0xA7) = gColor.G;
-                    *(uint8_t*)(regs.ebp - 0xA6) = gColor.R;
-                    *(uint8_t*)(regs.ebp - 0xA5) = 0xFF;
-                }
-            }; injector::MakeInline<USkeletalMeshInstanceRenderHook>(pattern.get_first(0), pattern.get_first(10));
-        }
-    }
+    SuitLights::Init();
 
     #if _DEBUG
     auto pFindAxisName = FindProcAddress(GetModuleHandle(L"Engine"), "?FindAxisName@UInput@@MBEPAMPAVAActor@@PB_W@Z", "?FindAxisName@UInput@@MBEPAMPAVAActor@@PBG@Z");

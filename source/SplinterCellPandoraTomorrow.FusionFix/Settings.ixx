@@ -133,8 +133,7 @@ public:
             Screen.nReflectionsResolution = settings.Int("MAIN.ReflectionsResolution");
             Screen.nBloomResolutionMultiplier = std::clamp(settings.Int("MAIN.BloomResolutionMultiplier"), 0, 4);
             fLightDistanceMultiplier = std::clamp(settings.Float("MAIN.LightDistanceMultiplier"), 1.0f, 8.0f);
-            const auto gogglesColor = settings.Int("BONUS.GogglesLightColor");
-            gColor.RGBA = gogglesColor == -1 ? settings.Int("BONUS.CustomGogglesLightColor") : gogglesColor;
+            nSuitLightColor = settings.Int("BONUS.GogglesLightColor");
             bSkipIntro = settings.Int("MAIN.SkipIntro") != 0;
             bSkipPressStartToContinue = settings.Int("MAIN.SkipPressStart") != 0;
             bEnableConsole = settings.Int("MAIN.EnableConsole") != 0;

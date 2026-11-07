@@ -15,7 +15,7 @@
   "MAIN.ImproveWindowedMode": "Ventana sin bordes",
   "MAIN.ImproveWindowedMode.description": "Hace el modo ventana sin bordes y ajusta la ventana a la resolución elegida.",
   "CAMERA.Enable": "Cámara libre",
-  "CAMERA.Enable.description": "Activa la mirada con ratón y stick derecho en la cámara de persecución. Quita en el juego los controles del stick derecho que choquen.",
+  "CAMERA.Enable.description": "Activa la mirada con ratón y stick derecho en la cámara de persecución. Quita en el juego los controles del stick derecho que choquen. Pulsa LS y RS a la vez para cambiar entre la mirada libre del juego y esta.",
   "CAMERA.CameraReturnTimeout": "Retardo de retorno de la cámara",
   "CAMERA.CameraReturnTimeout.description": "Segundos sin mover la cámara antes de volver detrás del coche.",
   "CAMERA.CameraReturnSpeed": "Velocidad de retorno de la cámara",

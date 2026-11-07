@@ -374,18 +374,22 @@
     },
     {
       "id": "2INSTANCESPLITSCREEN.Layout",
-      "type": "int",
+      "type": "choice",
       "default": 0,
       "label": "@2INSTANCESPLITSCREEN.Layout",
       "description": "@2INSTANCESPLITSCREEN.Layout.description",
       "page": "compatibility",
       "apply": "restart",
       "visibility": "editor",
-      "min": 0,
-      "max": 1,
-      "step": 1,
-      "control": [
-        "stepper"
+      "choices": [
+        {
+          "value": 0,
+          "label": "@2INSTANCESPLITSCREEN.Layout.0"
+        },
+        {
+          "value": 1,
+          "label": "@2INSTANCESPLITSCREEN.Layout.1"
+        }
       ]
     },
     {

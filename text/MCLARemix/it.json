@@ -4,7 +4,7 @@
   "page.controls": "Comandi",
   "page.compatibility": "Compatibilità",
   "ForceAspectRatio": "Proporzioni",
-  "ForceAspectRatio.description": "Auto segue le proporzioni di visualizzazione di PPSSPP. Inserisci L:A o un decimale (da 1:1 a 4:1) per sostituirle. Le modifiche si applicano durante il gioco.",
+  "ForceAspectRatio.description": "Auto segue le proporzioni di visualizzazione di PPSSPP. Per il widescreen attiva «Allunga» nel layout dello schermo di PPSSPP. Inserisci L:A o un decimale (da 1:1 a 4:1) per sostituirle. Le modifiche si applicano durante il gioco.",
   "FOVFactor": "Fattore campo visivo",
   "FOVFactor.description": "Scala il campo visivo della vista 3D da 0,5 a 2,0; 1,0 mantiene l'angolo originale. Il sorvolo iniziale delle gare mantiene la sua inquadratura. Le modifiche si applicano durante il gioco.",
   "HudAspectRatioConstraint": "Formato HUD",

@@ -63,7 +63,10 @@ public:
 
                     fPlayerVisibility = std::clamp(fPlayerVisibility, 0.0f, 1.0f);
 
-                    auto [R, G, B] = LEDEffects::RGBtoPercent(1, 255, 1, fPlayerVisibility);
+                    uint32_t rgb = 0x01FF01;
+                    if (gColor >= 1 && gColor <= SuitLightColors.size())
+                        rgb = SuitLightColors[gColor - 1];
+                    auto [R, G, B] = LEDEffects::RGBtoPercent((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, fPlayerVisibility);
 
                     LEDEffects::SetLighting(R, G, B, false, false, true);
                     AmmoInClip();
