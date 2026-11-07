@@ -1,8 +1,8 @@
 {
   "FMVMode": "Visualización de vídeos",
-  "FMVMode.description": "Original muestra el vídeo completo en un marco 4:3; Ajustar usa la pantalla. La imagen permanece completa.",
+  "FMVMode.description": "Original muestra el vídeo completo en un marco 4:3; Llenar usa la pantalla. La imagen permanece completa.",
   "FMVMode.original": "Original",
-  "FMVMode.fit": "Ajustar",
+  "FMVMode.fit": "Llenar",
   "plugin.name": "Just Cause Fusion Fix",
   "page.display": "Pantalla",
   "page.advanced": "Avanzado",

@@ -44,7 +44,9 @@ export union FColor
     {
         uint8_t B, G, R, A;
     };
-} gColor;
+};
+
+export int nSuitLightColor = 0;
 
 export bool bSkipIntro = false;
 export bool bPlayingVideo = false;

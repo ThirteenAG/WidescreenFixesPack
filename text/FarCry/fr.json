@@ -10,7 +10,7 @@
   "SMAA": "SMAA",
   "SMAA.description": "Applique un anticrénelage morphologique sous-pixel. Le MSAA du jeu doit être désactivé.",
   "ConsoleGamma": "Gamma console",
-  "ConsoleGamma.description": "Applique la courbe de gamma console plus contrastée.",
+  "ConsoleGamma.description": "Une courbe de gamma personnalisée pour une image plus contrastée aux couleurs plus profondes, semblable au rendu de GTA IV sur Xbox 360.",
   "MAIN.TextLanguage": "Langue des textes",
   "MAIN.TextLanguage.description": "Langue des textes du correctif et des autres plugins. Auto utilise l'anglais si la langue du jeu n'est pas reconnue.",
   "page.compatibility": "Compatibilité",

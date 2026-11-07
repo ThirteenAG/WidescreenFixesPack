@@ -15,7 +15,7 @@
   "MAIN.ImproveWindowedMode": "Finestra senza bordi",
   "MAIN.ImproveWindowedMode.description": "Rende la modalità finestra senza bordi e adatta la finestra alla risoluzione scelta.",
   "CAMERA.Enable": "Visuale libera",
-  "CAMERA.Enable.description": "Visuale libera con mouse e stick destro per la camera d'inseguimento. Libera lo stick destro nei comandi del gioco.",
+  "CAMERA.Enable.description": "Visuale libera con mouse e stick destro per la camera d'inseguimento. Libera lo stick destro nei comandi del gioco. Premi LS e RS insieme per passare dalla visuale libera del gioco a questa.",
   "CAMERA.CameraReturnTimeout": "Ritardo ritorno telecamera",
   "CAMERA.CameraReturnTimeout.description": "Secondi senza input prima che la telecamera torni dietro l'auto.",
   "CAMERA.CameraReturnSpeed": "Velocità ritorno telecamera",

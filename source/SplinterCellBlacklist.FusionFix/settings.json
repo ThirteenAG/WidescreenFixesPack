@@ -281,15 +281,31 @@
     },
     {
       "id": "MAIN.DefaultMissionFilter",
-      "type": "int",
+      "type": "choice",
       "default": 1,
       "label": "@MAIN.DefaultMissionFilter",
       "description": "@MAIN.DefaultMissionFilter.description",
       "page": "gameplay",
       "apply": "restart",
       "visibility": "menu",
-      "min": 0,
-      "max": 3
+      "choices": [
+        {
+          "value": 0,
+          "label": "@MAIN.DefaultMissionFilter.0"
+        },
+        {
+          "value": 1,
+          "label": "@MAIN.DefaultMissionFilter.1"
+        },
+        {
+          "value": 2,
+          "label": "@MAIN.DefaultMissionFilter.2"
+        },
+        {
+          "value": 3,
+          "label": "@MAIN.DefaultMissionFilter.3"
+        }
+      ]
     },
     {
       "id": "MAIN.SMIMapDisableStartupAnimation",
@@ -675,7 +691,7 @@
         },
         {
           "value": "fr",
-          "label": "FranÃ§ais"
+          "label": "Français"
         },
         {
           "value": "de",
@@ -687,7 +703,7 @@
         },
         {
           "value": "es",
-          "label": "EspaÃ±ol"
+          "label": "Español"
         }
       ]
     },

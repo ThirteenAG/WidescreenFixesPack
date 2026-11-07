@@ -15,7 +15,7 @@
   "MAIN.ImproveWindowedMode": "Borderless window",
   "MAIN.ImproveWindowedMode.description": "Make windowed mode borderless and match the selected resolution.",
   "CAMERA.Enable": "Free-look camera",
-  "CAMERA.Enable.description": "Enable mouse and right-stick look for the chase camera. Unbind conflicting right-stick controls in the game.",
+  "CAMERA.Enable.description": "Enable mouse and right-stick look for the chase camera. Unbind conflicting right-stick controls in the game. Press LS and RS together to switch between the game's own free look and this one.",
   "CAMERA.CameraReturnTimeout": "Camera return delay",
   "CAMERA.CameraReturnTimeout.description": "Seconds without camera input before returning behind the car.",
   "CAMERA.CameraReturnSpeed": "Camera return speed",

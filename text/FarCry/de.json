@@ -10,7 +10,7 @@
   "SMAA": "SMAA",
   "SMAA.description": "Wendet subpixel-morphologische Kantenglättung an. Das MSAA des Spiels muss aus sein.",
   "ConsoleGamma": "Konsolen-Gamma",
-  "ConsoleGamma.description": "Wendet die kontrastreichere Gammakurve der Konsole an.",
+  "ConsoleGamma.description": "Eine eigene Gammakurve für ein kontrastreicheres Bild mit satteren Farben, ähnlich wie GTA IV auf der Xbox 360 aussah.",
   "MAIN.TextLanguage": "Textsprache",
   "MAIN.TextLanguage.description": "Sprache der Texte des Fixes und anderer Plugins. Auto nutzt Englisch, wenn die Spielsprache nicht erkannt wird.",
   "page.compatibility": "Kompatibilität",

@@ -1,8 +1,8 @@
 {
   "FMVMode": "Movie display",
-  "FMVMode.description": "Original fits the whole movie inside a 4:3 frame; Fit uses the screen. Both preserve the full picture.",
+  "FMVMode.description": "Original fits the whole movie inside a 4:3 frame; Fill uses the screen. Both preserve the full picture.",
   "FMVMode.original": "Original",
-  "FMVMode.fit": "Fit",
+  "FMVMode.fit": "Fill",
   "plugin.name": "Just Cause Fusion Fix",
   "page.display": "Display",
   "page.advanced": "Advanced",

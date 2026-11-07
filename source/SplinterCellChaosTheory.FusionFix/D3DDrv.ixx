@@ -20,102 +20,174 @@ std::atomic<float> gVisibility{ 1.0f };
 export int32_t gBlacklistIndicators = 0;
 export FLTColor gColor = { 0 };
 export uint32_t bLightSyncRGB;
-float* __cdecl FGetHSV(float* dest, uint8_t H, uint8_t S, uint8_t V, const uint8_t* light)
+
+// Ops Suit Light colours, in the order of the goggles light setting (0 keeps the game's own lights)
+export constexpr std::array<uint32_t, 10> SuitLightColors =
 {
-    bool bChangeColor = false;
-    if ((H == 0x41 && S == 0xC8) || (H == 0x2C && S == 0xCC) || (H == 0x00 && S == 0xFF && V == 0xFF))
-    {
-        const auto id = *reinterpret_cast<const uint32_t*>(light + 20);
-        bChangeColor = id == 862 || id == 879 || id == 881 || id == 875;
-        if (bChangeColor && !gColor.empty())
-        {
-            dest[0] = gColor.R;
-            dest[1] = gColor.G;
-            dest[2] = gColor.B;
-            dest[3] = 1.0f;
-            if (gBlacklistIndicators)
-            {
-                const float visibility = gVisibility.load(std::memory_order_relaxed);
-                dest[0] *= visibility;
-                dest[1] *= visibility;
-                dest[2] *= visibility;
-                dest[3] *= visibility;
-            }
-            return dest;
-        }
-    }
+    0x37FF4F, // Classic Green
+    0xFFB137, // Topaz
+    0xFF3737, // Voron Red
+    0x3766FF, // Navy
+    0xFF3795, // Pink
+    0xB137FF, // Violet
+    0xFFFFFF, // White
+    0xF3FF37, // Gold
+    0xFFB137, // Amber
+    0x37E0FF, // Ghost Blue
+};
 
-    float r, g, b, a = 1.0f;
-    float v14 = static_cast<float>(H) * 6.0f * 0.00390625f;
-    float v4 = floor(v14);
-    float v5 = static_cast<float>(255 - S) * 0.0039215689f;
-    float v6 = static_cast<float>(V) * 0.0039215689f;
-    float v16 = (1.0f - v5) * v6;
-    float v10 = (1.0f - (v5 * (v14 - v4))) * v6;
-    float v7 = (1.0f - (v14 - v4)) * v5;
-    float v15 = static_cast<float>(V) * 0.0039215689f;
-    float v17 = (1.0f - v7) * v6;
+// Sam's suit and goggle lights are SCX_glow_materials of ESam_TEX. They draw the skin's diffuse texture, whose lenses
+// are painted green, times an HSV colour: a surface pass added to the scene and a pass into the glow buffer.
+// A colour multiply can't turn green texels red or blue, so with a chosen colour these draws use shaders that keep
+// the texel's brightness and replace its hue.
+using FGetHSVFn = float* (__cdecl*)(float* dest, uint32_t H, uint32_t S, uint32_t V);
+FGetHSVFn FGetHSV = nullptr;
+uint8_t*** NameEntries = nullptr;
+const uint8_t* gSuitLight = nullptr;
 
-    switch (static_cast<uint32_t>(v4))
-    {
-        case 0:
-            r = v15;
-            g = v17;
-            b = v16;
-            break;
-        case 1:
-            r = v10;
-            g = v15;
-            b = v16;
-            break;
-        case 2:
-            r = v16;
-            g = v15;
-            b = v17;
-            break;
-        case 3:
-            r = v16;
-            g = v10;
-            b = v15;
-            break;
-        case 4:
-            r = v17;
-            g = v16;
-            b = v15;
-            break;
-        case 5:
-            r = v15;
-            g = v16;
-            b = v10;
-            break;
-        default:
-            break;
-    }
-
-    dest[0] = r;
-    dest[1] = g;
-    dest[2] = b;
-    dest[3] = a;
-
-    if (bChangeColor && gBlacklistIndicators)
-    {
-        const float visibility = gVisibility.load(std::memory_order_relaxed);
-        dest[0] *= visibility;
-        dest[1] *= visibility;
-        dest[2] *= visibility;
-        dest[3] *= visibility;
-    }
-
-    return dest;
+const char* ObjectName(const uint8_t* object)
+{
+    auto entry = (*NameEntries)[*reinterpret_cast<const int32_t*>(object + 0x20)];
+    return reinterpret_cast<const char*>(entry + 12);
 }
 
-void ApplyLightHsv(SafetyHookContext& regs, uintptr_t light, uintptr_t resume)
+bool IsSuitLight(const uint8_t* material)
 {
+    auto package = material;
+    while (auto outer = *reinterpret_cast<const uint8_t* const*>(package + 0x18))
+        package = outer;
+    if (_stricmp(ObjectName(package), "ESam_TEX") != 0)
+        return false;
+
+    std::string name = ObjectName(material);
+    std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return name.find("glow") != std::string::npos && name.find("radio") == std::string::npos;
+}
+
+void ApplyLightHsv(SafetyHookContext& regs, uintptr_t material, uintptr_t resume)
+{
+    if (reinterpret_cast<const uint8_t*>(material) != gSuitLight)
+        return;
+
     const auto args = reinterpret_cast<const uint32_t*>(regs.esp);
     auto dest = reinterpret_cast<float*>(args[0]);
-    regs.eax = reinterpret_cast<uintptr_t>(FGetHSV(dest, static_cast<uint8_t>(args[1]), static_cast<uint8_t>(args[2]),
-        static_cast<uint8_t>(args[3]), reinterpret_cast<const uint8_t*>(light)));
+    if (gColor.empty())
+    {
+        FGetHSV(dest, args[1], args[2], args[3]);
+    }
+    else
+    {
+        const float brightness = static_cast<float>(args[3] & 0xFF) / 255.0f;
+        dest[0] = gColor.R * brightness;
+        dest[1] = gColor.G * brightness;
+        dest[2] = gColor.B * brightness;
+        dest[3] = 1.0f;
+    }
+
+    if (gBlacklistIndicators)
+    {
+        const float visibility = gVisibility.load(std::memory_order_relaxed);
+        for (int i = 0; i < 4; i++)
+            dest[i] *= visibility;
+    }
+
+    regs.eax = reinterpret_cast<uintptr_t>(dest);
     regs.eip = resume;
+}
+
+// The game's glow material shaders. Surface pass: tex t0; mul r0, t0, v0; mul_x4 r0, r0, c0.w
+constexpr uint32_t SurfacePassShader[] = { 0xFFFF0101, 0x00000042, 0xB00F0000, 0x00000005, 0x800F0000, 0xB0E40000, 0x90E40000,
+    0x00000005, 0x820F0000, 0x80E40000, 0xA0FF0000, 0x0000FFFF };
+// Glow buffer pass: tex t0; mul r0, t0, c0
+constexpr uint32_t GlowPassShader[] = { 0xFFFF0101, 0x00000042, 0xB00F0000, 0x00000005, 0x800F0000, 0xB0E40000, 0xA0E40000,
+    0x0000FFFF };
+
+// ps_2_0 replacements: hi/lo = max/min of the texel, peak = max of the colour, white = lo / 2 (the lens's hot core);
+// rgb = colour * (hi - white) + white * peak, alpha = texel alpha * colour alpha. Surface pass: colour = v0, result * 4 * c0.w
+constexpr uint32_t SurfacePassRecolor[] = { 0xFFFF0200, 0x05000051, 0xA00F0001, 0x3F000000, 0x40800000, 0x00000000, 0x00000000, 0x0200001F, 0x80000000,
+    0x900F0000, 0x0200001F, 0x80000000, 0xB0030000, 0x0200001F, 0x90000000, 0xA00F0800, 0x03000042, 0x800F0000,
+    0xB0E40000, 0xA0E40800, 0x0300000B, 0x80080001, 0x80550000, 0x80AA0000, 0x0300000B, 0x80080002, 0x80000000,
+    0x80FF0001, 0x0300000A, 0x80010001, 0x80AA0000, 0x80550000, 0x0300000A, 0x80010002, 0x80000001, 0x80000000,
+    0x03000005, 0x80080000, 0x80FF0000, 0x90FF0000, 0x04000004, 0x80010001, 0x80000002, 0xA1000001, 0x80FF0002,
+    0x03000005, 0x80020001, 0x80000002, 0xA0000001, 0x0300000B, 0x80040001, 0x90550000, 0x90AA0000, 0x0300000B,
+    0x80010002, 0x90000000, 0x80AA0001, 0x03000005, 0x80020001, 0x80550001, 0x80000002, 0x04000004, 0x80070000,
+    0x90E40000, 0x80000001, 0x80550001, 0x02000001, 0x80020001, 0xA0550001, 0x03000005, 0x80010001, 0x80550001,
+    0xA0FF0000, 0x03000005, 0x800F0000, 0x80E40000, 0x80000001, 0x02000001, 0x800F0800, 0x80E40000, 0x0000FFFF };
+// Glow buffer pass: colour = c0
+constexpr uint32_t GlowPassRecolor[] = { 0xFFFF0200, 0x05000051, 0xA00F0001, 0x3F000000, 0x00000000, 0x00000000, 0x00000000, 0x0200001F, 0x80000000,
+    0xB0030000, 0x0200001F, 0x90000000, 0xA00F0800, 0x03000042, 0x800F0000, 0xB0E40000, 0xA0E40800, 0x0300000B,
+    0x80080001, 0x80550000, 0x80AA0000, 0x0300000B, 0x80080002, 0x80000000, 0x80FF0001, 0x0300000A, 0x80010001,
+    0x80AA0000, 0x80550000, 0x0300000A, 0x80010002, 0x80000001, 0x80000000, 0x03000005, 0x80080000, 0x80FF0000,
+    0xA0FF0000, 0x04000004, 0x80010001, 0x80000002, 0xA1000001, 0x80FF0002, 0x03000005, 0x80020001, 0x80000002,
+    0xA0000001, 0x0300000B, 0x80040001, 0xA0550000, 0xA0AA0000, 0x0300000B, 0x80010002, 0xA0000000, 0x80AA0001,
+    0x03000005, 0x80020001, 0x80550001, 0x80000002, 0x04000004, 0x80070000, 0xA0E40000, 0x80000001, 0x80550001,
+    0x02000001, 0x800F0800, 0x80E40000, 0x0000FFFF };
+
+IDirect3DDevice9* RecolorDevice = nullptr;
+IDirect3DPixelShader9* SurfacePassRecolorShader = nullptr;
+IDirect3DPixelShader9* GlowPassRecolorShader = nullptr;
+
+IDirect3DPixelShader9* RecolorShader(IDirect3DDevice9* device, IDirect3DPixelShader9* shader)
+{
+    if (device != RecolorDevice)
+    {
+        if (SurfacePassRecolorShader)
+            SurfacePassRecolorShader->Release();
+        if (GlowPassRecolorShader)
+            GlowPassRecolorShader->Release();
+        SurfacePassRecolorShader = nullptr;
+        GlowPassRecolorShader = nullptr;
+        device->CreatePixelShader(reinterpret_cast<const DWORD*>(SurfacePassRecolor), &SurfacePassRecolorShader);
+        device->CreatePixelShader(reinterpret_cast<const DWORD*>(GlowPassRecolor), &GlowPassRecolorShader);
+        RecolorDevice = device;
+    }
+
+    uint32_t function[16]{};
+    UINT size = 0;
+    if (FAILED(shader->GetFunction(nullptr, &size)) || size > sizeof(function) || FAILED(shader->GetFunction(function, &size)))
+        return nullptr;
+    if (size == sizeof(SurfacePassShader) && std::memcmp(function, SurfacePassShader, size) == 0)
+        return SurfacePassRecolorShader;
+    if (size == sizeof(GlowPassShader) && std::memcmp(function, GlowPassShader, size) == 0)
+        return GlowPassRecolorShader;
+    return nullptr;
+}
+
+using DrawIndexedPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, INT, UINT, UINT, UINT, UINT);
+DrawIndexedPrimitiveFn DrawIndexedPrimitiveOriginal = nullptr;
+HRESULT __stdcall DrawIndexedPrimitiveHook(IDirect3DDevice9* device, D3DPRIMITIVETYPE type, INT baseVertex, UINT minIndex,
+    UINT numVertices, UINT startIndex, UINT primitiveCount)
+{
+    IDirect3DPixelShader9* shader = nullptr;
+    if (!gSuitLight || FAILED(device->GetPixelShader(&shader)) || !shader)
+        return DrawIndexedPrimitiveOriginal(device, type, baseVertex, minIndex, numVertices, startIndex, primitiveCount);
+
+    auto recolor = RecolorShader(device, shader);
+    if (recolor)
+        device->SetPixelShader(recolor);
+    auto result = DrawIndexedPrimitiveOriginal(device, type, baseVertex, minIndex, numVertices, startIndex, primitiveCount);
+    if (recolor)
+        device->SetPixelShader(shader);
+    shader->Release();
+    return result;
+}
+
+// Draws a mesh section with an SCX_glow_material
+SafetyHookInline shGlowMaterialDraw = {};
+int __fastcall GlowMaterialDraw(uint8_t* renderer, void* edx, uint8_t* material, void* section)
+{
+    if (!gColor.empty() && !DrawIndexedPrimitiveOriginal)
+    {
+        auto device = *reinterpret_cast<IDirect3DDevice9**>(*reinterpret_cast<uint8_t**>(renderer + 0x1A4) + 0x4D3C);
+        auto vtable = *reinterpret_cast<uintptr_t**>(device);
+        DrawIndexedPrimitiveOriginal = reinterpret_cast<DrawIndexedPrimitiveFn>(vtable[82]);
+        injector::WriteMemory(&vtable[82], &DrawIndexedPrimitiveHook, true);
+    }
+
+    gSuitLight = IsSuitLight(material) ? material : nullptr;
+    auto result = shGlowMaterialDraw.unsafe_thiscall<int>(renderer, material, section);
+    gSuitLight = nullptr;
+    return result;
 }
 
 SafetyHookInline shsub_10C86280 = {};
@@ -377,24 +449,41 @@ export void InitD3DDrv()
         injector::WriteMemory<float>(pattern.get_first(6), -0.15f, true);
     }
 
-    //Goggles Light Color
+    // Goggles light colour
     if (!gColor.empty() || gBlacklistIndicators || bLightSyncRGB)
     {
+        pattern = hook::pattern("8B 49 20 8B 15 ? ? ? ? 8B 0C 8A");
+        NameEntries = *pattern.get_first<uint8_t***>(5);
+
+        pattern = hook::pattern("81 EC F4 00 00 00 53 55 8B E9 83 7D 50 0B 56 8B B5 A4 01 00 00");
+        shGlowMaterialDraw = safetyhook::create_inline(pattern.get_first(), GlowMaterialDraw);
+
+        // The glow material's colour: surface pass with and without a projector, glow buffer pass
+        pattern = hook::pattern("33 D2 8A 53 62 8D 4C 24 ? 50 33 C0 8A 43 61 52 50 51 E8 ? ? ? ? 8B 8E ? ? ? ? 8B 11 83 C4 10 BF 01 00 00 00");
+        auto projected = pattern.get_first<uint8_t>(18);
+        FGetHSV = reinterpret_cast<FGetHSVFn>(injector::GetBranchDestination(projected).as_int());
+        static const auto projectedResume = reinterpret_cast<uintptr_t>(projected) + 5;
+        static auto projectedHook = safetyhook::create_mid(projected, [](SafetyHookContext& regs)
+        {
+            ApplyLightHsv(regs, regs.ebx, projectedResume);
+        });
+
         pattern = hook::pattern("33 D2 8A 53 62 8D 4C 24 ? 50 33 C0 8A 43 61 52 50 51 E8 ? ? ? ? 8B 8E ? ? ? ? 8B 11 83 C4 10 6A 01 50 6A 14 51");
-        auto first = pattern.get_first<uint8_t>(18);
-        static const auto firstResume = reinterpret_cast<uintptr_t>(first) + 5;
-        static auto firstHook = safetyhook::create_mid(first, [](SafetyHookContext& regs)
+        auto surface = pattern.get_first<uint8_t>(18);
+        static const auto surfaceResume = reinterpret_cast<uintptr_t>(surface) + 5;
+        static auto surfaceHook = safetyhook::create_mid(surface, [](SafetyHookContext& regs)
         {
-            ApplyLightHsv(regs, regs.ebx, firstResume);
+            ApplyLightHsv(regs, regs.ebx, surfaceResume);
         });
+
         pattern = hook::pattern("33 D2 8A 55 62 33 C0 8A 45 61 68 FF 00 00 00 8D 4C 24 ? 52 50 51 E8 ? ? ? ? 8B 45 48 83 C4 10");
-        auto second = pattern.get_first<uint8_t>(22);
-        static const auto secondResume = reinterpret_cast<uintptr_t>(second) + 5;
-        static auto secondHook = safetyhook::create_mid(second, [](SafetyHookContext& regs)
+        auto glow = pattern.get_first<uint8_t>(22);
+        static const auto glowResume = reinterpret_cast<uintptr_t>(glow) + 5;
+        static auto glowHook = safetyhook::create_mid(glow, [](SafetyHookContext& regs)
         {
-            ApplyLightHsv(regs, regs.ebp, secondResume);
+            ApplyLightHsv(regs, regs.ebp, glowResume);
         });
-        if (!firstHook || !secondHook)
+        if (!shGlowMaterialDraw || !projectedHook || !surfaceHook || !glowHook)
             throw std::runtime_error("Light color hooks unavailable");
 
         pattern = hook::pattern("66 89 44 24 ? 8B 17");
@@ -427,7 +516,8 @@ export void InitD3DDrv()
 
                 fPlayerVisibility = std::clamp(fPlayerVisibility, 0.0f, 1.0f);
 
-                auto [R, G, B] = LEDEffects::RGBtoPercent(1, 255, 1, fPlayerVisibility);
+                const auto color = gColor.empty() ? FLTColor(0x01FF01) : gColor;
+                auto [R, G, B] = LEDEffects::RGBtoPercent(color.R * 255.0f, color.G * 255.0f, color.B * 255.0f, fPlayerVisibility);
 
                 LEDEffects::SetLighting(R, G, B, false, false, true);
             });

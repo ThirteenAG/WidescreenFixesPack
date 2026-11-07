@@ -1,8 +1,8 @@
 {
   "FMVMode": "Filmanzeige",
-  "FMVMode.description": "Original zeigt den ganzen Film in einem 4:3-Rahmen; Einpassen nutzt den Bildschirm. Das Bild bleibt vollständig.",
+  "FMVMode.description": "Original zeigt den ganzen Film in einem 4:3-Rahmen; Füllen nutzt den Bildschirm. Das Bild bleibt vollständig.",
   "FMVMode.original": "Original",
-  "FMVMode.fit": "Einpassen",
+  "FMVMode.fit": "Füllen",
   "plugin.name": "Just Cause Fusion Fix",
   "page.display": "Anzeige",
   "page.advanced": "Erweitert",

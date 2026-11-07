@@ -15,7 +15,7 @@
   "MAIN.ImproveWindowedMode": "Fenêtre sans bordure",
   "MAIN.ImproveWindowedMode.description": "Rend le mode fenêtré sans bordure et adapte la fenêtre à la résolution choisie.",
   "CAMERA.Enable": "Caméra libre",
-  "CAMERA.Enable.description": "Active le regard à la souris et au stick droit pour la caméra de poursuite. Retirez dans le jeu les commandes du stick droit en conflit.",
+  "CAMERA.Enable.description": "Active le regard à la souris et au stick droit pour la caméra de poursuite. Retirez dans le jeu les commandes du stick droit en conflit. Appuyez sur LS et RS ensemble pour passer du regard libre du jeu à celui-ci.",
   "CAMERA.CameraReturnTimeout": "Délai de retour de la caméra",
   "CAMERA.CameraReturnTimeout.description": "Secondes sans mouvement de caméra avant le retour derrière la voiture.",
   "CAMERA.CameraReturnSpeed": "Vitesse de retour de la caméra",

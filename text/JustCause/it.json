@@ -1,8 +1,8 @@
 {
   "FMVMode": "Visualizzazione filmati",
-  "FMVMode.description": "Originale mostra il filmato intero in un riquadro 4:3; Adatta usa lo schermo. L’immagine resta completa.",
+  "FMVMode.description": "Originale mostra il filmato intero in un riquadro 4:3; Riempi usa lo schermo. L’immagine resta completa.",
   "FMVMode.original": "Originale",
-  "FMVMode.fit": "Adatta",
+  "FMVMode.fit": "Riempi",
   "plugin.name": "Just Cause Fusion Fix",
   "page.display": "Schermo",
   "page.advanced": "Avanzate",

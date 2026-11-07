@@ -4,7 +4,7 @@
   "page.controls": "Controls",
   "page.compatibility": "Compatibility",
   "ForceAspectRatio": "Aspect ratio",
-  "ForceAspectRatio.description": "Auto follows PPSSPP's display aspect. Enter W:H or a decimal (1:1 to 4:1) to override it. Changes apply while playing.",
+  "ForceAspectRatio.description": "Auto follows PPSSPP's display aspect. Enable Stretch in PPSSPP's display layout for widescreen. Enter W:H or a decimal (1:1 to 4:1) to override it. Changes apply while playing.",
   "FOVFactor": "FOV factor",
   "FOVFactor.description": "Scales the field of view of the 3D view from 0.5 to 2.0; 1.0 keeps the original angle. The race opening fly-by keeps its own framing. Changes apply while playing.",
   "HudAspectRatioConstraint": "HUD aspect ratio",

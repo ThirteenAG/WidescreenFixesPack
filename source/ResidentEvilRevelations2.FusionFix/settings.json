@@ -388,7 +388,7 @@
         },
         {
           "value": "fr",
-          "label": "FranÃ§ais"
+          "label": "Français"
         },
         {
           "value": "it",
@@ -396,7 +396,7 @@
         },
         {
           "value": "es",
-          "label": "EspaÃ±ol"
+          "label": "Español"
         }
       ],
       "label": "@textlanguage",

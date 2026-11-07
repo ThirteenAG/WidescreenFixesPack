@@ -299,7 +299,7 @@
         },
         {
           "value": "fr",
-          "label": "FranÃ§ais"
+          "label": "Français"
         },
         {
           "value": "de",
@@ -311,7 +311,7 @@
         },
         {
           "value": "es",
-          "label": "EspaÃ±ol"
+          "label": "Español"
         }
       ],
       "label": "@TextLanguage",

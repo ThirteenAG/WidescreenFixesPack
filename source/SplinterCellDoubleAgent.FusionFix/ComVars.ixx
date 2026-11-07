@@ -36,6 +36,20 @@ export int32_t gBlacklistIndicators = 0;
 export uint32_t bLightSyncRGB = false;
 export std::atomic<float> gVisibility{ 1.0f };
 export uint32_t gColor = 0;
+// Blacklist's ops suit light colours at full brightness (0xRRGGBB), BONUS.GogglesLightColor 1 to 10
+export constexpr std::array<uint32_t, 10> SuitLightColors =
+{
+    0x37FF4F, // Classic Green
+    0xFFB137, // Topaz
+    0xFF3737, // Voron Red
+    0x3766FF, // Navy
+    0xFF3795, // Pink
+    0xB137FF, // Violet
+    0xFFFFFF, // White
+    0xF3FF37, // Gold
+    0xFFB137, // Amber
+    0x37E0FF, // Ghost Blue
+};
 export std::atomic<uint64_t> ammoSnapshot{ (uint64_t{ 1 } << 32) | 1 };
 export HWND hGameWindow = NULL;
 export bool IsGameForeground()

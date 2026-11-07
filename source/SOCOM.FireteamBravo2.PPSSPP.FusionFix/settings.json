@@ -199,7 +199,7 @@
         },
         {
           "value": "fr",
-          "label": "FranÃƒÆ’Ã‚Â§ais"
+          "label": "Français"
         },
         {
           "value": "de",
@@ -211,7 +211,7 @@
         },
         {
           "value": "es",
-          "label": "EspaÃƒÆ’Ã‚Â±ol"
+          "label": "Español"
         }
       ],
       "label": "@language",

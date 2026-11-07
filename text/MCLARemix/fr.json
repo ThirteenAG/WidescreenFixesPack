@@ -4,7 +4,7 @@
   "page.controls": "Commandes",
   "page.compatibility": "Compatibilité",
   "ForceAspectRatio": "Format d'image",
-  "ForceAspectRatio.description": "Auto suit le format d'affichage de PPSSPP. Saisissez L:H ou un nombre décimal (1:1 à 4:1) pour le remplacer. Les changements s'appliquent pendant le jeu.",
+  "ForceAspectRatio.description": "Auto suit le format d'affichage de PPSSPP. Activez « Étirer » dans la disposition d'affichage de PPSSPP pour l'écran large. Saisissez L:H ou un nombre décimal (1:1 à 4:1) pour le remplacer. Les changements s'appliquent pendant le jeu.",
   "FOVFactor": "Facteur de champ de vision",
   "FOVFactor.description": "Modifie le champ de vision de la vue 3D de 0,5 à 2,0 ; 1,0 garde l'angle d'origine. Le survol d'ouverture des courses garde son cadrage. Les changements s'appliquent pendant le jeu.",
   "HudAspectRatioConstraint": "Format du HUD",

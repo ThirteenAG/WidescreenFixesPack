@@ -4,7 +4,7 @@
   "page.controls": "Controles",
   "page.compatibility": "Compatibilidad",
   "ForceAspectRatio": "Proporción",
-  "ForceAspectRatio.description": "Auto sigue la proporción de pantalla de PPSSPP. Escribe An:Al o un decimal (de 1:1 a 4:1) para sustituirla. Los cambios se aplican durante la partida.",
+  "ForceAspectRatio.description": "Auto sigue la proporción de pantalla de PPSSPP. Activa «Estirar» en la disposición de pantalla de PPSSPP para pantalla panorámica. Escribe An:Al o un decimal (de 1:1 a 4:1) para sustituirla. Los cambios se aplican durante la partida.",
   "FOVFactor": "Factor de campo de visión",
   "FOVFactor.description": "Escala el campo de visión de la vista 3D de 0,5 a 2,0; 1,0 mantiene el ángulo original. El vuelo de apertura de las carreras mantiene su encuadre. Los cambios se aplican durante la partida.",
   "HudAspectRatioConstraint": "Formato de la interfaz",

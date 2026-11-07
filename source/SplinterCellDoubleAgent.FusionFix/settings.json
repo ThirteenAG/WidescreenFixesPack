@@ -304,6 +304,34 @@
         {
           "value": 3,
           "label": "@BONUS.GogglesLightColor.3"
+        },
+        {
+          "value": 4,
+          "label": "@BONUS.GogglesLightColor.4"
+        },
+        {
+          "value": 5,
+          "label": "@BONUS.GogglesLightColor.5"
+        },
+        {
+          "value": 6,
+          "label": "@BONUS.GogglesLightColor.6"
+        },
+        {
+          "value": 7,
+          "label": "@BONUS.GogglesLightColor.7"
+        },
+        {
+          "value": 8,
+          "label": "@BONUS.GogglesLightColor.8"
+        },
+        {
+          "value": 9,
+          "label": "@BONUS.GogglesLightColor.9"
+        },
+        {
+          "value": 10,
+          "label": "@BONUS.GogglesLightColor.10"
         }
       ]
     },

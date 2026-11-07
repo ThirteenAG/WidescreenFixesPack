@@ -1,8 +1,8 @@
 {
   "FMVMode": "Affichage des vidéos",
-  "FMVMode.description": "Original place toute la vidéo dans un cadre 4:3 ; Ajuster utilise l’écran. L’image reste entière.",
+  "FMVMode.description": "Original place toute la vidéo dans un cadre 4:3 ; Remplir utilise l’écran. L’image reste entière.",
   "FMVMode.original": "Original",
-  "FMVMode.fit": "Ajuster",
+  "FMVMode.fit": "Remplir",
   "plugin.name": "Just Cause Fusion Fix",
   "page.display": "Affichage",
   "page.advanced": "Avancé",

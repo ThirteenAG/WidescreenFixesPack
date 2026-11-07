@@ -42,7 +42,7 @@
 
 ### Lighting
 
-- **Goggles** — Choose Original, Green, Red or Orange for the goggles and suit lights.
+- **Goggles** — Keep the original lights, which change with your visibility, or pick one of the Splinter Cell Blacklist suit light colors: Classic Green, Topaz, Voron Red, Navy, Pink, Violet, White, Gold, Amber or Ghost Blue.
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 - **Suit indicators** — Use Blacklist-style indicators that respond to the player's visibility.
 
