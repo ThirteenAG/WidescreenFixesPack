@@ -154,7 +154,8 @@ void InstallLoadingScreens() {
         progressCount += instruction == progressCall;
         spriteCount += instruction == spriteCall;
     }
-    if (!progressCount || !spriteCount) {
+    // The multiplayer executable draws no sprites on its loading screens.
+    if (!progressCount || (singleBars && !spriteCount)) {
         PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
         return;
     }

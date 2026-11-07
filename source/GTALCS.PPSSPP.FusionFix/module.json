@@ -27,7 +27,8 @@
   "defines": [
     "PSP_HOOK_RAM_END=0x0DD00000",
     "MEM_CUSTOM_TOTAL_SIZE=131072",
-    "PSP_GAME_ABI_COMPAT"
+    "PSP_GAME_ABI_COMPAT",
+    "PSP_CALLBACK_MODULE_GP"
   ],
   "libraries": [
     "-lpspsystemctrl_user",

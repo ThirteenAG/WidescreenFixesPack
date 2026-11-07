@@ -33,7 +33,7 @@ inline uint8_t savedHeader[36];
 inline SafetyMipsInline showHook, closeHook, dispatchHook;
 inline injector::hook_back<int(uintptr_t, int)> show, dispatch;
 inline injector::hook_back<int(uintptr_t)> close;
-inline int (*reset)(uintptr_t, int);
+inline injector::game_fn<int(uintptr_t, int)> reset;
 inline uint32_t resyncButton;
 inline int resyncTarget, resyncFrames;
 inline void Build(bool rewind = true);
@@ -163,8 +163,7 @@ inline void Apply(unsigned row)
         Geometry::fovFactor = float(ticks[row]) / 20;
     else if (row == 4 || row == 5)
     {
-        // The custom ratio was parsed at start. Parsing text here would call
-        // strtof on the game thread, which crashes the emulator.
+        // The custom ratio was parsed at start.
         const float aspect = ticks[row] == 5 ? customAspects[row - 4] : aspects[ticks[row]];
         if (row == 4)
             Geometry::forcedAspect = aspect;
@@ -530,7 +529,7 @@ inline void Install()
     const auto dispatchSite = sites::Required("E0 FF BD 27 25 30 A0 00 C0 29 06 00 80 38 06 00 21 28 A7 00 21 28 85 00 E4 00 A5 8C 10 00 BF AF");
     const auto resetSite = sites::Required("E0 FF BD 27 FF 00 A7 30 3C 00 85 8C 34 00 80 AC 38 00 80 AC 10 00 BF AF 09 00 E0 10 3C 00 80 AC");
     header = Absolute(headerSite, 0, 32);
-    reset = reinterpret_cast<decltype(reset)>(resetSite);
+    reset = decltype(reset)(resetSite);
     showHook = safetymips::create_inline(showSite, Show);
     show.fun = showHook.original<decltype(show.fun)>();
     closeHook = safetymips::create_inline(closeSite, Close);

@@ -7,9 +7,9 @@ inline uintptr_t title;
 inline int startupFrame{ -1 }, idleFrame{ -1 };
 inline SafetyMipsInline keyHook;
 inline injector::hook_back<void(uintptr_t)> keys;
-inline int (*labelAt)(const char*, uintptr_t);
+inline injector::game_fn<int(const char*, uintptr_t)> labelAt;
 inline uintptr_t* popupHead;
-inline int (*closePopup)(const uint32_t*, int);
+inline injector::game_fn<int(const uint32_t*, int)> closePopup;
 
 inline void Frame()
 {
@@ -84,9 +84,9 @@ inline void Install()
     const auto closeSite = sites::Required("60 FD BD 27 7C 02 B0 AF 25 80 80 00 80 02 B1 AF FF 00 B1 30 ? ? 04 3C ? ? 85 8C 84 02 B2 AF");
     const auto labelSite = sites::Required("D0 FF BD 27 20 00 B4 AF 1C 00 B4 8C 14 00 B1 AF 04 00 86 96 1C 00 B3 AF 00 00 13 34 25 88 80 00");
     const auto keySite = sites::Required("F0 FF BD 27 B0 0C 85 8C 00 00 B0 AF 25 80 80 00 2B 20 05 00 FF 00 84 30 04 00 BF AF 06 00 80 54");
-    labelAt = reinterpret_cast<decltype(labelAt)>(labelSite);
+    labelAt = decltype(labelAt)(labelSite);
     popupHead = reinterpret_cast<uintptr_t*>(Absolute(closeSite, 20, 24) - 12);
-    closePopup = reinterpret_cast<decltype(closePopup)>(closeSite);
+    closePopup = decltype(closePopup)(closeSite);
     keyHook = safetymips::create_inline(keySite, Keys);
     keys.fun = keyHook.original<decltype(keys.fun)>();
     Hud::afterMovie = Movie;

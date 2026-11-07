@@ -95,7 +95,7 @@ extern "C" int module_start(SceSize, void*) {
         if (inireader.ReadBoolean("MAIN", "SkipIntro", true))
         {
             // Identify the first movie by its position before the second one.
-            const auto intro = sites::Unique("01 00 04 3C 25 28 00 00 25 30 00 00 25 38 00 00 ? ? ? ? ? ? 84 24 01 00 04 3C 25 28 00 00 25 30 00 00 25 38 00 00", 16);
+            const auto intro = sites::Unique("? ? 04 3C 25 28 00 00 25 30 00 00 25 38 00 00 ? ? ? ? ? ? 84 24 ? ? 04 3C 25 28 00 00 25 30 00 00 25 38 00 00", 16);
             if (intro)
                 injector::MakeNOP(intro);
             else

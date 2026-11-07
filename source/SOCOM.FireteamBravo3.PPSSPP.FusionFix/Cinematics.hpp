@@ -7,7 +7,7 @@ inline bool active;
 inline uintptr_t multiplexor;
 inline injector::hook_back<void()> present;
 inline injector::hook_back<int(uintptr_t, float, float, float, float)> cull;
-inline void (*canvas)();
+inline injector::game_fn<void()> canvas;
 inline unsigned barFrames;
 
 inline bool Framed(float aspect)
@@ -80,7 +80,7 @@ inline void Install()
     const auto site = Hud::Required("2C 02 B4 C7 25 20 40 00 ? ? ? ? 06 A3 00 46 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 24 02 AC C7", 16);
     const auto canvasSite = Hud::Required("B0 FF BD 27 ? ? ? ? 00 60 80 44 25 20 A0 03 40 00 BF AF ? ? ? ? 00 68 85 44 ? ? ? ?");
     const auto cullSite = Hud::Required("C4 00 6E C6 06 A3 00 46 C8 00 6F C6 46 B3 00 46 ? ? ? ? 25 20 A0 02 ? ? ? ? 25 20 20 02 ? ? ? ? 06 F3 00 46", 16);
-    canvas = reinterpret_cast<decltype(canvas)>(canvasSite);
+    canvas = decltype(canvas)(canvasSite);
     present.fun = injector::MakeCALL(site, Present).get();
     cull.fun = injector::MakeCALL(cullSite, Cull).get();
 }

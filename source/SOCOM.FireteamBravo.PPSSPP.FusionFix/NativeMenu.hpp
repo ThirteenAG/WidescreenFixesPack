@@ -49,7 +49,7 @@ inline int originalSelection{};
 inline injector::hook_back<const char*(int)> originalLabel;
 inline injector::hook_back<int(int)> originalAllowed;
 inline injector::hook_back<int(uintptr_t)> originalConfirm;
-inline void (*refresh)(uintptr_t);
+inline injector::game_fn<void(uintptr_t)> refresh;
 
 inline int Language() { return ticks[8] ? ticks[8] - 1 : systemLanguage; }
 inline const char* Label(Word word) { return labels[Language()][unsigned(word)]; }
@@ -60,7 +60,7 @@ inline void FontText(uintptr_t font, const char* text)
     if (!font) return;
     const auto table = *reinterpret_cast<const uintptr_t*>(font);
     const auto adjust = *reinterpret_cast<const int16_t*>(table + 248);
-    const auto set = reinterpret_cast<void(*)(uintptr_t, const char*, int)>(*reinterpret_cast<const uintptr_t*>(table + 252));
+    const injector::game_fn<void(uintptr_t, const char*, int)> set{*reinterpret_cast<const uintptr_t*>(table + 252)};
     set(font + adjust, text, 1);
 }
 inline void FontVisible(uintptr_t font, bool visible)
@@ -69,7 +69,7 @@ inline void FontVisible(uintptr_t font, bool visible)
     const auto table = *reinterpret_cast<const uintptr_t*>(font);
     const unsigned off = visible ? 48 : 40;
     const auto adjust = *reinterpret_cast<const int16_t*>(table + off);
-    const auto call = reinterpret_cast<void(*)(uintptr_t)>(*reinterpret_cast<const uintptr_t*>(table + off + 4));
+    const injector::game_fn<void(uintptr_t)> call{*reinterpret_cast<const uintptr_t*>(table + off + 4)};
     call(font + adjust);
 }
 inline void SetRow(unsigned i, const char* text, bool active)
@@ -103,8 +103,7 @@ inline void Store(unsigned i)
 inline void Apply(unsigned i)
 {
     if (i == 3) Geometry::fovFactor = ticks[i] / 20.0f;
-    // The menu only offers the listed ratios. Parsing text here would call
-    // strtod on the game thread, which crashes the emulator.
+    // The menu only offers the listed ratios.
     else if (i == 4 || i == 5)
     {
         constexpr float aspects[] { 0.0f, 4.0f / 3.0f, 16.0f / 9.0f, 21.0f / 9.0f, 32.0f / 9.0f };
@@ -293,7 +292,7 @@ inline void Install()
 {
     const auto rows = sites::Required("25 98 40 00 10 00 50 AE ? ? ? ? 25 20 00 02 14 00 42 AE ? ? ? ? 25 20 00 02 1C 00 42 A2 ? ? ? ? 25 20 00 02 1D 00 42 A2");
     const auto confirm = sites::Required("04 00 80 10 00 00 00 00 ? ? ? ? 25 20 60 02 25 80 40 00 1F 00 00 12 25 20 60 02 ? ? ? ? 25 28 00 00");
-    refresh = reinterpret_cast<decltype(refresh)>(sites::Required("A0 FF BD 27 ? ? 05 3C ? ? A5 24 ? ? A0 D8 ? ? 05 3C ? ? A5 24 01 00 A5 90 38 00 B0 AF 40 00 B2 AF"));
+    refresh = decltype(refresh)(sites::Required("A0 FF BD 27 ? ? 05 3C ? ? A5 24 ? ? A0 D8 ? ? 05 3C ? ? A5 24 01 00 A5 90 38 00 B0 AF 40 00 B2 AF"));
     originalLabel.fun = injector::MakeCALL(rows + 8, PauseLabel).get();
     originalAllowed.fun = injector::MakeCALL(rows + 32, PauseAllowed).get();
     originalConfirm.fun = injector::MakeCALL(confirm + 8, Confirm).get();

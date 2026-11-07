@@ -10,7 +10,7 @@ constexpr float frame = 480.0f / 272.0f;
 inline float forced, fovFactor{ 1.0f }, hudConstraint;
 inline float aspect{ native }, cameraAspect;
 inline float shiftX, shiftY;
-inline void (*setGameAspect)(float);
+inline injector::game_fn<void(float)> setGameAspect;
 inline SafetyMipsMid cameraHook, projectionHook, canvasHook;
 inline SafetyMipsInline flipHook;
 inline injector::hook_back<int(unsigned, unsigned)> flip;
@@ -50,7 +50,7 @@ inline void Install()
     scalar.preserve = PSP_HOOK_SAVE_FPU;
     // CamSetGameAspect: every camera's projection aspect follows the display.
     const auto setSite = Required("E0 FF BD 27 ? ? 02 3C 0C 00 BF AF 00 00 B0 AF ? ? 4C E4 08 00 B2 AF 05 00 12 24");
-    setGameAspect = reinterpret_cast<decltype(setGameAspect)>(setSite);
+    setGameAspect = decltype(setGameAspect)(setSite);
     cameraHook = safetymips::create_mid(setSite, [](SafetyMipsContext& regs)
     {
         regs.f12 = aspect;

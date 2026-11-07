@@ -17,7 +17,7 @@ inline injector::hook_back<int(void*, const void*, unsigned)> copy;
 inline injector::hook_back<int(uintptr_t)> end;
 inline injector::hook_back<int(uintptr_t, uintptr_t, const float*, const uint32_t*)> leaf;
 inline injector::hook_back<int(uintptr_t, const uint16_t*, uintptr_t, const float*, const uint32_t*)> mesh;
-inline int (*callList)(uintptr_t);
+inline injector::game_fn<int(uintptr_t)> callList;
 
 inline int MovieFallback(void* destination, const void* source, unsigned length)
 {
@@ -275,7 +275,7 @@ inline void Install()
     const auto listSite = sites::Required("F0 FF BD 27 00 00 BF AF ? ? 06 3C ? ? C7 24 10 00 EB 8C 21 30 80 00 00 1E 88 7C 00 5C 8C 7C");
     const auto leafSite = sites::Required("10 FF BD 27 06 00 84 80 C8 00 B0 AF 25 80 A0 00 08 00 85 30 25 20 C0 00 CC 00 B1 AF D0 00 B2 AF");
     copy.fun = injector::MakeCALL(copySite, MovieCopy).get();
-    callList = reinterpret_cast<decltype(callList)>(listSite);
+    callList = decltype(callList)(listSite);
     endHook = safetymips::create_inline(endSite, End);
     end.fun = endHook.original<decltype(end.fun)>();
     leafHook = safetymips::create_inline(leafSite, Leaf);

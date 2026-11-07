@@ -129,9 +129,9 @@ void ApplyAll() { for (auto& icon : icons) Apply(icon); }
 
 SafetyMipsInline readTexture, destroyDisplayList;
 injector::hook_back<void(uintptr_t, uint8_t)> controller;
-uint8_t* (*getPad)(int);
-uint8_t (*guiLeft)(uint8_t*);
-uint8_t (*guiRight)(uint8_t*);
+injector::game_fn<uint8_t*(int)> getPad;
+injector::game_fn<uint8_t(uint8_t*)> guiLeft;
+injector::game_fn<uint8_t(uint8_t*)> guiRight;
 
 Texture* ReadTexture(const char* name, uintptr_t mask, uintptr_t flags) {
     auto texture = readTexture.call<Texture*>(name, mask, flags);
@@ -192,10 +192,10 @@ void SetController(uintptr_t object, uint8_t mode) {
 void Install(const char* name) {
     for (unsigned i = 0; i < SetCount; ++i)
         if (std::strcmp(name, sets[i]) == 0) { selected = i; break; }
-    getPad = reinterpret_cast<decltype(getPad)>(pattern.get_first("C0 20 04 00 23 10 85 00 ? ? ? ? ? ? ? ? 08 00 E0 03 21 10 44 00", -8));
+    getPad = decltype(getPad)(pattern.get_first("C0 20 04 00 23 10 85 00 ? ? ? ? ? ? ? ? 08 00 E0 03 21 10 44 00", -8));
     constexpr auto gui = "00 00 B0 AF 04 00 BF AF ? ? ? ? 25 80 80 00 ? ? ? ? 00 00 00 00 ? ? ? ? 25 20 00 02 ? ? ? ? 00 00 00 00 ? ? ? ? 01 00 02 34 25 10 00 00";
-    guiLeft = reinterpret_cast<decltype(guiLeft)>(pattern.get(0, gui, -4));
-    guiRight = reinterpret_cast<decltype(guiRight)>(pattern.get(1, gui, -4));
+    guiLeft = decltype(guiLeft)(pattern.get(0, gui, -4));
+    guiRight = decltype(guiRight)(pattern.get(1, gui, -4));
     const auto read = pattern.get_first("25 28 C0 00 00 00 02 AE", -4);
     const auto set = pattern.get_first("25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00 FF 00 86 30 25 20 A0 00 ? ? ? ? 25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00 FF 00 86 30 25 20 A0 00 ? ? ? ? 25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00", -4);
     // The texture hooks use the US addresses; the read site's call target tells that layout apart.

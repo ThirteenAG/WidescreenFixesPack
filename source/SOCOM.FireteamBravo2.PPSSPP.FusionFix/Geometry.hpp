@@ -17,8 +17,8 @@ inline injector::hook_back<uintptr_t(uintptr_t, uintptr_t)> ground;
 inline injector::hook_back<int(uintptr_t, uintptr_t)> clipPlanes;
 inline SafetyMipsMid projectionHook, projectionExitHook;
 inline injector::hook_back<int(uintptr_t, int)> prepare;
-inline void (*setHorizontal)(uintptr_t, int, float);
-inline void (*setVertical)(uintptr_t, int, float);
+inline injector::game_fn<void(uintptr_t, int, float)> setHorizontal;
+inline injector::game_fn<void(uintptr_t, int, float)> setVertical;
 
 inline float AspectRatio()
 {
@@ -166,8 +166,8 @@ inline void Install()
     manager = reinterpret_cast<uintptr_t*>(Absolute(managerSite + 8, 0, 12));
     sceneCamera = reinterpret_cast<uintptr_t*>(Absolute(cameraSite, 0, 12) + 320);
     worldOffsets = Absolute(contextSite, 0, 40) + 1332;
-    setHorizontal = reinterpret_cast<decltype(setHorizontal)>(horizontalSite);
-    setVertical = reinterpret_cast<decltype(setVertical)>(verticalSite);
+    setHorizontal = decltype(setHorizontal)(horizontalSite);
+    setVertical = decltype(setVertical)(verticalSite);
     const auto groundSite = sites::Required("E0 FE BD 27 08 01 B4 E7 0C 01 B6 E7 10 01 B0 AF 14 01 B1 AF 18 01 B2 AF 1C 01 BF AF 25 88 A0 00 25 80 80 00 6C 2D 04 8E");
     prepareHook = safetymips::create_inline(prepareSite, Prepare);
     groundHook = safetymips::create_inline(groundSite, Ground);

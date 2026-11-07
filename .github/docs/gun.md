@@ -23,13 +23,13 @@ Use **More Pages** and **Previous Pages** to move through settings. **Details** 
 | Field of view | 0.5–2.0; larger values widen the gameplay camera view, up to 150° across; live | 1.0 |
 | Cutscene borders | Off, Letterbox, Pillarbox or Both; live | Both |
 | HUD aspect ratio | Auto for the whole screen width, or 4:3, 16:9, 21:9, 32:9 or a custom ratio; live | Auto |
-| Video mode | Original aspect or Fill; live | Fill |
+| Video mode | Original aspect shows the whole frame with its black bars; Fill crops the bars so the picture fills the screen without stretching, very wide screens also lose part of the top and bottom, logos stay whole; live | Fill |
 | Pause when unfocused | On pauses while another window is active; live | On |
 | Confine cursor | On keeps the cursor inside the active game window; live | On |
 | Skip intro | Skip publisher and studio logos while preserving the game's intro; restart | On |
 | Check for updates | Off makes no network request; live | Off |
 
-Vanilla shows the logos, keeps the game's own cutscene letterbox and shows videos at their original aspect; Recommended and Enhanced skip the logos, keep the original cutscene frame with borders and fit video to the screen. Texts are available in English, French, German, Italian and Spanish. The in-game menu follows the game's language.
+Vanilla shows the logos, keeps the game's own cutscene letterbox and shows videos at their original aspect; Recommended and Enhanced skip the logos, keep the original cutscene frame with borders and fill the screen with video. Texts are available in English, French, German, Italian and Spanish. The in-game menu follows the game's language.
 
 Cutscenes keep their original 16:9 frame: on narrower screens the game's own bars appear above and below, on wider screens the frame fills the height with bars at the sides. With the borders off, cutscenes fill the screen. The field-of-view multiplier does not change cutscenes.
 

@@ -19,9 +19,9 @@ struct CPad {
     int16_t Mode, ShakeDur, DisablePlayerControls;
 };
 static_assert(sizeof(CControllerState) == 48 && offsetof(CPad, OldState) == 52);
-uintptr_t (*FindPlayerPed)(){};
-uintptr_t (*FindPlayerVehicle)(){};
-uintptr_t (*WeaponInfo)(int){};
+injector::game_fn<uintptr_t()> FindPlayerPed;
+injector::game_fn<uintptr_t()> FindPlayerVehicle;
+injector::game_fn<uintptr_t(int)> WeaponInfo;
 uintptr_t reloadWeapon;
 SafetyMipsInline lookBehind;
 bool Reloading() {

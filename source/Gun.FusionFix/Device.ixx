@@ -10,6 +10,7 @@ export module Device;
 
 import Display;
 import Cutscene;
+import Movie;
 
 #pragma comment(lib, "version.lib")
 
@@ -17,12 +18,10 @@ export namespace GunDevice
 {
     inline asi_overlay::D3D9Overlay Overlay;
     inline IDirect3DDevice9* CurrentDevice = nullptr;
-    inline SafetyHookInline CreateDeviceHook, PresentHook, ResetHook, DrawHook, MovieHook;
+    inline SafetyHookInline CreateDeviceHook, PresentHook, ResetHook;
     inline SafetyHookInline InputCreateHook, InputDeviceHook, DeviceStateHook, DeviceDataHook;
     inline IDirect3D9*(WINAPI* NativeCreate9)(UINT) = nullptr;
     inline std::function<void()> Frame;
-    inline uint32_t** MovieHandle = nullptr;
-    inline thread_local bool DrawingMovie = false;
     inline LONG HotkeyDown = 0, HotkeyRequested = 0;
 
     inline HMODULE ThisModule()
@@ -122,40 +121,6 @@ export namespace GunDevice
         return ResetHook.stdcall<HRESULT>(device, parameters);
     }
 
-    // The movie player draws one pre-transformed strip over the whole screen with the full video texture.
-    inline HRESULT WINAPI DrawUP(IDirect3DDevice9* device, D3DPRIMITIVETYPE type, UINT count, const void* data, UINT stride)
-    {
-        const auto video = MovieHandle ? *MovieHandle : nullptr;
-        if (!DrawingMovie || type != D3DPT_TRIANGLESTRIP || count != 2 || stride != 28 || !data || !video || !video[0] || !video[1])
-            return DrawHook.stdcall<HRESULT>(device, type, count, data, stride);
-        std::array<float, 28> v{};
-        std::memcpy(v.data(), data, sizeof(v));
-        const float width = v[7], height = v[15];
-        if (width <= 0.0f || height <= 0.0f)
-            return DrawHook.stdcall<HRESULT>(device, type, count, data, stride);
-        const float videoAspect = static_cast<float>(video[0]) / static_cast<float>(video[1]);
-        // The whole movie at its own aspect: Original inside the game's centred 4:3 area, Fill inside the whole screen
-        static const auto& mode = FixSettings().Int("MAIN.FMVWidescreenMode");
-        const float areaWidth = mode == 0 ? std::min(width, height * 4.0f / 3.0f) : width;
-        const float areaHeight = mode == 0 ? std::min(height, width * 3.0f / 4.0f) : height;
-        float w = areaWidth, h = areaHeight;
-        if (areaWidth / areaHeight > videoAspect) w = areaHeight * videoAspect;
-        else h = areaWidth / videoAspect;
-        const float x = (width - w) * 0.5f, y = (height - h) * 0.5f;
-        v[0] = v[14] = x;
-        v[7] = v[21] = x + w;
-        v[1] = v[8] = y;
-        v[15] = v[22] = y + h;
-        return DrawHook.stdcall<HRESULT>(device, type, count, v.data(), stride);
-    }
-
-    inline void __cdecl DrawMovie(void* texture, float x, float y, float width, float height, float alpha)
-    {
-        DrawingMovie = true;
-        MovieHook.ccall<void>(texture, x, y, width, height, alpha);
-        DrawingMovie = false;
-    }
-
     inline HRESULT WINAPI CreateDevice(IDirect3D9* d3d, UINT adapter, D3DDEVTYPE type, HWND window, DWORD behavior,
         D3DPRESENT_PARAMETERS* parameters, IDirect3DDevice9** device)
     {
@@ -165,8 +130,7 @@ export namespace GunDevice
             auto table = *reinterpret_cast<void***>(*device);
             ResetHook = safetyhook::create_inline(table[16], Reset);
             PresentHook = safetyhook::create_inline(table[17], Present);
-            if (MovieHook)
-                DrawHook = safetyhook::create_inline(table[83], DrawUP);
+            GunMovie::InstallDraw(table[83]);
         }
         return result;
     }
@@ -218,10 +182,7 @@ export namespace GunDevice
 
     inline void Init()
     {
-        auto movie = hook::pattern("83 EC 70 56 8B 74 24 78 85 F6 0F 84 ? ? ? ? 57 6A 00 E8 ? ? ? ? 68 01 00 01 00 6A 04 E8");
-        auto handle = hook::pattern("E8 ? ? ? ? 3B C3 A3 ? ? ? ? 0F 84 ? ? ? ? 8B 48 04 8B 10");
-        MovieHandle = *handle.get_first<uint32_t**>(8);
-        MovieHook = safetyhook::create_inline(movie.get_first(), DrawMovie);
+        GunMovie::Init();
 
         auto create = hook::pattern("6A 20 E8 ? ? ? ? 3B C7 A3 ? ? ? ? 75").get_first<uint8_t>(2);
         NativeCreate9 = reinterpret_cast<decltype(NativeCreate9)>(injector::GetBranchDestination(create, true).as_int());

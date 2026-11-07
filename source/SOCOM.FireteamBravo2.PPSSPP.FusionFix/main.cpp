@@ -57,9 +57,8 @@ template<unsigned Index> int Update(Input* input, float delta) {
 }
 int Exit(int status) { Unthrottle(false); return sceKernelExitDeleteThread(status); }
 int Terminate(SceUID thread) { Unthrottle(false); return sceKernelTerminateDeleteThread(thread); }
-// Read on the plugin's own thread. Install also runs inside the loader's
-// sceKernelStartModule call, where newlib's strtol (INI parsing) intermittently
-// crashed PPSSPP's JIT with the European loader.
+// Read on the plugin's own thread, before Install (which can also run inside the
+// loader's sceKernelStartModule call).
 void ReadOptions() {
     IniValue defaults[] = {{"MAIN", "SkipIntro", "1"}, {"MAIN", "DualAnalogPatch", "1"},
                            {"MAIN", "UnthrottleEmuDuringLoading", "1"},

@@ -267,12 +267,12 @@ ScreenTransform ElementTransform(uintptr_t object) {
 
 void DrawElement(uintptr_t object, uintptr_t function) {
     if (screen.active) {
-        reinterpret_cast<void (*)(uintptr_t)>(function)(object);
+        injector::cstd<void(uintptr_t)>::call(function, object);
         return;
     }
     RefreshAspect();
     SetTransform(ElementTransform(object));
-    reinterpret_cast<void (*)(uintptr_t)>(function)(object);
+    injector::cstd<void(uintptr_t)>::call(function, object);
     SetTransform({});
 }
 }

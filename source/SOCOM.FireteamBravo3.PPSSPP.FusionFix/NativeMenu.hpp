@@ -33,11 +33,11 @@ inline uint32_t previousButtons, presses, heldDirection, repeatAt;
 inline SafetyMipsInline layerHook, buttonHook;
 inline injector::hook_back<uintptr_t(uintptr_t, uintptr_t, uintptr_t)> layer;
 inline injector::hook_back<int(uintptr_t, uint8_t, uint8_t, uint8_t, int, int)> button;
-inline int (*print)(const char*, int, const char*, int, int, int, int, uint32_t, int);
-inline uintptr_t (*font)(const char*);
-inline int (*printFont)(uintptr_t, int, const char*, int, int, int, int, uint32_t, int);
-inline uintptr_t (*findTexture)(const char*);
-inline int (*sprite)(uintptr_t, uint32_t, float, float, float, float, float, float);
+inline injector::game_fn<int(const char*, int, const char*, int, int, int, int, uint32_t, int)> print;
+inline injector::game_fn<uintptr_t(const char*)> font;
+inline injector::game_fn<int(uintptr_t, int, const char*, int, int, int, int, uint32_t, int)> printFont;
+inline injector::game_fn<uintptr_t(const char*)> findTexture;
+inline injector::game_fn<int(uintptr_t, uint32_t, float, float, float, float, float, float)> sprite;
 struct FooterIcon
 {
     uintptr_t texture;
@@ -568,11 +568,11 @@ inline void Install()
     layer.fun = layerHook.original<decltype(layer.fun)>();
     buttonHook = safetymips::create_inline(buttonSite, Button);
     button.fun = buttonHook.original<decltype(button.fun)>();
-    print = reinterpret_cast<decltype(print)>(printSite);
+    print = decltype(print)(printSite);
     font = injector::GetBranchDestination(printSite + 68).get();
     printFont = injector::GetBranchDestination(printSite + 108).get();
     findTexture = injector::GetBranchDestination(textureSite).get();
-    sprite = reinterpret_cast<decltype(sprite)>(spriteSite);
+    sprite = decltype(sprite)(spriteSite);
     Hud::menuExtra = Render;
 }
 }

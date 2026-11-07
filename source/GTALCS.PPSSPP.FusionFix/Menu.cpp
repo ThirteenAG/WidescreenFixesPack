@@ -381,6 +381,7 @@ void DrawBars(uintptr_t menu, float x, float y, float value) {
     register float f13 asm("$f13") = y;
     register float f17 asm("$f17") = value;
     const uintptr_t function = Address<0x8AD6FB0>();
+    const uint32_t restore = psp::enter_game();
     asm volatile("jalr %[fn]; nop"
         : "+r"(a0), "+f"(f12), "+f"(f13), "+f"(f17)
         : [fn] "r"(function)
@@ -389,6 +390,7 @@ void DrawBars(uintptr_t menu, float x, float y, float value) {
           "$f0", "$f1", "$f2", "$f3", "$f4", "$f5", "$f6", "$f7", "$f8", "$f9", "$f10", "$f11",
           "$f14", "$f15", "$f16", "$f18", "$f19", "$f20", "$f21", "$f22", "$f23", "$f24",
           "$f25", "$f26", "$f27", "$f28", "$f29", "$f30", "$f31");
+    psp::leave_game(restore);
 }
 void DrawValue(SafetyMipsContext& regs) {
     // a0: row action; s6: row index; s4: value text; s2/fp: value position;

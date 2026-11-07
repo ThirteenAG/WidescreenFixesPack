@@ -65,7 +65,7 @@ void Tick(void*) {
     }
     if (concert) {
         uintptr_t text=*reinterpret_cast<uintptr_t*>(Address<0x8BAF748>());
-        auto get=reinterpret_cast<const uint16_t* (*)(uintptr_t,const char*)>(Address<0x89F6390>());
+        injector::game_fn<const uint16_t*(uintptr_t,const char*)> get{Address<0x89F6390>()};
         const uint16_t* title=text ? get(text,"REN7_O9") : nullptr;
         concertActive=OnMission() && title && *title;
         if (!concertActive) concert=false;
