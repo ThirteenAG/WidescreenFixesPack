@@ -119,8 +119,8 @@ void TickCheats() {
         std::memmove(buffer+1,buffer,sizeof(buffer)-1);buffer[0]=char('A'+i);
         for (const auto& cheat:cheats) {
             if (!Matches(cheat.word)) continue;
-            auto get=reinterpret_cast<void* (*)(int)>(Address<0x898B428>());
-            auto add=reinterpret_cast<void (*)(void*,char)>(Address<0x898EBC0>());
+            injector::game_fn<void*(int)> get{Address<0x898B428>()};
+            injector::game_fn<void(void*,char)> add{Address<0x898EBC0>()};
             void* pad=get(0);
             if (pad) for (unsigned j=0;j<8;++j) add(pad,sequences[cheat.id][j]);
             buffer[0]=0;break;

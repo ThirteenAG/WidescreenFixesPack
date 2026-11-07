@@ -33,7 +33,7 @@ int DirectAxis(uintptr_t input, int axis, float value) {
         // Cache native reflected property addresses, not copies of game objects.
         const auto method = *reinterpret_cast<const uintptr_t*>(input) + 0x130;
         const auto adjusted = input + *reinterpret_cast<const int16_t*>(method);
-        const auto find = *reinterpret_cast<float* (**)(uintptr_t, uintptr_t, const char*)>(method + 4);
+        const injector::game_fn<float*(uintptr_t, uintptr_t, const char*)> find{*reinterpret_cast<const uintptr_t*>(method + 4)};
         if (!find) return directAxis.call<int>(input, axis, value);
         axes = {actor, find(adjusted, actor, "aStrafe"), find(adjusted, actor, "aTurn"),
                        find(adjusted, actor, "aForward"), find(adjusted, actor, "aLookUp")};

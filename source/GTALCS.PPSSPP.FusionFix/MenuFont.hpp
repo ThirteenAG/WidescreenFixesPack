@@ -41,17 +41,17 @@ inline void Initialize()
 }
 inline void Text(const char16_t* text, float x, float y)
 {
-    reinterpret_cast<void (*)(const char16_t*, int, float, float)>(profile.get<0x08A56AD4>())(text, 0, x, y);
+    injector::cstd<void(const char16_t*, int, float, float)>::call(profile.get<0x08A56AD4>(), text, 0, x, y);
 }
 inline void Begin()
 {
     const console::portable::StoryColor white{253, 179, 54, 255};
-    reinterpret_cast<void (*)(int)>(profile.get<0x08A55054>())(2);
-    reinterpret_cast<void (*)(int)>(profile.get<0x08A5509C>())(1);
-    reinterpret_cast<void (*)()>(profile.get<0x08A54EE8>())();
-    reinterpret_cast<void (*)()>(profile.get<0x08A54F14>())();
-    reinterpret_cast<void (*)(float, float)>(profile.get<0x08A54DF8>())(0.4f, 0.65f);
-    reinterpret_cast<void (*)(float)>(profile.get<0x08A54FAC>())(460.0f);
-    reinterpret_cast<void (*)(const console::portable::StoryColor*)>(profile.get<0x08A54E30>())(&white);
+    injector::cstd<void(int)>::call(profile.get<0x08A55054>(), 2);
+    injector::cstd<void(int)>::call(profile.get<0x08A5509C>(), 1);
+    injector::cstd<void()>::call(profile.get<0x08A54EE8>());
+    injector::cstd<void()>::call(profile.get<0x08A54F14>());
+    injector::cstd<void(float, float)>::call(profile.get<0x08A54DF8>(), 0.4f, 0.65f);
+    injector::cstd<void(float)>::call(profile.get<0x08A54FAC>(), 460.0f);
+    injector::cstd<void(const console::portable::StoryColor*)>::call(profile.get<0x08A54E30>(), &white);
 }
 }

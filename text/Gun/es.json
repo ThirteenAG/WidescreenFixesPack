@@ -51,7 +51,7 @@
   "menu.details": "Detalles",
   "menu.restartshort": "Reinicio necesario",
   "FMVWidescreenMode": "Formato de vídeo",
-  "FMVWidescreenMode.description": "Formato original muestra los vídeos como el juego, completos dentro de su marco 4:3 centrado con franjas negras alrededor. Llenar ajusta el vídeo entero a la pantalla, sin cortar ni estirar nada.",
+  "FMVWidescreenMode.description": "Formato original muestra los vídeos como el juego, completos dentro de su marco 4:3 centrado con sus franjas negras. Llenar recorta las franjas para que la imagen ocupe la pantalla sin deformarse; las pantallas muy anchas también pierden parte de arriba y abajo. Los logotipos quedan completos.",
   "FMVWidescreenMode.original": "Formato original",
   "FMVWidescreenMode.fill": "Llenar",
   "PauseOnFocusLoss": "Pausa en segundo plano",

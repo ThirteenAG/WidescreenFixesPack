@@ -132,7 +132,7 @@ bool PresetMatches(int preset) {
 int MatchingPreset() { return PresetMatches(2) ? 2 : PresetMatches(1) ? 1 : PresetMatches(3) ? 3 : 0; }
 
 SafetyMipsInline drawHook, inputHook, getHookHook, setHookHook, textHook, closeHook, destroyHook, defaultItemHook;
-void (*playSound)(void*, uint16_t, uint32_t);
+injector::game_fn<void(void*, uint16_t, uint32_t)> playSound;
 uintptr_t dmAudio;
 
 CharList Literal(const char* value) {
@@ -143,7 +143,7 @@ CharList Literal(const char* value) {
 template<class Return = void, class... Args> Return Virtual(MenuItem* item, unsigned slot, Args... args) {
     const auto entry = item->vtable + slot * 8;
     const auto adjust = *reinterpret_cast<const int16_t*>(entry);
-    auto function = reinterpret_cast<Return (*)(void*, Args...)>(*reinterpret_cast<const uintptr_t*>(entry + 4));
+    injector::game_fn<Return(void*, Args...)> function{*reinterpret_cast<const uintptr_t*>(entry + 4)};
     return function(reinterpret_cast<char*>(item) + adjust, args...);
 }
 bool Selectable(const MenuItem* item) { return item && item->visible && item->hook > 0; }

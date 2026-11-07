@@ -355,7 +355,7 @@ inline int Draw(uintptr_t object, uintptr_t context, uintptr_t function)
         if (mode == 2 || mode == 5)
             ScopeSides();
     }
-    const int result = reinterpret_cast<int (*)(uintptr_t, uintptr_t)>(function)(object, context);
+    const int result = injector::cstd<int(uintptr_t, uintptr_t)>::call(function, object, context);
     role = previousRole;
     current = previousRole == Role::Frontend ? Affine{} : previous;
     Reapply();

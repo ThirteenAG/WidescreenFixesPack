@@ -16,8 +16,8 @@ inline uintptr_t* scriptHudState;
 inline SafetyMipsInline prepareHook;
 inline SafetyMipsMid projectionHook;
 inline injector::hook_back<int(uintptr_t, int)> prepare;
-inline void (*setHorizontal)(uintptr_t, int, float);
-inline void (*setVertical)(uintptr_t, int);
+inline injector::game_fn<void(uintptr_t, int, float)> setHorizontal;
+inline injector::game_fn<void(uintptr_t, int)> setVertical;
 
 inline float AspectRatio()
 {
@@ -142,8 +142,8 @@ inline void Install()
     player = reinterpret_cast<uintptr_t*>(Absolute(playerSite + 8, 0, 8));
     scriptHudState = reinterpret_cast<uintptr_t*>(Absolute(scriptHudSite + 8, 0, 4));
     sceneCamera = reinterpret_cast<uintptr_t*>(Absolute(cameraSite, 0, 4) + 0x140);
-    setHorizontal = reinterpret_cast<decltype(setHorizontal)>(horizontalSite);
-    setVertical = reinterpret_cast<decltype(setVertical)>(verticalSite);
+    setHorizontal = decltype(setHorizontal)(horizontalSite);
+    setVertical = decltype(setVertical)(verticalSite);
     prepareHook = safetymips::create_inline(prepareSite, Prepare);
     prepare.fun = prepareHook.original<decltype(prepare.fun)>();
     safetymips::Options scalar;

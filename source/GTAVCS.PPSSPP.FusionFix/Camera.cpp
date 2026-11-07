@@ -24,7 +24,7 @@ void SetFov(float degrees) {
 }
 void DrawCutsceneBorders(void*) {
     const auto camera = Address<0x8BC7E30>();
-    const auto now = reinterpret_cast<uint32_t (*)()>(Address<0x8905378>())();
+    const auto now = injector::cstd<uint32_t()>::call(Address<0x8905378>());
     const bool dark = *reinterpret_cast<const float*>(camera + 2644) >= 255.0f;
     borders.tick(now, CutsceneActive(), settings.cutsceneBorders != 0, dark);
     Drawing::Scope scope(Anchor::None);

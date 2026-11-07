@@ -11,7 +11,7 @@ inline bool scopeActive{};
 inline uintptr_t manager;
 inline injector::hook_back<int(uintptr_t, float)> update;
 using ProjectFunction = int(uintptr_t, const float*, float*);
-inline ProjectFunction* project[3];
+inline injector::game_fn<ProjectFunction> project[3];
 inline constexpr const char* markerSignature = "E0 FF BD 27 10 00 B0 AF 14 00 BF AF ? 00 80 10 25 80 A0 00 ? 00 00 12 ? ? 05 3C ? ? A5 24 ? ? A6 8C 25 28 80 00 25 20 C0 00";
 
 struct Profile { unsigned offset; float x, y; };

@@ -15,7 +15,8 @@
   "startup": "module_start",
   "defines": [
     "PSP_HOOK_RAM_END=0x0DD00000",
-    "PSP_GAME_ABI_COMPAT"
+    "PSP_GAME_ABI_COMPAT",
+    "PSP_CALLBACK_MODULE_GP"
   ],
   "libraries": [
     "-lpsppower",

@@ -150,9 +150,8 @@ int ClearEvent(SceUID event, u32 bits) { Unthrottle(false); return sceKernelClea
 #include "Cinematics.hpp"
 #include "PadIcons.hpp"
 #include "FrameRate.hpp"
-// Read on the plugin's own thread: Install also runs inside the loader's
-// sceKernelStartModule call, where newlib's number parsing (strtol/strtod) was
-// found to intermittently crash PPSSPP's JIT (SOCOM FTB2 EU loader).
+// Read on the plugin's own thread, before Install (which can also run inside the
+// loader's sceKernelStartModule call).
 struct Options { float fov; bool skipIntro, dualAnalog, smoothing, unthrottle; } options;
 bool RawCameraEnabled() { return options.dualAnalog; }
 #include "Startup.hpp"

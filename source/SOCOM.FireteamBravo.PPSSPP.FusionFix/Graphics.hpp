@@ -8,7 +8,7 @@ struct ClearVertex { uint32_t color; int16_t x, y, z, padding; };
 static_assert(sizeof(ClearVertex) == 12);
 alignas(16) inline ClearVertex vertices[8];
 alignas(16) inline uint32_t commands[12];
-inline void (*callList)(uintptr_t);
+inline injector::game_fn<void(uintptr_t)> callList;
 inline injector::hook_back<int(void*, const void*, unsigned)> copy;
 alignas(64) inline uint32_t videoList[512];
 alignas(64) inline PspGeContext videoContext;
@@ -121,7 +121,7 @@ inline int EndFrame(uintptr_t renderer)
 }
 inline void Install()
 {
-    callList = reinterpret_cast<decltype(callList)>(sites::Required("? ? 06 3C ? ? C6 24 10 00 C5 8C 00 00 C7 8C 23 28 85 00 ? ? 04 3C ? ? 88 24 25 20 E0 00 64 01 07 8D 0B 00 E0 14"));
+    callList = decltype(callList)(sites::Required("? ? 06 3C ? ? C6 24 10 00 C5 8C 00 00 C7 8C 23 28 85 00 ? ? 04 3C ? ? 88 24 25 20 E0 00 64 01 07 8D 0B 00 E0 14"));
     const auto movie = sites::Required("25 28 80 00 ? ? 10 3C 04 00 06 3C ? ? 04 8E 14 00 BF AF ? ? ? ? 00 40 C6 24 ? ? 04 8E 00 02 05 34", 20);
     copy.fun = injector::MakeCALL(movie, MovieCopy).get();
     const auto hud = sites::Required("? ? 04 8E 01 00 84 30 07 00 80 10 ? ? 04 26 ? ? 04 3C 00 00 05 8E 25 30 40 02", 28);

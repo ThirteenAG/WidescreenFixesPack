@@ -76,9 +76,9 @@ void TickCheats()
         for (const auto& cheat : cheats)
         {
             if (!Matches(cheat.word)) continue;
-            auto get = reinterpret_cast<void* (*)(int)>(profile.get<0x08A96408>());
-            auto add = reinterpret_cast<void (*)(void*, char)>(profile.get<0x08A99710>());
-            if (reinterpret_cast<uintptr_t (*)()>(Address<0x89D58B0>())())
+            injector::game_fn<void*(int)> get{profile.get<0x08A96408>()};
+            injector::game_fn<void(void*, char)> add{profile.get<0x08A99710>()};
+            if (injector::cstd<uintptr_t()>::call(Address<0x89D58B0>()))
                 if (void* pad = get(0))
                     for (const char* symbol = cheat.sequence; *symbol; ++symbol) add(pad, *symbol);
             std::memset(buffer, 0, sizeof(buffer));

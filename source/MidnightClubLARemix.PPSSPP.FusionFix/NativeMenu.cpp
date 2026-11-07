@@ -20,9 +20,9 @@ using menu::Word;
 constexpr char cfg[] = "ms0:/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.cfg";
 struct Delegate { uintptr_t object; int adjustment; uintptr_t function; int argument; int kind; };
 struct SavedRow { Delegate action; int id, high, flags; char text[4][96]; };
-using AddRow = uintptr_t (*)(uintptr_t, int, int, int, int, const Delegate*);
-using SetText = void (*)(uintptr_t, uintptr_t, int, const char*);
-using Clear = void (*)(uintptr_t, int);
+using AddRow = injector::game_fn<uintptr_t(uintptr_t, int, int, int, int, const Delegate*)>;
+using SetText = injector::game_fn<void(uintptr_t, uintptr_t, int, const char*)>;
+using Clear = injector::game_fn<void(uintptr_t, int)>;
 SafetyMipsInline pauseHook;
 uintptr_t managerSlot, callback, pageObject;
 AddRow addRow;
@@ -404,9 +404,9 @@ void ReadMenuOptions() {
 void InstallNativeMenu() {
     const auto pause = pattern.get_first("90 FE BD 27 ?? ?? 86 8F 4C 01 B3 AF 0C 00 D3 8C 5C 01 B7 AF 25 B8 80 00", 0);
     managerSlot = gameGP + int16_t(injector::ReadMemory<uint16_t>(pause + 4));
-    addRow = reinterpret_cast<AddRow>(pattern.get_first("A0 FF BD 27 38 00 B3 AF 25 98 80 00 00 00 24 8D 2C 00 B0 AF 25 80 C0 00 04 00 25 8D", 0));
-    setText = reinterpret_cast<SetText>(pattern.get_first("E0 FF BD 27 00 00 B0 AF 04 00 B1 AF 25 80 80 00 25 88 A0 00 08 00 24 8E 21 28 C6 00", 0));
-    clear = reinterpret_cast<Clear>(pattern.get_first("90 02 86 90 21 00 C0 10 FF 00 A5 30 BC 02 86 8C 80 38 06 00 21 38 87 00", 0));
+    addRow = AddRow(pattern.get_first("A0 FF BD 27 38 00 B3 AF 25 98 80 00 00 00 24 8D 2C 00 B0 AF 25 80 C0 00 04 00 25 8D", 0));
+    setText = SetText(pattern.get_first("E0 FF BD 27 00 00 B0 AF 04 00 B1 AF 25 80 80 00 25 88 A0 00 08 00 24 8E 21 28 C6 00", 0));
+    clear = Clear(pattern.get_first("90 02 86 90 21 00 C0 10 FF 00 A5 30 BC 02 86 8C 80 38 06 00 21 38 87 00", 0));
     callback = injector::detail::callback_address(&MenuAction);
     pauseHook = safetymips::create_inline(pause, Pause);
 }

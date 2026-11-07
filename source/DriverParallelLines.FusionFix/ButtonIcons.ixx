@@ -253,7 +253,12 @@ export namespace DPLIcons
         if (FontService.is_initialized() && FontService.get())
         {
             auto* service = static_cast<uint8_t*>(FontService.get());
-            for (size_t bank = 0; bank < 4; ++bank) PatchFont(At<void*>(service, 12 + bank * 328));
+            for (size_t bank = 0; bank < 4; ++bank)
+            {
+                // A bank's font pointer is uninitialized before it loads and stale after it unloads
+                auto* slot = service + 12 + bank * 328;
+                if (At<int>(slot, 324) > 0) PatchFont(At<void*>(slot, 0));
+            }
         }
         RefreshTextureOwners();
         for (auto& [texture, saved] : textures) Apply(texture);

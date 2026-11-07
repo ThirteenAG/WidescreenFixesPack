@@ -2,7 +2,7 @@
 namespace Startup
 {
 inline bool skipPressStart{ true }, advancing;
-inline int (*complete)(uintptr_t);
+inline injector::game_fn<int(uintptr_t)> complete;
 inline SafetyMipsInline noticeHook;
 inline injector::hook_back<int(const char*)> notice;
 inline int Notice(const char* key)
@@ -33,7 +33,7 @@ inline void Install()
 {
     const auto completeSite = Hud::Required("F0 FF BD 27 00 00 B0 AF 04 00 B1 AF 25 80 80 00 ? ? 11 3C ? ? 24 8E 25 28 00 00 08 00 BF AF ? ? ? ? 25 30 00 00 0F 00 40 10 00 00 00 00");
     const auto noticeCall = Hud::Required("? ? A5 24 ? ? 05 3C 25 20 00 02 ? ? ? ? ? ? A5 24 ? ? 24 8E 01 00 05 34", 12);
-    complete = reinterpret_cast<decltype(complete)>(completeSite);
+    complete = decltype(complete)(completeSite);
     const uintptr_t wrapper = injector::GetBranchDestination(noticeCall).as_int();
     const uintptr_t noticeSite = injector::GetBranchDestination(wrapper + 8).as_int();
     noticeHook = safetymips::create_inline(noticeSite, Notice);

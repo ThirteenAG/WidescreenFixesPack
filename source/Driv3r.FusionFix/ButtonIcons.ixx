@@ -231,7 +231,12 @@ export namespace Driv3rIcons
         if (FontService.is_initialized() && FontService.get())
         {
             auto* service = static_cast<uint8_t*>(FontService.get());
-            for (size_t bank = 0; bank < 4; ++bank) PatchFont(At<void*>(service, 12 + bank * 5744));
+            for (size_t bank = 0; bank < 4; ++bank)
+            {
+                // A bank's font pointer stays uninitialized until the bank has loaded
+                auto* slot = service + 12 + bank * 5744;
+                if (At<int>(slot, 5740) > 0) PatchFont(At<void*>(slot, 0));
+            }
         }
         RefreshTextureOwners();
         for (auto& [texture, saved] : textures) Apply(texture);
