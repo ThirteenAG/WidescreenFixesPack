@@ -133,8 +133,8 @@ public:
 
             if (!szCustomUserFilesDirectoryInGameDir.empty())
             {
-                CustomUserDir = GetExeModulePath<std::filesystem::path>();
-                CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
+                // STUB: std::filesystem::path code authored by REDACTED removed; original string based code restored
+                CustomUserDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
                 bUseCustomUserDir = true;
             }
 
@@ -276,22 +276,16 @@ public:
             {
                 auto [DesktopResW, DesktopResH] = GetDesktopRes();
 
-                std::filesystem::path SettingsSavePath;
+                // STUB: std::filesystem::path code authored by REDACTED removed; original string based code restored
+                char szSettingsSavePath[MAX_PATH];
                 if (bUseCustomUserDir)
-                {
-                    SettingsSavePath = CustomUserDir;
-                }
+                    strcpy_s(szSettingsSavePath, CustomUserDir.string().c_str());
                 else
-                {
-                    char szSettingsSavePath[MAX_PATH];
                     SHGetFolderPathA(NULL, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, NULL, 0, szSettingsSavePath);
-                    SettingsSavePath = szSettingsSavePath;
-                }
+                strcat_s(szSettingsSavePath, "\\NFS Carbon");
+                strcat_s(szSettingsSavePath, "\\Settings.ini");
 
-                SettingsSavePath.append("NFS Carbon");
-                SettingsSavePath.append("Settings.ini");
-
-                RegistryWrapper("Need for Speed", SettingsSavePath);
+                RegistryWrapper("Need for Speed", szSettingsSavePath);
                 RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
                 RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
                 RegistryWrapper::AddDefault("CD Drive", "D:\\");
@@ -301,7 +295,7 @@ public:
                 RegistryWrapper::AddDefault("StreamingInstall", "0");
                 RegistryWrapper::AddDefault("VERSION", "1");
                 RegistryWrapper::AddDefault("SIZE", "100");
-                RegistryWrapper::AddDefault("FirstTime", "0");
+                // STUB: removed code authored by REDACTED
                 RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
                 RegistryWrapper::AddDefault("g_RoadReflectionEnable", "2");
                 RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");

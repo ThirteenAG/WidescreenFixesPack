@@ -671,10 +671,7 @@ void Init4()
     injector::MakeNOP(pattern.get_first(7), 2, true);
 
     // HUD Width
-    uintptr_t loc_764436 = reinterpret_cast<uintptr_t>(hook::pattern("C7 41 04 06 00 00 00 C7 01 04 00 00 00 C7 81 BC 00 00 00 04 00 00 00").get_first(0)) + 0x20;
-    AspectRatio::fHudWidth = *reinterpret_cast<float**>(loc_764436 + 4);
-    DWORD oldprotect;
-    injector::UnprotectMemory(AspectRatio::fHudWidth, sizeof(float), oldprotect);
+    // STUB: HUD width hook-up authored by REDACTED removed
 
     pattern = GetPattern("C7 40 ? ? ? ? ? 88 50 20");
     struct ResHook
@@ -888,34 +885,8 @@ void Init4()
     static float CSMScaleFar = FixSettings().Float("GRAPHICS.CSMScaleFar") * CSMScale;
     Shadows::UpdateShadowsRes();
 
-    // Shadow texture creation: push height, width
-    pattern = hook::pattern("51 6A 01 68 00 04 00 00 C1 E0 0A");
-    Shadows::TextureCaveExit = reinterpret_cast<uintptr_t>(pattern.get_first(3 + 9));
-    injector::MakeJMP(pattern.get_first(3), Shadows::TextureCave, true);
-
-    // Shadow rendering viewports
-    pattern = hook::pattern("8B 46 08 0F 57 C0 C1 E0 0A");
-    struct ShadowsResHook2
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(uint32_t*)(regs.esp + 4) = Shadows::ShadowsRes * regs.eax;
-            *(uint32_t*)(regs.esp + 0xC) = Shadows::ShadowsRes;
-            *(uint32_t*)(regs.esp + 0x10) = Shadows::ShadowsRes;
-        }
-    }; injector::MakeInline<ShadowsResHook2>(pattern.get_first(6), pattern.get_first(26));
-
-    // Cascade scales: the game's writes to CSM::fCSMScaleLevel[] are removed
-    pattern = find_pattern("F3 0F 11 0D ? ? ? ? 0F 5A C8", "F3 0F 11 0D ? ? ? ? 56");
-    auto pattern2 = find_pattern("F3 0F 11 0D ? ? ? ? F3 0F 11 05 ? ? ? ? E8 ? ? ? ? 8B C8", "F3 0F 11 0D ? ? ? ? F3 0F 11 05 ? ? ? ? E8 ? ? ? ? 8B C8");
-    static float* CSM_fCSMScaleLevel = *pattern.get_first<float*>(4);
-    injector::MakeNOP(pattern.get_first(), 8);
-    injector::MakeNOP(pattern2.get_first(0), 8);
-    injector::MakeNOP(pattern2.get_first(8), 8);
-
-    CSM_fCSMScaleLevel[0] = CSMScaleNear;
-    CSM_fCSMScaleLevel[1] = CSMScaleMid;
-    CSM_fCSMScaleLevel[2] = CSMScaleFar;
+    // STUB: shadow texture / viewport resolution hooks and cascade scale code authored by REDACTED removed
+    (void)CSMScaleNear; (void)CSMScaleMid; (void)CSMScaleFar;
 
     // Shadows of meshes outside the view
     pattern = hook::pattern("77 ? F3 0F 5A C0 0F 5A C9");
@@ -928,9 +899,7 @@ void Init4()
     }
 
     // Shadow resolution during CSM::Update(), some distant shadows use it
-    pattern = hook::pattern("68 00 04 00 00 68 00 04 00 00");
-    static auto CSMUpdateHook = [](uint32_t, uint32_t) -> uint32_t { return Shadows::ShadowsRes; };
-    injector::MakeCALL(pattern.get_first(10), static_cast<uint32_t(__cdecl*)(uint32_t, uint32_t)>(CSMUpdateHook), true);
+    // STUB: removed code authored by REDACTED
 
     // Frame rate limit: -1 = monitor refresh rate, -2 = twice the refresh rate. The game needs a fixed rate, so it can't
     // be unlimited. The simulation runs at a whole multiple of it, at least 60 steps per second like the original (a

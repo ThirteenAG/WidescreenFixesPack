@@ -281,8 +281,8 @@ void GetResolutionsList(std::vector<std::string>& list, bool includeRefreshRate)
     }
 }
 
-// gets primary monitor's current refresh rate
-// default return value = 60
+// STUB: original GetDesktopRefreshRate implementation authored by REDACTED removed;
+// the signature is kept because other code depends on it.
 uint32_t GetDesktopRefreshRate()
 {
     DEVMODEW mode = { .dmSize = sizeof(DEVMODEW) };

@@ -19,199 +19,7 @@ void Redirect(void* operand, T* value)
     injector::WriteMemory<T*>(operand, value, true);
 }
 
-// Damage memory pools: they leaked a little with every race, so long sessions ran out of memory.
-// They're recreated once the game is back in the front end.
-namespace DamageFix
-{
-    inline uintptr_t ptrbFree = 0;
-    inline intptr_t ptrMemoryPoolClose = 0;
-    inline uintptr_t ptr_g_AttachmentVBMemoryPool = 0;
-    inline uintptr_t ptr_g_AttachmentMemoryPool = 0;
-
-    void* ptrDamageVBPool = 0;
-    void* ptrDamagePool = 0;
-
-    inline const char* aDamagevbpool = "OptimizedDamageVBPool";
-    inline const char* aDamagepool = "OptimizedDamagePool";
-
-    inline intptr_t bGetFreeMemoryPoolNum = 0;
-    inline intptr_t bWareMalloc = 0;
-    inline uintptr_t MemoryPoolInfoTable = 0;
-    inline uintptr_t MemoryPoolMem = 0;
-    inline uintptr_t MemoryPools = 0;
-    inline uintptr_t MemoryPool_Init = 0;
-
-    void __declspec(naked) DamagePublic_Init()
-    {
-        // clang-format off
-        _asm
-        {
-            push    ebx
-            push    esi
-            call    bGetFreeMemoryPoolNum; bGetFreeMemoryPoolNum(void)
-            xor ebx, ebx
-            push    ebx; allocation_params
-            push    1000000h; size
-            mov ebx, ptr_g_AttachmentVBMemoryPool
-            mov     dword ptr[ebx], eax; int g_AttachmentVBMemoryPool
-            call    bWareMalloc; bWareMalloc(int, char const*, int, int)
-            mov ptrDamageVBPool, eax
-            mov edx, ptr_g_AttachmentVBMemoryPool
-            mov     edx, dword ptr[edx]; memory
-            mov     ecx, edx
-            shl     ecx, 4
-            add     ecx, MemoryPoolInfoTable; MemoryPoolInfo* MemoryPoolInfoTable
-            mov[ecx + 1], bl
-            mov     dword ptr[ecx + 4], 0FFFFFFFFh
-            mov     dword ptr[ecx + 8], 10h
-            mov     ecx, edx
-            imul    ecx, 7Ch; '|'; mempool
-            add     esp, 8
-            push    aDamagevbpool; "DamageVBPool"
-            push    1000000h; memory_size
-            mov esi, MemoryPoolMem
-            lea     esi, dword ptr[esi + ecx]
-            push    eax; memory
-            mov eax, MemoryPools
-            mov     dword ptr[eax + edx * 4], esi; MemoryPool** MemoryPools
-            call    MemoryPool_Init; MemoryPool::Init(void*, int, char const*)
-            mov eax, ptr_g_AttachmentVBMemoryPool
-            mov eax, dword ptr[eax]
-            mov     esi, eax
-            and eax, 1Fh
-            or eax, 40h
-            push    eax; allocation_params
-            push    10h; size
-            call    bWareMalloc; bWareMalloc(int, char const*, int, int)
-            mov edx, MemoryPools
-            mov     edx, dword ptr[edx + esi * 4]; MemoryPool** MemoryPools
-            push    eax
-            mov[edx + 45h], bl
-            call    ptrbFree; bFree(void*)
-            call    bGetFreeMemoryPoolNum; bGetFreeMemoryPoolNum(void)
-            push    ebx; allocation_params
-            push    700000h; size
-            mov ebx, ptr_g_AttachmentMemoryPool
-            mov dword ptr[ebx], eax
-            call    bWareMalloc; bWareMalloc(int, char const*, int, int)
-            mov ptrDamagePool, eax
-            mov edx, ptr_g_AttachmentMemoryPool
-            mov edx, dword ptr[edx]
-            mov     ecx, edx
-            shl     ecx, 4
-            add     ecx, MemoryPoolInfoTable; MemoryPoolInfo* MemoryPoolInfoTable
-            mov[ecx + 1], bl
-            mov     dword ptr[ecx + 4], 0FFFFFFFFh
-            mov     dword ptr[ecx + 8], 10h
-            mov     ecx, edx
-            imul    ecx, 7Ch; '|'; mempool
-            add     esp, 14h
-            push    aDamagepool; "DamagePool"
-            push    700000h; memory_size
-            mov esi, MemoryPoolMem
-            lea     esi, dword ptr[esi + ecx]
-            push    eax; memory
-            mov eax, MemoryPools
-            mov     dword ptr[eax + edx * 4], esi; MemoryPool** MemoryPools
-            call    MemoryPool_Init; MemoryPool::Init(void*, int, char const*)
-            mov eax, ptr_g_AttachmentMemoryPool
-            mov eax, dword ptr[eax]
-            mov     esi, eax
-            and eax, 1Fh
-            or eax, 40h
-            push    eax; allocation_params
-            push    10h; size
-            call    bWareMalloc; bWareMalloc(int, char const*, int, int)
-            mov edx, MemoryPools
-            mov     edx, dword ptr[edx + esi * 4]; MemoryPool** MemoryPools
-            push    eax
-            mov[edx + 45h], bl
-            call    ptrbFree; bFree(void*)
-            add     esp, 0Ch
-            pop     esi
-            pop     ebx
-            retn
-        }
-        // clang-format on
-    }
-
-    bool bReInitFlag = false;
-    void __stdcall QuitToFEHook()
-    {
-        bReInitFlag = true;
-    }
-
-    void GameLoopExecutor()
-    {
-        if (!bReInitFlag)
-            return;
-
-        if (IsFrontEnd())
-        {
-            reinterpret_cast<void(*)(uint32_t)>(ptrMemoryPoolClose)(g_AttachmentMemoryPool);   // MemoryPool::Close
-            reinterpret_cast<void(*)(uint32_t)>(ptrMemoryPoolClose)(g_AttachmentVBMemoryPool); // MemoryPool::Close
-
-            g_AttachmentVBMemoryPool = -1;
-            g_AttachmentMemoryPool = -1;
-
-            reinterpret_cast<void(*)(void*)>(ptrbFree)(ptrDamageVBPool); // bFree
-            reinterpret_cast<void(*)(void*)>(ptrbFree)(ptrDamagePool);   // bFree
-            DamagePublic_Init();
-            bReInitFlag = false;
-        }
-    }
-
-    void Init()
-    {
-        uintptr_t loc_6DAB0E = reinterpret_cast<uintptr_t>(hook::pattern("68 00 60 00 00 E8 ? ? ? ? D9 05 ? ? ? ?").get_first(0)) + 0x5A;
-        uintptr_t loc_6A7976 = reinterpret_cast<uintptr_t>(hook::pattern("8B 11 8B 43 08 8B 92 54 01 00 00 50 FF D2").get_first(0)) - 0xB;
-        uintptr_t loc_4351CC = reinterpret_cast<uintptr_t>(hook::pattern("7E 18 68 FF FF FF 7F").get_first(0));
-        uintptr_t loc_4351E6 = loc_4351CC + 0x1A;
-        uintptr_t loc_4482FC = reinterpret_cast<uintptr_t>(hook::pattern("66 F7 46 0E 00 20 0F").get_first(0)) + 6;
-        uintptr_t loc_6DB10F = reinterpret_cast<uintptr_t>(hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 8B 4C 24 10 64 89 0D 00 00 00 00 59 5E 83 C4 14 C3 CC").get_first(0)) - 0xA;
-        ptrbFree = reinterpret_cast<uintptr_t>(hook::pattern("80 7E F5 22").get_first(0)) - 0x74;
-
-        uintptr_t loc_7907EA = reinterpret_cast<uintptr_t>(hook::pattern("E8 ? ? ? ? 8B 4E 60 51").get_first(0));
-        ptrMemoryPoolClose = loc_7907EA + 5 + *reinterpret_cast<intptr_t*>(loc_7907EA + 1);
-
-        uintptr_t loc_65F770 = reinterpret_cast<uintptr_t>(hook::pattern("6A 47 68 00 40 16 00").get_first(0)) + 0x12;
-        bGetFreeMemoryPoolNum = loc_65F770 + 5 + *reinterpret_cast<intptr_t*>(loc_65F770 + 1);
-
-        uintptr_t loc_436538 = reinterpret_cast<uintptr_t>(hook::pattern("C1 E8 02 25 FF 07 00 00").get_first(0)) + 0x40;
-        bWareMalloc = loc_436538 + 5 + *reinterpret_cast<intptr_t*>(loc_436538 + 1);
-
-        uintptr_t loc_1C45036 = reinterpret_cast<uintptr_t>(hook::pattern("8B C8 C1 E1 04 81 C1 ? ? ? ?").get_first(0)); // SecuROM section; 0x00436188 in the DRM-free demo
-        MemoryPoolInfoTable = *reinterpret_cast<uintptr_t*>(loc_1C45036 + 7);
-        MemoryPoolMem = *reinterpret_cast<uintptr_t*>(loc_1C45036 + 0x2A);
-        MemoryPools = *reinterpret_cast<uintptr_t*>(loc_1C45036 + 0x37);
-
-        uintptr_t loc_435F84 = reinterpret_cast<uintptr_t>(hook::pattern("C6 05 ? ? ? ? 00 C7 05 ? ? ? ? FF FF FF FF C7 05 ? ? ? ? 10 00 00 00 89 35 ? ? ? ? E8").get_first(0)) + 0x21; // 2 hits in the DRM-free demo, which is OK
-        MemoryPool_Init = loc_435F84 + 5 + *reinterpret_cast<intptr_t*>(loc_435F84 + 1);
-
-        uintptr_t sub_438AE0 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 83 E0 1F 0D 00 04 00 00 89 44 24 08 E9 ? ? ? ?").get_first(0));
-        ptr_g_AttachmentVBMemoryPool = *reinterpret_cast<uintptr_t*>(sub_438AE0 + 1);
-        g_AttachmentVBMemoryPool.SetAddress(ptr_g_AttachmentVBMemoryPool);
-
-        uintptr_t loc_438962 = reinterpret_cast<uintptr_t>(hook::pattern("A1 ? ? ? ? 83 E0 1F 0D 00 04 00 00 50 68 C4 0A 00 00").get_first(0));
-        ptr_g_AttachmentMemoryPool = *reinterpret_cast<uintptr_t*>(loc_438962 + 1);
-        g_AttachmentMemoryPool.SetAddress(ptr_g_AttachmentMemoryPool);
-
-        // DamagePublic init DRM-free code
-        injector::MakeCALL(loc_6DAB0E, DamagePublic_Init, true);
-
-        // Hook for EQuitToFE to tell the game it's ready to free memory
-        injector::MakeCALL(loc_6A7976, QuitToFEHook, true);
-
-        // remove free assert
-        injector::MakeJMP(loc_4351CC, loc_4351E6, true);
-
-        // force damage skin recreation
-        injector::MakeNOP(loc_4482FC, 6, true);
-
-        // game loop
-        injector::MakeCALL(loc_6DB10F, GameLoopExecutor, true);
-    }
-}
+// STUB: damage memory pool fix (DamageFix) authored by REDACTED removed
 
 // FE::Object::SetScript(object, script hash, start) could be called with an object whose memory was already
 // released, which crashed in the script lookup. Objects in unmapped memory are skipped.
@@ -643,7 +451,7 @@ public:
             pattern = hook::pattern("83 B9 80 03 00 00 00");
             injector::MakeRET(pattern.get_first(-0x3D), 0, true);
 
-            DamageFix::Init();
+            // STUB: removed code authored by REDACTED (DamageFix::Init)
 
             // The Xbox 360 achievement system, unused on PC: no manager, no updates and no checks
             pattern = hook::pattern("A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 53 56 57 8B D9");
@@ -951,23 +759,7 @@ public:
             }
 
             // Sparks
-            {
-                auto drawBatchCall = hook::pattern("E8 ? ? ? ? 8B 4E 08 83 C4 04 51 E8 ? ? ? ? 8B 56 08 5E");
-                auto setTextureCall = hook::pattern("6A 20 6A 00 53 6A 00 57 FF D1 8B 46 14 8B 17");
-                pattern = hook::pattern("A1 ? ? ? ? 53 8B 5C 24 08 56 57 8B 38 74 19");
-                XenonEffects::DrawBatchFunc = reinterpret_cast<decltype(XenonEffects::DrawBatchFunc)>(pattern.get_first(-7));
-                auto setTexture = hook::pattern("56 57 8B 7C 24 0C 8B 17 8B 52 10 8B F1 8B 46 18 8B 08 52");
-                if (setTexture.empty())
-                {
-                    setTexture.get_first();
-                    std::abort();
-                }
-                if (setTexture.size() != 2)
-                    std::abort();
-                XenonEffects::SetTextureFunc = reinterpret_cast<decltype(XenonEffects::SetTextureFunc)>(setTexture.get(0).get<void>(0));
-                injector::MakeCALL(drawBatchCall.get_first(0xC), XenonEffects::DrawBatch, true);
-                injector::MakeCALL(setTextureCall.get_first(0x25), XenonEffects::SetTexture, true);
-            }
+            // STUB: spark batch hook-up depends on code authored by REDACTED, removed
 
             // Motion blur off without turning off the other World FX: its branch is skipped. Switched in the options
             // menu at once.

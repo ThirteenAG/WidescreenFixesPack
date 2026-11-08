@@ -73,9 +73,8 @@ public:
             pDisableContrails = &FixSettings().Int("GRAPHICS.DisableContrails");
             XenonEffectRate::Init();
 
-            uintptr_t loc_7E139A = reinterpret_cast<uintptr_t>(hook::pattern("8A 87 9C 01 00 00 84 C0").get_first(0)) + 0x119;
-            AddXenonEffect = static_cast<uintptr_t>(injector::GetBranchDestination(loc_7E139A));
-            injector::MakeCALL(loc_7E139A, AddXenonEffect_Contrail_Hook, true);
+            // STUB: contrail effect hook-up authored by REDACTED removed
+            (void)&AddXenonEffect_Contrail_Hook;
         };
     }
 } ContrailHook;

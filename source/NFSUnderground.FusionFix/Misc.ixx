@@ -14,15 +14,7 @@ namespace IntroFMVScreen
     SafetyHookInline shNotificationMessage = {};
     void __fastcall NotificationMessage(void* FEPackage, void* edx, int a2, void* FEObject, int a4, int a5)
     {
-        // pop the package once for the intro skip
-        static bool bOnceFlag = false;
-        if (!bOnceFlag)
-        {
-            bOnceFlag = true;
-            cFEng::PopPackage(*(char**)((uintptr_t)FEPackage + 0xC));
-            return;
-        }
-
+        // STUB: intro skip package pop authored by REDACTED removed
         return shNotificationMessage.unsafe_fastcall(FEPackage, edx, a2, FEObject, a4, a5);
     }
 }
@@ -177,22 +169,7 @@ public:
 
             if (bSkipIntro)
             {
-                // LS_IntroFMV.fng needs to stay in the boot flow, otherwise the splash screen music doesn't play.
-                // The intro video still technically plays, so e3_title.mad still needs to be in the movies folder.
-                static const char* BootFlowScreens[] = { "LS_IntroFMV.fng", "LS_Splash_PC.fng", "MU_UG_NEwOrLoad_PC2.fng" , "BootFlowEnd" };
-                static const char* BootFlowScreensLangSelect[] = { "LS_LangSelect.fng", "LS_IntroFMV.fng", "LS_Splash_PC.fng", "MU_UG_NEwOrLoad_PC2.fng" , "BootFlowEnd" };
-
-                const char** outScreens = bShowLangSelect ? BootFlowScreensLangSelect : BootFlowScreens;
-                const char** outLastScreen = bShowLangSelect ? &BootFlowScreensLangSelect[_countof(BootFlowScreensLangSelect) - 1] : &BootFlowScreens[_countof(BootFlowScreens) - 1];
-
-                uintptr_t loc_4DE21A = reinterpret_cast<uintptr_t>(hook::pattern("74 ? 85 C0 0F 95 C1").get_first(0));
-                uintptr_t loc_4DE273 = reinterpret_cast<uintptr_t>(hook::pattern("BF ? ? ? ? 6A ? E8").get_first(0));
-                uintptr_t loc_4DE2A0 = reinterpret_cast<uintptr_t>(hook::pattern("81 FF ? ? ? ? 89 46 ? 89 48 ? ? ? 7C ? ? ? 85 F6").get_first(0));
-
-                // force US Retail bootflow
-                injector::MakeJMP(loc_4DE21A, loc_4DE273);
-                injector::WriteMemory<const char**>(loc_4DE273 + 1, outScreens, true);
-                injector::WriteMemory<const char**>(loc_4DE2A0 + 2, outLastScreen, true);
+                // STUB: boot flow screen list override (US retail boot flow) authored by REDACTED removed
 
                 // skip the intro video the first time it plays
                 auto pattern = hook::pattern("8B 44 24 ? 3D ? ? ? ? 56 74");
@@ -231,15 +208,7 @@ public:
             }
             else if (bShowLangSelect)
             {
-                static const char* BootFlowScreensLangSelect[] = { "LS_LangSelect.fng", "LS_EAlogo.fng", "LS_PSAMovie.fng", "LS_IntroFMV.fng", "LS_Splash_PC.fng", "MU_UG_NEwOrLoad_PC2.fng" , "BootFlowEnd" };
-
-                uintptr_t loc_4DE21A = reinterpret_cast<uintptr_t>(hook::pattern("89 36 89 76 04 A1 ? ? ? ? 83 F8 05").get_first(0)) + 0x15;
-                uintptr_t loc_4DE273 = loc_4DE21A + 0x59;
-                uintptr_t loc_4DE2A0 = reinterpret_cast<uintptr_t>(hook::pattern("8B 4E 04 89 01 83 C7 04 81 FF ? ? ? ? 89 46 04 89 48 04 89 30 7C C8 8B 36").get_first(0)) + 8;
-
-                injector::MakeJMP(loc_4DE21A, loc_4DE273);
-                injector::WriteMemory<const char**>(loc_4DE273 + 1, BootFlowScreensLangSelect, true);
-                injector::WriteMemory<const char**>(loc_4DE2A0 + 2, &BootFlowScreensLangSelect[_countof(BootFlowScreensLangSelect) - 1], true);
+                // STUB: language select boot flow override authored by REDACTED removed
             }
 
             // 44.1 kHz audio instead of 22 kHz
@@ -269,7 +238,7 @@ public:
             injector::WriteMemory<uint8_t>(pattern.get_first(0x11), 0xEB, true);
 
             // The best lap counter at the end of a race isn't visible in 16:9 and gets in the way on ultrawide
-            auto loc_49A222 = hook::pattern("8A 44 24 24 8B 6C 24 68 8B 7D 0C 83 CE FF 84 C0 8D 4C 24 24 74 ? 6B F6 21");
+            auto loc_49A222 = hook::pattern("8A 44 24 24 8B 6C 24 68 8B 7D 0C 83 CE FF 84 C0 8D 4C 24 24 74 1A"); // REDACTED pattern change reverted
             pattern = hook::pattern("0F 84 B8 00 00 00 8D 4C 24 44");
             injector::MakeNOP(pattern.get_first(0), 6, true);
             injector::MakeJMP(pattern.get_first(0), loc_49A222.get_first(0), true);

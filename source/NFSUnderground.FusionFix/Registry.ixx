@@ -152,8 +152,8 @@ public:
 
         if (!szCustomUserFilesDirectoryInGameDir.empty())
         {
-            CustomUserDir = GetExeModulePath<std::filesystem::path>();
-            CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
+            // STUB: std::filesystem::path code authored by REDACTED removed; original string based code restored
+            CustomUserDir = GetExeModulePath<std::string>() + szCustomUserFilesDirectoryInGameDir;
             bUseCustomUserDir = true;
         }
 

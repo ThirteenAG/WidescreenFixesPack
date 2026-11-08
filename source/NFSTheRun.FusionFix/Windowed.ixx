@@ -92,22 +92,18 @@ void ApplyWindowStyle()
     LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
     lStyle &= ~(WS_HSCROLL | WS_VSCROLL);
 
-    if (bBorderlessWindowed)
-        lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-    else
+    if (!bBorderlessWindowed)
     {
         lStyle |= (WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-        if (bEnableWindowResize)
-            lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
     }
 
-    SetWindowLong(GameHWND, GWL_STYLE, lStyle);
+    // STUB: window style code (borderless / resizable styles and applying them) authored by REDACTED removed
 
     auto [resW, resH] = GetRes();
 
     if (resW <= 0 || resH <= 0)
     {
-        SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        // STUB: removed code authored by REDACTED
         return;
     }
 
@@ -239,8 +235,7 @@ LONG WINAPI SetWindowLongA_Hook(HWND hWnd, int nIndex, LONG dwNewLong)
     else
     {
         dwNewLong |= (WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-        if (bEnableWindowResize)
-            dwNewLong |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
+        // STUB: resizable window style code authored by REDACTED removed
     }
 
     return SetWindowLongA(hWnd, GWL_STYLE, dwNewLong);
@@ -257,8 +252,7 @@ LONG WINAPI SetWindowLongW_Hook(HWND hWnd, int nIndex, LONG dwNewLong)
     else
     {
         dwNewLong |= (WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-        if (bEnableWindowResize)
-            dwNewLong |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
+        // STUB: resizable window style code authored by REDACTED removed
     }
 
     return SetWindowLongW(hWnd, GWL_STYLE, dwNewLong);

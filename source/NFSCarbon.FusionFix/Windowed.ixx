@@ -22,19 +22,7 @@ public:
 
             if (nWindowedMode)
             {
-                switch (nWindowedMode)
-                {
-                    case 4:
-                        WindowedModeWrapper::bScaleWindow = true;
-                        break;
-                    case 3:
-                        WindowedModeWrapper::bEnableWindowResize = true;
-                    case 2:
-                        WindowedModeWrapper::bBorderlessWindowed = false;
-                        break;
-                    default:
-                        break;
-                }
+                // STUB: windowed mode selection (scaled / resizable / bordered) authored by REDACTED removed
 
                 dwWindowedMode = 1;
 

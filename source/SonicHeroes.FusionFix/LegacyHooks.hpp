@@ -1,15 +1,4 @@
 #pragma once
 
-void StretchOnBoot();
-void LensFlareScale();
-void RestoreDemos();
-
-namespace AdvertiseWindowFix
-{
-    void hkAdvWindowConstructor();
-}
-
-namespace AdvStaffRollFix
-{
-    void hkStaffrollConstructor();
-}
+// STUB: declarations of the hooks authored by REDACTED (StretchOnBoot, LensFlareScale, RestoreDemos,
+// AdvertiseWindowFix::hkAdvWindowConstructor, AdvStaffRollFix::hkStaffrollConstructor) have been removed.

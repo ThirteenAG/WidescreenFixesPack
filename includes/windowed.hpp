@@ -4,6 +4,8 @@
 #include <tuple>
 #include <cstdint>
 
+// STUB: parts of WindowedModeWrapper authored by REDACTED have been removed. The namespace, option flags
+// and hook signatures are kept because other code depends on them.
 namespace WindowedModeWrapper
 {
     static bool bBorderlessWindowed = true;
@@ -65,7 +67,6 @@ namespace WindowedModeWrapper
     static std::tuple<int, int, int, int> beforeCreateWindow(int nWidth, int nHeight)
     {
         EnableDpiAwareness();
-        // fix the window to open at the center of the screen...
         const auto info = WindowMonitor();
         const auto DesktopX = info.rcMonitor.right - info.rcMonitor.left;
         const auto DesktopY = info.rcMonitor.bottom - info.rcMonitor.top;
@@ -75,21 +76,12 @@ namespace WindowedModeWrapper
 
         if (bScaleWindow)
         {
-            // As large as the screen allows at the game's aspect ratio: by height, or by width when it's wider
-            float fAspectRatio = static_cast<float>(nWidth) / static_cast<float>(nHeight);
-            newHeight = DesktopY;
-            newWidth = static_cast<int>(newHeight * fAspectRatio);
-            if (newWidth > static_cast<int>(DesktopX))
-            {
-                newWidth = DesktopX;
-                newHeight = static_cast<int>(newWidth / fAspectRatio);
-            }
+            // STUB: window scaling code authored by REDACTED removed
         }
 
         if (bStretchWindow)
         {
-            newHeight = DesktopY;
-            newWidth = DesktopX;
+            // STUB: window stretching code authored by REDACTED removed
         }
 
         if (bBorderlessWindowed || desiredClientWidth <= 0 || desiredClientHeight <= 0)
@@ -111,16 +103,12 @@ namespace WindowedModeWrapper
 
         lStyle &= ~(WS_HSCROLL | WS_VSCROLL);
 
-        if (bBorderlessWindowed)
-            lStyle &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-        else
+        if (!bBorderlessWindowed)
         {
             lStyle |= (WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-            if (bEnableWindowResize)
-                lStyle |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
         }
 
-        SetWindowLong(GameHWND, GWL_STYLE, lStyle);
+        // STUB: window style code (borderless / resizable styles and applying them) authored by REDACTED removed
 
         if (!bBorderlessWindowed && desiredClientWidth > 0 && desiredClientHeight > 0)
         {
@@ -147,7 +135,7 @@ namespace WindowedModeWrapper
         }
         else
         {
-            SetWindowPos(GameHWND, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
+            // STUB: removed code authored by REDACTED
         }
 
         // No rounded corners on Windows 11 (DWMWA_WINDOW_CORNER_PREFERENCE = DWMWCP_DONOTROUND), so the game image
@@ -193,39 +181,10 @@ namespace WindowedModeWrapper
         }
     }
 
-    static BOOL WINAPI CenterWindowPosition(int nWidth, int nHeight)
+    static BOOL WINAPI CenterWindowPosition(int /*nWidth*/, int /*nHeight*/)
     {
-        // fix the window to open at the center of the screen...
-        const auto info = WindowMonitor();
-        const auto DesktopX = info.rcMonitor.right - info.rcMonitor.left;
-        const auto DesktopY = info.rcMonitor.bottom - info.rcMonitor.top;
-
-        int newWidth = nWidth;
-        int newHeight = nHeight;
-
-        if (bScaleWindow)
-        {
-            // As large as the screen allows at the game's aspect ratio: by height, or by width when it's wider
-            float fAspectRatio = static_cast<float>(nWidth) / static_cast<float>(nHeight);
-            newHeight = DesktopY;
-            newWidth = static_cast<int>(newHeight * fAspectRatio);
-            if (newWidth > static_cast<int>(DesktopX))
-            {
-                newWidth = DesktopX;
-                newHeight = static_cast<int>(newWidth / fAspectRatio);
-            }
-        }
-
-        if (bStretchWindow)
-        {
-            newHeight = DesktopY;
-            newWidth = DesktopX;
-        }
-
-        int WindowPosX = info.rcMonitor.left + (int)(((float)DesktopX / 2.0f) - ((float)newWidth / 2.0f));
-        int WindowPosY = info.rcMonitor.top + (int)(((float)DesktopY / 2.0f) - ((float)newHeight / 2.0f));
-
-        return SetWindowPos(GameHWND, 0, WindowPosX, WindowPosY, newWidth, newHeight, SWP_NOZORDER | SWP_FRAMECHANGED);
+        // STUB: window centering code authored by REDACTED removed
+        return FALSE;
     }
 
     static HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWindowName, DWORD dwStyle, int X, int Y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam)
@@ -266,8 +225,7 @@ namespace WindowedModeWrapper
         else
         {
             dwNewLong |= (WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-            if (bEnableWindowResize)
-                dwNewLong |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
+            // STUB: resizable window style code authored by REDACTED removed
         }
 
         return SetWindowLongA(hWnd, GWL_STYLE, dwNewLong);
@@ -289,8 +247,7 @@ namespace WindowedModeWrapper
         else
         {
             dwNewLong |= (WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-            if (bEnableWindowResize)
-                dwNewLong |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
+            // STUB: resizable window style code authored by REDACTED removed
         }
 
         return SetWindowLongW(hWnd, GWL_STYLE, dwNewLong);
@@ -300,14 +257,7 @@ namespace WindowedModeWrapper
     {
         BOOL res = SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags);
         if (hWnd != GameHWND) return res;
-        if (bBorderlessWindowed)
-        {
-            afterCreateWindow();
-            RECT rect;
-            GetClientRect(hWnd, &rect);
-            CenterWindowPosition(rect.right, rect.bottom);
-            return TRUE;
-        }
+        // STUB: borderless window handling authored by REDACTED removed
         return res;
     }
 

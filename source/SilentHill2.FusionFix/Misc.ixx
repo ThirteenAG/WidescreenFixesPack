@@ -46,21 +46,34 @@ namespace injector
     }
 }
 
+// STUB: LoadDatFile implementation authored by REDACTED removed. The original implementation (CFileMgr) no
+// longer exists, so this is a replacement that reads the whole file and passes each non-comment line on.
 void LoadDatFile(std::filesystem::path str, std::function<void(std::string_view line)>&& cb)
 {
-    std::ifstream hFile;
-    hFile.open(str);
-    if (hFile.is_open())
+    std::error_code ec;
+    const auto size = std::filesystem::file_size(str, ec);
+    if (ec || size == 0)
+        return;
+
+    std::string contents(static_cast<size_t>(size), '\0');
+    FILE* f = nullptr;
+    if (_wfopen_s(&f, str.c_str(), L"rb") == 0 && f)
     {
-        std::string line;
-        while (std::getline(hFile, line))
-        {
-            if (!line.empty() && line[0] != '#')
-            {
-                cb(line);
-            }
-        }
-        hFile.close();
+        contents.resize(fread(contents.data(), 1, contents.size(), f));
+        fclose(f);
+    }
+
+    for (size_t start = 0; start < contents.size();)
+    {
+        size_t end = contents.find('\n', start);
+        if (end == std::string::npos)
+            end = contents.size();
+        std::string_view entry(contents.data() + start, end - start);
+        if (!entry.empty() && entry.back() == '\r')
+            entry.remove_suffix(1);
+        if (!entry.empty() && entry.front() != '#')
+            cb(entry);
+        start = end + 1;
     }
 }
 
@@ -748,9 +761,11 @@ public:
                     static std::set<uint32_t> images;
                     // The list of full screen pictures next to the plugin, with its name
                     auto DataFilePath = GetThisModulePath<std::filesystem::path>() / GetThisModuleName<std::filesystem::path>();
-                    DataFilePath.replace_extension(".dat");
-                    //auto pos = DataFilePath.rfind('.');
-                    //DataFilePath.replace(pos, DataFilePath.length() - pos, ".dat");
+                    // REDACTED change (replace_extension) reverted to the original code
+                    auto DataFilePathStr = DataFilePath.string();
+                    auto pos = DataFilePathStr.rfind('.');
+                    DataFilePathStr.replace(pos, DataFilePathStr.length() - pos, ".dat");
+                    DataFilePath = DataFilePathStr;
                     char buf[MAX_PATH];
                     GetModuleFileNameA(NULL, buf, MAX_PATH);
                     *(strrchr(buf, '\\') + 1) = '\0';

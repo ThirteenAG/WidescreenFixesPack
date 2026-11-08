@@ -450,7 +450,7 @@ export void InitD3DDrv()
                         {
                             IDirect3DDevice9* ppDevice = nullptr;
                             pTex->GetDevice(&ppDevice);
-                            if (D3DXCreateTextureFromFileW(ppDevice, (LPCWSTR)(Screen.szLoadscPath.u16string().c_str()), &pTexLoadscreenCustom) == D3D_OK)
+                            if (D3DXCreateTextureFromFileA(ppDevice, Screen.szLoadscPath.c_str(), &pTexLoadscreenCustom) == D3D_OK) // REDACTED change reverted
                                 regs.edi = (uint32_t)pTexLoadscreenCustom;
                         }
                         else

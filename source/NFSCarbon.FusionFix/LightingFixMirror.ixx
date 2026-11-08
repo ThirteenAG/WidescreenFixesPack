@@ -7,44 +7,7 @@ export module LightingFixMirror;
 
 import ComVars;
 
-uint32_t* LightingFixUpdateMirrorCave_Exit = nullptr;
-uint32_t* sub_713AA0 = nullptr;
-uint32_t* sub_713A30 = nullptr;
-uint32_t* ptr_dword_AB095C = nullptr;
-uint32_t* ptr_dword_AB0914 = nullptr;
-
-void __declspec(naked) LightingFixUpdateMirrorCave()
-{
-    _asm
-    {
-        cmp dword ptr[edi + 8], 01
-        mov ecx, esi
-        jne IsMirror
-        mov eax, ds:ptr_dword_AB095C
-        mov eax, [eax]
-        push eax
-        push 0x59
-        call sub_713AA0
-        jmp ExitCode
-
-        IsMirror :
-        mov eax, ds : ptr_dword_AB0914
-            mov eax, [eax]
-            push eax
-            push 0x59
-            call sub_713AA0
-            mov eax, [esi + 0x1330]
-            test eax, eax
-            je ExitCode
-            push 0
-            push 0x80
-            mov ecx, esi
-            call sub_713A30
-
-            ExitCode :
-        jmp LightingFixUpdateMirrorCave_Exit
-    }
-}
+// STUB: mirror lighting update code (LightingFixUpdateMirrorCave) authored by REDACTED removed
 
 class LightingFixMirror
 {
@@ -68,17 +31,7 @@ public:
                 injector::WriteMemory<float>(dword_73E7CB, 1.35f, true);
 
                 //Lighting Fix Update (mirror)
-                auto pattern = hook::pattern("8B 4F 6C 8B 91 8C 02 00 00 52 6A 6C 8B CE"); //0x00748C17
-                uint32_t* dword_748C2A = pattern.count(1).get(0).get<uint32_t>(0x13);
-                ptr_dword_AB095C = *pattern.count(1).get(0).get<uint32_t*>(0x1C);
-                ptr_dword_AB0914 = *hook::pattern("52 50 FF 51 5C A1 ? ? ? ? 8B 08").count(1).get(0).get<uint32_t*>(6);
-                sub_713AA0 = hook::pattern("C2 08 00 CC 8B 54 24 08 8B 41 44 56").count(1).get(0).get<uint32_t>(4);
-                sub_713A30 = hook::pattern("89 81 84 17 00 00 C3 CC CC").count(1).get(0).get<uint32_t>(9);
-                LightingFixUpdateMirrorCave_Exit = hook::pattern("A1 ? ? ? ? 8B 15 ? ? ? ? 83 F8 06 89 15 ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").count(1).get(0).get<uint32_t>(0); //0x00748C5D
-                injector::MakeJMP(dword_748C2A, LightingFixUpdateMirrorCave, true);
-
-                uint32_t* dword_72E382 = hook::pattern("C7 05 ? ? ? ? 01 00 00 00 C7 05 ? ? ? ? 00 00 80").count(1).get(0).get<uint32_t>(6);
-                injector::WriteMemory(dword_72E382, 0, true);
+                // STUB: removed code authored by REDACTED
 
             }
         };

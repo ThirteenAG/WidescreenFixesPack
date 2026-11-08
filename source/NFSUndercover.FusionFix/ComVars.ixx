@@ -29,6 +29,7 @@ export struct bVector4
     float w;
 };
 
+// STUB: type declaration originally authored by REDACTED, kept because other code depends on it
 export struct bMatrix4
 {
     bVector4 v0;

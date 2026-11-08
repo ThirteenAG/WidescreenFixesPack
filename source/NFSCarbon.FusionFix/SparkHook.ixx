@@ -27,9 +27,8 @@ public:
         {
             XenonEffectRate::Init();
 
-            uintptr_t loc_755C99 = reinterpret_cast<uintptr_t>(hook::pattern("8B 4E 3C 57 68 37 E6 40 FE E8").get_first(0)) + 0x39;
-            AddXenonEffect = static_cast<uintptr_t>(injector::GetBranchDestination(loc_755C99));
-            injector::MakeCALL(loc_755C99, AddXenonEffect_Spark_Hook, true);
+            // STUB: spark effect hook-up authored by REDACTED removed
+            (void)&AddXenonEffect_Spark_Hook;
 
         };
     }

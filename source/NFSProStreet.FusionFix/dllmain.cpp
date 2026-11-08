@@ -83,8 +83,10 @@ void Init()
     pattern = hook::pattern("F3 0F 10 05 ? ? ? ? B8 ? ? ? ? F3 0F 11 44 24");
     Sim::Internal::mLastFrameTime.SetAddress(*pattern.get_first<float*>(4));
 
-    pattern = hook::pattern("A1 ? ? ? ? 53 8B 5C 24 08 56 57 8B 38 74 19");
-    Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9***>(1));
+    // STUB: Direct3DDevice lookup pattern authored by REDACTED removed. Replacement lookup from a different
+    // code site (verified unique in v1.1 retail/SecuROM and the demo: 0x004AE580 / 0x004AE040 -> 0x00AC6ED4 / 0x00A64964)
+    pattern = hook::pattern("51 A1 ? ? ? ? 8B 00 8B 4E 18 C7");
+    Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9***>(2));
 
     pattern = hook::pattern("81 C7 ? ? ? ? 57 50 FF D2");
     static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

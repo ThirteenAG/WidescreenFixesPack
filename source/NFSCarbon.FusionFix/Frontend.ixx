@@ -21,33 +21,7 @@ namespace FrontEndFit
         matrix->_22 *= fScale;
     }
 
-    struct SetTransformHook1
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            uintptr_t vTable = *reinterpret_cast<uintptr_t*>(regs.ecx);
-            uintptr_t SetTransformAddr = *reinterpret_cast<uintptr_t*>(vTable + 8);
-
-            D3DMATRIX matrix = *reinterpret_cast<D3DMATRIX*>(regs.esp + 0x30);
-            ScaleMat(&matrix);
-
-            reinterpret_cast<void(__thiscall*)(uintptr_t, D3DMATRIX*, uintptr_t, uint32_t)>(SetTransformAddr)(regs.ecx, &matrix, regs.ebx, 0);
-        }
-    };
-
-    struct SetTransformHook2
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            uintptr_t vTable = *reinterpret_cast<uintptr_t*>(regs.esi);
-            uintptr_t SetTransformAddr = *reinterpret_cast<uintptr_t*>(vTable + 8);
-
-            D3DMATRIX matrix = *reinterpret_cast<D3DMATRIX*>(regs.esp + 0x30);
-            ScaleMat(&matrix);
-
-            reinterpret_cast<void(__thiscall*)(uintptr_t, D3DMATRIX*, uintptr_t, uint32_t)>(SetTransformAddr)(regs.esi, &matrix, regs.ebx, 0);
-        }
-    };
+    // STUB: SetTransform hooks (front end scaler) authored by REDACTED removed
 }
 
 // Movies
@@ -603,11 +577,7 @@ public:
             });
 
             {
-                auto loc_730E4D = hook::pattern("6A ? 53 8D 54 24 ? 52 FF 50");
-                injector::MakeInline<FrontEndFit::SetTransformHook1>(loc_730E4D.get_first(), loc_730E4D.get_first(0xB));
-
-                auto loc_730ECE = hook::pattern("57 53 8D 44 24 ? 50 8B CE FF 52");
-                injector::MakeInline<FrontEndFit::SetTransformHook2>(loc_730ECE.get_first(), loc_730ECE.get_first(0xC));
+                // STUB: SetTransform hook installation depends on code authored by REDACTED, removed
 
                 onResChange() += [](int Width, int Height)
                 {

@@ -65,8 +65,8 @@ public:
             });
             Screen.bRawInputMouseRawData = FixSettings().Int("MAIN.RawInputMouseRawData") != 0;
             Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
-            Screen.szLoadscPath = FixSettings().CfgPath();
-            Screen.szLoadscPath.replace_extension(".png");
+            Screen.szLoadscPath = std::filesystem::path(FixSettings().CfgPath()).string();
+            Screen.szLoadscPath = Screen.szLoadscPath.substr(0, Screen.szLoadscPath.find_last_of('.')) + ".png"; // REDACTED change reverted
             gBlacklistIndicators = FixSettings().Int("BONUS.BlacklistIndicators");
             gColor = FixSettings().Int("BONUS.GogglesLightColor");
             bLightSyncRGB = FixSettings().Int("MAIN.LightSyncRGB");

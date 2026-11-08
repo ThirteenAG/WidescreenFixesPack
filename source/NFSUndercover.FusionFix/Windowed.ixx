@@ -23,20 +23,9 @@ public:
 
             if (nWindowedMode)
             {
-                switch (nWindowedMode)
-                {
-                    case 4:
-                        WindowedModeWrapper::bScaleWindow = true;
-                        break;
-                    case 3:
-                        WindowedModeWrapper::bEnableWindowResize = true;
-                        bAspectFromWindow = true;
-                    case 2:
-                        WindowedModeWrapper::bBorderlessWindowed = false;
-                        break;
-                    default:
-                        break;
-                }
+                // STUB: windowed mode selection (scaled / resizable / bordered) authored by REDACTED removed
+                if (nWindowedMode == 3)
+                    bAspectFromWindow = true;
 
                 dwWindowedMode = 1;
 
@@ -122,7 +111,7 @@ public:
                     }));
                 }
 
-                auto pattern = hook::pattern("89 5D 3C 89 5D 18 89 5D 44"); //0x74FD5C
+                auto pattern = hook::pattern("89 5D 3C 89 5D 18 89 5D 44");
                 struct WindowedMode
                 {
                     void operator()(injector::reg_pack& regs)

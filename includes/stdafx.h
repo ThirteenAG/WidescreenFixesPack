@@ -234,25 +234,8 @@ T GetModulePath(HMODULE hModule)
 
     if constexpr (std::is_same_v<T, std::filesystem::path>)
     {
-        std::u16string ret;
-        std::filesystem::path pathret;
-        auto bufferSize = INITIAL_BUFFER_SIZE;
-        for (size_t iterations = 0; iterations < MAX_ITERATIONS; ++iterations)
-        {
-            ret.resize(bufferSize);
-            size_t charsReturned = 0;
-            charsReturned = GetModuleFileNameW(hModule, (LPWSTR)&ret[0], bufferSize);
-            if (charsReturned < ret.length())
-            {
-                ret.resize(charsReturned);
-                pathret = ret;
-                return pathret;
-            }
-            else
-            {
-                bufferSize *= 2;
-            }
-        }
+        // STUB: std::filesystem::path implementation authored by REDACTED removed
+        return T(GetModulePath<std::wstring>(hModule));
     }
     else
     {
@@ -287,7 +270,7 @@ T GetThisModulePath()
     GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&GetDesktopRefreshRate, &hm);
     T r = GetModulePath<T>(hm);
     if constexpr (std::is_same_v<T, std::filesystem::path>)
-        return r.parent_path();
+        return T(GetThisModulePath<std::wstring>()).parent_path(); // STUB: code authored by REDACTED removed
     else if constexpr (std::is_same_v<T, std::string>)
         r = r.substr(0, r.find_last_of("/\\") + 1);
     else
@@ -301,9 +284,8 @@ T GetThisModuleName()
     HMODULE hm = NULL;
     GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&GetDesktopRefreshRate, &hm);
     const T moduleFileName = GetModulePath<T>(hm);
-
     if constexpr (std::is_same_v<T, std::filesystem::path>)
-        return moduleFileName.filename();
+        return T(GetThisModuleName<std::wstring>()); // STUB: code authored by REDACTED removed
     else if constexpr (std::is_same_v<T, std::string>)
         return moduleFileName.substr(moduleFileName.find_last_of("/\\") + 1);
     else
@@ -314,9 +296,8 @@ template<class T = std::filesystem::path>
 T GetExeModulePath()
 {
     T r = GetModulePath<T>(NULL);
-
     if constexpr (std::is_same_v<T, std::filesystem::path>)
-        return r.parent_path();
+        return T(GetExeModulePath<std::wstring>()).parent_path(); // STUB: code authored by REDACTED removed
     else if constexpr (std::is_same_v<T, std::string>)
         r = r.substr(0, r.find_last_of("/\\") + 1);
     else
@@ -329,7 +310,7 @@ T GetExeModuleName()
 {
     const T moduleFileName = GetModulePath<T>(NULL);
     if constexpr (std::is_same_v<T, std::filesystem::path>)
-        return moduleFileName.filename();
+        return T(GetExeModuleName<std::wstring>()); // STUB: code authored by REDACTED removed
     else if constexpr (std::is_same_v<T, std::string>)
         return moduleFileName.substr(moduleFileName.find_last_of("/\\") + 1);
     else
@@ -343,25 +324,8 @@ T GetCurrentDirectoryW()
     static constexpr auto MAX_ITERATIONS = 7;
     if constexpr (std::is_same_v<T, std::filesystem::path>)
     {
-        std::u16string ret;
-        std::filesystem::path pathret;
-        auto bufferSize = INITIAL_BUFFER_SIZE;
-        for (size_t iterations = 0; iterations < MAX_ITERATIONS; ++iterations)
-        {
-            ret.resize(bufferSize);
-            size_t charsReturned = 0;
-            charsReturned = GetCurrentDirectoryW(bufferSize, (LPWSTR)&ret[0]);
-            if (charsReturned < ret.length())
-            {
-                ret.resize(charsReturned);
-                pathret = ret;
-                return pathret;
-            }
-            else
-            {
-                bufferSize *= 2;
-            }
-        }
+        // STUB: std::filesystem::path implementation authored by REDACTED removed
+        return T(GetCurrentDirectoryW<std::wstring>());
     }
     else
     {
@@ -446,6 +410,8 @@ private:
 public:
     static inline DWORD OverrideTypeREG_NONE = REG_NONE;
 
+    // STUB: std::filesystem::path constructor overload authored by REDACTED removed; signature kept because
+    // other code depends on it, body follows the original RegistryWrapper constructor (d1a717a0, ThirteenAG).
     RegistryWrapper(std::string_view searchString, std::filesystem::path iniPath)
     {
         filter = searchString;
