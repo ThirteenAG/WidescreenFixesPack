@@ -618,16 +618,6 @@
       "visibility": "menu"
     },
     {
-      "id": "MAIN.ShowLangSelect",
-      "type": "bool",
-      "default": 0,
-      "label": "@WFP_SHOWLANGSELECT",
-      "description": "@WFP_DESC_SHOWLANGSELECT",
-      "page": "other",
-      "visibility": "editor",
-      "apply": "restart"
-    },
-    {
       "id": "MAIN.CustomUserFilesDirectoryInGameDir",
       "type": "path",
       "folder": true,

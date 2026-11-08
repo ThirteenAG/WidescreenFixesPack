@@ -74,8 +74,6 @@ export namespace NFSPSDialog
 export GameRef<NFSPSDialog::Configuration*> DialogPending;
 export GameRef<void*> DialogInstance;
 export GameRef<uint8_t> StaticTextStatePool;
-export GameRef<uint32_t> g_AttachmentVBMemoryPool;
-export GameRef<uint32_t> g_AttachmentMemoryPool;
 export struct Binding
     {
         int32_t type;

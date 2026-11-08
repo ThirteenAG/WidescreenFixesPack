@@ -12,6 +12,16 @@ import ComVars;
 static std::filesystem::path CustomUserDir;
 static bool bUseCustomUserDir = false;
 
+// Where the profiles and saves go: the custom folder, or the user's Documents
+static std::filesystem::path UserFilesFolder()
+{
+    if (bUseCustomUserDir)
+        return CustomUserDir;
+    wchar_t documents[MAX_PATH] = {};
+    SHGetFolderPathW(nullptr, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, nullptr, 0, documents);
+    return documents;
+}
+
 // The installer's language, from the registry before the fix redirects it
 static std::string InstallerLanguage()
 {
@@ -109,15 +119,10 @@ public:
         WFP::onInitEvent() += []()
         {
             bool bWriteSettingsToFile = FixSettings().Bool("MAIN.PortableSettings");
-            auto szCustomUserFilesDirectoryInGameDir = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir");
-
-            if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
-                szCustomUserFilesDirectoryInGameDir.clear();
-
-            if (!szCustomUserFilesDirectoryInGameDir.empty())
+            // A folder of the game's folder for the profiles and saves; "0" keeps them where the game puts them
+            if (auto folder = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir"); !folder.empty() && folder != "0")
             {
-                CustomUserDir = GetExeModulePath<std::filesystem::path>();
-                CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
+                CustomUserDir = GetExeModulePath<std::filesystem::path>() / folder;
                 bUseCustomUserDir = true;
             }
 
@@ -249,22 +254,8 @@ public:
             {
                 auto [DesktopResW, DesktopResH] = GetDesktopRes();
 
-                std::filesystem::path SettingsSavePath;
-                if (bUseCustomUserDir)
-                {
-                    SettingsSavePath = CustomUserDir;
-                }
-                else
-                {
-                    char szSettingsSavePath[MAX_PATH];
-                    SHGetFolderPathA(NULL, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, NULL, 0, szSettingsSavePath);
-                    SettingsSavePath = szSettingsSavePath;
-                }
-
-                SettingsSavePath.append("NFS Underground 2");
-                SettingsSavePath.append("Settings.ini");
-
-                RegistryWrapper("Need for Speed", SettingsSavePath);
+                // The game's registry settings go to an ini in the user files folder
+                RegistryWrapper("Need for Speed", UserFilesFolder() / "NFS Underground 2" / "Settings.ini");
                 RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
                 RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
                 RegistryWrapper::AddDefault("CD Drive", "D:\\");

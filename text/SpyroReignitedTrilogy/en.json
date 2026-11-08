@@ -1,9 +1,0 @@
-{
-  "plugin.name": "Spyro Reignited Trilogy Fusion Fix",
-  "page.camera": "Camera",
-  "FOVFactor": "Field of view",
-  "FOVFactor.description": "Multiplies the field of view on top of the widescreen correction, which already shows more to the sides on screens wider than 16:9. 1.0 keeps the game's framing; higher values show more, lower values zoom in. Cutscenes and other scripted views use the same camera and change too. Applies at once.",
-  "OverrideFOV": "Fixed field of view",
-  "OverrideFOV.description": "Replaces the camera's field of view with a fixed horizontal angle in degrees, as it would be at 16:9; the widescreen correction and the field of view multiplier still apply on top. Every view uses it, cutscenes and the game's own zoom effects included. Off keeps the camera's own field of view. Applies at once.",
-  "OverrideFOV.off": "Off"
-}

@@ -72,10 +72,10 @@ public:
         {
             pDisableContrails = &FixSettings().Int("GRAPHICS.DisableContrails");
             XenonEffectRate::Init();
-
-            uintptr_t loc_7E139A = reinterpret_cast<uintptr_t>(hook::pattern("8A 87 9C 01 00 00 84 C0").get_first(0)) + 0x119;
-            AddXenonEffect = static_cast<uintptr_t>(injector::GetBranchDestination(loc_7E139A));
-            injector::MakeCALL(loc_7E139A, AddXenonEffect_Contrail_Hook, true);
+            // The contrail's AddXenonEffect call in the car's effect update
+            auto contrailCall = hook::pattern("8B 47 34 D9 5C 24 ? 8B 4F 30 83 C4 08 50 51 56 6A 00 E8").get_first(18);
+            AddXenonEffect = injector::GetBranchDestination(contrailCall).as_int();
+            injector::MakeCALL(contrailCall, AddXenonEffect_Contrail_Hook, true);
         };
     }
 } ContrailHook;

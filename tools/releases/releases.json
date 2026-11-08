@@ -917,18 +917,6 @@
       "unmanagedAssets": []
     },
     {
-      "tag": "spyro",
-      "name": "Spyro Reignited Trilogy Fusion Fix",
-      "packages": [
-        "SpyroReignitedTrilogy.FusionFix"
-      ],
-      "platforms": [
-        "Win64"
-      ],
-      "available": true,
-      "unmanagedAssets": []
-    },
-    {
       "tag": "srs",
       "name": "Street Racing Syndicate Fusion Fix",
       "packages": [

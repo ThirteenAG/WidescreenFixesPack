@@ -14,29 +14,18 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            // 0 full screen, 1 windowed, 2 borderless at the monitor's size, 3 resizable window, 4 borderless
             const auto mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 4);
-            constexpr int32_t nativeModes[] = { 0, 2, 4, 3, 1 };
-            int32_t nWindowedMode = nativeModes[mode];
 
             // Per monitor DPI awareness, so the game gets real pixels on scaled desktops
             WindowedModeWrapper::EnableDpiAwareness();
 
-            if (nWindowedMode)
+            if (mode != 0)
             {
-                switch (nWindowedMode)
-                {
-                    case 4:
-                        WindowedModeWrapper::bScaleWindow = true;
-                        break;
-                    case 3:
-                        WindowedModeWrapper::bEnableWindowResize = true;
-                        bAspectFromWindow = true;
-                    case 2:
-                        WindowedModeWrapper::bBorderlessWindowed = false;
-                        break;
-                    default:
-                        break;
-                }
+                WindowedModeWrapper::bBorderlessWindowed = mode == 2 || mode == 4;
+                WindowedModeWrapper::bScaleWindow = mode == 2;
+                WindowedModeWrapper::bEnableWindowResize = mode == 3;
+                bAspectFromWindow = mode == 3;
 
                 dwWindowedMode = 1;
 
@@ -122,38 +111,32 @@ public:
                     }));
                 }
 
-                // actually what enforces the windowed mode
-                auto pattern = hook::pattern("89 5D 3C 89 5D 18 89 5D 44"); //0x708379
-                struct WindowedMode
+                // The device's windowed flag, set while the game fills in its present parameters
+                auto presentParams = hook::pattern("89 5D 44 89 5D 48 8B 0D ? ? ? ? C6 44 24 ? 02 E8");
+                static auto PresentParamsHook = safetyhook::create_mid(presentParams.get_first(6), [](SafetyHookContext& regs)
                 {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        *(uint32_t*)(regs.ebp + 0x3C) = dwWindowedMode;
-                        *(uint32_t*)(regs.ebp + 0x18) = regs.ebx;
-                    }
-                }; injector::MakeInline<WindowedMode>(pattern.get_first(0), pattern.get_first(6));
+                    *reinterpret_cast<uint32_t*>(regs.ebp + 0x3C) = dwWindowedMode;
+                });
 
-                pattern = hook::pattern("A3 ? ? ? ? 89 35 ? ? ? ? 88 1D ? ? ? ? B9 ? ? ? ? 74 0B 6A 15");
-                WindowWidth.SetAddress(*pattern.get_first<int32_t*>(1));
-                WindowHeight.SetAddress(*pattern.get_first<int32_t*>(7));
-                struct ResHook
+                // The window follows the resolution the game stores for it
+                auto windowSize = hook::pattern("89 15 ? ? ? ? 89 1D ? ? ? ? 89 1D ? ? ? ? A3 ? ? ? ? 89 35 ? ? ? ? 88 1D ? ? ? ? B9");
+                WindowWidth.SetAddress(*windowSize.get_first<int32_t*>(19));
+                WindowHeight.SetAddress(*windowSize.get_first<int32_t*>(25));
+                static auto WindowSizeHook = safetyhook::create_mid(windowSize.get_first(35), [](SafetyHookContext& regs)
                 {
-                    void operator()(injector::reg_pack& regs)
+                    int32_t width = WindowWidth;
+                    int32_t height = WindowHeight;
+                    if (WindowedModeWrapper::bBorderlessWindowed)
                     {
-                        WindowWidth.get() = regs.eax;
-                        WindowHeight.get() = regs.esi;
-
-                        // A window with a frame gets the resolution as its client size, the frame around it
-                        if (WindowedModeWrapper::bBorderlessWindowed)
-                            WindowedModeWrapper::CenterWindowPosition(WindowWidth.get(), WindowHeight.get());
-                        else
-                        {
-                            WindowedModeWrapper::desiredClientWidth = WindowWidth.get();
-                            WindowedModeWrapper::desiredClientHeight = WindowHeight.get();
-                            WindowedModeWrapper::afterCreateWindow();
-                        }
+                        WindowedModeWrapper::CenterWindowPosition(width, height);
+                        return;
                     }
-                }; injector::MakeInline<ResHook>(pattern.get_first(0), pattern.get_first(11));
+
+                    // A framed window gets the resolution as its client area
+                    WindowedModeWrapper::desiredClientWidth = width;
+                    WindowedModeWrapper::desiredClientHeight = height;
+                    WindowedModeWrapper::afterCreateWindow();
+                });
             }
         };
     }

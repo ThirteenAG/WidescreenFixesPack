@@ -1,103 +1,96 @@
 module;
 
 #include <stdafx.h>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
 
 export module FrameRate;
 
 import ComVars;
 
-#pragma runtime_checks("", off)
-
-export namespace BetterSync
+// The game runs one step of its logic per 1/60 s frame and waits for the next frame on a coarse multimedia timer
+// event, which lets frames come early or late by a few milliseconds. The fix waits for the next 1/60 s itself, on a
+// precise schedule. Movies keep the game's own wait: the movie decoder follows that timer.
+export namespace FrameRate
 {
-    float fFPSLimit = 60.0f;
+    constexpr int64_t Rate = 60;
 
-    // code from: https://github.com/ThirteenAG/d3d8-wrapper/blob/c2509f26d22c0813bb6eced277defe67628acd90/source/dllmain.cpp#L55
-    class FrameLimiter
+    inline void(__cdecl* GameWait)() = nullptr;
+    inline SafetyHookMid MovieHook;
+    inline bool MovieFrame = false;
+    inline HANDLE Timer = nullptr;
+    inline int64_t Frequency = 0;
+    inline int64_t Next = 0;
+
+    inline int64_t Now()
     {
-    private:
-        static inline double TIME_Frequency = 0.0;
-        static inline double TIME_Ticks = 0.0;
-        static inline double TIME_Frametime = 0.0;
+        LARGE_INTEGER ticks{};
+        QueryPerformanceCounter(&ticks);
+        return ticks.QuadPart;
+    }
 
-    public:
-        enum FPSLimitMode { FPS_NONE, FPS_REALTIME, FPS_ACCURATE };
-        static void Init(FPSLimitMode mode)
+    // Sleeps on the high-resolution timer until shortly before the deadline, then spins to it
+    inline void WaitUntil(int64_t deadline)
+    {
+        const int64_t margin = Frequency / 1000;
+        for (int64_t now = Now(); now < deadline; now = Now())
         {
-            LARGE_INTEGER frequency;
-
-            QueryPerformanceFrequency(&frequency);
-            static constexpr auto TICKS_PER_FRAME = 1;
-            auto TICKS_PER_SECOND = (TICKS_PER_FRAME * fFPSLimit);
-            if (mode == FPS_ACCURATE)
+            const int64_t left = deadline - now;
+            if (Timer && left > margin * 2)
             {
-                TIME_Frametime = 1000.0 / (double)fFPSLimit;
-                TIME_Frequency = (double)frequency.QuadPart / 1000.0; // ticks are milliseconds
+                LARGE_INTEGER due;
+                due.QuadPart = -std::max<int64_t>(1, (left - margin) * 10'000'000 / Frequency);
+                if (SetWaitableTimer(Timer, &due, 0, nullptr, nullptr, FALSE))
+                    WaitForSingleObject(Timer, INFINITE);
             }
-            else // FPS_REALTIME
-            {
-                TIME_Frequency = (double)frequency.QuadPart / (double)TICKS_PER_SECOND; // ticks are 1/n frames (n = fFPSLimit)
-            }
-            Ticks();
-        }
-        static DWORD Sync_RT()
-        {
-            DWORD lastTicks, currentTicks;
-            LARGE_INTEGER counter;
-
-            QueryPerformanceCounter(&counter);
-            lastTicks = (DWORD)TIME_Ticks;
-            TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
-            currentTicks = (DWORD)TIME_Ticks;
-
-            return (currentTicks > lastTicks) ? currentTicks - lastTicks : 0;
-        }
-        static DWORD Sync_SLP()
-        {
-            LARGE_INTEGER counter;
-            QueryPerformanceCounter(&counter);
-            double millis_current = (double)counter.QuadPart / TIME_Frequency;
-            double millis_delta = millis_current - TIME_Ticks;
-            if (TIME_Frametime <= millis_delta)
-            {
-                TIME_Ticks = millis_current;
-                return 1;
-            }
-            else if (TIME_Frametime - millis_delta > 2.0) // > 2ms
-                Sleep(1); // Sleep for ~1ms
+            else if (!Timer && left > margin * 3)
+                Sleep(1);
+            else if (left > margin)
+                Sleep(0);
             else
-                Sleep(0); // yield thread's time-slice (does not actually sleep)
-
-            return 0;
+                YieldProcessor();
         }
+    }
 
-    private:
-        static void Ticks()
-        {
-            LARGE_INTEGER counter;
-            QueryPerformanceCounter(&counter);
-            TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
-        }
-    };
-
-    FrameLimiter::FPSLimitMode mFPSLimitMode = FrameLimiter::FPSLimitMode::FPS_ACCURATE;
-
-    uintptr_t sub_6C4FC0 = 0;
-    bool bEnabled = false;
-
-    // Once per frame, where the game waits for its next frame
-    void CustomSyncFunc()
+    inline void __cdecl Wait()
     {
         WFP::onGameProcessEvent().executeAll();
 
-        if (!bEnabled || (SyncMovieID > 0))
-            return reinterpret_cast<void(*)()>(sub_6C4FC0)();
+        if (MovieFrame)
+        {
+            MovieFrame = false;
+            Next = 0;
+            GameWait();
+            return;
+        }
 
-        if (mFPSLimitMode == FrameLimiter::FPSLimitMode::FPS_REALTIME)
-            while (!FrameLimiter::Sync_RT());
-        else if (mFPSLimitMode == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
-            while (!FrameLimiter::Sync_SLP());
+        const int64_t period = Frequency / Rate;
+        const int64_t now = Now();
+        // A frame that took too long (loading, a dragged window) starts a new schedule instead of rushing to catch up
+        if (Next == 0 || now - Next > period * 2)
+            Next = now;
+        WaitUntil(Next);
+        Next += period;
+    }
+
+    void Init()
+    {
+        LARGE_INTEGER ticksPerSecond{};
+        QueryPerformanceFrequency(&ticksPerSecond);
+        Frequency = ticksPerSecond.QuadPart;
+        Timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+        if (!Timer)
+            timeBeginPeriod(1);
+
+        // Once per frame in the main loop, before the frame's logic
+        auto frame = hook::pattern("FF 0D ? ? ? ? E8 ? ? ? ? 83 3D ? ? ? ? 01 0F 8E");
+        GameWait = reinterpret_cast<decltype(GameWait)>(injector::GetBranchDestination(frame.get_first(6)).as_int());
+        injector::MakeCALL(frame.get_first(6), Wait, true);
+
+        // The movie player's update
+        MovieHook = safetyhook::create_mid(hook::get_pattern("83 EC 1C 53 56 8B F0 C7 44 24 0C 00 00 00 00 E8"), [](SafetyHookContext&)
+        {
+            MovieFrame = true;
+        });
     }
 }
-
-#pragma runtime_checks("", restore)

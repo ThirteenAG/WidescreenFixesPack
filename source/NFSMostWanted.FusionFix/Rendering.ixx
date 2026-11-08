@@ -20,7 +20,6 @@ public:
             static const int* pScaling = &FixSettings().Int("GRAPHICS.Scaling");
             static const float* pRainDropletsScale = &FixSettings().Float("GRAPHICS.RainDropletsScale");
             static const float* pFovFactor = &FixSettings().Float("MAIN.FOVFactor");
-            static uint32_t ForcedGPUVendor = 0x10DE;               // the NVIDIA renderer path
 
             // Driving-camera field-of-view multiplier. CubicCameraMover::Update, the
             // mover of the chase, hood and bumper cameras, stores the camera's field of view (a 16 bit angle, 65536
@@ -46,8 +45,6 @@ public:
                 static float flt3 = 0.0f;
 
                 uint32_t* dword_6CF4F0 = hook::pattern("DB 40 18 DA 70 14").count(1).get(0).get<uint32_t>(0);
-                uintptr_t loc_6CF4EA = (uintptr_t)dword_6CF4F0 - 6;
-                uintptr_t loc_6CF4F6 = (uintptr_t)dword_6CF4F0 + 6;
                 struct FOVHook
                 {
                     void operator()(injector::reg_pack& regs)
@@ -102,7 +99,9 @@ public:
                         else
                             _asm {fld ds : ver3DScale}
                     }
-                }; injector::MakeInline<FOVHook>(loc_6CF4EA, loc_6CF4F6);
+                };
+                auto projection = reinterpret_cast<uintptr_t>(dword_6CF4F0);
+                injector::MakeInline<FOVHook>(projection - 6, projection + 6);
                 injector::WriteMemory(dword_6CF4F0, 0x9001F983, true); //cmp     ecx, 1
 
                 uint32_t* dword_6CF566 = hook::pattern("D8 3D ? ? ? ? D9 5C 24 20 DB 44 24 30 D8 4C 24 2C").count(1).get(0).get<uint32_t>(2);
@@ -120,38 +119,25 @@ public:
                 static float fShadowDistanceMultiplier = 10.0f;
                 injector::WriteMemory((uint32_t)dword_6C9653, &fShadowDistanceMultiplier, true);
 
-                // Shadow camera FOV fix
-                uintptr_t loc_6E4652 = reinterpret_cast<uintptr_t>(hook::pattern("8B 46 60 8B 48 18 8B 50 14 89 4C 24 14 DB 44 24 14").get_first(0)) + 9;
-                uintptr_t loc_6E4668 = loc_6E4652 + 0x16;
-
-                uintptr_t loc_6E47E4 = reinterpret_cast<uintptr_t>(hook::pattern("8B 40 60 8B 50 18 8B 40 14 89 54 24 14 89 44 24 18 0F B7 8B C4 00 00 00").get_first(0)) + 0x18;
-                uintptr_t loc_6E47EC = loc_6E47E4 + 8;
-
-                uintptr_t loc_6E46B0 = reinterpret_cast<uintptr_t>(hook::pattern("D8 7C 24 1C 0F B7 8B C4 00 00 00 89 4C 24 1C").get_first(0)) + 0xF;
-                uintptr_t loc_6E4830 = reinterpret_cast<uintptr_t>(hook::pattern("D8 7C 24 1C 0F B7 93 C4 00 00 00 89 54 24 1C").get_first(0)) + 0xF;
-
-                struct ShadowCameraFix1
+                // The shadow camera fits the shadow map to the view's frustum, built from the field of view and the
+                // viewport's height / width. For a wider screen the view is wider (hor3DScale), not lower: the height
+                // keeps its 4:3 share and the width scale follows the player view. Two frustums (both shadow maps).
+                auto shadowHeight = hook::pattern("D8 0D ? ? ? ? D9 5C 24 18 DB 44 24 14 D8 0D ? ? ? ? D8 0D ? ? ? ? E8");
+                auto shadowWidth = hook::pattern("D8 3D ? ? ? ? D9 5C 24 24 DB 44 24 1C D8 4C 24 20");
+                if (shadowHeight.size() != 2 || shadowWidth.size() != 2)
+                    std::abort();
+                static std::vector<SafetyHookMid> ShadowFrustumHooks;
+                for (size_t i = 0; i < 2; ++i)
                 {
-                    void operator()(injector::reg_pack& regs)
+                    ShadowFrustumHooks.push_back(safetyhook::create_mid(shadowHeight.get(i).get<void>(10), [](SafetyHookContext& regs)
                     {
-                        _asm {fld ver3DScale}
-                    }
-                }; injector::MakeInline<ShadowCameraFix1>(loc_6E4652, loc_6E4652 + 8);
-                injector::MakeNOP(loc_6E4668, 4);
-
-                struct ShadowCameraFix2
-                {
-                    void operator()(injector::reg_pack& regs)
+                        *reinterpret_cast<float*>(regs.esp + 0x18) = 0.75f;
+                    }));
+                    ShadowFrustumHooks.push_back(safetyhook::create_mid(shadowWidth.get(i).get<void>(10), [](SafetyHookContext& regs)
                     {
-                        *(uint32_t*)(regs.esp + 0x14) = regs.ecx;
-                        _asm {fld ver3DScale}
-                    }
-                }; injector::MakeInline<ShadowCameraFix2>(loc_6E47E4, loc_6E47E4 + 8);
-                injector::MakeNOP(loc_6E47EC, 4);
-
-                injector::WriteMemory(loc_6E46B0 + 2, &hor3DScale, true);
-                injector::WriteMemory(loc_6E4830 + 2, &hor3DScale, true);
-
+                        *reinterpret_cast<float*>(regs.esp + 0x24) *= hor3DScale;
+                    }));
+                }
             }
 
             static ProtectedGameRef<float> fAutosculptScaling;
@@ -195,16 +181,6 @@ public:
                     *(uintptr_t*)(regs.esp + 0x38) = regs.ecx;
                 }
             }; injector::MakeInline<RainDropletsYScaleHook>(pattern.get_first(30), pattern.get_first(30 + 8)); //6D482B
-
-            {
-                uint32_t* dword_93D898 = *hook::pattern("A1 ? ? ? ? 49 3D 02 10 00 00 89 0D").count(1).get(0).get<uint32_t*>(1);
-
-                for (size_t i = 0; i < 20; i++)
-                {
-                    uint32_t* dword__93D898 = hook::pattern(pattern_str(to_bytes(dword_93D898))).count(1).get(0).get<uint32_t>(0);
-                    injector::WriteMemory(dword__93D898, &ForcedGPUVendor, true);
-                }
-            }
         };
     }
 } Rendering;

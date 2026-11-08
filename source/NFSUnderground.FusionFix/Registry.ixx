@@ -16,8 +16,7 @@ import ComVars;
 // file the game can't load its text, and without the speech stream the first car purchase never completes, because the
 // game waits for Samantha's comment (#2266). The other per-language files don't matter: the movies are the same
 // for all languages (the exe's table of localized intro movies is unused), and the online terms (LANGUAGES\agree.*)
-// are skipped when they're missing. The game never writes the value, and the language select screen of the boot
-// flow (ShowLangSelect) only changes the language until the game is closed.
+// are skipped when they're missing. The game never writes the value.
 namespace Language
 {
     struct GameLanguage
@@ -145,15 +144,10 @@ class Registry
 public:
     Registry()
     {
-        auto szCustomUserFilesDirectoryInGameDir = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir");
-
-        if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
-            szCustomUserFilesDirectoryInGameDir.clear();
-
-        if (!szCustomUserFilesDirectoryInGameDir.empty())
+        // A folder of the game's folder for the profiles and saves; "0" keeps them where the game puts them
+        if (auto folder = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir"); !folder.empty() && folder != "0")
         {
-            CustomUserDir = GetExeModulePath<std::filesystem::path>();
-            CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
+            CustomUserDir = GetExeModulePath<std::filesystem::path>() / folder;
             bUseCustomUserDir = true;
         }
 

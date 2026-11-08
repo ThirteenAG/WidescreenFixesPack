@@ -14,27 +14,16 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            // 0 full screen, 1 windowed, 2 borderless at the monitor's size, 3 resizable window, 4 borderless
             const auto mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 4);
-            constexpr int32_t nativeModes[] = { 0, 2, 4, 3, 1 };
-            int32_t nWindowedMode = nativeModes[mode];
 
             WindowedModeWrapper::EnableDpiAwareness();
 
-            if (nWindowedMode)
+            if (mode != 0)
             {
-                switch (nWindowedMode)
-                {
-                    case 4:
-                        WindowedModeWrapper::bScaleWindow = true;
-                        break;
-                    case 3:
-                        WindowedModeWrapper::bEnableWindowResize = true;
-                    case 2:
-                        WindowedModeWrapper::bBorderlessWindowed = false;
-                        break;
-                    default:
-                        break;
-                }
+                WindowedModeWrapper::bBorderlessWindowed = mode == 2 || mode == 4;
+                WindowedModeWrapper::bScaleWindow = mode == 2;
+                WindowedModeWrapper::bEnableWindowResize = mode == 3;
 
                 dwWindowedMode = 1;
 

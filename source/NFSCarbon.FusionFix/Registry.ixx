@@ -69,6 +69,16 @@ namespace Language
 static std::filesystem::path CustomUserDir;
 static bool bUseCustomUserDir = false;
 
+// Where the profiles and saves go: the custom folder, or the user's Documents
+static std::filesystem::path UserFilesFolder()
+{
+    if (bUseCustomUserDir)
+        return CustomUserDir;
+    wchar_t documents[MAX_PATH] = {};
+    SHGetFolderPathW(nullptr, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, nullptr, 0, documents);
+    return documents;
+}
+
 static std::unique_ptr<FunctionHookMinHook> mhSHGetFolderPathA;
 static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
 {
@@ -126,15 +136,11 @@ public:
             injector::WriteMemory<uint8_t>(pattern.get_first(), 0xEB, true);
 
             bool bWriteSettingsToFile = FixSettings().Bool("MAIN.PortableSettings");
-            auto szCustomUserFilesDirectoryInGameDir = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir");
 
-            if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
-                szCustomUserFilesDirectoryInGameDir.clear();
-
-            if (!szCustomUserFilesDirectoryInGameDir.empty())
+            // A folder of the game's folder for the profiles and saves; "0" keeps them in the user's Documents
+            if (auto folder = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir"); !folder.empty() && folder != "0")
             {
-                CustomUserDir = GetExeModulePath<std::filesystem::path>();
-                CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
+                CustomUserDir = GetExeModulePath<std::filesystem::path>() / folder;
                 bUseCustomUserDir = true;
             }
 
@@ -276,22 +282,8 @@ public:
             {
                 auto [DesktopResW, DesktopResH] = GetDesktopRes();
 
-                std::filesystem::path SettingsSavePath;
-                if (bUseCustomUserDir)
-                {
-                    SettingsSavePath = CustomUserDir;
-                }
-                else
-                {
-                    char szSettingsSavePath[MAX_PATH];
-                    SHGetFolderPathA(NULL, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, NULL, 0, szSettingsSavePath);
-                    SettingsSavePath = szSettingsSavePath;
-                }
-
-                SettingsSavePath.append("NFS Carbon");
-                SettingsSavePath.append("Settings.ini");
-
-                RegistryWrapper("Need for Speed", SettingsSavePath);
+                // The game's registry settings go to an ini in the user files folder
+                RegistryWrapper("Need for Speed", UserFilesFolder() / "NFS Carbon" / "Settings.ini");
                 RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
                 RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
                 RegistryWrapper::AddDefault("CD Drive", "D:\\");
@@ -301,7 +293,7 @@ public:
                 RegistryWrapper::AddDefault("StreamingInstall", "0");
                 RegistryWrapper::AddDefault("VERSION", "1");
                 RegistryWrapper::AddDefault("SIZE", "100");
-                RegistryWrapper::AddDefault("FirstTime", "0");
+                RegistryWrapper::AddDefault("FirstTime", "0");          // the profile check reads it as well
                 RegistryWrapper::AddDefault("g_CarEnvironmentMapEnable", "3");
                 RegistryWrapper::AddDefault("g_RoadReflectionEnable", "2");
                 RegistryWrapper::AddDefault("g_MotionBlurEnable", "1");

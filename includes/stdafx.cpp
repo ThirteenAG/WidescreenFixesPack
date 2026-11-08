@@ -281,14 +281,13 @@ void GetResolutionsList(std::vector<std::string>& list, bool includeRefreshRate)
     }
 }
 
-// gets primary monitor's current refresh rate
-// default return value = 60
-uint32_t GetDesktopRefreshRate()
+// The primary display's refresh rate in its current mode; 60 when Windows reports none (0 and 1 mean the hardware default)
+uint32_t GetDesktopRefreshRate() noexcept
 {
-    DEVMODEW mode = { .dmSize = sizeof(DEVMODEW) };
-    if (!EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) || mode.dmDisplayFrequency <= 1)
-        return 60;
-    return mode.dmDisplayFrequency;
+    DEVMODEW current{};
+    current.dmSize = sizeof(current);
+    const bool known = EnumDisplaySettingsExW(nullptr, ENUM_CURRENT_SETTINGS, &current, 0) && current.dmDisplayFrequency > 1;
+    return known ? current.dmDisplayFrequency : 60u;
 }
 
 uint32_t crc32(uint32_t crc, const void* buf, size_t size)

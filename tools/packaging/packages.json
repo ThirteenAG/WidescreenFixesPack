@@ -2042,10 +2042,6 @@
       ],
       "files": [
         {
-          "source": "data/SonicHeroes.FusionFix/scripts/icon.ico",
-          "destination": "scripts/icon.ico"
-        },
-        {
           "source": "data/SonicHeroes.FusionFix/Xidi.ini",
           "destination": "Xidi.ini"
         }
@@ -2830,27 +2826,6 @@
           "id": "dsoal",
           "member": "DSOAL+HRTF/Win32/dsoal-aldrv.dll",
           "destination": "system/dsoal-aldrv.dll"
-        }
-      ]
-    },
-    {
-      "id": "SpyroReignitedTrilogy.FusionFix",
-      "producers": [
-        {
-          "project": "SpyroReignitedTrilogy.FusionFix",
-          "solution": "Win64",
-          "source": "data/SpyroReignitedTrilogy.FusionFix/Falcon/Binaries/Win64/scripts/SpyroReignitedTrilogy.FusionFix.asi",
-          "destination": "Falcon/Binaries/Win64/scripts/SpyroReignitedTrilogy.FusionFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [],
-      "dependencies": [
-        {
-          "id": "loader-x64",
-          "member": "*.dll",
-          "destination": "Falcon/Binaries/Win64/dsound.dll"
         }
       ]
     },

@@ -5,18 +5,17 @@
 #include "Shared/NFS/Cursor.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
 
-import ComVars;
-import PostFX;
-
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
 ASI_SETTINGS_EXPORT(FixSettings())
 ASI_AUTOMATION_FRAMES_EXPORT()
 
-std::once_flag of;
+import ComVars;
+import PostFX;
 
 void MainLoop()
 {
-    std::call_once(of, []()
+    static std::once_flag gameInit;
+    std::call_once(gameInit, []()
     {
         WFP::onGameInitEvent().executeAll();
     });
@@ -28,12 +27,7 @@ void MainLoop()
     static bool oldMenuState = GameFlowManager::IsPaused();
     bool curMenuState = GameFlowManager::IsPaused();
     if (curMenuState != oldMenuState)
-    {
-        if (curMenuState)
-            WFP::onMenuEnterEvent().executeAll();
-        else
-            WFP::onMenuExitEvent().executeAll();
-    }
+        (curMenuState ? WFP::onMenuEnterEvent() : WFP::onMenuExitEvent()).executeAll();
     oldMenuState = curMenuState;
     if (curMenuState)
         WFP::onMenuDrawingEvent().executeAll();
@@ -47,13 +41,11 @@ void Init()
     auto pattern = hook::pattern("A1 ? ? ? ? 68 ? ? ? ? 50 FF 15");
     hWnd.SetAddress(*pattern.get_first<HWND*>(1));
     WindowRect.SetAddress(*pattern.get_first<tagRECT*>(6));
-
+    // The window mode, the resolution and the main loop
     pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 ? A1 ? ? ? ? 68");
     dwWindowedMode.SetAddress(*pattern.get_first<uint32_t*>(1));
-
     pattern = hook::pattern("A1 ? ? ? ? 8B 0C 85 ? ? ? ? 85 C9");
     g_RacingResolution.SetAddress(*pattern.get_first<int*>(1));
-
     pattern = hook::pattern("A3 ? ? ? ? 39 1D ? ? ? ? 89 15");
     static auto MainLoopHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
@@ -89,43 +81,25 @@ void Init()
 
     pattern = hook::pattern("E8 ? ? ? ? 8B 75 ? 3B F3 74 ? 81 4E");
     FEHashUpper = (decltype(FEHashUpper))injector::GetBranchDestination(pattern.get_first(0)).as_int();
-
     // EAXSound::Update(RealTimeElapsed) in MainLoop
     pattern = hook::pattern("52 E8 ? ? ? ? 8B 2D ? ? ? ? BF");
     RealTimeElapsed.SetAddress(*pattern.get_first<float*>(8));
 
     pattern = hook::pattern("8B 44 24 ? 8B 4C 24 ? ? ? 50 8B 44 24 ? 51 50");
-    static auto FEPkgMgr_SendMessageToPackageHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        onMenuScreenBaseNotify().executeAll((MenuScreen*)regs.esi);
-    });
-
+    static auto FEPkgMgr_SendMessageToPackageHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { onMenuScreenBaseNotify().executeAll((MenuScreen*)regs.esi); });
+    // The device's reset and the end of a frame
     pattern = hook::pattern("BE ? ? ? ? ? ? ? ? 50 FF 91");
-    static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        WFP::onBeforeReset().executeAll();
-    });
-
+    static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&) { WFP::onBeforeReset().executeAll(); });
     pattern = hook::pattern("A1 ? ? ? ? ? ? 83 C4 ? 50");
     Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));
-    static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        WFP::onEndScene().executeAll();
-    });
-
+    static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&) { WFP::onEndScene().executeAll(); });
+    // The fix's modules
     WFP::onInitEvent().executeAll();
-
     // Serve the initialized settings to editors while the game runs.
     asi_settings::LiveLink::Start();
-
+    // The tasks started at init are done before the game's first frame
     static auto futures = WFP::onInitEventAsync().executeAllAsync();
-
-    WFP::onGameInitEvent() += []()
-    {
-        for (auto& f : futures.get())
-            f.wait();
-        futures.get().clear();
-    };
+    WFP::onGameInitEvent() += []() { for (auto& f : futures.get()) f.wait(); futures.get().clear(); };
 }
 
 CEXP void InitializeASI()

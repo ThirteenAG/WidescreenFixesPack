@@ -194,8 +194,8 @@ function add_postfx(id_postfx, id_areatex, id_searchtex)
 end
 
 function add_pspsdk()
-   includedirs { "external/pspsdk/usr/local/pspdev/psp/sdk/include" }
-   includedirs { "external/pspsdk/usr/local/pspdev/bin" }
+   local pspdev = "external/pspsdk/usr/local/pspdev/"
+   includedirs { pspdev .. "psp/sdk/include", pspdev .. "bin" }
    files { "source/%{prj.name}/*.h", "source/%{prj.name}/*.hpp", "source/%{prj.name}/*.c", "source/%{prj.name}/*.cpp", "source/%{prj.name}/makefile", "source/%{prj.name}/module.json", "source/%{prj.name}/exports.exp" }
 end
 
@@ -993,12 +993,6 @@ project "GTASADE.FusionFix"
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/GTASADE/en.json') }
    setpaths("GTA_SAN_ANDREAS_DEFINITIVE_EDITION_DIR", "Gameface/Binaries/Win64/SanAndreas.exe", "Gameface/Binaries/Win64/scripts/")
 group ""
-
-project "SpyroReignitedTrilogy.FusionFix"
-   files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/SpyroReignitedTrilogy/*.json" }
-   dependson { "AsiSettingsValidator" }
-   prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SpyroReignitedTrilogy/en.json') }
-   setpaths("SPYRO_REIGNITED_TRILOGY_DIR", "Falcon/Binaries/Win64/Spyro-Win64-Shipping.exe", "Falcon/Binaries/Win64/scripts/")
 
 project "MafiaDefinitiveEdition.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/MafiaDefinitiveEdition/*.json" }

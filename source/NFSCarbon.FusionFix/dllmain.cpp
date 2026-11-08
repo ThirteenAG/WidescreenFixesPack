@@ -4,21 +4,22 @@
 #include "Shared/NFS/Cursor.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
 
-import ComVars;
-import PostFX;
-
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
 ASI_SETTINGS_EXPORT(FixSettings())
 
-std::once_flag of;
+import ComVars;
+import PostFX;
+// The game init event, on the first frame of either loop
+void GameInitOnce()
+{
+    static std::once_flag done;
+    std::call_once(done, [] { WFP::onGameInitEvent().executeAll(); });
+}
 
 SafetyHookInline shMainLoop = {};
 void __cdecl MainLoop(float TickerDifference)
 {
-    std::call_once(of, []()
-    {
-        WFP::onGameInitEvent().executeAll();
-    });
+    GameInitOnce();
 
     CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
     CursorConfinement::Frame(hWnd.get());
@@ -27,12 +28,7 @@ void __cdecl MainLoop(float TickerDifference)
     static bool oldMenuState = GameFlowManager::IsPaused();
     bool curMenuState = GameFlowManager::IsPaused();
     if (curMenuState != oldMenuState)
-    {
-        if (curMenuState)
-            WFP::onMenuEnterEvent().executeAll();
-        else
-            WFP::onMenuExitEvent().executeAll();
-    }
+        (curMenuState ? WFP::onMenuEnterEvent() : WFP::onMenuExitEvent()).executeAll();
     oldMenuState = curMenuState;
     if (curMenuState)
         WFP::onMenuDrawingEvent().executeAll();
@@ -43,10 +39,7 @@ void __cdecl MainLoop(float TickerDifference)
 SafetyHookInline shMiniMainLoop = {};
 void __cdecl MiniMainLoop()
 {
-    std::call_once(of, []()
-    {
-        WFP::onGameInitEvent().executeAll();
-    });
+    GameInitOnce();
 
     CursorConfinement::Frame(hWnd.get());
     WFP::onGameProcessEvent().executeAll();
@@ -96,28 +89,15 @@ void Init()
 
     pattern = hook::pattern("A1 ? ? ? ? ? ? 68 ? ? ? ? 50 FF 52 ? A1");
     Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));
-    static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        WFP::onBeforeReset().executeAll();
-    });
-
+    static auto BeforeResetHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onBeforeReset().executeAll(); });
     pattern = hook::pattern("A1 ? ? ? ? ? ? 83 C4 ? 50 FF 91");
-    static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    {
-        WFP::onEndScene().executeAll();
-    });
-
+    static auto BeforeEndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { WFP::onEndScene().executeAll(); });
+    // The fix's modules, and the settings served to editors while the game runs
     WFP::onInitEvent().executeAll();
     asi_settings::LiveLink::Start();
-
+    // The tasks started at init are done before the game's first frame
     static auto futures = WFP::onInitEventAsync().executeAllAsync();
-
-    WFP::onGameInitEvent() += []()
-    {
-        for (auto& f : futures.get())
-            f.wait();
-        futures.get().clear();
-    };
+    WFP::onGameInitEvent() += []() { for (auto& f : futures.get()) f.wait(); futures.get().clear(); };
 }
 
 CEXP void InitializeASI()

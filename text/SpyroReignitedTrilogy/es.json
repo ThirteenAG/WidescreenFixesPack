@@ -1,9 +1,0 @@
-{
-  "plugin.name": "Spyro Reignited Trilogy Fusion Fix",
-  "page.camera": "Cámara",
-  "FOVFactor": "Campo de visión",
-  "FOVFactor.description": "Multiplica el campo de visión además de la corrección panorámica, que ya muestra más a los lados en pantallas más anchas que 16:9. 1.0 mantiene el encuadre del juego; los valores más altos muestran más y los más bajos acercan la imagen. Las cinemáticas y otras vistas guionizadas usan la misma cámara y también cambian. Se aplica al instante.",
-  "OverrideFOV": "Campo de visión fijo",
-  "OverrideFOV.description": "Sustituye el campo de visión de la cámara por un ángulo horizontal fijo en grados, tal como sería a 16:9; la corrección panorámica y el multiplicador del campo de visión se siguen aplicando encima. Todas las vistas lo usan, incluidas las cinemáticas y los efectos de zoom del juego. Desactivado mantiene el campo de visión propio de la cámara. Se aplica al instante.",
-  "OverrideFOV.off": "Desactivado"
-}

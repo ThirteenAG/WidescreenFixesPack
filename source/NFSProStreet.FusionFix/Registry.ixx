@@ -35,6 +35,17 @@ static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, 
     return mhSHGetFolderPathA->get_original<decltype(SHGetFolderPathA)>()(hwnd, csidl, hToken, dwFlags, pszPath);
 }
 
+// Documents, or the folder in the game's directory that the fix keeps the user files in
+static std::filesystem::path UserFilesFolder()
+{
+    if (bUseCustomUserDir)
+        return CustomUserDir;
+
+    wchar_t documents[MAX_PATH] = {};
+    SHGetFolderPathW(nullptr, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, nullptr, SHGFP_TYPE_CURRENT, documents);
+    return documents;
+}
+
 // The game's languages: the names the registry's "Language" value is compared with, each standing for a language
 // id (0x710890 reads it), and the text files of each id (the table 0x594F90 looks ids up in). A name whose id has no
 // text files in this exe can't be used: the language loader dereferences the missing entry and the game crashes.
@@ -95,15 +106,9 @@ public:
         WFP::onInitEvent() += []()
         {
             bool bWriteSettingsToFile = FixSettings().Bool("MAIN.PortableSettings");
-            auto szCustomUserFilesDirectoryInGameDir = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir");
-
-            if (szCustomUserFilesDirectoryInGameDir.empty() || szCustomUserFilesDirectoryInGameDir == "0")
-                szCustomUserFilesDirectoryInGameDir.clear();
-
-            if (!szCustomUserFilesDirectoryInGameDir.empty())
+            if (auto folder = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir"); !folder.empty() && folder != "0")
             {
-                CustomUserDir = GetExeModulePath<std::filesystem::path>();
-                CustomUserDir.append(szCustomUserFilesDirectoryInGameDir);
+                CustomUserDir = GetExeModulePath<std::filesystem::path>() / folder;
                 bUseCustomUserDir = true;
             }
 
@@ -245,50 +250,24 @@ public:
             {
                 auto [DesktopResW, DesktopResH] = GetDesktopRes();
 
-                std::filesystem::path SettingsSavePath;
-                if (bUseCustomUserDir)
-                {
-                    SettingsSavePath = CustomUserDir;
-                }
-                else
-                {
-                    char szSettingsSavePath[MAX_PATH];
-                    SHGetFolderPathA(NULL, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, NULL, 0, szSettingsSavePath);
-                    SettingsSavePath = szSettingsSavePath;
-                }
-
-                SettingsSavePath.append("NFS ProStreet");
-                SettingsSavePath.append("Settings.ini");
-
-                RegistryWrapper("Need for Speed", SettingsSavePath);
+                // The settings file sits in the game's folder of the user files
+                RegistryWrapper("Need for Speed", UserFilesFolder() / "NFS ProStreet" / "Settings.ini");
                 RegistryWrapper::AddPathWriter("Install Dir", "InstallDir", "Path");
-                RegistryWrapper::AddDefault("@", "INSERTYOURCDKEYHERE");
-                RegistryWrapper::AddDefault("CD Drive", "D:\\");
-                RegistryWrapper::AddDefault("CacheSize", "5697825792");
-                RegistryWrapper::AddDefault("SwapSize", "73400320");
+
+                static constexpr std::pair<const char*, const char*> Defaults[] =
+                {
+                    { "@", "INSERTYOURCDKEYHERE" }, { "CD Drive", "D:\\" }, { "CacheSize", "5697825792" }, { "SwapSize", "73400320" },
+                    { "StreamingInstall", "0" }, { "FirstTime", "0" }, { "g_CarEffects", "2" }, { "g_WorldFXLevel", "3" },
+                    { "g_RoadReflectionEnable", "1" }, { "g_WorldLodLevel", "2" }, { "g_CarLodLevel", "0" }, { "g_FSAALevel", "3" },
+                    { "g_RainEnable", "1" }, { "g_TextureFiltering", "2" }, { "g_SmokeEnable", "1" }, { "g_CarDamageDetail", "2" },
+                    { "g_PerformanceLevel", "0" }, { "g_VSyncOn", "0" }, { "g_ShadowEnable", "3" }, { "g_ShaderDetailLevel", "1" },
+                    { "g_AudioDetail", "1" }, { "g_Brightness", "50" }, { "g_AudioMode", "1" }, { "g_Refresh", "60" },
+                };
+                for (auto [name, value] : Defaults)
+                    RegistryWrapper::AddDefault(name, value);
                 RegistryWrapper::AddDefault("Language", defaultLanguage.c_str());
-                RegistryWrapper::AddDefault("StreamingInstall", "0");
-                RegistryWrapper::AddDefault("FirstTime", "0");
-                RegistryWrapper::AddDefault("g_CarEffects", "2");
-                RegistryWrapper::AddDefault("g_WorldFXLevel", "3");
-                RegistryWrapper::AddDefault("g_RoadReflectionEnable", "1");
-                RegistryWrapper::AddDefault("g_WorldLodLevel", "2");
-                RegistryWrapper::AddDefault("g_CarLodLevel", "0");
-                RegistryWrapper::AddDefault("g_FSAALevel", "3");
-                RegistryWrapper::AddDefault("g_RainEnable", "1");
-                RegistryWrapper::AddDefault("g_TextureFiltering", "2");
-                RegistryWrapper::AddDefault("g_SmokeEnable", "1");
-                RegistryWrapper::AddDefault("g_CarDamageDetail", "2");
-                RegistryWrapper::AddDefault("g_PerformanceLevel", "0");
-                RegistryWrapper::AddDefault("g_VSyncOn", "0");
-                RegistryWrapper::AddDefault("g_ShadowEnable", "3");
-                RegistryWrapper::AddDefault("g_ShaderDetailLevel", "1");
-                RegistryWrapper::AddDefault("g_AudioDetail", "1");
-                RegistryWrapper::AddDefault("g_Brightness", "50");
-                RegistryWrapper::AddDefault("g_AudioMode", "1");
                 RegistryWrapper::AddDefault("g_Width", std::to_string(DesktopResW));
                 RegistryWrapper::AddDefault("g_Height", std::to_string(DesktopResH));
-                RegistryWrapper::AddDefault("g_Refresh", "60");
 
                 auto hooks = IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
                     std::forward_as_tuple("RegCloseKey", RegistryWrapper::RegCloseKey),

@@ -65,8 +65,7 @@ public:
             });
             Screen.bRawInputMouseRawData = FixSettings().Int("MAIN.RawInputMouseRawData") != 0;
             Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
-            Screen.szLoadscPath = FixSettings().CfgPath();
-            Screen.szLoadscPath.replace_extension(".png");
+            Screen.LoadscreenPicture = std::filesystem::path(FixSettings().CfgPath()).replace_extension(L".png");
             gBlacklistIndicators = FixSettings().Int("BONUS.BlacklistIndicators");
             gColor = FixSettings().Int("BONUS.GogglesLightColor");
             bLightSyncRGB = FixSettings().Int("MAIN.LightSyncRGB");

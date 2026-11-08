@@ -7,43 +7,17 @@ export module LightingFixMirror;
 
 import ComVars;
 
-uint32_t* LightingFixUpdateMirrorCave_Exit = nullptr;
-uint32_t* sub_713AA0 = nullptr;
-uint32_t* sub_713A30 = nullptr;
-uint32_t* ptr_dword_AB095C = nullptr;
-uint32_t* ptr_dword_AB0914 = nullptr;
-
-void __declspec(naked) LightingFixUpdateMirrorCave()
+// The rear-view mirror. The game draws its road with the low detail technique and no reflection texture. With the
+// console lighting it uses the main view's road technique; the reflection stays off there.
+namespace RearViewRoad
 {
-    _asm
-    {
-        cmp dword ptr[edi + 8], 01
-        mov ecx, esi
-        jne IsMirror
-        mov eax, ds:ptr_dword_AB095C
-        mov eax, [eax]
-        push eax
-        push 0x59
-        call sub_713AA0
-        jmp ExitCode
+    constexpr int MirrorView = 3;
+    constexpr int ReflectionTextureParam = 89;      // MISCMAP1_TEXTURE
+    constexpr int SurfaceReflectionParam = 128;     // cfSurfaceReflection
 
-        IsMirror :
-        mov eax, ds : ptr_dword_AB0914
-            mov eax, [eax]
-            push eax
-            push 0x59
-            call sub_713AA0
-            mov eax, [esi + 0x1330]
-            test eax, eax
-            je ExitCode
-            push 0
-            push 0x80
-            mov ecx, esi
-            call sub_713A30
-
-            ExitCode :
-        jmp LightingFixUpdateMirrorCave_Exit
-    }
+    void* (__thiscall* SetTexture)(void* shader, int param, void* texture) = nullptr;
+    void* (__thiscall* SetValue)(void* shader, int param, uint32_t value) = nullptr;
+    void** ReflectionTexture = nullptr;
 }
 
 class LightingFixMirror
@@ -56,7 +30,7 @@ public:
             if (!FixSettings().Bool("GRAPHICS.ConsoleLighting"))
                 return;
 
-            // The lighting values of the Xbox 360 version, also for the rear-view mirror
+            // The lighting values of the Xbox 360 version
             {
                 uint32_t* dword_7497B9 = hook::pattern("8B 0D ? ? ? ? 83 F8 06 89 0D ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").count(2).get(1).get<uint32_t>(2);
                 static float f20 = 2.0f;
@@ -66,21 +40,26 @@ public:
                 injector::WriteMemory(dword_748A70, &f19, true);
                 uint32_t* dword_73E7CB = *hook::pattern("C7 05 ? ? ? ? CD CC CC 3E B8 ? ? ? ? 74 05 B8 ? ? ? ? C3").count(1).get(0).get<uint32_t*>(11);
                 injector::WriteMemory<float>(dword_73E7CB, 1.35f, true);
-
-                //Lighting Fix Update (mirror)
-                auto pattern = hook::pattern("8B 4F 6C 8B 91 8C 02 00 00 52 6A 6C 8B CE"); //0x00748C17
-                uint32_t* dword_748C2A = pattern.count(1).get(0).get<uint32_t>(0x13);
-                ptr_dword_AB095C = *pattern.count(1).get(0).get<uint32_t*>(0x1C);
-                ptr_dword_AB0914 = *hook::pattern("52 50 FF 51 5C A1 ? ? ? ? 8B 08").count(1).get(0).get<uint32_t*>(6);
-                sub_713AA0 = hook::pattern("C2 08 00 CC 8B 54 24 08 8B 41 44 56").count(1).get(0).get<uint32_t>(4);
-                sub_713A30 = hook::pattern("89 81 84 17 00 00 C3 CC CC").count(1).get(0).get<uint32_t>(9);
-                LightingFixUpdateMirrorCave_Exit = hook::pattern("A1 ? ? ? ? 8B 15 ? ? ? ? 83 F8 06 89 15 ? ? ? ? C7 05 ? ? ? ? CD CC CC 3E").count(1).get(0).get<uint32_t>(0); //0x00748C5D
-                injector::MakeJMP(dword_748C2A, LightingFixUpdateMirrorCave, true);
-
-                uint32_t* dword_72E382 = hook::pattern("C7 05 ? ? ? ? 01 00 00 00 C7 05 ? ? ? ? 00 00 80").count(1).get(0).get<uint32_t>(6);
-                injector::WriteMemory(dword_72E382, 0, true);
-
             }
+
+            // The mirror pass sets the low detail flag for its draw; it's left off
+            auto mirrorPass = hook::pattern("6A 00 6A 01 68 ? ? ? ? C7 05 ? ? ? ? 01 00 00 00 C7 05 ? ? ? ? 00 00 80 3F E8");
+            injector::WriteMemory<uint32_t>(mirrorPass.get_first(15), 0, true);
+
+            // The road shader's per-view parameters: in the mirror, the main view's reflection texture with no reflection
+            auto roadParams = hook::pattern("83 7F 08 03 8B CE 74 08 A1 ? ? ? ? 50 EB 02 6A 00 6A 59 E8 ? ? ? ? 8B 86 ? ? ? ? 85 C0 74 ? 8B 0D ? ? ? ? 51 6A 78 8B CE E8");
+            RearViewRoad::ReflectionTexture = *roadParams.get_first<void**>(9);
+            RearViewRoad::SetTexture = reinterpret_cast<decltype(RearViewRoad::SetTexture)>(injector::GetBranchDestination(roadParams.get_first(20)).as_int());
+            RearViewRoad::SetValue = reinterpret_cast<decltype(RearViewRoad::SetValue)>(injector::GetBranchDestination(roadParams.get_first(46)).as_int());
+            static auto RoadParamsHook = safetyhook::create_mid(roadParams.get_first(51), [](SafetyHookContext& regs)
+            {
+                auto view = reinterpret_cast<const int*>(regs.edi);
+                if (view[2] != RearViewRoad::MirrorView)
+                    return;
+                auto shader = reinterpret_cast<void*>(regs.esi);
+                RearViewRoad::SetTexture(shader, RearViewRoad::ReflectionTextureParam, *RearViewRoad::ReflectionTexture);
+                RearViewRoad::SetValue(shader, RearViewRoad::SurfaceReflectionParam, 0);
+            });
         };
     }
 } LightingFixMirror;

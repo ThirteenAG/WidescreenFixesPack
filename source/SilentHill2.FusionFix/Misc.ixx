@@ -46,21 +46,16 @@ namespace injector
     }
 }
 
-void LoadDatFile(std::filesystem::path str, std::function<void(std::string_view line)>&& cb)
+// Every entry of a text list: one per line, without empty lines and # comments (a missing file has none)
+void ForEachListEntry(const std::filesystem::path& file, const std::function<void(std::string_view entry)>& visit)
 {
-    std::ifstream hFile;
-    hFile.open(str);
-    if (hFile.is_open())
+    std::ifstream list(file, std::ios::binary);
+    for (std::string entry; std::getline(list, entry);)
     {
-        std::string line;
-        while (std::getline(hFile, line))
-        {
-            if (!line.empty() && line[0] != '#')
-            {
-                cb(line);
-            }
-        }
-        hFile.close();
+        if (entry.ends_with('\r'))
+            entry.pop_back();
+        if (!entry.empty() && !entry.starts_with('#'))
+            visit(entry);
     }
 }
 
@@ -747,15 +742,9 @@ public:
 
                     static std::set<uint32_t> images;
                     // The list of full screen pictures next to the plugin, with its name
-                    auto DataFilePath = GetThisModulePath<std::filesystem::path>() / GetThisModuleName<std::filesystem::path>();
-                    DataFilePath.replace_extension(".dat");
-                    //auto pos = DataFilePath.rfind('.');
-                    //DataFilePath.replace(pos, DataFilePath.length() - pos, ".dat");
-                    char buf[MAX_PATH];
-                    GetModuleFileNameA(NULL, buf, MAX_PATH);
-                    *(strrchr(buf, '\\') + 1) = '\0';
-                    std::string mPath(buf);
-                    LoadDatFile(DataFilePath, [&mPath](std::string_view line)
+                    const auto listFile = std::filesystem::path(GetModulePath<std::filesystem::path>(module_path_detail::ThisModule())).replace_extension(L".dat");
+                    const std::string mPath = GetExeModulePath<std::string>();
+                    ForEachListEntry(listFile, [&mPath](std::string_view line)
                         {
                             auto texPath = mPath + std::string(line);
                             std::FILE* fp;

@@ -22,13 +22,8 @@ export struct bVector4
     float w;
 };
 
-export struct bMatrix4
-{
-    bVector4 v0;
-    bVector4 v1;
-    bVector4 v2;
-    bVector4 v3;
-};
+// A 4x4 matrix, row by row
+export using bMatrix4 = std::array<bVector4, 4>;
 
 export GameRef<HWND> hWnd;
 export GameRef<uint32_t> dwWindowedMode;

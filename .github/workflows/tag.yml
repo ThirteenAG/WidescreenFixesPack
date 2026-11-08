@@ -84,7 +84,6 @@ on:
         - sh4
         - sniperelite
         - sonicheroes
-        - spyro
         - srs
         - thaw
         - thegodfather
@@ -179,7 +178,6 @@ env:
   sh4: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SilentHill\\SilentHill4_FusionFix /p:Configuration=Release
   sniperelite: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SniperElite_FusionFix /p:Configuration=Release
   sonicheroes: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SonicHeroes_FusionFix /p:Configuration=Release
-  spyro: msbuild -m build/Win64.WidescreenFixesPack.slnx /t:SpyroReignitedTrilogy_FusionFix /p:Configuration=Release
   srs: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:StreetRacingSyndicate_FusionFix /p:Configuration=Release
   thegodfather: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TheGodfather_FusionFix /p:Configuration=Release
   thematrixpathofneo: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:TheMatrixPathOfNeo_FusionFix /p:Configuration=Release

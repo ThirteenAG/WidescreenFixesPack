@@ -1,9 +1,0 @@
-{
-  "plugin.name": "Spyro Reignited Trilogy Fusion Fix",
-  "page.camera": "Telecamera",
-  "FOVFactor": "Campo visivo",
-  "FOVFactor.description": "Moltiplica il campo visivo oltre alla correzione widescreen, che sugli schermi più larghi di 16:9 mostra già di più ai lati. 1.0 mantiene l'inquadratura del gioco; valori più alti mostrano di più, valori più bassi avvicinano l'immagine. Le scene di intermezzo e le altre viste scriptate usano la stessa telecamera e cambiano anch'esse. Si applica subito.",
-  "OverrideFOV": "Campo visivo fisso",
-  "OverrideFOV.description": "Sostituisce il campo visivo della telecamera con un angolo orizzontale fisso in gradi, come sarebbe a 16:9; la correzione widescreen e il moltiplicatore del campo visivo si applicano comunque in aggiunta. Tutte le viste lo usano, comprese le scene di intermezzo e gli effetti di zoom del gioco. Disattivato mantiene il campo visivo proprio della telecamera. Si applica subito.",
-  "OverrideFOV.off": "Disattivato"
-}

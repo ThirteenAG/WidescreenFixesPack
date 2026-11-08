@@ -18,6 +18,8 @@
 - **Lens flare, Extras windows, staff roll** — Sized and placed correctly at any aspect ratio.
 - **Movies** — The game's movies are 4:3 pictures and are shown whole at their own shape, with black bars at the sides on wider screens. The story scenes are movies too, so there is no separate cutscene setting.
 - **No disc needed** — The retail game runs without its disc.
+- **Frame pacing** — Frames come at an even 60 per second, the game's own speed; movies keep the game's own timing.
+- **Window icon** — The game's window and taskbar button show the game's icon.
 - **Supported executables** — The retail `Tsonic_win.exe` and the modified `Tsonic_win2.exe`; the fix replaces the latter's own widescreen camera code.
 
 ## Options
@@ -30,12 +32,12 @@
 - **Shadows** — Choose the original PC or GameCube-sized character shadows and a shadow-map resolution. The default map is 1024; the original uses 256.
 - **Object distance** — Optionally shows objects from farther away, reducing pop-in.
 - **Switch flash effect** — Original, or the PlayStation 2 versions of the castle/mansion switch flash.
-- **Better frame pacing** — A frame limiter with steadier frame times (60 by default; the game speed is tied to it).
+- **Save folder** — Optionally keeps saves and the game's settings in a folder inside the game folder.
 - **No frame skipping, ignore the mouse** — On by default. Attract demos can be restored, and the quit dialog, loading screen timeout and subtitles can be turned off.
 - **Confine cursor** — Keeps the cursor inside the active game window; released on focus loss, while moving the window, in system menus and immediately when turned off.
 - **Check for updates** — Off by default. When on, the game shows a notice at the title and main menu when a newer version of the fix is available.
 
-Settings are on fusionfix.io or in FusionFixHub (English, French, German, Italian and Spanish), with the Vanilla, Recommended and Enhanced presets. HUD aspect ratio, field of view, confine cursor and update check apply at once, the rest at the next start. Resolution, minimum aspect ratio, clip range and object-distance tuning are on the advanced pages; the limiter method can only be changed in the settings file.
+Settings are on fusionfix.io or in FusionFixHub (English, French, German, Italian and Spanish), with the Vanilla, Recommended and Enhanced presets. HUD aspect ratio, field of view, confine cursor and update check apply at once, the rest at the next start. Resolution, minimum aspect ratio, clip range, save folder and object-distance tuning are on the advanced pages.
 
 ## Controller
 
@@ -55,7 +57,3 @@ The archive includes Xidi for the game's DirectInput controls. Connect an XInput
 2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
 3. Launch the game once to create `scripts/SonicHeroes.FusionFix.cfg`.
 4. Configure the fix on fusionfix.io or in FusionFixHub. Restart the game when an option requires it.
-
-<a href="https://github.com/sponsors/xan1242"><img src="https://img.shields.io/badge/Sponsor_xan1242_on_GitHub-5c5c5c?style=for-the-badge&logo=github&logoColor=white" width="250"></a><br>
-
-<a href="https://www.paypal.com/paypalme/xan1242"><img src="https://img.shields.io/badge/Donate_to_xan1242_on_PayPal-5c5c5c?style=for-the-badge&logo=paypal&logoColor=blue" width="250"></a><br>

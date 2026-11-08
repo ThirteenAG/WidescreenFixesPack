@@ -25,7 +25,7 @@ export struct Screen
     int32_t FilmstripScaleX;
     int32_t FilmstripOffset;
     uint32_t pFilmstripTex;
-    std::filesystem::path szLoadscPath;
+    std::filesystem::path LoadscreenPicture; // a picture next to the settings file replaces the loading screen
     const float fDefaultARforFOV = 16.0f / 9.0f;
     bool bRawInputMouse;
     bool bRawInputMouseRawData;

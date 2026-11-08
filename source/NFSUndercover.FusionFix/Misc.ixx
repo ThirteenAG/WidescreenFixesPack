@@ -671,8 +671,9 @@ void Init4()
     injector::MakeNOP(pattern.get_first(7), 2, true);
 
     // HUD Width
-    uintptr_t loc_764436 = reinterpret_cast<uintptr_t>(hook::pattern("C7 41 04 06 00 00 00 C7 01 04 00 00 00 C7 81 BC 00 00 00 04 00 00 00").get_first(0)) + 0x20;
-    AspectRatio::fHudWidth = *reinterpret_cast<float**>(loc_764436 + 4);
+    // The width the HUD is laid out in, the first of the two the game picks from
+    auto hudWidth = hook::pattern("84 C0 74 0A F3 0F 10 05 ? ? ? ? EB 08 F3 0F 10 05 ? ? ? ? 53 55 F3 0F 11 44 24 10 E8");
+    AspectRatio::fHudWidth = *hudWidth.get_first<float*>(8);
     DWORD oldprotect;
     injector::UnprotectMemory(AspectRatio::fHudWidth, sizeof(float), oldprotect);
 
@@ -888,34 +889,31 @@ void Init4()
     static float CSMScaleFar = FixSettings().Float("GRAPHICS.CSMScaleFar") * CSMScale;
     Shadows::UpdateShadowsRes();
 
-    // Shadow texture creation: push height, width
-    pattern = hook::pattern("51 6A 01 68 00 04 00 00 C1 E0 0A");
-    Shadows::TextureCaveExit = reinterpret_cast<uintptr_t>(pattern.get_first(3 + 9));
-    injector::MakeJMP(pattern.get_first(3), Shadows::TextureCave, true);
+    // Shadow texture creation: its size comes from the resolution and the cascade count the game passes
+    pattern = hook::pattern("68 00 04 00 00 C1 E0 0A 50 6A 4B");
+    Shadows::TextureCaveExit = reinterpret_cast<uintptr_t>(pattern.get_first(9));
+    injector::MakeJMP(pattern.get_first(0), Shadows::TextureCave, true);
 
-    // Shadow rendering viewports
-    pattern = hook::pattern("8B 46 08 0F 57 C0 C1 E0 0A");
-    struct ShadowsResHook2
+    // Shadow rendering: each cascade's viewport, once the game has filled it in for its 1024 pixels
+    pattern = hook::pattern("B8 00 04 00 00 89 44 24 0C 89 44 24 10 A1");
+    static auto CascadeViewportHook = safetyhook::create_mid(pattern.get_first(13), [](SafetyHookContext& regs)
     {
-        void operator()(injector::reg_pack& regs)
-        {
-            *(uint32_t*)(regs.esp + 4) = Shadows::ShadowsRes * regs.eax;
-            *(uint32_t*)(regs.esp + 0xC) = Shadows::ShadowsRes;
-            *(uint32_t*)(regs.esp + 0x10) = Shadows::ShadowsRes;
-        }
-    }; injector::MakeInline<ShadowsResHook2>(pattern.get_first(6), pattern.get_first(26));
+        auto viewport = reinterpret_cast<uint32_t*>(regs.esp + 4);
+        uint32_t cascade = *reinterpret_cast<uint32_t*>(regs.esi + 8);
+        viewport[0] = cascade * Shadows::ShadowsRes;   // X
+        viewport[2] = Shadows::ShadowsRes;             // width
+        viewport[3] = Shadows::ShadowsRes;             // height
+    });
 
-    // Cascade scales: the game's writes to CSM::fCSMScaleLevel[] are removed
-    pattern = find_pattern("F3 0F 11 0D ? ? ? ? 0F 5A C8", "F3 0F 11 0D ? ? ? ? 56");
-    auto pattern2 = find_pattern("F3 0F 11 0D ? ? ? ? F3 0F 11 05 ? ? ? ? E8 ? ? ? ? 8B C8", "F3 0F 11 0D ? ? ? ? F3 0F 11 05 ? ? ? ? E8 ? ? ? ? 8B C8");
-    static float* CSM_fCSMScaleLevel = *pattern.get_first<float*>(4);
-    injector::MakeNOP(pattern.get_first(), 8);
-    injector::MakeNOP(pattern2.get_first(0), 8);
-    injector::MakeNOP(pattern2.get_first(8), 8);
-
-    CSM_fCSMScaleLevel[0] = CSMScaleNear;
-    CSM_fCSMScaleLevel[1] = CSMScaleMid;
-    CSM_fCSMScaleLevel[2] = CSMScaleFar;
+    // Cascade scales: CSM::Update works out CSM::fCSMScaleLevel[] each time, the settings replace them right after
+    pattern = hook::pattern("F3 0F 11 0D ? ? ? ? F3 0F 11 05 ? ? ? ? E8 ? ? ? ? 8B C8");
+    static float* CascadeScales = *pattern.get_first<float*>(4) - 1;
+    static auto CascadeScaleHook = safetyhook::create_mid(pattern.get_first(16), [](SafetyHookContext&)
+    {
+        CascadeScales[0] = CSMScaleNear;
+        CascadeScales[1] = CSMScaleMid;
+        CascadeScales[2] = CSMScaleFar;
+    });
 
     // Shadows of meshes outside the view
     pattern = hook::pattern("77 ? F3 0F 5A C0 0F 5A C9");

@@ -722,14 +722,6 @@ jobs:
         tag: sc
         artifacts: data/Archives/SplinterCell.FusionFix.zip
 
-    - name: Spyro Reignited Trilogy Fusion Fix
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ steps.selection.outputs.tags }}
-        tag: spyro
-        artifacts: data/Archives/SpyroReignitedTrilogy.FusionFix.zip
-
     - name: Sniper Elite Fusion Fix
       uses: ./.github/workflows/release_tag
       with:

@@ -303,80 +303,29 @@ public:
                 // Some releases have this code twice, with the same value
                 fFEHudPosX.SetAddress(*hook::pattern("D8 25 ? ? ? ? D9 5C 24 14 DB 05 ? ? ? ? D8 25 ? ? ? ? D9 5C 24 1C 74 20").get_first<float*>(2));
 
-                auto pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x56FED4
-                struct HudPosXHook1
-                {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        *(float*)(regs.esp + 0x19C) = fFEHudPosX;
-                    }
-                }; injector::MakeInline<HudPosXHook1>(pattern.get_first(0), pattern.get_first(11));
+                // The front end's centre (320, 240) is written to the stack as immediates in several places. They and
+                // the rear-view mirror's corners (x 190 and 450) follow the screen's centre.
+                static std::vector<ProtectedGameRef<float>> FECentreX;
+                auto centre = hook::pattern("C7 84 24 ? ? 00 00 00 00 A0 43 C7 84 24 ? ? 00 00 00 00 70 43");
+                if (centre.size() != 6)
+                    std::abort();
+                for (size_t i = 0; i < centre.size(); ++i)
+                    FECentreX.emplace_back().SetAddress(centre.get(i).get<float>(7));
+                FECentreX.emplace_back().SetAddress(hook::pattern("C7 44 24 ? 00 00 A0 43 C7 44 24 ? 00 00 70 43").get_first<float>(4));
 
-                pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x584EEF
-                struct HudPosXHook2
+                struct MirrorCorner
                 {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        *(float*)(regs.esp + 0x90) = fFEHudPosX;
-                    }
-                }; injector::MakeInline<HudPosXHook2>(pattern.get_first(0), pattern.get_first(11));
-
-                pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x599E79
-                struct HudPosXHook3
+                    ProtectedGameRef<float> x;
+                    float original;
+                };
+                static std::vector<MirrorCorner> MirrorCorners;
+                auto mirror = hook::pattern("C7 44 24 ? 00 00 E1 43 C7 44 24 ? 00 00 98 41 C7 84 24");
+                for (int offset : { 4, 23, 45, 67 })
                 {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        *(float*)(regs.esp + 0x84) = fFEHudPosX;
-                    }
-                }; injector::MakeInline<HudPosXHook3>(pattern.get_first(0), pattern.get_first(11));
-
-                pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x0059A120
-                struct HudPosXHook4
-                {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        *(float*)(regs.esp + 0xC4) = fFEHudPosX;
-                    }
-                }; injector::MakeInline<HudPosXHook4>(pattern.get_first(0), pattern.get_first(11));
-
-                pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x0059A5AB
-                struct HudPosXHook5
-                {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        *(float*)(regs.esp + 0x94) = fFEHudPosX;
-                    }
-                }; injector::MakeInline<HudPosXHook5>(pattern.get_first(0), pattern.get_first(11));
-
-                pattern = hook::pattern("C7 ? ? ? ? 00 00 00 00 A0 43 C7 ? ? ? ? 00 00 00 00 70 43"); // 0x0059A83E
-                injector::MakeInline<HudPosXHook5>(pattern.get_first(0), pattern.get_first(11));
-
-                pattern = hook::pattern("C7 ? ? ? 00 00 A0 43 C7 ? ? ? 00 00 70 43"); // 0x005A44C8
-                struct HudPosXHook6
-                {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        *(float*)(regs.esp + 0x64) = fFEHudPosX;
-                    }
-                }; injector::MakeInline<HudPosXHook6>(pattern.get_first(0), pattern.get_first(8));
-
-                //mirror position fix
-                pattern = hook::pattern("C7 44 24 70 00 00 E1 43 C7 44 24 74 00 00 98 41 C7 84 24 80 00 00 00 00 00 3E 43"); // 0x6E70C0
-                struct MirrorPosXHook
-                {
-                    void operator()(injector::reg_pack& regs)
-                    {
-                        *(float*)(regs.esp + 0x70) = (fFEHudPosX - 320.0f) + 450.0f;
-                        *(float*)(regs.esp + 0xA0) = (fFEHudPosX - 320.0f) + 450.0f;
-                        *(float*)(regs.esp + 0x80) = (fFEHudPosX - 320.0f) + 190.0f;
-                        *(float*)(regs.esp + 0x90) = (fFEHudPosX - 320.0f) + 190.0f;
-                        // others
-                        *(float*)(regs.esp + 0x74) = 19.0;
-                        *(float*)(regs.esp + 0x84) = 19.0;
-                        *(float*)(regs.esp + 0x94) = 89.0;
-                        *(float*)(regs.esp + 0xA4) = 89.0;
-                    }
-                }; injector::MakeInline<MirrorPosXHook>(pattern.get_first(0), pattern.get_first(82));
+                    auto& corner = MirrorCorners.emplace_back();
+                    corner.x.SetAddress(mirror.get_first<float>(offset));
+                    corner.original = corner.x;
+                }
 
                 uint32_t* dword_57CB82 = hook::pattern("3A 55 34 0F 85 0B 02 00 00 A1").count(1).get(0).get<uint32_t>(0); // HUD
                 uint32_t* dword_5696CB = hook::pattern("8A 41 34 38 86 30 03 00 00 74 52 84 C0").count(1).get(0).get<uint32_t>(0); // HUD
@@ -389,7 +338,7 @@ public:
                 injector::WriteMemory<uint32_t>(dword_56885A, 0x7401F980, true);
 
                 //Widescreen Splash
-                pattern = hook::pattern("8B 46 10 8B 3D ? ? ? ? 53 50");
+                auto pattern = hook::pattern("8B 46 10 8B 3D ? ? ? ? 53 50");
                 injector::MakeNOP(pattern.get_first(-2), 2, true);
                 // The choice between the widescreen and the 4:3 splash package (other choices have the same code)
                 pattern = hook::pattern("E8 ? ? ? ? 84 C0 B8 ? ? ? ? 75 ? B8 ? ? ? ? C3");
@@ -441,6 +390,10 @@ public:
                     fHudScaleX = (1.0f / static_cast<float>(Width) * (static_cast<float>(Height) / 480.0f)) * 2.0f;
                     float fHudPosX = 640.0f / (640.0f * fHudScaleX);
                     fFEHudPosX = fHudPosX;
+                    for (auto& x : FECentreX)
+                        x = fHudPosX;
+                    for (auto& corner : MirrorCorners)
+                        corner.x = corner.original - 320.0f + fHudPosX;
 
                     UpdateWidescreenHudOffset(Width, Height);
                 };

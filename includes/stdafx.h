@@ -59,7 +59,7 @@ void CreateThreadAutoClose(LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwSt
 std::tuple<int32_t, int32_t> GetDesktopRes();
 std::vector<std::tuple<int, int, int>> GetResolutionsList(bool uniqueByRefresh = true);
 void GetResolutionsList(std::vector<std::string>& list, bool includeRefreshRate = false);
-uint32_t GetDesktopRefreshRate();
+[[nodiscard]] uint32_t GetDesktopRefreshRate() noexcept;
 uint32_t crc32(uint32_t crc, const void* buf, size_t size);
 
 HICON CreateIconFromBMP(UCHAR* data);
@@ -226,167 +226,122 @@ inline bool starts_with(const std::wstring_view str, const std::wstring_view pre
     return str.starts_with(prefix);
 }
 
+namespace module_path_detail
+{
+    // Text from a Win32 call that fills a buffer and returns the length it wrote. The buffer grows while the call says it
+    // was too small: a returned length that reaches the capacity (a cut path) or exceeds it (the size it needs).
+    template<typename Char, typename Call>
+    std::basic_string<Char> ReadText(Call&& call)
+    {
+        constexpr size_t limit = 32768; // the longest path Windows has
+        std::basic_string<Char> text(MAX_PATH, Char{});
+        while (text.size() <= limit)
+        {
+            const auto capacity = static_cast<DWORD>(text.size());
+            const DWORD length = call(text.data(), capacity);
+            if (length == 0)
+                return {};
+            if (length < capacity)
+            {
+                text.resize(length);
+                return text;
+            }
+            text.resize((std::max)(text.size() * 2, size_t(length) + 1));
+        }
+        return {};
+    }
+
+    // std::string is the ANSI text Windows gives; std::wstring and std::filesystem::path are Unicode
+    template<typename T>
+    T ModuleFile(HMODULE module)
+    {
+        if constexpr (std::is_same_v<T, std::string>)
+            return ReadText<char>([module](char* buffer, DWORD size) { return ::GetModuleFileNameA(module, buffer, size); });
+        else
+            return T(ReadText<wchar_t>([module](wchar_t* buffer, DWORD size) { return ::GetModuleFileNameW(module, buffer, size); }));
+    }
+
+    template<typename T>
+    T CurrentDirectory()
+    {
+        if constexpr (std::is_same_v<T, std::string>)
+            return ReadText<char>([](char* buffer, DWORD size) { return ::GetCurrentDirectoryA(size, buffer); });
+        else
+            return T(ReadText<wchar_t>([](wchar_t* buffer, DWORD size) { return ::GetCurrentDirectoryW(size, buffer); }));
+    }
+
+    template<typename Char>
+    constexpr Char Separators[] = { Char('/'), Char('\\'), Char(0) };
+
+    // A path's folder, and a string's folder with its trailing separator
+    template<typename T>
+    T FolderOf(const T& file)
+    {
+        if constexpr (std::same_as<T, std::filesystem::path>)
+            return file.parent_path();
+        else
+        {
+            const auto end = file.find_last_of(Separators<typename T::value_type>);
+            return end == T::npos ? T() : file.substr(0, end + 1);
+        }
+    }
+
+    template<typename T>
+    T NameOf(const T& file)
+    {
+        if constexpr (std::same_as<T, std::filesystem::path>)
+            return file.filename();
+        else
+        {
+            const auto end = file.find_last_of(Separators<typename T::value_type>);
+            return end == T::npos ? file : file.substr(end + 1);
+        }
+    }
+
+    // The module this code is linked into: every plugin has its own copy of this function
+    inline HMODULE ThisModule()
+    {
+        HMODULE module = nullptr;
+        ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(&ThisModule), &module);
+        return module;
+    }
+}
+
 template<class T = std::filesystem::path>
 T GetModulePath(HMODULE hModule)
 {
-    static constexpr auto INITIAL_BUFFER_SIZE = MAX_PATH;
-    static constexpr auto MAX_ITERATIONS = 7;
-
-    if constexpr (std::is_same_v<T, std::filesystem::path>)
-    {
-        std::u16string ret;
-        std::filesystem::path pathret;
-        auto bufferSize = INITIAL_BUFFER_SIZE;
-        for (size_t iterations = 0; iterations < MAX_ITERATIONS; ++iterations)
-        {
-            ret.resize(bufferSize);
-            size_t charsReturned = 0;
-            charsReturned = GetModuleFileNameW(hModule, (LPWSTR)&ret[0], bufferSize);
-            if (charsReturned < ret.length())
-            {
-                ret.resize(charsReturned);
-                pathret = ret;
-                return pathret;
-            }
-            else
-            {
-                bufferSize *= 2;
-            }
-        }
-    }
-    else
-    {
-        T ret;
-        auto bufferSize = INITIAL_BUFFER_SIZE;
-        for (size_t iterations = 0; iterations < MAX_ITERATIONS; ++iterations)
-        {
-            ret.resize(bufferSize);
-            size_t charsReturned = 0;
-            if constexpr (std::is_same_v<T, std::string>)
-                charsReturned = GetModuleFileNameA(hModule, &ret[0], bufferSize);
-            else
-                charsReturned = GetModuleFileNameW(hModule, &ret[0], bufferSize);
-            if (charsReturned < ret.length())
-            {
-                ret.resize(charsReturned);
-                return ret;
-            }
-            else
-            {
-                bufferSize *= 2;
-            }
-        }
-    }
-    return T();
+    return module_path_detail::ModuleFile<T>(hModule);
 }
 
 template<class T = std::filesystem::path>
 T GetThisModulePath()
 {
-    HMODULE hm = NULL;
-    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&GetDesktopRefreshRate, &hm);
-    T r = GetModulePath<T>(hm);
-    if constexpr (std::is_same_v<T, std::filesystem::path>)
-        return r.parent_path();
-    else if constexpr (std::is_same_v<T, std::string>)
-        r = r.substr(0, r.find_last_of("/\\") + 1);
-    else
-        r = r.substr(0, r.find_last_of(L"/\\") + 1);
-    return r;
+    return module_path_detail::FolderOf(module_path_detail::ModuleFile<T>(module_path_detail::ThisModule()));
 }
 
 template<class T = std::filesystem::path>
 T GetThisModuleName()
 {
-    HMODULE hm = NULL;
-    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&GetDesktopRefreshRate, &hm);
-    const T moduleFileName = GetModulePath<T>(hm);
-
-    if constexpr (std::is_same_v<T, std::filesystem::path>)
-        return moduleFileName.filename();
-    else if constexpr (std::is_same_v<T, std::string>)
-        return moduleFileName.substr(moduleFileName.find_last_of("/\\") + 1);
-    else
-        return moduleFileName.substr(moduleFileName.find_last_of(L"/\\") + 1);
+    return module_path_detail::NameOf(module_path_detail::ModuleFile<T>(module_path_detail::ThisModule()));
 }
 
 template<class T = std::filesystem::path>
 T GetExeModulePath()
 {
-    T r = GetModulePath<T>(NULL);
-
-    if constexpr (std::is_same_v<T, std::filesystem::path>)
-        return r.parent_path();
-    else if constexpr (std::is_same_v<T, std::string>)
-        r = r.substr(0, r.find_last_of("/\\") + 1);
-    else
-        r = r.substr(0, r.find_last_of(L"/\\") + 1);
-    return r;
+    return module_path_detail::FolderOf(module_path_detail::ModuleFile<T>(nullptr));
 }
 
 template<class T = std::filesystem::path>
 T GetExeModuleName()
 {
-    const T moduleFileName = GetModulePath<T>(NULL);
-    if constexpr (std::is_same_v<T, std::filesystem::path>)
-        return moduleFileName.filename();
-    else if constexpr (std::is_same_v<T, std::string>)
-        return moduleFileName.substr(moduleFileName.find_last_of("/\\") + 1);
-    else
-        return moduleFileName.substr(moduleFileName.find_last_of(L"/\\") + 1);
+    return module_path_detail::NameOf(module_path_detail::ModuleFile<T>(nullptr));
 }
 
 template<class T = std::filesystem::path>
 T GetCurrentDirectoryW()
 {
-    static constexpr auto INITIAL_BUFFER_SIZE = MAX_PATH;
-    static constexpr auto MAX_ITERATIONS = 7;
-    if constexpr (std::is_same_v<T, std::filesystem::path>)
-    {
-        std::u16string ret;
-        std::filesystem::path pathret;
-        auto bufferSize = INITIAL_BUFFER_SIZE;
-        for (size_t iterations = 0; iterations < MAX_ITERATIONS; ++iterations)
-        {
-            ret.resize(bufferSize);
-            size_t charsReturned = 0;
-            charsReturned = GetCurrentDirectoryW(bufferSize, (LPWSTR)&ret[0]);
-            if (charsReturned < ret.length())
-            {
-                ret.resize(charsReturned);
-                pathret = ret;
-                return pathret;
-            }
-            else
-            {
-                bufferSize *= 2;
-            }
-        }
-    }
-    else
-    {
-        T ret;
-        auto bufferSize = INITIAL_BUFFER_SIZE;
-        for (size_t iterations = 0; iterations < MAX_ITERATIONS; ++iterations)
-        {
-            ret.resize(bufferSize);
-            size_t charsReturned = 0;
-            if constexpr (std::is_same_v<T, std::string>)
-                charsReturned = GetCurrentDirectoryA(bufferSize, &ret[0]);
-            else
-                charsReturned = GetCurrentDirectoryW(bufferSize, &ret[0]);
-            if (charsReturned < ret.length())
-            {
-                ret.resize(charsReturned);
-                return ret;
-            }
-            else
-            {
-                bufferSize *= 2;
-            }
-        }
-    }
-    return T();
+    return module_path_detail::CurrentDirectory<T>();
 }
 
 template <typename T>
@@ -446,12 +401,14 @@ private:
 public:
     static inline DWORD OverrideTypeREG_NONE = REG_NONE;
 
-    RegistryWrapper(std::string_view searchString, std::filesystem::path iniPath)
+    // Registry values whose key contains the search text are read from and written to the ini instead; its folder is made
+    RegistryWrapper(std::string_view searchString, const std::filesystem::path& iniFile)
     {
-        filter = searchString;
-        RegistryReader.SetIniPath(iniPath);
-        if (auto directory = iniPath.parent_path(); !directory.empty())
-            std::filesystem::create_directories(directory);
+        filter.assign(searchString);
+        RegistryReader.SetIniPath(iniFile);
+        std::error_code ignored;
+        if (const auto folder = iniFile.parent_path(); !folder.empty())
+            std::filesystem::create_directories(folder, ignored);
     }
 
     static void AddDefault(std::string_view key, std::string_view value)
