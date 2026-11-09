@@ -6,30 +6,20 @@ export module Fixes;
 
 import ComVars;
 
-// The render job skips entities whose mesh information cannot be read, using the game's existing skip path.
+// The render job skips entities whose mesh is gone, using the game's existing skip path.
 namespace
 {
+    // Streaming can free a mesh while an entity still refers to it; the links then read as null or small values
     bool HasMeshData(uintptr_t entity)
     {
-        __try
-        {
-            auto mesh = *(uintptr_t*)(entity + 0x50);
-            if (mesh < 0x10000)
-                return false;
-            auto data = *(uintptr_t*)mesh;
-            if (data < 0x10000)
-                return false;
-            auto info = *(uintptr_t*)(data + 0x10);
-            if (info < 0x10000)
-                return false;
-            volatile auto flags = *(uint32_t*)(info + 4);
-            (void)flags;
-            return true;
-        }
-        __except (EXCEPTION_EXECUTE_HANDLER)
-        {
+        auto mesh = *(uintptr_t*)(entity + 0x50);
+        if (mesh < 0x10000)
             return false;
-        }
+        auto data = *(uintptr_t*)mesh;
+        if (data < 0x10000)
+            return false;
+        auto info = *(uintptr_t*)(data + 0x10);
+        return info >= 0x10000;
     }
 }
 

@@ -42,6 +42,11 @@ https://fusionfix.io/wfp
 Plugins to make or improve widescreen resolutions support in PC games, add more features and fix bugs.
 </div>
 
+# System Requirements
+
+- Windows 10 or 11, or Linux with Proton/Wine.
+- Windows 7 is not supported: the plugins and Ultimate ASI Loader use system functions that Windows 7 doesn't have, so the game won't start with them.
+
 # Building and Installing
 
 Requirements:
