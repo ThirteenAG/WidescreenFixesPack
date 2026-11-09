@@ -26,6 +26,7 @@ export GameRef<uint8_t*> RendererState;
 export GameRef<std::array<uint8_t, 9296>> InputContexts;
 export GameRef<std::array<uint8_t, 4>> InputClaims;
 export GameRef<int> PrimaryController;
+export GameRef<float> SpriteScaleX;
 
 export struct CutsceneManagerState
 {

@@ -21,6 +21,7 @@ import Overlay;
 import Input;
 import Window;
 import ScreenPatches;
+import Geography;
 
 
 class Main
@@ -62,6 +63,7 @@ public:
 
 
             ScreenPatches::Install();
+            BullyGeography::Install();
             GameplayCamera::Install(fFOVFactor);
         };
     }

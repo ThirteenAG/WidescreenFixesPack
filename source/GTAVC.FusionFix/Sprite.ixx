@@ -23,7 +23,7 @@ bool __cdecl CalcScreenCoors(const RwV3d* in, RwV3d* out, float* outw, float* ou
     out->y *= SCREEN_HEIGHT * recip;
     const float fov = 70.0f;
     // this is used to scale correctly if you zoom in with sniper rifle
-    float fovScale = fov / CDraw::GetFOV();
+    float fovScale = fov / CDraw::GetFOV() * CDraw::GetSpriteScale();
 
     *outw = CDraw::ms_bFixSprites ? (fovScale * recip * SCREEN_HEIGHT) : (fovScale * SCREEN_SCALE_AR(recip) * SCREEN_WIDTH);
     *outh = fovScale * recip * SCREEN_HEIGHT;
@@ -37,8 +37,9 @@ bool __cdecl CalcParticleScreenCoors(const RwV3d* in, RwV3d* out, float* outw, f
     if (visible)
     {
         // Particle textures use the original 4:3 proportions. Keep the native
-        // projection and clipping, and correct only their horizontal size.
-        *outw = SCREEN_SCALE_AR(*outw);
+        // projection and clipping, correct their horizontal size and the cutscene scale.
+        *outw = SCREEN_SCALE_AR(*outw) * CDraw::GetSpriteScale();
+        *outh *= CDraw::GetSpriteScale();
     }
     return visible;
 }

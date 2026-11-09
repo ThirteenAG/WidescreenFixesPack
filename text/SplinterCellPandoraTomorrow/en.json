@@ -23,7 +23,7 @@
   "HudAspectRatioConstraint": "HUD Aspect Ratio",
   "HudAspectRatioConstraint.description": "Auto puts the HUD at the screen edges. A ratio such as 4:3, 16:9 or 21:9 keeps it in a centered box; 4:3 is the original layout. Applies immediately.",
   "PostProcessFixedScale": "Vision Effect Resolution",
-  "PostProcessFixedScale.description": "The game uses 512. 0 keeps it, 1 uses the screen width, other values set the size; larger sizes render night and thermal vision sharper.",
+  "PostProcessFixedScale.description": "The game uses 512. 0 keeps it, 1 follows the screen width (rounded up to a multiple of 1024), other values set the size; larger sizes render night and thermal vision sharper.",
   "GrainScale": "Vision Grain Scaling",
   "GrainScale.description": "Scale vision grain for the screen resolution. 1 uses the corrected 640x480 baseline; 0 keeps the original grain scale.",
   "ShadowMapResolution": "Shadow Resolution",

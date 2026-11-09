@@ -56,6 +56,7 @@ private:
     static inline GameRef<float> ms_fAspectRatio;
 
     static inline float ms_fScaledFOV;
+    static inline float ms_fSpriteScale = 1.0f;
 public:
     static inline bool ms_bProperScaling = true;
     static inline bool ms_bFixRadar = true;
@@ -65,6 +66,7 @@ public:
     static void CalculateAspectRatio();
     static float GetFOV() { return ms_fFOV; }
     static float GetScaledFOV() { return ms_fScaledFOV; }
+    static float GetSpriteScale() { return ms_fSpriteScale; }
 
     static float FindAspectRatio();
     static float ConvertFOV(float fov);
@@ -316,6 +318,7 @@ void CDraw::SetFOV(float fov)
     if (!CCutsceneMgr::IsRunning() && !TheCamera->m_bWideScreenOn)
     {
         g_cutsceneCameraZoom = 1.0f;
+        ms_fSpriteScale = 1.0f;
         // The multiplier widens the view's width (the tangent of the half angle): 2.0 shows twice as much. The
         // widened view stops at 150 degrees, past which the perspective collapses on wide screens.
         constexpr float MaxWidth = 3.7320508f; // tan(75 degrees)
@@ -328,6 +331,9 @@ void CDraw::SetFOV(float fov)
     else
     {
         ms_fScaledFOV = ConvertFOVforCutscene(fov);
+        // Cutscenes fit the field of view to the screen's width instead of the 4:3 height, so the scene appears
+        // larger than in gameplay at the same field of view; sprites follow it to keep their size next to the world
+        ms_fSpriteScale = GetAspectRatio() / DEFAULT_ASPECT_RATIO / g_cutsceneCameraZoom;
     }
     ms_fFOV = fov;
 }

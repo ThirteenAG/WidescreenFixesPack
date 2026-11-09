@@ -16,16 +16,21 @@ export namespace BullyFocus
     uintptr_t PumpReturn = 0;
     bool HaveFocusEvent = false;
 
+    // The game's active flag stays clear until its window is first activated, so a game started
+    // in the background must count as running from the start too.
     bool BackgroundRunning()
     {
-        return HaveFocusEvent && FocusActive.is_initialized() && !FocusActive && PauseOnFocusLoss && !*PauseOnFocusLoss;
+        return FocusActive.is_initialized() && !FocusActive && PauseOnFocusLoss && !*PauseOnFocusLoss;
     }
 
     void Update()
     {
-        if (!HaveFocusEvent || !FocusActive.is_initialized() || FocusActive)
+        if (!FocusActive.is_initialized() || FocusActive)
             return;
         const bool pause = !BackgroundRunning();
+        // Before the first activation the game has nothing of its own to pause yet.
+        if (pause && !HaveFocusEvent)
+            return;
         FocusTimerPaused = pause;
         if (pause && !FocusMutexOwned && FocusStreamingMutex)
         {

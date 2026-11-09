@@ -104,15 +104,26 @@ void Init()
 
     if (FixSettings().Bool("MAIN.SkipPressStart"))
     {
-        // Press any key: the title page (OpeningPage) sends ResetPressStart when it opens and SignIn LIVE=0 PRESSSTART=1 on a key press,
-        // sign in right away the first time (CFlashMenuPreGameManager command handler sub_D7B89A, the manager at [ebp+68h], virtual +2Ch sends a command)
+        // Press any key: the title page (OpeningPage) sends ResetPressStart when it opens, then adds its key and mouse listeners (any key
+        // becomes START), on START it sends SignIn LIVE=0 PRESSSTART=1 and leaves when the player is ready, removing the listeners.
+        // The first time, SignIn is sent here on the menu manager's next update: sent from ResetPressStart the page left before it
+        // added the listeners, they stayed and turned every key into START, which launched the Deniable Ops match from its lobby.
+        // (CFlashMenuPreGameManager: command handler sub_D7B89A with the manager at [ebp+68h], virtual +2Ch sends a command; update sub_D7931F)
+        static uintptr_t pressStartManager = 0;
         auto pattern = hook::pattern("68 ? ? ? ? 50 E8 ? ? ? ? 85 C0 59 59 74 14 E8 ? ? ? ? 8B 10 8B C8 FF 92 60 02 00 00 E9");
         static auto PressStartHook = safetyhook::create_mid(pattern.get_first(32), [](SafetyHookContext& regs)
         {
             static bool once = false;
-            if (std::exchange(once, true))
+            if (!std::exchange(once, true))
+                pressStartManager = *reinterpret_cast<uintptr_t*>(regs.ebp + 0x68);
+        });
+
+        pattern = hook::pattern("55 8B EC D9 45 08 83 EC 48 56 57 51 D9 1C 24 8B F1 E8 ? ? ? ? 8B 8E C4 02 00 00");
+        static auto MenuUpdateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            if (!pressStartManager || regs.ecx != pressStartManager)
                 return;
-            auto manager = *reinterpret_cast<uintptr_t*>(regs.ebp + 0x68);
+            auto manager = std::exchange(pressStartManager, 0);
             reinterpret_cast<int(__thiscall*)(uintptr_t, const char*, const char*, int32_t)>((*reinterpret_cast<uintptr_t**>(manager))[0x2C / 4])(manager, "SignIn", "LIVE=0 PRESSSTART=1", 0);
         });
     }

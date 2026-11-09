@@ -1,9 +1,12 @@
 #pragma once
 #include <filesystem>
+#include <initializer_list>
 #include <string>
+#include <string_view>
+#include <vector>
 
 // The Widescreen Fix of a game became its Fusion Fix. Both patch the same game code, so the Fusion Fix stays off
-// while the old <Game>.WidescreenFix.asi is still installed, and says so.
+// while the old <Game>.WidescreenFix.asi (or another plugin of the old package) is still installed, and says so.
 namespace WidescreenFixConflict
 {
     // "<Game>.FusionFix.asi" -> "<Game>.WidescreenFix.asi"
@@ -30,18 +33,26 @@ namespace WidescreenFixConflict
         return {};
     }
 
-    // True when the old Widescreen Fix is installed; the caller then doesn't start
-    inline bool Found()
+    // True when the old Widescreen Fix is installed; the caller then doesn't start. otherFiles: further plugins the old
+    // Widescreen Fix package shipped whose work the Fusion Fix now does.
+    inline bool Found(std::initializer_list<std::wstring_view> otherFiles = {})
     {
-        const auto fileName = OldFileName();
-        if (fileName.empty())
-            return false;
-        const auto path = Find(fileName);
-        if (path.empty())
+        std::vector<std::wstring> fileNames;
+        if (auto fileName = OldFileName(); !fileName.empty())
+            fileNames.push_back(std::move(fileName));
+        for (auto fileName : otherFiles)
+            fileNames.emplace_back(fileName);
+        std::wstring paths;
+        for (const auto& fileName : fileNames)
+        {
+            if (auto path = Find(fileName); !path.empty())
+                paths += L"\n" + path.wstring();
+        }
+        if (paths.empty())
             return false;
         const auto title = GetThisModuleName<std::wstring>();
         const auto text = L"The Widescreen Fix for this game is now part of its Fusion Fix, and both can't work together.\n\n"
-            L"Please delete the old Widescreen Fix:\n" + path.wstring() +
+            L"Please delete the old Widescreen Fix:" + paths +
             L"\n\nThe Fusion Fix stays off until then.";
         MessageBoxW(nullptr, text.c_str(), title.c_str(), MB_OK | MB_ICONWARNING | MB_TOPMOST | MB_SETFOREGROUND);
         return true;

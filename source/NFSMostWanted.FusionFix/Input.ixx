@@ -335,22 +335,24 @@ namespace
         const char* playStation;
     };
 
+    // The 9 / 0 zoom keys of the showcase: the game's texture pack lists them as PC_GREATERTHAN_LESSTHAN, its name
+    // cut to 23 characters, but their hash is that of the full name
     constexpr HotkeyTextures HotkeyImages[] =
     {
-        { "L1",                      "XBOX_L1",                   "PS_L1"                   },
-        { "R1",                      "XBOX_R1",                   "PS_R1"                   },
-        { "PC_KEY_Q",                "XBOX_KEY_Q",                "PS_KEY_Q"                },
-        { "PC_GREATERTHAN_LESSTHAN", "XBOX_GREATERTHAN_LESSTHAN", "PS_GREATERTHAN_LESSTHAN" },
-        { "PC_KEY_ENTER",            "XBOX_KEY_ENTER",            "PS_KEY_ENTER"            },
-        { "PC_KEY_ESC_FRENCH",       "XBOX_KEY_ESC_FRENCH",       "PS_KEY_ESC_FRENCH"       },
-        { "PC_KEY_ESC",              "XBOX_KEY_ESC",              "PS_KEY_ESC"              },
-        { "PC_KEY_1",                "XBOX_KEY_1",                "PS_KEY_1"                },
-        { "PC_KEY_2",                "XBOX_KEY_2",                "PS_KEY_2"                },
-        { "PC_KEY_3",                "XBOX_KEY_3",                "PS_KEY_3"                },
-        { "PC_KEY_4",                "XBOX_KEY_4",                "PS_KEY_4"                },
-        { "PC_ARROW_KEYS_UP_DOWN",   "XBOX_ARROW_KEYS_UP_DOWN",   "PS_ARROW_KEYS_UP_DOWN"   },
-        { "PC_LOAD",                 "XBOX_LOAD",                 "PS_LOAD"                 },
-        { "PC_ARROW_KEYS",           "XBOX_ARROW_KEYS",           "PS_ARROW_KEYS"           },
+        { "L1",                           "XBOX_L1",                   "PS_L1"                   },
+        { "R1",                           "XBOX_R1",                   "PS_R1"                   },
+        { "PC_KEY_Q",                     "XBOX_KEY_Q",                "PS_KEY_Q"                },
+        { "PC_GREATERTHAN_LESSTHAN_KEYS", "XBOX_GREATERTHAN_LESSTHAN", "PS_GREATERTHAN_LESSTHAN" },
+        { "PC_KEY_ENTER",                 "XBOX_KEY_ENTER",            "PS_KEY_ENTER"            },
+        { "PC_KEY_ESC_FRENCH",            "XBOX_KEY_ESC_FRENCH",       "PS_KEY_ESC_FRENCH"       },
+        { "PC_KEY_ESC",                   "XBOX_KEY_ESC",              "PS_KEY_ESC"              },
+        { "PC_KEY_1",                     "XBOX_KEY_1",                "PS_KEY_1"                },
+        { "PC_KEY_2",                     "XBOX_KEY_2",                "PS_KEY_2"                },
+        { "PC_KEY_3",                     "XBOX_KEY_3",                "PS_KEY_3"                },
+        { "PC_KEY_4",                     "XBOX_KEY_4",                "PS_KEY_4"                },
+        { "PC_ARROW_KEYS_UP_DOWN",        "XBOX_ARROW_KEYS_UP_DOWN",   "PS_ARROW_KEYS_UP_DOWN"   },
+        { "PC_LOAD",                      "XBOX_LOAD",                 "PS_LOAD"                 },
+        { "PC_ARROW_KEYS",                "XBOX_ARROW_KEYS",           "PS_ARROW_KEYS"           },
     };
 
     struct HotkeyHashes

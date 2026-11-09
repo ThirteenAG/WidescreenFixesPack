@@ -144,6 +144,11 @@ public:
             if (Screen.Width <= 0 || Screen.Height <= 0)
                 std::tie(Screen.Width, Screen.Height) = std::make_tuple(640, 480);
 
+            // 1 follows the screen width, rounded up to a whole multiple of 1024: the vision effects shrink this target
+            // into fixed 256 and 1024 buffers, and only whole ratios keep every sample on the same texel spacing
+            if (Screen.nPostProcessFixedScale == 1)
+                Screen.nPostProcessFixedScale = (static_cast<uint32_t>(Screen.Width) + 1023) / 1024 * 1024;
+
             auto exePath = GetExeModulePath();
 
             auto userIniPath = exePath / "SplinterCell2User.ini";

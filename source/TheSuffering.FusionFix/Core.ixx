@@ -121,6 +121,8 @@ void InitFrame()
         if (NativeFOV.is_initialized())
             Screen.fFieldOfView = CurrentFieldOfView();
         UpdateCameraLenses();
+        ResetIconProjection();
+        HookIconDevice(device);
         DrawPillarbox(device);
         SufferingOverlay::Present(device, hGameWindow);
     };

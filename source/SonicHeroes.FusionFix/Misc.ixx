@@ -23,38 +23,22 @@ import Intro;
 
 namespace Shadows
 {
-    float Scale = 1.0f;
-
     void Init()
     {
         auto& settings = FixSettings();
-        Scale = std::clamp(settings.Float("MISC.ShadowScale"), 0.1f, 10.0f);
 
-        uintptr_t loc_63B143 = reinterpret_cast<uintptr_t>(hook::pattern("D9 54 24 3C D9 54 24 40 D9 54 24 58").get_first(0));
-        static uintptr_t sub_64CA10 = static_cast<uintptr_t>(injector::GetBranchDestination(loc_63B143 + 0x30));
-
-        struct ShadowFix2
+        // Each character is drawn from above into its own shadow texture, which is then projected onto the ground.
+        // Shadows are enlarged in that projection, so the texture keeps the whole silhouette; zooming into the
+        // texture would cut off whatever lies near its edges. The size grows by half the setting's distance from 1
+        // (1.7 makes the shadows about 1.35 times larger).
+        const float scale = std::clamp(settings.Float("MISC.ShadowScale"), 0.1f, 10.0f);
+        if (scale != 1.0f)
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                float val = (5.0f * Scale) - ((2.5f / Scale) * (4 - regs.esi));
-                float val2 = val * 0.025f;
-
-                // 0.278645843267
-                *(float*)(regs.esp + 0x3C) = val2;
-                *(float*)(regs.esp + 0x40) = val2;
-                *(float*)(regs.esp + 0x58) = val2;
-                *(float*)(regs.esp + 0x78) = val2;
-                // 0.72135412693
-                *(float*)(regs.esp + 0x5C) = 1.0f - val2;
-                *(float*)(regs.esp + 0x74) = 1.0f - val2;
-                *(float*)(regs.esp + 0x90) = 1.0f - val2;
-                *(float*)(regs.esp + 0x94) = 1.0f - val2;
-
-                reinterpret_cast<void(__cdecl*)(uint32_t, uint32_t, uint32_t)>(sub_64CA10)(4, regs.edx, 4);
-                _asm fld [val]
-            }
-        }; injector::MakeInline<ShadowFix2>(loc_63B143, loc_63B143 + 0x39);
+            const float growth = 1.0f + (scale - 1.0f) * 0.5f;
+            auto projection = *hook::get_pattern<float*>("68 ? ? ? ? 8D 4C 24 44 51 8B D1 52 E8", 1);
+            injector::WriteMemory(&projection[0], projection[0] / growth, true);
+            injector::WriteMemory(&projection[5], projection[5] / growth, true);
+        }
 
         // The character shadows are drawn into a 256x256 texture; every place that knows that size follows the setting
         const int size = std::clamp(settings.Int("GRAPHICS.ShadowResolution"), 16, 8192);
@@ -69,7 +53,6 @@ namespace Shadows
             "C7 44 24 74 00 00 80 43 C7 44 24 78 00 00 80 43");
         for (const int offset : { 0x0C, 0x14, 0x24, 0x2C })
             injector::WriteMemory(quad.get_first(offset), fsize, true);
-        injector::WriteMemory(hook::get_pattern("68 CD CC CC 3D 56 E8 ? ? ? ? 68 00 00 80 43 56 E8", 0x0C), fsize, true);
     }
 }
 

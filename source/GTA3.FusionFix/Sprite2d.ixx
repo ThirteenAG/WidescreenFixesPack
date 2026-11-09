@@ -50,6 +50,8 @@ CRect g_contentRect = {};
 bool g_drawingBars = false;
 bool bFullscreenMenuBackground = true;
 bool g_drawingMenuBackground = false;
+CSprite2d* SniperScopeSprite = nullptr;
+bool g_drawingScopeQuarter = false;
 
 static inline float CorrectX(float x)
 {
@@ -385,7 +387,9 @@ void __fastcall Draw3(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col,
     g_hasTexture = sprite2d->m_pTexture != nullptr;
     g_alpha = reinterpret_cast<uint8_t*>(col)[3];
     if (g_isFullscreen && g_hasTexture) g_contentRect = ComputeContentRect(sprite2d, rect);
+    g_drawingScopeQuarter = sprite2d == SniperScopeSprite;
     shDraw3.unsafe_fastcall(sprite2d, edx, rect, col, u0, v0, u1, v1, u3, v3, u2, v2);
+    g_drawingScopeQuarter = false;
     if (g_isFullscreen && g_hasTexture) DrawPillarBars(g_contentRect);
     g_isFullscreen = false; g_hasTexture = false;
 }
@@ -438,6 +442,47 @@ void __cdecl AddSpriteToBank(int index, CRect* r, CRGBA* color, float x1, float 
     return shAddSpriteToBank.unsafe_ccall(index, r, color, x1, y1, x2, y2, x3, y3, x4, y4);
 }
 
+// The scope's four quarters meet at the screen centre, on a row and a column of pixel centres. With multisampling both
+// quarters shade those pixels and the crosshair line on the texture's edge comes out twice as thick. The shared edges
+// go between two pixels instead, with the texture coordinates following them, so every pixel shows what it shows
+// without multisampling. Corners: (left, top) u1 v1, (right, top) u2 v2, (left, bottom) u3 v3, (right, bottom) u4 v4.
+static void SnapScopeQuarter(CRect* r, float& u1, float& v1, float& u2, float& v2, float& u3, float& v3, float& u4, float& v4)
+{
+    const float seamX = float(RsGlobal->width / 2) - 0.5f;
+    const float seamY = float(RsGlobal->height / 2) - 0.5f;
+    const CRect o = *r;
+    const float ou1 = u1, ov1 = v1, ou2 = u2, ov2 = v2, ou3 = u3, ov3 = v3, ou4 = u4, ov4 = v4;
+    auto snap = [](float& edge, float target) -> float
+    {
+        if (std::abs(edge - (target + 0.5f)) >= 0.25f)
+            return 0.0f;
+        const float moved = target - edge;
+        edge = target;
+        return moved;
+    };
+
+    if (float t = snap(r->left, seamX) / (o.right - o.left); t != 0.0f)
+    {
+        u1 += t * (ou2 - ou1); v1 += t * (ov2 - ov1);
+        u3 += t * (ou4 - ou3); v3 += t * (ov4 - ov3);
+    }
+    if (float t = snap(r->right, seamX) / (o.right - o.left); t != 0.0f)
+    {
+        u2 += t * (ou2 - ou1); v2 += t * (ov2 - ov1);
+        u4 += t * (ou4 - ou3); v4 += t * (ov4 - ov3);
+    }
+    if (float t = snap(r->top, seamY) / (o.bottom - o.top); t != 0.0f)
+    {
+        u1 += t * (ou3 - ou1); v1 += t * (ov3 - ov1);
+        u2 += t * (ou4 - ou2); v2 += t * (ov4 - ov2);
+    }
+    if (float t = snap(r->bottom, seamY) / (o.bottom - o.top); t != 0.0f)
+    {
+        u3 += t * (ou3 - ou1); v3 += t * (ov3 - ov1);
+        u4 += t * (ou4 - ou2); v4 += t * (ov4 - ov2);
+    }
+}
+
 SafetyHookInline shSetVertices1 = {};
 void __cdecl SetVertices1(CRect* posn, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* colorRight, CRGBA* colorBottom, float u1, float v1, float u2, float v2, float u3, float v3, float u4, float v4)
 {
@@ -445,6 +490,9 @@ void __cdecl SetVertices1(CRect* posn, CRGBA* colorLeft, CRGBA* colorTop, CRGBA*
         *posn = g_contentRect;
     else
         ScaleRect(posn);
+
+    if (g_drawingScopeQuarter)
+        SnapScopeQuarter(posn, u1, v1, u2, v2, u3, v3, u4, v4);
     return shSetVertices1.unsafe_ccall(posn, colorLeft, colorTop, colorRight, colorBottom, u1, v1, u2, v2, u3, v3, u4, v4);
 }
 
@@ -658,6 +706,10 @@ public:
 
                 pattern = hook::pattern("E8 ? ? ? ? E9 ? ? ? ? 89 C0 8D 40 ? 8D 8C 24 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? 50");
                 shDraw3 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw3);
+
+                // CHud::Sprites[20] is a quarter of the sniper scope
+                pattern = hook::pattern("BD ? ? ? ? C6 05 ? ? ? ? ? C6 05 ? ? ? ? ? 8B 04 DD");
+                SniperScopeSprite = *pattern.get_first<CSprite2d*>(1) + 20;
 
                 pattern = hook::pattern("E8 ? ? ? ? 8D 4C 24 ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 8D 44 24 ? 8D 8B");
                 shDraw4 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw4);

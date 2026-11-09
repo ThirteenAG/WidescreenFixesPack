@@ -37,7 +37,8 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
-        if (WidescreenFixConflict::Found())
+        // The old package also had Mafia.GenericFix.asi, which patches the same registry, window and stick code
+        if (WidescreenFixConflict::Found({ L"Mafia.GenericFix.asi" }))
             return;
         FixSettings();
         asi_settings::LiveLink::Start();

@@ -263,6 +263,25 @@ namespace Splitscreen
         return reinterpret_cast<uintptr_t(__thiscall*)(uintptr_t)>(GetProfile1)(profileManager);
     }
 
+    // UEChallengeManager, a map starts: every signed-in profile's challenge stats take the map's entry (sub_580E1D, sub_5807D2). For maps
+    // in MapConfigurationDLC.xml (the Insurgency maps) the entry is the player's (sub_580503): the profile's id ([+28h]+2Ch) has to be
+    // player 1's or player 2's (profile manager +230h, +234h), for any other profile it's null and the game crashed. Player 2's profile
+    // (slot 1, id 1) signed in at startup is player 2 only in a split screen session: outside of it, it's left out (it doesn't play).
+    SafetyHookInline shChallengeMapStart = {};
+    void __fastcall ChallengeMapStart(uintptr_t stats, void* edx, int32_t a2)
+    {
+        auto owner = *reinterpret_cast<uintptr_t*>(stats + 0x28);
+        auto profileManager = GetProfileManager();
+        if (owner && profileManager)
+        {
+            auto id = *reinterpret_cast<int32_t*>(owner + 0x2C);
+            auto playerIds = reinterpret_cast<int32_t*>(profileManager + 0x230);
+            if (id >= 0 && id != playerIds[0] && id != playerIds[1])
+                return;
+        }
+        shChallengeMapStart.fastcall<void>(stats, edx, a2);
+    }
+
     // which player a controller is, the viewport (UViewport) that points to it
     int32_t ControllerPlayer(uintptr_t controller)
     {
@@ -782,4 +801,5 @@ export void InitLocalSplitscreen()
     Splitscreen::shHudElement1[3] = safetyhook::create_inline(hook::get_pattern("55 8D 6C 24 8C 81 EC F4 00 00 00 53 57 8B D9 33 FF 39 BB 18 08 00 00 0F"), Splitscreen::HudElement1<3>);
     Splitscreen::shHudElement2[0] = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 14 56 FF 75 0C 8B F1 8D 4D EC E8"), Splitscreen::HudElement2<0>);
     Splitscreen::shHudElement2[1] = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 14 53 56 57 FF 75 0C 8B D9 8D 4D EC E8"), Splitscreen::HudElement2<1>);
+    Splitscreen::shChallengeMapStart = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 28 53 8B D9 8B 43 2C 6B C0 58 56 8D B4 18 C0 04 00 00 8B 45 08 85 C0 57 0F 84"), Splitscreen::ChallengeMapStart);
 }

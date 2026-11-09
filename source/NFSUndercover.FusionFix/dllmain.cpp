@@ -2,6 +2,7 @@
 #include "d3d9.h"
 #include "FixSettings.hpp"
 #include "Shared/NFS/Cursor.hpp"
+#include "Shared/WidescreenFixConflict.hpp"
 
 import ComVars;
 import PostFX;
@@ -78,6 +79,9 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        // The old package's NFSUndercover.GenericFix.asi patches the same code
+        if (WidescreenFixConflict::Found({ L"NFSUndercover.GenericFix.asi" }))
+            return;
         //securom compatibility
         auto ModuleStart = (uintptr_t)GetModuleHandle(NULL);
         MEMORY_BASIC_INFORMATION mbi;

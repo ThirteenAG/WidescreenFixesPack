@@ -923,9 +923,6 @@ export void InitEngine()
 
     if (Screen.nPostProcessFixedScale)
     {
-        if (Screen.nPostProcessFixedScale == 1)
-            Screen.nPostProcessFixedScale = Screen.Width;
-
         auto pattern2 = hook::module_pattern(GetModuleHandle(L"Engine"), "68 00 02 00 00 68 00 02 00 00");
         if (pattern2.size() != 6)
             throw std::runtime_error("Post-process signatures not found");

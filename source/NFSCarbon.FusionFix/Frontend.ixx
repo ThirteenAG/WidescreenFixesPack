@@ -388,16 +388,21 @@ public:
                 uint32_t dword_750DF5 = (uint32_t)dword_750DE7 + 14;
                 injector::WriteMemory<float>(dword_750DF5, -0.1649999917f, true);
 
+                // The mirror and picture-in-picture quads are made for 4:3; they're narrowed like the HUD and, on
+                // screens narrower than 4:3, shrunk with the front end like their frames
                 auto pattern = hook::pattern("D9 5E 4C 89 46 5C 5E 5B C3");
                 struct MirrorFix
                 {
                     void operator()(injector::reg_pack& regs)
                     {
-                        float fMirrorScaling = 1.0f * ((4.0f / 3.0f) / GetAspectRatio());
-                        *(float*)(regs.esi + 0x00) = *(float*)(regs.esi + 0x00) * fMirrorScaling;
-                        *(float*)(regs.esi + 0x18) = *(float*)(regs.esi + 0x18) * fMirrorScaling;
-                        *(float*)(regs.esi + 0x30) = *(float*)(regs.esi + 0x30) * fMirrorScaling;
-                        *(float*)(regs.esi + 0x48) = *(float*)(regs.esi + 0x48) * fMirrorScaling;
+                        float fScaleY = FrontEndFit::fScale;
+                        float fScaleX = ((4.0f / 3.0f) / GetAspectRatio()) * fScaleY;
+                        for (uintptr_t vertex = 0; vertex < 4; vertex++)
+                        {
+                            auto position = reinterpret_cast<float*>(regs.esi + vertex * 0x18);
+                            position[0] *= fScaleX;
+                            position[1] *= fScaleY;
+                        }
                     }
                 }; injector::MakeInline<MirrorFix>(pattern.get_first(6)); //750C23
                 injector::WriteMemory(pattern.get_first(6 + 5), 0x90C35B5E, true); //pop esi pop ebx ret

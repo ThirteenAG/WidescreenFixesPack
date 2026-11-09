@@ -2,6 +2,7 @@
 #include "d3d9.h"
 #include "FixSettings.hpp"
 #include "Shared/NFS/Cursor.hpp"
+#include "Shared/WidescreenFixConflict.hpp"
 
 import ComVars;
 import PostFX;
@@ -90,6 +91,9 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        // The old package's NFSProStreet.GenericFix.asi patches the same code
+        if (WidescreenFixConflict::Found({ L"NFSProStreet.GenericFix.asi" }))
+            return;
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("C7 46 ? ? ? ? ? E8 ? ? ? ? C6 86 ? ? ? ? ? 5E C2 04 00"));
     });
 }

@@ -23,7 +23,7 @@ bool CalcScreenCoors(const RwV3d* in, RwV3d* out, float* outw, float* outh, bool
     out->x *= SCREEN_WIDTH * recip;
     out->y *= SCREEN_HEIGHT * recip;
 
-    const float fovScale = 70.0f / CDraw::GetFOV();
+    const float fovScale = 70.0f / CDraw::GetFOV() * CDraw::GetSpriteScale();
     *outw = CDraw::ms_bFixSprites ? (fovScale * recip * SCREEN_HEIGHT) : (fovScale * SCREEN_SCALE_AR(recip) * SCREEN_WIDTH);
     *outh = fovScale * recip * SCREEN_HEIGHT;
 

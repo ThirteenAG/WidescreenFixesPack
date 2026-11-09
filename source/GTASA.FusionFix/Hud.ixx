@@ -543,17 +543,14 @@ public:
             // SkyUI replaces DrawTripSkip's entry. Hook its caller instead,
             // preserving the live callee without requiring the original prologue.
             pattern = hook::pattern("E8 ? ? ? ? A0 ? ? ? ? 84 C0 75 ? 6A 00 6A 00 6A 01 68 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? 50 E8");
-
-                hbDrawTripSkip.fun = injector::MakeCALL(pattern.get_first(), DrawTripSkip, true).get();
+            hbDrawTripSkip.fun = injector::MakeCALL(pattern.get_first(), DrawTripSkip, true).get();
 
             // Locate both renderers through the dispatcher. Mods such as SkyUI
             // replace their entries, but the live call targets can still be chained.
             pattern = hook::pattern("8B 4C 24 10 6A 00 51 E8 ? ? ? ? 8A 0D ? ? ? ? 83 C4 08 FE C3 46 83 C7 04 80 FB 02");
-
-                ScriptMenuDrawHooks[0] = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(7)).as_int(), DisplayScriptMenu<0>);
+            ScriptMenuDrawHooks[0] = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(7)).as_int(), DisplayScriptMenu<0>);
             pattern = hook::pattern("8B 44 24 10 6A 00 50 E8 ? ? ? ? EB ? 8B 4C 24 10 6A 00 51 E8");
-
-                ScriptMenuDrawHooks[1] = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(7)).as_int(), DisplayScriptMenu<1>);
+            ScriptMenuDrawHooks[1] = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(7)).as_int(), DisplayScriptMenu<1>);
         };
     }
 } Hud;

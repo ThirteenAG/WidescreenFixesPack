@@ -11,6 +11,7 @@ export module Frame;
 
 import Cinema;
 import DeveloperOverlay;
+import Window;
 import Frontend;
 
 // Per-frame work on the game's device (frame rate limit, cursor confinement, the developer overlay, the update notice)
@@ -141,13 +142,18 @@ export namespace CoCFrame
         });
         D3D9Options::frame = [](IDirect3DDevice9* device)
         {
+            CoCWindow::Gamma::Apply(device);
             CoCCinema::Frame();
             CursorConfinement::Suspend(CoCOverlay::BlocksInput());
             CursorConfinement::Frame(window);
             RWGTA::UpdateCheck::Tick();
             CoCOverlay::Present(device, window);
         };
-        D3D9Options::beforeReset = CoCOverlay::BeforeReset;
+        D3D9Options::beforeReset = [](IDirect3DDevice9* device)
+        {
+            CoCWindow::Gamma::BeforeReset();
+            CoCOverlay::BeforeReset(device);
+        };
 
         // Update notice: in the help line of the fix's page in Options
         RWGTA::UpdateCheck::Config update;

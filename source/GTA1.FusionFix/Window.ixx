@@ -4,6 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include <ddraw.h>
 #include "include/WindowStyle.hpp"
+#include <execution>
 
 export module Window;
 
@@ -39,6 +40,8 @@ export namespace GTA1Window
     struct Surface;
     void Present(Surface* surface);
     Surface* Shown = nullptr;               // the last frame presented, drawn again on WM_PAINT
+    std::vector<uint32_t> Shrunk;           // a frame larger than the window, sampled to its size
+    std::vector<int> Columns;
 
     struct Palette final : IDirectDrawPalette
     {
@@ -369,8 +372,38 @@ export namespace GTA1Window
             for (auto& bar : bars) if (bar.right > bar.left && bar.bottom > bar.top) FillRect(dc, &bar, black);
         }
         SetStretchBltMode(dc, COLORONCOLOR);
-        StretchDIBits(dc, x, y, w, h, 0, 0, surface->width, surface->height, surface->memory.data(),
-            reinterpret_cast<BITMAPINFO*>(&info), DIB_RGB_COLORS, SRCCOPY);
+        if ((w < surface->width || h < surface->height) && (surface->bits == 16 || surface->bits == 32))
+        {
+            // GDI shrinks a frame far too slowly for the game's frame time: sample it here.
+            Shrunk.resize(size_t(w) * h);
+            Columns.resize(w);
+            for (int column = 0; column < w; ++column) Columns[column] = int(int64_t(column) * surface->width / w);
+            std::vector<int> bands;
+            for (int top = 0; top < h; top += 32) bands.push_back(top);
+            std::for_each(std::execution::par, bands.begin(), bands.end(), [&](int top)
+            {
+                for (int row = top; row < std::min(top + 32, h); ++row)
+                {
+                    auto in = surface->memory.data() + size_t(int64_t(row) * surface->height / h) * surface->pitch;
+                    auto out = Shrunk.data() + size_t(row) * w;
+                    if (surface->bits == 32)
+                        for (int column = 0; column < w; ++column) out[column] = reinterpret_cast<const uint32_t*>(in)[Columns[column]];
+                    else
+                        for (int column = 0; column < w; ++column)
+                        {
+                            uint32_t pixel = reinterpret_cast<const uint16_t*>(in)[Columns[column]];
+                            uint32_t r = pixel >> 11, g = (pixel >> 5) & 63, b = pixel & 31;
+                            out[column] = (((r << 3) | (r >> 2)) << 16) | (((g << 2) | (g >> 4)) << 8) | ((b << 3) | (b >> 2));
+                        }
+                }
+            });
+            BITMAPINFO shrunk{};
+            shrunk.bmiHeader = { sizeof(BITMAPINFOHEADER), w, -h, 1, 32, BI_RGB };
+            SetDIBitsToDevice(dc, x, y, w, h, 0, 0, 0, h, Shrunk.data(), &shrunk, DIB_RGB_COLORS);
+        }
+        else
+            StretchDIBits(dc, x, y, w, h, 0, 0, surface->width, surface->height, surface->memory.data(),
+                reinterpret_cast<BITMAPINFO*>(&info), DIB_RGB_COLORS, SRCCOPY);
         ReleaseDC(Window, dc);
     }
 

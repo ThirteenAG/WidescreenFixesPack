@@ -11,20 +11,17 @@ export namespace GTA1Timing
 {
     SafetyHookInline WaitHook;
     HANDLE Timer = nullptr;
-    double Frequency = 0, Deadline = 0;
+    double Frequency = [] { LARGE_INTEGER value{}; QueryPerformanceFrequency(&value); return double(value.QuadPart); }();
+    double Deadline = 0;
+    bool Pending = false;                   // a step ran; its frame waits for the deadline
     double Now()
     {
         LARGE_INTEGER value{}; QueryPerformanceCounter(&value);
         return value.QuadPart / Frequency;
     }
-    char __cdecl Wait(unsigned ticks)
+    void WaitForDeadline()
     {
-        if (!bTimerActive || !nTimerEnabled || !Available() || ticks != 3)
-        { Deadline = 0; return WaitHook.call<char>(ticks); }
-        // Keep the original three 70 Hz timer ticks per simulation step.
-        // Miles' callback counter discarded the fractional remainder and busy
-        // waited on the Windows timer's coarse cadence, producing uneven steps.
-        const double now = Now(), interval = ticks / 70.0;
+        const double now = Now(), interval = 3 / 70.0;
         if (!Deadline || now - Deadline > interval) Deadline = now;
         Deadline += interval;
         for (double remaining = Deadline - Now(); remaining > 0; remaining = Deadline - Now())
@@ -58,7 +55,32 @@ export namespace GTA1Timing
             }
             previous = finished;
         }
+    }
+    char __cdecl Wait(unsigned ticks)
+    {
+        if (!bTimerActive || !nTimerEnabled || !Available() || ticks != 3)
+        { Deadline = 0; Pending = false; return WaitHook.call<char>(ticks); }
+        // Keep the original three 70 Hz timer ticks per simulation step.
+        // Miles' callback counter discarded the fractional remainder and busy
+        // waited on the Windows timer's coarse cadence, producing uneven steps.
+        // The game shows a frame at the start of the next loop, after rendering
+        // it, so a wait here leaves every frame late by its varying render time.
+        // The step runs at once; its frame waits for the deadline before it is
+        // shown. Without a frame in between, the step waits here.
+        if (Pending) WaitForDeadline();
+        Pending = true;
+        nTimerTicks = 0;
         return char(ticks);
+    }
+    // The time of the step being simulated: paced steps are exactly one interval
+    // apart, whenever the step itself started.
+    double Clock() { return Pending && Deadline ? Deadline : Now(); }
+    // The gameplay frame is about to be shown.
+    void BeforePresent()
+    {
+        if (!Pending) return;
+        Pending = false;
+        WaitForDeadline();
     }
     void Install()
     {
@@ -67,7 +89,6 @@ export namespace GTA1Timing
             "A0 ? ? ? ? 84 C0 74 21 A1 ? ? ? ? 85 C0 74 18 8B 44 24 04 8B 0D ? ? ? ? 3B C1 77 F6 C7 05",
             "A0 ? ? ? ? 84 C0 74 24 A1 ? ? ? ? 85 C0 74 1B 8B 44 24 04 8B 0D ? ? ? ? 3B C8 73 08 39 05");
 
-        LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency); Frequency = double(frequency.QuadPart);
         Timer = CreateWaitableTimerExW(nullptr, nullptr, 0x2, TIMER_ALL_ACCESS);
         if (!Timer) Timer = CreateWaitableTimerW(nullptr, FALSE, nullptr);
         if (!Timer || !Frequency) return;

@@ -13,6 +13,7 @@ import ComVars;
 import Window;
 import Prompts;
 import Options;
+import Timing;
 import Log;
 
 export namespace GTA1Presentation
@@ -144,6 +145,7 @@ export namespace GTA1Presentation
                 int(RenderingFrontend), dc, dc ? dc[110] : 0, dc ? dc[114] : 0);
             Log::Write(message); logged = true;
         }
+        if (!RenderingFrontend) GTA1Timing::BeforePresent();
         if (!ScaleFrontend || !RenderingFrontend || right < 640 || bottom < 480)
             return PresentHook.call<int>();
         int* destination = pOffscreenDC ? pOffscreenDC : pDisplayDC;

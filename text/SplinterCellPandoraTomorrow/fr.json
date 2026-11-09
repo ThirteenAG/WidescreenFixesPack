@@ -23,7 +23,7 @@
   "HudAspectRatioConstraint": "Format du HUD",
   "HudAspectRatioConstraint.description": "Auto place le HUD aux bords de l’écran. Un format comme 4:3, 16:9 ou 21:9 le garde dans un cadre centré ; 4:3 est la disposition d’origine. Effet immédiat.",
   "PostProcessFixedScale": "Résolution des effets de vision",
-  "PostProcessFixedScale.description": "Le jeu utilise 512. 0 le conserve, 1 utilise la largeur d'écran, une autre valeur fixe la taille ; plus grand rend la vision nocturne et thermique plus nette.",
+  "PostProcessFixedScale.description": "Le jeu utilise 512. 0 le conserve, 1 suit la largeur d'écran (arrondie au multiple de 1024 supérieur), une autre valeur fixe la taille ; plus grand rend la vision nocturne et thermique plus nette.",
   "GrainScale": "Échelle du grain de vision",
   "GrainScale.description": "Adapte le grain à la résolution. 1 utilise la base corrigée 640x480 ; 0 conserve l'échelle d'origine.",
   "ShadowMapResolution": "Résolution des ombres",

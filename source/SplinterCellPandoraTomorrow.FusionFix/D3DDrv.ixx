@@ -316,6 +316,17 @@ export void InitD3DDrv()
     pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 64 89 25 ? ? ? ? 81 EC ? ? ? ? 53 56 57 8B 7D ? 8B F1", "55 8B EC 6A ? 68 ? ? ? ? 64 A1 ? ? ? ? 50 81 EC ? ? ? ? A1 ? ? ? ? 33 C5 89 45 ? 56 57 50 8D 45 ? 64 A3 ? ? ? ? 8B F1 89 75");
     shUD3DRenderDeviceSetRes = safetyhook::create_inline(pattern.get_first(), UD3DRenderDeviceSetRes);
 
+    // UseVSync only sets the fullscreen present interval; a window copies without waiting, so give it the vsync copy
+    pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "83 BE ? ? ? ? 00 0F 45 C1", "8B 96 ? ? ? ? F7 DA 1B D2 81 E2 01 00 00 80");
+    static const uint32_t nUseVSyncOffset = *pattern.get_first<uint32_t>(2);
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 86 90 46 00 00 6A 16 6A 01 6A 01 57 6A 01");
+    static auto SetResVSyncHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        const bool bUseVSync = *reinterpret_cast<const uint32_t*>(regs.esi + nUseVSyncOffset) != 0;
+        if (PresentParams->Windowed && bUseVSync)
+            PresentParams->SwapEffect = D3DSWAPEFFECT_COPY_VSYNC;
+    });
+
     auto rendererLayout = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "83 EC ? 53 55 56 8B F1 8B 86");
     bool retailLayout = true;
     if (!rendererLayout.empty()) // retail
@@ -565,9 +576,6 @@ export void InitD3DDrv()
 
     if (Screen.nPostProcessFixedScale > 0)
     {
-        if (Screen.nPostProcessFixedScale == 1)
-            Screen.nPostProcessFixedScale = Screen.Width;
-
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "68 00 02 00 00 68 00 02 00 00");
         if (pattern.size() != (retailLayout ? 7 : 8))
             throw std::runtime_error("Post-process signatures not found");

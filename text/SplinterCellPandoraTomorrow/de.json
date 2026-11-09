@@ -23,7 +23,7 @@
   "HudAspectRatioConstraint": "HUD-Seitenverhältnis",
   "HudAspectRatioConstraint.description": "Auto setzt das HUD an die Bildschirmränder. Ein Verhältnis wie 4:3, 16:9 oder 21:9 hält es in einem mittigen Rahmen; 4:3 ist das Original-Layout. Wirkt sofort.",
   "PostProcessFixedScale": "Auflösung der Sichteffekte",
-  "PostProcessFixedScale.description": "Das Spiel nutzt 512. 0 behält das bei, 1 nutzt die Bildschirmbreite, andere Werte legen die Größe fest; größere Werte stellen Nacht- und Wärmesicht schärfer dar.",
+  "PostProcessFixedScale.description": "Das Spiel nutzt 512. 0 behält das bei, 1 folgt der Bildschirmbreite (auf ein Vielfaches von 1024 aufgerundet), andere Werte legen die Größe fest; größere Werte stellen Nacht- und Wärmesicht schärfer dar.",
   "GrainScale": "Körnungsskalierung der Sicht",
   "GrainScale.description": "Passt Sichtkörnung an die Auflösung an. 1 nutzt die korrigierte 640x480-Basis; 0 erhält die Originalskalierung.",
   "ShadowMapResolution": "Schattenauflösung",

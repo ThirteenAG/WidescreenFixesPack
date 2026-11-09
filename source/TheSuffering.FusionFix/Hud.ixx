@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include <atomic>
+#include <optional>
 
 export module Hud;
 
@@ -21,6 +22,149 @@ void UpdateHudAspect()
 {
     const auto parsed = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
     fHudAspect = parsed ? std::clamp(*parsed, 4.0f / 3.0f, 32.0f / 9.0f) : 100.0f;
+}
+
+// Where a stretched 4:3 element (left edge and width in screen pixels) goes: x / fAspectRatioDiff + the returned
+// shift. In play each element keeps its 4:3 size and its distance from the side it belongs to (left, right or
+// centred by where it sits) inside the HUD box, the whole screen with Auto; menus keep the centred 4:3 box.
+float HudShift(float left, float width)
+{
+    if (!InGameplay())
+        return Screen.fHudOffsetReal;
+    const float centre = (left + width * 0.5f) / Screen.fWidth;
+    const float boxWidth = std::min(Screen.fWidth, Screen.fHeight * fHudAspect.load());
+    const float boxLeft = (Screen.fWidth - boxWidth) * 0.5f;
+    if (centre < 1.0f / 3.0f)
+        return boxLeft;
+    if (centre > 2.0f / 3.0f)
+        return boxLeft + boxWidth - Screen.fWidth / Screen.fAspectRatioDiff;
+    return Screen.fHudOffsetReal;
+}
+
+// The 3D weapon and item icons: the game clears the depth of the icon's stretched 4:3 rectangle, draws the model
+// with the scene camera at a spot worked out for a stretched 4:3 view, then sets the camera's field of view back.
+// The cleared rectangle now goes where the HUD puts that box, and until the field of view is set back the camera has
+// the game's own lens and maps the screen's width to 4:3 at the same shift (in the camera for the game's own
+// projection, in the device's projection for the vertex shaders and fixed function), so the model lands in the
+// rectangle.
+uint32_t nIconLensOffset = 0;       // the camera's lens
+uint32_t nIconViewportOffset = 0;   // its viewport: x, y, width, height
+uint32_t nIconHalfWidthOffset = 0;  // minus half the viewport's width, screen x per projected x
+uint32_t nIconCentreOffset = 0;     // the viewport's centre x
+
+struct IconCamera
+{
+    uintptr_t camera;
+    float lens;
+    float shift;
+};
+std::optional<IconCamera> IconView;
+
+uintptr_t CurrentCamera()
+{
+    const auto renderer = reinterpret_cast<uint32_t*>(Memory.get());
+    return renderer && renderer[0x10] ? renderer[0x10] + off_2C0 * renderer[0x13] : 0;
+}
+
+// The camera's viewport setter also rebuilds everything that comes from the lens
+void RebuildCamera(uintptr_t camera)
+{
+    using SetViewportFn = void(__thiscall*)(uintptr_t camera, int32_t x, int32_t y, int32_t width, int32_t height);
+    const auto viewport = reinterpret_cast<int32_t*>(camera + nIconViewportOffset);
+    (*reinterpret_cast<SetViewportFn**>(camera))[0](camera, viewport[0], viewport[1], viewport[2], viewport[3]);
+}
+
+template<typename T> T& CameraField(uintptr_t camera, uint32_t offset)
+{
+    return *reinterpret_cast<T*>(camera + offset);
+}
+
+// rebuild: false when the game's field of view setter is about to rebuild the camera anyway
+void EndIconView(bool rebuild)
+{
+    if (!IconView)
+        return;
+    CameraField<float>(IconView->camera, nIconLensOffset) = IconView->lens;
+    if (rebuild)
+        RebuildCamera(IconView->camera);
+    IconView.reset();
+}
+
+void BeginIconView(float shift)
+{
+    EndIconView(true);
+    const auto camera = CurrentCamera();
+    if (!camera || !NativeFOV.is_initialized() || Screen.fFieldOfView <= 0.0f)
+        return;
+    auto& lens = CameraField<float>(camera, nIconLensOffset);
+    IconView = IconCamera{ camera, lens, shift };
+    lens *= NativeFOV.get() / Screen.fFieldOfView;
+    RebuildCamera(camera);
+    const auto viewport = reinterpret_cast<int32_t*>(camera + nIconViewportOffset);
+    CameraField<float>(camera, nIconHalfWidthOffset) /= Screen.fAspectRatioDiff;
+    CameraField<float>(camera, nIconCentreOffset) = viewport[0] + shift + viewport[2] * 0.5f / Screen.fAspectRatioDiff;
+}
+
+// Clip-space x becomes x / fAspectRatioDiff + offset * w: the screen's width as 4:3, moved by the icon's shift
+float IconClipOffset()
+{
+    const float halfWidth = Screen.fWidth * 0.5f;
+    return (halfWidth / Screen.fAspectRatioDiff + IconView->shift - halfWidth) / halfWidth;
+}
+
+SafetyHookInline shSetTransform = {};
+long __stdcall SetTransform(void* device, uint32_t state, const float* matrix)
+{
+    constexpr uint32_t Projection = 3;
+    if (state != Projection || !IconView || !matrix)
+        return shSetTransform.unsafe_stdcall<long>(device, state, matrix);
+    // Row-major: column 0 gives x, column 3 gives w
+    float projection[16];
+    std::copy_n(matrix, 16, projection);
+    const float offset = IconClipOffset();
+    for (int row = 0; row < 4; ++row)
+        projection[row * 4] = projection[row * 4] / Screen.fAspectRatioDiff + offset * projection[row * 4 + 3];
+    return shSetTransform.unsafe_stdcall<long>(device, state, projection);
+}
+
+SafetyHookInline shSetVertexShaderConstantF = {};
+long __stdcall SetVertexShaderConstantF(void* device, uint32_t start, const float* data, uint32_t count)
+{
+    if (start != 0 || count < 4 || !IconView || !data)
+        return shSetVertexShaderConstantF.unsafe_stdcall<long>(device, start, data, count);
+    // The transposed world, view and projection: register 0 gives x, register 3 gives w
+    std::vector<float> constants(data, data + count * 4);
+    const float offset = IconClipOffset();
+    for (int i = 0; i < 4; ++i)
+        constants[i] = constants[i] / Screen.fAspectRatioDiff + offset * constants[12 + i];
+    return shSetVertexShaderConstantF.unsafe_stdcall<long>(device, start, constants.data(), count);
+}
+
+void HookIconDevice(void* device)
+{
+    if (shSetTransform)
+        return;
+    const auto methods = *reinterpret_cast<void***>(device);
+    shSetTransform = safetyhook::create_inline(methods[44], SetTransform);
+    shSetVertexShaderConstantF = safetyhook::create_inline(methods[94], SetVertexShaderConstantF);
+}
+
+SafetyHookInline shClearRect = {};
+int __stdcall ClearRect(int left, int top, int right, int bottom, int target, int stencil)
+{
+    if (!target && (left > 0 || right < Screen.Width))
+    {
+        const float shift = HudShift(float(left), float(right - left));
+        left = int(std::lround(left / Screen.fAspectRatioDiff + shift));
+        right = int(std::lround(right / Screen.fAspectRatioDiff + shift));
+        BeginIconView(shift);
+    }
+    return shClearRect.unsafe_stdcall<int>(left, top, right, bottom, target, stencil);
+}
+
+void ResetIconProjection()
+{
+    EndIconView(true);
 }
 
 void __cdecl sub_44A390(uintptr_t a1, float a2, float a3, float a4, float a5, float a6, float a7, float a8, float a9, float a10, float a11, uintptr_t a12, uintptr_t a13, uintptr_t a14)
@@ -42,27 +186,10 @@ void __cdecl sub_44A390(uintptr_t a1, float a2, float a3, float a4, float a5, fl
             }
         }
     }
-    else if (InGameplay())
-    {
-        // The HUD: each element keeps its 4:3 size and its distance from the side it belongs to (left, right or
-        // centred by where it sits) inside the HUD box, the whole screen with Auto
-        const float centre = (a2 + a4 * 0.5f) / Screen.fWidth;
-        const float boxWidth = std::min(Screen.fWidth, Screen.fHeight * fHudAspect.load());
-        const float boxLeft = (Screen.fWidth - boxWidth) * 0.5f;
-        const float right = Screen.fWidth - a2;
-        a4 /= Screen.fAspectRatioDiff;
-        if (centre < 1.0f / 3.0f)
-            a2 = boxLeft + a2 / Screen.fAspectRatioDiff;
-        else if (centre > 2.0f / 3.0f)
-            a2 = boxLeft + boxWidth - right / Screen.fAspectRatioDiff;
-        else
-            a2 = a2 / Screen.fAspectRatioDiff + Screen.fHudOffsetReal;
-    }
     else
     {
-        a2 /= Screen.fAspectRatioDiff;
+        a2 = a2 / Screen.fAspectRatioDiff + HudShift(a2, a4);
         a4 /= Screen.fAspectRatioDiff;
-        a2 += Screen.fHudOffsetReal;
     }
 
     float v14 = a6 + 0.5f;
@@ -163,6 +290,25 @@ void InitHud()
     injector::MakeCALL(pattern.get_first(0), sub_44A390, true); //0x44A6C0
     pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 83 C4 38 51");
     injector::MakeCALL(pattern.get_first(0), sub_44A390, true); //0x44AB58
+
+    // 3D icons
+    pattern = hook::pattern("8B 0D ? ? ? ? 85 C9 53 55 56 57 74 ? 8B 74 24 14 8B 7C 24 1C 3B F7");
+    shClearRect = safetyhook::create_inline(pattern.get_first(), ClearRect); //0x4B09D0
+    // The camera's lens setter: the lens, then the viewport (height, width, y, x) handed to the viewport setter
+    pattern = hook::pattern("8B 44 24 04 8B 11 89 81 ? ? ? ? 8B 81 ? ? ? ? 50 8B 81 ? ? ? ? 50 8B 81 ? ? ? ? 50 8B 81 ? ? ? ? 50");
+    nIconLensOffset = *pattern.get_first<uint32_t>(8); //0x27C
+    nIconViewportOffset = *pattern.get_first<uint32_t>(35); //0x298
+    // The viewport setter: minus half the width, minus half the height, then the centre
+    pattern = hook::pattern("D9 9E ? ? ? ? 50 D9 44 24 20 D8 0D ? ? ? ? D9 9E ? ? ? ? DB 44 24 14 89 54 24 14 D9 44 24 1C D8 0D ? ? ? ? D8 C1 D9 9E");
+    nIconHalfWidthOffset = *pattern.get_first<uint32_t>(2); //0x260
+    nIconCentreOffset = *pattern.get_first<uint32_t>(45); //0x280
+    // The camera's field of view being set (back) ends the icon; the setter rebuilds the camera
+    pattern = hook::pattern("D9 44 24 04 8B 91 ? ? ? ? D8 0D ? ? ? ? 8B 01 52 8B 91");
+    static auto FieldOfViewHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (IconView && IconView->camera == regs.ecx)
+            EndIconView(false);
+    }); //0x4B21F0
 
 
 }

@@ -2,11 +2,13 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <execution>
 
 export module Rotation;
 
 import ComVars;
 import Raster;
+import Timing;
 import Log;
 
 // Chinatown Wars style camera for GTA1: the view turns so that the player's
@@ -34,8 +36,7 @@ export namespace GTA1Rotation
     int Side = 0;                             // canvas side
     Target Display, World;
     std::vector<uint8_t> Canvas;
-    double Frequency = 0.0;
-    LONGLONG LastFrame = 0;
+    double LastFrame = 0;
     struct SavedView { bool valid = false; int centreX = 0, centreY = 0, width = 0, height = 0; };
     std::array<SavedView, 4> Views{};
 
@@ -70,9 +71,9 @@ export namespace GTA1Rotation
 
     void UpdateAngle(int player)
     {
-        LARGE_INTEGER counter{}; QueryPerformanceCounter(&counter);
-        double elapsed = LastFrame && Frequency ? (counter.QuadPart - LastFrame) / Frequency : 0.0;
-        LastFrame = counter.QuadPart;
+        const double now = GTA1Timing::Clock();
+        double elapsed = LastFrame ? now - LastFrame : 0.0;
+        LastFrame = now;
         elapsed = std::clamp(elapsed, 0.0, 0.1);
         float target = Angle, heading = 0;
         bool follow = Enabled && Available() && Heading(player, heading);
@@ -121,6 +122,60 @@ export namespace GTA1Rotation
         return RangesHook.ccall<int>();
     }
 
+    // The columns of a row whose canvas coordinate, start + x * step in 16.16
+    // fixed point, stays inside the canvas: narrows [first, last].
+    void Span(int64_t start, int64_t step, int64_t& first, int64_t& last)
+    {
+        const int64_t limit = int64_t(Side) << 16;
+        auto floorDiv = [](int64_t a, int64_t b) { return a >= 0 ? a / b : -((-a + b - 1) / b); };
+        if (step == 0)
+        {
+            if (start < 0 || start >= limit) { first = 1; last = 0; }
+            return;
+        }
+        int64_t low = -start, high = limit - 1 - start;   // step * x within [low, high]
+        if (step < 0) { step = -step; std::swap(low, high); low = -low; high = -high; }
+        first = std::max(first, floorDiv(low + step - 1, step));
+        last = std::min(last, floorDiv(high, step));
+    }
+
+    // Rotates the rows [top, bottom) in blocks of columns: neighbouring rows read
+    // neighbouring canvas memory at any angle.
+    template <typename Pixel>
+    void RotateRows(int top, int bottom, double half, double cx, double cy, int64_t stepX, int64_t stepY)
+    {
+        constexpr int Block = 64;
+        const int width = Display.width;
+        struct Row { int64_t sx, sy, first, last; };
+        std::array<Row, 16> rows{};
+        for (int y = top; y < bottom; ++y)
+        {
+            double dy = y - cy, dx = -cx;
+            auto& row = rows[y - top];
+            row.sx = int64_t(std::llround((half + dx * Cos + dy * Sin) * 65536.0));
+            row.sy = int64_t(std::llround((half - dx * Sin + dy * Cos) * 65536.0));
+            row.first = 0; row.last = width - 1;
+            Span(row.sx, stepX, row.first, row.last);
+            Span(row.sy, stepY, row.first, row.last);
+            auto output = reinterpret_cast<Pixel*>(Display.pixels + size_t(y) * Display.pitch);
+            if (row.first > row.last) { std::fill_n(output, width, Pixel{}); continue; }
+            std::fill_n(output, size_t(row.first), Pixel{});
+            std::fill(output + row.last + 1, output + width, Pixel{});
+        }
+        const auto source = World.pixels;
+        const size_t pitch = World.pitch;
+        for (int block = 0; block < width; block += Block)
+            for (int y = top; y < bottom; ++y)
+            {
+                const auto& row = rows[y - top];
+                const int64_t first = std::max<int64_t>(row.first, block), last = std::min<int64_t>(row.last, block + Block - 1);
+                auto output = reinterpret_cast<Pixel*>(Display.pixels + size_t(y) * Display.pitch);
+                int64_t sx = row.sx + first * stepX, sy = row.sy + first * stepY;
+                for (int64_t x = first; x <= last; ++x, sx += stepX, sy += stepY)
+                    output[x] = *reinterpret_cast<const Pixel*>(source + size_t(sy >> 16) * pitch + size_t(sx >> 16) * sizeof(Pixel));
+            }
+    }
+
     // Rotate the world canvas into the frame and draw into the frame again.
     void Resolve()
     {
@@ -132,22 +187,17 @@ export namespace GTA1Rotation
         Bind(Display);
         const double half = Side * 0.5;
         const double cx = Display.width * 0.5 - 0.5, cy = Display.height * 0.5 - 0.5;
-        // Inverse rotation, in 16.16 fixed point stepping along each row.
+        // Inverse rotation, in 16.16 fixed point stepping along each row. A full
+        // frame of samples is too slow for one thread at large resolutions.
         const int64_t stepX = int64_t(std::llround(Cos * 65536.0)), stepY = int64_t(std::llround(-Sin * 65536.0));
-        for (int y = 0; y < Display.height; ++y)
+        std::vector<int> bands;
+        for (int top = 0; top < Display.height; top += 16) bands.push_back(top);
+        std::for_each(std::execution::par, bands.begin(), bands.end(), [&](int top)
         {
-            double dy = y - cy, dx = -cx;
-            int64_t sx = int64_t(std::llround((half + dx * Cos + dy * Sin) * 65536.0));
-            int64_t sy = int64_t(std::llround((half - dx * Sin + dy * Cos) * 65536.0));
-            auto output = Display.pixels + size_t(y) * Display.pitch;
-            for (int x = 0; x < Display.width; ++x, sx += stepX, sy += stepY)
-            {
-                int ix = int(sx >> 16), iy = int(sy >> 16);
-                if (unsigned(ix) < unsigned(Side) && unsigned(iy) < unsigned(Side))
-                    memcpy(output + size_t(x) * bytes, World.pixels + size_t(iy) * World.pitch + size_t(ix) * bytes, bytes);
-                else memset(output + size_t(x) * bytes, 0, bytes);
-            }
-        }
+            const int bottom = std::min(top + 16, Display.height);
+            if (bytes == 2) RotateRows<uint16_t>(top, bottom, half, cx, cy, stepX, stepY);
+            else RotateRows<uint32_t>(top, bottom, half, cx, cy, stepX, stepY);
+        });
     }
 
     int __cdecl RenderWorld()
@@ -183,7 +233,6 @@ export namespace GTA1Rotation
         read();
         for (auto id : { "CAMERA.RotateWithPlayer", "CAMERA.RotateInVehicles", "CAMERA.RotateOnFoot", "CAMERA.RotationSmoothing", "CAMERA.ToggleRotationKey" })
             FixSettings().OnChange(id, read);
-        LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency); Frequency = double(frequency.QuadPart);
         if (!GTA1Raster::OriginalRows || !PlayerStates)
         { Log::Write("GTA1 camera rotation needs the raster, presentation and input hooks."); return; }
         using GTA1Build::Find, GTA1Build::Kind;

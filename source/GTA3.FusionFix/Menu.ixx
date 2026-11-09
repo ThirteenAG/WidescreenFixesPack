@@ -396,6 +396,18 @@ class Menu
 public:
     Menu()
     {
+        WFP::onInitEvent() += []()
+        {
+            // Full screen used the lowest refresh rate of 60 Hz or more for the resolution, which holds the frame rate
+            // at 60 wherever the picture is synced to the display: take the highest one instead
+            auto pattern = hook::pattern("BD FF FF FF 7F 75 ? C7 04 24");
+            injector::WriteMemory<uint32_t>(pattern.get_first(1), 0, true);
+            pattern = hook::pattern("39 E8 73 ? 83 F8 3C");
+            injector::WriteMemory<uint8_t>(pattern.get_first(2), 0x76, true); // jnb -> jbe
+            pattern = hook::pattern("81 FD FF FF FF 7F 75");
+            injector::WriteMemory<uint32_t>(pattern.get_first(2), 0, true);
+        };
+
         WFP::onGameInitEvent() += []()
         {
             menuFrameLimit = static_cast<float>(std::max(0, FixSettings().Int("MAIN.FPSLimitMenus")));

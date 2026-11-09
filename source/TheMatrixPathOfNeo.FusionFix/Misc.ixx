@@ -79,6 +79,20 @@ public:
                 }
             }; injector::MakeInline<AspectHook>(pattern.get_first(0)); //0x41F45A
 
+            // Mirrors are drawn into the shadow buffers, which are 256 or 512 pixels square at any resolution, so
+            // at high resolutions a mirror shows big blocks. The buffers grow with the screen height, by powers of
+            // two, so a mirror keeps the detail it has at 800x600.
+            pattern = hook::pattern("83 FA 06 0F 9F C0 8B CF 48 25 00 FF FF FF 05 00 02 00 00 A3");
+            static auto ShadowBufferSizeHook = safetyhook::create_mid(pattern.get_first(19), [](SafetyHookContext& regs)
+            {
+                const uint32_t base = regs.eax;
+                const uint32_t height = static_cast<uint32_t>(std::max(Screen.nHeight, 0));
+                uint32_t size = base;
+                while (size < 2048 && size * 600 < base * height)
+                    size *= 2;
+                regs.eax = size;
+            });
+
             NeoStartup::Install();
             NeoHud::Install();
             NeoWindow::Install();

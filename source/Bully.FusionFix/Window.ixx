@@ -59,6 +59,17 @@ export namespace BullyWindow
         }
     }
 
+    // Activation messages that arrive while the window is being placed are kept from the game,
+    // so tell it the real state once placing is done.
+    void SyncActivation()
+    {
+        if (!Window || !FocusActive.is_initialized())
+            return;
+        const bool active = GetForegroundWindow() == Window;
+        if (active != (FocusActive != 0))
+            PostMessageA(Window, WM_ACTIVATE, active ? WA_ACTIVE : WA_INACTIVE, 0);
+    }
+
     void Place()
     {
         if (!Window || !DisplayWidth.is_initialized() || !DisplayHeight.is_initialized())
@@ -89,6 +100,8 @@ export namespace BullyWindow
         }
         SquareCorners(Window);
         Changing = wasChanging;
+        if (!Changing)
+            SyncActivation();
     }
 
     LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
@@ -255,6 +268,7 @@ export namespace BullyWindow
                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOSENDCHANGING);
         }
         Changing = false;
+        SyncActivation();
     }
 
     int __cdecl Frame()

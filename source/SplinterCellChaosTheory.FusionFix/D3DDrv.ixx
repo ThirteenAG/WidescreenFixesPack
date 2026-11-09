@@ -425,6 +425,28 @@ export void InitD3DDrv()
     pattern = hook::pattern("8B 44 24 04 81 EC 84 00 00 00 56");
     shsub_10C86280 = safetyhook::create_inline(pattern.get_first(0), sub_10C86280);
 
+    // SetRes releases the device and creates a new one, which the game uses without checking it. While another program
+    // changes the display mode (a fullscreen game starting or closing), CreateDevice fails with D3DERR_DEVICELOST
+    // until that program is done, and the game crashed; the device is created again once the display is free.
+    pattern = hook::pattern("FF 51 40 8B 86 44 4D 00 00 33 DB 83 F8 02");
+    static auto CreateDeviceHook = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
+    {
+        auto device = reinterpret_cast<IDirect3DDevice9**>(regs.esi + 0x4D3C);
+        if (*device)
+            return;
+
+        auto d3d = *reinterpret_cast<IDirect3D9**>(regs.esi + 0x4D40);
+        auto adapter = *reinterpret_cast<UINT*>(regs.esi + 0x46AC);
+        auto window = reinterpret_cast<HWND>(regs.ebp);
+        auto parameters = *reinterpret_cast<D3DPRESENT_PARAMETERS**>(regs.esp + 0x14);
+        for (int attempt = 0; attempt < 240 && !*device; attempt++)
+        {
+            Sleep(250);
+            if (FAILED(d3d->CreateDevice(adapter, D3DDEVTYPE_HAL, window, D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_PUREDEVICE, parameters, device)))
+                d3d->CreateDevice(adapter, D3DDEVTYPE_HAL, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, parameters, device);
+        }
+    });
+
     // Shadow Quality picks 512, 1024 or 2048; the override replaces the size for every quality level.
     // The shadow map, its colour buffer, viewport and depth bias all read the size stored here.
     if (nShadowMapResolution > 0)

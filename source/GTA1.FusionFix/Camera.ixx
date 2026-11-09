@@ -6,6 +6,7 @@ module;
 export module Camera;
 
 import ComVars;
+import Timing;
 import Log;
 
 // GTA3-style overhead camera for GTA1. The game computes, per player, a camera
@@ -19,8 +20,7 @@ export namespace GTA1Camera
     bool Enabled = true;
     double FollowSeconds = 0.25, HeightSeconds = 0.35;
     double Zoom = 1.0;                       // multiplier for the visible area
-    double CounterFrequency = 1;
-    struct State { double offset[2]{}, velocity[2]{}, height = 0, heightVelocity = 0; LONGLONG time = 0; };
+    struct State { double offset[2]{}, velocity[2]{}, height = 0, heightVelocity = 0, time = 0; };
     std::array<State, 4> Players{};
     // Where a hook site has its values: the player in a register, x and y in
     // stack slots, the height in a register or (London) a stack slot.
@@ -60,9 +60,9 @@ export namespace GTA1Camera
         double distance = height + 384.0, taper = std::clamp((1100.0 - distance) / (1100.0 - 462.0), 0.0, 1.0);
         double goalHeight = distance * (1.0 + (Zoom - 1.0) * taper) - 384.0;
         double goal[2] = { double(*x - control[4]), double(*y - control[5]) };
-        LARGE_INTEGER counter{}; QueryPerformanceCounter(&counter);
-        double elapsed = Enabled && state.time ? (counter.QuadPart - state.time) / CounterFrequency : 0.0;
-        state.time = Enabled ? counter.QuadPart : 0;
+        const double now = GTA1Timing::Clock();
+        double elapsed = Enabled && state.time ? now - state.time : 0.0;
+        state.time = Enabled ? now : 0;
         // Snap without Smooth Follow, on level changes, teleports and long pauses.
         if (elapsed <= 0.0 || elapsed > 0.5 || std::hypot(goal[0] - state.offset[0], goal[1] - state.offset[1]) > 1024.0)
         {
@@ -98,8 +98,6 @@ export namespace GTA1Camera
         read();
         for (auto id : { "CAMERA.SmoothFollow", "CAMERA.FollowTime", "CAMERA.HeightTime", "MAIN.FOVFactor" })
             FixSettings().OnChange(id, read);
-        LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency);
-        CounterFrequency = double(frequency.QuadPart);
         // After the native camera constraints, before projection and visibility bounds.
         // Classics and Retail inline this in two camera functions, London calls it.
         using GTA1Build::Kind;
