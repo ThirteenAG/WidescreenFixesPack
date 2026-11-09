@@ -251,14 +251,46 @@ namespace module_path_detail
         return {};
     }
 
+    template<typename Char>
+    constexpr Char Separators[] = { Char('/'), Char('\\'), Char(0) };
+
+    // A file's path with its name in the case it has on disk. GetModuleFileName returns the name in the case the loader
+    // asked for (some lowercase it), and files named after a plugin should match the plugin's name.
+    template<typename Char>
+    std::basic_string<Char> OnDiskName(std::basic_string<Char> file)
+    {
+        const auto slash = file.find_last_of(Separators<Char>);
+        if (slash == std::basic_string<Char>::npos)
+            return file;
+        if constexpr (std::same_as<Char, char>)
+        {
+            WIN32_FIND_DATAA found{};
+            if (const HANDLE search = ::FindFirstFileExA(file.c_str(), FindExInfoBasic, &found, FindExSearchNameMatch, nullptr, 0); search != INVALID_HANDLE_VALUE)
+            {
+                ::FindClose(search);
+                file.replace(slash + 1, std::string::npos, found.cFileName);
+            }
+        }
+        else
+        {
+            WIN32_FIND_DATAW found{};
+            if (const HANDLE search = ::FindFirstFileExW(file.c_str(), FindExInfoBasic, &found, FindExSearchNameMatch, nullptr, 0); search != INVALID_HANDLE_VALUE)
+            {
+                ::FindClose(search);
+                file.replace(slash + 1, std::wstring::npos, found.cFileName);
+            }
+        }
+        return file;
+    }
+
     // std::string is the ANSI text Windows gives; std::wstring and std::filesystem::path are Unicode
     template<typename T>
     T ModuleFile(HMODULE module)
     {
-        if constexpr (std::is_same_v<T, std::string>)
-            return ReadText<char>([module](char* buffer, DWORD size) { return ::GetModuleFileNameA(module, buffer, size); });
+        if constexpr (std::same_as<T, std::string>)
+            return OnDiskName(ReadText<char>([module](char* buffer, DWORD size) { return ::GetModuleFileNameA(module, buffer, size); }));
         else
-            return T(ReadText<wchar_t>([module](wchar_t* buffer, DWORD size) { return ::GetModuleFileNameW(module, buffer, size); }));
+            return T(OnDiskName(ReadText<wchar_t>([module](wchar_t* buffer, DWORD size) { return ::GetModuleFileNameW(module, buffer, size); })));
     }
 
     template<typename T>
@@ -269,9 +301,6 @@ namespace module_path_detail
         else
             return T(ReadText<wchar_t>([](wchar_t* buffer, DWORD size) { return ::GetCurrentDirectoryW(size, buffer); }));
     }
-
-    template<typename Char>
-    constexpr Char Separators[] = { Char('/'), Char('\\'), Char(0) };
 
     // A path's folder, and a string's folder with its trailing separator
     template<typename T>
