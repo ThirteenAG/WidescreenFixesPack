@@ -26,13 +26,14 @@ namespace cFEng
     float fWidescreenHudOffset = 120.0f;
     float fRadarOffset = 0.0f;
 
-    // How far the side groups move out. Up to 16:9 as before; on wider boxes they keep their 16:9 distance from the
-    // edges (the HUD's units are 1/720 of the screen height there)
+    // How far the side groups move out: at every width they keep their 16:9 distance from the edges (the HUD's units
+    // are 1/720 of the screen height), so on narrower boxes they move in and long texts such as the cost to state
+    // stay on the screen
     float WidescreenOffset(float aspect)
     {
         constexpr float wide = 16.0f / 9.0f;
-        float offset = -CalculateWidescreenOffset(480.0f * std::min(aspect, wide), 480.0f, 480.0f, 480.0f);
-        return offset + 360.0f * std::max(aspect - wide, 0.0f);
+        float offset = -CalculateWidescreenOffset(480.0f * wide, 480.0f, 480.0f, 480.0f);
+        return offset + 360.0f * (aspect - wide);
     }
 
     void updateWidescreenOffset()

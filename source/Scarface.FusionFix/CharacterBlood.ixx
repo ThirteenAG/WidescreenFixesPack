@@ -4,7 +4,6 @@ module;
 #include "FixSettings.hpp"
 #include "RTTI.h"
 #include <d3d9.h>
-#include <d3dx9.h>
 #include <wrl/client.h>
 
 export module CharacterBlood;
@@ -15,9 +14,6 @@ namespace
     SafetyHookInline primitiveHook, hardwareHook;
     uintptr_t characterVtable = 0, textureVtable = 0;
     bool enabled = false;
-    HMODULE d3dx = nullptr;
-    decltype(&D3DXDisassembleShader) disassemble = nullptr;
-    decltype(&D3DXAssembleShader) assemble = nullptr;
     ComPtr<IDirect3DPixelShader9> bloodPixelShader;
     IDirect3DDevice9* shaderDevice = nullptr;
     struct VertexReplacement
@@ -83,41 +79,96 @@ namespace
         return result;
     }
 
-    ComPtr<ID3DXBuffer> Assemble(const std::string& source)
+    // ps_1_1: tex t0; mul r0, t0, v0
+    constexpr DWORD bloodPixelCode[] = { D3DPS_VERSION(1, 1), 0x00000042, 0xB00F0000,
+        0x00000005, 0x800F0000, 0xB0E40000, 0x90E40000, D3DSIO_END };
+
+    int SourceCount(DWORD opcode)
     {
-        ComPtr<ID3DXBuffer> code;
-        if (FAILED(assemble(source.c_str(), UINT(source.size()), nullptr, nullptr, 0,
-                            code.GetAddressOf(), nullptr)))
+        switch (opcode)
         {
-            return {};
+        case D3DSIO_MOV: case D3DSIO_RCP: case D3DSIO_RSQ: case D3DSIO_EXP: case D3DSIO_LOG:
+        case D3DSIO_LIT: case D3DSIO_FRC: case D3DSIO_EXPP: case D3DSIO_LOGP:
+            return 1;
+        case D3DSIO_ADD: case D3DSIO_SUB: case D3DSIO_MUL: case D3DSIO_DP3: case D3DSIO_DP4:
+        case D3DSIO_MIN: case D3DSIO_MAX: case D3DSIO_SLT: case D3DSIO_SGE: case D3DSIO_DST:
+        case D3DSIO_M4x4: case D3DSIO_M4x3: case D3DSIO_M3x4: case D3DSIO_M3x3: case D3DSIO_M3x2:
+            return 2;
+        case D3DSIO_MAD:
+            return 3;
+        default:
+            return -1;
         }
-        return code;
     }
 
-    std::string BloodVertexSource(const char* original)
+    std::vector<DWORD> BloodVertexCode(const DWORD* code, size_t count)
     {
-        std::istringstream lines(original);
-        std::string line, source;
-        while (std::getline(lines, line))
-        {
-            if (auto comment = line.find("//"); comment != std::string::npos) line.resize(comment);
-            auto first = line.find_first_not_of(" \t\r");
-            if (first == std::string::npos) continue;
-            line.erase(0, first);
-            if (line.starts_with("vs_1_1")) line = "vs_2_0";
-            // VS 2 permits the additional palette at c128 without borrowing lighting/bone constants.
-            if (line.starts_with("mov a0.x")) line.replace(0, 3, "mova");
-            source += line + '\n';
-        }
+        // Rewrites the vs_1_1 skin program as vs_2_0 token by token, so the palette at c128
+        // fits without borrowing lighting/bone constants, and no shader compiler is needed.
+        constexpr DWORD addressX = 0x80000000 | D3DSPR_ADDR << D3DSP_REGTYPE_SHIFT;
         // PS2 0x76CC18 selects the first palette bone's front/back damage by normal Z.
         // 0x76EAC8/0x76EB10 supply this value as the second texture pass's alpha.
-        source += "mul r0.x, v2.x, c0.z\n"
-                  "mova a0.x, r0.x\n"
-                  "slt r0.y, v3.z, c0.x\n"
-                  "sub r0.z, c0.y, r0.y\n"
-                  "mul r0.y, r0.y, c128[a0.x].x\n"
-                  "mad oD0.w, r0.z, c128[a0.x].y, r0.y\n";
-        return source;
+        static constexpr DWORD damage[] =
+        {
+            0x03000005, 0x80010000, 0x90000002, 0xA0AA0000,                     // mul r0.x, v2.x, c0.z
+            0x0200002E, 0xB0010000, 0x80000000,                                 // mova a0.x, r0.x
+            0x0300000C, 0x80020000, 0x90AA0003, 0xA0000000,                     // slt r0.y, v3.z, c0.x
+            0x03000002, 0x80040000, 0xA0550000, 0x81550000,                     // add r0.z, c0.y, -r0.y
+            0x04000005, 0x80020000, 0x80550000, 0xA0002080, addressX,           // mul r0.y, r0.y, c128[a0.x].x
+            0x05000004, 0xD0080000, 0x80AA0000, 0xA0552080, addressX, 0x80550000, // mad oD0.w, r0.z, c128[a0.x].y, r0.y
+        };
+        if (count < 2 || code[0] != D3DVS_VERSION(1, 1)) return {};
+        std::vector<DWORD> out{ D3DVS_VERSION(2, 0) };
+        for (size_t i = 1; i < count;)
+        {
+            const DWORD token = code[i];
+            const DWORD opcode = token & D3DSI_OPCODE_MASK;
+            if (token == D3DSIO_END)
+            {
+                out.insert(out.end(), std::begin(damage), std::end(damage));
+                out.push_back(D3DSIO_END);
+                return out;
+            }
+            if (opcode == D3DSIO_COMMENT)
+            {
+                i += 1 + ((token & D3DSI_COMMENTSIZE_MASK) >> D3DSI_COMMENTSIZE_SHIFT);
+                continue;
+            }
+            const size_t at = out.size();
+            out.push_back(opcode);
+            if (opcode == D3DSIO_DCL || opcode == D3DSIO_DEF)
+            {
+                const size_t size = opcode == D3DSIO_DCL ? 2 : 5;
+                if (i + 1 + size > count) return {};
+                out.insert(out.end(), code + i + 1, code + i + 1 + size);
+                i += 1 + size;
+            }
+            else if (opcode == D3DSIO_NOP)
+            {
+                ++i;
+            }
+            else
+            {
+                const int sources = SourceCount(opcode);
+                if (sources < 0 || i + 2 + sources > count) return {};
+                const DWORD dest = code[i + 1];
+                const DWORD type = (dest & D3DSP_REGTYPE_MASK) >> D3DSP_REGTYPE_SHIFT |
+                                   (dest & D3DSP_REGTYPE_MASK2) >> D3DSP_REGTYPE_SHIFT2;
+                // vs_2_0 loads a0 with mova and names a0.x after every relative source.
+                if (opcode == D3DSIO_MOV && type == D3DSPR_ADDR) out[at] = D3DSIO_MOVA;
+                out.push_back(dest);
+                for (int s = 0; s < sources; ++s)
+                {
+                    const DWORD source = code[i + 2 + s];
+                    out.push_back(source);
+                    if (source & D3DVS_ADDRMODE_RELATIVE) out.push_back(addressX);
+                }
+                i += 2 + sources;
+            }
+            // vs_2_0 instructions carry their length.
+            out[at] |= DWORD(out.size() - at - 1) << D3DSI_INSTLENGTH_SHIFT;
+        }
+        return {};
     }
 
     IDirect3DVertexShader9* GetBloodVertex(IDirect3DDevice9* device, IDirect3DVertexShader9* shader)
@@ -137,10 +188,8 @@ namespace
                 auto hash = crc32(0, bytes.data(), size);
                 if (hash == 0xD41E262E || hash == 0xDF075E41)
                 {
-                    ComPtr<ID3DXBuffer> text;
-                    if (SUCCEEDED(disassemble(bytes.data(), FALSE, nullptr, text.GetAddressOf())))
-                        if (auto code = Assemble(BloodVertexSource(static_cast<const char*>(text->GetBufferPointer()))))
-                            device->CreateVertexShader(static_cast<const DWORD*>(code->GetBufferPointer()), entry.blood.GetAddressOf());
+                    const auto code = BloodVertexCode(bytes.data(), size / sizeof(DWORD));
+                    if (!code.empty()) device->CreateVertexShader(code.data(), entry.blood.GetAddressOf());
                 }
             }
         }
@@ -195,17 +244,11 @@ export namespace CharacterBlood
         auto& settings = FixSettings();
         const bool bRestoreCharacterBlood = settings.Bool("GRAPHICS.RestoreCharacterBlood");
         if (!bRestoreCharacterBlood) return false;
-        d3dx = LoadLibraryW(L"d3dx9_43.dll");
-        if (d3dx)
-        {
-            disassemble = reinterpret_cast<decltype(disassemble)>(GetProcAddress(d3dx, "D3DXDisassembleShader"));
-            assemble = reinterpret_cast<decltype(assemble)>(GetProcAddress(d3dx, "D3DXAssembleShader"));
-        }
         characterVtable = ScarfaceRTTI::FindVtable(".?AVd3dCharacterShader@pure3d@@");
         textureVtable = ScarfaceRTTI::FindVtable(".?AVd3dTexture@pure3d@@");
         auto primitive = ScarfaceRTTI::FindVtable(".?AVPrimGroupSkinnedOptimized@pure3d@@");
         auto hardware = ScarfaceRTTI::FindVtable(".?AVd3dExtHardwareSkinning@pure3d@@");
-        if (assemble && disassemble && characterVtable && textureVtable && primitive && hardware)
+        if (characterVtable && textureVtable && primitive && hardware)
         {
             primitiveHook = safetyhook::create_inline(*reinterpret_cast<void**>(primitive + 8 * sizeof(void*)), DrawPrimitiveGroup);
             hardwareHook = safetyhook::create_inline(*reinterpret_cast<void**>(hardware + 6 * sizeof(void*)), DrawHardwareSkin);
@@ -232,8 +275,7 @@ export namespace CharacterBlood
             D3DCAPS9 caps{};
             if (FAILED(device->GetDeviceCaps(&caps)) || caps.VertexShaderVersion < D3DVS_VERSION(2, 0) ||
                 caps.MaxVertexShaderConst < damageRegister + damageRegisters) return;
-            if (auto code = Assemble("ps_1_1\ntex t0\nmul r0, t0, v0\n"))
-                device->CreatePixelShader(static_cast<const DWORD*>(code->GetBufferPointer()), bloodPixelShader.GetAddressOf());
+            device->CreatePixelShader(bloodPixelCode, bloodPixelShader.GetAddressOf());
         }
         if (!bloodPixelShader) return;
         SavedState saved(device);
@@ -265,7 +307,6 @@ export namespace CharacterBlood
     {
         primitiveHook.reset(); hardwareHook.reset();
         replacements.clear(); bloodPixelShader.Reset(); shaderDevice = nullptr;
-        if (d3dx) FreeLibrary(d3dx);
-        d3dx = nullptr; assemble = nullptr; disassemble = nullptr; enabled = false;
+        enabled = false;
     }
 }

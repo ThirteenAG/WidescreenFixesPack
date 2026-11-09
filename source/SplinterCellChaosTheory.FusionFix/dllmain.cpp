@@ -83,7 +83,7 @@ void Init()
     Screen.bRawInputMouseRawData = settings.Int("MAIN.RawInputMouseRawData") != 0;
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(settings.Get("MAIN.HudAspectRatioConstraint"));
     nShadowMapResolution = settings.Int("GRAPHICS.ShadowMapResolution");
-    bEnableShadowFiltering = settings.Int("GRAPHICS.EnableShadowFiltering") != 0;
+    bHardShadows = settings.Int("GRAPHICS.HardShadows") != 0;
     UpdateFrameLimit();
     settings.OnChange("MAIN.FPSLimit", UpdateFrameLimit);
     const auto gogglesColor = settings.Int("BONUS.GogglesLightColor");

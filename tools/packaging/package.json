@@ -5,5 +5,9 @@
   "description": "GitHub-only artifact upload adapter",
   "dependencies": {
     "@actions/artifact": "6.3.1"
+  },
+  "overrides": {
+    "glob": "^14.0.2",
+    "minimatch@>=7": "^11.0.1"
   }
 }

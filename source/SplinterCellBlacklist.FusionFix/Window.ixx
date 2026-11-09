@@ -528,9 +528,9 @@ export void InitWindow()
         WindowHandle = (HWND)regs.eax;
     });
 
-    // WindowStyle
+    // WindowStyleFinal
     pattern = hook::pattern("83 3D ? ? ? ? ? 0F 85 ? ? ? ? A1 ? ? ? ? 3B 46 08");
-    WindowStyle.SetAddress(*pattern.get_first<int*>(2));
+    WindowStyleFinal.SetAddress(*pattern.get_first<int*>(2));
 
     // Resolution
     pattern = hook::pattern("A3 ? ? ? ? 8B 8E ? ? ? ? 89 0D ? ? ? ? 85 DB 74 13 83 BE");

@@ -137,6 +137,7 @@ export GameRef<double> OriginalHorizontalFov;
 export GameRef<double> OriginalVerticalFov;
 export GameRef<double> OriginalBoostAdder;
 export GameRef<double> OriginalBoostSubtractor;
+export GameRef<bool> twkEnableTSM;
 
 export struct RegistryName
 {

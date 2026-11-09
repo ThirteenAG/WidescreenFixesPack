@@ -155,6 +155,11 @@ private:
         if (pEffect)
             return true;
 
+        // Plugins load D3DX on first use: without the DirectX runtime the effects stay off instead of crashing
+        static const bool d3dxPresent = LoadLibraryW(L"d3dx9_43.dll") != nullptr;
+        if (!d3dxPresent)
+            return false;
+
         HMODULE hModule = nullptr;
         GetModuleHandleExA(
             GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,

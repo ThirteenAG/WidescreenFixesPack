@@ -8,7 +8,7 @@
 // Windowed and borderless modes for games made for full screen: the fixes route the game's window calls through these
 // hooks. Windowed keeps a caption (resizable when asked) and centres the client area on the game's monitor; borderless
 // strips the frame and keeps the window centred whatever the game does to it.
-namespace GameWindow
+namespace WindowedModeWrapper
 {
     inline bool bBorderlessWindowed{ true };
     inline bool bEnableWindowResize{ false };
@@ -296,6 +296,3 @@ namespace GameWindow
         return ShowCursor(bShow);
     }
 }
-
-// The name the fixes use
-namespace WindowedModeWrapper = GameWindow;

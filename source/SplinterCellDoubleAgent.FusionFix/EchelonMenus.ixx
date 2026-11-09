@@ -61,4 +61,58 @@ export void InitEchelonMenus()
             regs.esi = 0;
         }
     }; injector::MakeInline<ResListHook>(pattern.get_first(0), pattern.get_first(6));
+
+    // ElectricPickLock: 1.00 lists it among the gadgets unlocked by secondary objectives, although it can't be earned,
+    // and shows it in the pause menu equipment. Later builds already drop it from both.
+    pattern = hook::module_pattern(GetModuleHandle(L"EchelonMenus"), "83 FF 11 8B 4E 70 0F 83");
+    if (!pattern.empty())
+    {
+        // Unlock list rows and their descriptions: 17 gadget names, one fewer without it
+        auto desc = hook::module_pattern(GetModuleHandle(L"EchelonMenus"), "66 3D 11 00 0F 83 ? ? ? ? 0F BF C0 8B 0C 85");
+        auto gadgets = *desc.get_first<const wchar_t**>(16);
+        for (size_t i = 0; i < 17; ++i)
+        {
+            if (_wcsicmp(gadgets[i], L"ElectricPickLock") == 0)
+            {
+                std::copy(gadgets + i + 1, gadgets + 17, gadgets + i); // the name table is in writable data
+                gadgets[16] = nullptr;
+                break;
+            }
+        }
+        injector::WriteMemory<uint8_t>(pattern.get_first(2), 16, true);
+        injector::WriteMemory<uint8_t>(desc.get_first(2), 16, true);
+
+        // Gadget unlock state: report it as not unlockable instead of mapping it to a profile bit
+        auto bit = hook::module_pattern(GetModuleHandle(L"EchelonMenus"), "85 C0 74 0A B8 10 00 00 00 E9");
+        injector::WriteMemory<uint8_t>(bit.get_first(2), 0xEB, true);
+
+        // Pause menu equipment is read from the ini one entry at a time; drop the ElectricPickLock entry
+        static uintptr_t equipmentList = 0;
+        static uintptr_t equipmentRemove = 0;
+        auto equip = hook::module_pattern(GetModuleHandle(L"EchelonMenus"), "8B 0D ? ? ? ? 03 CE FF 15 ? ? ? ? 85 C0 0F 85 ? ? ? ? 6A 01 57 B9");
+        equipmentList = *equip.get_first<uintptr_t>(2);
+        equipmentRemove = (uintptr_t)injector::GetBranchDestination(equip.get_first(30)).as_int();
+
+        struct EquipmentEntryHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                struct FString
+                {
+                    wchar_t* Data;
+                    int32_t ArrayNum;
+                    int32_t ArrayMax;
+                };
+
+                // esi = byte offset of the entry just read, edi = its index
+                auto entry = (FString*)(*(uintptr_t*)equipmentList + regs.esi);
+                regs.eax = entry->ArrayNum ? entry->ArrayNum - 1 : 0;
+                if (entry->Data && _wcsicmp(entry->Data, L"ElectricPickLock") == 0)
+                {
+                    reinterpret_cast<void(__fastcall*)(uintptr_t, void*, int32_t, int32_t)>(equipmentRemove)(equipmentList, nullptr, regs.edi, 1);
+                    regs.eax = 1; // not the end of the list, go on with the next entry
+                }
+            }
+        }; injector::MakeInline<EquipmentEntryHook>(equip.get_first(0), equip.get_first(14));
+    }
 }

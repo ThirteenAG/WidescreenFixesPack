@@ -119,6 +119,23 @@ export void InitEchelon()
         }; injector::MakeInline<GetPrimaryAmmoHook>(pattern.get_first(0), pattern.get_first(6));
     }
 
+    // Gadgets unlocked by secondary objectives: 1.00 clears the player's unlocked gadget mask at every mission start
+    // instead of taking it from the profile, so earned gadgets stay locked. Later builds already load it.
+    {
+        auto pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "89 9E 08 07 00 00 C7 45 EC FF FF FF FF");
+        if (!pattern.empty())
+        {
+            injector::MakeNOP(pattern.get_first(), 6, true);
+
+            pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "3B FB 8B 48 08 89 8E 04 07 00 00");
+            static auto RestoreUnlockedGadgetsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                // eax = player profile data, its first field is the unlocked gadget mask
+                *(uint32_t*)(regs.esi + 0x708) = *(uint32_t*)regs.eax;
+            });
+        }
+    }
+
     //EPlayerController additional state cache
     AEPlayerController::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Echelon"), "?Tick@AEPlayerController@@UAEHMW4ELevelTick@@@Z"), AEPlayerController::Tick);
     AEPattern::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Echelon"), "?Tick@AEPattern@@UAEHMW4ELevelTick@@@Z"), AEPattern::Tick);

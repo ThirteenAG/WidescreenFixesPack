@@ -314,6 +314,8 @@ public:
             // The controller name lookup can receive an action-source index beyond the eight controller slots.
             auto controllerName = hook::pattern("83 E8 02 75 ? 8B 44 24 10 8B 04 85 ? ? ? ? EB ? 5F B8 78 56 34 12");
             static auto emptyControllerName = reinterpret_cast<uintptr_t>(controllerName.get_first<uint8_t>(5) + *controllerName.get_first<int8_t>(4));
+            // The joystick devices: mov eax, ds:devices[eax*4], read before the hook replaces it
+            JoystickDevices = *controllerName.get_first<uintptr_t*>(12);
             static auto controllerNameHook = safetyhook::create_mid(controllerName.get_first(9), [](SafetyHookContext& regs)
             {
                 if (regs.eax >= 8)
@@ -412,10 +414,6 @@ public:
             // The controller type, for the default controls of newer XInput controllers
             pattern = hook::pattern("E8 ? ? ? ? 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D ? ? ? ? 0F 87 ? ? ? ? 0F 84 ? ? ? ? 3D ? ? ? ? 0F 87");
             auto getDeviceType = injector::GetBranchDestination(pattern.get_first()).as_int();
-            // mov eax, [esp+arg_4]; mov eax, ds:devices[eax*4]
-            auto table = hook::range_pattern(getDeviceType + 0x42, getDeviceType + 0x4D,
-                "8B 44 24 ? 8B 04 85 ? ? ? ?").get_first<uint8_t>();
-            JoystickDevices = *reinterpret_cast<uintptr_t**>(table + 7);
             shGetDeviceType = safetyhook::create_inline(getDeviceType, GetDeviceType);
 
             // Keyboard: key states at ebp-0x130

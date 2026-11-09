@@ -35,7 +35,7 @@
 
 ### Graphics and lighting
 
-- **Shadows** — Increase shadow resolution or change filtering. Disabling filtering makes soft shadows less soft; filtering can cause issues across multiple monitors.
+- **Shadows** — Increase shadow resolution, or switch to hard shadows with sharp edges and the usual darkness (Shader Model 2.0 and 3.0).
 - **Goggles** — Give Sam's goggle and suit lights one of the Ops Suit Light colors from Blacklist, or keep the original lights.
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 - **Suit indicators** — Use Blacklist-style indicators that respond to the player's visibility.

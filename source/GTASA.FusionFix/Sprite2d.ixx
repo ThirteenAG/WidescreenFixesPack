@@ -578,7 +578,8 @@ public:
                 auto pattern = hook::pattern("8B 0D ? ? ? ? 8D 0C 8D ? ? ? ? E8 ? ? ? ? 83 C4 18 C3");
                 static GameRef<int32_t> currentSplash(*pattern.get_first<int32_t*>(2));
                 static auto splashes = *pattern.get_first<CSprite2d*>(9);
-                pattern = hook::pattern("E8 ? ? ? ? D9 05 ? ? ? ? D8 1D ? ? ? ? 83 C4 28 DF E0 F6 C4 44");
+                // The fld after the call is left out: limit adjusters jump from there to draw their loading text.
+                pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? D8 1D ? ? ? ? 83 C4 28 DF E0 F6 C4 44");
                 static auto LoadingBar = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
                     const int32_t index = *currentSplash;

@@ -70,7 +70,7 @@ export struct FLTColor
 };
 
 export int32_t nShadowMapResolution;
-export bool bEnableShadowFiltering;
+export bool bHardShadows;
 export bool bPlayingVideo = false;
 export bool bHackingGameplay = false;
 export bool bQuickLoadingShown = false;

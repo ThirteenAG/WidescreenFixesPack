@@ -29,7 +29,7 @@ export enum eWindowStyle
     ExclusiveFullscreen,
     Borderless
 };
-export GameRef<int> WindowStyle;
+export GameRef<int> WindowStyleFinal;
 
 // Viewport resolution, set by UD3DRenderDevice::SetRes
 export GameRef<int> ViewportResolutionWidth;

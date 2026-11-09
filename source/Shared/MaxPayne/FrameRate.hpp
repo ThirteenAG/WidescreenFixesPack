@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 
-uint32_t GetDesktopRefreshRate();
+[[nodiscard]] uint32_t GetDesktopRefreshRate() noexcept;
 
 // The frame rate limit of both Max Payne games (MAIN.FPSLimit): 0 = unlimited (the games' own behaviour, they run on
 // variable frame times without a cap), -1 = the monitor's refresh rate, else frames per second, 30 to 1000.

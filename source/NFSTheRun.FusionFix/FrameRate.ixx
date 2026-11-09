@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <unordered_map>
 
 export module FrameRate;
 
@@ -20,13 +21,47 @@ namespace
         return dt > 0.0f && dt < 1.0f / 32.0f;
     }
 
-    // Snow spray, drift smoke and dirt dust inherit part of the speed of what emits them. Above 30 frames per second
-    // they get too much of it and fill the screen (issue #2063), so the share is scaled to the frame time.
-    void ScaleInheritedSpeed(SafetyHookContext& regs)
+    // Snow spray, drift smoke and dirt dust inherit part of the speed of what emits them. The particle update takes
+    // that speed from how far the emitter moved since its last position, divided by the frame time. The emitters move
+    // on the physics ticks only, so above 30 frames per second a tick's movement is divided by a part of the tick: the
+    // particles get several times the car's speed, fly ahead of it and fill the screen (issue #2063). The movement is
+    // divided by the time since the emitter moved before instead, which is the frame time at 30 frames per second.
+    struct EmitterMotion
     {
-        float scale = std::clamp(fb::GameTimer::frameDeltaTime * 30.0f, 0.0f, 1.0f);
-        if (scale > 0.0f)
-            regs.xmm0.f32[0] *= scale;
+        float position[3] = {};
+        float sinceMove = 0.0f;     // the time since the position changed
+        float interval = 0.0f;      // the time between the last two changes
+        uint32_t seenFrame = 0;
+    };
+    std::unordered_map<uintptr_t, EmitterMotion> EmitterMotions;   // by the emitter's address
+    std::mutex EmitterMotionsMutex;                                 // the particles are updated on several threads
+    uint32_t EmitterFrame = 0;
+
+    // emitter +0x30: its position, +0xB0: its position before the last move
+    float EmitterMoveTime(uintptr_t emitter, float dt)
+    {
+        auto position = (const float*)(emitter + 0x30);
+        std::lock_guard lock(EmitterMotionsMutex);
+        auto [it, added] = EmitterMotions.try_emplace(emitter);
+        auto& motion = it->second;
+        motion.seenFrame = EmitterFrame;
+        if (added || memcmp(motion.position, position, sizeof(motion.position)) != 0)
+        {
+            memcpy(motion.position, position, sizeof(motion.position));
+            motion.interval = added ? dt : std::min(motion.sinceMove + dt, 0.1f);
+            motion.sinceMove = 0.0f;
+        }
+        else
+            motion.sinceMove += dt;
+        return std::max(motion.interval, dt);
+    }
+
+    void PruneEmitterMotions()
+    {
+        std::lock_guard lock(EmitterMotionsMutex);
+        if (++EmitterFrame % 256 != 0)
+            return;
+        std::erase_if(EmitterMotions, [](const auto& entry) { return EmitterFrame - entry.second.seenFrame > 256; });
     }
 
     // Rotation matrix (rows right, up, forward) to a quaternion and back
@@ -364,11 +399,28 @@ public:
                 });
             }
 
-            pattern = hook::pattern("80 7E 39 00 F3 0F 10 46 34 0F C6 C0 00");
-            static auto InheritSpeedHook1 = safetyhook::create_mid(pattern.get_first(9), ScaleInheritedSpeed);
+            // The emitter's speed: its last move divided by the time since the move before. The divisor is in xmm0,
+            // the emitter in edx and eax.
+            WFP::onGameProcessEvent() += []()
+            {
+                PruneEmitterMotions();
+            };
 
-            pattern = hook::pattern("80 78 39 00 F3 0F 10 40 34 0F C6 C0 00");
-            static auto InheritSpeedHook2 = safetyhook::create_mid(pattern.get_first(9), ScaleInheritedSpeed);
+            pattern = hook::pattern("0F 28 9A B0 00 00 00 0F 28 62 30 0F 5C E3 0F 5E E0");
+            static auto EmitterSpeedHook1 = safetyhook::create_mid(pattern.get_first(14), [](SafetyHookContext& regs)
+            {
+                float time = EmitterMoveTime(regs.edx, regs.xmm0.f32[0]);
+                for (auto& lane : regs.xmm0.f32)
+                    lane = time;
+            });
+
+            pattern = hook::pattern("0F 28 90 B0 00 00 00 0F 28 58 30 0F 5C DA 0F C6 C9 00 0F 29 8C 24 ? ? ? ? F3 0F 10 0D ? ? ? ? 0F C6 C9 00 0F 5F C1 0F 5E D8");
+            static auto EmitterSpeedHook2 = safetyhook::create_mid(pattern.get_first(41), [](SafetyHookContext& regs)
+            {
+                float time = EmitterMoveTime(regs.eax, regs.xmm0.f32[0]);
+                for (auto& lane : regs.xmm0.f32)
+                    lane = time;
+            });
         };
     }
 } FrameRate;

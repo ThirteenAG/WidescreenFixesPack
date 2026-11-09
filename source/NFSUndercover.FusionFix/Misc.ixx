@@ -1090,10 +1090,11 @@ public:
             }
             else
             {
-                auto steam = hook::pattern("F3 0F 2A 44 24 ? 56");
+                // The main loops' code after their starts, which the frame hooks have replaced by now
+                auto steam = hook::pattern("56 F3 0F 5A C0 F2 0F 59 05 ? ? ? ? F2 0F 5E 05 ? ? ? ? 57 51 F2 0F 5A C0 F3 0F 11 04 24");
                 if (steam.empty()) // 1.0.1.17
                 {
-                    auto retail = hook::pattern("51 E9 ? ? ? ? 50 E8");
+                    auto retail = hook::pattern("50 E8 ? ? ? ? D9 54 24 04 D9 05 ? ? ? ? 83 C4 04 DF F1 DD D8 76");
                     if (retail.empty())
                     {
                         retail.get_first();

@@ -66,6 +66,45 @@ namespace XenonEffects
     }
 }
 
+// People cast dynamic shadows, like on the Xbox 360: the shadow map pass drew smackables, scenery and cars, but not
+// the world models that characters (flaggers, pit crews, the people at the race day hub) are drawn as. Their render
+// already handles the shadow map view; they're drawn there and flushed with the shadow techniques of the pass.
+// The instanced crowd in the stands has no shadow shader, so it still doesn't cast one.
+namespace WorldModelShadows
+{
+    struct FlushCommand
+    {
+        uint32_t header[2];
+        void* renderView;
+        void* drawList;
+        const char* technique;
+        const char* skinnedTechnique;
+        const char* name;
+    };
+    static_assert(sizeof(FlushCommand) == 28);
+
+    void(__thiscall* QueueCommand)(void* queue, void* command, void* execute, int size) = nullptr;
+    void(__cdecl* RenderWorldModels)(void* view, int flags) = nullptr;
+    void* (__cdecl* NextDrawList)() = nullptr;
+    void* ExecuteFlush = nullptr;
+    void* ShadowView = nullptr;
+    void* ShadowRenderView = nullptr;
+    const char* Techniques[2][2] = {};   // [TSM, LiSPSM][alpha tested, skinned]
+
+    // Replaces the queueing of the command after the scenery shadows
+    void __fastcall QueueAfterScenery(void* queue, void*, void* command, void* execute, int size)
+    {
+        RenderWorldModels(ShadowView, 0);
+        if (auto drawList = NextDrawList())
+        {
+            auto& techniques = Techniques[twkEnableTSM ? 0 : 1];
+            FlushCommand flush{ { 0, 0 }, ShadowRenderView, drawList, techniques[0], techniques[1], "worldModelsShadow" };
+            QueueCommand(queue, &flush, ExecuteFlush, sizeof(flush));
+        }
+        QueueCommand(queue, command, execute, size);
+    }
+}
+
 // Focus. When the window loses focus the game mutes its sound (WM_ACTIVATE) and pauses (WM_ACTIVATEAPP: its main
 // loop waits until the window is active again). Online and LAN races keep running
 // in the background, and so does everything with MAIN.PauseOnFocusLoss off; input is blocked then while the window
@@ -795,6 +834,27 @@ public:
                 injector::WriteMemory(shadowPattern.get_first(1), nShadowsRes, true);
                 injector::WriteMemory(shadowPattern.get_first(8), nShadowsRes, true);
                 injector::WriteMemory(shadowPattern.get_first(15), nShadowsRes, true);
+            }
+
+            // Shadows of characters
+            {
+                auto techniques = hook::pattern("38 1D ? ? ? ? 74 1A C7 44 24 14 ? ? ? ? C7 44 24 18 ? ? ? ? C7 44 24 1C ? ? ? ? EB 18 C7 44 24 14 ? ? ? ? C7 44 24 18 ? ? ? ? C7 44 24 1C");
+                auto scenery = hook::pattern("68 00 02 00 00 68 ? ? ? ? E8 ? ? ? ? 89 5C 24 20 89 5C 24 24 C7 44 24 28 ? ? ? ? E8 ? ? ? ? 8B 54 24 14 6A 1C 89 44 24 30 89 54 24 34 B9 07 00 00 00 8D 74 24 24 8D 7C 24 40 68");
+                auto queueCall = hook::pattern("6A 0C 68 ? ? ? ? 8D 4C 24 28 B8 ? ? ? ? 51 B9 ? ? ? ? 89 5C 24 2C 89 6C 24 30 89 44 24 34 E8");
+                auto renderWorldModels = hook::pattern("8B 44 24 08 8B 4C 24 04 6A 01 6A 01 50 51 E8 ? ? ? ? 83 C4 10 C3");
+
+                twkEnableTSM.SetAddress(*techniques.get_first<bool*>(2));
+                WorldModelShadows::Techniques[0][0] = *techniques.get_first<const char*>(0x0C);    // RenderTSMAlphaTex
+                WorldModelShadows::Techniques[0][1] = *techniques.get_first<const char*>(0x1C);    // RenderTSMMatrixPalette
+                WorldModelShadows::Techniques[1][0] = *techniques.get_first<const char*>(0x26);    // RenderLiSPSMAlphaTex
+                WorldModelShadows::Techniques[1][1] = *techniques.get_first<const char*>(0x36);    // RenderLiSPSMMatrixPalette
+                WorldModelShadows::ShadowView = *scenery.get_first<void*>(6);
+                WorldModelShadows::ShadowRenderView = *scenery.get_first<void*>(0x1B);
+                WorldModelShadows::NextDrawList = decltype(WorldModelShadows::NextDrawList)(injector::GetBranchDestination(scenery.get_first(0x1F)).get());
+                WorldModelShadows::ExecuteFlush = *scenery.get_first<void*>(0x40);
+                WorldModelShadows::RenderWorldModels = renderWorldModels.get_first<void(__cdecl)(void*, int)>();
+                WorldModelShadows::QueueCommand = decltype(WorldModelShadows::QueueCommand)(injector::GetBranchDestination(queueCall.get_first(0x22)).get());
+                injector::MakeCALL(queueCall.get_first(0x22), WorldModelShadows::QueueAfterScenery, true);
             }
 
             // Window procedure, and the input blocker for online races

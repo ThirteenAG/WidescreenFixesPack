@@ -240,11 +240,11 @@
       "max": 16384
     },
     {
-      "id": "GRAPHICS.EnableShadowFiltering",
+      "id": "GRAPHICS.HardShadows",
       "type": "bool",
-      "default": 1,
-      "label": "@EnableShadowFiltering",
-      "description": "@EnableShadowFiltering.description",
+      "default": 0,
+      "label": "@HardShadows",
+      "description": "@HardShadows.description",
       "page": "graphics",
       "apply": "restart",
       "visibility": "menu"

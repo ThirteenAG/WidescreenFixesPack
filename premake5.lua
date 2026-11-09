@@ -729,6 +729,9 @@ project "ResidentEvil6.FusionFix"
 group ""
 
 project "Scarface.FusionFix"
+   -- D3DX loaded on first use, so the plugin also loads where the DirectX runtime is missing
+   linkoptions { "/DELAYLOAD:d3dx9_43.dll" }
+   links { "delayimp" }
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/%{prj.name}/FixSettings.hpp", "text/Scarface/*.json" }
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Scarface/en.json') }

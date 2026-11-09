@@ -425,28 +425,30 @@ export void InitD3DDrv()
     pattern = hook::pattern("8B 44 24 04 81 EC 84 00 00 00 56");
     shsub_10C86280 = safetyhook::create_inline(pattern.get_first(0), sub_10C86280);
 
-    // The game uses a 2048 shadow map by default.
-    if (nShadowMapResolution && nShadowMapResolution != 2048)
+    // Shadow Quality picks 512, 1024 or 2048; the override replaces the size for every quality level.
+    // The shadow map, its colour buffer, viewport and depth bias all read the size stored here.
+    if (nShadowMapResolution > 0)
     {
-        auto pattern = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 8B CE FF 92 ? ? ? ? 5F 5E C7 43 ? ? ? ? ? 5B C2 04 00 C7 87");
-        injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
-        injector::WriteMemory(pattern.get_first(6), nShadowMapResolution, true);
-
-        pattern = hook::pattern("B9 00 01 00 00 89 94 24 DC 00 00 00");
-        injector::WriteMemory(pattern.get_first(1), nShadowMapResolution, true);
+        auto pattern = hook::pattern("8B 44 24 04 8B 54 24 08 89 81 BC 4C 00 00 89 91 C0 4C 00 00 C2 08 00");
+        static auto ShadowMapSizeHook = safetyhook::create_mid(pattern.get_first(8), [](SafetyHookContext& regs)
+        {
+            regs.eax = nShadowMapResolution;
+            regs.edx = nShadowMapResolution;
+        });
     }
 
-    if (!bEnableShadowFiltering)
+    if (bHardShadows)
     {
-        // Disable angle-dependent filtering. Soft shadows remain less soft at wide resolutions.
-        auto pattern = hook::pattern("B9 ? ? ? ? 89 94 24 DC 00 00 00");
-        injector::WriteMemory(pattern.get_first(1), 0x10000, true);
-
-        pattern = hook::pattern("BB 9A 99 99 3F");
-        injector::WriteMemory<float>(pattern.get_first(1), 0.25f, true);
-
-        pattern = hook::pattern("C7 86 C8 07 00 00 9A 99 99 BE");
-        injector::WriteMemory<float>(pattern.get_first(6), -0.15f, true);
+        // Shader Model 2.0 and 3.0 (also with High Quality Shadows) mix the sharp screen-space shadow
+        // with a blurred copy by saturate(scale / (depth + bias) + offset); zero scale and offset keep it sharp.
+        // The blur keeps the average darkness, so the sharp shadow is as dark as the soft one.
+        // Shader Model 1.1 is left alone: its blur pyramid adds light to the shadows, so they would get darker.
+        auto pattern = hook::pattern("C7 86 C8 07 00 00 9A 99 99 BE 89 8E CC 07 00 00");
+        static auto ShadowBlurMixHook = safetyhook::create_mid(pattern.get_first(10), [](SafetyHookContext& regs)
+        {
+            *reinterpret_cast<float*>(regs.esi + 0x7C4) = 0.0f;
+            *reinterpret_cast<float*>(regs.esi + 0x7C8) = 0.0f;
+        });
     }
 
     // Goggles light colour

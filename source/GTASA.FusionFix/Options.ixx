@@ -794,12 +794,10 @@ public:
             RowTextPrevious = injector::MakeCALL(rowText.get_first(1), AnsweredText<RowTextPrevious>, true).get();
             TitleTextPrevious = injector::MakeCALL(titleText.get_first(12), AnsweredText<TitleTextPrevious>, true).get();
             auto renderFontBuffer = hook::pattern("A1 ? ? ? ? 83 EC 18 3D ? ? ? ? 0F 84 ? ? ? ? 0F BF 0D");
-            const auto titleCall = reinterpret_cast<uintptr_t>(titleText.get_first(28));
-            hook::range_pattern(titleCall, titleCall + 5, "E8 ? ? ? ?").get_first();
-            {
-                RenderFontBuffer = reinterpret_cast<decltype(RenderFontBuffer)>(renderFontBuffer.get_first());
+            RenderFontBuffer = reinterpret_cast<decltype(RenderFontBuffer)>(renderFontBuffer.get_first());
+            // Menu mods that hide the page title replace its print call with NOPs; it stays hidden then.
+            if (*titleText.get_first<uint8_t>(28) == 0xE8)
                 TitlePrintPrevious = reinterpret_cast<PrintStringFn>(injector::MakeCALL(titleText.get_first(28), TitlePrint, true).as_int());
-            }
             UserInputPrevious = injector::MakeCALL(userInput.get_first(11), UserInput, true).get();
             ProcessUserInputPrevious = injector::MakeCALL(processUserInput.get_first(5), ProcessUserInput, true).get();
             OptionsAcceptPrevious = injector::MakeCALL(accept.get_first(9), OptionsAccept, true).get();
@@ -828,7 +826,7 @@ public:
             // (StretchX(610.0)), and CFont's right-justify wrap (SetRightJustifyWrap(10.0) after the label line)
             auto helper = hook::pattern("0F BE 85 5D 01 00 00 83 F8 28 77 ? 0F B6 90 ? ? ? ? FF 24 95 ? ? ? ? 6A 00 8B CD E8");
             auto helperKey = hook::pattern("85 C0 74 ? 50 B9 ? ? ? ? E8 ? ? ? ? 68 FF 00 00 00");
-            auto helperX = hook::pattern("68 00 80 18 44 E8 ? ? ? ? 51 D9 1C 24 E8");
+            auto helperX = hook::pattern("68 00 80 18 44 E8 ? ? ? ? 51 D9 1C 24");
             auto wrap = hook::pattern("68 00 00 20 41 E8 ? ? ? ? 83 C4 08 80 BD 5D 01 00 00 26");
             HelperKeyPrevious = injector::MakeCALL(helperKey.get_first(10), AnsweredText<HelperKeyPrevious>, true).get();
             HelperTextPrevious = injector::MakeCALL(helper.get_first(30), HelperText, true).get();

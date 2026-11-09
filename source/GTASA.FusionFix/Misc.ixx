@@ -160,9 +160,11 @@ public:
             auto pattern = hook::pattern("E8 ? ? ? ? 8A 0D ? ? ? ? 83 C4 14");
             CFont::PrintString = (decltype(CFont::PrintString))injector::GetBranchDestination(pattern.get_first()).as_int();
 
-            pattern = hook::pattern("E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? EB ? ? ? ? ? ? EB ? ? ? ? ? ? EB");
-
-                hbPrintStringFromBottom.fun = injector::MakeCALL(pattern.get_first(), PrintStringFromBottom, true).get();
+            // The helper text's CFont::PrintString call, after its x (StretchX(610.0)). Menu mods that hide the
+            // helper text replace this call with NOPs; it stays hidden then.
+            pattern = hook::pattern("68 00 80 18 44 E8 ? ? ? ? 51 D9 1C 24");
+            if (*pattern.get_first<uint8_t>(14) == 0xE8)
+                hbPrintStringFromBottom.fun = injector::MakeCALL(pattern.get_first(14), PrintStringFromBottom, true).get();
 
             static auto loc_719F30 = (uintptr_t)hook::pattern("8B 0D ? ? ? ? BA ? ? ? ? 2B D5").get_first();
             pattern = hook::pattern("D9 05 ? ? ? ? A0 ? ? ? ? D8 1D ? ? ? ? 66 0F BE D9 8A 0D ? ? ? ? A2 ? ? ? ? 89 54 24 ? 8A 15 ? ? ? ? DF E0 F6 C4 44 88 0D ? ? ? ? 8A 0D ? ? ? ? C6 05 ? ? ? ? ? 88 15 ? ? ? ? 88 0D ? ? ? ? C6 05 ? ? ? ? ? 7B ? 0F BF D3 89 54 24 ? DB 44 24 ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 C9 D8 05 ? ? ? ? D9 1D ? ? ? ? DB 05 ? ? ? ? D8 0D ? ? ? ? D8 C9 D8 05 ? ? ? ? D9 1D ? ? ? ? DD D8 8B 7C 24");
