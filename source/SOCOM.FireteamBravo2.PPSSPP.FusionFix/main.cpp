@@ -62,8 +62,8 @@ int Terminate(SceUID thread) { Unthrottle(false); return sceKernelTerminateDelet
 void ReadOptions() {
     IniValue defaults[] = {{"MAIN", "SkipIntro", "1"}, {"MAIN", "DualAnalogPatch", "1"},
                            {"MAIN", "UnthrottleEmuDuringLoading", "1"},
-                           {"MAIN", "FOVFactor", "1"}, {"MAIN", "ForceAspectRatio", "Auto"},
-                           {"MAIN", "HudScale", "1"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
+                           {"MAIN", "FOVFactor", "1.0"}, {"MAIN", "ForceAspectRatio", "Auto"},
+                           {"MAIN", "HudScale", "1.0"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
                            {"MAIN", "CutsceneBorders", "3"}, {"MAIN", "TextLanguage", "auto"},
                            {"MAIN", "GamepadIcons", "0"}, {"MAIN", "FPSLimit", "60"}};
     CompleteCfg("ms0:/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/SOCOM.FireteamBravo2.PPSSPP.FusionFix.cfg", defaults);

@@ -75,7 +75,7 @@ extern "C" int module_start(SceSize, void*) {
         {"MAIN", "RadioInAllVehicles", "1"},
         {"MAIN", "UnthrottleEmuDuringLoading", "1"},
         {"MAIN", "UnlockXinMissionsInReplayBoard", "0"},
-        {"MAIN", "HudScale", "1"},
+        {"MAIN", "HudScale", "1.0"},
         {"MAIN", "HudAspectRatioConstraint", "Auto"},
         {"MAIN", "FOVFactor", "1.0"},
         {"MAIN", "CutsceneBorders", "3"},

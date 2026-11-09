@@ -7,9 +7,9 @@ inline constexpr const char* cfg = "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP
 inline IniValue values[]
 {
     { "MAIN", "SkipIntro", "1" }, { "MAIN", "DualAnalogPatch", "1" },
-    { "MAIN", "UnthrottleEmuDuringLoading", "1" }, { "MAIN", "FOVFactor", "1" },
+    { "MAIN", "UnthrottleEmuDuringLoading", "1" }, { "MAIN", "FOVFactor", "1.0" },
     { "MAIN", "ForceAspectRatio", "Auto" }, { "MAIN", "HudAspectRatioConstraint", "Auto" },
-    { "MAIN", "HudScale", "1" }, { "MAIN", "CutsceneBorders", "3" }, { "MAIN", "TextLanguage", "auto" },
+    { "MAIN", "HudScale", "1.0" }, { "MAIN", "CutsceneBorders", "3" }, { "MAIN", "TextLanguage", "auto" },
     { "MAIN", "GamepadIcons", "0" }, { "MAIN", "FPSLimit", "60" },
 };
 inline constexpr unsigned settingCount = sizeof(values) / sizeof(values[0]);
@@ -139,7 +139,7 @@ inline void Store(unsigned row)
     else if (row == 3 || row == 6)
     {
         console::Text<sizeof(output)> text(output);
-        text.fixed(float(ticks[row]) / 20, 2);
+        text.decimal(float(ticks[row]) / 20, 2);
     }
     else if (row == 4 || row == 5)
     {

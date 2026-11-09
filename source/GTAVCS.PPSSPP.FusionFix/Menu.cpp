@@ -465,10 +465,10 @@ void Save() {
     std::strcpy(values[0].value, settings.fps ? "60" : "30");
     // A configured value of 2 (also fast-forward fades) is kept while enabled.
     std::strcpy(values[1].value, !settings.unthrottle ? "0" : settings.unthrottleMode == 2 ? "2" : "1");
-    console::format(values[2].value, "", Drawing::settings.multiplayerRadar, 2);
-    console::format(values[3].value, "", Drawing::settings.hud, 2);
-    console::format(values[4].value, "", Drawing::settings.radar, 2);
-    console::format(values[5].value, "", settings.fov, 2);
+    console::decimal(values[2].value, Drawing::settings.multiplayerRadar, 2);
+    console::decimal(values[3].value, Drawing::settings.hud, 2);
+    console::decimal(values[4].value, Drawing::settings.radar, 2);
+    console::decimal(values[5].value, settings.fov, 2);
     values[6].value[0] = char('0' + (settings.cutsceneBorders & 3)); values[6].value[1] = 0;
     std::strcpy(values[7].value, settings.skipIntro ? "1" : "0");
     const float hudAspect = Drawing::settings.hudAspect;

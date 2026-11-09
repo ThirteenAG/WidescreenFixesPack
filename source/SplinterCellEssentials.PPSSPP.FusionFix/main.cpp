@@ -26,9 +26,9 @@ void CompleteSettings() {
         {"MAIN", "SpeedStickControl", "1"},
         {"MAIN", "FPSLimit", "60"},
         {"MAIN", "UnthrottleEmuDuringLoading", "1"},
-        {"MAIN", "FOVFactor", "1"},
+        {"MAIN", "FOVFactor", "1.0"},
         {"MAIN", "HudAspectRatioConstraint", "Auto"},
-        {"MAIN", "HudScale", "1"},
+        {"MAIN", "HudScale", "1.0"},
         {"MAIN", "ForceAspectRatio", "Auto"}
     };
     console::portable::CompleteCfg(ini, defaults);

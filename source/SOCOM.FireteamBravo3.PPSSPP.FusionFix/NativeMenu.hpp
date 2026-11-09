@@ -12,10 +12,10 @@ inline IniValue values[]
     { "MAIN", "DualAnalogPatch", "1" },
     { "MAIN", "DisableCameraSmoothing", "1" },
     { "MAIN", "UnthrottleEmuDuringLoading", "1" },
-    { "MAIN", "FOVFactor", "1" },
+    { "MAIN", "FOVFactor", "1.0" },
     { "MAIN", "ForceAspectRatio", "Auto" },
     { "MAIN", "HudAspectRatioConstraint", "Auto" },
-    { "MAIN", "HudScale", "1" },
+    { "MAIN", "HudScale", "1.0" },
     { "MAIN", "CutsceneBorders", "3" },
     { "MAIN", "TextLanguage", "auto" },
     { "MAIN", "GamepadIcons", "0" },
@@ -140,7 +140,7 @@ inline void Store(unsigned row)
     else if (row == 4 || row == 7)
     {
         console::Text text(output);
-        text.fixed(float(ticks[row]) / 20, 2);
+        text.decimal(float(ticks[row]) / 20, 2);
     }
     else if (row == 5 || row == 6)
         std::strcpy(output, ticks[row] == 5 ? customAspect[row - 5] : ratios[ticks[row]]);

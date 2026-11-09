@@ -159,8 +159,8 @@ bool RawCameraEnabled() { return options.dualAnalog; }
 void ReadOptions() {
     IniValue defaults[] = {{"MAIN", "SkipIntro", "1"}, {"MAIN", "DualAnalogPatch", "1"},
         {"MAIN", "DisableCameraSmoothing", "1"}, {"MAIN", "UnthrottleEmuDuringLoading", "1"},
-        {"MAIN", "FOVFactor", "1"}, {"MAIN", "ForceAspectRatio", "Auto"},
-        {"MAIN", "HudScale", "1"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
+        {"MAIN", "FOVFactor", "1.0"}, {"MAIN", "ForceAspectRatio", "Auto"},
+        {"MAIN", "HudScale", "1.0"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
         {"MAIN", "CutsceneBorders", "3"}, {"MAIN", "TextLanguage", "auto"},
         {"MAIN", "GamepadIcons", "0"}, {"MAIN", "SkipPressStart", "1"}, {"MAIN", "FPSLimit", "60"}};
     constexpr auto cfg = "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.cfg";

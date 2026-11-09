@@ -15,6 +15,7 @@ extern "C" {
 #include "../Shared/Console/PortableCfg.hpp"
 #include "../Shared/Console/Viewport.hpp"
 #include "../Shared/Console/PadButtonArtwork.hpp"
+#include "../Shared/Console/Text.hpp"
 extern "C" { PSP_MODULE_INFO("FireteamBravo.FusionFix", PSP_MODULE_USER, 2, 0); }
 namespace {
 using console::socom::Input;
@@ -53,9 +54,9 @@ int Install() {
     sceKernelDelayThread(120000);
     if (!BeginWithNotice()) return -1;
     IniValue defaults[] = {{"MAIN", "SkipIntro", "1"}, {"MAIN", "DualAnalogPatch", "1"},
-        {"MAIN", "UnthrottleEmuDuringLoading", "1"}, {"MAIN", "FOVFactor", "1"},
+        {"MAIN", "UnthrottleEmuDuringLoading", "1"}, {"MAIN", "FOVFactor", "1.0"},
         {"MAIN", "ForceAspectRatio", "Auto"}, {"MAIN", "CutsceneBorders", "3"},
-        {"MAIN", "HudScale", "1"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
+        {"MAIN", "HudScale", "1.0"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
         {"MAIN", "FPSLimit", "60"}, {"MAIN", "TextLanguage", "auto"},
         {"MAIN", "GamepadIcons", "0"}};
     (void)CompleteCfg(cfgPath, defaults);

@@ -75,10 +75,10 @@ void Save(const char* key, const char* value) {
     IniWriter<> writer;
     saveError = !writer.update(cfg, &entry, 1);
 }
-void SaveFixed(const char* key, float value) {
+void SaveFloat(const char* key, float value) {
     char buffer[16];
     console::Text<sizeof(buffer)> text(buffer);
-    text.fixed(value, 2);
+    text.decimal(value, 2);
     Save(key, buffer);
 }
 
@@ -232,7 +232,7 @@ void Change(int row) {
     switch (row) {
         case Fov:
             fovFactor = fovFactor >= 1.99f ? 0.5f : std::min(2.0f, std::round(fovFactor * 10.0f + 1.0f) / 10.0f);
-            SaveFixed("FOVFactor", fovFactor);
+            SaveFloat("FOVFactor", fovFactor);
             break;
         case HudBox: {
             const int box = (BoxIndex() + 1) % 5;
@@ -242,7 +242,7 @@ void Change(int row) {
         }
         case HudSize:
             hudScale = hudScale >= 1.49f ? 0.5f : std::min(1.5f, std::round(hudScale * 10.0f + 1.0f) / 10.0f);
-            SaveFixed("HudScale", hudScale);
+            SaveFloat("HudScale", hudScale);
             break;
         case Borders: {
             cutsceneBorders = (cutsceneBorders + 1) % 4;

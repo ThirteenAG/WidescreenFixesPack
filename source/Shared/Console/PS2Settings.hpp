@@ -1,5 +1,7 @@
 #pragma once
+#include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 extern "C" {
 #include "../../../external/injector/include/ps2/plugin_settings.h"
@@ -114,5 +116,16 @@ inline bool boolean(const Value& value, bool fallback) {
     if (!std::strcmp(token, "1") || !std::strcmp(token, "true") || !std::strcmp(token, "on") || !std::strcmp(token, "yes")) return true;
     if (!std::strcmp(token, "0") || !std::strcmp(token, "false") || !std::strcmp(token, "off") || !std::strcmp(token, "no")) return false;
     return fallback;
+}
+// An int or numeric choice: "3", or a whole number written like a float
+// ("3.0"). A fraction or trailing text leaves `out` unchanged.
+inline bool integer(const Value& value, long& out) {
+    char* end = nullptr;
+    const float number = std::strtof(value.value, &end);
+    if (end == value.value || !std::isfinite(number) || std::fabs(number) > 1000000.0f || number != std::floor(number)) return false;
+    while (*end == ' ' || *end == '\t' || *end == '\r') ++end;
+    if (*end) return false;
+    out = long(number);
+    return true;
 }
 }

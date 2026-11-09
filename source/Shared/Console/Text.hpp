@@ -37,9 +37,29 @@ template<size_t Size> struct Text {
         for (uint32_t digit = factor / 10; digit; digit /= 10)
             character(char('0' + rounded / digit % 10));
     }
+    // A float setting's CFG text: at most `precision` decimals with trailing
+    // zeros dropped, but always a point and one decimal ("1.0", "0.75").
+    void decimal(float value, unsigned precision) {
+        if (!std::isfinite(value) || value < -1000 || value > 1000 || precision > 4) {
+            character('?'); return;
+        }
+        if (!precision) precision = 1;
+        uint32_t factor = 1;
+        for (unsigned i = 0; i < precision; ++i) factor *= 10;
+        uint32_t rounded = uint32_t((value < 0 ? -value : value) * float(factor) + 0.5f);
+        while (factor > 10 && rounded % 10 == 0) { rounded /= 10; factor /= 10; }
+        if (value < 0 && rounded) character('-');
+        integer(rounded / factor);
+        character('.');
+        for (uint32_t digit = factor / 10; digit; digit /= 10)
+            character(char('0' + rounded / digit % 10));
+    }
 };
 template<size_t Size> void format(char (&output)[Size], const char* label, float value, unsigned precision) {
     Text<Size> text(output); text.append(label); text.fixed(value, precision);
+}
+template<size_t Size> void decimal(char (&output)[Size], float value, unsigned precision) {
+    Text<Size> text(output); text.decimal(value, precision);
 }
 template<size_t Size> void format(char (&output)[Size], const char* label, const char* value) {
     Text<Size> text(output); text.append(label); text.append(value);

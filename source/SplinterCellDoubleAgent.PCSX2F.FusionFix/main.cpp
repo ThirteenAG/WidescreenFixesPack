@@ -42,11 +42,9 @@ unsigned projectionCalls, movieCalls;
 void ApplySettings() {
     using namespace scda;
     forcedAspect = console::parse_forced_aspect(options[2].value);
+    long mode = 1;
+    videoMode = console::ps2settings::integer(options[5], mode) ? int(std::clamp(mode, 0L, 1L)) : 1;
     char* end = nullptr;
-    const long mode = std::strtol(options[5].value, &end, 10);
-    const bool parsedMode = end != options[5].value;
-    while (end && (*end == ' ' || *end == '\t')) ++end;
-    videoMode = parsedMode && end && !*end ? int(std::clamp(mode, 0L, 1L)) : 1;
     const float scale = std::strtof(options[1].value, &end);
     while (end && (*end == ' ' || *end == '\t')) ++end;
     hudSize = end && end != options[1].value && !*end && std::isfinite(scale) ? std::clamp(scale, 0.5f, 1.5f) : 1;
@@ -55,10 +53,8 @@ void ApplySettings() {
     const bool parsedFov = end != options[4].value;
     while (end && (*end == ' ' || *end == '\t')) ++end;
     fovFactor = parsedFov && end && !*end && std::isfinite(fov) ? std::clamp(fov, 0.5f, 2.0f) : 1.0f;
-    const long borders = std::strtol(options[6].value, &end, 10);
-    const bool parsedBorders = end != options[6].value;
-    while (end && (*end == ' ' || *end == '\t')) ++end;
-    cinemaMode = parsedBorders && end && !*end ? int(std::clamp(borders, 0L, 3L)) : 3;
+    long borders = 3;
+    cinemaMode = console::ps2settings::integer(options[6], borders) ? int(std::clamp(borders, 0L, 3L)) : 3;
     cinemaAnimated = console::ps2settings::boolean(options[7], true);
     constexpr const char* languages[] = {"en", "fr", "de", "it", "es"};
     textLanguage = 0;

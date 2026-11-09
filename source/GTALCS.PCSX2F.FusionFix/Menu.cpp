@@ -671,13 +671,13 @@ void Save() {
     request.size = sizeof(request); request.version = 1; request.operation = PCSX2F_SETTINGS_WRITE;
     set("MAIN", "FPSLimit", settings.sixtyFPS ? "60" : "30");
     set("MAIN", "UnthrottleEmuDuringLoading", settings.unthrottle ? "1" : "0");
-    console::format(number, "", settings.hudScale, 2); set("MAIN", "HudScale", number);
+    console::decimal(number, settings.hudScale, 2); set("MAIN", "HudScale", number);
     number[0] = char('0' + (settings.cutsceneBorders & 3)); number[1] = 0; set("MAIN", "CutsceneBorders", number);
     set("CONTROLS", "PCControlScheme", settings.pcControls ? "1" : "0");
-    console::format(number, "", settings.mouseSensitivity / 0.002f, 2); set("MAIN", "MouseSensitivity", number);
+    console::decimal(number, settings.mouseSensitivity / 0.002f, 2); set("MAIN", "MouseSensitivity", number);
     set("MAIN", "InvertMouseY", settings.invertMouse ? "1" : "0");
     set("MAIN", "DisableBlur", settings.disableBlur ? "1" : "0");
-    console::format(number, "", settings.fovFactor, 2); set("MAIN", "FOVFactor", number);
+    console::decimal(number, settings.fovFactor, 2); set("MAIN", "FOVFactor", number);
     const int aspect = HudAspectIndex();
     set("MAIN", "HudAspectRatioConstraint", aspect == 0 ? "Auto" : aspect > 0 ? hudAspectNames[aspect] : config::values[11].value);
     set("MAIN", "SkipIntro", settings.skipIntro ? "1" : "0");

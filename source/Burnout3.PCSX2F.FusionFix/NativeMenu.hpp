@@ -1,6 +1,7 @@
 #pragma once
 #include "../../external/injector/include/ps2/game_abi.hpp"
 #include "../Shared/Console/PS2Settings.hpp"
+#include "../Shared/Console/Text.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -288,6 +289,11 @@ void Number(char* out, float value, float low, float high)
     int n = int(std::clamp(value, low, high) * 100.0f + 0.5f);
     std::snprintf(out, 16, "%d.%02d", n / 100, n % 100);
 }
+// CFG text of a float setting: "1.0", "0.75".
+void Setting(char (&out)[16], float value, float low, float high)
+{
+    console::decimal(out, std::isfinite(value) ? std::clamp(value, low, high) : 1.0f, 2);
+}
 void Populate()
 {
     const auto& l = CurrentLanguage();
@@ -408,7 +414,7 @@ void Change(unsigned row, int direction)
             n = 1.0f;
         int step = std::clamp(int(n * 20.0f + 0.5f) + direction, 10, maximum);
         char number[16];
-        Number(number, float(step) / 20.0f, 0.5f, row == 2 ? 1.5f : 2.0f);
+        Setting(number, float(step) / 20.0f, 0.5f, row == 2 ? 1.5f : 2.0f);
         ChangeOne(index, number);
     }
     else if (page == 1 && row == 4)
@@ -423,7 +429,7 @@ void Change(unsigned row, int direction)
         if (!std::isfinite(value)) value = 1.0f;
         const int step = std::clamp(int(value * 20.0f + 0.5f) + direction, 2, 100);
         char number[16];
-        Number(number, float(step) / 20.0f, 0.1f, 5.0f);
+        Setting(number, float(step) / 20.0f, 0.1f, 5.0f);
         ChangeOne(6, number);
     }
     else if (page == 3 && row == 1)
@@ -434,7 +440,7 @@ void Change(unsigned row, int direction)
         if (!std::isfinite(value)) value = 1.0f;
         const int step = std::clamp(int(value * 20.0f + 0.5f) + direction, 5, 80);
         char number[16];
-        Number(number, float(step) / 20.0f, 0.25f, 4.0f);
+        Setting(number, float(step) / 20.0f, 0.25f, 4.0f);
         ChangeOne(8, number);
     }
     else if (page == 3 && row == 3)

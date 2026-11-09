@@ -6,9 +6,9 @@ namespace NativeMenu
 inline constexpr const char* cfg = "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.cfg";
 inline IniValue values[] {
     {"MAIN", "SkipIntro", "1"}, {"MAIN", "DualAnalogPatch", "1"},
-    {"MAIN", "UnthrottleEmuDuringLoading", "1"}, {"MAIN", "FOVFactor", "1"},
+    {"MAIN", "UnthrottleEmuDuringLoading", "1"}, {"MAIN", "FOVFactor", "1.0"},
     {"MAIN", "ForceAspectRatio", "Auto"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
-    {"MAIN", "HudScale", "1"}, {"MAIN", "CutsceneBorders", "3"},
+    {"MAIN", "HudScale", "1.0"}, {"MAIN", "CutsceneBorders", "3"},
     {"MAIN", "TextLanguage", "auto"}, {"MAIN", "FPSLimit", "60"},
     {"MAIN", "GamepadIcons", "0"},
 };
@@ -93,7 +93,7 @@ inline bool Save()
 inline void Store(unsigned i)
 {
     char* out = values[i].value;
-    if (i == 3 || i == 6) npf_snprintf(out, sizeof(values[i].value), "%d.%02d", ticks[i] / 20, (ticks[i] % 20) * 5);
+    if (i == 3 || i == 6) console::decimal(values[i].value, float(ticks[i]) / 20, 2);
     else if (i == 4 || i == 5) npf_snprintf(out, sizeof(values[i].value), "%s", ratios[ticks[i]]);
     else if (i == 8) npf_snprintf(out, sizeof(values[i].value), "%s", languages[ticks[i]]);
     else if (i == 9) npf_snprintf(out, sizeof(values[i].value), "%d", ticks[i] ? 60 : 30);

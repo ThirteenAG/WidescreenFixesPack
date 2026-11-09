@@ -684,14 +684,14 @@ void SaveSettings() {
         auto& entry = request.entries[request.count++];
         std::strcpy(entry.section, section); std::strcpy(entry.key, key); std::strcpy(entry.value, value);
     };
-    console::format(number, "", settings.hudScale, 2); set("MAIN", "HudScale", number);
+    console::decimal(number, settings.hudScale, 2); set("MAIN", "HudScale", number);
     set("MAIN", "UnthrottleEmuDuringLoading", settings.unthrottle ? "1" : "0");
-    console::format(number, "", settings.mouseSensitivity / 0.002f, 2); set("MAIN", "MouseSensitivity", number);
+    console::decimal(number, settings.mouseSensitivity / 0.002f, 2); set("MAIN", "MouseSensitivity", number);
     set("MAIN", "InvertMouseY", settings.invertMouse ? "1" : "0");
     set("MAIN", "FPSLimit", settings.sixtyFPS ? "60" : "30");
     number[0] = char('0' + (settings.cutsceneBorders & 3)); number[1] = 0; set("MAIN", "CutsceneBorders", number);
     set("CONTROLS", "PCControlScheme", settings.pcControls ? "1" : "0");
-    console::format(number, "", settings.fovFactor, 2); set("MAIN", "FOVFactor", number);
+    console::decimal(number, settings.fovFactor, 2); set("MAIN", "FOVFactor", number);
     int aspect = -1;
     for (int i = 0; i < 5; ++i) if (std::fabs(settings.hudAspect - hudAspectValues[i]) < 0.001f) aspect = i;
     if (aspect >= 0) {

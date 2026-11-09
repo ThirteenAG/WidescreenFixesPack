@@ -154,7 +154,7 @@ extern "C" int module_start(SceSize, void*) {
     if (!Start("WARR", cfg, log)) return 0;
     IniValue defaults[] = {{"MAIN", "SkipIntro", "1"}, {"MAIN", "DualAnalogPatch", "1"}, {"MAIN", "FPSLimit", "30"},
         {"MAIN", "UnthrottleEmuDuringLoading", "1"}, {"MAIN", "ForceAspectRatio", "Auto"},
-        {"MAIN", "HudAspectRatioConstraint", "Auto"}, {"MAIN", "FOVFactor", "1"}, {"MAIN", "TextLanguage", "auto"}};
+        {"MAIN", "HudAspectRatioConstraint", "Auto"}, {"MAIN", "FOVFactor", "1.0"}, {"MAIN", "TextLanguage", "auto"}};
     (void)CompleteCfg(cfg, defaults);
     ReadOptions();
     return Install();
