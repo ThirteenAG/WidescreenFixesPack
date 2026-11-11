@@ -1950,10 +1950,6 @@
         {
           "source": "data/SniperElite.FusionFix/scripts/global.ini",
           "destination": "scripts/global.ini"
-        },
-        {
-          "source": "data/SniperElite.FusionFix/Xidi.ini",
-          "destination": "Xidi.ini"
         }
       ],
       "dependencies": [
@@ -1961,16 +1957,6 @@
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "d3d8.dll"
-        },
-        {
-          "id": "xidi",
-          "member": "Xidi-*/Win32/dinput8.dll",
-          "destination": "dinput8.dll"
-        },
-        {
-          "id": "xidi",
-          "member": "Xidi-*/Win32/Xidi.32.dll",
-          "destination": "Xidi.32.dll"
         }
       ]
     },
