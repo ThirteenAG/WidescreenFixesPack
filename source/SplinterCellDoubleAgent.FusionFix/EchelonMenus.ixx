@@ -65,7 +65,7 @@ export void InitEchelonMenus()
     // ElectricPickLock: 1.00 lists it among the gadgets unlocked by secondary objectives, although it can't be earned,
     // and shows it in the pause menu equipment. Later builds already drop it from both.
     pattern = hook::module_pattern(GetModuleHandle(L"EchelonMenus"), "83 FF 11 8B 4E 70 0F 83");
-    if (!pattern.empty())
+    if (!pattern.empty()) // 1.00
     {
         // Unlock list rows and their descriptions: 17 gadget names, one fewer without it
         auto desc = hook::module_pattern(GetModuleHandle(L"EchelonMenus"), "66 3D 11 00 0F 83 ? ? ? ? 0F BF C0 8B 0C 85");

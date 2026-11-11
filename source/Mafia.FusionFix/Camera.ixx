@@ -189,7 +189,7 @@ export void CaptureCameraInput(uintptr_t object)
         Camera::CaptureInput(object);
 }
 
-export void InitCamera(bool inputHookInstalled)
+export void InitCamera()
 {
     using namespace Camera;
     auto update = find_pattern(
@@ -198,7 +198,7 @@ export void InitCamera(bool inputHookInstalled)
     auto aim = find_pattern("A0 ? ? ? ? 83 EC 24 A8 01 56 57 8B F9 0F 85");
     nControlFlags.SetAddress(*aim.get_first<uint8_t*>(1));
     shUpdate = safetyhook::create_inline(update.get_first(), UpdateCamera);
-    if (!shUpdate || !FixSettings().Bool("CAMERA.FreeCamera")) return;
+    if (!FixSettings().Bool("CAMERA.FreeCamera")) return;
     CameraReturnTimeout = std::max(FixSettings().Float("CAMERA.CameraReturnTimeout"), 0.0f);
     CameraReturnSpeed = std::max(FixSettings().Float("CAMERA.CameraReturnSpeed"), 0.0f);
 
@@ -214,10 +214,5 @@ export void InitCamera(bool inputHookInstalled)
     bInvertMouse.SetAddress(*vertical.get_first<uint8_t*>(11));
     shPlace = safetyhook::create_inline(place.get_first(), PlaceCamera);
     shAim = safetyhook::create_inline(aim.get_first(), AimCamera);
-    FreeCameraEnabled = inputHookInstalled && shPlace && shAim;
-    if (!FreeCameraEnabled)
-    {
-        shAim.reset();
-        shPlace.reset();
-    }
+    FreeCameraEnabled = true;
 }

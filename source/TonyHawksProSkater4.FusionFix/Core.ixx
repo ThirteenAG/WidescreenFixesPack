@@ -46,7 +46,7 @@ void Install()
     // The 2D frame keeps 4:3: pillarboxed on wider screens, letterboxed on narrower ones (5:4)
     Screen.fHudOffsetReal = std::max(0.0f, (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
     Screen.fHudOffsetY = std::max(0.0f, (Screen.fHeight - Screen.fWidth * (3.0f / 4.0f)) / 2.0f);
-    THPS4Video::Install(&FixSettings().Int("MAIN.FMVWidescreenMode"));
+    THPS4Video::Install();
 
     InstallResolution();
 

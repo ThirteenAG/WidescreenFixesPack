@@ -32,7 +32,7 @@ export namespace GTA1Rotation
 
     bool RotateVehicle = true, RotateFoot = false;
     float Smoothing = 0.35f;
-    bool Rendering = false, HudReady = false;
+    bool Rendering = false;
     int Side = 0;                             // canvas side
     Target Display, World;
     std::vector<uint8_t> Canvas;
@@ -205,7 +205,7 @@ export namespace GTA1Rotation
         if (Rendering) Resolve(); // a frame without a HUD pass
         auto native = reinterpret_cast<int*>(GTA1Raster::OriginalRows);
         int bytes = (native[GTA1Build::RasterBytes] & 0xFF);
-        if (!Active || (bytes != 2 && bytes != 4) || !HudReady)
+        if (!Active || (bytes != 2 && bytes != 4))
             return WorldHook.ccall<int>();
         Display = { reinterpret_cast<uint8_t*>(GTA1Raster::Rows[1]), nDisplayWidth, nDisplayHeight, native[GTA1Build::RasterPitch] };
         if (!Display.pixels || Display.pitch < Display.width * bytes) return WorldHook.ccall<int>();
@@ -233,8 +233,6 @@ export namespace GTA1Rotation
         read();
         for (auto id : { "CAMERA.RotateWithPlayer", "CAMERA.RotateInVehicles", "CAMERA.RotateOnFoot", "CAMERA.RotationSmoothing", "CAMERA.ToggleRotationKey" })
             FixSettings().OnChange(id, read);
-        if (!GTA1Raster::OriginalRows || !PlayerStates)
-        { Log::Write("GTA1 camera rotation needs the raster, presentation and input hooks."); return; }
         using GTA1Build::Find, GTA1Build::Kind;
         auto world = Find("83 EC 0C 53 55 56 57 6A 01 6A 06 E8", "83 EC 0C 53 56 57 55 6A 01 BE 05 00 00 00 6A 06 E8",
             "53 55 56 57 6A 01 6A 06 E8 ? ? ? ? 83 C4 08 B8 01 00 00 00");
@@ -253,7 +251,7 @@ export namespace GTA1Rotation
         if (GTA1Build::Current == Kind::London)
         {
             carsBase = 17;
-            if (cars.empty())
+            if (cars.empty()) // London 1961
             {
                 cars = hook::pattern("0F BF 44 24 04 8D 0C 80 8D 14 88 C1 E2 03 2B D0 8D 04 95 ? ? ? ? C3");
                 carsBase = 19; CarStride = 668; CarHeading = 148;
@@ -269,7 +267,6 @@ export namespace GTA1Rotation
         nClipTop.SetAddress(*clip.get_first<int*>(53)); nClipBottom.SetAddress(*clip.get_first<int*>(70));
         RangesHook = safetyhook::create_inline(ranges.get_first(), BuildRanges);
         WorldHook = safetyhook::create_inline(world.get_first(), RenderWorld);
-        Installed = true;
         Log::Write("GTA1 rotating camera installed.");
     }
 }

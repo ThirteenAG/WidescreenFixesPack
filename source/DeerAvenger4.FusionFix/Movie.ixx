@@ -171,19 +171,13 @@ export namespace DeerMovie
         auto lock = hook::pattern(game, "83 EC 18 33 C0 8A 44 24 20 8B 54 24 24 8B 4C 24 1C 89 7C 24 14 8D 7C 24 10 89 4C 24 04 89 3C 24 C1 E0 08");
         auto unlock = hook::pattern(game, "53 8B 5C 24 08 83 EC 10 33 C0 89 5C 24 04 89 44 24 08 8B 15 ? ? ? ? 89 04 24 FF 92 88 00 00 00");
         movieRaster = *branch.get_first<void**>(14);
-        if (auto address = *scaled.get_first<int*>(4))
-            game_extensionOffset.SetAddress(address);
+        game_extensionOffset.SetAddress(*scaled.get_first<int*>(4));
         targetRaster = *scaled.get_first<void**>(10);
         lockRaster = reinterpret_cast<decltype(lockRaster)>(lock.get_first());
         unlockRaster = reinterpret_cast<decltype(unlockRaster)>(unlock.get_first());
         branchHook = safetyhook::create_mid(branch.get_first(5), [](SafetyHookContext& context) { context.eax = 1; });
         drawHook = safetyhook::create_inline(draw.get_first(), Draw);
         copyHook = safetyhook::create_inline(GetProcAddress(GetModuleHandleW(L"binkw32.dll"), "_BinkCopyToBuffer@28"), BinkCopy);
-        if (!drawHook || !branchHook)
-        {
-            drawHook.reset(); branchHook.reset();
-            return false;
-        }
         return true;
     }
 }

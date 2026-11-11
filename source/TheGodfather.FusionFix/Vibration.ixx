@@ -127,23 +127,13 @@ export namespace GodfatherVibration
         auto destroy = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 08 56 8B F1 "
             "57 89 74 24 0C C7 06 ? ? ? ? C7 46 08 ? ? ? ? 68 ? ? ? ? C7 44 24 1C 01 00 00 00 "
             "E8 ? ? ? ? 68 ? ? ? ? 8B CE E8 ? ? ? ? 8B 7E 0C 85 FF 74 11");
-        if (GodfatherInputSlot.is_initialized() && GodfatherWantedMode.is_initialized() && GodfatherPauseReasons.is_initialized())
-        {
-            auto thunk = injector::GetBranchDestination(output.get_first<uint8_t>(15)).get<uint8_t>();
-            deviceHook = safetyhook::create_inline(device.get_first(), Device, safetyhook::InlineHook::StartDisabled);
-            outputHook = safetyhook::create_inline(thunk, Output, safetyhook::InlineHook::StartDisabled);
-            destroyHook = safetyhook::create_inline(destroy.get_first(), Destroy, safetyhook::InlineHook::StartDisabled);
-            if (!deviceHook || !outputHook || !destroyHook || !deviceHook.enable() || !outputHook.enable() || !destroyHook.enable())
-            {
-                destroyHook.reset();
-                outputHook.reset();
-                deviceHook.reset();
-            }
-        }
-        const bool available = deviceHook && outputHook && destroyHook;
-        FixSettings().Availability("MAIN.Vibration", [available](std::string_view value) { return value == "0" || available; });
-        if (!available)
-            throw std::runtime_error("Controller vibration hooks unavailable");
+        auto thunk = injector::GetBranchDestination(output.get_first<uint8_t>(15)).get<uint8_t>();
+        deviceHook = safetyhook::create_inline(device.get_first(), Device, safetyhook::InlineHook::StartDisabled);
+        outputHook = safetyhook::create_inline(thunk, Output, safetyhook::InlineHook::StartDisabled);
+        destroyHook = safetyhook::create_inline(destroy.get_first(), Destroy, safetyhook::InlineHook::StartDisabled);
+        (void)deviceHook.enable();
+        (void)outputHook.enable();
+        (void)destroyHook.enable();
         const auto refresh = []()
         {
             enabled.store(FixSettings().Bool("MAIN.Vibration"), std::memory_order_relaxed);

@@ -78,7 +78,6 @@ void RefreshCameraFov(SafetyHookContext& regs)
 export void InitFOV()
 {
     auto module = GetLS3DF();
-    if (!module) return;
     struct FovMatch
     {
         uintptr_t load;
@@ -123,7 +122,7 @@ export void InitFOV()
         site.cameraRegister = cameraRegister;
         site.field = field;
         site.hook = safetyhook::create_mid(load, callbacks[i]);
-        if (site.hook) injector::WriteMemory<float*>(multiply + 2, &site.multiplier, true);
+        injector::WriteMemory<float*>(multiply + 2, &site.multiplier, true);
     }
     // Called for the active camera on every scene render, before the renderer
     // checks its revision. Projection setters alone miss cutscene transitions.
@@ -137,7 +136,6 @@ export void InitFOV()
 export void InitMovie()
 {
     auto module = GetLS3DF();
-    if (!module) return;
     auto pattern = find_module_pattern(module,
         "8B 4C 24 14 8B 54 24 00 8D 41 28 89 10 8B 54 24 04",
         "8B 4C 24 14 8B 54 24 00 8D 41 2C 89 10 8B 54 24 04");

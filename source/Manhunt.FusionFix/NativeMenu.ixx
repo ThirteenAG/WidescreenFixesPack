@@ -70,12 +70,8 @@ export namespace MHMenu
 
         void Log(const std::string& message) noexcept
         {
-            try
-            {
-                if (messages.size() >= 32 || !messages.insert(message).second) return;
-                OutputDebugStringA(("Manhunt native menu: " + message + "\n").c_str());
-            }
-            catch (...) {}
+            if (messages.size() >= 32 || !messages.insert(message).second) return;
+            OutputDebugStringA(("Manhunt native menu: " + message + "\n").c_str());
         }
 
         std::wstring Words(const char* key)
@@ -91,20 +87,6 @@ export namespace MHMenu
             model.Close();
             view = {};
             refresh = true;
-        }
-
-        void Fail()
-        {
-            Close();
-            video.Close();
-            videoOpen = false;
-            beforeVideo.clear();
-            writtenVideo.clear();
-            enabled = false;
-            auto selected = ABI::SettingsSelection();
-            if (selected >= 6) injector::WriteMemory<int32_t>(ABI::Address::SettingsSelection().get_ptr(), selected == 7 ? 6 : 5, true);
-            if (ABI::VideoSelection() >= 5) injector::WriteMemory<int32_t>(ABI::Address::VideoSelection().get_ptr(), 4, true);
-            Log("native settings session refused; original menus retained");
         }
 
         bool Open()
@@ -248,139 +230,127 @@ export namespace MHMenu
     {
         auto& state = *Storage();
         if (!state.enabled) return ABI::Function<int(__cdecl*)()>(ABI::Address::SettingsInput())();
-        try
+        if (state.opened) return PrivateInput(state);
+        auto rows = RootRows();
+        auto selected = ABI::SettingsSelection();
+        auto found = std::find(rows.begin(), rows.end(), selected);
+        size_t physical = found == rows.end() ? 0 : static_cast<size_t>(found - rows.begin());
+        if (ABI::Down()) physical = (physical + 1) % rows.size();
+        if (ABI::Up()) physical = (physical + rows.size() - 1) % rows.size();
+        bool mouse = ABI::MouseMode();
+        bool hoverAction = false;
+        if (ABI::HoverActive())
         {
-            if (state.opened) return PrivateInput(state);
-            auto rows = RootRows();
-            auto selected = ABI::SettingsSelection();
-            auto found = std::find(rows.begin(), rows.end(), selected);
-            size_t physical = found == rows.end() ? 0 : static_cast<size_t>(found - rows.begin());
-            if (ABI::Down()) physical = (physical + 1) % rows.size();
-            if (ABI::Up()) physical = (physical + rows.size() - 1) % rows.size();
-            bool mouse = ABI::MouseMode();
-            bool hoverAction = false;
-            if (ABI::HoverActive())
+            auto hovered = ABI::Hovered();
+            if (hovered >= 0 && static_cast<size_t>(hovered) < rows.size())
             {
-                auto hovered = ABI::Hovered();
-                if (hovered >= 0 && static_cast<size_t>(hovered) < rows.size())
-                {
-                    physical = static_cast<size_t>(hovered);
-                    hoverAction = true;
-                }
+                physical = static_cast<size_t>(hovered);
+                hoverAction = true;
             }
-            selected = rows[physical];
-            injector::WriteMemory<int32_t>(ABI::Address::SettingsSelection().get_ptr(), selected, true);
-            bool back = state.BackPressed(), enter = state.EnterPressed();
-            if (back) { RootBack(); return 1; }
-            if (enter && (!mouse || hoverAction))
-            {
-                if (selected == 6)
-                {
-                    if (!state.Open()) state.Log("plugin discovery/text fit refused; Settings retained");
-                }
-                else
-                {
-                    static constexpr int pages[] = { 3, 18, 1, 11, 13, 17, 0, 19 };
-                    ABI::Switch(pages[selected]);
-                }
-            }
-            return 1;
         }
-        catch (...) { state.Fail(); return 1; }
+        selected = rows[physical];
+        injector::WriteMemory<int32_t>(ABI::Address::SettingsSelection().get_ptr(), selected, true);
+        bool back = state.BackPressed(), enter = state.EnterPressed();
+        if (back) { RootBack(); return 1; }
+        if (enter && (!mouse || hoverAction))
+        {
+            if (selected == 6)
+            {
+                if (!state.Open()) state.Log("plugin discovery/text fit refused; Settings retained");
+            }
+            else
+            {
+                static constexpr int pages[] = { 3, 18, 1, 11, 13, 17, 0, 19 };
+                ABI::Switch(pages[selected]);
+            }
+        }
+        return 1;
     }
 
     inline int __cdecl SettingsDraw()
     {
         auto& state = *Storage();
         if (!state.enabled) return ABI::Function<int(__cdecl*)()>(ABI::Address::SettingsDraw())();
-        try
+        if (state.opened && state.Build())
         {
-            if (state.opened && state.Build())
-            {
-                auto title = state.Words(state.view.details ? "menu.details" : "menu.plugins");
-                ABI::Header(title.c_str());
-                auto y = ABI::Y();
-                for (size_t i = 0; i < state.view.items.size(); ++i)
-                {
-                    const auto& item = state.view.items[i];
-                    ABI::Row(item.text.c_str(), y, item.enabled && i == state.view.selected);
-                    y += ABI::Spacing();
-                }
-                auto restart = state.model.RestartRequired() ? state.Words("menu.restartshort") : std::wstring{};
-                ABI::Footer(restart.c_str());
-                return 1;
-            }
-            ABI::Header(ABI::Text("SETT"));
-            auto rows = RootRows();
-            auto plugin = state.Words("menu.plugins");
-            static constexpr const char* keys[] = { "DIFF", "CONTR", "LANGUA", "AUDIO", "VIDEO", "BRIGHTN", "", "DEFSET" };
+            auto title = state.Words(state.view.details ? "menu.details" : "menu.plugins");
+            ABI::Header(title.c_str());
             auto y = ABI::Y();
-            for (int row : rows)
+            for (size_t i = 0; i < state.view.items.size(); ++i)
             {
-                ABI::Row(row == 6 ? plugin.c_str() : ABI::Text(keys[row]), y, ABI::SettingsSelection() == row);
+                const auto& item = state.view.items[i];
+                ABI::Row(item.text.c_str(), y, item.enabled && i == state.view.selected);
                 y += ABI::Spacing();
             }
-            auto restart = GetTickCount64() < state.restartUntil ? state.Words("menu.restartshort") : std::wstring{};
+            auto restart = state.model.RestartRequired() ? state.Words("menu.restartshort") : std::wstring{};
             ABI::Footer(restart.c_str());
             return 1;
         }
-        catch (...) { state.Fail(); return ABI::Function<int(__cdecl*)()>(ABI::Address::SettingsDraw())(); }
+        ABI::Header(ABI::Text("SETT"));
+        auto rows = RootRows();
+        auto plugin = state.Words("menu.plugins");
+        static constexpr const char* keys[] = { "DIFF", "CONTR", "LANGUA", "AUDIO", "VIDEO", "BRIGHTN", "", "DEFSET" };
+        auto y = ABI::Y();
+        for (int row : rows)
+        {
+            ABI::Row(row == 6 ? plugin.c_str() : ABI::Text(keys[row]), y, ABI::SettingsSelection() == row);
+            y += ABI::Spacing();
+        }
+        auto restart = GetTickCount64() < state.restartUntil ? state.Words("menu.restartshort") : std::wstring{};
+        ABI::Footer(restart.c_str());
+        return 1;
     }
 
     inline int __cdecl VideoInput()
     {
         auto& state = *Storage();
         if (!state.enabled) return ABI::Function<int(__cdecl*)()>(ABI::Address::VideoInput())();
-        try
+        state.EnsureVideo();
+        auto selected = (std::clamp)(ABI::VideoSelection(), 0, 6);
+        if (ABI::Up()) selected = (selected + 6) % 7;
+        if (ABI::Down()) selected = (selected + 1) % 7;
+        if (ABI::MouseMode())
         {
-            state.EnsureVideo();
-            auto selected = (std::clamp)(ABI::VideoSelection(), 0, 6);
-            if (ABI::Up()) selected = (selected + 6) % 7;
-            if (ABI::Down()) selected = (selected + 1) % 7;
-            if (ABI::MouseMode())
-            {
-                auto hovered = ABI::Hovered();
-                if (hovered >= 0 && hovered < 7) selected = hovered;
-            }
-            injector::WriteMemory<int32_t>(ABI::Address::VideoSelection().get_ptr(), selected, true);
-            bool left = ABI::Left(), right = ABI::Right(), enter = state.EnterPressed();
-            if (selected < 5)
-            {
-                auto values = ABI::Address::VideoValues();
-                auto maximum = selected < 3 ? 2 : (selected == 3 ? ABI::Address::ResolutionCount().get() : ABI::Address::DetailCount().get());
-                maximum = (std::max)(maximum, 1);
-                auto value = values[selected].get();
-                value = (std::clamp)(value, 0, maximum - 1);
-                if (left) value = selected < 3 ? (value + maximum - 1) % maximum : (std::max)(value - 1, 0);
-                if (right) value = selected < 3 ? (value + 1) % maximum : (std::min)(value + 1, maximum - 1);
-                if (enter && ABI::MouseMode() && selected < 3)
-                {
-                    auto target = ABI::MouseValue() - selected * 2;
-                    if (target == 0 || target == 1) value = target;
-                }
-                injector::WriteMemory<int32_t>(values[selected].get_ptr(), value, true);
-            }
-            else
-            {
-                const char* id = selected == 5 ? "MAIN.FOVFactor" : "MAIN.HudAspectRatioConstraint";
-                if (left) state.ChangeJoined(id, -1);
-                if (right) state.ChangeJoined(id, 1);
-                if (enter && ABI::MouseMode() && ABI::HoverActive() && ABI::Hovered() == selected)
-                    state.ChangeJoined(id, 1);
-            }
-            bool cancel = state.BackPressed();
-            if (cancel)
-            {
-                state.FinishVideo(true);
-                ABI::Switch(10);
-                ABI::Function<void(__cdecl*)()>(ABI::Address::VideoApply())();
-            }
-            if (cancel || selected == 2) ABI::Function<void(__cdecl*)()>(ABI::Address::VideoRestore())();
-            bool accept = ABI::MouseMode() ? ABI::FooterAccept() : enter;
-            if (accept && !cancel) { state.FinishVideo(false); ABI::Switch(10); }
-            return 1;
+            auto hovered = ABI::Hovered();
+            if (hovered >= 0 && hovered < 7) selected = hovered;
         }
-        catch (...) { state.Fail(); return 1; }
+        injector::WriteMemory<int32_t>(ABI::Address::VideoSelection().get_ptr(), selected, true);
+        bool left = ABI::Left(), right = ABI::Right(), enter = state.EnterPressed();
+        if (selected < 5)
+        {
+            auto values = ABI::Address::VideoValues();
+            auto maximum = selected < 3 ? 2 : (selected == 3 ? ABI::Address::ResolutionCount().get() : ABI::Address::DetailCount().get());
+            maximum = (std::max)(maximum, 1);
+            auto value = values[selected].get();
+            value = (std::clamp)(value, 0, maximum - 1);
+            if (left) value = selected < 3 ? (value + maximum - 1) % maximum : (std::max)(value - 1, 0);
+            if (right) value = selected < 3 ? (value + 1) % maximum : (std::min)(value + 1, maximum - 1);
+            if (enter && ABI::MouseMode() && selected < 3)
+            {
+                auto target = ABI::MouseValue() - selected * 2;
+                if (target == 0 || target == 1) value = target;
+            }
+            injector::WriteMemory<int32_t>(values[selected].get_ptr(), value, true);
+        }
+        else
+        {
+            const char* id = selected == 5 ? "MAIN.FOVFactor" : "MAIN.HudAspectRatioConstraint";
+            if (left) state.ChangeJoined(id, -1);
+            if (right) state.ChangeJoined(id, 1);
+            if (enter && ABI::MouseMode() && ABI::HoverActive() && ABI::Hovered() == selected)
+                state.ChangeJoined(id, 1);
+        }
+        bool cancel = state.BackPressed();
+        if (cancel)
+        {
+            state.FinishVideo(true);
+            ABI::Switch(10);
+            ABI::Function<void(__cdecl*)()>(ABI::Address::VideoApply())();
+        }
+        if (cancel || selected == 2) ABI::Function<void(__cdecl*)()>(ABI::Address::VideoRestore())();
+        bool accept = ABI::MouseMode() ? ABI::FooterAccept() : enter;
+        if (accept && !cancel) { state.FinishVideo(false); ABI::Switch(10); }
+        return 1;
     }
 
     inline int __cdecl VideoDraw()
@@ -388,74 +358,56 @@ export namespace MHMenu
         auto& state = *Storage();
         auto result = ABI::Function<int(__cdecl*)()>(ABI::Address::VideoDraw())();
         if (!state.enabled) return result;
-        try
+        // The original detail rows use two ordinary spacings each.
+        auto y = ABI::Y() + ABI::Spacing() * (3.0f + 2.0f * ABI::Address::DetailRows().get());
+        for (const auto* id : { "MAIN.FOVFactor", "MAIN.HudAspectRatioConstraint" })
         {
-            // The original detail rows use two ordinary spacings each.
-            auto y = ABI::Y() + ABI::Spacing() * (3.0f + 2.0f * ABI::Address::DetailRows().get());
-            for (const auto* id : { "MAIN.FOVFactor", "MAIN.HudAspectRatioConstraint" })
+            auto row = state.Joined(id);
+            if (!row) continue;
+            auto label = state.video.Label(*row) + ": " + state.video.Value(*row);
+            std::wstring text;
+            if (!Text::Convert(label, text) || !Text::Fits(text))
             {
-                auto row = state.Joined(id);
-                if (!row) continue;
-                auto label = state.video.Label(*row) + ": " + state.video.Value(*row);
-                std::wstring text;
-                if (!Text::Convert(label, text) || !Text::Fits(text))
-                {
-                    state.Log("joined Video text fit refused");
-                    continue;
-                }
-                auto index = id == std::string_view("MAIN.FOVFactor") ? 5 : 6;
-                ABI::Row(text.c_str(), y, ABI::VideoSelection() == index);
-                y += ABI::Spacing();
+                state.Log("joined Video text fit refused");
+                continue;
             }
-            return result;
+            auto index = id == std::string_view("MAIN.FOVFactor") ? 5 : 6;
+            ABI::Row(text.c_str(), y, ABI::VideoSelection() == index);
+            y += ABI::Spacing();
         }
-        catch (...) { state.Fail(); return result; }
+        return result;
     }
 
     inline void Tick()
     {
         auto state = Storage();
         if (!state || !state->enabled) return;
-        try
-        {
-            if (ABI::CurrentMenu() != 10 && state->opened) state->Close();
-            if (ABI::CurrentMenu() != 13 && state->videoOpen) state->FinishVideo(false);
-            state->refresh |= RWGTAMenu::Model::Changed().exchange(false);
-        }
-        catch (...) { state->Fail(); }
+        if (ABI::CurrentMenu() != 10 && state->opened) state->Close();
+        if (ABI::CurrentMenu() != 13 && state->videoOpen) state->FinishVideo(false);
+        state->refresh |= RWGTAMenu::Model::Changed().exchange(false);
     }
 
     inline void Init()
     {
         if (Storage()) return;
-        State* state = nullptr;
-        try
+        auto state = new State;
+        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            reinterpret_cast<LPCWSTR>(&Init), &state->module)) { delete state; return; }
+        HMODULE pinned = nullptr;
+        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
+            reinterpret_cast<LPCWSTR>(&Init), &pinned) || pinned != state->module) { delete state; return; }
+        Storage() = state;
+        // This call site is reached only by Yes in the game's confirmation.
+        state->defaults = safetyhook::create_mid(reinterpret_cast<void*>(ABI::Address::DefaultsConfirmed()), [](SafetyHookContext&)
         {
-            state = new State;
-            if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                reinterpret_cast<LPCWSTR>(&Init), &state->module)) { delete state; return; }
-            HMODULE pinned = nullptr;
-            if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
-                reinterpret_cast<LPCWSTR>(&Init), &pinned) || pinned != state->module) { delete state; return; }
-            Storage() = state;
-            // This call site is reached only by Yes in the game's confirmation.
-            state->defaults = safetyhook::create_mid(reinterpret_cast<void*>(ABI::Address::DefaultsConfirmed()), [](SafetyHookContext&)
-            {
-                auto state = Storage();
-                if (!state || !state->enabled) return;
-                try { state->RestoreDefaults(); } catch (...) { state->Fail(); }
-            });
-            if (!state->defaults) { state->Log("defaults callback transaction refused"); return; }
-            ABI::Store<uintptr_t>(ABI::Address::SettingsPage(), reinterpret_cast<uintptr_t>(&SettingsInput));
-            ABI::Store<uintptr_t>(ABI::Address::SettingsPage() + 4, reinterpret_cast<uintptr_t>(&SettingsDraw));
-            ABI::Store<uintptr_t>(ABI::Address::VideoPage(), reinterpret_cast<uintptr_t>(&VideoInput));
-            ABI::Store<uintptr_t>(ABI::Address::VideoPage() + 4, reinterpret_cast<uintptr_t>(&VideoDraw));
-            state->enabled = true;
-        }
-        catch (...)
-        {
-            if (state && Storage() == state) state->Fail();
-            else delete state;
-        }
+            auto state = Storage();
+            if (!state || !state->enabled) return;
+            state->RestoreDefaults();
+        });
+        ABI::Store<uintptr_t>(ABI::Address::SettingsPage(), reinterpret_cast<uintptr_t>(&SettingsInput));
+        ABI::Store<uintptr_t>(ABI::Address::SettingsPage() + 4, reinterpret_cast<uintptr_t>(&SettingsDraw));
+        ABI::Store<uintptr_t>(ABI::Address::VideoPage(), reinterpret_cast<uintptr_t>(&VideoInput));
+        ABI::Store<uintptr_t>(ABI::Address::VideoPage() + 4, reinterpret_cast<uintptr_t>(&VideoDraw));
+        state->enabled = true;
     }
 }

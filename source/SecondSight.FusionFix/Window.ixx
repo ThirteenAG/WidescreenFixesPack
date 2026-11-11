@@ -145,12 +145,8 @@ export namespace SecondSightWindow
         auto originals = IATHook::Replace(exe, "USER32.dll",
             std::pair{ "CreateWindowExA", reinterpret_cast<void*>(&Create) },
             std::pair{ "SetWindowPos", reinterpret_cast<void*>(&Position) });
-        if (originals.contains("CreateWindowExA"))
-            OriginalCreate = reinterpret_cast<decltype(OriginalCreate)>(originals.at("CreateWindowExA").get());
-        if (originals.contains("SetWindowPos"))
-            OriginalPosition = reinterpret_cast<decltype(OriginalPosition)>(originals.at("SetWindowPos").get());
-        if (!originals.contains("CreateWindowExA") || !originals.contains("SetWindowPos"))
-            OutputDebugStringA("Second Sight: window hooks unavailable.\n");
+        OriginalCreate = reinterpret_cast<decltype(OriginalCreate)>(originals.at("CreateWindowExA").get());
+        OriginalPosition = reinterpret_cast<decltype(OriginalPosition)>(originals.at("SetWindowPos").get());
 
         // The start-up device settings (D3DPRESENT_PARAMETERS inside) and the game's renderer size get the resolution
         // chosen in the game's options; window modes ask for a windowed device of exactly that size. Borderless shows

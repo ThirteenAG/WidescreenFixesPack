@@ -272,16 +272,6 @@
       "visibility": "menu"
     },
     {
-      "id": "MISC.DisableFrameSkipping",
-      "type": "bool",
-      "default": 1,
-      "label": "@MISC.DisableFrameSkipping",
-      "description": "@MISC.DisableFrameSkipping.description",
-      "page": "game",
-      "apply": "restart",
-      "visibility": "menu"
-    },
-    {
       "id": "MISC.DisableQuitDialog",
       "type": "bool",
       "default": 0,

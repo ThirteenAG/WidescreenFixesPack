@@ -143,9 +143,5 @@
   "ui.pillarbox": "Bandes verticales",
   "ui.both": "Les deux",
   "HudAspectRatioConstraint": "Format du HUD",
-  "HudAspectRatioConstraint.description": "Auto place les éléments latéraux du HUD aux bords de l’écran. Choisissez 4:3, 16:9, 21:9 ou un rapport personnalisé L:H ou décimal, entre 4:3 et 32:9, pour les centrer dans cette zone. Les effets plein écran et les marqueurs du monde restent inchangés. Effet immédiat.",
-  "FMVWidescreenMode": "Cadrage des vidéos",
-  "FMVWidescreenMode.description": "Original affiche toute la vidéo dans une zone 4:3. Remplir adapte toute la vidéo à l’écran. Aucun mode ne recadre ni n’étire l’image.",
-  "FMVWidescreenMode.0": "Format d'origine",
-  "FMVWidescreenMode.1": "Remplir"
+  "HudAspectRatioConstraint.description": "Auto place les éléments latéraux du HUD aux bords de l’écran. Choisissez 4:3, 16:9, 21:9 ou un rapport personnalisé L:H ou décimal, entre 4:3 et 32:9, pour les centrer dans cette zone. Les effets plein écran et les marqueurs du monde restent inchangés. Effet immédiat."
 }

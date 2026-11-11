@@ -28,10 +28,6 @@ export namespace PunMenu
     {
         injector::WriteMemory<T>(reinterpret_cast<T*>(base + offset), value, true);
     }
-    inline void Log(const char* message)
-    {
-        OutputDebugStringA(("The Punisher native menu: " + std::string(message) + "\n").c_str());
-    }
     inline std::string NativeText(const std::string& text)
     {
         auto count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), static_cast<int>(text.size()), nullptr, 0);
@@ -370,7 +366,7 @@ export namespace PunMenu
     inline uintptr_t __cdecl OptionsInput(int input, void* origin)
     {
         auto& state = Get();
-        if (!state.enabled || state.busy || !Current(Options)) return state.optionsInput.ccall<uintptr_t>(input, origin);
+        if (state.busy || !Current(Options)) return state.optionsInput.ccall<uintptr_t>(input, origin);
         auto event = Events(input, Options, OptionsList);
         if (!state.open)
         {
@@ -444,7 +440,7 @@ export namespace PunMenu
     inline uintptr_t __cdecl GameInput(int input, void* origin)
     {
         auto& state = Get();
-        if (!state.enabled || state.busy || !Current(GameSettings) || !state.labels.bound)
+        if (state.busy || !Current(GameSettings) || !state.labels.bound)
             return state.gameInput.ccall<uintptr_t>(input, origin);
         auto event = Events(input, GameSettings, GameLabels);
         int row = Selected(GameLabels) - state.labels.count;
@@ -491,7 +487,7 @@ export namespace PunMenu
     inline void UpdateDraw(uintptr_t root)
     {
         auto& state = Get();
-        if (!state.enabled || state.busy) return;
+        if (state.busy) return;
         state.activeRoot = root;
         if (root != Options)
         {
@@ -559,16 +555,6 @@ export namespace PunMenu
         state.gameInput = safetyhook::create_inline(reinterpret_cast<void*>(native.gameInput), GameInput);
         state.defaults = safetyhook::create_inline(reinterpret_cast<void*>(native.defaults), Defaults);
         state.draw = safetyhook::create_inline(reinterpret_cast<void*>(native.draw), Draw);
-        state.enabled = state.optionsInit && state.optionsInput && state.gameInit && state.gameInput && state.defaults && state.draw;
-        if (!state.enabled)
-        {
-            state.optionsInit.reset();
-            state.optionsInput.reset();
-            state.gameInit.reset();
-            state.gameInput.reset();
-            state.defaults.reset();
-            state.draw.reset();
-            Log("Native menu hooks unavailable");
-        }
+        state.enabled = true;
     }
 } // namespace PunMenu

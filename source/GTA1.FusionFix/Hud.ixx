@@ -160,7 +160,6 @@ export namespace GTA1Hud
         read();
         FixSettings().OnChange("MAIN.HudSafeArea", read);
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", read);
-        if (!GTA1Raster::OriginalRows) return;
         using GTA1Build::Find;
         auto draw = Find("A1 ? ? ? ? 55 33 ED 3B C5 0F 85 ? ? ? ? A1 ? ? ? ? 53 56 3B C5", "53 A1 ? ? ? ? 56 85 C0 57 55 0F 85 ? ? ? ? A1",
             "A1 ? ? ? ? 85 C0 0F 85 ? ? ? ? A1 ? ? ? ? 85 C0 74 05 E8 ? ? ? ? A0 ? ? ? ? 84 C0 74 05 E8");
@@ -201,12 +200,9 @@ export namespace GTA1Hud
                     Coverage(int(args[0]), int(args[1]), reinterpret_cast<uint8_t*>(args[2]), args[3], args[4], 256);
                 });
         }
-        if (!GlyphHook || !SpriteHook)
-        { Log::Write("GTA1 HUD coverage hooks unavailable."); return; }
         ProjectedHook = safetyhook::create_inline(projected.get_first(), DrawProjected);
         LabelsHook = safetyhook::create_inline(labels.get_first(), DrawLabels);
         DrawHook = safetyhook::create_inline(draw.get_first(), Draw);
-        GTA1Rotation::HudReady = bool(DrawHook);
         Log::Write("GTA1 HUD scaling installed.");
     }
 }

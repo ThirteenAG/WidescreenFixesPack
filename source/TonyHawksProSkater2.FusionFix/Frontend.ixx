@@ -1567,8 +1567,7 @@ namespace THPS2Menu::Unwind
         if (!action || servicing || !OutsideNativeRows())
             return;
         struct Scope { Scope() { servicing = true; } ~Scope() { servicing = false; } } scope;
-        try { action(); }
-        catch (...) { Diagnose(Diagnostic::Rollback, "foreign action exception; private work rejected"); }
+        action();
     }
 
     inline int __cdecl Modal()
@@ -1622,20 +1621,8 @@ namespace THPS2Menu::Unwind
         // Caller has pinned the module.
         // The host commits nativeReady only after all hook creation succeeds.
         modalHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().modal), reinterpret_cast<void*>(&Modal));
-        if (!modalHook)
-            return false;
         presentHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().present), reinterpret_cast<void*>(&Present));
-        if (!presentHook)
-        {
-            Reset();
-            return false;
-        }
         worldHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().world), reinterpret_cast<void*>(&World));
-        if (!worldHook)
-        {
-            Reset();
-            return false;
-        }
         return true;
     }
 }
@@ -1699,35 +1686,28 @@ namespace THPS2Menu
         auto result = titleCtorHook.unsafe_thiscall<void*>(owner);
         if (!nativeReady || result != owner || Unwind::modalDepth != 1 || Unwind::worldDepth || titles.count(owner))
             return result;
-        try
+        auto record = std::make_shared<TitleRecord>();
+        auto host = std::make_shared<Host>(Backend::Title);
+        record->host = host;
+        host->owner = owner;
+        host->module = ownModule;
+        std::weak_ptr<TitleRecord> weak = record;
+        host->nativeCurrent = [weak](const Host& value)
         {
-            auto record = std::make_shared<TitleRecord>();
-            auto host = std::make_shared<Host>(Backend::Title);
-            record->host = host;
-            host->owner = owner;
-            host->module = ownModule;
-            std::weak_ptr<TitleRecord> weak = record;
-            host->nativeCurrent = [weak](const Host& value)
-            {
-                auto kept = weak.lock();
-                return kept && Unwind::modalDepth == 1 && !Unwind::worldDepth && kept->context.Eligible(value.open && !value.entering);
-            };
-            host->enterNative = [weak](Host&) { auto kept = weak.lock(); return kept && kept->context.Enter(); };
-            host->leaveNative = [weak](Host&) { if (auto kept = weak.lock()) kept->context.Leave(); };
-            // Register C++ lifetime before publishing any engine-owned row.
-            titles.emplace(owner, record);
-            if (!record->context.Append(owner, Caption()))
-            {
-                titles.erase(owner);
-                Diagnose(Diagnostic::TitleContext, "title category construction refused");
-                return result;
-            }
-            host->titleStyle = record->context.style;
-        }
-        catch (...)
+            auto kept = weak.lock();
+            return kept && Unwind::modalDepth == 1 && !Unwind::worldDepth && kept->context.Eligible(value.open && !value.entering);
+        };
+        host->enterNative = [weak](Host&) { auto kept = weak.lock(); return kept && kept->context.Enter(); };
+        host->leaveNative = [weak](Host&) { if (auto kept = weak.lock()) kept->context.Leave(); };
+        // Register C++ lifetime before publishing any engine-owned row.
+        titles.emplace(owner, record);
+        if (!record->context.Append(owner, Caption()))
         {
-            Diagnose(Diagnostic::Rollback, "title category allocation failed");
+            titles.erase(owner);
+            Diagnose(Diagnostic::TitleContext, "title category construction refused");
+            return result;
         }
+        host->titleStyle = record->context.style;
         return result;
     }
 
@@ -1815,40 +1795,33 @@ namespace THPS2Menu
     {
         if (nativeReady && Unwind::worldDepth == 1 && !pauses.count(owner) && static_cast<Native::PauseMenu*>(PauseRoot.get()) == owner)
         {
-            try
+            auto record = std::make_shared<PauseRecord>();
+            auto host = std::make_shared<Host>(Backend::Pause);
+            record->host = host;
+            host->owner = owner;
+            host->module = ownModule;
+            host->pauseSource = reinterpret_cast<Native::Font*>(GamePauseFont.get_ptr());
+            std::weak_ptr<PauseRecord> weak = record;
+            host->nativeCurrent = [weak](const Host&)
             {
-                auto record = std::make_shared<PauseRecord>();
-                auto host = std::make_shared<Host>(Backend::Pause);
-                record->host = host;
-                host->owner = owner;
-                host->module = ownModule;
-                host->pauseSource = reinterpret_cast<Native::Font*>(GamePauseFont.get_ptr());
-                std::weak_ptr<PauseRecord> weak = record;
-                host->nativeCurrent = [weak](const Host&)
-                {
-                    auto kept = weak.lock();
-                    return kept && !kept->deletionRequested && kept->context.Eligible();
-                };
-                host->enterNative = [weak](Host&)
-                {
-                    auto kept = weak.lock();
-                    return kept && kept->context.Eligible() && kept->context.base->selected == kept->context.entry;
-                };
-                host->leaveNative = [weak](Host&)
-                {
-                    if (auto kept = weak.lock(); kept && kept->context.Eligible())
-                        FunctionAt<void* (__thiscall*)(Native::PauseMenu*, char)>(Game().pauseSelect)(kept->context.base, static_cast<char>(kept->context.entry));
-                };
-                pauses.emplace(owner, record);
-                if (!record->context.Append(owner, Caption()))
-                {
-                    pauses.erase(owner);
-                    Diagnose(Diagnostic::PauseContext, "pause category construction refused");
-                }
-            }
-            catch (...)
+                auto kept = weak.lock();
+                return kept && !kept->deletionRequested && kept->context.Eligible();
+            };
+            host->enterNative = [weak](Host&)
             {
-                Diagnose(Diagnostic::Rollback, "pause category allocation failed");
+                auto kept = weak.lock();
+                return kept && kept->context.Eligible() && kept->context.base->selected == kept->context.entry;
+            };
+            host->leaveNative = [weak](Host&)
+            {
+                if (auto kept = weak.lock(); kept && kept->context.Eligible())
+                    FunctionAt<void* (__thiscall*)(Native::PauseMenu*, char)>(Game().pauseSelect)(kept->context.base, static_cast<char>(kept->context.entry));
+            };
+            pauses.emplace(owner, record);
+            if (!record->context.Append(owner, Caption()))
+            {
+                pauses.erase(owner);
+                Diagnose(Diagnostic::PauseContext, "pause category construction refused");
             }
         }
         return pauseCenterHook.unsafe_thiscall<int>(owner);
@@ -2064,11 +2037,7 @@ namespace THPS2Menu
         // Native borrowed strings and callbacks require process lifetime.
         // Pin the bridge before any hook or retained native pointer.
         // Dynamic host unload is not supported.
-        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN, reinterpret_cast<LPCWSTR>(&Init), &ownModule))
-        {
-            Diagnose(Diagnostic::PinFailed);
-            return false;
-        }
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN, reinterpret_cast<LPCWSTR>(&Init), &ownModule);
         for (const auto& setting : FixSettings().GetDescription().settings)
         {
             if (setting.HasValue() && setting.apply == "restart")
@@ -2080,24 +2049,19 @@ namespace THPS2Menu
         auto attach = [](SafetyHookInline& hook, uintptr_t address, void* callback)
         {
             hook = safetyhook::create_inline(reinterpret_cast<void*>(address), callback);
-            return static_cast<bool>(hook);
         };
-        if (!attach(titleCtorHook, Game().titleConstruct, reinterpret_cast<void*>(&TitleConstruct)) ||
-            !attach(titleDeleteHook, Game().titleDelete, reinterpret_cast<void*>(&TitleDelete)) ||
-            !attach(titleInputHook, Game().titleInput, reinterpret_cast<void*>(&TitleInput)) ||
-            !attach(titleUpdateHook, Game().titleUpdate, reinterpret_cast<void*>(&TitleUpdate)) ||
-            !attach(pauseCenterHook, Game().pauseCenter, reinterpret_cast<void*>(&PauseCenter)) ||
-            !attach(pauseDeleteHook, Game().pauseDelete, reinterpret_cast<void*>(&PauseDelete)) ||
-            !attach(pauseInputHook, Game().pauseInput, reinterpret_cast<void*>(&PauseInput)) ||
-            !attach(pauseDrawHook, Game().pauseDraw, reinterpret_cast<void*>(&PauseDraw)) ||
-            !attach(pauseReadHook, Game().pauseRead, reinterpret_cast<void*>(&ReadPauseInput)) ||
-            !attach(fontDrawHook, Game().fontDraw, reinterpret_cast<void*>(&FontDraw)) ||
-            !attach(pauseDispatchHook, Game().pauseDispatch, reinterpret_cast<void*>(&DispatchPause)) || !Unwind::Install())
-        {
-            ResetHooks();
-            Diagnose(Diagnostic::HookFailed);
-            return false;
-        }
+        attach(titleCtorHook, Game().titleConstruct, reinterpret_cast<void*>(&TitleConstruct));
+        attach(titleDeleteHook, Game().titleDelete, reinterpret_cast<void*>(&TitleDelete));
+        attach(titleInputHook, Game().titleInput, reinterpret_cast<void*>(&TitleInput));
+        attach(titleUpdateHook, Game().titleUpdate, reinterpret_cast<void*>(&TitleUpdate));
+        attach(pauseCenterHook, Game().pauseCenter, reinterpret_cast<void*>(&PauseCenter));
+        attach(pauseDeleteHook, Game().pauseDelete, reinterpret_cast<void*>(&PauseDelete));
+        attach(pauseInputHook, Game().pauseInput, reinterpret_cast<void*>(&PauseInput));
+        attach(pauseDrawHook, Game().pauseDraw, reinterpret_cast<void*>(&PauseDraw));
+        attach(pauseReadHook, Game().pauseRead, reinterpret_cast<void*>(&ReadPauseInput));
+        attach(fontDrawHook, Game().fontDraw, reinterpret_cast<void*>(&FontDraw));
+        attach(pauseDispatchHook, Game().pauseDispatch, reinterpret_cast<void*>(&DispatchPause));
+        Unwind::Install();
         nativeReady = true;
         return true;
     }
@@ -2234,8 +2198,6 @@ namespace THPS2DeferredClose
         auto requestExit = [](SafetyHookContext&) { if (pending) gameExit = 8; };
         initialExitCheckHook = safetyhook::create_mid(initialCheck.get_first(), requestExit);
         frameExitCheckHook = safetyhook::create_mid(frameCheck.get_first(), requestExit);
-        if (!wndProcHook || !loopHook || !initialExitCheckHook || !frameExitCheckHook)
-            std::terminate();
         previousTitle = THPS2Menu::Unwind::titleFrame;
         THPS2Menu::Unwind::titleFrame = TitleFrame;
         injector::MakeCALL(frame.get_first(21), TitlePump, true);

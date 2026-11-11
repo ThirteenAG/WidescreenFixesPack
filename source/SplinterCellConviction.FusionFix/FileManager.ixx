@@ -341,9 +341,6 @@ namespace FileLoader
         if (GetOverloadedFilePathA(path, nullptr, 0))
             return path;
 
-        if (!NormalizeName)
-            return nullptr;
-
         FString normalized = {};
         NormalizeName(&normalized, path, 1);
         thread_local std::string diskPath;
@@ -1017,13 +1014,6 @@ namespace Dumper
             cancelled ? "Cancelled.\n\n" : "", written - incomplete, outputPath.string(), incomplete, conflicts).c_str(), "Splinter Cell Conviction FusionFix", MB_OK | MB_ICONINFORMATION);
         dumping = false;
     }
-}
-
-export bool MenuOverridesAvailable()
-{
-    return GetOverloadedFilePathA && FileLoader::NormalizeName && FileLoader::FStringDestructor &&
-        FFileManagerArc::shLookup && FFileManagerArc::shIsAvailable && FFileManagerLinear::shCreateFileReader &&
-        FFileManagerLinear::shFileSize && FFileManagerLinear::shFileExists && FFileManagerLinear::shResolveAlias;
 }
 
 export void InitFileManager()

@@ -55,7 +55,7 @@ void InitializeGame()
     PsiOpsHud::Init();
 
     PsiOpsCamera::Init();
-    PsiOpsCinematics::Init(bool(PsiOpsHud::drawHook));
+    PsiOpsCinematics::Init();
 
     if (settings.Bool("MAIN.SkipIntro"))
     {

@@ -1380,11 +1380,6 @@ export namespace MafiaMenu
         updateHook = safetyhook::create_inline(reinterpret_cast<void*>(Address().update), &Update);
         pushHook = safetyhook::create_inline(reinterpret_cast<void*>(Address().push), &Pushed);
         closeHook = safetyhook::create_inline(reinterpret_cast<void*>(Address().close), &Closed);
-        if (!initHook || !processHook || !destroyHook || !drawHook || !pageDrawHook || !updateHook || !pushHook || !closeHook)
-        {
-            closeHook.reset(); pushHook.reset(); updateHook.reset(); pageDrawHook.reset(); drawHook.reset(); destroyHook.reset(); processHook.reset(); initHook.reset();
-            throw std::runtime_error("Native menu hook installation failed");
-        }
         ready = true;
     }
 }

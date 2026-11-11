@@ -100,8 +100,7 @@ namespace IntroSkip
         auto open = hook::pattern("FF 15 ? ? ? ? 3B C3 89 06 75 ? C7 86 ? ? ? ? 02 00 00 00");
 
         const auto* movies = reinterpret_cast<Movie*>(*input.get_first<uintptr_t>(30) - offsetof(Movie, skipMode));
-        if (movies)
-            pMovies.SetAddress(movies);
+        pMovies.SetAddress(movies);
         skipLogos = FixSettings().Bool("MAIN.SkipIntro");
         skipTitle = FixSettings().Bool("MAIN.SkipPressStart");
         auto title = hook::pattern("C7 05 ? ? ? ? 01 00 00 00 C7 05 ? ? ? ? 02 00 00 00 C7 05 ? ? ? ? 00 00 00 00 C3");

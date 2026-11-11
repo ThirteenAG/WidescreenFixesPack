@@ -78,8 +78,6 @@ export namespace GameplayCamera
                 applyProjection(regs);
         });
         projectionHooks[1] = safetyhook::create_mid(secondary + 17, applyProjection);
-        if (!projectionHooks[0] || !projectionHooks[1])
-            std::terminate();
 
         //Render
         auto pattern = hook::pattern("D9 86 ? ? ? ? DC 0D ? ? ? ? DC 0D ? ? ? ? D9 5C 24 04 D9 44 24 04 E8 ? ? ? ? D9 5C 24 08 D9 44 24 08");

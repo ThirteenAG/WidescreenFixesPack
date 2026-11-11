@@ -29,8 +29,6 @@ std::vector<MaxPayneMenu::Placement> MenuPlacements()
 // lines keep their name (P_Text) at +4 and their ID at +12, and update in slot 3.
 export void InitControlIcons()
 {
-    if (!MaxPayneIcons::Ready || !MaxPayneMenu::Get().host)
-        return;
     MaxPayneMenu::Get().tipSource = MaxPayneIcons::Source;
     MaxPayneIcons::HookControls(MaxPayneMenu::FindVTable(GetModuleHandleW(nullptr), ".?AVX_MenuInputConfig@@"),
         3, 12, 34, GetControlIcon);
@@ -40,8 +38,7 @@ export void InitMenu()
 {
     HMODULE hModule = nullptr;
     GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&InitMenu, &hModule);
-    if (!MaxPayneMenu::Init(hModule, GetModuleHandleW(L"rlmfc"), GetModuleHandleW(L"e2mfc"), MenuPlacements()))
-        return;
+    MaxPayneMenu::Init(hModule, GetModuleHandleW(L"rlmfc"), GetModuleHandleW(L"e2mfc"), MenuPlacements());
 
     auto exe = GetModuleHandleW(nullptr);
     MaxPayneMenu::HookMenu(MaxPayneMenu::FindVTable(exe, ".?AVMaxPayne_MenuMode@@"), { 21, 22, 28, 29, 14, 347, 302 },

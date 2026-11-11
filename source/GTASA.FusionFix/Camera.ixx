@@ -543,7 +543,7 @@ public:
     int							GetFadeStage();
     int							GetLookDirection();
     bool						IsPositionVisible(const CVector& vecPos, float fRadius);
-    static void UpdatePlayerVehicleSpeedBlur(CCamera* camera);
+    static void UpdatePlayerVehicleSpeedBlur(CCamera* camera, float minSpeed, float intensity);
 };
 
 export GameRef<CCamera> TheCamera([]() -> CCamera*
@@ -569,7 +569,8 @@ enum eVehicleType
     VEHICLE_TRAILER
 };
 
-void CCamera::UpdatePlayerVehicleSpeedBlur(CCamera* camera)
+// minSpeed: the vehicle speed (game units per frame) the shake starts at; intensity: 1.0 = the original strength
+void CCamera::UpdatePlayerVehicleSpeedBlur(CCamera* camera, float minSpeed, float intensity)
 {
     if (!camera->m_pTargetEntity || camera->m_pTargetEntity->nType != ENTITY_TYPE_VEHICLE)
         return;
@@ -591,14 +592,12 @@ void CCamera::UpdatePlayerVehicleSpeedBlur(CCamera* camera)
         return;
 
     float speed = playerVehicle->m_vecMoveSpeed.Magnitude();
-    if (speed <= 0.65f)
+    if (speed <= minSpeed)
         return;
 
-
-    float speedMul = ((std::min(1.0f, speed) - 0.65f) / (1.0f - 0.65f)) * 75;
-    speedMul = std::clamp(speedMul, 0.0f, 1.0f);
-
-    speed = ((std::min(1.0f, speed) - 0.65f) / (1.0f - 0.65f)) / 200;
+    // Grows to its full strength over the next 0.35 units of speed
+    constexpr float rampSpeed = 0.35f;
+    speed = ((std::min(minSpeed + rampSpeed, speed) - minSpeed) / rampSpeed) / 200 * intensity;
 
     int32_t r = CGeneral::GetRandomNumber();
     camera->GetMatrix()->GetPosition().x += speed * ((r & 0xF) - 7);

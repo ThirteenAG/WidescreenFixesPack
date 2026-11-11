@@ -30,7 +30,7 @@ The fix's settings are in the game's **Options › Plugins** page (F1 or Y shows
 - **HUD aspect ratio** — Auto (default) puts the HUD at the screen's edges; a ratio such as 16:9 or 21:9 keeps it in a centred box of that shape. Applies at once.
 - **Field of view** — Multiplier for the normal and vehicle gameplay cameras, also under Options › Camera; scripted, weapon and cinematic cameras keep their framing.
 - **Cutscene borders** — Off, Letterbox (the original bars), Pillarbox (16:9 with side bars on wider screens) or Both (default). Applies at once.
-- **Video framing** — Videos whole at their aspect: Original inside the game's 4:3 frame with bars, Fill (default) fitted to the screen. Nothing is cut off or stretched.
+- **Video framing** — Original shows the videos inside the game's centred 16:9 frame. On screens wider than 16:9, Fill (default) enlarges the two story videos, which have black bars in the file, until their picture fits the screen. No picture is cut off or stretched.
 - **Frame rate limit** — What the game's VARIABLE frame rate option is capped at: 120 FPS (default), Unlimited, the refresh rate or a number. Applies at once.
 - **Window mode** — Windowed or borderless when the game's own Full Screen option is off. A window as big as the screen has its frame outside the screen.
 - **Pause in background** — On by default; off keeps the game running while its window isn't active.
@@ -47,7 +47,7 @@ The fix's settings are in the game's **Options › Plugins** page (F1 or Y shows
 
 ## Settings and hub
 
-The fix creates `scripts/ResidentEvil6.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it, also while the game runs. Vanilla keeps the original cutscene bars, the intro and videos with bars; Recommended and Enhanced skip the intro, fill the screen with videos and use both cutscene borders. Window and input settings aren't changed by presets. Texts are available in English, French, German, Italian and Spanish.
+The fix creates `scripts/ResidentEvil6.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it, also while the game runs. Vanilla keeps the original cutscene bars, the intro and the videos in the game's 16:9 frame; Recommended and Enhanced skip the intro, fit the story videos to the screen and use both cutscene borders. Window and input settings aren't changed by presets. Texts are available in English, French, German, Italian and Spanish.
 
 ## Known limits
 

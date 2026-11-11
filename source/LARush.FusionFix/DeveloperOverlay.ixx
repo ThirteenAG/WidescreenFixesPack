@@ -44,9 +44,7 @@ export namespace LARushOverlay
     {
         auto pause = hook::pattern("56 89 35 ? ? ? ? E8 ? ? ? ? 83 C4 04 FF 15 ? ? ? ? 85 F6 F3 0F 10 05");
         SetGamePaused = pause.get_first();
-        auto gamePausedAddress = *pause.get_first<int32_t*>(3);
-        if (gamePausedAddress)
-            GamePaused.SetAddress(gamePausedAddress);
+        GamePaused.SetAddress(*pause.get_first<int32_t*>(3));
         auto input = hook::pattern("68 ? ? ? ? 56 89 35 ? ? ? ? E8 ? ? ? ? A0 ? ? ? ? 83 C4 08 3C 28");
         const auto inputCall = input.get_first<uint8_t>(12);
         InputHook = safetyhook::create_inline(inputCall + 5 + *reinterpret_cast<int32_t*>(inputCall + 1), Input);

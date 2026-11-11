@@ -188,8 +188,6 @@ export namespace RevIcons
                 cleanup = safetyhook::create_inline(hook::pattern("53 56 8B F1 E8 ? ? ? ? 8B 86 AC 00 00 00 33 DB 3B C3 74 10 8B 16 50 8B 42 44 8B CE FF").get_first(), Cleanup);
                 loadedExternal = safetyhook::create_mid(hook::pattern("E8 ? ? ? ? 5F 5D 5B B0 01 5E 83 C4 38 C2 04 00 8B 8E 9C").get_first(5), Capture);
                 loadedEmbedded = safetyhook::create_mid(hook::pattern("E8 ? ? ? ? 5F 5D 5B B0 01 5E 83 C4 38 C2 04 00 8B 16 8B").get_first(5), Capture);
-                if (!loadedExternal || !loadedEmbedded || !cleanup)
-                    throw std::runtime_error("Resident Evil Revelations: controller icon hooks could not be installed");
             };
         }
     } controllerIcons;

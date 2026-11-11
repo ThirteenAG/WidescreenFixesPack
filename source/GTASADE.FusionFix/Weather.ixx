@@ -79,8 +79,6 @@ public:
             auto infraredAddress = hook::pattern("44 88 35 ? ? ? ? 48 8B 87 F0 05 00 00 44 88 35 ? ? ? ? 44 88 35").get_first<uint8_t>(3);
             auto darknessAddress = hook::pattern("44 88 35 ? ? ? ? 48 8B 48 08 44 88 35 ? ? ? ? 4C 39 71 48 74 ?").get_first<uint8_t>(3);
             const auto update = hook::pattern("4C 8B DC 55 56 49 8D 6B A1 48 81 EC C8 00 00 00 45 0F 29 4B A8 48 8B 05").get_first();
-            if (!update || !coloursAddress || !nightVisionAddress || !infraredAddress || !darknessAddress)
-                return;
             colours = reinterpret_cast<uint8_t*>(injector::ReadRelativeOffset(coloursAddress).as_int());
             nightVision = reinterpret_cast<uint8_t*>(injector::ReadRelativeOffset(nightVisionAddress).as_int());
             infrared = reinterpret_cast<uint8_t*>(injector::ReadRelativeOffset(infraredAddress).as_int());

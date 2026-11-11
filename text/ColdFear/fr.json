@@ -28,7 +28,7 @@
   "hudaspect.description": "Auto garde le HUD aux bords de l'écran. Un format le garde dans un cadre centré de cette forme ; 4:3 est la disposition d'origine.",
   "hudaspect.auto": "Auto",
   "cutsceneborders": "Bandes des cinématiques",
-  "cutsceneborders.description": "Garde les bandes d'origine, limite les cinématiques à une image centrée en 4:3, ou les deux. Retirer les bandes horizontales recadre sans dévoiler les zones cachées.",
+  "cutsceneborders.description": "Haut/bas garde les bandes noires en haut et en bas des cinématiques ; Côtés les limite à leur image 4:3 d'origine.",
   "cutsceneborders.letterbox": "Haut/bas",
   "cutsceneborders.pillarbox": "Côtés",
   "cutsceneborders.both": "Les deux",

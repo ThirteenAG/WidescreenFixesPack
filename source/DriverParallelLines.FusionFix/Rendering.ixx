@@ -265,14 +265,13 @@ public:
                     *value = BoundViewFov(HorGameplayFov(*value, fAspectRatio) * *factor);
             });
             auto& settings = FixSettings();
-            settings.Availability("MAIN.FOVFactor", [](std::string_view) { return static_cast<bool>(viewFovHook); });
 
             auto updateHud = []()
             {
                 const float aspect = fAspectRatio;
                 const auto constraint = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
-                float target = hudHook ? aspect : std::min(baseAspect, aspect);
-                if (hudHook && constraint && std::isfinite(*constraint) && *constraint >= 0)
+                float target = aspect;
+                if (constraint && std::isfinite(*constraint) && *constraint >= 0)
                     target = ClampHudAspectRatio(*constraint, aspect);
                 targetHudAspect.store(target);
             };
@@ -286,11 +285,6 @@ public:
             auto text = hook::pattern("53 56 8B F1 8B 46 68 33 DB 48 57 0F 84 ? ? ? ? 48 74 46 39 9E 24 22 00 00");
             hudTextHook = safetyhook::create_inline(text.get_first(), DrawHudText);
             hudHook = safetyhook::create_inline(hud.get_first(), DrawHud);
-            if (!hudHook || !hudTextHook)
-            {
-                hudHook.reset(); hudTextHook.reset();
-            }
-            settings.Availability("MAIN.HudAspectRatioConstraint", [](std::string_view) { return static_cast<bool>(hudHook); });
 
             onResChange() += [updateHud](int Width, int Height)
             {

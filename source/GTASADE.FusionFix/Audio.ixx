@@ -93,16 +93,9 @@ public:
             auto rain = hook::pattern("40 57 48 81 EC 80 00 00 00 48 8B 05 ? ? ? ? 48 8B F9 48 8B 48 30 48 85 C9 0F 84 ? ? ? ? 83 79 68 69").get_first();
             auto engine = hook::pattern("40 53 56 57 48 83 EC 60 4C 0F BF 81 2C 01 00 00 48 8B D9 48 8B 05 ? ? ? ? 48 8B FA 48 8B 72 10 4A 8B 0C C0").get_first();
             auto timer = hook::pattern("8B 05 ? ? ? ? 03 C5 89 7B 28 F3 48 0F 2A C0 B8 04 00 00 00").get_first<uint8_t>(2);
-            if (!rain || !engine || !timer)
-                return;
             gameTime = reinterpret_cast<const uint32_t*>(injector::ReadRelativeOffset(timer).as_int());
             rainHook = safetyhook::create_inline(rain, RainOnVehicle);
             playerEngineHook = safetyhook::create_inline(engine, PlayerEngine);
-            if (!rainHook || !playerEngineHook)
-            {
-                rainHook = {};
-                playerEngineHook = {};
-            }
         };
         WFP::onGameInitEvent() += []() { vehicles.clear(); lastCleanup = 0; };
     }

@@ -20,12 +20,12 @@
 - **Videos** - Original shows a video as the game does, inside its 4:3 picture. Fill shows the whole video as large as the screen allows at its own aspect ratio. Covers the startup logos, the teaser, the menu background and the story videos.
 - **Loading screens** - the loading artwork and its progress bar keep their proportions; loading runs without the emulator's frame limiter.
 - **Skip intro** - skips the logo movies at startup. Memory card notices and the title screen stay.
-- **Single-player start** - fixes the launcher's switch to the single-player game, which otherwise fails in PCSX2 Fork.
+- **Single-player start** - fixes the launcher's switch to the single-player game, which otherwise fails in PCSX2F.
 
 ## Installation
 
 1. Download the fix archive from this release.
-2. Use [PCSX2 Fork With Plugins](https://github.com/ASI-Factory/PCSX2-Fork-With-Plugins/releases/tag/latest).
+2. Use [PCSX2F](https://github.com/ASI-Factory/PCSX2-Fork-With-Plugins/releases/tag/latest) (PCSX2 Fork With Plugins; the fix does not work in regular PCSX2).
 3. Extract the plugin archive into the emulator folder, preserving its `PLUGINS` directory.
 4. Set the emulator's aspect ratio or window size, then launch a supported version of the game.
 5. If an older `PLUGINS/SplinterCellDoubleAgent.PCSX2F.WidescreenFix.elf` is still there, delete it. It is part of this Fusion Fix now; while it is installed, the Fusion Fix stays off and says so on screen.
@@ -33,7 +33,7 @@
 ## Useful information
 
 - Two versions of the game are compatible, **SLUS-21356** (crc: **C0498D24**) and **SLES-53827** (crc: **ABE2FDE9**).
-- Keep PCSX2's FMV aspect ratio switch off; the fix fits the videos itself.
+- Keep PCSX2F's FMV aspect ratio switch off; the fix fits the videos itself.
 
 ![](https://i.imgur.com/swnrFGs.jpg)
 

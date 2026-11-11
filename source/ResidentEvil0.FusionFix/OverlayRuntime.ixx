@@ -15,8 +15,6 @@ import ButtonIcons;
 
 export namespace RE0OverlayRuntime
 {
-    inline bool cursorReady = false;
-
     inline BOOL WINAPI NativeClip(const RECT*)
     {
         // The physical-client service owns confinement, including native release requests.
@@ -52,34 +50,15 @@ export namespace RE0OverlayRuntime
         RE0Overlay::BeforeReset(device);
     }
 
-    inline bool Install()
+    inline void Install()
     {
         WindowCursor::Initialize(FixSettings());
-        FixSettings().Availability("MAIN.ConfineCursor", [](std::string_view) { return cursorReady; });
-        const bool inputReady = RE0Input::Install();
-        if (inputReady)
-        {
-            RE0Input::overlayBlocksInput = []() { return RE0Overlay::BlocksInput(); };
-            RE0Overlay::InputReady = []() { return RE0Input::ready; };
-        }
+        RE0Input::Install();
+        RE0Input::overlayBlocksInput = []() { return RE0Overlay::BlocksInput(); };
+        RE0Overlay::InputReady = []() { return RE0Input::ready; };
         D3D9Options::frame = Frame;
         D3D9Options::beforeReset = BeforeReset;
-        if (D3D9Options::HookCreation())
-        {
-            cursorReady = true;
-            IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("ClipCursor", NativeClip));
-            return inputReady;
-        }
-        cursorReady = false;
-        WindowCursor::Shutdown();
-        D3D9Options::frame = nullptr;
-        D3D9Options::beforeReset = nullptr;
-        RE0Input::keyboardHook.reset();
-        RE0Input::padHook.reset();
-        RE0Input::mouseHook.reset();
-        RE0Input::ready = false;
-        RE0Video::Disable();
-        RE0Icons::Disable();
-        return false;
+        D3D9Options::HookCreation();
+        IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("ClipCursor", NativeClip));
     }
 }

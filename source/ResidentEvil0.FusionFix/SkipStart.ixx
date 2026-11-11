@@ -12,7 +12,7 @@ export namespace RE0Start
     inline SafetyHookMid prompt;
     inline uintptr_t* titleVtable = nullptr;
     inline bool (*blocked)() = nullptr;
-    inline bool ready = false, passed = false;
+    inline bool passed = false;
 
     inline bool AtPrompt(const void* gui)
     {
@@ -36,7 +36,7 @@ export namespace RE0Start
     inline void Install(bool (*isBlocked)())
     {
         blocked = isBlocked;
-        ready = passed = false;
+        passed = false;
         titleVtable = nullptr;
         auto constructor = hook::pattern("53 56 57 8B F1 E8 ? ? ? ? 8D 8E 8C 02 00 00 C7 06 ? ? ? ? C7 86 60 02 00 00 00 00 00 00 C7 86 64 02 00 00 00 00 00 00");
         auto branch = hook::pattern("A1 ? ? ? ? 85 98 6C 0B 00 00 0F 85 ? ? ? ? F7 C6 50 00 05 00 74 ? 8B 8F 00 03 00 00 E8 ? ? ? ? 8B 8F 00 03 00 00 3D 45 42 0F 00");
@@ -51,13 +51,7 @@ export namespace RE0Start
         hook::range_pattern(getter, getter + 33,
             "8B 81 EC 00 00 00 85 C0 74 11 8B 80 94 00 00 00 85 C0 74 03 8B 00 C3").get_first();
         titleVtable = table;
-        ready = true;
         if (FixSettings().Bool("MAIN.SkipPressStart"))
-        {
             prompt = safetyhook::create_mid(site + 11, Confirm);
-            ready = bool(prompt);
-        }
-        FixSettings().Availability("MAIN.SkipPressStart", [](std::string_view value) { return value == "0" || ready; });
-        if (!ready) OutputDebugStringA("Resident Evil 0: title prompt skip unavailable; native confirmation retained.\n");
     }
 }

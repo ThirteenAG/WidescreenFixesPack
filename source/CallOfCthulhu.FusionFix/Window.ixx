@@ -293,15 +293,6 @@ export namespace CoCWindow
         hasPresentation = true;
         styleHook = safetyhook::create_inline(style.get_first(), Style);
         selectionHook = safetyhook::create_inline(selection.get_first(), Selection);
-        if (!styleHook || !selectionHook)
-        {
-            styleHook.reset();
-            selectionHook.reset();
-            hasPresentation = false;
-            getContext = nullptr;
-            OutputDebugStringA("Call of Cthulhu: window mode hooks failed; native mode retained.\n");
-            return;
-        }
         ready = true;
         if (mode != 0)
         {

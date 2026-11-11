@@ -24,9 +24,6 @@ namespace
         { "ATTRACT.bik", 640, 480, 64, 392 },
     };
 
-    // Screens narrower than the picture keep thin bars rather than lose more than this from its sides.
-    constexpr float MaxSideCut = 0.1f;
-
     using Vertices = std::array<float, 28>;
 
     SafetyHookInline MovieHook, DrawHook;
@@ -63,26 +60,17 @@ namespace
         PlaceQuad(v, (screenWidth - w) * 0.5f, (screenHeight - h) * 0.5f, w, h);
     }
 
-    // The picture without its bars fills the screen at its own aspect, the overflow cut evenly.
-    void CoverPicture(Vertices& v, float screenWidth, float screenHeight, const Picture& picture)
+    // The picture without its bars, whole and at its own aspect, as large as the screen allows
+    void FitPicture(Vertices& v, float screenWidth, float screenHeight, const Picture& picture)
     {
         // Half a texel in, so that filtering doesn't mix a bar into the first and last rows
         const float top = picture.top + 0.5f, bottom = picture.bottom - 0.5f;
         const float pictureWidth = static_cast<float>(picture.width), pictureHeight = bottom - top;
-        const float cover = std::max(screenWidth / pictureWidth, screenHeight / pictureHeight);
-        const float scale = std::min(cover, screenWidth / (pictureWidth * (1.0f - MaxSideCut)));
-        const float shownWidth = std::min(pictureWidth, screenWidth / scale);
-        const float shownHeight = std::min(pictureHeight, screenHeight / scale);
-        const float w = shownWidth * scale, h = shownHeight * scale;
+        const float scale = std::min(screenWidth / pictureWidth, screenHeight / pictureHeight);
+        const float w = pictureWidth * scale, h = pictureHeight * scale;
         PlaceQuad(v, (screenWidth - w) * 0.5f, (screenHeight - h) * 0.5f, w, h);
-        const float u0 = (pictureWidth - shownWidth) * 0.5f / picture.width;
-        const float v0 = (top + (pictureHeight - shownHeight) * 0.5f) / picture.height;
-        const float u1 = u0 + shownWidth / picture.width;
-        const float v1 = v0 + shownHeight / picture.height;
-        v[5] = v[19] = u0;
-        v[12] = v[26] = u1;
-        v[6] = v[13] = v0;
-        v[20] = v[27] = v1;
+        v[6] = v[13] = top / picture.height;
+        v[20] = v[27] = bottom / picture.height;
     }
 
     // The movie player clears the screen and draws one pre-transformed strip with the full video texture.
@@ -99,7 +87,7 @@ namespace
         static const auto& mode = FixSettings().Int("MAIN.FMVWidescreenMode");
         const auto picture = CurrentPicture;
         if (mode != 0 && picture && video[0] == picture->width && video[1] == picture->height)
-            CoverPicture(v, width, height, *picture);
+            FitPicture(v, width, height, *picture);
         else
             FitWhole(v, width, height, static_cast<float>(video[0]) / static_cast<float>(video[1]), mode);
         return DrawHook.stdcall<HRESULT>(device, type, count, v.data(), stride);

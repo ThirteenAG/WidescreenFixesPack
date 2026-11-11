@@ -339,8 +339,6 @@ export namespace BullyInput
         RumbleHook = safetyhook::create_mid(rumble.get_first(), LimitRumble);
         LookXHook = safetyhook::create_inline(lookX.get_first(), LookX);
         LookYHook = safetyhook::create_inline(lookY.get_first(), LookY);
-        if (!PollHook || !StateHook || !RumbleHook || !LookXHook || !LookYHook)
-            std::terminate();
         auto replace = [&](uintptr_t* address, uintptr_t value)
         {
             DeadzoneOperands.push_back({ address, *address });

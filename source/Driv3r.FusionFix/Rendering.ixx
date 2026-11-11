@@ -133,7 +133,7 @@ public:
                     _asm { fstp dword ptr[temp] }
                     *(float*)(regs.esi - 0x2C) = temp;
 
-                    if (Driv3rVideo::ready && Driv3rVideo::drawing)
+                    if (Driv3rVideo::drawing)
                         return;
 
                     // Skip radar border/overlay — position handled by RadarHook via sub_53D790

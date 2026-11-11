@@ -1,5 +1,5 @@
 {
-  "plugin.name": "GTA Vice City Stories PPSSPP Widescreen Fix",
+  "plugin.name": "GTA Vice City Stories PPSSPP Fusion Fix",
   "MAIN.SkipIntro": "Skip intro",
   "MAIN.SkipIntro.description": "Skip the opening intro. Restart the emulated game after changing this setting in the hub.",
   "MAIN.ForceAspectRatio": "Aspect ratio",
@@ -48,10 +48,6 @@
   "cutsceneborders.letterbox": "Letterbox",
   "cutsceneborders.pillarbox": "Pillarbox",
   "cutsceneborders.both": "Both",
-  "MAIN.FMVWidescreenMode": "Video aspect ratio",
-  "MAIN.FMVWidescreenMode.description": "Both choices show every movie whole in its own proportions, with black bars where the screen is wider or narrower. Restart after hub changes.",
-  "movies.original": "Original",
-  "movies.fill": "Fill",
   "lights": "Vehicle lights",
   "lights.description": "Light headlights, tail, brake and reverse lights on car and bike body textures. Enabled by default. Restart the emulated game after changing this setting.",
   "icons": "Controller icons",

@@ -603,7 +603,7 @@ export void InitEngine()
     }
 
     // Thermal vision noise grain FPS fix
-    if (VisionNoiseGrain::Init())
+    VisionNoiseGrain::Init();
     {
         // Noise grain TexMatrix random rotation (appFrand angle)
         auto patternAngle = hook::module_pattern(GetModuleHandle(L"Engine"), "89 4A 4C FF 15 ? ? ? ? A1");

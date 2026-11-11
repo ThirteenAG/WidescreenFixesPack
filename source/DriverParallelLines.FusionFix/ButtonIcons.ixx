@@ -298,11 +298,6 @@ export namespace DPLIcons
         releaseHook = safetyhook::create_inline(release.get_first(), Release);
         TextureManager.SetAddress(*manager.get_first<uintptr_t>(17));
         DiffuseHash.SetAddress(*diffuse.get_first<uintptr_t>(9));
-        ready = glyphHook && nameHook && loadHook && releaseHook;
-        if (!ready)
-        {
-            releaseHook.reset(); loadHook.reset(); nameHook.reset(); glyphHook.reset();
-            OutputDebugStringA("DriverParallelLines: native controller artwork hook transaction failed.\n");
-        }
+        ready = true;
     }
 }

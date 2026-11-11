@@ -130,8 +130,6 @@ export namespace THUG2Hud
         HudLayout.SetAddress(*layout.get_first<int*>(9));
         TextHook = safetyhook::create_inline(text.get_first(), DrawText);
         SpriteHook = safetyhook::create_inline(sprite.get_first(), DrawSprite);
-        if (!TextHook || !SpriteHook)
-            std::terminate();
     }
 }
 

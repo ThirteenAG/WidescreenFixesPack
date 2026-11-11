@@ -143,9 +143,5 @@
   "ui.pillarbox": "Bande verticali",
   "ui.both": "Entrambe",
   "HudAspectRatioConstraint": "Proporzioni HUD",
-  "HudAspectRatioConstraint.description": "Auto posiziona gli elementi laterali dell’HUD ai bordi dello schermo. Scegli 4:3, 16:9, 21:9 o un rapporto personalizzato L:H o decimale, da 4:3 a 32:9, per mantenerli in un’area centrata. Effetti a schermo intero e indicatori nel mondo restano invariati. Effetto immediato.",
-  "FMVWidescreenMode": "Inquadratura video",
-  "FMVWidescreenMode.description": "Originale adatta il video completo a un’area 4:3. Riempi adatta il video completo allo schermo. Nessuna modalità taglia o deforma l’immagine.",
-  "FMVWidescreenMode.0": "Formato originale",
-  "FMVWidescreenMode.1": "Riempi"
+  "HudAspectRatioConstraint.description": "Auto posiziona gli elementi laterali dell’HUD ai bordi dello schermo. Scegli 4:3, 16:9, 21:9 o un rapporto personalizzato L:H o decimale, da 4:3 a 32:9, per mantenerli in un’area centrata. Effetti a schermo intero e indicatori nel mondo restano invariati. Effetto immediato."
 }

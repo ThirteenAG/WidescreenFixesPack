@@ -55,16 +55,7 @@ export namespace NFSPSHud
             auto found = entries.find(object);
             bool inserted = found == entries.end();
             if (inserted)
-            {
-                try
-                {
-                    found = entries.emplace(object, Placement{ identity, x, x, right, false }).first;
-                }
-                catch (const std::bad_alloc&)
-                {
-                    return false;
-                }
-            }
+                found = entries.emplace(object, Placement{ identity, x, x, right, false }).first;
             auto& placement = found->second;
             if (!inserted && (placement.identity.guid != identity.guid || placement.right != right ||
                 (!Same(x, placement.originalX) && !Same(x, placement.lastX))))

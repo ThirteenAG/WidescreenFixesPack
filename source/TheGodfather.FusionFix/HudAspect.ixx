@@ -143,26 +143,20 @@ export namespace GodfatherHud
             *reinterpret_cast<float*>(static_cast<char*>(vertices) + 28 * i) += offset;
     }
 
-    bool Init()
+    void Init()
     {
         auto tree = hook::pattern("55 8B EC 83 E4 F8 83 EC 08 56 57 8B 7D 0C 8B F1 F6 46 20 01");
         auto draw = hook::pattern("8B 06 8D 4C 24 08 51 8B CE FF 50 04 8B 4E 18 85 C9 74 ? 57");
         auto radar = hook::pattern("D9 5E 6C 8B 15 ? ? ? ? FF 52 30 83 C4 14 5F 5E C2 04 00");
         auto frame = hook::pattern("D9 5F 6C 8B 15 ? ? ? ? FF 52 30 83 C4 14 5F 5E C2 04 00");
         auto icons = hook::pattern("83 C4 0C 8B 54 24 30 8B 7C 24 4C");
-        if (!drawHook)
-            throw std::runtime_error("HUD group dependency unavailable");
         radarSurfaces = { radar.get_first(12), frame.get_first(12), icons.get_first() };
         treeHook = safetyhook::create_inline(tree.get_first(), Tree, SafetyHookInline::StartDisabled);
         beforeHook = safetyhook::create_mid(draw.get_first(), Before, SafetyHookMid::StartDisabled);
         afterHook = safetyhook::create_mid(draw.get_first(12), After, SafetyHookMid::StartDisabled);
-        if (!treeHook || !beforeHook || !afterHook || !beforeHook.enable() || !afterHook.enable() || !treeHook.enable())
-        {
-            treeHook = {};
-            beforeHook = {};
-            afterHook = {};
-            throw std::runtime_error("HUD group hooks unavailable");
-        }
+        (void)beforeHook.enable();
+        (void)afterHook.enable();
+        (void)treeHook.enable();
         const auto refresh = []()
         {
             Godfather::FloatingPointScope floatingPoint;
@@ -173,6 +167,5 @@ export namespace GodfatherHud
         refresh();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", refresh);
         postTransform = Translate;
-        return true;
     }
 }

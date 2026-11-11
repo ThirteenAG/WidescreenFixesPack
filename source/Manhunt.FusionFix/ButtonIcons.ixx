@@ -355,7 +355,7 @@ export namespace MHIcons
         auto footer = hook::pattern("8B 0D ? ? ? ? 53 56 55 83 EC 18 8B 74 24 28 8B 6C 24 30 8B 5C 24 34 89 0D");
         auto controls = hook::pattern("D9 05 ? ? ? ? D8 35 ? ? ? ? 53 56 55 83 EC 14 B9 ? ? ? ? BD ? ? ? ? 8B 1D");
         auto wrap = hook::pattern("53 56 57 55 8B 5C 24 14 81 EC 40 01 00 00 85 DB 89 CD 74 06 66 83 3B 00 75 16");
-        if (!MHPad::nameHook)
+        if (!MHPad::modern) // the controller layout is not installed
             return;
         print = BindGameRef(printState, *state.get_first<PrintState*>(13));
         font = BindGameRef(printFont, *character.get_first<int*>(10));

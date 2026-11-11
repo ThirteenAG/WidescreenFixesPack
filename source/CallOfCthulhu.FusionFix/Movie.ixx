@@ -24,14 +24,15 @@ export namespace CoCMovie
         if (width <= 0 || height <= 0 || width > 16384 || height > 16384 ||
             movieWidth <= 0 || movieHeight <= 0 || movieWidth > 16384 || movieHeight > 16384 || mode < 0 || mode > 1)
             return false;
-        double drawWidth = width;
+        // The whole movie at its own aspect: inside the centred 4:3 frame (Original) or the screen (Fill)
+        const double areaWidth = mode == 0 ? std::min(double(width), height * 4.0 / 3.0) : double(width);
+        double drawWidth = areaWidth;
         double drawHeight = height;
         const double aspect = double(movieWidth) / movieHeight;
-        // Both modes show the whole movie at its own aspect
-        if (double(width) / height > aspect)
+        if (areaWidth / height > aspect)
             drawWidth = height * aspect;
         else
-            drawHeight = width / aspect;
+            drawHeight = areaWidth / aspect;
         if (drawWidth < 1.0 || drawHeight < 1.0 || drawWidth > 1048576.0 || drawHeight > 1048576.0)
             return false;
         rectangle.width = int(std::lround(drawWidth));
@@ -109,11 +110,5 @@ export namespace CoCMovie
             args[3] = rectangle.width;
             args[4] = rectangle.height;
         });
-        if (!MoviePublishHook || !MovieDrawHook)
-        {
-            MoviePublishHook.reset();
-            MovieDrawHook.reset();
-            OutputDebugStringA("Call of Cthulhu: movie hook installation failed; native playback retained.\n");
-        }
     }
 }

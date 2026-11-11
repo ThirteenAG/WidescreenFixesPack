@@ -114,7 +114,7 @@ export void InitStartup()
         static void(__fastcall* ResumeThiscall)(uintptr_t scene, void* edx) = nullptr;
         static void(__stdcall* ResumeStdcall)(uintptr_t scene) = nullptr;
         pattern = hook::pattern("38 9E 85 05 00 00 74 ? 8B CE E8");
-        if (!pattern.empty())
+        if (!pattern.empty()) // DX11
             ResumeThiscall = reinterpret_cast<decltype(ResumeThiscall)>(injector::GetBranchDestination(pattern.get_first(10)).as_int());
         else
         {

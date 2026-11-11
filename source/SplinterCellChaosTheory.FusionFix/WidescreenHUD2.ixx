@@ -233,7 +233,6 @@ export void InitWidescreenHUD2()
     pHudTextLabelVTable = *text.get_first<void*>(2);
     pHudPlaceholderViewportVTable = *placeholder.get_first<void*>(2);
     CTHudLive::destructorHook = safetyhook::create_inline(destroy.get_first(), CTHudLive::Destroyed);
-    if (!CTHudLive::destructorHook) return;
     static auto MAGMAParserHook = safetyhook::create_mid(parser.get_first(), [](SafetyHookContext& regs)
     {
         auto id = *(uint32_t*)(regs.esp + 0x18);

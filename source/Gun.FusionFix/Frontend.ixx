@@ -779,12 +779,6 @@ export namespace GunMenu
                           reinterpret_cast<LPCWSTR>(&Init), &state.module);
         state.launchHook = safetyhook::create_inline(reinterpret_cast<void*>(Native().launch), Launch);
         state.updateHook = safetyhook::create_inline(reinterpret_cast<void*>(Native().update), Update);
-        state.enabled = state.launchHook && state.updateHook;
-        if (!state.enabled)
-        {
-            state.launchHook.reset();
-            state.updateHook.reset();
-            Log("Native menu hooks unavailable");
-        }
+        state.enabled = true;
     }
 } // namespace GunMenu

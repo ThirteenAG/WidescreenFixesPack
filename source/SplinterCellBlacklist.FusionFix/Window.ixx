@@ -459,7 +459,7 @@ export void InitWindow()
     pOptions = *pattern.get_first<uint8_t*>(6);
 
     pattern = hook::pattern("89 B3 10 02 00 00 E8 ? ? ? ? 8D 8D ? ? ? ? 56 51 E8");
-    if (!pattern.empty())
+    if (!pattern.empty()) // DX11
         SaveOptions = reinterpret_cast<decltype(SaveOptions)>(injector::GetBranchDestination(pattern.get_first(19)).as_int());
     else
     {
@@ -491,7 +491,7 @@ export void InitWindow()
     // in globals in the DX9 one, the new mode is edi / esi.
     static bool modeInEdi = false;
     pattern = hook::pattern("89 56 20 89 46 24 83 FF 01");
-    if (!pattern.empty())
+    if (!pattern.empty()) // DX11
     {
         modeInEdi = true;
         injector::MakeNOP(pattern.get_first(), 6, true);
@@ -534,7 +534,7 @@ export void InitWindow()
 
     // Resolution
     pattern = hook::pattern("A3 ? ? ? ? 8B 8E ? ? ? ? 89 0D ? ? ? ? 85 DB 74 13 83 BE");
-    if (!pattern.empty())
+    if (!pattern.empty()) // DX11
     {
         ViewportResolutionWidth.SetAddress(*pattern.get_first<int*>(1));
         ViewportResolutionHeight.SetAddress(*pattern.get_first<int*>(13));

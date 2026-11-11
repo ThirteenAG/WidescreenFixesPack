@@ -62,11 +62,11 @@ export namespace ScarfaceFocus
         return result;
     }
 
-    inline bool Install(const int& pause, HMODULE module = GetModuleHandle(nullptr))
+    inline void Install(const int& pause, HMODULE module = GetModuleHandle(nullptr))
     {
         Pause = &pause;
         if (PumpHook)
-            return true;
+            return;
         const auto base = reinterpret_cast<uintptr_t>(module);
         const auto dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
         const auto nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
@@ -82,8 +82,5 @@ export namespace ScarfaceFocus
         Clock = reinterpret_cast<decltype(Clock)>(injector::GetBranchDestination(clock.get_first()).as_int());
         SoundActive = reinterpret_cast<decltype(SoundActive)>(injector::GetBranchDestination(sound.get_first(2)).as_int());
         PumpHook = safetyhook::create_inline(injector::GetBranchDestination(pump.get_first(3)).as_int(), Pump);
-        if (!PumpHook)
-            throw std::runtime_error("Background pause hook unavailable");
-        return bool(PumpHook);
     }
 }

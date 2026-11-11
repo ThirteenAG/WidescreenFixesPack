@@ -511,12 +511,6 @@ export namespace FarCryWindow
         CreateHook = safetyhook::create_inline(create.get_first(), Create);
         ChangeHook = safetyhook::create_inline(change.get_first(), ChangeResolution);
         FrameHook = safetyhook::create_mid(frame, BeginFrame);
-        if (!CreateHook || !ChangeHook || !FrameHook)
-        {
-            ResetHooks();
-            OutputDebugStringA("Far Cry: native window-mode hooks unavailable.\n");
-            return false;
-        }
 #ifndef _WIN64
         MetricsSlot = *metrics.get_first<decltype(OriginalMetrics)*>(2);
 #else

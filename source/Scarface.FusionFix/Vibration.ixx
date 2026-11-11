@@ -56,7 +56,7 @@ export namespace ScarfaceVibration
         return result;
     }
 
-    inline bool Install()
+    inline void Install()
     {
         auto update = hook::pattern("83 EC 0C A1 ? ? ? ? 0F BF 40 08 53 33 DB 85 C0 89 44 24 0C 0F 8E");
         const auto address = update.get_first<uint8_t>();
@@ -66,11 +66,6 @@ export namespace ScarfaceVibration
         vibrationDisabled.SetAddress(*flag.get_first<uint8_t*>(2));
         bound = true;
         updateHook = safetyhook::create_inline(address, Update);
-        if (!updateHook)
-        {
-            bound = false;
-            throw std::runtime_error("Vibration update hook unavailable");
-        }
         ScarfaceVibrationInput::stop = Stop;
         ScarfaceFrame::Handlers.push_back([](void*) { if (!Allowed()) Stop(); });
         WFP::onShutdownEvent() += []()
@@ -79,6 +74,5 @@ export namespace ScarfaceVibration
             updateHook.reset();
             bound = false;
         };
-        return true;
     }
 }

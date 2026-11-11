@@ -12,7 +12,6 @@ export namespace REFocus
     inline std::atomic<bool> pause{ true };
     inline SafetyHookMid updateGate;
     inline bool originalCompiler = false;
-    inline std::function<bool()> backgroundInputReady;
 
     inline uint32_t UpdateFlags(uint32_t flags, bool pauseOnFocusLoss, bool active)
     {
@@ -34,12 +33,8 @@ export namespace REFocus
         {
             // The native always-update flag also runs Options in the background. Apply our pause rule before it.
             auto system = reinterpret_cast<const uint8_t*>(originalCompiler ? context.ecx : context.eax);
-            const bool shouldPause = pause.load(std::memory_order_relaxed) || (backgroundInputReady && !backgroundInputReady());
+            const bool shouldPause = pause.load(std::memory_order_relaxed);
             context.eflags = UpdateFlags(context.eflags, shouldPause, system[9553] != 0);
-        });
-        FixSettings().Availability("MAIN.PauseOnFocusLoss", [](std::string_view value)
-        {
-            return updateGate && (value == "1" || !backgroundInputReady || backgroundInputReady());
         });
     }
 }

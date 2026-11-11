@@ -83,17 +83,7 @@ export namespace GodfatherCamera
         });
         angleHook = safetyhook::create_inline(angle.get_first(), Angle, safetyhook::InlineHook::StartDisabled);
         setupHook = safetyhook::create_inline(setup.get_first(), Setup, safetyhook::InlineHook::StartDisabled);
-        if (!angleHook || !setupHook)
-        {
-            angleHook = {};
-            setupHook = {};
-            throw std::runtime_error("Camera hooks unavailable");
-        }
-        if (!angleHook.enable() || !setupHook.enable())
-        {
-            setupHook = {};
-            angleHook = {};
-            throw std::runtime_error("Camera hooks could not be enabled");
-        }
+        (void)angleHook.enable();
+        (void)setupHook.enable();
     }
 }

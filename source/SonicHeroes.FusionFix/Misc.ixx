@@ -147,9 +147,8 @@ namespace Options
         if (const int flash = std::clamp(settings.Int("MISC.WarpSwitchEffectMode"), 0, 2); flash != 0)
             injector::WriteMemory<uint8_t>(hook::get_pattern("6A 02 6A 0A E8 ? ? ? ? 6A ? EB 0B 6A 05", 0x0A), uint8_t(flash), true);
 
-        // Always one game step per frame at the configured rate, instead of catching up with skipped frames
-        if (settings.Bool("MISC.DisableFrameSkipping"))
-            injector::WriteMemory<uint8_t>(hook::get_pattern("84 C9 74 24 A1 ? ? ? ? 2B 05 ? ? ? ? ? 89 87 78 02 00 00", 2), 0xEB, true);
+        // Two-player modes draw every frame, as single player does, instead of every second one
+        injector::WriteMemory<uint8_t>(hook::get_pattern("84 C9 74 24 A1 ? ? ? ? 2B 05 ? ? ? ? ? 89 87 78 02 00 00", 2), 0xEB, true);
 
         // The title screen's attract mode cycles through all six demos instead of only the first
         if (settings.Bool("MISC.RestoreDemos"))

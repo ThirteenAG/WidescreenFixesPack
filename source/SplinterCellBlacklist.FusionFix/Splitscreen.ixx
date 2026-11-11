@@ -994,14 +994,10 @@ export void InitSplitscreen()
     Splitscreen::padPlayer1 = std::clamp(settings.Int("SPLITSCREEN.GamepadPlayer1"), 0, XUSER_MAX_COUNT);
     Splitscreen::padPlayer2 = std::clamp(settings.Int("SPLITSCREEN.GamepadPlayer2"), 1, XUSER_MAX_COUNT);
 
-    auto xinput = GetModuleHandleW(L"xinput1_3.dll");
-    if (!xinput)
-        xinput = LoadLibraryW(L"xinput1_3.dll");
-    auto getState = xinput ? GetProcAddress(xinput, "XInputGetState") : nullptr;
-    auto setState = xinput ? GetProcAddress(xinput, "XInputSetState") : nullptr;
-    auto getCapabilities = xinput ? GetProcAddress(xinput, "XInputGetCapabilities") : nullptr;
-    if (!getState || !setState || !getCapabilities)
-        return;
+    auto xinput = GetModuleHandleW(L"xinput1_3.dll"); // imported by the game
+    auto getState = GetProcAddress(xinput, "XInputGetState");
+    auto setState = GetProcAddress(xinput, "XInputSetState");
+    auto getCapabilities = GetProcAddress(xinput, "XInputGetCapabilities");
 
     auto branch = [](void* call) { return reinterpret_cast<uintptr_t>(call) + 5 + *reinterpret_cast<int32_t*>(reinterpret_cast<uintptr_t>(call) + 1); };
 
@@ -1043,7 +1039,7 @@ export void InitSplitscreen()
     auto viewportEvent = hook::pattern("55 8B EC 83 3D ? ? ? ? 00 57 8B F9 74 28 8B 45 1C F3 0F 10 45 14");
 
     Splitscreen::GetEngine = engine.get_first<uint8_t*()>();
-    if (!start.empty())
+    if (!start.empty()) // DX11
     {
         Splitscreen::StartPressed = start.get_first<void(__fastcall)(void*, void*)>();
         LastPad.SetAddress(*start.get_first<int32_t*>(4));

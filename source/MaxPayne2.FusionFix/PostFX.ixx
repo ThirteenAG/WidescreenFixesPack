@@ -170,8 +170,7 @@ export void InitPostFXDriver()
     auto e2_d3d8_driver_mfc = GetModuleHandle(L"e2_d3d8_driver_mfc");
     P_D3D::shBeginScene = safetyhook::create_inline(GetProcAddress(e2_d3d8_driver_mfc, "?DRV_beginScene@P_D3D@@UAEXXZ"), P_D3D::DRV_beginScene);
     P_D3D::shFreeMode = safetyhook::create_inline(GetProcAddress(e2_d3d8_driver_mfc, "?DRV_freeMode@P_D3D@@UAEXXZ"), P_D3D::DRV_freeMode);
-    if (auto swap = GetProcAddress(e2_d3d8_driver_mfc, "?DRV_swapBuffer@P_D3D@@UAEXABUtagRECT@@@Z"))
-        P_D3D::shSwapBuffer = safetyhook::create_inline(swap, P_D3D::DRV_swapBuffer);
+    P_D3D::shSwapBuffer = safetyhook::create_inline(GetProcAddress(e2_d3d8_driver_mfc, "?DRV_swapBuffer@P_D3D@@UAEXABUtagRECT@@@Z"), P_D3D::DRV_swapBuffer);
 }
 
 export void ShutdownPostFXDriver()

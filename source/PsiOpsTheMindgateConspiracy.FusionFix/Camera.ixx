@@ -120,18 +120,6 @@ export namespace PsiOpsCamera
         projectionHook = safetyhook::create_inline(projection.get_first(), Projection);
         controlHook = safetyhook::create_inline(control.get_first(), Control);
         updateHook = safetyhook::create_inline(update.get_first(), Update);
-        const bool available = constructorHook && buildHook && projectionHook && controlHook && updateHook;
-        FixSettings().Availability("MAIN.CutsceneBorders", [available](std::string_view) { return available; });
-        FixSettings().Availability("MAIN.FOVFactor", [available](std::string_view value) { return value == "1" || available; });
-        if (!available)
-        {
-            updateHook.reset();
-            controlHook.reset();
-            projectionHook.reset();
-            buildHook.reset();
-            constructorHook.reset();
-            return;
-        }
         const auto updateFactor = []()
         {
             factor = FixSettings().Float("MAIN.FOVFactor");

@@ -143,9 +143,5 @@
   "ui.pillarbox": "Bandas verticales",
   "ui.both": "Ambas",
   "HudAspectRatioConstraint": "Relación de aspecto del HUD",
-  "HudAspectRatioConstraint.description": "Auto coloca los elementos laterales del HUD en los bordes de la pantalla. Elige 4:3, 16:9, 21:9 o una proporción personalizada A:H o decimal, entre 4:3 y 32:9, para mantenerlos en una zona centrada. Los efectos de pantalla completa y los marcadores del mundo no cambian. Efecto inmediato.",
-  "FMVWidescreenMode": "Encuadre de vídeo",
-  "FMVWidescreenMode.description": "Original ajusta el vídeo completo a una zona 4:3. Rellenar ajusta el vídeo completo a la pantalla. Ningún modo recorta ni estira la imagen.",
-  "FMVWidescreenMode.0": "Formato original",
-  "FMVWidescreenMode.1": "Llenar"
+  "HudAspectRatioConstraint.description": "Auto coloca los elementos laterales del HUD en los bordes de la pantalla. Elige 4:3, 16:9, 21:9 o una proporción personalizada A:H o decimal, entre 4:3 y 32:9, para mantenerlos en una zona centrada. Los efectos de pantalla completa y los marcadores del mundo no cambian. Efecto inmediato."
 }

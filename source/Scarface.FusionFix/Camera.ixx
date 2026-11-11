@@ -117,10 +117,5 @@ export namespace ScarfaceCamera
             const auto source = reinterpret_cast<const uint8_t*>(regs.edi);
             UpdateFov(manager, source, reinterpret_cast<float*>(regs.esp + 16));
         });
-        if (!ProjectionHook || !SniperHook || !LockHook || !AimHook)
-        {
-            ResetHooks();
-            throw std::runtime_error("Gameplay camera hooks unavailable");
-        }
     }
 }

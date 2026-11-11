@@ -27,7 +27,6 @@ void ReadSettings() {
     float fov=inireader.ReadFloat("MAIN","FOVFactor",1);
     settings.fov=fov>0 ? bounded(fov,0.5f,2.0f,1) : 1;
     settings.cutsceneBorders=int(bounded(inireader.ReadFloat("MAIN","CutsceneBorders",3),0,3,3));
-    settings.movieMode=int(bounded(inireader.ReadFloat("MAIN","FMVWidescreenMode",1),0,1,1));
     char icons[16]{};
     const char* selectedIcons = inireader.ReadString("MAIN", "GamepadIcons", "Auto", icons, sizeof(icons));
     settings.icons = 8;
@@ -108,7 +107,6 @@ extern "C" int module_start(SceSize,void*) {
         {"MPRADAR", "RadarPosY", "170.0"},
         {"MAIN", "FOVFactor", "1.0"},
         {"MAIN", "CutsceneBorders", "3"},
-        {"MAIN", "FMVWidescreenMode", "1"},
         {"MAIN", "GamepadIcons", "Auto"},
         {"MAIN", "VehicleLights", "1"},
     };

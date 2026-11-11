@@ -43,7 +43,6 @@ export namespace InputFilter
 
 export namespace RE6Input
 {
-    inline bool ready = false;
     inline std::function<bool()> overlayBlocksInput;
     inline std::atomic<HWND> window{ nullptr };
     inline std::atomic<uint32_t> focusGeneration{ 0 };
@@ -174,7 +173,7 @@ export namespace RE6Input
         return result;
     }
 
-    inline bool Install()
+    inline void Install()
     {
         auto pad = hook::pattern("51 53 55 56 57 8B F9 80 BF C5 2D 00 00 00 74 ? C6 87 C5 2D 00 00 00 8B 0D ? ? ? ?");
         auto keyboard = hook::pattern("83 EC 14 53 55 56 8D A9 28 01 00 00 57 89 4C 24 14 8B C5 BA 08 00 00 00");
@@ -182,13 +181,5 @@ export namespace RE6Input
         padHook = safetyhook::create_inline(pad.get_first(), Pad);
         keyboardHook = safetyhook::create_inline(keyboard.get_first(), Keyboard);
         mouseHook = safetyhook::create_inline(mouse.get_first(), Mouse);
-        ready = padHook && keyboardHook && mouseHook;
-        if (!ready)
-        {
-            padHook.reset();
-            keyboardHook.reset();
-            mouseHook.reset();
-        }
-        return ready;
     }
 }

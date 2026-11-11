@@ -24,7 +24,6 @@ export namespace DPLMouse
     SafetyHookInline pollHook, cursorHook;
     float remainderX = 0, remainderY = 0;
     std::atomic<bool> changed{ true };
-    bool ready = false;
     void (*drainController)(void*) = nullptr;
 
     template<class T> T& At(void* pointer, size_t offset)
@@ -104,9 +103,6 @@ export namespace DPLMouse
     }
     void Install()
     {
-        FixSettings().Availability("MAIN.RawInputMouse", [](std::string_view) { return ready; });
-        FixSettings().Availability("MAIN.MouseSensitivity", [](std::string_view) { return ready; });
-        FixSettings().Availability("MAIN.InvertMouseY", [](std::string_view) { return ready; });
         auto poll = hook::pattern("55 8B EC 81 EC 84 02 00 00 53 8B D9 8B 43 04 85 C0 56 57 74 50 80 3B 00");
         auto cursor = hook::pattern("55 8B EC 83 EC 0C 56 8B F1 F3 0F 2A 86 20 02 00 00 F3 0F 10 96 80 05 00 00");
         auto globals = hook::pattern("8B 08 01 0E F3 0F 10 05 ? ? ? ? 01 0D ? ? ? ? 0F 28 D1");
@@ -114,13 +110,6 @@ export namespace DPLMouse
         accumulation.SetAddress(*globals.get_first<MouseAccumulation*>(14));
         pollHook = safetyhook::create_inline(poll.get_first(), Poll);
         cursorHook = safetyhook::create_inline(cursor.get_first(), Cursor);
-        ready = pollHook && cursorHook;
-        if (!ready)
-        {
-            pollHook.reset();
-            cursorHook.reset();
-            OutputDebugStringA("DriverParallelLines: native mouse hooks unavailable.\n");
-        }
         FixSettings().OnChange("MAIN.RawInputMouse", []() { changed.store(true); });
     }
 }

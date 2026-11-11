@@ -312,6 +312,44 @@
       }
     },
     {
+      "id": "MISC.VCSCamShakeMinSpeed",
+      "type": "int",
+      "default": 117,
+      "min": 30,
+      "max": 250,
+      "step": 1,
+      "unit": "km/h",
+      "label": "@vcscamshakeminspeed",
+      "description": "@vcscamshakeminspeed.description",
+      "page": "camera",
+      "control": [
+        "slider"
+      ],
+      "visibleIf": {
+        "setting": "MISC.VCSCamShake",
+        "equals": true
+      }
+    },
+    {
+      "id": "MISC.VCSCamShakeIntensity",
+      "type": "int",
+      "default": 100,
+      "min": 10,
+      "max": 300,
+      "step": 10,
+      "unit": "%",
+      "label": "@vcscamshakeintensity",
+      "description": "@vcscamshakeintensity.description",
+      "page": "camera",
+      "control": [
+        "slider"
+      ],
+      "visibleIf": {
+        "setting": "MISC.VCSCamShake",
+        "equals": true
+      }
+    },
+    {
       "id": "MAIN.FreeCamera",
       "type": "bool",
       "default": 0,

@@ -15,7 +15,7 @@ export namespace ScarfaceMenu
     inline View view;
     inline SafetyHookInline activateHook, deactivateHook, destroyHook, backHook, rowHook, selectionHook, evaluateHook;
     inline void* active = nullptr;
-    inline bool enabled = false, opened = false, rebuilding = false, refresh = false;
+    inline bool opened = false, rebuilding = false, refresh = false;
     inline int nativeCount = 0;
     inline std::string countText, shownLanguage;
     inline int(__cdecl* nativeLanguage)() = nullptr;
@@ -377,13 +377,12 @@ export namespace ScarfaceMenu
         rebuilding = false;
     }
 
-    inline bool Install()
+    inline void Install()
     {
         const auto options = ScarfaceRTTI::FindVtable(".?AVPauseMenuPageOptions@@");
         const auto item = ScarfaceRTTI::FindVtable(".?AVPauseMenuPageOptionsItem@PauseMenuPageOptions@@");
         auto evaluator = hook::pattern("83 EC 44 53 56 57 6A 0F 8B F1 E8 ? ? ? ? 8B 0D ? ? ? ? 83 C4 04 C7 05 ? ? ? ? ? ? ? ? E8 ? ? ? ? 8B 7C 24 54 57 E8 ? ? ? ?");
-        if (!options || !item || !ScarfaceText::Install())
-            throw std::runtime_error("Native menu dependencies unavailable");
+        ScarfaceText::Install();
         auto language = hook::pattern("E8 ? ? ? ? 83 C0 BD 83 F8 10 77 61 0F B6 80 ? ? ? ? FF 24 85");
         nativeLanguage = reinterpret_cast<decltype(nativeLanguage)>(injector::GetBranchDestination(language.get_first()).as_int());
         for (const auto& setting : FixSettings().GetDescription().settings)
@@ -398,15 +397,6 @@ export namespace ScarfaceMenu
         rowHook = safetyhook::create_inline(reinterpret_cast<void*>(rowMethods[5]), Row);
         selectionHook = safetyhook::create_inline(reinterpret_cast<void*>(rowMethods[1]), Highlight);
         evaluateHook = safetyhook::create_inline(evaluator.get_first(), Evaluate);
-        enabled = activateHook && deactivateHook && destroyHook && backHook && rowHook && selectionHook && evaluateHook;
-        if (enabled)
-            ScarfaceText::overrideText = LookupText;
-        else
-        {
-            activateHook.reset(); deactivateHook.reset(); destroyHook.reset(); backHook.reset(); rowHook.reset(); selectionHook.reset(); evaluateHook.reset();
-            ScarfaceText::Shutdown();
-            throw std::runtime_error("Native menu hooks unavailable");
-        }
-        return enabled;
+        ScarfaceText::overrideText = LookupText;
     }
 }

@@ -224,7 +224,7 @@ namespace
             GlyphTable[i] = Accented[i].glyph;  // byte 0x80 + i
 
         uint16_t* base = &GlyphTable[128];
-        for (size_t i = 0; i < widthSites.size(); ++i)
+        for (size_t i = 0; i < 5; ++i)
             injector::WriteMemory<uint16_t*>(widthSites.get(i).get<uint16_t*>(4), base, true);
         injector::WriteMemory<uint16_t*>(drawSites.get_first<uint16_t*>(4), base, true);
         AccentedGlyphs = true;
@@ -1526,16 +1526,6 @@ export namespace Menu
             TopHelps[i] = helps[i];
         DrawMessageCentered = (decltype(DrawMessageCentered))drawCentered.get_first();
 
-        for (auto function : { (void*)Pressed, (void*)Repeated, (void*)Housekeep, (void*)HideElements, (void*)ResetLayout, (void*)MouseScreen,
-            (void*)BackPressed, (void*)StopInput, (void*)MouseClick, (void*)ScrollNav, (void*)MouseRow, (void*)Wheel, (void*)SoundBackInGame,
-            (void*)SoundBack, (void*)SoundValue, (void*)SoundMove, (void*)SoundAcceptInGame, (void*)MouseClickRange, (void*)MouseHover,
-            (void*)SoundError, (void*)SoundAccept, (void*)Title, (void*)Highlight, (void*)LayoutBusy, (void*)Prompt, (void*)FadedIn,
-            (void*)KeyboardMenus, (void*)DrawMessageAt, (void*)Fade, (void*)ElementAlpha, (void*)Arrows, (void*)ElementShow })
-        {
-            if (!function)
-                return;
-        }
-
         auto gameUpdate = hook::pattern("68 A5 00 00 00 6A 04 E8 ? ? ? ? 6A 01 68 A6 00 00 00");
         auto gameDraw = hook::pattern("83 EC 30 56 8B F1 83 BE 8C 01 00 00 00");
         auto gameRestore = hook::pattern("53 56 8B F1 57 33 FF 8D 9E 90 01 00 00");
@@ -1549,12 +1539,9 @@ export namespace Menu
         gameTables.values[1] = Pointer<uint16_t*>(settingsDraw + 0xD1 + 4);
         gameTables.values[2] = Pointer<uint16_t*>(settingsDraw + 0xEE + 4);
         gameTables.helps = Pointer<uint16_t*>(settingsDraw + 0x1A5 + 4);
-        if (DrawMessage && HelpMessage && PauseRestorePrompt)
-        {
-            GameUpdateHook = safetyhook::create_inline(gameUpdate.get_first(-0x105), GameUpdate);
-            GameDrawHook = safetyhook::create_inline(gameDraw.get_first(), GameDraw);
-            GameRestoreHook = safetyhook::create_inline(gameRestore.get_first(), GameRestore);
-        }
+        GameUpdateHook = safetyhook::create_inline(gameUpdate.get_first(-0x105), GameUpdate);
+        GameDrawHook = safetyhook::create_inline(gameDraw.get_first(), GameDraw);
+        GameRestoreHook = safetyhook::create_inline(gameRestore.get_first(), GameRestore);
 
         SystemInitHook = safetyhook::create_inline(systemInit.get_first(), SystemInit);
         SystemUpdateHook = safetyhook::create_inline(systemUpdate.get_first(), SystemUpdate);

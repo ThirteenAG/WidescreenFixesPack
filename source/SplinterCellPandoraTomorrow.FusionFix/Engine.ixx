@@ -838,7 +838,7 @@ export void InitEngine()
     FCanvasUtil::DrawTile = (decltype(FCanvasUtil::DrawTile))injector::GetBranchDestination(pattern.get_first(6), true).as_int();
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "DC 0D ? ? ? ? DB 43 18 DC 0D ? ? ? ? D9 5D E4 75 12 D9 45 10");
-    if (!pattern.empty())
+    if (!pattern.empty()) // retail
         injector::WriteMemory(pattern.get_first(2), &Screen.dHUDScaleX, true);
     else
     {
@@ -847,7 +847,7 @@ export void InitEngine()
     }
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 4D F4 5F 5E 64 89 0D 00 00 00 00 5B 8B E5 5D C2 4C 00");
-    if (!pattern.empty())
+    if (!pattern.empty()) // retail
         injector::MakeCALL(pattern.count(1).get(0).get<uint32_t>(-5), FCanvasUtilDrawTileHook, true); //pfFUCanvasDrawTile + 0x219
     else
     {
@@ -856,7 +856,7 @@ export void InitEngine()
     }
 
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 4C 24 04 8B 51 44 83");
-    if (!pattern.empty())
+    if (!pattern.empty()) // retail
     {
         uint32_t pfsub_103762F0 = (uint32_t)pattern.get_first(0);
         auto rpattern = hook::range_pattern(pfsub_103762F0, pfsub_103762F0 + 0x800, "E8 ? ? ? ? 8B ?");
@@ -991,7 +991,7 @@ export void InitEngine()
     if (bSkipPressStartToContinue)
     {
         pattern = find_module_pattern(GetModuleHandle(L"Engine"), "0F 84 ? ? ? ? F3 0F 10 45 ? F3 0F 59 05");
-        if (!pattern.empty())
+        if (!pattern.empty()) // digital
             injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jz -> jmp
         else
         {

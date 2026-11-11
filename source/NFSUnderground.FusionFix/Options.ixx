@@ -478,7 +478,7 @@ namespace
 
     std::string CreditsText()
     {
-        auto text = GameSearchForString ? GameSearchForString(nullptr, CreditsTextHash) : nullptr;
+        auto text = GameSearchForString(nullptr, CreditsTextHash);
         return text ? text : "";
     }
 
@@ -560,8 +560,7 @@ namespace
     // shown there, next to the game's HUD and display options, and not on the fix's page
     constexpr int CategoryDisplay = 4;
     const std::vector<std::string> DisplaySettings = { "MAIN.HudAspectRatioConstraint", "MAIN.FOVFactor", "GRAPHICS.Scaling", "GRAPHICS.ConsoleGamma", "MAIN.FMVWidescreenMode" };
-    int GameRowsFrom = 0;
-    bool GameRowsInstalled = false; // the Display category's rows could be set up           // the first of the fix's rows in a game category, 0 when the category is the fix's
+    int GameRowsFrom = 0; // the first of the fix's rows in a game category, 0 when the category is the fix's
 
     HMODULE Self()
     {
@@ -575,7 +574,7 @@ namespace
     const std::vector<std::string>& Excluded(const asi_settings::LoadedPlugin& plugin)
     {
         static const std::vector<std::string> none;
-        return plugin.module == Self() && GameRowsInstalled ? Active->joinedSettings : none;
+        return plugin.module == Self() ? Active->joinedSettings : none;
     }
 
     void FindPlugins()
@@ -1228,8 +1227,7 @@ namespace
     // The category's rows: the game has hidden all rows and set none up, so all are the fix's
     void SetupRows(void* screen, Menu& menu)
     {
-        if (ScreenDestroy)
-            menu.owner = screen;
+        menu.owner = screen;
         NoteText.clear();
         Active = &menu;
         GameRowsFrom = 0;
@@ -1256,12 +1254,11 @@ namespace
     // The fix's rows below the game's own in its Display category: the rows after the last one the category shows
     void AddGameRows(void* screen, Menu& menu)
     {
-        if (ScreenDestroy)
-            menu.owner = screen;
+        menu.owner = screen;
         menu.joinedSettings.clear();
         GameRowsFrom = 0;
         auto package = FindPackageByName(PackageName(screen));
-        if (!GameRowsInstalled || !package)
+        if (!package)
             return;
         int first = 1;
         for (int row = 1; row <= menu.rowCount; ++row)
@@ -1705,7 +1702,7 @@ namespace Selector
         }
     }
 
-    bool Install()
+    void Install()
     {
         auto focus = hook::pattern("A1 ? ? ? ? 83 EC 20 83 F8 0A 56 77 ? FF 24 85");
         auto notify = hook::pattern("8B 44 24 04 3D 0B 62 F8 35 57 8B F9 0F 87");
@@ -1733,22 +1730,7 @@ namespace Selector
         shSearchForString = safetyhook::create_inline(searchForString, SearchForString);
         shFocusLastCategory = safetyhook::create_inline(focus.get_first(), FocusLastCategory);
         shNotify = safetyhook::create_inline(notify.get_first(), Notify);
-        if (shSearchForString && shFocusLastCategory && shNotify)
-        {
-            GameSearchForString = shSearchForString.original<decltype(GameSearchForString)>();
-            return true;
-        }
-        shSearchForString = {};
-        shFocusLastCategory = {};
-        shNotify = {};
-        return false;
-    }
-
-    void Uninstall()
-    {
-        shNotify = {};
-        shFocusLastCategory = {};
-        shSearchForString = {};
+        GameSearchForString = shSearchForString.original<decltype(GameSearchForString)>();
     }
 }
 
@@ -2107,7 +2089,7 @@ namespace PauseSelector
             At<int32_t>(package, 0x1C) = 0;
     }
 
-    bool Install()
+    void Install()
     {
         auto ctor = hook::pattern("C7 06 ? ? ? ? 89 6E 40 8B 41 1C 3B C5");
         auto rows = hook::pattern("C7 05 ? ? ? ? 06 00 00 00 C6 86 1C 02 00 00 01 56 E8 ? ? ? ? E8");
@@ -2142,12 +2124,6 @@ namespace PauseSelector
         {
             AddPauseRows(reinterpret_cast<void*>(regs.esi));
         });
-        if (shConstruct && shNotify && shRowsReady)
-            return true;
-        shConstruct = {};
-        shNotify = {};
-        shRowsReady = {};
-        return false;
     }
 }
 
@@ -2218,9 +2194,8 @@ public:
                     HideJoinedHelp(screen, PauseMenu);
             };
 
-            // The menu entry; without it the settings remain available through the Hub and CFG
-            if (!Selector::Install())
-                return;
+            // The menu entry
+            Selector::Install();
 
             // The rows' mouse areas are set up after the category's rows
             static auto shRowsReady = safetyhook::create_mid(injector::GetBranchDestination(category.get_first(0x1B)).get_raw<void>(), [](SafetyHookContext& regs)
@@ -2228,14 +2203,6 @@ public:
                 AddRows(reinterpret_cast<void*>(regs.esi));
             });
             shMainNotify = safetyhook::create_inline(mainNotify.get_first(), MainNotify);
-            if (!shRowsReady || !shMainNotify)
-            {
-                shMainNotify = {};
-                shRowsReady = {};
-                Selector::Uninstall();
-                return;
-            }
-            GameRowsInstalled = true;
 
             if (NFSUpdateNotice::Install(FixSettings(), []() { return IsFrontEnd() && !MovieIsPlaying(); },
                 FindPackageByName, [](const std::string& text) { return GameText(text); }))
@@ -2245,10 +2212,9 @@ public:
             }
 
 
-            // The pause menu's entry, which uses the main menu's text lookup; without it the pause menu stays as it is
+            // The pause menu's entry, which uses the main menu's text lookup
             shPauseNotify = safetyhook::create_inline(pauseNotify.get_first(), PauseNotify);
-            if (shPauseNotify && !PauseSelector::Install())
-                shPauseNotify = {};
+            PauseSelector::Install();
         };
     }
 } Options;

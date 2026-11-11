@@ -36,7 +36,7 @@
   "FOVFactor": "Champ de vision",
   "FOVFactor.description": "Multiplie le champ de vision ordinaire, jusqu'à 150 degrés de large. 1.0 garde la vue prévue. Visée, scripts, effets de caméra et transitions restent inchangés.",
   "FMVWidescreenMode": "Cadrage des vidéos",
-  "FMVWidescreenMode.description": "Les deux choix affichent chaque vidéo en entier dans ses propres proportions, avec des bandes noires lorsque l'écran est plus large ou plus étroit. Rien n'est coupé ni étiré.",
+  "FMVWidescreenMode.description": "Format d'origine affiche les vidéos comme le jeu, en entier dans son cadre 4:3 centré avec des bandes noires autour. Remplir adapte la vidéo entière à l'écran, sans rien couper ni étirer.",
   "FMVWidescreenMode.0": "Format d'origine",
   "FMVWidescreenMode.1": "Remplir",
   "WindowMode": "Mode fenêtre",

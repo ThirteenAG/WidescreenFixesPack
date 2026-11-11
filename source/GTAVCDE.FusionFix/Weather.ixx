@@ -108,8 +108,6 @@ public:
             auto directionalGAddress = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 75 ? 48 8D 0D ? ? ?").get_first<uint8_t>(4);
             auto directionalBAddress = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 05 ? ? ? ? F3 0F 11 0D ? ? ? ? 75 ? 48 8D 0D ? ? ?").get_first<uint8_t>(4);
             const auto update = hook::pattern("48 8B C4 48 89 58 08 48 89 70 10 48 89 78 18 55 41 54 41 55 41 56 41 57 48 8D 6C 24 A0 48 81 EC 60 01 00 00 0F 29 70 C8 0F 29 78 B8 44 0F 29 40 A8 44 0F 29 48 98 44 0F 29 50 88 44 0F 29 98 78 FF FF FF 44 0F 29 A0 68 FF FF FF 44 0F 29 A8 58 FF FF FF 44 0F 29 B0 48 FF FF FF 44 0F 29 B8 38 FF FF FF 48 8B 05 ? ? ? ? 48 33 C4 48 89 45 B0 0F B6 05 ? ? ? ?").get_first();
-            if (!update || !skyTopRAddress || !skyTopGAddress || !skyTopBAddress || !skyBottomRAddress || !skyBottomGAddress || !skyBottomBAddress || !ambientRAddress || !ambientGAddress || !ambientBAddress || !cloudRAddress || !cloudGAddress || !cloudBAddress || !blurRAddress || !blurGAddress || !blurBAddress || !lowCloudRAddress || !lowCloudGAddress || !lowCloudBAddress || !topCloudRAddress || !topCloudGAddress || !topCloudBAddress || !directionalRAddress || !directionalGAddress || !directionalBAddress)
-                return;
             skyTopR = reinterpret_cast<int32_t*>(injector::ReadRelativeOffset(skyTopRAddress).as_int());
             skyTopG = reinterpret_cast<int32_t*>(injector::ReadRelativeOffset(skyTopGAddress).as_int());
             skyTopB = reinterpret_cast<int32_t*>(injector::ReadRelativeOffset(skyTopBAddress).as_int());

@@ -33,12 +33,10 @@ namespace ScarfaceText
         return lookupHook.unsafe_ccall<const wchar_t*>(key);
     }
 
-    inline bool Install()
+    inline void Install()
     {
         if (!lookupHook)
-            if (auto address = Resolve())
-                lookupHook = safetyhook::create_inline(address, Lookup);
-        return bool(lookupHook);
+            lookupHook = safetyhook::create_inline(Resolve(), Lookup);
     }
 
     inline void Shutdown()

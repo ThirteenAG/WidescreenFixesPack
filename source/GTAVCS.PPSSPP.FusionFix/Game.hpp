@@ -21,8 +21,6 @@ struct Settings {
     }
     // MAIN.CutsceneBorders: 0 off, 1 letterbox, 2 pillarbox, 3 both.
     int cutsceneBorders = 3;
-    // MAIN.FMVWidescreenMode: 0 original, 1 fill.
-    int movieMode = 1;
     // MAIN.VehicleLights (read at startup): lit head, tail, brake and reverse lights on vehicle bodies.
     bool vehicleLights = true;
 };
@@ -45,5 +43,4 @@ void SelectGamepadIcons(unsigned set);
 void TickCheats();
 void InstallCheats();
 void InstallMovies();
-bool MoviesAvailable();
 }

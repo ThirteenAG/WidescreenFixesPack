@@ -32,8 +32,7 @@ public:
         WFP::onInitEvent() += []()
         {
             if (Settings.skipIntro)
-                if (auto address = LegalScreenAddress())
-                    legalScreenHook = safetyhook::create_inline(address, ShouldShow);
+                legalScreenHook = safetyhook::create_inline(LegalScreenAddress(), ShouldShow);
             if (!Settings.skipMenu)
                 return;
             const auto update = InterfaceUpdateAddress();

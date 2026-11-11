@@ -1106,16 +1106,5 @@ export namespace PsiOpsMenu
         eventHook = safetyhook::create_inline(event, Event);
         drawTextHook = safetyhook::create_inline(draw, DrawText);
         drawPolyHook = safetyhook::create_inline(polygon, DrawPolygon);
-        if (!cleanupHook || !relocateHook || !showHook || !nativeShowHook || !eventHook || !drawTextHook || !drawPolyHook)
-        {
-            drawPolyHook.reset();
-            drawTextHook.reset();
-            eventHook.reset();
-            nativeShowHook.reset();
-            showHook.reset();
-            relocateHook.reset();
-            cleanupHook.reset();
-            OutputDebugStringA("Psi-Ops: native menu hook installation failed.\n");
-        }
     }
 }

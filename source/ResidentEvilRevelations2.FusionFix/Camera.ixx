@@ -255,8 +255,6 @@ public:
             shCinemaScope = safetyhook::create_inline(cinemaScope.get_first(), DrawCinemaScope);
             auto perspective = hook::pattern("E8 ? ? ? ? 8B 44 24 04 C2 04 00 CC CC CC CC CC CC CC CC CC CC 8D 41 50");
             shSetPerspective = safetyhook::create_inline(injector::GetBranchDestination(perspective.get_first()).as_int(), SetPerspective);
-            if (!shSetPerspective)
-                OutputDebugStringA("Resident Evil Revelations 2 Fusion Fix: near-clip projection hook unavailable.\n");
 
             auto output = hook::pattern("C7 87 D8 5D 00 00 00 00 00 00 8B 87 C4 01 00 00 F3 0F 10 44 24 70 F3 0F 11 80 20 01 00 00");
             auto nearClip = hook::pattern("F3 0F 10 41 34 8B 4C 24 14 F3 0F 11 04 24 E8 ? ? ? ? 8B 44 24 04 C2 04 00");
@@ -264,19 +262,9 @@ public:
             pCameraSystem.SetAddress(*root.get_first<uint8_t**>(1));
             // ECX still identifies the camera and XMM0 contains its freshly loaded near plane.
             shGameplayNear = safetyhook::create_mid(nearClip.get_first(5), ApplyGameplayNear);
-            if (!shGameplayNear)
-            {
-                OutputDebugStringA("Resident Evil Revelations 2 Fusion Fix: gameplay near-clip hook unavailable.\n");
-                return;
-            }
             // Both the override and ordinary camera paths converge after the reset instruction.
             // Change the local FOV before native publication and culling.
             shGameplayFOV = safetyhook::create_mid(output.get_first(10), ApplyGameplayFOV);
-            if (!shGameplayFOV)
-            {
-                shGameplayNear.reset();
-                OutputDebugStringA("Resident Evil Revelations 2 Fusion Fix: gameplay camera hook unavailable.\n");
-            }
         };
     }
 } Camera;

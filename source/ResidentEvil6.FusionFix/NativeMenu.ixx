@@ -550,18 +550,6 @@ export namespace RE6Menu
         destroyHook = safetyhook::create_inline(destroy, Destroy);
         renderLabelHook = safetyhook::create_inline(renderLabel, RenderLabel);
         hoverHook = safetyhook::create_inline(hover, Hover);
-        if (!initializeHook || !executeHook || !labelsHook || !messageHook || !destroyHook || !renderLabelHook || !hoverHook)
-        {
-            initializeHook.reset();
-            executeHook.reset();
-            labelsHook.reset();
-            messageHook.reset();
-            destroyHook.reset();
-            renderLabelHook.reset();
-            hoverHook.reset();
-            OutputDebugStringA("Resident Evil 6 Fusion Fix: native menu hooks could not be installed.\n");
-            return;
-        }
         RWGTA::UpdateCheck::Config updates;
         updates.pluginId = "ResidentEvil6.FusionFix";
         updates.fileVersion = rsc_FileVersion;
@@ -842,7 +830,6 @@ export namespace RE6CameraMenu
 
     inline void Install()
     {
-        if (!RE6Menu::executeHook) return;
         auto initialize = hook::pattern("56 8B F1 C7 46 48 00 00 00 00 B9 0B 00 00 00 89 4E 4C A1 ? ? ? ? 8B 50 20");
         auto execute = hook::pattern("51 56 8B F1 8B 46 38 25 FF 00 00 00 57 83 F8 5C 0F 87 ? ? ? ? 0F B6 80 ? ? ? ? FF 24 85 ? ? ? ? 6A 00 E8 ? ? ? ? FE 46 38 E9 ? ? ? ? 6A 00 E8 ? ? ? ? 84 C0 0F 84 ? ? ? ? FE 46 38 E9 ? ? ? ? 6A FF E8 ? ? ? ? 84 C0 74 ? 8B CE E8 ? ? ? ? C6 46 41 01 C6 46 38 5A E9 ? ? ? ? 8B 4E 4C 8B 56 48 6A 00 6A 00 6A 00 6A FF 51 52 8B CE E8 ? ? ? ? 8B 4E 48 89 44 24 08 3B C8 74 ? 6A 01 89 46 48 8B 0D ? ? ? ? 50 E8 ? ? ? ? 8B CE E8 ? ? ? ? E9 ? ? ? ? 8B 84 8E 60 01 00 00 6A 00 89 44 24 0C 8B 94 8E 8C 01 00 00");
         auto labels = hook::pattern("83 EC 08 53 56 8B D9 33 F6 39 73 4C 0F 8E ? ? ? ? 55 57 EB ? 8D A4 24 00 00 00 00 8D 49 00 8B 84 B3 8C 01 00 00");
@@ -852,12 +839,7 @@ export namespace RE6CameraMenu
         auto visibility = hook::pattern("8B 44 24 08 3B 81 F8 01 00 00 73 20 8A 54 24 04 8D 04 80 C1 E0 05 03 81 14 02 00 00");
         auto table = hook::pattern("C7 06 ? ? ? ? C7 86 B8 01 00 00 00 00 00 00");
         const auto vtable = *table.get_first<uintptr_t*>(2);
-        const auto base = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
-        const auto pe = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + reinterpret_cast<const IMAGE_DOS_HEADER*>(base)->e_lfanew);
-        const auto address = reinterpret_cast<uintptr_t>(vtable);
-        if (address < base || address + 9 * sizeof(uintptr_t) > base + pe->OptionalHeader.SizeOfImage) return;
         const auto entries = reinterpret_cast<const uintptr_t*>(vtable);
-        if (entries[5] != reinterpret_cast<uintptr_t>(initialize.get_first()) || entries[8] != reinterpret_cast<uintptr_t>(execute.get_first())) return;
         initializeHook = safetyhook::create_inline(initialize.get_first(), Initialize);
         executeHook = safetyhook::create_inline(execute.get_first(), Execute);
         labelsHook = safetyhook::create_inline(labels.get_first(), NativeLabels);
@@ -866,12 +848,6 @@ export namespace RE6CameraMenu
         destroyHook = safetyhook::create_inline(entries[0], Destroy);
         visibilityHook = safetyhook::create_inline(visibility.get_first(), Visibility);
         categoriesHook = safetyhook::create_inline(categories.get_first(), Categories);
-        if (!initializeHook || !executeHook || !labelsHook || !footerHook || !navigateHook || !destroyHook || !visibilityHook || !categoriesHook)
-        {
-            initializeHook.reset(); executeHook.reset(); labelsHook.reset(); footerHook.reset(); navigateHook.reset(); destroyHook.reset(); visibilityHook.reset(); categoriesHook.reset();
-            OutputDebugStringA("Resident Evil 6 Fusion Fix: native Camera menu hooks unavailable.\n");
-            return;
-        }
         RE6Menu::joinedIds.insert("MAIN.FOVFactor");
         RE6Menu::joinedHover = Hover;
     }

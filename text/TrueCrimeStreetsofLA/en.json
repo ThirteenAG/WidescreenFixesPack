@@ -11,7 +11,7 @@
   "HudAspectRatioConstraint": "HUD aspect ratio constraint",
   "HudAspectRatioConstraint.description": "Auto spreads the HUD across the whole screen, at its sides. A ratio keeps it in a centred box of that shape. Menus keep their 4:3 layout. Applies immediately.",
   "FMVWidescreenMode": "Video aspect ratio",
-  "FMVWidescreenMode.description": "Both choices show every movie whole at its own shape, with black bars where the screen is wider or narrower. Nothing is cut off or stretched.",
+  "FMVWidescreenMode.description": "Original shows the movies whole inside the game's centred 4:3 frame. Fill fits the whole movie to the screen. Nothing is cut off or stretched.",
   "WindowMode": "Window mode",
   "WindowMode.description": "Fullscreen, a framed window at the selected resolution, or borderless at the monitor resolution. Restart after changing the window mode.",
   "PauseOnFocusLoss": "Pause when unfocused",

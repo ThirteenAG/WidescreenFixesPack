@@ -108,11 +108,12 @@ namespace
                 SetWeatherHue(actor, 976, fog);
                 SetWeatherHue(actor, 1040, weather.directional);
             }
-            // The weather curve's gain/contrast/saturation/midtone contrast
-            // would grade the restored palette a second time. Native user
+            // The weather curve's contrast, saturation and shadows gain would
+            // grade the restored palette a second time. Its master gain stays:
+            // the scene's exposure is balanced against it. Native user
             // brightness, weapon wheel effects and material blendables remain.
-            for (size_t channel = 0; channel < 4; ++channel)
-                reinterpret_cast<float*>(actor + 1076)[channel] = 1.0f;
+            for (size_t value = 1; value < 4; ++value)
+                reinterpret_cast<float*>(actor + 1076)[value] = 1.0f;
         }
         const auto result = applyValuesHook.ccall<uintptr_t>(actor);
         if (active)
@@ -134,14 +135,8 @@ public:
         {
             const auto applyValues = hook::pattern("48 8B C4 55 53 57 41 56 48 8D 68 88 48 81 EC 58 01 00 00 4C 89 60 D8 48").get_first();
             const auto colourOptions = hook::pattern("48 8B C4 55 41 56 48 8D 68 A1 48 81 EC E8 00 00 00 48 83 3D ? ? ? ?").get_first();
-            if (!applyValues || !colourOptions)
-                return;
             colourOptionsHook = safetyhook::create_inline(colourOptions, UpdateColorOptions);
-            if (!colourOptionsHook)
-                return;
             applyValuesHook = safetyhook::create_inline(applyValues, ApplyValues);
-            if (!applyValuesHook)
-                colourOptionsHook = {};
         };
     }
 } PostEffectsModuleInstance;

@@ -3,8 +3,6 @@
   "page.display": "Schermo",
   "page.game": "Gioco",
   "page.compatibility": "Compatibilità",
-  "FixSavePath": "Cartella di salvataggio personale",
-  "FixSavePath.description": "Sposta la cartella dei salvataggi dai documenti pubblici a quelli personali. I salvataggi esistenti vengono copiati se la destinazione non esiste ancora.",
   "FOVFactor": "Campo visivo",
   "FOVFactor.description": "Moltiplica il campo visivo durante il gioco; valori maggiori ampliano la vista fino a 150 gradi orizzontali. Le telecamere delle sequenze e le visuali con zoom non cambiano.",
   "SkipIntro": "Salta introduzione",

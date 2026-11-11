@@ -14,11 +14,11 @@ ASI_SETTINGS_EXPORT(FixSettings())
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
+    {
         if (WidescreenFixConflict::Found())
             return;
-            CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("53 55 56 57 52 6A 00"));
-        });
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("53 55 56 57 52 6A 00"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

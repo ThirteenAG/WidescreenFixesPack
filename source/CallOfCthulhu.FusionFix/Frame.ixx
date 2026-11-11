@@ -133,8 +133,6 @@ export namespace CoCFrame
             std::call_once(once, []() { WFP::onGameInitEvent().executeAll(); });
             WFP::onGameProcessEvent().executeAll();
         });
-        if (!paceHook)
-            OutputDebugStringA("Call of Cthulhu: frame loop hook installation failed.\n");
         CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
         FixSettings().OnChange("MAIN.ConfineCursor", []()
         {
@@ -166,7 +164,5 @@ export namespace CoCFrame
 
         auto procedure = hook::pattern("83 EC 14 55 8B 6C 24 28 56 8B 74 24 28 57 8B 7C 24 28 83 FF 20 0F 87");
         windowProcedureHook = safetyhook::create_inline(procedure.get_first(), WindowProcedure);
-        if (!windowProcedureHook)
-            OutputDebugStringA("Call of Cthulhu: window message hook installation failed.\n");
     }
 }

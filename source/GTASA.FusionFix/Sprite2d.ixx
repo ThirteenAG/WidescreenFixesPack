@@ -636,7 +636,7 @@ public:
                 shDraw6 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw6);
 
                 pattern = hook::pattern("9C A1 ? ? ? ? 51 8B 0D ? ? ? ? D3 C0 59 8B 00 9D E9 16 E4 31 00");
-                if (!pattern.empty())
+                if (!pattern.empty()) // Executable with the relocated CSprite2d::DrawRect entry
                 {
                     shDrawRect1 = safetyhook::create_inline(pattern.get_first(), DrawRect1);
                 }

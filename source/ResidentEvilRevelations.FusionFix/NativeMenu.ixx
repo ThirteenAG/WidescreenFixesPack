@@ -59,7 +59,7 @@ export namespace RevMenuNative
         return hook::get_pattern(signature);
     }
 
-    inline bool Bind()
+    inline void Bind()
     {
         Initialize = reinterpret_cast<decltype(Initialize)>(Find("8B 44 24 04 83 EC 08 53 56 57 8B F1 89 86 88 02 00 00 8B 0D ? ? ? ? 8B 11 8B 42 30 BB 01 00 00 00 53 68 ? ? ? ?"));
         Input = reinterpret_cast<decltype(Input)>(Find("55 8B EC 83 E4 F0 83 EC 24 53 56 57 8B F1 6A 01 8D 8E EC 02 00 00 E8 ? ? ? ? 3C 01 74 ? 6A 03 8D 8E EC 02 00 00 E8 ? ? ? ?"));
@@ -78,8 +78,6 @@ export namespace RevMenuNative
         const auto help = static_cast<uint8_t*>(Find("8B 04 B5 ? ? ? ? 8B 0D ? ? ? ? 8D 56 F9 F7 DA 1B D2 83 E2 E3 83 C2 21 52 50 E8 ? ? ? ?"));
         pInputManager.SetAddress(*reinterpret_cast<uintptr_t**>(input + 1));
         pHelpManager.SetAddress(*reinterpret_cast<uintptr_t**>(help + 9));
-        return Initialize && Input && Destroy && Lookup && Select && SetMessage && ShowHelp && HideHelp && HitTest &&
-            HitPart && AnimateReference && AnimateWidget && HasNetwork && pInputManager.get_ptr() && pHelpManager.get_ptr();
     }
 }
 
@@ -720,8 +718,7 @@ export namespace RevMenu
         Height = height;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<LPCWSTR>(&Init), &module);
-        if (!Native::Bind())
-            return;
+        Native::Bind();
         for (const auto& setting : FixSettings().GetDescription().settings)
             if (setting.HasValue() && setting.apply == "restart")
                 restartValues.try_emplace({ module, setting.id }, FixSettings().Get(setting.id));
@@ -729,16 +726,7 @@ export namespace RevMenu
         messageHook = safetyhook::create_inline(Native::Lookup, Message);
         inputHook = safetyhook::create_inline(Native::Input, Input);
         destroyHook = safetyhook::create_inline(Native::Destroy, Destroy);
-        if (messageHook && inputHook && destroyHook)
-            initializeHook = safetyhook::create_inline(Native::Initialize, Initialize);
-        if (!initializeHook)
-        {
-            destroyHook.reset();
-            inputHook.reset();
-            messageHook.reset();
-            OutputDebugStringA("Resident Evil Revelations: native Plugins menu unavailable.\n");
-            return;
-        }
+        initializeHook = safetyhook::create_inline(Native::Initialize, Initialize);
 
         // MAIN.CheckForUpdates: the notice shows on the plugin list; FusionFixHub opens when the game closes.
         IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", Exit));

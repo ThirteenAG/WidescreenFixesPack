@@ -69,7 +69,5 @@ export namespace CoCCamera
             auto argument = reinterpret_cast<float*>(regs.esp);
             *argument = CoCCamera::Apply(reinterpret_cast<void*>(regs.esi), *argument, factor, Screen.fAspectRatio);
         });
-        if (!GameplayFOVHook)
-            OutputDebugStringA("Call of Cthulhu: gameplay FOV hook installation failed.\n");
     }
 }

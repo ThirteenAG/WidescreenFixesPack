@@ -28,7 +28,7 @@
   "hudaspect.description": "Auto hält das HUD an den Bildschirmrändern. Ein Seitenverhältnis hält es in einem zentrierten Rahmen dieser Form; 4:3 ist das Original-Layout.",
   "hudaspect.auto": "Auto",
   "cutsceneborders": "Zwischensequenz-Balken",
-  "cutsceneborders.description": "Behält Originalbalken, begrenzt Szenen auf ein mittiges 4:3-Bild oder beides. Entfernte horizontale Balken beschneiden das Bild, ohne verdeckte Bereiche zu zeigen.",
+  "cutsceneborders.description": "Oben/unten behält die schwarzen Balken über und unter den Zwischensequenzen; Seitlich begrenzt sie auf ihr ursprüngliches 4:3-Bild.",
   "cutsceneborders.letterbox": "Oben/unten",
   "cutsceneborders.pillarbox": "Seitlich",
   "cutsceneborders.both": "Beide",

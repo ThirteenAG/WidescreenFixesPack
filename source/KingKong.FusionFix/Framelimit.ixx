@@ -162,12 +162,6 @@ public:
             {
                 gCurrentLevel = regs.eax & 0x7FFFF;
             });
-            if (!fpslimiter || !fpslimiterlevel)
-            {
-                fpslimiter.reset();
-                fpslimiterlevel.reset();
-                OutputDebugStringA("King Kong: frame limiter hooks unavailable.\n");
-            }
         };
     }
 } Framelimit;

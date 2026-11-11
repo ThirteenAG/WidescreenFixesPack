@@ -23,7 +23,6 @@ std::vector<int> ResListHashes;
 std::vector<int> dwSupportedResolutionsArray;
 std::vector<int> dwSupportedRefreshRateArray;
 int cachedWidth = 0, cachedHeight = 0;
-bool FocusControlAvailable = false;
 
 namespace DALOptions
 {
@@ -198,7 +197,7 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
         case WM_ACTIVATE:
         {
             // The game pauses its sound here when the window loses focus
-            if (LOWORD(wParam) == WA_INACTIVE && FocusControlAvailable && !FixSettings().Bool("MAIN.PauseOnFocusLoss"))
+            if (LOWORD(wParam) == WA_INACTIVE && !FixSettings().Bool("MAIN.PauseOnFocusLoss"))
                 return DefWindowProc(hWnd, Msg, wParam, lParam);
         }
         break;
@@ -393,22 +392,14 @@ public:
                 if (!*pauseOnFocusLoss)
                     regs.eip = PeekMessages;
             });
-            FocusControlAvailable = static_cast<bool>(FocusHook);
-            if (FocusHook)
+            FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
             {
-                FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
-                {
-                    auto window = hWnd.get();
-                    if (!window)
-                        return;
-                    bool active = !FixSettings().Bool("MAIN.PauseOnFocusLoss") || GetForegroundWindow() == window;
-                    PostMessage(window, WM_ACTIVATE, active ? WA_ACTIVE : WA_INACTIVE, 0);
-                    PostMessage(window, WM_NULL, 0, 0);
-                });
-            }
-            FixSettings().Availability("MAIN.PauseOnFocusLoss", [](std::string_view value)
-            {
-                return value != "0" || FocusControlAvailable;
+                auto window = hWnd.get();
+                if (!window)
+                    return;
+                bool active = !FixSettings().Bool("MAIN.PauseOnFocusLoss") || GetForegroundWindow() == window;
+                PostMessage(window, WM_ACTIVATE, active ? WA_ACTIVE : WA_INACTIVE, 0);
+                PostMessage(window, WM_NULL, 0, 0);
             });
 
             pattern = hook::pattern("C7 44 24 ? ? ? ? ? 89 5C 24 ? 89 5C 24 ? FF D6 68");

@@ -645,7 +645,7 @@ namespace X_InputControlButton
         const char* szPadName = nullptr;
         if (pControl == GetInputPtr(MaxPayne_ConfiguredInput::RUN) || pControl == GetInputPtr(MaxPayne_ConfiguredInput::WALKBACK) ||
             pControl == GetInputPtr(MaxPayne_ConfiguredInput::STRAFELEFT) || pControl == GetInputPtr(MaxPayne_ConfiguredInput::STRAFERIGHT))
-            szPadName = MaxPayneIcons::Ready ? MaxPayneIcons::Glyph(19) : "Left Stick";
+            szPadName = MaxPayneIcons::Glyph(19);
         else
         {
             auto button = GetButtonForInput(pControl);
@@ -680,7 +680,7 @@ namespace X_InputControlButton
             MaxPayneIcons::Replace(alternatives.pad, token, CurrentSubstitution.pad);
         }
         auto result = OriginalReplace(self, position, length, name, start, count);
-        if (MaxPayneIcons::Ready && !CurrentSubstitution.pad.empty())
+        if (!CurrentSubstitution.pad.empty())
             MaxPayneIcons::RegisterPrompt(ReadString(self), std::move(alternatives));
         CurrentSubstitution = {};
         return result;
@@ -691,8 +691,6 @@ namespace X_InputControlButton
 export std::string GetControlIcon(std::string_view action)
 {
     using namespace X_InputControlButton;
-    if (!MaxPayneIcons::Ready)
-        return {};
     if (action == "RUN") return MaxPayneIcons::Glyph(22);
     if (action == "WALKBACK") return MaxPayneIcons::Glyph(23);
     if (action == "STRAFELEFT" || action == "STRAFERIGHT") return MaxPayneIcons::Glyph(21);
@@ -980,8 +978,6 @@ void InitRawMouse()
     auto module = GetModuleHandleW(L"X_Inputmfc.dll");
     auto update = hook::module_pattern(module, "64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 8B 44 24 10 64 89 25 00 00 00 00 83 EC 1C 57 8B F9 89 47 4D 8B 47 05");
     MouseUpdateHook = safetyhook::create_inline(update.get_first(), UpdateMouse);
-    if (!MouseUpdateHook)
-        throw std::runtime_error("Mouse update hook unavailable");
     auto pattern = hook::module_pattern(module, "D9 47 53 8B 4F 5F D8 0D ? ? ? ? 8B 97 87 00 00 00 8B 47 5B");
     MouseHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& context)
     {
@@ -994,11 +990,6 @@ void InitRawMouse()
         WriteMouse(mouse + 9, static_cast<LONG>(std::clamp(DeltaX.exchange(0), minimum, maximum)));
         WriteMouse(mouse + 13, static_cast<LONG>(std::clamp(DeltaY.exchange(0), minimum, maximum)));
     });
-    if (!MouseHook)
-    {
-        MouseUpdateHook.reset();
-        throw std::runtime_error("Raw mouse hook unavailable");
-    }
     Enabled.store(FixSettings().Bool("MAIN.RawInputMouse"));
     FixSettings().OnChange("MAIN.RawInputMouse", []() { Enabled.store(FixSettings().Bool("MAIN.RawInputMouse")); ClearMovement(); });
 }

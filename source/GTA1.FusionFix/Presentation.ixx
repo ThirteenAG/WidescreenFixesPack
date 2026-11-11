@@ -268,7 +268,7 @@ export namespace GTA1Presentation
 
         MenuHook = safetyhook::create_inline(MenuFrame, DrawMenu);
         PresentHook = safetyhook::create_inline(PresentPage, Present);
-        Log::Write(PresentHook ? "GTA1 presentation hook installed." : "GTA1 presentation hook FAILED.");
+        Log::Write("GTA1 presentation hook installed.");
         OriginalReadKey = reinterpret_cast<decltype(OriginalReadKey)>(key.get_first());
         // The event reader loops back into its first few instructions. Patch its
         // callers so those internal jumps continue to target the original code.

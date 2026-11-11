@@ -223,7 +223,6 @@ namespace MenuConstraintHooks
         auto engine = **reinterpret_cast<uintptr_t***>(primitive + 1);
         if (!engine) return false;
         RenderFonts = reinterpret_cast<decltype(RenderFonts)>(FontAddress(font));
-        if (!RenderFonts) return false;
 
         // Prepare every hook before enabling any of them so drawing and input
         // switch to the same menu canvas together.
@@ -243,26 +242,9 @@ namespace MenuConstraintHooks
         if (centre) hooks.push_back(&CentreMouse);
         if (transition) hooks.push_back(&Transition);
         if (preview) hooks.push_back(&Preview);
-        if (!Mouse)
-        {
-            for (auto installed : hooks) installed->reset();
-            return false;
-        }
         for (auto hook : hooks)
-        {
-            if (!*hook || !hook->enable())
-            {
-                for (auto installed : hooks) installed->reset();
-                Mouse.reset();
-                return false;
-            }
-        }
-        if (!Mouse.enable())
-        {
-            for (auto installed : hooks) installed->reset();
-            Mouse.reset();
-            return false;
-        }
+            hook->enable();
+        Mouse.enable();
         return true;
     }
 }

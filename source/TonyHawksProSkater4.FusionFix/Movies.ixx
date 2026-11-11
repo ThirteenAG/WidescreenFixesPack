@@ -11,7 +11,6 @@ import ComVars;
 export namespace THPS4Video
 {
     inline SafetyHookInline DrawHook;
-    inline const int32_t* Mode = nullptr;
 
     inline void __cdecl Draw(IDirect3DTexture8* texture, float x, float y, float width, float height, float alpha)
     {
@@ -46,7 +45,7 @@ export namespace THPS4Video
             }
         }
         // Every movie is a 4:3 picture; the 640x448 and 320x224 ones are anamorphic
-        const auto box = TonyVideo::Layout(targetWidth, targetHeight, 4.0f, 3.0f, std::clamp(*Mode, 0, 1));
+        const auto box = TonyVideo::Layout(targetWidth, targetHeight, 4.0f, 3.0f, 1);
         DrawHook.ccall<void>(texture, box.x, box.y, box.width / MovieFrameWidth.get(), box.height / MovieFrameHeight.get(), alpha);
         if (device)
         {
@@ -56,9 +55,8 @@ export namespace THPS4Video
         }
     }
 
-    inline void Install(const int32_t* mode, HMODULE module = GetModuleHandleW(nullptr))
+    inline void Install(HMODULE module = GetModuleHandleW(nullptr))
     {
-        Mode = mode;
         auto draw = hook::module_pattern(module, "83 EC 70 56 8B 74 24 78 85 F6 0F 84 ? ? ? ? 57 68 01 00 01 00 6A 04 E8");
         auto dimensions = hook::module_pattern(module, "D9 1D ? ? ? ? DF 6C 24 ? 51 6A 01 6A 16 53 D9 1D ? ? ? ? DB 05 ? ? ? ? 6A 01 56 57 50 D9 1D ? ? ? ? DB 05 ? ? ? ? D9 1D");
         MovieFrameWidth.SetAddress(*dimensions.get_first<float*>(35));

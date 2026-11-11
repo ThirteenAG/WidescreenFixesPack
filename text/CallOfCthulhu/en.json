@@ -36,7 +36,7 @@
   "FOVFactor": "Field of View",
   "FOVFactor.description": "Multiply the ordinary gameplay field of view, up to 150 degrees across. Aiming, scripted views, camera effects and transitions keep their native framing. 1.0 uses the intended field of view.",
   "FMVWidescreenMode": "Video Framing",
-  "FMVWidescreenMode.description": "Both choices show every movie whole at its own shape, with black bars where the screen is wider or narrower. Nothing is cut off or stretched.",
+  "FMVWidescreenMode.description": "Original aspect shows the movies as the game does, whole inside its centred 4:3 frame with black bars around them. Fill fits the whole movie to the screen, without cutting anything off or stretching it.",
   "FMVWidescreenMode.0": "Original aspect",
   "FMVWidescreenMode.1": "Fill",
   "WindowMode": "Window Mode",

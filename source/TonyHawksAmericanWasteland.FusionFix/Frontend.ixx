@@ -199,10 +199,18 @@ namespace THAWMenu
                    << static_cast<unsigned>(static_cast<const uint8_t*>(data)[i]) << ' ';
         return result.str();
     }
+    // Script function names and their table rows are data, past the code the default pattern scan covers:
+    // the whole image is searched.
+    inline void* find_data(const std::string& bytes)
+    {
+        const auto image = reinterpret_cast<uintptr_t>(GetModuleHandleW(nullptr));
+        const auto header = reinterpret_cast<const IMAGE_NT_HEADERS*>(image + reinterpret_cast<const IMAGE_DOS_HEADER*>(image)->e_lfanew);
+        return hook::range_pattern(image, image + header->OptionalHeader.SizeOfImage, bytes).get_first();
+    }
     inline void* Native(const char* name)
     {
-        auto text = find_pattern(Bytes(name, std::strlen(name) + 1));
-        auto row = find_pattern(Bytes(&text, sizeof(text)));
+        auto text = find_data(Bytes(name, std::strlen(name) + 1));
+        auto row = find_data(Bytes(&text, sizeof(text)));
         return Read<void*>(row, sizeof(void*));
     }
     struct Bindings
@@ -1022,14 +1030,6 @@ namespace THAWMenu
         state.callHook = safetyhook::create_inline(api.call, ScriptCall);
         state.updateHook = safetyhook::create_inline(api.update, Update);
         state.launchHook = safetyhook::create_inline(api.launch, Launch);
-        if (!state.callHook || !state.updateHook || !state.launchHook)
-        {
-            state.callHook.reset();
-            state.updateHook.reset();
-            state.launchHook.reset();
-            Log("Native menu hooks unavailable");
-            return;
-        }
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
                            reinterpret_cast<LPCWSTR>(&Init), &state.module);
         for (const auto& setting : FixSettings().GetDescription().settings)

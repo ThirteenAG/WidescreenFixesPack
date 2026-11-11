@@ -7,7 +7,7 @@ export module Movie;
 import Renderer;
 
 // The Bink player draws each frame as a full-screen quad (and the subtitles over it). The Movie layer gives the frame
-// its aspect ratio by MAIN.FMVWidescreenMode; black covers the rest of the screen.
+// its own aspect ratio; black covers the rest of the screen.
 namespace
 {
     SafetyHookInline shPlayMovieFrame = {};

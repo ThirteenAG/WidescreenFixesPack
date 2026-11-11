@@ -46,7 +46,7 @@ export void InitDrawDistance()
         injector::WriteMemory(pDrawDistValue24.get_first(0x2), &drawDistValue2, true);
         injector::WriteMemory(pDrawDistValue25.get_first(0x2), &drawDistValue2, true);
     }
-    else
+    else // 1.1/1.2 draw-distance layout
     {
         injector::WriteMemory(pDrawDistValue12.get_first(0x4), drawDistValue1, true);
 

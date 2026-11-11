@@ -118,7 +118,6 @@ public:
                 else
                     regs.eflags &= ~uint32_t{ 1 << 6 };
             });
-            settings.Availability("MAIN.PauseOnFocusLoss", [](std::string_view) { return bool(FocusHook); });
 
             static std::atomic<int> fpsLimit{ settings.Int("MAIN.FPSLimit") };
             settings.OnChange("MAIN.FPSLimit", []()
@@ -136,7 +135,6 @@ public:
                 if (std::isfinite(rate) && rate > 0.0f)
                     regs.xmm1.f32[0] = limit == 0 ? 0.0f : rate / limit;
             });
-            settings.Availability("MAIN.FPSLimit", [](std::string_view) { return bool(FrameRateHook); });
 
             // The logo scene (aLogo) waits (state 0), shows the division and copyright logos (state 1) and then changes
             // to the title scene (state 2). Starting it at state 2 goes to the title at once.

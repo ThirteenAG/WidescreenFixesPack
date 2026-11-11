@@ -122,7 +122,7 @@ namespace cFEng
 
     bool ApplyHudPackage(const char* packageName)
     {
-        if (!packageName || !*packageName || !FE::Object::FindObject || !shDestroyGroup)
+        if (!packageName || !*packageName)
             return false;
         bool found = false;
         for (bool right : { false, true })
@@ -179,15 +179,7 @@ namespace cFEng
         hbQueuePackageMessage.fun(instance, edx, messageHash, packageName, argument);
         updateWidescreenOffset();
         if (ApplyHudPackage(packageName))
-        {
-            try
-            {
-                HudPackages.emplace(packageName);
-            }
-            catch (const std::bad_alloc&)
-            {
-            }
-        }
+            HudPackages.emplace(packageName);
     }
 
 }
@@ -218,14 +210,7 @@ public:
             FE::Object::GetCenter = reinterpret_cast<decltype(FE::Object::GetCenter)>(injector::GetBranchDestination(getCenter.get_first()).as_int());
             FE::Object::FindObject = reinterpret_cast<decltype(FE::Object::FindObject)>(injector::GetBranchDestination(findObject.get_first()).as_int());
             cFEng::shDestroyGroup = safetyhook::create_inline(destroyGroup.get_first(), cFEng::DestroyGroup);
-            if (!cFEng::shDestroyGroup)
-                return;
             cFEng::shHudFrame = safetyhook::create_inline(hudFrame.get_first(), cFEng::HudFrame);
-            if (!cFEng::shHudFrame)
-            {
-                cFEng::shDestroyGroup.reset();
-                return;
-            }
             cFEng::mInstance.SetAddress(*queue.get_first<void**>(-9));
             cFEng::hbQueuePackageMessage.fun = injector::MakeCALL(queue.get_first(), cFEng::QueuePackageMessage, true).get();
             injector::MakeCALL(hudMessage.get_first(6), cFEng::QueuePackageMessage, true);

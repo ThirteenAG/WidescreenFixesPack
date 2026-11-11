@@ -99,17 +99,9 @@ public:
                 RevIcons::BeforeReset();
                 RevOverlay::BeforeReset(device);
             };
-            if (D3D9Options::HookCreation())
-            {
-                if (auto device = GetD3DDevice())
-                    D3D9Options::HookDevice(device);
-            }
-            else
-            {
-                D3D9Options::frame = nullptr;
-                D3D9Options::beforeReset = nullptr;
-                OutputDebugStringA("Resident Evil Revelations Fusion Fix: cutscene borders and developer overlay unavailable.\n");
-            }
+            D3D9Options::HookCreation();
+            if (auto device = GetD3DDevice())
+                D3D9Options::HookDevice(device);
         };
         WFP::onShutdownEvent() += []() { WindowCursor::Shutdown(); };
     }

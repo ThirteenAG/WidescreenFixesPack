@@ -191,7 +191,7 @@ export std::pair<int, int> GetRes()
 {
     // The profile options don't exist yet when the game creates its window
     int Width = 0, Height = 0;
-    if (fb::g_profileOptionsManager.get() && fb::ProfileOptions::getInt)
+    if (fb::g_profileOptionsManager.get())
     {
         Width = fb::ProfileOptions::getInt(fb::g_profileOptionsManager + 0x14, "ResolutionWidth", 0);
         Height = fb::ProfileOptions::getInt(fb::g_profileOptionsManager + 0x14, "ResolutionHeight", 0);

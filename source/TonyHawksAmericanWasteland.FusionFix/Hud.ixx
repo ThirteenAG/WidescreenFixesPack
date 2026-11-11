@@ -191,8 +191,6 @@ export namespace THAWHud
         CinemaMode = cinemaMode;
         auto font = hook::module_pattern(module, "81 EC 80 00 00 00 53 55 56 57 8B F9 D9 47 40 F3 0F 10 1D ? ? ? ? D9 FF F3 0F 10 4F 28");
         FontDrawHook = safetyhook::create_inline(font.get_first(), DrawFont);
-        if (!FontDrawHook)
-            std::terminate();
         auto text = hook::module_pattern(module, "83 EC 28 56 8B F1 8B 86 84 01 00 00 85 C0 0F 84 ? ? ? ? 0F BF 86 42 01 00 00");
         auto sprite = hook::module_pattern(module, "F3 0F 10 0D ? ? ? ? 83 EC 0C 53 56 8B F1 0F BF 86 42 01 00 00 F3 0F 2A C0 F3 0F 59 05");
         auto layout = hook::module_pattern(module, "8B 44 24 08 8B 48 1C 8B 15 ? ? ? ? 33 C0 83 FA 05 77 ? FF 24 95");

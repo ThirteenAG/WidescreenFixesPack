@@ -206,19 +206,13 @@ export namespace GodfatherOverlay
         auto events = hook::pattern("8B 48 04 8B 49 08 83 F9 03 75 26");
         auto next = hook::pattern("8B 4B 3C 8B 01 FF 50 18 85 C0 75 A7");
         auto pc = hook::pattern("83 EC 08 53 56 8B F1 66 8B 86 F6 04 00 00 33 DB 66 89 86 F8 04 00 00 38 9E 44 05 00 00");
-        if (!GodfatherWindow::createD3DHook)
-            return;
         nextEvent = next.get_first();
         inputHook = safetyhook::create_mid(input.get_first(), Filter, SafetyHookMid::StartDisabled);
         eventsHook = safetyhook::create_mid(events.get_first(), Event, SafetyHookMid::StartDisabled);
         pcHook = safetyhook::create_inline(pc.get_first(), Poll, SafetyHookInline::StartDisabled);
-        if (!inputHook || !eventsHook || !pcHook || !inputHook.enable() || !eventsHook.enable() || !pcHook.enable())
-        {
-            inputHook = {};
-            eventsHook = {};
-            pcHook = {};
-            return;
-        }
+        (void)inputHook.enable();
+        (void)eventsHook.enable();
+        (void)pcHook.enable();
         GodfatherInput::blocked = BlocksInput;
         GodfatherWindow::blocksInput = BlocksInput;
         const auto message = GodfatherWindow::message;

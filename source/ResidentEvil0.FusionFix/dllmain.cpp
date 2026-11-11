@@ -37,11 +37,9 @@ void Init()
     RE0Video::Install();
     RE0Start::Install(RE0Input::Blocked);
 
-    if (!RE0OverlayRuntime::Install())
-        OutputDebugStringA("Resident Evil 0 Fusion Fix: developer overlay unavailable.\n");
+    RE0OverlayRuntime::Install();
 
-    if (!RE0Menu::Install(module))
-        OutputDebugStringA("Resident Evil 0 Fusion Fix: native Plugins menu unavailable.\n");
+    RE0Menu::Install(module);
 }
 
 CEXP void InitializeASI()

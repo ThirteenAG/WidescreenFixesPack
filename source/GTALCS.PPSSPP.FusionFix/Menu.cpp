@@ -32,19 +32,19 @@ constexpr uintptr_t screenOffset = 0x564, optionOffset = 0x568, editOffset = 0x5
 enum Option : int16_t { FrameRate = 0x60, MoreOptions, HudSize, RadarSize, FieldOfView, CutsceneBorders,
     CutsceneFov, FastLoading, SkipIntro, ModernControls, MultiplayerRadar, DisplayOptions, GameOptions,
     FixOptions, Preset, ApplyPreset, Back, VehicleLights, FixDefaults,
-    LayoutOptions, AspectRatio, HudConstraint, RadarX, RadarY, MultiplayerY, PcCheats, MovieMode, IconSet, OptionEnd };
+    LayoutOptions, AspectRatio, HudConstraint, RadarX, RadarY, MultiplayerY, PcCheats, IconSet, OptionEnd };
 constexpr unsigned optionCount = OptionEnd - FrameRate;
 constexpr char keys[optionCount][8] = {"WF_FPS", "WF_MORE", "WF_HUD", "WF_RAD", "WF_FOV", "WF_CBOR",
     "WF_CFOV", "WF_LOAD", "WF_INTR", "WF_CTRL", "WF_MRAD", "WF_DISP", "WF_GAME", "WF_FIX",
     "WF_PRE", "WF_APLY", "WF_BACK", "WF_VLIT", "WF_FDEF",
-    "WF_LAY", "WF_ASP", "WF_HASP", "WF_RADX", "WF_RADY", "WF_MRY", "WF_PCC", "WF_MOV", "WF_ICON"};
+    "WF_LAY", "WF_ASP", "WF_HASP", "WF_RADX", "WF_RADY", "WF_MRY", "WF_PCC", "WF_ICON"};
 constexpr char16_t captions[optionCount][28] = {u"FRAME RATE:", u"PLUGINS", u"HUD SIZE:",
     u"RADAR SIZE:", u"FIELD OF VIEW:", u"CUTSCENE BORDERS:", u"ORIGINAL CUTSCENE FOV:", u"FAST LOADING:",
     u"SKIP INTRO:", u"MODERN CONTROLS:", u"MULTIPLAYER RADAR SIZE:", u"DISPLAY AND CAMERA",
     u"GAME AND CONTROLS", u"FUSION FIX", u"PRESET:", u"APPLY PRESET", u"",
     u"VEHICLE LIGHTS:", u"RESTORE DEFAULTS", u"LAYOUT",
     u"ASPECT RATIO:", u"HUD ASPECT RATIO:", u"RADAR HORIZONTAL POSITION:", u"RADAR VERTICAL POSITION:",
-    u"MULTIPLAYER RADAR POSITION:", u"PC CHEATS:", u"VIDEO ASPECT RATIO:", u"CONTROLLER ICONS:"};
+    u"MULTIPLAYER RADAR POSITION:", u"PC CHEATS:", u"CONTROLLER ICONS:"};
 bool Slider(int option) { return option == HudSize || option == RadarSize || option == MultiplayerRadar || option == FieldOfView; }
 bool Ours(int action) { return action >= FrameRate && action < OptionEnd; }
 bool Link(int action) { return action == MoreOptions || action == DisplayOptions || action == GameOptions || action == FixOptions || action == LayoutOptions || action == Back; }
@@ -97,7 +97,7 @@ void Write(bool sub) {
             add(FixOptions);
             break;
         case Page::Fix: add(Preset); add(ApplyPreset); add(DisplayOptions); add(LayoutOptions); add(GameOptions); add(FixDefaults); break;
-        case Page::Display: add(HudSize); add(RadarSize); add(MultiplayerRadar); add(FieldOfView); add(CutsceneBorders); add(MovieMode); break;
+        case Page::Display: add(HudSize); add(RadarSize); add(MultiplayerRadar); add(FieldOfView); add(CutsceneBorders); break;
         case Page::Game: add(FrameRate); add(FastLoading); add(SkipIntro); add(ModernControls); add(PcCheats); add(IconSet); add(VehicleLights); break;
         case Page::Layout: add(AspectRatio); add(HudConstraint); add(RadarX); add(RadarY); add(MultiplayerY); break;
         default: break;
@@ -248,7 +248,6 @@ void Adjust(int option, int direction) {
     case MultiplayerRadar: Drawing::settings.multiplayerRadar = step(Drawing::settings.multiplayerRadar, 0.1f, 2.0f); break;
     case FieldOfView: settings.fov = step(settings.fov, 0.5f, 2.0f); break;
     case CutsceneBorders: settings.cutsceneBorders = (settings.cutsceneBorders + (direction < 0 ? 3 : 1)) % 4; break;
-    case MovieMode: settings.movieMode = settings.movieMode ? 0 : 1; break;
     case SkipIntro: settings.skipIntro = !settings.skipIntro; break;
     case ModernControls: settings.modernControls = !settings.modernControls; break;
     case PcCheats: settings.pcCheats = !settings.pcCheats; break;
@@ -323,7 +322,7 @@ const uint16_t* ValueText(uintptr_t, int option) {
     auto& out = values[option - FrameRate];
     const uint16_t* source = nullptr;
     char ascii[8] = {};
-    if ((option == MovieMode && !MoviesAvailable()) || (option == PcCheats && !CheatsAvailable()))
+    if (option == PcCheats && !CheatsAvailable())
         return unavailable;
     if (option == IconSet)
     {
@@ -357,11 +356,6 @@ const uint16_t* ValueText(uintptr_t, int option) {
         static const uint16_t borders[][12] = {{'O','F','F',0}, {'L','E','T','T','E','R','B','O','X',0},
             {'P','I','L','L','A','R','B','O','X',0}, {'B','O','T','H',0}};
         source = borders[settings.cutsceneBorders & 3];
-    }
-    else if (option == MovieMode)
-    {
-        static const char16_t modes[][9] = {u"ORIGINAL", u"FILL"};
-        return reinterpret_cast<const uint16_t*>(modes[settings.movieMode ? 1 : 0]);
     }
     else if (Slider(option)) { console::Text<8> t(ascii); t.integer(uint32_t(Value(option))); t.character('%'); }
     else {
@@ -474,10 +468,6 @@ void DrawMenus(uintptr_t menu, int argument) {
         help = u"Keep the original cinematic frame with black borders.";
         second = u"Off crops it to fill; Both preserves the whole shot.";
         break;
-    case MovieMode:
-        help = u"Original and Fill both show the whole video, uncut.";
-        if (!MoviesAvailable()) second = u"Unsupported game code. Check the plugin log.";
-        break;
     case FastLoading: help = u"Temporarily remove the emulator speed limit while loading."; break;
     case SkipIntro: help = u"Skip the opening intro on the next game start."; break;
     case ModernControls:
@@ -513,13 +503,13 @@ void DrawMenus(uintptr_t menu, int argument) {
 void Save() {
     if (!dirty) return;
     using console::portable::IniValue;
-    IniValue values[19] = {
+    IniValue values[18] = {
         {"MAIN", "FPSLimit", {}}, {"MAIN", "UnthrottleEmuDuringLoading", {}},
         {"MAIN", "HudScale", {}}, {"RADAR", "RadarScale", {}}, {"MAIN", "FOVFactor", {}},
         {"MAIN", "CutsceneBorders", {}},
         {"MAIN", "SkipIntro", {}}, {"CONTROLS", "ModernControlScheme", {}}, {"MPRADAR", "RadarScale", {}},
         {"MAIN", "ForceAspectRatio", {}}, {"MAIN", "HudAspectRatioConstraint", {}}, {"RADAR", "RadarPosX", {}},
-        {"RADAR", "RadarPosY", {}}, {"MPRADAR", "RadarPosY", {}}, {"CONTROLS", "PCCheats", {}}, {"MAIN", "FMVWidescreenMode", {}}, {"MAIN", "GamepadIcons", {}}, {"MAIN", "TextLanguage", {}},
+        {"RADAR", "RadarPosY", {}}, {"MPRADAR", "RadarPosY", {}}, {"CONTROLS", "PCCheats", {}}, {"MAIN", "GamepadIcons", {}}, {"MAIN", "TextLanguage", {}},
         {"MAIN", "VehicleLights", {}}};
     std::strcpy(values[0].value, settings.fps ? "60" : "30");
     std::strcpy(values[1].value, settings.unthrottle ? "1" : "0");
@@ -540,12 +530,11 @@ void Save() {
     console::decimal(values[12].value, Drawing::settings.radarY, 2);
     console::decimal(values[13].value, Drawing::settings.multiplayerRadarY, 2);
     std::strcpy(values[14].value, settings.pcCheats ? "1" : "0");
-    values[15].value[0] = char('0' + settings.movieMode); values[15].value[1] = 0;
-    std::strcpy(values[16].value, iconSets[settings.icons]);
-    std::strcpy(values[17].value, settings.textLanguage == TextLanguage::Auto ? "auto" : "en");
-    std::strcpy(values[18].value, settings.vehicleLights ? "1" : "0");
+    std::strcpy(values[15].value, iconSets[settings.icons]);
+    std::strcpy(values[16].value, settings.textLanguage == TextLanguage::Auto ? "auto" : "en");
+    std::strcpy(values[17].value, settings.vehicleLights ? "1" : "0");
     static console::portable::IniWriter<> writer;
-    const bool saved = writer.update(iniPath, values, 19);
+    const bool saved = writer.update(iniPath, values, 18);
 #ifndef NDEBUG
     logger.WriteF("Menu settings %s", saved ? "saved" : "could not be saved");
 #endif

@@ -10,7 +10,6 @@ import ComVars;
 export namespace BullyCutscene
 {
     SafetyHookMid RenderHook, TimeHook;
-    bool ManagerReady = false;
     float UnclampedStep = 1.0f;
     bool HaveStep = false;
     const int* Mode = nullptr;
@@ -30,7 +29,7 @@ export namespace BullyCutscene
 
     bool Active()
     {
-        return ManagerReady && (CutsceneManager->current != 0 || CutsceneManager->previous != 0);
+        return CutsceneManager->current != 0 || CutsceneManager->previous != 0;
     }
 
     Layout Calculate(float aspect)
@@ -79,8 +78,6 @@ export namespace BullyCutscene
 
     void Render()
     {
-        if (!ManagerReady || !Aspect || !DrawRectangle)
-            return;
         const auto layout = Calculate(*Aspect);
         if (!layout.active)
             return;
@@ -111,7 +108,6 @@ export namespace BullyCutscene
     {
         RenderHook.reset();
         TimeHook.reset();
-        ManagerReady = false;
         HaveStep = false;
     }
 
@@ -121,7 +117,6 @@ export namespace BullyCutscene
         auto rectangle = hook::module_pattern(module, "83 EC 0C 56 8D 44 24 04 50 6A 08 E8 ? ? ? ? 8D 4C 24 10 51 6A 06 E8");
         auto time = hook::module_pattern(module, "D9 1D ? ? ? ? DB 05 ? ? ? ? DE C2 D9 C9 E8 ? ? ? ? D9 05 ? ? ? ? 8B F0 D9 05 ? ? ? ? 8B 0D");
         CutsceneManager.SetAddress(*render.get_first<uint8_t*>(28));
-        ManagerReady = true;
         (void)*render.get_first<bool*>(20);
         CutsceneTimeStep.SetAddress(*time.get_first<float*>(2));
         Mode = &mode;

@@ -136,8 +136,6 @@ public:
             auto blurBAddress = hook::pattern("F3 41 0F 11 84 8C B0 4E 04 05 F3 0F 10 45 1C F3 41 0F 11 84 8C 30 4D 04").get_first<uint8_t>(6);
             auto blurAAddress = hook::pattern("F3 41 0F 11 84 8C 30 4D 04 05 49 83 FE 60 0F 8C ? ? ? ? 66 FF C6 66").get_first<uint8_t>(6);
             const auto update = hook::pattern("48 8B C4 48 89 58 08 48 89 70 10 48 89 78 18 55 41 54 41 55 41 56 41 57 48 8D 68 A1 48 81 EC C0 00 00 00 0F 29 70 C8 0F").get_first();
-            if (!update || !skyTopRAddress || !skyTopGAddress || !skyTopBAddress || !skyBottomRAddress || !skyBottomGAddress || !skyBottomBAddress || !ambientRAddress || !ambientGAddress || !ambientBAddress || !cloudRAddress || !cloudGAddress || !cloudBAddress || !hoursAddress || !minutesAddress || !weatherInterpolationAddress || !oldWeatherAddress || !newWeatherAddress || !lowCloudRAddress || !lowCloudGAddress || !lowCloudBAddress || !topCloudRAddress || !topCloudGAddress || !topCloudBAddress || !directionalRAddress || !directionalGAddress || !directionalBAddress || !blurRAddress || !blurGAddress || !blurBAddress || !blurAAddress)
-                return;
             skyTopR = reinterpret_cast<int32_t*>(injector::ReadRelativeOffset(skyTopRAddress).as_int());
             skyTopG = reinterpret_cast<int32_t*>(injector::ReadRelativeOffset(skyTopGAddress).as_int());
             skyTopB = reinterpret_cast<int32_t*>(injector::ReadRelativeOffset(skyTopBAddress).as_int());

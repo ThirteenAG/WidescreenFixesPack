@@ -169,29 +169,20 @@ export namespace ScarfaceCutscene
         }
     };
 
-    inline bool Install(const int& borders, bool cameraReady, HMODULE module = GetModuleHandle(nullptr))
+    inline void Install(const int& borders, HMODULE module = GetModuleHandle(nullptr))
     {
         Borders = &borders;
         if (Ready)
-            return true;
+            return;
         const auto tables = ScarfaceRTTI::ScanVtables(module);
         const auto effects = tables.at(".?AVHUDScreenFX@@");
         const auto movie = tables.at(".?AVRenderStrategyBink@movie@@");
-        if (!cameraReady)
-            throw std::runtime_error("Cutscene framing dependencies unavailable");
         const auto movieConfigure = reinterpret_cast<uintptr_t*>(movie)[7];
         auto display = hook::range_pattern(movieConfigure, movieConfigure + 128, "8B 0D ? ? ? ? 8B 01 56 57 FF 50 38");
         cutsceneDisplay.SetAddress(*display.get_first<void**>(2));
         const auto methods = reinterpret_cast<uintptr_t*>(effects);
         UpdateHook = safetyhook::create_inline(reinterpret_cast<void*>(methods[54]), Update);
         DestroyHook = safetyhook::create_inline(reinterpret_cast<void*>(methods[1]), Destroy);
-        Ready = UpdateHook && DestroyHook;
-        if (!Ready)
-        {
-            UpdateHook.reset();
-            DestroyHook.reset();
-            throw std::runtime_error("Cutscene framing hooks unavailable");
-        }
-        return Ready;
+        Ready = true;
     }
 }

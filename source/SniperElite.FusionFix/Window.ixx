@@ -133,8 +133,6 @@ export namespace SniperWindow
         NativeMoveWindow = MoveWindow;
         auto original = IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("CreateWindowExA", CreateGameWindow),
             std::forward_as_tuple("MoveWindow", MoveGameWindow));
-        auto create = original.find("CreateWindowExA");
-        if (create == original.end() || !(NativeCreateWindow = reinterpret_cast<decltype(NativeCreateWindow)>(create->second.get())))
-            OutputDebugStringA("Sniper Elite: window placement unavailable.\n");
+        NativeCreateWindow = reinterpret_cast<decltype(NativeCreateWindow)>(original.at("CreateWindowExA").get());
     }
 }

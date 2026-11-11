@@ -213,5 +213,5 @@ export void InstallCameraAndMovies()
 
     THPS2Camera::Install(&FixSettings().Float("MAIN.FOVFactor"), &Screen.FOV);
 
-    THPS2Video::Install(Screen.fWidth, Screen.fHeight, &FixSettings().Int("MAIN.FMVWidescreenMode"));
+    THPS2Video::Install(Screen.fWidth, Screen.fHeight);
 }

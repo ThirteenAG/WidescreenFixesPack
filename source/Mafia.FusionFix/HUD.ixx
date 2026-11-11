@@ -319,20 +319,15 @@ export void InitMap()
         // FMUL/FXCH sequence and restore the width before the next operation.
         // Copy integer bits here: both hooks run with a live x87 stack.
         static thread_local uint32_t savedWidth;
-        static SafetyHookMid MapPlayerWidthHook;
         static auto MapPlayerRestoreHook = safetyhook::create_mid(pMapPlayer.get_first(6), [](SafetyHookContext& regs)
         {
             Field<uint32_t>(regs.esp, 0x10) = savedWidth;
         });
-        if (MapPlayerRestoreHook)
+        static auto MapPlayerWidthHook = safetyhook::create_mid(pMapPlayer.get_first(), [](SafetyHookContext& regs)
         {
-            MapPlayerWidthHook = safetyhook::create_mid(pMapPlayer.get_first(), [](SafetyHookContext& regs)
-            {
-                savedWidth = Field<uint32_t>(regs.esp, 0x10);
-                Field<uint32_t>(regs.esp, 0x10) = std::bit_cast<uint32_t>(fMapPlayerWidth);
-            });
-            if (!MapPlayerWidthHook) MapPlayerRestoreHook.reset();
-        }
+            savedWidth = Field<uint32_t>(regs.esp, 0x10);
+            Field<uint32_t>(regs.esp, 0x10) = std::bit_cast<uint32_t>(fMapPlayerWidth);
+        });
     }
     static float mapWidth = mapRightX - mapLeftX;
     injector::WriteMemory(pMapWidth.get_first(0x2), &mapWidth, true);

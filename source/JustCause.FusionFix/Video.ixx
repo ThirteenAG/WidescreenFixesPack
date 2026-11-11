@@ -107,10 +107,9 @@ export namespace JCVideo
         if (decoderReady)
         {
             constructHook = safetyhook::create_inline(constructSite, Construct);
-            if (constructHook) spriteHook = safetyhook::create_inline(spriteSite, Sprite);
-            if (spriteHook) nativeDraw.fun = injector::MakeCALL(drawSite, Draw).get();
-            ready = nativeDraw.fun && spriteHook && constructHook;
+            spriteHook = safetyhook::create_inline(spriteSite, Sprite);
+            nativeDraw.fun = injector::MakeCALL(drawSite, Draw).get();
+            ready = true;
         }
-        if (!ready) OutputDebugStringA("Just Cause: movie drawing hook unavailable.\n");
     }
 }

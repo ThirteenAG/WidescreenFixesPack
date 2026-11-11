@@ -169,12 +169,9 @@ export namespace NeoRenderer
         });
         D3D9Options::frame = Present;
         D3D9Options::beforeReset = BeforeReset;
-        if (!D3D9Options::HookCreation())
-            OutputDebugStringA("Path of Neo Fusion Fix: Direct3D 9 hooks unavailable.\n");
+        D3D9Options::HookCreation();
 
         auto original = IATHook::Replace(GetModuleHandleW(nullptr), "DINPUT8.dll", std::forward_as_tuple("DirectInput8Create", CreateInput));
-        auto create = original.find("DirectInput8Create");
-        if (create == original.end() || !(NativeInputCreate = reinterpret_cast<decltype(NativeInputCreate)>(create->second.get())))
-            OutputDebugStringA("Path of Neo Fusion Fix: developer overlay input hook unavailable.\n");
+        NativeInputCreate = reinterpret_cast<decltype(NativeInputCreate)>(original.at("DirectInput8Create").get());
     }
 }

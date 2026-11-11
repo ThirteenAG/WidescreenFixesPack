@@ -129,9 +129,5 @@
   "ui.off": "Desactivado",
   "ui.both": "Ambas",
   "ui.letterbox": "Bandas horizontales",
-  "ui.pillarbox": "Bandas verticales",
-  "FMVWidescreenMode": "Encuadre de vídeo",
-  "FMVWidescreenMode.description": "Original ajusta el vídeo completo a una zona 4:3. Rellenar ajusta el vídeo completo a la pantalla. Ningún modo recorta ni estira la imagen.",
-  "FMVWidescreenMode.0": "Formato original",
-  "FMVWidescreenMode.1": "Llenar"
+  "ui.pillarbox": "Bandas verticales"
 }

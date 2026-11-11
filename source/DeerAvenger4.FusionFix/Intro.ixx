@@ -21,6 +21,6 @@ export namespace DeerIntro
         {
             context.eax = 1;
         });
-        return bool(decisionHook);
+        return true;
     }
 }

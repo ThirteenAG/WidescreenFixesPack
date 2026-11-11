@@ -108,14 +108,18 @@ public:
             // and slower. The fix keeps them at their 720p size relative to the screen height.
             if (FixSettings().Bool("MAIN.DisableFilmGrain"))
             {
-                // Its noise and mask textures aren't found, so it isn't drawn
+                // Its noise and mask textures aren't found, so it isn't drawn. The names are in read-only data,
+                // past the code the default pattern scan covers: the whole image is searched.
+                const auto image = (uintptr_t)GetModuleHandleW(nullptr);
+                const auto header = (IMAGE_NT_HEADERS*)(image + ((IMAGE_DOS_HEADER*)image)->e_lfanew);
+                const auto end = image + header->OptionalHeader.SizeOfImage;
                 for (auto name : { R"(system\filter\TVNoise_LIN)", R"(system\filter\TVMask_LIN)" })
                 {
                     std::string bytes;
                     for (auto c = name; *c; ++c)
                         bytes += std::format("{:02X} ", (uint8_t)*c);
                     bytes += "00";
-                    auto pattern = hook::pattern(bytes);
+                    auto pattern = hook::range_pattern(image, end, bytes);
                     injector::WriteMemory<uint8_t>(pattern.get_first(), 'r', true);
                 }
             }

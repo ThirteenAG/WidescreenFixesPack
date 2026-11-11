@@ -61,9 +61,9 @@ namespace
             return HudSpriteHook.ccall<uintptr_t>(sprite, mode);
         auto x = reinterpret_cast<float*>(static_cast<uint8_t*>(sprite) + 0x30);
         const float original = *x;
-        injector::WriteMemory<float>(x, original - offset, true);
+        *x = original - offset;
         const auto result = HudSpriteHook.ccall<uintptr_t>(sprite, mode);
-        injector::WriteMemory<float>(x, original, true);
+        *x = original;
         return result;
     }
 
@@ -293,8 +293,8 @@ namespace
     {
         if (RenderCamera->fZoom != zoom)
         {
-            injector::WriteMemory<float>(&RenderCamera->fZoom, zoom, true);
-            injector::WriteMemory<uint32_t>(&RenderCamera->nFlags, RenderCamera->nFlags | 1, true);
+            RenderCamera->fZoom = zoom;
+            RenderCamera->nFlags |= 1;
         }
     }
 
@@ -468,7 +468,7 @@ public:
             HudCircleHook = safetyhook::create_mid(circle.get_first(15), [](SafetyHookContext& regs)
             {
                 auto x = reinterpret_cast<float*>(regs.esp);
-                injector::WriteMemory<float>(x, *x - HudOffset(), true);
+                *x -= HudOffset();
             });
             if (!HudSpriteHook || !HudCircleHook)
                 std::terminate();

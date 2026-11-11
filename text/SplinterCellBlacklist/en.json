@@ -143,9 +143,5 @@
   "ui.pillarbox": "Pillarbox",
   "ui.both": "Both",
   "HudAspectRatioConstraint": "HUD Aspect Ratio",
-  "HudAspectRatioConstraint.description": "Auto places side HUD elements at the screen edges. Choose 4:3, 16:9, 21:9 or a custom W:H or decimal ratio to keep them in a centered area, from 4:3 to 32:9. Full-screen effects and world markers are unchanged. Applies immediately.",
-  "FMVWidescreenMode": "Video framing",
-  "FMVWidescreenMode.description": "Original fits the whole video within a 4:3 area. Fill fits the whole video within the screen. Neither crops or stretches the picture.",
-  "FMVWidescreenMode.0": "Original aspect",
-  "FMVWidescreenMode.1": "Fill"
+  "HudAspectRatioConstraint.description": "Auto places side HUD elements at the screen edges. Choose 4:3, 16:9, 21:9 or a custom W:H or decimal ratio to keep them in a centered area, from 4:3 to 32:9. Full-screen effects and world markers are unchanged. Applies immediately."
 }

@@ -41,11 +41,7 @@ namespace USMXidi
     void Init()
     {
         auto load = hook::pattern("83 C4 0C 8D 84 24 18 01 00 00 50 FF 15 ? ? ? ? 3B C3 A3 ? ? ? ? 74 13 68");
-        std::array<wchar_t, 32768> executable{};
-        const auto length = GetModuleFileNameW(nullptr, executable.data(), static_cast<DWORD>(executable.size()));
-        if (!length || length >= executable.size())
-            return;
-        const auto directory = std::filesystem::path(executable.data()).parent_path();
+        const auto directory = GetExeModulePath<std::filesystem::path>();
         std::error_code error;
         const auto proxy = directory / "dinput8.dll";
         if (!std::filesystem::is_regular_file(directory / "Xidi.32.dll", error) ||
@@ -101,27 +97,19 @@ namespace USMLanguage
 
     void Init()
     {
-        std::array<wchar_t, 32768> path{};
-        const auto length = GetModuleFileNameW(nullptr, path.data(), static_cast<DWORD>(path.size()));
-        if (length && length < path.size())
-            GameDirectory = std::filesystem::path(path.data()).parent_path();
+        GameDirectory = GetExeModulePath<std::filesystem::path>();
         auto reader = hook::pattern("83 EC 08 8D 04 24 50 8D 54 24 08 52 8B 54 24 14 8D 44 24 14 50 52 C7 44 24 10 04 00 00 00 E8 ? ? ? ? 84 C0 74 0B");
-        if (!GameDirectory.empty())
-        {
-            auto hook = safetyhook::InlineHook::create(reader.get_first(), reinterpret_cast<void*>(&Read));
-            if (hook)
-                ReadHook = std::move(*hook);
-        }
+        ReadHook = safetyhook::create_inline(reader.get_first(), Read);
         auto& settings = FixSettings();
         settings.Availability("MAIN.Language", [](std::string_view value)
         {
-            return value == "auto" || (ReadHook && Installed(value));
+            return Installed(value);
         }, []()
         {
             return USMMenu::Words("language.unavailable");
         });
         const auto selected = settings.String("MAIN.Language");
-        Selected = ReadHook && Installed(selected) ? Index(selected) : -1;
+        Selected = Installed(selected) ? Index(selected) : -1;
         USMMenu::GameLanguage = []()
         {
             constexpr std::string_view codes[] = { "en", "fr", "de", "es", "it" };
@@ -140,13 +128,6 @@ namespace USMUpdates
 
     void Init()
     {
-        const bool available = USMMenu::LoopHook && USMMenu::EventHook && USMMenu::DestroyHook;
-        FixSettings().Availability("MAIN.CheckForUpdates", [available](std::string_view value)
-        {
-            return value == "0" || available;
-        });
-        if (!available)
-            return;
         IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", Exit));
         RWGTA::UpdateCheck::Config config;
         config.pluginId = "UltimateSpiderMan.FusionFix";

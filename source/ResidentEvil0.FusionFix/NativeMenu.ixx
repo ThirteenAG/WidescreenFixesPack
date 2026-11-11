@@ -605,10 +605,11 @@ export namespace RE0Menu
         return 0;
     }
 
-    inline bool Install(HMODULE ownModule)
+    inline void Install(HMODULE ownModule)
     {
         module = ownModule;
-        if (!RE0Text::Bind() || !Bind()) return false;
+        RE0Text::Bind();
+        Bind();
         initHook = safetyhook::create_inline(initialize, Initialize);
         execHook = safetyhook::create_inline(reinterpret_cast<void*>(menuVtable[8]), Exec);
         destroyHook = safetyhook::create_inline(reinterpret_cast<void*>(menuVtable[0]), Destroy);
@@ -632,41 +633,32 @@ export namespace RE0Menu
             host->page = host->rowStart = host->selection = 0;
             Populate(host);
         });
-        const bool ready = initHook && execHook && destroyHook && releaseHook && inputHook && acceptHook;
-        if (!ready)
+        RWGTA::UpdateCheck::Config updates;
+        updates.pluginId = "ResidentEvil0.FusionFix";
+        updates.fileVersion = rsc_FileVersion;
+        updates.settings = &FixSettings();
+        updates.playable = []()
         {
-            initHook.reset(); execHook.reset(); destroyHook.reset(); releaseHook.reset(); inputHook.reset(); acceptHook.reset();
-        }
-        if (ready)
+            return std::any_of(hosts.begin(), hosts.end(), [](const auto& entry)
+            {
+                return Current(entry.second) && Read<uint8_t>(entry.first, 0x254) && Read<uint32_t>(entry.first, 0x268) == 3;
+            });
+        };
+        updates.show = [](const std::wstring& notice) { updateNotice = asi_settings::text::Narrow(notice); };
+        updates.format = [](const std::string& version, bool hub)
         {
-            RWGTA::UpdateCheck::Config updates;
-            updates.pluginId = "ResidentEvil0.FusionFix";
-            updates.fileVersion = rsc_FileVersion;
-            updates.settings = &FixSettings();
-            updates.playable = []()
+            auto texts = FixSettings().GetTexts();
+            texts.Select(Language());
+            auto line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
+            auto replace = [&line](const char* key, const std::string& value)
             {
-                return std::any_of(hosts.begin(), hosts.end(), [](const auto& entry)
-                {
-                    return Current(entry.second) && Read<uint8_t>(entry.first, 0x254) && Read<uint32_t>(entry.first, 0x268) == 3;
-                });
+                const auto at = line.find(key);
+                if (at != std::string::npos) line.replace(at, strlen(key), value);
             };
-            updates.show = [](const std::wstring& notice) { updateNotice = asi_settings::text::Narrow(notice); };
-            updates.format = [](const std::string& version, bool hub)
-            {
-                auto texts = FixSettings().GetTexts();
-                texts.Select(Language());
-                auto line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
-                auto replace = [&line](const char* key, const std::string& value)
-                {
-                    const auto at = line.find(key);
-                    if (at != std::string::npos) line.replace(at, strlen(key), value);
-                };
-                replace("{name}", texts.Resolve(FixSettings().GetDescription().name));
-                replace("{version}", version);
-                return asi_settings::text::Widen(line);
-            };
-            RWGTA::UpdateCheck::Init(std::move(updates));
-        }
-        return ready;
+            replace("{name}", texts.Resolve(FixSettings().GetDescription().name));
+            replace("{version}", version);
+            return asi_settings::text::Widen(line);
+        };
+        RWGTA::UpdateCheck::Init(std::move(updates));
     }
 }

@@ -110,7 +110,7 @@ export namespace GTA2Camera
     {
         auto take = [](GameRef<void*>& slot, auto& original, auto replacement)
         {
-            if (!slot.is_initialized() || !slot || slot == reinterpret_cast<void*>(replacement)) return;
+            if (!slot || slot == reinterpret_cast<void*>(replacement)) return;
             original = reinterpret_cast<std::remove_reference_t<decltype(original)>>(slot.get());
             slot = reinterpret_cast<void*>(replacement);
         };
@@ -252,7 +252,7 @@ export namespace GTA2Camera
 
     int __fastcall DrawLayers(void* layers, int)
     {
-        if (!nBlockRangeFactor.is_initialized() || !ViewCamera) return LayersHook.thiscall<int>(layers);
+        if (!ViewCamera) return LayersHook.thiscall<int>(layers);
         // The block range is depth / zoom wide and 0.75 of that tall, from the
         // 4:3 screen. Widen it to the screen's aspect ratio, and for a turned view
         // to the screen diagonal in both directions.

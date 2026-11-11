@@ -11,7 +11,7 @@
   "HudAspectRatioConstraint": "HUD-Seitenverhältnis",
   "HudAspectRatioConstraint.description": "Auto verteilt das HUD über den ganzen Bildschirm, an seine Ränder. Ein Verhältnis hält es in einem mittigen Rahmen dieser Form. Menüs behalten ihr 4:3-Layout. Wirkt sofort.",
   "FMVWidescreenMode": "Video-Seitenverhältnis",
-  "FMVWidescreenMode.description": "Beide Einstellungen zeigen jedes Video vollständig im eigenen Seitenverhältnis, mit schwarzen Balken, wo der Bildschirm breiter oder schmaler ist. Nichts wird abgeschnitten oder gestreckt.",
+  "FMVWidescreenMode.description": "Original zeigt die Videos vollständig im mittigen 4:3-Rahmen des Spiels. Ausfüllen passt das ganze Video an den Bildschirm an. Nichts wird abgeschnitten oder gestreckt.",
   "WindowMode": "Fenstermodus",
   "WindowMode.description": "Vollbild, ein Fenster mit Rahmen in der gewählten Auflösung oder rahmenlos in der Monitorauflösung. Nach einem Wechsel des Fenstermodus neu starten.",
   "PauseOnFocusLoss": "Bei Fokusverlust pausieren",

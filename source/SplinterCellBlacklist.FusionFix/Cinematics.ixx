@@ -238,21 +238,11 @@ export namespace Cinematics
             const auto dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
             const auto nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
             const auto& directory = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_TLS];
-            if (!directory.VirtualAddress || directory.Size < sizeof(IMAGE_TLS_DIRECTORY))
-                return;
             const auto tls = reinterpret_cast<const IMAGE_TLS_DIRECTORY*>(base + directory.VirtualAddress);
-            if (tls->AddressOfIndex < base || tls->AddressOfIndex - base > nt->OptionalHeader.SizeOfImage - sizeof(DWORD))
-                return;
             TlsIndex = reinterpret_cast<const DWORD*>(tls->AddressOfIndex);
         }
         ProjectionHook = safetyhook::create_inline(projection.get_first(), Projection);
         HudHook = safetyhook::create_mid(Dx9 ? hud9.get_first() : hud11.get_first(), [](SafetyHookContext& regs) { BeforeHud(regs.edi); });
-        if (!ProjectionHook || !HudHook)
-        {
-            HudHook.reset();
-            ProjectionHook.reset();
-            throw std::runtime_error("Cinematic hook installation failed");
-        }
         Ready.store(true);
     }
 }

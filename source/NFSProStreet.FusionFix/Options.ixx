@@ -389,7 +389,7 @@ namespace
 
     bool DecodeText(const std::string& text, std::vector<wchar_t>& wide)
     {
-        if (!LocalizedWide || text.size() >= size_t(INT_MAX - 1))
+        if (text.size() >= size_t(INT_MAX - 1))
             return false;
         auto hash = TextHash("MEASURE");
         Texts[hash] = text + '\0';
@@ -488,7 +488,7 @@ namespace
     float MeasureText(void* object, const std::string& text)
     {
         FontModeScope literal(true);
-        if (!object || !FindFont || !GlyphAdvance || !LocalizedWide)
+        if (!object)
             return std::numeric_limits<float>::quiet_NaN();
         auto bytes = static_cast<uint8_t*>(object);
         auto data = *reinterpret_cast<float**>(bytes + 0x2C);
@@ -1533,7 +1533,7 @@ namespace
             auto context = LoadedPackage(record.package);
             if (!active())
                 return;
-            if (context != record.context || !FindObject)
+            if (context != record.context)
                 continue;
             auto object = FindObject(context, record.name);
             if (!active())
@@ -1627,7 +1627,7 @@ namespace
 
     bool PublishCaption(uint8_t* object, uint32_t hash, std::string encoded, WFPMenu::Owner::Token owner)
     {
-        if (!PageOwner.Matches(owner) || !SetLanguageHash)
+        if (!PageOwner.Matches(owner))
             return false;
         encoded.resize(std::min<size_t>(encoded.size(), 1023));
         bool changed = Texts[hash] != encoded || *reinterpret_cast<uint32_t*>(object + 0x60) != hash ||
@@ -1710,7 +1710,7 @@ namespace
 
     void FitRow(uint8_t* page, int index, const char* format, uint8_t* node, bool settings, WFPMenu::Owner::Token owner)
     {
-        if (!PageOwner.Matches(owner) || !FindObject || !SetLanguageHash)
+        if (!PageOwner.Matches(owner))
             return;
         if (owner.screen != page)
         {
@@ -1894,7 +1894,7 @@ namespace
         auto pin = Plugins;
         auto active = [&]() { return PageOwner.Matches(owner) && Plugins == pin; };
         if ((DialogPending.is_initialized() && NFSPSDialog::Busy()) ||
-            !page || owner.screen != page || !Pages.count(page) || !FindObject ||
+            !page || owner.screen != page || !Pages.count(page) ||
             *reinterpret_cast<int32_t*>(page + 0x1C) <= 0 ||
             (*reinterpret_cast<uintptr_t**>(page) == OptionsPageTable && *reinterpret_cast<int32_t*>(page + PageState) != 0))
         {
@@ -2237,7 +2237,7 @@ namespace
         auto pin = Plugins;
         auto current = [&]() { return owner.screen == page && PageOwner.Matches(owner) && Plugins == pin; };
         if (!RestartChange || RestartWarned || !page || !current() || !Pages.count(page) || NFSPSDialog::Busy() ||
-            !LocalizedWide || !FindFont || !FindFont(0x94AF4029) || !current() ||
+            !FindFont(0x94AF4029) || !current() ||
             (*reinterpret_cast<uintptr_t**>(page) == OptionsPageTable && *reinterpret_cast<int32_t*>(page + PageState) != 0))
             return;
         std::array<uint8_t, 120> style{};
@@ -2321,8 +2321,6 @@ namespace
     void Refresh(uint8_t* page)
     {
         NativeScope scope;
-        if (!CrtMalloc || !CrtFree)
-            return;
         auto format = PageFormats.find(page);
         if (format == PageFormats.end())
             return;
@@ -2471,7 +2469,7 @@ namespace
     void ShowRowGroups(uint8_t* page, size_t count, WFPMenu::Owner::Token owner)
     {
         auto format = PageFormats.find(page);
-        if (format == PageFormats.end() || !FindObject)
+        if (format == PageFormats.end())
             return;
         auto rowFormat = format->second.starts_with("OPTION_HEADER_") ? std::string("OPTION_GROUP_%d") : format->second;
         auto screen = *reinterpret_cast<uint8_t**>(page + 0x14);
@@ -2501,7 +2499,7 @@ namespace
     {
         NativeScope native;
         auto source = PageParents.find(page);
-        if (!page || !Pages.count(page) || source == PageParents.end() || !RepaintRows ||
+        if (!page || !Pages.count(page) || source == PageParents.end() ||
             (DialogPending.is_initialized() && NFSPSDialog::Busy()))
             return true;
         auto table = *reinterpret_cast<uintptr_t**>(page);
@@ -3239,24 +3237,6 @@ public:
             shGetParentID = safetyhook::create_inline(parentId.get_first(), GetParentID);
             shContextNotify = safetyhook::create_inline(contextNotify.get_first(), &ContextNotify);
             shDrawSlider = safetyhook::create_inline(sliderDraw.get_first(), &DrawSlider);
-            if (!shCreatePreview || !shConstructPage || !shClearNodes || !shSearchString || !shGetChildren || !shGetDataNode || !shGetParentID || !shFormat || !shRenderString ||
-                !shPopupItem || !shPopupDraw || !shContextNotify || !shDrawSlider)
-            {
-                shDrawSlider.reset();
-                shContextNotify.reset();
-                shGetParentID.reset();
-                shGetDataNode.reset();
-                shGetChildren.reset();
-                shSearchString.reset();
-                shFormat.reset();
-                shPopupDraw.reset();
-                shPopupItem.reset();
-                shRenderString.reset();
-                shClearNodes.reset();
-                shConstructPage.reset();
-                shCreatePreview.reset();
-                return;
-            }
             OriginalContextNotify = shContextNotify.original<ContextNotifyFn>();
             OriginalDrawSlider = shDrawSlider.original<DrawSliderFn>();
             auto baseTable = *basePage.get_first<uintptr_t*>(5);
@@ -3269,30 +3249,20 @@ public:
             auto table = *dialogScreen.get_first<uintptr_t*>(0x0E);
             shConstructDialog = safetyhook::create_inline(dialogScreen.get_first(-0x37), ConstructDialog);
             shDialogNotify = safetyhook::create_inline(reinterpret_cast<void*>(table[1]), DialogNotify);
-            if (shConstructDialog && shDialogNotify)
-            {
-                CloseDialog = reinterpret_cast<decltype(CloseDialog)>(dialogClose.get_first());
-                NFSPSDialog::Table = *dialogConstructor.get_first<void*>(0x15);
-                DialogPending.SetAddress(*dialogConstructor.get_first<NFSPSDialog::Configuration**>(0x41));
-                DialogInstance.SetAddress(*dialogOpen.get_first<void**>(2));
-                NFSPSDialog::Open = reinterpret_cast<decltype(NFSPSDialog::Open)>(dialogOpen.get_first());
-            }
-            else
-            {
-                shConstructDialog.reset();
-                shDialogNotify.reset();
-            }
+            CloseDialog = reinterpret_cast<decltype(CloseDialog)>(dialogClose.get_first());
+            NFSPSDialog::Table = *dialogConstructor.get_first<void*>(0x15);
+            DialogPending.SetAddress(*dialogConstructor.get_first<NFSPSDialog::Configuration**>(0x41));
+            DialogInstance.SetAddress(*dialogOpen.get_first<void**>(2));
+            NFSPSDialog::Open = reinterpret_cast<decltype(NFSPSDialog::Open)>(dialogOpen.get_first());
 
             // The game's CRT, which allocates the texts of the menu's nodes
-            if (auto crt = GetModuleHandleW(L"msvcr80.dll"))
-            {
-                CrtMalloc = reinterpret_cast<decltype(CrtMalloc)>(GetProcAddress(crt, "malloc"));
-                CrtFree = reinterpret_cast<decltype(CrtFree)>(GetProcAddress(crt, "free"));
-                NFSPSStaticText::Allocate = CrtMalloc;
-                NFSPSStaticText::Free = CrtFree;
-                NFSPSDialog::Allocate = CrtMalloc;
-                NFSPSDialog::Free = CrtFree;
-            }
+            auto crt = GetModuleHandleW(L"msvcr80.dll");
+            CrtMalloc = reinterpret_cast<decltype(CrtMalloc)>(GetProcAddress(crt, "malloc"));
+            CrtFree = reinterpret_cast<decltype(CrtFree)>(GetProcAddress(crt, "free"));
+            NFSPSStaticText::Allocate = CrtMalloc;
+            NFSPSStaticText::Free = CrtFree;
+            NFSPSDialog::Allocate = CrtMalloc;
+            NFSPSDialog::Free = CrtFree;
 
             auto dalVTable = *dal.get_first<uintptr_t*>(9);
             HookSlot(dalVTable, 2, &GetFloat, OriginalGetFloat);
@@ -3327,14 +3297,12 @@ public:
         // The update notice in the game's one-button dialog over the main menu, once nothing else is open there
         WFP::onInitEvent() += []()
         {
-            bool available = NFSPSDialog::Open && NFSPSDialog::Table && NFSPSDialog::Allocate && NFSPSDialog::Free &&
-                LocalizedWide && FindFont && PackageHeader && PackageManager.is_initialized();
             static auto playable = []()
             {
                 return IsFrontEnd() && !NFSPSDialog::Busy() && LoadedPackage(NFSPSUpdateNotice::MainMenu) &&
                     !LoadedPackage("FeDialog.fng") && !LoadedPackage("FeMainMenu_Sub.fng");
             };
-            if (NFSPSUpdateNotice::Install(FixSettings(), available, playable,
+            NFSPSUpdateNotice::Install(FixSettings(), playable,
                 [](const std::string& text)
                 {
                     std::vector<wchar_t> body;
@@ -3349,11 +3317,9 @@ public:
                     std::array<uint8_t, 120> style{};
                     *reinterpret_cast<uint32_t*>(style.data() + 0x24) = 0x94AF4029;
                     return FontText(style.data(), text, false);
-                }))
-            {
-                WFP::onGameProcessEvent() += []() { NFSPSUpdateNotice::Tick(); };
-                WFP::onShutdownEvent() += []() { NFSPSUpdateNotice::OnExit(); };
-            }
+                });
+            WFP::onGameProcessEvent() += []() { NFSPSUpdateNotice::Tick(); };
+            WFP::onShutdownEvent() += []() { NFSPSUpdateNotice::OnExit(); };
         };
     }
 } Options;

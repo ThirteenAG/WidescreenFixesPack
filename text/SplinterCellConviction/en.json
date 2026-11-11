@@ -129,9 +129,5 @@
   "ui.off": "Off",
   "ui.both": "Both",
   "ui.letterbox": "Letterbox",
-  "ui.pillarbox": "Pillarbox",
-  "FMVWidescreenMode": "Video framing",
-  "FMVWidescreenMode.description": "Original fits the whole video within a 4:3 area. Fill fits the whole video within the screen. Neither crops or stretches the picture.",
-  "FMVWidescreenMode.0": "Original aspect",
-  "FMVWidescreenMode.1": "Fill"
+  "ui.pillarbox": "Pillarbox"
 }

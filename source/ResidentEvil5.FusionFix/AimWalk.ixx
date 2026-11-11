@@ -299,7 +299,7 @@ export namespace AimWalk
     // 0 = ahead, + = left) and its magnitude (0 = let go)
     void SetStick(uintptr_t ch, float direction, float magnitude, bool run = false)
     {
-        if (!SetMotionHook || !ch)
+        if (!ch)
             return;
         auto index = Field<uint8_t>(ch, ChSlot);
         if (index > 3)

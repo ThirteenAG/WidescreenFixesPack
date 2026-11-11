@@ -88,8 +88,7 @@ export void InitWidescreenFix()
         nResolutionHeight.SetAddress(*pattern.get_first<int32_t*>(1));
         nResolutionWidth.SetAddress(*pattern.get_first<int32_t*>(7));
     }
-    if (auto hModule = GetLS3DF())
-        IATHook::Replace(hModule, "USER32.DLL", std::forward_as_tuple("LoadCursorA", LoadCursorHook));
+    IATHook::Replace(GetLS3DF(), "USER32.DLL", std::forward_as_tuple("LoadCursorA", LoadCursorHook));
 
     auto pMatroxWidth = find_pattern("75 ? B9 01 00 00 00 89 0D ? ? ? ? D9 44 24 10");
     if (!pMatroxWidth.empty()) // 1.1/1.2 Matrox layout

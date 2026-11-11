@@ -50,11 +50,6 @@ public:
                 SkinRendering::ObserveDevice(pDevice);
                 ShaderDump::ObserveDevice(pDevice);
             });
-            if (!PresentHook)
-            {
-                OutputDebugStringA("Scarface: renderer observation hook unavailable.\n");
-                return;
-            }
 
             ShaderDump::Initialize();
             CharacterBlood::Initialize();
@@ -78,14 +73,6 @@ public:
                 CPostFX::Shutdown();
                 CPostFX::OnDeviceReset();
             });
-            if (!DrawHook || !ResetHook)
-            {
-                DrawHook.reset();
-                ResetHook.reset();
-                CPostFX::bConsoleGammaEnabled = CPostFX::bSmaaEnabled = false;
-                OutputDebugStringA("Scarface: post-processing draw/reset hooks unavailable.\n");
-                return;
-            }
             hb_sub_654B20.fun = injector::MakeCALL(release.get_first(2), sub_654B20, true).get();
             injector::MakeCALL(resetRelease.get_first(), sub_654B20, true);
         };

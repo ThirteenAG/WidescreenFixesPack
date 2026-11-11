@@ -312,8 +312,7 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            if (!RevPlayer::Init())
-                return;
+            RevPlayer::Init();
             auto input = find_pattern("55 8B EC 83 E4 F8 83 EC 34 53 56 8B F1 33 DB 57 39 9E 80 0E 00 00");
             auto camera = find_pattern("55 8B EC 83 E4 F8 83 EC 1C 53 56 8B F1 8B 4E 50 8B 49 78 33 C0 57");
             auto pad = find_pattern("8B 0D ? ? ? ? E8 ? ? ? ? D9 00 D9 9E 38 11 00 00 53 D9 40 04 D9 9E 3C 11 00 00");
@@ -328,8 +327,6 @@ public:
             InputHook = safetyhook::create_inline(input.get_first(), UpdateInput, SafetyHookInline::StartDisabled);
             ViewHook = safetyhook::create_inline(camera.get_first(), UpdateView, SafetyHookInline::StartDisabled);
             LegsHook = safetyhook::create_mid(legs.get_first(), AllowLegs, SafetyHookMid::StartDisabled);
-            if (!InputHook || !ViewHook || !LegsHook || !ReloadHook)
-                return;
             auto apply = []()
             {
                 auto enabled = FixSettings().Int("MAIN.ModernControls") != 0;

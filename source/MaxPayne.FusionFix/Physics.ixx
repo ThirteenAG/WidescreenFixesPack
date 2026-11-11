@@ -191,12 +191,6 @@ namespace MaxPaynePhysics
         OriginalGround = reinterpret_cast<decltype(OriginalGround)>(ground.get_first());
         GravityHook = safetyhook::create_inline(gravity.get_first(), Gravity);
         BodyHook = safetyhook::create_inline(body.get_first(), UpdateBody);
-        if (!GravityHook || !BodyHook)
-        {
-            BodyHook.reset();
-            GravityHook.reset();
-            throw std::runtime_error("Max Payne: takeoff timing hooks unavailable");
-        }
         injector::MakeCALL(call, Ground, true);
     }
 }

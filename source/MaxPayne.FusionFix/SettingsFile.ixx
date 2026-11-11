@@ -105,8 +105,6 @@ export void InitSettingsFile()
     auto crt = GetModuleHandleA("msvcrt.dll");
     CWinApp::crtStrdup = (decltype(CWinApp::crtStrdup))GetProcAddress(crt, "_strdup");
     CWinApp::crtFree = (decltype(CWinApp::crtFree))GetProcAddress(crt, "free");
-    if (!CWinApp::crtStrdup || !CWinApp::crtFree)
-        return;
 
     CWinApp::shSetRegistryKey = safetyhook::create_inline(GetProcAddress(GetModuleHandleA("mfc42.dll"), MAKEINTRESOURCEA(6117)), CWinApp::SetRegistryKey); // CWinApp::SetRegistryKey(LPCTSTR)
 }

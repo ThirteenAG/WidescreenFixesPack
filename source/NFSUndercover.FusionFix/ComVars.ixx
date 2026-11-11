@@ -9,7 +9,7 @@ export uintptr_t RangeStart, RangeEnd;
 export hook::pattern GetPattern(std::string_view pattern)
 {
     auto p = hook::pattern(pattern);
-    if (p.empty())
+    if (p.empty()) // code in the SecuROM section
         return hook::pattern(RangeStart, RangeEnd, pattern);
     return p;
 }

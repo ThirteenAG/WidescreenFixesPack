@@ -104,32 +104,6 @@
       }
     },
     {
-      "id": "MAIN.FMVWidescreenMode",
-      "type": "choice",
-      "default": 1,
-      "min": 0,
-      "max": 1,
-      "label": "@display.fmv",
-      "description": "@display.fmv.description",
-      "page": "display",
-      "apply": "live",
-      "choices": [
-        {
-          "value": 0,
-          "label": "@display.fmv.fit"
-        },
-        {
-          "value": 1,
-          "label": "@display.fmv.fill"
-        }
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
-    },
-    {
       "id": "MAIN.WindowMode",
       "type": "choice",
       "default": 0,

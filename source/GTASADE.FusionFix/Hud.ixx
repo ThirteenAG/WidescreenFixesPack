@@ -144,8 +144,6 @@ public:
             storeWidgetHook = safetyhook::create_mid(store, PlaceWidget);
             boundsHook = safetyhook::create_mid(bounds, PlaceBounds);
             parseWidgetHook = safetyhook::create_inline(parser, ParseWidgetPositionLineFromFile);
-            if (!widthHook || !heightHook || !storeWidgetHook || !boundsHook || !parseWidgetHook)
-                throw std::runtime_error("Could not install HUD layout hooks");
             ReadHudAspect();
             FixSettings().OnChange("MAIN.HudAspectRatioConstraint", ReadHudAspect);
             for (const auto id : { "MAIN.HudScale", "MAIN.RadarScale" })

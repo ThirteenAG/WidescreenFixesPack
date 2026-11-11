@@ -33,41 +33,25 @@ export void InitMenu()
     HMODULE hModule = nullptr;
     GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&InitMenu, &hModule);
     auto basicModes = GetModuleHandleW(L"X_BasicModesMFC");
-    if (!basicModes || !MaxPayneMenu::Init(hModule, GetModuleHandleW(L"rlmfc"), GetModuleHandleW(L"e2mfc"), MenuPlacements()))
-        return;
+    MaxPayneMenu::Init(hModule, GetModuleHandleW(L"rlmfc"), GetModuleHandleW(L"e2mfc"), MenuPlacements());
 
-    auto exe = GetModuleHandleW(nullptr);
-    auto menu = MaxPayneMenu::FindVTable(exe, ".?AVMP_MenuMode@@");
-    auto crt = GetModuleHandleW(L"msvcr71.dll");
-    auto allocate = crt ? reinterpret_cast<decltype(MaxPayneMenu::Get().allocate)>(GetProcAddress(crt, "malloc")) : nullptr;
-    bool footer = menu && allocate;
-    if (footer)
-    {
-        auto& state = MaxPayneMenu::Get();
-        state.allocate = allocate;
-        state.textSize = 436;
-        state.textLayerOffset = 284;
-        state.fontHeightOffset = 80;
-    }
+    auto& state = MaxPayneMenu::Get();
+    state.allocate = reinterpret_cast<decltype(state.allocate)>(GetProcAddress(GetModuleHandleW(L"msvcr71.dll"), "malloc"));
+    state.textSize = 436;
+    state.textLayerOffset = 284;
+    state.fontHeightOffset = 80;
 
-    MaxPayneMenu::MenuModeSlots slots = { 21, 22, 29, 30 };
-    if (footer)
-        slots = { 21, 22, 29, 30, 14, 0x17A, 0x14D };
-    MaxPayneMenu::HookMenu(menu, slots,
+    MaxPayneMenu::HookMenu(MaxPayneMenu::FindVTable(GetModuleHandleW(nullptr), ".?AVMP_MenuMode@@"), { 21, 22, 29, 30, 14, 0x17A, 0x14D },
         MaxPayneMenu::FindVTable(basicModes, ".?AVX_MenuItem@@"), MaxPayneMenu::FindVTable(basicModes, ".?AVX_MenuSlider@@"), { 4, 12, 3 });
-    auto controls = MaxPayneMenu::FindVTable(basicModes, ".?AVX_MenuInputConfig@@");
-    if (MaxPayneIcons::Ready && controls)
+    state.tipSource = MaxPayneIcons::Source;
+    MaxPayneIcons::HookControlsByObject(MaxPayneMenu::FindVTable(basicModes, ".?AVX_MenuInputConfig@@"), 3, 0x2e, [](uint8_t* item)
     {
-        MaxPayneMenu::Get().tipSource = MaxPayneIcons::Source;
-        MaxPayneIcons::HookControlsByObject(controls, 3, 0x2e, [](uint8_t* item)
-        {
-            auto value = item + 0x56;
-            auto length = *reinterpret_cast<uint32_t*>(value + 0x14);
-            auto capacity = *reinterpret_cast<uint32_t*>(value + 0x18);
-            auto text = capacity >= 16 ? *reinterpret_cast<const char**>(value + 4) : reinterpret_cast<const char*>(value + 4);
-            return text && length <= 100 ? GetControlIcon(std::string_view(text, length)) : std::string();
-        });
-    }
+        auto value = item + 0x56;
+        auto length = *reinterpret_cast<uint32_t*>(value + 0x14);
+        auto capacity = *reinterpret_cast<uint32_t*>(value + 0x18);
+        auto text = capacity >= 16 ? *reinterpret_cast<const char**>(value + 4) : reinterpret_cast<const char*>(value + 4);
+        return text && length <= 100 ? GetControlIcon(std::string_view(text, length)) : std::string();
+    });
 }
 
 namespace Updates
@@ -91,16 +75,7 @@ namespace Updates
     {
         auto pattern = hook::pattern("6A 00 FF 15 ? ? ? ? C3 CC CC CC CC CC CC CC 56 57");
         QuitHook = safetyhook::create_inline(pattern.get_first(), Quit);
-        auto kernel = GetModuleHandleW(L"kernel32.dll");
-        auto exitProcess = kernel ? GetProcAddress(kernel, "ExitProcess") : nullptr;
-        if (exitProcess)
-            ExitProcessHook = safetyhook::create_inline(exitProcess, ExitProcessDetour);
-        if (!QuitHook || !ExitProcessHook)
-        {
-            QuitHook.reset();
-            ExitProcessHook.reset();
-            throw std::runtime_error("Update exit hooks unavailable");
-        }
+        ExitProcessHook = safetyhook::create_inline(GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "ExitProcess"), ExitProcessDetour);
         RWGTA::UpdateCheck::Config config;
         config.pluginId = "MaxPayne2.FusionFix";
         config.fileVersion = rsc_FileVersion;

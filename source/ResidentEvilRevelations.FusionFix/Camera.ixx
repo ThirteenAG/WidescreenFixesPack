@@ -165,8 +165,6 @@ public:
             pGameCamera.SetAddress(*root.get_first<uint8_t**>(2));
             // The native x87 store completes before the callback; projection consumes the published camera output.
             shGameplayFOV = safetyhook::create_mid(output.get_first(27), ApplyGameplayFOV);
-            if (!shGameplayFOV)
-                OutputDebugStringA("Resident Evil Revelations Fusion Fix: gameplay camera hook unavailable.\n");
         };
     }
 } Camera;

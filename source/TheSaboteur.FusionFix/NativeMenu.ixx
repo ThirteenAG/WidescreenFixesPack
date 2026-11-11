@@ -338,14 +338,7 @@ export namespace SaboteurMenu
         pattern = hook::pattern("8B 44 24 08 56 6A 01 50 8D 4C 24 14 E8 ? ? ? ? 8B 00 3D 46 06 4D 41 74");
         CallbackHook = safetyhook::create_inline(pattern.get_first(), Callback);
         pattern = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 08 53 55 57 33 DB 8D 44 24 0C 89 5C 24 0C");
-        if (CallbackHook)
-            FileHook = safetyhook::create_inline(pattern.get_first(), File);
-        if (!CallbackHook || !FileHook)
-        {
-            FileHook.reset();
-            CallbackHook.reset();
-            throw std::runtime_error("Native menu bridge hook installation failed");
-        }
+        FileHook = safetyhook::create_inline(pattern.get_first(), File);
     }
 
     inline void Initialize()
@@ -357,36 +350,28 @@ export namespace SaboteurMenu
         for (const auto& setting : FixSettings().GetDescription().settings)
             if (setting.apply == "restart")
                 Startup.emplace(setting.id, FixSettings().Wanted(setting.id));
-        const bool available = CallbackHook && FileHook;
-        FixSettings().Availability("MAIN.CheckForUpdates", [available](std::string_view value)
+        RWGTA::UpdateCheck::Config config;
+        config.pluginId = "TheSaboteur.FusionFix";
+        config.fileVersion = rsc_FileVersion;
+        config.settings = &FixSettings();
+        config.playable = []() { return Model.IsOpen() && NotificationMovie && Notice.empty(); };
+        config.format = [](const std::string&, bool hub)
         {
-            return value == "0" || available;
-        });
-        if (available)
+            return asi_settings::text::Widen(RWGTAMenu::PluginText(FixSettings(), Language(),
+                hub ? "update.availablehub" : "update.availablesite"));
+        };
+        config.show = [](const std::wstring& text)
         {
-            RWGTA::UpdateCheck::Config config;
-            config.pluginId = "TheSaboteur.FusionFix";
-            config.fileVersion = rsc_FileVersion;
-            config.settings = &FixSettings();
-            config.playable = []() { return Model.IsOpen() && NotificationMovie && Notice.empty(); };
-            config.format = [](const std::string&, bool hub)
-            {
-                return asi_settings::text::Widen(RWGTAMenu::PluginText(FixSettings(), Language(),
-                    hub ? "update.availablehub" : "update.availablesite"));
-            };
-            config.show = [](const std::wstring& text)
-            {
-                Notice = asi_settings::text::Narrow(text);
-                Render(NotificationMovie);
-            };
-            RWGTA::UpdateCheck::Init(std::move(config));
-            WFP::onShutdownEvent() += []()
-            {
-                static std::atomic<bool> exited{ false };
-                if (!exited.exchange(true))
-                    RWGTA::UpdateCheck::OnExit();
-            };
-        }
+            Notice = asi_settings::text::Narrow(text);
+            Render(NotificationMovie);
+        };
+        RWGTA::UpdateCheck::Init(std::move(config));
+        WFP::onShutdownEvent() += []()
+        {
+            static std::atomic<bool> exited{ false };
+            if (!exited.exchange(true))
+                RWGTA::UpdateCheck::OnExit();
+        };
     }
 }
 

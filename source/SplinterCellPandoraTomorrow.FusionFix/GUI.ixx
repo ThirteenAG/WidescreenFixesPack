@@ -65,7 +65,7 @@ int32_t __cdecl ClampYAxisState(int32_t value, int32_t min, int32_t max)
 export void InitGUI()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"GUI"), "85 C0 79 ? 33 DB EB 0A BB 80 02 00 00 3B C3 0F 4C D8");
-    if (!pattern.empty())
+    if (!pattern.empty()) // digital
     {
         struct UGUIControllerNativePostRenderHookX
         {
@@ -88,7 +88,7 @@ export void InitGUI()
     }
 
     pattern = hook::module_pattern(GetModuleHandle(L"GUI"), "85 C9 79 ? C7 45 08 00 00 00 00");
-    if (!pattern.empty())
+    if (!pattern.empty()) // digital
     {
         struct UGUIControllerNativePostRenderHookY
         {

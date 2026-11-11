@@ -56,7 +56,7 @@ Requirements:
 
 Run the following command in the root of this directory to generate the project files (or simply launch **premake5.bat**):
 
-    premake5 vs2022
+    premake5 vs2026
 
 A project deploys its built `.asi` into the game folder its key names in a `.env` file in the repository root, so that the paths of a machine stay out of the repository (the file is ignored by git, a game the file does not name is simply not deployed), for example:
 

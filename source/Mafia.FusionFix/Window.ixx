@@ -238,14 +238,14 @@ namespace MafiaWindow
     void Init(HMODULE engine)
     {
         auto present = hook::module_pattern(engine, "83 EC 34 53 56 E8 ? ? ? ? A0 ? ? ? ? 84 C0 0F 84 ? ? ? ? FF 05");
-        auto reset = hook::module_pattern(engine, "A1 ? ? ? ? 83 EC 3C 85 C0 53 56 8A D9 74 ? 8B 0D");
+        auto reset = hook::module_pattern(engine, "83 EC 3C 85 C0 53 56 8A D9 74 ? 8B 0D");
         auto parameters = hook::module_pattern(engine, "A1 ? ? ? ? 8B 08 68 ? ? ? ? 50 FF 51 38 85 C0 7D");
         auto restart = hook::module_pattern(engine, "B1 01 E8 ? ? ? ? 85 C0 7D ? BE 68 08 76 88 EB ? 8B 0D ? ? ? ? F7 C1 00 00 10 00 74 ? E8 ? ? ? ? 68");
         bool originalEngine = false;
-        if (present.empty() && reset.empty())
+        if (present.empty() && reset.empty()) // 1.0 engine
         {
             present = hook::module_pattern(engine, "83 EC 34 56 57 E8 ? ? ? ? A0 ? ? ? ? 84 C0 0F 84 ? ? ? ? FF 05");
-            reset = hook::module_pattern(engine, "A1 ? ? ? ? 83 EC 3C 85 C0 53 55 56 8A D9 74 ? 8B 0D");
+            reset = hook::module_pattern(engine, "83 EC 3C 85 C0 53 55 56 8A D9 74 ? 8B 0D");
             originalEngine = true;
         }
         DEVMODEW desktop{};
@@ -255,14 +255,14 @@ namespace MafiaWindow
         fullscreenInterval = (nEngineFlags & 0x100u) ? 1u : 0x80000000u;
         pEngineDevice.SetAddress(*parameters.get_first<void**>(1));
         EnginePresentParameters.SetAddress(*parameters.get_first<PresentParameters*>(8));
-        resetDevice = reinterpret_cast<decltype(resetDevice)>(reset.get_first());
+        // The function starts 5 bytes before the pattern: its first instruction is left out, other plugins hook it
+        resetDevice = reinterpret_cast<decltype(resetDevice)>(reset.get_first(-5));
         if (!originalEngine)
             restartRenderer = reinterpret_cast<decltype(restartRenderer)>(injector::GetBranchDestination(restart.get_first(32)).as_int());
         lastWindowMode = nWindowMode ? nWindowMode : 1;
         static auto presentHook = safetyhook::create_mid(present.get_first(), Frame);
-        enabled = static_cast<bool>(presentHook);
-        if (enabled)
-            IATHook::Replace(engine, "USER32.dll", std::forward_as_tuple("ClipCursor", ClipCursorHook));
+        enabled = true;
+        IATHook::Replace(engine, "USER32.dll", std::forward_as_tuple("ClipCursor", ClipCursorHook));
     }
 }
 

@@ -109,7 +109,6 @@ CEXP void InitializeASI()
                 reinterpret_cast<LPCWSTR>(&InitMenu), &host);
             MaxPayneIcons::Init(host, GetModuleHandleW(L"E2MFC.dll"), GetModuleHandleW(L"rlmfc.dll"),
                 []() { return FixSettings().Int("MAIN.GamepadIcons"); }, MaxPayneGamepadButtons::IsPadInUse);
-            InitControlIcons();
         });
         CallbackHandler::RegisterCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { InitE2_D3D8_DRIVER_MFC(); InitPostFXDriver(); });
         CallbackHandler::RegisterModuleUnloadCallback(L"E2_D3D8_DRIVER_MFC.dll", []() { BorderlessWindowedHook.reset(); shDllMainHook.reset(); ShutdownPostFXDriver(); });

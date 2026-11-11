@@ -343,13 +343,7 @@ export namespace SCCMenu
         wideDtor = reinterpret_cast<decltype(wideDtor)>(Find("56 8B F1 33 C0 39 46 08 89 46 04 74 0A 6A 02 89 46 08 E8"));
         invokeAddress = Find("55 8B EC 83 EC 34 56 8B 75 0C 8B CE E8 ? ? ? ? 8B 4D 08 8D 55 18 52 FF 75 14 8D 55 CC FF 75 10 C6 06 00 8B 01 52 FF 50 34");
         retireHook = safetyhook::create_inline(reinterpret_cast<void*>(retire), Retire);
-        if (retireHook) commandHook = safetyhook::create_inline(reinterpret_cast<void*>(command), Command);
-        if (!retireHook || !commandHook)
-        {
-            commandHook.reset();
-            retireHook.reset();
-            throw std::runtime_error("Native Flash bridge hook installation failed");
-        }
+        commandHook = safetyhook::create_inline(reinterpret_cast<void*>(command), Command);
         ready = true;
         RWGTA::UpdateCheck::Config update;
         update.pluginId = "SplinterCellConviction.FusionFix";

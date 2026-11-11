@@ -74,7 +74,7 @@
   "fmv": "Encuadre de vídeo",
   "fmv.original": "Formato original",
   "fmv.fill": "Rellenar",
-  "fmv.description": "Formato original muestra los vídeos como el juego, completos dentro de su marco 4:3 centrado con franjas negras alrededor. Rellenar ajusta el vídeo entero a la pantalla, sin cortar ni estirar nada.",
+  "fmv.description": "Formato original muestra los vídeos dentro del marco 16:9 centrado del juego. En pantallas más anchas que 16:9, Rellenar amplía los dos vídeos de la historia, que tienen bandas negras en el archivo, hasta que su imagen se ajusta a la pantalla. No se corta ni se estira nada de la imagen.",
   "textlanguage": "Idioma del menú",
   "textlanguage.description": "Elige el idioma de los ajustes y de la ayuda de la corrección. Automático sigue el idioma de la interfaz de Windows.",
   "confinecursor": "Restringir cursor",

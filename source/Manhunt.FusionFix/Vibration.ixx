@@ -99,16 +99,7 @@ export namespace MHRumble
             motors[motor] = 0;
         if (!running.exchange(true))
         {
-            try
-            {
-                std::thread(Worker).detach();
-            }
-            catch (...)
-            {
-                running = false;
-                Stop();
-                OutputDebugStringA("Manhunt: controller vibration worker unavailable.\n");
-            }
+            std::thread(Worker).detach();
         }
     }
 

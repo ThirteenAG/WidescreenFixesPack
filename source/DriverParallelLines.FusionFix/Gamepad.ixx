@@ -20,7 +20,7 @@ export namespace DPLPad
     std::array<std::atomic<void*>, 4> systems{};
     IDirectInputDevice8A* previousDevice = nullptr;
     std::atomic<bool> deadzoneChanged{ true }, stopRequested{ true };
-    bool deadzoneReady = false, vibrationReady = false, wasBlocked = false;
+    bool wasBlocked = false;
 
     template<class T> T& At(void* pointer, size_t offset)
     {
@@ -87,12 +87,12 @@ export namespace DPLPad
         const uintptr_t manager = dword_70C59C;
         if (!manager || !At<uint8_t>(reinterpret_cast<void*>(manager), 4)) return;
         const bool blocked = BlockVibration();
-        if (vibrationReady && (stopRequested.exchange(false) || (blocked && !wasBlocked))) StopEffects();
+        if (stopRequested.exchange(false) || (blocked && !wasBlocked)) StopEffects();
         wasBlocked = blocked;
         auto* input = reinterpret_cast<void*>(manager);
         auto* device = At<uint16_t>(input, 1424) == 1 ? At<IDirectInputDevice8A*>(input, 584 + 4) : nullptr;
         const bool changed = deadzoneChanged.exchange(false);
-        if (deadzoneReady && device && (changed || device != previousDevice))
+        if (device && (changed || device != previousDevice))
         {
             DIPROPDWORD property{};
             property.diph.dwSize = sizeof(property);
@@ -117,20 +117,12 @@ export namespace DPLPad
     }
     void Install()
     {
-        FixSettings().Availability("MAIN.GamepadDeadzone", [](std::string_view) { return deadzoneReady; });
-        FixSettings().Availability("MAIN.Vibration", [](std::string_view) { return vibrationReady; });
         auto stick = hook::pattern("F3 0F 10 0D ? ? ? ? F3 0F 10 44 24 04 0F 2F C8 76 23 0F 2F 05 ? ? ? ? 76 12");
         stickHook = safetyhook::create_inline(stick.get_first(), Stick);
-        deadzoneReady = static_cast<bool>(stickHook);
         auto state = hook::pattern("8B 81 C0 02 00 00 85 C0 74 02 FF E0 B8 8F 04 00 00 C2 08 00");
         auto effect = hook::pattern("55 8B EC 83 EC 40 56 8B F1 33 C9 39 4E 08 89 4D F8 89 4D FC 75 07 32 C0");
         stateHook = safetyhook::create_inline(state.get_first(), SetState);
         effectHook = safetyhook::create_inline(effect.get_first(), Effect);
-        vibrationReady = stateHook && effectHook;
-        if (!vibrationReady)
-        {
-            stateHook.reset(); effectHook.reset();
-        }
         FixSettings().OnChange("MAIN.GamepadDeadzone", []() { deadzoneChanged.store(true); });
         FixSettings().OnChange("MAIN.Vibration", []() { stopRequested.store(true); });
     }

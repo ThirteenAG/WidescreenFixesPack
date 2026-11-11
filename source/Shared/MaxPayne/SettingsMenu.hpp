@@ -314,8 +314,6 @@ namespace MaxPayneMenu
         inline void UpdateTip(void* tooltip)
         {
             auto& s = Get();
-            if (!s.textString || !s.textFont || !s.fontSize || !s.textScale || !s.textPosition)
-                return;
             std::string current = s.tipSource ? s.tipSource(tooltip) : s.textString(tooltip, nullptr);
             auto found = s.fullTips.find(current);
             if (found == s.fullTips.end() && current != s.shownTip)
@@ -400,9 +398,6 @@ namespace MaxPayneMenu
         inline void UpdateLine(State::FooterLine& line, void* scene, void* tooltip, const std::string& message, int row)
         {
             auto& s = Get();
-            if (!s.textConstruct || !s.textFont || !s.textPosition || !s.textScale || !s.textSetPosition ||
-                !s.textSetScale || !s.objectAddTo || !s.objectEnable || !s.allocate || !s.newCount || !s.deleteCount || !SceneDestructor)
-                return;
             if (line.scene != scene)
                 DestroyLine(line);
             if (!line.text && !message.empty())
@@ -426,8 +421,7 @@ namespace MaxPayneMenu
             float height = static_cast<float>(*reinterpret_cast<int*>(font + s.fontHeightOffset)) * scale[1] + 2.0f;
             s.textSetPosition(line.text, nullptr, position[0], position[1] - height * row);
             s.textSetScale(line.text, nullptr, scale[0], scale[1]);
-            if (s.textColor && s.textSetColor)
-                s.textSetColor(line.text, nullptr, s.textColor(tooltip, nullptr));
+            s.textSetColor(line.text, nullptr, s.textColor(tooltip, nullptr));
             ProtectedGameRef<uint32_t> layer;
             layer.SetAddress(reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(line.text) + s.textLayerOffset));
             layer = *reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(tooltip) + s.textLayerOffset);
@@ -995,7 +989,7 @@ namespace MaxPayneMenu
     {
         auto row = Find(id);
         auto& s = Get();
-        if (!row || !text || !s.textClear || !s.textPrint)
+        if (!row || !text)
             return;
         if (row->kind != Row::Kind::Setting && row->kind != Row::Kind::Preset)
             return;
@@ -1093,10 +1087,8 @@ namespace MaxPayneMenu
     // The menu mode's virtual functions the rows are answered through, by their slot
     struct MenuModeSlots
     {
-        int setItem, isItemEnabled, setSlider, getSlider;
-        int update = -1;
-        ptrdiff_t tooltip = -1;
-        ptrdiff_t scene = -1;
+        int setItem, isItemEnabled, setSlider, getSlider, update;
+        ptrdiff_t tooltip, scene;
     };
 
     // Where a menu line keeps its name (P_Text*) and ID, and the slot of the function updating it every frame
@@ -1162,30 +1154,24 @@ namespace MaxPayneMenu
 
     // Hooks the menu mode's functions (from its vtable) and the update of the item and slider lines (from theirs),
     // which may be in another module than the menu mode
-    inline bool HookMenu(void** menuMode, const MenuModeSlots& slots, void** item, void** slider, const LineLayout& layout)
+    inline void HookMenu(void** menuMode, const MenuModeSlots& slots, void** item, void** slider, const LineLayout& layout)
     {
-        if (!menuMode || !item || !slider || !Get().host)
-            return false;
         using namespace MenuMode;
         shSetItem = safetyhook::create_inline(menuMode[slots.setItem], setItem);
         shIsItemEnabled = safetyhook::create_inline(menuMode[slots.isItemEnabled], isItemEnabled);
         shSetSlider = safetyhook::create_inline(menuMode[slots.setSlider], setSlider);
         shGetSlider = safetyhook::create_inline(menuMode[slots.getSlider], getSlider);
-        if (slots.update >= 0 && slots.tooltip >= 0 && slots.scene >= 0)
-        {
-            TooltipOffset = slots.tooltip;
-            SceneOffset = slots.scene;
-            shUpdate = safetyhook::create_inline(menuMode[slots.update], update);
-        }
+        TooltipOffset = slots.tooltip;
+        SceneOffset = slots.scene;
+        shUpdate = safetyhook::create_inline(menuMode[slots.update], update);
         Lines::Layout = layout;
         Lines::shUpdate[0] = safetyhook::create_inline(item[layout.update], Lines::update<0>);
         Lines::shUpdate[1] = safetyhook::create_inline(slider[layout.update], Lines::update<1>);
-        return true;
     }
 
     // Before the menu is read: hooks the script loader (rlmfc) and the text functions (e2mfc). host: the fix's module,
     // whose texts have the words of the menu's own rows. placements: the fix's settings that go into the game's menus.
-    inline bool Init(HMODULE host, HMODULE rlmfc, HMODULE e2mfc, std::vector<Placement> placements)
+    inline void Init(HMODULE host, HMODULE rlmfc, HMODULE e2mfc, std::vector<Placement> placements)
     {
         auto& s = Get();
         s.textClear = reinterpret_cast<decltype(s.textClear)>(GetProcAddress(e2mfc, "?clear@P_Text@@QAEXXZ"));
@@ -1205,16 +1191,12 @@ namespace MaxPayneMenu
         s.allocate = reinterpret_cast<decltype(s.allocate)>(GetProcAddress(GetModuleHandleW(L"msvcrt.dll"), "malloc"));
         s.newCount = reinterpret_cast<int*>(GetProcAddress(rlmfc, "?sm_iNewCount@R_Memory@@2HA"));
         s.deleteCount = reinterpret_cast<int*>(GetProcAddress(rlmfc, "?sm_iDeleteCount@R_Memory@@2HA"));
-        if (auto destructor = GetProcAddress(e2mfc, "??1P_Scene@@UAE@XZ"))
-            Footer::SceneDestructor = safetyhook::create_inline(destructor, Footer::DestroyScene);
+        Footer::SceneDestructor = safetyhook::create_inline(GetProcAddress(e2mfc, "??1P_Scene@@UAE@XZ"), Footer::DestroyScene);
         auto size = GetProcAddress(rlmfc, "?size@R_File@@QAEIPBD@Z");
         auto load = GetProcAddress(rlmfc, "?load@R_File@@QAEXPAXPBDI@Z");
-        if (!host || !s.textClear || !s.textPrint || !size || !load)
-            return false;
         s.host = host;
         s.placements = std::move(placements);
         R_File::shSize = safetyhook::create_inline(size, R_File::size);
         R_File::shLoad = safetyhook::create_inline(load, R_File::load);
-        return true;
     }
 }

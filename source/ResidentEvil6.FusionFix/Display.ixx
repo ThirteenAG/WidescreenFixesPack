@@ -13,7 +13,6 @@ import InputDrain;
 namespace
 {
     const int* pPauseOnFocusLoss = nullptr;
-    bool focusReady = false;
 
     BOOL WINAPI SystemParameters(UINT action, UINT parameter, PVOID value, UINT flags)
     {
@@ -48,7 +47,7 @@ namespace
             RE6Input::FocusLost();
             SystemParameters(SPI_SETSCREENSAVEACTIVE, 1, nullptr, 0);
         }
-        if (!active && !*pPauseOnFocusLoss && RE6Input::ready)
+        if (!active && !*pPauseOnFocusLoss)
             return TRUE;
         return setActiveHook.unsafe_stdcall<BOOL>(active);
     }
@@ -131,13 +130,9 @@ public:
 
             // MAIN.PauseOnFocusLoss: the game pauses when its window loses the focus; 0 keeps it running
             pPauseOnFocusLoss = &FixSettings().Int("MAIN.PauseOnFocusLoss");
-            FixSettings().Availability("MAIN.PauseOnFocusLoss", [](std::string_view value) { return value != "0" || (RE6Input::ready && focusReady); });
             pattern = hook::pattern("E8 ? ? ? ? 8B 54 24 6C 52");
             const auto target = injector::GetBranchDestination(pattern.get_first()).as_int();
             setActiveHook = safetyhook::create_inline(target, SetActiveOnFocus);
-            focusReady = static_cast<bool>(setActiveHook);
-            if (!setActiveHook)
-                OutputDebugStringA("Resident Evil 6 Fusion Fix: native focus hook unavailable.\n");
 
             // The game's Aspect option fits a 4:3, 16:9 or 16:10 image into the screen; the fix always uses the screen's
             // own aspect (the option's DEFAULT), on which everything else of the fix is based

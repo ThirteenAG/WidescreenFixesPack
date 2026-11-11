@@ -1126,22 +1126,12 @@ namespace THUG2Menu
     }
     inline void Init()
     {
-        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, reinterpret_cast<LPCWSTR>(&Init), &module))
-        {
-            LogOnce("native bridge module pin rejected");
-            return;
-        }
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, reinterpret_cast<LPCWSTR>(&Init), &module);
         // The game keeps calling into this module (hooks, the controller event call); unloading it is unsupported.
         auto pattern = hook::pattern("68 74 EE B2 36 68 74 EE B2 36 51 8B 4C 24 ? E8");
         destructorHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().elementDestroyed), ElementDestroyed);
         callHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().scriptCall), ScriptCall);
         taskHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().task), Task);
-        if (!destructorHook || !callHook || !taskHook)
-        {
-            taskHook.reset(); callHook.reset(); destructorHook.reset();
-            LogOnce("native hook transaction rejected");
-            return;
-        }
         for (const auto& setting : FixSettings().GetDescription().settings)
         {
             if (setting.HasValue() && setting.apply == "restart")

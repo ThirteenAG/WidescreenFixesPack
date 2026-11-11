@@ -344,8 +344,6 @@ namespace GodfatherIcons
             parser = hook::pattern("64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 8B 44 24 18 64 89 25 00 00 00 00 83 EC 20 53 8B 5C 24 38 55 56 8B F1 8B 4C 24 3C C7 03 00 00 00 00 C7 00 FF FF FF FF 8A 01");
             text = hook::pattern("B8 A4 40 00 00 E8 ? ? ? ? A1 ? ? ? ? 89 84 24 A0 40 00 00 8B 84 24 AC 40 00 00 D9 40 04");
         }
-        if (!GodfatherPaths::assign)
-            throw std::runtime_error("Controller icon dependency unavailable");
         GodfatherTextSlot.SetAddress(*root.get_first<void**>(5));
         GodfatherRenderSlot.SetAddress(*bind.get_first<void**>(5));
         const auto action = actions.get_first<uint8_t>(-29);
@@ -355,21 +353,8 @@ namespace GodfatherIcons
         textHook = safetyhook::create_inline(text.get_first(), Text);
         quadHook = safetyhook::create_inline(quads.get_first(), Quad);
         conversionHook = safetyhook::create_mid(convert.get_first(), PreserveToken);
-        if (glyphHook && parseHook && textHook && quadHook && conversionHook)
-            labelHook = safetyhook::create_inline(labels.get_first(), Label);
-        if (labelHook)
-            actionHook = safetyhook::create_inline(action, Action);
-        if (!labelHook || !actionHook)
-        {
-            actionHook.reset();
-            labelHook.reset();
-            conversionHook.reset();
-            quadHook.reset();
-            textHook.reset();
-            parseHook.reset();
-            glyphHook.reset();
-            throw std::runtime_error("Controller icon hooks unavailable");
-        }
+        labelHook = safetyhook::create_inline(labels.get_first(), Label);
+        actionHook = safetyhook::create_inline(action, Action);
         auto& settings = FixSettings();
         style.store(settings.Int("MAIN.GamepadIcons"), std::memory_order_relaxed);
         settings.OnChange("MAIN.GamepadIcons", []()

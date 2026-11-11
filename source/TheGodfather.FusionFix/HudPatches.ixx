@@ -169,8 +169,6 @@ export namespace GodfatherHudPatches
         };
         auto entry = pattern.get_first<uint8_t>(-3);
         GodfatherHud::drawHook = safetyhook::create_inline(entry, GodfatherHud::Draw);
-        if (!GodfatherHud::drawHook)
-            throw std::runtime_error("HUD vertex hook unavailable");
 
         pattern = hook::pattern("D9 1D ? ? ? ? DB 44 24 08 D9 1D ? ? ? ? D9 40 68 DC C0");
         dword_1061AF0.SetAddress(*pattern.get_first<float*>(2));
@@ -256,10 +254,8 @@ export namespace GodfatherHudPatches
         injector::MakeCALL(pattern.get(2).get<void>(0), sub_88C8E0, true); //0x7837F1
         //7590A0 hud weapon related
 
-        const bool hud = GodfatherHud::Init();
-        if (hud)
-            GodfatherHudModels::Init();
-        settings.Availability("MAIN.HudAspectRatioConstraint", [hud](std::string_view) { return hud; });
+        GodfatherHud::Init();
+        GodfatherHudModels::Init();
 
         //videos crash, just in case
         pattern = hook::pattern("C6 86 DE 01 00 00 01");

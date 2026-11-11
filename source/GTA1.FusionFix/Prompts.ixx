@@ -106,6 +106,6 @@ export namespace GTA1Prompts
             }
         }
         TextHook = safetyhook::create_inline(reinterpret_cast<void*>(Lookup), Text);
-        Log::Write(Lookup && Labels[0].global && Labels[1].global ? "GTA1 prompts follow the last device." : "GTA1 prompt signatures unavailable.");
+        Log::Write("GTA1 prompts follow the last device.");
     }
 }

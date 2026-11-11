@@ -17,7 +17,6 @@ export namespace THPS3Video
     inline IDirect3DDevice8* (__cdecl* GetDevice)() = nullptr;
     inline IDirect3DDevice8* Device = nullptr;
     inline IDirect3DTexture8* Texture = nullptr;
-    inline const int32_t* Mode = nullptr;
     inline uint32_t SourceWidth = 0, SourceHeight = 0, SourcePitch = 0, TextureWidth = 0, TextureHeight = 0;
     inline uint16_t Bits = 0;
     inline bool TopDown = false;
@@ -126,7 +125,7 @@ export namespace THPS3Video
         if (SUCCEEDED(begun))
         {
             const auto box = TonyVideo::Layout(static_cast<float>(description.Width), static_cast<float>(description.Height),
-                static_cast<float>(SourceWidth), static_cast<float>(SourceHeight), Mode ? std::clamp(*Mode, 0, 1) : 1);
+                static_cast<float>(SourceWidth), static_cast<float>(SourceHeight), 1);
             struct Vertex
             {
                 float x, y, z, rhw, u, v;
@@ -200,9 +199,8 @@ export namespace THPS3Video
         return CleanupHook.ccall<int>();
     }
 
-    inline void Install(const int32_t* mode, HMODULE module = GetModuleHandleW(nullptr))
+    inline void Install(HMODULE module = GetModuleHandleW(nullptr))
     {
-        Mode = mode;
         auto setup = hook::module_pattern(module, "83 EC 2C 8B 44 24 3C 56 57 50 FF 15 ? ? ? ? DB 44 24 3C A3");
         auto cleanup = hook::module_pattern(module, "A1 ? ? ? ? 56 33 F6 3B C6 74 0D 50 FF 15 ? ? ? ? 89 35 ? ? ? ? A1");
         auto callback = hook::module_pattern(module, "8B 44 24 14 8B 4C 24 10 50 51 FF 15 ? ? ? ? 83 C4 08 33 C0 C2 14 00");

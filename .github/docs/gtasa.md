@@ -40,7 +40,7 @@
 <tr>
 <td width="58%" valign="middle">
 
-- **In-game menu** - the fix's settings are in the game's own menu, in the main menu and in the pause menu. Console gamma is a row of **Options > Display Setup** (after Brightness), field of view and SMAA rows of its **Advanced** screen (after Widescreen and the game's Anti Aliasing); the game's Restore Defaults there resets them too. Everything else is under **Options > Plugins**: the fix first, then every other plugin with settings (such as Xbox Rain Droplets and III.VC.SA.WindowedMode, which sets the window mode). Each plugin's page has its own Preset row (Vanilla, Recommended, Enhanced; press twice to apply), its settings and Restore defaults, with the selected setting's description at the bottom of the screen. Most settings apply at once, the others at the next start (the page then says so above its rows)
+- **In-game menu** - the fix's settings are in the game's own menu, in the main menu and in the pause menu. Console gamma is a row of **Options > Display Setup** (after Brightness), field of view and SMAA rows of its **Advanced** screen (after Widescreen and the game's Anti Aliasing); the game's Restore Defaults there resets them too. Everything else is under **Options > Plugins**: the fix first, then every other plugin with settings (such as Fusion Rain Droplets and III.VC.SA.WindowedMode, which sets the window mode). Each plugin's page has its own Preset row (Vanilla, Recommended, Enhanced; press twice to apply), its settings and Restore defaults, with the selected setting's description at the bottom of the screen. Most settings apply at once, the others at the next start (the page then says so above its rows)
 - **Settings** - stored in `GTASA.FusionFix.cfg` next to the `.asi`, which the fix writes on its first start with every setting and a comment above each. Change settings in the game, on fusionfix.io or in FusionFixHub (also while the game runs)
 - **Field of View** - a multiplier (0.5 to 2.0) of the gameplay cameras' field of view, on top of the widescreen correction; cutscenes keep theirs.
 - **Skip Intro** - starts with the loading screen and the main menu, without the title screens and logo videos (on by default, after restart)
@@ -100,7 +100,7 @@
 - **Pause on Focus Loss** - off keeps the game running when focus is lost in windowed mode
 - **Crosshair Fix** - disables the small white dot shown while aiming with some weapons
 - **Text Outline** - replaces text shadows with an outline
-- **VCS Camera Shake** - enables GTA: Vice City Stories style camera shake in vehicles at high speed
+- **VCS Camera Shake** - enables GTA: Vice City Stories style camera shake in vehicles at high speed; **Shake Start Speed** and **Shake Intensity** set the speed it starts at and how strong it is
 
 </td>
 <td width="42%" valign="middle" align="center">

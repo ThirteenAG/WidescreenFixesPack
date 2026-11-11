@@ -225,13 +225,6 @@ export namespace RE0Icons
         textureFailed = false;
     }
 
-    inline void Disable()
-    {
-        ready = false;
-        loadHook.reset();
-        releaseHook.reset();
-    }
-
     inline void Install(HMODULE module)
     {
         const auto update = []()
@@ -253,12 +246,12 @@ export namespace RE0Icons
                 RE0Text::Read<uint32_t>(artwork.data(), 12) == 512 && RE0Text::Read<uint32_t>(artwork.data(), 16) == 256 &&
                 !std::memcmp(artwork.data() + 84, "DXT5", 4);
         }
-        if (assetsReady && Bind())
+        if (assetsReady)
         {
+            Bind();
             loadHook = safetyhook::create_inline(fontLoad, Load);
-            if (loadHook) releaseHook = safetyhook::create_inline(fontRelease, Release);
-            ready = loadHook && releaseHook;
-            if (!ready) Disable();
+            releaseHook = safetyhook::create_inline(fontRelease, Release);
+            ready = true;
         }
         FixSettings().Availability("MAIN.GamepadIcons", [](std::string_view value)
         {

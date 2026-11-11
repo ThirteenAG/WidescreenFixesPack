@@ -21,7 +21,7 @@ export namespace GTA2PauseMenu
     void* (__stdcall* DrawText)(const wchar_t*, int, int, int, int*, int, int, int) = nullptr;
     int (__stdcall* TextWidth)(const wchar_t*, int) = nullptr;
     RWGTAMenu::Model Model;
-    bool Opened = false, Ready = false;
+    bool Opened = false;
     void* OwnerGame = nullptr, * OwnerPlayer = nullptr;
     size_t Page = SIZE_MAX, RootStart = 0, Selected = 0, RootSelected = 0;
     std::pair<size_t, size_t> HelpSelection{ SIZE_MAX, SIZE_MAX };
@@ -134,7 +134,7 @@ export namespace GTA2PauseMenu
     void Poll(void* player)
     {
         using namespace InputDevices;
-        if (!Ready || !Available(player) || !Focused())
+        if (!Available(player) || !Focused())
         {
             std::fill(std::begin(PadHeld), std::end(PadHeld), false); InputActive = false; return;
         }
@@ -294,7 +294,6 @@ export namespace GTA2PauseMenu
         wHeadingFont.SetAddress(*heading.get_first<uint16_t*>(3)); wRowFont.SetAddress(*row.get_first<uint16_t*>(3));
         DrawHook = safetyhook::create_inline(draw.get_first(), Draw);
         KeyHook = safetyhook::create_inline(key.get_first(), Key);
-        Ready = bool(DrawHook) && bool(KeyHook);
         Log::Write("GTA2 native pause menu installed.");
     }
 }

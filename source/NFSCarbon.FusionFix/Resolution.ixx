@@ -23,7 +23,6 @@ std::vector<int> ResListHashes;
 std::vector<int> dwSupportedResolutionsArray;
 std::vector<int> dwSupportedRefreshRateArray;
 int cachedWidth = 0, cachedHeight = 0;
-bool FocusControlAvailable = false;
 int* pAppActive = nullptr;     // the game's "window is active" flag
 
 namespace DALOptions
@@ -190,14 +189,14 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
         case WM_ACTIVATE:
         {
             // The game pauses its sound here when the window loses focus
-            if (LOWORD(wParam) == WA_INACTIVE && FocusControlAvailable && !FixSettings().Bool("MAIN.PauseOnFocusLoss"))
+            if (LOWORD(wParam) == WA_INACTIVE && !FixSettings().Bool("MAIN.PauseOnFocusLoss"))
                 return DefWindowProc(hWnd, Msg, wParam, lParam);
         }
         break;
         case WM_ACTIVATEAPP:
         {
             // The game clears its active flag (no input is read then) and stops its force feedback here
-            if (!wParam && FocusControlAvailable && !FixSettings().Bool("MAIN.PauseOnFocusLoss"))
+            if (!wParam && !FixSettings().Bool("MAIN.PauseOnFocusLoss"))
             {
                 *pAppActive = 0;
                 return DefWindowProc(hWnd, Msg, wParam, lParam);
@@ -387,24 +386,16 @@ public:
                 if (!*pauseOnFocusLoss)
                     regs.eip = PeekMessages;
             });
-            FocusControlAvailable = static_cast<bool>(FocusHook);
-            if (FocusHook)
+            FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
             {
-                FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
-                {
-                    auto window = hWnd.get();
-                    if (!window)
-                        return;
-                    bool active = !FixSettings().Bool("MAIN.PauseOnFocusLoss") || GetForegroundWindow() == window;
-                    PostMessage(window, WM_ACTIVATE, active ? WA_ACTIVE : WA_INACTIVE, 0);
-                    if (GetForegroundWindow() != window)
-                        PostMessage(window, WM_ACTIVATEAPP, FALSE, 0);
-                    PostMessage(window, WM_NULL, 0, 0);
-                });
-            }
-            FixSettings().Availability("MAIN.PauseOnFocusLoss", [](std::string_view value)
-            {
-                return value != "0" || FocusControlAvailable;
+                auto window = hWnd.get();
+                if (!window)
+                    return;
+                bool active = !FixSettings().Bool("MAIN.PauseOnFocusLoss") || GetForegroundWindow() == window;
+                PostMessage(window, WM_ACTIVATE, active ? WA_ACTIVE : WA_INACTIVE, 0);
+                if (GetForegroundWindow() != window)
+                    PostMessage(window, WM_ACTIVATEAPP, FALSE, 0);
+                PostMessage(window, WM_NULL, 0, 0);
             });
 
             pattern = hook::pattern("C7 44 24 ? ? ? ? ? 89 74 24 ? 89 74 24 ? FF D7 68");

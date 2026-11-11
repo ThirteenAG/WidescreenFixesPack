@@ -19,7 +19,6 @@ injector::hook_back<int(void*, int, int, int)> present;
 alignas(64) uint32_t frame[MovieMap::Width * MovieMap::Height];
 MovieMap map;
 float mappedAspect;
-int mappedMode = -1;
 bool available;
 
 int Present(void* pixels, int stride, int format, int sync)
@@ -34,10 +33,9 @@ int Present(void* pixels, int stride, int format, int sync)
         stride == 512 && format == 3 && address >= 0x08000000u &&
         address <= 0x10000000u - 512u * MovieMap::Height * sizeof(uint32_t))
     {
-        if (mappedMode != settings.movieMode || mappedAspect != aspect)
+        if (mappedAspect != aspect)
         {
-            map.Set(aspect, settings.movieMode);
-            mappedMode = settings.movieMode;
+            map.Set(aspect);
             mappedAspect = aspect;
         }
         auto output = static_cast<uint32_t*>(pixels);
@@ -67,5 +65,4 @@ void InstallMovies()
     }
     present.fun = injector::MakeCALL(profile.get<0x08A07C78>(), Present).get();
 }
-bool MoviesAvailable() { return available; }
 }

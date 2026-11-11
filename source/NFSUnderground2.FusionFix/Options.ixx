@@ -1019,7 +1019,7 @@ namespace
     // resets the fix's rows there too
     bool BeforeNotify(void* screen, uint32_t message)
     {
-        if (screen != Active.screen || !OptionsType)
+        if (screen != Active.screen)
             return false;
         if (!Active.video && *OptionsType == FixOptionsType && message == MessageBack && CurrentLevel == Level::Page &&
             Plugins && !Plugins->plugins.empty())
@@ -1034,7 +1034,7 @@ namespace
 
     void AfterNotify(void* screen, uint32_t message)
     {
-        if (screen != Active.screen || !Active.video || !OptionsType || *OptionsType != VideoOptionsType || message != MessageDialogYes)
+        if (screen != Active.screen || !Active.video || *OptionsType != VideoOptionsType || message != MessageDialogYes)
             return;
         std::vector<const asi_settings::Setting*> settings;
         for (auto& entry : Active.entries)
@@ -1423,19 +1423,6 @@ public:
                 }
             });
 
-            // Without any of them the menu is left out completely
-            if (!shSearchString || !CategoriesHook || !MenuSwitchHook || !NotifyHooks[0] || !DestructorHooks[0] || !ScreenSwitchHook)
-            {
-                ScreenSwitchHook = {};
-                DefaultCaseHook = {};
-                DestructorHooks[0] = {};
-                NotifyHooks[0] = {};
-                MenuSwitchHook = {};
-                CategoriesHook = {};
-                shSearchString = {};
-                return;
-            }
-
             // The pause menu's options (UI_PauseOptionsMain.fng): after its last category (player) is added; the
             // pause options screen's setup by the type (cases 0 to 3), the common end of its cases and its class.
             // Every category of the pause menu opens UI_PauseOptions.fng, the fix's too; leaving it goes back to the
@@ -1494,18 +1481,6 @@ public:
             auto pauseVTable = *pauseClass.get_first<void**>(2);
             NotifyHooks[1] = safetyhook::create_inline(pauseVTable[2], &Notify<1>);
             DestructorHooks[1] = safetyhook::create_inline(pauseVTable[0], &Destructor<1>);
-
-            // Without any of them the pause menu stays as it is (the display rows too, both menus or none)
-            if (!PauseCategoriesHook || !PauseScreenSwitchHook || !PauseEndHook || !NotifyHooks[1] || !DestructorHooks[1])
-            {
-                DestructorHooks[1] = {};
-                NotifyHooks[1] = {};
-                PauseEndHook = {};
-                PauseScreenSwitchHook = {};
-                PauseCategoriesHook = {};
-                VideoHook = {};
-                VideoSettings.clear();
-            }
         };
     }
 } Options;

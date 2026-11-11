@@ -97,8 +97,7 @@ public:
         FixSettings().OnChange("MAIN.ConfineCursor", []() { LockCursor(); });
         WFP::onInitEvent() += []()
         {
-            if (auto address = WindowProcedureAddress())
-                wndProcHook = safetyhook::create_inline(address, CustomWndProc);
+            wndProcHook = safetyhook::create_inline(WindowProcedureAddress(), CustomWndProc);
         };
         WFP::onGameInitEvent() += []()
         {

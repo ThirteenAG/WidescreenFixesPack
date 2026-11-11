@@ -172,8 +172,7 @@ export namespace Overlay
             if (device == CurrentDevice)
                 Instance.BeforeReset();
         };
-        if (!D3D9Options::HookCreation())
-            return;
+        D3D9Options::HookCreation();
         WindowCursor::Initialize(FixSettings());
         IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("ClipCursor", NativeClip));
         HasFocusHook = safetyhook::create_inline(focus.get_first(), ::HasFocus);

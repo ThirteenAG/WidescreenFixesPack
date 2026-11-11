@@ -3,8 +3,6 @@
   "page.display": "Anzeige",
   "page.game": "Spiel",
   "page.compatibility": "Kompatibilität",
-  "FixSavePath": "Persönlicher Speicherordner",
-  "FixSavePath.description": "Leitet den Speicherpfad von den öffentlichen auf die persönlichen Dokumente um. Vorhandene Spielstände werden kopiert, wenn das Ziel noch nicht existiert.",
   "FOVFactor": "Sichtfeld",
   "FOVFactor.description": "Multipliziert das Sichtfeld im Spiel; größere Werte erweitern die Sicht bis zu 150 Grad horizontal. Skriptkameras und Zoomansichten bleiben unverändert.",
   "SkipIntro": "Intro überspringen",

@@ -273,12 +273,12 @@ export namespace RE6Icons
                 Read<uint32_t>(artwork.data(), 12) == 2048 && Read<uint32_t>(artwork.data(), 16) == 256 &&
                 !std::memcmp(artwork.data() + 84, "DXT5", 4);
         }
-        if (assetsReady && Bind())
+        if (assetsReady)
         {
+            Bind();
             loadHook = safetyhook::create_inline(fontLoad, Load);
-            if (loadHook) releaseHook = safetyhook::create_inline(fontRelease, Release);
-            ready = loadHook && releaseHook;
-            if (!ready) Disable();
+            releaseHook = safetyhook::create_inline(fontRelease, Release);
+            ready = true;
         }
         FixSettings().Availability("MAIN.GamepadIcons", [](std::string_view value)
         {

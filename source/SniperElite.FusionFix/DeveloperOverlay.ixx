@@ -154,12 +154,7 @@ export namespace SniperOverlay
     inline void Init()
     {
         auto original = IATHook::Replace(GetModuleHandleW(nullptr), "DINPUT8.dll", std::forward_as_tuple("DirectInput8Create", Create));
-        auto create = original.find("DirectInput8Create");
-        if (create == original.end() || !(NativeCreate = reinterpret_cast<decltype(NativeCreate)>(create->second.get())))
-        {
-            OutputDebugStringA("Sniper Elite: developer overlay input hook unavailable.\n");
-            return;
-        }
+        NativeCreate = reinterpret_cast<decltype(NativeCreate)>(original.at("DirectInput8Create").get());
         SniperWindow::Message = Message;
         D3D8Compatibility::BeforeReset = []() { Overlay.BeforeReset(); };
         D3D8Compatibility::Frame = Frame;

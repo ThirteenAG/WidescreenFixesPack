@@ -122,26 +122,13 @@ export void InitFrameRate()
     auto race = old ? hook::pattern("6A 53 6A 01 50 8B 08 FF 91 F0 00 00 00 89 44 24 ?")
         : hook::pattern("6A 53 6A 01 50 8B 08 FF 91 00 01 00 00 89 44 24 ?");
     auto raceCall = reinterpret_cast<uintptr_t>(race.get_first());
-    auto engine = GetLS3DF();
     using GetGraph = void* (__cdecl*)();
-    auto getGraph = engine ? reinterpret_cast<GetGraph>(GetProcAddress(engine, "GetIGraph")) : nullptr;
-    auto graph = getGraph ? getGraph() : nullptr;
-    if (!graph || !QueryPerformanceFrequency(&frequency) || frequency.QuadPart <= 0)
-    {
-        OutputDebugStringA("Mafia: frame pacing API unavailable.\n");
-        FixSettings().Availability("MAIN.FPSLimit", [](std::string_view) { return false; });
-        return;
-    }
+    auto graph = reinterpret_cast<GetGraph>(GetProcAddress(GetLS3DF(), "GetIGraph"))();
+    QueryPerformanceFrequency(&frequency);
     const auto offset = old ? 0xF0u : 0x100u;
     frameCallers = { call + 11, raceCall + 13 };
     auto table = *reinterpret_cast<void***>(graph);
     timerHook = safetyhook::create_inline(table[offset / sizeof(uintptr_t)], Update);
-    if (!timerHook)
-    {
-        OutputDebugStringA("Mafia: frame pacing hook unavailable.\n");
-        FixSettings().Availability("MAIN.FPSLimit", [](std::string_view) { return false; });
-        return;
-    }
     timer = CreateWaitableTimerExW(nullptr, nullptr, 0x2, TIMER_ALL_ACCESS);
     if (!timer) timer = CreateWaitableTimerW(nullptr, FALSE, nullptr);
     const auto changed = []()

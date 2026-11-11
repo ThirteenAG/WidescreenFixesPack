@@ -3,8 +3,6 @@
   "page.display": "Affichage",
   "page.game": "Jeu",
   "page.compatibility": "Compatibilité",
-  "FixSavePath": "Dossier de sauvegarde personnel",
-  "FixSavePath.description": "Redirige le dossier de sauvegarde des documents publics vers les documents personnels. Les sauvegardes existantes sont copiées si la destination n'existe pas encore.",
   "FOVFactor": "Champ de vision",
   "FOVFactor.description": "Multiplie le champ de vision en jeu ; une valeur supérieure élargit la vue, jusqu’à 150 degrés horizontalement. Les caméras scriptées et les vues zoomées restent inchangées.",
   "SkipIntro": "Passer l'intro",

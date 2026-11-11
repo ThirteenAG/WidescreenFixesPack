@@ -14,13 +14,13 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
+    {
         if (WidescreenFixConflict::Found())
             return;
-            FixSettings();
-            asi_settings::LiveLink::Start();
-            CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("8B 4C B4 20 89 15"));
-        });
+        FixSettings();
+        asi_settings::LiveLink::Start();
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("8B 4C B4 20 89 15"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

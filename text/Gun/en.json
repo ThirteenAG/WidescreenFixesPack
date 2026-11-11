@@ -51,7 +51,7 @@
   "menu.details": "Details",
   "menu.restartshort": "Restart required",
   "FMVWidescreenMode": "Video mode",
-  "FMVWidescreenMode.description": "Original aspect shows the movies as the game does, whole inside its centred 4:3 frame with their black bars. Fill crops the bars so the picture fills the screen without stretching; very wide screens also lose part of the top and bottom. Logos stay whole.",
+  "FMVWidescreenMode.description": "Original aspect shows the movies as the game does, with their black bars. Fill enlarges them past the black bars around the picture until the picture fits the screen, without cutting anything off.",
   "FMVWidescreenMode.original": "Original aspect",
   "FMVWidescreenMode.fill": "Fill",
   "PauseOnFocusLoss": "Pause when unfocused",

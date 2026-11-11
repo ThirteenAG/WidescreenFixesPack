@@ -259,8 +259,6 @@ export namespace DeerHud
         UpdateConstraint();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", [] { UpdateConstraint(); });
         pathHook = safetyhook::create_inline(path.get_first(), Draw);
-        const bool available = bool(pathHook);
-        FixSettings().Availability("MAIN.HudAspectRatioConstraint", [available](std::string_view) { return available; });
-        return available;
+        return true;
     }
 }

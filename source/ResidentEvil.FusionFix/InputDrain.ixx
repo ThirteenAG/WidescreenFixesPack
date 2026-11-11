@@ -18,7 +18,6 @@ export namespace REInput
     inline bool keyboardHeld = false;
     inline bool mouseHeld = false;
     inline std::array<bool, 4> padHeld{};
-    inline bool ready = false;
 
     inline bool Blocked()
     {
@@ -96,7 +95,7 @@ export namespace REInput
         return result;
     }
 
-    inline bool Install()
+    inline void Install()
     {
         auto currentKey = hook::pattern("83 EC 08 53 55 56 57 8B F9 8B 87 20 01 00 00 8D 9F 20 01 00 00 C7 03 00 00 00 00 89 87 40 01 00 00");
         auto oldKey = hook::pattern("83 EC 14 53 55 56 8D A9 20 01 00 00 57 89 4C 24 10 89 6C 24 20 8B D5 BE 08 00 00 00");
@@ -107,8 +106,5 @@ export namespace REInput
         keyboardHook = safetyhook::create_inline(currentKey.size() ? currentKey.get_first() : oldKey.get_first(), Keyboard);
         padHook = safetyhook::create_inline(currentPad.size() ? currentPad.get_first() : oldPad.get_first(), Pad);
         mouseHook = safetyhook::create_inline(currentMouse.size() ? currentMouse.get_first() : oldMouse.get_first(), Mouse);
-        ready = keyboardHook && padHook && mouseHook;
-        if (!ready) { keyboardHook.reset(); padHook.reset(); mouseHook.reset(); }
-        return ready;
     }
 }

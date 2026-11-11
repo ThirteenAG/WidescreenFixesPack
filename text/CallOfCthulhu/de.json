@@ -36,7 +36,7 @@
   "FOVFactor": "Sichtfeld",
   "FOVFactor.description": "Multipliziert das normale Sichtfeld, bis zu 150 Grad in der Breite. 1.0 erhält die vorgesehene Ansicht. Zielen, Skripte, Kameraeffekte und Übergänge bleiben unverändert.",
   "FMVWidescreenMode": "Videobildausschnitt",
-  "FMVWidescreenMode.description": "Beide Einstellungen zeigen jedes Video vollständig im eigenen Seitenverhältnis, mit schwarzen Balken, wo der Bildschirm breiter oder schmaler ist. Nichts wird abgeschnitten oder gestreckt.",
+  "FMVWidescreenMode.description": "Originalformat zeigt die Videos wie das Spiel, vollständig in seinem mittigen 4:3-Rahmen mit schwarzen Balken ringsum. Füllen passt das ganze Video an den Bildschirm an, ohne etwas abzuschneiden oder zu verzerren.",
   "FMVWidescreenMode.0": "Originalformat",
   "FMVWidescreenMode.1": "Füllen",
   "WindowMode": "Fenstermodus",

@@ -143,9 +143,5 @@
   "ui.pillarbox": "Balken seitlich",
   "ui.both": "Beide",
   "HudAspectRatioConstraint": "HUD-Seitenverhältnis",
-  "HudAspectRatioConstraint.description": "Auto platziert seitliche HUD-Elemente an den Bildschirmrändern. Mit 4:3, 16:9, 21:9 oder einem eigenen Verhältnis (B:H oder Dezimalzahl, 4:3 bis 32:9) bleiben sie in einem zentrierten Bereich. Vollbildeffekte und Weltmarkierungen bleiben unverändert. Gilt sofort.",
-  "FMVWidescreenMode": "Videobildausschnitt",
-  "FMVWidescreenMode.description": "Original zeigt das ganze Video innerhalb eines 4:3-Bereichs. Füllen passt das ganze Video an den Bildschirm an. Keiner der Modi schneidet oder streckt das Bild.",
-  "FMVWidescreenMode.0": "Originalformat",
-  "FMVWidescreenMode.1": "Füllen"
+  "HudAspectRatioConstraint.description": "Auto platziert seitliche HUD-Elemente an den Bildschirmrändern. Mit 4:3, 16:9, 21:9 oder einem eigenen Verhältnis (B:H oder Dezimalzahl, 4:3 bis 32:9) bleiben sie in einem zentrierten Bereich. Vollbildeffekte und Weltmarkierungen bleiben unverändert. Gilt sofort."
 }

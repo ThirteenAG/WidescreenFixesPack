@@ -40,7 +40,7 @@
 <tr>
 <td width="58%" valign="middle">
 
-- **In-game menu** - the fix's settings are in the game's own menu, in the main menu and in the pause menu, under **Options > Plugins**, with the selected setting's description at the bottom of the screen: the fix first, then every other plugin with settings (such as Xbox Rain Droplets and III.VC.SA.WindowedMode, which sets the window mode). Each plugin's page has its own Preset row (Vanilla, Recommended, Enhanced; press twice to apply), its settings and Restore defaults. Most settings apply at once, the others at the next start (the page then says so above its rows). Display Setup already holds the twelve rows a screen of the game can have, so none of them is placed there
+- **In-game menu** - the fix's settings are in the game's own menu, in the main menu and in the pause menu, under **Options > Plugins**, with the selected setting's description at the bottom of the screen: the fix first, then every other plugin with settings (such as Fusion Rain Droplets and III.VC.SA.WindowedMode, which sets the window mode). Each plugin's page has its own Preset row (Vanilla, Recommended, Enhanced; press twice to apply), its settings and Restore defaults. Most settings apply at once, the others at the next start (the page then says so above its rows). Display Setup already holds the twelve rows a screen of the game can have, so none of them is placed there
 - **Settings** - stored in `GTAVC.FusionFix.cfg` next to the `.asi`, which the fix writes on its first start with every setting and a comment above each. Change settings in the game, on fusionfix.io or in FusionFixHub (also while the game runs)
 - **Field of View** - a multiplier (0.5 to 2.0) of the gameplay cameras' field of view, on top of the widescreen correction; cutscenes keep theirs.
 - **Skip Intro** - starts with the loading screen and the main menu, without the logo videos (on by default, after restart)
@@ -111,7 +111,7 @@
 <td width="58%" valign="middle">
 
 - **Speed Sensitive FOV** - FOV increases with car speed
-- **VCS Camera Shake** - enables GTA: Vice City Stories style camera shake in vehicles at high speed
+- **VCS Camera Shake** - enables GTA: Vice City Stories style camera shake in vehicles at high speed; **Shake Start Speed** and **Shake Intensity** set the speed it starts at and how strong it is
 - **Text Outline** - replaces text shadows with an outline
 
 </td>

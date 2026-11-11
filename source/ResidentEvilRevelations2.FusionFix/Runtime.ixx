@@ -192,8 +192,6 @@ namespace Rev2Runtime
         FixSettings().OnChange("MAIN.PauseOnFocusLoss", updatePause);
         auto activation = hook::pattern("80 7C 24 04 00 A1 ? ? ? ? 74 ? C6 80 51 25 00 00 01");
         activationHook = safetyhook::create_inline(activation.get_first(), Activation);
-        if (!activationHook)
-            throw std::runtime_error("Failed to install the focus activation hook");
         Rev2Overlay::FocusSettingChanged = [](HWND window)
         {
             if (windowedState.load() == 1 && !Rev2Overlay::Active(window))

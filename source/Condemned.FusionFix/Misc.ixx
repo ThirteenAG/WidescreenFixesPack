@@ -47,10 +47,8 @@ void InstallProcessExit()
     HMODULE own = nullptr;
     if (!crt || !GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
         reinterpret_cast<LPCWSTR>(&ExitCondemned), &own)) return;
-    const auto originals = IATHook::Replace(crt, "KERNEL32.dll",
+    IATHook::Replace(crt, "KERNEL32.dll",
         std::pair{ "ExitProcess", reinterpret_cast<void*>(&ExitCondemned) });
-    if (!originals.contains("ExitProcess"))
-        OutputDebugStringA("Condemned Fusion Fix: process exit workaround unavailable.\n");
 }
 
 void InstallInit()
@@ -99,10 +97,16 @@ void InstallInit()
             auto w = *(uint32_t*)(regs.esp + 0x08);
             auto h = *(uint32_t*)(regs.esp + 0x0C);
 
+            // Looked up once, not for every quad
+            static const auto exe = (size_t)GetModuleHandle(NULL);
+            static size_t client = 0;
+            if (!client)
+                client = (size_t)GetModuleHandle(L"GameClient");
+
             uint32_t arr[10]{};
             for (size_t i = regs.esp, j = 0; j < 9; i += 4)
             {
-                if ((*(size_t*)i > (size_t)GetModuleHandle(NULL) && *(size_t*)i < (size_t)GetModuleHandle(NULL) + 0x176004) || (*(size_t*)i > (size_t)GetModuleHandle(L"GameClient") && *(size_t*)i < (size_t)GetModuleHandle(L"GameClient") + 0x172AD8))
+                if ((*(size_t*)i > exe && *(size_t*)i < exe + 0x176004) || (*(size_t*)i > client && *(size_t*)i < client + 0x172AD8))
                 {
                     arr[j] = *(size_t*)i;
                     ++j;

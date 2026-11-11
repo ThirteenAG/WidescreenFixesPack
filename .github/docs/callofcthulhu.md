@@ -15,7 +15,7 @@
 - **View** — The game keeps its vertical view at every aspect ratio, so wider screens see more at the sides. The field of view factor widens the normal gameplay view, up to 150 degrees across.
 - **Menus** — Menus, the inventory, the journal and loading screens keep their 4:3 layout in the middle of the screen, with black beside full screen pictures. Dimming behind menus, fades, subtitle bands and tip panels cover the whole screen.
 - **Cutscenes** — The in-engine cutscenes are framed as a 16:9 picture (the original bars on a 4:3 screen). The fix keeps that picture at any screen shape: on 16:9 it fills the screen, on wider screens it stays 16:9 between side bars, on narrower ones it gets bars above and below.
-- **Videos** — Videos keep their aspect ratio and are always shown complete, with black bars where needed (Original and Fill look the same).
+- **Videos** — Videos keep their aspect ratio and are always shown complete, with black bars where needed. Original shows them inside the game's centred 4:3 frame, Fill fits them to the screen; a 4:3 video looks the same in both.
 - **Window modes** — Fullscreen, a window with exactly the chosen resolution, or borderless at the resolution of the monitor the window is on.
 - **Frame rate** — The game runs uncapped at hundreds of frames per second; the frame rate limit holds it at 60 or the rate you choose.
 - **Background** — The game can keep running while another window is active, and the cursor stays inside the window while the game is active.

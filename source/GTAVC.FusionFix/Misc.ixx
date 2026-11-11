@@ -18,8 +18,11 @@ injector::hook_back<void(__fastcall*)(CCamera*, void*)> hbCalculateDerivedValues
 void __fastcall CalculateDerivedValues(CCamera* camera, void* edx)
 {
     static auto& bVCSCamShake = FixSettings().Int("MISC.VCSCamShake");
+    static auto& nVCSCamShakeMinSpeed = FixSettings().Int("MISC.VCSCamShakeMinSpeed");
+    static auto& nVCSCamShakeIntensity = FixSettings().Int("MISC.VCSCamShakeIntensity");
+    // The settings are in km/h and percent; a speed of 1.0 is 180 km/h
     if (bVCSCamShake)
-        CCamera::UpdatePlayerVehicleSpeedBlur(camera);
+        CCamera::UpdatePlayerVehicleSpeedBlur(camera, nVCSCamShakeMinSpeed / 180.0f, nVCSCamShakeIntensity / 100.0f);
     return hbCalculateDerivedValues.fun(camera, edx);
 }
 

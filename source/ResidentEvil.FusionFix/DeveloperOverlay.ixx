@@ -15,7 +15,6 @@ export namespace REOverlay
     asi_overlay::D3D9Overlay Overlay;
     IDirect3DDevice9* CurrentDevice = nullptr;
     LONG HotkeyDown = 0, HotkeyRequested = 0;
-    std::function<bool()> InputReady;
 
     HMODULE ThisModule()
     {
@@ -81,7 +80,7 @@ export namespace REOverlay
         }
         else
             InterlockedExchange(&HotkeyDown, 0);
-        if (InterlockedExchange(&HotkeyRequested, 0) && window && Active(window) && (!InputReady || InputReady()))
+        if (InterlockedExchange(&HotkeyRequested, 0) && window && Active(window))
             Overlay.SetOpen(!Overlay.IsOpen());
     }
 
@@ -114,7 +113,6 @@ export namespace REOverlay
     {
         if (!device)
             return;
-        if (InputReady && !InputReady()) return;
         static const bool page = []()
         {
             asi_overlay::Overlay::AddPage("Debug", "Info", [](asi_overlay::OverlayUI& ui)

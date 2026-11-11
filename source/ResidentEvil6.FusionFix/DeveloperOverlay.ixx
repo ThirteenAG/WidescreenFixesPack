@@ -16,7 +16,6 @@ export namespace RE6Overlay
     IDirect3DDevice9* CurrentDevice = nullptr;
     float actualFPS = 0.0f;
     LONG HotkeyDown = 0, HotkeyRequested = 0;
-    std::function<bool()> InputReady;
 
     HMODULE ThisModule()
     {
@@ -82,7 +81,7 @@ export namespace RE6Overlay
         }
         else
             InterlockedExchange(&HotkeyDown, 0);
-        if (InterlockedExchange(&HotkeyRequested, 0) && window && Active(window) && (!InputReady || InputReady()))
+        if (InterlockedExchange(&HotkeyRequested, 0) && window && Active(window))
             Overlay.SetOpen(!Overlay.IsOpen());
     }
 
@@ -116,7 +115,6 @@ export namespace RE6Overlay
     {
         if (!device)
             return;
-        if (InputReady && !InputReady()) return;
         static LARGE_INTEGER frequency{}, start{};
         static uint32_t frames = 0;
         LARGE_INTEGER now{};

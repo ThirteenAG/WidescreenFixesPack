@@ -30,7 +30,7 @@ void __fastcall VideoRender(void* renderer, void* edx, float* quad)
     if (renderTarget)
         return shVideoRender.fastcall<void>(renderer, edx, quad);
     const float aspect = GetPresentationAspectRatio();
-    const auto frame = SCVideoFrame::Fit(aspect, 1.0f, videoAspect, 1.0f, FixSettings().Int("MAIN.FMVWidescreenMode"));
+    const auto frame = SCVideoFrame::Fit(aspect, 1.0f, videoAspect, 1.0f);
     if (aspect <= 0.0f || frame.width <= 0.0f || frame.height <= 0.0f)
         return shVideoRender.fastcall<void>(renderer, edx, quad);
     float saved[4] = { quad[0], quad[1], quad[2], quad[3] };

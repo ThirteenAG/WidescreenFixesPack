@@ -4,7 +4,7 @@ module;
 
 export module Pools;
 
-export bool PrepareClassicLODPools()
+export void PrepareClassicLODPools()
 {
     // Full-map streaming registers more CEntity sector links than DE's local
     // streaming window. CPool::New returns nullptr on exhaustion and native
@@ -24,12 +24,6 @@ export bool PrepareClassicLODPools()
         hook::pattern("C7 47 10 34 21 00 00 C7 47 14 FF FF FF FF").get_first<uint8_t>(3),
         hook::pattern("48 81 F9 34 21 00 00 7C E4").get_first<uint8_t>(3),
     };
-    const auto missing = [](const auto& addresses)
-    {
-        return std::any_of(addresses.begin(), addresses.end(), [](const auto address) { return !address; });
-    };
-    if (missing(doubleNodes) || missing(dummies))
-        return false;
     const auto resize = [](const auto& addresses, uint32_t count, uint32_t stride)
     {
         injector::WriteMemory<uint32_t>(addresses[0], count * stride, true);
@@ -38,5 +32,4 @@ export bool PrepareClassicLODPools()
     };
     resize(doubleNodes, 100000, 24);
     resize(dummies, 60000, 120);
-    return true;
 }

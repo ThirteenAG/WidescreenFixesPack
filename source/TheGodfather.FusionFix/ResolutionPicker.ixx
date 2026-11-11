@@ -36,7 +36,6 @@ export namespace GodfatherResolutions
     Node* tree{};
     unsigned treeCount{};
     std::vector<Mode> modes;
-    bool installed{};
     Value* populatedPage{};
     Value* populatedLabels{};
     Value* populatedIndices{};
@@ -186,7 +185,7 @@ export namespace GodfatherResolutions
 
     void Populate(Value* page)
     {
-        if (!installed || !page || !Catalog())
+        if (!page || !Catalog())
             return;
         auto widget = GodfatherMenu::Get(page, "videoRes");
         auto labels = GodfatherMenu::Get(widget, "textArray");
@@ -225,15 +224,6 @@ export namespace GodfatherResolutions
         populatedIndices = indices;
     }
 
-    void Disable()
-    {
-        installed = false;
-        countHook = {};
-        resolutionHook = {};
-        activeHook = {};
-        selectHook = {};
-        modeHook = {};
-    }
     void Init();
 }
 
@@ -278,13 +268,10 @@ namespace GodfatherResolutions
         activeHook = safetyhook::create_inline(activeEntry.get_first(), Active, SafetyHookInline::StartDisabled);
         selectHook = safetyhook::create_inline(selectEntry.get_first(), Select, SafetyHookInline::StartDisabled);
         modeHook = safetyhook::create_inline(modeEntry.get_first(), SelectMode, SafetyHookInline::StartDisabled);
-        if (!countHook || !resolutionHook || !activeHook || !selectHook || !modeHook ||
-            !countHook.enable() || !resolutionHook.enable() || !activeHook.enable() || !selectHook.enable() || !modeHook.enable())
-        {
-            Disable();
-            throw std::runtime_error("Resolution catalog hooks unavailable");
-        }
-        else
-            installed = true;
+        (void)countHook.enable();
+        (void)resolutionHook.enable();
+        (void)activeHook.enable();
+        (void)selectHook.enable();
+        (void)modeHook.enable();
     }
 }

@@ -54,8 +54,6 @@ namespace
 // does not rule out a branch entering the overwritten instruction sequence.
 export void InstallClassicOrbit(const ClassicOrbitSites& verified)
 {
-    if (std::any_of(verified.instructions.begin(), verified.instructions.end(), [](auto p) { return !p; }))
-        return;
     sites = verified;
     const auto add = [](size_t index, auto callback)
     {
@@ -133,7 +131,5 @@ export void InstallClassicOrbit(const ClassicOrbitSites& verified)
         if (const auto turn = ControllerTurn(c.rsi, c.xmm6.f32[0], false, true))
             c.xmm6.f32[0] = *turn;
     });
-    if (std::any_of(hooks.begin(), hooks.end(), [](const auto& hook) { return !hook; }))
-        hooks.clear();
     WFP::onGameInitEvent() += []() { controllerSpeeds.clear(); };
 }

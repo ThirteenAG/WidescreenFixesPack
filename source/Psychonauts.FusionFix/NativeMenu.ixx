@@ -469,12 +469,12 @@ export namespace PsychonautsMenu
         return hook::pattern(bytes).get_first();
     }
 
-    inline bool Init()
+    inline void Init()
     {
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<LPCWSTR>(&Init), &host);
         const auto runtime = GetModuleHandleW(L"MSVCR90.dll");
-        api.allocate = runtime ? reinterpret_cast<decltype(api.allocate)>(GetProcAddress(runtime, "_aligned_malloc")) : nullptr;
+        api.allocate = reinterpret_cast<decltype(api.allocate)>(GetProcAddress(runtime, "_aligned_malloc"));
         auto options = find("55 8B EC 81 EC D0 00 00 00 89 8D 54 FF FF FF");
         auto activated = find("55 8B EC 51 89 4D FC 8B 45 08 50 8B 4D FC E8 ? ? ? ? 8B 4D FC 8B 55 08 3B 91 94 00 00 00");
         auto text = find("55 8B EC 83 EC 08 89 4D F8 8B 4D F8 E8 ? ? ? ? 8B 45 F8 C7 00 ? ? ? ? 8B 4D F8 C6 81 94 00 00 00 01");
@@ -484,8 +484,6 @@ export namespace PsychonautsMenu
         auto layout = find("55 8B EC 83 EC 2C 89 4D DC 8B 45 DC 83 B8 90 00 00 00 00");
         auto show = find("55 8B EC 51 89 4D FC 6A 00 E8 ? ? ? ? 83 C4 04 A1 ? ? ? ?");
         auto pressed = find("55 8B EC 8B 45 08 0F B6 80 ? ? ? ? 83 E0 02");
-        if (!api.allocate)
-            return false;
         api.text = reinterpret_cast<decltype(api.text)>(text);
         api.container = reinterpret_cast<decltype(api.container)>(container);
         api.addChild = reinterpret_cast<decltype(api.addChild)>(add);
@@ -501,6 +499,5 @@ export namespace PsychonautsMenu
         lookupHook = safetyhook::create_inline(lookup, Lookup);
         optionsHook = safetyhook::create_inline(options, OptionsCreated);
         activatedHook = safetyhook::create_inline(activated, OptionsActivated);
-        return lookupHook && optionsHook && activatedHook;
     }
 }

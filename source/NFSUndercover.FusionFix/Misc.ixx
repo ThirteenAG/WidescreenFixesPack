@@ -188,9 +188,9 @@ namespace FrameRate
         dCameraStep = static_cast<double>(std::min(steps, MaxSteps)) * dStepTime;
     }
 
-    // Points the instructions in [begin, end) that read the constant at `from` to `to`, if there are exactly `expected`
+    // Points the instructions in [begin, end) that read the constant at `from` to `to`; there are exactly `expected`
     // of them (a 4-byte absolute address in this code is always such an operand)
-    bool RedirectConstant(uintptr_t begin, uintptr_t end, uintptr_t from, const void* to, size_t expected)
+    void RedirectConstant(uintptr_t begin, uintptr_t end, uintptr_t from, const void* to, size_t expected)
     {
         std::vector<uintptr_t> sites;
         for (auto p = begin; p + 4 <= end; ++p)
@@ -199,10 +199,9 @@ namespace FrameRate
                 sites.push_back(p);
         }
         if (sites.size() != expected)
-            return false;
+            std::abort();
         for (auto site : sites)
             injector::WriteMemory(site, reinterpret_cast<uintptr_t>(to), true);
-        return true;
     }
 }
 
@@ -302,7 +301,7 @@ namespace FieldOfView
 
 // Movies (all 16:9) are drawn as a quad over the whole screen on screens wider than 4:3, which stretched them on wider
 // ones, and over 75% of the height on others. The movie always takes the whole-screen quad, sized for the screen: the
-// whole movie at its aspect with black bars (MAIN.FMVWidescreenMode shows it this way in both modes).
+// whole movie at its aspect with black bars.
 namespace Movie
 {
     bool bDrawing = false;      // the movie's quad is drawn next
@@ -739,7 +738,7 @@ void Init4()
 
     // Transition overlay: the full width of the screen
     pattern = GetPattern("E8 ? ? ? ? D9 5C 24 14 E8 ? ? ? ? D9 5C 24 1C");
-    if (pattern.empty())
+    if (pattern.empty()) // retail
         pattern = GetPattern("E8 ? ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? 0F B6 44 24");
     injector::MakeCALL(pattern.get_first(0), FullWidth::LoadPositive, true); // 561A00
 
@@ -753,7 +752,7 @@ void Init4()
     uint32_t* dword_74A81D = find_pattern("D9 C9 DF F1 DD D8 76 ? F2 0F 10 0D", "D9 C9 DF F1 DD D8 76 ? F3 0F 10 0D").count(1).get(0).get<uint32_t>(6);
     injector::MakeNOP(dword_74A81D, 2, true);
     auto dword_76B84C = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 11 04 24 D9 04 24 83 C4 08");
-    if (!dword_76B84C.empty())
+    if (!dword_76B84C.empty()) // Steam
         injector::WriteMemory(dword_76B84C.count(1).get(0).get<uint32_t>(4), &fVertFOV, true);
     else
     {
@@ -765,7 +764,7 @@ void Init4()
     if (nScaling)
     {
         auto pattern = hook::pattern("F2 0F 59 0D ? ? ? ? 66 0F 5A C1 F3 0F 11 44 24");
-        if (!pattern.empty())
+        if (!pattern.empty()) // Steam
         {
             static const double Corrected_Hor = 1.3;
             injector::WriteMemory(pattern.get_first(4), &Corrected_Hor, true);
@@ -780,7 +779,7 @@ void Init4()
 
     // FOV
     pattern = GetPattern("F3 0F 10 44 24 38 F3 0F 10 4C 24 28"); //0x74A959
-    if (!pattern.empty())
+    if (!pattern.empty()) // Steam
     {
         struct FOVHook
         {
@@ -917,7 +916,7 @@ void Init4()
 
     // Shadows of meshes outside the view
     pattern = hook::pattern("77 ? F3 0F 5A C0 0F 5A C9");
-    if (!pattern.empty())
+    if (!pattern.empty()) // Steam
         injector::MakeJMP(pattern.get_first(), pattern.get_first(15), true);
     else
     {

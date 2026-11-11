@@ -19,16 +19,11 @@ void Install()
     auto& settings = FixSettings();
     asi_settings::LiveLink::Start();
     (void)DeerMenu::Game();
-    if (!DeerMovie::Init())
-        OutputDebugStringA("Deer Avenger 4: native movie scaling contracts unavailable.\n");
-    if (!DeerWindow::Init(settings.Int("MAIN.WindowMode")))
-        OutputDebugStringA("Deer Avenger 4: native window mode contracts unavailable.\n");
-    if (!DeerIntro::Init(settings.Bool("MAIN.SkipIntro")))
-        OutputDebugStringA("Deer Avenger 4: startup video decision unavailable; native preference retained.\n");
-    if (!DeerHud::Init())
-        OutputDebugStringA("Deer Avenger 4: gameplay HUD correction unavailable; native layout retained.\n");
-    if (!DeerCamera::Init())
-        OutputDebugStringA("Deer Avenger 4: camera/FOV correction incomplete; native signatures or hook unavailable.\n");
+    DeerMovie::Init();
+    DeerWindow::Init(settings.Int("MAIN.WindowMode"));
+    DeerIntro::Init(settings.Bool("MAIN.SkipIntro"));
+    DeerHud::Init();
+    DeerCamera::Init();
 }
 
 export void InitWithMenu()

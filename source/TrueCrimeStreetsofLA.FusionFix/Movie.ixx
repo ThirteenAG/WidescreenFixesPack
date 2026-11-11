@@ -30,8 +30,11 @@ export namespace TrueCrimeMovie
         {
             const float width = u1 - u0;
             const float height = v1 - v0;
-            // Both modes show the whole movie at its own aspect
-            const float scale = std::min(right / width, bottom / height);
+            // The whole movie at its own aspect: Original inside the game's centred 4:3 frame, Fill inside the whole screen
+            const bool original = FixSettings().Int("MAIN.FMVWidescreenMode") == 0;
+            const float areaWidth = original ? std::min(right, bottom * 4.0f / 3.0f) : right;
+            const float areaHeight = original ? std::min(bottom, right * 3.0f / 4.0f) : bottom;
+            const float scale = std::min(areaWidth / width, areaHeight / height);
             const float fittedWidth = width * scale;
             const float fittedHeight = height * scale;
             left = (right - fittedWidth) * 0.5f;
@@ -54,11 +57,11 @@ export namespace TrueCrimeMovie
     inline void Init()
     {
         auto draw = hook::pattern("A1 ? ? ? ? 81 EC 24 04 00 00 85 C0 0F 84 ? ? ? ? 53 56 57");
-        if (draw.empty())
+        if (draw.empty()) // TrueCrimeMB.exe
             draw = hook::pattern("81 EC 2C 04 00 00 A1 ? ? ? ? 89 84 24 28 04 00 00 A1 ? ? ? ? 85 C0 0F 84 ? ? ? ? 53 56 57");
         auto quad = hook::pattern("55 8B EC 83 E4 F0 83 EC 14 53 56 33 C0 8B F1 8A 66 07");
         auto play = hook::pattern("81 EC 04 02 00 00 53 56 57 E8 ? ? ? ? A1 ? ? ? ? 33 DB 3B C3");
-        if (play.empty())
+        if (play.empty()) // TrueCrimeMB.exe
             play = hook::pattern("81 EC 08 02 00 00 A1 ? ? ? ? 53 56 57 89 84 24 10 02 00 00 E8 ? ? ? ? A1 ? ? ? ? 33 DB 3B C3");
         DrawHook = safetyhook::create_inline(draw.get_first(), Draw);
         QuadHook = safetyhook::create_inline(quad.get_first(), Quad);

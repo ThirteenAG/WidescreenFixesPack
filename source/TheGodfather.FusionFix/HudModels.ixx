@@ -91,7 +91,7 @@ namespace GodfatherHudModels
         device->SetViewport(&original);
     }
 
-    export bool Init()
+    export void Init()
     {
         auto draw = hook::pattern("56 8B F1 8B 46 50 85 C0 74 69 8B 46 54 57 33 FF 85 C0 76 5E 8B 46 50 8B 0C B8 6A 00 68");
         auto begin = hook::pattern("8B 4E 6C 85 C9 0F 8E ? ? ? ? 50 E8 ? ? ? ? 8B 56 0C 52 E8");
@@ -99,14 +99,11 @@ namespace GodfatherHudModels
         auto animate = hook::pattern("89 4E 34 89 56 3C E8 ? ? ? ? 50 8D 44 24 ? 50 E8 ? ? ? ? DB 44 24");
         auto place = hook::pattern("5D E8 ? ? ? ? 50 8D 54 24 ? 52 E8 ? ? ? ? DB 44 24 ? 8B 46 54");
         drawHook = safetyhook::create_inline(draw.get_first(), Draw);
-        if (!drawHook)
-            throw std::runtime_error("HUD model hook unavailable");
         setViewWindow = reinterpret_cast<decltype(setViewWindow)>(window.get_first());
         beginUpdate = reinterpret_cast<decltype(beginUpdate)>(injector::GetBranchDestination(begin.get_first(12)).as_int());
         screenSize = reinterpret_cast<decltype(screenSize)>(injector::GetBranchDestination(place.get_first(12)).as_int());
         injector::MakeCALL(begin.get_first(12), BeginModels, true);
         injector::MakeCALL(animate.get_first(17), ScreenSize, true);
         injector::MakeCALL(place.get_first(12), ScreenSize, true);
-        return true;
     }
 }

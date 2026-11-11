@@ -20,7 +20,7 @@ export namespace PsiOpsCinematics
     inline bool Capture(void* self, PsiOpsMenu::Node node, void* color)
     {
         const auto found = nativeBars.find(node);
-        if (found == nativeBars.end() || nativeBars.size() != 2 || !PsiOpsCamera::projectionHook)
+        if (found == nativeBars.end() || nativeBars.size() != 2)
             return false;
         if (!(node[3] & 1) || !(PsiOpsCamera::borders.load() & 1))
             return true;
@@ -82,13 +82,11 @@ export namespace PsiOpsCinematics
         surface->Release();
     }
 
-    inline void Init(bool nativeAvailable)
+    inline void Init()
     {
         const auto refresh = []() { animated = FixSettings().Bool("MAIN.AnimatedCutsceneBorders"); };
         refresh();
         FixSettings().OnChange("MAIN.AnimatedCutsceneBorders", refresh);
-        FixSettings().Availability("MAIN.AnimatedCutsceneBorders",
-            [available = nativeAvailable && bool(PsiOpsCamera::projectionHook)](std::string_view) { return available; });
         const auto previous = PsiOpsWindow::frame;
         PsiOpsWindow::frame = [previous](IDirect3DDevice9* device)
         {

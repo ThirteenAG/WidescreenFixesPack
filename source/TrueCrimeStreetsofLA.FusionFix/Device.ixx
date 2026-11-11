@@ -126,8 +126,7 @@ export namespace TrueCrimeDevice
         });
         CallbackHandler::RegisterCallback(L"d3d9.dll", []()
         {
-            if (auto create = GetProcAddress(GetModuleHandleW(L"d3d9.dll"), "Direct3DCreate9"))
-                Create9Hook = safetyhook::create_inline(create, Create9);
+            Create9Hook = safetyhook::create_inline(GetProcAddress(GetModuleHandleW(L"d3d9.dll"), "Direct3DCreate9"), Create9);
         });
     }
 }

@@ -553,43 +553,16 @@ export namespace ControllerPrompts
         wrapDrawHook=safetyhook::create_inline(slot(15),WrapDraw);
         beginHook=safetyhook::create_inline(slot(14),Begin);
         endHook=safetyhook::create_inline(slot(17),End);
-        if(glyphHook&&widthHook&&lineWidthHook&&wrapWidthHook&&maskHook&&drawHook&&wrapDrawHook&&beginHook&&endHook)
-            lookupHook=safetyhook::create_inline(lookup,Lookup);
-        enabled=bool(lookupHook);
-        if (!enabled)
-        {
-            lookupHook.reset();
-            glyphHook.reset();
-            widthHook.reset();
-            lineWidthHook.reset();
-            wrapWidthHook.reset();
-            maskHook.reset();
-            drawHook.reset();
-            wrapDrawHook.reset();
-            beginHook.reset();
-            endHook.reset();
-            throw std::runtime_error("Controller prompt font hooks unavailable");
-        }
-        if(enabled)
+        lookupHook=safetyhook::create_inline(lookup,Lookup);
+        enabled=true;
         {
             auto tutorial=ScarfaceRTTI::FindVtable(".?AVLookTutorialHUD@@");
             pattern=hook::pattern("6A FF 6A 00 6A 00 6A 00 68 ? ? ? ? E8 ? ? ? ? 83 C4 14 C2 04 00 83 F8 01 75"); // 0x5B6380, Con::evaluate call at +13.
-            if(tutorial)
-            {
-                evaluateScript=reinterpret_cast<decltype(evaluateScript)>(injector::GetBranchDestination(pattern.get_first(13)).as_int());
-                lookTutorialUpdateHook=safetyhook::create_inline(*reinterpret_cast<void**>(tutorial+54*sizeof(void*)),UpdateLookTutorial);
-            }
+            evaluateScript=reinterpret_cast<decltype(evaluateScript)>(injector::GetBranchDestination(pattern.get_first(13)).as_int());
+            lookTutorialUpdateHook=safetyhook::create_inline(*reinterpret_cast<void**>(tutorial+54*sizeof(void*)),UpdateLookTutorial);
             auto text=ScarfaceRTTI::FindVtable(".?AVFETextObject@@");
             pattern=hook::pattern("53 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 EB 05 B8 ? ? ? ? 8B 4E 38"); // 0x5E27D4 + 6
-            if(text)
-            {
-                setTextHook=safetyhook::create_inline(*reinterpret_cast<void**>(text+39*sizeof(void*)),SetText);
-            }
-            if (!lookTutorialUpdateHook || !setTextHook)
-            {
-                Shutdown();
-                throw std::runtime_error("Controller prompt menu hooks unavailable");
-            }
+            setTextHook=safetyhook::create_inline(*reinterpret_cast<void**>(text+39*sizeof(void*)),SetText);
             hbControlButtonLabel.fun=injector::MakeCALL(pattern.get_first(6),ControlButtonLabel,true).get();
         }
     }

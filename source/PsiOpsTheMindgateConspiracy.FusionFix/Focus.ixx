@@ -33,10 +33,6 @@ export namespace PsiOpsFocus
         auto request = hook::pattern("55 8B EC 51 89 4D FC 8B 45 FC 8B 4D 08 3B 48 6C 7E 09 8B 55 FC 8B 45 08 89 42 6C 8B E5 5D C2 04 00");
         requestPause = reinterpret_cast<decltype(requestPause)>(request.get_first());
         updateHook = safetyhook::create_inline(update.get_first(), Update);
-        const bool available = bool(updateHook);
-        FixSettings().Availability("MAIN.PauseOnFocusLoss", [available](std::string_view value) { return value == "0" || available; });
-        if (!available)
-            return;
         const auto refresh = []() { enabled = FixSettings().Bool("MAIN.PauseOnFocusLoss"); };
         refresh();
         FixSettings().OnChange("MAIN.PauseOnFocusLoss", refresh);

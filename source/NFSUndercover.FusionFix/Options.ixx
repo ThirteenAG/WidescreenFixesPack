@@ -870,17 +870,9 @@ public:
                 Tree.push_back({ PluginsId, menu, TextHash("WFP_PLUGINS"), 0, 0 });
             GameTreeSize = Tree.size();
 
-            // The hooks first: without them the game keeps its own table
             shSearchString = safetyhook::create_inline(search.get_first(), SearchString);
             shCreateItem = safetyhook::create_inline(createItem.get_first(), CreateItem);
             shCommitChanges = safetyhook::create_inline(commit.get_first(), CommitChanges);
-            if (!shSearchString || !shCreateItem || !shCommitChanges)
-            {
-                shCommitChanges.reset();
-                shCreateItem.reset();
-                shSearchString.reset();
-                return;
-            }
 
             auto begin = reinterpret_cast<uintptr_t>(Tree.data());
             for (auto address : { children.get_first<uintptr_t>(9), highlight.get_first<uintptr_t>(3) })
@@ -913,11 +905,8 @@ public:
             auto okDialog = GetPattern("8A 4C 24 0C 8A 44 24 08 ? ? ? ? ? ? 8B 0D ? ? ? ? 85 C9 A2 ? ? ? ? B8 01 26 7B 41");
             auto dialogScreen = GetPattern("A1 ? ? ? ? 85 C0 74 13 6A 00 6A 00 68 ? ? ? ? 50 E8");
             auto mainMenu = GetPattern("8D 8E 98 00 00 00 89 5C 24 18 C7 06");
-            if (GetScreen)
-            {
-                MainMenuVTable = *mainMenu.get_first<uintptr_t>(0xC);
-                DialogScreen = *dialogScreen.get_first<void**>(1);
-            }
+            MainMenuVTable = *mainMenu.get_first<uintptr_t>(0xC);
+            DialogScreen = *dialogScreen.get_first<void**>(1);
             bool available = ScreenManager && StateManager && Originals[DialogResultSlot];
             if (available)
                 ShowOKDialog = reinterpret_cast<decltype(ShowOKDialog)>(okDialog.get_first());

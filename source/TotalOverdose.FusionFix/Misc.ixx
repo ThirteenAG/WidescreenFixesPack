@@ -39,7 +39,5 @@ export void InstallFieldOfView()
 {
     auto pattern = hook::pattern("8B 44 24 14 83 F8 FF 75 69 8B 41 1C 33 D2 85 C0 0F 8E");
     SetProjectionHook = safetyhook::create_inline(pattern.get_first(), SetProjection); //0x41FB20
-    if (!SetProjectionHook)
-        std::terminate();
 }
 

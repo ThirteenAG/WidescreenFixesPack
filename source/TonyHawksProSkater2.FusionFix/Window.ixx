@@ -473,12 +473,7 @@ export namespace THPS2Display
         if (!mode)
             return true;
         auto library = GetModuleHandleW(L"ddraw.dll");
-        Create = library ? reinterpret_cast<decltype(Create)>(GetProcAddress(library, "DirectDrawCreateEx")) : nullptr;
-        if (!Create)
-        {
-            OutputDebugStringA("THPS2: DirectDraw window adapter unavailable.\n");
-            return false;
-        }
+        Create = reinterpret_cast<decltype(Create)>(GetProcAddress(library, "DirectDrawCreateEx"));
         auto initial = hook::pattern("68 ? ? ? ? 89 44 24 14 52 89 44 24 1C A1 ? ? ? ? 50 8B 08 FF 51 30");
         auto recreate = hook::pattern("68 ? ? ? ? 89 54 24 18 89 54 24 1C 8B 08 8D 54 24 10 52 50 FF 51 30");
         CachedBack.SetAddress(*initial.get_first<IDirectDrawSurface7**>(1));

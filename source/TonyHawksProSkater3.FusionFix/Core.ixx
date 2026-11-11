@@ -57,7 +57,7 @@ void Install()
 
     THPS3Camera::Install(1.0f / Screen.fAspectRatioDiff, &settings.Float("MAIN.FOVFactor"));
 
-    THPS3Video::Install(&settings.Int("MAIN.FMVWidescreenMode"));
+    THPS3Video::Install();
 
     InstallHud();
 

@@ -1775,12 +1775,6 @@ export namespace FarCryMenu
         scriptReleaseHook = safetyhook::create_inline(scriptRelease, &ScriptReleased);
         fontReleaseHook = safetyhook::create_inline(fontRelease, &FontReleased);
         switchHook = safetyhook::create_inline(canSwitch, &CanSwitch);
-        if (!updateHook || !drawHook || !inputHook || !brokerHook || !releaseHook || !destroyHook || !scriptReleaseHook || !fontReleaseHook || !switchHook)
-        {
-            switchHook.reset(); fontReleaseHook.reset(); scriptReleaseHook.reset(); destroyHook.reset(); releaseHook.reset();
-            brokerHook.reset(); inputHook.reset(); drawHook.reset(); updateHook.reset();
-            Log("native hook transaction refused"); return;
-        }
         ready = true;
     }
 }

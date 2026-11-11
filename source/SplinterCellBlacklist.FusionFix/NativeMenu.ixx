@@ -814,6 +814,7 @@ export namespace BlacklistMenu
         else
             addresses = Resolve(BlacklistMenuContracts::DX11);
         if (!asi_settings::ReadModule(self, hostFile)) return false;
+        // Some entries exist in one executable only.
         auto address = [&](const char* name) -> void*
         {
             auto found = addresses.find(name);
@@ -841,11 +842,6 @@ export namespace BlacklistMenu
         backHook = safetyhook::create_inline(address("Back"), Back);
         performHook = safetyhook::create_inline(address("Perform"), Perform);
         settingsHook = safetyhook::create_inline(address("Settings"), dx9 ? reinterpret_cast<void*>(Settings9) : reinterpret_cast<void*>(Settings11));
-        if (!destroyHook || !updateHook || !backHook || !performHook || !settingsHook)
-        {
-            settingsHook.reset(); performHook.reset(); backHook.reset(); updateHook.reset(); destroyHook.reset();
-            throw std::runtime_error("Native menu hook installation failed");
-        }
         ready = true;
         RWGTA::UpdateCheck::Config update;
         update.pluginId = "SplinterCellBlacklist.FusionFix";

@@ -24,7 +24,6 @@ export GameRef<uintptr_t> nativeLanguage;
 
 export template<class T> GameRef<T>* BindGameRef(GameRef<T>& ref, T* address)
 {
-    if (!address) return nullptr;
     ref.SetAddress(address);
     return &ref;
 }

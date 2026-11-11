@@ -101,11 +101,11 @@ export namespace ScarfaceVideo
         return DestroyHook.unsafe_fastcall<void*>(object, nullptr, flags);
     }
 
-    inline bool Install(const int& mode, HMODULE module = GetModuleHandle(nullptr))
+    inline void Install(const int& mode, HMODULE module = GetModuleHandle(nullptr))
     {
         Mode = &mode;
         if (ConfigureHook && DrawHook && DestroyHook)
-            return true;
+            return;
         const auto tables = ScarfaceRTTI::ScanVtables(module);
         const auto table = tables.at(".?AVRenderStrategyBink@movie@@");
         const auto methods = reinterpret_cast<uintptr_t*>(table);
@@ -114,13 +114,5 @@ export namespace ScarfaceVideo
         ConfigureHook = safetyhook::create_inline(reinterpret_cast<void*>(methods[7]), Configure);
         DrawHook = safetyhook::create_inline(reinterpret_cast<void*>(methods[9]), Draw);
         DestroyHook = safetyhook::create_inline(reinterpret_cast<void*>(methods[3]), Destroy);
-        if (!ConfigureHook || !DrawHook || !DestroyHook)
-        {
-            ConfigureHook.reset();
-            DrawHook.reset();
-            DestroyHook.reset();
-            throw std::runtime_error("Movie hooks unavailable");
-        }
-        return true;
     }
 }

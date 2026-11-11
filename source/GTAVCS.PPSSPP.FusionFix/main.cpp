@@ -34,7 +34,6 @@ void ReadSettings() {
     settings.pcCheats=inireader.ReadBoolean("CONTROLS","PCCheats",0);
     settings.SetFovRequest(ReadCfgFloat("MAIN","FOVFactor",1));
     settings.cutsceneBorders=int(bounded(ReadCfgFloat("MAIN","CutsceneBorders",3),0,3,3));
-    settings.movieMode=std::clamp(inireader.ReadInteger("MAIN","FMVWidescreenMode",1),0,1);
     settings.vehicleLights=inireader.ReadBoolean("MAIN","VehicleLights",1);
     auto& drawing=Drawing::settings;
     drawing.aspect=console::portable::Aspect();
@@ -94,7 +93,6 @@ extern "C" int module_start(SceSize,void*) {
         {"MPRADAR", "RadarPosY", "170.0"},
         {"MAIN", "FOVFactor", "1.0"},
         {"MAIN", "CutsceneBorders", "3"},
-        {"MAIN", "FMVWidescreenMode", "1"},
         {"MAIN", "VehicleLights", "1"},
         {"MAIN", "GamepadIcons", "Auto"},
     };

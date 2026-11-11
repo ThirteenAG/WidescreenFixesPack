@@ -307,34 +307,6 @@
       ]
     },
     {
-      "id": "MAIN.FMVWidescreenMode",
-      "type": "choice",
-      "default": 1,
-      "label": "@FMVWidescreenMode",
-      "description": "@FMVWidescreenMode.description",
-      "page": "display",
-      "apply": "live",
-      "visibility": "menu",
-      "min": 0,
-      "max": 1,
-      "step": 1,
-      "choices": [
-        {
-          "value": 0,
-          "label": "@fmv.original"
-        },
-        {
-          "value": 1,
-          "label": "@fmv.fill"
-        }
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
-    },
-    {
       "id": "MAIN.PauseOnFocusLoss",
       "type": "bool",
       "default": true,

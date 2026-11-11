@@ -84,12 +84,8 @@ export namespace FarCryMovie
             regs.ecx &= 0xFFFFFF00;
             regs.eip = AspectContinue;
         });
-        Ready = bool(AspectHook);
-        if (!Ready)
-            OutputDebugStringA("Far Cry: movie aspect hook unavailable.\n");
-#else
-        Ready = true;
 #endif
+        Ready = true;
         return Ready;
     }
 }

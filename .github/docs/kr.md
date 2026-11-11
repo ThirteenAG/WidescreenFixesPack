@@ -65,20 +65,20 @@ Compatible version: **SLES-51011** (crc **989192FE**).
 - **Cockpit view** — the dashboard is a 4:3 model, so the cockpit view shows the original 4:3 picture with black sides on wider screens. Its HUD stays on the dashboard.
 - **Menus and loading screens** — keep their 4:3 proportions in the middle of the screen; the background bands fill the width.
 - **Mission start scenes** — Cutscene Borders chooses the bars: Off (the scene fills the screen), Letterbox (the original bars above and below), Pillarbox (the original 4:3 framing with bars at the sides) or Both. Subtitles stay in the 4:3 picture with Pillarbox and Both, and move to the left edge with Letterbox and Off.
-- **Videos** — the videos are widescreen pictures inside a 4:3 frame. Original shows them as the game does; Fill shows the whole widescreen picture as large as the screen allows, with bars only where the screen is wider or narrower than the picture.
+- **Videos** — the videos keep their whole 4:3 frame, including its own black bars: wider screens get bars at the sides, narrower ones above and below.
 - **Skip intro** — skips the Davilex logo and the opening video at startup. The language choice, copyright and memory card screens stay.
 
 ### Installation
 
-1. Use [PCSX2 Fork With Plugins](https://github.com/ASI-Factory/PCSX2-Fork-With-Plugins/releases/tag/latest).
+1. Use [PCSX2F](https://github.com/ASI-Factory/PCSX2-Fork-With-Plugins/releases/tag/latest) (PCSX2 Fork With Plugins; the fix does not work in regular PCSX2).
 2. Extract the plugin archive into the emulator folder, preserving its `PLUGINS` directory.
-3. Set the emulator's aspect ratio (Stretch follows the window) or window size, then launch the game. Keep PCSX2's FMV aspect ratio switch off; the fix fits the videos itself. Resolution and anti-aliasing are chosen in PCSX2.
+3. Set the emulator's aspect ratio (Stretch follows the window) or window size, then launch the game. Keep PCSX2F's FMV aspect ratio switch off; the fix fits the videos itself. Resolution and anti-aliasing are chosen in PCSX2F.
 
 ### Settings
 
 The settings are stored in `PLUGINS/KnightRider.PCSX2F.FusionFix.cfg`, which is created on the first start. Change them in FusionFixHub or on fusionfix.io. The game's menus are fixed scene files, so the fix adds no settings page inside the game. Display settings apply during play within about a second and after loading a save state; Skip Intro applies the next time the emulated game starts.
 
-- **Presets** — Vanilla shows the intro, the original letterbox bars and the videos as the game shows them; Recommended (the default) and Enhanced skip the intro, use Both for the borders and Fill for the videos. Field of view, HUD aspect ratio and display aspect ratio keep your choice.
+- **Presets** — Vanilla shows the intro and the original letterbox bars; Recommended (the default) and Enhanced skip the intro and use Both for the borders. Field of view, HUD aspect ratio and display aspect ratio keep your choice.
 - Setting texts: English, French, German, Italian and Spanish.
 
 ### Known limits

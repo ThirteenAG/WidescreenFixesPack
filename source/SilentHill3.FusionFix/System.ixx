@@ -115,7 +115,7 @@ public:
             auto reverb = hook::pattern("E8 ? ? ? ? 83 C4 04 85 C0 7D 19 53 68");
             injector::WriteMemory<uint8_t>(reverb.get_first(10), 0xEB, true);
 
-            // Silent Hill 2 references of the PC release in new games (from sh3proxy)
+            // Silent Hill 2 references of the PC release in new games
             if (FixSettings().Bool("MAIN.SH2Reference"))
             {
                 auto reference = hook::pattern("A0 ? ? ? ? 84 C0 ? ? E8 ? ? ? ? A2 ? ? ? ? C6 05");

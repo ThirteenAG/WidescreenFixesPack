@@ -33,16 +33,6 @@
   ],
   "settings": [
     {
-      "id": "MAIN.FixSavePath",
-      "type": "bool",
-      "default": 1,
-      "label": "@FixSavePath",
-      "description": "@FixSavePath.description",
-      "page": "compatibility",
-      "apply": "restart",
-      "visibility": "menu"
-    },
-    {
       "id": "MAIN.WindowMode",
       "type": "choice",
       "default": 0,

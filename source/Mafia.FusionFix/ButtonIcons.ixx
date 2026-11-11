@@ -235,21 +235,16 @@ export namespace MafiaIcons
     void Install()
     {
         auto name = hook::pattern("53 55 8B 6C 24 0C 33 C0 56 8B F1 85 ED 0F 84 ? ? ? ? 8D 9E ? ? ? ? 57 B9 08 00 00 00 8B FB F3 AB 66 8B 45 04");
-        if (name.empty())
+        if (name.empty()) // 1.0
             name = hook::pattern("56 57 8B 7C 24 0C 33 C0 85 FF 0F 84 ? ? ? ? 66 8B 47 04 83 F8 03 0F 87 ? ? ? ? FF 24 85 ? ? ? ? 33 C0 8A 47 06 3D DD 00 00 00");
         auto draw = hook::pattern("B8 E4 38 00 00 E8 ? ? ? ? 53 8B 9C 24 EC 38 00 00 85 DB 89 8C 24 9C 00 00 00");
         auto measure = hook::pattern("56 8B 74 24 08 85 F6 75 0A D9 05 ? ? ? ? 5E C2 10 00 8B 44 24 10 53 8B D0 57 C1 E2 07 03 D0");
         measureHook = safetyhook::create_inline(measure.get_first(), Measure);
         drawHook = safetyhook::create_inline(draw.get_first(), Draw);
-        if (measureHook && drawHook) nameHook = safetyhook::create_inline(name.get_first(), Name);
-        if (!nameHook)
-        {
-            drawHook.reset();
-            measureHook.reset();
-        }
+        nameHook = safetyhook::create_inline(name.get_first(), Name);
         FixSettings().Availability("MAIN.GamepadIcons", [](std::string_view value)
         {
-            return value == "0" || (nameHook && Ready());
+            return value == "0" || Ready();
         });
     }
 }

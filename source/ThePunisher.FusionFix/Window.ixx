@@ -182,8 +182,6 @@ export namespace PunisherWindow
         auto slot = *window.get_first<decltype(NativeCreateWindow)*>(18);
         NativeCreateWindow = *slot;
         CreateHook = safetyhook::create_inline(create.get_first(), Create);
-        if (!CreateHook)
-            std::terminate();
         injector::WriteMemory<decltype(NativeCreateWindow)>(slot, CreateEngineWindow, true);
     }
 }

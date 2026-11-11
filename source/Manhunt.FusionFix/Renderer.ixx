@@ -18,7 +18,7 @@ export enum class Layer2D
     Box,        // HUD, menus, text and loading screens: their 4:3 design in a centered box
     Stretch,    // full-screen effects that are meant to cover the screen (noise, scanlines, tints)
     Projected,  // sprites placed from the 3D view (lock-on, halos, lights, blood): already at the right place
-    Movie,      // videos: the frame keeps its aspect ratio (MAIN.FMVWidescreenMode), the rest like Box
+    Movie,      // videos: the frame keeps its aspect ratio, the rest like Box
 };
 
 // Where an element of the Box layer sits when the HUD box is wider than 4:3
@@ -171,7 +171,6 @@ namespace
         const int32_t h = RwRasterGetHeight(raster);
         const float movieAspect = (w == h || w <= 0 || h <= 0) ? DEFAULT_ASPECT_RATIO : float(w) / float(h);
 
-        // Both modes show the whole movie at its own aspect
         if (movieAspect < frame.aspect)
             ScaleX(v, 4, movieAspect / frame.aspect, frame);
         else

@@ -3,8 +3,6 @@
   "page.display": "Pantalla",
   "page.game": "Juego",
   "page.compatibility": "Compatibilidad",
-  "FixSavePath": "Carpeta de guardado personal",
-  "FixSavePath.description": "Cambia la carpeta de partidas de los documentos públicos a los personales. Las partidas existentes se copian si el destino aún no existe.",
   "FOVFactor": "Campo de visión",
   "FOVFactor.description": "Multiplica el campo de visión durante el juego; un valor mayor amplía la vista hasta 150 grados horizontales. Las cámaras de secuencias y las vistas con zoom no cambian.",
   "SkipIntro": "Saltar introducción",

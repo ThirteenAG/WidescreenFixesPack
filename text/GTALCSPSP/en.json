@@ -1,5 +1,5 @@
 {
-  "plugin.name": "GTA Liberty City Stories PPSSPP Widescreen Fix",
+  "plugin.name": "GTA Liberty City Stories PPSSPP Fusion Fix",
   "MAIN.SkipIntro": "Skip intro",
   "MAIN.SkipIntro.description": "Skip the opening intro. Restart the emulated game after changing this setting in the hub.",
   "MAIN.ForceAspectRatio": "Aspect ratio",
@@ -48,10 +48,6 @@
   "cutsceneborders.letterbox": "Letterbox",
   "cutsceneborders.pillarbox": "Pillarbox",
   "cutsceneborders.both": "Both",
-  "MAIN.FMVWidescreenMode": "Video aspect ratio",
-  "MAIN.FMVWidescreenMode.description": "Both choices show every movie whole in its own proportions, with black bars where the screen is wider or narrower. Restart after hub changes.",
-  "movies.original": "Original",
-  "movies.fill": "Fill",
   "MAIN.GamepadIcons": "Controller icons",
   "MAIN.GamepadIcons.description": "Choose prompt and controller artwork matching your bindings in PPSSPP. PSP preserves the original artwork. The guest cannot detect the host controller type, so choose the set manually. Missing or incompatible icon files preserve the affected original artwork. Restart after hub changes. Auto uses Xbox 360 artwork.",
   "lights": "Vehicle lights",

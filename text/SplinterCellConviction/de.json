@@ -129,9 +129,5 @@
   "ui.off": "Aus",
   "ui.both": "Beide",
   "ui.letterbox": "Balken oben/unten",
-  "ui.pillarbox": "Balken seitlich",
-  "FMVWidescreenMode": "Videobildausschnitt",
-  "FMVWidescreenMode.description": "Original zeigt das ganze Video innerhalb eines 4:3-Bereichs. Füllen passt das ganze Video an den Bildschirm an. Keiner der Modi schneidet oder streckt das Bild.",
-  "FMVWidescreenMode.0": "Originalformat",
-  "FMVWidescreenMode.1": "Füllen"
+  "ui.pillarbox": "Balken seitlich"
 }

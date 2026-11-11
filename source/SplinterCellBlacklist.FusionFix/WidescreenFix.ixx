@@ -154,7 +154,7 @@ int __cdecl BootMovie(uintptr_t device, uintptr_t textures, float width, float h
         const bool window = WindowHandle && GetClientRect(WindowHandle, &client) && client.right > 0 && client.bottom > 0;
         // Startup playback applies render-size changes after the movie ends.
         const auto scale = MovieFrame::Layout(window ? float(client.right) : width, window ? float(client.bottom) : height,
-            videoWidth, videoHeight, FixSettings().Int("MAIN.FMVWidescreenMode"));
+            videoWidth, videoHeight);
         left = width * (1.0f - scale.x) * 0.5f;
         top = height * (1.0f - scale.y) * 0.5f;
     }
@@ -180,14 +180,14 @@ void InitMovies()
         const auto width = *reinterpret_cast<const int*>(renderer + 0x30);
         const auto height = *reinterpret_cast<const int*>(renderer + 0x34);
         const auto aspect = bHUDClipped ? fDefaultAspectRatio : GetAspectRatio();
-        const auto scale = MovieFrame::Layout(aspect, 1.0f, width, height, FixSettings().Int("MAIN.FMVWidescreenMode"));
+        const auto scale = MovieFrame::Layout(aspect, 1.0f, width, height);
         auto quad = reinterpret_cast<float*>(regs.ebp - 0x60);
         for (int i = 0; i < 4; ++i)
             quad[i] *= i % 2 == 0 ? scale.x : scale.y;
         bClearMovie = scale.x < 0.9999f || scale.y < 0.9999f;
     });
     // Native playback only clears viewport targets; clear the bars of full-screen movies too.
-    if (!clear11.empty())
+    if (!clear11.empty()) // DX11
     {
         static auto Clear = reinterpret_cast<void(__fastcall*)(uintptr_t, void*, uint32_t, void*, uint32_t, uint32_t, float, uint32_t)>(
             injector::GetBranchDestination(clear11.get_first(8)).as_int());
@@ -207,12 +207,6 @@ void InitMovies()
                 device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
             }
         });
-    }
-    if (!shBootMovie || !FullScreenMovieRect || !ClearMovie)
-    {
-        shBootMovie.reset();
-        FullScreenMovieRect.reset();
-        ClearMovie.reset();
     }
 }
 
@@ -267,7 +261,7 @@ export void InitWidescreenFix()
         };
 
         pattern = hook::pattern("F3 0F 11 04 24 50 8B 85 ? ? ? ? 51 52 50 57");
-        if (!pattern.count_hint(1).empty())
+        if (!pattern.count_hint(1).empty()) // DX11
         {
             static auto D3DRenderer__RenderHUD = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
             {
@@ -355,7 +349,7 @@ export void InitWidescreenFix()
             return !(size == 128 && IsStageOverlay(regs.ebx, batch, reinterpret_cast<float*>(matrices)));
         };
         pattern = hook::pattern("E8 ? ? ? ? 8B 15 ? ? ? ? 8B 4B 08 F3 0F 7E 01");
-        if (!pattern.empty())
+        if (!pattern.empty()) // DX11
         {
             static auto UIBatchMatrices = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
             {

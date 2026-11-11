@@ -226,7 +226,7 @@ void PumpMessagesDeferringClose()
 // Draw Bink frame using a custom texture with correct aspect ratio scaling
 void DrawHiResCutsceneFrame(IDirect3DDevice8* pD3DDevice, void* UCanvas)
 {
-    if (!pBinkCopyToBuffer || !UCanvas || !*reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(UCanvas) + kCanvas_IsPlaying))
+    if (!UCanvas || !*reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(UCanvas) + kCanvas_IsPlaying))
         return;
 
     void* hBink = *(void**)((uintptr_t)UCanvas + kCanvas_hBink);
@@ -394,7 +394,7 @@ namespace UD3DRenderDevice
 
     void __fastcall StartVideo(void* renderDevice, void* edx, void* UCanvas, int posX, int posY, int centered)
     {
-        if (pPrepareTexture && bPlayingVideo && !bGadgetVideoIsPlaying &&
+        if (bPlayingVideo && !bGadgetVideoIsPlaying &&
             *(uint32_t*)((uintptr_t)renderDevice + kRenderDevice_VideoMode) == 0)
         {
             void* hBink = *(void**)((uintptr_t)UCanvas + kCanvas_hBink);
@@ -578,13 +578,12 @@ export void InitD3DDrv()
 
     // High resolution Bink cutscene fix
     pPrepareTexture = (PrepareTexture_t)GetProcAddress(GetModuleHandle(L"D3DDrv"), "?PrepareTexture@UD3DRenderDevice@@QAEPAVUTexture@@HH@Z");
-    if (HMODULE hBinkModule = GetModuleHandle(L"binkw32"))
     {
+        HMODULE hBinkModule = GetModuleHandle(L"binkw32");
         pBinkCopyToBuffer = (BinkCopyToBuffer_t)GetProcAddress(hBinkModule, "_BinkCopyToBuffer@28");
 
         // Prevent crash during shutdown while a video is still playing
-        if (auto pBinkRect = GetProcAddress(hBinkModule, "_BinkCopyToBufferRect@44"))
-            shBinkCopyToBufferRect = safetyhook::create_inline(pBinkRect, BinkCopyToBufferRectGuard);
+        shBinkCopyToBufferRect = safetyhook::create_inline(GetProcAddress(hBinkModule, "_BinkCopyToBufferRect@44"), BinkCopyToBufferRectGuard);
     }
     UD3DRenderDevice::shStartVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?StartVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@HHH@Z"), UD3DRenderDevice::StartVideo);
     UD3DRenderDevice::shStopVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?StopVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@HH@Z"), UD3DRenderDevice::StopVideo);
@@ -719,12 +718,10 @@ export void InitD3DDrv()
         auto base = reinterpret_cast<uintptr_t>(pattern.get_first(0));
 
         // Redirect call sites before creating the mid hook on the first call site
-        if (VisionNoiseGrain::Init())
-        {
-            VisionNoiseGrain::RedirectCallSite(base + 0x04, VisionNoiseGrain::HeldFrand<0, 0>); // rotation angle
-            VisionNoiseGrain::RedirectCallSite(base + 0x0E, VisionNoiseGrain::HeldFrand<0, 1>); // V offset
-            VisionNoiseGrain::RedirectCallSite(base + 0x1C, VisionNoiseGrain::HeldFrand<0, 2>); // U offset
-        }
+        VisionNoiseGrain::Init();
+        VisionNoiseGrain::RedirectCallSite(base + 0x04, VisionNoiseGrain::HeldFrand<0, 0>); // rotation angle
+        VisionNoiseGrain::RedirectCallSite(base + 0x0E, VisionNoiseGrain::HeldFrand<0, 1>); // V offset
+        VisionNoiseGrain::RedirectCallSite(base + 0x1C, VisionNoiseGrain::HeldFrand<0, 2>); // U offset
 
         static auto NightVisionGrainHook = safetyhook::create_mid(reinterpret_cast<void*>(base + 0x04), [](SafetyHookContext& regs)
         {
@@ -746,8 +743,6 @@ export void InitD3DDrv()
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 5C 24 28 FF 15 ? ? ? ? D9 5C 24 1C FF 15 ? ? ? ? D8 4C 24 28 D9 5C 24 7C FF 15 ? ? ? ? D8 4C 24 14");
     {
         auto base = reinterpret_cast<uintptr_t>(pattern.get_first(0));
-        if (!VisionNoiseGrain::Init())
-            return;
         VisionNoiseGrain::RedirectCallSite(base + 0x04, VisionNoiseGrain::HeldFrand<1, 0>); // rotation angle
         VisionNoiseGrain::RedirectCallSite(base + 0x0E, VisionNoiseGrain::HeldFrand<1, 1>); // V offset
         VisionNoiseGrain::RedirectCallSite(base + 0x1C, VisionNoiseGrain::HeldFrand<1, 2>); // U offset

@@ -229,18 +229,12 @@ export namespace DeerWindow
         auto procedure = hook::pattern(game, "8B 44 24 08 83 EC 18 3D 04 01 00 00 56 57 0F 87 C4 02 00 00 0F 84 76 02 00 00 83 F8 24");
         auto clock = hook::pattern(game, "8B 44 24 08 83 EC 08 85 C0 0F 84 ? ? ? ? 6A 78 E8");
         auto focus = hook::pattern(game, "A1 ? ? ? ? 85 C0 74 0E 6A 00 6A 11 E8 ? ? ? ? 83 C4 08 EB 02 FF D3");
-        if (auto address = *selection.get_first<uintptr_t*>(23))
-            game_context.SetAddress(address);
-        if (auto address = *selection.get_first<int*>(28))
-            game_windowWidth.SetAddress(address);
-        if (auto address = *selection.get_first<int*>(34))
-            game_windowHeight.SetAddress(address);
-        if (auto address = *selected.get_first<int*>(18))
-            game_modeCount.SetAddress(address);
-        if (auto address = *selected.get_first<VideoMode**>(25))
-            game_modes.SetAddress(address);
-        if (auto address = *selected.get_first<VideoMode**>(47))
-            game_selected.SetAddress(address);
+        game_context.SetAddress(*selection.get_first<uintptr_t*>(23));
+        game_windowWidth.SetAddress(*selection.get_first<int*>(28));
+        game_windowHeight.SetAddress(*selection.get_first<int*>(34));
+        game_modeCount.SetAddress(*selected.get_first<int*>(18));
+        game_modes.SetAddress(*selected.get_first<VideoMode**>(25));
+        game_selected.SetAddress(*selected.get_first<VideoMode**>(47));
         selectionHook = safetyhook::create_mid(selection.get_first(41), [](SafetyHookContext&)
         {
             if (Prepare()) Place();
@@ -256,11 +250,6 @@ export namespace DeerWindow
         {
             frameTimer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
             clockHook = safetyhook::create_inline(clock.get_first(), Clock);
-        }
-        if (!selectionHook || !showHook || !procedureHook || !focusHook || (mode != 0 && !clockHook))
-        {
-            selectionHook.reset(); showHook.reset(); procedureHook.reset(); clockHook.reset(); focusHook.reset();
-            return false;
         }
         ready = true;
         FixSettings().OnChange("MAIN.PauseOnFocusLoss", []

@@ -280,8 +280,7 @@ void __fastcall SetMode(uint8_t* _this, void* edx, int32_t width, int32_t height
 bool ChangeWindowMode(int width, int height)
 {
     auto* manager = static_cast<uint8_t*>(GraphicsManager.get());
-    if (!manager || !shSetMode || !Renderer.is_initialized() ||
-        (*reinterpret_cast<void***>(manager))[34] != SetModeTarget) return false;
+    if (!manager || (*reinterpret_cast<void***>(manager))[34] != SetModeTarget) return false;
     const auto* present = reinterpret_cast<const D3DPRESENT_PARAMETERS*>(Renderer.get_ptr() + 0x160);
     if (width <= 0 || height <= 0)
     {
@@ -367,7 +366,7 @@ public:
             pattern = hook::pattern("56 57 8B 7C 24 14 8B F1 39 BE 98 10 00 00");
             SetModeTarget = pattern.get_first();
             shSetMode = safetyhook::create_inline(SetModeTarget, SetMode);
-            if (shSetMode) Driv3rWindow::onModeChange = ChangeWindowMode;
+            Driv3rWindow::onModeChange = ChangeWindowMode;
 
             //resolution switch
             pattern = hook::pattern("89 8B 80 01 00 00"); //0x5C938F, 0x5C947E

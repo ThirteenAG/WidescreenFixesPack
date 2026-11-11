@@ -39,7 +39,7 @@
 <tr>
 <td width="58%" valign="middle">
 
-- **In-game menu** - the fix's settings are in the game's own menu, in the main menu and in the pause menu, each with a short description under the list. Console gamma, field of view and anti-aliasing are rows of **Options > Display Setup**, next to brightness, draw distance and the resolution; the game's Restore Defaults there resets them too. Everything else is under **Options > Plugins**: the fix first, then every other plugin with settings (such as Xbox Rain Droplets and III.VC.SA.WindowedMode, which sets the window mode). Each plugin's page has its own Preset row (Vanilla, Recommended, Enhanced; press twice to apply), its settings and Restore defaults. Most settings apply at once, the others at the next start
+- **In-game menu** - the fix's settings are in the game's own menu, in the main menu and in the pause menu, each with a short description under the list. Console gamma, field of view and anti-aliasing are rows of **Options > Display Setup**, next to brightness, draw distance and the resolution; the game's Restore Defaults there resets them too. Everything else is under **Options > Plugins**: the fix first, then every other plugin with settings (such as Fusion Rain Droplets and III.VC.SA.WindowedMode, which sets the window mode). Each plugin's page has its own Preset row (Vanilla, Recommended, Enhanced; press twice to apply), its settings and Restore defaults. Most settings apply at once, the others at the next start
 - **Settings** - stored in `GTA3.FusionFix.cfg` next to the `.asi`, which the fix writes on its first start with every setting and a comment above each. Change settings in the game, on fusionfix.io or in FusionFixHub (also while the game runs)
 - **In-Game Options** - a Cutscene Borders mode (off, letterbox, pillarbox, or both) and a Frame Limiter selector (off, 30 up to 240 FPS) are available right in the Display menu. Above 30 FPS, timers, mission countdowns, HUD flashing, particles, smoke and script-moved gates and lifts keep the game's original speed
 - **Field of View** - a multiplier (0.5 to 2.0) of the gameplay cameras' field of view, on top of the widescreen correction; cutscenes keep theirs
@@ -109,7 +109,7 @@
 <td width="58%" valign="middle">
 
 - **Speed Sensitive FOV** - FOV increases with car speed
-- **VCS Camera Shake** - enables GTA: Vice City Stories style camera shake in vehicles at high speed
+- **VCS Camera Shake** - enables GTA: Vice City Stories style camera shake in vehicles at high speed; **Shake Start Speed** and **Shake Intensity** set the speed it starts at and how strong it is
 - **Text Outline** - replaces text shadows with an outline
 
 </td>

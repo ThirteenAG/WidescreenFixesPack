@@ -19,13 +19,6 @@ namespace GodfatherUpdates
 
     export void Init()
     {
-        const bool available = GodfatherMenu::state.gammaHook && GodfatherMenu::state.actionsHook;
-        FixSettings().Availability("MAIN.CheckForUpdates", [available](std::string_view value)
-        {
-            return value == "0" || available;
-        });
-        if (!available)
-            throw std::runtime_error("Update notice dependency unavailable");
         IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", Exit));
         RWGTA::UpdateCheck::Config config;
         config.pluginId = "TheGodfather.FusionFix";

@@ -2,7 +2,7 @@
 
 <img src="https://thirteenag.github.io/screens/bully/main2.jpg" width="760" alt="Bully: Scholarship Edition Fusion Fix">
 
-**Bully: Scholarship Edition Fusion Fix** corrects ultrawide HUD scaling and field of view, expands the display resolution list, and preserves the selected resolution on startup. Video framing has selectable modes.
+**Bully: Scholarship Edition Fusion Fix** corrects ultrawide HUD scaling and field of view, expands the display resolution list, and preserves the selected resolution on startup. Videos are shown whole at their own aspect.
 
 [Website](https://thirteenag.github.io/wfp#bully) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Bully.FusionFix/dllmain.cpp)
 
@@ -49,7 +49,7 @@ Ctrl+F10 opens the developer overlay. The overlay requires a valid Supporter tok
 
 ## Limitations
 
-- **Videos** — Original and Fill both show the whole video at its own aspect, with black bars where needed; nothing is cut off or stretched.
+- **Videos** — The 16:9 videos are shown whole at their own aspect, with black bars where the screen is wider or narrower; nothing is cut off or stretched.
 - **Frame rate** — The fix keeps the game’s 30 FPS limit. It does not promise that missions, minigames or physics work correctly at higher frame rates.
 - **Display modes** — The native Video screen has 128 entries. If the adapter reports more, it retains 640×480 and the largest 127 sizes.
 

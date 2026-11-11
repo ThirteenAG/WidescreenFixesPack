@@ -42,8 +42,6 @@
   "MAIN.SkipPressStart.description": "Goes on from the title screen to the game data selection without waiting for Enter or Start. Needs a restart.",
   "MISC.DisableMouseInput": "Ignore the mouse",
   "MISC.DisableMouseInput.description": "Turns off mouse input, so a stray click or move doesn't affect the game.",
-  "MISC.DisableFrameSkipping": "No frame skipping",
-  "MISC.DisableFrameSkipping.description": "Draws every frame instead of skipping frames when the game falls behind.",
   "MISC.DisableQuitDialog": "No quit dialog",
   "MISC.DisableQuitDialog.description": "Closes the game without asking when the window is closed (Alt+F4 or the close button).",
   "MISC.DisableLoadingTimer": "No loading screen timeout",

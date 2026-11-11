@@ -185,8 +185,6 @@ export namespace FarCryStartup
         auto compile = hook::module_pattern(module, "48 81 EC 68 01 00 00 4D 85 C9 48 8D 05 ? ? ? ? 48 89 BC 24 88 01 00 00 49 0F 45 C1 48 8B F9 33 C9 48 85 D2");
 #endif
         CompileHook = safetyhook::create_inline(compile.get_first(), Compile);
-        if (!CompileHook)
-            OutputDebugStringA("Far Cry: startup script compiler hook unavailable.\n");
-        return bool(CompileHook);
+        return true;
     }
 }

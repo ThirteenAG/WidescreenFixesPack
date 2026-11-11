@@ -467,6 +467,10 @@ public:
 
             onResChange() += [](int Width, int Height)
             {
+                // The game has no window handle yet at startup and while the window is being created
+                if (!hWnd.get())
+                    return;
+
                 WindowedModeWrapper::GameHWND = hWnd;
                 WindowedModeWrapper::EnableDpiAwareness();
                 auto monitor = WindowedModeWrapper::WindowMonitor();

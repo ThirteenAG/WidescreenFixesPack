@@ -25,7 +25,6 @@ export namespace Driv3rMenu
     inline uintptr_t textClass, bitmapClass, buttonClass, rootClass, guiClass, fontClass, nativeFontClass, languageClass;
     inline uintptr_t buttonAction;
     inline HMODULE module;
-    inline bool ready;
     inline uint32_t processDepth = 0;
     inline std::function<bool()> padHelp, blocksInput;
     inline std::function<std::wstring()> helpPrefix;
@@ -150,7 +149,7 @@ export namespace Driv3rMenu
     inline int __fastcall DrawText(void* self, void*, int render, int bank)
     {
         auto found = texts.find(self);
-        if (!ready || found == texts.end()) return textHook.thiscall<int>(self, render, bank);
+        if (found == texts.end()) return textHook.thiscall<int>(self, render, bank);
         auto host = found->second.first.lock();
         if (!host || !Current(host) || !GuiService.is_initialized() || !GuiService.get() || !FontService.is_initialized() || !FontService.get() ||
             At<uintptr_t>(GuiService.get(), 0) != guiClass || At<uintptr_t>(FontService.get(), 0) != fontClass) return 0;
@@ -673,7 +672,7 @@ export namespace Driv3rMenu
     inline int __fastcall Load(void* self, void*, int mode, void* assets, int index)
     {
         int result = loadHook.thiscall<int>(self, mode, assets, index);
-        if (ready && !Prepare(static_cast<uint8_t*>(self) - 4)) Log("native MEC host contract unsupported");
+        if (!Prepare(static_cast<uint8_t*>(self) - 4)) Log("native MEC host contract unsupported");
         for (auto i = texts.begin(); i != texts.end();) { if (i->second.first.expired()) i = texts.erase(i); else ++i; }
         for (auto i = buttons.begin(); i != buttons.end();) { if (i->second.first.expired()) i = buttons.erase(i); else ++i; }
         return result;
@@ -814,7 +813,5 @@ export namespace Driv3rMenu
         activateHook = safetyhook::create_inline(hook::get_pattern("83 EC 08 53 56 57 8B F9 8D 5F 08 8D 4C 24 18 8D 44 24 0C 8B D3 E8 ? ? ? ? 8B 74 24 0C 3B 74 24 10 75 06 8D B3 A4 82 00 00 8B 8F 1C 83 00 00"), &Activate);
         deactivateHook = safetyhook::create_inline(hook::get_pattern("83 EC 08 53 56 57 8B F9 8D 5F 08 8D 4C 24 18 8D 44 24 0C 8B D3 E8 ? ? ? ? 8B 74 24 0C 3B 74 24 10 75 06 8D B3 A4 82 00 00 8B 44 24 18"), &Deactivate);
         loadHook = safetyhook::create_inline(hook::get_pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 24 8A 44 24 34"), &Load);
-        ready = destroyHook && releaseHook && textHook && processHook && loadHook && switchHook && activateHook && deactivateHook;
-        if (!ready) { loadHook.reset(); deactivateHook.reset(); activateHook.reset(); switchHook.reset(); processHook.reset(); textHook.reset(); releaseHook.reset(); destroyHook.reset(); Log("native menu hook transaction failed"); }
     }
 }

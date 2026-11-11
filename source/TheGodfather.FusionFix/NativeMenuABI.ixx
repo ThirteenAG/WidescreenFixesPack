@@ -176,9 +176,7 @@ export namespace GodfatherMenu
         api.transform = reinterpret_cast<decltype(api.transform)>(
             find_pattern("8B 44 24 04 83 EC 14 83 F8 0B 56 8B F1 0F 87 ? ? ? ? 57 FF 24 85"));
         auto interpreter = hook::pattern("8B 44 24 08 8B 4C 24 04 6A 00 6A 01 6A 01 50 6A 00 51 B9 ? ? ? ? E8 ? ? ? ? 85 C0 74 0B");
-        const auto interpreterAddress = *interpreter.get_first<void*>(19);
-        if (interpreterAddress)
-            GodfatherInterpreter.SetAddress(interpreterAddress);
+        GodfatherInterpreter.SetAddress(*interpreter.get_first<void*>(19));
         api.saveScope = reinterpret_cast<decltype(api.saveScope)>(
             find_pattern("A1 ? ? ? ? 8B 0D ? ? ? ? 8D 14 88 89 15 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00 C3"));
         api.restoreScope = reinterpret_cast<decltype(api.restoreScope)>(
@@ -189,9 +187,7 @@ export namespace GodfatherMenu
         auto gamma = GammaEntry();
         void** screens = nullptr;
         std::memcpy(&screens, gamma + (layoutShift ? 2 : 1), sizeof(screens));
-        if (screens)
-            GodfatherMenuScreens.SetAddress(screens);
-        return valid && api.text && api.invoke && api.toNumber && GodfatherInterpreter.is_initialized() && api.number && api.saveScope &&
-               api.restoreScope && api.transform && api.levelRoot && GodfatherMenuScreens.is_initialized();
+        GodfatherMenuScreens.SetAddress(screens);
+        return valid;
     }
 } // namespace GodfatherMenu

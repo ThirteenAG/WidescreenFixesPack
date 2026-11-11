@@ -1765,7 +1765,7 @@ public:
                     []()
                     {
                         auto package = [](const char* name) { return *feng && findPackage(*feng, nullptr, name) != nullptr; };
-                        return IsFrontEnd() && !MoviePlayerInstance.get() && shSearchForString && package(NFSMWUpdateNotice::MainMenu) &&
+                        return IsFrontEnd() && !MoviePlayerInstance.get() && package(NFSMWUpdateNotice::MainMenu) &&
                             !package("Dialog.fng") && !package("MainMenu_Sub.fng");
                     },
                     [](const std::string& text)
@@ -1841,29 +1841,11 @@ public:
             {
                 ConstructScreen(reinterpret_cast<void*>(regs.esi));
             });
-            if (!shDestroyScreen || !shClearRows || !ScreenConstructHook)
-            {
-                ScreenConstructHook.reset();
-                shClearRows.reset();
-                shDestroyScreen.reset();
-                return;
-            }
 
             shSearchForString = safetyhook::create_inline(search.get_first(), SearchForString);
             shScreenMessage = safetyhook::create_inline(screenVTable[1], ScreenMessage);
             shQueueMessage = safetyhook::create_inline(queueMessage.get_first(), QueueMessage);
             shOptionsUnchanged = safetyhook::create_inline(unchanged.get_first(), OptionsUnchanged);
-            if (!shSearchForString || !shScreenMessage || !shQueueMessage || !shOptionsUnchanged)
-            {
-                shOptionsUnchanged.reset();
-                shQueueMessage.reset();
-                shScreenMessage.reset();
-                shSearchForString.reset();
-                ScreenConstructHook.reset();
-                shClearRows.reset();
-                shDestroyScreen.reset();
-                return;
-            }
 
             // The options menu: the categories are added one by one, the fix's after Controls
             IconOptionCtor = reinterpret_cast<decltype(IconOptionCtor)>(injector::GetBranchDestination(categories.get_first(0xC)).as_int());
@@ -1900,21 +1882,6 @@ public:
                     BuildFixScreen(reinterpret_cast<void*>(regs.esi));
             });
 
-            if (!CategoriesHook || !MenuSwitchHook || !ScreenSetupHook)
-            {
-                ScreenSetupHook.reset();
-                MenuSwitchHook.reset();
-                CategoriesHook.reset();
-                shOptionsUnchanged.reset();
-                shQueueMessage.reset();
-                shScreenMessage.reset();
-                shSearchForString.reset();
-                ScreenConstructHook.reset();
-                shClearRows.reset();
-                shDestroyScreen.reset();
-                return;
-            }
-
             // The video screen's list (case 1 of the setup switch: the builder, then the end of the list) and the
             // game's Restore Defaults
             auto restoreDefaults = hook::pattern("53 55 8B E9 8B 0D ? ? ? ? 8B 41 10 8B 50 24 83 FA 09 56 57 0F 87");
@@ -1922,15 +1889,12 @@ public:
 
             auto videoAddress = reinterpret_cast<uintptr_t>((*screenSwitch.get_first<uint8_t**>(0x16))[1]);
             auto videoCase = hook::range_pattern(videoAddress, videoAddress + 7, "8B CE E8 ? ? ? ?").get_first<uint8_t>();
-            if (shRestoreDefaults)
+            static SafetyHookInline shVideoList = {};
+            shVideoList = safetyhook::create_inline(injector::GetBranchDestination(videoCase + 2).as_int(), static_cast<void(__fastcall*)(void*, void*)>([](void* screen, void* edx)
             {
-                static SafetyHookInline shVideoList = {};
-                shVideoList = safetyhook::create_inline(injector::GetBranchDestination(videoCase + 2).as_int(), static_cast<void(__fastcall*)(void*, void*)>([](void* screen, void* edx)
-                {
-                    shVideoList.unsafe_fastcall(screen, edx);
-                    BuildVideoRows(screen);
-                }));
-            }
+                shVideoList.unsafe_fastcall(screen, edx);
+                BuildVideoRows(screen);
+            }));
             // A dialog with one button (the profile name check's message)
             auto dialog = hook::pattern("68 2D 45 6C 53 6A 01 68 ? ? ? ? 51 E8");
             ShowDialog = reinterpret_cast<decltype(ShowDialog)>(injector::GetBranchDestination(dialog.get_first(0xD)).as_int());

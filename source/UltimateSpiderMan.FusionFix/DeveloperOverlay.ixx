@@ -41,8 +41,6 @@ export namespace USMOverlay
 
     inline bool Message(HWND window, UINT message, WPARAM key, LPARAM parameter, LRESULT& result)
     {
-        if (!ActionHook)
-            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             key == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -101,7 +99,7 @@ export namespace USMOverlay
 
     inline void Frame(IDirect3DDevice9* device, HWND window)
     {
-        if (!device || !window || !ActionHook)
+        if (!device || !window)
             return;
         const bool down = GetForegroundWindow() == window &&
             (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);

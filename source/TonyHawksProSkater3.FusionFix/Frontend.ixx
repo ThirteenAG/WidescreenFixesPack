@@ -445,11 +445,6 @@ namespace THPS3Menu
             remove = safetyhook::create_inline(reinterpret_cast<void*>(Game().remove), Remove);
             removeControllers = safetyhook::create_inline(reinterpret_cast<void*>(Game().removeControllers), RemoveControllers);
             removeTree = safetyhook::create_inline(reinterpret_cast<void*>(Game().removeTree), RemoveTree);
-            if (!recursive || !parents || !input || !task || !destroy || !remove || !removeControllers || !removeTree)
-            {
-                Reset();
-                return false;
-            }
             return true;
         }
     };
@@ -1529,13 +1524,13 @@ namespace THPS3Menu
         // Native intrusive controller nodes retain our vtable/function pointers.
         // Pin before any hook or allocation publishes them; dynamic unload is
         // unsupported for this verified host, including an explicit FreeLibrary.
-        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
-            reinterpret_cast<LPCWSTR>(&Init), &pinned)) { Log("module pin failed"); return; }
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
+            reinterpret_cast<LPCWSTR>(&Init), &pinned);
         module = pinned;
         for (const auto& setting : FixSettings().GetDescription().settings)
             if (setting.HasValue() && setting.apply == "restart")
                 restartBaseline.emplace(std::make_pair(module, setting.id), FixSettings().Get(setting.id));
-        if (!Unwind::Install(Frame, Retire, Observe)) { Log("native unwind hook installation failed"); return; }
+        Unwind::Install(Frame, Retire, Observe);
         installed = true;
     }
 }

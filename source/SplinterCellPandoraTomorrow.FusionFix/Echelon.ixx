@@ -348,7 +348,7 @@ namespace AEPlayerControllerCheckpoint
         if (!pendingLoadEngine || pendingLoadCmd.empty())
             return;
 
-        void* out = GNull.is_initialized() ? static_cast<void*>(GNull) : nullptr;
+        void* out = GNull;
 
         shUGameEngineExec.unsafe_fastcall<int>(
             pendingLoadEngine, nullptr, pendingLoadCmd.c_str(), out);
@@ -415,7 +415,7 @@ namespace AEPlayerControllerCheckpoint
 
     void RunDeferredSave(void* playerController)
     {
-        if (!FindFunction || !ProcessEvent || !playerController)
+        if (!playerController)
             return;
 
         if (!consoleCommandFn && consoleCommandNameIdx != 0)
@@ -452,7 +452,7 @@ namespace AEPlayerControllerCheckpoint
 
     void TriggerCheckpointSave(void* playerController)
     {
-        if (!FName_ctor || !FindFunction || !ProcessEvent || !playerController)
+        if (!playerController)
             return;
 
         if (consoleCommandNameIdx == 0)
@@ -479,7 +479,7 @@ namespace AEPlayerControllerCheckpoint
     void __fastcall ProcessInternalHook(void* self, void* edx, void* stack, void* result)
     {
         // Lazy-init InitialSave FName (wait for script package to register it)
-        if (initialSaveNameIdx == 0 && FName_ctor)
+        if (initialSaveNameIdx == 0)
             FName_ctor(&initialSaveNameIdx, nullptr, L"InitialSave", 1 /* FNAME_Add */);
 
         if (initialSaveNameIdx != 0 && stack)
@@ -506,23 +506,14 @@ namespace AEPlayerControllerCheckpoint
         FName_ctor    = decltype(FName_ctor)(FindProcAddress(GetModuleHandle(L"Core"), "??0FName@@QAE@PB_WW4EFindName@@@Z", "??0FName@@QAE@PBGW4EFindName@@@Z"));
         FindFunction  = decltype(FindFunction)(GetProcAddress(GetModuleHandle(L"Core"), "?FindFunction@UObject@@QAEPAVUFunction@@VFName@@H@Z"));
         ProcessEvent  = decltype(ProcessEvent)(GetProcAddress(GetModuleHandle(L"Core"), "?ProcessEvent@UObject@@UAEXPAVUFunction@@PAX1@Z"));
-        if (auto gNull = GetProcAddress(GetModuleHandle(L"Core"), "?GNull@@3PAVFOutputDevice@@A"))
-            GNull.SetAddress(reinterpret_cast<void**>(gNull));
+        GNull.SetAddress(reinterpret_cast<void**>(GetProcAddress(GetModuleHandle(L"Core"), "?GNull@@3PAVFOutputDevice@@A")));
 
-        if (FName_ctor)
-        {
-            FName_ctor(&initialSaveNameIdx,    nullptr, L"InitialSave",    1 /* FNAME_Add */);
-            FName_ctor(&consoleCommandNameIdx, nullptr, L"ConsoleCommand", 1 /* FNAME_Add */);
-        }
+        FName_ctor(&initialSaveNameIdx,    nullptr, L"InitialSave",    1 /* FNAME_Add */);
+        FName_ctor(&consoleCommandNameIdx, nullptr, L"ConsoleCommand", 1 /* FNAME_Add */);
 
-        if (auto pProcessInternal = GetProcAddress(GetModuleHandle(L"Core"), "?ProcessInternal@UObject@@QAEXAAUFFrame@@QAX@Z"))
-            shProcessInternal = safetyhook::create_inline(pProcessInternal, ProcessInternalHook);
-
-        if (auto pLocalize = FindProcAddress(GetModuleHandle(L"Core"), "?Localize@@YAPB_WPB_W000H@Z", "?Localize@@YAPBGPBG000H@Z"))
-            shLocalize = safetyhook::create_inline(pLocalize, LocalizeHook);
-
-        if (auto pExec = FindProcAddress(GetModuleHandle(L"Engine"), "?Exec@UGameEngine@@UAEHPB_WAAVFOutputDevice@@@Z", "?Exec@UGameEngine@@UAEHPBGAAVFOutputDevice@@@Z"))
-            shUGameEngineExec = safetyhook::create_inline(pExec, UGameEngineExecHook);
+        shProcessInternal = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?ProcessInternal@UObject@@QAEXAAUFFrame@@QAX@Z"), ProcessInternalHook);
+        shLocalize = safetyhook::create_inline(FindProcAddress(GetModuleHandle(L"Core"), "?Localize@@YAPB_WPB_W000H@Z", "?Localize@@YAPBGPBG000H@Z"), LocalizeHook);
+        shUGameEngineExec = safetyhook::create_inline(FindProcAddress(GetModuleHandle(L"Engine"), "?Exec@UGameEngine@@UAEHPB_WAAVFOutputDevice@@@Z", "?Exec@UGameEngine@@UAEHPBGAAVFOutputDevice@@@Z"), UGameEngineExecHook);
     }
 }
 
@@ -674,7 +665,7 @@ export void InitEchelon()
 
     // Camera acceleration
     pattern = find_module_pattern(GetModuleHandle(L"Echelon"), "0F 8A ? ? ? ? F3 0F 10 81 ? ? ? ? 0F 2E C1 9F F6 C4 ? 0F 8A ? ? ? ? F3 0F 10 89");
-    if (!pattern.empty())
+    if (!pattern.empty()) // digital
         injector::WriteMemory<uint16_t>(pattern.get_first(0), 0xE990, true); // jp -> jmp
     else
     {

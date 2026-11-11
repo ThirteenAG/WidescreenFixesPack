@@ -53,10 +53,10 @@ export namespace ScarfaceDisplayModes
         return count != 0;
     }
 
-    inline bool Install(HMODULE module = GetModuleHandle(nullptr))
+    inline void Install(HMODULE module = GetModuleHandle(nullptr))
     {
         if (RefreshHook && PopulateHook)
-            return true;
+            return;
         const auto base = reinterpret_cast<uintptr_t>(module);
         const auto dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
         const auto nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
@@ -71,22 +71,12 @@ export namespace ScarfaceDisplayModes
         Evaluate = reinterpret_cast<decltype(Evaluate)>(injector::GetBranchDestination(evaluate.get_first(13)).as_int());
         PopulateContinue = reinterpret_cast<uintptr_t>(populate.get_first(8));
         RefreshHook = safetyhook::create_inline(*reinterpret_cast<void**>(table + 31 * sizeof(void*)), Refresh);
-        if (RefreshHook)
+        PopulateHook = safetyhook::create_mid(populate.get_first(3), [](SafetyHookContext& regs)
         {
-            PopulateHook = safetyhook::create_mid(populate.get_first(3), [](SafetyHookContext& regs)
-            {
-                if (Populate())
-                    regs.eip = PopulateContinue;
-                else
-                    OutputDebugStringA("Scarface: no detected display modes available; retaining the native list.\n");
-            });
-        }
-        if (!RefreshHook || !PopulateHook)
-        {
-            RefreshHook.reset();
-            PopulateHook.reset();
-            throw std::runtime_error("Display-mode hooks unavailable");
-        }
-        return true;
+            if (Populate())
+                regs.eip = PopulateContinue;
+            else
+                OutputDebugStringA("Scarface: no detected display modes available; retaining the native list.\n");
+        });
     }
 }

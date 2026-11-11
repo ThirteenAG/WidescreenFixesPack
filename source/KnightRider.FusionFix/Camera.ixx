@@ -124,9 +124,7 @@ export namespace KnightRiderCamera
         update();
         FixSettings().OnChange("MAIN.CutsceneBorders", update);
         auto wrapper = hook::pattern("8B 0D ? ? ? ? D8 46 10 D9 1C 24 DD D8 E8 ? ? ? ? 5F 5E C2 04 00");
-        auto wrapperAddress = *wrapper.get_first<uint8_t**>(2);
-        if (wrapperAddress)
-            Wrapper.SetAddress(wrapperAddress);
+        Wrapper.SetAddress(*wrapper.get_first<uint8_t**>(2));
         auto animation = hook::pattern("8B 4E 28 53 55 57 E8 ? ? ? ? 83 C0 50 8B 28");
         AnimationHook = safetyhook::create_mid(animation.get_first(), [](SafetyHookContext&) { Cinematic = true; });
         auto stationary = hook::pattern("55 8B 2D ? ? ? ? 57 8B CE E8 ? ? ? ? 8A 88 94 00 00 00");

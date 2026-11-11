@@ -271,7 +271,7 @@ public:
             shSetMode = safetyhook::create_inline(pattern.get_first(), SetMode);
             DPLWindow::onModeChange = [](int width, int height)
             {
-                if (!lastModeContext || !shSetMode) return false;
+                if (!lastModeContext) return false;
                 auto* native = static_cast<int32_t*>(lastModeContext);
                 if (width <= 0 || height <= 0)
                 {
@@ -311,11 +311,8 @@ public:
                 onResChange().executeAll(*BackbufferWidth, *BackbufferHeight);
             });
             auto apply = hook::pattern("80 3D ? ? ? ? 00 75 15 FF 36 8B 0D ? ? ? ? FF 76 48 8B 01 FF 37 FF 90 98 00 00 00 B0 01");
-            if (ModeDimensionsHook && shSetMode && DPLWindow::ready)
-            {
-                // Native Video skips its validated resolution request when the windowed flag is set.
-                injector::MakeNOP(apply.get_first(7), 2, true);
-            }
+            // Native Video skips its validated resolution request when the windowed flag is set.
+            injector::MakeNOP(apply.get_first(7), 2, true);
 
 
             onResChange() += [](int Width, int Height)

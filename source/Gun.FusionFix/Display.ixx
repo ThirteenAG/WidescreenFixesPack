@@ -220,28 +220,18 @@ export namespace GunDisplay
         requestedHeight = height;
         resolution = std::move(update);
         PresentationParameters.SetAddress(*buffer.get_first<D3DPRESENT_PARAMETERS*>(6));
-        if (auto address = *build.get_first<IDirect3D9**>(1))
-            Direct3D.SetAddress(address);
-        if (auto address = *reset.get_first<uint8_t*>(2))
-            ResetRequested.SetAddress(address);
+        Direct3D.SetAddress(*build.get_first<IDirect3D9**>(1));
+        ResetRequested.SetAddress(*reset.get_first<uint8_t*>(2));
         mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
         if (mode) lastWindowMode = mode;
-        createHook = safetyhook::create_inline(create.get_first(), Create, SafetyHookInline::StartDisabled);
-        parametersHook = safetyhook::create_inline(build.get_first(), Parameters, SafetyHookInline::StartDisabled);
-        resetHook = safetyhook::create_inline(reset.get_first(), Reset, SafetyHookInline::StartDisabled);
-        if (!createHook || !parametersHook || !resetHook)
-            return;
-        if (!createHook.enable() || !parametersHook.enable() || !resetHook.enable())
-        {
-            (void)createHook.disable(); (void)parametersHook.disable(); (void)resetHook.disable();
-            return;
-        }
+        createHook = safetyhook::create_inline(create.get_first(), Create);
+        parametersHook = safetyhook::create_inline(build.get_first(), Parameters);
+        resetHook = safetyhook::create_inline(reset.get_first(), Reset);
         auto pause = hook::pattern("6A 00 68 ? ? ? ? 6A 08 6A 3B C6 05 ? ? ? ? 00 FF 15 ? ? ? ? C3");
         auto resume = hook::pattern("6A 00 68 ? ? ? ? 6A 08 6A 3B FF 15 ? ? ? ? C6 05 ? ? ? ? 01 C3");
         pauseGame = reinterpret_cast<void(__cdecl*)()>(pause.get_first());
         resumeGame = reinterpret_cast<void(__cdecl*)()>(resume.get_first());
-        if (auto address = *pause.get_first<uint8_t*>(13))
-            GameActive.SetAddress(address);
+        GameActive.SetAddress(*pause.get_first<uint8_t*>(13));
         nativeShow = GunImports::Replace("USER32.dll", "ShowWindow", &Show);
         nativePosition = GunImports::Replace("USER32.dll", "SetWindowPos", &Position);
         if (!nativeShow) nativeShow = ShowWindow;

@@ -55,6 +55,15 @@ namespace SCWindow
             setAttribute(window, 33, &preference, sizeof(preference));
     }
 
+    // The window's style in each mode. Every style write gets the same one: a frame that changes without the window
+    // being told leaves its old outline on screen, over the edges of the picture.
+    inline LONG ModeStyle(LONG style, bool bBorderless)
+    {
+        if (bBorderless)
+            return (style & ~WS_OVERLAPPEDWINDOW) | WS_POPUP;
+        return (style & ~(WS_POPUP | WS_MAXIMIZEBOX)) | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_THICKFRAME;
+    }
+
     // Borderless covers the monitor. A window is centered in the work area when it fits, otherwise its client area is centered
     // on the monitor and the frame goes past the edges (at the desktop resolution it covers the screen like borderless).
     inline void Place(HWND window, int width, int height, bool bBorderless)
@@ -63,17 +72,15 @@ namespace SCWindow
         if (IsIconic(window))
             ShowWindow(window, SW_RESTORE);
         auto info = Monitor(window);
-        auto style = GetWindowLong(window, GWL_STYLE) & ~(WS_MINIMIZE | WS_MAXIMIZE);
+        auto style = ModeStyle(GetWindowLong(window, GWL_STYLE) & ~(WS_MINIMIZE | WS_MAXIMIZE), bBorderless);
         auto exStyle = GetWindowLong(window, GWL_EXSTYLE);
         RECT rect = info.rcMonitor;
         if (bBorderless)
         {
-            style = (style & ~(WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX)) | WS_POPUP;
             exStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE | WS_EX_WINDOWEDGE);
         }
         else
         {
-            style = (style & ~(WS_POPUP | WS_MAXIMIZEBOX)) | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_THICKFRAME;
             auto frame = Frame(window, style, exStyle);
             auto& work = info.rcWork;
             auto& area = info.rcMonitor;
@@ -120,10 +127,7 @@ namespace SCWindow
         if (state->Windowed && message == WM_STYLECHANGING && wparam == static_cast<WPARAM>(GWL_STYLE))
         {
             auto style = reinterpret_cast<STYLESTRUCT*>(lparam);
-            if (state->Mode == 2)
-                style->styleNew = (style->styleNew & ~WS_OVERLAPPEDWINDOW) | WS_POPUP;
-            else
-                style->styleNew = (style->styleNew & ~(WS_POPUP | WS_MAXIMIZEBOX)) | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+            style->styleNew = ModeStyle(style->styleNew, state->Mode == 2);
         }
         if (message == WM_ENTERSIZEMOVE)
             state->InSizeMove = true;

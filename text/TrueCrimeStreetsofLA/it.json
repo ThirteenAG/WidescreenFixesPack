@@ -11,7 +11,7 @@
   "HudAspectRatioConstraint": "Proporzioni HUD",
   "HudAspectRatioConstraint.description": "Auto distribuisce l'HUD su tutto lo schermo, ai suoi bordi. Un rapporto lo tiene in un riquadro centrato di quella forma. I menu mantengono il formato 4:3. Si applica subito.",
   "FMVWidescreenMode": "Formato dei video",
-  "FMVWidescreenMode.description": "Entrambe le opzioni mostrano ogni filmato per intero nelle sue proporzioni, con bande nere dove lo schermo è più largo o più stretto. Nulla viene tagliato o stirato.",
+  "FMVWidescreenMode.description": "Originale mostra i filmati interi nella cornice 4:3 centrata del gioco. Riempi adatta l'intero filmato allo schermo. Nulla viene tagliato o stirato.",
   "WindowMode": "Modalità finestra",
   "WindowMode.description": "Schermo intero, finestra con cornice alla risoluzione scelta o senza bordi alla risoluzione del monitor. Riavvia dopo aver cambiato modalità.",
   "PauseOnFocusLoss": "Pausa quando inattivo",

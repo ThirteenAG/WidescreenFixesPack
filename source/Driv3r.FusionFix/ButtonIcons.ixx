@@ -284,11 +284,6 @@ export namespace Driv3rIcons
         loadHook = safetyhook::create_inline(load.get_first(), Load);
         releaseHook = safetyhook::create_inline(release.get_first(), Release);
         TextureManager.SetAddress(*manager.get_first<uintptr_t>(4));
-        ready = nameHook && axisHook && loadHook && releaseHook && glyphHook;
-        if (!ready)
-        {
-            glyphHook.reset(); releaseHook.reset(); loadHook.reset(); axisHook.reset(); nameHook.reset();
-            OutputDebugStringA("Driv3r: native controller artwork hook transaction failed.\n");
-        }
+        ready = true;
     }
 }

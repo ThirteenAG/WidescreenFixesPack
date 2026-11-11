@@ -51,7 +51,7 @@
   "menu.details": "Details",
   "menu.restartshort": "Neustart erforderlich",
   "FMVWidescreenMode": "Videoformat",
-  "FMVWidescreenMode.description": "Originalformat zeigt die Videos wie das Spiel, vollständig in seinem mittigen 4:3-Rahmen mit ihren schwarzen Balken. Ausfüllen schneidet die Balken ab, sodass das Bild den Bildschirm ohne Verzerrung füllt; sehr breite Bildschirme verlieren auch oben und unten etwas. Logos bleiben vollständig.",
+  "FMVWidescreenMode.description": "Originalformat zeigt die Videos wie das Spiel, mit ihren schwarzen Balken. Füllen vergrößert sie über die schwarzen Balken um das Bild hinaus, bis das Bild auf den Bildschirm passt, ohne etwas abzuschneiden.",
   "FMVWidescreenMode.original": "Originalformat",
   "FMVWidescreenMode.fill": "Ausfüllen",
   "PauseOnFocusLoss": "Pause im Hintergrund",

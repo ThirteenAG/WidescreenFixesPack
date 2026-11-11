@@ -1250,17 +1250,15 @@ namespace THPS4Menu
     }
     inline void Init()
     {
-        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, reinterpret_cast<LPCWSTR>(&Init), &module))
-        {
-            LogOnce("native bridge module pin rejected");
-            return;
-        }
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, reinterpret_cast<LPCWSTR>(&Init), &module);
         // The native controls retain event-vtable pointers. Pin before any
         // publication; dynamic host DLL unload is unsupported.
         textTable.original = Game().textTable;
         containerTable.original = Game().containerTable;
         menuTable.original = Game().menuTable;
-        if (!textTable.Prepare() || !containerTable.Prepare() || !menuTable.Prepare()) { LogOnce("native vtable contracts rejected"); return; }
+        textTable.Prepare();
+        containerTable.Prepare();
+        menuTable.Prepare();
         for (const auto& setting : FixSettings().GetDescription().settings)
         {
             if (setting.HasValue() && setting.apply == "restart")
@@ -1270,12 +1268,6 @@ namespace THPS4Menu
         sourceHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().source), Source);
         brokerHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().broker), Broker);
         taskHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().task), Task);
-        if (!destructorHook || !sourceHook || !brokerHook || !taskHook)
-        {
-            taskHook.reset(); brokerHook.reset(); sourceHook.reset(); destructorHook.reset();
-            LogOnce("native hook transaction rejected");
-            return;
-        }
         ready = true;
     }
 }

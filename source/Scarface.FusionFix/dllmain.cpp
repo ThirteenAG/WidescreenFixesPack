@@ -43,7 +43,7 @@ CEXP void InitializeASI()
             ScarfaceDisplayModes::Install();
             ScarfaceFrame::Install();
             ScarfacePacing::Install(FixSettings().Int("MAIN.FPSLimit"));
-            ScarfaceCutscene::Install(FixSettings().Int("MAIN.CutsceneBorders"), bool(ScarfaceCamera::ProjectionHook));
+            ScarfaceCutscene::Install(FixSettings().Int("MAIN.CutsceneBorders"));
             ScarfaceVideo::Install(FixSettings().Int("MAIN.FMVWidescreenMode"));
             ScarfaceFocus::Install(FixSettings().Int("MAIN.PauseOnFocusLoss"));
             ScarfaceIntro::Install();

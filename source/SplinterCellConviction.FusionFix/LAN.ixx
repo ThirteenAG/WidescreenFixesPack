@@ -252,7 +252,8 @@ export void InitLAN()
 
     // LAN play
     {
-        // The capture interface must be null if sound device creation fails before it is assigned.
+        // Quazal::DSoundSource (voice chat): the constructor leaves the capture interface (+0Ch) unset when the sound or capture device
+        // can't be created, the destructor released that garbage when the LAN lobby was left. It starts as null now.
         auto soundSourceInit = hook::pattern("88 5E 25 89 5E 10 89 18 89 5E 14 88 5E 24 89 5E 20 89 5E 1C E8 ? ? ? ? 3B C3 7C ? 53 8D 4E 0C 51 53 E8 ? ? ? ? 3B C3 7C ?");
         static auto soundSourceInitHook = safetyhook::create_mid(soundSourceInit.get_first(14), [](SafetyHookContext& regs)
         {
@@ -260,43 +261,6 @@ export void InitLAN()
         });
         if (!soundSourceInitHook)
             throw std::runtime_error("LAN sound initialization hook unavailable");
-
-        // Quazal::DSoundSource destructors (voice chat): leaving the LAN lobby released an object that was already freed (+0Ch or +10h,
-        // the call went through a garbage vtable). Objects whose Release (vtable +8) isn't code of a module are left alone.
-        static auto IsCode = [](uintptr_t address)
-        {
-            MEMORY_BASIC_INFORMATION info{};
-            return address && VirtualQuery(reinterpret_cast<void*>(address), &info, sizeof(info)) && info.State == MEM_COMMIT && info.Type == MEM_IMAGE &&
-                (info.Protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY));
-        };
-        static auto IsReadable = [](uintptr_t address)
-        {
-            MEMORY_BASIC_INFORMATION info{};
-            return address && VirtualQuery(reinterpret_cast<void*>(address), &info, sizeof(info)) && info.State == MEM_COMMIT &&
-                !(info.Protect & (PAGE_NOACCESS | PAGE_GUARD));
-        };
-        const char* soundSourcePatterns[] =
-        {
-            "56 8B F1 8B 46 10 85 C0 C7 06 ? ? ? ? 74 08 8B 08 8B 51 08 50 FF D2 8B 46 0C 85 C0 74 08 8B 08 8B 51 08 50 FF D2 8B 46 08 85 C0 74 08 8B 08 8B 51 08 50 FF D2 C7 46 28",
-            "56 8B F1 8B 46 10 85 C0 C7 06 ? ? ? ? 74 08 8B 08 8B 51 08 50 FF D2 8B 46 0C 85 C0 74 08 8B 08 8B 51 08 50 FF D2 8B 46 08 85 C0 74 08 8B 08 8B 51 08 50 FF D2 F6 44 24 08 01 C7 46 28"
-        };
-        static std::vector<SafetyHookMid> SoundSourceDestructors;
-        for (const auto* signature : soundSourcePatterns)
-        {
-            auto site = hook::pattern(signature).get_first(3);
-            SoundSourceDestructors.push_back(safetyhook::create_mid(site, [](SafetyHookContext& regs)
-            {
-                for (auto offset : { 0x0C, 0x10 })
-                {
-                    auto& object = *reinterpret_cast<uintptr_t*>(regs.esi + offset);
-                    if (!object)
-                        continue;
-                    auto vtable = IsReadable(object) ? *reinterpret_cast<uintptr_t*>(object) : 0;
-                    if (!IsReadable(vtable + 8) || !IsCode(*reinterpret_cast<uintptr_t*>(vtable + 8)))
-                        object = 0;
-                }
-            }));
-        }
 
         // the game connects before it sends the request, the server has to be up first
         std::thread(LAN::ConfigServer, sServerAddr == "127.0.0.1").detach();

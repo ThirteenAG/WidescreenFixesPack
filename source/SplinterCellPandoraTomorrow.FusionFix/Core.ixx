@@ -212,7 +212,7 @@ export void InitCore()
     UObject::shGotoState = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?GotoState@UObject@@UAE?AW4EGotoState@@VFName@@@Z"), UObject::GotoState);
 
     pattern = hook::module_pattern(GetModuleHandle(L"Core"), "33 C0 0F B7 0B");
-    if (!pattern.empty())
+    if (!pattern.empty()) // digital
     {
         static auto OverwriteResolutions = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {

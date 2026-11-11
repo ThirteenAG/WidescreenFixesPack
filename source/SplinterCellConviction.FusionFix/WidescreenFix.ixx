@@ -235,7 +235,7 @@ export void InitWidescreenFix()
                 return;
             const float canvasWidth = width * scaleX, canvasHeight = height * scaleY;
             const float aspect = GetPresentationAspectRatio();
-            const auto frame = SCVideoFrame::Fit(aspect, 1.0f, float(width), float(height), FixSettings().Int("MAIN.FMVWidescreenMode"));
+            const auto frame = SCVideoFrame::Fit(aspect, 1.0f, float(width), float(height));
             x += frame.x * canvasWidth / aspect;
             y += frame.y * canvasHeight;
             scaleX *= frame.width / aspect;

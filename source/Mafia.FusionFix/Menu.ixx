@@ -50,7 +50,7 @@ void InstallMenuHooks()
             if (shift) Field<float>(regs.esi, 0x10) += fMenuOffset;
         });
     }
-    else
+    else // 1.1/1.2 menu layout
     {
         menuCallers[0] = reinterpret_cast<uintptr_t>(pMenuPanelsNew.get_first()) + 5;
         menuCallers[1] = reinterpret_cast<uintptr_t>(pMenuImagesNew.get_first()) + 5;

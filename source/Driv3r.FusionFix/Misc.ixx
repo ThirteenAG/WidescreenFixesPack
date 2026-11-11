@@ -184,7 +184,6 @@ public:
                     if (regs.eax < 3 || (regs.eax == 3 && !_stricmp(reinterpret_cast<const char*>(regs.edi + 16), "FMV\\NVIDIA.XMV")))
                         regs.eip = next;
                 });
-                FixSettings().Availability("MAIN.SkipIntro", [](std::string_view value) { return value == "0" || static_cast<bool>(skipStartupMovies); });
             }
 
             //Draw distance adjuster

@@ -76,7 +76,5 @@ namespace GodfatherVideoModes
         auto read = hook::pattern("51 8B 44 24 14 8B 4C 24 10 8B 54 24 0C 56 8B 74 24 0C 50 51 52 68 01 00 00 80 "
             "56 C7 44 24 18 00 00 00 00 E8 ? ? ? ? 83 C4 14 8B C6 5E 59 C3");
         defaultsHook = safetyhook::create_inline(read.get_first(), Defaults);
-        if (!defaultsHook)
-            throw std::runtime_error("Desktop-resolution hook unavailable");
     }
 }

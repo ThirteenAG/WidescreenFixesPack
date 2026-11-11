@@ -21,12 +21,12 @@ export namespace SaboteurCutscenes
     inline bool Ready()
     {
         const auto movie = ReadyMovie.load();
-        return movie && HUD && HUD->get() && *reinterpret_cast<uintptr_t*>(HUD->get() + 2688) == movie;
+        return movie && HUD->get() && *reinterpret_cast<uintptr_t*>(HUD->get() + 2688) == movie;
     }
 
     inline bool Active()
     {
-        if (!Camera || !CameraCount || CameraCount->get() <= 0 || !Camera->get() || !HUD || !HUD->get() || !Movies || !Movies->get())
+        if (CameraCount->get() <= 0 || !Camera->get() || !HUD->get() || !Movies->get())
             return false;
         if (!*reinterpret_cast<uintptr_t*>(HUD->get() + 2688) || *reinterpret_cast<uintptr_t*>(Movies->get() + 16))
             return false;

@@ -29,7 +29,7 @@ export namespace NFSPSDialog
 
     inline bool Show(std::wstring body, std::wstring label, const std::function<bool()>& current)
     {
-        if (Busy() || !Table || !Allocate || !Free || !Open || body.empty() || label.empty() || !current())
+        if (Busy() || body.empty() || label.empty() || !current())
             return false;
         auto config = static_cast<Configuration*>(Allocate(sizeof(Configuration)));
         if (!config)

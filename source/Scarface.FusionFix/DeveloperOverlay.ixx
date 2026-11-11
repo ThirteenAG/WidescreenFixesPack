@@ -153,14 +153,6 @@ export namespace ScarfaceOverlay
         PresentHook = safetyhook::create_inline(table[17], Present);
         SwapChainHook = safetyhook::create_inline(chainTable[3], SwapChainPresent);
         chain->Release();
-        if (!ResetHook || !PresentHook || !SwapChainHook)
-        {
-            ResetHook.reset();
-            PresentHook.reset();
-            SwapChainHook.reset();
-            OutputDebugStringA("Scarface: developer overlay hooks unavailable.\n");
-            return;
-        }
         CurrentDevice = device;
     }
 
@@ -174,13 +166,9 @@ export namespace ScarfaceOverlay
     void Install()
     {
         auto pattern = hook::pattern("8B 4C 24 04 51 8B CE E8 ? ? ? ? 84 C0 74 27 80 7E 29 00 75 09 80 3D");
-        if (!ScarfaceFrame::PresentHook)
-            return;
         const auto call = pattern.get_first<uint8_t>(7);
         const auto target = call + 5 + *reinterpret_cast<const int32_t*>(call + 1);
         ActionMapHook = safetyhook::create_inline(target, ProcessActionMap);
-        if (!ActionMapHook)
-            return;
         ScarfaceOverlayInput::message = Message;
         ScarfaceOverlayInput::blocks = BlocksInput;
         ScarfaceFrame::Handlers.push_back([](void* display)

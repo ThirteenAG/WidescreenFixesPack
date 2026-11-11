@@ -203,7 +203,7 @@ public:
             if (bUnlockFrameRate)
             {
                 auto pattern = hook::pattern("C6 05 ? ? ? ? 01 C6 05 ? ? ? ? 01 E9 ? ? ? ? C6 44 24 ? 01");
-                if (!pattern.empty())
+                if (!pattern.empty()) // 1.1
                 {
                     static auto vsync = *pattern.get_first<uint8_t*>(2);
                     static auto reloadSetting = *pattern.get_first<uint8_t*>(9);
@@ -217,7 +217,7 @@ public:
                         }
                         // Cutscenes and quick-time events keep the game's own handling, 30 frames per second without
                         // frames between the ticks, unless they're unlocked as well
-                        else if ((bUnlockCutscenes || !fb::Vehicle::InRaceWithoutControl()) && fb::g_profileOptionsManager.get() && fb::ProfileOptions::getInt)
+                        else if ((bUnlockCutscenes || !fb::Vehicle::InRaceWithoutControl()) && fb::g_profileOptionsManager.get())
                         {
                             // The player's own VSync setting instead of the forced one
                             *vsync = fb::ProfileOptions::getInt(fb::g_profileOptionsManager + 0x14, "VSyncEnabled", 1) != 0;

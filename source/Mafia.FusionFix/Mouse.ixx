@@ -58,8 +58,6 @@ namespace MafiaMouse
         }
         auto input = hook::pattern("83 EC ? 53 8A 5C 24 ? 55 8B E9 56 57 8B 45 08 85 C0 74 ? 8B 4D 0C 2B C8 B8 EB A0 0E EA");
         inputHook = safetyhook::create_inline(input.get_first(), Input);
-        if (!inputHook)
-            OutputDebugStringA("Mafia: overlay gameplay input suppression unavailable.\n");
         static std::vector<SafetyHookMid> hooks;
         enabled = &FixSettings().Int("MAIN.RawInputMouse");
         constexpr std::array callbacks{ &Uncap<0>, &Uncap<1> };
@@ -76,16 +74,6 @@ namespace MafiaMouse
             resume[axis] = reinterpret_cast<uintptr_t>(site + 23);
             hooks.emplace_back(safetyhook::create_mid(site, callbacks[axis]));
         }
-        const bool available = hooks.size() == 2 && hooks[0] && hooks[1];
-        if (!available)
-        {
-            hooks.clear();
-            OutputDebugStringA("Mafia: raw mouse normalization patterns unavailable.\n");
-        }
-        FixSettings().Availability("MAIN.RawInputMouse", [available](std::string_view value)
-        {
-            return value == "0" || available;
-        });
     }
 }
 
@@ -97,7 +85,7 @@ public:
         WFP::onInitEvent() += []()
         {
             MafiaMouse::Install();
-            InitCamera(static_cast<bool>(MafiaMouse::inputHook));
+            InitCamera();
         };
     }
 } Mouse;

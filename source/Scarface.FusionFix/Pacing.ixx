@@ -112,13 +112,11 @@ export namespace ScarfacePacing
         return rate;
     }
 
-    inline bool Install(const int& value)
+    inline void Install(const int& value)
     {
         LimitValue = &value;
         if (Registered)
-            return true;
-        if (!ScarfaceFrame::PresentHook)
-            throw std::runtime_error("Frame pacing boundary unavailable");
+            return;
         ScarfaceFrame::Handlers.push_back([](void* display)
         {
             static Pacer pacer;
@@ -126,6 +124,5 @@ export namespace ScarfacePacing
             pacer.Limit(value < 0 ? MonitorRate(display) : value);
         });
         Registered = true;
-        return true;
     }
 }

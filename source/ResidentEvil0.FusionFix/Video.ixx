@@ -202,18 +202,6 @@ export namespace RE0Video
         count.store(0);
     }
 
-    inline void Disable()
-    {
-        ready = false;
-        drawHook.reset();
-        compositeHook.reset();
-        quadHook.reset();
-        verticesHook.reset();
-        releaseHook.reset();
-        aspectHook.reset();
-        Frame();
-    }
-
     inline void Install()
     {
         ready = false;
@@ -249,9 +237,7 @@ export namespace RE0Video
         drawHook = safetyhook::create_inline(drawAddress, Draw);
         releaseHook = safetyhook::create_inline(releaseAddress, Release);
         aspectHook = safetyhook::create_inline(aspectAddress, Aspect);
-        ready = verticesHook && quadHook && compositeHook && drawHook && releaseHook && aspectHook;
-        if (!ready) { verticesHook.reset(); quadHook.reset(); compositeHook.reset(); drawHook.reset(); releaseHook.reset(); aspectHook.reset(); }
-        if (!ready) OutputDebugStringA("Resident Evil 0: movie aspect hook unavailable; native playback retained.\n");
+        ready = true;
         FixSettings().Availability("MAIN.FMVWidescreenMode", [](std::string_view) { return ready; });
     }
 }

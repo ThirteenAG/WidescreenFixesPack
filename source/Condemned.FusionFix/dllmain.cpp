@@ -68,7 +68,6 @@ CEXP void InitializeASI()
         WindowedModeWrapper::EnableDpiAwareness();
         auto& settings = FixSettings();
         asi_settings::LiveLink::Start();
-        IniFile.FixSavePath = settings.Bool("MAIN.FixSavePath");
         IniFile.WindowMode = settings.Int("MAIN.WindowMode");
         IniFile.SkipIntro = settings.Bool("MAIN.SkipIntro");
 
@@ -77,11 +76,9 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterModuleLoadCallback(L"GameClient.dll", InitGameClient);
         CallbackHandler::RegisterModuleLoadCallback(L"Xidi.32.dll", InitXidi);
 
-        if (IniFile.FixSavePath)
-        {
-            mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
-            mhSHGetFolderPathA->create();
-        }
+        // Saves go to the personal Documents folder instead of the public one
+        mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
+        mhSHGetFolderPathA->create();
     });
 }
 

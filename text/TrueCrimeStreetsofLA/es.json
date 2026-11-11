@@ -11,7 +11,7 @@
   "HudAspectRatioConstraint": "Relación de aspecto del HUD",
   "HudAspectRatioConstraint.description": "Auto reparte el HUD por toda la pantalla, en sus bordes. Una relación lo mantiene en un recuadro centrado con esa forma. Los menús conservan su diseño 4:3. Se aplica al instante.",
   "FMVWidescreenMode": "Relación de aspecto del vídeo",
-  "FMVWidescreenMode.description": "Ambas opciones muestran cada vídeo completo en su propia proporción, con franjas negras donde la pantalla es más ancha o más estrecha. No se corta ni se estira nada.",
+  "FMVWidescreenMode.description": "Original muestra los vídeos completos dentro del marco 4:3 centrado del juego. Rellenar ajusta el vídeo entero a la pantalla. No se corta ni se estira nada.",
   "WindowMode": "Modo de ventana",
   "WindowMode.description": "Pantalla completa, ventana con marco a la resolución elegida o sin bordes a la resolución del monitor. Reinicia después de cambiar el modo de ventana.",
   "PauseOnFocusLoss": "Pausar al perder el foco",

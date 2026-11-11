@@ -15,8 +15,6 @@ export void InitDevicePointer()
     if (pD3D8Device.is_initialized()) return;
 
     auto hLS3DF = GetLS3DF();
-    if (!hLS3DF) return;
-
     static auto pattern = hook::module_pattern(hLS3DF, "A1 ? ? ? ? 53 6A ? 89 1D ? ? ? ? ? ? 50 FF 91 ? ? ? ? 8B 4C 24");
     pD3D8Device.SetAddress(*pattern.get_first<IUnknown**>(1));
 }
@@ -44,9 +42,6 @@ export void InitPostFX()
         return;
 
     auto hLS3DF = GetLS3DF();
-    if (!hLS3DF || !pD3D8Device.is_initialized())
-        return;
-
     auto pattern = hook::module_pattern(hLS3DF, "E8 ? ? ? ? 33 C9 ? ? ? ? ? ? ? E8 ? ? ? ? 6A ? 6A ? 6A ? FF 96 ? ? ? ? C6 05");
     {
         static auto RenderHook = safetyhook::create_mid(pattern.get_first(), +[](SafetyHookContext& regs)

@@ -91,7 +91,7 @@ export namespace SaboteurHUD
 
     inline bool Mask(void* movie, float inset, float scale)
     {
-        if (!Renderer || !Renderer->get() || !std::isfinite(scale) || scale <= 0)
+        if (!Renderer->get() || !std::isfinite(scale) || scale <= 0)
             return false;
         const auto width = *reinterpret_cast<uint32_t*>(Renderer->get() + 1652) / scale;
         const auto height = *reinterpret_cast<uint32_t*>(Renderer->get() + 1656) / scale;
@@ -182,7 +182,7 @@ export namespace SaboteurHUD
     {
         NativeOffsets offsets;
         const auto hud = SaboteurBindings::HUD();
-        if (hud && hud->get() && SaboteurCutscenes::Ready() && !Current && Renderer && Renderer->get() && MinimapBounds &&
+        if (hud->get() && SaboteurCutscenes::Ready() && !Current && Renderer->get() &&
             *reinterpret_cast<uintptr_t*>(hud->get() + 52 + 22 * 4) == self)
         {
             const auto constraint = Constraint.load();
@@ -215,7 +215,7 @@ export namespace SaboteurHUD
         Current.reset();
         Frame.reset();
         const auto constraint = Constraint.load();
-        if (!manager || !Renderer || !Renderer->get() || !MinimapBounds || !*reinterpret_cast<void**>(manager + 2688))
+        if (!manager || !Renderer->get() || !*reinterpret_cast<void**>(manager + 2688))
             return;
         EnsureInterface(*reinterpret_cast<void**>(manager + 2688));
         const auto width = *reinterpret_cast<uint32_t*>(Renderer->get() + 1652);
@@ -255,12 +255,6 @@ export namespace SaboteurHUD
         MinimapBounds = BindGameRef(minimapBounds, *bounds.get_first<float*>(2));
         MinimapUpdateHook = safetyhook::create_inline(updateMinimap.get_first(), UpdateMinimap);
         EndHook = safetyhook::create_mid(end.get_first(), [](SafetyHookContext&) { Current.reset(); Frame.reset(); });
-        if (EndHook && MinimapUpdateHook)
-            BeginHook = safetyhook::create_mid(begin.get_first(), [](SafetyHookContext& context) { Begin(context.esi); });
-        const bool available = BeginHook && EndHook && MinimapUpdateHook;
-        FixSettings().Availability("MAIN.HudAspectRatioConstraint", [available](std::string_view value)
-        {
-            return value == "Auto" || available;
-        });
+        BeginHook = safetyhook::create_mid(begin.get_first(), [](SafetyHookContext& context) { Begin(context.esi); });
     }
 }

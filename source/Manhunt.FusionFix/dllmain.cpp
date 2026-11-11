@@ -19,8 +19,6 @@ void Init()
     {
         WFP::onInitEvent().executeAll();
     });
-    if (!WinMainHook)
-        std::terminate();
 
     // CApp::Idle, once per frame of the main loop
     pattern = hook::pattern("8B 15 ? ? ? ? 89 15 ? ? ? ? A1 ? ? ? ? 8B 48 0C");

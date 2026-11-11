@@ -367,9 +367,6 @@ public:
 
             const auto drawHandlerVtable = ScarfaceRTTI::FindVtable(".?AVDrawHandler@FrontEndManager@@");
 
-            if (!drawHandlerVtable || !groupVtable || !layerVtable || !pageVtable || !boxVtable || !p3dVtable || !objectVtable || !textVtable || !spriteVtable || !roundedRectangleVtable)
-                return;
-
             pattern = hook::pattern("8B 48 ? E8 ? ? ? ? 5F 5E 83 C4");
             hbSubmitMapIcon.fun = injector::MakeCALL(pattern.get_first(3), SubmitMapIcon, true).get();
 

@@ -22,7 +22,7 @@ static uintptr_t TrackingUpdate = 0;
 
 static bool GameplayLens()
 {
-    if (!GameCamera || !CameraCount || CameraCount->get() <= 0 || !Players || !Players->get() || !TrackingUpdate)
+    if (CameraCount->get() <= 0 || !Players->get())
         return false;
     const auto camera = GameCamera->get();
     if (!camera || *reinterpret_cast<int*>(camera + 44) != 0 || *reinterpret_cast<int*>(camera + 2772) != 1)
@@ -64,7 +64,7 @@ struct OdinCamera
 
     static void __fastcall SetFOV(OdinCamera* camera, void* edx, float a_FovX, float a_AspectRatio)
     {
-        const auto renderer = Renderer ? Renderer->get() : 0;
+        const auto renderer = Renderer->get();
         const auto mainCamera = renderer ? *reinterpret_cast<OdinCamera**>(renderer + 2980) : nullptr;
         if (camera != mainCamera)
         {
@@ -104,14 +104,8 @@ public:
             CameraCount = BindGameRef(fovCameraCount, *cameras.get_first<int*>(11));
             GameCamera = BindGameRef(fovGameCamera, *cameras.get_first<uintptr_t*>(29));
             TrackingUpdate = reinterpret_cast<uintptr_t>(tracking.get_first());
-            const bool lensAvailable = GameCamera && CameraCount && Players && TrackingUpdate;
-            settings.Availability("MAIN.FOVFactor", [lensAvailable](std::string_view value)
-            {
-                return value == "1" || value == "1.0" || lensAvailable;
-            });
             SetFOVHook = safetyhook::create_inline(pattern.get_first(), OdinCamera::SetFOV, safetyhook::InlineHook::StartDisabled);
-            if (SetFOVHook && !SetFOVHook.enable())
-                SetFOVHook.reset();
+            (void)SetFOVHook.enable();
         };
     }
 } FOV;

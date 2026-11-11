@@ -74,7 +74,7 @@
   "fmv": "Inquadratura video",
   "fmv.original": "Formato originale",
   "fmv.fill": "Riempi",
-  "fmv.description": "Formato originale mostra i filmati come il gioco, interi nella sua cornice 4:3 centrata con bande nere attorno. Riempi adatta l'intero filmato allo schermo, senza tagliare né stirare nulla.",
+  "fmv.description": "Formato originale mostra i filmati nella cornice 16:9 centrata del gioco. Sugli schermi più larghi di 16:9, Riempi ingrandisce i due filmati della storia, che hanno bande nere nel file, finché la loro immagine si adatta allo schermo. Nulla dell'immagine viene tagliato né stirato.",
   "textlanguage": "Lingua del menu",
   "textlanguage.description": "Scegli la lingua delle impostazioni e della guida della correzione. Automatico segue la lingua di visualizzazione di Windows.",
   "confinecursor": "Confina cursore",

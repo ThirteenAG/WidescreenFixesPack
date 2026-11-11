@@ -17,7 +17,6 @@ struct Settings {
     float fov = 1.0f;
     // MAIN.CutsceneBorders: 0 off, 1 letterbox, 2 pillarbox, 3 both.
     int cutsceneBorders = 3;
-    int movieMode = 1;
     int icons = 8;
     // MAIN.VehicleLights (read at startup): lit head, tail, brake and reverse lights on vehicle bodies.
     bool vehicleLights = true;
@@ -36,7 +35,6 @@ void InstallVehicleLights();
 void InstallControls();
 void InstallCamera();
 void InstallMovies();
-bool MoviesAvailable();
 void InstallIcons();
 void TickIcons(unsigned now);
 bool IconsAvailable();

@@ -129,9 +129,5 @@
   "ui.off": "Disattivato",
   "ui.both": "Entrambe",
   "ui.letterbox": "Bande orizzontali",
-  "ui.pillarbox": "Bande verticali",
-  "FMVWidescreenMode": "Inquadratura video",
-  "FMVWidescreenMode.description": "Originale adatta il video completo a un’area 4:3. Riempi adatta il video completo allo schermo. Nessuna modalità taglia o deforma l’immagine.",
-  "FMVWidescreenMode.0": "Formato originale",
-  "FMVWidescreenMode.1": "Riempi"
+  "ui.pillarbox": "Bande verticali"
 }

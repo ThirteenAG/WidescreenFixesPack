@@ -30,7 +30,7 @@ export namespace REWindow
     inline std::recursive_mutex modeMutex;
     inline int framedWidth = 0, framedHeight = 0;
     inline int lastWidth = 0, lastHeight = 0, lastMode = -1;
-    inline bool initialized = false, ready = false;
+    inline bool initialized = false;
     inline constexpr UINT placeMessage = WM_APP + 0x4F1;
 
     inline bool BlocksInput() { return toggleHeld.load() || toggleRequested.load() || requestedMode.load() >= 0 || changingMode.load(); }
@@ -175,7 +175,7 @@ export namespace REWindow
     inline void Frame(void* renderer, HWND handle, bool overlay, IDirect3DDevice9* device)
     {
         const std::lock_guard lock(modeMutex);
-        if (!ready || !renderer || !handle) return;
+        if (!renderer || !handle) return;
         if (window.load() != handle)
         {
             const auto original = GetWindowLongPtrW(handle, GWLP_WNDPROC);
@@ -256,24 +256,16 @@ export namespace REWindow
         mode.store(std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2));
         windowedMode = mode.load() ? mode.load() : 1;
         WindowCursor::Initialize(FixSettings());
-        if (Bind())
+        Bind();
+        resolutionHook = safetyhook::create_inline(changeResolution, ChangeResolution);
+        startupHook = safetyhook::create_mid(fullscreenInstruction, [](SafetyHookContext& context)
         {
-            resolutionHook = safetyhook::create_inline(changeResolution, ChangeResolution);
-            if (resolutionHook)
-                startupHook = safetyhook::create_mid(fullscreenInstruction, [](SafetyHookContext& context)
-                {
-                    context.eax = (context.eax & ~0xFFu) | (mode.load() == 0 ? 1u : 0u);
-                });
-            ready = bool(startupHook);
-            if (!ready) resolutionHook.reset();
-        }
-        FixSettings().Availability("MAIN.WindowMode", [](std::string_view) { return ready; });
-        FixSettings().Availability("MAIN.ConfineCursor", [](std::string_view value) { return value == "0" || ready; });
+            context.eax = (context.eax & ~0xFFu) | (mode.load() == 0 ? 1u : 0u);
+        });
         FixSettings().OnChange("MAIN.WindowMode", []()
         {
             requestedMode.store(std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2));
         });
-        if (ready)
-            IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("ClipCursor", NativeClip));
+        IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("ClipCursor", NativeClip));
     }
 }

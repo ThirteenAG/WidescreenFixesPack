@@ -58,16 +58,6 @@ export namespace GodfatherFocus
         auto add = hook::pattern("8B 0D ? ? ? ? 8B 44 24 04 0B C8 C7 05 ? ? ? ? 01 00 00 00 89 0D ? ? ? ? C3");
         auto remove = hook::pattern("8B 44 24 04 8B 0D ? ? ? ? F7 D0 23 C8 89 0D ? ? ? ? 75 0A C7 05 ? ? ? ? 02 00 00 00 C3");
         auto inactive = hook::pattern("84 C0 A0 ? ? ? ? 74 29 84 C0 75 47 C6 05 ? ? ? ? 01 E8 ? ? ? ? C6 05");
-        const bool available = GodfatherWindow::createWindowHook && GodfatherWindow::createD3DHook;
-        FixSettings().Availability("MAIN.PauseOnFocusLoss", [available](std::string_view value)
-        {
-            return value == "0" || available;
-        });
-        if (!available)
-        {
-            OutputDebugStringA("The Godfather focus: native pause contracts unavailable; feature disabled.\n");
-            return;
-        }
         GodfatherPauseReasons.SetAddress(*add.get_first<uint32_t*>(2));
         GodfatherWantedMode.SetAddress(*add.get_first<int*>(14));
         GodfatherIdle.SetAddress(*inactive.get_first<uint8_t*>(3));

@@ -19,8 +19,11 @@ injector::hook_back<void(__fastcall*)(CCamera*, void*, bool, bool)> hbCalculateD
 void __fastcall CalculateDerivedValues(CCamera* camera, void* edx, bool bForMirror, bool bOriented)
 {
     static auto& bVCSCamShake = FixSettings().Int("MISC.VCSCamShake");
+    static auto& nVCSCamShakeMinSpeed = FixSettings().Int("MISC.VCSCamShakeMinSpeed");
+    static auto& nVCSCamShakeIntensity = FixSettings().Int("MISC.VCSCamShakeIntensity");
+    // The settings are in km/h and percent; a speed of 1.0 is 180 km/h
     if (bVCSCamShake)
-        CCamera::UpdatePlayerVehicleSpeedBlur(camera);
+        CCamera::UpdatePlayerVehicleSpeedBlur(camera, nVCSCamShakeMinSpeed / 180.0f, nVCSCamShakeIntensity / 100.0f);
     return hbCalculateDerivedValues.fun(camera, edx, bForMirror, bOriented);
 }
 
@@ -261,7 +264,7 @@ public:
 
             if (bAllowAltTabbingWithoutPausing)
             {
-                //Windowed mode fix (from MTA sources)
+                // Windowed only: the game keeps running while its window is in the background
                 if ((GetWindowLong((HWND)RsGlobal->ps, GWL_STYLE) & WS_POPUP) == 0)
                 {
                     // Disable MENU AFTER alt + tab

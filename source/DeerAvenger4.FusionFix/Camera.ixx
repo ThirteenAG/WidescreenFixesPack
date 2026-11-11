@@ -132,8 +132,7 @@ export namespace DeerCamera
     {
         auto owner = hook::pattern(game, "A1 ? ? ? ? 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 34 EB ? D9 05");
         auto setter = hook::pattern(game, "D9 05 ? ? ? ? D8 73 68 D9 05 ? ? ? ? D8 73 6C D9 C9");
-        if (auto address = *owner.get_first<void**>(1))
-            cameraPrimary.SetAddress(address);
+        cameraPrimary.SetAddress(*owner.get_first<void**>(1));
         // A window resize rebuilds the camera with the window's own extent (fixed width, Vert-);
         // give it the 4:3 extent fullscreen uses, so the setter below widens it like at startup.
         auto resize = hook::pattern(game, "A8 01 74 16 D9 44 24 34 D8 74 24 38");
@@ -142,9 +141,6 @@ export namespace DeerCamera
         {
             Correct(reinterpret_cast<void*>(regs.ebx));
         });
-        if (!viewHook)
-            return false;
-
         auto begin = hook::pattern(game, "83 EC 08 8B 44 24 0C 89 04 24 FF 50 18 83 C4 08 C3");
         auto nativeSetter = hook::pattern(game, "53 8B 5C 24 08 83 EC 08 8B 44 24 14 8B 10 89 53 68 8B 40 04 89 43 6C");
         auto scopeState = hook::pattern(game, "A1 ? ? ? ? 83 EC 64 85 C0 56 57 0F 84 ? ? ? ? 8B 15");
@@ -152,19 +148,14 @@ export namespace DeerCamera
         auto followState = hook::pattern(game, "A1 ? ? ? ? 85 C0 75 ? A1 ? ? ? ? 85 C0 75 ? A1 ? ? ? ? 85 C0 75 ? A1");
         auto canvas = hook::pattern(game, "8B 44 24 04 53 83 EC 20 8B D8 85 DB 0F 84 ? ? ? ? 89 1C 24 E8 ? ? ? ? 85 C0");
         auto canvasState = hook::pattern(game, "89 1D ? ? ? ? 83 C4 20 C7 05 ? ? ? ? 00 00 00 00 B8 01 00 00 00 5B C3");
-        if (auto address = *scopeState.get_first<int*>(1))
-            game_scope.SetAddress(address);
-        if (auto address = *scriptState.get_first<int*>(1))
-            game_scripted.SetAddress(address);
-        if (auto address = *followState.get_first<int*>(1))
-            game_followBlocked.SetAddress(address);
-        if (auto address = *followState.get_first<int*>(19))
-            game_controlBlocked.SetAddress(address);
-        if (auto address = *canvasState.get_first<void**>(2))
-            cameraCanvas.SetAddress(address);
+        game_scope.SetAddress(*scopeState.get_first<int*>(1));
+        game_scripted.SetAddress(*scriptState.get_first<int*>(1));
+        game_followBlocked.SetAddress(*followState.get_first<int*>(1));
+        game_controlBlocked.SetAddress(*followState.get_first<int*>(19));
+        cameraCanvas.SetAddress(*canvasState.get_first<void**>(2));
         setCanvasCamera = reinterpret_cast<decltype(setCanvasCamera)>(canvas.get_first());
         setView = reinterpret_cast<decltype(setView)>(nativeSetter.get_first());
         beginHook = safetyhook::create_inline(begin.get_first(), Begin);
-        return bool(beginHook);
+        return true;
     }
 }

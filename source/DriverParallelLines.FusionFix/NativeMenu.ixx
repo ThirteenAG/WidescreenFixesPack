@@ -27,7 +27,6 @@ export namespace DPLMenu
     inline uintptr_t textClass, bitmapClass, rowClass, rootClass, guiClass, fontClass, nativeFontClass, languageClass;
     inline uintptr_t setStyle, setText, renderText, buttonAction;
     inline HMODULE module;
-    inline bool ready;
     inline uint32_t processDepth = 0;
     inline SafetyHookInline loadHook, processHook, releaseHook, pushHook, textHook, switchHook, activateHook, deactivateHook;
     struct Host;
@@ -181,7 +180,7 @@ export namespace DPLMenu
     inline int __fastcall DrawText(void* self, void*, int render, int bank)
     {
         auto found = texts.find(self);
-        if (!ready || found == texts.end()) return textHook.thiscall<int>(self, render, bank);
+        if (found == texts.end()) return textHook.thiscall<int>(self, render, bank);
         auto host = found->second.first.lock();
         if (!host || !Current(host) || !GuiService.is_initialized() || !GuiService.get() || !FontService.is_initialized() || !FontService.get() ||
             At<uintptr_t>(GuiService.get(), 0) != guiClass || At<uintptr_t>(FontService.get(), 0) != fontClass) return 0;
@@ -650,7 +649,7 @@ export namespace DPLMenu
         auto old = hosts.find(root);
         if (old != hosts.end()) { auto keep = old->second; Retire(keep); }
         int result = loadHook.thiscall<int>(self, mode, assets, index);
-        if (ready) Prepare(root);
+        Prepare(root);
         for (auto i = texts.begin(); i != texts.end();) { if (i->second.first.expired()) i = texts.erase(i); else ++i; }
         for (auto i = buttons.begin(); i != buttons.end();) { if (i->second.first.expired()) i = buttons.erase(i); else ++i; }
         return result;
@@ -789,7 +788,5 @@ export namespace DPLMenu
         activateHook = safetyhook::create_inline(hook::get_pattern("56 57 8B F1 8D 44 24 0C 50 8D 4E 08"), &Activate);
         deactivateHook = safetyhook::create_inline(hook::get_pattern("53 56 57 8B F9 8D 44 24 10 50"), &Deactivate);
         loadHook = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 3C 53 56 8B F1 57"), &Load);
-        ready = releaseHook && textHook && processHook && switchHook && pushHook && activateHook && deactivateHook && loadHook;
-        if (!ready) { loadHook.reset(); deactivateHook.reset(); activateHook.reset(); pushHook.reset(); switchHook.reset(); processHook.reset(); textHook.reset(); releaseHook.reset(); Log("native menu hook transaction rejected"); }
     }
 }

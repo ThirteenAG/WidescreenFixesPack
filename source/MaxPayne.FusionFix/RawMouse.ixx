@@ -219,8 +219,6 @@ void InitRawMouse()
 {
     auto update = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 30 8B 45 08 53 56 8B F1 89 46 4D 8B 46 05 8B 08 57 50 FF 51 1C");
     MouseUpdateHook = safetyhook::create_inline(update.get_first(), UpdateMouse);
-    if (!MouseUpdateHook)
-        throw std::runtime_error("Mouse update hook unavailable");
     auto pattern = hook::pattern("8B 46 5B 8B 56 53 8B 4E 5F 89 46 63 52 89 4E 67");
     MouseHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& context)
     {
@@ -240,11 +238,6 @@ void InitRawMouse()
         WriteMouse(mouse + 9, static_cast<LONG>(std::clamp(DeltaX.exchange(0), minimum, maximum)));
         WriteMouse(mouse + 13, static_cast<LONG>(std::clamp(DeltaY.exchange(0), minimum, maximum)));
     });
-    if (!MouseHook)
-    {
-        MouseUpdateHook.reset();
-        throw std::runtime_error("Raw mouse hook unavailable");
-    }
     Enabled.store(FixSettings().Bool("MAIN.RawInputMouse"));
     FixSettings().OnChange("MAIN.RawInputMouse", []()
     {

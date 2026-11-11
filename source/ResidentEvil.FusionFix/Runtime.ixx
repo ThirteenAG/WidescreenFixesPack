@@ -25,7 +25,6 @@ export namespace RERuntime
 {
     IDirect3DDevice9* currentDevice = nullptr;
     HWND window = nullptr;
-    bool ready = false;
 
     void Frame(IDirect3DDevice9* device)
     {
@@ -45,7 +44,7 @@ export namespace RERuntime
         REOverlay::Keyboard(window);
         REWindow::Frame(native, window, REOverlay::BlocksInput(), device);
         REIcons::Frame(device);
-        if (REFrameRate::ready) REFrameRate::Frame(window);
+        REFrameRate::Frame(window);
         REOverlay::Draw(device);
     }
 
@@ -55,18 +54,15 @@ export namespace RERuntime
         REInput::overlayBlocksInput = []() { return REOverlay::BlocksInput() || REWindow::BlocksInput(); };
         REInput::Install();
         RESkipStart::Install();
-        REOverlay::InputReady = []() { return REInput::ready; };
-        REFocus::backgroundInputReady = []() { return REInput::ready; };
         REFocus::Install();
         REMenu::blocksInput = []() { return REOverlay::BlocksInput() || REWindow::BlocksInput(); };
-        if (!REMenu::Install(REOverlay::ThisModule()))
-            OutputDebugStringA("Resident Evil: native Plugins menu unavailable.\n");
+        REMenu::Install(REOverlay::ThisModule());
         REUpdates::Install();
         REIcons::Install(REOverlay::ThisModule());
         auto current = hook::pattern("A1 ? ? ? ? 56 57 FF 71 04 66 0F 6E 88");
         auto original = hook::pattern("A1 ? ? ? ? 56 66 0F 6E 80");
         sRender.SetAddress(current.size() == 1 ? *current.get_first<uint8_t**>(1) : *original.get_first<uint8_t**>(1));
-        const bool clock = REFrameRate::Install();
+        REFrameRate::Install();
         {
             D3D9Options::frameLimit = 0;
             D3D9Options::frame = Frame;
@@ -75,15 +71,7 @@ export namespace RERuntime
                 REIcons::BeforeReset(device);
                 REOverlay::BeforeReset(device);
             };
-            const bool presentation = D3D9Options::HookCreation();
-            ready = clock && presentation;
-            if (!presentation)
-            {
-                REFrameRate::variableClock.reset();
-                REFrameRate::ready = false;
-                OutputDebugStringA("Resident Evil: presentation hook unavailable; native frame clock retained.\n");
-            }
+            D3D9Options::HookCreation();
         }
-        FixSettings().Availability("MAIN.FPSLimit", [](std::string_view) { return ready; });
     }
 }

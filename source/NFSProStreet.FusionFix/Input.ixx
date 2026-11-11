@@ -375,7 +375,7 @@ namespace
     {
         static bool bLoaded = false;
         static SteadyClock::time_point retryAfter{};
-        if (bLoaded || !LoadChunks || SteadyClock::now() < retryAfter)
+        if (bLoaded || SteadyClock::now() < retryAfter)
             return;
         bLoaded = true;
 

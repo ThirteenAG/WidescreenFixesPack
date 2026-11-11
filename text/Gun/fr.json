@@ -51,7 +51,7 @@
   "menu.details": "Détails",
   "menu.restartshort": "Redémarrage requis",
   "FMVWidescreenMode": "Format des vidéos",
-  "FMVWidescreenMode.description": "Format original affiche les vidéos comme le jeu, entières dans son cadre 4:3 centré avec leurs bandes noires. Remplir retire les bandes pour que l'image occupe l'écran sans déformation ; les écrans très larges perdent aussi une partie du haut et du bas. Les logos restent entiers.",
+  "FMVWidescreenMode.description": "Format d'origine affiche les vidéos comme le jeu, avec leurs bandes noires. Remplir les agrandit au-delà des bandes noires autour de l'image jusqu'à ce que l'image tienne à l'écran, sans rien couper.",
   "FMVWidescreenMode.original": "Format original",
   "FMVWidescreenMode.fill": "Remplir",
   "PauseOnFocusLoss": "Pause en arrière-plan",

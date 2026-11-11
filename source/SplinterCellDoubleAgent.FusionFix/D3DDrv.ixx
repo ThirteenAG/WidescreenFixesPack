@@ -416,17 +416,14 @@ export void InitD3DDrv()
                 PlaceGameWindow(PresentParams->hDeviceWindow, Screen.Width, Screen.Height);
 
             //Mirrors
-            auto hEngine = GetModuleHandle(L"Engine");
-            if (hEngine)
+            if (!MIRROR_WIDTH.is_initialized())
             {
-                if (!MIRROR_WIDTH.is_initialized())
-                {
-                    MIRROR_WIDTH.SetAddress(reinterpret_cast<int*>(GetProcAddress(hEngine, "?MIRROR_WIDTH@@3IA")));
-                    MIRROR_HEIGHT.SetAddress(reinterpret_cast<int*>(GetProcAddress(hEngine, "?MIRROR_HEIGHT@@3IA")));
-                }
-                MIRROR_WIDTH = std::clamp(640 * nMirrorResolutionMultiplier, 640, (int)Screen.Width);
-                MIRROR_HEIGHT = std::clamp(360 * nMirrorResolutionMultiplier, 360, (int)Screen.Height);
+                auto hEngine = GetModuleHandle(L"Engine");
+                MIRROR_WIDTH.SetAddress(reinterpret_cast<int*>(GetProcAddress(hEngine, "?MIRROR_WIDTH@@3IA")));
+                MIRROR_HEIGHT.SetAddress(reinterpret_cast<int*>(GetProcAddress(hEngine, "?MIRROR_HEIGHT@@3IA")));
             }
+            MIRROR_WIDTH = std::clamp(640 * nMirrorResolutionMultiplier, 640, (int)Screen.Width);
+            MIRROR_HEIGHT = std::clamp(360 * nMirrorResolutionMultiplier, 360, (int)Screen.Height);
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(0));
 

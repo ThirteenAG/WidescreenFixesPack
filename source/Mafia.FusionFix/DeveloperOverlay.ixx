@@ -156,14 +156,6 @@ export namespace MafiaOverlay
         PresentHook = safetyhook::create_inline(table[17], Present);
         SwapChainHook = safetyhook::create_inline(chainTable[3], SwapChainPresent);
         chain->Release();
-        if (!ResetHook || !PresentHook || !SwapChainHook)
-        {
-            ResetHook.reset();
-            PresentHook.reset();
-            SwapChainHook.reset();
-            OutputDebugStringA("Mafia: developer overlay hooks unavailable.\n");
-            return;
-        }
         CurrentDevice = device;
     }
 }

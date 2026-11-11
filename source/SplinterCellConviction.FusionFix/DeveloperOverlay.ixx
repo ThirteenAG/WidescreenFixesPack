@@ -121,8 +121,6 @@ export namespace DeveloperOverlay
         {
             auto target = (*reinterpret_cast<void***>(device))[16];
             ResetHook = safetyhook::create_inline(target, Reset);
-            if (!ResetHook)
-                return;
         }
         CurrentDevice = device;
         Overlay.Present(device, ThisModule());

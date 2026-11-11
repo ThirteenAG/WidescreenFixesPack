@@ -36,7 +36,7 @@ Change the settings on fusionfix.io, in FusionFixHub or in the developer overlay
 | Pause on focus loss | On, Off | On | while playing |
 | Confine cursor | On, Off | On | while playing |
 | Skip intro | On, Off | On | after a restart |
-| Movie display | Original, Fit | Fit | while playing |
+| Movie display | Original, Fill | Fill | while playing |
 | HUD aspect ratio | Auto, 4:3, 16:9, 21:9, 32:9 | Auto | while playing |
 | Frame rate limit | Unlimited, monitor refresh rate, 30–1000 FPS | 60 | while playing |
 | Field of view factor | 0.5–2.0 | 1.0 | while playing |

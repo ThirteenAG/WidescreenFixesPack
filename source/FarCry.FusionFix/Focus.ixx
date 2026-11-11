@@ -90,10 +90,10 @@ export namespace FarCryFocus
 #endif
 #ifdef _WIN64
         UpdateHook = safetyhook::create_mid(site.get_first(), Update);
-        Ready = bool(UpdateHook);
+        Ready = true;
 #else
         PauseHook = safetyhook::create_inline(site.get_first(), Pause);
-        Ready = bool(PauseHook);
+        Ready = true;
 #endif
     }
 }

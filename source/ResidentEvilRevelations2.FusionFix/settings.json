@@ -250,14 +250,31 @@
       }
     },
     {
-      "id": "MAIN.SplitScreenVertical",
-      "type": "bool",
-      "default": 0,
-      "label": "@SplitScreenVertical",
-      "description": "@SplitScreenVertical.description",
+      "id": "MAIN.SplitScreenLayout",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@SplitScreenLayout.original"
+        },
+        {
+          "value": 1,
+          "label": "@SplitScreenLayout.topbottom"
+        },
+        {
+          "value": 2,
+          "label": "@SplitScreenLayout.sidebyside"
+        }
+      ],
+      "label": "@SplitScreenLayout",
+      "description": "@SplitScreenLayout.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "live"
+      "apply": "live",
+      "control": [
+        "cycler"
+      ]
     },
     {
       "id": "MAIN.SplitScreenSwapTopBottom",

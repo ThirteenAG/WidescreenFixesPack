@@ -25,8 +25,6 @@ export namespace GTA2Updates
         config.playable = [] { return GTA2Options::Menu && *reinterpret_cast<uint16_t*>(GTA2Options::Menu + GTA2Options::CurrentPage) == 0; };
         config.show = [](const std::wstring& line)
         {
-            if (!GTA2Options::TextWidth)
-                return;
             Notice = GTA2MenuText::Wrap(GTA2MenuText::Native(line), 320, 49, [](const std::wstring& text)
             {
                 return GTA2Options::TextWidth(text.c_str(), wFooterFont);

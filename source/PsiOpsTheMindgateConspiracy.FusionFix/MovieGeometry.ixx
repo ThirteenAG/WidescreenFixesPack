@@ -15,8 +15,8 @@ export namespace PsiOpsMovies
         float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f;
     };
 
-    // Both modes show the whole movie at its own aspect
-    inline Rectangle Fit(int width, int height, float aspect, int)
+    // The whole movie at its own aspect, centred
+    inline Rectangle Fit(int width, int height, float aspect)
     {
         if (width <= 0 || height <= 0 || !std::isfinite(aspect) || aspect <= 0.0f)
             return {};

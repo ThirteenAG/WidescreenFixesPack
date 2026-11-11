@@ -128,8 +128,7 @@ export namespace MafiaPad
             auto legacy = hook::pattern("F7 85 A4 90 00 00 00 00 00 02 74 ? 39 BD 4C 94 00 00");
             legacy.get_first();
         }
-        ready = MafiaMenu::ready && profileBindings && inputObject && static_cast<bool>(pauseHook);
-        if (!ready) OutputDebugStringA("Mafia: modern native controller contracts unavailable.\n");
+        ready = MafiaMenu::ready; // 1.2
         FixSettings().Availability("MAIN.ControllerLayout", [](std::string_view value) { return value == "0" || ready; });
         FixSettings().OnChange("MAIN.ControllerLayout", []() { resetRequested.store(true); });
     }

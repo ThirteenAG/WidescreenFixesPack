@@ -155,7 +155,5 @@ export namespace JCOverlay
     inline void Install()
     {
         NativeCreate = JCImports::Replace("DINPUT8.dll", "DirectInput8Create", &Create);
-        if (!NativeCreate)
-            OutputDebugStringA("Just Cause: developer overlay input hook unavailable.\n");
     }
 }

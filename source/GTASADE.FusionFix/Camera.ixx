@@ -124,13 +124,10 @@ namespace
         auto alphaCar = FindFirst("F3 0F 58 36 F3 41 0F 59 C0 41 0F 2F F2 F3 0F 11 36 F3 44 0F 58 F0 76 ?");
         auto sourceCar = FindFirst("F3 0F 10 46 10 0F 57 C9 F3 41 0F 10 CA F3 44 0F 11 15 ? ? ? ? E8 ?");
         auto betaCar = FindFirst("48 8B C4 48 81 EC A8 00 00 00 83 3D ? ? ? ? 00 44 0F 29 40 C8 45 0F");
-        if (!aimGain || !samplePed || !betaPed || !alphaPed || !sourcePed || !controllerPedPitch || !beginCar
-            || !sampleCar || !taskCar || !alphaCar || !sourceCar || !betaCar)
-            return;
         const auto relative = [](const char* signature, size_t offset, ptrdiff_t trailing = 0) -> uintptr_t
         {
             const auto operand = FindFirst(signature, offset);
-            return operand ? injector::ReadRelativeOffset(operand).as_int() + trailing : 0;
+            return injector::ReadRelativeOffset(operand).as_int() + trailing;
         };
         aimHorizontal = reinterpret_cast<AimAxis>(FindFirst("48 89 5C 24 20 55 41 54 41 55 41 56 41 57 48 8B EC 48 81 EC 80 00 00 00"));
         disabledControls = reinterpret_cast<uint16_t*>((relative("66 44 09 15 ? ? ? ? E8 ? ? ? ? 44 38 35 ? ? ? ? 4D 8B D6 4C", 4)));
@@ -139,17 +136,8 @@ namespace
         scriptAngles = reinterpret_cast<bool*>((relative("C6 05 ? ? ? ? 00 E9 ? ? ? ? 48 8B CF E8 ? ? ? ? E9 ? ? ?", 2, 1)));
         carParameters = reinterpret_cast<const float*>((relative("F3 0F 59 35 ? ? ? ? F3 44 0F 10 44 24 38 F3 44 0F 10 5C 24 34 F3 0F", 4)));
         auto entryStick = FindFirst("4C 8B DC 49 89 5B 18 49 89 6B 20 41 56 48 81 EC 90 00 00 00 48 8B 41 18 4D 8B F1");
-        if (!aimHorizontal || !disabledControls || !timeStep || !direction || !scriptAngles || !carParameters || !entryStick)
-            return;
         entryStickHook = safetyhook::create_inline(entryStick, EntryStickModifier);
-        if (!entryStickHook)
-            return;
         carBetaHook = safetyhook::create_inline(betaCar, ComputeCarBeta);
-        if (!carBetaHook)
-        {
-            entryStickHook = {};
-            return;
-        }
         const auto add = [](void* address, auto callback)
         {
             orbitHooks.push_back(safetyhook::create_mid(address, callback));
@@ -271,12 +259,6 @@ namespace
             if (car.applied)
                 c.xmm14.f32[0] = c.xmm10.f32[0];
         });
-        if (std::any_of(orbitHooks.begin(), orbitHooks.end(), [](const auto& hook) { return !hook; }))
-        {
-            orbitHooks.clear();
-            carBetaHook = {};
-            entryStickHook = {};
-        }
     }
 }
 

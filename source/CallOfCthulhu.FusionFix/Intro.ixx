@@ -20,7 +20,5 @@ export namespace CoCIntro
             constexpr uintptr_t ZeroFlag = 0x40;
             context.eflags &= ~ZeroFlag;
         });
-        if (!IntroHook)
-            OutputDebugStringA("Call of Cthulhu: startup video hook installation failed.\n");
     }
 }

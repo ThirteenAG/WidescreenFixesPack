@@ -1543,23 +1543,10 @@ namespace KongMenu
             Log("hook allocation failed; installation rolled back");
             return;
         }
-        if (!wholeHook || !worldHook || !optionsHook || !selectHook || !mouseHook || !titleHook ||
-            !pauseHook || !temporaryHook || !objectHook || !behaviorHook || !languageHook || !subtitleHook)
-        {
-            Rollback();
-            Log("hook installation transaction failed; all hooks restored");
-            return;
-        }
-        // Assign every original trampoline before enabling any branch. Partial
-        // installation forwards originals while the committed flag is false.
-        if (!wholeHook.enable() || !worldHook.enable() || !optionsHook.enable() || !selectHook.enable() ||
-            !mouseHook.enable() || !titleHook.enable() || !pauseHook.enable() || !temporaryHook.enable() ||
-            !objectHook.enable() || !behaviorHook.enable() || !languageHook.enable() || !subtitleHook.enable())
-        {
-            Rollback();
-            Log("hook enable transaction failed; all original targets restored");
-            return;
-        }
+        // Every original trampoline exists before any branch is enabled.
+        for (auto hook : { &wholeHook, &worldHook, &optionsHook, &selectHook, &mouseHook, &titleHook, &pauseHook, &temporaryHook,
+            &objectHook, &behaviorHook, &languageHook, &subtitleHook })
+            (void)hook->enable();
         installed = true;
     }
 }

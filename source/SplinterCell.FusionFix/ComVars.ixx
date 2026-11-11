@@ -246,12 +246,13 @@ export namespace VisionNoiseGrain
 
     float(__cdecl* pAppFrand)() = nullptr;
 
-    // Resolve Core.dll's appFrand once, the fix is skipped when unavailable
-    bool Init()
+    // Resolve Core.dll's appFrand once
+    void Init()
     {
         if (!pAppFrand)
             pAppFrand = (decltype(pAppFrand))GetProcAddress(GetModuleHandle(L"Core"), "?appFrand@@YAMXZ");
-        return pAppFrand != nullptr;
+        if (!pAppFrand)
+            throw std::runtime_error("Core appFrand export not found");
     }
 
     double NowSeconds()

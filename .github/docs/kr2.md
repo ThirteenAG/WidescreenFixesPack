@@ -4,7 +4,7 @@
 
 **Knight Rider 2: The Game Fusion Fix** corrects resolution handling, aspect ratio, HUD scaling, field of view and video scaling for widescreen displays.
 
-[Website](https://thirteenag.github.io/wfp#kr2) Â· [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/KnightRider2.FusionFix/dllmain.cpp)
+[Website](https://thirteenag.github.io/wfp#kr2) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/KnightRider2.FusionFix/dllmain.cpp)
 
 </div>
 
@@ -12,28 +12,28 @@
 
 ## Fixes
 
-- **Resolution and aspect ratio** â€” Supports custom resolutions, including render targets larger than the original 2048-pixel limit. The gameplay view widens at the sides while retaining its original height.
-- **HUD** â€” Auto places the HUD near the screen edges; a choice of centered HUD boxes is available. The cockpit retains its original centered 4:3 view and instruments, with black side areas on wider screens. Menu artwork keeps its original proportions.
-- **Videos** â€” Original fits the whole video in the original 4:3 presentation. Fill preserves the picture and skips the black borders encoded in the intro and new game videos.
-- **Frame rate** â€” An adjustable limiter replaces the native limits, and game time follows real time.
-- **Window modes** â€” Choose fullscreen, framed windowed or borderless. Resolution and mode changes require a restart.
-- **Intro skip** â€” Skips the startup logos and legal screens; mission scenes remain available.
-- **Start-up abort** â€” Fixes the start-up abort on systems where the game's mouse setup fails.
+- **Resolution and aspect ratio** — Supports custom resolutions, including render targets larger than the original 2048-pixel limit. The gameplay view widens at the sides while retaining its original height.
+- **HUD** — Auto places the HUD near the screen edges; a choice of centered HUD boxes is available. The cockpit retains its original centered 4:3 view and instruments, with black side areas on wider screens. Menu artwork keeps its original proportions.
+- **Videos** — Original fits the whole video in the original 4:3 presentation. Fill preserves the picture and skips the black borders encoded in the intro and new game videos.
+- **Frame rate** — An adjustable limiter replaces the native limits, and game time follows real time.
+- **Window modes** — Choose fullscreen, framed windowed or borderless. Resolution and mode changes require a restart.
+- **Intro skip** — Skips the startup logos and legal screens; mission scenes remain available.
+- **Start-up abort** — Fixes the start-up abort on systems where the game's mouse setup fails.
 
 ## Options
 
-- **Field of view factor** â€” 0.5â€“2.0, live; 1.0 keeps the intended gameplay view. Story shots keep their own framing.
-- **Resolution width / height** â€” 0 uses the desktop resolution; restart required.
-- **Window mode** â€” Fullscreen, Windowed or Borderless; restart required. Borderless uses the desktop resolution.
-- **HUD aspect ratio constraint** â€” Auto uses the screen edges; 4:3, 16:9, 21:9 or 32:9 places the HUD inside a centered box. Applies live.
-- **Frame rate limit** â€” 0 is unlimited, âˆ’1 follows the display refresh rate, and a positive value selects the cap. Default 60; applies live.
-- **Cutscene borders** â€” Off or Pillarbox; applies live. Pillarbox keeps the original story framing with side borders.
-- **Video framing** â€” Original or Fill, as described above.
-- **Confine cursor** â€” Keeps the cursor inside the focused game window; applies live.
-- **Skip intro / Skip press start** â€” Enabled by default; restart required.
-- **Controller icons** â€” Auto, Xbox, PlayStation or Nintendo button labels; applies live. Auto uses Xbox labels because XInput does not identify the controller family.
-- **Text language** â€” Auto, English, French, German, Italian or Spanish for the fix's settings and help.
-- **Check for updates** â€” Optional update notice at the main menu; disabled by default.
+- **Field of view factor** — 0.5–2.0, live; 1.0 keeps the intended gameplay view. Story shots keep their own framing.
+- **Resolution width / height** — 0 uses the desktop resolution; restart required.
+- **Window mode** — Fullscreen, Windowed or Borderless; restart required. Borderless uses the desktop resolution.
+- **HUD aspect ratio constraint** — Auto uses the screen edges; 4:3, 16:9, 21:9 or 32:9 places the HUD inside a centered box. Applies live.
+- **Frame rate limit** — 0 is unlimited, −1 follows the display refresh rate, and a positive value selects the cap. Default 60; applies live.
+- **Cutscene borders** — Off or Pillarbox; applies live. Pillarbox keeps the original story framing with side borders.
+- **Video framing** — Original or Fill, as described above.
+- **Confine cursor** — Keeps the cursor inside the focused game window; applies live.
+- **Skip intro / Skip press start** — Enabled by default; restart required.
+- **Controller icons** — Auto, Xbox, PlayStation or Nintendo button labels; applies live. Auto uses Xbox labels because XInput does not identify the controller family.
+- **Text language** — Auto, English, French, German, Italian or Spanish for the fix's settings and help.
+- **Check for updates** — Optional update notice at the main menu; disabled by default.
 
 Settings can be changed on fusionfix.io or in FusionFixHub. Recommended is the default preset; Vanilla and Enhanced are also available. No preset changes the resolution. Supporters can open the developer overlay with Ctrl+F10, or Start and View together on a controller. The game's fixed options scenes do not support an additional Plugins page.
 

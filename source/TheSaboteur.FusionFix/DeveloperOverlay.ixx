@@ -101,7 +101,7 @@ export namespace SaboteurOverlay
 
     void Frame(IDirect3DDevice9* device)
     {
-        if (!device || !InputHook || !ProcedureHook)
+        if (!device)
             return;
         if (Device != device)
         {

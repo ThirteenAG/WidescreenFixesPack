@@ -74,7 +74,7 @@
   "fmv": "Cadrage des vidéos",
   "fmv.original": "Format original",
   "fmv.fill": "Remplir",
-  "fmv.description": "Format original affiche les vidéos comme le jeu, en entier dans son cadre 4:3 centré avec des bandes noires autour. Remplir adapte la vidéo entière à l'écran, sans rien couper ni étirer.",
+  "fmv.description": "Format original affiche les vidéos dans le cadre 16:9 centré du jeu. Sur les écrans plus larges que le 16:9, Remplir agrandit les deux vidéos de l'histoire, qui ont des bandes noires dans le fichier, jusqu'à ce que leur image tienne dans l'écran. Rien de l'image n'est coupé ni étiré.",
   "textlanguage": "Langue du menu",
   "textlanguage.description": "Choisissez la langue des réglages et de l’aide du correctif. Automatique suit la langue d’affichage de Windows.",
   "confinecursor": "Limiter le curseur",

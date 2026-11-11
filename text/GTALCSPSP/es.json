@@ -1,5 +1,5 @@
 {
-  "plugin.name": "GTA Liberty City Stories PPSSPP Widescreen Fix",
+  "plugin.name": "GTA Liberty City Stories PPSSPP Fusion Fix",
   "MAIN.SkipIntro": "Saltar introducción",
   "MAIN.SkipIntro.description": "Salta la introducción inicial. Reinicia el juego emulado tras cambiar este ajuste en el hub.",
   "MAIN.ForceAspectRatio": "Proporción",
@@ -48,10 +48,6 @@
   "cutsceneborders.letterbox": "Letterbox",
   "cutsceneborders.pillarbox": "Pillarbox",
   "cutsceneborders.both": "Ambos",
-  "MAIN.FMVWidescreenMode": "Formato de los vídeos",
-  "MAIN.FMVWidescreenMode.description": "Ambas opciones muestran cada vídeo completo en su propia proporción, con franjas negras donde la pantalla es más ancha o más estrecha. Reinicia tras los cambios en el hub.",
-  "movies.original": "Original",
-  "movies.fill": "Rellenar",
   "MAIN.GamepadIcons": "Iconos del mando",
   "MAIN.GamepadIcons.description": "Elige los iconos y el dibujo del mando correspondientes a los controles de PPSSPP. PSP conserva los gráficos originales. El juego emulado no puede detectar el tipo de mando del PC: elígelo manualmente. Los archivos ausentes o incompatibles conservan los gráficos originales afectados. Reinicia tras los cambios en el hub. Auto usa los iconos de Xbox 360.",
   "lights": "Luces de vehículos",

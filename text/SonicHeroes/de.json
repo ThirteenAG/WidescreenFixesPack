@@ -42,8 +42,6 @@
   "MAIN.SkipPressStart.description": "Geht vom Titelbild direkt zur Auswahl der Spieldaten, ohne auf Enter oder Start zu warten. Neustart erforderlich.",
   "MISC.DisableMouseInput": "Maus ignorieren",
   "MISC.DisableMouseInput.description": "Schaltet die Mauseingabe ab, damit versehentliche Klicks oder Bewegungen das Spiel nicht beeinflussen.",
-  "MISC.DisableFrameSkipping": "Kein Bildauslassen",
-  "MISC.DisableFrameSkipping.description": "Zeichnet jedes Bild, statt Bilder auszulassen, wenn das Spiel hinterherhinkt.",
   "MISC.DisableQuitDialog": "Kein Beenden-Dialog",
   "MISC.DisableQuitDialog.description": "Beendet das Spiel ohne Nachfrage, wenn das Fenster geschlossen wird (Alt+F4 oder Schließen-Schaltfläche).",
   "MISC.DisableLoadingTimer": "Keine Ladebildschirm-Mindestzeit",

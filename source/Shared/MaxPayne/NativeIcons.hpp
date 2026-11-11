@@ -17,7 +17,6 @@ namespace MaxPayneIcons
 {
     constexpr unsigned First = 0x80;
     constexpr unsigned Count = 27;
-    inline bool Ready = false;
     inline HMODULE Host = nullptr;
     inline std::function<int()> Family;
     inline std::function<bool()> PadInUse;
@@ -49,7 +48,7 @@ namespace MaxPayneIcons
                 value[i][0] = char(First + i);
             return value;
         }();
-        return Ready && icon < Count ? strings[icon].data() : nullptr;
+        return icon < Count ? strings[icon].data() : nullptr;
     }
 
     inline const char* Button(int button)
@@ -270,7 +269,7 @@ namespace MaxPayneIcons
     {
         if (!value || !*value)
             return {};
-        auto path = File && *File && FullPath ? FullPath(*File, nullptr, value) : value;
+        auto path = *File ? FullPath(*File, nullptr, value) : value;
         return path ? path : "";
     }
 
@@ -304,8 +303,6 @@ namespace MaxPayneIcons
 
     inline void CountAllocation(int* address)
     {
-        if (!address)
-            return;
         ProtectedGameRef<int> count;
         count.SetAddress(address);
         count = count.get() + 1;
@@ -348,18 +345,7 @@ namespace MaxPayneIcons
                 return nullptr;
             BuildingFamily = family;
             BuiltWithIcons = false;
-            try
-            {
-                variant = Constructor.unsafe_fastcall<void*>(memory, nullptr, font.color.c_str(), font.alpha.c_str());
-            }
-            catch (...)
-            {
-                BuildingFamily = 0;
-                Free(memory);
-                font.failed[family - 1] = true;
-                OutputDebugStringA("Max Payne: controller icon font source unavailable; using button names.\n");
-                return nullptr;
-            }
+            variant = Constructor.unsafe_fastcall<void*>(memory, nullptr, font.color.c_str(), font.alpha.c_str());
             BuildingFamily = 0;
             CountAllocation(NewCount);
             if (!BuiltWithIcons)
@@ -409,8 +395,6 @@ namespace MaxPayneIcons
     inline Prompt Hardcoded(const std::string& text)
     {
         Prompt prompt{ text, text };
-        if (!Ready)
-            return prompt;
         struct Key
         {
             const char* name;
@@ -557,7 +541,7 @@ namespace MaxPayneIcons
         auto found = Texts.find(text);
         if (found != Texts.end())
             return found->second.prompt.keyboard;
-        auto value = GetString ? GetString(text, nullptr) : nullptr;
+        auto value = GetString(text, nullptr);
         return value ? value : "";
     }
 
@@ -568,18 +552,15 @@ namespace MaxPayneIcons
 
     inline void __fastcall UpdateControl(uint8_t* self, void* edx)
     {
-        if (Ready && (ControlBinding || ControlBindingObject))
+        auto text = *reinterpret_cast<void**>(self + ControlText);
+        auto pad = ControlBindingObject ? ControlBindingObject(self) : ControlBinding(*reinterpret_cast<int*>(self + ControlId));
+        if (text && !pad.empty())
         {
-            auto text = *reinterpret_cast<void**>(self + ControlText);
-            auto pad = ControlBindingObject ? ControlBindingObject(self) : ControlBinding(*reinterpret_cast<int*>(self + ControlId));
-            if (text && !pad.empty())
-            {
-                ControlTexts[text] = std::move(pad);
-                auto previous = Texts.find(text);
-                auto value = GetString(text, nullptr);
-                auto source = previous == Texts.end() ? std::string(value ? value : "") : previous->second.prompt.keyboard;
-                PrintText(text, nullptr, source.c_str());
-            }
+            ControlTexts[text] = std::move(pad);
+            auto previous = Texts.find(text);
+            auto value = GetString(text, nullptr);
+            auto source = previous == Texts.end() ? std::string(value ? value : "") : previous->second.prompt.keyboard;
+            PrintText(text, nullptr, source.c_str());
         }
         ControlsUpdate.unsafe_fastcall(self, edx);
     }
@@ -587,8 +568,6 @@ namespace MaxPayneIcons
     inline void HookControls(void** table, int update, ptrdiff_t id, ptrdiff_t text,
                              std::function<std::string(int)> binding)
     {
-        if (!Ready || !table || ControlsUpdate)
-            return;
         ControlId = id;
         ControlText = text;
         ControlBinding = std::move(binding);
@@ -598,19 +577,14 @@ namespace MaxPayneIcons
     inline void HookControlsByObject(void** table, int update, ptrdiff_t text,
                                      std::function<std::string(uint8_t*)> binding)
     {
-        if (!Ready || !table || ControlsUpdate)
-            return;
         ControlText = text;
         ControlBindingObject = std::move(binding);
         ControlsUpdate = safetyhook::create_inline(table[update], UpdateControl);
     }
 
-    inline bool Init(HMODULE host, HMODULE e2mfc, HMODULE rlmfc, std::function<int()> family,
+    inline void Init(HMODULE host, HMODULE e2mfc, HMODULE rlmfc, std::function<int()> family,
                      std::function<bool()> padInUse, FontLayout layout = {})
     {
-        static bool attempted = false;
-        if (std::exchange(attempted, true))
-            return Ready;
         Host = host;
         Layout = layout;
         Family = std::move(family);
@@ -632,12 +606,6 @@ namespace MaxPayneIcons
         Free = reinterpret_cast<decltype(Free)>(GetProcAddress(crt, "free"));
         NewCount = reinterpret_cast<int*>(GetProcAddress(rlmfc, "?sm_iNewCount@R_Memory@@2HA"));
         DeleteCount = reinterpret_cast<int*>(GetProcAddress(rlmfc, "?sm_iDeleteCount@R_Memory@@2HA"));
-        if (!host || !constructor || !one || !destructor || !validate || !print || !execute || !destroyText ||
-            !GetFont || !SetFont || !GetString || !FullPath || !File || !Allocate || !Free || !NewCount || !DeleteCount)
-        {
-            OutputDebugStringA("Max Payne: controller icon font exports unavailable; using button names.\n");
-            return false;
-        }
         Constructor = safetyhook::create_inline(constructor, Construct);
         ConstructorOne = safetyhook::create_inline(one, ConstructOne);
         Destructor = safetyhook::create_inline(destructor, Destroy);
@@ -645,7 +613,5 @@ namespace MaxPayneIcons
         Print = safetyhook::create_inline(print, PrintText);
         Execute = safetyhook::create_inline(execute, ExecuteText);
         TextDestructor = safetyhook::create_inline(destroyText, DestroyText);
-        Ready = Constructor && ConstructorOne && Destructor && Validate && Print && Execute && TextDestructor;
-        return Ready;
     }
 } // namespace MaxPayneIcons

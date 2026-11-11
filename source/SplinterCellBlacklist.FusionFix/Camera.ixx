@@ -245,13 +245,4 @@ export void InitCamera()
     SceneTwoNearFar = safetyhook::create_inline(constructors[2], TwoNearFar);
     SceneOneNearFar = safetyhook::create_inline(constructors[3], OneNearFar);
     TargetHook = safetyhook::create_mid(target.get_first(14), Target);
-    if (!SceneOne || !SceneTwo || !SceneTwoNearFar || !SceneOneNearFar || !TargetHook)
-    {
-        TargetHook.reset();
-        SceneOne.reset();
-        SceneTwo.reset();
-        SceneTwoNearFar.reset();
-        SceneOneNearFar.reset();
-        throw std::runtime_error("Camera hook installation failed");
-    }
 }

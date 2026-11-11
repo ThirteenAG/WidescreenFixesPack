@@ -312,26 +312,6 @@
       "visibility": "editor"
     },
     {
-      "id": "MAIN.FMVWidescreenMode",
-      "type": "choice",
-      "default": 1,
-      "label": "@MAIN.FMVWidescreenMode",
-      "description": "@MAIN.FMVWidescreenMode.description",
-      "page": "display",
-      "visibility": "menu",
-      "apply": "restart",
-      "choices": [
-        {
-          "value": 0,
-          "label": "@movies.original"
-        },
-        {
-          "value": 1,
-          "label": "@movies.fill"
-        }
-      ]
-    },
-    {
       "id": "MAIN.VehicleLights",
       "type": "bool",
       "default": 1,

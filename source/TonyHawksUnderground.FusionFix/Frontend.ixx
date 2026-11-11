@@ -748,15 +748,12 @@ namespace THUGMenu
     }
     inline void Init()
     {
-        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-            reinterpret_cast<LPCWSTR>(&Init), &state.module)) return;
         auto pattern = hook::pattern("68 74 EE B2 36 68 74 EE B2 36 55 E8");
         // The game keeps calling into this module (hooks, the controller event call); unloading it is unsupported
-        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
-            reinterpret_cast<LPCWSTR>(&Init), &state.module)) { Log("THUG native menu: module lifetime pin failed"); return; }
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
+            reinterpret_cast<LPCWSTR>(&Init), &state.module);
         state.createHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().created), Created);
         state.taskHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().task), Task);
-        if (!state.createHook || !state.taskHook) { state.taskHook.reset(); state.createHook.reset(); Log("THUG native menu: hooks failed"); return; }
         for (const auto& setting : FixSettings().GetDescription().settings)
         {
             if (setting.HasValue() && setting.apply == "restart")
@@ -790,8 +787,6 @@ namespace THUGUpdates
 
     inline void Init()
     {
-        if (!THUGMenu::state.taskHook)
-            return;
         IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", Exit));
         RWGTA::UpdateCheck::Config config;
         config.pluginId = "TonyHawksUnderground.FusionFix";

@@ -128,11 +128,7 @@ public:
             auto procedure = hook::pattern("53 8B 5C 24 ? 55 8B 6C 24 ? 56 8B 74 24 ? 57 8B 7C 24 ? 8D 44 24 ? 50 56 57 53 55");
             shWndProc = safetyhook::create_inline(procedure.get_first(), WndProc);
             auto inactive = hook::pattern("C7 05 ? ? ? ? 01 00 00 00 E8 ? ? ? ? EB ? C7 05 ? ? ? ? 00 00 00 00 E8");
-            if (shWndProc)
-                bAppInactive.SetAddress(*inactive.get_first<uint32_t*>(2));
-            const bool focusAvailable = bAppInactive.is_initialized();
-            FixSettings().Availability("MAIN.PauseOnFocusLoss", [focusAvailable](std::string_view) { return focusAvailable; });
-            FixSettings().Availability("MAIN.ConfineCursor", [](std::string_view) { return static_cast<bool>(shWndProc); });
+            bAppInactive.SetAddress(*inactive.get_first<uint32_t*>(2));
             auto updateConfinement = []()
             {
                 CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));

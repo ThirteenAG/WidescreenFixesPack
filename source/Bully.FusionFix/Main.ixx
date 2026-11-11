@@ -45,7 +45,7 @@ public:
             });
             BullyWindow::Install(FixSettings().Int("MAIN.WindowMode"));
             BullyFocus::Install(FixSettings().Int("MAIN.PauseOnFocusLoss"));
-            BullyVideo::Install(FixSettings().Int("MAIN.FMVWidescreenMode"));
+            BullyVideo::Install();
             BullyIcons::Install(FixSettings().Int("MAIN.GamepadIcons"));
             BullyInput::Install(FixSettings().Int("MAIN.AutoGamepad"), FixSettings().Float("MAIN.GamepadCameraSpeed"), FixSettings().Float("MAIN.GamepadDeadzone"));
             BullyMenu::UsingPad = BullyInput::UsingPad;

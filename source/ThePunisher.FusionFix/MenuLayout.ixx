@@ -27,7 +27,7 @@ export namespace PunMenuLayout
         bool active{}, clipped{};
         explicit Scope(uintptr_t root)
         {
-            if (!WidthHook || Drawing) return;
+            if (Drawing) return;
             Drawing = active = true;
             if (CanvasWidth >= Width) return;
             // Keep artwork, native clipping and mouse hit tests on the same canvas.
@@ -82,10 +82,6 @@ export namespace PunMenuLayout
         Colour = reinterpret_cast<decltype(Colour)>(colour.get_first());
         Fill = reinterpret_cast<decltype(Fill)>(fill.get_first());
         WidthHook = safetyhook::create_inline(screen.get_first(), GetWidth);
-        if (WidthHook)
-        {
-            MainDrawHook = safetyhook::create_inline(main.get_first(), DrawMain);
-            if (!MainDrawHook) WidthHook.reset();
-        }
+        MainDrawHook = safetyhook::create_inline(main.get_first(), DrawMain);
     }
 }

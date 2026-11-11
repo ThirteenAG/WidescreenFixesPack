@@ -6,7 +6,6 @@ export module ComVars;
 
 export struct INI
 {
-    bool FixSavePath;
     int WindowMode;
     bool SkipIntro;
 } IniFile;

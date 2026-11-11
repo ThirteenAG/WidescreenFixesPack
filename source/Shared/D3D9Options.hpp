@@ -109,7 +109,7 @@ namespace D3D9Options
 
         inline void Hook(SafetyHookInline& hook, void* target, void* detour)
         {
-            if (!hook && target)
+            if (!hook)
                 hook = safetyhook::create_inline(target, detour);
         }
     }
@@ -148,21 +148,18 @@ namespace D3D9Options
         }
     }
 
-    // Loads the d3d9.dll the game will use if it isn't loaded yet; false when nothing is on or D3D9 is unavailable
-    inline bool HookCreation()
+    // Loads the d3d9.dll the game will use if it isn't loaded yet; does nothing when no option is on
+    inline void HookCreation()
     {
         if (frameLimit <= 0 && anisotropy <= 1 && !presentParameters && !frame && !beforeReset)
-            return false;
+            return;
         auto module = GetModuleHandleW(L"d3d9.dll");
         if (!module)
             module = LoadLibraryW(L"d3d9.dll");
-        auto create = module ? reinterpret_cast<IDirect3D9*(WINAPI*)(UINT)>(GetProcAddress(module, "Direct3DCreate9")) : nullptr;
-        auto d3d = create ? create(D3D_SDK_VERSION) : nullptr;
-        if (!d3d)
-            return false;
+        auto create = reinterpret_cast<IDirect3D9*(WINAPI*)(UINT)>(GetProcAddress(module, "Direct3DCreate9"));
+        auto d3d = create(D3D_SDK_VERSION);
         auto methods = *reinterpret_cast<void***>(d3d);
         detail::Hook(detail::createDevice, methods[IDirect3D9VTBL::CreateDevice], reinterpret_cast<void*>(&detail::CreateDevice));
         d3d->Release();
-        return bool(detail::createDevice);
     }
 }

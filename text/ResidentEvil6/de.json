@@ -74,7 +74,7 @@
   "fmv": "Videobildformat",
   "fmv.original": "Originalformat",
   "fmv.fill": "Ausfüllen",
-  "fmv.description": "Originalformat zeigt die Videos wie das Spiel, vollständig in seinem mittigen 4:3-Rahmen mit schwarzen Balken ringsum. Ausfüllen passt das ganze Video an den Bildschirm an, ohne etwas abzuschneiden oder zu verzerren.",
+  "fmv.description": "Originalformat zeigt die Videos im mittigen 16:9-Rahmen des Spiels. Auf Bildschirmen, die breiter als 16:9 sind, vergrößert Ausfüllen die beiden Story-Videos, die schwarze Balken in der Datei haben, bis ihr Bild den Bildschirm ausfüllt. Kein Bildinhalt wird abgeschnitten oder verzerrt.",
   "textlanguage": "Menüsprache",
   "textlanguage.description": "Sprache der Einstellungen und Hilfetexte des Fixes. Automatisch folgt der Windows-Anzeigesprache.",
   "confinecursor": "Mauszeiger begrenzen",

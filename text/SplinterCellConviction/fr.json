@@ -129,9 +129,5 @@
   "ui.off": "Désactivé",
   "ui.both": "Les deux",
   "ui.letterbox": "Bandes horizontales",
-  "ui.pillarbox": "Bandes verticales",
-  "FMVWidescreenMode": "Cadrage des vidéos",
-  "FMVWidescreenMode.description": "Original affiche toute la vidéo dans une zone 4:3. Remplir adapte toute la vidéo à l’écran. Aucun mode ne recadre ni n’étire l’image.",
-  "FMVWidescreenMode.0": "Format d'origine",
-  "FMVWidescreenMode.1": "Remplir"
+  "ui.pillarbox": "Bandes verticales"
 }

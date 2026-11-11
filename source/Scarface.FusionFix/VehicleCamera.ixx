@@ -28,10 +28,10 @@ export namespace ScarfaceVehicleCamera
         *weight = BlendWeight(*reinterpret_cast<const float*>(time + 0x0C), *weight);
     }
 
-    inline bool Install(HMODULE module = GetModuleHandle(nullptr))
+    inline void Install(HMODULE module = GetModuleHandle(nullptr))
     {
         if (BlendHook)
-            return true;
+            return;
         const auto base = reinterpret_cast<uintptr_t>(module);
         const auto dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
         const auto nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
@@ -41,8 +41,5 @@ export namespace ScarfaceVehicleCamera
         FlowTimeOffset = *blend.get_first<uint32_t>(8);
         // Scale only this velocity blend; the native acceleration and camera update follow unchanged.
         BlendHook = safetyhook::create_mid(blend.get_first(), UpdateBlend);
-        if (!BlendHook)
-            throw std::runtime_error("Vehicle camera smoothing hook unavailable");
-        return bool(BlendHook);
     }
 }

@@ -37,8 +37,7 @@ public:
         {
             gameState = reinterpret_cast<const int*>(GameStateAddress());
             showHelp = reinterpret_cast<decltype(showHelp)>(HelpMessageAddress());
-            if (const auto running = hook::pattern("0F B6 15 ? ? ? ? F3 44 0F 10 0D ? ? ? ? F3 44 0F 10 05").get_first<uint8_t>(3))
-                cutsceneRunning = reinterpret_cast<const uint8_t*>(injector::ReadRelativeOffset(running).as_int());
+            cutsceneRunning = reinterpret_cast<const uint8_t*>(injector::ReadRelativeOffset(hook::pattern("0F B6 15 ? ? ? ? F3 44 0F 10 0D ? ? ? ? F3 44 0F 10 05").get_first<uint8_t>(3)).as_int());
 
             RWGTA::UpdateCheck::Config config;
             config.pluginId = "GTA3DE.FusionFix";
@@ -52,10 +51,7 @@ public:
             {
                 noticeText = line;
                 if (!textGetHook)
-                    if (const auto textGet = TextGetAddress())
-                        textGetHook = safetyhook::create_inline(textGet, TextGet);
-                if (!textGetHook)
-                    return;
+                    textGetHook = safetyhook::create_inline(TextGetAddress(), TextGet);
                 static std::wstring key = noticeKey;
                 FString message;
                 message.Data = key.data();

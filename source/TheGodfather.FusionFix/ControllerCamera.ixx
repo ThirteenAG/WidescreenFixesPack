@@ -114,23 +114,12 @@ export namespace GodfatherControllerCamera
         auto axes = hook::pattern("83 EC 08 53 8B D9 83 7B 3C FF 56 8B 35 ? ? ? ? 75 1C 8B 44 24 1C "
             "8B 4C 24 18 5E C7 00 00 00 00 00 C7 01 00 00 00 00 5B 83 C4 08 C2 14 00");
         auto curve = hook::pattern("CC CC 56 8B 74 24 08 D9 06 57 8B 7C 24 10 D9 07 D9 C0 D8 C9 D9 C2 D8 CB DE C1 D9 FA DD DA DD D8");
-        if (GodfatherInputSlot.is_initialized())
-        {
-            updateHook = safetyhook::create_inline(update.get_first(), Update, safetyhook::InlineHook::StartDisabled);
-            axesHook = safetyhook::create_inline(axes.get_first(), Axes, safetyhook::InlineHook::StartDisabled);
-            curveHook = safetyhook::create_inline(curve.get_first(2), Curve, safetyhook::InlineHook::StartDisabled);
-            if (!updateHook || !axesHook || !curveHook || !updateHook.enable() || !axesHook.enable() || !curveHook.enable())
-            {
-                curveHook.reset();
-                updateHook.reset();
-                axesHook.reset();
-            }
-        }
-        const bool available = updateHook && axesHook && curveHook;
-        FixSettings().Availability("MAIN.GamepadCameraSpeed", [available](std::string_view) { return available; });
-        FixSettings().Availability("MAIN.InvertGamepadY", [available](std::string_view) { return available; });
-        if (!available)
-            throw std::runtime_error("Controller camera hooks unavailable");
+        updateHook = safetyhook::create_inline(update.get_first(), Update, safetyhook::InlineHook::StartDisabled);
+        axesHook = safetyhook::create_inline(axes.get_first(), Axes, safetyhook::InlineHook::StartDisabled);
+        curveHook = safetyhook::create_inline(curve.get_first(2), Curve, safetyhook::InlineHook::StartDisabled);
+        (void)updateHook.enable();
+        (void)axesHook.enable();
+        (void)curveHook.enable();
         const auto refresh = []()
         {
             speed.store(FixSettings().Float("MAIN.GamepadCameraSpeed"), std::memory_order_relaxed);

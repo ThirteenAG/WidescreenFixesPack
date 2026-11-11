@@ -24,7 +24,7 @@
 ## Installation
 
 1. Download the fix archive from this release.
-2. Use [PCSX2 Fork With Plugins](https://github.com/ASI-Factory/PCSX2-Fork-With-Plugins/releases/tag/latest).
+2. Use [PCSX2F](https://github.com/ASI-Factory/PCSX2-Fork-With-Plugins/releases/tag/latest) (PCSX2 Fork With Plugins; the fix does not work in regular PCSX2).
 3. Extract the plugin archive into the emulator folder, preserving its `PLUGINS` directory.
 4. Set the emulator's aspect ratio or window size, then launch the game.
 5. If an older `PLUGINS/Burnout3.PCSX2F.WidescreenFix.elf` is still there, delete it. It is part of this Fusion Fix now; while it is installed, the Fusion Fix stays off and says so on screen.
@@ -32,7 +32,7 @@
 ## Useful information
 
 - Compatible version: **SLUS-21050** (crc: **BEBF8793**).
-- Keep PCSX2's FMV aspect ratio switch off; the fix fits the videos itself.
+- Keep PCSX2F's FMV aspect ratio switch off; the fix fits the videos itself.
 - With the emulator's aspect ratio on Stretch, the fix follows the window's shape.
 
 ## Settings

@@ -124,11 +124,5 @@ export namespace CoCCinema
         draw = reinterpret_cast<decltype(draw)>(injector::GetBranchDestination(bars.get_first(15)).as_int());
         effectHook = safetyhook::create_inline(effect.get_first(), Effect);
         projectionHook = safetyhook::create_inline(projection.get_first(), Projection);
-        if (!effectHook || !projectionHook)
-        {
-            effectHook.reset();
-            projectionHook.reset();
-            OutputDebugStringA("Call of Cthulhu: cutscene border hooks failed; native bars retained.\n");
-        }
     }
 }

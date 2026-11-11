@@ -12,7 +12,6 @@ namespace THPS2DirectVideo
 {
     using CopyFn = int(__stdcall*)(void*, void*, int, unsigned, unsigned, unsigned, unsigned);
     inline CopyFn Copy = nullptr;
-    inline const int32_t* Mode = nullptr;
 
     struct FrameCache
     {
@@ -24,11 +23,10 @@ namespace THPS2DirectVideo
     inline FrameCache Frame;
 
     inline void Fit(uint8_t* pixels, int pitch, unsigned width, unsigned height, unsigned bytes,
-        unsigned sourceWidth, unsigned sourceHeight, int mode)
+        unsigned sourceWidth, unsigned sourceHeight)
     {
-        const float areaWidth = mode == 0 ? std::min(float(width), float(height) * 4.0f / 3.0f) : float(width);
-        const float areaHeight = mode == 0 ? std::min(float(height), float(width) * 3.0f / 4.0f) : float(height);
-        const float factor = std::min(areaWidth / sourceWidth, areaHeight / sourceHeight);
+        // The whole movie at its own aspect, centred
+        const float factor = std::min(float(width) / sourceWidth, float(height) / sourceHeight);
         const unsigned outWidth = std::clamp(unsigned(std::lround(sourceWidth * factor)), 1u, width);
         const unsigned outHeight = std::clamp(unsigned(std::lround(sourceHeight * factor)), 1u, height);
         const unsigned left = (width - outWidth) / 2, top = (height - outHeight) / 2;
@@ -90,30 +88,22 @@ namespace THPS2DirectVideo
             Frame.movie = nullptr;
             return result;
         }
-        try
-        {
-            Frame.source.resize(sourcePitch * sourceHeight);
-            for (unsigned row = 0; row < sourceHeight; ++row)
-                std::memcpy(Frame.source.data() + size_t(row) * sourcePitch,
-                    static_cast<uint8_t*>(pixels) + ptrdiff_t(y + row) * pitch + size_t(x) * bytes, sourcePitch);
-            Frame.movie = movie;
-            Frame.width = sourceWidth;
-            Frame.height = sourceHeight;
-            Frame.bytes = bytes;
-            Frame.frame = frame;
-            Frame.flags = flags;
-            Fit(static_cast<uint8_t*>(pixels), pitch, width, surfaceHeight, bytes, sourceWidth, sourceHeight, std::clamp(*Mode, 0, 1));
-        }
-        catch (...)
-        {
-            Frame.movie = nullptr;
-        }
+        Frame.source.resize(sourcePitch * sourceHeight);
+        for (unsigned row = 0; row < sourceHeight; ++row)
+            std::memcpy(Frame.source.data() + size_t(row) * sourcePitch,
+                static_cast<uint8_t*>(pixels) + ptrdiff_t(y + row) * pitch + size_t(x) * bytes, sourcePitch);
+        Frame.movie = movie;
+        Frame.width = sourceWidth;
+        Frame.height = sourceHeight;
+        Frame.bytes = bytes;
+        Frame.frame = frame;
+        Frame.flags = flags;
+        Fit(static_cast<uint8_t*>(pixels), pitch, width, surfaceHeight, bytes, sourceWidth, sourceHeight);
         return result;
     }
 
-    inline void Install(const int32_t* mode, HMODULE module = GetModuleHandleW(nullptr))
+    inline void Install(HMODULE module = GetModuleHandleW(nullptr))
     {
-        Mode = mode;
         auto copy = hook::module_pattern(module, "8B 0D ? ? ? ? 52 8B 15 ? ? ? ? 50 51 52 FF 15 ? ? ? ? A0 ? ? ? ? 84 C0 0F 84");
         auto render = hook::module_pattern(module, "8B 44 24 04 A3 ? ? ? ? 48 0F 84 ? ? ? ? 48 0F 84 ? ? ? ? C7 05");
         const auto surfacePointer = *copy.get_first<uint8_t**>(2);
@@ -136,7 +126,6 @@ export namespace THPS2Video
     using TonyVideo::Layout;
 
     inline SafetyHookInline SetupHook, DrawHook;
-    inline const int32_t* Mode = nullptr;
     inline float Width = 640.0f, Height = 480.0f;
     inline std::array<Vertex, 8> Native{};
     inline bool Ready = false;
@@ -152,9 +141,9 @@ export namespace THPS2Video
 
     inline int __cdecl Draw()
     {
-        if (!Ready || !Mode)
+        if (!Ready)
             return DrawHook.ccall<int>();
-        const auto box = Layout(Width, Height, static_cast<float>(MovieWidth.get()), static_cast<float>(MovieHeight.get()), std::clamp(*Mode, 0, 1));
+        const auto box = Layout(Width, Height, static_cast<float>(MovieWidth.get()), static_cast<float>(MovieHeight.get()), 1);
         const bool split = MovieSplit.get() != 0;
         const float edge = split ? std::clamp(static_cast<float>(MovieTextureWidth.get()) / MovieWidth.get(), 0.0f, 1.0f) : 1.0f;
         const auto count = split ? 8u : 4u;
@@ -174,11 +163,10 @@ export namespace THPS2Video
         return result;
     }
 
-    inline void Install(float width, float height, const int32_t* mode, HMODULE module = GetModuleHandleW(nullptr))
+    inline void Install(float width, float height, HMODULE module = GetModuleHandleW(nullptr))
     {
         Width = width;
         Height = height;
-        Mode = mode;
         auto setup = hook::module_pattern(module, "A0 ? ? ? ? 83 EC 10 53 33 DB 3A C3 0F 84 ? ? ? ? A1 ? ? ? ? 8B 0D");
         auto draw = hook::module_pattern(module, "A1 ? ? ? ? 83 EC 14 85 C0 56 0F 84 ? ? ? ? 8D 44 24 08 8D 4C 24 0C");
         auto summary = hook::module_pattern(module, "A1 ? ? ? ? 68 ? ? ? ? 50 FF 15 ? ? ? ? 8B 15 ? ? ? ? 8B 0D ? ? ? ? A1");
@@ -193,6 +181,6 @@ export namespace THPS2Video
         MovieVertices.SetAddress(*quad.get_first<Vertex*>(5));
         SetupHook = safetyhook::create_inline(setup.get_first(), Setup);
         DrawHook = safetyhook::create_inline(draw.get_first(), Draw);
-        THPS2DirectVideo::Install(Mode, module);
+        THPS2DirectVideo::Install(module);
     }
 }

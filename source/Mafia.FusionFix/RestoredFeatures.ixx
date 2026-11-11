@@ -364,8 +364,6 @@ namespace RestoredFeatures
         radar = oldLayout ? RadarLayout{ 37008, 38072, 0xAF4, 0x18, 0x4C, 0x64, 37228 }
             : RadarLayout{ 16528, 17600, 0xB04, 0x20, 0x6C, 0x74, 16756 };
         radarDrawHook = safetyhook::create_inline(pDraw.get_first(), DrawRadar);
-        if (!radarDrawHook)
-            throw std::runtime_error("Radar draw hook unavailable");
         if (!radarMap)
             return;
         auto manager = find_pattern("8B 0D ? ? ? ? 6A 01 6A FF 6A 00 68 ? ? ? ? E8 ? ? ? ? 8D 94 24 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 52");
@@ -375,11 +373,6 @@ namespace RestoredFeatures
         auto pModels = find_pattern<2>(
             "D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 94 24 ? ? ? ? 8D 44 24 ? 52 50 D9 5C 24 ? 56 E8",
             "D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 94 24 ? ? ? ? 8D 84 24 ? ? ? ? 52 50 D9 5C 24 ? 56 E8");
-        if (pModels.size() != 2)
-        {
-            radarDrawHook.reset();
-            throw std::runtime_error("Radar model sites unavailable");
-        }
         void* target;
         if (oldLayout)
         {
@@ -397,31 +390,11 @@ namespace RestoredFeatures
         static auto CarsHook = safetyhook::create_mid(pCars.get_first(), ScaleRadarBlip);
         static auto ModelsHook = safetyhook::create_mid(pModels.get(0).get<void>(), ScaleRadarBlip);
         static auto MapHook = safetyhook::create_mid(target, DrawRadarMap);
-        if (!radarUpdateHook || !radarDrawHook || !CarsHook || !ModelsHook || !MapHook)
-        {
-            MapHook.reset();
-            ModelsHook.reset();
-            CarsHook.reset();
-            radarMap = false;
-            radarUpdateHook.reset();
-            radarDrawHook.reset();
-            throw std::runtime_error("Radar map hook unavailable");
-        }
         auto pMask = find_pattern(
             "8B 10 51 50 FF 52 0C A1 ? ? ? ? 8D 8C 24 8C 00 00 00 6A 01 51 8B 10 6A 02 6A 05 50 FF 52 58 D9 44 24 ? D8 05",
             "8B 10 51 50 FF 52 0C A1 ? ? ? ? 8D 4C 24 7C 6A 01 51 8B 10 6A 02 6A 05 50 FF 52 58 D9 44 24 ? D8 05");
         {
             static auto RadarMaskHook = safetyhook::create_mid(pMask.get_first(oldLayout ? 26 : 29), DrawRadarMask);
-            if (!RadarMaskHook)
-            {
-                MapHook.reset();
-                ModelsHook.reset();
-                CarsHook.reset();
-                radarUpdateHook.reset();
-                radarDrawHook.reset();
-                radarMap = false;
-                throw std::runtime_error("Radar mask hook unavailable");
-            }
         }
     }
 }

@@ -20,7 +20,6 @@ export namespace Driv3rWindow
     inline RECT framedRect{};
     inline int framedWidth = 0, framedHeight = 0, lastWindowMode = 1;
     inline SafetyHookInline procedureHook;
-    inline bool ready = false;
     inline int mode = 0, requestedIndex = -1;
 
     inline HWND Window() { return hWnd.is_initialized() ? hWnd.get() : nullptr; }
@@ -42,7 +41,7 @@ export namespace Driv3rWindow
         if (!window)
             return false;
         WindowStyle::SquareCorners(window);
-        if (!ready || mode == 0 || !Dimensions(width, height))
+        if (mode == 0 || !Dimensions(width, height))
             return false;
         const DWORD frameBits = WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU;
         DWORD style = DWORD(GetWindowLongW(window, GWL_STYLE)) & ~(frameBits | WS_POPUP);
@@ -59,7 +58,7 @@ export namespace Driv3rWindow
 
     inline void Request(SafetyHookContext& context)
     {
-        if (!ready || mode == 0 || reinterpret_cast<uint8_t*>(context.eax) != Renderer.get_ptr())
+        if (mode == 0 || reinterpret_cast<uint8_t*>(context.eax) != Renderer.get_ptr())
             return;
         auto index = *reinterpret_cast<const int**>(context.esp + 8);
         if (index) requestedIndex = *index;
@@ -70,7 +69,7 @@ export namespace Driv3rWindow
 
     inline bool Prepare(void* context, int width, int height)
     {
-        if (!ready || mode == 0 || context != Renderer.get_ptr() || !Dimensions(width, height))
+        if (mode == 0 || context != Renderer.get_ptr() || !Dimensions(width, height))
             return false;
         auto& present = *reinterpret_cast<D3DPRESENT_PARAMETERS*>(Renderer.get_ptr() + 0x160);
         // The native windowed branch uses zero dimensions, which mean the
@@ -122,7 +121,7 @@ export namespace Driv3rWindow
     inline bool Frame(IDirect3DDevice9* device, bool blocked)
     {
         const auto window = Window();
-        if (!ready || !window || GetForegroundWindow() != window)
+        if (!window || GetForegroundWindow() != window)
         {
             InterlockedExchange(&toggleDown, 0);
             InterlockedExchange(&toggleRequested, 0);
@@ -176,7 +175,7 @@ export namespace Driv3rWindow
 
     inline LRESULT CALLBACK Procedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
-        if (ready && window == Window() && wParam == VK_RETURN &&
+        if (window == Window() && wParam == VK_RETURN &&
             (message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) && ((lParam & (1u << 29)) || toggleDown))
         {
             if (message == WM_SYSKEYUP) InterlockedExchange(&toggleDown, 0);
@@ -184,7 +183,7 @@ export namespace Driv3rWindow
                 !InterlockedCompareExchange(&toggleDown, 1, 0)) InterlockedExchange(&toggleRequested, 1);
             return 0;
         }
-        if (ready && mode != 0 && window == Window() && message == WM_CLOSE)
+        if (mode != 0 && window == Window() && message == WM_CLOSE)
         {
             // The native message pump consumes WM_QUIT and unwinds the loop;
             // WinMain then destroys its own window and releases its services.
@@ -202,20 +201,8 @@ export namespace Driv3rWindow
         auto builder = hook::pattern("83 EC 10 53 55 8B 6C 24 20 8B D8 8B 45 00 3B 83 50 01 00 00 75 1D 8B 4C 24 24 8A 11 3A 93 4C 01 00 00");
         auto windowed = hook::pattern("89 83 80 01 00 00 EB 2A");
         auto procedure = hook::pattern("8B 44 24 08 8B 54 24 10 83 EC 28 3D 03 02 00 00 53 55 8B 6C 24 3C 56 57 0F 87 A6 02 00 00");
-        if (!hWnd.is_initialized() || !Renderer.is_initialized())
-        {
-            OutputDebugStringA("Driv3r: window mode contracts unavailable; native mode retained.\n");
-            return;
-        }
         modeHook = safetyhook::create_mid(builder.get_first(), Request);
         publicationHook = safetyhook::create_mid(windowed.get_first(), Configured);
         procedureHook = safetyhook::create_inline(procedure.get_first(), Procedure);
-        if (!modeHook || !publicationHook || !procedureHook)
-        {
-            modeHook.reset(); publicationHook.reset(); procedureHook.reset();
-            OutputDebugStringA("Driv3r: window mode hooks failed; native mode retained.\n");
-            return;
-        }
-        ready = true;
     }
 }

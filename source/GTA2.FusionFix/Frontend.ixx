@@ -27,8 +27,6 @@ void InstallOptions(void* setPage)
     ReloadVideoMode = reinterpret_cast<decltype(ReloadVideoMode)>(reload.get_first());
     ApplyResolution = []
     {
-        if (!ReloadVideoMode)
-            return false;
         // The video mode is re-read from the patched settings and reset, as after alt-tab.
         if (fullscreenWidth.is_initialized()) fullscreenWidth = nResX;
         if (fullscreenHeight.is_initialized()) fullscreenHeight = nResY;

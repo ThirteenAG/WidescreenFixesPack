@@ -12,7 +12,6 @@ export namespace RE0Resolution
 {
     inline SafetyHookMid countHook, enumHook;
     inline thread_local std::vector<UINT> indices;
-    inline bool ready = false;
     inline void* catalog = nullptr;
 
     // The game accepts a saved size only if it appears in its enumerated catalog. Windowed D3D9 can also use
@@ -83,23 +82,14 @@ export namespace RE0Resolution
             Collect(RE0Text::Read<IDirect3D9*>(value, 160), RE0Text::Read<UINT>(value, 0x447DEC), context.eax);
             context.eax = static_cast<uint32_t>(indices.size());
         });
-        if (countHook) enumHook = safetyhook::create_mid(enumeration.get_first(6), [](SafetyHookContext& context)
+        enumHook = safetyhook::create_mid(enumeration.get_first(6), [](SafetyHookContext& context)
         {
             const auto index = RE0Text::Read<UINT>(reinterpret_cast<void*>(context.esp), 12);
             if (index < indices.size())
                 RE0Text::Write(reinterpret_cast<void*>(context.esp), 12, indices[index]);
         });
-        ready = countHook && enumHook;
-        if (ready)
-        {
-            injector::MakeNOP(limits.get_first(3), 6, true);
-            injector::WriteMemory<uint32_t>(limits.get_first<uint32_t>(30), 8192, true);
-            injector::WriteMemory<uint32_t>(limits.get_first<uint32_t>(37), 8192, true);
-        }
-        else
-        {
-            countHook.reset();
-            enumHook.reset();
-        }
+        injector::MakeNOP(limits.get_first(3), 6, true);
+        injector::WriteMemory<uint32_t>(limits.get_first<uint32_t>(30), 8192, true);
+        injector::WriteMemory<uint32_t>(limits.get_first<uint32_t>(37), 8192, true);
     }
 }

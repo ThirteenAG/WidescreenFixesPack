@@ -36,13 +36,6 @@ export namespace SniperUpdates
     {
         auto font = hook::pattern("E8 ? ? ? ? D8 2D ? ? ? ? A1 ? ? ? ? 50 D9 5C 24 08"); //475092
         auto setFont = hook::pattern("8B 44 24 04 83 F8 FF 74 ? 8B 0D ? ? ? ? 83 3C 81 00"); //40E5F0
-        const bool available = print != nullptr;
-        FixSettings().Availability("MAIN.CheckForUpdates", [available](std::string_view value)
-        {
-            return value == "0" || available;
-        });
-        if (!available)
-            return;
         Print = print;
         if (auto* fontAddress = *font.get_first<int32_t*>(12))
             UpdateFont.SetAddress(fontAddress);

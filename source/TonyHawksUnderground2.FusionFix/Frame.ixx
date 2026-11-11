@@ -167,8 +167,6 @@ export namespace THUG2Frame
         LetterboxHook = safetyhook::create_inline(letterbox.get_first(), SetLetterbox);
         ViewportHook = safetyhook::create_mid(viewport.get_first(10), [](SafetyHookContext&) { SetViewport(false); });
         OverlayViewportHook = safetyhook::create_mid(overlayViewport.get_first(8), [](SafetyHookContext&) { SetViewport(true); });
-        if (!ScaleHook || !LetterboxHook || !ViewportHook || !OverlayViewportHook)
-            std::terminate();
     }
 }
 

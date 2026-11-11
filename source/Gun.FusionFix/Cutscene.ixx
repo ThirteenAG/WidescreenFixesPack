@@ -97,8 +97,7 @@ export namespace GunCutscene
     {
         ScreenAspect.store(aspect, std::memory_order_relaxed);
         auto letterbox = hook::pattern("8A 44 24 04 84 C0 A0 ? ? ? ? 74 27 84 C0 75 63 A1 ? ? ? ? D9 05 ? ? ? ? D8 0D");
-        if (auto address = *letterbox.get_first<uint8_t*>(7))
-            LetterboxFlag.SetAddress(address);
+        LetterboxFlag.SetAddress(*letterbox.get_first<uint8_t*>(7));
         Hook = safetyhook::create_inline(letterbox.get_first(), SetLetterbox);
     }
 }

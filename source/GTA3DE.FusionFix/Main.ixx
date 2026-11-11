@@ -36,14 +36,10 @@ export void InitFusionFix()
 {
     ReadSettings();
     WFP::onInitEvent().executeAll();
-    if (auto address = hook::pattern("48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 48 89 4C 24 08 57 41 54 41 55 41 56 41 57 48 83 EC 40 45 33 ED 4C 8D 3D ?").get_first())
-        initialiseHook = safetyhook::create_inline(address, Initialise);
+    initialiseHook = safetyhook::create_inline(hook::pattern("48 89 5C 24 10 48 89 6C 24 18 48 89 74 24 20 48 89 4C 24 08 57 41 54 41 55 41 56 41 57 48 83 EC 40 45 33 ED 4C 8D 3D ?").get_first(), Initialise);
     // CGame::Process, rather than CCamera::Process (which also runs in loads).
-    if (auto address = hook::pattern("40 53 55 41 54 48 81 EC A0 00 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89").get_first())
+    static auto processHook = safetyhook::create_mid(hook::pattern("40 53 55 41 54 48 81 EC A0 00 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89").get_first(), [](SafetyHookContext&)
     {
-        static auto processHook = safetyhook::create_mid(address, [](SafetyHookContext&)
-        {
-            WFP::onGameProcessEvent().executeAll();
-        });
-    }
+        WFP::onGameProcessEvent().executeAll();
+    });
 }

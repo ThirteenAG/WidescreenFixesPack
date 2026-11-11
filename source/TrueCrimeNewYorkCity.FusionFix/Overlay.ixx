@@ -72,7 +72,6 @@ namespace TCOverlay
             resetHook.reset();
             auto vtable = *reinterpret_cast<void***>(device);
             resetHook = safetyhook::create_inline(vtable[16], Reset);
-            if (!resetHook) { device->Release(); return; }
             resetDevice = device;
         }
         overlay.hotkey = FixSettings().Int("MAIN.OverlayHotkey");

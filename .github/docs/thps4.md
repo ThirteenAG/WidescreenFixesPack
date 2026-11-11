@@ -21,7 +21,6 @@ Left and Right change a value, Enter steps it forward. **Details** below a setti
 | Resolution width and height | 0 = desktop resolution, or any size, including sizes the monitor doesn't list; Hub/settings file; restart | 0 |
 | Window mode | Fullscreen, Windowed or Borderless; live | Fullscreen |
 | Skip intro | Skip the Activision, Aspyr and Neversoft logos and the intro movie at startup; restart | On |
-| Video mode | Original aspect or Fill; live | Fill |
 | HUD aspect ratio | Auto for the whole screen width, or 4:3, 16:9, 21:9, 32:9 or a custom ratio; live | Auto |
 | Pause in background | On stops the game while another window is active, as the original does; Off keeps it running; live | On |
 | Frame rate limit | 30–1000 fps, Unlimited, or the desktop refresh rate; live | 60 |
@@ -36,7 +35,7 @@ Vanilla shows the logos and the intro movie and leaves the frame rate to the gam
 - **Any resolution and aspect ratio** from 5:4 to 32:9, with square pixels. The 3D view keeps the original vertical view and shows more at the sides (Hor+).
 - **HUD:** with **HUD aspect ratio** on Auto, the score, special meter and stance sit at the left edge of the screen, and the goal, cash and pro points at the right edge; trick text, the balance meter and messages stay centered. A ratio keeps them in a centered box of that shape. Nothing is stretched.
 - **Menus and 2D screens** (main menu, options, level select, skater select, dialogs) keep their 4:3 layout in the middle of the screen; the button help bar at the bottom spans the whole width. On screens narrower than 4:3, such as 5:4, they fit the width with the 3D scene above and below.
-- **Movies** are never cut off or stretched. All of the game's movies are 4:3 pictures, so Original and Fill both show them at full height with black bars at the sides.
+- **Movies** are never cut off or stretched. All of the game's movies are 4:3 pictures, shown at full height with black bars at the sides.
 - **Window modes** at any Windows display scaling, without rounded corners: Windowed opens a centered window with exactly the chosen client size, also for sizes the monitor doesn't list. The window is not minimized when another window becomes active.
 - **Soundtrack:** the random song order works.
 - **Ctrl+F10** opens the in-game settings overlay.

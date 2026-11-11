@@ -98,7 +98,6 @@ export namespace SecondSightRenderer
         update.playable = []() { return true; };
         update.show = [](const std::wstring& line) { notice = asi_settings::text::Narrow(line); };
         RWGTA::UpdateCheck::Init(std::move(update));
-        if (!D3D9Options::HookCreation())
-            OutputDebugStringA("Second Sight: Direct3D 9 hooks unavailable.\n");
+        D3D9Options::HookCreation();
     }
 }

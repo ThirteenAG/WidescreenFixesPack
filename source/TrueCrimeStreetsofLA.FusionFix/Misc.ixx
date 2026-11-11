@@ -75,7 +75,7 @@ public:
 
             // Projection: Hor+ field of view
             auto pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 F3 0F 10 75");
-            if (pattern.empty())
+            if (pattern.empty()) // TrueCrimeMB.exe
                 pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 D9 45 08 53 56 8B F1 D8 4E 04 8B 46 30 8B 4E 2C");
             sub_5EE430_hook = safetyhook::create_inline(pattern.get_first(0), sub_5EE430);
         };

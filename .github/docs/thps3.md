@@ -22,7 +22,6 @@ Left and Right change a value, Enter steps it forward. **Details** below a setti
 | Window mode | Fullscreen, Windowed or Borderless; restart | Fullscreen |
 | Field of view | 0.5–2.0; larger values widen the skating camera; live | 1.0 |
 | HUD aspect ratio | Auto for the whole screen width, or 4:3, 16:9, 21:9, 32:9 or a custom ratio; live | Auto |
-| Video mode | Original aspect or Fill; live | Fill |
 | Skip intro | Skip the publisher and studio logos and the intro movie at startup; restart | On |
 | Confine cursor | On keeps the cursor inside the active game window; Hub/settings file; live | On |
 | Check for updates | Off makes no network request; live | Off |
@@ -34,7 +33,7 @@ Vanilla shows the logos and the intro movie; Recommended and Enhanced skip them.
 - **Any resolution and aspect ratio** from 5:4 to 32:9, with square pixels. The 3D view keeps the original vertical view and shows more at the sides (Hor+).
 - **HUD:** with **HUD aspect ratio** on Auto, the score and special meter sit at the left edge of the screen and the stance icon at the right edge; the timer, trick text, balance meter and goal messages stay centered. A ratio keeps them in a centered box of that shape. Nothing is stretched.
 - **Menus and 2D screens** (main menu, options, level select, park editor, goal lists) keep their 4:3 layout in the middle of the screen. On screens narrower than 4:3, such as 5:4, they fit the width with the 3D scene above and below. The level-select tapes are centered.
-- **Movies** are never cut off or stretched. All of the game's movies are 4:3, so Original and Fill both show them at full height with black bars at the sides.
+- **Movies** are never cut off or stretched. All of the game's movies are 4:3, shown at full height with black bars at the sides.
 - **Window modes** at any Windows display scaling, without rounded corners: Windowed opens a centered window with exactly the chosen client size, also for sizes the monitor doesn't list. In windowed modes the window is not minimized when another window becomes active; the game keeps running in the background and takes keyboard input again when you return.
 - **Soundtrack:** the random song order works.
 

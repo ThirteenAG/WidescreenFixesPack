@@ -17,14 +17,8 @@ export namespace PsychonautsUpdates
         ExitProcess(code);
     }
 
-    inline void Init(bool menu)
+    inline void Init()
     {
-        FixSettings().Availability("MAIN.CheckForUpdates", [menu](std::string_view value)
-        {
-            return value == "0" || menu;
-        });
-        if (!menu)
-            return;
         IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", Exit));
         RWGTA::UpdateCheck::Config config;
         config.pluginId = "Psychonauts.FusionFix";

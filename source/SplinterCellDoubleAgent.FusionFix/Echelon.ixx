@@ -123,7 +123,7 @@ export void InitEchelon()
     // instead of taking it from the profile, so earned gadgets stay locked. Later builds already load it.
     {
         auto pattern = hook::module_pattern(GetModuleHandle(L"Echelon"), "89 9E 08 07 00 00 C7 45 EC FF FF FF FF");
-        if (!pattern.empty())
+        if (!pattern.empty()) // 1.00
         {
             injector::MakeNOP(pattern.get_first(), 6, true);
 

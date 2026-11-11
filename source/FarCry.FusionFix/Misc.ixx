@@ -208,7 +208,7 @@ export void Init()
 
 export void InitXRenderD3D9()
 {
-    const bool windowReady = FarCryWindow::Install(GetModuleHandleW(L"XRenderD3D9.dll"));
+    FarCryWindow::Install(GetModuleHandleW(L"XRenderD3D9.dll"));
     FarCryCinematics::DeviceReady = InitDeviceHook();
     #ifndef _WIN64
     auto pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "E8 ? ? ? ? 8B 86 98 C6 01 00 8B 08 57 6A 03 50 FF 91 B0 00 00 00 8B 86 18 D3 01 00");
@@ -313,34 +313,6 @@ export void InitXRenderD3D9()
     });
     #endif
 
-    if (!windowReady)
-    {
-    #ifndef _WIN64
-    //borderless windowed
-    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 35 ? ? ? ? 6A 10");
-    injector::WriteMemory<decltype(&GetSystemMetricsHook)>(reinterpret_cast<decltype(&GetSystemMetricsHook)*>(*pattern.get_first<uint32_t*>(2)), &GetSystemMetricsHook, true); //0x3816A218
-
-    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 86 ? ? ? ? 83 C0 F0 3B F8 7E 02 8B F8");
-    injector::WriteMemory<uint8_t>(pattern.get_first<uint8_t>(-2), 0xEB, true); //jmp
-
-    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "B8 00 00 CA 10 89 83 34 B7 01 00");
-    auto style = pattern.get_first<LONG>(1);
-    injector::WriteMemory<LONG>(style, *style & ~WS_OVERLAPPEDWINDOW, true);
-    #else
-    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "FF 15 ? ? ? ? B9 ? ? ? ? 2B C3 99 2B C2 D1 F8 44 8B F0");
-    auto ptr = (uint64_t)pattern.get_first(0) + injector::ReadMemory<uint32_t>(pattern.get_first(2), true) + 6;
-    injector::WriteMemory<decltype(&GetSystemMetricsHook)>(reinterpret_cast<decltype(&GetSystemMetricsHook)*>(ptr), &GetSystemMetricsHook, true); //0x1008845E
-
-    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "41 8B 84 24 ? ? ? ? 83 C0 F0 3B F8 0F 4F F8");
-    injector::WriteMemory<uint8_t>(pattern.get_first<uint8_t>(-2), 0xEB, true); //jmp
-
-    pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "BD ? ? ? ? 89 AF ? ? ? ? 4C 89 AC 24 ? ? ? ? 0F 85 ? ? ? ? 41 BD");
-    auto style = pattern.get_first<LONG>(1);
-    injector::WriteMemory<LONG>(style, *style & ~WS_OVERLAPPEDWINDOW, true);
-    #endif
-
-    }
-
     //2D
     #ifndef _WIN64
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "8B 86 ? ? ? ? 8B 80 ? ? ? ? 8D 8D");
@@ -359,8 +331,8 @@ export void InitXRenderD3D9()
 
             if (FarCryCinematics::StockBar(x1, y1, x2, y2))
             {
-                injector::WriteMemory<float>(reinterpret_cast<float*>(regs.esp + 0x38), 0.0f, true);
-                injector::WriteMemory<float>(reinterpret_cast<float*>(regs.esp + 0x3C), 0.0f, true);
+                *reinterpret_cast<float*>(regs.esp + 0x38) = 0.0f;
+                *reinterpret_cast<float*>(regs.esp + 0x3C) = 0.0f;
                 return;
             }
 
@@ -394,14 +366,14 @@ export void InitXRenderD3D9()
                         DrawImage(reinterpret_cast<void*>(regs.esi), bar.x, bar.y, bar.width, bar.height,
                             0, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.5f);
                     });
-                    injector::WriteMemory<float>(reinterpret_cast<float*>(regs.esp + 0x30), geometry.image.x, true);
-                    injector::WriteMemory<float>(reinterpret_cast<float*>(regs.esp + 0x34), geometry.image.y, true);
-                    injector::WriteMemory<float>(reinterpret_cast<float*>(regs.esp + 0x38), geometry.image.width, true);
-                    injector::WriteMemory<float>(reinterpret_cast<float*>(regs.esp + 0x3C), geometry.image.height, true);
-                    injector::WriteMemory<float>(reinterpret_cast<float*>(regs.esp + 0x44), geometry.u0, true);
-                    injector::WriteMemory<float>(reinterpret_cast<float*>(regs.esp + 0x48), geometry.v0, true);
-                    injector::WriteMemory<float>(reinterpret_cast<float*>(regs.esp + 0x4C), geometry.u1, true);
-                    injector::WriteMemory<float>(reinterpret_cast<float*>(regs.esp + 0x50), geometry.v1, true);
+                    *reinterpret_cast<float*>(regs.esp + 0x30) = geometry.image.x;
+                    *reinterpret_cast<float*>(regs.esp + 0x34) = geometry.image.y;
+                    *reinterpret_cast<float*>(regs.esp + 0x38) = geometry.image.width;
+                    *reinterpret_cast<float*>(regs.esp + 0x3C) = geometry.image.height;
+                    *reinterpret_cast<float*>(regs.esp + 0x44) = geometry.u0;
+                    *reinterpret_cast<float*>(regs.esp + 0x48) = geometry.v0;
+                    *reinterpret_cast<float*>(regs.esp + 0x4C) = geometry.u1;
+                    *reinterpret_cast<float*>(regs.esp + 0x50) = geometry.v1;
                     return;
                 }
                 *(float*)(regs.esp + 0x30) /= Screen.fHudScale;

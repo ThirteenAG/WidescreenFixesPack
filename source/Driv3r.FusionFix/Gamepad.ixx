@@ -20,7 +20,7 @@ export namespace Driv3rPad
     std::atomic<bool> dirty{ true }, stopRequested{ true };
     std::array<IDirectInputDevice8A*, 8> devices{};
     std::array<IDirectInputEffect*, 8> effects{};
-    bool ready = false, wasBlocked = false;
+    bool wasBlocked = false;
 
     DWORD Deadzone()
     {
@@ -34,7 +34,7 @@ export namespace Driv3rPad
     void StopEffects()
     {
         const uintptr_t manager = InputManager;
-        if (!ready || !manager || !*reinterpret_cast<const uint8_t*>(manager + 4)) return;
+        if (!manager || !*reinterpret_cast<const uint8_t*>(manager + 4)) return;
         auto* joystick = reinterpret_cast<uint8_t*>(manager + 588);
         for (size_t index = 0; index < effects.size(); ++index)
         {
@@ -44,7 +44,6 @@ export namespace Driv3rPad
     }
     void Frame()
     {
-        if (!ready) return;
         const uintptr_t manager = InputManager;
         if (!manager || !*reinterpret_cast<const uint8_t*>(manager + 4)) return;
         auto* joystick = reinterpret_cast<uint8_t*>(manager + 588);
@@ -74,8 +73,6 @@ export namespace Driv3rPad
     }
     void Install()
     {
-        FixSettings().Availability("MAIN.GamepadDeadzone", [](std::string_view) { return ready; });
-        FixSettings().Availability("MAIN.Vibration", [](std::string_view) { return ready; });
         auto init = hook::pattern("C7 86 64 05 00 00 C4 09 00 00 8B 0F 57 FF 51 10");
         auto vibration = hook::pattern("83 EC 48 8D 04 C0 C1 E0 04 53 33 DB 39 5C 08 04 8D 14 08");
         initHook = safetyhook::create_mid(init.get_first(10), [](SafetyHookContext& regs)
@@ -92,13 +89,6 @@ export namespace Driv3rPad
                 *reinterpret_cast<float*>(regs.esp + 8) = 0.0f;
             }
         });
-        ready = initHook && vibrationHook;
-        if (!ready)
-        {
-            initHook.reset();
-            vibrationHook.reset();
-            OutputDebugStringA("Driv3r: native controller property hooks unavailable.\n");
-        }
         FixSettings().OnChange("MAIN.GamepadDeadzone", []() { dirty.store(true); });
         FixSettings().OnChange("MAIN.Vibration", []() { stopRequested.store(true); });
     }

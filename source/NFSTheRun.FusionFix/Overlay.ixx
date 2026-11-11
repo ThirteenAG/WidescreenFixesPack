@@ -69,8 +69,6 @@ namespace
 
     DWORD WINAPI XInputGetStateHook(DWORD userIndex, XINPUT_STATE* state)
     {
-        if (!GameXInputGetState)
-            return ERROR_DEVICE_NOT_CONNECTED;
         auto result = GameXInputGetState(userIndex, state);
         if (result != ERROR_SUCCESS || !state || userIndex != 0)
             return result;
@@ -129,10 +127,8 @@ public:
                     ui.Value("Resolution", std::to_string(client.right) + " x " + std::to_string(client.bottom));
             });
 
-            GameXInputGetState = PadInput::XInput().getState;
             auto originals = IATHook::Replace(GetModuleHandleA(NULL), "xinput9_1_0.dll", std::forward_as_tuple("XInputGetState", XInputGetStateHook));
-            if (originals.contains("XInputGetState"))
-                GameXInputGetState = reinterpret_cast<decltype(GameXInputGetState)>(originals["XInputGetState"].get());
+            GameXInputGetState = reinterpret_cast<decltype(GameXInputGetState)>(originals.at("XInputGetState").get());
 
             WFP::onGameProcessEvent() += []()
             {

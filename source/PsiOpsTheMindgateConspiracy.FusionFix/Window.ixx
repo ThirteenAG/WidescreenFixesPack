@@ -328,11 +328,7 @@ export namespace PsiOpsWindow
         CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
         const auto user = GetModuleHandleW(L"user32.dll");
         const auto d3d = LoadLibraryW(L"d3d9.dll");
-        if (user)
-            createWindowHook = safetyhook::create_inline(GetProcAddress(user, "CreateWindowExA"), CreateEngineWindow);
-        if (d3d)
-            createD3DHook = safetyhook::create_inline(GetProcAddress(d3d, "Direct3DCreate9"), CreateD3D);
-        if (!createWindowHook || !createD3DHook)
-            OutputDebugStringA("Psi-Ops: window contracts unavailable.\n");
+        createWindowHook = safetyhook::create_inline(GetProcAddress(user, "CreateWindowExA"), CreateEngineWindow);
+        createD3DHook = safetyhook::create_inline(GetProcAddress(d3d, "Direct3DCreate9"), CreateD3D);
     }
 }

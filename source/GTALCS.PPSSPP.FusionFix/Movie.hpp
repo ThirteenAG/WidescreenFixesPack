@@ -9,8 +9,8 @@ struct MovieMap
     static constexpr int Width = 480, Height = 272;
     int x[Width]{}, y[Height]{};
 
-    // Both modes show the whole movie at its own aspect with black bars
-    void Set(float aspect, int)
+    // The whole 16:9 movie at its own aspect, with black bars on other screen shapes
+    void Set(float aspect)
     {
         constexpr float original = float(Width) / Height;
         if (!std::isfinite(aspect) || aspect <= 0.0f) aspect = original;

@@ -360,7 +360,7 @@ namespace
     constexpr int WidthsPerStyle = 210;
     std::vector<int16_t> Widths;
 
-    bool ExtendWidthTable(const int16_t* table, uint8_t* codeBegin, uint8_t* codeEnd)
+    void ExtendWidthTable(const int16_t* table, uint8_t* codeBegin, uint8_t* codeEnd)
     {
         constexpr size_t count = 0x10000 + FontStyles * WidthsPerStyle;
         Widths.assign(count, 0);
@@ -376,7 +376,6 @@ namespace
 
         // movsx reg, word ptr [table + index * 2] and the fixed-width column [table + 209 * 2 + index * 4]
         auto fixed = reinterpret_cast<const uint8_t*>(table) + (WidthsPerStyle - 1) * sizeof(int16_t);
-        int count1 = 0, count2 = 0;
         for (auto p = codeBegin; p + 8 <= codeEnd; ++p)
         {
             if (p[0] != 0x0F || p[1] != 0xBF || (p[2] & 0xC7) != 0x04)
@@ -385,15 +384,12 @@ namespace
             if (*operand == table && (p[3] >> 6) == 1)
             {
                 injector::WriteMemory(operand, Widths.data(), true);
-                ++count1;
             }
             else if (*operand == fixed && (p[3] >> 6) == 2)
             {
                 injector::WriteMemory(operand, reinterpret_cast<uint8_t*>(Widths.data()) + (WidthsPerStyle - 1) * sizeof(int16_t), true);
-                ++count2;
             }
         }
-        return count1 >= 6 && count2 >= 6;
     }
 
     // The code section of the game
@@ -554,8 +550,7 @@ public:
                     table = *reinterpret_cast<const int16_t**>(p + 4);
             }
             auto [codeBegin, codeEnd] = CodeRange();
-            if (!table || !codeBegin || !ExtendWidthTable(table, codeBegin, codeEnd))
-                return;
+            ExtendWidthTable(table, codeBegin, codeEnd);
 
             Rw.RasterCreate = reinterpret_cast<decltype(Rw.RasterCreate)>(rasterCreate.get_first());
             Rw.RasterLock = reinterpret_cast<decltype(Rw.RasterLock)>(rasterLock.get_first());

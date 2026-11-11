@@ -84,9 +84,9 @@ export namespace JCCamera
             return;
         }
         const auto original = *fov;
-        injector::WriteMemory<float>(fov, Scaled(original, static_cast<float>(width) / height, multiplier), true);
+        *fov = Scaled(original, static_cast<float>(width) / height, multiplier);
         projectionHook.thiscall<void>(camera);
-        injector::WriteMemory<float>(fov, original, true);
+        *fov = original;
     }
 
     inline void Install()
@@ -96,9 +96,6 @@ export namespace JCCamera
         FixSettings().OnChange("MAIN.CutsceneBorders", Refresh);
         auto projection = hook::pattern("83 EC 08 56 8B F1 8B 86 A8 03 00 00 85 C0 C7 44 24 04 00 00 80 3F 89 44 24 08");
         projectionHook = safetyhook::create_inline(projection.get_first(), Projection);
-        ready = static_cast<bool>(projectionHook);
-        if (!ready)
-            OutputDebugStringA("Just Cause: camera projection hook unavailable.\n");
-        FixSettings().Availability("MAIN.FOVFactor", [](std::string_view) { return ready; });
+        ready = true;
     }
 }

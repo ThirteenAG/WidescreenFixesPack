@@ -33,11 +33,9 @@ export namespace Driv3rVideo
 
     SafetyHookMid drawHook, endHook;
     thread_local bool drawing = false;
-    bool ready = false;
 
     void Install()
     {
-        FixSettings().Availability("MAIN.FMVWidescreenMode", [](std::string_view) { return ready; });
         auto site = hook::pattern("D9 46 28 D8 76 30 D8 4E 38 D9 5C 24 5C E8 ? ? ? ? 8B 46 0C 85 C0 74 06 57 E8");
         drawHook = safetyhook::create_mid(site.get_first(13), [](SafetyHookContext& regs)
         {
@@ -61,12 +59,5 @@ export namespace Driv3rVideo
             quad[11] = (frame.v + frame.vScale) * v;
         });
         endHook = safetyhook::create_mid(site.get_first(18), [](SafetyHookContext& regs) { drawing = false; });
-        ready = drawHook && endHook;
-        if (!ready)
-        {
-            drawHook.reset();
-            endHook.reset();
-            OutputDebugStringA("Driv3r: fullscreen movie draw hook unavailable.\n");
-        }
     }
 }

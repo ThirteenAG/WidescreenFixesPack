@@ -2,7 +2,7 @@
 
 <img src="https://thirteenag.github.io/screens/condemned/main2.jpg" width="760" alt="Condemned: Criminal Origins Fusion Fix">
 
-**Condemned: Criminal Origins Fusion Fix** corrects ultrawide scaling, adds a field-of-view setting and skips the startup logos, with options for saved settings and window modes.
+**Condemned: Criminal Origins Fusion Fix** corrects ultrawide scaling, adds a field-of-view setting and skips the startup logos, keeps saves in your own Documents folder and adds window modes.
 
 [Website](https://thirteenag.github.io/wfp#condemned) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Condemned.FusionFix/dllmain.cpp)
 
@@ -17,6 +17,7 @@
 - **HUD** — The HUD uses the whole screen, also on screens narrower than 16:9.
 - **Menus** — Menu backgrounds keep their proportions.
 - **Frame rate drops** — No drop to roughly 20–30 FPS after several minutes.
+- **Save folder** — Saves and the game's settings are kept in your own Documents folder instead of the public one, so no administrator rights are needed. Saves already in the public folder are copied over the first time.
 - **Gamepad** — XInput controllers use [Xidi](https://github.com/samuelgr/Xidi). New profiles are configured with controller bindings alongside keyboard and mouse controls. If a controller does not respond, configure its bindings in the controls menu. Existing profiles keep their bindings. PlayStation and Switch controllers need an XInput mapping through Steam Input or DS4Windows.
 
 ## Options
@@ -31,7 +32,6 @@
 - **Confine cursor** — Keeps the mouse cursor inside the game window while the game is active.
 - **Check for updates** — Off by default. When on, the fix asks fusionfix.io once per start and shows a line on its settings page when a newer version is out.
 - **Skip intro** — On by default; skips the startup logo videos, as pressing the skip button would.
-- **Saved settings** — Compatibility option: keeps saves and settings in My Documents so no administrator rights are needed.
 
 ---
 

@@ -180,7 +180,7 @@ public:
             // FEngHud::SetWideScreenMode moves the radar's map once per HUD (x at +0xBC, esi): by the offset that applies
             // now, from where the HUD put it, also when it runs again for a changed HUD box
             pattern = find_pattern("F2 0F 5C 05 ? ? ? ? EB ? 68");
-            if (!pattern.empty())
+            if (!pattern.empty()) // Steam
             {
                 injector::MakeNOP(pattern.get_first(0), 8);
                 static auto SetWideScreenModeHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

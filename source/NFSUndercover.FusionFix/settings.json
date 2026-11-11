@@ -732,33 +732,6 @@
       ]
     },
     {
-      "id": "MAIN.FMVWidescreenMode",
-      "type": "choice",
-      "default": 1,
-      "choices": [
-        {
-          "value": 0,
-          "label": "@WFP_FMVMODE_ORIGINAL"
-        },
-        {
-          "value": 1,
-          "label": "@WFP_FMVMODE_FILL"
-        }
-      ],
-      "label": "@WFP_FMVMODE",
-      "description": "@WFP_DESC_FMVMODE",
-      "page": "movies",
-      "control": [
-        "segmented",
-        "cycler"
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
-    },
-    {
       "id": "MAIN.CutsceneBorders",
       "type": "choice",
       "default": 3,

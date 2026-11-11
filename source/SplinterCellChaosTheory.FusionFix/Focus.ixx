@@ -21,6 +21,38 @@ namespace
             return 0;
         return PauseHook.unsafe_fastcall<int>(engine, edx, paused);
     }
+
+    SafetyHookInline MovieSkipHook;
+
+    // Movies play in a loop of their own that never reads the window's messages, so Windows reports the window as
+    // not responding, and the loop takes its skip keys from the keyboard whichever program they are pressed in.
+    // This runs once per movie frame, after the frame is shown.
+    int __fastcall MovieSkip(void* engine, void* edx)
+    {
+        const bool unicode = hGameWindow && IsWindowUnicode(hGameWindow);
+        MSG msg;
+        while (unicode ? PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE) : PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT)
+            {
+                // Left for the main loop, which ends the game
+                PostQuitMessage(int(msg.wParam));
+                return 1;
+            }
+            TranslateMessage(&msg);
+            unicode ? DispatchMessageW(&msg) : DispatchMessageA(&msg);
+        }
+
+        // Mouse movement during a movie doesn't turn the camera afterwards
+        UWindowsViewport::deferredCauseInputEvent = {};
+        UWindowsViewport::deferredCauseInputEventForRawInput = nullptr;
+        RawInputHandler<>::RawMouseDeltaX.exchange(0);
+        RawInputHandler<>::RawMouseDeltaY.exchange(0);
+
+        if (hGameWindow && GetForegroundWindow() != hGameWindow)
+            return 0;
+        return MovieSkipHook.unsafe_fastcall<int>(engine, edx);
+    }
 }
 
 export namespace Focus
@@ -57,5 +89,8 @@ export namespace Focus
         });
         auto pattern = hook::pattern("81 EC B4 00 00 00 A1 ? ? ? ? 56 8B F1 89 84 24 B4 00 00 00 8B 86 A8 00 00 00 85 C0 74 30");
         PauseHook = safetyhook::create_inline(pattern.get_first(), Pause);
+
+        pattern = hook::pattern("56 57 8B F9 8B 07 33 F6 FF 50 48 85 C0 0F 84 E1 00 00 00");
+        MovieSkipHook = safetyhook::create_inline(pattern.get_first(), MovieSkip);
     }
 }

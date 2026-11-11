@@ -30,7 +30,6 @@ export namespace REIcons
     inline SafetyHookInline releaseHook;
     inline std::unordered_set<void*> fonts;
     inline void* savedFont = nullptr;
-    inline bool ready = false;
 
     inline bool Copy(IDirect3DTexture9* texture, uint8_t* bytes, bool read)
     {
@@ -122,7 +121,7 @@ export namespace REIcons
             Restore();
             return;
         }
-        if (!ready || !assetsReady) return;
+        if (!assetsReady) return;
         IDirect3DTexture9* texture = nullptr;
         void* font = nullptr;
         for (const auto candidate : fonts)
@@ -210,18 +209,16 @@ export namespace REIcons
                 REText::Read<uint32_t>(artwork.data(), 12) == 1024 && REText::Read<uint32_t>(artwork.data(), 16) == 256 &&
                 !std::memcmp(artwork.data() + 84, "DXT5", 4);
         }
-        if (assetsReady && Bind())
+        if (assetsReady)
         {
+            Bind();
             loadHook = safetyhook::create_inline(fontLoad, Load);
             releaseHook = safetyhook::create_inline(fontRelease, Release);
-            ready = loadHook && releaseHook;
-            if (!ready) { loadHook.reset(); releaseHook.reset(); }
         }
-        if (!assetsReady) OutputDebugStringA("Resident Evil: controller artwork file unavailable.\n");
-        else if (!ready) OutputDebugStringA("Resident Evil: controller font hooks unavailable.\n");
+        else OutputDebugStringA("Resident Evil: controller artwork file unavailable.\n");
         FixSettings().Availability("MAIN.GamepadIcons", [](std::string_view value)
         {
-            return value == "0" || value == "1" || (ready && assetsReady && !textureFailed);
+            return value == "0" || value == "1" || (assetsReady && !textureFailed);
         });
     }
 }

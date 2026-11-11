@@ -170,8 +170,7 @@ export namespace SkinCapture
         d3dx = LoadLibraryW(L"d3dx9_43.dll");
         if (d3dx) saveTexture = reinterpret_cast<SaveTexture>(GetProcAddress(d3dx, "D3DXSaveTextureToFileW"));
         const auto vtable = ScarfaceRTTI::FindVtable(".?AVd3dExtHardwareSkinning@pure3d@@");
-        if (vtable)
-            matrixHook = safetyhook::create_inline(*reinterpret_cast<void**>(vtable + 5 * sizeof(void*)), SetMatrix);
+        matrixHook = safetyhook::create_inline(*reinterpret_cast<void**>(vtable + 5 * sizeof(void*)), SetMatrix);
     }
 
     bool IsEnabled() { return enabled; }

@@ -52,11 +52,7 @@ public:
                 onResChange().executeAll(width, height);
             };
             GodfatherWindow::Init(Screen.nWidth, Screen.nHeight);
-            const bool timing = GodfatherTiming::Init();
-            settings.Availability("MAIN.FPSLimit", [timing](std::string_view value)
-            {
-                return value == "30" || timing;
-            });
+            GodfatherTiming::Init();
             GodfatherFocus::Init();
             GodfatherCinematics::Init();
             GodfatherMovies::Init();

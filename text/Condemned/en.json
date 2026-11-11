@@ -3,8 +3,6 @@
   "page.display": "Display",
   "page.game": "Game",
   "page.compatibility": "Compatibility",
-  "FixSavePath": "Personal Save Folder",
-  "FixSavePath.description": "Redirect the native public-documents save path to personal documents. Existing native saves are copied if the target does not yet exist.",
   "FOVFactor": "Field of view",
   "FOVFactor.description": "Multiplies the gameplay field of view; larger is wider, up to 150 degrees across. Scripted cameras and zoomed views keep their own.",
   "SkipIntro": "Skip Intro",

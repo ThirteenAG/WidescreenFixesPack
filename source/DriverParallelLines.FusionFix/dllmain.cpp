@@ -71,8 +71,6 @@ void Init()
     hWnd.SetAddress(nativeWindow);
     D3D9Options::frameLimit = 0;
     DPLWindow::Init();
-    FixSettings().Availability("MAIN.WindowMode", [](std::string_view value) { return value == "0" || DPLWindow::ready; },
-        [] { return "Window mode is unavailable."; });
     D3D9Options::HookCreation();
 
     pattern = hook::pattern("38 05 ? ? ? ? 75 ? 39 81 ? ? ? ? 74");

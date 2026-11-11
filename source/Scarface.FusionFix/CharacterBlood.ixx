@@ -248,14 +248,10 @@ export namespace CharacterBlood
         textureVtable = ScarfaceRTTI::FindVtable(".?AVd3dTexture@pure3d@@");
         auto primitive = ScarfaceRTTI::FindVtable(".?AVPrimGroupSkinnedOptimized@pure3d@@");
         auto hardware = ScarfaceRTTI::FindVtable(".?AVd3dExtHardwareSkinning@pure3d@@");
-        if (characterVtable && textureVtable && primitive && hardware)
-        {
-            primitiveHook = safetyhook::create_inline(*reinterpret_cast<void**>(primitive + 8 * sizeof(void*)), DrawPrimitiveGroup);
-            hardwareHook = safetyhook::create_inline(*reinterpret_cast<void**>(hardware + 6 * sizeof(void*)), DrawHardwareSkin);
-        }
-        enabled = primitiveHook && hardwareHook;
-        if (!enabled) { primitiveHook.reset(); hardwareHook.reset(); }
-        return enabled;
+        primitiveHook = safetyhook::create_inline(*reinterpret_cast<void**>(primitive + 8 * sizeof(void*)), DrawPrimitiveGroup);
+        hardwareHook = safetyhook::create_inline(*reinterpret_cast<void**>(hardware + 6 * sizeof(void*)), DrawHardwareSkin);
+        enabled = true;
+        return true;
     }
 
     void Render(IDirect3DDevice9* device, const std::function<void()>& draw)

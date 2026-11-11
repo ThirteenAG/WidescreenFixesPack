@@ -47,24 +47,12 @@ export namespace GodfatherIntro
         {
             auto decode = hook::pattern("8B 44 24 08 8A 08 80 F9 7F 77 0D 8B 54 24 04 0F BE C9 89 0A 40 C2 08 00");
             textDecodeHook = safetyhook::create_inline(decode.get_first(), DecodeText);
-            if (!textDecodeHook)
-                throw std::runtime_error("Text decoder hook unavailable");
         }
         auto start = hook::pattern("8B 44 24 04 B1 01 83 EC 08 56 88 88 91 00 00 00 88 88 92 00 00 00 E8");
         if (GodfatherMenu::layoutShift) // Chinese executable
             start = hook::pattern("8B 44 24 04 B1 01 83 EC 08 56 88 88 95 00 00 00 88 88 96 00 00 00 E8");
-        if (!GodfatherMenu::api.undefined)
-        {
-            textDecodeHook.reset();
-            throw std::runtime_error("Startup movie dependency unavailable");
-        }
         skip.store(FixSettings().Bool("MAIN.SkipIntro"), std::memory_order_relaxed);
         startHook = safetyhook::create_inline(start.get_first(), Start);
-        if (!startHook)
-        {
-            textDecodeHook.reset();
-            throw std::runtime_error("Startup movie hook unavailable");
-        }
         FixSettings().OnChange("MAIN.SkipIntro", []()
         {
             skip.store(FixSettings().Bool("MAIN.SkipIntro"), std::memory_order_relaxed);

@@ -185,14 +185,6 @@ export namespace PsiOpsHud
         rebuild = reinterpret_cast<decltype(rebuild)>(matrix.get_first());
         orthoHook = safetyhook::create_inline(ortho.get_first(), Ortho);
         drawHook = safetyhook::create_inline(draw.get_first(), Draw);
-        const bool available = orthoHook && drawHook;
-        if (!available)
-        {
-            drawHook.reset(); orthoHook.reset();
-        }
-        FixSettings().Availability("MAIN.HudAspectRatioConstraint", [available](std::string_view value) { return value == "Auto" || available; });
-        if (!available)
-            return;
         const auto refresh = []()
         {
             PsiOps::FloatingPointScope floatingPoint;

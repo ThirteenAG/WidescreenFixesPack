@@ -141,14 +141,6 @@ export namespace BullyOverlay
         PresentHook = safetyhook::create_inline(table[17], Present);
         SwapChainHook = safetyhook::create_inline(chainTable[3], SwapChainPresent);
         chain->Release();
-        if (!ResetHook || !PresentHook || !SwapChainHook)
-        {
-            ResetHook.reset();
-            PresentHook.reset();
-            SwapChainHook.reset();
-            OutputDebugStringA("Bully: developer overlay hooks unavailable.\n");
-            return;
-        }
         CurrentDevice = device;
     }
 

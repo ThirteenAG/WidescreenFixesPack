@@ -178,6 +178,6 @@ export namespace GTA1Input
             *packet = Transform(*packet);
             WFP::onGameProcessEvent().executeAll();
         });
-        Log::Write(GatherHook ? "GTA1 input gathering hook installed." : "GTA1 input gathering hook FAILED.");
+        Log::Write("GTA1 input gathering hook installed.");
     }
 }

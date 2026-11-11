@@ -293,8 +293,6 @@ export namespace NFSPSHelp
 
         std::array<float, 3> TextBounds(uint8_t* object, FontLookup lookup)
         {
-            if (!ReadWide || !Advance)
-                return { NAN, NAN, NAN };
             auto font = static_cast<uint8_t*>(lookup(*reinterpret_cast<uint32_t*>(object + 0x24)));
             auto header = font ? *reinterpret_cast<uint8_t**>(font + 24) : nullptr;
             if (!header || *reinterpret_cast<uint32_t*>(header) != 0x46746E46)

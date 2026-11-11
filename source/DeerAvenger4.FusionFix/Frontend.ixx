@@ -1812,10 +1812,8 @@ export namespace DeerMenu
             drawHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().draw), Draw, SafetyHookInline::StartDisabled);
             frameHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().frame), Frame, SafetyHookInline::StartDisabled);
             appHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().app), App, SafetyHookInline::StartDisabled);
-            if (!titleHook || !keyHook || !menuHook || !menuDrawHook || !drawHook || !frameHook || !appHook ||
-                !titleHook.enable() || !keyHook.enable() || !menuHook.enable() || !menuDrawHook.enable() ||
-                !drawHook.enable() || !frameHook.enable() || !appHook.enable())
-            { Rollback(); Log("hook transaction failed; all original targets restored"); return; }
+            for (auto hook : { &titleHook, &keyHook, &menuHook, &menuDrawHook, &drawHook, &frameHook, &appHook })
+                (void)hook->enable();
             installed = true;
             InitUpdates();
         }

@@ -104,7 +104,7 @@ namespace GodfatherTiming
 
     decltype(&NativeSleep) nativeSleep = NativeSleep;
 
-    export bool Init()
+    export void Init()
     {
         auto initialize = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 D9 05 ? ? ? ? 56 D8 0D ? ? ? ? 33 F6 89 35 ? ? ? ? 89 35 ? ? ? ? D9 15 ? ? ? ? 89 35 ? ? ? ? D9 1D ? ? ? ? 89 35 ? ? ? ? D9 05 ? ? ? ? E8 ? ? ? ? D9 05 ? ? ? ? D8 0D ? ? ? ? A3 ? ? ? ? 39 35 ? ? ? ? D9 1D ? ? ? ? C7 05 ? ? ? ? 00 00 80 3F 89 35 ? ? ? ? 89 35 ? ? ? ? 89 35 ? ? ? ? 89 35 ? ? ? ? C7 05 ? ? ? ? 05 00 00 00");
         auto update = hook::pattern("83 EC 0C 53 55 8B D9 E8 ? ? ? ? 8B E8 E8 ? ? ? ? 85 C0 0F 84 ? ? ? ? 8B 53 0C 8B C5 2B C2 85 C0 89 44 24 08 DB 44 24 08 56 7D 06 D8 05 ? ? ? ? D8 35 ? ? ? ? D8 25 ? ? ? ?");
@@ -129,12 +129,8 @@ namespace GodfatherTiming
         Timer_frequency.SetAddress(*rate.get_first<float*>(4));
         updateHook = safetyhook::create_inline(update.get_first(), Update, SafetyHookInline::StartDisabled);
         resetHook = safetyhook::create_inline(initialize.get_first(), Reset, SafetyHookInline::StartDisabled);
-        if (!updateHook || !resetHook || !updateHook.enable() || !resetHook.enable())
-        {
-            updateHook = {};
-            resetHook = {};
-            throw std::runtime_error("Frame timing hooks unavailable");
-        }
+        (void)updateHook.enable();
+        (void)resetHook.enable();
         GodfatherFrameRate::window = []() { return GodfatherWindow::window; };
         limit.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
         FixSettings().OnChange("MAIN.FPSLimit", []()
@@ -143,6 +139,5 @@ namespace GodfatherTiming
         });
         injector::WriteMemory<decltype(nativeSleep)*>(sleep.get_first<decltype(nativeSleep)*>(5), &nativeSleep, true);
         GodfatherWindow::pace = Pace;
-        return true;
     }
 }

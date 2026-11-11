@@ -36,11 +36,11 @@ export namespace NeoCamera
         if (!camera || Screen.nAspectRatioDiff <= 0 || Screen.fAspectRatio <= 0.0f || !std::isfinite(halfVertical) ||
             halfVertical <= 0.0f || halfVertical >= 90.0f)
             return LensHook.ccall<int>(halfVertical, camera, pixelAspect);
-        injector::WriteMemory<int>(reinterpret_cast<int*>(camera + 72), Screen.nAspectRatioDiff, true);
+        *reinterpret_cast<int*>(camera + 72) = Screen.nAspectRatioDiff;
         const auto band = NeoCinema::Current(camera);
         if (band.Active)
         {
-            injector::WriteMemory<int>(reinterpret_cast<int*>(camera + 76), NeoCinema::CameraHeight(band), true);
+            *reinterpret_cast<int*>(camera + 76) = NeoCinema::CameraHeight(band);
             return LensHook.ccall<int>(halfVertical, camera, pixelAspect);
         }
         const float factor = Gameplay(camera) ? Factor.load() : 1.0f;

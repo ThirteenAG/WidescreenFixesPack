@@ -338,10 +338,7 @@ namespace MaxPayneVideo
             Video = nullptr;
             StartupSizing = false;
         });
-        if (BeginHook && EndHook)
-        {
-            static auto peekMessage = &PeekMessage;
-            injector::WriteMemory(peek.get_first(2), &peekMessage, true);
-        }
+        static auto peekMessage = &PeekMessage;
+        injector::WriteMemory(peek.get_first(2), &peekMessage, true);
     }
 }

@@ -42,8 +42,6 @@
   "MAIN.SkipPressStart.description": "Pasa de la pantalla de título a la selección de datos de juego sin esperar a Intro o Start. Requiere reiniciar.",
   "MISC.DisableMouseInput": "Ignorar el ratón",
   "MISC.DisableMouseInput.description": "Desactiva el ratón para que un clic o movimiento accidental no afecte al juego.",
-  "MISC.DisableFrameSkipping": "Sin saltos de fotogramas",
-  "MISC.DisableFrameSkipping.description": "Dibuja cada fotograma en lugar de saltarlos cuando el juego se retrasa.",
   "MISC.DisableQuitDialog": "Sin confirmación al salir",
   "MISC.DisableQuitDialog.description": "Cierra el juego sin preguntar al cerrar la ventana (Alt+F4 o el botón de cerrar).",
   "MISC.DisableLoadingTimer": "Sin tiempo mínimo de carga",

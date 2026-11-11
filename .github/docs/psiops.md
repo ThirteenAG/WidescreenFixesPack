@@ -15,7 +15,7 @@
 - **Resolution and field of view** — Correct widescreen projection, with a live gameplay field-of-view factor and a 150-degree horizontal limit. Authored story and zoom views retain their own camera angles.
 - **HUD** — Keep HUD proportions correct and choose a narrower safe area for the health, weapon and other HUD groups.
 - **Cutscenes** — Preserve the original framing with borders. Turning borders off expands the view horizontally. The original sliding bars can be replaced with immediate borders.
-- **Movies** — Original and Fill both preserve the authored aspect ratio and show the whole movie with black bars where needed.
+- **Movies** — The 4:3 movies are shown whole at their own aspect, with black bars where the screen is wider or narrower.
 - **Windows** — Fullscreen, Windowed and Borderless choices, exact windowed client dimensions, DPI awareness and square window corners. Windowed mode keeps the selected rendering size when opening Plugins or when another resize is requested.
 - **Focus and cursor** — Optional pause while unfocused and cursor confinement while the game is active. In windowed mode, the Windows pointer follows the game’s cursor visibility.
 - **Frame limiter** — A live limit from 30 to 1000 FPS, Unlimited, or the monitor's refresh rate.
@@ -34,7 +34,6 @@ The page has one Preset row: Vanilla, Recommended or Enhanced. Vanilla keeps the
 | Cutscene borders | Both | Live |
 | Animated cutscene borders | On | Live |
 | Field of view factor | 1.0 | Live |
-| Movie presentation | Fill | Live |
 | Skip intro | On | Restart |
 | Window mode | Fullscreen | Restart |
 | Resolution width / height | Desktop | Restart |

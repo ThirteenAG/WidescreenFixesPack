@@ -74,7 +74,7 @@
   "fmv": "Video framing",
   "fmv.original": "Original aspect",
   "fmv.fill": "Fill",
-  "fmv.description": "Original aspect shows the movies as the game does, whole inside its centred 4:3 frame with black bars around them. Fill fits the whole movie to the screen, without cutting anything off or stretching it.",
+  "fmv.description": "Original aspect shows the movies inside the game's centred 16:9 frame. On screens wider than 16:9, Fill enlarges the two story movies, which have black bars in the file, until their picture fits the screen. No picture is cut off or stretched.",
   "textlanguage": "Menu language",
   "textlanguage.description": "Choose the language of the fix’s settings and help. Automatic follows the Windows interface language.",
   "confinecursor": "Confine cursor",

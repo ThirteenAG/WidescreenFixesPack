@@ -44,7 +44,7 @@
 
 ## Settings
 
-The fix creates `memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.cfg` on the first launch. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), Display and Camera (HUD size, HUD aspect ratio, radar and multiplayer radar size, field of view, cutscene borders, video aspect ratio), Game (frame rate, fast loading, skip intro, vehicle lights, controller icons) and Restore Defaults. Menu changes are saved when the menu closes; skip intro and vehicle lights need a restart, as do changes made on fusionfix.io or in FusionFixHub. Use FusionFixHub or fusionfix.io for radar positions, aspect ratio, controls and PC cheats.
+The fix creates `memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.cfg` on the first launch. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), Display and Camera (HUD size, HUD aspect ratio, radar and multiplayer radar size, field of view, cutscene borders), Game (frame rate, fast loading, skip intro, vehicle lights, controller icons) and Restore Defaults. Menu changes are saved when the menu closes; skip intro and vehicle lights need a restart, as do changes made on fusionfix.io or in FusionFixHub. Use FusionFixHub or fusionfix.io for radar positions, aspect ratio, controls and PC cheats.
 
 - **Presets** - Vanilla keeps the original look (HUD, radar and multiplayer radar at full size, cutscene letterbox, PSP controller icons, intros, normal loading, no vehicle lights); Recommended is the default; Enhanced adds 60 FPS.
 

@@ -141,7 +141,7 @@ export std::atomic<int> PendingKey = 0;
 // The rotating camera's turn, shared with the input
 export namespace GTA1Rotation
 {
-    bool Installed = false, Active = false, Enabled = true;
+    bool Active = false, Enabled = true;
     int ToggleKey = 'C';                        // F6 is the native pause key
     float Angle = 0.0f, Sin = 0.0f, Cos = 1.0f;
 
@@ -155,7 +155,7 @@ export namespace GTA1Rotation
 
     void KeyDown(WPARAM key)
     {
-        if (Installed && ToggleKey && int(key) == ToggleKey) Enabled = !Enabled;
+        if (ToggleKey && int(key) == ToggleKey) Enabled = !Enabled;
     }
 }
 

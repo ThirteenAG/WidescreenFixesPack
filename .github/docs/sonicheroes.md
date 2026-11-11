@@ -18,7 +18,7 @@
 - **Lens flare, Extras windows, staff roll** — Sized and placed correctly at any aspect ratio.
 - **Movies** — The game's movies are 4:3 pictures and are shown whole at their own shape, with black bars at the sides on wider screens. The story scenes are movies too, so there is no separate cutscene setting.
 - **No disc needed** — The retail game runs without its disc.
-- **Frame pacing** — Frames come at an even 60 per second, the game's own speed; movies keep the game's own timing.
+- **Frame pacing** — Frames come at an even 60 per second, the game's own speed; movies keep the game's own timing. Two-player modes draw every frame too, instead of every second one.
 - **Window icon** — The game's window and taskbar button show the game's icon.
 - **Supported executables** — The retail `Tsonic_win.exe` and the modified `Tsonic_win2.exe`; the fix replaces the latter's own widescreen camera code.
 
@@ -33,7 +33,7 @@
 - **Object distance** — Optionally shows objects from farther away, reducing pop-in.
 - **Switch flash effect** — Original, or the PlayStation 2 versions of the castle/mansion switch flash.
 - **Save folder** — Optionally keeps saves and the game's settings in a folder inside the game folder.
-- **No frame skipping, ignore the mouse** — On by default. Attract demos can be restored, and the quit dialog, loading screen timeout and subtitles can be turned off.
+- **Ignore the mouse** — On by default, so a stray click or move doesn't affect the game. Attract demos can be restored, and the quit dialog, loading screen timeout and subtitles can be turned off.
 - **Confine cursor** — Keeps the cursor inside the active game window; released on focus loss, while moving the window, in system menus and immediately when turned off.
 - **Check for updates** — Off by default. When on, the game shows a notice at the title and main menu when a newer version of the fix is available.
 

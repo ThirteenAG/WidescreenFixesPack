@@ -38,7 +38,7 @@ Open **Options → Plugins → Resident Evil Revelations 2 Fusion Fix** (the las
 | Pause when unfocused | On pauses in the background; off keeps the game running in windowed modes; live | On |
 | Skip intro | Skips the logos and the OK-only startup notices; restart | On |
 | Skip title prompt | Continues past the first press-start prompt; restart | On |
-| Vertical split screen | Local co-op side by side instead of top and bottom; applies when split screen starts | Off |
+| Split screen layout | Top and bottom or Side by side give each player half of the screen in local co-op; Original keeps the game's two smaller staggered views; applies when split screen starts | Top and bottom |
 | Swap co-op views | Swaps the two players' views; applies when split screen starts | Off |
 | Hide damage overlay | Hides the low-health overlay; live | Off |
 | Hide film grain | Hides the film grain and its vignette; restart | Off |

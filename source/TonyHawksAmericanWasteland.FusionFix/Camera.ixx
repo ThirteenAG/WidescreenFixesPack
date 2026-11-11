@@ -22,8 +22,6 @@ export void InstallCameraFix()
             "E8 ? ? ? ? D9 44 24 04 8B CE D9 F2 DD D8 D9 54 24 04 D8 B6 D4 00 00 00 DE C9",
             0xc0, 0xd4, 0x184, 0xd8, 0x18c, 0x130
         }, &FixSettings().Float("MAIN.FOVFactor"));
-    if (!TonyCamera::RegisterHook)
-        std::terminate();
     pattern = hook::pattern("D9 9E C4 00 00 00 E8 ? ? ? ? D9 86 C4 00 00 00 5E 59 C3");
     struct FovHook
     {

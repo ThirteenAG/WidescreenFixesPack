@@ -116,11 +116,7 @@ export namespace PsiOpsOverlay
     inline void Install()
     {
         auto input = hook::pattern("55 8B EC 83 EC 20 89 4D E0 8B 45 E0 BA 01 00 00 00 8B 48 08 D3 E2 89 55 FC");
-        if (!PsiOpsWindow::createD3DHook)
-            return;
         inputHook = safetyhook::create_inline(input.get_first(), Input);
-        if (!inputHook)
-            return;
         PsiOpsWindow::message = Message;
         PsiOpsWindow::blocksInput = BlocksInput;
         PsiOpsWindow::beforeReset = []() { Overlay.BeforeReset(); };

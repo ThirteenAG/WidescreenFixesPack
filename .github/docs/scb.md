@@ -29,7 +29,7 @@ Menus and dialogs remain in an undistorted, centered 16:9 area. The 3D view fill
 - **Ultrawide** — Keeps menus and dialogs at 16:9 without stretching while the 3D view fills the screen with the correct aspect.
 - **HUD aspect ratio** — Auto places side HUD elements at the screen edges. Choose 4:3, 16:9, 21:9 or a custom ratio to keep them in a centered area. Applies immediately.
 - **Cutscene borders** — Both preserves the original 16:9 framing on wide and narrow screens. Letterbox and Pillarbox apply borders on one axis; Off extends the view on widescreen displays.
-- **Video framing** — Original fits the whole movie in a centered 4:3 area; Fill fits it to the screen.
+- **Video framing** — The 16:9 movies are shown whole at their own aspect, centered, with black bars where the screen is wider or narrower.
 - **Frame rate limit** — Change the limit while playing: 0 is unlimited, -1 follows the monitor refresh rate, and positive limits range from 30 to 1000 FPS. Native Vertical Sync can still limit the frame rate.
 - **Field of view** — Adjust the locomotion camera from 0.5 to 2.0 while playing, with a maximum horizontal view of 150 degrees and the game's normal camera smoothing.
 - **Pause when unfocused** — Enabled by default in single player. Disable it to keep the world running while the game window is unfocused.

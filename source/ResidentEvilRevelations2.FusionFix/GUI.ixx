@@ -115,13 +115,10 @@ namespace
                     return;
                 const auto width = *reinterpret_cast<int32_t*>(viewport + 196) - *reinterpret_cast<int32_t*>(viewport + 188);
                 const auto height = *reinterpret_cast<int32_t*>(viewport + 200) - *reinterpret_cast<int32_t*>(viewport + 192);
-                const bool vertical = IsSplitScreenVertical();
-                const bool inViewport = vertical ? (width == SplitScreen::GetCurrentResX() || width == SplitScreen::GetCurrentResX() + 1)
-                                                 : (height == SplitScreen::GetCurrentResY() || height == SplitScreen::GetCurrentResY() + 1);
-                if (!inViewport)
+                if (!SplitScreen::IsPlayerViewport(width, height))
                     return;
-                viewportAspect = vertical ? viewportAspect / 2.0f : viewportAspect * 2.0f;
-                layoutAspect = float(SplitScreen::NativeResX) / float(SplitScreen::NativeResY);
+                viewportAspect = SplitScreen::GetViewportAspect();
+                layoutAspect = SplitScreen::NativeAspect;
             }
             const auto constraint = fHudAspect.load(std::memory_order_relaxed);
             const auto box = constraint > 0.0f ? std::min(viewportAspect, constraint) : viewportAspect;
@@ -301,14 +298,11 @@ namespace
         float layoutAspect = defaultAspectRatio;
         if (IsSplitScreenActive())
         {
-            const bool vertical = IsSplitScreenVertical();
-            const bool inViewport = vertical ? (width == SplitScreen::GetCurrentResX() || width == SplitScreen::GetCurrentResX() + 1)
-                                             : (height == SplitScreen::GetCurrentResY() || height == SplitScreen::GetCurrentResY() + 1);
-            if (inViewport)
+            if (SplitScreen::IsPlayerViewport(width, height))
             {
                 // The game's split HUD is laid out for its 800x360 viewport
-                viewportAspect = vertical ? GetAspectRatio() / 2.0f : GetAspectRatio() * 2.0f;
-                layoutAspect = (float)SplitScreen::NativeResX / (float)SplitScreen::NativeResY;
+                viewportAspect = SplitScreen::GetViewportAspect();
+                layoutAspect = SplitScreen::NativeAspect;
                 diff = viewportAspect / layoutAspect;
                 if (diff < 1.0f)
                 {
@@ -351,7 +345,11 @@ namespace
     void __fastcall SetItemViewPos(void* view, void* edx, int32_t x, int32_t y)
     {
         if (IsSplitScreenActive())
-            x += (int32_t)((720.0f * GetAspectRatio()) - (float)SplitScreen::NativeResX);
+        {
+            // The game's own viewports already fit the split layout
+            if (SplitScreen::GetLayout() != SplitScreen::Layout::Original)
+                x += (int32_t)((720.0f * GetAspectRatio()) - (float)SplitScreen::NativeResX);
+        }
         else if (const auto aspect = GetAspectRatio(); aspect < defaultAspectRatio)
         {
             const auto render = pRender.get();

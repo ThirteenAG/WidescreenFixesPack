@@ -127,16 +127,16 @@ export namespace JCHud
         const auto offset = anchor * Offset(screenAspect.load(), requestedAspect.load());
         const bool dirty = (*flags & 4) != 0;
         // Recompute the whole native subtree from its authored position on every pass.
-        injector::WriteMemory<float>(position, original + offset, true);
-        injector::WriteMemory<uint8_t>(flags, *flags | 4, true);
+        *position = original + offset;
+        *flags |= 4;
         layoutHook.thiscall<void>(self);
-        injector::WriteMemory<float>(position, original, true);
+        *position = original;
         // Plain images test their dirty flag before laying out, so a changed offset reaches them on the next draw
         const std::lock_guard lock(mutex);
         if (const auto found = roots.find(self); found != roots.end())
         {
             if (found->second.applied != offset)
-                injector::WriteMemory<uint8_t>(flags, *flags | 4, true);
+                *flags |= 4;
             if (dirty)
                 found->second.applied = offset;
         }
@@ -165,22 +165,11 @@ export namespace JCHud
         auto clipSite = clip.get_first(4);
         auto layoutSite = layout.get_first();
         constructHook = safetyhook::create_inline(target, Construct);
-        if (constructHook) parseHook = safetyhook::create_inline(parseSite, Parse);
-        if (parseHook) miniMapHook = safetyhook::create_inline(miniMapSite, MiniMap);
-        if (miniMapHook) markerHook = safetyhook::create_inline(markerSite, Marker);
-        if (markerHook) nativeClip.fun = injector::MakeCALL(clipSite, Clip, true).get();
-        if (nativeClip.fun) layoutHook = safetyhook::create_inline(layoutSite, Layout);
-        ready = constructHook && parseHook && miniMapHook && markerHook && nativeClip.fun && layoutHook;
-        if (!ready)
-        {
-            if (nativeClip.fun) injector::MakeCALL(clipSite, nativeClip.fun, true);
-            markerHook.reset();
-            miniMapHook.reset();
-            layoutHook.reset();
-            parseHook.reset();
-            constructHook.reset();
-            OutputDebugStringA("Just Cause: HUD layout hooks unavailable.\n");
-        }
-        FixSettings().Availability("MAIN.HudAspectRatioConstraint", [](std::string_view) { return ready; });
+        parseHook = safetyhook::create_inline(parseSite, Parse);
+        miniMapHook = safetyhook::create_inline(miniMapSite, MiniMap);
+        markerHook = safetyhook::create_inline(markerSite, Marker);
+        nativeClip.fun = injector::MakeCALL(clipSite, Clip, true).get();
+        layoutHook = safetyhook::create_inline(layoutSite, Layout);
+        ready = true;
     }
 }

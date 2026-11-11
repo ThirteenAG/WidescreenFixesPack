@@ -36,6 +36,5 @@ export void InitUpdateCheck()
     {
         RWGTA::UpdateCheck::Tick();
     };
-    if (auto exit = GetProcAddress(GetModuleHandle(L"Core"), "?appRequestExit@@YAXH@Z"))
-        shAppRequestExit = safetyhook::create_inline(exit, AppRequestExit);
+    shAppRequestExit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Core"), "?appRequestExit@@YAXH@Z"), AppRequestExit);
 }

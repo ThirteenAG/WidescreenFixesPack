@@ -16,45 +16,36 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            if (auto address = hook::pattern("83 F8 02 40 0F 96 C6 E8 ? ? ? ? 48 8D 0D ? ? ? ? 44 0F B6 F0 E8").get_first())
+            static auto rifleHook = safetyhook::create_mid(hook::pattern("83 F8 02 40 0F 96 C6 E8 ? ? ? ? 48 8D 0D ? ? ? ? 44 0F B6 F0 E8").get_first(), [](SafetyHookContext& c)
             {
-                static auto rifleHook = safetyhook::create_mid(address, [](SafetyHookContext& c)
-                {
-                    if (Settings.disableFirstPersonAimForRifles && (c.rdi == 5 || c.rdi == 6))
-                        c.rax = INT_MAX;
-                });
-            }
-            if (auto aim = hook::pattern("F3 0F 10 53 08 0F 28 C2 F3 0F 59 D3 F3 41 0F 59 C0 F3 0F 59 15 ? ? ?").get_first())
+                if (Settings.disableFirstPersonAimForRifles && (c.rdi == 5 || c.rdi == 6))
+                    c.rax = INT_MAX;
+            });
+            static auto aimHook = safetyhook::create_mid(hook::pattern("F3 0F 10 53 08 0F 28 C2 F3 0F 59 D3 F3 41 0F 59 C0 F3 0F 59 15 ? ? ?").get_first(), [](SafetyHookContext& c)
             {
-                static auto aimHook = safetyhook::create_mid(aim, [](SafetyHookContext& c)
+                const auto camera = reinterpret_cast<const uint8_t*>(c.rbx);
+                const auto mode = *reinterpret_cast<const uint16_t*>(camera + 38);
+                const auto fov = *reinterpret_cast<const float*>(camera + 8);
+                if (IsMouseCameraActive() && (mode == 34 || mode == 44) && fov > 0.0f)
                 {
-                    const auto camera = reinterpret_cast<const uint8_t*>(c.rbx);
-                    const auto mode = *reinterpret_cast<const uint16_t*>(camera + 38);
-                    const auto fov = *reinterpret_cast<const float*>(camera + 8);
-                    if (IsMouseCameraActive() && (mode == 34 || mode == 44) && fov > 0.0f)
-                    {
-                        c.xmm8.f32[0] *= 70.0f / fov;
-                        c.xmm3.f32[0] *= (4.0f / 3.0f) * (70.0f / fov);
-                    }
-                });
-            }
+                    c.xmm8.f32[0] *= 70.0f / fov;
+                    c.xmm3.f32[0] *= (4.0f / 3.0f) * (70.0f / fov);
+                }
+            });
             // CCam::Process_Syphon is the normal third-person weapon aim,
             // separate from the rifle first-person helper above. Its native
             // pad gates, aim target, angle limits and collision stay active.
-            if (auto aim = hook::pattern("F3 41 0F 58 45 00 F3 0F 10 1D ? ? ? ? 41 BB 64 00 00 00 F3 41 0F 58").get_first())
+            static auto syphonAimHook = safetyhook::create_mid(hook::pattern("F3 41 0F 58 45 00 F3 0F 10 1D ? ? ? ? 41 BB 64 00 00 00 F3 41 0F 58").get_first(), [](SafetyHookContext& c)
             {
-                static auto syphonAimHook = safetyhook::create_mid(aim, [](SafetyHookContext& c)
+                const auto camera = reinterpret_cast<const uint8_t*>(c.r13);
+                const auto fov = *reinterpret_cast<const float*>(camera + 8);
+                if (IsMouseCameraActive() && std::isfinite(fov) && fov > 0.0f)
                 {
-                    const auto camera = reinterpret_cast<const uint8_t*>(c.r13);
-                    const auto fov = *reinterpret_cast<const float*>(camera + 8);
-                    if (IsMouseCameraActive() && std::isfinite(fov) && fov > 0.0f)
-                    {
-                        const auto reference = 70.0f / fov;
-                        c.xmm6.f32[0] *= 3.125f * reference;
-                        c.xmm0.f32[0] *= (25.0f / 6.0f) * reference;
-                    }
-                });
-            }
+                    const auto reference = 70.0f / fov;
+                    c.xmm6.f32[0] *= 3.125f * reference;
+                    c.xmm0.f32[0] *= (25.0f / 6.0f) * reference;
+                }
+            });
             const auto requiredSite0 = hook::pattern("F3 0F 58 C6 F3 0F 58 05 ? ? ? ? F3 0F 11 43 10 8B 8F C0 04 00 00 B8").get_first();
             const auto requiredSite1 = hook::pattern("F3 0F 11 1D ? ? ? ? F3 0F 10 0D ? ? ? ? 0F 28 C3 0F 28 7C 24 20").get_first();
             const auto requiredSite2 = hook::pattern("F3 0F 59 35 ? ? ? ? EB ? 48 8B 05 ? ? ? ? F3 0F 10 70 10 F3 0F").get_first();
@@ -71,8 +62,6 @@ public:
             const auto requiredSite13 = hook::pattern("C7 05 ? ? ? ? 00 00 00 00 0F C6 C0 01 F3 0F 59 05 ? ? ? ? 48 C7").get_first<uint8_t>(2);
             const auto requiredSite14 = hook::pattern("F3 0F 10 05 ? ? ? ? F3 41 0F 5C C4 F3 44 0F 10 25 ? ? ? ? F3 44").get_first<uint8_t>(4);
             const auto requiredSite15 = hook::pattern("F3 44 0F 10 05 ? ? ? ? 48 8D 0C 80 49 8B 41 10 41 0F 28 F0 41 0F 28").get_first<uint8_t>(5);
-            if (!requiredSite0 || !requiredSite1 || !requiredSite2 || !requiredSite3 || !requiredSite4 || !requiredSite5 || !requiredSite6 || !requiredSite7 || !requiredSite8 || !requiredSite9 || !requiredSite10 || !requiredSite11 || !requiredSite12 || !requiredSite13 || !requiredSite14 || !requiredSite15)
-                return;
             InstallClassicOrbit({{requiredSite0,
                 requiredSite1,
                 requiredSite2,

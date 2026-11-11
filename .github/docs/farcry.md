@@ -33,7 +33,7 @@
 - **Cutscene borders** - Both keeps the original cinematic frame on wide and narrow windows. Letterbox keeps top and bottom borders, Pillarbox keeps side borders, and Off extends the view. Borders can animate over a quarter of a second.
 - **Check for updates** - Disabled by default. When enabled, checks once per start and shows an update notice in Plugins.
 - **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
-- **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360
+- **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to the look of Xbox 360 games
 
 ---
 

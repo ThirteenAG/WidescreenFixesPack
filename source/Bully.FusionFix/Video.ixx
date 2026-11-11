@@ -13,12 +13,11 @@ export namespace BullyVideo
 {
     SafetyHookInline UpdateHook;
     SafetyHookInline CleanupHook;
-    const int* Mode = nullptr;
     void* Owner = nullptr;
     IVMRWindowlessControl9* Control = nullptr;
     LONG Width = 0, Height = 0, AspectWidth = 0, AspectHeight = 0;
     LONG ClientWidth = 0, ClientHeight = 0;
-    int AppliedMode = -1;
+    bool Applied = false;
     bool ReportedFailure = false;
 
     void Reset()
@@ -27,14 +26,14 @@ export namespace BullyVideo
         Control = nullptr;
         Width = Height = AspectWidth = AspectHeight = 0;
         ClientWidth = ClientHeight = 0;
-        AppliedMode = -1;
+        Applied = false;
         ReportedFailure = false;
     }
 
     void Apply(void* player)
     {
         auto bytes = static_cast<uint8_t*>(player);
-        if (!hGameWindow.is_initialized() || !Mode || !player || *reinterpret_cast<int*>(bytes + 4) != 1 ||
+        if (!hGameWindow.is_initialized() || !player || *reinterpret_cast<int*>(bytes + 4) != 1 ||
             !*reinterpret_cast<void**>(bytes + 16))
             return;
         auto control = *reinterpret_cast<IVMRWindowlessControl9**>(bytes + 24);
@@ -49,8 +48,7 @@ export namespace BullyVideo
         RECT client{};
         if (!GetClientRect(hGameWindow, &client) || client.right <= 0 || client.bottom <= 0)
             return;
-        const int mode = std::clamp(*Mode, 0, 1);
-        if (mode == AppliedMode && ClientWidth == client.right && ClientHeight == client.bottom)
+        if (Applied && ClientWidth == client.right && ClientHeight == client.bottom)
             return;
         if (Width <= 0 || Height <= 0)
         {
@@ -61,7 +59,7 @@ export namespace BullyVideo
                 return;
             }
         }
-        // Original and Fill both show the whole movie fitted to the window (the movies are 16:9)
+        // The whole movie fitted to the window at its own aspect (the movies are 16:9)
         RECT source{ 0, 0, Width, Height };
         const HRESULT border = control->SetBorderColor(RGB(0, 0, 0));
         const HRESULT aspect = control->SetAspectRatioMode(VMR9ARMode_LetterBox);
@@ -75,7 +73,7 @@ export namespace BullyVideo
             }
             return;
         }
-        AppliedMode = mode;
+        Applied = true;
         ClientWidth = client.right;
         ClientHeight = client.bottom;
     }
@@ -93,12 +91,11 @@ export namespace BullyVideo
         return CleanupHook.thiscall<char>(player);
     }
 
-    void Install(const int& mode, HMODULE module = GetModuleHandle(nullptr))
+    void Install(HMODULE module = GetModuleHandle(nullptr))
     {
         auto update = hook::module_pattern(module, "51 56 8B F1 83 7E 10 00 74 26 83 7E 04 01 75 20");
         auto cleanup = hook::module_pattern(module, "53 56 8B F1 8B 46 1C 83 F8 FF 74 0E 50 FF 15 ? ? ? ? C7 46 1C FF FF FF FF");
         auto window = hook::module_pattern(module, "8B 15 ? ? ? ? 8B 08 52 50 8B 41 28 FF D0");
-        Mode = &mode;
         hGameWindow.SetAddress(*window.get_first<HWND*>(2));
         CleanupHook = safetyhook::create_inline(cleanup.get_first(), Cleanup);
         UpdateHook = safetyhook::create_inline(update.get_first(), Update);

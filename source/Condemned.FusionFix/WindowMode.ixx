@@ -94,11 +94,6 @@ export namespace CondemnedWindow
         {
             context.ecx = Mode != 0;
         });
-        if (!SelectionHook)
-        {
-            OutputDebugStringA("Condemned: native window mode hook unavailable.\n");
-            return;
-        }
         OriginalPosition = *positionSlot;
         injector::WriteMemory<decltype(&SetWindowPos)>(positionSlot, Position, true);
         if (Mode == 2)

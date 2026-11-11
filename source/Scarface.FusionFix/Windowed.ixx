@@ -290,7 +290,6 @@ public:
                 CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !ScarfaceOverlayInput::BlocksInput());
             });
             const auto displayVtable = ScarfaceRTTI::FindVtable(".?AVd3dDisplay@pure3d@@");
-            if (!displayVtable) return;
 
             auto pattern = hook::pattern("A3 ? ? ? ? 5B 74");
             auto buildSettings = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 83 C4 ? 8D 54 24 ? 52 E8");
@@ -305,13 +304,6 @@ public:
             resetResume = reinterpret_cast<uintptr_t>(reset.get_first(14));
             resetHook = safetyhook::create_mid(reset.get_first(3), CaptureReset);
             displayHook = safetyhook::create_inline(reinterpret_cast<void*>(displayMethod), ApplyDisplay);
-            if (!settingsHook || !displayHook || !ScarfaceFrame::PresentHook || !resetHook)
-            {
-                settingsHook.reset();
-                displayHook.reset();
-                resetHook.reset();
-                throw std::runtime_error("Native window hooks unavailable");
-            }
             ScarfaceFrame::Handlers.push_back(CompleteFrame);
             ScarfaceFocus::RestoreDisplay = []()
             {

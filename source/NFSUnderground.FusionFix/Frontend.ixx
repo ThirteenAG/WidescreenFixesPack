@@ -404,14 +404,14 @@ public:
             static ProtectedGameRef<float> fRearviewMirrorRightX2;
 
             auto pattern = hook::pattern("C7 44 24 ? 00 00 DC 43 C7 44 24 ? 00 00 70 41");
-            if (!pattern.empty())
+            if (!pattern.empty()) // US 1.4
             {
                 fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(20));
                 fRearviewMirrorLeftX2.SetAddress(pattern.get_first<float>(42));
                 fRearviewMirrorRightX1.SetAddress(pattern.get_first<float>(4));
                 fRearviewMirrorRightX2.SetAddress(pattern.get_first<float>(64));
             }
-            else
+            else // Russian 1.4
             {
                 pattern = hook::pattern("C7 44 24 ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? C7 84 24 ? ? ? ? ? ? ? ? FF 91");
                 fRearviewMirrorLeftX1.SetAddress(pattern.get_first<float>(26));

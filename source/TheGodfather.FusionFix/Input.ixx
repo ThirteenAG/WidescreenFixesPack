@@ -108,8 +108,6 @@ export namespace GodfatherInput
     {
         auto cooperative = hook::pattern("8B 86 64 04 00 00 8B 48 08 85 C9 74 28 8B 07 8B 10 6A 05 51 50 FF 52 34 85 C0 74 19");
         cooperativeHook = safetyhook::create_mid(cooperative.get_first(19), Cooperative);
-        if (!cooperativeHook)
-            throw std::runtime_error("Mouse cooperation hook unavailable");
         auto root = hook::pattern("56 8B F1 8B 0D ? ? ? ? 6A 00 E8 ? ? ? ? 85 C0 74 ? 8B 48 30 85 C9");
         auto query = hook::pattern("8B 44 24 04 53 50 32 DB E8 ? ? ? ? 85 C0 74 ? 8B 4C 24 0C 33 D2 66 8B 50 38 "
             "66 F7 D2 23 CA 0F B6 54 24 10 83 FA 03 77 ? FF 24 95 ? ? ? ? 8B 50 30 0F B7 C9 85 D1 0F 95 C3");

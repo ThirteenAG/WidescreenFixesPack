@@ -15,7 +15,6 @@ import MenuBindings;
 export namespace REMenu
 {
     inline HMODULE module = nullptr;
-    inline bool ready = false;
     inline std::function<bool()> blocksInput;
     inline SafetyHookInline initHook, execHook, inputHook, destroyHook, releaseHook;
     inline SafetyHookMid firstCountHook, secondCountHook;
@@ -578,10 +577,10 @@ export namespace REMenu
         return 0;
     }
 
-    inline bool Install(HMODULE ownModule)
+    inline void Install(HMODULE ownModule)
     {
         module = ownModule;
-        if (!Bind()) return false;
+        Bind();
         initHook = safetyhook::create_inline(initialize, Initialize);
         execHook = safetyhook::create_inline(reinterpret_cast<void*>(menuVtable[8]), Exec);
         destroyHook = safetyhook::create_inline(reinterpret_cast<void*>(menuVtable[0]), Destroy);
@@ -594,20 +593,11 @@ export namespace REMenu
             if (originalCompiler) ++context.ebx;
             else ++context.eax;
         });
-        if (secondCountInstruction)
+        if (secondCountInstruction) // Current executable
             secondCountHook = safetyhook::create_mid(secondCountInstruction + 7, [](SafetyHookContext& context)
             {
                 auto gui = reinterpret_cast<void*>(context.edi);
                 if (hosts.count(gui) && Current(hosts.at(gui))) ++context.eax;
             });
-        ready = initHook && execHook && destroyHook && releaseHook && inputHook && firstCountHook &&
-            (!secondCountInstruction || secondCountHook);
-        if (!ready)
-        {
-            initHook.reset(); execHook.reset(); destroyHook.reset(); inputHook.reset();
-            releaseHook.reset();
-            firstCountHook.reset(); secondCountHook.reset();
-        }
-        return ready;
     }
 }

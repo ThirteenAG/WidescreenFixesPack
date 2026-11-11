@@ -28,7 +28,7 @@
   "hudaspect.description": "Auto tiene l'HUD ai bordi dello schermo. Un rapporto lo tiene in un riquadro centrato di quella forma; 4:3 è il layout originale.",
   "hudaspect.auto": "Auto",
   "cutsceneborders": "Bande dei filmati",
-  "cutsceneborders.description": "Conserva le bande originali, limita le scene a un'immagine centrata in 4:3 o entrambi. Rimuovere le bande orizzontali ritaglia l'immagine senza mostrare le zone nascoste.",
+  "cutsceneborders.description": "Sopra/sotto mantiene le bande nere sopra e sotto nei filmati; Ai lati li limita alla loro immagine 4:3 originale.",
   "cutsceneborders.letterbox": "Sopra/sotto",
   "cutsceneborders.pillarbox": "Ai lati",
   "cutsceneborders.both": "Entrambe",

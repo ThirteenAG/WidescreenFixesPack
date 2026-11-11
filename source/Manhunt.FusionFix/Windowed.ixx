@@ -341,8 +341,6 @@ public:
                 axes[0] = static_cast<int32_t>(std::clamp(rawX.exchange(0, std::memory_order_relaxed), low, high));
                 axes[1] = static_cast<int32_t>(std::clamp(rawY.exchange(0, std::memory_order_relaxed), low, high));
             });
-            if (!rawMouseSample)
-                std::terminate();
             bFirstStart = !HasSavedVideoMode();
 
             // Keeps the cursor inside the game's window while it's in front
@@ -435,8 +433,6 @@ public:
                 }
                 std::terminate();
             });
-            if (!SelectDevice || !VideoModeDialog || !windowProc)
-                std::terminate();
         };
         WFP::onShutdownEvent() += []()
         {

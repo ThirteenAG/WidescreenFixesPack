@@ -781,12 +781,6 @@ export namespace GodfatherMenu
         auto actions = find_pattern("8B 44 24 0C 83 EC 1C 83 F8 FF 53 55 56 57 8B 7C 24 34 8B F1");
         state.gammaHook = safetyhook::create_inline(gamma, Gamma);
         state.actionsHook = safetyhook::create_inline(actions, Actions);
-        if (!state.gammaHook || !state.actionsHook)
-        {
-            state.gammaHook.reset();
-            state.actionsHook.reset();
-            throw std::runtime_error("Native menu hooks unavailable");
-        }
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
                            reinterpret_cast<LPCWSTR>(&Init), &state.module);
     }

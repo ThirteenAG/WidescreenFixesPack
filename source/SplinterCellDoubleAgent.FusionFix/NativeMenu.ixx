@@ -1313,12 +1313,8 @@ export namespace DAMenu
             if (interaction(candidate.manager, nullptr) != object || topMenu(candidate.manager, nullptr) != candidate.page) continue;
             preparingPage = &candidate;
             struct RetireAttempt { ~RetireAttempt() { preparingPage = nullptr; } } retireAttempt;
-            try
-            {
-                if (!Prepare(candidate.manager, candidate.page) && candidate.page && ++candidate.attempts < 120)
-                    pendingPages.push_back(candidate);
-            }
-            catch (const std::exception& error) { LogOnce("prepare", candidate.page, error.what()); }
+            if (!Prepare(candidate.manager, candidate.page) && candidate.page && ++candidate.attempts < 120)
+                pendingPages.push_back(candidate);
             // A native teardown can change the queue during Prepare.
             break;
         }
@@ -1401,14 +1397,15 @@ export namespace DAMenu
     inline void Init()
     {
         auto engine = GetModuleHandleW(L"Engine.dll"), core = GetModuleHandleW(L"Core.dll");
-        if (!engine || !core || displayHook) return;
+        if (displayHook) return;
         auto find = [engine](const char* pattern) { return hook::module_pattern(engine, pattern).get_first<uint8_t>(); };
         auto exported = [engine](const char* name) { return reinterpret_cast<void*>(GetProcAddress(engine, name)); };
         fullName = reinterpret_cast<decltype(fullName)>(GetProcAddress(core, "?GetFullName@UObject@@QBEPBGPAG@Z"));
         if (!fullName) fullName = reinterpret_cast<decltype(fullName)>(GetProcAddress(core, "?GetFullName@UObject@@QBEPB_WPA_W@Z"));
         gameLanguage = reinterpret_cast<decltype(gameLanguage)>(GetProcAddress(core, "?GetLanguage@UObject@@SAPBGXZ"));
         if (!gameLanguage) gameLanguage = reinterpret_cast<decltype(gameLanguage)>(GetProcAddress(core, "?GetLanguage@UObject@@SAPB_WXZ"));
-        if (!fullName || !gameLanguage) { LogOnce("init", nullptr, "Core name/language exports unavailable"); return; }
+        if (!fullName || !gameLanguage)
+            throw std::runtime_error("Core name/language exports unavailable");
         FactorySlot.SetAddress(*reinterpret_cast<void***>(find(Contracts::FactoryGetter) + 1));
         createArea = reinterpret_cast<decltype(createArea)>(find(Contracts::CreateArea));
         createNode = reinterpret_cast<decltype(createNode)>(find(Contracts::CreateNode));
@@ -1438,22 +1435,8 @@ export namespace DAMenu
         handlerTable[6] = reinterpret_cast<void*>(Key);
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<LPCWSTR>(&hostModule), &hostModule);
-        if (!hostModule) { LogOnce("init", nullptr, "host module unavailable"); return; }
-        struct HookRollback
-        {
-            bool complete = false;
-            ~HookRollback()
-            {
-                if (!complete)
-                {
-                    defaultsHook.reset();
-                    displayHook.reset();
-                    tickHook.reset();
-                    destroyHook.reset();
-                    uninitializeHook.reset();
-                }
-            }
-        } rollback;
+        if (!hostModule)
+            throw std::runtime_error("Native menu host module unavailable");
         uninitializeHook = safetyhook::create_inline(exported("?Uninitialize@CMenusManager@@UAE_NXZ"), Uninitialize);
         destroyHook = safetyhook::create_inline(find(Contracts::PageDestroy), Destroy);
         tickHook = safetyhook::create_inline(exported("?ProcessTick@USCMagmaInteraction@@MAEXM@Z"), Tick);
@@ -1473,6 +1456,5 @@ export namespace DAMenu
         {
             throw std::runtime_error("Native menu defaults hook failed");
         }
-        rollback.complete = true;
     }
 }

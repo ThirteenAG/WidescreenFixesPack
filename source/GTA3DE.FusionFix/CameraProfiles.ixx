@@ -45,11 +45,7 @@ public:
                 FindFirst("75 ? B8 01 00 00 00 66 89 05 ? ? ? ? 0F 2E A3 60 01 00 00 74 ? 8B"),
                 FindFirst("75 ? 44 88 7E 6B 44 38 76 71 75 ? 66 83 FB 2C 77 ? 48 B9 80 09 80 30"),
                 FindFirst("F3 0F 11 A3 50 01 00 00 75 ? 85 C9 75 ? 8D 41 10 EB ? 3B 0D ? ? ?")};
-            if (std::any_of(sites.begin(), sites.end(), [](auto p) { return !p; }))
-                return;
             const auto zoomCountOperand = FindFirst("C7 05 ? ? ? ? 05 00 00 00 0F 84 ? ? ? ? 80 7B 76 00 0F 85 ? ?", 2);
-            if (!zoomCountOperand)
-                return;
             carZoomCount.SetAddress(injector::ReadRelativeOffset(zoomCountOperand).as_int() + 4);
             profileHooks.push_back(safetyhook::create_mid(sites[0], [](SafetyHookContext& c)
             {
@@ -140,8 +136,6 @@ public:
                     c.xmm4.f32[0] = distances[c.rax - 1];
                 }
             }));
-            if (std::any_of(profileHooks.begin(), profileHooks.end(), [](const auto& hook) { return !hook; }))
-                profileHooks.clear();
         };
     }
 } CameraProfilesModuleInstance;

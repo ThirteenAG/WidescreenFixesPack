@@ -197,8 +197,7 @@ public:
 
             // The cutscene manager's list of playing cutscenes; gameplay FOV only while it is empty.
             pattern = hook::pattern("8B 3D ? ? ? ? 0F 94 C1 88 4C 24 0C 68 74 52 15 DA");
-            if (auto address = *pattern.get_first<uint8_t**>(2))
-                CutsceneOwner.SetAddress(address);
+            CutsceneOwner.SetAddress(*pattern.get_first<uint8_t**>(2));
             pattern = hook::pattern("D9 9E C4 00 00 00 E8 ? ? ? ? D9 86 C4 00 00 00 5E 59 C3");
             // The native fstp has stored the angle and balanced the x87 stack. The following call rebuilds derived camera values.
             static auto FovHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
@@ -208,8 +207,6 @@ public:
                 auto& fov = *reinterpret_cast<float*>(camera + 0xC4);
                 fov = CameraFOV(fov, factor, camera);
             });
-            if (!FovHook)
-                OutputDebugStringA("Gun Fusion Fix: camera hook unavailable.\n");
 
             if (bSkipIntro)
             {

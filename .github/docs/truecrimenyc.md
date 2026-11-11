@@ -72,7 +72,7 @@ Compatible versions:
 
 Installation:
 
-- Download and extract [PCSX2 Fork With Plugins](https://github.com/ASI-Factory/PCSX2-Fork-With-Plugins/releases/tag/latest).
+- Download and extract [PCSX2F](https://github.com/ASI-Factory/PCSX2-Fork-With-Plugins/releases/tag/latest) (PCSX2 Fork With Plugins; the fix does not work in regular PCSX2).
 - Download and extract plugin archive to the root directory, where exe is located, keeping its `PLUGINS` folder.
 - Change the aspect ratio or window size of the emulator.
 - Launch the game.

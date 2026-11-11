@@ -85,29 +85,20 @@ public:
             injector::WriteMemory<float*>(pattern.get_first<float*>(1), &animationMinDelta, true);
 
             const auto rageVtable = ScarfaceRTTI::FindVtable(".?AVRageState@@");
-            if (rageVtable)
-            {
-                auto pattern = hook::pattern("56 8B F1 8B 46 ? 83 F8 ? 75 ? 8B 0D");
-                rageHook = safetyhook::create_inline(pattern.get_first(), UpdateRageBar);
-                if (rageHook)
-                {
-                    // RageState::UpdatePreSim(const FlowTime&) is vtable slot 8.
-                    const auto updateSlot = rageVtable + 8 * sizeof(void*);
-                    hbRagePreSim.fun = *reinterpret_cast<decltype(hbRagePreSim.fun)*>(updateSlot);
-                    injector::WriteMemory<decltype(&UpdateRagePreSim)>(reinterpret_cast<decltype(&UpdateRagePreSim)*>(updateSlot), &UpdateRagePreSim, true);
-                }
-            }
+            pattern = hook::pattern("56 8B F1 8B 46 ? 83 F8 ? 75 ? 8B 0D");
+            rageHook = safetyhook::create_inline(pattern.get_first(), UpdateRageBar);
+            // RageState::UpdatePreSim(const FlowTime&) is vtable slot 8.
+            const auto updateSlot = rageVtable + 8 * sizeof(void*);
+            hbRagePreSim.fun = *reinterpret_cast<decltype(hbRagePreSim.fun)*>(updateSlot);
+            injector::WriteMemory<decltype(&UpdateRagePreSim)>(reinterpret_cast<decltype(&UpdateRagePreSim)*>(updateSlot), &UpdateRagePreSim, true);
 
             auto mortarPattern = hook::pattern("D8 A0 ? ? ? ? D9 9E");
             auto decay = mortarPattern.get_first<uint8_t>();
             mortarContinue = reinterpret_cast<uintptr_t>(decay + 12);
             mortarHook = safetyhook::create_mid(decay, UpdateMortarForce);
-            if (mortarHook)
-            {
-                // FLD [ESI+140h] precedes ADD ESP,4 / TEST BL,BL. Preserve both
-                // integer instructions and replace the entire x87 operation.
-                injector::MakeNOP(decay - 11, 6);
-            }
+            // FLD [ESI+140h] precedes ADD ESP,4 / TEST BL,BL. Preserve both
+            // integer instructions and replace the entire x87 operation.
+            injector::MakeNOP(decay - 11, 6);
         };
     }
 } FramerateVigilante;

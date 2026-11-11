@@ -76,8 +76,6 @@ export namespace GodfatherPaths
             assign = reinterpret_cast<decltype(assign)>(injector::GetBranchDestination(text.get_first<uint8_t>(30)).as_int());
             registryHook = safetyhook::create_inline(read.get_first(), Read);
         }
-        if (!registryHook)
-            throw std::runtime_error("Asset path hook unavailable");
         IATHook::Replace(GetModuleHandleW(nullptr), "ADVAPI32.dll", std::forward_as_tuple("RegCreateKeyExA", CreateKey));
     }
 }

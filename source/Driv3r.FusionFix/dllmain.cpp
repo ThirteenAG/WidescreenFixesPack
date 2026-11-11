@@ -118,8 +118,6 @@ void Init()
     BackbufferWidth.SetAddress(dword_8D7DF0 + 2);
     BackbufferHeight.SetAddress(dword_8D7DF0 + 3);
     Driv3rWindow::Init(reinterpret_cast<uint8_t*>(dword_8D7DF0 - 2) - 0x150);
-    FixSettings().Availability("MAIN.WindowMode", [](std::string_view value) { return value == "0" || Driv3rWindow::ready; },
-        [] { return "Native window mode is unavailable."; });
 
     pattern = hook::pattern("A1 ? ? ? ? ? ? 8D 7B ? 57 6A ? 6A");
     Direct3DDevice.SetAddress(*pattern.get_first<IDirect3DDevice9**>(1));

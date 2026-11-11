@@ -10,7 +10,7 @@
   "SMAA": "SMAA",
   "SMAA.description": "Applica l'antialiasing morfologico subpixel. L'MSAA del gioco deve essere disattivato.",
   "ConsoleGamma": "Gamma console",
-  "ConsoleGamma.description": "Una curva gamma personalizzata per un'immagine più contrastata con colori più profondi, simile all'aspetto di GTA IV su Xbox 360.",
+  "ConsoleGamma.description": "Una curva gamma personalizzata per un'immagine più contrastata con colori più profondi, simile all'aspetto dei giochi per Xbox 360.",
   "MAIN.TextLanguage": "Lingua dei testi",
   "MAIN.TextLanguage.description": "Lingua dei testi della correzione e degli altri plugin. Auto usa l'inglese se la lingua del gioco non viene riconosciuta.",
   "page.compatibility": "Compatibilità",

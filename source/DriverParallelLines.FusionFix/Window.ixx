@@ -37,13 +37,11 @@ export namespace DPLWindow
         return width > 0 && height > 0 && width <= 16384 && height <= 16384;
     }
 
-    inline bool ready = false;
-
 
     inline bool Place(int width, int height)
     {
         const auto window = Window();
-        if (!ready || !window || mode == 0 || !Dimensions(width, height))
+        if (!window || mode == 0 || !Dimensions(width, height))
             return false;
         const DWORD frameBits = WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU;
         DWORD style = DWORD(GetWindowLongW(window, GWL_STYLE)) & ~(frameBits | WS_POPUP);
@@ -100,7 +98,7 @@ export namespace DPLWindow
     inline bool Frame(IDirect3DDevice9* device, bool blocked)
     {
         const auto window = Window();
-        if (!ready || !window || GetForegroundWindow() != window)
+        if (!window || GetForegroundWindow() != window)
         {
             InterlockedExchange(&toggleDown, 0);
             InterlockedExchange(&toggleRequested, 0);
@@ -154,8 +152,8 @@ export namespace DPLWindow
 
     inline LRESULT CALLBACK Procedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
-        if (ready && message == WM_NCCREATE && onCreate) onCreate();
-        if (ready && window == Window() && wParam == VK_RETURN &&
+        if (message == WM_NCCREATE && onCreate) onCreate();
+        if (window == Window() && wParam == VK_RETURN &&
             (message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) && ((lParam & (1u << 29)) || toggleDown))
         {
             if (message == WM_SYSKEYUP) InterlockedExchange(&toggleDown, 0);
@@ -163,7 +161,7 @@ export namespace DPLWindow
                 !InterlockedCompareExchange(&toggleDown, 1, 0)) InterlockedExchange(&toggleRequested, 1);
             return 0;
         }
-        if (ready && mode != 0 && window == Window() && message == WM_CLOSE)
+        if (mode != 0 && window == Window() && message == WM_CLOSE)
         {
             // The native message pump consumes WM_QUIT and unwinds the loop;
             // WinMain then destroys its own window and releases its services.
@@ -178,18 +176,8 @@ export namespace DPLWindow
         mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
         lastWindowMode = mode ? mode : 1;
         auto procedure = hook::pattern("55 8B EC 83 EC 20 8B 45 0C 48 48 56 57 0F 84 ? ? ? ? 83 E8 03 74 6F");
-        if (!hWnd.is_initialized())
-        {
-            OutputDebugStringA("DriverParallelLines: native window procedure unavailable.\n");
-            return;
-        }
         procedureHook = safetyhook::create_inline(procedure.get_first(), Procedure);
         D3D9Options::presentParameters = Windowed;
-        ready = procedureHook && D3D9Options::HookCreation();
-        if (!ready)
-        {
-            D3D9Options::presentParameters = nullptr;
-            OutputDebugStringA("DriverParallelLines: window mode unavailable; fullscreen retained.\n");
-        }
+        D3D9Options::HookCreation();
     }
 }

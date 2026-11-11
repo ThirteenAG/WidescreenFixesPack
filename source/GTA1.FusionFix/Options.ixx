@@ -57,7 +57,6 @@ export namespace GTA1Options
     int* RawControls = nullptr, * Controls = nullptr;
     int (__cdecl* LoadControls)(int*) = nullptr;
     SafetyHookInline OptionsHook;
-    bool Installed = false;
 
     // menu state
     std::vector<std::vector<Entry>> Sections;
@@ -576,7 +575,7 @@ export namespace GTA1Options
         }
     }
 
-    bool Showing() { return Installed && nMenuState == State && !Sections.empty(); }
+    bool Showing() { return nMenuState == State && !Sections.empty(); }
 
     // Before the frontend draws: work that must not happen mid-frame.
     void BeforeFrame()
@@ -796,7 +795,7 @@ export namespace GTA1Options
     // Window messages during gameplay. Returns true when consumed.
     bool OverlayMessage(UINT message, WPARAM key)
     {
-        if (!Installed || InputDevices::Frontend || !LoadFont) return false;
+        if (InputDevices::Frontend) return false;
         if (!Overlay)
         {
             // Esc opens the menu, unless a native prompt or list is waiting for it.
@@ -952,7 +951,7 @@ export namespace GTA1Options
     // Before a gameplay frame is presented.
     void GameplayPresent(uint8_t* pixels, int width, int height, int pitch, int bits)
     {
-        if (!Installed || !LoadFont || !pixels || width <= 0 || height <= 0 ||
+        if (!pixels || width <= 0 || height <= 0 ||
             (bits != 15 && bits != 16) || pitch <= 0 || size_t(pitch) < size_t(width) * 2 ||
             size_t(width) > Snapshot.max_size() / size_t(height)) return;
         bool openPad = false;
@@ -1232,8 +1231,7 @@ export namespace GTA1Options
 
         }
         OptionsHook = safetyhook::create_inline(options.get_first(), NativeOptions);
-        Installed = bool(OptionsHook);
-        Log::Write(Installed ? "GTA1 in-game options installed." : "GTA1 in-game options hook FAILED.");
+        Log::Write("GTA1 in-game options installed.");
     }
 }
 

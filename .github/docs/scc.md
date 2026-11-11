@@ -39,7 +39,7 @@
 
 - **Widescreen** — Projection and UI placement are corrected on wide and narrow screens. HUD Aspect Ratio Constraint uses Auto for the full player view, or a selected safe-area ratio.
 - **Cinematics** — Cutscene Borders preserves the authored 16:9 frame. Both fits it with side bars on wide screens and top/bottom bars on narrow screens; Off fills the view.
-- **Videos** — Original fits the whole decoded movie in a centered 4:3 area; Fill fits it to the screen. Window resize requests made during a fullscreen video apply when playback finishes, keeping its picture and captions correctly proportioned.
+- **Videos** — The 16:9 movies are shown whole at their own aspect, centered, with black bars where the screen is wider or narrower. Window resize requests made during a fullscreen video apply when playback finishes, keeping its picture and captions correctly proportioned.
 - **Depth of field** — Optionally disable the depth of field effect.
 - **Black and white filter** — Optionally disable the desaturation effect.
 - **Sonar vision** — Enable the enhanced sonar vision option.

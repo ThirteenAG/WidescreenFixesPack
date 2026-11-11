@@ -31,12 +31,8 @@ public:
             const auto helpAddress = hook::pattern("48 89 5C 24 10 48 89 74 24 18 48 89 7C 24 20 55 41 56 41 57 48 8D AC 24 50 FF FF FF 48 81 EC B0 01 00 00 48 8B 05 ? ? ? ? 48 33 C4 48 89 85 A0 00 00 00 48 63 59 08").get_first();
             const auto clockCall = hook::pattern("E8 ? ? ? ? 0F B6 15 ? ? ? ? 4C 8D 05 ? ? ? ? F3 0F 10 05 ?").get_first();
             const auto saveResult = hook::pattern("40 53 48 83 EC 20 45 33 C0 8B DA E8 ? ? ? ? 0F B6 D3 E8 ? ? ? ?").get_first(24);
-            if (!saveAddress || !helpAddress || !clockCall || !saveResult)
-                return;
             const auto requiredSite0 = hook::pattern("4C 8D 0D ? ? ? ? 42 8B 4C 0F F9 81 E1 FF FF FF 00 81 F9 50 00 01 00").get_first<uint8_t>(3);
             const auto requiredSite1 = hook::pattern("8B 05 ? ? ? ? 40 32 F6 F3 0F 11 55 88 45 0F B6 F1 44 0F 28 F1 48 8B").get_first<uint8_t>(2);
-            if (!requiredSite0 || !requiredSite1)
-                return;
             const MissionState mission{reinterpret_cast<const uint8_t*>((injector::ReadRelativeOffset(requiredSite0).as_int())),
                 reinterpret_cast<const uint32_t*>((injector::ReadRelativeOffset(requiredSite1).as_int())), 339000};
             const auto widescreen = reinterpret_cast<const uint8_t*>((injector::ReadRelativeOffset(hook::pattern("80 3D ? ? ? ? 01 48 8D 1D ? ? ? ? 0F 94 05 ? ? ? ? 66 90 48").get_first<uint8_t>(2)).as_int() + 1));
@@ -58,12 +54,6 @@ public:
                 if (quicksaveInProgress)
                     quicksaveSucceeded = (context.rax & 0xff) == 0;
             });
-            if (!clockHook || !resultHook)
-            {
-                clockHook = {};
-                resultHook = {};
-                return;
-            }
             RegisterQuicksave([mission, widescreen, menuCount, pendingMenu]()
             {
                 return !mission.IsOnMission() && !*widescreen && !*menuCount && !*pendingMenu;

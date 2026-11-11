@@ -142,10 +142,7 @@ export namespace NeoCinema
         Quad = reinterpret_cast<QuadFunction>(injector::GetBranchDestination(quad.get_first(17)).as_int());
         BandHook = safetyhook::create_mid(code + 89, SetBars);
         AreaHook = safetyhook::create_mid(area.get_first(5), SetArea);
-        if (BandHook)
-        {
-            BarsHook = safetyhook::create_inline(code, DrawBars, SafetyHookInline::StartDisabled);
-            (void)BarsHook.enable();
-        }
+        BarsHook = safetyhook::create_inline(code, DrawBars, SafetyHookInline::StartDisabled);
+        (void)BarsHook.enable();
     }
 }

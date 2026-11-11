@@ -154,30 +154,6 @@
       }
     },
     {
-      "id": "MAIN.FMVWidescreenMode",
-      "type": "choice",
-      "default": 1,
-      "label": "@MAIN.FMVWidescreenMode",
-      "description": "@MAIN.FMVWidescreenMode.description",
-      "page": "display",
-      "apply": "live",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      },
-      "choices": [
-        {
-          "value": 0,
-          "label": "@MAIN.FMVWidescreenMode.0"
-        },
-        {
-          "value": 1,
-          "label": "@MAIN.FMVWidescreenMode.1"
-        }
-      ]
-    },
-    {
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",

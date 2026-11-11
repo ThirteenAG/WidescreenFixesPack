@@ -379,8 +379,6 @@ export namespace GodfatherWindow
         verticalSync = FixSettings().Bool("MAIN.VSync");
         auto swap = hook::pattern("A1 ? ? ? ? 85 C0 74 18 A1 ? ? ? ? 8B 08 50 FF 91 A8 00 00 00 C7 05 ? ? ? ? 00 00 00 00 8A 4C 24 0C B8 01 00 00 00 84 C8");
         swapHook = safetyhook::create_inline(swap.get_first(), Swap);
-        if (!swapHook)
-            throw std::runtime_error("Presentation hook unavailable");
         if (mode)
         {
             auto movie = hook::pattern("6A 11 51 50 FF 52 50 85 C0 7D 1C 8B 0D ? ? ? ? 8B 03 8B 10 6A 08 51 50 FF 52 50");
@@ -397,16 +395,7 @@ export namespace GodfatherWindow
         auto classSite = hook::pattern("8B 0D ? ? ? ? 52 50 A1 ? ? ? ? 50 51 6A 00 FF 15 ? ? ? ? 8B F0 85 F6");
         createReturn = classSite.get_first(23);
         GodfatherWindowClass.SetAddress(*classSite.get_first<const char**>(2));
-        if (user && createReturn)
-            createWindowHook = safetyhook::create_inline(GetProcAddress(user, "CreateWindowExA"), CreateEngineWindow);
-        if (d3d)
-            createD3DHook = safetyhook::create_inline(GetProcAddress(d3d, "Direct3DCreate9"), CreateD3D);
-        if (!createWindowHook || !createD3DHook)
-        {
-            createWindowHook.reset();
-            createD3DHook.reset();
-            swapHook.reset();
-            throw std::runtime_error("Window hooks unavailable");
-        }
+        createWindowHook = safetyhook::create_inline(GetProcAddress(user, "CreateWindowExA"), CreateEngineWindow);
+        createD3DHook = safetyhook::create_inline(GetProcAddress(d3d, "Direct3DCreate9"), CreateD3D);
     }
 }

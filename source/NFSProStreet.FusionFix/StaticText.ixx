@@ -55,7 +55,7 @@ export namespace NFSPSStaticText
 
     inline uint8_t* Clone(uint8_t* original)
     {
-        if (!Construct || !AllocateState || !Allocate || !Free || !StaticTextStatePool.is_initialized() || !original ||
+        if (!original ||
             *reinterpret_cast<uint32_t*>(original + 0x18) != 2 ||
             *reinterpret_cast<uint32_t*>(original + 0x30) != 68 ||
             !*reinterpret_cast<void**>(original + 0x2C))

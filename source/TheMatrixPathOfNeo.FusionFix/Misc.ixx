@@ -75,7 +75,7 @@ public:
                 void operator()(injector::reg_pack& regs)
                 {
                     regs.eax += 0x94;
-                    injector::WriteMemory<int32_t>(reinterpret_cast<int32_t*>(regs.eax - 0x4C), Screen.nAspectRatioDiff, true);
+                    *reinterpret_cast<int32_t*>(regs.eax - 0x4C) = Screen.nAspectRatioDiff;
                 }
             }; injector::MakeInline<AspectHook>(pattern.get_first(0)); //0x41F45A
 

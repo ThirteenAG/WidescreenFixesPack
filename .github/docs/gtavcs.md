@@ -34,7 +34,7 @@
 ## Installation
 
 1. Download the fix archive from this release.
-2. Use [PCSX2 Fork With Plugins](https://github.com/ASI-Factory/PCSX2-Fork-With-Plugins/releases/tag/latest).
+2. Use [PCSX2F](https://github.com/ASI-Factory/PCSX2-Fork-With-Plugins/releases/tag/latest) (PCSX2 Fork With Plugins; the fix does not work in regular PCSX2).
 3. Extract the plugin archive into the emulator folder, preserving its `PLUGINS` directory.
 4. Set the emulator’s aspect ratio or window size, then launch a supported version of the game.
 5. If an older `PLUGINS/GTAVCS.PCSX2F.WidescreenFix.elf` or `PLUGINS/GTAVCS.PCSX2F.ImVehLM.elf` is still there, delete it. Both are part of this Fusion Fix now; while one of them is installed, the Fusion Fix stays off and says so on screen.
@@ -56,7 +56,7 @@ The settings are stored in `PLUGINS/GTAVCS.PCSX2F.FusionFix.cfg`, which the fix 
 ## Not covered
 
 - **Resolution, anti-aliasing, window modes and Alt+Tab** - handled by the emulator.
-- **Videos** - the only videos are the logo and intro movies at startup, which Skip Intro skips. They are decoded straight to the screen; PCSX2's own FMV aspect ratio setting shows them at 4:3.
+- **Videos** - the only videos are the logo and intro movies at startup, which Skip Intro skips. They are decoded straight to the screen; PCSX2F's own FMV aspect ratio setting shows them at 4:3.
 
 # Project2DFX
 

@@ -41,12 +41,8 @@ export namespace CoCFocus
 
         auto branch = hook::pattern("85 F6 75 69 E8 ? ? ? ? 84 C0 75 60 E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 74 50");
         static auto FocusHook = safetyhook::create_mid(branch.get_first(2), Select);
-        if (!FocusHook)
-            OutputDebugStringA("Call of Cthulhu: focus pause hook installation failed.\n");
 
         auto active = hook::pattern("83 EC 4C 57 8B F9 E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 0F 84");
         static auto ActiveHook = safetyhook::create_mid(active.get_first(18), Run);
-        if (!ActiveHook)
-            OutputDebugStringA("Call of Cthulhu: background frame hook installation failed.\n");
     }
 }

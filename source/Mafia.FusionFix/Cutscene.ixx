@@ -162,15 +162,6 @@ export void InitCutscenes()
         if (std::isfinite(ratio) && ratio > 0.0f && ratio < 0.75f)
             Cutscene::aspect = ratio;
     });
-    if (!AspectHook)
-    {
-        throw std::runtime_error("Cutscene aspect hook unavailable");
-    }
     static auto BordersHook = safetyhook::create_mid(draw, Cutscene::DrawBorders);
-    if (!BordersHook)
-    {
-        AspectHook.reset();
-        throw std::runtime_error("Cutscene borders hook unavailable");
-    }
     Cutscene::enabled = true;
 }

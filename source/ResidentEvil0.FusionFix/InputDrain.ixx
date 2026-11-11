@@ -96,7 +96,7 @@ export namespace RE0Input
         return result;
     }
 
-    inline bool Install()
+    inline void Install()
     {
         auto keyboard = hook::pattern("83 EC 14 53 55 56 8D A9 20 01 00 00 57 89 4C 24 10 89 6C 24 20 8B D5 BE 08 00 00 00");
         auto pad = hook::pattern("53 55 8B E9 56 80 BD 75 0B 00 00 00 57 74 17 C6 85 75 0B 00 00 00 8B 0D");
@@ -104,8 +104,6 @@ export namespace RE0Input
         keyboardHook = safetyhook::create_inline(keyboard.get_first(), Keyboard);
         padHook = safetyhook::create_inline(pad.get_first(), Pad);
         mouseHook = safetyhook::create_inline(mouse.get_first(), Mouse);
-        ready = keyboardHook && padHook && mouseHook;
-        if (!ready) { keyboardHook.reset(); padHook.reset(); mouseHook.reset(); }
-        return ready;
+        ready = true;
     }
 }

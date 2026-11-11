@@ -47,8 +47,6 @@ public:
             const auto sample = MouseSampleAddress();
             const auto start = PadUpdateAddress();
             baseUpdatePadHook = safetyhook::create_inline(start, BaseUpdatePad);
-            if (!baseUpdatePadHook)
-                return;
             mouseSampleHook = safetyhook::create_mid(sample, [](SafetyHookContext& context)
             {
                 mousePathActive = true;
@@ -58,8 +56,6 @@ public:
                     context.xmm0.f32[1] = frameDelta.y;
                 }
             });
-            if (!mouseSampleHook)
-                baseUpdatePadHook = {};
         };
     }
 } InputModuleInstance;

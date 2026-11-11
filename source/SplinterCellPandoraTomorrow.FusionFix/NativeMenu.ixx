@@ -432,35 +432,14 @@ export namespace PTMenu
         buttonDrawHook = safetyhook::create_inline(button, DrawButton);
         tabDrawHook = safetyhook::create_inline(tab, DrawTab);
         if (!tickHook || !buttonDrawHook || !tabDrawHook)
-        {
-            tickHook.reset();
-            buttonDrawHook.reset();
-            tabDrawHook.reset();
-            textSize = nullptr;
             throw std::runtime_error("Native drawing hook installation failed");
-        }
-        try
-        {
-            InitControlsDrawing();
-        }
-        catch (...)
-        {
-            tickHook.reset();
-            buttonDrawHook.reset();
-            tabDrawHook.reset();
-            textSize = nullptr;
-            throw;
-        }
-    }
-    inline bool ResolveBounds()
-    {
-        auto gui = GetModuleHandleW(L"GUI.dll");
-        if (!gui) return false;
         actualLeft = reinterpret_cast<decltype(actualLeft)>(GetProcAddress(gui, "?ActualLeft@UGUIComponent@@UAEMXZ"));
         actualTop = reinterpret_cast<decltype(actualTop)>(GetProcAddress(gui, "?ActualTop@UGUIComponent@@UAEMXZ"));
         actualWidth = reinterpret_cast<decltype(actualWidth)>(GetProcAddress(gui, "?ActualWidth@UGUIComponent@@UAEMXZ"));
         actualHeight = reinterpret_cast<decltype(actualHeight)>(GetProcAddress(gui, "?ActualHeight@UGUIComponent@@UAEMXZ"));
-        return actualLeft && actualTop && actualWidth && actualHeight && tickHook && buttonDrawHook && tabDrawHook;
+        if (!actualLeft || !actualTop || !actualWidth || !actualHeight)
+            throw std::runtime_error("GUI bounds exports unavailable");
+        InitControlsDrawing();
     }
     struct Item
     {
@@ -972,7 +951,6 @@ export namespace PTMenu
     inline bool Prepare(void* parent)
     {
         if (auto found = hosts.find(parent); found != hosts.end()) return !found->second->building && !found->second->retired;
-        if (!ResolveBounds()) { LogOnce("prepare", parent, "GUI bounds exports unavailable"); return false; }
         auto controller = Object(parent, L"Controller"), tabBox = Object(parent, L"boxTabButtons"), area = Object(parent, L"boxVideo");
         auto controls = Object(parent, L"btnControls"), video = Object(parent, L"btnVideo"), sound = Object(parent, L"btnSound");
         auto buttonClass = findObject(nullptr, nullptr, L"GUI.GUIButtonSC2", 0);

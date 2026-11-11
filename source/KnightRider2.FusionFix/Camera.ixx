@@ -181,9 +181,7 @@ export namespace KnightRider2Camera
         auto draw = hook::pattern("A1 ? ? ? ? 85 C0 55 8B E9 0F 84 CE 01 00 00 53 56 8B 35 ? ? ? ?");
         DrawHook = safetyhook::create_inline(draw.get_first(), Draw);
         auto director = hook::pattern("A1 ? ? ? ? 83 EC 68 85 C0 53 55 56 57 8B E9 75 33"); // CinematicDirector click
-        auto wrapperAddress = *director.get_first<uint8_t**>(1);
-        if (wrapperAddress)
-            Wrapper.SetAddress(wrapperAddress);
+        Wrapper.SetAddress(*director.get_first<uint8_t**>(1));
         DirectorHook = safetyhook::create_inline(director.get_first(), Direct);
     }
 }

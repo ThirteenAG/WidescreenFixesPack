@@ -72,7 +72,7 @@
   "AnimatedCutsceneBorders": "Animated cutscene borders",
   "AnimatedCutsceneBorders.description": "Play the original letterbox entrance and exit animations. Turn off for immediate borders. This changes only scenes that request the original letterbox.",
   "FMVWidescreenMode": "Movie Framing",
-  "FMVWidescreenMode.description": "Original fits the whole video within a 4:3 area. Fill fits the whole video within the screen. Neither crops or stretches the picture.",
+  "FMVWidescreenMode.description": "Original fits the whole video within a 4:3 area. Fill fits the whole video within the screen. Nothing is cut off or stretched.",
   "fmv.original": "Original Aspect",
   "fmv.fill": "Fill"
 }

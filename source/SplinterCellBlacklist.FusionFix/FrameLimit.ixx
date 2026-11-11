@@ -153,7 +153,7 @@ export void InitFrameLimit()
     // UI::SMISvMManual (sub_199AF90), the function starts 28h before the pattern; the SMI state pointer is read right after it
     {
         auto pattern = hook::pattern("8B F1 8A 86 9F 01 00 00 83 CB FF 84 C0 A1");
-        if (!pattern.empty())
+        if (!pattern.empty()) // DX11
             SMIState.SetAddress(*pattern.get_first<uint8_t**>(14));
         else
         {

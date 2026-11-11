@@ -11,7 +11,7 @@
   "HudAspectRatioConstraint": "Format du HUD",
   "HudAspectRatioConstraint.description": "Auto répartit l'ATH sur tout l'écran, sur ses bords. Un format le garde dans un cadre centré de cette forme. Les menus gardent leur disposition 4:3. S'applique immédiatement.",
   "FMVWidescreenMode": "Format des vidéos",
-  "FMVWidescreenMode.description": "Les deux choix affichent chaque vidéo en entier dans ses propres proportions, avec des bandes noires lorsque l'écran est plus large ou plus étroit. Rien n'est coupé ni étiré.",
+  "FMVWidescreenMode.description": "Original affiche les vidéos en entier dans le cadre 4:3 centré du jeu. Remplir adapte la vidéo entière à l'écran. Rien n'est coupé ni étiré.",
   "WindowMode": "Mode fenêtre",
   "WindowMode.description": "Plein écran, fenêtre encadrée à la résolution choisie ou sans bordure à la résolution du moniteur. Redémarrez après avoir changé le mode de fenêtre.",
   "PauseOnFocusLoss": "Pause en arrière-plan",

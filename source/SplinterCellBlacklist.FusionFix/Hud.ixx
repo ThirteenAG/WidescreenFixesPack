@@ -227,25 +227,12 @@ export namespace Hud
         }
         for (size_t i = 0; i < reset.size(); ++i)
         {
-            auto hook = safetyhook::create_mid(reset.get(i).get<void>(), [](SafetyHookContext& regs)
+            MovieResetHooks.push_back(safetyhook::create_mid(reset.get(i).get<void>(), [](SafetyHookContext& regs)
             {
                 ForgetMovie(regs.ecx);
-            });
-            if (!hook)
-            {
-                MovieResetHooks.clear();
-                SetRoot = nullptr;
-                throw std::runtime_error("HUD reset hook installation failed");
-            }
-            MovieResetHooks.push_back(std::move(hook));
+            }));
         }
         CullRectHook = safetyhook::create_inline(cull.get_first(), CullRect);
-        if (!CullRectHook)
-        {
-            MovieResetHooks.clear();
-            SetRoot = nullptr;
-            throw std::runtime_error("HUD culling hook installation failed");
-        }
         UpdateConstraint();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", UpdateConstraint);
     }

@@ -2518,19 +2518,14 @@ public:
                     }
                     shButtonPressed.unsafe_thiscall(manager, button);
                 }));
-                if (shButtonPressed)
-                {
-                    auto header = reinterpret_cast<uint8_t*>(injector::GetBranchDestination(screen.get_first(0x14)).as_int());
-                    hook::range_pattern(uintptr_t(header + 0x20), uintptr_t(header + 0x2C), "8B 0D ? ? ? ? 50 E8 ? ? ? ?").get_first();
-                    {
-                        showMessage = reinterpret_cast<decltype(showMessage)>(message.get_first());
-                        dialogConfigInstance = *dialogConfig.get_first<void**>(6);
-                        dialogInstance = *dialog.get_first<void**>(2);
-                        feng = *reinterpret_cast<void***>(header + 0x22);
-                        findPackage = reinterpret_cast<decltype(findPackage)>(injector::GetBranchDestination(header + 0x27).as_int());
-                    }
-                }
-                if (NFSCUpdateNotice::Install(FixSettings(), showMessage != nullptr,
+                auto header = reinterpret_cast<uint8_t*>(injector::GetBranchDestination(screen.get_first(0x14)).as_int());
+                hook::range_pattern(uintptr_t(header + 0x20), uintptr_t(header + 0x2C), "8B 0D ? ? ? ? 50 E8 ? ? ? ?").get_first();
+                showMessage = reinterpret_cast<decltype(showMessage)>(message.get_first());
+                dialogConfigInstance = *dialogConfig.get_first<void**>(6);
+                dialogInstance = *dialog.get_first<void**>(2);
+                feng = *reinterpret_cast<void***>(header + 0x22);
+                findPackage = reinterpret_cast<decltype(findPackage)>(injector::GetBranchDestination(header + 0x27).as_int());
+                if (NFSCUpdateNotice::Install(FixSettings(),
                     []()
                     {
                         auto package = [](const char* name) { return *feng && findPackage(*feng, name) != nullptr; };
@@ -2653,18 +2648,6 @@ public:
             {
                 ConstructScreen(reinterpret_cast<void*>(regs.esi));
             });
-            if (!shDestroyScreen || !shClearRows || !shScreenSetup || !shNativeDefaults || !shVideoBasic || !shVideoAdvanced || !shBack || !ConstructHook)
-            {
-                ConstructHook.reset();
-                shBack.reset();
-                shVideoAdvanced.reset();
-                shVideoBasic.reset();
-                shNativeDefaults.reset();
-                shScreenSetup.reset();
-                shClearRows.reset();
-                shDestroyScreen.reset();
-                return;
-            }
             shAddDalOption = safetyhook::create_inline(addDalOption, AddDalOption);
 
             static auto PackageLoadHook = safetyhook::create_mid(packageLoad.get_first(), [](SafetyHookContext& regs)
@@ -2708,25 +2691,6 @@ public:
                     regs.eip = returnAddress;
                 }
             });
-
-            // Without any of them the menu is left out completely
-            if (!shAddDalOption || !PackageLoadHook || !CategoryHook || !ScreenHook || !shSearchString)
-            {
-                shSearchString.reset();
-                ScreenHook.reset();
-                CategoryHook.reset();
-                PackageLoadHook.reset();
-                shAddDalOption.reset();
-                ConstructHook.reset();
-                shBack.reset();
-                shVideoAdvanced.reset();
-                shVideoBasic.reset();
-                shNativeDefaults.reset();
-                shScreenSetup.reset();
-                shClearRows.reset();
-                shDestroyScreen.reset();
-                return;
-            }
 
             static ProtectedGameRef<uint32_t> ScreenTitle;
             ScreenTitle.SetAddress(screen.get_first<uint32_t>(10));

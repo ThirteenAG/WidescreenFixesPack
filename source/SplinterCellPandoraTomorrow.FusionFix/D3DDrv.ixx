@@ -543,7 +543,7 @@ export void InitD3DDrv()
     UD3DRenderDevice::shDisplayVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z"), UD3DRenderDevice::DisplayVideo);
 
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "D9 1C 24 56 56 FF 15");
-    if (!pattern.empty())
+    if (!pattern.empty()) // retail
     {
         injector::WriteMemory<uint8_t>(pattern.get_first(-4), 0x56, true); //push esi
         struct DisplayVideo_Hook
@@ -589,7 +589,7 @@ export void InitD3DDrv()
         }
 
         pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "B8 00 02 00 00");
-        if (!pattern.empty())
+        if (!pattern.empty()) // retail
             injector::WriteMemory(pattern.count(1).get(0).get<uint32_t>(1), Screen.nPostProcessFixedScale, true);
         else
         {
@@ -628,7 +628,7 @@ export void InitD3DDrv()
             Screen.nReflectionsResolution = std::clamp(Screen.Width, 0, retailLayout ? 2048 : 3072);
 
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "68 ? ? ? ? C7 04 81 ? ? ? ? 8B 07 8B 10 68 ? ? ? ? 50 FF 52 ? 6A ? 6A ? 8B CE FF 15 ? ? ? ? 8B 0E 68");
-        if (!pattern.empty())
+        if (!pattern.empty()) // retail
         {
             injector::WriteMemory(pattern.get_first(1), Screen.nReflectionsResolution, true);
             injector::WriteMemory(pattern.get_first(17), Screen.nReflectionsResolution, true);
@@ -821,7 +821,7 @@ export void InitD3DDrv()
 
     // Fix night vision grain scaling at high resolutions
     pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 5E C8 F3 0F 11 8D 18 FA FF FF FF D0 66 0F 6E 8D 14 FA FF FF 0F 5B C9 66 0F 6E C0 0F 5B C0 F3 0F 5E C8 F3 0F 11 8D 04 FA FF FF");
-    if (!pattern.empty())
+    if (!pattern.empty()) // digital
     {
         static auto NightVisionGrainHook = safetyhook::create_mid(pattern.get_first(0x2C), [](SafetyHookContext& regs)
             {

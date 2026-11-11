@@ -170,22 +170,17 @@ export namespace GodfatherWindowModes
         engine.SetAddress(*close.get_first<void**>(11));
         allocationHint = *build.get_first<unsigned>(23);
         buildHook = safetyhook::create_inline(build.get_first(), Build);
-        if (!buildHook)
-            throw std::runtime_error("Window resolution hook unavailable");
         auto change = hook::pattern("83 EC 18 56 8B F1 8A 46 0C 84 C0 75 76 8B 4E 04 8B 44 24 20 3B C1 8B 4C 24 24");
         auto manager = hook::pattern("A1 ? ? ? ? 85 C0 75 3E 68 40 06 00 00 E8 ? ? ? ? 83 C4 04 89 04 24 85 C0");
         auto frontendSize = hook::pattern("A1 ? ? ? ? 8B 4C 24 04 89 48 18 8B 15 ? ? ? ? 8B 44 24 08 89 42 1C "
             "8B 0D ? ? ? ? 6A 00 E8 ? ? ? ? C2 08 00");
         auto selection = hook::pattern("A1 ? ? ? ? 83 EC 48 53 55 33 ED 3B C5 56 57 0F 84 ? ? ? ? 8B 5C 24 5C 3B DD "
             "0F 8C ? ? ? ? 3B 1D ? ? ? ? 0F 8D ? ? ? ? 39 1D ? ? ? ?");
-        if (buildHook)
-        {
-            updateRasters = reinterpret_cast<decltype(updateRasters)>(injector::GetBranchDestination(change.get_first(0x6A)).as_int());
-            display.SetAddress(*manager.get_first<void**>(1));
-            frontend.SetAddress(*frontendSize.get_first<void**>(1));
-            resizeFrontend = reinterpret_cast<decltype(resizeFrontend)>(frontendSize.get_first());
-            selected.SetAddress(*selection.get_first<int*>(48));
-            GodfatherWindow::service = Service;
-        }
+        updateRasters = reinterpret_cast<decltype(updateRasters)>(injector::GetBranchDestination(change.get_first(0x6A)).as_int());
+        display.SetAddress(*manager.get_first<void**>(1));
+        frontend.SetAddress(*frontendSize.get_first<void**>(1));
+        resizeFrontend = reinterpret_cast<decltype(resizeFrontend)>(frontendSize.get_first());
+        selected.SetAddress(*selection.get_first<int*>(48));
+        GodfatherWindow::service = Service;
     }
 }

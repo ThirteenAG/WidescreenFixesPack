@@ -81,10 +81,6 @@ void Init()
     }
 
     InitFileManager();
-    if (!MenuOverridesAvailable())
-    {
-        SCCMenu::Log("native menu movie overrides unavailable: loader API or file-manager hooks missing");
-    }
     Focus::Init();
     InitWindow();
     InitSplitscreen();

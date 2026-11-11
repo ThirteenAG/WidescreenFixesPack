@@ -51,7 +51,7 @@
   "menu.details": "Dettagli",
   "menu.restartshort": "Riavvio necessario",
   "FMVWidescreenMode": "Formato video",
-  "FMVWidescreenMode.description": "Formato originale mostra i filmati come il gioco, interi nella sua cornice 4:3 centrata con le loro bande nere. Riempi taglia le bande perché l'immagine riempia lo schermo senza deformarla; gli schermi molto larghi perdono anche parte dell'alto e del basso. I loghi restano interi.",
+  "FMVWidescreenMode.description": "Formato originale mostra i filmati come il gioco, con le loro bande nere. Riempi li ingrandisce oltre le bande nere intorno all'immagine finché l'immagine non entra nello schermo, senza tagliare nulla.",
   "FMVWidescreenMode.original": "Formato originale",
   "FMVWidescreenMode.fill": "Riempi",
   "PauseOnFocusLoss": "Pausa in secondo piano",

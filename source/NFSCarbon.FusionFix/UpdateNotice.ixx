@@ -18,18 +18,9 @@ export namespace NFSCUpdateNotice
     constexpr const char* MainMenu = "FeMainMenu.fng";
 
     // show: the dialog with the text (already in the font's encoding)
-    inline bool Install(asi_settings::Plugin& settings, bool available, std::function<bool()> playable,
+    inline bool Install(asi_settings::Plugin& settings, std::function<bool()> playable,
         std::function<void(const std::string&)> show, std::function<std::string(const std::string&)> encode)
     {
-        settings.Availability("MAIN.CheckForUpdates", [available](std::string_view value)
-        {
-            return value == "0" || available;
-        });
-        if (!available)
-        {
-            OutputDebugStringA("Carbon: update dialog is unavailable; update checking is disabled.\n");
-            return false;
-        }
         RWGTA::UpdateCheck::Config config;
         config.pluginId = "NFSCarbon.FusionFix";
         config.fileVersion = rsc_FileVersion;

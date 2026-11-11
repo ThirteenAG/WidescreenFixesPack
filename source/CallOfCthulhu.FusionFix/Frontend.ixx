@@ -2121,25 +2121,10 @@ export namespace CthulhuMenu
             rowDestroyHook = safetyhook::create_inline(reinterpret_cast<void*>(Native::Address().rowDestroy), RowDestroy, SafetyHookInline::StartDisabled);
             fontHook = safetyhook::create_inline(reinterpret_cast<void*>(Native::Address().font), Font, SafetyHookInline::StartDisabled);
             actionHook = safetyhook::create_inline(reinterpret_cast<void*>(Native::Address().action), Action, SafetyHookInline::StartDisabled);
-            if (!mapperHook || !mapperCleanupHook || !targetHook || !broadcastHook || !messageHook ||
-                !updateHook || !serializationHook || !drawHook || !managerClearHook || !managerDestroyHook ||
-                !pageDestroyHook || !rowDestroyHook || !fontHook || !actionHook)
-            {
-                Rollback();
-                Log("CoC native menu: hook transaction refused");
-                return;
-            }
-            // Publish every original trampoline before any patched entry is live.
-            // Partial enable failure restores all native targets without exposure.
-            if (!mapperHook.enable() || !mapperCleanupHook.enable() || !targetHook.enable() ||
-                !broadcastHook.enable() || !messageHook.enable() || !updateHook.enable() || !serializationHook.enable() ||
-                !drawHook.enable() || !managerClearHook.enable() || !managerDestroyHook.enable() ||
-                !pageDestroyHook.enable() || !rowDestroyHook.enable() || !fontHook.enable() || !actionHook.enable())
-            {
-                Rollback();
-                Log("CoC native menu: hook enable transaction refused");
-                return;
-            }
+            // Every original trampoline exists before any patched entry is live.
+            for (auto hook : { &mapperHook, &mapperCleanupHook, &targetHook, &broadcastHook, &messageHook, &updateHook, &serializationHook,
+                &drawHook, &managerClearHook, &managerDestroyHook, &pageDestroyHook, &rowDestroyHook, &fontHook, &actionHook })
+                (void)hook->enable();
             auto backend = FontBackend.get();
             nativeResources = backend && Read<uintptr_t>(backend, 0) == Native::Address().backendTable;
             installed = true;

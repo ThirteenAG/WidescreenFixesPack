@@ -49,18 +49,18 @@ static_assert(sizeof(Widget) == 0xC8 && sizeof(MenuPage) == 0x38 && offsetof(Men
 enum Option : int { FrameRate = 0x100, MoreOptions, HudSize, RadarSize, MultiplayerRadar,
     FieldOfView, CutsceneBorders, CutsceneFov, FastLoading, Preset, ApplyPreset,
     DisplayPage, GamePage, VehicleLights, IconSet,
-    FixPage, FixDefaults, SkipIntro, HudBox, MovieMode, Back, OptionEnd };
+    FixPage, FixDefaults, SkipIntro, HudBox, Back, OptionEnd };
 constexpr unsigned optionCount = OptionEnd - FrameRate;
 constexpr char keys[optionCount][20] = {"WF_FRAME_RATE", "WF_MORE_OPTIONS", "WF_HUD_SIZE", "WF_RADAR_SIZE",
     "WF_MP_RADAR", "WF_FOV", "WF_CUT_BORDERS", "WF_CUT_FOV", "WF_FAST_LOADING", "WF_PRESET",
     "WF_APPLY_PRESET", "WF_DISPLAY", "WF_GAME", "WF_LIGHTS",
-    "WF_ICONS", "WF_FIX_PAGE", "WF_FIX_DEFAULTS", "WF_SKIP_INTRO", "WF_HUD_BOX", "WF_MOVIES", "WF_BACK"};
+    "WF_ICONS", "WF_FIX_PAGE", "WF_FIX_DEFAULTS", "WF_SKIP_INTRO", "WF_HUD_BOX", "WF_BACK"};
 constexpr char16_t captions[optionCount][28] = {u"FRAME RATE:", u"PLUGINS", u"HUD SIZE:",
     u"RADAR SIZE:", u"MULTIPLAYER RADAR SIZE:", u"FIELD OF VIEW:", u"CUTSCENE BORDERS:",
     u"ORIGINAL CUTSCENE FOV:", u"FAST LOADING:", u"PRESET:", u"APPLY PRESET", u"DISPLAY AND CAMERA",
     u"GAME", u"VEHICLE LIGHTS (RESTART):",
     u"CONTROLLER ICONS:", u"FUSION FIX", u"RESTORE DEFAULTS", u"SKIP INTRO (RESTART):", u"HUD ASPECT RATIO:",
-    u"VIDEO ASPECT RATIO:", u""};
+    u""};
 constexpr char fpsKeys[2][12] = {"WF_FPS_30", "WF_FPS_60"};
 constexpr char16_t fpsText[2][4] = {u"30", u"60"};
 constexpr char onOff[2][16] = {"WF_BOOL_OFF", "WF_BOOL_ON"};
@@ -78,8 +78,6 @@ constexpr char hudBoxKeys[5][12] = {"WF_HB_AUTO", "WF_HB_43", "WF_HB_169", "WF_H
 constexpr char16_t hudBoxText[5][8] = {u"AUTO", u"4:3", u"16:9", u"21:9", u"32:9"};
 constexpr char hudBoxNames[5][8] = {"Auto", "4:3", "16:9", "21:9", "32:9"};
 constexpr float hudBoxAspects[5] = {0.0f, 4.0f / 3.0f, 16.0f / 9.0f, 21.0f / 9.0f, 32.0f / 9.0f};
-constexpr char movieKeys[2][16] = {"WF_MV_ORIGINAL", "WF_MV_FILL"};
-constexpr char16_t movieText[2][12] = {u"ORIGINAL", u"FILL"};
 // A custom CFG ratio shows as Auto until a choice is picked; it is saved unchanged.
 int HudBoxIndex(float aspect) {
     for (int i = 1; i < 5; ++i) if (std::fabs(aspect - hudBoxAspects[i]) < 0.001f) return i;
@@ -168,7 +166,6 @@ int Value(int option) {
     case FastLoading: return settings.unthrottle ? settings.unthrottleMode : 0;
     case SkipIntro: return settings.skipIntro;
     case HudBox: return HudBoxIndex(Drawing::settings.hudAspect);
-    case MovieMode: return settings.movieMode;
     case Preset: return selectedPreset;
     case VehicleLights: return settings.vehicleLights;
     case IconSet: return int(GamepadIconSet());
@@ -186,7 +183,6 @@ void SetOption(int option, int value) {
     case CutsceneBorders: settings.cutsceneBorders = value >= 0 && value <= 3 ? value : 3; break;
     case SkipIntro: settings.skipIntro = value != 0; break;
     case HudBox: Drawing::settings.hudAspect = hudBoxAspects[value >= 0 && value < 5 ? value : 0]; break;
-    case MovieMode: settings.movieMode = value != 0; break;
     case FastLoading: settings.unthrottleMode = value; settings.unthrottle = value != 0; if (!settings.unthrottle) console::portable::Unthrottle(false); break;
     case Preset: selectedPreset = value; confirmPreset = false; return;
     case VehicleLights: settings.vehicleLights = value != 0; break;
@@ -227,8 +223,6 @@ const uint16_t* GetText(void* text, const char* key) {
             if (!std::strcmp(key, iconKeys[i])) return reinterpret_cast<const uint16_t*>(GamepadIconsAvailable() ? iconText[i] : u"UNAVAILABLE");
         for (unsigned i = 0; i < 5; ++i)
             if (!std::strcmp(key, hudBoxKeys[i])) return reinterpret_cast<const uint16_t*>(hudBoxText[i]);
-        for (unsigned i = 0; i < 2; ++i)
-            if (!std::strcmp(key, movieKeys[i])) return reinterpret_cast<const uint16_t*>(MoviesAvailable() ? movieText[i] : u"UNAVAILABLE");
         for (unsigned i = 1; i < 3; ++i)
             if (!std::strcmp(key, loadingKeys[i])) return reinterpret_cast<const uint16_t*>(loadingText[i - 1]);
         if (!std::strcmp(key, "WF_BACK")) return reinterpret_cast<const uint16_t*>(u"BACK");
@@ -271,8 +265,7 @@ void Initialize(Extension& e, const Widget& slider, const Widget& toggle, const 
             for (unsigned j = 0; j < count; ++j)
                 e.values[i][j] = Literal(option == Preset ? presetKeys[j] : option == IconSet ? iconKeys[j] :
                     option == FastLoading ? loadingKeys[j] :
-                    option == FrameRate ? fpsKeys[j] : option == CutsceneBorders ? bordersKeys[j] : option == HudBox ? hudBoxKeys[j] :
-                    option == MovieMode ? movieKeys[j] : onOff[j]);
+                    option == FrameRate ? fpsKeys[j] : option == CutsceneBorders ? bordersKeys[j] : option == HudBox ? hudBoxKeys[j] : onOff[j]);
             widget.toggle.strings = {e.values[i], e.values[i] + count, e.values[i] + count};
             widget.toggle.count = uint8_t(count);
         }
@@ -292,14 +285,14 @@ void Show(unsigned mode) {
         if (*p && (*p)->hook == 0) e.subItems[count++] = *p;
     constexpr int plugins[] = {FixPage, Back};
     constexpr int fix[] = {Preset, ApplyPreset, DisplayPage, GamePage, FixDefaults, Back};
-    constexpr int display[] = {HudSize, HudBox, RadarSize, MultiplayerRadar, FieldOfView, CutsceneBorders, MovieMode, Back};
+    constexpr int display[] = {HudSize, HudBox, RadarSize, MultiplayerRadar, FieldOfView, CutsceneBorders, Back};
     constexpr int game[] = {FrameRate, FastLoading, SkipIntro, VehicleLights, IconSet, Back};
     const int* options = game;
     unsigned rows = 6;
     switch (mode) {
     case Plugins: options = plugins; rows = 2; break;
     case FixMode: options = fix; rows = 6; break;
-    case DisplayMode: options = display; rows = 8; break;
+    case DisplayMode: options = display; rows = 7; break;
     default: break;
     }
     unsigned visibleRows = 0;
@@ -429,7 +422,6 @@ void InputTrigger(MenuItem* item, int trigger) {
                 else
                 {
                     settings.SetFovRequest(1.0f);
-                    settings.movieMode = 1;
                     ApplyPresetValues(recommendedPreset, confirmDefaults);
                     dirty = true;
                     confirmDefaults = false;
@@ -457,11 +449,11 @@ void InputTrigger(MenuItem* item, int trigger) {
 void Save() {
     if (!dirty) return;
     using console::portable::IniValue;
-    IniValue values[11] = {
+    IniValue values[10] = {
         {"MAIN", "FPSLimit", {}}, {"MAIN", "UnthrottleEmuDuringLoading", {}}, {"MPRADAR", "RadarScale", {}},
         {"MAIN", "HudScale", {}}, {"RADAR", "RadarScale", {}}, {"MAIN", "FOVFactor", {}},
         {"MAIN", "CutsceneBorders", {}}, {"MAIN", "SkipIntro", {}},
-        {"MAIN", "HudAspectRatioConstraint", {}}, {"MAIN", "FMVWidescreenMode", {}}, {"MAIN", "VehicleLights", {}}};
+        {"MAIN", "HudAspectRatioConstraint", {}}, {"MAIN", "VehicleLights", {}}};
     std::strcpy(values[0].value, settings.fps ? "60" : "30");
     // A configured value of 2 (also fast-forward fades) is kept while enabled.
     std::strcpy(values[1].value, !settings.unthrottle ? "0" : settings.unthrottleMode == 2 ? "2" : "1");
@@ -475,10 +467,9 @@ void Save() {
     if (hudAspect == 0.0f) std::strcpy(values[8].value, "Auto");
     else if (const int index = HudBoxIndex(hudAspect)) std::strcpy(values[8].value, hudBoxNames[index]);
     else console::format(values[8].value, "", hudAspect, 4);
-    values[9].value[0] = char('0' + (settings.movieMode != 0)); values[9].value[1] = 0;
-    std::strcpy(values[10].value, settings.vehicleLights ? "1" : "0");
+    std::strcpy(values[9].value, settings.vehicleLights ? "1" : "0");
     static console::portable::IniWriter<> writer;
-    const bool saved = writer.update(cfgPath, values, 11);
+    const bool saved = writer.update(cfgPath, values, 10);
 #ifndef NDEBUG
     logger.WriteF("Menu settings %s", saved ? "saved" : "could not be saved");
 #endif

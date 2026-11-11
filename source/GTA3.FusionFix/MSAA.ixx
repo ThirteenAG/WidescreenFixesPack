@@ -51,7 +51,7 @@ public:
                 MultisamplingLevel = 99999;
 
             auto pattern = hook::pattern("8B C3 5E 5B 81 C4 30 04 00 00 C3 A1 ? ? ? ? 33 FF");
-            if (!pattern.empty())
+            if (!pattern.empty()) // Original executable
             {
                 static auto D3D8System1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {
@@ -74,7 +74,7 @@ public:
             });
 
             pattern = hook::pattern("8B C3 5E 5B 81 C4 30 04 00 00 C3 8B 8C 24");
-            if (!pattern.empty())
+            if (!pattern.empty()) // Original executable; the alternate build has two exits
             {
                 static auto D3D8System3 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
                 {

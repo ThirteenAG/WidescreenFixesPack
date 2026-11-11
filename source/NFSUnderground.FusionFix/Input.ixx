@@ -834,9 +834,9 @@ public:
             shSetDefaultJoystickBindings = safetyhook::create_inline(pattern.get_first(), SetDefaultJoystickBindings);
 
             pattern = hook::pattern("51 53 8B 5C 24 0C 55 8B 6C 24 14 57 33 C0 B9 4F 00 00 00 BF");
-            if (!pattern.empty())
+            if (!pattern.empty()) // US 1.4
                 shGetJoystickBindingName = safetyhook::create_inline(pattern.get_first(), GetJoystickBindingName);
-            else
+            else // Russian 1.4
             {
                 pattern = hook::pattern("83 EC 08 55 8B 6C 24 10 57 33 C0 B9 4F 00 00 00 BF ? ? ? ? F3 AB");
                 RussianBindingNames = true;

@@ -115,8 +115,6 @@ export namespace GodfatherCinematics
     void Init()
     {
         auto root = hook::pattern("89 0D ? ? ? ? C7 06 ? ? ? ? C7 46 08 ? ? ? ? 88 46 0C 88 46 14 89 46 18 89 46 1C 88 46 20 88 5E 21 89 46 24 88 46 34 89 46 38 89 46 3C C7 46 10 ? ? ? ?");
-        if (!GodfatherWindow::createD3DHook)
-            throw std::runtime_error("Cinematic rendering dependency unavailable");
         CinematicRoot.SetAddress(*root.get_first<void**>(2));
         rootBound = true;
         borderMode.store(FixSettings().Int("MAIN.CutsceneBorders"), std::memory_order_relaxed);
@@ -130,13 +128,7 @@ export namespace GodfatherCinematics
             animated.store(FixSettings().Bool("MAIN.AnimatedCutsceneBorders"), std::memory_order_relaxed);
         });
         const auto table = *root.get_first<void**>(52);
-        const auto draw = table ? *table : nullptr;
-        drawHook = draw ? safetyhook::create_inline(draw, Draw) : SafetyHookInline{};
-        if (!drawHook)
-        {
-            rootBound = false;
-            throw std::runtime_error("Cinematic rendering hook unavailable");
-        }
+        drawHook = safetyhook::create_inline(*table, Draw);
         const auto frame = GodfatherWindow::frame;
         GodfatherWindow::frame = [frame](IDirect3DDevice9* device)
         {

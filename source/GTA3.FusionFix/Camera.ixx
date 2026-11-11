@@ -484,7 +484,7 @@ public:
     void     SetPercentAlongCutScene(float pct);
     void     FinishCutscene();
 
-    static void UpdatePlayerVehicleSpeedBlur(CCamera* camera);
+    static void UpdatePlayerVehicleSpeedBlur(CCamera* camera, float minSpeed, float intensity);
 };
 
 export GameRef<CCamera> TheCamera([]() -> CCamera*
@@ -493,7 +493,8 @@ export GameRef<CCamera> TheCamera([]() -> CCamera*
     return *pattern.get_first<CCamera*>(1);
 });
 
-void CCamera::UpdatePlayerVehicleSpeedBlur(CCamera* camera)
+// minSpeed: the vehicle speed (game units per frame) the shake starts at; intensity: 1.0 = the original strength
+void CCamera::UpdatePlayerVehicleSpeedBlur(CCamera* camera, float minSpeed, float intensity)
 {
     if (camera->pTargetEntity->GetType() == ENTITY_TYPE_PED)
         return;
@@ -506,18 +507,16 @@ void CCamera::UpdatePlayerVehicleSpeedBlur(CCamera* camera)
 
     float speed = FindPlayerVehicle()->GetMoveSpeed().Magnitude();
 
-    if (speed <= 0.65f ||
+    if (speed <= minSpeed ||
         FindPlayerVehicle()->IsBoat() ||
         FindPlayerVehicle()->IsHeli() ||
         FindPlayerVehicle()->IsPlane() ||
         FindPlayerVehicle()->IsBike())
         return;
 
-
-    float speedMul = ((std::min(1.0f, speed) - 0.65f) / (1.0f - 0.65f)) * 75;
-    speedMul = std::clamp(speedMul, 0.0f, 1.0f);
-
-    speed = ((std::min(1.0f, speed) - 0.65f) / (1.0f - 0.65f)) / 200;
+    // Grows to its full strength over the next 0.35 units of speed
+    constexpr float rampSpeed = 0.35f;
+    speed = ((std::min(minSpeed + rampSpeed, speed) - minSpeed) / rampSpeed) / 200 * intensity;
 
     int32_t r = CGeneral::GetRandomNumber();
     camera->GetMatrix().GetPosition().x += speed * ((r & 0xF) - 7);

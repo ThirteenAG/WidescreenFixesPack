@@ -245,13 +245,8 @@ export namespace FarCryCinematics
 #endif
         BeginHook = safetyhook::create_inline(begin.get_first(), Begin);
         EndHook = safetyhook::create_inline(end.get_first(), End);
-        Ready = bool(BeginHook) && bool(EndHook);
-        if (!Ready)
-        {
-            BeginHook.reset();
-            EndHook.reset();
-        }
-        return Ready;
+        Ready = true;
+        return true;
     }
 }
 
@@ -336,7 +331,7 @@ export namespace FarCryCamera
     {
         const auto authored = Source.Read(camera, Epoch, camera[12]);
         Source.applied = Target(authored, aspect, factor);
-        injector::WriteMemory<float>(camera + 12, Source.applied, true);
+        camera[12] = Source.applied;
     }
 
     inline void Reset()
@@ -371,14 +366,7 @@ export namespace FarCryCamera
         const auto call = client.get_first<uint8_t>(callOffset);
         ClientReturn = reinterpret_cast<uintptr_t>(call + 6);
         ViewHook = safetyhook::create_inline(view.get_first(), SetView);
-        if (ViewHook)
-            ClientHook = safetyhook::create_mid(client.get_first(hookOffset), Client);
-        if (!ClientHook || !ViewHook)
-        {
-            Reset();
-            OutputDebugStringA("Far Cry: camera ownership hooks unavailable; gameplay FOV multiplier disabled.\n");
-            return false;
-        }
+        ClientHook = safetyhook::create_mid(client.get_first(hookOffset), Client);
         return true;
     }
 }

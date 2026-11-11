@@ -5,26 +5,33 @@ module;
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cstring>
 
 export module Video;
 
 namespace VideoGeometry
 {
-    inline bool Quad(std::array<float, 16>& vertices, int width, int height, int targetWidth, int targetHeight, int mode)
+    // picture: the share of the movie height that holds the picture; the rest is black bars in the file
+    inline bool Quad(std::array<float, 16>& vertices, int width, int height, int targetWidth, int targetHeight, int mode, float picture)
     {
         if (width <= 0 || height <= 0 || targetWidth <= 0 || targetHeight <= 0 ||
             width > 16384 || height > 16384 || targetWidth > 16384 || targetHeight > 16384 || mode < 0 || mode > 1)
             return false;
-        const float ratio = (float(width) * targetHeight) / (float(height) * targetWidth);
-        const float x = mode == 0 ? (std::min)(1.0f, ratio) : 1.0f;
-        const float y = mode == 0 ? (std::min)(1.0f, 1.0f / ratio) : 1.0f;
-        const float u = mode == 1 ? (std::min)(1.0f, 1.0f / ratio) : 1.0f;
-        const float v = mode == 1 ? (std::min)(1.0f, ratio) : 1.0f;
+        // The whole movie at its own aspect: Original inside the game's centred 16:9 frame, Fill inside the whole screen.
+        // Fill fits the picture instead of the frame, so only the file's own black bars leave the screen.
+        const float screen = float(targetWidth) / targetHeight;
+        const float area = mode == 0 ? 16.0f / 9.0f : screen;
+        const float movie = float(width) / height;
+        const float shown = mode == 0 ? 1.0f : std::clamp(picture, 0.1f, 1.0f);
+        const float tall = (std::min)(1.0f, screen / area) * (std::min)(1.0f, area / (movie / shown)) / shown;
+        const float x = tall * movie / screen;
+        const float y = (std::min)(1.0f, tall);
+        const float v = 0.5f * (std::min)(1.0f, 1.0f / tall);
         vertices = {
-            -x, y, 0.5f - 0.5f * u, 0.5f - 0.5f * v,
-            -x, -y, 0.5f - 0.5f * u, 0.5f + 0.5f * v,
-            x, y, 0.5f + 0.5f * u, 0.5f - 0.5f * v,
-            x, -y, 0.5f + 0.5f * u, 0.5f + 0.5f * v
+            -x, y, 0.0f, 0.5f - v,
+            -x, -y, 0.0f, 0.5f + v,
+            x, y, 1.0f, 0.5f - v,
+            x, -y, 1.0f, 0.5f + v
         };
         return true;
     }
@@ -58,20 +65,19 @@ public:
                 const auto movie = reinterpret_cast<const void*>(regs.ebp);
                 const auto target = Read<void*>(movie, 96);
                 const auto texture = target ? Read<void*>(target, 212) : nullptr;
-                if (!texture || !Read<void*>(movie, 88) || Read<int>(movie, 72) != 4) return;
+                const auto source = Read<void*>(movie, 88);
+                if (!texture || !source || Read<int>(movie, 72) != 4) return;
+                // The two story movies are 2.35:1 pictures with black bars in their 1280x720 frames
+                const auto path = (*reinterpret_cast<const char* (__thiscall***)(void*)>(source))[19](source);
+                const bool bars = path && (std::strstr(path, "e5110") || std::strstr(path, "e5120"));
                 const auto packed = Read<uint32_t>(texture, 32);
                 std::array<float, 16> geometry;
                 if (!VideoGeometry::Quad(geometry, Read<int>(movie, 104), Read<int>(movie, 108),
-                    packed & 65535, (packed >> 16) & 16383, videoMode.load())) return;
+                    packed & 65535, (packed >> 16) & 16383, videoMode.load(), bars ? 544.0f / 720.0f : 1.0f)) return;
                 auto output = reinterpret_cast<float*>(regs.edi);
                 for (size_t i = 0; i < geometry.size(); ++i)
                     injector::WriteMemory(output + i, geometry[i], true);
             });
-            if (!vertices)
-            {
-                FixSettings().Availability("MAIN.FMVWidescreenMode", [](std::string_view) { return false; });
-                OutputDebugStringA("ResidentEvil6.FusionFix: movie vertex hook could not be installed.\n");
-            }
         };
     }
 } Video;

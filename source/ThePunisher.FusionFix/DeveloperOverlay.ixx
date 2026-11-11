@@ -259,17 +259,8 @@ export namespace PunisherOverlay
             axes[0] = static_cast<int32_t>(std::clamp(RawX.exchange(0, std::memory_order_relaxed), low, high));
             axes[1] = static_cast<int32_t>(std::clamp(RawY.exchange(0, std::memory_order_relaxed), low, high));
         });
-        if (!MouseSampleHook)
-            std::terminate();
-        if (!PunisherWindow::Window && !PunisherWindow::CreateHook)
-            return;
         auto original = IATHook::Replace(GetModuleHandleW(nullptr), "DINPUT8.dll", std::forward_as_tuple("DirectInput8Create", Create));
-        auto create = original.find("DirectInput8Create");
-        if (create == original.end() || !(NativeCreate = reinterpret_cast<decltype(NativeCreate)>(create->second.get())))
-        {
-            OutputDebugStringA("The Punisher Fusion Fix: developer overlay input hook unavailable.\n");
-            return;
-        }
+        NativeCreate = reinterpret_cast<decltype(NativeCreate)>(original.at("DirectInput8Create").get());
         PunisherWindow::Message = Message;
         D3D8Compatibility::BeforeReset = []() { Overlay.BeforeReset(); };
         D3D8Compatibility::Frame = Frame;

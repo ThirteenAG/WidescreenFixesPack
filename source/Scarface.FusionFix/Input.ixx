@@ -198,8 +198,6 @@ void Init()
 
     pattern = hook::pattern("8B 0D ? ? ? ? 53 8B 5C 24 ? 55");
     shWndProc = safetyhook::create_inline(pattern.get_first(), WndProc);
-    if (!shWndProc)
-        throw std::runtime_error("Mouse window hook unavailable");
 
     pattern = hook::pattern("D9 58 10 83 C4 5C C2 0C 00");
     struct SetOutput_Update_FreeLook
@@ -333,7 +331,7 @@ void Init()
             ScarfaceProfile::Update();
         }
     });
-    ScarfaceRawMouse::Install(settings.Int("MAIN.RawInputMouse"), settings.Float("MAIN.MouseSensitivity"), &hWndInput, bool(ScarfaceFrame::PresentHook));
+    ScarfaceRawMouse::Install(settings.Int("MAIN.RawInputMouse"), settings.Float("MAIN.MouseSensitivity"), &hWndInput);
     WFP::onShutdownEvent() += []()
     {
         ScarfaceProfile::Shutdown();
@@ -351,8 +349,6 @@ void InitXidi()
 
     if (bModernControlScheme)
     {
-        if (!ScarfaceFrame::PresentHook)
-            throw std::runtime_error("Controller profile frame boundary unavailable");
         typedef bool (*XidiRegisterProfileCallbackFunc)(const wchar_t* (*callback)());
         auto xidiModule = GetModuleHandleW(L"Xidi.32.dll");
 

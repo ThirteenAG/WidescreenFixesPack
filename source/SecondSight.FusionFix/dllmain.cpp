@@ -15,15 +15,15 @@ void Init()
 CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
-        {
+    {
         if (WidescreenFixConflict::Found())
             return;
-            // Real pixels on scaled desktops (desktop resolution, full screen picture not scaled up from a corner)
-            WindowedModeWrapper::EnableDpiAwareness();
-            FixSettings();
-            asi_settings::LiveLink::Start();
-            CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("BF 94 00 00 00 8B C7"));
-        });
+        // Real pixels on scaled desktops (desktop resolution, full screen picture not scaled up from a corner)
+        WindowedModeWrapper::EnableDpiAwareness();
+        FixSettings();
+        asi_settings::LiveLink::Start();
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("BF 94 00 00 00 8B C7"));
+    });
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID lpReserved)

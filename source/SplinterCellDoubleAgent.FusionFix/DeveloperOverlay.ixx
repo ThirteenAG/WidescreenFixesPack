@@ -86,7 +86,7 @@ export namespace DeveloperOverlay
             auto target = (*reinterpret_cast<void***>(device))[16];
             ResetHook = safetyhook::create_inline(target, Reset);
             if (!ResetHook)
-                return;
+                throw std::runtime_error("Developer overlay reset hook unavailable");
         }
         CurrentDevice = device;
         Overlay.Present(device, ThisModule());

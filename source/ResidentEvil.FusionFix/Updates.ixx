@@ -19,11 +19,6 @@ export namespace REUpdates
 
     inline void Install()
     {
-        FixSettings().Availability("MAIN.CheckForUpdates", [](std::string_view value)
-        {
-            return value == "0" || REMenu::ready;
-        });
-        if (!REMenu::ready) return;
         IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", Exit));
         RWGTA::UpdateCheck::Config config;
         config.pluginId = "ResidentEvil.FusionFix";

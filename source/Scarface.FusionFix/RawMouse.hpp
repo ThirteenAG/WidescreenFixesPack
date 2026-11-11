@@ -262,12 +262,12 @@ namespace ScarfaceRawMouse
         return result;
     }
 
-    inline void Install(const int& enabled, const float& sensitivity, GameRef<HWND>* window, bool frameReady)
+    inline void Install(const int& enabled, const float& sensitivity, GameRef<HWND>* window)
     {
         Enabled = &enabled;
         Sensitivity = &sensitivity;
         Window = window;
-        FrameReady = frameReady;
+        FrameReady = true;
         Bind();
     }
 

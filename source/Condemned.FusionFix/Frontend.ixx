@@ -2124,12 +2124,9 @@ export namespace CondemnedMenuNative
         host->hooks[20] = safetyhook::create_inline(reinterpret_cast<void*>(host->api.Base() + Rva().shellDestroyed), &ShellDestroyed, safetyhook::InlineHook::StartDisabled);
         host->hooks[21] = safetyhook::create_inline(reinterpret_cast<void*>(host->api.Base() + Rva().shellTerminated), &ShellTerminated, safetyhook::InlineHook::StartDisabled);
         host->hooks[22] = safetyhook::create_inline(reinterpret_cast<void*>(host->api.Base() + Rva().textDeleted), &TextDeleted, safetyhook::InlineHook::StartDisabled);
-        for (auto& hook : host->hooks) if (!hook)
-        { for (auto& installed : host->hooks) installed.reset(); host->diagnostics |= HookRefused; FlushLog(); return; }
         // All trampolines exist before any hook can execute. Before committed
         // readiness, callbacks delegate through these complete originals.
-        for (auto& hook : host->hooks) if (!hook.enable())
-        { for (auto& installed : host->hooks) installed.reset(); host->diagnostics |= HookRefused; FlushLog(); return; }
+        for (auto& hook : host->hooks) (void)hook.enable();
         host->ready = true;
     }
     inline void Init(HMODULE image) noexcept

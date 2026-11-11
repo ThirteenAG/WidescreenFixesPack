@@ -115,7 +115,8 @@ void InitializeFix()
     asi_settings::LiveLink::Start();
     InstallLogoSkip();
     InstallPressStartSkip();
-    PsychonautsUpdates::Init(PsychonautsMenu::Init());
+    PsychonautsMenu::Init();
+    PsychonautsUpdates::Init();
     PsychonautsRenderer::Frame = []()
     {
         static std::once_flag once;

@@ -85,33 +85,6 @@
       ]
     },
     {
-      "id": "MAIN.FMVWidescreenMode",
-      "type": "choice",
-      "default": 1,
-      "choices": [
-        {
-          "value": 0,
-          "label": "@fmvmode.original"
-        },
-        {
-          "value": 1,
-          "label": "@fmvmode.fill"
-        }
-      ],
-      "label": "@fmvmode",
-      "description": "@fmvmode.description",
-      "page": "display",
-      "group": "@group.videos",
-      "control": [
-        "cycler"
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
-    },
-    {
       "id": "MAIN.CutsceneBorders",
       "type": "choice",
       "default": 3,

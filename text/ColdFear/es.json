@@ -28,7 +28,7 @@
   "hudaspect.description": "Auto mantiene el HUD en los bordes de la pantalla. Una proporción lo mantiene en un recuadro centrado de esa forma; 4:3 es el diseño original.",
   "hudaspect.auto": "Auto",
   "cutsceneborders": "Franjas de las cinemáticas",
-  "cutsceneborders.description": "Conserva las bandas originales, limita las escenas a una imagen centrada en 4:3 o ambas cosas. Quitar bandas horizontales recorta sin mostrar las zonas ocultas.",
+  "cutsceneborders.description": "Arriba/abajo conserva las franjas negras de arriba y abajo en las cinemáticas; Laterales las limita a su imagen 4:3 original.",
   "cutsceneborders.letterbox": "Arriba/abajo",
   "cutsceneborders.pillarbox": "Laterales",
   "cutsceneborders.both": "Ambas",

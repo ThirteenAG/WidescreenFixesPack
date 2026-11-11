@@ -119,7 +119,5 @@ namespace BullyRawMouse
                 regs.eip = Resume;
             }
         });
-        if (!SampleHook || !MouseHook)
-            std::terminate();
     }
 }

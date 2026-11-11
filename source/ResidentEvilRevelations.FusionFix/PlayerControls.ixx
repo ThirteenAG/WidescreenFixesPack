@@ -23,7 +23,7 @@ export namespace RevPlayer
     inline bool (__thiscall* IsOnline)(uintptr_t){};
     inline bool (__thiscall* ChangeState)(uintptr_t, int, int, void*){};
 
-    inline bool Init()
+    inline void Init()
     {
         static const bool ready = []()
         {
@@ -35,7 +35,6 @@ export namespace RevPlayer
             ChangeState = reinterpret_cast<decltype(ChangeState)>(change.get_first());
             return true;
         }();
-        return ready;
     }
 
     inline const char* TypeName(uintptr_t object)
@@ -55,7 +54,7 @@ export namespace RevPlayer
 
     inline bool Offline(uintptr_t ch)
     {
-        return Local(ch) && pSystem.is_initialized() && pSystem.get() && IsOnline && !IsOnline(pSystem);
+        return Local(ch) && pSystem.is_initialized() && pSystem.get() && !IsOnline(pSystem);
     }
 
     inline int Lower(uintptr_t ch)
@@ -85,12 +84,9 @@ export namespace RevPlayer
     template<typename Hook>
     void SetEnabled(Hook& hook, bool enabled)
     {
-        if (hook)
-        {
-            if (enabled)
-                (void)hook.enable();
-            else
-                (void)hook.disable();
-        }
+        if (enabled)
+            (void)hook.enable();
+        else
+            (void)hook.disable();
     }
 }

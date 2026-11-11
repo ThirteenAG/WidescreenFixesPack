@@ -223,9 +223,6 @@ export namespace PsychonautsDisplay
             Field<uint8_t>(renderer, 720) = fullscreen;
             Field<int>(renderer, 716) = refreshRate;
             result = resetHook.thiscall<int>(renderer, flags);
-            OutputDebugStringA(FAILED(result)
-                ? "Psychonauts Fusion Fix: window change and native display restore refused.\n"
-                : "Psychonauts Fusion Fix: window change refused; native display restored.\n");
         }
         if (SUCCEEDED(result) && engine.is_initialized() && engine && Field<void*>(engine, 404) == renderer)
         {
@@ -251,18 +248,12 @@ export namespace PsychonautsDisplay
         refresh = reinterpret_cast<decltype(refresh)>(applied + 11 + *reinterpret_cast<int32_t*>(applied + 7));
         refreshScreen = reinterpret_cast<decltype(refreshScreen)>(applied + 22 + *reinterpret_cast<int32_t*>(applied + 18));
         HMODULE pinned = nullptr;
-        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
-            reinterpret_cast<LPCWSTR>(&Init), &pinned)) return;
-        createHook = safetyhook::create_inline(create.get_first(), Create, SafetyHookInline::StartDisabled);
-        parametersHook = safetyhook::create_inline(parameters.get_first(), Parameters, SafetyHookInline::StartDisabled);
-        placeHook = safetyhook::create_inline(place.get_first(), Place, SafetyHookInline::StartDisabled);
-        resetHook = safetyhook::create_inline(reset.get_first(), Reset, SafetyHookInline::StartDisabled);
-        if (!createHook || !parametersHook || !placeHook || !resetHook
-            || !createHook.enable() || !parametersHook.enable() || !placeHook.enable() || !resetHook.enable())
-        {
-            createHook.reset(); parametersHook.reset(); placeHook.reset(); resetHook.reset();
-            return;
-        }
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
+            reinterpret_cast<LPCWSTR>(&Init), &pinned);
+        createHook = safetyhook::create_inline(create.get_first(), Create);
+        parametersHook = safetyhook::create_inline(parameters.get_first(), Parameters);
+        placeHook = safetyhook::create_inline(place.get_first(), Place);
+        resetHook = safetyhook::create_inline(reset.get_first(), Reset);
         FixSettings().OnChange("MAIN.WindowMode", []()
         {
             if (const auto hwnd = window.load(std::memory_order_acquire); hwnd && !changing)

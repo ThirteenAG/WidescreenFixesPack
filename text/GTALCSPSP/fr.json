@@ -1,5 +1,5 @@
 {
-  "plugin.name": "GTA Liberty City Stories PPSSPP Widescreen Fix",
+  "plugin.name": "GTA Liberty City Stories PPSSPP Fusion Fix",
   "MAIN.SkipIntro": "Passer l'introduction",
   "MAIN.SkipIntro.description": "Passe l'introduction d'ouverture. Redémarrez le jeu émulé après avoir modifié ce réglage dans le hub.",
   "MAIN.ForceAspectRatio": "Format d'image",
@@ -48,10 +48,6 @@
   "cutsceneborders.letterbox": "Letterbox",
   "cutsceneborders.pillarbox": "Pillarbox",
   "cutsceneborders.both": "Les deux",
-  "MAIN.FMVWidescreenMode": "Format des vidéos",
-  "MAIN.FMVWidescreenMode.description": "Les deux choix affichent chaque vidéo en entier dans ses propres proportions, avec des bandes noires lorsque l'écran est plus large ou plus étroit. Redémarrez après une modification dans le hub.",
-  "movies.original": "Original",
-  "movies.fill": "Remplir",
   "MAIN.GamepadIcons": "Icônes de manette",
   "MAIN.GamepadIcons.description": "Choisissez les icônes et le dessin de manette correspondant aux touches de PPSSPP. PSP conserve les graphismes d’origine. Le jeu émulé ne peut pas détecter le type de manette du PC : choisissez-le manuellement. Les fichiers absents ou incompatibles laissent les graphismes concernés inchangés. Redémarrez après les modifications dans le hub. Auto utilise les icônes Xbox 360.",
   "lights": "Feux des véhicules",

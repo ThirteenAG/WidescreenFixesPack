@@ -637,9 +637,9 @@ namespace MaxPayne_InputControl
 
         static auto& nGamepadIcons = FixSettings().Int("MAIN.GamepadIcons");
         if (token == "#RUN#" || token == "#WALKBACK#" || token == "#STRAFELEFT#" || token == "#STRAFERIGHT#")
-            return MaxPayneIcons::Ready ? MaxPayneIcons::Glyph(19) : "Left Stick";
+            return MaxPayneIcons::Glyph(19);
         if (token == "#AIMUP#" || token == "#AIMDOWN#" || token == "#AIMLEFT#" || token == "#AIMRIGHT#")
-            return MaxPayneIcons::Ready ? MaxPayneIcons::Glyph(24) : "Right Stick";
+            return MaxPayneIcons::Glyph(24);
         int family = nGamepadIcons == MaxPayneGamepadButtons::Auto ? MaxPayneGamepadButtons::DetectFamily() : nGamepadIcons;
         for (auto& [name, button] : Buttons)
         {
@@ -682,9 +682,7 @@ export std::string GetControlIcon(int id)
 {
     using namespace MaxPayneIcons;
     using namespace MaxPayne_InputControl;
-    if (!Ready)
-        return {};
-    auto button = [](JoystickButton value)
+    auto button =[](JoystickButton value)
     {
         auto icon = Button(value);
         return icon ? std::string(icon) : std::string();

@@ -36,7 +36,7 @@
   "FOVFactor": "Campo visivo",
   "FOVFactor.description": "Moltiplica il campo visivo ordinario, fino a 150 gradi in orizzontale. 1.0 mantiene la vista prevista. Mira, script, effetti telecamera e transizioni restano invariati.",
   "FMVWidescreenMode": "Inquadratura video",
-  "FMVWidescreenMode.description": "Entrambe le opzioni mostrano ogni filmato per intero nelle sue proporzioni, con bande nere dove lo schermo è più largo o più stretto. Nulla viene tagliato o stirato.",
+  "FMVWidescreenMode.description": "Proporzioni originali mostra i filmati come il gioco, interi nella sua cornice 4:3 centrata con bande nere attorno. Riempi adatta l'intero filmato allo schermo, senza tagliare né stirare nulla.",
   "FMVWidescreenMode.0": "Formato originale",
   "FMVWidescreenMode.1": "Riempi",
   "WindowMode": "Modalità finestra",
