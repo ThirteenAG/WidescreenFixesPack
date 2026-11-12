@@ -59,6 +59,8 @@
   "fullscreenbg.description": "Étend les fonds des menus à tout l'écran en répétant une colonne sans illustration. À désactiver pour des fonds remplacés aux tailles d'origine. Menu transparent est prioritaire.",
   "hqradardisc": "Contour du radar HD",
   "hqradardisc.description": "Dessine l'anneau du radar en haute résolution quand la texture basse résolution du jeu est utilisée.",
+  "nearlightsquares": "Carrés lumineux de près",
+  "nearlightsquares.description": "Garde le halo carré des phares et feux arrière sur les véhicules proches de la caméra, comme dans le jeu d'origine. Non ne l'affiche que sur les véhicules plus éloignés.",
   "textoutline": "Contour du texte",
   "textoutline.description": "Remplace l'ombre du texte du HUD et des menus par un contour.",
   "textoutline.thin": "Fin",

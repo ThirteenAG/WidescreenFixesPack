@@ -132,6 +132,23 @@
       "decimals": 2
     },
     {
+      "id": "MAIN.SwapShoulderKey",
+      "type": "key",
+      "default": "",
+      "devices": [
+        "keyboard",
+        "mouse"
+      ],
+      "label": "@MAIN.SwapShoulderKey",
+      "description": "@MAIN.SwapShoulderKey.description",
+      "page": "controls",
+      "apply": "live",
+      "control": [
+        "keycapture"
+      ],
+      "visibility": "editor"
+    },
+    {
       "id": "MAIN.CutsceneBorders",
       "type": "choice",
       "default": 3,

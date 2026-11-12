@@ -331,7 +331,7 @@ function Invoke-DependencyDownloads($Manifest, $Packages, [string]$Root, [string
     }
     [IO.File]::WriteAllText((Join-Path $Work 'dependencies.json'), ($resolved | ConvertTo-Json -Depth 10))
 }
-function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Work, [string]$Signing = 'optional', [string]$Hub = '') {
+function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Work, [string]$Signing = 'optional', [string]$Hub = '', [bool]$CrashDumps = $false) {
     if ($Signing -notin @('required', 'optional', 'off')) { throw 'Invalid signing profile.' }
     $packageWork = Join-Path $Work $Package.id
     $stage = Join-Path $packageWork 'stage'; $check = Join-Path $packageWork 'verify'
@@ -406,6 +406,12 @@ function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Wor
                 $null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target)
                 Copy-Item -LiteralPath $Hub -Destination $target
                 $expected[$destination] = Get-FileHashValue $target
+            }
+        }
+        if ($CrashDumps) {
+            # Developer builds: an empty CrashDumps folder next to the game's executable makes the ASI loader write crash dumps there
+            foreach ($destination in @(Get-HubDestinations $Package)) {
+                $null = New-Item -ItemType Directory -Force -Path (Resolve-PackagePath $stage ($destination -replace '[^/]+$', 'CrashDumps'))
             }
         }
         if ($Package.optionalTree) {

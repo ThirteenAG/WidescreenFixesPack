@@ -48,7 +48,7 @@
   "menu.restoredefaultshelp": "Restablece los ajustes de esta página a sus valores predeterminados.",
   "menu.restartwarning": "Reinicia el juego para aplicar los cambios.",
   "menu.help": "Ayuda",
-  "menu.presethelp": "Elige un preajuste con Izquierda/Derecha y confirma. Original mantiene los logotipos. Recomendado y Mejorado los omiten, ocultan el cursor inactivo y activan RGB. Solo Mejorado omite las transiciones de puertas. Se conservan las preferencias personales y los valores comunes. Restaurar valores predeterminados reinicia todas las opciones. Original y Recomendado usan 60 FPS; Mejorado elimina el límite. La sincronización vertical puede seguir limitando la frecuencia.",
+  "menu.presethelp": "Elige un preajuste con Izquierda/Derecha y confirma. Original mantiene los logotipos. Recomendado y Mejorado los omiten, ocultan el cursor inactivo y activan RGB. Solo Mejorado omite las transiciones de puertas y activa la profundidad de campo. Se conservan las preferencias personales y los valores comunes. Restaurar valores predeterminados reinicia todas las opciones. Original y Recomendado usan 60 FPS; Mejorado elimina el límite. La sincronización vertical puede seguir limitando la frecuencia.",
   "menu.helphint": "F1 / botón Predeterminado: ayuda completa",
   "PauseOnFocusLoss": "Pausar sin enfoque",
   "PauseOnFocusLoss.description": "Pausa cuando la ventana del juego está inactiva. Desactiva para que continúe en segundo plano.",
@@ -78,5 +78,10 @@
   "SkipPressStart": "Omitir aviso inicial",
   "SkipPressStart.description": "Omitir automáticamente el aviso de la pantalla de título.",
   "ConfineCursor": "Limitar el cursor",
-  "ConfineCursor.description": "Mantiene el puntero dentro de la ventana activa del juego. Lo libera al perder el foco o al abrir la interfaz de desarrollo."
+  "ConfineCursor.description": "Mantiene el puntero dentro de la ventana activa del juego. Lo libera al perder el foco o al abrir la interfaz de desarrollo.",
+  "page.controls": "Controles",
+  "ClassicKeyLinks": "Teclas enlazadas clásicas",
+  "ClassicKeyLinks.description": "Enlaza las teclas como en los juegos originales: las teclas de ataque y examinar funcionan como una sola (ataque al apuntar, examinar si no) y confirman en los menús, y la tecla de correr cancela en los menús. Se mantienen las teclas elegidas en las opciones de teclado del juego. Una tecla que también sirve para correr o para el giro rápido no se enlaza en el juego, así correr no examina.",
+  "DepthOfField": "Profundidad de campo",
+  "DepthOfField.description": "El desenfoque de profundidad de campo de las versiones de consola en las cinemáticas: el efecto del propio juego, que la versión de PC nunca activa."
 }

@@ -102,6 +102,16 @@ extern "C" void init()
     unthrottle = console::ps2settings::boolean(options[7], true);
     // Fast-forward from boot until the first engine frame reports its loading state.
     FrameLimitUnthrottle = unthrottle;
+    // The emulator reports 128 MB of RAM; before starting the next program the game then
+    // takes the devkit TLB path, which a retail BIOS doesn't have (the jump to 0x00400397).
+    // Both programs keep the retail path.
+    const auto memorySize = sites::at_130528();
+    if (!Required(memorySize, "memory size check"))
+    {
+        FrameLimitUnthrottle = 0;
+        return;
+    }
+    injector::WriteMemory<uint32_t>(memorySize + 8, 0x3C020200); // LUI v0, 0x0200 (32 MB)
     // The launcher and the streamed TC2 engine are separate ELF generations.
     if (const auto intro = sites::at_100350())
     {

@@ -413,6 +413,19 @@ public:
                 shSetMessage = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first(0x1B)).as_int(), Memcard::SetMessage);
             }
 
+            // When a career starts, the game looks once for an Underground 2 save folder in Local AppData; if there is
+            // one, the career gets 10000 bonus cash. The option counts the save as found.
+            {
+                static const int* pUnderground2SaveBonus = &FixSettings().Int("MAIN.Underground2SaveBonus");
+                pattern = hook::pattern("83 FF 02 76 ? 8B 15 ? ? ? ? C6 42 1C 01 56 FF 15 ? ? ? ? 5F 5B 8B CD E8");
+                static auto ppMemoryCard = *pattern.get_first<uint8_t**>(7);
+                static auto Underground2Save = safetyhook::create_mid(pattern.get_first(0x18), [](SafetyHookContext& regs)
+                {
+                    if (*pUnderground2SaveBonus)
+                        (*ppMemoryCard)[0x1C] = 1;
+                });
+            }
+
             // Frame rate limit and simulation rate: -1 = monitor refresh rate, -2 = twice the refresh rate.
             // The game needs a fixed rate, so it can't be unlimited.
             if (nFPSLimit == -2)

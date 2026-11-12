@@ -5,6 +5,7 @@ param(
     [string]$Packages = '',
     [ValidateSet('required', 'optional', 'off')][string]$Signing = 'optional',
     [ValidateSet('required', 'optional', 'off')][string]$Hub = $(if ($env:WFP_HUB_POLICY) { $env:WFP_HUB_POLICY } else { 'optional' }),
+    [ValidateSet('on', 'off')][string]$CrashDumps = $(if ($env:WFP_CRASH_DUMPS) { $env:WFP_CRASH_DUMPS } else { 'off' }),
     [switch]$Existing,
     [switch]$Available,
     [switch]$NoDownload,
@@ -123,8 +124,8 @@ function Start-ReadyPackages {
         $state.Scheduled[$package.id] = $true
         Write-Host "Packaging $($package.id)"
         $shell = [PowerShell]::Create(); $shell.RunspacePool = $pool
-        $null = $shell.AddScript('param($module, $manifest, $package, $root, $work, $signing, $hub); $ErrorActionPreference="Stop"; Import-Module $module -DisableNameChecking; Invoke-ManifestPackage $manifest $package $root $work $signing $hub')
-        foreach ($argument in @((Join-Path $PSScriptRoot 'Packaging.psm1'), $manifest, $package, $RepositoryRoot, $WorkDirectory, $Signing, $hubFile)) { $null = $shell.AddArgument($argument) }
+        $null = $shell.AddScript('param($module, $manifest, $package, $root, $work, $signing, $hub, $dumps); $ErrorActionPreference="Stop"; Import-Module $module -DisableNameChecking; Invoke-ManifestPackage $manifest $package $root $work $signing $hub $dumps')
+        foreach ($argument in @((Join-Path $PSScriptRoot 'Packaging.psm1'), $manifest, $package, $RepositoryRoot, $WorkDirectory, $Signing, $hubFile, ($CrashDumps -eq 'on'))) { $null = $shell.AddArgument($argument) }
         $null = $state.Workers.Add(@{ Shell = $shell; Invocation = $shell.BeginInvoke(); Id = $package.id })
     }
 }

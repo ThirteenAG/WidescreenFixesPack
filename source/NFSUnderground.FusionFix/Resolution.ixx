@@ -240,14 +240,14 @@ public:
             injector::WriteMemory(pattern.get_first(1), (int)ResList.size() - 1, true);
 
             pattern = hook::pattern("BA ? ? ? ? 33 C9 3B C2");
-            injector::WriteMemory(pattern.get_first(1), (int)ResList.size() - 1, true);
+            injector::WriteMemory(hook::pattern(pattern).get_first(1), (int)ResList.size() - 1, true);
 
             {
                 auto setResRef = [](hook::pattern pattern, int offset, std::vector<ProtectedGameRef<int32_t>>& targetVector)
                 {
                     if (pattern.empty())
                     {
-                        pattern.get_first();
+                        (void)hook::pattern(pattern).get_first();
                         std::abort();
                     }
                     pattern.for_each_result([&](const hook::pattern_match& match)

@@ -14,6 +14,8 @@
   "MAIN.SkipPressStart.description": "Omite la pantalla Pulsa cualquier tecla y la selección del punto de control.",
   "MAIN.TurnSpeed": "Velocidad de giro",
   "MAIN.TurnSpeed.description": "Velocidad con la que Sam gira hacia el movimiento (0.5–10). 1.0 es el valor original.",
+  "MAIN.SwapShoulderKey": "Tecla de cambio de hombro",
+  "MAIN.SwapShoulderKey.description": "Tecla que lleva la cámara sobre el otro hombro de Sam a pie, también al apuntar. En cobertura y con un escudo humano se mantiene el lado del juego. Vacío = sin tecla.",
   "MAIN.FOVFactor": "Multiplicador del campo visual",
   "MAIN.FOVFactor.description": "Escala el campo visual al desplazarse de 0,5 a 2,0. 1,0 conserva la vista normal. La mira, los visores, los dispositivos y las cámaras predeterminadas mantienen su campo propio. La vista horizontal no supera 150 grados y conserva las transiciones originales.",
   "MAIN.ScreenCullBias": "Margen de descarte fuera de pantalla",

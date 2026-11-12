@@ -40,6 +40,7 @@
   - Quick turn: A with the stick toward the camera (keyboard: the quick turn key); the camera swings behind.
   - Dodges: while aiming, A with the stick to a side or back (keyboard: the quick turn key with a direction) plays the game's avoid actions (the dodges of the QTEs): a side roll or a jump back.
 - **Laser sight with keyboard/mouse** — Keyboard/mouse aiming looks exactly like the pad's: the weapon's laser sight shows and the crosshair is hidden (the sniper scope keeps its reticle).
+- **Turn speed while moving** — How fast the character turns while walking and running, with the mouse or a stick. The game turns much slower on the move than standing still, slowest while running; 1.0x keeps the game's speed, higher values turn faster. With modern controls the camera turns freely, so this doesn't apply there.
 - **Knife parry** — Raise or swing the knife just before a Majini's melee attack or grab lands to block it: no damage (a grab doesn't latch on), the character plays the game's guard reaction (or keeps swinging) and the enemy reels as from a head shot, which opens the usual melee prompt for a follow-up.
 
 ---
@@ -57,8 +58,8 @@ The game's Options menu (at the title screen and in the pause menu) has the fix'
 Field of view, Modern controls, Laser sight with keyboard/mouse and Knife parry under the game's own rows (its Restore
 to default resets them too), and the added **PLUGINS** row lists the fix and every other loaded plugin with settings.
 Each plugin's page has its preset, its settings and Restore defaults for that page. FusionFixHub and fusionfix.io change
-the same settings; the first launch creates `scripts/ResidentEvil5.FusionFix.cfg`. **Vanilla** shows the logos; **Recommended** skips them; **Enhanced** also turns off the colour filter. Modern controls, laser sight and knife parry remain player choices. The field of view, HUD aspect ratio, frame rate limit, cursor confinement, pause when unfocused, colour filter, modern
-controls, laser sight, knife parry and update check apply at once. Reopen the Plugins page after changing its language;
+the same settings; the first launch creates `scripts/ResidentEvil5.FusionFix.cfg`. **Vanilla** shows the logos; **Recommended** skips them; **Enhanced** also turns off the colour filter. Modern controls, laser sight, turn speed while moving and knife parry remain player choices. The field of view, HUD aspect ratio, frame rate limit, cursor confinement, pause when unfocused, colour filter, modern
+controls, laser sight, turn speed while moving, knife parry and update check apply at once. Reopen the Plugins page after changing its language;
 window mode, intro skipping and RGB lighting apply after a restart. The window mode and update check are the player's choice. Ctrl+F10 opens the developer overlay (supporters).
 
 ## Known limits

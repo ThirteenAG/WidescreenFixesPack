@@ -48,7 +48,7 @@
   "menu.restoredefaultshelp": "Sets the settings of this page to their defaults.",
   "menu.restartwarning": "Restart the game to apply changes.",
   "menu.help": "Help",
-  "menu.presethelp": "Choose a preset with Left/Right, then confirm to apply. Vanilla retains the logos. Recommended and Enhanced enable logo skipping, idle cursor hiding and RGB lighting. Only Enhanced skips door transitions. Player preferences and settings shared by all presets are kept. Restore Defaults resets every setting. Vanilla and Recommended use 60 FPS; Enhanced removes the frame limit. V-Sync may still limit the rate.",
+  "menu.presethelp": "Choose a preset with Left/Right, then confirm to apply. Vanilla retains the logos. Recommended and Enhanced enable logo skipping, idle cursor hiding and RGB lighting. Only Enhanced skips door transitions and turns on depth of field. Player preferences and settings shared by all presets are kept. Restore Defaults resets every setting. Vanilla and Recommended use 60 FPS; Enhanced removes the frame limit. V-Sync may still limit the rate.",
   "menu.helphint": "F1 / Default button: full help",
   "PauseOnFocusLoss": "Pause when unfocused",
   "PauseOnFocusLoss.description": "Pause while the game window is inactive. Turn off to keep the game running in the background.",
@@ -78,5 +78,10 @@
   "SkipPressStart": "Skip title prompt",
   "SkipPressStart.description": "Continue automatically from the opening Press Start or any key prompt.",
   "ConfineCursor": "Confine Cursor",
-  "ConfineCursor.description": "Keep the pointer inside the active game window. Release it when unfocused or while the developer overlay is open."
+  "ConfineCursor.description": "Keep the pointer inside the active game window. Release it when unfocused or while the developer overlay is open.",
+  "page.controls": "Controls",
+  "ClassicKeyLinks": "Classic Key Links",
+  "ClassicKeyLinks.description": "Links keyboard keys as in the original games: the attack and examine keys work as one key (attack while aiming, examine otherwise) and confirm in menus, and the run key cancels in menus. The keys stay the ones set in the game's keyboard options. A key that is also the run or quick turn key isn't linked in play, so running doesn't examine.",
+  "DepthOfField": "Depth of Field",
+  "DepthOfField.description": "The depth of field blur of the console versions in cutscenes: the game's own effect, which the PC version never switches on."
 }

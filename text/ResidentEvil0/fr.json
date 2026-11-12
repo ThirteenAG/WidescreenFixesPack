@@ -48,7 +48,7 @@
   "menu.restoredefaultshelp": "Rétablit les valeurs par défaut des réglages de cette page.",
   "menu.restartwarning": "Redémarrez le jeu pour appliquer les changements.",
   "menu.help": "Aide",
-  "menu.presethelp": "Choisir un préréglage avec Gauche/Droite, puis confirmer. Original conserve les logos. Recommandé et Amélioré les passent, masquent le curseur inactif et activent le RGB. Seul Amélioré passe les transitions des portes. Les préférences personnelles et les valeurs communes sont conservées. Rétablir les valeurs par défaut réinitialise toutes les options. Original et Recommandé utilisent 60 IPS ; Amélioré supprime la limite. La synchronisation verticale peut encore limiter la cadence.",
+  "menu.presethelp": "Choisir un préréglage avec Gauche/Droite, puis confirmer. Original conserve les logos. Recommandé et Amélioré les passent, masquent le curseur inactif et activent le RGB. Seul Amélioré passe les transitions des portes et active la profondeur de champ. Les préférences personnelles et les valeurs communes sont conservées. Rétablir les valeurs par défaut réinitialise toutes les options. Original et Recommandé utilisent 60 IPS ; Amélioré supprime la limite. La synchronisation verticale peut encore limiter la cadence.",
   "menu.helphint": "F1 / touche Défaut : aide complète",
   "PauseOnFocusLoss": "Pause hors focus",
   "PauseOnFocusLoss.description": "Met le jeu en pause lorsque sa fenêtre est inactive. Désactiver pour continuer en arrière-plan.",
@@ -78,5 +78,10 @@
   "SkipPressStart": "Passer l’invite du titre",
   "SkipPressStart.description": "Passer automatiquement l’invite de l’écran titre.",
   "ConfineCursor": "Confiner le curseur",
-  "ConfineCursor.description": "Garde le pointeur dans la fenêtre active du jeu. Le libère lorsque le jeu perd le focus ou lorsque la surcouche de développement est ouverte."
+  "ConfineCursor.description": "Garde le pointeur dans la fenêtre active du jeu. Le libère lorsque le jeu perd le focus ou lorsque la surcouche de développement est ouverte.",
+  "page.controls": "Commandes",
+  "ClassicKeyLinks": "Touches liées classiques",
+  "ClassicKeyLinks.description": "Lie les touches du clavier comme dans les jeux d'origine : les touches d'attaque et d'examen agissent comme une seule touche (attaque en visant, examen sinon) et valident dans les menus, et la touche de course annule dans les menus. Les touches restent celles réglées dans les options clavier du jeu. Une touche qui sert aussi à courir ou au demi-tour n'est pas liée en jeu : courir n'examine pas.",
+  "DepthOfField": "Profondeur de champ",
+  "DepthOfField.description": "Le flou de profondeur de champ des versions console dans les cinématiques : l'effet du jeu, que la version PC n'active jamais."
 }

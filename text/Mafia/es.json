@@ -29,6 +29,8 @@
   "GRAPHICS.RestoreCarScratches.description": "Restaura los arañazos de la versión 1.0.",
   "HUD.RadarMap": "Mapa del radar",
   "HUD.RadarMap.description": "Radar estilo Xbox con indicadores mayores y zoom según la velocidad.",
+  "GAMEPLAY.OriginalRaceDifficulty": "Dificultad original de las carreras",
+  "GAMEPLAY.OriginalRaceDifficulty.description": "Los rivales corren a la velocidad de la versión 1.0, lo que hace más difícil la carrera de la historia. Se aplica durante la carrera.",
   "WIDESCREEN.WidescreenMap": "Mapa panorámico",
   "WIDESCREEN.WidescreenMap.description": "Muestra el mapa en toda la pantalla.",
   "CUTSCENES.CutsceneBorders": "Franjas de las cinemáticas",

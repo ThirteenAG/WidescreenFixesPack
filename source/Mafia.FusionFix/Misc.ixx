@@ -2,6 +2,8 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <intrin.h>
+#include <unordered_map>
 
 export module Misc;
 
@@ -53,6 +55,74 @@ void PreserveSniperBinding()
     }
 }
 
+// Mission programs run one command per frame and drop what a "wait" overshoots, so their loops speed up with the
+// frame rate (Free Ride Extreme monster and bombs). Above 60 FPS, run them on frames 16 ms apart and hand each
+// program the time of the frames it sat out. Program starts and script events run unchanged.
+namespace ScriptTiming
+{
+    constexpr double step = 0.016;
+    SafetyHookInline runHook;
+    uintptr_t startReturn = 0, eventReturn = 0;
+    uint32_t presented = 0, decided = ~0u;
+    void* first = nullptr;
+    bool runFrame = true;
+    double credit = 0.0;
+    LARGE_INTEGER frequency{}, last{};
+    std::unordered_map<void*, uint32_t> skipped;
+
+    // Once per frame: time left over carries to the next frame, so 60 FPS and below run every frame
+    void Decide(uint32_t elapsed)
+    {
+        if (runFrame)
+            skipped.clear();
+        LARGE_INTEGER now{};
+        QueryPerformanceCounter(&now);
+        const double real = last.QuadPart ? static_cast<double>(now.QuadPart - last.QuadPart) / frequency.QuadPart : step;
+        last = now;
+        credit = std::min(credit + std::max(real, elapsed / 1000.0), step * 2.0);
+        runFrame = credit >= step;
+        if (runFrame)
+            credit -= step;
+    }
+
+    char __fastcall Run(void* program, void*, uint32_t elapsed)
+    {
+        const auto caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
+        if (caller == startReturn || caller == eventReturn)
+            return runHook.unsafe_thiscall<char>(program, elapsed);
+        if (decided != presented || program == first)
+        {
+            decided = presented;
+            first = program;
+            Decide(elapsed);
+        }
+        if (!runFrame)
+        {
+            skipped[program] += elapsed;
+            return 0;
+        }
+        if (!skipped.empty())
+        {
+            if (auto it = skipped.find(program); it != skipped.end())
+                elapsed += it->second;
+        }
+        return runHook.unsafe_thiscall<char>(program, elapsed);
+    }
+
+    void Init()
+    {
+        auto run = hook::pattern("56 57 8B 7C 24 0C 8B F1 8B 4E 10 85 C9 74 2B 8B 46 14 2B C1 8B 4E 1C C1 F8 03 3B C8 73 1C 8B 46 10 83 3C C8 06 75 04 C6 46 64 00");
+        startReturn = reinterpret_cast<uintptr_t>(hook::get_pattern("6A 01 C7 41 44 00 00 00 00 C6 41 64 01 E8", 18));
+        eventReturn = reinterpret_cast<uintptr_t>(hook::get_pattern("8B 06 6A 01 8B CE FF 50 1C 6A 01 8B CE E8", 18));
+        QueryPerformanceFrequency(&frequency);
+        runHook = safetyhook::create_inline(run.get_first(), Run);
+        WFP::onGameProcessEvent() += []()
+        {
+            ++presented;
+        };
+    }
+}
+
 class Misc
 {
 public:
@@ -63,6 +133,7 @@ public:
             InitIntro();
             PreserveSniperBinding();
             RestoreGameOverSound();
+            ScriptTiming::Init();
 
             // Portable settings: the game's registry settings in savegame\settings.bin
             bool bWriteSettingsToFile = FixSettings().Bool("MAIN.PortableSettings") != 0;

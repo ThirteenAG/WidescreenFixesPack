@@ -3,6 +3,7 @@
 #include "Shared/WidescreenFixConflict.hpp"
 
 import Skeleton;
+import Misc;
 
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
 ASI_SETTINGS_EXPORT(FixSettings())
@@ -14,6 +15,8 @@ void Init()
 
     FixSettings();
     asi_settings::LiveLink::Start();
+
+    InitMiscAtLoad();
 
     static auto WinMainHook = safetyhook::create_mid(pattern.get_first(17), [](SafetyHookContext& regs)
     {

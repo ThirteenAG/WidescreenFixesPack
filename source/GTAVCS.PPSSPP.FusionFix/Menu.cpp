@@ -49,18 +49,18 @@ static_assert(sizeof(Widget) == 0xC8 && sizeof(MenuPage) == 0x38 && offsetof(Men
 enum Option : int { FrameRate = 0x100, MoreOptions, HudSize, RadarSize, MultiplayerRadar,
     FieldOfView, CutsceneBorders, CutsceneFov, FastLoading, Preset, ApplyPreset,
     DisplayPage, GamePage, VehicleLights, IconSet,
-    FixPage, FixDefaults, SkipIntro, HudBox, Back, OptionEnd };
+    FixPage, FixDefaults, SkipIntro, HudBox, HoldCamera, Back, OptionEnd };
 constexpr unsigned optionCount = OptionEnd - FrameRate;
 constexpr char keys[optionCount][20] = {"WF_FRAME_RATE", "WF_MORE_OPTIONS", "WF_HUD_SIZE", "WF_RADAR_SIZE",
     "WF_MP_RADAR", "WF_FOV", "WF_CUT_BORDERS", "WF_CUT_FOV", "WF_FAST_LOADING", "WF_PRESET",
     "WF_APPLY_PRESET", "WF_DISPLAY", "WF_GAME", "WF_LIGHTS",
-    "WF_ICONS", "WF_FIX_PAGE", "WF_FIX_DEFAULTS", "WF_SKIP_INTRO", "WF_HUD_BOX", "WF_BACK"};
+    "WF_ICONS", "WF_FIX_PAGE", "WF_FIX_DEFAULTS", "WF_SKIP_INTRO", "WF_HUD_BOX", "WF_HOLD_CAMERA", "WF_BACK"};
 constexpr char16_t captions[optionCount][28] = {u"FRAME RATE:", u"PLUGINS", u"HUD SIZE:",
     u"RADAR SIZE:", u"MULTIPLAYER RADAR SIZE:", u"FIELD OF VIEW:", u"CUTSCENE BORDERS:",
     u"ORIGINAL CUTSCENE FOV:", u"FAST LOADING:", u"PRESET:", u"APPLY PRESET", u"DISPLAY AND CAMERA",
     u"GAME", u"VEHICLE LIGHTS (RESTART):",
     u"CONTROLLER ICONS:", u"FUSION FIX", u"RESTORE DEFAULTS", u"SKIP INTRO (RESTART):", u"HUD ASPECT RATIO:",
-    u""};
+    u"HOLD VEHICLE CAMERA:", u""};
 constexpr char fpsKeys[2][12] = {"WF_FPS_30", "WF_FPS_60"};
 constexpr char16_t fpsText[2][4] = {u"30", u"60"};
 constexpr char onOff[2][16] = {"WF_BOOL_OFF", "WF_BOOL_ON"};
@@ -111,11 +111,11 @@ bool dirty = false;
 int selectedPreset = 0;
 bool confirmPreset = false, confirmDefaults = false;
 // The descriptor's presets: 1 vanilla, 2 recommended (the defaults), 3 enhanced (0 = custom).
-struct PresetValues { int fps, unthrottleMode; float hud, radar, multiplayerRadar; int cutsceneBorders; bool skipIntro; bool vehicleLights; unsigned icons; };
+struct PresetValues { int fps, unthrottleMode; float hud, radar, multiplayerRadar; int cutsceneBorders; bool skipIntro; bool vehicleLights; unsigned icons; bool holdCamera; };
 constexpr PresetValues presetValues[4] = {{},
-    {0, 0, 1.0f, 1.0f, 1.0f, 1, false, false, 0},
-    {0, 1, 0.75f, 0.83f, 0.63f, 3, true, true, 8},
-    {1, 1, 0.75f, 0.83f, 0.63f, 3, true, true, 8}};
+    {0, 0, 1.0f, 1.0f, 1.0f, 1, false, false, 0, false},
+    {0, 1, 0.75f, 0.83f, 0.63f, 3, true, true, 8, false},
+    {1, 1, 0.75f, 0.83f, 0.63f, 3, true, true, 8, true}};
 constexpr int recommendedPreset = 2;
 bool PresetMatches(int preset) {
     if (preset < 1 || preset > 3) return false;
@@ -125,7 +125,8 @@ bool PresetMatches(int preset) {
         std::fabs(Drawing::settings.radar - p.radar) < 0.001f &&
         std::fabs(Drawing::settings.multiplayerRadar - p.multiplayerRadar) < 0.001f &&
         settings.cutsceneBorders == p.cutsceneBorders && settings.skipIntro == p.skipIntro &&
-        settings.vehicleLights == p.vehicleLights && GamepadIconSet() == p.icons;
+        settings.vehicleLights == p.vehicleLights && GamepadIconSet() == p.icons &&
+        settings.holdVehicleCamera == p.holdCamera;
 }
 int MatchingPreset() { return PresetMatches(2) ? 2 : PresetMatches(1) ? 1 : PresetMatches(3) ? 3 : 0; }
 
@@ -168,6 +169,7 @@ int Value(int option) {
     case HudBox: return HudBoxIndex(Drawing::settings.hudAspect);
     case Preset: return selectedPreset;
     case VehicleLights: return settings.vehicleLights;
+    case HoldCamera: return settings.holdVehicleCamera;
     case IconSet: return int(GamepadIconSet());
     default: return 0;
     }
@@ -186,6 +188,7 @@ void SetOption(int option, int value) {
     case FastLoading: settings.unthrottleMode = value; settings.unthrottle = value != 0; if (!settings.unthrottle) console::portable::Unthrottle(false); break;
     case Preset: selectedPreset = value; confirmPreset = false; return;
     case VehicleLights: settings.vehicleLights = value != 0; break;
+    case HoldCamera: settings.holdVehicleCamera = value != 0; break;
     // Applied and saved at once, like the game's own controller menu does.
     case IconSet: if (value >= 0) SelectGamepadIcons(unsigned(value)); return;
     default: return;
@@ -286,9 +289,9 @@ void Show(unsigned mode) {
     constexpr int plugins[] = {FixPage, Back};
     constexpr int fix[] = {Preset, ApplyPreset, DisplayPage, GamePage, FixDefaults, Back};
     constexpr int display[] = {HudSize, HudBox, RadarSize, MultiplayerRadar, FieldOfView, CutsceneBorders, Back};
-    constexpr int game[] = {FrameRate, FastLoading, SkipIntro, VehicleLights, IconSet, Back};
+    constexpr int game[] = {FrameRate, FastLoading, SkipIntro, VehicleLights, HoldCamera, IconSet, Back};
     const int* options = game;
-    unsigned rows = 6;
+    unsigned rows = 7;
     switch (mode) {
     case Plugins: options = plugins; rows = 2; break;
     case FixMode: options = fix; rows = 6; break;
@@ -316,6 +319,7 @@ void ApplyPresetValues(int preset, bool& confirm) {
     Drawing::settings.hud = p.hud; Drawing::settings.radar = p.radar; Drawing::settings.multiplayerRadar = p.multiplayerRadar;
     settings.cutsceneBorders = p.cutsceneBorders;
     settings.skipIntro = p.skipIntro; settings.vehicleLights = p.vehicleLights;
+    settings.holdVehicleCamera = p.holdCamera;
     SelectGamepadIcons(p.icons);
     selectedPreset = preset;
     dirty = true; confirm = false;
@@ -449,11 +453,12 @@ void InputTrigger(MenuItem* item, int trigger) {
 void Save() {
     if (!dirty) return;
     using console::portable::IniValue;
-    IniValue values[10] = {
+    IniValue values[11] = {
         {"MAIN", "FPSLimit", {}}, {"MAIN", "UnthrottleEmuDuringLoading", {}}, {"MPRADAR", "RadarScale", {}},
         {"MAIN", "HudScale", {}}, {"RADAR", "RadarScale", {}}, {"MAIN", "FOVFactor", {}},
         {"MAIN", "CutsceneBorders", {}}, {"MAIN", "SkipIntro", {}},
-        {"MAIN", "HudAspectRatioConstraint", {}}, {"MAIN", "VehicleLights", {}}};
+        {"MAIN", "HudAspectRatioConstraint", {}}, {"MAIN", "VehicleLights", {}},
+        {"CONTROLS", "HoldVehicleCamera", {}}};
     std::strcpy(values[0].value, settings.fps ? "60" : "30");
     // A configured value of 2 (also fast-forward fades) is kept while enabled.
     std::strcpy(values[1].value, !settings.unthrottle ? "0" : settings.unthrottleMode == 2 ? "2" : "1");
@@ -468,8 +473,9 @@ void Save() {
     else if (const int index = HudBoxIndex(hudAspect)) std::strcpy(values[8].value, hudBoxNames[index]);
     else console::format(values[8].value, "", hudAspect, 4);
     std::strcpy(values[9].value, settings.vehicleLights ? "1" : "0");
+    std::strcpy(values[10].value, settings.holdVehicleCamera ? "1" : "0");
     static console::portable::IniWriter<> writer;
-    const bool saved = writer.update(cfgPath, values, 10);
+    const bool saved = writer.update(cfgPath, values, 11);
 #ifndef NDEBUG
     logger.WriteF("Menu settings %s", saved ? "saved" : "could not be saved");
 #endif

@@ -9,117 +9,84 @@ export module Framelimit;
 
 import ComVars;
 
-float fFpsLimit;
-int32_t nFrameLimitType;
+// The game's clock is a 60 Hz tick, counted by its tick thread. A frame waits a number of ticks since the last one
+// (2 = 30 FPS, 1 = 60 FPS) and the simulation runs one step per tick.
+GameRef<uint32_t> nTickCount;
+GameRef<uint32_t> nLastWaitTick;
+void (__cdecl* Tick)() = nullptr;
 
-class FrameLimiter
+HANDLE hTickEvent = nullptr;
+// Read by the game in place of its own frame interval, which stays as saved in its preferences
+int32_t nFrameInterval = 2;
+uint32_t nSteppedTick = 0;
+int32_t nFrameSteps = 2;
+
+// Replaces the game's tick thread, which measured its 17 ms with a millisecond timer and ran slow and unevenly
+DWORD WINAPI TickThread(LPVOID)
 {
-public:
-    enum FPSLimitMode { FPS_NONE, FPS_REALTIME, FPS_ACCURATE };
-    FPSLimitMode mFPSLimitMode = FPS_NONE;
-private:
-    double TIME_Frequency = 0.0;
-    double TIME_Ticks = 0.0;
-    double TIME_Frametime = 0.0;
-    float  fFPSLimit = 0.0f;
-public:
-    void Init(FPSLimitMode mode, float fps_limit)
-    {
-        mFPSLimitMode = mode;
-        fFPSLimit = fps_limit;
+    LARGE_INTEGER frequency, now;
+    QueryPerformanceFrequency(&frequency);
+    QueryPerformanceCounter(&now);
 
-        LARGE_INTEGER frequency;
-        QueryPerformanceFrequency(&frequency);
-        static constexpr auto TICKS_PER_FRAME = 1;
-        auto TICKS_PER_SECOND = (TICKS_PER_FRAME * fFPSLimit);
-        if (mFPSLimitMode == FPS_ACCURATE)
+    HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+    if (!timer)
+        timer = CreateWaitableTimerW(nullptr, TRUE, nullptr);
+
+    const double period = double(frequency.QuadPart) / 60.0;
+    double next = double(now.QuadPart);
+
+    while (true)
+    {
+        next += period;
+        QueryPerformanceCounter(&now);
+
+        // After a stall the ticks start over instead of arriving all at once
+        if (double(now.QuadPart) - next > period * 4.0)
+            next = double(now.QuadPart);
+
+        while (double(now.QuadPart) < next)
         {
-            TIME_Frametime = 1000.0 / (double)fFPSLimit;
-            TIME_Frequency = (double)frequency.QuadPart / 1000.0; // ticks are milliseconds
+            LARGE_INTEGER due;
+            due.QuadPart = -std::max(1LL, LONGLONG((next - double(now.QuadPart)) * 10000000.0 / double(frequency.QuadPart)));
+            SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE);
+            WaitForSingleObject(timer, INFINITE);
+            QueryPerformanceCounter(&now);
         }
-        else // FPS_REALTIME
-        {
-            TIME_Frequency = (double)frequency.QuadPart / (double)TICKS_PER_SECOND; // ticks are 1/n frames (n = fFPSLimit)
-        }
-        Ticks();
-    }
-    DWORD Sync_RT()
-    {
-        DWORD lastTicks, currentTicks;
-        LARGE_INTEGER counter;
-        QueryPerformanceCounter(&counter);
-        lastTicks = (DWORD)TIME_Ticks;
-        TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
-        currentTicks = (DWORD)TIME_Ticks;
 
-        return (currentTicks > lastTicks) ? currentTicks - lastTicks : 0;
+        Tick();
+        SetEvent(hTickEvent);
     }
-    DWORD Sync_SLP()
-    {
-        LARGE_INTEGER counter;
-        QueryPerformanceCounter(&counter);
-        double millis_current = (double)counter.QuadPart / TIME_Frequency;
-        double millis_delta = millis_current - TIME_Ticks;
-        if (TIME_Frametime <= millis_delta)
-        {
-            TIME_Ticks = millis_current;
-            return 1;
-        }
-        else if (TIME_Frametime - millis_delta > 2.0) // > 2ms
-            Sleep(1); // Sleep for ~1ms
-        else
-            Sleep(0); // yield thread's time-slice (does not actually sleep)
-
-        return 0;
-    }
-    void Sync()
-    {
-        if (mFPSLimitMode == FPS_REALTIME)
-            while (!Sync_RT());
-        else if (mFPSLimitMode == FPS_ACCURATE)
-            while (!Sync_SLP());
-    }
-private:
-    void Ticks()
-    {
-        LARGE_INTEGER counter;
-        QueryPerformanceCounter(&counter);
-        TIME_Ticks = (double)counter.QuadPart / TIME_Frequency;
-    }
-} FpsLimiter, FpsLimiter30;
-
-SafetyHookInline shsub_648AC0 = {};
-void __cdecl sub_648AC0(int a1)
-{
-    return shsub_648AC0.unsafe_ccall(nFrameLimitType ? 0 : a1);
 }
 
-void (__cdecl* sub_62B450)() = nullptr;
-void __stdcall Thread(LPVOID a1)
+SafetyHookInline shFrameWait = {};
+// The game's frame wait spins until the tick arrives and handles one window message per turn; it is also the only
+// message pump of the movie player. Here the messages are handled and the thread sleeps until the tick, so the
+// game's own wait returns at once.
+void __cdecl FrameWait(int ticks)
 {
-    LARGE_INTEGER frequency, currentTime;
-    double lastTime, elapsed;
-    const double msPerFrame = 1000.0 / fFpsLimit; // ms per frame at the requested FPS
-
-    QueryPerformanceFrequency(&frequency);
-    QueryPerformanceCounter(&currentTime);
-    lastTime = (double)currentTime.QuadPart / frequency.QuadPart * 1000.0;
-
-    while (1)
+    while (true)
     {
-        QueryPerformanceCounter(&currentTime);
-        elapsed = ((double)currentTime.QuadPart / frequency.QuadPart * 1000.0) - lastTime;
+        bool quit = false;
+        MSG msg;
+        while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+        {
+            // Left for the game's own loop
+            if (msg.message == WM_QUIT)
+            {
+                PostQuitMessage(int(msg.wParam));
+                quit = true;
+                break;
+            }
+            TranslateMessage(&msg);
+            DispatchMessageA(&msg);
+        }
 
-        if (elapsed >= msPerFrame)
-        {
-            lastTime += msPerFrame;
-            sub_62B450();
-        }
-        else
-        {
-            Sleep(1);
-        }
+        if (quit || int32_t(nTickCount - nLastWaitTick) >= ticks)
+            break;
+
+        MsgWaitForMultipleObjects(1, &hTickEvent, FALSE, 100, QS_ALLINPUT);
     }
+    return shFrameWait.unsafe_ccall(ticks);
 }
 
 bool GameNeeds30FPS()
@@ -140,128 +107,69 @@ bool GameNeeds30FPS()
 
 void InitFrameLimiter()
 {
-    // Native frame limiter fix
-    auto pattern = hook::pattern("A1 ? ? ? ? 83 C0 01 A3 ? ? ? ? A1");
-    sub_62B450 = (decltype(sub_62B450))pattern.get_first();
+    timeBeginPeriod(1);
+    hTickEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 
-    pattern = hook::pattern("A1 ? ? ? ? 83 EC 1C");
-    shsub_648AC0 = safetyhook::create_inline(pattern.get_first(0), sub_648AC0);
+    auto pattern = hook::pattern("A1 ? ? ? ? 83 C0 01 A3 ? ? ? ? A1");
+    Tick = (decltype(Tick))pattern.get_first();
+    nTickCount.SetAddress(*pattern.get_first<uint32_t*>(1));
 
     pattern = hook::pattern("56 8B 35 ? ? ? ? 57 8B 3D ? ? ? ? 8B FF");
-    injector::MakeJMP(pattern.get_first(), Thread, true);
+    injector::MakeJMP(pattern.get_first(), TickThread, true);
 
-    if (fFpsLimit >= 0.0f)
+    pattern = hook::pattern("A1 ? ? ? ? 83 EC 1C");
+    nLastWaitTick.SetAddress(*pattern.get_first<uint32_t*>(1));
+    shFrameWait = safetyhook::create_inline(pattern.get_first(0), FrameWait);
+
+    // Frame wait of the main loop, least steps of a paused frame, frame wait of the map screen
+    pattern = hook::pattern("83 38 13 B8 02 00 00 00 74 05 A1 ? ? ? ?");
+    injector::WriteMemory(pattern.get_first(11), &nFrameInterval, true);
+    pattern = hook::pattern("E8 ? ? ? ? 2B 05 ? ? ? ? 8B 0D ? ? ? ? 89 44 24");
+    injector::WriteMemory(pattern.get_first(13), &nFrameInterval, true);
+    pattern = hook::pattern("B8 02 00 00 00 2B 05 ? ? ? ? 50 E8");
+    injector::WriteMemory(pattern.get_first(7), &nFrameInterval, true);
+
+    // Each turn of the main loop: the frame rate, and the simulation steps of this frame = the ticks since the last
+    // one. The game guessed the steps from the last frame's duration instead, starting at 2, which tied the game
+    // speed to the frame rate. At most 4 steps, like the game; ticks beyond that are dropped.
+    pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? E8 ? ? ? ? 80 3D");
+    static auto MainLoopHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (nFrameLimitType > 0)
+        static const int& nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
+        nFrameInterval = (nFPSLimit == 60 && !GameNeeds30FPS()) ? 1 : 2;
+
+        const uint32_t tick = nTickCount;
+        int32_t steps = int32_t(tick - nSteppedTick);
+        if (steps > 4)
         {
-            auto mode = (nFrameLimitType == 2) ? FrameLimiter::FPSLimitMode::FPS_ACCURATE : FrameLimiter::FPSLimitMode::FPS_REALTIME;
-            if (mode == FrameLimiter::FPSLimitMode::FPS_ACCURATE)
-                timeBeginPeriod(1);
-
-            FpsLimiter.Init(mode, fFpsLimit);
-            FpsLimiter30.Init(mode, 30.0f);
-
-            auto pattern = hook::pattern("8B 76 ? 8B 16 53");
-            static auto FPSLimiterPresent = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                if (!GameNeeds30FPS())
-                    FpsLimiter.Sync();
-                else
-                    FpsLimiter30.Sync();
-            });
+            steps = 4;
+            nSteppedTick = tick;
         }
-
-        // Tick rate
-        pattern = hook::pattern("BE ? ? ? ? F3 0F 11 4C 24 ? F3 0F 11 44 24 ? 89 74 24 ? DB 44 24");
-        injector::MakeNOP(pattern.get_first(), 5, true);
-        static auto TickRateHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        else
         {
-            if (!GameNeeds30FPS())
-                regs.esi = 1;
-            else
-                regs.esi = 2;
-        });
-
-        // Clamp
-        pattern = hook::pattern("83 FE 04 74 ? 83 C6 01");
-        injector::WriteMemory<uint8_t>(pattern.get_first(2), 2, true);
-
-        pattern = hook::pattern("83 FE 04 89 74 24");
-        injector::WriteMemory<uint8_t>(pattern.get_first(2), 2, true);
-
-        static float fTargetTimeStep = (30.0f / fFpsLimit) * (1.0f / ((1.0f / 60.0f) * 1000.0f));
-
-        {
-            //pattern = hook::pattern("D9 05 ? ? ? ? DF F1 DD D8 76 ? E8 ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 5C 24 ? EB 0E F3 0F 10 05 ? ? ? ? F3 0F 11 44 24 ? 8B 4C 24");
-            //injector::WriteMemory(0x45B131, &fTargetTimeStep, true); //fld     flt_6CF0A0
-            //pattern = hook::pattern("D9 05 ? ? ? ? DF F1 DD D8 76 ? E8 ? ? ? ? D8 0D ? ? ? ? D8 05 ? ? ? ? D9 5C 24 ? EB 0E F3 0F 10 05 ? ? ? ? F3 0F 11 44 24 ? F3 0F 10 05");
-            //injector::WriteMemory(0x45B1A7, &fTargetTimeStep, true); //fld     flt_6CF0A0
+            steps = std::max(steps, 1);
+            nSteppedTick += steps;
         }
+        nFrameSteps = steps;
+    });
 
-        // Possibly loading screens
-        {
-            //pattern = hook::pattern("D8 0D ? ? ? ? D9 05 ? ? ? ? D9 C9 DF F1 DD D8 0F 86");
-            //injector::WriteMemory(0x499680, &fTargetTimeStep, true); //fmul    flt_6CF0A0
-            //pattern = hook::pattern("D8 0D ? ? ? ? D9 05 ? ? ? ? D9 C9 DF F1 DD D8 76 ? B8 01 00 00 00");
-            //injector::WriteMemory(0x49A08D, &fTargetTimeStep, true); //fmul    flt_6CF0A0
-        }
+    pattern = hook::pattern("8A 0D ? ? ? ? 8A 5C 24 ? 88 0D ? ? ? ?");
+    static auto pStepsDone = (uintptr_t)pattern.get_first();
 
-        // Main timing loop
-        {
-            pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? E8 ? ? ? ? 80 3D");
-            static auto setTargetForMain = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                if (!GameNeeds30FPS())
-                    fTargetTimeStep = (30.0f / fFpsLimit) * (1.0f / ((1.0f / 60.0f) * 1000.0f));
-                else
-                    fTargetTimeStep = (1.0f / ((1.0f / 60.0f) * 1000.0f));
-            });
+    pattern = hook::pattern("F3 0F 10 44 24 ? F3 0F 10 4C 24 ? F3 0F 5C C8 F3 0F 5E 44 24 ? BE 02 00 00 00");
+    static auto StepsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        regs.esi = nFrameSteps;
+        regs.eip = pStepsDone;
+    });
 
-            pattern = hook::pattern("D8 0D ? ? ? ? F3 0F 10 05 ? ? ? ? F3 0F 11 44 24 ? D9 5C 24");
-            injector::WriteMemory(pattern.get_first(2), &fTargetTimeStep, true); //fmul    flt_6CF0A0
-            pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? 0F 85");
-            injector::WriteMemory(pattern.get_first(2), &fTargetTimeStep, true); //fmul    flt_6CF0A0
-            pattern = hook::pattern("D8 0D ? ? ? ? A1 ? ? ? ? 85 C0");
-            injector::WriteMemory(pattern.get_first(2), &fTargetTimeStep, true); //fmul    flt_6CF0A0
-            pattern = hook::pattern("D8 0D ? ? ? ? F3 0F 2A C6");
-            injector::WriteMemory(pattern.get_first(2), &fTargetTimeStep, true); //fmul    flt_6CF0A0
-            pattern = hook::pattern("D8 0D ? ? ? ? D9 5C 24 ? 0F 84");
-            injector::WriteMemory(pattern.get_first(2), &fTargetTimeStep, true); //fmul    flt_6CF0A0
-        }
-
-        {
-            //pattern = hook::pattern("D8 0D ? ? ? ? D9 05 ? ? ? ? D9 C9 DF F1 DD D8 72");
-            //injector::WriteMemory(0x4A910C, &fTargetTimeStep, true); //fmul    flt_6CF0A0
-        }
-
-        {
-            //pattern = hook::pattern("D8 0D ? ? ? ? D9 05 ? ? ? ? D9 C9 DF F1 DD D8 76 ? A1");
-            //injector::WriteMemory(0x5C09D0, &fTargetTimeStep, true); //fmul    flt_6CF0A0
-        }
-
-        {
-            //pattern = hook::pattern("D8 0D ? ? ? ? D9 05 ? ? ? ? D9 C9 DF F1 DD D8 0F 82");
-            //injector::WriteMemory(0x5D8571, &fTargetTimeStep, true); //fmul    flt_6CF0A0
-        }
-
-        {
-            //pattern = hook::pattern("0F 2F 05 ? ? ? ? 76 ? 6A 00 6A 00");
-            //injector::WriteMemory(0x5F5489, &fTargetTimeStep, true); //comiss  xmm0, flt_6CF0A0
-        }
-
-        // change menu map cursor sensitivity
-        static const float fMenuCursorSens = 27.5f / 2.0f;
-        pattern = hook::pattern("F3 0F 10 05 ? ? ? ? F3 0F 10 4C 24 ? F3 0F 59 C8 F3 0F 58 4E");
-        injector::WriteMemory(pattern.get_first(4), &fMenuCursorSens, true);
-
-        // improve camera rotation with gamepad
-        pattern = hook::pattern("51 F3 0F 11 04 24 68 ? ? ? ? 8D 44 24 ? 68 ? ? ? ? 50 E8 ? ? ? ? 0F 28 08 0F 28 C1 0F 59 C1 0F 28 D0 0F C6 D0 FF 0F 28 D8 0F C6 D8 AA");
-        static auto slerpHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-        {
-            if (CurrentCameraMode == CameraOnFoot)
-                regs.xmm0.f32[0] *= 1.5f;
-        });
-    }
+    // improve camera rotation with gamepad
+    pattern = hook::pattern("51 F3 0F 11 04 24 68 ? ? ? ? 8D 44 24 ? 68 ? ? ? ? 50 E8 ? ? ? ? 0F 28 08 0F 28 C1 0F 59 C1 0F 28 D0 0F C6 D0 FF 0F 28 D8 0F C6 D8 AA");
+    static auto slerpHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (CurrentCameraMode == CameraOnFoot)
+            regs.xmm0.f32[0] *= 1.5f;
+    });
 }
 
 class Framelimit
@@ -271,14 +179,7 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            auto& settings = FixSettings();
-            nFrameLimitType = settings.Int("FRAMELIMIT.FrameLimitType");
-            fFpsLimit = settings.Int("MAIN.FPSLimit") == 60 ? 60.0f : 30.0f;
-
-            if (fFpsLimit)
-            {
-                InitFrameLimiter();
-            }
+            InitFrameLimiter();
         };
     }
 } Framelimit;

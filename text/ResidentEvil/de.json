@@ -73,5 +73,8 @@
   "MAIN.GamepadIcons.description": "Native Controller-Tastensymbole: Xbox, PlayStation oder Nintendo. Automatisch verwendet Xbox. Tastatur- und Mausbezeichnungen bleiben unverändert.",
   "menu.pad.triangle": "Dreieck",
   "SkipPressStart": "Beliebige Taste überspringen",
-  "SkipPressStart.description": "Überspringt den ersten Bildschirm zum Drücken einer beliebigen Taste. Lade- und Speicherbestätigungen bleiben unverändert."
+  "SkipPressStart.description": "Überspringt den ersten Bildschirm zum Drücken einer beliebigen Taste. Lade- und Speicherbestätigungen bleiben unverändert.",
+  "page.controls": "Steuerung",
+  "ClassicKeyLinks": "Klassische Tastenkopplung",
+  "ClassicKeyLinks.description": "Koppelt Tasten wie im Originalspiel: Feuer- und Untersuchen-Taste wirken als eine Taste (Feuern beim Zielen, sonst Untersuchen) und bestätigen in Menüs, die Lauftaste bricht in Menüs ab. Es bleiben die in den Tastatur-Optionen des Spiels gewählten Tasten. Eine Taste, die auch Laufen oder Schnelldrehung ist, wird im Spiel nicht gekoppelt, damit Laufen nicht untersucht."
 }

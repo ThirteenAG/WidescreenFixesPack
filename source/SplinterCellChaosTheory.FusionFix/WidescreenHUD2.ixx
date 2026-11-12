@@ -186,6 +186,22 @@ export bool HudNeedsToMoveRight(uint32_t id)
         AREAINST::A_Info_teamate,     // Coop teammate's username and health
         IMAGE::I_Talking,             // Coop teammate's microphone icon
         AREAINST::A_icon_coopaction,  // Coop action icon
+        // Quick inventory, next to the weapon box
+        BUTTONINST::B_SlotItem01,
+        BUTTONINST::B_SlotItem02,
+        BUTTONINST::B_SlotItem03,
+        BUTTONINST::B_SlotItem04,
+        BUTTONINST::B_SlotItem05,
+        BUTTONINST::B_SlotItem06,
+        BUTTONINST::B_SlotItem07,
+        BUTTONINST::B_SlotAmmo01,
+        BUTTONINST::B_SlotAmmo02,
+        BUTTONINST::B_SlotAmmo03,
+        BUTTONINST::B_SlotAmmo04,
+        BUTTONINST::B_SlotAmmo05,
+        IMAGE::Back_infos,
+        TEXT::L_SelectedItemName,
+        TEXT::L_SelectedItemAmmo,
     };
 
     return std::any_of(std::begin(elements), std::end(elements), [id](HudID hash)
@@ -242,12 +258,25 @@ export void InitWidescreenHUD2()
         auto type = *reinterpret_cast<void**>(source);
         const int count = type == pHudAreaWidgetVTable ? 1 : 2;
         if (type != pHudAreaWidgetVTable && type != pHudImageRendererVTable && type != pHudTextLabelVTable && type != pHudPlaceholderViewportVTable) return;
+        // Elements of one page are read in order: the sniper view's health bar follows its centre area, and the
+        // quick inventory's info bar is followed by its four outline strokes (generic names shared with other pages)
+        static thread_local uint32_t previousId = 0;
+        static thread_local int infoBarStrokes = 0;
+        const uint32_t afterId = std::exchange(previousId, id);
+        bool infoBarStroke = false;
+        if (infoBarStrokes > 0 && type == pHudImageRendererVTable)
+        {
+            infoBarStroke = true;
+            --infoBarStrokes;
+        }
+        if (id == uint32_t(IMAGE::Back_infos))
+            infoBarStrokes = 4;
         int direction = 0, extra = 0;
         if (HudNeedsToMoveLeft(id))
             direction = -1;
         else if (HudNeedsToMoveLeftGoggles(id))
         { direction = -1; extra = 15; }
-        else if (HudNeedsToMoveRight(id))
+        else if (HudNeedsToMoveRight(id) || infoBarStroke || (id == uint32_t(AREAINST::AInst_Life) && afterId == uint32_t(AREAINST::A_center)))
             direction = 1;
         else if (HudNeedsToMoveRightGoggles(id))
         { direction = 1; extra = 20; }

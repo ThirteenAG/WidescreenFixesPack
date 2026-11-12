@@ -535,6 +535,17 @@ export namespace Controls
         pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 74 53 56 8B F1 80 BE B1 30 00 00 00 57 0F 85");
         ControllerHook = safetyhook::create_inline(pattern.get_first(), ControllerUpdate);
 
+        // MAIN.MovingTurnSpeed (live): walking and running turn the character at a speed from the player's parameters
+        // (walking with the mouse has its own), in xmm0 here; scaled for the local players (esi = character)
+        pattern = hook::pattern("8B 15 ? ? ? ? F3 0F 10 4A 28 F3 0F 59 8E D4 0F 00 00 F3 0F 59 C8 F3 0F 59 4C 24 0C");
+        static auto TurnSpeedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            static auto& turnSpeed = FixSettings().Float("MAIN.MovingTurnSpeed");
+            if (turnSpeed == 1.0f || Field<uint32_t>(regs.esi, ChNetControl) != 0)
+                return;
+            regs.xmm0.f32[0] *= std::clamp(turnSpeed, 0.5f, 3.0f);
+        });
+
         // MAIN.ForceLaserSight (live): keyboard/mouse aiming looks like the pad's. The aim update decides whether the
         // weapon's laser is drawn (laser +0x2FA; esi = character, edi = laser): drawn for keyboard/mouse too.
         pattern = hook::pattern("E8 ? ? ? ? 88 9F FA 02 00 00 33 DB 33 FF");

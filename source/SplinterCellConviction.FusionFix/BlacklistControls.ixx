@@ -284,6 +284,26 @@ export void InitBlacklistControls()
         }
     });
 
+    // Default keyboard keys (FProfileManager sub_791EDF, KT_DEFAULT / KT_AZERTY of ProfileDefaultsPC.ini into the key table at
+    // settings +24h): keys give pad buttons, the layout moved crouch to the left stick and reload to the right stick, so they were on
+    // R and the middle mouse button. Crouch is on Ctrl and reload on R again, the gadget (left bumper) takes the middle mouse button.
+    {
+        static SafetyHookInline shDefaultKeys = {};
+        static auto DefaultKeys = [](void* manager, void* edx, uint8_t* settings) -> int
+        {
+            auto result = shDefaultKeys.fastcall<int>(manager, edx, settings);
+            constexpr struct { uint8_t key, original, blacklist; } keys[] = { { 17, 204, 208 }, { 82, 208, 209 }, { 4, 209, 204 } };
+            for (auto& [key, original, blacklist] : keys)
+            {
+                if (settings[0x24 + key] == original)
+                    settings[0x24 + key] = blacklist;
+            }
+            return result;
+        };
+        shDefaultKeys = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 44 8B 0D ? ? ? ? 53 56 57 BF ? ? ? ? 57 8D 55 D0 33 DB 52 68"),
+            static_cast<int(__fastcall*)(void*, void*, uint8_t*)>(DefaultKeys));
+    }
+
     // cover states, to know when the pawn left cover
     HookCoverStates(std::make_index_sequence<CoverStates.size()>());
 

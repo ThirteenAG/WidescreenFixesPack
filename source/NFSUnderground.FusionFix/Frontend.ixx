@@ -366,7 +366,7 @@ public:
             {
                 if (pattern.empty())
                 {
-                    pattern.get_first();
+                    (void)hook::pattern(pattern).get_first();
                     std::abort();
                 }
                 pattern.for_each_result([&](hook::pattern_match match)
@@ -426,7 +426,7 @@ public:
             {
                 if (pattern.empty())
                 {
-                    pattern.get_first();
+                    (void)hook::pattern(pattern).get_first();
                     std::abort();
                 }
                 pattern.for_each_result([&](hook::pattern_match match)

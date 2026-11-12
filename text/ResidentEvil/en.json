@@ -73,5 +73,8 @@
   "MAIN.GamepadIcons.description": "Native controller button pictures: Xbox, PlayStation or Nintendo. Auto uses Xbox. Keyboard and mouse names stay unchanged.",
   "menu.pad.triangle": "Triangle",
   "SkipPressStart": "Skip Press Any Key",
-  "SkipPressStart.description": "Continue through the first Press Any Key screen automatically. Loading and save confirmations keep their normal behavior."
+  "SkipPressStart.description": "Continue through the first Press Any Key screen automatically. Loading and save confirmations keep their normal behavior.",
+  "page.controls": "Controls",
+  "ClassicKeyLinks": "Classic Key Links",
+  "ClassicKeyLinks.description": "Links keyboard keys as in the original game: the fire and check keys work as one key (fire while aiming, check otherwise) and confirm in menus, and the run key cancels in menus. The keys stay the ones set in the game's keyboard options. A key that is also the run or quick turn key isn't linked in play, so running doesn't check."
 }

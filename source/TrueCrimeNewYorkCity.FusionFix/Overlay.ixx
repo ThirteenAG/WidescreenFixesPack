@@ -83,7 +83,7 @@ namespace TCOverlay
         device->Release();
     }
 
-    // Installed from dllmain before the other hooks: the frame limiter patches the start of the Present sequence
+    // Installed from dllmain before the other hooks
     export void Init()
     {
         host = asi_settings::ClaimHostRole();
@@ -93,14 +93,13 @@ namespace TCOverlay
         gameLanguage = reinterpret_cast<decltype(gameLanguage)>(languagePattern.get(1).get<void>());
         auto pattern = hook::pattern("A1 ? ? ? ? 8B 10 8D 4C 24 ? 51 50");
         pD3DDevice.SetAddress(*pattern.get_first<IUnknown**>(1));
-        // Capture locations before installing any hooks (the limiter patches the earlier bytes).
+        // Capture locations before installing any hooks
         auto present = hook::pattern("8B 76 ? 8B 16 53 53 53 53 56 FF 52 3C");
         auto input = hook::pattern("80 3D ? ? ? ? 00 75 21 80 3D ? ? ? ? 00 75 18 8B 0D");
         pMappedPad.SetAddress(*input.get_first<uint8_t**>(20));
         if (host)
             inputHook = safetyhook::create_inline(input.get_first(), Input);
-        // Immediately before IDirect3DDevice8::Present, after EndScene and the final UI copies.
-        // +10 avoids overlapping Framelimit's mid-hook at the start of this sequence.
+        // Immediately before IDirect3DDevice8::Present, after EndScene and the final UI copies
         static auto presentHook = safetyhook::create_mid(present.get_first(10), [](SafetyHookContext&) { Draw(); });
     }
 }

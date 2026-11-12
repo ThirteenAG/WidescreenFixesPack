@@ -34,6 +34,9 @@ void DrawCutsceneBorders(void*) {
         [&](const console::Rect& rect) { Drawing::solidHook.call<void>(&rect, &black, true); }, settings.cutsceneBorders);
 }
 SafetyMipsMid littleWillie;
+SafetyMipsMid followCarSwing;
+bool cameraHeld = false;
+uint32_t cameraHeldUntil = 0;
 }
 void InstallCamera() {
     cameraSize.fun=injector::MakeCALL(Address<0x8934C58>(),CameraSize).get();
@@ -47,6 +50,15 @@ void InstallCamera() {
         auto* distance=reinterpret_cast<float*>(camera+1944);
         uintptr_t vehicle=*reinterpret_cast<uintptr_t*>(camera+1984);
         if (vehicle && *distance==1.0f && *reinterpret_cast<int16_t*>(vehicle+86)==0xAD) *distance=2.0f;
+    });
+    // CCam::Process_FollowCar_SA: f12 is this frame's right stick turn, f13 the turn that swings
+    // the camera back behind the vehicle. While held, the stick's direction stays.
+    followCarSwing=safetymips::create_mid(Address<0x89A0E58>(),[](SafetyMipsContext& regs) {
+        if (!settings.holdVehicleCamera) { cameraHeld=false; return; }
+        const uint32_t now=*reinterpret_cast<const uint32_t*>(Address<0x8BB3B4C>()); // CTimer::m_snTimeInMilliseconds
+        if (float(regs.f12)!=0.0f) { cameraHeld=true; cameraHeldUntil=now+2000; }
+        else if (cameraHeld && (int32_t(now-cameraHeldUntil)>=0 || int32_t(cameraHeldUntil-now)>2000)) cameraHeld=false; // also after a timer reset
+        if (cameraHeld) regs.f13=0.0f;
     });
     injector::MakeNOP(Address<0x8ad4ef4>()); // Garage removal must not discard the saved vehicle.
     console::slot_zero::PatchPortable<4>(pattern.text_addr, pattern.text_size); // Script handles in slot 0 are valid.

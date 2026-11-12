@@ -399,6 +399,67 @@ namespace RestoredFeatures
     }
 }
 
+namespace RestoredFeatures
+{
+    // Race opponents' speed. 1.1 lowered the speed of the two easiest opponent levels (the story race uses
+    // the second one), scaled each opponent by its own factor and changed the catch-up rules. Optionally
+    // use the 1.0 speeds: slower only while an opponent leads the player by more than 100 or 150 meters.
+    struct RaceLayout
+    {
+        size_t count, racers, player, level;
+    };
+    static RaceLayout race;
+    static SafetyHookInline opponentSpeedHook;
+    static double(__fastcall* raceGap)(uintptr_t, void*, uintptr_t, uintptr_t);
+    static bool originalRaceDifficulty;
+
+    uint32_t __fastcall SetOpponentSpeed(uintptr_t manager)
+    {
+        if (!originalRaceDifficulty)
+            return opponentSpeedHook.unsafe_thiscall<uint32_t>(manager);
+        static constexpr std::pair<float, float> speeds[] = { { 0.9f, 0.9f }, { 0.93f, 0.85f }, { 1.0f, 1.0f },
+            { 1.2f, 1.3f }, { 1.3f, 1.4f } };
+        const auto level = Field<uint32_t>(manager, race.level);
+        const auto count = Field<uint32_t>(manager, race.count);
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            const auto racer = Field<uintptr_t>(manager, race.racers + i * 4);
+            const auto driver = Field<uintptr_t>(racer, 0x48);
+            if (!driver || level >= std::size(speeds))
+                continue;
+            auto [speed, cornering] = speeds[level];
+            const double gap = raceGap(manager, nullptr, manager + race.player, racer);
+            const float scale = gap > 150.0 ? 0.6f : gap > 100.0 ? 0.7f : 1.0f;
+            Field<float>(driver, 124) = speed * scale;
+            Field<float>(driver, 128) = cornering * scale;
+        }
+        return count;
+    }
+
+    void InitRaceDifficulty()
+    {
+        auto pattern = hook::pattern("83 EC 08 55 56 8B F1 33 ED 8B 86 ? ? ? ? 85 C0 0F 86 ? ? ? ? 53 57 8D 9E ? ? ? ? 8B 3B 8B 47 48 85 C0 0F 84 ? ? ? ? 8D 44 24 14 8D 4C 24 10 50 51 8B 0D ? ? ? ? E8 ? ? ? ? 8D 56 ? 57 52 8B CE E8");
+        if (pattern.empty()) // 1.0 has the original speeds
+        {
+            hook::get_pattern("83 EC 08 55 56 8B F1 33 ED 8B 86 ? ? ? ? 85 C0 0F 86 ? ? ? ? 53 57 8D BE ? ? ? ? 8B 1F 8B 43 48 85 C0 0F 84");
+            return;
+        }
+        auto start = pattern.get_first<uint8_t>();
+        race.count = *reinterpret_cast<uint32_t*>(start + 11);
+        race.racers = *reinterpret_cast<uint32_t*>(start + 27);
+        race.player = start[67];
+        race.level = *hook::get_pattern<uint8_t>("8B 41 ? 83 F8 04 77 23 FF 24 85", 2);
+        raceGap = reinterpret_cast<decltype(raceGap)>(injector::GetBranchDestination(start + 72).as_int());
+        const auto changed = []()
+        {
+            originalRaceDifficulty = FixSettings().Bool("GAMEPLAY.OriginalRaceDifficulty");
+        };
+        changed();
+        FixSettings().OnChange("GAMEPLAY.OriginalRaceDifficulty", changed);
+        opponentSpeedHook = safetyhook::create_inline(start, SetOpponentSpeed);
+    }
+}
+
 class RestoredFeaturesInit
 {
 public:
@@ -407,6 +468,7 @@ public:
         WFP::onInitEvent() += []()
         {
             RestoredFeatures::InitRadar();
+            RestoredFeatures::InitRaceDifficulty();
         };
     }
 } RestoredFeaturesInit;

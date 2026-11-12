@@ -391,10 +391,15 @@ public:
                 fScaledFOV = DEGTORAD(CDraw::GetScaledFOV() / 2.0f);
             });
 
-            // CBrightLights::Render, render only when far away
-            pattern = hook::pattern("C6 44 24 ? ? EB ? ? ? ? ? ? ? DF E0");
-
-                injector::WriteMemory<uint8_t>(pattern.get_first(4), 0, true);
+            // CBrightLights::Render: the alpha of car light squares close to the camera; 0 draws them only far away
+            static auto pNearLightSquareAlpha = hook::pattern("C6 44 24 ? ? EB ? ? ? ? ? ? ? DF E0").get_first<uint8_t>(4);
+            static auto& nearLightSquares = FixSettings().Int("GRAPHICS.NearLightSquares");
+            static auto applyNearLightSquares = []()
+            {
+                injector::WriteMemory<uint8_t>(pNearLightSquareAlpha, nearLightSquares ? 31 : 0, true);
+            };
+            applyNearLightSquares();
+            OnSettingChange("GRAPHICS.NearLightSquares", applyNearLightSquares);
         };
     }
 } Camera;

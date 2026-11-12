@@ -93,7 +93,7 @@ export namespace OnimushaResolution
         };
         auto labels = hook::pattern("68 ? ? ? ? 6A 15 6A 13 68 80 00 00 00 6A 00 68 ? ? ? ? 68 64 01 00 00 68 ? ? ? ? E8");
         labels.count_hint(4);
-        Print = reinterpret_cast<decltype(Print)>(injector::GetBranchDestination(labels.get_first(31)).as_int());
+        Print = reinterpret_cast<decltype(Print)>(injector::GetBranchDestination(hook::pattern(labels).get_first(31)).as_int());
         for (size_t i = 0; i < 4; ++i)
             injector::MakeCALL(labels.get(i).get<void>(31), Label, true);
     }

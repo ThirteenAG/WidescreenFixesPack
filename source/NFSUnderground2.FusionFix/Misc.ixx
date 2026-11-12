@@ -314,7 +314,7 @@ public:
                 auto pattern = hook::pattern("8B F1 50 89 74 24 08 E8 ? ? ? ? 8B 46 04 68 ? ? ? ? 68 ? ? ? ? 50");
                 if (pattern.empty())
                 {
-                    pattern.get_first();
+                    (void)hook::pattern(pattern).get_first();
                     std::abort();
                 }
                 if (pattern.size() != 3)

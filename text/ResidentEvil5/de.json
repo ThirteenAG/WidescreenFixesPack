@@ -54,5 +54,7 @@
   "checkupdates": "Nach Updates suchen",
   "checkupdates.description": "Prüft beim Aktivieren einmal auf eine neue Version. Ein Hinweis erscheint unter Plugins; FusionFixHub öffnet sich nach Spielende, falls installiert. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar."
+  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
+  "MovingTurnSpeed": "Drehgeschwindigkeit in Bewegung",
+  "MovingTurnSpeed.description": "Wie schnell sich die Figur beim Gehen und Laufen dreht, mit Maus oder Stick. Das Spiel dreht in Bewegung langsamer als im Stand; 1.0x behält die Geschwindigkeit des Spiels. Mit moderner Steuerung dreht sich die Kamera frei, dann gilt dies nicht."
 }

@@ -35,6 +35,7 @@ void ReadSettings() {
     settings.SetFovRequest(ReadCfgFloat("MAIN","FOVFactor",1));
     settings.cutsceneBorders=int(bounded(ReadCfgFloat("MAIN","CutsceneBorders",3),0,3,3));
     settings.vehicleLights=inireader.ReadBoolean("MAIN","VehicleLights",1);
+    settings.holdVehicleCamera=inireader.ReadBoolean("CONTROLS","HoldVehicleCamera",0);
     auto& drawing=Drawing::settings;
     drawing.aspect=console::portable::Aspect();
     char ratioBuffer[64];const char* ratio=inireader.ReadString("MAIN","ForceAspectRatio","auto",ratioBuffer,sizeof(ratioBuffer));
@@ -84,6 +85,7 @@ extern "C" int module_start(SceSize,void*) {
         {"MAIN", "UnthrottleEmuDuringLoading", "1"},
         {"CONTROLS", "ModernControlScheme", "0"},
         {"CONTROLS", "PCCheats", "0"},
+        {"CONTROLS", "HoldVehicleCamera", "0"},
         {"MAIN", "HudScale", "0.75"},
         {"MAIN", "HudAspectRatioConstraint", "Auto"},
         {"RADAR", "RadarScale", "0.83"},

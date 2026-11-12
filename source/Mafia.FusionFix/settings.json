@@ -247,6 +247,20 @@
       }
     },
     {
+      "id": "GAMEPLAY.OriginalRaceDifficulty",
+      "type": "bool",
+      "default": false,
+      "label": "@GAMEPLAY.OriginalRaceDifficulty",
+      "description": "@GAMEPLAY.OriginalRaceDifficulty.description",
+      "page": "gameplay",
+      "apply": "live",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
+    },
+    {
       "id": "WIDESCREEN.WidescreenMap",
       "type": "bool",
       "default": true,

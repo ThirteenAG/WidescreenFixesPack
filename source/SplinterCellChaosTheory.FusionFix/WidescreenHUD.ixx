@@ -55,6 +55,17 @@ namespace HudImageMatchers
             ((left == 319 && right == 699) || (left == 320 && right == 700));
     }
 
+    // Night/thermal vision brackets in third person, drawn at their 4:3 place (first person views move them with the goggles)
+    inline bool IsGogglesBracketLeft(int16_t left, int16_t right, int16_t top, int16_t bottom)
+    {
+        return left >= 30 && right <= 47 && top >= 205 && bottom <= 275;
+    }
+
+    inline bool IsGogglesBracketRight(int16_t left, int16_t right, int16_t top, int16_t bottom)
+    {
+        return left >= 590 && right <= 608 && top >= 205 && bottom <= 275;
+    }
+
     inline bool IsWeaponScopeLeft(int16_t left, int16_t right, int16_t top, int16_t bottom, FColor color)
     {
         return (left == -1 || left == 579) && (right == 62 || right == 649) && top == -3 && bottom == 483 && color.RGBA == 0x1bffffff && left == -1;
@@ -92,6 +103,18 @@ export void WidescreenHudImage(int16_t& left, int16_t& right, int16_t& top, int1
         else if (IsWeaponScopeRight(left, right, top, bottom, color))
         {
             right += Screen.nHudOffsetReal;
+        }
+        else if (Screen.fWidescreenHudOffset > 0.0f && IsGogglesBracketLeft(left, right, top, bottom))
+        {
+            const auto shift = static_cast<int16_t>(Screen.fWidescreenHudOffset + 15.0f);
+            left -= shift;
+            right -= shift;
+        }
+        else if (Screen.fWidescreenHudOffset > 0.0f && IsGogglesBracketRight(left, right, top, bottom))
+        {
+            const auto shift = static_cast<int16_t>(Screen.fWidescreenHudOffset + 20.0f);
+            left += shift;
+            right += shift;
         }
     }
 }

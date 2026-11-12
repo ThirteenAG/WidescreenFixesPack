@@ -50,6 +50,8 @@
   "cutsceneborders.both": "Beide",
   "lights": "Fahrzeuglichter",
   "lights.description": "Lässt Scheinwerfer, Rück-, Brems- und Rückfahrlichter auf den Karosserietexturen von Autos und Motorrädern leuchten. Standardmäßig aktiv. Nach einer Änderung das emulierte Spiel neu starten.",
+  "holdcamera": "Fahrzeugkamera halten",
+  "holdcamera.description": "Wenn du die Kamera in einem Fahrzeug mit dem rechten Stick drehst, bleibt sie dort, sodass du während der Fahrt nach hinten schauen kannst. Zwei Sekunden nach dem Loslassen schwenkt sie wieder hinter das Fahrzeug. Aus behält die Originalkamera, die beim Fahren wieder hinter das Fahrzeug schwenkt.",
   "icons": "Controller-Symbole",
   "icons.description": "Wählt die Controller-Grafiken. Die Umschaltung im Controller-Menü des Spiels ändert und speichert diese Einstellung ebenfalls. Änderungen im Hub gelten beim nächsten Start des emulierten Spiels. Auto verwendet Xbox-360-Symbole.",
   "set.PSP": "Original-PSP",

@@ -50,6 +50,8 @@
   "cutsceneborders.both": "Entrambi",
   "lights": "Luci dei veicoli",
   "lights.description": "Accende fari, luci posteriori, luci di stop e luci di retromarcia sulle texture della carrozzeria di auto e moto. Attivo per impostazione predefinita. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "holdcamera": "Mantieni telecamera del veicolo",
+  "holdcamera.description": "Quando ruoti la telecamera con lo stick destro in un veicolo, resta in quella posizione, così puoi guardare indietro mentre guidi. Torna dietro al veicolo due secondi dopo aver rilasciato lo stick. Off mantiene la telecamera originale, che torna dietro al veicolo mentre guidi.",
   "icons": "Icone del controller",
   "icons.description": "Sceglie la grafica del controller. Anche il selettore nel menu controller del gioco cambia e salva questa impostazione. Le modifiche nell'hub valgono al prossimo avvio del gioco emulato. Auto usa le icone Xbox 360.",
   "set.PSP": "PSP originale",

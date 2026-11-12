@@ -22,6 +22,7 @@
 - **UI Scaling** - radar blips, menu underlines, crosshair details and the cursor scale with resolution
 - **Sniper Binding** - saved sniper-mode controls are retained when loading a profile
 - **Game Over Audio** - restores the game-over sound.
+- **Mission Script Timing** - above 60 FPS, mission scripts keep the speed they have at 60 FPS, so timed events such as the Free Ride Extreme sea monster and bombs no longer run faster at high frame rates
 
 ---
 
@@ -29,6 +30,7 @@
 
 - **Eye Animations** - restores the original character models with moving eyes from `A2.dta`, bypassing their static-eyed replacements in `A8.dta`; loose replacement models remain supported
 - **Car Scratches** - restores the original 1.0 scratch opacity on 1.1 and 1.2, while retaining native 1.0 behavior
+- **Original Race Difficulty** - on 1.1 and 1.2, race opponents drive at their version 1.0 speeds again (1.1 slowed the easier opponent levels and changed how they wait for the player), which makes the Fair Play race harder; applies while racing
 - **Radar Map** - draws the PC city map inside the radar with a smooth circular mask, Xbox-sized car footprints and smooth speed-based zoom. Zooms out between 0 and 60 km/h (about 37 mph), doubling the visible world range; the map and blips scale together with resolution. On the race track, the city map is hidden and the radar remains visible.
 - **Free Camera** - optional free car camera controlled by mouse or right stick. While aiming and shooting, the view rotates independently from the current orbit position, retaining native camera collision and weapon targeting. Turn it on with the **Free Camera** option; it uses the game's look bindings, sensitivity, inversion and stick deadzones. Automatic return delay and speed are configurable
 - **Draw Distance** - increases the draw distance; the new distance and the skip ranges are configurable on fusionfix.io, in FusionFixHub or in the game's menu

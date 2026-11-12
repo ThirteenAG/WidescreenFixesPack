@@ -31,6 +31,7 @@
 - **Skip intro** - skips the startup intros.
 - **PC cheats** - enable keyboard cheat codes with PC Cheats.
 - **Vehicle lights** - lit headlights, tail, brake and reverse lights on car and bike bodies. Vehicle Lights is on by default; the Vanilla preset turns it off. A change applies the next time the emulated game starts.
+- **Hold vehicle camera** - when you turn the camera with the right stick in a vehicle, it stays there, so you can look back while driving; it swings back behind the vehicle two seconds after you let go. Off by default (the original camera swings back as you drive); the Enhanced preset turns it on.
 - **Controller icons** - Auto (default) uses Xbox 360 artwork. Original PSP, Xbox 360, Xbox One, PlayStation 3/4/5, Nintendo Switch and Steam Deck sets are also available. Scroll through the configuration option in the game's Controls menu, or choose the set on the fix's Game page; both apply at once. Changes made on fusionfix.io or in FusionFixHub apply the next time the emulated game starts. The sets replace the US version's artwork; other versions keep the original icons.
 
 ![image](https://user-images.githubusercontent.com/4904157/211559646-964ac702-d4e5-45e7-ad26-acb7eb24bdf6.png)
@@ -44,9 +45,9 @@
 
 ## Settings
 
-The fix creates `memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.cfg` on the first launch. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), Display and Camera (HUD size, HUD aspect ratio, radar and multiplayer radar size, field of view, cutscene borders), Game (frame rate, fast loading, skip intro, vehicle lights, controller icons) and Restore Defaults. Menu changes are saved when the menu closes; skip intro and vehicle lights need a restart, as do changes made on fusionfix.io or in FusionFixHub. Use FusionFixHub or fusionfix.io for radar positions, aspect ratio, controls and PC cheats.
+The fix creates `memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.cfg` on the first launch. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), Display and Camera (HUD size, HUD aspect ratio, radar and multiplayer radar size, field of view, cutscene borders), Game (frame rate, fast loading, skip intro, vehicle lights, hold vehicle camera, controller icons) and Restore Defaults. Menu changes are saved when the menu closes; skip intro and vehicle lights need a restart, as do changes made on fusionfix.io or in FusionFixHub. Use FusionFixHub or fusionfix.io for radar positions, aspect ratio, controls and PC cheats.
 
-- **Presets** - Vanilla keeps the original look (HUD, radar and multiplayer radar at full size, cutscene letterbox, PSP controller icons, intros, normal loading, no vehicle lights); Recommended is the default; Enhanced adds 60 FPS.
+- **Presets** - Vanilla keeps the original look (HUD, radar and multiplayer radar at full size, cutscene letterbox, PSP controller icons, intros, normal loading, no vehicle lights); Recommended is the default; Enhanced adds 60 FPS and the held vehicle camera.
 
 After updating from an older release, reapply your preferences in FusionFixHub.
 

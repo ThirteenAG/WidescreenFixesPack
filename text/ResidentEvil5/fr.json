@@ -54,5 +54,7 @@
   "checkupdates": "Rechercher les mises à jour",
   "checkupdates.description": "Vérifie une nouvelle version une fois à l'activation. Un avis apparaît dans Plugins ; FusionFixHub s'ouvre après le jeu s'il est installé. Désactivé : aucune requête réseau.",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvrira quand vous quitterez le jeu.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io."
+  "update.availablesite": "{name} {version} est disponible sur fusionfix.io.",
+  "MovingTurnSpeed": "Vitesse de rotation en mouvement",
+  "MovingTurnSpeed.description": "Vitesse à laquelle le personnage tourne en marchant et en courant, à la souris ou au stick. Le jeu tourne plus lentement en mouvement qu'à l'arrêt ; 1.0x garde la vitesse du jeu. Avec les commandes modernes, la caméra tourne librement et ce réglage ne s'applique pas."
 }

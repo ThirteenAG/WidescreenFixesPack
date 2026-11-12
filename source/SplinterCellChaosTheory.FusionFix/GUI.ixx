@@ -295,8 +295,51 @@ int16_t __cdecl ClampYAxisState(int16_t value, int16_t min, int16_t max)
     return std::clamp(value, min, max);
 }
 
+// The interaction list and the quick inventory move with the arrow keys and the movement commands. The pad's d-pad
+// (Joy13 up, Joy14 down, Joy15 left, Joy16 right) moves them too while they are open, instead of switching vision
+// modes. The interaction list only takes up and down, so left and right keep switching vision modes there.
+int ArrowForDPad(int key, bool upDownOnly)
+{
+    switch (key)
+    {
+        case 0xD4: return 38;
+        case 0xD5: return 40;
+        case 0xD6: return upDownOnly ? 0 : 37;
+        case 0xD7: return upDownOnly ? 0 : 39;
+        default: return 0;
+    }
+}
+
+char KeyEventWithDPad(SafetyHookInline& hook, void* handler, void* page, int* event, bool upDownOnly)
+{
+    // Keyboard events carry the virtual key; pad buttons carry -1 there and their key next to it
+    const int key = event[0];
+    const int arrow = key == -1 ? ArrowForDPad(event[1], upDownOnly) : 0;
+    if (!arrow)
+        return hook.unsafe_thiscall<char>(handler, page, event);
+    event[0] = arrow;
+    const auto handled = hook.unsafe_thiscall<char>(handler, page, event);
+    event[0] = key;
+    return handled;
+}
+
+SafetyHookInline shInteractionListKeyEvent = {};
+char __fastcall InteractionListKeyEvent(void* list, void*, void* page, int* event)
+{
+    return KeyEventWithDPad(shInteractionListKeyEvent, list, page, event, true);
+}
+
+SafetyHookInline shQuickInventoryKeyEvent = {};
+char __fastcall QuickInventoryKeyEvent(void* inventory, void*, void* page, int* event)
+{
+    return KeyEventWithDPad(shQuickInventoryKeyEvent, inventory, page, event, false);
+}
+
 export void InitGUI()
 {
+    shInteractionListKeyEvent = safetyhook::create_inline(hook::get_pattern("53 56 8B F1 8B 46 2C 8A 48 20 32 DB F6 C1 02 0F 84 ? ? ? ? 57 8B 7C 24 14 8B 47 0C"), InteractionListKeyEvent);
+    shQuickInventoryKeyEvent = safetyhook::create_inline(hook::get_pattern("53 56 57 8B 7C 24 14 8B 47 0C 8B F1 8B 48 04 32 DB 85 C9 74 04 8B 00 EB 05 B8 ? ? ? ? 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 08 85 C0 75"), QuickInventoryKeyEvent);
+
     auto pattern = hook::pattern("3B C5 89 44 24 44 7D ? 66 89 6C 24 40");
     {
         struct USCMagmaInteractionProcessInputAxisStateHookX

@@ -73,5 +73,8 @@
   "MAIN.GamepadIcons.description": "Immagini dei pulsanti nativi: Xbox, PlayStation o Nintendo. Automatico usa Xbox. I nomi di tastiera e mouse restano invariati.",
   "menu.pad.triangle": "Triangolo",
   "SkipPressStart": "Salta Premi un tasto",
-  "SkipPressStart.description": "Supera automaticamente la prima schermata Premi un tasto. Le conferme di caricamento e salvataggio mantengono il comportamento normale."
+  "SkipPressStart.description": "Supera automaticamente la prima schermata Premi un tasto. Le conferme di caricamento e salvataggio mantengono il comportamento normale.",
+  "page.controls": "Controlli",
+  "ClassicKeyLinks": "Tasti collegati classici",
+  "ClassicKeyLinks.description": "Collega i tasti come nel gioco originale: i tasti di fuoco ed esamina funzionano come un unico tasto (fuoco mirando, altrimenti esamina) e confermano nei menu, e il tasto di corsa annulla nei menu. Restano i tasti scelti nelle opzioni tastiera del gioco. Un tasto che serve anche per correre o per l'inversione rapida non viene collegato in gioco, così correre non esamina."
 }

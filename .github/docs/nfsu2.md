@@ -80,6 +80,7 @@ Menu Text Language is on fusionfix.io and in FusionFixHub, on the Compatibility 
 <img src="https://thirteenag.github.io/screens/nfsu2/camera.gif" width="400" align="right" style="margin: 0 0 16px 24px;" alt="Mouse look in-game">
 
 - **Mouse/Stick Look** - free look for the chase cameras with the right stick or the mouse. Like the car camera of GTA San Andreas, the look direction stays fixed in the world while the car turns; after the return delay the camera eases back behind the car. Experience *Need for Speed: Underground 2* like never before with new camera angles. Free look, stick and mouse sensitivity, invert look, horizontal-only right stick, return delay and return speed are on the fix's page under Plugins.
+- **Drift Camera in All Races** - optional (off by default): the chase cameras behave as in drift races in every mode, so they no longer pull back when accelerating or close in when braking.
 
 <br clear="both">
 

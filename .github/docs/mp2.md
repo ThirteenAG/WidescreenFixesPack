@@ -20,6 +20,7 @@ The included ASI loader provides Direct3D 8 to 9 conversion. Keep `d3d8.dll` and
 - **Videos** — Original fits each movie within a centered 4:3 area; Fill fits it to the screen. Both preserve the whole picture.
 - **16-bit display modes** — A 16-bit mode in the settings no longer stops the game from starting ("creating the device failed: D3DERR_NOTAVAILABLE"), the 32-bit mode of that resolution is used.
 - **Display modes** — The startup dialog lists the display modes largest first.
+- **High-resolution fonts** — Font textures replaced with higher-resolution versions (for example a sharper `font_universal_medium.tga`) keep the size of the original text on screen instead of growing with the texture.
 
 ## Options
 

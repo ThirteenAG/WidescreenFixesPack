@@ -19,6 +19,8 @@
   "RestoreOriginalCamera.description": "Stellt die originalen Abstände und Neigungen der Fahrzeugkamera sowie das originale Controller-Verhalten wieder her.",
   "CenteringDelay": "Verzögerung der Kamerazentrierung",
   "CenteringDelay.description": "Sekunden, bevor sich die Fahrzeugkamera wieder hinter dem Fahrzeug ausrichtet. Das Originalspiel nutzt 1.",
+  "AircraftFreeCamera": "Freie Kamera in Luftfahrzeugen",
+  "AircraftFreeCamera.description": "Flugzeuge und Hubschrauber nutzen dieselbe Verfolgerkamera wie andere Fahrzeuge, sodass Maus oder rechter Stick die Kamera drehen und nach oben und unten schauen können, wie im Originalspiel. Aus hält die Kamera fest hinter dem Luftfahrzeug.",
   "RawMouseInput": "Direkte Mauseingabe",
   "RawMouseInput.description": "Liest die Maus für die Kamera direkt aus, mit der Mausempfindlichkeit und Invertierung aus den Spieleinstellungen.",
   "VisualStyle": "Grafikstil",

@@ -10,7 +10,7 @@ export constexpr float defaultAspectRatio = 16.0f / 9.0f;
 
 // Game objects, found in dllmain before the modules initialize
 export GameRef<uintptr_t> pGameMode;    // game mode manager; mode 1 = local split screen (+0x8F4)
-export GameRef<uintptr_t> pRender;      // renderer: resolution +0x1E0, split viewport size +0x50, player viewports from +0x48
+export GameRef<uintptr_t> pRender;      // renderer: resolution +0x1E0, player viewports (left, top, right, bottom) from +0x48
 export GameRef<uint8_t*> pCameraSystem; // sBioCamera: the players' cameras every 400 bytes from +52
 
 // The backbuffer size is published together so a live device reset cannot mix two resolutions.
@@ -71,12 +71,13 @@ export namespace SplitScreen
     constexpr int32_t NativeResY = 360;
     constexpr float NativeAspect = float(NativeResX) / float(NativeResY);
 
-    // Whether a viewport of this size is a player's view (the other draws cover the whole screen)
+    // Whether a viewport of this size is a player's view (the other draws cover the whole screen). The two views
+    // can differ by a pixel of rounding.
     bool IsPlayerViewport(int32_t width, int32_t height)
     {
         if (GetLayout() == Layout::SideBySide)
-            return width == GetCurrentResX() || width == GetCurrentResX() + 1;
-        return height == GetCurrentResY() || height == GetCurrentResY() + 1;
+            return std::abs(width - GetCurrentResX()) <= 1;
+        return std::abs(height - GetCurrentResY()) <= 1;
     }
 
     // The aspect of a player's view

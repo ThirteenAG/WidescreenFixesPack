@@ -12,6 +12,7 @@ import SkipStart;
 import Resolution;
 import Video;
 import ButtonIcons;
+import ClassicKeys;
 
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
 ASI_SETTINGS_EXPORT(FixSettings())
@@ -40,6 +41,8 @@ void Init()
     RE0OverlayRuntime::Install();
 
     RE0Menu::Install(module);
+    // After the menu, which reads the start of a menu reader this hooks
+    RE0ClassicKeys::Install();
 }
 
 CEXP void InitializeASI()

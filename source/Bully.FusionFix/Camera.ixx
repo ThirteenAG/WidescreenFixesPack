@@ -63,6 +63,10 @@ export namespace GameplayCamera
         auto blend = hook::pattern("51 56 8B F1 83 BE A4 01 00 00 00 0F 84 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? 85 C0 0F 84");
         CameraBlending.SetAddress(*blend.get_first<int32_t*>(18) + 2);
 
+        // The game's widescreen mode lowers the follow camera's target by 0.3 m; keep the 4:3 camera height
+        auto lowered = hook::pattern("80 3D ? ? ? ? 01 75 ? 80 BD ? ? ? ? 00 75 ? 80 BF ? ? ? ? 00 75 ? 80 BD ? ? ? ? 00 8B C6 75");
+        injector::WriteMemory<uint8_t>(lowered.get_first(7), 0xEB, true); //0x4FE54E
+
         static std::array<SafetyHookMid, 2> projectionHooks;
         static auto applyProjection = [](SafetyHookContext& regs)
         {

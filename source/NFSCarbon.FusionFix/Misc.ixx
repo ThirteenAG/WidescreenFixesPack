@@ -139,12 +139,12 @@ public:
                 auto statePattern = hook::pattern("8B 8E 5C 01 00 00 E8 ? ? ? ? 83 F8 02 74 ? 8B 8E 5C 01 00 00"); // 0x88883E
                 if (audioPattern.empty())
                 {
-                    audioPattern.get_first();
+                    (void)hook::pattern(audioPattern).get_first();
                     std::abort();
                 }
                 if (statePattern.empty())
                 {
-                    statePattern.get_first();
+                    (void)hook::pattern(statePattern).get_first();
                     std::abort();
                 }
                 if (audioPattern.size() != 1 || statePattern.size() != 1)

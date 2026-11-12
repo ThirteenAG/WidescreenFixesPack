@@ -31,7 +31,11 @@ Window Mode selects fullscreen, a framed window or desktop borderless. Alt+Enter
 
 HUD Aspect Ratio applies immediately. Auto uses the full screen width; choosing a ratio moves the side HUD elements into a centered area. Centered text, character health bars and the full map keep their original placement.
 
-Cutscene Borders offers Off, Letterbox, Pillarbox and Both, with optional animated transitions. Off removes the borders and widens the cutscene view to fill the screen. Normal gameplay framing returns after the cutscene.
+Widescreen keeps the camera height and vertical framing of the original 4:3 game and shows more at the sides. The game's own widescreen mode moved the follow camera lower; the fix keeps it where 4:3 has it.
+
+Cutscene Borders offers Off, Letterbox, Pillarbox and Both, with optional animated transitions. Cutscenes keep the height of the original letterboxed 4:3 picture; screens up to 16:9 show more at the sides, and Pillarbox adds side bars beyond 16:9. Off removes the borders and widens the cutscene view to fill the screen. Normal gameplay framing returns after the cutscene.
+
+Shadow Resolution sets the size of the shadow maps: 1024 (the original), 2048 or 4096. Higher sizes give sharper shadows and use more video memory. It applies at the next start and needs Shadows turned on in the game's Video menu.
 
 The game remembers supported ultrawide resolutions between launches.
 

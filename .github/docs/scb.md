@@ -22,6 +22,7 @@ Menus and dialogs remain in an undistorted, centered 16:9 area. The 3D view fill
 - **Startup prompt** — Skip the “Press Any Key” screen and checkpoint selection.
 - **Mouse input** — Raw mouse input for camera turning, so high polling rate mice don't lose movement; negative mouse acceleration is removed.
 - **Turn speed** — Makes Sam turn faster toward the movement direction while moving, for snappier direction changes.
+- **Swap shoulder key** — Pick a keyboard key or mouse button in FusionFixHub or on fusionfix.io; pressing it moves the camera over Sam's other shoulder while on foot, aiming included. In cover and with a human shield the game picks the camera side as before. No key is set by default.
 
 ### Display and camera
 

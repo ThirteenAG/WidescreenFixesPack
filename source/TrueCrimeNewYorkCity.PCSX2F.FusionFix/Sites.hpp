@@ -8,6 +8,8 @@ extern "C"
 namespace tcny::sites
 {
     inline uintptr_t at_100350() { return pattern.get(0, "2D 20 40 02 ? ? ? ? 2D 40 20 02", -4); }
+    // Before LoadExecPS2: GetMemorySize, then the 32 MB (retail) TLB reset or the 128 MB (devkit) syscall.
+    inline uintptr_t at_130528() { return pattern.get(0, "F0 FF BD 27 00 00 BF FF ? ? ? 0C 00 00 00 00 00 02 03 3C 05 00 43 14 00 00 00 00 ? ? ? 0C", 0); }
     // Start-up program: textured sprite writer, copyright picture upload, MPEG picture decode (RGBA output).
     inline uintptr_t at_104C90() { return pattern.get(0, "50 FF BD 27 2D 68 C0 00 B0 00 A2 8F A0 00 B0 7F 90 00 B1 7F 2D 80 80 00", 0); }
     inline uintptr_t at_105948() { return pattern.get(0, "2D 20 40 02 2D 28 00 00 02 00 07 96 04 00 0C 96 3F 00 E2 24 2D 58 E0 00", 0); }

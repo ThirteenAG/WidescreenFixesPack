@@ -180,6 +180,14 @@
       }
     },
     {
+      "id": "CAMERA.DriftCamera",
+      "type": "bool",
+      "default": 0,
+      "label": "@WFP_DRIFTCAMERA",
+      "description": "@WFP_DESC_DRIFTCAMERA",
+      "page": "camera"
+    },
+    {
       "id": "MAIN.GamepadIcons",
       "type": "choice",
       "default": 0,

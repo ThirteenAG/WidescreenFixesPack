@@ -62,6 +62,23 @@ namespace
     {
         if (!applyingDisplay || reinterpret_cast<void*>(regs.ebp) != applyingDisplay)
             return;
+        if (!changing && FAILED(static_cast<HRESULT>(regs.eax)))
+        {
+            // A resize while the device is lost: the caller has released the device resources and the
+            // frame would go on without them. Wait here until the device is back and reset.
+            auto device = Game::Field<IDirect3DDevice9*>(applyingDisplay, 16);
+            auto parameters = &Game::Field<D3DPRESENT_PARAMETERS>(applyingDisplay, 20);
+            auto result = static_cast<HRESULT>(regs.eax);
+            for (int attempts = 0; FAILED(result) && attempts < 20;)
+            {
+                Sleep(100);
+                if (device->TestCooperativeLevel() == D3DERR_DEVICELOST)
+                    continue;
+                result = device->Reset(parameters);
+                ++attempts;
+            }
+            regs.eax = static_cast<uintptr_t>(result);
+        }
         resetResult = static_cast<HRESULT>(regs.eax);
         if (changing && FAILED(*resetResult))
         {

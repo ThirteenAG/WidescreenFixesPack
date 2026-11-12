@@ -142,7 +142,7 @@ export namespace System
         // MAIN.PauseOnFocusLoss: the focus checks that pause the game (those after the "pause when unfocused" flag, +0x21
         // of the screen settings, and the pause menu's own); the other focus checks gate the input
         auto main = hook::pattern("8B 15 ? ? ? ? 38 42 21 74 ? 8B 0D ? ? ? ? E8 ? ? ? ? 84 C0");
-        sMain.SetAddress(*main.get_first<uintptr_t*>(13));
+        sMain.SetAddress(*hook::pattern(main).get_first<uintptr_t*>(13));
         main.for_each_result([](hook::pattern_match match)
         {
             injector::MakeCALL(match.get<uint8_t>(17), HasFocusForPause, true);

@@ -1,6 +1,8 @@
 module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#define DIRECTINPUT_VERSION 0x0700
+#include <dinput.h>
 
 export module Misc;
 import ComVars;
@@ -25,6 +27,11 @@ void InitializeGame()
     ParadiseCamera::Init();
     ParadiseHud::Init();
     ParadiseOverlay::Init();
+
+    // The exclusive DirectInput keyboard crashes inside dinput.dll when the game acquires it again on returning
+    // from another window; the non-exclusive foreground keyboard (still without the Windows key) doesn't
+    auto keyboard = hook::pattern("6A 15 FF 75 08 50 FF 51 34");
+    injector::WriteMemory<uint8_t>(keyboard.get_first(1), DISCL_NONEXCLUSIVE | DISCL_FOREGROUND | DISCL_NOWINKEY, true);
 
     // Skip intro: the game's own -nointro switch (publisher and studio logos, title movie)
     if (settings.Bool("MAIN.SkipIntro"))

@@ -284,8 +284,8 @@ public:
             // Windowed mode text fix
             {
                 auto [ResX, ResY] = RequestedResolution();
+                (void)hook::pattern("68 E0 01 00 00 68 80 02 00 00").get_first();
                 pattern = hook::pattern("68 E0 01 00 00 68 80 02 00 00");
-                (void)pattern.get_first();
                 for (size_t i = 0; i < pattern.size(); ++i)
                 {
                     injector::WriteMemory<int32_t>(pattern.get(i).get<int32_t>(6), ResX, true);

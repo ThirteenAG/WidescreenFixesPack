@@ -73,5 +73,8 @@
   "MAIN.GamepadIcons.description": "Imágenes de los botones nativos: Xbox, PlayStation o Nintendo. Automático usa Xbox. Los nombres del teclado y ratón no cambian.",
   "menu.pad.triangle": "Triángulo",
   "SkipPressStart": "Omitir Pulsa una tecla",
-  "SkipPressStart.description": "Avanza automáticamente por la primera pantalla Pulsa una tecla. Las confirmaciones de carga y guardado conservan su comportamiento normal."
+  "SkipPressStart.description": "Avanza automáticamente por la primera pantalla Pulsa una tecla. Las confirmaciones de carga y guardado conservan su comportamiento normal.",
+  "page.controls": "Controles",
+  "ClassicKeyLinks": "Teclas enlazadas clásicas",
+  "ClassicKeyLinks.description": "Enlaza las teclas como en el juego original: las teclas de disparo y examinar funcionan como una sola (disparo al apuntar, examinar si no) y confirman en los menús, y la tecla de correr cancela en los menús. Se mantienen las teclas elegidas en las opciones de teclado del juego. Una tecla que también sirve para correr o para el giro rápido no se enlaza en el juego, así correr no examina."
 }

@@ -29,6 +29,8 @@
   "GRAPHICS.RestoreCarScratches.description": "Rétablit les rayures de la version 1.0.",
   "HUD.RadarMap": "Carte radar",
   "HUD.RadarMap.description": "Radar de style Xbox, repères plus grands et zoom selon la vitesse.",
+  "GAMEPLAY.OriginalRaceDifficulty": "Difficulté d'origine des courses",
+  "GAMEPLAY.OriginalRaceDifficulty.description": "Les adversaires roulent à la vitesse de la version 1.0, ce qui rend la course de l'histoire plus difficile. S'applique pendant la course.",
   "WIDESCREEN.WidescreenMap": "Carte panoramique",
   "WIDESCREEN.WidescreenMap.description": "Affiche la carte sur tout l’écran.",
   "CUTSCENES.CutsceneBorders": "Bandes des cinématiques",

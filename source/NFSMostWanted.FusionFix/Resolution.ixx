@@ -112,6 +112,14 @@ void __stdcall sub_6C28B0(int* outWidth, int* outHeight)
     return GetRacingResolution(outWidth, outHeight);
 }
 
+SafetyHookInline shSetDefaultVideoOptions = {};
+void __cdecl SetDefaultVideoOptions()
+{
+    int racingResolution = g_RacingResolution;
+    shSetDefaultVideoOptions.unsafe_ccall();
+    g_RacingResolution = racingResolution;
+}
+
 SafetyHookInline shGetLocalizedString = {};
 char* __cdecl GetLocalizedString(int hash)
 {
@@ -299,11 +307,10 @@ public:
             pattern = hook::pattern("A1 ? ? ? ? 56 57 8B 7C 24 ? 81 FF");
             DALOptions::shIncScreenRes = safetyhook::create_inline(pattern.get_first(), DALOptions::IncScreenRes);
 
-            pattern = hook::pattern("89 3D ? ? ? ? 89 3D ? ? ? ? 89 3D ? ? ? ? 89 35 ? ? ? ? 89 3D ? ? ? ? 89 35");
-            injector::MakeNOP(pattern.get_first(), 6, true);
-
-            pattern = hook::pattern("89 35 ? ? ? ? 89 35 ? ? ? ? 89 35 ? ? ? ? 89 35 ? ? ? ? 89 35 ? ? ? ? 89 35 ? ? ? ? 89 35");
-            injector::MakeNOP(pattern.get_first(), 6, true);
+            // The default graphics settings for the detected hardware also reset the racing resolution. Other mods
+            // and modified executables change that function's body, so it's hooked at its start.
+            pattern = hook::pattern("A1 ? ? ? ? 83 EC 40 53 56 BE 01 00 00 00 57 33 FF 3B C6 89 3D");
+            shSetDefaultVideoOptions = safetyhook::create_inline(pattern.get_first(), SetDefaultVideoOptions);
 
             pattern = hook::pattern("A1 ? ? ? ? 83 F8 ? 0F 87 ? ? ? ? FF 24 85 ? ? ? ? 8B 44 24 ? 8B 4C 24 ? ? ? ? ? ? ? ? ? ? ? ? ? C2");
             shsub_6C27D0 = safetyhook::create_inline(pattern.count_hint(2).get(0).get<void*>(), GetRacingResolution);

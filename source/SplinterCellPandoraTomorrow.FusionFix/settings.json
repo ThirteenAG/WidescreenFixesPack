@@ -436,6 +436,26 @@
       "visibility": "menu"
     },
     {
+      "id": "MAIN.SaveLocation",
+      "type": "choice",
+      "default": 0,
+      "label": "@MAIN.SaveLocation",
+      "description": "@MAIN.SaveLocation.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@MAIN.SaveLocation.game"
+        },
+        {
+          "value": 1,
+          "label": "@MAIN.SaveLocation.documents"
+        }
+      ]
+    },
+    {
       "id": "BONUS.GogglesLightColor",
       "type": "choice",
       "default": 0,

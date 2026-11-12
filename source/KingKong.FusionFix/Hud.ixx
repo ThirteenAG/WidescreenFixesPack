@@ -112,6 +112,13 @@ namespace
         if (Screen.fTextBox < 0.999f)
             width = static_cast<int16_t>(std::lround(width * Screen.fTextBox));
     }
+
+    // Every match of a pattern; get_first() alone would end the search at the first one
+    hook::pattern AllMatches(std::string_view bytes)
+    {
+        (void)hook::pattern(bytes).get_first();
+        return hook::pattern(bytes);
+    }
 }
 
 export bool KingKongInMenu()
@@ -133,8 +140,7 @@ public:
             if (!Screen.bSignatureEdition) // Gamer's Edition
             {
                 auto dword_temp = *pattern.get_first<void*>(3);
-                pattern = hook::pattern(pattern_str(0xD9, 0x04, '?', to_bytes(dword_temp)));
-                (void)pattern.get_first(); //0xA01C67
+                pattern = AllMatches(pattern_str(0xD9, 0x04, '?', to_bytes(dword_temp))); //0xA01C67
                 for (size_t i = 0; i < pattern.size(); i++)
                 {
                     injector::MakeNOP(pattern.get(i).get<uint32_t>(0), 1, true);
@@ -150,8 +156,7 @@ public:
                 injector::WriteMemory<uint16_t>(pattern.get_first<uint16_t>(1), 0x158B, true);
                 injector::WriteMemory<float*>(pattern.get_first<float*>(3), &Screen.fHudScale, true);
 
-                pattern = hook::pattern(pattern_str(0xD9, 0x04, '?', to_bytes(dword_temp)));
-                (void)pattern.get_first();
+                pattern = AllMatches(pattern_str(0xD9, 0x04, '?', to_bytes(dword_temp)));
                 for (size_t i = 0; i < pattern.size(); i++)
                 {
                     injector::MakeNOP(pattern.get(i).get<uint32_t>(0), 1, true);

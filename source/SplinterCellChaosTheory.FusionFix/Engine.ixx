@@ -196,6 +196,9 @@ export void InitEngine()
     injector::WriteMemory(pattern.get_first(2), &Screen.fTextScaleX, true); //0x10B149CE + 0x2
     pattern = hook::pattern("D8 25 ? ? ? ? D9 44 24 24 D8 4C 24");
     injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffset, true); //0x10B14BAD + 0x2
+    // The second quad of double-struck text (the version label on Game Mode Selection)
+    pattern = hook::pattern("D8 25 ? ? ? ? D9 44 24 68 D8 4D 38");
+    injector::WriteMemory(pattern.get_first(2), &Screen.fHudOffset, true); //0x10B14C8C + 0x2
 
     // Loading Bar
     pattern = hook::pattern("83 EC ? 53 56 57 8B F9 8B 47 ? 85 C0 0F 84 ? ? ? ? 8B 48");

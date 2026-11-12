@@ -27,10 +27,12 @@
 - **Color correction** — Optionally disable color correction.
 - **Noise filter** — Optionally disable the noise filter's grain.
 - **Fog** — Optionally disable fog in supported rendering passes; some fog effects may remain.
+- **Depth of field** — The background and foreground blur the console versions show in cutscenes. The scenes place the game's own depth of field effect, but the PC version never switches it on. Off by default; the Enhanced preset turns it on.
 - **Pause when unfocused** — Pause when another window has focus, or keep the game running in the background. This applies immediately.
 - **Frame rate limit** — 60 FPS by default, with a live limit, monitor refresh rate or unlimited. Higher rates remain experimental.
 - **Update notice** — Optionally check for a newer fix and read the notice in the native Options and Plugins menus. Disabled by default.
 - **Menu language** — Choose the language of the fix’s menu. Automatic follows the language the game runs in.
+- **Classic key links** — Keyboard keys linked as in the original games: the attack and examine keys work as one key (attack while aiming, examine otherwise) and also confirm in menus, and the run key cancels in menus. Set the keys in the game's keyboard options, for example Space for attack and V for run. A key that is also the run or quick turn key isn't linked during play, so running never examines. Off by default; applies immediately.
 - **Controller button icons** — Keep the native Xbox buttons with Auto or Xbox, or select PlayStation or Nintendo button glyphs. Changes apply immediately.
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 
@@ -50,7 +52,7 @@ The native **Options → Plugins** menu and FusionFixHub change the same setting
 read its full help, and Back to return. The menu offers Recommended, Vanilla and Enhanced presets and shows one
 restart notice while any startup setting differs from the running configuration.
 
-Frame rate, movie framing, cursor confinement, background pause, cursor timeout and update checks apply while playing. Window mode, visual filters,
+Frame rate, movie framing, cursor confinement, background pause, cursor timeout, classic key links and update checks apply while playing. Window mode, visual filters, depth of field,
 logo and title-prompt skipping, door skipping, and RGB lighting require a restart.
 
 **Ctrl+F10** opens the developer overlay when available. Its supporter access uses the normal Fusion Fix account check.

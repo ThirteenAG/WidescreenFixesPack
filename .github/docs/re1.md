@@ -25,6 +25,7 @@
 - **Door animations** — Skip door, stairs and lift transitions.
 - **Window mode** — Fullscreen, Windowed with the exact size chosen in the game, or Borderless at the monitor resolution. Changes apply while playing, and Alt+Enter switches between fullscreen and the last window mode. The window stays sharp at high display scaling.
 - **Confine cursor** — Keep the pointer inside the focused game window. Turning it off, changing focus or opening the developer overlay releases it.
+- **Classic key links** — Keyboard keys linked as in the original game: the fire and check keys work as one key (fire while aiming, check otherwise) and both confirm in menus, and the run key cancels in menus. Set the keys in the game's keyboard options, for example Space for fire and V for run. A key that is also the run or quick turn key isn't linked during play, so running never checks. Off by default; applies immediately.
 - **Controller button icons** — Xbox, PlayStation or Nintendo button pictures. Auto uses Xbox. Keyboard names stay unchanged.
 - **Menu language** — The language of the fix's menu. Automatic follows the display language chosen in the game's Language options.
 - **Update notice** — Optionally check for a newer fix and show a notice in Plugins. Off by default; no request is made while it is off.
@@ -51,8 +52,8 @@ frame rate to 60 FPS; door animations play as usual. **Vanilla** shows the logos
 cursor, turns RGB lighting off and keeps the game's own 120 FPS ceiling in VARIABLE mode. **Enhanced** is Recommended
 plus door skipping. The visual filter options are off in every preset, and the window mode is always your own choice.
 
-Frame rate, background pause, cursor timeout, cursor confinement, window mode, button icons and update checks apply while
-playing. Logo and title-prompt skipping, door skipping, the visual filters and RGB lighting need a restart.
+Frame rate, background pause, cursor timeout, cursor confinement, window mode, button icons, classic key links and update
+checks apply while playing. Logo and title-prompt skipping, door skipping, the visual filters and RGB lighting need a restart.
 
 **Ctrl+F10** opens the developer overlay; Debug → Info shows the fix version, build time, graphics API, resolution and
 frame rate. Its supporter access uses the normal Fusion Fix account check.

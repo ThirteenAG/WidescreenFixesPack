@@ -17,7 +17,7 @@ Configure on fusionfix.io or in FusionFixHub. The first start creates `Gameface/
 Presets:
 - **Vanilla:** the Definitive Edition as shipped, with widescreen HUD and mouse corrections: DE colours, HUD and radar at the game's size, intro and menu shown, the DE camera, the PC mouse camera fix and raw mouse input.
 - **Recommended** (the defaults): PS2 colour adaptation with restored weather colours, HUD 0.8, radar 0.75, legal screens skipped, original camera behaviour.
-- **Enhanced:** Recommended plus Resume on startup (loads your last save straight from startup).
+- **Enhanced:** Recommended plus Resume on startup (loads your last save straight from startup) and Free camera in aircraft.
 
 Field of view is 1.0 in every preset. The save slot and the classic object LODs (a compatibility setting) aren't changed by presets.
 
@@ -27,7 +27,7 @@ Field of view is 1.0 in every preset. The save slot and the classic object LODs 
 - **HUD Aspect Ratio**: Auto places side-anchored HUD widgets at the screen edges, with sizes based on screen height. Choose 4:3, 16:9, 21:9, 32:9 or enter another ratio to place the HUD in a centered box. The box, HUD scale and radar scale apply live and follow window resizing.
 - **HUD scale** and **Radar scale**: scale the player information and radar widgets while keeping their edge anchors.
 - **Startup and saves:** **Skip intro** skips the legal screens; F5 quicksaves outside missions to the chosen **Save slot**.
-- **Mouse and camera:** PC mouse camera fixes and aim sensitivity that follows the camera's field of view are always active, with a separate **Confine cursor** setting while the mouse camera is active, **Raw mouse input**, **Camera centering delay**, **Original camera** (original camera distances and controller orbit).
+- **Mouse and camera:** PC mouse camera fixes and aim sensitivity that follows the camera's field of view are always active, with a separate **Confine cursor** setting while the mouse camera is active, **Raw mouse input**, **Camera centering delay**, **Original camera** (original camera distances and controller orbit), **Free camera in aircraft** (planes and helicopters use the normal follow camera, so the mouse or right stick turns the camera and looks up and down, as in the original game; off keeps the Definitive Edition's camera locked behind the aircraft).
 - **Colours:** **Visual style** (DE, PS2 or PC colours), **Restore weather colours**, **Colour filter strength**. The game's own tone mapping and HDR stay active; the original PS2 blur effect isn't reproduced.
 - **Streaming:** **Classic object LODs** (on the Compatibility page) keeps the original lower-detail object models loaded.
 - **Check for updates** (off by default): once per start, asks fusionfix.io whether a newer version of the fix is out and tells you in the game's help box; with FusionFixHub in the game folder, the hub opens on the fix's page when you close the game. Off makes no network request.

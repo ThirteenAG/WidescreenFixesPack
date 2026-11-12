@@ -20,6 +20,7 @@ Install the official Max Payne 1.05 update before installing the fix. The includ
 - **Startup and audio compatibility** - The bundled runtime avoids image-decoding errors on affected AMD processors and keeps the bundled audio replacement working.
 - **16-bit display modes** — Picking a 16-bit mode in the options no longer stops the game from starting ("creating the device failed: D3DERR_NOTAVAILABLE"), the 32-bit mode of that resolution is used. The startup dialog only lists the 32-bit modes, largest first.
 - **Adaptive difficulty** — Fugitive's adaptive difficulty counts deaths, health and play time over reloads, so it eases off again instead of climbing to the hardest settings and staying there.
+- **High-resolution fonts** — Font textures replaced with higher-resolution versions (for example a sharper `Hud_Universal_Medium.tga`) keep the size of the original text on screen instead of growing with the texture.
 
 ## Options
 

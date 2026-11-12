@@ -8,6 +8,7 @@ import System;
 import LightSync;
 import FrameRate;
 import Runtime;
+import ClassicKeys;
 
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
 ASI_SETTINGS_EXPORT(FixSettings())
@@ -23,6 +24,7 @@ void Init()
 
     WFP::onInitEvent().executeAll();
     RERuntime::Install();
+    REClassicKeys::Install();
 }
 
 CEXP void InitializeASI()

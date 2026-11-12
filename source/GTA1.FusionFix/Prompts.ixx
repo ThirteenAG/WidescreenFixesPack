@@ -90,7 +90,7 @@ export namespace GTA1Prompts
             auto headers = reinterpret_cast<PIMAGE_NT_HEADERS>(reinterpret_cast<uint8_t*>(module) + reinterpret_cast<PIMAGE_DOS_HEADER>(module)->e_lfanew);
             auto begin = reinterpret_cast<uintptr_t>(module);
             auto text = hook::range_pattern(begin, begin + headers->OptionalHeader.SizeOfImage, bytes + "00");
-            text.get_first();
+            (void)hook::pattern(text).get_first();
             for (size_t t = 0; t < text.size() && !label.global; ++t)
             {
                 auto address = reinterpret_cast<uintptr_t>(text.get(t).get<void>());

@@ -2,6 +2,7 @@
 #include "FixSettings.hpp"
 #include "automation/asi_automation_frames.h"
 #include "Shared/SplinterCell/Window.hpp"
+#include "Shared/SplinterCell/SaveLocation.hpp"
 #include "Shared/CursorConfinement.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
 
@@ -41,6 +42,9 @@ CEXP void InitializeASI()
         if (WidescreenFixConflict::Found())
             return;
         FixSettings();
+        // Documents instead of the game's Save folder
+        if (FixSettings().Int("MAIN.SaveLocation") == 1)
+            SCSaveLocation::Redirect::Install(SCSaveLocation::GameFolder() / L"Save", SCSaveLocation::Documents(L"Splinter Cell"));
         asi_settings::LiveLink::Start();
         CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
         FixSettings().OnChange("MAIN.ConfineCursor", []()

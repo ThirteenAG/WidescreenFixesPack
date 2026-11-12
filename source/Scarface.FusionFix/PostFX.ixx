@@ -75,6 +75,31 @@ public:
             });
             hb_sub_654B20.fun = injector::MakeCALL(release.get_first(2), sub_654B20, true).get();
             injector::MakeCALL(resetRelease.get_first(), sub_654B20, true);
+
+            // A windowed device is lost without the focus change on which the game releases its device
+            // resources, and the reset in its wait loop then never succeeds. Go through the game's own
+            // deactivation and activation instead of that reset.
+            auto lostReset = hook::pattern("8B 47 10 8B 08 8D 57 14 52 50 FF 51 40 85 C0 75 05 E8");
+            auto setActive = hook::pattern("53 8A 5C 24 08 56 8B F1 38 9E ? ? ? ? 0F 84");
+            static auto SetDisplayActive = reinterpret_cast<void(__thiscall*)(void*, char)>(setActive.get_first());
+            static auto lostResume = reinterpret_cast<uintptr_t>(lostReset.get_first(22));
+            static auto LostResetHook = safetyhook::create_mid(lostReset.get_first(), [](SafetyHookContext& regs)
+            {
+                auto display = reinterpret_cast<void*>(regs.edi);
+                SetDisplayActive(display, 0);
+                SetDisplayActive(display, 1);
+                regs.eip = lostResume;
+            });
+
+            // The game releases its device resources when it is deactivated and recreates them only after
+            // a device reset. A device that was never lost needs no reset: recreate them on activation.
+            auto restore = hook::pattern("FF 51 40 85 C0 75 ? E8 ? ? ? ? 8B 86");
+            static auto RestoreDeviceResources = reinterpret_cast<void(*)()>(injector::GetBranchDestination(restore.get_first(7)).as_int());
+            auto activated = hook::pattern("85 C0 75 ? 8B 96 ? ? ? ? 50 6A 01 68 9A 06 00 00");
+            static auto ActivatedHook = safetyhook::create_mid(activated.get_first(4), [](SafetyHookContext&)
+            {
+                RestoreDeviceResources();
+            });
         };
 
         WFP::onShutdownEvent() += []()

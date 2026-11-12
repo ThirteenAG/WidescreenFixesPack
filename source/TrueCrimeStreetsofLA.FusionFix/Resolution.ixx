@@ -155,7 +155,7 @@ export namespace TrueCrimeResolution
         auto references = hook::pattern(text);
         if (references.empty())
         {
-            references.get_first();
+            (void)hook::pattern(references).get_first();
             std::abort();
         }
         references.for_each_result([to](hook::pattern_match match)

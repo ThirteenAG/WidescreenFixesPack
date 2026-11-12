@@ -92,6 +92,32 @@ namespace
     }
 }
 
+// Patches made as soon as the fix is loaded and not at WinMain: a plugin loaded after the fix may call the game or
+// patch the same code right away, before the game's static constructors have run.
+export void InitMiscAtLoad()
+{
+    // The folder for saves and settings in Documents: the game appends its folder name from a string made by a static
+    // constructor. While that string doesn't exist yet, the same name is used instead of crashing.
+    auto pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 59 59 68 ? ? ? ? FF 15 ? ? ? ? 83 F8 FF");
+    static auto UserFilesFolder = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        auto& folder = *reinterpret_cast<const char**>(regs.esp);
+        if (!folder)
+            folder = "\\Manhunt User Files";
+    });
+
+    auto legalScreenTime = hook::pattern("81 F9 B8 0B 00 00 72 C9").get_first<uint32_t>(2);
+    auto titlesVideo = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 83 79 1C 00").get_first();
+    if (FixSettings().Bool("MAIN.SkipIntro"))
+    {
+        // The legal screen is still drawn, but the game doesn't wait three seconds on it
+        injector::WriteMemory<uint32_t>(legalScreenTime, 0, true);
+
+        // The opening logo video (TITLES.BIK)
+        injector::MakeNOP(titlesVideo, 5, true);
+    }
+}
+
 class Misc
 {
 public:
@@ -99,27 +125,6 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            auto legalScreenTime = hook::pattern("81 F9 B8 0B 00 00 72 C9").get_first<uint32_t>(2);
-            if (FixSettings().Bool("MAIN.SkipIntro"))
-            {
-                // The legal screen is still drawn, but the game doesn't wait three seconds on it
-                injector::WriteMemory<uint32_t>(legalScreenTime, 0, true);
-
-                // The opening logo video (TITLES.BIK)
-                auto pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 83 79 1C 00");
-                injector::MakeNOP(pattern.get_first(), 5, true);
-            }
-
-            // The folder for saves and settings in Documents: the game appends its folder name from a string made by
-            // a static constructor. Should it not exist yet, use the same name instead of crashing.
-            auto pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 59 59 68 ? ? ? ? FF 15 ? ? ? ? 83 F8 FF");
-            static auto UserFilesFolder = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                auto& folder = *reinterpret_cast<const char**>(regs.esp);
-                if (!folder)
-                    folder = "\\Manhunt User Files";
-            });
-
             // Once per frame, in CApp::Idle before the game's own wait
             static auto& limit = FixSettings().Int("MAIN.FPSLimit");
             static FrameLimiter limiter;

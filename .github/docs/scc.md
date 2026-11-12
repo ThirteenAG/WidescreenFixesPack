@@ -21,6 +21,7 @@
 - **Hardware detection** — Skip hardware detection messages on startup.
 - **CPU cores** — The game runs on all CPU cores.
 - **LAN** — Restore LAN support.
+- **Effects** — Bullet casings and impact debris show at every Environment Detail setting, not only at Low.
 
 ## Options
 
@@ -44,13 +45,15 @@
 - **Black and white filter** — Optionally disable the desaturation effect.
 - **Sonar vision** — Enable the enhanced sonar vision option.
 - **Character lighting** — Optionally disable the additional character lighting, including in cutscenes.
+- **Draw distance** — LOD Distance keeps objects and characters at full detail farther away, Shadow Distance lets lights cast shadows farther away. Both default to the game's distances and change live.
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 
 ### Content and controls
 
 - **Loose files** — Load unpacked files from disk.
 - **DLC** — Restores DLC content made unavailable by the server shutdown.
-- **Controls** — Enable the Blacklist control scheme on keyboard and gamepad: cover is toggled with a press and released by any action that leaves it, drops from ledges are on the cover button, as in Blacklist, and Death from Above is on E / X.
+- **Last known position** — Optionally hide the silhouette that marks where enemies last saw you.
+- **Controls** — Enable the Blacklist control scheme on keyboard and gamepad: cover is toggled with a press and released by any action that leaves it, drops from ledges are on the cover button, as in Blacklist, and Death from Above is on E / X. The default keyboard keys put crouch on Ctrl, reload on R and the gadget on the middle mouse button; an existing profile keeps its own keys, change them in the controls menu.
 
 ![controls](https://github.com/user-attachments/assets/2498a891-2991-4604-b0dc-b5d309a0c02d)
 

@@ -251,7 +251,7 @@ public:
             auto drivingOutput = hook::pattern("56 57 8B 7C 24 0C 8B F1 57 8D 8E C0 01 00 00 E8 ? ? ? ? 8D 4E 60 E8 ? ? ? ? D8 47 40 D9 5F 40 5F 5E C2 04 00");
             if (drivingOutput.empty())
             {
-                drivingOutput.get_first();
+                (void)hook::pattern(drivingOutput).get_first();
                 std::abort();
             }
             for (size_t i = 0; i < drivingOutput.size(); ++i)
@@ -343,12 +343,12 @@ public:
             auto radarScales = hook::pattern("F3 0F 11 ? 4C 07 00 00");
             if (radarPositions.empty())
             {
-                radarPositions.get_first();
+                (void)hook::pattern(radarPositions).get_first();
                 std::abort();
             }
             if (radarScales.empty())
             {
-                radarScales.get_first();
+                (void)hook::pattern(radarScales).get_first();
                 std::abort();
             }
             if (radarPositions.size() != 4 || radarScales.size() != 3)

@@ -22,6 +22,7 @@ export struct FusionSettings
     bool rawMouseInput = true;
     bool restoreOriginalCamera = true;
     float centeringDelay = 5.0f;
+    bool aircraftFreeCamera = false;
 };
 export FusionSettings Settings;
 
@@ -40,6 +41,7 @@ namespace
         Settings.rawMouseInput = FixSettings().Bool("MAIN.RawInputMouse");
         const auto delay = FixSettings().Float("MAIN.CenteringDelay");
         Settings.centeringDelay = std::isfinite(delay) && delay >= 0.0f ? delay : 5.0f;
+        Settings.aircraftFreeCamera = FixSettings().Bool("MAIN.AircraftFreeCamera");
         Settings.classicLODsOnly = FixSettings().Bool("GRAPHICS.ClassicLODsOnly");
         const auto style = FixSettings().Int("GRAPHICS.VisualStyle");
         Settings.visualStyle = style >= 0 && style <= 2 ? static_cast<VisualStyle>(style) : VisualStyle::PS2;
@@ -60,7 +62,8 @@ export void ReadSettings()
 {
     ReadValues();
     for (const auto id : { "MAIN.HudScale", "MAIN.RadarScale",
-        "MAIN.RestoreOriginalCamera", "MAIN.RawInputMouse", "MAIN.CenteringDelay", "MAIN.SaveSlot", "GRAPHICS.VisualStyle",
+        "MAIN.RestoreOriginalCamera", "MAIN.RawInputMouse", "MAIN.CenteringDelay", "MAIN.AircraftFreeCamera", "MAIN.SaveSlot",
+        "GRAPHICS.VisualStyle",
         "GRAPHICS.RestoreWeatherColours", "GRAPHICS.ColourFilterStrength" })
     {
         FixSettings().OnChange(id, []()

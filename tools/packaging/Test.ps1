@@ -55,6 +55,12 @@ try {
     Remove-Item -LiteralPath $result.file
     $result = Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'with-hub') 'off' $hubFile
     Assert ('FusionFixHub.exe' -in $result.files -and $result.files.Count -eq 3) 'The hub is missing from the archive.'
+    $listing = [Text.Encoding]::UTF8.GetString((Invoke-PackageTool (Join-Path $work 'data/7za.exe') @('l', '-slt', $result.file)))
+    Assert ($listing.Replace("`r", '') -notmatch '(?m)^Path = CrashDumps$') 'A release build got the CrashDumps folder.'
+    Remove-Item -LiteralPath $result.file
+    $result = Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'with-dumps') 'off' $hubFile $true
+    $listing = [Text.Encoding]::UTF8.GetString((Invoke-PackageTool (Join-Path $work 'data/7za.exe') @('l', '-slt', $result.file)))
+    Assert ($listing.Replace("`r", '') -match '(?m)^Path = CrashDumps$' -and $result.files.Count -eq 3) 'The CrashDumps folder is missing from a developer build.'
     Assert-Fails { Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'x86-hub') 'off' (Join-Path $work 'data/A/A.asi') } 'not an x64'
     Remove-Item -LiteralPath $result.file, (Join-Path $work 'data/A/config.ini')
     Assert-Fails { Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'second') 'off' } 'does not exist|Cannot find'

@@ -310,6 +310,55 @@
       "apply": "restart"
     },
     {
+      "id": "GRAPHICS.LODDistance",
+      "type": "float",
+      "default": 1,
+      "label": "@GRAPHICS.LODDistance",
+      "description": "@GRAPHICS.LODDistance.description",
+      "page": "graphics",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 2
+      },
+      "min": 1,
+      "max": 4,
+      "step": 0.25,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "GRAPHICS.ShadowDistance",
+      "type": "float",
+      "default": 1,
+      "label": "@GRAPHICS.ShadowDistance",
+      "description": "@GRAPHICS.ShadowDistance.description",
+      "page": "graphics",
+      "apply": "live",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 1,
+        "enhanced": 1.5
+      },
+      "min": 1,
+      "max": 4,
+      "step": 0.25,
+      "control": [
+        "stepper"
+      ]
+    },
+    {
+      "id": "GAMEPLAY.LastKnownPosition",
+      "type": "bool",
+      "default": true,
+      "label": "@GAMEPLAY.LastKnownPosition",
+      "description": "@GAMEPLAY.LastKnownPosition.description",
+      "page": "gameplay",
+      "apply": "live"
+    },
+    {
       "id": "MAIN.RawInputMouse",
       "type": "bool",
       "default": true,

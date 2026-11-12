@@ -25,7 +25,6 @@ void Init()
     pattern = hook::pattern("83 3D ? ? ? ? ? 74 ? 84 DB");
     nLoading.SetAddress(*pattern.get_first<uint32_t*>(2));
 
-    // The overlay first: it captures the Present sequence before the frame limiter (Framelimit) patches its start
     TCOverlay::Init();
 
     WFP::onInitEvent().executeAll();

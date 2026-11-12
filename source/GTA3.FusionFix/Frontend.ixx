@@ -214,8 +214,8 @@ namespace ScriptDraw
             injector::WriteMemory(match.get<void*>(2), ResYInvRefs[eCHud].get_ptr(), true);
         });
 
-        hbSetWrapX.fun = reinterpret_cast<decltype(hbSetWrapX.fun)>(injector::GetBranchDestination(wrap.get_first(9)).as_int());
-        hbPrintString.fun = reinterpret_cast<decltype(hbPrintString.fun)>(injector::GetBranchDestination(print.get_first(15)).as_int());
+        hbSetWrapX.fun = reinterpret_cast<decltype(hbSetWrapX.fun)>(injector::GetBranchDestination(hook::pattern(wrap).get_first(9)).as_int());
+        hbPrintString.fun = reinterpret_cast<decltype(hbPrintString.fun)>(injector::GetBranchDestination(hook::pattern(print).get_first(15)).as_int());
         wrap.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(9), SetWrapX, true); });
         print.for_each_result([](hook::pattern_match match) { injector::MakeCALL(match.get<void>(15), PrintString, true); });
     }

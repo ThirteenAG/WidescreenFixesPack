@@ -29,6 +29,8 @@
   "GRAPHICS.RestoreCarScratches.description": "Stellt Fahrzeugkratzer aus Version 1.0 wieder her.",
   "HUD.RadarMap": "Radarkarte",
   "HUD.RadarMap.description": "Xbox-Radar mit größeren Fahrzeugpunkten und geschwindigkeitsabhängigem Zoom.",
+  "GAMEPLAY.OriginalRaceDifficulty": "Ursprüngliche Rennschwierigkeit",
+  "GAMEPLAY.OriginalRaceDifficulty.description": "Die Gegner fahren so schnell wie in Version 1.0, was das Rennen der Story schwerer macht. Gilt sofort im Rennen.",
   "WIDESCREEN.WidescreenMap": "Breitbild-Karte",
   "WIDESCREEN.WidescreenMap.description": "Zeigt die Karte über den gesamten Bildschirm.",
   "CUTSCENES.CutsceneBorders": "Zwischensequenz-Balken",

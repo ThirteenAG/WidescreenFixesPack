@@ -617,7 +617,7 @@ public:
             pattern = hook::pattern("0F B6 C0 89 01 B0 01");
             if (pattern.empty())
             {
-                pattern.get_first();
+                (void)hook::pattern(pattern).get_first();
                 std::abort();
             }
             if (pattern.size() != 7)
@@ -801,7 +801,7 @@ public:
                 auto setTexture = hook::pattern("56 57 8B 7C 24 0C 8B 17 8B 52 10 8B F1 8B 46 18 8B 08 52");
                 if (setTexture.empty())
                 {
-                    setTexture.get_first();
+                    (void)hook::pattern(setTexture).get_first();
                     std::abort();
                 }
                 if (setTexture.size() != 2)

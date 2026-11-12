@@ -19,6 +19,8 @@
   "RestoreOriginalCamera.description": "Restores the original vehicle camera distances and pitch, and the original controller response.",
   "CenteringDelay": "Camera centering delay",
   "CenteringDelay.description": "Seconds before the vehicle camera centres behind the vehicle again. The original game uses 1.",
+  "AircraftFreeCamera": "Free camera in aircraft",
+  "AircraftFreeCamera.description": "Planes and helicopters use the same follow camera as other vehicles, so the mouse or right stick can turn the camera and look up and down, as in the original game. Off keeps the camera locked behind the aircraft.",
   "RawMouseInput": "Raw mouse input",
   "RawMouseInput.description": "Reads the mouse directly for the camera, with the mouse sensitivity and inversion of the game's settings.",
   "VisualStyle": "Visual style",

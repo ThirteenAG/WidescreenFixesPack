@@ -259,6 +259,15 @@ public:
                 injector::MakeCALL(create.get_first(), CreatePixelShaderHook, true);
             }
 
+            // Depth of field in the scenes, as on the consoles: the scenes place the game's depth of field filter
+            // (uGameDOFFilter, and the bokeh filter built on it), but this build creates it switched off (+0xA5) and
+            // never switches it on
+            if (FixSettings().Bool("MAIN.DepthOfField"))
+            {
+                auto dof = hook::pattern("89 86 AC 00 00 00 C6 86 A5 00 00 00 01");
+                injector::WriteMemory<uint8_t>(dof.get_first(12), 0, true);
+            }
+
             // TV noise filter: the texture coordinates of the noise and scanline mask are the viewport size over the
             // mask texture size (arguments 7 and 8 of the quad call), the viewport is at +188 of the draw context (esi)
             auto noiseQuad = hook::pattern("56 E8 ? ? ? ? 83 C4 20 80 7F 74 00");

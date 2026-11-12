@@ -48,7 +48,7 @@
   "menu.restoredefaultshelp": "Riporta le impostazioni di questa pagina ai valori predefiniti.",
   "menu.restartwarning": "Riavvia il gioco per applicare le modifiche.",
   "menu.help": "Aiuto",
-  "menu.presethelp": "Scegli una preimpostazione con Sinistra/Destra e conferma. Originale mantiene i loghi. Consigliata e Migliorata li saltano, nascondono il cursore inattivo e attivano RGB. Solo Migliorata salta le transizioni delle porte. Le preferenze personali e i valori comuni sono mantenuti. Ripristina predefiniti reimposta tutte le opzioni. Originale e Consigliata usano 60 FPS; Migliorata rimuove il limite. La sincronizzazione verticale può comunque limitare i fotogrammi.",
+  "menu.presethelp": "Scegli una preimpostazione con Sinistra/Destra e conferma. Originale mantiene i loghi. Consigliata e Migliorata li saltano, nascondono il cursore inattivo e attivano RGB. Solo Migliorata salta le transizioni delle porte e attiva la profondità di campo. Le preferenze personali e i valori comuni sono mantenuti. Ripristina predefiniti reimposta tutte le opzioni. Originale e Consigliata usano 60 FPS; Migliorata rimuove il limite. La sincronizzazione verticale può comunque limitare i fotogrammi.",
   "menu.helphint": "F1 / tasto Predefinito: guida completa",
   "PauseOnFocusLoss": "Pausa senza focus",
   "PauseOnFocusLoss.description": "Mette in pausa quando la finestra del gioco non è attiva. Disattiva per continuare in background.",
@@ -78,5 +78,10 @@
   "SkipPressStart": "Salta messaggio iniziale",
   "SkipPressStart.description": "Supera automaticamente il messaggio nella schermata iniziale.",
   "ConfineCursor": "Confina il cursore",
-  "ConfineCursor.description": "Mantiene il puntatore nella finestra attiva del gioco. Lo libera quando il gioco perde il focus o quando la sovrimpressione di sviluppo è aperta."
+  "ConfineCursor.description": "Mantiene il puntatore nella finestra attiva del gioco. Lo libera quando il gioco perde il focus o quando la sovrimpressione di sviluppo è aperta.",
+  "page.controls": "Controlli",
+  "ClassicKeyLinks": "Tasti collegati classici",
+  "ClassicKeyLinks.description": "Collega i tasti come nei giochi originali: i tasti di attacco ed esamina funzionano come un unico tasto (attacco mirando, altrimenti esamina) e confermano nei menu, e il tasto di corsa annulla nei menu. Restano i tasti scelti nelle opzioni tastiera del gioco. Un tasto che serve anche per correre o per l'inversione rapida non viene collegato in gioco, così correre non esamina.",
+  "DepthOfField": "Profondità di campo",
+  "DepthOfField.description": "La sfocatura della profondità di campo delle versioni console nei filmati: l'effetto del gioco, che la versione PC non attiva mai."
 }

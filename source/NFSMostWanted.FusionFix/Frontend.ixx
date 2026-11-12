@@ -344,7 +344,7 @@ public:
                 pattern = hook::pattern("E8 ? ? ? ? 84 C0 B8 ? ? ? ? 75 ? B8 ? ? ? ? C3");
                 if (pattern.empty())
                 {
-                    pattern.get_first();
+                    (void)hook::pattern(pattern).get_first();
                     std::abort();
                 }
                 bool splashFound = false;

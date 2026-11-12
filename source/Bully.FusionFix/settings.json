@@ -25,6 +25,11 @@
       "section": "camera"
     },
     {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
       "id": "controls",
       "title": "@page.controls",
       "section": "controls"
@@ -196,6 +201,36 @@
       "description": "@display.AnimatedCutsceneBorders.description",
       "page": "display",
       "apply": "live"
+    },
+    {
+      "id": "GRAPHICS.ShadowResolution",
+      "type": "choice",
+      "default": 1024,
+      "min": 1024,
+      "max": 4096,
+      "label": "@GRAPHICS.ShadowResolution",
+      "description": "@GRAPHICS.ShadowResolution.description",
+      "page": "graphics",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 1024,
+          "label": "@GRAPHICS.ShadowResolution.1024"
+        },
+        {
+          "value": 2048,
+          "label": "2048"
+        },
+        {
+          "value": 4096,
+          "label": "4096"
+        }
+      ],
+      "presets": {
+        "vanilla": 1024,
+        "recommended": 1024,
+        "enhanced": 2048
+      }
     },
     {
       "id": "MAIN.AutoGamepad",

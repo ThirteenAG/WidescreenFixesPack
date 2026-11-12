@@ -341,48 +341,11 @@
         "cycler",
         "dropdown"
       ],
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 30,
         "recommended": 60,
         "enhanced": 60
-      }
-    },
-    {
-      "id": "FRAMELIMIT.FrameLimitType",
-      "type": "choice",
-      "default": 1,
-      "choices": [
-        {
-          "value": -1,
-          "label": "@limiter.external"
-        },
-        {
-          "value": 0,
-          "label": "@limiter.native"
-        },
-        {
-          "value": 1,
-          "label": "@limiter.realtime"
-        },
-        {
-          "value": 2,
-          "label": "@limiter.accurate"
-        }
-      ],
-      "label": "@limiter",
-      "description": "@limiter.description",
-      "page": "display",
-      "group": "@group.framerate",
-      "control": [
-        "dropdown",
-        "cycler"
-      ],
-      "apply": "restart",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
       }
     },
     {

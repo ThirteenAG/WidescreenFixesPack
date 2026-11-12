@@ -28,6 +28,7 @@ namespace
     const float* pMouseSensitivity = nullptr;
     const float* pReturnDelay = nullptr;
     const float* pReturnSpeed = nullptr;
+    const int* pDriftCamera = nullptr;
 
     constexpr float StickDegreesPerSecond = 150.0f;
     constexpr float MouseDegreesPerCount = 0.15f;
@@ -270,10 +271,20 @@ public:
             pMouseSensitivity = &FixSettings().Float("MAIN.MouseSensitivity");
             pReturnDelay = &FixSettings().Float("CAMERA.ReturnDelay");
             pReturnSpeed = &FixSettings().Float("CAMERA.ReturnSpeed");
+            pDriftCamera = &FixSettings().Int("CAMERA.DriftCamera");
 
             // CubicCameraMover::Update
             auto pattern = hook::pattern("E8 ? ? ? ? 8B 4E ? 8D 84 24 ? ? ? ? 50 51");
             hb_eCreateLookAtMatrix.fun = injector::MakeCALL(pattern.get_first(), eCreateLookAtMatrix, true).get();
+
+            // CubicCameraMover::Update: in drift races the game clears the part of the view data that pulls the
+            // camera away from the car when accelerating and towards it when braking. Do that in every race too.
+            pattern = hook::pattern("C7 84 24 00 01 00 00 00 00 00 00 C7 84 24 04 01 00 00 00 00 00 00 C7 84 24 08 01 00 00 00 00 00 00 8B 4E 2C");
+            static auto DriftCamera = safetyhook::create_mid(pattern.get_first(33), [](SafetyHookContext& regs)
+            {
+                if (*pDriftCamera)
+                    std::fill_n((float*)(regs.esp + 0x100), 3, 0.0f);
+            });
 
             pattern = hook::pattern("8B 5E ? 83 FB ? 74");
             static auto GetCameraData = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

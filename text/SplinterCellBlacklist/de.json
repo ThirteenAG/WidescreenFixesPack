@@ -14,6 +14,8 @@
   "MAIN.SkipPressStart.description": "Überspringt den Beliebige-Taste-Bildschirm und die Kontrollpunktauswahl.",
   "MAIN.TurnSpeed": "Drehgeschwindigkeit",
   "MAIN.TurnSpeed.description": "Wie schnell Sam sich beim Bewegen in Laufrichtung dreht (0.5–10). 1.0 ist der Standard.",
+  "MAIN.SwapShoulderKey": "Taste für Schulterwechsel",
+  "MAIN.SwapShoulderKey.description": "Taste, die die Kamera zu Fuß, auch beim Zielen, über Sams andere Schulter setzt. In Deckung und mit menschlichem Schild bleibt die Kameraseite des Spiels. Leer = keine Taste.",
   "MAIN.FOVFactor": "Sichtfeld-Multiplikator",
   "MAIN.FOVFactor.description": "Skaliert das Sichtfeld bei der Fortbewegung von 0,5 bis 2,0. 1,0 erhält die normale Ansicht. Zielen, Zielfernrohre, Geräte und vorgegebene Kameras behalten ihr eigenes Sichtfeld. Die horizontale Spielansicht bleibt auf 150 Grad begrenzt; die Kameraglättung bleibt erhalten.",
   "MAIN.ScreenCullBias": "Bildschirm-Culling-Spielraum",

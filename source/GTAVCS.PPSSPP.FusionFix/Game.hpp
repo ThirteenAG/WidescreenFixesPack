@@ -23,6 +23,8 @@ struct Settings {
     int cutsceneBorders = 3;
     // MAIN.VehicleLights (read at startup): lit head, tail, brake and reverse lights on vehicle bodies.
     bool vehicleLights = true;
+    // CONTROLS.HoldVehicleCamera: the vehicle camera stays where the right stick turned it until the stick rests for a moment.
+    bool holdVehicleCamera = false;
 };
 inline Settings settings;
 inline bool autoAspect=true;

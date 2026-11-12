@@ -54,5 +54,7 @@
   "checkupdates": "Check for updates",
   "checkupdates.description": "Check for a new fix version once when enabled. A notice appears in Plugins; FusionFixHub opens after the game exits if installed. Off makes no network request.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io."
+  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "MovingTurnSpeed": "Turn Speed While Moving",
+  "MovingTurnSpeed.description": "How fast the character turns while walking and running, with the mouse or a stick. The game turns slower while moving than standing; 1.0x keeps the game's speed. With Modern controls the camera turns freely and this doesn't apply."
 }

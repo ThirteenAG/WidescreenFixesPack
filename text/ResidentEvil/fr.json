@@ -73,5 +73,8 @@
   "MAIN.GamepadIcons.description": "Images des boutons natifs : Xbox, PlayStation ou Nintendo. Automatique utilise Xbox. Les noms du clavier et de la souris restent inchangés.",
   "menu.pad.triangle": "Triangle",
   "SkipPressStart": "Passer Appuyez sur une touche",
-  "SkipPressStart.description": "Passe automatiquement le premier écran Appuyez sur une touche. Les confirmations de chargement et de sauvegarde restent inchangées."
+  "SkipPressStart.description": "Passe automatiquement le premier écran Appuyez sur une touche. Les confirmations de chargement et de sauvegarde restent inchangées.",
+  "page.controls": "Commandes",
+  "ClassicKeyLinks": "Touches liées classiques",
+  "ClassicKeyLinks.description": "Lie les touches du clavier comme dans le jeu d'origine : les touches de tir et d'examen agissent comme une seule touche (tir en visant, examen sinon) et valident dans les menus, et la touche de course annule dans les menus. Les touches restent celles réglées dans les options clavier du jeu. Une touche qui sert aussi à courir ou au demi-tour n'est pas liée en jeu : courir n'examine pas."
 }

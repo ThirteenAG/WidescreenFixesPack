@@ -14,6 +14,8 @@
   "MAIN.SkipPressStart.description": "Passe l'écran Appuyez sur une touche et le choix du point de contrôle.",
   "MAIN.TurnSpeed": "Vitesse de rotation",
   "MAIN.TurnSpeed.description": "Vitesse à laquelle Sam se tourne en se déplaçant (0.5–10). 1.0 est la valeur d'origine.",
+  "MAIN.SwapShoulderKey": "Touche de changement d'épaule",
+  "MAIN.SwapShoulderKey.description": "Touche qui place la caméra au-dessus de l'autre épaule de Sam à pied, visée comprise. À couvert et avec un bouclier humain, le jeu garde son propre côté. Vide = aucune touche.",
   "MAIN.FOVFactor": "Multiplicateur de champ de vision",
   "MAIN.FOVFactor.description": "Multiplie le champ de vision en déplacement de 0,5 à 2,0. 1,0 conserve la vue normale. La visée, les lunettes, les gadgets et les caméras scénarisées gardent leur champ propre. La vue horizontale reste limitée à 150 degrés et le lissage natif est conservé.",
   "MAIN.ScreenCullBias": "Marge de suppression hors écran",

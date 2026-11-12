@@ -35,6 +35,7 @@ jobs:
         packaging_mode: ${{ github.event_name == 'push' && github.ref_name == 'master' && 'as-ready' || 'after-build' }}
         signing_profile: ${{ github.event_name == 'push' && github.ref_name == 'master' && 'required' || 'off' }}
         hub_policy: ${{ github.event_name == 'push' && github.ref_name == 'master' && 'required' || 'optional' }}
+        crash_dumps: on
       env:
         CODE_SIGNING_PFX: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.CODE_SIGNING_PFX || '' }}
         CODE_SIGNING_PASSWORD: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.CODE_SIGNING_PASSWORD || '' }}

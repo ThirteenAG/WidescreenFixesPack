@@ -220,7 +220,7 @@ export namespace TrueCrimeInput
             auto aimSites = hook::pattern("F7 D8 89 44 24 28 E9");
             if (aimSites.empty())
             {
-                aimSites.get_first();
+                (void)hook::pattern(aimSites).get_first();
                 std::abort();
             }
             if (aimSites.size() != 2)

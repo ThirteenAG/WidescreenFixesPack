@@ -50,6 +50,8 @@
   "cutsceneborders.both": "Both",
   "lights": "Vehicle lights",
   "lights.description": "Light headlights, tail, brake and reverse lights on car and bike body textures. Enabled by default. Restart the emulated game after changing this setting.",
+  "holdcamera": "Hold vehicle camera",
+  "holdcamera.description": "When you turn the camera with the right stick in a vehicle, it stays there, so you can look back while driving. It swings back behind the vehicle two seconds after you let go. Off keeps the original camera, which swings back behind the vehicle as you drive.",
   "icons": "Controller icons",
   "icons.description": "Choose the controller artwork. The game’s controller-menu cycler also changes and saves this setting. Hub edits apply on the next emulated-game startup. Auto uses Xbox 360 artwork.",
   "set.PSP": "Original PSP",

@@ -46,6 +46,7 @@
 - **Skip Intro** - starts with the loading screen and the main menu, without the logo videos (on by default, after restart)
 - **Videos** - the intro videos are never cut off or stretched: **Original Aspect** shows them as the game does, inside its 4:3 picture; **Fill** fits them to the whole screen
 - **Animated Cutscene Borders** - the borders slide in and out
+- **Light Squares Up Close** - car headlights and taillights keep their square glow when the car is near the camera, as in the original game (Vanilla preset); off by default, which shows it only on cars further away
 - **In-Game Options** - a Cutscene Borders mode (off, letterbox, pillarbox, or both) and a Frame Limiter selector (off, 30 up to 240 FPS) are available right in the Display menu. Above 30 FPS, timers, mission countdowns, HUD flashing, particles, smoke and script-moved gates and doors keep the game's original speed
 
 </td>

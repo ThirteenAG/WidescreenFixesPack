@@ -54,5 +54,7 @@
   "checkupdates": "Buscar actualizaciones",
   "checkupdates.description": "Busca una nueva versión una vez al activarlo. El aviso aparece en Plugins; FusionFixHub se abre al salir si está instalado. Desactivado no envía solicitudes de red.",
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abrirá al cerrar el juego.",
-  "update.availablesite": "{name} {version} está disponible en fusionfix.io."
+  "update.availablesite": "{name} {version} está disponible en fusionfix.io.",
+  "MovingTurnSpeed": "Velocidad de giro en movimiento",
+  "MovingTurnSpeed.description": "Lo rápido que gira el personaje al caminar y correr, con el ratón o un stick. El juego gira más despacio en movimiento que parado; 1.0x mantiene la velocidad del juego. Con los controles modernos la cámara gira libremente y esto no se aplica."
 }

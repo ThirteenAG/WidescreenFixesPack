@@ -24,6 +24,8 @@ public:
     static inline bool bGamepadUsed = false;
     static inline const float* GamepadCameraSpeed = nullptr;
     static inline const float* VehicleCameraRecenterDelay = nullptr;
+    static inline const float* OnFootCameraRecenterDelay = nullptr;
+    static inline const int* WalkKey = nullptr;
     static inline uint32_t nVehicleCameraAimHoldOffset = 0;
     static inline bool (*pScarfaceHook_GetMenuActive)() = nullptr;
     static inline bool (*NativeMenuActive)() = nullptr;
@@ -32,6 +34,12 @@ public:
     {
         return VehicleCameraRecenterDelay && std::isfinite(*VehicleCameraRecenterDelay)
             ? std::clamp(*VehicleCameraRecenterDelay, 0.0f, 60.0f) : 3.0f;
+    }
+
+    static inline float GetOnFootCameraRecenterDelay()
+    {
+        return OnFootCameraRecenterDelay && std::isfinite(*OnFootCameraRecenterDelay)
+            ? std::clamp(*OnFootCameraRecenterDelay, 0.0f, 60.0f) : 0.0f;
     }
 
     static inline void RecordGamepadMotion(float x, float y)
@@ -178,12 +186,88 @@ float __cdecl math__ClampY(float* value, float* min, float* max)
     return *value;
 }
 
+// On-foot camera: while walking without look input the game switches to its follow mode, which swings the
+// camera behind Tony and levels the pitch. The delay keeps the last aimed view for a while after looking.
+namespace OnFootCamera
+{
+    constexpr uint32_t InputOffset = 0xAC;      // GenericCharacterCamera::mControllerInput
+    constexpr uint32_t RightStickX = 0x0C;      // ControllerInput::mRightStickX, mRightStickY follows
+    constexpr uint32_t LastAngleXZ = 0x1E8;     // mRotationAngleXZ_last, mRotationAngleY_last follows
+
+    const uint8_t* Camera = nullptr;
+    float TimeSinceLook = 60.0f;
+    bool MouseLooked = false;
+
+    injector::hook_back<void(__fastcall*)(uint8_t*, void*, float, float, float, float)> hbUpdateInput;
+    void __fastcall UpdateInput(uint8_t* input, void* edx, float accelThreshold, float accelTime, float decelTime, float deltaTime)
+    {
+        hbUpdateInput.fun(input, edx, accelThreshold, accelTime, decelTime, deltaTime);
+
+        const auto camera = input - InputOffset;
+        if (camera != Camera)
+        {
+            Camera = camera;
+            TimeSinceLook = 60.0f;
+            MouseLooked = false;
+        }
+        const auto stick = reinterpret_cast<const float*>(input + RightStickX);
+        if (MouseLooked || stick[0] != 0.0f || stick[1] != 0.0f)
+            TimeSinceLook = 0.0f;
+        else if (std::isfinite(deltaTime) && deltaTime > 0.0f)
+            TimeSinceLook = std::min(60.0f, TimeSinceLook + deltaTime);
+        MouseLooked = false;
+    }
+
+    injector::hook_back<uint8_t*(__fastcall*)(uint8_t*, void*, uint8_t*, float)> hbFollow;
+    uint8_t* __fastcall Follow(uint8_t* camera, void* edx, uint8_t* output, float deltaTime)
+    {
+        auto result = hbFollow.fun(camera, edx, output, deltaTime);
+        if (camera == Camera && TimeSinceLook < OptionManager::GetOnFootCameraRecenterDelay())
+        {
+            auto angles = reinterpret_cast<float*>(output + 0x0C);
+            const auto last = reinterpret_cast<const float*>(camera + LastAngleXZ);
+            angles[0] = last[0];
+            angles[1] = last[1];
+            if (SetMouseInput(&angles[0], &angles[1]))
+                TimeSinceLook = 0.0f;
+        }
+        return result;
+    }
+}
+
+// Walk key: limits the on-foot movement input to the walking range of the game's speed rings.
+namespace WalkInput
+{
+    constexpr float WalkSpeed = 0.5f;
+
+    injector::hook_back<void(__fastcall*)(float*, void*, void*)> hbUpdate;
+    void __fastcall Update(float* input, void* edx, void* actionMap)
+    {
+        hbUpdate.fun(input, edx, actionMap);
+
+        const int key = OptionManager::WalkKey ? *OptionManager::WalkKey : 0;
+        if (key <= 0 || key > 0xFE || !(GetAsyncKeyState(key) & 0x8000))
+            return;
+        if (ScarfaceOverlayInput::BlocksInput() || !hWndInput.is_initialized() || !hWndInput.get() ||
+            hWndInput.get() != GetForegroundWindow() || OptionManager::ScarfaceHook_GetMenuActive())
+            return;
+        const float x = input[0], y = input[1];
+        const float length = std::sqrt(x * x + y * y);
+        if (!std::isfinite(length) || length <= WalkSpeed)
+            return;
+        input[0] = x * WalkSpeed / length;
+        input[1] = y * WalkSpeed / length;
+    }
+}
+
 void Init()
 {
     auto& settings = FixSettings();
     auto bScrollWeaponsWithMouseWheel = settings.Bool("MAIN.ScrollWeaponsWithMouseWheel");
     OptionManager::GamepadCameraSpeed = &settings.Float("MAIN.GamepadCameraSpeed");
     OptionManager::VehicleCameraRecenterDelay = &settings.Float("MAIN.VehicleCameraRecenterDelay");
+    OptionManager::OnFootCameraRecenterDelay = &settings.Float("MAIN.OnFootCameraRecenterDelay");
+    OptionManager::WalkKey = &settings.Int("MAIN.WalkKey");
     auto menu = hook::pattern("E8 ? ? ? ? 84 C0 75 A4");
     OptionManager::NativeMenuActive = reinterpret_cast<decltype(OptionManager::NativeMenuActive)>(injector::GetBranchDestination(menu.get_first()).as_int());
 
@@ -204,10 +288,21 @@ void Init()
     {
         void operator()(injector::reg_pack& regs)
         {
-            SetMouseInput((float*)(regs.eax + 0x0C), (float*)(regs.eax + 0x10));
+            if (SetMouseInput((float*)(regs.eax + 0x0C), (float*)(regs.eax + 0x10)))
+                OnFootCamera::MouseLooked = true;
         }
     }; injector::MakeInline<SetOutput_Update_FreeLook>(pattern.get_first(6));
     injector::MakeRET(pattern.get_first(6 + 5), 0xC);
+
+    //on-foot camera recenter delay
+    pattern = hook::pattern("8D 8E AC 00 00 00 E8 ? ? ? ? 8B 86 F0 00 00 00 83 F8 06");
+    OnFootCamera::hbUpdateInput.fun = injector::MakeCALL(pattern.get_first(6), OnFootCamera::UpdateInput, true).get();
+    pattern = hook::pattern("8B 47 0C 50 8D 4C 24 38 51 8B CE E8 ? ? ? ? EB 5B");
+    OnFootCamera::hbFollow.fun = injector::MakeCALL(pattern.get_first(11), OnFootCamera::Follow, true).get();
+
+    //walk key
+    pattern = hook::pattern("50 B9 ? ? ? ? E8 ? ? ? ? 57 8B CE E8 ? ? ? ? 8B CE E8 ? ? ? ? 57 8B CE E8");
+    WalkInput::hbUpdate.fun = injector::MakeCALL(pattern.get_first(6), WalkInput::Update, true).get();
 
     //camera blend disable
     pattern = hook::pattern("83 EC 10 57 8B F9 80 BF");

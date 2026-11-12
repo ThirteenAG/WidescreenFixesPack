@@ -125,6 +125,8 @@ export void InitLeadD3DRender()
 
     }
 
+    InitLODDistance();
+
     auto video = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "55 8D 6C 24 8C 81 EC ? ? ? ? 53 56 57 89 4D 28 E8");
     shVideoRender = safetyhook::create_inline(video.get_first(), VideoRender);
 }

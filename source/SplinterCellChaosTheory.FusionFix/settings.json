@@ -1516,6 +1516,30 @@
       "visibility": "menu"
     },
     {
+      "id": "MAIN.SaveLocation",
+      "type": "choice",
+      "default": 0,
+      "label": "@MAIN.SaveLocation",
+      "description": "@MAIN.SaveLocation.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@MAIN.SaveLocation.programdata"
+        },
+        {
+          "value": 1,
+          "label": "@MAIN.SaveLocation.documents"
+        },
+        {
+          "value": 2,
+          "label": "@MAIN.SaveLocation.game"
+        }
+      ]
+    },
+    {
       "id": "MAIN.GamepadIcons",
       "type": "choice",
       "default": 0,

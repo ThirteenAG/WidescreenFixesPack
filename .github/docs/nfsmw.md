@@ -41,6 +41,7 @@
 - **Language** - switch the game's language on the fix's page (after a restart); only the languages installed with the game are offered, so the game no longer crashes on a language whose files are missing
 - **Cutscene Borders** - the black bars of the in-game cutscenes (race intros, pursuit and story scenes played in the game's engine): Off, Letterbox (the bars above and below of the console versions, which the PC version never drew), Pillarbox (side bars that keep the scene at 16:9 on wider screens) or Both (the default). Off shows the whole picture across the screen, like the original PC version. The race start scenes have no bars in any version, so Letterbox doesn't change them. **Animated Cutscene Borders** slides the bars in and out with the scene like the consoles; off shows them at once
 - **Skip Intro** - bypass startup FMVs and the title screen, straight to the game menu
+- **Underground 2 Save Bonus** - optional (off by default): a new career gets the 10000 bonus cash the game gives for an *Underground 2* save, without one in Local AppData (handy on Linux and Steam Deck)
 - **Subtitles** - subtitles in the story movies and tutorials in English too; the game only showed them for the other languages
 - **Display Mode** - borderless, bordered, resizable, or borderless fullscreen; in every mode the game gets the full resolution on scaled desktops
 - **FPS Limit** - synced to the monitor refresh rate, twice the refresh rate, or a fixed value (restart needed)

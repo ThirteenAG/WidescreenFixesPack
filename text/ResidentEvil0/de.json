@@ -48,7 +48,7 @@
   "menu.restoredefaultshelp": "Setzt die Einstellungen dieser Seite auf ihre Standardwerte zurück.",
   "menu.restartwarning": "Spiel neu starten, um Änderungen anzuwenden.",
   "menu.help": "Hilfe",
-  "menu.presethelp": "Mit Links/Rechts eine Voreinstellung wählen und bestätigen. Original behält die Logos bei. Empfohlen und Verbessert überspringen die Logos, blenden den ruhenden Mauszeiger aus und aktivieren RGB-Beleuchtung. Nur Verbessert überspringt Türübergänge. Persönliche Werte und gleiche Voreinstellungswerte bleiben erhalten. Standardwerte setzt alle Optionen zurück. Original und Empfohlen verwenden 60 FPS; Verbessert hebt das Bildratenlimit auf. V-Sync kann die Bildrate weiterhin begrenzen.",
+  "menu.presethelp": "Mit Links/Rechts eine Voreinstellung wählen und bestätigen. Original behält die Logos bei. Empfohlen und Verbessert überspringen die Logos, blenden den ruhenden Mauszeiger aus und aktivieren RGB-Beleuchtung. Nur Verbessert überspringt Türübergänge und schaltet die Tiefenschärfe ein. Persönliche Werte und gleiche Voreinstellungswerte bleiben erhalten. Standardwerte setzt alle Optionen zurück. Original und Empfohlen verwenden 60 FPS; Verbessert hebt das Bildratenlimit auf. V-Sync kann die Bildrate weiterhin begrenzen.",
   "menu.helphint": "F1 / Standard-Taste: vollständige Hilfe",
   "PauseOnFocusLoss": "Bei Fokusverlust pausieren",
   "PauseOnFocusLoss.description": "Pausiert, wenn das Spielfenster nicht aktiv ist. Ausschalten, damit das Spiel im Hintergrund weiterläuft.",
@@ -78,5 +78,10 @@
   "SkipPressStart": "Startaufforderung überspringen",
   "SkipPressStart.description": "Die Aufforderung auf dem Startbildschirm automatisch überspringen.",
   "ConfineCursor": "Mauszeiger begrenzen",
-  "ConfineCursor.description": "Hält den Mauszeiger im aktiven Spielfenster. Gibt ihn bei Fokusverlust oder geöffnetem Entwickleroverlay frei."
+  "ConfineCursor.description": "Hält den Mauszeiger im aktiven Spielfenster. Gibt ihn bei Fokusverlust oder geöffnetem Entwickleroverlay frei.",
+  "page.controls": "Steuerung",
+  "ClassicKeyLinks": "Klassische Tastenkopplung",
+  "ClassicKeyLinks.description": "Koppelt Tasten wie in den Originalspielen: Angriffs- und Untersuchen-Taste wirken als eine Taste (Angriff beim Zielen, sonst Untersuchen) und bestätigen in Menüs, die Lauftaste bricht in Menüs ab. Es bleiben die in den Tastatur-Optionen des Spiels gewählten Tasten. Eine Taste, die auch Laufen oder Schnelldrehung ist, wird im Spiel nicht gekoppelt, damit Laufen nicht untersucht.",
+  "DepthOfField": "Tiefenschärfe",
+  "DepthOfField.description": "Die Tiefenunschärfe der Konsolenfassungen in Zwischensequenzen: der Effekt des Spiels, den die PC-Fassung nie einschaltet."
 }

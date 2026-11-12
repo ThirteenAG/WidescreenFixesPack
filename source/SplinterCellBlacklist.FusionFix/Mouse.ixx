@@ -7,6 +7,7 @@ export module Mouse;
 
 import ComVars;
 import DeveloperOverlay;
+import Camera;
 
 // Mouse look comes from WM_MOUSEMOVE (UWindowsViewport's WndProc, sub_1AF55C0): the move from the middle of the window is sent as an
 // IK_MouseX/IK_MouseY axis input (UWindowsViewport::CauseInputEvent, virtual +78h, action 6) and the cursor is put back in the middle.
@@ -114,6 +115,109 @@ namespace TurnSpeed
     }
 }
 
+// Shoulder swap: the game swaps the camera to the other shoulder only in cover and with a human shield (its own camera modes),
+// the controller's left stick click alias (SwitchHandness) does nothing. The swap key puts the camera over Sam's left shoulder
+// on foot: CameraImpl::New_ComputeIdealLocation (sub_D4B270) gets the mode's ideal camera offset from ComputeIdealOffset (sub_D46D80)
+// in the camera's space (y = to the right) and its side is mirrored. Each camera mode entity (settings at +1Ch, kind at +8, mode at +Ch)
+// computes its own location, so going into cover or a human shield blends to the game's own camera as before.
+namespace ShoulderSwap
+{
+    constexpr float SwapTime = 0.25f;
+
+    bool swapped = false;
+    float side = 1.0f;
+    LARGE_INTEGER last = {};
+    LARGE_INTEGER frequency = {};
+    bool keyDown = false;
+
+    // modes on foot that have the camera over the right shoulder (CameraImpl::CameraMode2String, sub_D81F10)
+    bool Mirrored(int mode)
+    {
+        switch (mode)
+        {
+            case 2: case 3: case 4: case 5: case 6: case 7: case 8:   // Walk, _Zoom, _Scope, _HighProfile, _SurvivalSuit, _Zoom_SurvivalSuit, _Arc
+            case 9:                                                   // GunPoint
+            case 10: case 11: case 12: case 19: case 20: case 21: case 22: // Crouch, _Zoom, _Scope, _HighProfile, _SurvivalSuit, _Zoom_SurvivalSuit, _Arc
+            case 30: case 31: case 32: case 33:                       // SlideStand, SlideCrouch (+ _HighProfile)
+            case 90: case 91: case 92: case 93: case 94: case 95:     // Run, _Scope, _HighProfile, _HighProfile_AlternateControl, _SurvivalSuit, _HighProfile_SurvivalSuit
+            case 96: case 97:                                         // Combat, Combat_Zoom
+            case 365: case 366:                                       // Disguised, Disguised_Zoom
+            case 367: case 368: case 369: case 370: case 371: case 372: // Hub, Hub_Zoom, HubClose, HubClose_Zoom, Hub_HighProfile, HubClose_HighProfile
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    bool MirroredEntity(uintptr_t entity)
+    {
+        return entity && *reinterpret_cast<int*>(entity + 8) == 2 && Mirrored(*reinterpret_cast<int*>(entity + 0xC));
+    }
+
+    // a key name of the settings file (A, F5, Space, Mouse.Middle, Mouse.X1) or a virtual-key code (0x05)
+    int KeyCode(std::string_view key)
+    {
+        if (key.empty())
+            return 0;
+        if (key.size() > 2 && key[0] == '0' && (key[1] == 'x' || key[1] == 'X'))
+            return std::strtol(std::string(key).c_str(), nullptr, 16);
+        if (key.size() == 1 && std::isalnum(uint8_t(key[0])))
+            return std::toupper(uint8_t(key[0]));
+        if ((key[0] == 'F' || key[0] == 'f') && key.size() <= 3 && std::all_of(key.begin() + 1, key.end(), ::isdigit))
+        {
+            auto n = std::atoi(std::string(key.substr(1)).c_str());
+            return n >= 1 && n <= 24 ? VK_F1 + n - 1 : 0;
+        }
+        static const std::pair<std::string_view, int> Names[] =
+        {
+            { "Space", VK_SPACE }, { "Tab", VK_TAB }, { "Enter", VK_RETURN }, { "Backspace", VK_BACK }, { "Insert", VK_INSERT },
+            { "Delete", VK_DELETE }, { "Home", VK_HOME }, { "End", VK_END }, { "PageUp", VK_PRIOR }, { "PageDown", VK_NEXT },
+            { "Pause", VK_PAUSE }, { "ScrollLock", VK_SCROLL }, { "CapsLock", VK_CAPITAL }, { "Shift", VK_SHIFT },
+            { "Control", VK_CONTROL }, { "Ctrl", VK_CONTROL }, { "Alt", VK_MENU }, { "Left", VK_LEFT }, { "Right", VK_RIGHT },
+            { "Up", VK_UP }, { "Down", VK_DOWN }, { "Mouse.Middle", VK_MBUTTON }, { "Mouse.X1", VK_XBUTTON1 },
+            { "Mouse.X2", VK_XBUTTON2 }, { "Mouse.Button4", VK_XBUTTON1 }, { "Mouse.Button5", VK_XBUTTON2 },
+        };
+        for (auto& [name, code] : Names)
+        {
+            if (name.size() == key.size() && _strnicmp(name.data(), key.data(), key.size()) == 0)
+                return code;
+        }
+        return 0;
+    }
+
+    int Key()
+    {
+        static std::string name;
+        static int code = 0;
+        const auto& current = FixSettings().String("MAIN.SwapShoulderKey");
+        if (current != name)
+        {
+            name = current;
+            code = KeyCode(name);
+        }
+        return code;
+    }
+
+    // once a frame or more: the key toggles the side while the camera is on foot, the side moves to it over SwapTime
+    void Update(uintptr_t camera)
+    {
+        const auto key = Key();
+        const bool down = key && WindowHandle && GetForegroundWindow() == WindowHandle && (GetAsyncKeyState(key) & 0x8000) != 0;
+        if (down && !keyDown && !NativeMenuOpen && !DeveloperOverlay::BlocksInput() &&
+            MirroredEntity(*reinterpret_cast<uintptr_t*>(camera + 0x2C)))
+            swapped = !swapped;
+        keyDown = down;
+
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        const float elapsed = last.QuadPart ? std::min(float(now.QuadPart - last.QuadPart) / float(frequency.QuadPart), 0.1f) : 0.0f;
+        last = now;
+        const float target = swapped ? -1.0f : 1.0f;
+        const float step = 2.0f * elapsed / SwapTime;
+        side = side < target ? std::min(side + step, target) : std::max(side - step, target);
+    }
+}
+
 export void InitMouse()
 {
     IATHook::Replace(GetModuleHandleW(nullptr), "USER32.DLL",
@@ -195,5 +299,20 @@ export void InitMouse()
             CauseInputEvent(viewport, nullptr, input, IK_MouseX, IST_Axis, static_cast<float>(x), 0, 0);
         if (y)
             CauseInputEvent(viewport, nullptr, input, IK_MouseY, IST_Axis, static_cast<float>(y), 0, 0);
+    });
+
+    // CameraImpl::New_ComputeIdealLocation right after ComputeIdealOffset: esi is the mode's settings, the offset is at ebp-10h,
+    // the camera at ebp-4
+    QueryPerformanceFrequency(&ShoulderSwap::frequency);
+    pattern = hook::pattern("8B 4D FC 57 8D 81 ? ? 00 00 50 56 8D 55 D8 52 E8");
+    static auto IdealOffset = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        using namespace ShoulderSwap;
+        const auto camera = *reinterpret_cast<uintptr_t*>(regs.ebp - 4);
+        if (!IsFirstPlayerCamera(camera))
+            return;
+        Update(camera);
+        if (side != 1.0f && MirroredEntity(regs.esi - 0x1C))
+            *reinterpret_cast<float*>(regs.ebp - 0x10 + 4) *= side;
     });
 }

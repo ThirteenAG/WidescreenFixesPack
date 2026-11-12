@@ -72,7 +72,7 @@ public:
             pattern = hook::pattern("C7 05 ? ? ? ? 00 00 20 44"); //0x553DFC //mov
             if (pattern.empty())
             {
-                pattern.get_first();
+                (void)hook::pattern(pattern).get_first();
                 std::abort();
             }
             for (size_t i = 0; i < pattern.size(); ++i)
@@ -83,7 +83,7 @@ public:
             pattern = hook::pattern("68 00 00 F0 43 68 00 00 20 44"); //0x4CA7E6 //push
             if (pattern.empty())
             {
-                pattern.get_first();
+                (void)hook::pattern(pattern).get_first();
                 std::abort();
             }
             for (size_t i = 0; i < pattern.size(); ++i)

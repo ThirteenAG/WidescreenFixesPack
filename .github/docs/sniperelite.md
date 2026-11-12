@@ -21,7 +21,6 @@
 - **Cursor** — The cursor stays inside the game window while the game is active.
 - **Skip intro** — The legal screen and the Rebellion logo movie are skipped at startup; the intro movie still plays and can be skipped with the game's own button.
 - **Frame rate limit** — An even frame rate limit, 60 FPS by default.
-- **Controller** — The bundled Xidi presents an Xbox controller to the game's own controller support.
 - **Update notice** — With update checks on, a newer version is announced in one line on the game's menu screens.
 - **Display scaling** — The game gets the full resolution on scaled desktops.
 
@@ -49,7 +48,7 @@ Presets: Vanilla keeps the original letterbox bars, shows the intro screens, pla
 
 - No page in the game's own settings menu: its menu pages come from the game's packed menu data, so the fix's settings are on fusionfix.io, in FusionFixHub and in the overlay.
 - The title screen still waits for "Start Game".
-- The controller uses the game's own controller bindings.
+- No controller support: the game polls a DirectInput pad but never maps it to anything, so play with keyboard and mouse.
 
 ## Installation
 

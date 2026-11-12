@@ -59,6 +59,8 @@
   "fullscreenbg.description": "Extiende los fondos de los menús a toda la pantalla repitiendo una columna sin ilustración. Desactívalo para fondos sustituidos de los tamaños originales. Menú transparente tiene prioridad.",
   "hqradardisc": "Anillo del radar HD",
   "hqradardisc.description": "Dibuja el anillo del radar en alta resolución cuando se usa la textura de baja resolución del juego.",
+  "nearlightsquares": "Cuadrados de luz de cerca",
+  "nearlightsquares.description": "Mantiene el brillo cuadrado de los faros y luces traseras en los vehículos cercanos a la cámara, como en el juego original. Desactivado lo muestra solo en vehículos más lejanos.",
   "textoutline": "Contorno del texto",
   "textoutline.description": "Sustituye la sombra del texto del HUD y de los menús por un contorno.",
   "textoutline.thin": "Fino",

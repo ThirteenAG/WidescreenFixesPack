@@ -76,7 +76,7 @@ CEXP void InitializeASI()
             HMODULE host = nullptr;
             GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                 reinterpret_cast<LPCWSTR>(&InitMenu), &host);
-            MaxPayneIcons::FontLayout fontLayout{ 0x22, 0x44, 0x2454, L"msvcr71.dll" };
+            MaxPayneIcons::FontLayout fontLayout{ 0x22, 0x44, 0x2454, L"msvcr71.dll", 0x50 };
             MaxPayneIcons::Init(host, e2, GetModuleHandleW(L"rlmfc.dll"),
                 []() { return FixSettings().Int("MAIN.GamepadIcons"); }, MaxPayneGamepadButtons::IsPadInUse, fontLayout);
         });

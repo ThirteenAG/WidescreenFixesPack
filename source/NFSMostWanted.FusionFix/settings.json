@@ -189,6 +189,15 @@
       }
     },
     {
+      "id": "MAIN.Underground2SaveBonus",
+      "type": "bool",
+      "default": 0,
+      "label": "@WFP_U2SAVEBONUS",
+      "description": "@WFP_DESC_U2SAVEBONUS",
+      "page": "gameplay",
+      "apply": "live"
+    },
+    {
       "id": "LANGUAGE.Language",
       "type": "choice",
       "default": "English US",

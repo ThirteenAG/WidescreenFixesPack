@@ -33,11 +33,13 @@ Controllers use the game's DirectInput support through bundled Xidi, with its XI
 
 **Gamepad Icons** applies live. Auto uses Xbox artwork; PlayStation and Nintendo are manual choices, with additional Xbox One, PS3/PS4 and Steam families. Prompts follow the last input device and active mappings. **Controller Camera Speed** multiplies the native right-stick values without changing mouse sensitivity. Turning off native Vibration or leaving the game window stops native feedback.
 
-Raw mouse input uses mouse movement directly, with a separate multiplier for the native mouse slider. Vehicle recenter delay defaults to three seconds. Cursor confinement releases on focus loss, window moves, system menus and while the developer overlay owns input. **Pause in Background** pauses and mutes the game; turn it off to keep the game running in the background. The game pauses while minimized and restores its display when reopened.
+Keyboard keys can be changed in the game's own Controls menu. **Walk Key** adds a key (Alt, Mouse 4 or Mouse 5) that makes Tony walk instead of run while you hold it; it is off by default.
+
+Raw mouse input uses mouse movement directly, with a separate multiplier for the native mouse slider. Vehicle recenter delay defaults to three seconds. **On-Foot Camera Recenter Delay** keeps the camera where you aimed it for the chosen number of seconds while Tony moves, before it swings back behind him; 0 keeps the original behavior. Cursor confinement releases on focus loss, window moves, system menus and while the developer overlay owns input. **Pause in Background** pauses and mutes the game; turn it off to keep the game running in the background. The game pauses while minimized and restores its display when reopened.
 
 ## Other features
 
-Optional SMAA, console-style gamma and PS2 character blood use the native Direct3D 9 renderer. Skip Intro skips startup legal screens, logos and the single-button load-success notice. Skip Press Start separately bypasses the start screen. Weapons use their real maximum recoil. Ctrl+F10 opens the Supporter developer overlay; Debug → Info shows the version, build time, graphics API and resolution.
+Optional SMAA, console-style gamma, PS2 character blood and the console cracked glass on damaged car windows use the native Direct3D 9 renderer. Skip Intro skips startup legal screens, logos and the single-button load-success notice. Skip Press Start separately bypasses the start screen. Weapons use their real maximum recoil. Ctrl+F10 opens the Supporter developer overlay; Debug → Info shows the version, build time, graphics API and resolution.
 
 Check for Updates defaults to Off and makes no request while disabled. When enabled, a newer fix version produces a notice in Options. FusionFixHub opens on the update after the game exits when it is installed.
 

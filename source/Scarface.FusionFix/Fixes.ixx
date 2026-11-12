@@ -38,7 +38,10 @@ public:
             }
             if (settings.Bool("MAIN.SkipPressStart"))
             {
-                pattern = hook::pattern("75 22 E8 ? ? ? ? 8B C8");
+                // The game goes past the start screen by itself once Start has been pressed in the session;
+                // treat it as pressed. Running the profile check inside the start screen state instead
+                // repeats it afterwards, and the profile then fails to load.
+                pattern = hook::pattern("74 07 C7 46 68 00 00 00 00");
                 injector::MakeNOP(pattern.get_first(), 2);
             }
 

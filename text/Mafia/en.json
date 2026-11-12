@@ -29,6 +29,8 @@
   "GRAPHICS.RestoreCarScratches.description": "Restores the car scratches of version 1.0.",
   "HUD.RadarMap": "Radar Map",
   "HUD.RadarMap.description": "Xbox-style radar with larger car blips and speed-based zoom.",
+  "GAMEPLAY.OriginalRaceDifficulty": "Original Race Difficulty",
+  "GAMEPLAY.OriginalRaceDifficulty.description": "Race opponents drive at their version 1.0 speeds, which makes the story race harder. Applies while racing.",
   "WIDESCREEN.WidescreenMap": "Widescreen Map",
   "WIDESCREEN.WidescreenMap.description": "Shows the map across the whole screen.",
   "CUTSCENES.CutsceneBorders": "Cutscene Borders",

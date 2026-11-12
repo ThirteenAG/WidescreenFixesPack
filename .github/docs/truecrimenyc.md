@@ -20,6 +20,9 @@
 - **Movies** — The startup movies are shown whole at their own shape, never stretched or cut off.
 - **Window and focus** — Correct window size at any Windows display scaling, square window corners, no stretched picture from the window frame. Switching to another window pauses the game (or keeps it running, see below) without minimizing it.
 - **Gamepad** — Xbox and other XInput controllers work through the included Xidi with the game's own gamepad layout, in the game and in the menus (A select, B back, Start exit).
+- **Tree foliage** — The leaves of the trees and bushes in Central Park and other parks are drawn again, lit by the time of day like on the PlayStation 2; the PC version showed bare trees.
+- **See-through leaves** — Potted bushes, flags, signs and other cut-out textures get soft, see-through edges like on the PlayStation 2 instead of dark outlines.
+- **Traffic** — Cars no longer appear at the roadside or far ahead only to vanish a moment later. Traffic stays at the sides of a wide picture instead of disappearing there, and cars and pedestrians fade in and out rather than popping.
 - **Install path** — The game loads its data from the Data folder next to the exe, so it runs from any folder.
 
 ## Options
@@ -32,7 +35,7 @@
 - **Pause When Unfocused** — Pauses the game while another window is active; off keeps it running.
 - **Confine Cursor** — Keeps the cursor inside the game window while it is active.
 - **Skip Intro** — Skips the logo movies and the legal notice at startup.
-- **Frame Rate** — 30 (original) or 60 FPS with the correct game speed; scenes that need it still run at 30. **Frame Limiter** chooses how the frame rate is held.
+- **Frame Rate** — 30 (original) or 60 FPS with the correct game speed; scenes that need it still run at 30. It can be changed while playing.
 - **Language** — The game's language (English US/UK, French, German, Spanish, Italian, Russian) when its files are installed.
 - **Mouse camera** — The mouse turns the camera on foot and in vehicles and moves the map cursor, with its own speed and vertical inversion on top of the game's settings; both apply while playing. It is read every drawn frame, so it stays smooth with high polling rate mice. After 5 seconds without mouse movement the game's camera takes over again; Look Behind always shows the game's view behind and then returns to the game's camera.
 - **High Resolution Shadows**, **Distance Blur** (like the PlayStation 2 version), **Bloom**, **Anti-Aliasing** (SMAA) and **Console Gamma** (Xbox 360 contrast).

@@ -59,6 +59,8 @@
   "fullscreenbg.description": "Dehnt die Menühintergründe auf den ganzen Bildschirm aus, indem eine Spalte ohne Motiv wiederholt wird. Für ersetzte Hintergründe in Originalgröße ausschalten. Transparentes Menü hat Vorrang.",
   "hqradardisc": "HD-Radarring",
   "hqradardisc.description": "Zeichnet den Ring des Radars in höherer Auflösung, wenn die niedrig aufgelöste Textur des Spiels verwendet wird.",
+  "nearlightsquares": "Lichtquadrate aus der Nähe",
+  "nearlightsquares.description": "Behält den quadratischen Schein der Scheinwerfer und Rücklichter an Fahrzeugen nahe der Kamera, wie im Originalspiel. Aus zeigt ihn nur an weiter entfernten Fahrzeugen.",
   "textoutline": "Textumriss",
   "textoutline.description": "Ersetzt den Schatten des HUD- und Menütexts durch einen Umriss.",
   "textoutline.thin": "Dünn",

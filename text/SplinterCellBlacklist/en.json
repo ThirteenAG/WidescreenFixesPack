@@ -14,6 +14,8 @@
   "MAIN.SkipPressStart.description": "Skips the \"Press Any Key\" screen and checkpoint selection.",
   "MAIN.TurnSpeed": "Turn Speed",
   "MAIN.TurnSpeed.description": "How fast Sam turns toward the movement direction while moving (0.5-10), 1.0 = default.",
+  "MAIN.SwapShoulderKey": "Swap Shoulder Key",
+  "MAIN.SwapShoulderKey.description": "Key that moves the camera over Sam's other shoulder while on foot, aiming included. Cover and human shields keep the game's own camera side. Empty = no key.",
   "MAIN.FOVFactor": "Gameplay FOV Multiplier",
   "MAIN.FOVFactor.description": "Scale locomotion camera FOV from 0.5 to 2.0. 1.0 keeps the normal view. Aim, scopes, gadgets and authored cameras keep their own FOV. The final horizontal gameplay view stays within 150 degrees; native camera smoothing is preserved.",
   "MAIN.ScreenCullBias": "Screen Culling Bias",

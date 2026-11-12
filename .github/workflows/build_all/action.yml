@@ -20,6 +20,10 @@ inputs:
     description: "FusionFixHub.exe in the PC fixes' zips: required, optional, or off"
     required: false
     default: "optional"
+  crash_dumps:
+    description: "on: an empty CrashDumps folder next to the game's executable (developer builds), off: none (releases)"
+    required: false
+    default: "off"
 
 runs:
   using: "composite"
@@ -96,6 +100,7 @@ runs:
         WFP_PACKAGING_MODE: ${{ inputs.packaging_mode }}
         WFP_SIGNING_PROFILE: ${{ inputs.signing_profile }}
         WFP_HUB_POLICY: ${{ inputs.hub_policy }}
+        WFP_CRASH_DUMPS: ${{ inputs.crash_dumps }}
       with:
         script: |
           const coordinator = require('./tools/packaging/upload.cjs')

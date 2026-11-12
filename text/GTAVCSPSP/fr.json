@@ -50,6 +50,8 @@
   "cutsceneborders.both": "Les deux",
   "lights": "Feux des véhicules",
   "lights.description": "Allume les phares, feux arrière, feux stop et feux de recul sur les textures de carrosserie des voitures et des motos. Activé par défaut. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "holdcamera": "Maintenir la caméra du véhicule",
+  "holdcamera.description": "Quand vous tournez la caméra avec le stick droit dans un véhicule, elle reste orientée ainsi, pour regarder derrière vous en roulant. Elle revient derrière le véhicule deux secondes après avoir relâché le stick. Désactivé garde la caméra d'origine, qui revient derrière le véhicule pendant que vous roulez.",
   "icons": "Icônes de manette",
   "icons.description": "Choisit les visuels de la manette. Le sélecteur du menu manette du jeu modifie et enregistre aussi ce réglage. Les modifications dans le hub s'appliquent au prochain lancement du jeu émulé. Auto utilise les icônes Xbox 360.",
   "set.PSP": "PSP d'origine",

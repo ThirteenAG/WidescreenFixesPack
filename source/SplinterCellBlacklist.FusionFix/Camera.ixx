@@ -190,6 +190,16 @@ namespace
     }
 }
 
+// The camera (CameraImpl, its owner at +1Ch) is the first player's: the only one, or the first view in split screen
+export bool IsFirstPlayerCamera(uintptr_t camera)
+{
+    const auto engine = GetEngine ? GetEngine() : 0;
+    const auto client = engine ? *reinterpret_cast<const uintptr_t*>(engine + 0x44) : 0;
+    const auto views = client ? *reinterpret_cast<const uintptr_t* const*>(client + 0x2C) : nullptr;
+    const auto owner = camera ? *reinterpret_cast<const uintptr_t*>(camera + 0x1C) : 0;
+    return owner && views && *reinterpret_cast<const int32_t*>(client + 0x30) > 0 && views[0] && Viewport(0, views[0], owner) == views[0];
+}
+
 export CameraDebugState GetCameraDebugState()
 {
     CameraDebugState state;

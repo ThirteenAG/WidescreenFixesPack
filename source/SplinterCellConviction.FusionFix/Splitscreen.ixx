@@ -692,6 +692,29 @@ namespace LocalSplitscreen
         Splitscreen::StringDestructor(path, nullptr);
     }
 
+    // Player 2's profile slot (profile manager +234h) while the split screen lobby edits player 2, -1 otherwise. The lobby has only
+    // player 1's viewport, so the arsenal, uniform closet and challenges showed and spent player 1's points and items.
+    int32_t EditedPlayer2Slot()
+    {
+        auto engine = Splitscreen::GetEngine ? Splitscreen::GetEngine() : 0;
+        if (!IsSplitLobby() || editingPlayer1 || !engine)
+            return -1;
+        auto vtable = *reinterpret_cast<uintptr_t**>(engine);
+        if (reinterpret_cast<uintptr_t(__thiscall*)(uintptr_t)>(vtable[276 / 4])(engine))
+            return -1;
+        auto profileManager = reinterpret_cast<uintptr_t(__thiscall*)(uintptr_t)>(vtable[496 / 4])(engine);
+        return profileManager ? *reinterpret_cast<int32_t*>(profileManager + 0x234) : -1;
+    }
+
+    // UGameEngine player profile slot (sub_79547B(viewport)): player 1's viewport gives player 1's slot (+230h)
+    SafetyHookInline shPlayerProfileSlot = {};
+    int32_t __fastcall PlayerProfileSlot(uintptr_t engine, void* edx, uintptr_t viewport)
+    {
+        auto slot = shPlayerProfileSlot.fastcall<int32_t>(engine, edx, viewport);
+        auto slot2 = EditedPlayer2Slot();
+        return slot2 >= 0 ? slot2 : slot;
+    }
+
     SafetyHookInline shMenuCommand = {};
     int __fastcall MenuCommand(void* manager, void* edx, const char* command, const char* args, int32_t a4)
     {
@@ -700,7 +723,15 @@ namespace LocalSplitscreen
         else if (command && std::string_view(command) == "UnInitMPConnection")
             Splitscreen::splitSession = false;
         if (command && args && std::string_view(command) == "SplitChangeInput")
-            editingPlayer1 = std::string_view(args).contains("MAIN=1");
+        {
+            // the menu sends MAIN=, the game's own switch Main=: the game reads the number after either
+            std::string_view text(args), key("MAIN=");
+            auto found = std::ranges::search(text, key, [](char a, char b) { return std::toupper(static_cast<unsigned char>(a)) == b; });
+            if (!found.empty())
+                editingPlayer1 = atoi(args + (found.end() - text.begin())) != 0;
+        }
+        else if (command && (std::string_view(command) == "StartMatch" || std::string_view(command) == "UnInitMPConnection"))
+            editingPlayer1 = true;
         if (command && args && IsSplitLobby() && std::string_view(command) == "CauseInput" && std::string_view(args).contains("INPUTKEY=202"))
         {
             if (std::string_view(args).contains("INPUTACTION=1"))
@@ -783,6 +814,14 @@ export void InitLocalSplitscreen()
     shSetPlayerInputDisabled = safetyhook::create_inline(hook::get_pattern("8B 44 24 04 85 C0 56 8B F1 74 2D 83 7C 24 0C 00"), SetPlayerInputDisabled);
     shSetCustomizationInput = safetyhook::create_inline(hook::get_pattern("57 E8 ? ? ? ? 8B F8 85 FF 74 41 56 E8 ? ? ? ? 8B 10 8B C8 FF 92 A4 00 00 00 8B F0 85 F6 74 2A 6A 01"), SetCustomizationInput);
     shMenuCommand = safetyhook::create_inline(hook::get_pattern("55 8D 6C 24 94 81 EC 20 02 00 00 53 56 8B 75 78"), MenuCommand);
+    shPlayerProfileSlot = safetyhook::create_inline(hook::get_pattern("53 56 57 8B 7C 24 10 8B 07 8B F1 8B CF 83 CB FF FF 90 BC 00 00 00"), PlayerProfileSlot);
+    // A pawn's PEC inventory and points (sub_5182FA): the challenge entry of its viewport's joystick id, the lobby's pawn is player 1's
+    static auto PawnInventorySlotHook = safetyhook::create_mid(hook::get_pattern("8B 48 58 8B 01 8B 3E FF 90 A4 00 00 00 50 8B CE FF 97 A8 00 00 00 EB", 13), [](SafetyHookContext& regs)
+    {
+        auto slot2 = EditedPlayer2Slot();
+        if (slot2 >= 0)
+            regs.eax = slot2;
+    });
     shMenuInput = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 4C 53 56 57 89 4D FC E8 ? ? ? ? 8B 10 8B C8 FF 92 F0 01 00 00 33 DB 8B F0 33"), MenuInput);
     shElementPosition = safetyhook::create_inline(hook::get_pattern("55 8D 6C 24 94 81 EC 4C 01 00 00 A1 ? ? ? ? 33 C5 89 45 68 53 8B 5D"), ElementPosition);
     shButtonsLayout = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 50 53 8B 5D 08 85 DB 56 8B F1 0F 8C ? ? ? ? 3B 5E 10 0F 8D"), ButtonsLayout);

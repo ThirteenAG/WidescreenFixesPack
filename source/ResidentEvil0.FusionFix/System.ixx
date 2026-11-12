@@ -119,6 +119,29 @@ public:
                     regs.eflags &= ~uint32_t{ 1 << 6 };
             });
 
+            // Device reset: while another program holds the display in exclusive full screen, Reset keeps returning
+            // D3DERR_DEVICELOST. The game stops retrying after 80 seconds and goes on to recreate its render targets on
+            // the unreset device, which fails with "ERR09 : Unsupported function". Keep retrying until the reset
+            // succeeds, unless the game is closing (ebx = the window thread object, +0x2664 = closing).
+            static SafetyHookMid ResetWaitHook;
+            auto resetWait = hook::pattern("66 0F 2F 05 ? ? ? ? 0F 87 ? ? ? ? 8A 4C 24 0E 84 C9 75");
+            ResetWaitHook = safetyhook::create_mid(resetWait.get_first(8), [](SafetyHookContext& regs)
+            {
+                if (!*reinterpret_cast<uint8_t*>(regs.ebx + 0x2664))
+                    regs.eflags |= uint32_t{ 1 };
+            });
+
+            // Present: the game handles D3DERR_DEVICELOST with a reset and stops with an error on any other failure.
+            // While other programs change the display, Present can also fail with D3DERR_INVALIDCALL; take the same
+            // reset path, which reports a device that really can't be restored.
+            static SafetyHookMid PresentResultHook;
+            auto presentResult = hook::pattern("FF 51 44 3D 68 08 76 88 75 09 83 8E 94 3E 43 00 10");
+            PresentResultHook = safetyhook::create_mid(presentResult.get_first(3), [](SafetyHookContext& regs)
+            {
+                if (regs.eax == uint32_t(D3DERR_INVALIDCALL))
+                    regs.eax = uint32_t(D3DERR_DEVICELOST);
+            });
+
             static std::atomic<int> fpsLimit{ settings.Int("MAIN.FPSLimit") };
             settings.OnChange("MAIN.FPSLimit", []()
             {

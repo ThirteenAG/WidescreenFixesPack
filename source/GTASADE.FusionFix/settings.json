@@ -184,6 +184,21 @@
       "min": 0
     },
     {
+      "id": "MAIN.AircraftFreeCamera",
+      "type": "bool",
+      "default": 0,
+      "label": "@AircraftFreeCamera",
+      "description": "@AircraftFreeCamera.description",
+      "page": "advanced",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "MAIN.RawInputMouse",
       "type": "bool",
       "default": 1,

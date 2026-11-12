@@ -28,6 +28,7 @@ namespace MaxPayneIcons
         ptrdiff_t alphaFlag = 0x42;
         size_t fontSize = 0x2450;
         const wchar_t* crt = L"msvcrt.dll";
+        ptrdiff_t metricsOffset = 0x4C; // glyph height, followed by the 256 glyph widths
     };
     inline FontLayout Layout;
 
@@ -265,6 +266,48 @@ namespace MaxPayneIcons
     inline int* NewCount = nullptr;
     inline int* DeleteCount = nullptr;
 
+    // Image heights of the stock font strips. Glyph sizes are measured in texels, so a font drawn at a higher
+    // resolution under the same name would show larger; its metrics are scaled back to the stock height.
+    inline int StockHeight(const std::string& path)
+    {
+        static constexpr std::pair<const char*, int> heights[] = {
+            { "hud_universal_medium.tga", 23 }, { "font_universal_medium.tga", 23 },
+            { "menu_font_univers.tga", 27 }, { "menu_font_univers_bright.tga", 27 },
+            { "font_univers.tga", 27 }, { "font_univers_bright.tga", 27 },
+            { "menu_font_univers_verysmall.tga", 19 }, { "font_univers_verysmall.tga", 19 },
+            { "console8pt.pcx", 11 }, { "font_console8pt.pcx", 11 },
+            { "tahoma.pcx", 14 }, { "font_tahoma.pcx", 14 },
+        };
+        auto name = path.substr(path.find_last_of("\\/") + 1);
+        for (auto& c : name)
+            c = char(std::tolower(uint8_t(c)));
+        for (auto& [file, height] : heights)
+        {
+            if (name == file)
+                return height;
+        }
+        return 0;
+    }
+
+    inline void KeepStockSize(void* font, const std::string& path)
+    {
+        int stock = StockHeight(path);
+        auto metrics = reinterpret_cast<int*>(static_cast<uint8_t*>(font) + Layout.metricsOffset);
+        int height = metrics[0] + 2;
+        if (!stock || height <= stock)
+            return;
+        // A strip enlarged as a whole is a multiple of the stock height; otherwise only the glyph rows below the
+        // two marker rows were enlarged
+        double scale = height % stock == 0 ? double(stock) / height : double(stock - 2) / (height - 2);
+        metrics[0] = stock - 2; // line spacing as with the stock font
+        for (int i = 1; i <= 256; ++i)
+        {
+            // A width is the glyph's columns plus one column of spacing
+            if (metrics[i] > 0)
+                metrics[i] = int(std::lround((metrics[i] - 1) * scale)) + 1;
+        }
+    }
+
     inline std::string Path(const char* value)
     {
         if (!value || !*value)
@@ -280,6 +323,7 @@ namespace MaxPayneIcons
         Font font{ colorName.empty() ? "" : Path(colorName.c_str()), alphaName.empty() ? "" : Path(alphaName.c_str()) };
         auto result = Constructor.unsafe_fastcall<void*>(self, edx, color ? colorName.c_str() : nullptr,
                                                          alpha ? alphaName.c_str() : nullptr);
+        KeepStockSize(self, font.color);
         Fonts[self] = std::move(font);
         return result;
     }
@@ -289,6 +333,7 @@ namespace MaxPayneIcons
         std::string colorName = color ? color : "";
         Font font{ colorName.empty() ? "" : Path(colorName.c_str()), "" };
         auto result = ConstructorOne.unsafe_fastcall<void*>(self, edx, color ? colorName.c_str() : nullptr);
+        KeepStockSize(self, font.color);
         Fonts[self] = std::move(font);
         return result;
     }
@@ -358,6 +403,7 @@ namespace MaxPayneIcons
                 OutputDebugStringA("Max Payne: controller icon font could not be built; using button names.\n");
                 return nullptr;
             }
+            KeepStockSize(variant, font.color);
             Bases[variant] = source;
         }
         return variant;

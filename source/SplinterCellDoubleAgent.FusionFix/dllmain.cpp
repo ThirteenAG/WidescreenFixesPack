@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "FixSettings.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
+#include "Shared/SplinterCell/SaveLocation.hpp"
 
 ASI_SETTINGS_EXPORT(FixSettings())
 
@@ -23,8 +24,39 @@ import WidescreenHUD;
 import NativeMenu;
 import Updates;
 
+// MAIN.SaveLocation: the profiles and saves in Documents or the game folder instead of ProgramData
+std::wstring SaveFolder;
+SafetyHookInline shGetSaveFolder = {};
+int __fastcall GetSaveFolder(void* fileManager, void* edx, wchar_t* out)
+{
+    SHCreateDirectoryExW(nullptr, SaveFolder.c_str(), nullptr);
+    wcscpy_s(out, MAX_PATH, (SaveFolder + L"\\").c_str());
+    return 1;
+}
+
+void InitSaveLocation()
+{
+    switch (FixSettings().Int("MAIN.SaveLocation"))
+    {
+        case 1:
+            SaveFolder = SCSaveLocation::Documents(L"Splinter Cell Double Agent").wstring();
+            break;
+        case 2:
+            SaveFolder = (SCSaveLocation::GameFolder() / L"Save").wstring();
+            break;
+        default:
+            return;
+    }
+    // No Documents folder: the game keeps its own
+    if (SaveFolder.empty())
+        return;
+    auto pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 81 EC 38 05 00 00");
+    shGetSaveFolder = safetyhook::create_inline(pattern.get_first(), GetSaveFolder);
+}
+
 void Init()
 {
+    InitSaveLocation();
     WFP::onInitEvent().executeAll();
 
     //for test only (steam version)

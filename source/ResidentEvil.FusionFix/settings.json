@@ -25,6 +25,11 @@
       "section": "graphics"
     },
     {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
       "id": "compatibility",
       "title": "@page.compatibility",
       "section": "compatibility"
@@ -245,6 +250,16 @@
       "page": "graphics",
       "visibility": "menu",
       "apply": "restart"
+    },
+    {
+      "id": "MAIN.ClassicKeyLinks",
+      "type": "bool",
+      "default": 0,
+      "label": "@ClassicKeyLinks",
+      "description": "@ClassicKeyLinks.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
     },
     {
       "id": "MAIN.TextLanguage",

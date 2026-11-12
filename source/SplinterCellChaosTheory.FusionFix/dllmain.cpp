@@ -3,6 +3,7 @@
 #include <TlHelp32.h>
 #include "Shared/RWGTA/UpdateCheck.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
+#include "Shared/SplinterCell/SaveLocation.hpp"
 
 import ComVars;
 import D3DDrv;
@@ -112,6 +113,32 @@ void Init()
     // Disable safe mode
     pattern = hook::pattern("E8 ? ? ? ? 68 ? ? ? ? 53 68");
     injector::MakeNOP(pattern.get_first(0), 5, true);
+
+    // MAIN.SaveLocation: the profiles folder (saves inside) in Documents or the game folder instead of ProgramData
+    static std::filesystem::path ProfilesFolder;
+    switch (settings.Int("MAIN.SaveLocation"))
+    {
+        case 1:
+            ProfilesFolder = SCSaveLocation::Documents(L"Splinter Cell Chaos Theory");
+            break;
+        case 2:
+            ProfilesFolder = SCSaveLocation::GameFolder() / L"Save";
+            break;
+    }
+    if (!ProfilesFolder.empty())
+    {
+        pattern = hook::pattern("6A 23 8D 8D ? ? ? ? 51 E8 ? ? ? ? 83 C4 08 68 ? ? ? ? 8D 95 ? ? ? ? 52 FF 15");
+        static auto nPathOffset = *pattern.get_first<int32_t>(24);
+        struct ProfilesFolderHook
+        {
+            void operator()(injector::reg_pack& regs)
+            {
+                auto pszPath = reinterpret_cast<wchar_t*>(regs.ebp + nPathOffset);
+                SHCreateDirectoryExW(nullptr, ProfilesFolder.c_str(), nullptr);
+                wcscpy_s(pszPath, MAX_PATH, ProfilesFolder.c_str());
+            }
+        }; injector::MakeInline<ProfilesFolderHook>(pattern.get_first(17), pattern.get_first(35));
+    }
 
     // Unlock all resolutions
     pattern = hook::pattern("75 ? B8 ? ? ? ? 68 ? ? ? ? 50 E8 ? ? ? ? 8B 5C 24 3C");

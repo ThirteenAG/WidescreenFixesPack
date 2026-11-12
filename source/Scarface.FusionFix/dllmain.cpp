@@ -21,6 +21,7 @@ import HUD;
 import Fixes;
 import FramerateVigilante;
 import PostFX;
+import VehicleGlass;
 
 ASI_SETTINGS_EXPORT(FixSettings())
 

@@ -35,7 +35,7 @@ export namespace BullyCutscene
     Layout Calculate(float aspect)
     {
         Layout layout;
-        if (!Active() || !Mode || !Animated || !bWidescreen.is_initialized() || !std::isfinite(aspect) || aspect <= 0.0f)
+        if (!Active() || !Mode || !Animated || !std::isfinite(aspect) || aspect <= 0.0f)
             return layout;
         layout.active = true;
         const int current = CutsceneManager->current;
@@ -51,18 +51,24 @@ export namespace BullyCutscene
             current != 0 ? phase : 1.0f - phase;
         const float letterbox = current == previous ? float(current == 1) :
             previous == 1 && current != 1 ? 1.0f - phase : current == 1 ? phase : 0.0f;
-        const float nativeTop = bWidescreen ? 0.0f : 50.0f * letterbox;
+        // Authored picture: the 4:3 frame minus the original letterbox
+        const float nativeVisible = 1.0f - 50.0f * letterbox / 240.0f;
+        const float frame = (4.0f / 3.0f) / nativeVisible;
         const int mode = std::clamp(*Mode, 0, 3);
-        layout.top = (mode & 1) ? nativeTop : 0.0f;
-        const float nativeVisible = 1.0f - nativeTop / 240.0f;
-        const float reference = bWidescreen ? 16.0f / 9.0f : 4.0f / 3.0f;
         if (mode & 1)
-            layout.top = std::max(layout.top, 240.0f * (1.0f - aspect / reference * nativeVisible) * scene);
+        {
+            // Bars beyond the original letterbox (screens narrower than 4:3) follow the transition
+            const float narrow = 1.0f - std::min(1.0f, aspect * 0.75f);
+            const float fit = 1.0f - std::min(1.0f, aspect / frame);
+            layout.top = 240.0f * (fit - narrow * (1.0f - scene));
+        }
         const float visible = 1.0f - layout.top / 240.0f;
-        const float boxAspect = reference * visible / nativeVisible;
+        // Same height as the 4:3 picture; wider screens see more at the sides, pillarboxed beyond 16:9
+        const float boxAspect = std::max(frame, 16.0f / 9.0f) * visible;
         if (mode & 2)
             layout.side = std::max(0.0f, 1.0f - boxAspect / aspect) * 320.0f * scene;
-        layout.fovScale = aspect / reference * nativeVisible / visible;
+        // Without the borders the whole authored picture stays in view: more above and below on narrower screens
+        layout.fovScale = std::max(1.0f, aspect * 0.75f * nativeVisible / visible);
         return layout;
     }
 

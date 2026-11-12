@@ -346,6 +346,8 @@ inline constexpr uint32_t frontEndSoundWords[]={0x24840000u,0x8FBF0000u,0x03E000
 inline constexpr uint8_t frontEndSoundMasks[]={1,0,0,0,0,0,1,0,0,0,0,1};
 inline constexpr uint32_t dmAudioWords[]={0x84C70000u,0x8CC60004u,0x00C0F809u,0x00872021u,0x27840000u,0x340500C5u,0x0C000000u,0x00003025u,0x34020001u,0x8FB00000u,0x8FB10004u,0x8FBF0008u};
 inline constexpr uint8_t dmAudioMasks[]={0,0,0,0,1,0,2,0,0,0,0,0};
+inline constexpr uint32_t followCarSwingWords[]={0xC6560024u,0xC7AD0000u,0xC7AE0000u,0x460D7343u,0x460D6300u,0x3C043F80u,0x4484E000u,0x4616603Eu,0x00000000u,0x45010003u,0x461AE701u,0x10000007u};
+inline constexpr uint8_t followCarSwingMasks[]={0,1,1,0,0,0,0,0,0,0,0,0};
 inline constexpr uint32_t texturedRectWords[]={0x8FB00000u,0x8FBF0004u,0x03E00008u,0x27BD0010u,0x27BDFFF0u,0x00A03025u,0x00A03825u,0x00A04025u,0xAFBF0000u,0x0C000000u,0x34090001u,0x3C050000u};
 inline constexpr uint8_t texturedRectMasks[]={0,0,0,0,0,0,0,0,0,2,0,1};
 inline constexpr uint32_t imageDrawWords[]={0x03E00008u,0x00000000u,0x03E00008u,0x00000000u,0x27BDFFD0u,0xAFB00018u,0xAFB1001Cu,0xAFBF0020u,0x0C000000u,0x00808025u,0x8E0500B8u,0x34040001u};
@@ -362,7 +364,7 @@ inline constexpr uint32_t pagerWords[]={0x8FB40064u,0x8FBF0068u,0x03E00008u,0x27
 inline constexpr uint8_t pagerMasks[]={0,0,0,0,0,1,1,0,0,0,0,0};
 inline constexpr uint32_t helpWords[]={0x8FB40104u,0x8FBF0108u,0x03E00008u,0x27BD0110u,0x27BDFFD0u,0x9485243Cu,0xAFB00014u,0xAFB10018u,0xAFB2001Cu,0xAFBF0020u,0x10A0019Fu,0x00808025u};
 inline constexpr uint8_t helpMasks[]={0,0,0,0,0,0,0,0,0,0,0,0};
-inline constexpr std::array<console::AddressRule,176> rules={{
+inline constexpr std::array<console::AddressRule,177> rules={{
     {0x08810484u,0x08810474u,words0,masks0,12,36,16,0,0,console::AddressKind::Code},
     {0x0882DC20u,0x0882DC10u,menuCloseWords,menuCloseMasks,12,30,16,0,0,console::AddressKind::Code},
     {0x0882E470u,0x0882E460u,words1,masks1,12,44,16,0,0,console::AddressKind::Code},
@@ -444,6 +446,7 @@ inline constexpr std::array<console::AddressRule,176> rules={{
     {0x0898F560u,0x0898F550u,words66,masks66,12,0,16,0,0,console::AddressKind::Code},
     {0x089991D4u,0x089991C4u,freeAimAboveWords,freeAimAboveMasks,12,17,16,0,0,console::AddressKind::Code},
     {0x0899F96Cu,0x0899F95Cu,words67,masks67,12,8,16,0,0,console::AddressKind::Code},
+    {0x089A0E58u,0x089A0E48u,followCarSwingWords,followCarSwingMasks,12,12,16,0,0,console::AddressKind::Code},
     {0x089BA6ECu,0x089BA6DCu,words68,masks68,12,0,16,0,0,console::AddressKind::Code},
     {0x089BAA8Cu,0x089BAA7Cu,words69,masks69,12,0,16,0,0,console::AddressKind::Code},
     {0x089BAAB4u,0x089BAAA4u,words70,masks70,12,17,16,0,0,console::AddressKind::Code},

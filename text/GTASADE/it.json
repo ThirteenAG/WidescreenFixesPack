@@ -19,6 +19,8 @@
   "RestoreOriginalCamera.description": "Ripristina le distanze e le inclinazioni originali della telecamera dei veicoli e la risposta originale del controller.",
   "CenteringDelay": "Ritardo di centratura",
   "CenteringDelay.description": "Secondi prima che la telecamera del veicolo si ricentri dietro di esso. Il gioco originale usa 1.",
+  "AircraftFreeCamera": "Telecamera libera sui velivoli",
+  "AircraftFreeCamera.description": "Aerei ed elicotteri usano la stessa telecamera di inseguimento degli altri veicoli, così mouse o stick destro possono ruotare la telecamera e guardare in alto e in basso, come nel gioco originale. Off tiene la telecamera bloccata dietro al velivolo.",
   "RawMouseInput": "Input mouse diretto",
   "RawMouseInput.description": "Legge il mouse direttamente per la telecamera, con la sensibilità e l'inversione del mouse delle impostazioni di gioco.",
   "VisualStyle": "Stile visivo",

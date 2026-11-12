@@ -29,6 +29,7 @@
 * **Controller Prompts** - while a pad is used, supported English training prompts name its buttons (Xbox, PlayStation or Nintendo names, selected with Gamepad Icons; Auto uses Xbox names); keyboard keys return when the keyboard or mouse is used
 * **Confine Cursor** - keeps the mouse cursor inside the game window while the game is active
 * **Pause on Focus Loss** - in windowed and borderless modes the game pauses while another window is active, as the original does; turn it off to keep the game running in the background
+* **Save Location** - optional: keeps profiles and saves in Documents\My Games\Splinter Cell instead of the game's Save folder (saves already made are not moved; copy them over to keep playing them)
 * **Update Check** - optional: once per start, asks fusionfix.io whether a newer version is out and tells you in the main menu
 * **EAX Support** - restored EAX support via [DSOAL](https://github.com/kcat/dsoal)
 

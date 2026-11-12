@@ -61,6 +61,33 @@ namespace
         return gain;
     }
 
+    // At sunrise and sunset the timecycle paints the horizon orange while its
+    // sun colour can stay white. The sun glow and haze take their colour from
+    // the sun and sky lights, so a warm horizon tints both; with a cool or
+    // neutral horizon the tint is white and the lights keep their colours.
+    std::array<float, 3> HorizonTint(const WeatherColours& weather)
+    {
+        const auto& horizon = weather.skyBottom;
+        const float peak = std::max({ horizon[0], horizon[1], horizon[2] });
+        std::array<float, 3> tint{ 1.0f, 1.0f, 1.0f };
+        if (peak <= 0.0f || horizon[0] < peak)
+            return tint;
+        const float warmth = std::clamp((1.0f - horizon[2] / peak - 0.15f) / 0.25f, 0.0f, 1.0f);
+        const float amount = warmth * warmth * (3.0f - 2.0f * warmth);
+        for (size_t channel = 0; channel < 3; ++channel)
+            tint[channel] = std::lerp(1.0f, horizon[channel] / peak, amount);
+        return tint;
+    }
+
+    // Never cooler than the tint; a light that is already warmer stays as it is
+    std::array<float, 3> Warmed(std::array<float, 3> colour, const std::array<float, 3>& tint)
+    {
+        const float peak = std::max({ colour[0], colour[1], colour[2] });
+        for (size_t channel = 0; channel < 3; ++channel)
+            colour[channel] = std::min(colour[channel], peak * tint[channel]);
+        return colour;
+    }
+
     uintptr_t UpdateColorOptions(uint8_t* volume)
     {
         // Native code rebuilds RGB gain from its baseline on every invocation.
@@ -88,7 +115,8 @@ namespace
                 // FSkyInterpolationResult starts at 696 on all three latest
                 // PC builds. Update before ApplyValues performs sky occlusion,
                 // interior blending and uploads the colours to UE components.
-                SetWeatherHue(actor, 696, weather.ambient);
+                const auto tint = HorizonTint(weather);
+                SetWeatherHue(actor, 696, Warmed(weather.ambient, tint));
                 SetWeatherHue(actor, 712, weather.skyBottom);
                 SetWeatherHue(actor, 728, weather.skyTop);
                 SetWeatherHue(actor, 744, weather.skyBottom);
@@ -106,7 +134,7 @@ namespace
                 }
                 SetWeatherHue(actor, 920, fog); // Classic Atmosphere fog colour override.
                 SetWeatherHue(actor, 976, fog);
-                SetWeatherHue(actor, 1040, weather.directional);
+                SetWeatherHue(actor, 1040, Warmed(weather.directional, tint));
             }
             // The weather curve's contrast, saturation and shadows gain would
             // grade the restored palette a second time. Its master gain stays:

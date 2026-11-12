@@ -50,6 +50,8 @@
   "cutsceneborders.both": "Ambos",
   "lights": "Luces de vehículos",
   "lights.description": "Enciende los faros y las luces traseras, de freno y de marcha atrás en las texturas de carrocería de coches y motos. Activado por defecto. Reinicia el juego emulado tras cambiar este ajuste.",
+  "holdcamera": "Mantener cámara del vehículo",
+  "holdcamera.description": "Cuando giras la cámara con el stick derecho en un vehículo, se queda ahí, para que puedas mirar atrás mientras conduces. Vuelve detrás del vehículo dos segundos después de soltarlo. Desactivado mantiene la cámara original, que vuelve detrás del vehículo mientras conduces.",
   "icons": "Iconos del mando",
   "icons.description": "Elige los gráficos del mando. El selector del menú de mando del juego también cambia y guarda este ajuste. Los cambios en el hub se aplican al próximo inicio del juego emulado. Auto usa los iconos de Xbox 360.",
   "set.PSP": "PSP original",

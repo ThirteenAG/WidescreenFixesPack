@@ -28,6 +28,7 @@
 * **Raw Mouse Input** - added raw input support for mouse
 * **Confine Cursor** - keeps the mouse cursor inside the game window while the game is active
 * **Pause on Focus Loss** - the game pauses while another window is active, as the original does; turn it off to keep the game running in the background in windowed and borderless modes
+* **Save Location** - optional: keeps profiles and saves in Documents\My Games\Splinter Cell Pandora Tomorrow instead of the game's Save folder (saves already made are not moved; copy them over to keep playing them)
 * **Update Check** - optional: once per start, asks fusionfix.io whether a newer version is out and tells you in the main menu
 * **Gamepad Support** - improved gamepad support via [Xidi](https://github.com/samuelgr/Xidi), with adjustable right-stick camera speed, vertical look inversion and a vibration toggle
 * **Controller Prompts** - training hints follow the last input device and use the pad’s button names in English, French, German, Italian and Spanish. Auto uses Xbox names; select PlayStation or Nintendo manually

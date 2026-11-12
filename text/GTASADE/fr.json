@@ -19,6 +19,8 @@
   "RestoreOriginalCamera.description": "Rétablit les distances et inclinaisons d'origine de la caméra des véhicules ainsi que la réponse d'origine de la manette.",
   "CenteringDelay": "Délai de recentrage de la caméra",
   "CenteringDelay.description": "Secondes avant que la caméra du véhicule se recentre derrière lui. Le jeu original utilise 1.",
+  "AircraftFreeCamera": "Caméra libre en aéronef",
+  "AircraftFreeCamera.description": "Les avions et hélicoptères utilisent la même caméra de poursuite que les autres véhicules : la souris ou le stick droit peuvent tourner la caméra et regarder vers le haut et le bas, comme dans le jeu d'origine. Désactivé garde la caméra fixée derrière l'aéronef.",
   "RawMouseInput": "Entrée souris brute",
   "RawMouseInput.description": "Lit la souris directement pour la caméra, avec la sensibilité et l'inversion de la souris des réglages du jeu.",
   "VisualStyle": "Style visuel",

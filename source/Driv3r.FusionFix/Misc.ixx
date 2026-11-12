@@ -144,7 +144,7 @@ public:
                 auto keymapInitializers = hook::pattern("89 0D ? ? ? ? 5B 83 C4 50 C3");
                 if (keymapInitializers.empty())
                 {
-                    keymapInitializers.get_first();
+                    (void)hook::pattern(keymapInitializers).get_first();
                     std::abort();
                 }
                 if (keymapInitializers.size() != 2)

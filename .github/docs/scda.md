@@ -39,6 +39,7 @@
 
 - **Frame rate limit** — Limit FPS to reduce game bugs; 60 FPS by default.
 - **Skip intro** — Skip startup intros.
+- **Save location** — Keep profiles and saves in Documents\My Games\Splinter Cell Double Agent or in the Save folder of the game instead of the hidden ProgramData folder. Saves already made are not moved; copy them from ProgramData\Ubisoft\SplinterCell4\Save\Offline to keep playing them.
 
 ### Lighting
 

@@ -19,6 +19,8 @@
   "RestoreOriginalCamera.description": "Restaura las distancias e inclinaciones originales de la cámara del vehículo y la respuesta original del mando.",
   "CenteringDelay": "Retardo de centrado de cámara",
   "CenteringDelay.description": "Segundos antes de que la cámara del vehículo vuelva a centrarse detrás de él. El juego original usa 1.",
+  "AircraftFreeCamera": "Cámara libre en aeronaves",
+  "AircraftFreeCamera.description": "Los aviones y helicópteros usan la misma cámara de seguimiento que los demás vehículos, así que el ratón o el stick derecho pueden girar la cámara y mirar arriba y abajo, como en el juego original. Desactivado mantiene la cámara fija detrás de la aeronave.",
   "RawMouseInput": "Entrada directa del ratón",
   "RawMouseInput.description": "Lee el ratón directamente para la cámara, con la sensibilidad y la inversión del ratón de los ajustes del juego.",
   "VisualStyle": "Estilo visual",

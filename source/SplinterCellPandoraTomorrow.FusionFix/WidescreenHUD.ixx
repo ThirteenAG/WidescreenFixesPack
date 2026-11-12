@@ -8,9 +8,17 @@ export module WidescreenHUD;
 import ComVars;
 import CutsceneFrame;
 
+// The turret and retinal scanner screens: their whole interface sits at the right HUD margin
+bool bRightSideInterface = false;
+
 // Once per frame on the game thread: the live HUD settings, consumed by the HUD draw hooks
 export void RefreshHudConstraint()
 {
+    // The turret panel is drawn over the regular HUD; the scanner view replaces it, alone or with a grabbed guard
+    const auto hudState = UObject::GetState(L"EchelonMainHUD");
+    const auto playerState = UObject::GetState(L"EPlayerController");
+    bRightSideInterface = (hudState == L"MainHUD" && playerState == L"s_Turret") ||
+        (hudState == L"s_Slavery" && (playerState == L"s_RetinalScanner" || playerState == L"s_Grab"));
     Screen.fGrainScale = std::clamp(FixSettings().Float("MAIN.GrainScale"), 0.0f, 1.0f);
     if (Screen.Width <= 0 || Screen.Height <= 0 || Screen.fWidth <= 0.0f || Screen.fHeight <= 0.0f ||
         !std::isfinite(Screen.fWidth) || !std::isfinite(Screen.fHeight) || !std::isfinite(Screen.fAspectRatio))
@@ -292,5 +300,10 @@ export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, flo
     {
         offsetX1 -= Screen.fWidescreenHudOffset;
         offsetX2 -= Screen.fWidescreenHudOffset;
+    }
+    else if (bRightSideInterface && offsetX1 >= 320.0f)
+    {
+        offsetX1 += Screen.fWidescreenHudOffset;
+        offsetX2 += Screen.fWidescreenHudOffset;
     }
 }

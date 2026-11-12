@@ -9,6 +9,7 @@ module;
 export module PostFX;
 
 import ComVars;
+import ModelSprites;
 
 inline void SAFE_RELEASE(auto*& ptr)
 {
@@ -570,6 +571,10 @@ void sub_533AA0(float* screenData)
         {
             if (node->cb == sub_52F7D0)
             {
+                // The console's model sprite pass follows this one; drawn before the post effects so that distance
+                // blur, bloom and anti-aliasing include it like the rest of the scene
+                RenderModelSprites(screenData);
+
                 float zn = screenData[7];
                 float zf = screenData[8];
                 CPostFX::DistanceBlur::Render(zn, zf);

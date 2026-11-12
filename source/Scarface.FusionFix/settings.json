@@ -150,11 +150,52 @@
       }
     },
     {
+      "id": "MAIN.WalkKey",
+      "type": "choice",
+      "default": 0,
+      "label": "@WalkKey",
+      "description": "@WalkKey.description",
+      "page": "controls",
+      "apply": "live",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@WalkKey.none"
+        },
+        {
+          "value": 18,
+          "label": "Alt"
+        },
+        {
+          "value": 5,
+          "label": "@WalkKey.mouse4"
+        },
+        {
+          "value": 6,
+          "label": "@WalkKey.mouse5"
+        }
+      ]
+    },
+    {
       "id": "MAIN.VehicleCameraRecenterDelay",
       "type": "float",
       "default": 3.0,
       "label": "@VehicleCameraRecenterDelay",
       "description": "@VehicleCameraRecenterDelay.description",
+      "page": "camera",
+      "apply": "live",
+      "visibility": "menu",
+      "min": 0,
+      "max": 60,
+      "step": 0.5
+    },
+    {
+      "id": "MAIN.OnFootCameraRecenterDelay",
+      "type": "float",
+      "default": 0.0,
+      "label": "@OnFootCameraRecenterDelay",
+      "description": "@OnFootCameraRecenterDelay.description",
       "page": "camera",
       "apply": "live",
       "visibility": "menu",
@@ -221,6 +262,21 @@
       "default": 1,
       "label": "@RestoreCharacterBlood",
       "description": "@RestoreCharacterBlood.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.RestoreWindowDamage",
+      "type": "bool",
+      "default": 1,
+      "label": "@RestoreWindowDamage",
+      "description": "@RestoreWindowDamage.description",
       "page": "graphics",
       "apply": "restart",
       "visibility": "menu",

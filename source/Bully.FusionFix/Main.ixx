@@ -22,6 +22,7 @@ import Input;
 import Window;
 import ScreenPatches;
 import Geography;
+import Shadows;
 
 
 class Main
@@ -64,6 +65,7 @@ public:
 
             ScreenPatches::Install();
             BullyGeography::Install();
+            BullyShadows::Install(FixSettings().Int("GRAPHICS.ShadowResolution"));
             GameplayCamera::Install(fFOVFactor);
         };
     }

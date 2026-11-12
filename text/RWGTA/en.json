@@ -59,6 +59,8 @@
   "fullscreenbg.description": "Extends the menu backgrounds to the whole screen by repeating a column without artwork. Turn it off for replaced backgrounds of the original sizes. Transparent Menu takes precedence.",
   "hqradardisc": "HQ Radar Disc",
   "hqradardisc.description": "Draws the radar's ring at a higher resolution when the game's own low resolution texture is used.",
+  "nearlightsquares": "Light Squares Up Close",
+  "nearlightsquares.description": "Keeps the square glow of headlights and taillights on cars near the camera, as in the original game. Off shows it only on cars further away.",
   "textoutline": "Text Outline",
   "textoutline.description": "Replaces the shadow of the HUD's and menus' text with an outline.",
   "textoutline.thin": "Thin",

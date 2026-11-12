@@ -205,6 +205,24 @@
       "apply": "live"
     },
     {
+      "id": "MAIN.MovingTurnSpeed",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 3.0,
+      "step": 0.1,
+      "decimals": 1,
+      "unit": "x",
+      "label": "@MovingTurnSpeed",
+      "description": "@MovingTurnSpeed.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "slider"
+      ]
+    },
+    {
       "id": "MAIN.ForceLaserSight",
       "type": "bool",
       "default": 0,

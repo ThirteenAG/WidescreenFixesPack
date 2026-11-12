@@ -14,6 +14,8 @@
   "MAIN.SkipPressStart.description": "Salta la schermata Premi un tasto e la scelta del checkpoint.",
   "MAIN.TurnSpeed": "Velocità rotazione",
   "MAIN.TurnSpeed.description": "Velocità con cui Sam si gira nella direzione di movimento (0.5–10). 1.0 è il valore originale.",
+  "MAIN.SwapShoulderKey": "Tasto cambio spalla",
+  "MAIN.SwapShoulderKey.description": "Tasto che porta la telecamera sull'altra spalla di Sam a piedi, anche mirando. In copertura e con uno scudo umano resta il lato scelto dal gioco. Vuoto = nessun tasto.",
   "MAIN.FOVFactor": "Moltiplicatore campo visivo",
   "MAIN.FOVFactor.description": "Scala il campo visivo durante gli spostamenti da 0,5 a 2,0. 1,0 mantiene la vista normale. Mira, mirini, gadget e telecamere predefinite mantengono il proprio campo visivo. La vista orizzontale resta entro 150 gradi e mantiene la transizione graduale originale.",
   "MAIN.ScreenCullBias": "Margine esclusione fuori schermo",

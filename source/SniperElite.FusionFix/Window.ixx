@@ -105,6 +105,16 @@ export namespace SniperWindow
         return result;
     }
 
+    inline bool ActivationPending = false;
+    constexpr UINT_PTR ActivationTimer = 0x5E1D;
+
+    inline bool DeviceLost()
+    {
+        using TestCooperativeLevel = HRESULT(__stdcall*)(void*);
+        const auto device = D3DDevice.get();
+        return device && (*reinterpret_cast<TestCooperativeLevel**>(device))[3](device) == HRESULT(0x88760868); // D3DERR_DEVICELOST
+    }
+
     // The game pauses (and turns its sound down) when it loses the focus; with the setting off it keeps running
     inline LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
@@ -114,6 +124,32 @@ export namespace SniperWindow
             return handled;
         if (message == WM_ACTIVATEAPP && !wParam && !FixSettings().Bool("MAIN.PauseOnFocusLoss"))
             return 0;
+        // Fullscreen: on activation the game waits inside this message until its lost device can be reset, but the
+        // device only comes back while messages are handled; it hung when the focus left again meanwhile. The
+        // activation reaches the game once the device is no longer lost.
+        if (Mode == 0 && message == WM_ACTIVATEAPP)
+        {
+            ActivationPending = wParam && DeviceLost();
+            if (ActivationPending)
+            {
+                SetTimer(window, ActivationTimer, 100, nullptr);
+                return 0;
+            }
+            KillTimer(window, ActivationTimer);
+        }
+        if (message == WM_TIMER && wParam == ActivationTimer)
+        {
+            if (!ActivationPending || !DeviceLost())
+            {
+                KillTimer(window, ActivationTimer);
+                if (ActivationPending)
+                {
+                    ActivationPending = false;
+                    return WindowProcHook.stdcall<LRESULT>(window, WM_ACTIVATEAPP, TRUE, 0);
+                }
+            }
+            return 0;
+        }
         return WindowProcHook.stdcall<LRESULT>(window, message, wParam, lParam);
     }
 
@@ -125,6 +161,8 @@ export namespace SniperWindow
         auto setup = hook::pattern("8A 15 ? ? ? ? 8B 0D ? ? ? ? 84 D2 8B 15 ? ? ? ? 0F 94 C0");
         auto procedure = hook::pattern("83 EC 54 A1 ? ? ? ? 89 44 24 50");
         WindowedMode.SetAddress(*setup.get_first<uint8_t*>(2));
+        auto reset = hook::pattern("A1 ? ? ? ? 8B 10 50 FF 52 0C 3B C3 7C");
+        D3DDevice.SetAddress(*reset.get_first<void**>(1));
         WindowedSwitch = safetyhook::create_mid(setup.get_first(), [](SafetyHookContext&)
         {
             WindowedMode = uint8_t(Mode != 0);

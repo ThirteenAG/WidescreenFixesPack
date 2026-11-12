@@ -314,6 +314,21 @@
       }
     },
     {
+      "id": "CONTROLS.HoldVehicleCamera",
+      "type": "bool",
+      "default": 0,
+      "label": "@holdcamera",
+      "description": "@holdcamera.description",
+      "page": "camera",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "MAIN.GamepadIcons",
       "type": "choice",
       "default": "Auto",

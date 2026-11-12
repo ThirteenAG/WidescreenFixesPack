@@ -22,7 +22,7 @@
 ### Input and compatibility
 
 - **Mouse input** - Use raw mouse input with a separate sensitivity multiplier, and choose whether Windows mouse speed and acceleration apply.
-- **Gamepad** — Support controllers through [Xidi](https://github.com/ThirteenAG/Xidi). Choose Xbox, PlayStation or Nintendo button labels; Auto uses Xbox. Vibration can be disabled independently. Camera sensitivity and inversion use the game’s own Joystick options.
+- **Gamepad** — Support controllers through [Xidi](https://github.com/ThirteenAG/Xidi). Choose Xbox, PlayStation or Nintendo button labels; Auto uses Xbox. Vibration can be disabled independently. Camera sensitivity and inversion use the game’s own Joystick options. The d-pad moves through the interaction list (up and down) and the quick inventory instead of switching vision modes while they are open.
 - **Audio** — Restore EAX support through [DSOAL](https://github.com/kcat/dsoal).
 - **Saved settings** — Prevent settings from resetting on each launch.
 - **Steam overlay** — Restore the Steam overlay when available.
@@ -32,6 +32,7 @@
 - **Frame rate limit** — Limit FPS to reduce game bugs; the default is 60 FPS.
 - **Skip intro** — Skip startup intros.
 - **Startup prompt** — Skip the “Press Any Key to Continue” screen (on by default).
+- **Save location** — Keep profiles and saves in Documents\My Games\Splinter Cell Chaos Theory or in the Save folder of the game instead of the hidden ProgramData folder. Profiles already made are not moved; copy them from ProgramData\Ubisoft\Tom Clancy's Splinter Cell Chaos Theory\Profiles to keep playing them.
 
 ### Graphics and lighting
 

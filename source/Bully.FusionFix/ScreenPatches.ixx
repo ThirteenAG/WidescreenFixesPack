@@ -119,6 +119,19 @@ export namespace ScreenPatches
             }
         }; injector::MakeInline<BackgroundsHook>(pattern.get_first(0), pattern.get_first(6)); //0x73984B
 
+        // The sprite batch holds 500 sprites and is only drawn while a frame is open. With the device lost no frame
+        // opens, the batch keeps growing past its end and overwrites the renderer's data: drop it when it is full.
+        pattern = hook::pattern("83 3D ? ? ? ? 00 0F 84 ? ? ? ? E8 ? ? ? ? 84 C0 0F 84 ? ? ? ? 80 3D ? ? ? ? 00 75 05");
+        static auto CanDrawSprites = reinterpret_cast<bool(__cdecl*)()>(injector::GetBranchDestination(pattern.get_first(13)).as_int());
+        static auto FlushReady = []() -> bool
+        {
+            const bool ready = CanDrawSprites();
+            if (!ready && dword_20DCD44 >= 500)
+                dword_20DCD44 = 0;
+            return ready;
+        };
+        injector::MakeCALL(pattern.get_first(13), static_cast<bool(__cdecl*)()>(FlushReady), true);
+
         //In widescreen mode the game loads 16:9 loadscreens from TXD\lsw instead of 4:3 ones from TXD\ls
         pattern = hook::pattern("80 3D ? ? ? ? 00 57 75 0C 68");
         (void)*pattern.get_first<bool*>(2); //0x43BFBC

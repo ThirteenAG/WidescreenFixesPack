@@ -550,6 +550,19 @@
       }
     },
     {
+      "id": "GRAPHICS.NearLightSquares",
+      "type": "bool",
+      "default": 0,
+      "label": "@nearlightsquares",
+      "description": "@nearlightsquares.description",
+      "page": "graphics",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
       "id": "MISC.ReplaceTextShadowWithOutline",
       "type": "choice",
       "default": 2,

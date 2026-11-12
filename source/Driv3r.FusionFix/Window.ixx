@@ -20,6 +20,8 @@ export namespace Driv3rWindow
     inline RECT framedRect{};
     inline int framedWidth = 0, framedHeight = 0, lastWindowMode = 1;
     inline SafetyHookInline procedureHook;
+    inline SafetyHookMid shutdownHook;
+    inline GameRef<uint32_t> PresentedFrames;
     inline int mode = 0, requestedIndex = -1;
 
     inline HWND Window() { return hWnd.is_initialized() ? hWnd.get() : nullptr; }
@@ -204,5 +206,15 @@ export namespace Driv3rWindow
         modeHook = safetyhook::create_mid(builder.get_first(), Request);
         publicationHook = safetyhook::create_mid(windowed.get_first(), Configured);
         procedureHook = safetyhook::create_inline(procedure.get_first(), Procedure);
+
+        // Closing the window quits from gameplay too. The game's shutdown waits until resources released in
+        // gameplay are ten presented frames old, and nothing is presented anymore: each pass of that wait counts as one.
+        auto shutdown = hook::pattern("8B 0D ? ? ? ? 8B 01 FF 50 14 84 C0 75 0D 8B 0D ? ? ? ? 8B 11 FF 52 10 EB E4");
+        auto presented = hook::pattern("C7 87 98 01 00 00 02 00 00 00 8B 0D ? ? ? ? 89 8F 8C 01 00 00");
+        PresentedFrames.SetAddress(*presented.get_first<uint32_t*>(12));
+        shutdownHook = safetyhook::create_mid(shutdown.get_first(15), [](SafetyHookContext&)
+        {
+            ++PresentedFrames;
+        });
     }
 }

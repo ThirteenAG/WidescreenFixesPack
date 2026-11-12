@@ -190,7 +190,7 @@ void InstallGameClient()
         std::vector<void*> callSites;
         auto collect = [&](hook::pattern pattern, ptrdiff_t offset)
         {
-            pattern.get_first();
+            (void)hook::pattern(pattern).get_first();
             pattern.for_each_result([&](hook::pattern_match match) { callSites.push_back(match.get<void>(offset)); });
         };
         collect(hook::pattern(gameClient, "51 8B 0D ? ? ? ? D8 0D ? ? ? ? 8D 54 24 ? D9 1C 24 52 E8"), 21);
