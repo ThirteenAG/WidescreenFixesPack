@@ -227,7 +227,7 @@ void InitializeGame()
             auto ret = *(uint32_t*)(regs.esp + 0x28);
             if (LARushHud::DrawingMinimap)
             {
-                LARushHud::TransformMinimapText(reinterpret_cast<float*>(regs.esi + 4));
+                // Laid out in the minimap's own viewport.
             }
             else if (LARushHud::DrawingSpeedometer)
             {
@@ -295,7 +295,7 @@ void InitializeGame()
                     y = -1.0f + (y + 1.0f) * scale;
                 }
             }
-            if (!LARushHud::DrawingSpeedometer && !LARushHud::DrawingLowrider && ret != ret_4ED9E4 && ret != ret_4D25FE && ret != ret_4F62A6 && ret != ret_4ED33B && ret != ret_4FA384 && ret != ret_4EF78F)
+            if (!LARushHud::DrawingMinimap && !LARushHud::DrawingSpeedometer && !LARushHud::DrawingLowrider && ret != ret_4ED9E4 && ret != ret_4D25FE && ret != ret_4F62A6 && ret != ret_4ED33B && ret != ret_4FA384 && ret != ret_4EF78F)
             {
                 *(float*)(regs.esi + 0x10) /= Screen.fHudScale;
                 *(float*)(regs.esi + 0x14) /= Screen.fHudScale;
@@ -388,6 +388,19 @@ void InitializeGame()
             regs.eax = movieHeight;
         }
     }; injector::MakeInline<FMVHeightHook>(pattern.get_first(9));
+
+    // The scene is copied to the screen with texture coordinates on texel corners, so the left column and the top
+    // row blend in the opposite edge. Sample the texel centres instead.
+    pattern = hook::pattern("8B 7C 24 0C B9 18 00 00 00 8D 74 24 50 F3 A5");
+    static auto sceneCopy = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& context)
+    {
+        auto vertices = reinterpret_cast<float*>(context.esp + 0x50);
+        for (int i = 0; i < 4; ++i)
+        {
+            vertices[i * 6 + 3] += 0.5f / Screen.fWidth;
+            vertices[i * 6 + 4] += 0.5f / Screen.fHeight;
+        }
+    });
 
     // Install after resolving the native return address at the same epilogue.
     LARushHud::InstallSpeedometer();

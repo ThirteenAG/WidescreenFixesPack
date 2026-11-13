@@ -12,6 +12,8 @@ import Camera;
 export namespace LARushHud
 {
     inline SafetyHookInline MinimapHook;
+    inline SafetyHookMid MinimapWidth1, MinimapHeight1, MinimapWidth2, MinimapHeight2;
+    inline SafetyHookMid StarsHook;
     inline SafetyHookMid SpeedometerBegin, SpeedometerEnd, MeterBegin, MeterEnd;
     inline SafetyHookMid MoneyBegin1, MoneyEnd1, MoneyBegin2, MoneyEnd2;
     inline SafetyHookMid RaceBegin1, RaceEnd1, RaceBegin2, RaceEnd2;
@@ -19,6 +21,8 @@ export namespace LARushHud
     inline SafetyHookInline BatchHook;
     inline SafetyHookInline GlyphHook;
     inline thread_local bool DrawingMinimap = false;
+    inline thread_local uintptr_t MinimapView = 0;
+    inline thread_local int32_t MinimapSize[2]{};
     inline thread_local bool DrawingSpeedometer = false;
     inline thread_local bool DrawingMeter = false;
     inline thread_local bool BuildingMoney = false;
@@ -132,20 +136,29 @@ export namespace LARushHud
         *reinterpret_cast<int32_t*>(camera + 808) = 1;
         const bool previous = DrawingMinimap;
         DrawingMinimap = true;
+        MinimapView = reinterpret_cast<uintptr_t>(camera);
+        MinimapSize[0] = original[2];
+        MinimapSize[1] = original[3];
         const auto result = MinimapHook.ccall<char>();
         DrawingMinimap = previous;
+        MinimapView = 0;
         std::copy(std::begin(original), std::end(original), viewport);
         *reinterpret_cast<int32_t*>(camera + 808) = 1;
         return result;
     }
 
-    inline void TransformMinimapText(float* position)
+    // The minimap pass converts its pixel layout to clip space with the camera's viewport size.
+    // Keep the original size there so the whole layout follows the scaled viewport.
+    inline void MinimapWidth(SafetyHookContext& context)
     {
-        const float scale = Scale();
-        position[0] = (position[0] + 1.0f) * scale - 1.0f;
-        position[1] *= scale;
-        position[2] = 1.0f - (1.0f - position[2]) * scale;
-        position[3] *= scale;
+        if (DrawingMinimap && context.ecx == MinimapView)
+            context.eax = MinimapSize[0];
+    }
+
+    inline void MinimapHeight(SafetyHookContext& context)
+    {
+        if (DrawingMinimap && context.ecx == MinimapView)
+            context.eax = MinimapSize[1];
     }
 
     inline void TransformSpeedometerText(float* position, bool bottomAnchored)
@@ -209,5 +222,20 @@ export namespace LARushHud
         MinimapCamera.SetAddress(*index.get_first<int32_t*>(1));
         auto draw = hook::pattern("A1 ? ? ? ? 81 EC 88 00 00 00 85 C0 0F 85 ? ? ? ? A1 ? ? ? ? 69 C0 68 03 00 00");
         MinimapHook = safetyhook::create_inline(draw.get_first(), DrawMinimap);
+        auto vertices = hook::pattern("8B C8 E8 ? ? ? ? 8B F0 B9 ? ? ? ? D1 EE E8 ? ? ? ? 8B C8 E8 ? ? ? ? D1 E8");
+        MinimapWidth1 = safetyhook::create_mid(vertices.get_first(7), MinimapWidth);
+        MinimapHeight1 = safetyhook::create_mid(vertices.get_first(28), MinimapHeight);
+        auto rectangles = hook::pattern("8B C8 E8 ? ? ? ? 8B F8 B9 ? ? ? ? D1 EF E8 ? ? ? ? 8B C8 E8 ? ? ? ? F3 0F 10 46 04");
+        MinimapWidth2 = safetyhook::create_mid(rectangles.get_first(7), MinimapWidth);
+        MinimapHeight2 = safetyhook::create_mid(rectangles.get_first(28), MinimapHeight);
+        // The wanted stars are placed 7.5% of the screen size from the top right corner, in screen pixels. Use the
+        // 640x480 distances instead: the HUD transform scales them like the rest of the top right HUD.
+        auto stars = hook::pattern("57 2B 44 24 20 83 E8 58 50 8B 46 28 E8");
+        StarsHook = safetyhook::create_mid(stars.get_first(8), [](SafetyHookContext& context)
+        {
+            const auto margins = reinterpret_cast<int32_t*>(context.esp + 0x1C);
+            context.eax += margins[1] - static_cast<int32_t>(640 * 0.075f);
+            *reinterpret_cast<int32_t*>(context.esp) -= margins[0] - static_cast<int32_t>(480 * 0.075f);
+        });
     }
 }
