@@ -4,6 +4,7 @@ module;
 #include "Shared/SplinterCell/Window.hpp"
 #include "FixSettings.hpp"
 #include "automation/asi_automation_frames.h"
+#include "Shared/SplinterCell/PreferredAdapter.hpp"
 #include <minidx8/d3d8.h>
 
 export module D3DDrv;
@@ -520,6 +521,8 @@ namespace FD3DRenderInterface
 
 export void InitD3DDrv()
 {
+    SCPreferredAdapter::Init(8);
+
     auto pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "8B 44 24 04 81 EC 80 00 00 00");
     shUD3DRenderDeviceSetRes = safetyhook::create_inline(pattern.get_first(), UD3DRenderDeviceSetRes);
     PresentParams.SetAddress(*hook::module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? 33 C0 8B D9 C1 E9 02 83 E3 03").get_first<D3DPRESENT_PARAMETERS*>(1));

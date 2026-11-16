@@ -224,18 +224,44 @@ namespace FrameRate
         next.QuadPart += period;
     }
 
-    // Sim::QueueEvents(dt) runs a step for every whole step time that has passed. With dt close to one
-    // step, timing noise gave 0 or 2 steps instead of 1. The time is rounded to the nearest step here;
-    // the difference is carried over, so the simulation keeps real time within half a step.
+    // Sim::QueueEvents(dt) runs a step for every whole step time that has passed. The game measures dt on its
+    // main thread, which runs ahead of the rendering by a varying amount, so dt jitters by several milliseconds
+    // even when the frames are shown evenly; with a few steps per frame that gave 1, 2 and 3 steps by turns,
+    // and the car stuttered. The simulation advances by the average frame time instead, with the difference
+    // to real time (Lag) worked in slowly and at once when it grows over two frames. The time is then rounded
+    // to whole steps; the rounding difference is carried over.
     float Carry = 0.0f;
+    float FrameTime = 0.0f;
+    float Lag = 0.0f;
 
     void PrepareStep(float& dt)
     {
         if (!*SimActive || dt <= 0.0f)
             return;
 
+        float elapsed = dt;
+        if (FrameTime <= 0.0f || elapsed > FrameTime * 3.0f || elapsed < FrameTime / 3.0f)
+        {
+            // First frame, a hitch or a frame rate change: real time as it is
+            FrameTime = elapsed;
+            elapsed += Lag;
+            Lag = 0.0f;
+        }
+        else
+        {
+            FrameTime += (elapsed - FrameTime) * 0.05f;
+            float advance = FrameTime + Lag * 0.05f;
+            Lag += elapsed - advance;
+            elapsed = advance;
+            if (std::abs(Lag) > std::max(FrameTime * 2.0f, fStepTime * 2.0f))
+            {
+                elapsed += Lag;
+                Lag = 0.0f;
+            }
+        }
+
         float previous = *TimeBank;
-        float due = previous + dt + Carry;
+        float due = previous + elapsed + Carry;
         int steps = static_cast<int>(std::floor(due / fStepTime + 0.5f));
         if (steps <= 0)
         {

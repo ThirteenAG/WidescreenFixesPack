@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "Shared/SplinterCell/Window.hpp"
 #include "FixSettings.hpp"
+#include "Shared/SplinterCell/PreferredAdapter.hpp"
 #include <minidx8/d3d8.h>
 #include <stdexcept>
 
@@ -310,6 +311,8 @@ namespace UD3DRenderDevice
 
 export void InitD3DDrv()
 {
+    SCPreferredAdapter::Init(8);
+
     auto pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "BF ? ? ? ? 33 C0 8B D9 C1 E9 02 83 E3 03", "68 ? ? ? ? FF 15 ? ? ? ? 8B 8D");
     PresentParams.SetAddress(*pattern.get_first<D3DPRESENT_PARAMETERS*>(1));
 

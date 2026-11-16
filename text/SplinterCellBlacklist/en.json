@@ -33,7 +33,7 @@
   "MAIN.SMIMapDisableStartupAnimation": "SMIMap Disable Startup Animation",
   "MAIN.SMIMapDisableStartupAnimation.description": "Skip the initial SMI map animation.",
   "MAIN.FPSLimit": "Frame Rate Limit",
-  "MAIN.FPSLimit.description": "Change the frame rate limit immediately. Use 0 for unlimited, -1 for the current monitor refresh rate, or 30–1000 FPS. Turn off native Vertical Sync for rates above refresh. Some NPCs can show double images above 100 FPS.",
+  "MAIN.FPSLimit.description": "Change the frame rate limit immediately. Use 0 for unlimited, -1 for the current monitor refresh rate, or 30–1000 FPS. Turn off native Vertical Sync for rates above refresh.",
   "UNLOCKS.UnlockDLC": "Unlock DLC",
   "UNLOCKS.UnlockDLC.description": "Unlocks all DLC content that can no longer be obtained due to server shutdown.",
   "UNLOCKS.UnlockAllNonCampaignMissions": "Unlock All Non Campaign Missions",

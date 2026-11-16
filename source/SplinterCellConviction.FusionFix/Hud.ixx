@@ -137,8 +137,35 @@ export namespace Hud
                 area = { 0, 0, viewport[0], viewport[1] };
         }
         const int areaWidth = area.right - area.left, areaHeight = area.bottom - area.top;
-        const auto offset = Frame(areaWidth, areaHeight, viewport[2] - area.left, viewport[3] - area.top,
-            viewport[4], viewport[5], width, height);
+        // A split screen HUD on a whole-screen stage is laid out in its player's half of it: that half is the HUD's frame.
+        // The stage spans both halves whenever it isn't inside its player's area (with halves of 16:9 the HUD rect is as wide as a half).
+        int viewLeft = viewport[2] - area.left, viewTop = viewport[3] - area.top, viewWidth = viewport[4], viewHeight = viewport[5];
+        int stageWidth = width, stageHeight = height;
+        double promptCenter = width * 0.5;
+        // The reticle sits in the middle of the player's half of the stage, which is off the middle of the player's area in the HUD rect
+        // on screens other than 16:9: it's moved to where the camera aims, the middle of the area.
+        int shiftX = 0, shiftY = 0;
+        if (splitMovie && (viewLeft < 0 || viewLeft + viewWidth > areaWidth))
+        {
+            viewWidth /= 2;
+            stageWidth /= 2;
+            viewLeft += player * viewWidth;
+            promptCenter = width * (player ? 0.75 : 0.25);
+            shiftX = (areaWidth - viewWidth) / 2 - viewLeft;
+        }
+        if (splitMovie && (viewTop < 0 || viewTop + viewHeight > areaHeight))
+        {
+            viewHeight /= 2;
+            stageHeight /= 2;
+            viewTop += player * viewHeight;
+            shiftY = (areaHeight - viewHeight) / 2 - viewTop;
+        }
+        const auto offset = Frame(areaWidth, areaHeight, viewLeft, viewTop, viewWidth, viewHeight, stageWidth, stageHeight);
+        if (splitMovie)
+        {
+            Move(view, "HudReticule", 'x', double(shiftX) * stageWidth / viewWidth);
+            Move(view, "HudReticule", 'y', double(shiftY) * stageHeight / viewHeight);
+        }
         if (viewport[4] > 0 && viewport[5] > 0)
         {
             for (const auto clip : { "BlackFlash", "SuppressionHalo" })
@@ -176,7 +203,7 @@ export namespace Hud
             const auto adjustment = Get(view, (base + ".FixHudAdjustment_x").c_str());
             if (x && previous && adjustment && *x == *previous)
                 *x -= *adjustment;
-            if (x) Move(view, clip, 'x', *x < width * 0.5 ? offset.left : offset.right);
+            if (x) Move(view, clip, 'x', *x < promptCenter ? offset.left : offset.right);
         }
 
         if (areaWidth > 0 && areaHeight > 0 && viewport[4] > 0 && viewport[5] > 0)
@@ -191,5 +218,40 @@ export namespace Hud
             viewport[4] = areaWidth;
             viewport[5] = areaHeight;
         }
+    }
+
+    // Split screen beacons (objective and distance markers) are laid out in the HUD rect but placed anywhere in their player's viewport:
+    // the movie's clip is extended over the whole screen, or markers left or right of the HUD rect weren't drawn.
+    void RenderBeacon(uintptr_t object, uintptr_t view, int32_t* viewport)
+    {
+        if (!object || !view)
+            return;
+        const auto path = *reinterpret_cast<const char**>(object + 4);
+        const int count = *reinterpret_cast<int*>(object + 8);
+        if (!path || count < 2 || count > 4096 || path[count - 1] != 0)
+            return;
+        const auto name = std::string_view(path, count - 1);
+        const auto file = name.substr(name.find_last_of("\\/") + 1);
+        if (_strnicmp(std::string(file).c_str(), "DynamicObjectivesArrows.", 24) != 0)
+            return;
+        const auto description = *reinterpret_cast<uintptr_t*>(object + 32);
+        if (!description)
+            return;
+        const int width = *reinterpret_cast<int*>(description + 8), height = *reinterpret_cast<int*>(description + 12);
+        if (width <= 0 || height <= 0 || width > 16384 || height > 16384 || viewport[0] <= 0 || viewport[1] <= 0 ||
+            viewport[4] <= 0 || viewport[5] <= 0)
+            return;
+        // undone when split screen ends
+        const bool split = GetLocalPlayerViewport(0).has_value();
+        Adjust(view, "", "_xscale", split ? double(viewport[4]) / viewport[0] : 1.0, true);
+        Adjust(view, "", "_yscale", split ? double(viewport[5]) / viewport[1] : 1.0, true);
+        Move(view, "", 'x', split ? double(viewport[2]) * width / viewport[0] : 0.0);
+        Move(view, "", 'y', split ? double(viewport[3]) * height / viewport[1] : 0.0);
+        if (!split)
+            return;
+        viewport[2] = 0;
+        viewport[3] = 0;
+        viewport[4] = viewport[0];
+        viewport[5] = viewport[1];
     }
 }

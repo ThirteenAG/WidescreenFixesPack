@@ -33,7 +33,7 @@
   "MAIN.SMIMapDisableStartupAnimation": "SMI-Startanimation überspringen",
   "MAIN.SMIMapDisableStartupAnimation.description": "Überspringt die erste SMI-Kartenanimation.",
   "MAIN.FPSLimit": "Bildratenlimit",
-  "MAIN.FPSLimit.description": "Ändert das Bildratenlimit sofort: 0 für unbegrenzt, -1 für die Monitorfrequenz oder 30–1000 FPS. Für höhere Raten die vertikale Synchronisierung im Spiel deaktivieren. Manche Figuren können über 100 FPS doppelt erscheinen.",
+  "MAIN.FPSLimit.description": "Ändert das Bildratenlimit sofort: 0 für unbegrenzt, -1 für die Monitorfrequenz oder 30–1000 FPS. Für höhere Raten die vertikale Synchronisierung im Spiel deaktivieren.",
   "UNLOCKS.UnlockDLC": "DLC freischalten",
   "UNLOCKS.UnlockDLC.description": "Schaltet DLC frei, die seit der Serverabschaltung nicht mehr erhältlich sind.",
   "UNLOCKS.UnlockAllNonCampaignMissions": "Alle Nebenmissionen freischalten",

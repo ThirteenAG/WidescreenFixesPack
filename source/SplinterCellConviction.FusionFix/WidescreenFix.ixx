@@ -47,7 +47,9 @@ namespace GameplayFOV
             const auto viewport = GetCameraViewport(camera);
             const auto width = viewport.area.right - viewport.area.left;
             const auto height = viewport.area.bottom - viewport.area.top;
-            const float aspect = width > 0 && height > 0 ? float(width) / height : GetAspectRatio();
+            float aspect = width > 0 && height > 0 ? float(width) / height : GetAspectRatio();
+            if (GetLocalPlayerViewport(viewport.player)) // split screen halves keep the angle below 16:9
+                aspect = std::max(aspect, fDefaultAspectRatio);
             *reinterpret_cast<float*>(camera + 0x2C) = Scale(angle, factor, aspect);
         }
     }
@@ -260,6 +262,59 @@ export void InitWidescreenFix()
         auto projection = hook::pattern("55 8B EC F3 0F 2A 45 0C D9 45 08 F3 0F 2A 4D 10 F3 0F 5E C1 0F 2F 05 ? ? ? ? F3 0F 11 45 0C 76 25");
         injector::MakeNOP(projection.get_first(32), 2, true);
 
+        // FCameraSceneNode: the viewport angle is adjusted only for a viewport with the multi-monitor flag (+2B0h), which only player 1's
+        // split screen viewport gets, so player 1's half was zoomed in and player 2's wasn't. Both halves keep the 16:9 horizontal angle
+        // below 16:9, as on console, and get Hor+ above it.
+        auto sceneProjection = hook::pattern("83 B8 B0 02 00 00 00 74 ? FF B0 DC 00 00 00 D9 45 28");
+        static auto sceneProjectionDone = reinterpret_cast<uintptr_t>(sceneProjection.get_first(9)) + *sceneProjection.get_first<int8_t>(8);
+        static auto splitProjection = safetyhook::create_mid(sceneProjection.get_first(), [](SafetyHookContext& regs)
+        {
+            if (!IsLocalPlayerViewport(regs.eax))
+                return;
+            const auto width = *reinterpret_cast<const int*>(regs.eax + 0xD8);
+            const auto height = *reinterpret_cast<const int*>(regs.eax + 0xDC);
+            auto& angle = *reinterpret_cast<float*>(regs.ebp + 0x28);
+            angle = Cinematics::Projection(regs.eax, angle, width, height);
+            const float aspect = width > 0 && height > 0 ? float(width) / height : fDefaultAspectRatio;
+            if (aspect > fDefaultAspectRatio && std::isfinite(angle) && angle > 0.0f && angle < 180.0f)
+            {
+                constexpr float radians = 3.14159265358979323846f / 180.0f;
+                angle = 2.0f * std::atan(std::tan(angle * radians * 0.5f) * aspect / fDefaultAspectRatio) / radians;
+            }
+            regs.eip = sceneProjectionDone;
+        });
+
+        // Split screen beacons (FlashBeacon, objective and distance markers): the screen position is made a fraction of the whole window
+        // (UViewport +F0h, +F4h), but the movie is laid out in the HUD rect, so markers drifted towards its center. Use the HUD rect,
+        // as without split screen.
+        auto beaconPosition = hook::pattern("F3 0F 2A 45 08 F3 0F 10 4D DC F3 0F 5C C8 83 C4 10 0F 28 C1");
+        static auto splitBeacon = safetyhook::create_mid(beaconPosition.get_first(), [](SafetyHookContext& regs)
+        {
+            const auto viewport = *reinterpret_cast<uintptr_t*>(regs.ebp - 4);
+            if (!regs.eax || !IsLocalPlayerViewport(viewport))
+                return;
+            const auto hudY = *reinterpret_cast<int32_t*>(regs.ebp - 0x10);
+            const auto hudWidth = *reinterpret_cast<int32_t*>(regs.ebp - 0x14);
+            const auto hudHeight = *reinterpret_cast<int32_t*>(regs.ebp - 0x18);
+            const auto windowWidth = *reinterpret_cast<int32_t*>(viewport + 0xF0);
+            const auto windowHeight = *reinterpret_cast<int32_t*>(viewport + 0xF4);
+            if (hudWidth <= 0 || hudHeight <= 0 || windowWidth <= 0 || windowHeight <= 0)
+                return;
+            *reinterpret_cast<float*>(regs.ebp - 0x08) *= float(windowWidth) / hudWidth;   // stage units per pixel
+            *reinterpret_cast<float*>(regs.ebp - 0x0C) *= float(windowHeight) / hudHeight;
+            *reinterpret_cast<float*>(regs.ebp - 0x20) -= float(hudY);                     // y, x has the HUD rect's left taken off next
+        });
+
+        // FlashBeacon screen edge clamp: with the multi-monitor mode it's the HUD rect, in window pixels, while the position is in the
+        // split screen viewport's: beacons stuck to the HUD rect's left edge inside the half. Clamp to the viewport, as without the mode.
+        auto beaconClamp = hook::pattern("8D 7D C0 A5 A5 A5 E8 ? ? ? ? 85 C0 0F 84 ? ? ? ? 8D 45 F8 50");
+        static auto beaconClampViewport = reinterpret_cast<uintptr_t>(beaconClamp.get_first(19)) + *beaconClamp.get_first<int32_t>(15);
+        static auto splitBeaconClamp = safetyhook::create_mid(beaconClamp.get_first(6), [](SafetyHookContext& regs)
+        {
+            if (IsLocalPlayerViewport(*reinterpret_cast<uintptr_t*>(regs.ebp - 4)))
+                regs.eip = beaconClampViewport;
+        });
+
         // The engine has a multi-monitor mode (UD3DRenderDevice +0x110, set for Eyefinity or when aspect > MinTripleDispRatio):
         // the viewport gets Hor+ FOV from the 16:9 horizontal FOV (UViewport +0x2B0 -> sub_87B3A3), Flash menus/HUD are laid out
         // in the HUD rect at +0x114 (x, y, w, h) and mouse input is offset into it, HUD beacons project into it too.
@@ -400,7 +455,10 @@ export void InitWidescreenFix()
             auto ratio = GetAspectRatio() / fDefaultAspectRatio;
             auto movieView = *reinterpret_cast<uintptr_t*>(regs.edi + 0x28);
             if (movieView)
+            {
                 Hud::Render(regs.edi, movieView, args);
+                Hud::RenderBeacon(regs.edi, movieView, args);
+            }
             if (ratio <= 1.0f || !movieView)
                 return;
             if (SetFlashNumber(movieView, "_root.Background.BG._width", 1280.0 * ratio))

@@ -456,6 +456,12 @@ export std::optional<RECT> GetLocalPlayerViewport(int player)
     return RECT{ left, top, left + width, top + height };
 }
 
+export bool IsLocalPlayerViewport(uintptr_t viewport)
+{
+    return Splitscreen::localSplitscreenPlaying && viewport &&
+        (viewport == Splitscreen::viewportPlayer1 || viewport == Splitscreen::viewportPlayer2);
+}
+
 export PlayerViewport GetCameraViewport(uintptr_t camera)
 {
     if (Splitscreen::localSplitscreenPlaying)
@@ -676,6 +682,9 @@ namespace LocalSplitscreen
     // The lobby's X switches the edited player (setUser, SplitChangeInput MAIN=1/0) only with the main menu focused, the keyboard has no
     // X in the menus and clicking a player (the only X a mouse gives, CauseInput 202) focuses the player list: the click switches it.
     bool editingPlayer1 = true;
+    // The arsenal and uniform closet (ActivatePEC / ActivateCloset ACTIVE=1 until ACTIVE=0) have their own X (upgrade, camouflage) and
+    // their prompts send it with a click: it isn't the lobby's player switch there.
+    bool customizing = false;
 
     void LobbySetUser(bool player1)
     {
@@ -731,8 +740,13 @@ namespace LocalSplitscreen
                 editingPlayer1 = atoi(args + (found.end() - text.begin())) != 0;
         }
         else if (command && (std::string_view(command) == "StartMatch" || std::string_view(command) == "UnInitMPConnection"))
+        {
             editingPlayer1 = true;
-        if (command && args && IsSplitLobby() && std::string_view(command) == "CauseInput" && std::string_view(args).contains("INPUTKEY=202"))
+            customizing = false;
+        }
+        else if (command && args && (std::string_view(command) == "ActivatePEC" || std::string_view(command) == "ActivateCloset"))
+            customizing = std::string_view(args).contains("ACTIVE=1");
+        if (command && args && IsSplitLobby() && !customizing && std::string_view(command) == "CauseInput" && std::string_view(args).contains("INPUTKEY=202"))
         {
             if (std::string_view(args).contains("INPUTACTION=1"))
                 LobbySetUser(!editingPlayer1);

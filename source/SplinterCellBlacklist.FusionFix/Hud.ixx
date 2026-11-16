@@ -1,7 +1,6 @@
 module;
 
 #include <stdafx.h>
-#include <stdexcept>
 #include <unordered_map>
 #include <mutex>
 #include "FixSettings.hpp"
@@ -49,14 +48,12 @@ namespace
     bool Dx9 = false;
     struct CullRoot
     {
-        uintptr_t movie, node;
+        uintptr_t node;
         float x, y;
     };
     std::mutex CullMutex;
     std::vector<CullRoot> CullRoots, NextCullRoots;
-    uintptr_t(__fastcall* ReadRoot)(uintptr_t) = nullptr;
-    SafetyHookInline CullRectHook{};
-    std::vector<SafetyHookMid> MovieResetHooks;
+    SafetyHookMid CullRectHook{};
 
     void PublishRoots()
     {
@@ -64,23 +61,19 @@ namespace
         CullRoots.swap(NextCullRoots);
     }
 
-    void ForgetMovie(uintptr_t movie)
+    // Runs right after the tree root draw has computed its cull rect. The listed movies may have been
+    // destroyed since the last HUD update (closing the pause menu does it), so their nodes are only compared
+    // with the root being drawn, never read.
+    void CullRect(SafetyHookContext& regs)
     {
-        std::lock_guard lock(CullMutex);
-        const auto matches = [movie](const auto& root) { return root.movie == movie; };
-        std::erase_if(CullRoots, matches);
-        std::erase_if(NextCullRoots, matches);
-    }
-
-    char __fastcall CullRect(uintptr_t viewport, void* edx, float* out, char orient)
-    {
-        const auto result = CullRectHook.thiscall<char>(viewport, out, orient);
-        if (!result)
-            return result;
+        if (!(regs.eax & 0xFF))
+            return;
+        const auto drawn = *reinterpret_cast<const uintptr_t*>(regs.ebx + 8);
+        const auto out = reinterpret_cast<float*>(regs.ebp - 0x20);
         std::lock_guard lock(CullMutex);
         for (const auto& root : CullRoots)
         {
-            if (ReadRoot(root.node) + 160 != viewport)
+            if (root.node != drawn)
                 continue;
             // Culling happens before the HUD projection places the original stage on screen.
             out[0] -= root.x;
@@ -89,7 +82,6 @@ namespace
             out[3] += root.y;
             break;
         }
-        return result;
     }
 
     void Set(uintptr_t root, const Point& point)
@@ -142,7 +134,7 @@ namespace
             std::lock_guard lock(CullMutex);
             if (node && std::isfinite(aspect) && aspect > 0 &&
                 !std::ranges::any_of(NextCullRoots, [node](const auto& entry) { return entry.node == node; }))
-                NextCullRoots.push_back({ movie, node, std::max(0.0f, 360.0f * aspect - 640.0f),
+                NextCullRoots.push_back({ node, std::max(0.0f, 360.0f * aspect - 640.0f),
                     std::max(0.0f, 640.0f / aspect - 360.0f) });
         }
         auto& state = States[scene];
@@ -211,28 +203,15 @@ export namespace Hud
 
     void Init()
     {
-        auto cull = hook::pattern("55 8B EC 83 EC 1C 33 C0 56 FF 75 0C 89 45 E4 89 45 E8 89 45 EC 89 45 F0 8D 45 E4 50 8B F1");
-        auto read = hook::pattern("56 8B C1 8B F0 81 E6 00 F0 FF FF 2B C6 83 E8 1C 99 6A 1C 59 F7 F9 8B 4E 14 5E 8B 44 81 14 83 E0 FE C3");
-        auto reset = hook::pattern("8B 49 0C 8B 01 FF 60 24");
+        // Tree root draw: the cull rect call, then cmp [edi], 0 / mov [ebp-1], al. The drawn root is at [ebx+8], the rect at ebp-20h.
+        auto cull = hook::pattern("8B CF D9 5D EC E8 ? ? ? ? 83 3F 00 88 45 FF 0F 84");
         auto viewport = hook::pattern("55 8B EC 83 EC 10 89 4D F0 C7 45 FC 00 00 00 00 8B 45 F0 83 B8 5C 02 00 00 00 74 3D 8B 4D F0 8B 91 5C 02 00 00 8B 82 10 03 00 00 50 E8 ? ? ? ? 83 C4 04 85 C0");
         auto dx11 = hook::pattern("55 8B EC 51 56 8B F1 83 7E 5C 00 0F 84 ? ? ? ? 8B 4D 08 F3 0F 10 01 F3 0F 10 56 10");
         auto dx9 = hook::pattern("55 8B EC 83 EC 08 83 7E 5C 00 0F 84 ? ? ? ? F3 0F 10 01 F3 0F 10 56 10");
         Dx9 = !dx9.empty();
         SetRoot = Dx9 ? dx9.get_first<uint8_t>() : dx11.get_first<uint8_t>();
         GetViewport = reinterpret_cast<decltype(GetViewport)>(viewport.get_first());
-        ReadRoot = reinterpret_cast<decltype(ReadRoot)>(read.get_first());
-        if (reset.size() != 2)
-        {
-            throw std::runtime_error("HUD reset signatures unavailable");
-        }
-        for (size_t i = 0; i < reset.size(); ++i)
-        {
-            MovieResetHooks.push_back(safetyhook::create_mid(reset.get(i).get<void>(), [](SafetyHookContext& regs)
-            {
-                ForgetMovie(regs.ecx);
-            }));
-        }
-        CullRectHook = safetyhook::create_inline(cull.get_first(), CullRect);
+        CullRectHook = safetyhook::create_mid(cull.get_first(10), CullRect);
         UpdateConstraint();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", UpdateConstraint);
     }

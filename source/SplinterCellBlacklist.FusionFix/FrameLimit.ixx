@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include <unordered_map>
 #include "FixSettings.hpp"
 
 export module FrameLimit;
@@ -143,9 +144,71 @@ namespace GridFix
     }
 }
 
+// A guard's movement heading comes from his animation, which follows the AI's movement request two frames late. The AI adds a
+// correction to that heading on each tick, scaled by the time step. With a tick every frame, even and odd frames steer on their own;
+// above about 100 FPS the correction is too small to turn a heading that points the wrong way, so the guard walks forwards and
+// backwards in alternate frames (double image, walking in place). The AI ticks at most every 10 ms of game time instead, with the
+// time since its last tick, so each tick sees the result of the previous one. Below 100 FPS every frame ticks as before.
+// Controllers that already skip frames are left alone: the engine's AI LOD and co-op (every other frame), and a controller whose
+// tick returned without running (it then stores no time step at +5C0h).
+namespace AiRate
+{
+    constexpr float MinStep = 0.01f;
+    constexpr float SelfPacedHold = 1.0f;
+
+    struct State
+    {
+        float pending = 0.0f;
+        float selfPaced = 0.0f;
+    };
+    std::unordered_map<uintptr_t, State> States;
+
+    SafetyHookInline shTick{};
+    int __fastcall Tick(uint8_t* controller, void* edx, float dt, int a3)
+    {
+        const auto body = *reinterpret_cast<uint8_t**>(controller + 0x584);
+        if (!(dt > 0.0f) || (body && (body[0x31C] & 0x20)))
+            return shTick.thiscall<int>(controller, dt, a3);
+
+        if (States.size() > 4096)
+            States.clear();
+        auto& state = States[reinterpret_cast<uintptr_t>(controller)];
+        auto elapsed = dt;
+        if (state.selfPaced > 0.0f)
+            state.selfPaced -= dt;
+        else
+        {
+            elapsed += state.pending;
+            if (elapsed < MinStep)
+            {
+                state.pending = elapsed;
+                return 1;
+            }
+        }
+
+        auto& step = *reinterpret_cast<float*>(controller + 0x5C0);
+        const auto previous = step;
+        step = -1.0f;
+        const auto result = shTick.thiscall<int>(controller, elapsed, a3);
+        if (step == -1.0f)
+        {
+            step = previous;
+            state.selfPaced = SelfPacedHold;
+        }
+        state.pending = 0.0f;
+        return result;
+    }
+}
+
 export void InitFrameLimit()
 {
     using namespace FrameLimit;
+
+    // AEAIController::Tick
+    {
+        auto pattern = hook::pattern("55 8B EC 56 8B F1 F7 86 04 05 00 00 00 02 00 00 74 1B 8B 8E 8C 05 00 00 85 C9 74 11 8B 01 8B 50 74 FF D2 B8 01 00 00 00 5E 5D C2 08 00");
+        AiRate::shTick = safetyhook::create_inline(pattern.get_first(), AiRate::Tick);
+    }
 
     QueryPerformanceFrequency(&frequency);
     timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);

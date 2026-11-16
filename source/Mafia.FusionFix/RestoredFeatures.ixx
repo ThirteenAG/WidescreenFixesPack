@@ -113,6 +113,7 @@ namespace RestoredFeatures
     struct RadarLayout
     {
         size_t texture, scale, matrix, origin, dimensions, center, speed;
+        size_t mapShown; // set by the mission scripts: on in the city, off in races
     };
     static RadarLayout radar;
     static bool radarMap;
@@ -280,7 +281,7 @@ namespace RestoredFeatures
 
     void DrawRadarMap(SafetyHookContext& regs)
     {
-        if (IsRaceTrack())
+        if (IsRaceTrack() || !Field<uint8_t>(regs.ebp, radar.mapShown))
             return;
         void* igraph = pRadarIGraph;
         if (!igraph)
@@ -368,6 +369,8 @@ namespace RestoredFeatures
             return;
         auto manager = find_pattern("8B 0D ? ? ? ? 6A 01 6A FF 6A 00 68 ? ? ? ? E8 ? ? ? ? 8D 94 24 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 52");
         pGameManager.SetAddress(*manager.get_first<void**>(2));
+        // Like the Xbox HUD, the map is drawn only while the mission scripts turn it on (off in races)
+        radar.mapShown = *hook::get_pattern<uint32_t>("8A 44 24 04 56 8B F1 6A 5F B9 ? ? ? ? 88 86", 16);
         auto pUpdate = find_pattern("83 EC 24 53 55 56 57 8B 7C 24 38 33 DB 89 7C 24 2C 89 5C 24 30 DF 6C 24 2C 8B E9");
         auto pCars = find_pattern("D9 85 ? ? ? ? D9 E0 D9 5C 24 ? D9 85 ? ? ? ? 8D 8C 24 ? ? ? ? 8D 54 24 ? 51 52");
         auto pModels = find_pattern<2>(

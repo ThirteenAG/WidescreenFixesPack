@@ -41,7 +41,8 @@ namespace
     } car;
     SafetyHookInline carBetaHook;
     SafetyHookInline entryStickHook;
-    SafetyHookInline aircraftCameraHook;
+    SafetyHookMid aircraftCameraHook;
+    uintptr_t aircraftCameraFollow = 0;
     std::vector<SafetyHookMid> orbitHooks;
     using AimAxis = float(*)(void*, void*, float, bool, bool, int);
     AimAxis aimHorizontal = nullptr;
@@ -63,14 +64,6 @@ namespace
         // cameras; mouse follow-ped must retain its unmodified frame delta.
         if (!MouseOrbitAllowed())
             entryStickHook.ccall<void>(task, player, distance, alpha, beta, pitch, yaw);
-    }
-    // The game keeps the camera locked behind planes and helicopters (no free look).
-    // With the option they get the other vehicles' answer: the follow camera with free look.
-    uint8_t AircraftCameraLocked(uint8_t* camera)
-    {
-        if (Settings.aircraftFreeCamera)
-            return camera[0x22];
-        return aircraftCameraHook.ccall<uint8_t>(camera);
     }
     float FovScale(const CameraAngles& camera)
     {
@@ -147,7 +140,19 @@ namespace
         auto entryStick = FindFirst("4C 8B DC 49 89 5B 18 49 89 6B 20 41 56 48 81 EC 90 00 00 00 48 8B 41 18 4D 8B F1");
         entryStickHook = safetyhook::create_inline(entryStick, EntryStickModifier);
         auto aircraftCamera = FindFirst("0F B6 05 ? ? ? ? 4C 8B C1 48 69 C0 C0 01 00 00 48 8D 0D ? ? ? ? 48 8B 0C 08 48 85 C9 74 ? F7 81 ? ? ? ? 00 01 00 00 74 ? 48 8B 89 ? ? ? ? 48 85 C9 74 ? 8B 81 ? ? ? ? 83 E8 03 83 F8 01");
-        aircraftCameraHook = safetyhook::create_inline(aircraftCamera, AircraftCameraLocked);
+        // The game keeps the camera locked behind planes and helicopters (no free look).
+        // With the option they get the other vehicles' answer: the follow camera with free look.
+        // This check is a small leaf function and its callers keep values in rdx and r9-r11
+        // across the call, so it is redirected in place: a replacement function would change them.
+        aircraftCameraFollow = reinterpret_cast<uintptr_t>(aircraftCamera) + 0x21 + *reinterpret_cast<int8_t*>(aircraftCamera + 0x20);
+        aircraftCameraHook = safetyhook::create_mid(aircraftCamera, [](SafetyHookContext& c)
+        {
+            if (Settings.aircraftFreeCamera)
+            {
+                c.r8 = c.rcx;
+                c.rip = aircraftCameraFollow;
+            }
+        });
         carBetaHook = safetyhook::create_inline(betaCar, ComputeCarBeta);
         const auto add = [](void* address, auto callback)
         {

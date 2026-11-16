@@ -39,7 +39,7 @@
     {
       "id": "MAIN.FPSLimit",
       "type": "int",
-      "default": 60,
+      "default": -1,
       "min": 30,
       "max": 1000,
       "unit": "fps",
@@ -81,6 +81,11 @@
         "cycler",
         "dropdown"
       ],
+      "presets": {
+        "vanilla": 120,
+        "recommended": -1,
+        "enhanced": -1
+      },
       "visibility": "menu"
     },
     {

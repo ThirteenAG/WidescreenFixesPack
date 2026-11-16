@@ -6,6 +6,7 @@ module;
 #include <d3dx9.h>
 #include <atomic>
 #include <stdexcept>
+#include "Shared/SplinterCell/PreferredAdapter.hpp"
 
 export module D3DDrv;
 
@@ -369,6 +370,8 @@ void BeforePresent(SafetyHookContext& regs)
 
 export void InitD3DDrv()
 {
+    SCPreferredAdapter::Init(9);
+
     dword_1120B6BC.SetAddress(*hook::pattern("D9 1D ? ? ? ? 0F BF").count(1).get(0).get<float*>(2));
     dword_1120B6B0.SetAddress(*hook::pattern("8B 0D ? ? ? ? 85 C9 74 ? 8B 54 24 04 8B 82").count(1).get(0).get<uint32_t*>(2));
     auto pattern = hook::pattern("89 6B 58 89 7B 5C EB 0E");

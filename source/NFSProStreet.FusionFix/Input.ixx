@@ -584,6 +584,29 @@ public:
                     bIconStyleOutdated = true;
             };
 
+            // The profile has 0x5000 bytes for its data. The controller settings save the bindings of every
+            // joystick, 1696 bytes each, and Xidi always presents four controllers: that doesn't fit, the profile's
+            // last parts were cut off and the next start crashed while loading it. Three joysticks fit; the load
+            // matches the saved ones by device, and the others keep their defaults.
+            pattern = hook::pattern("8B CB E8 ? ? ? ? 8B F8 6A 00 57 8B CE 89 7C 24 20 E8");
+            static auto SavedJoysticksHook = safetyhook::create_mid(pattern.get_first(7), [](SafetyHookContext& regs)
+            {
+                constexpr uint32_t MaxSavedJoysticks = 3;
+                regs.eax = std::min(regs.eax, MaxSavedJoysticks);
+            });
+
+            // A profile damaged that way had chunk sizes that led the load far past its data: the load stops at
+            // the first chunk that doesn't fit, and the rest keeps its defaults
+            pattern = hook::pattern("80 3D ? ? ? ? 00 74 16 A1 ? ? ? ? 8B 48 54 8B 11 8B 82 C8 00 00 00 FF D0 84 C0 75 70 8B 0F 8B 51 04 52");
+            static auto loadEnd = reinterpret_cast<uintptr_t>(pattern.get_first(0x8F));
+            static auto ChunkBoundsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                // esi = the chunk, ebp = the end of the data (the end the savables read up to)
+                uintptr_t end = regs.ebp;
+                if (regs.esi + 0xC > end || *reinterpret_cast<uint32_t*>(regs.esi + 4) > end - (regs.esi + 0xC))
+                    regs.eip = loadEnd;
+            });
+
             // Button textures and the front end icons
             pattern = hook::pattern("8B 44 24 0C 56 8B 74 24 08 57 8B 7C 24 10 50 57 56 E8");
             LoadChunks = reinterpret_cast<decltype(LoadChunks)>(pattern.get_first());

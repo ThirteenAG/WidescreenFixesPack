@@ -181,15 +181,21 @@ public:
                 }
                 if (nFPSLimit <= 0 && gameMaxFps < 0.0f)
                     return;
+
+                // The levels load on the frames of the load screen, so the fewer frames, the longer the load (a race
+                // loads in about 15 s at 60 frames per second, 8 s without a limit). Load screens get the game's own
+                // value, which has no limit.
+                auto inLoadScreen = fb::Settings::Field<bool>("ClientSettings", "InLoadScreen");
+                bool loading = bUnlockFrameRate && inLoadScreen && *inLoadScreen;
                 if (auto maxFps = fb::Settings::Field<float>("GameTimeSettings", "MaxVariableFps"))
                 {
-                    if (nFPSLimit > 0)
+                    if (nFPSLimit > 0 && !loading)
                     {
                         if (gameMaxFps < 0.0f)
                             gameMaxFps = *maxFps;
                         *maxFps = (float)std::max(nFPSLimit, 30);
                     }
-                    else
+                    else if (gameMaxFps >= 0.0f)
                     {
                         *maxFps = gameMaxFps;
                         gameMaxFps = -1.0f;
@@ -286,21 +292,46 @@ public:
                     if (std::fabs(Length(current + 8) - 1.0f) > 0.01f || std::fabs(Length(previous + 8) - 1.0f) > 0.01f)
                         return;
 
-                    // Once a tick: another camera, or the same one moving or turning much more than in the tick before
+                    // Once a tick: another camera, or the same one moving or turning much more than in the tick before.
+                    // A camera riding a moving car goes a long way every tick, so once its last move is known it is
+                    // compared with where that move would have taken it, against how far off the tick before was.
                     static uintptr_t lastCamera = 0;
                     static float lastCurrent[16] = {}, lastPrevious[16] = {};
-                    static float lastMove = 0.0f, lastTurn = 0.0f;
+                    static float lastMove = 0.0f, lastTurn = 0.0f, lastMiss = 0.0f, lastMissTurn = 0.0f;
+                    static bool bSteady = false;    // neither the last tick nor the one before it was a cut
                     if (memcmp(lastCurrent, current, sizeof(lastCurrent)) != 0 || memcmp(lastPrevious, previous, sizeof(lastPrevious)) != 0)
                     {
+                        float before[16];           // the camera a tick before previous
+                        memcpy(before, lastPrevious, sizeof(before));
+                        bool known = bSteady && memcmp(lastCurrent, previous, sizeof(lastCurrent)) == 0;
                         memcpy(lastCurrent, current, sizeof(lastCurrent));
                         memcpy(lastPrevious, previous, sizeof(lastPrevious));
                         float dx = current[12] - previous[12], dy = current[13] - previous[13], dz = current[14] - previous[14];
                         float move = std::sqrt(dx * dx + dy * dy + dz * dz);
                         float turn = std::acos(std::clamp(current[8] * previous[8] + current[9] * previous[9] + current[10] * previous[10], -1.0f, 1.0f));
+                        float miss = 0.0f, missTurn = 0.0f;     // how far the camera is from where its last move would take it
+                        if (known)
+                        {
+                            float expected[3];
+                            for (int i = 0; i < 3; ++i)
+                            {
+                                float d = current[12 + i] - (2.0f * previous[12 + i] - before[12 + i]);
+                                miss += d * d;
+                                expected[i] = 2.0f * previous[8 + i] - before[8 + i];
+                            }
+                            miss = std::sqrt(miss);
+                            float length = std::sqrt(expected[0] * expected[0] + expected[1] * expected[1] + expected[2] * expected[2]);
+                            missTurn = length > 0.0f ? std::acos(std::clamp((current[8] * expected[0] + current[9] * expected[1] + current[10] * expected[2]) / length, -1.0f, 1.0f)) : turn;
+                        }
                         state.bTickFrame = true;
                         bool switched = camera != lastCamera;
-                        bool jump = move > std::max(0.15f, lastMove * 4.0f) || turn > std::max(0.07f, lastTurn * 4.0f);  // 4 degrees
-                        if (switched || state.bAhead)
+                        bool jump = known ? miss > std::max(0.25f, lastMiss * 4.0f) || missTurn > std::max(0.07f, lastMissTurn * 4.0f)
+                                          : move > std::max(0.15f, lastMove * 4.0f) || turn > std::max(0.07f, lastTurn * 4.0f);  // 4 degrees
+                        bool cut = switched || state.bAhead;
+                        lastMiss = known && !jump ? miss : 0.0f;
+                        lastMissTurn = known && !jump ? missTurn : 0.0f;
+                        bSteady = !cut && !jump;
+                        if (cut)
                         {
                             state.bAhead = false;
                             state.bCut = true;

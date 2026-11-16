@@ -21,6 +21,8 @@ export namespace REFrameRate
     int64_t statisticsStart = 0;
     uint32_t statisticsFrames = 0;
     float actualFPS = 0.0f;
+    std::atomic<bool> variable{ false };
+    bool updatedRelease = false;
     int MonitorRate()
     {
         const auto monitor = MonitorFromWindow(Window, MONITOR_DEFAULTTOPRIMARY);
@@ -93,8 +95,14 @@ export namespace REFrameRate
         }();
         if (!initialized) return;
         Window = window;
-        const int requested = FixSettings().Int("MAIN.FPSLimit");
-        Pace(requested == -1 || requested == 0 ? requested : std::clamp(requested, 30, 1000));
+        // The clock sets the flag again on every update while Variable mode runs
+        if (variable.exchange(false, std::memory_order_relaxed))
+        {
+            const int requested = FixSettings().Int("MAIN.FPSLimit");
+            Pace(requested == -1 || requested == 0 ? requested : std::clamp(requested, 30, 1000));
+        }
+        else
+            deadline = 0.0;
         const auto now = Counter();
         ++statisticsFrames;
         if (!statisticsStart) { statisticsStart = now; statisticsFrames = 0; }
@@ -108,11 +116,17 @@ export namespace REFrameRate
     {
         auto current = hook::pattern("F3 0F 10 4D 38 F3 0F 5E 4D 3C F2 0F 59 44 24 ? 0F 28 D1");
         auto original = hook::pattern("F3 0F 10 4B 38 F3 0F 5E 4B 3C 66 0F 5A C0 F3 0F 11 4C 24 ? F3 0F 5C C8");
-        auto* site = current.size() == 1 ? current.get_first(10) : original.get_first(10);
+        updatedRelease = current.size() == 1;
+        auto* site = updatedRelease ? current.get_first(10) : original.get_first(10);
         variableClock = safetyhook::create_mid(site, [](SafetyHookContext& regs)
         {
-            // Only Variable mode reaches this threshold. Preserve elapsed time, time scale and fixed 30/60 clocks.
-            regs.xmm1.f32[0] = 0.0f;
+            // Only Variable mode reaches this threshold; its target is 120. Movies keep this mode but set their own
+            // 30 fps target, so they stay native. Preserve elapsed time, time scale and fixed 30/60 clocks.
+            const auto clock = updatedRelease ? regs.ebp : regs.ebx;
+            const bool unlocked = *reinterpret_cast<const float*>(clock + 0x3C) == 120.0f;
+            variable.store(unlocked, std::memory_order_relaxed);
+            if (unlocked)
+                regs.xmm1.f32[0] = 0.0f;
         });
     }
 

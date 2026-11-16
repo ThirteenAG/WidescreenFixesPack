@@ -151,10 +151,16 @@ public:
             auto clock = hook::pattern("F3 0F 10 4B 38 F3 0F 5E 4B 3C 66 0F 5A C0 F3 0F 11 4C 24 ? F3 0F 5C C8");
             FrameRateHook = safetyhook::create_mid(clock.get_first(10), [](SafetyHookContext& regs)
             {
+                // The game's Frame Rate option sets the clock's target to 30, 60 or 120 (Variable). Movies and the
+                // benchmark set their own target while they run. Only Variable follows the limit, the rest keep
+                // their native timing.
+                const auto target = *reinterpret_cast<const float*>(regs.ebx + 0x3C);
+                if (target != 120.0f)
+                    return;
                 const auto requested = fpsLimit.load(std::memory_order_relaxed);
                 const auto limit = requested == -1 ? MonitorRefreshRate() : requested == 0 ? 0 : std::clamp(requested, 30, 1000);
                 const auto rate = *reinterpret_cast<const float*>(regs.ebx + 0x38);
-                // Change only the variable clock's wait threshold; elapsed time, carry and fixed clocks stay native.
+                // Change only the variable clock's wait threshold; elapsed time and carry stay native.
                 if (std::isfinite(rate) && rate > 0.0f)
                     regs.xmm1.f32[0] = limit == 0 ? 0.0f : rate / limit;
             });
@@ -257,6 +263,24 @@ public:
                         *reinterpret_cast<float*>(regs.edi + 0x2C) = -1.0f;
                     }
                 }; injector::MakeInline<DoorkSkipHook>(pattern.get_first(0));
+
+                // The door scene fades in from black, then fades out again (from transparent, every frame until the
+                // next room is loaded). Both would show the skipped door for a moment, so the screen stays black:
+                // no fade-in, and the fade-out starts from the current, already black colour.
+                static auto FadeFromCurrent = injector::GetBranchDestination(hook::get_pattern("C7 04 24 00 00 00 3F E8 ? ? ? ? 51 8B 0D ? ? ? ? C7 04 24 00 00 00 3F E8 ? ? ? ? 8B CF E8", 7)).as_int();
+                struct DoorFade
+                {
+                    static void __fastcall In(void* fade, void* edx, float time)
+                    {
+                    }
+
+                    static void __fastcall Out(void* fade, void* edx, const uint32_t* color, float time)
+                    {
+                        injector::thiscall<void(void*, float)>::call(FadeFromCurrent, fade, time);
+                    }
+                };
+                injector::MakeCALL(hook::get_pattern("51 8B 48 20 C7 04 24 00 00 00 3F E8 ? ? ? ? C7 47 48 04 00 00 00", 11), DoorFade::In, true);
+                injector::MakeCALL(hook::get_pattern("C7 04 24 9A 99 99 3E 51 8B 48 20 E8", 11), DoorFade::Out, true);
             }
 
             {

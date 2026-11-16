@@ -33,7 +33,7 @@
   "MAIN.SMIMapDisableStartupAnimation": "Salta animazione iniziale SMI",
   "MAIN.SMIMapDisableStartupAnimation.description": "Salta l'animazione iniziale della mappa SMI.",
   "MAIN.FPSLimit": "Limite fotogrammi",
-  "MAIN.FPSLimit.description": "Modifica subito il limite: 0 per illimitato, -1 per la frequenza del monitor o 30–1000 FPS. Disattiva la sincronizzazione verticale del gioco per superare tale frequenza. Alcuni personaggi possono apparire sdoppiati oltre 100 FPS.",
+  "MAIN.FPSLimit.description": "Modifica subito il limite: 0 per illimitato, -1 per la frequenza del monitor o 30–1000 FPS. Disattiva la sincronizzazione verticale del gioco per superare tale frequenza.",
   "UNLOCKS.UnlockDLC": "Sblocca DLC",
   "UNLOCKS.UnlockDLC.description": "Sblocca i DLC non più ottenibili dopo la chiusura dei server.",
   "UNLOCKS.UnlockAllNonCampaignMissions": "Sblocca tutte le missioni secondarie",
