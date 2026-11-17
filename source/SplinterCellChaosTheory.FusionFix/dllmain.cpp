@@ -296,6 +296,11 @@ DWORD FindProcessId(const std::wstring& processName)
 
 void InitGameOverlayRenderer()
 {
+    // Steam injects its overlay renderer but never starts the overlay for this game. Started by the fix,
+    // the overlay costs frame rate on some PCs (streaming from another graphics card), so it is opt-in
+    if (!FixSettings().Bool("MAIN.SteamOverlay"))
+        return;
+
     auto steamPid = FindProcessId(L"steam.exe");
     if (steamPid)
     {

@@ -187,6 +187,61 @@ export namespace fb
     }
 }
 
+// The game updates on its main thread and presents on its render thread. With VSync or a frame limit outside the game
+// (the driver's), the render thread waits in Present while the main thread already reads the clock for one or two
+// frames ahead, at uneven times, so the frames' places between the physics ticks come out uneven and moving things
+// judder. The main thread starts a frame only when the render thread has presented the frame before the last one.
+export namespace FramePacing
+{
+    bool bEnabled = false;
+    std::atomic<uint32_t> nPresented{ 0 };
+    HANDLE hPresented = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+
+    void Presented()
+    {
+        ++nPresented;
+        SetEvent(hPresented);
+    }
+
+    void BeforeFrame()
+    {
+        static uint32_t frame = 0;
+        if (!bEnabled)
+            return;
+        ++frame;
+        while (nPresented.load() + 1 < frame)
+        {
+            if (WaitForSingleObject(hPresented, 100) == WAIT_TIMEOUT)
+                break;
+        }
+        // Frames that never reach Present don't hold up the ones after them
+        frame = std::min(frame, nPresented.load() + 1);
+    }
+}
+
+// The levels load between the frames of the load screen, and every frame waits in Present for VSync or a driver's
+// frame limit. On load screens only one frame per 1/60 s is shown; the others are tested instead of presented, don't
+// wait, and the loading goes on.
+export namespace LoadScreen
+{
+    bool bEnabled = false;
+
+    bool SkipPresent()
+    {
+        static LARGE_INTEGER frequency = []() { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
+        static LONGLONG lastShown = 0;
+        auto inLoadScreen = fb::Settings::Field<bool>("ClientSettings", "InLoadScreen");
+        if (!bEnabled || !inLoadScreen || !*inLoadScreen)
+            return false;
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        if (now.QuadPart - lastShown < frequency.QuadPart / 60)
+            return true;
+        lastShown = now.QuadPart;
+        return false;
+    }
+}
+
 export std::pair<int, int> GetRes()
 {
     // The profile options don't exist yet when the game creates its window

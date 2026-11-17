@@ -138,7 +138,7 @@
   "MAIN.SaveLocation.documents": "Dokumente",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
   "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
-  "startup.unsupported": "Diese Version von Splinter Cell wird nicht unterstützt. Der Fusion Fix braucht Version 1.3 (Steam, GOG, Ubisoft Connect oder eine Ladenversion mit dem Patch 1.3). Das Spiel startet ohne den Fix.",
+  "startup.unsupported": "Diese Version von Splinter Cell wird nicht unterstützt. Der Fusion Fix braucht Version 1.3 (Steam, Ubisoft Connect oder eine Ladenversion mit dem Patch 1.3). Das Spiel startet ohne den Fix.",
   "MAIN.FMVWidescreenMode": "Video-Seitenverhältnis",
   "MAIN.FMVWidescreenMode.description": "Original zeigt das ganze Video innerhalb eines 4:3-Bereichs. Füllen passt das ganze Video an den Bildschirm an. Keiner der Modi schneidet oder streckt das Bild.",
   "ui.original": "Original",

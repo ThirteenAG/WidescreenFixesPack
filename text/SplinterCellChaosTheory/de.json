@@ -28,6 +28,8 @@
   "WindowMode.2": "Randlos",
   "FullScreenRefreshRateInHz": "Vollbild-Bildwiederholrate",
   "FullScreenRefreshRateInHz.description": "Nutzt die höchste Vollbild-Bildwiederholrate bis zu diesem Wert für die Auflösung. 0 nutzt den Adapterstandard.",
+  "MAIN.SteamOverlay": "Steam-Overlay",
+  "MAIN.SteamOverlay.description": "Startet das Steam-Overlay, wenn das Spiel über Steam läuft, was Steam bei diesem Spiel nicht von selbst tut. Auf manchen PCs, etwa beim Streamen über eine zweite Grafikkarte, senkt das Overlay die Bildrate. Wirkt nach einem Neustart.",
   "ShadowMapResolution": "Schattenkarten-Auflösung",
   "ShadowMapResolution.description": "Schattenkartengröße in Pixeln, zum Beispiel 2048, 4096 oder 8192. 0 behält die Größe der Spieloption Schattenqualität (512, 1024 oder 2048); größere Karten ergeben schärfere Schattenkanten und belegen mehr Grafikspeicher.",
   "HardShadows": "Harte Schatten",

@@ -166,31 +166,33 @@ private:
         bool executed;
     };
 
-    static inline auto& GetOnModuleLoadCallbackList()
+    using ModuleCallbackMap = std::map<std::wstring, std::function<void()>, Comparator>;
+
+    static inline ModuleCallbackMap& GetOnModuleLoadCallbackList()
     {
-        static std::map<std::wstring, std::function<void()>, Comparator> onModuleLoad;
+        static ModuleCallbackMap onModuleLoad;
         return onModuleLoad;
     }
 
-    static inline auto& GetOnModuleUnloadCallbackList()
+    static inline ModuleCallbackMap& GetOnModuleUnloadCallbackList()
     {
-        static std::map<std::wstring, std::function<void()>, Comparator> onModuleUnload;
+        static ModuleCallbackMap onModuleUnload;
         return onModuleUnload;
     }
 
-    static inline auto& GetOnAnyModuleLoadCallbackList()
+    static inline std::vector<std::function<void(HMODULE)>>& GetOnAnyModuleLoadCallbackList()
     {
         static std::vector<std::function<void(HMODULE)>> onAnyModuleLoad;
         return onAnyModuleLoad;
     }
 
-    static inline auto& GetOnAnyModuleUnloadCallbackList()
+    static inline std::vector<std::function<void(std::wstring_view)>>& GetOnAnyModuleUnloadCallbackList()
     {
         static std::vector<std::function<void(std::wstring_view)>> onAnyModuleUnload;
         return onAnyModuleUnload;
     }
 
-    static inline auto& GetCallbackParamsList()
+    static inline std::vector<ThreadParams>& GetCallbackParamsList()
     {
         static std::vector<ThreadParams> callbackParams;
         return callbackParams;

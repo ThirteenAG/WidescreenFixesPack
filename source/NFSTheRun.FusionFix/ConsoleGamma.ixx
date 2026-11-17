@@ -323,6 +323,13 @@ public:
             auto pattern = hook::pattern("57 ? ? 52 51 50 8B 47");
             static auto DX11PresentHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
+                // Present(swap chain = eax, sync interval = ecx, flags = edx)
+                if (LoadScreen::SkipPresent())
+                {
+                    regs.ecx = 0;
+                    regs.edx = DXGI_PRESENT_TEST;
+                    return;
+                }
                 bConsoleGammaEnabled = FixSettings().Bool("GRAPHICS.ConsoleGamma");
                 IDXGISwapChain* pSwapChain = (IDXGISwapChain*)regs.eax;
                 ConsoleGammaDX11::Render(pSwapChain);

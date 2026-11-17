@@ -12,7 +12,7 @@
 
 ## Settings
 
-Open **Options → Plugins → Gun Fusion Fix** for the fix's settings and presets, on the retail and GOG editions. **Display** also contains **Window Mode** and **Field of View** alongside the game's options. `scripts/Gun.FusionFix.cfg` is created on first start; fusionfix.io and FusionFixHub change the same settings.
+Open **Options → Plugins → Gun Fusion Fix** for the fix's settings and presets, on the retail and digital editions. **Display** also contains **Window Mode** and **Field of View** alongside the game's options. `scripts/Gun.FusionFix.cfg` is created on first start; fusionfix.io and FusionFixHub change the same settings.
 
 Use **More Pages** and **Previous Pages** to move through settings. **Details** describes the last selected setting; **Back** returns to its page. Presets and Restore Defaults apply only to the selected plugin. Display settings keep their values when that plugin page is reset. A restart notice appears when a changed option needs the game to restart.
 

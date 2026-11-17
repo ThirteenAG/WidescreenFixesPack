@@ -232,7 +232,7 @@ namespace GameAllocator
 // where the file is closed, often the "bf:" device's own I/O thread finishing a request. When both change
 // the lists at once an entry gets lost or ends up in both lists; lost entries add up until the pool is
 // empty, and then the next open either fails, which leaves a loading screen waiting for its file forever,
-// or writes through the NULL it got (#2330). It happens on one core too, only less often, as the threads
+// or writes through the NULL it got. It happens on one core too, only less often, as the threads
 // can still switch inside these functions. Open and Close run under one lock now; both only search and
 // relink entries in memory. Mount and Unmount (the archive list) stay as they are: they read and close
 // the archive through other I/O threads and wait for them, and they only run on the main thread.
@@ -255,6 +255,37 @@ namespace ArchiveFiles
         EnterCriticalSection(&Lock);
         auto result = shClose.unsafe_thiscall<void*>(device, file);
         LeaveCriticalSection(&Lock);
+        return result;
+    }
+}
+
+// RealCore's disk device opens game files for reading with FILE_SHARE_READ only, so an open fails while
+// another process (a virus scanner, the search indexer, a backup or sync tool) has the file open with
+// write or delete access. The game never expects a file it shipped to fail: bFile's open returns no file,
+// and the streaming pack loader then drops the request without calling back. The car loader sets its busy
+// flag before it asks for a car's texture pack header and only clears it in that callback, so it waits
+// forever, and with it the loading screen (career start, garage, races, saving, whichever load is
+// running). Read opens share read, write and delete now, and a read open that fails because the file is
+// busy is tried again for up to two seconds. Missing files still fail at once.
+namespace DiskFiles
+{
+    SafetyHookInline shOpen = {};
+    HANDLE __fastcall Open(void* device, void* edx, const char* path, int flags, int unused)
+    {
+        auto result = shOpen.unsafe_thiscall<HANDLE>(device, path, flags, unused);
+        if (result != INVALID_HANDLE_VALUE || !(flags & 1))
+            return result;
+
+        for (int attempt = 0; attempt < 200; ++attempt)
+        {
+            auto error = GetLastError();
+            if (error != ERROR_SHARING_VIOLATION && error != ERROR_LOCK_VIOLATION && error != ERROR_ACCESS_DENIED)
+                break;
+            Sleep(10);
+            result = shOpen.unsafe_thiscall<HANDLE>(device, path, flags, unused);
+            if (result != INVALID_HANDLE_VALUE)
+                break;
+        }
         return result;
     }
 }
@@ -439,6 +470,11 @@ public:
             auto bfClose = hook::pattern("55 8B EC 56 8B 75 08 57 8B F9 C1 E6 05 03 77 1C 6A 00 56 8D 4F 48 E8");
             ArchiveFiles::shOpen = safetyhook::create_inline(bfOpen.get_first(), ArchiveFiles::Open);
             ArchiveFiles::shClose = safetyhook::create_inline(bfClose.get_first(), ArchiveFiles::Close);
+
+            // Opening game files on disk, see DiskFiles
+            pattern = hook::pattern("55 8B EC 81 EC 14 01 00 00 8B 45 0C 83 65 F8 00 A8 01 C7 45 F4 00 00 00 80 C7 45 FC 80 00 00 00 74 09 C7 45 F8 01 00 00 00");
+            injector::WriteMemory<uint32_t>(pattern.get_first(0x25), FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, true);
+            DiskFiles::shOpen = safetyhook::create_inline(pattern.get_first(), DiskFiles::Open);
 
             // Movie subtitles, see Subtitles
             Subtitles::Setting = &FixSettings().Int("MAIN.Subtitles");

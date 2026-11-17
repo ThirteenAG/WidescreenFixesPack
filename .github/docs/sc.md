@@ -51,7 +51,7 @@ Recommended uses the default setup. Vanilla and Enhanced offer alternative prese
 
 ## Installation
 
-Use version 1.3, available as the retail patch and in the Steam, GOG and Ubisoft Connect releases. Version 1.0 is unsupported. Some Russian-language releases use a different engine build that is not currently supported. The native Direct3D 8 renderer is retained for buffered shadows; the Direct3D 9/11 developer overlay does not apply.
+Use version 1.3, available as the retail patch and in the current digital releases. Version 1.0 is unsupported. Some Russian-language releases use a different engine build that is not currently supported. The native Direct3D 8 renderer is retained for buffered shadows; the Direct3D 9/11 developer overlay does not apply.
 
 1. Download `SplinterCell.FusionFix.zip` from this release.
 2. Extract the contents directly into the game folder - preserving the `system` folder beside the installed game files.

@@ -82,6 +82,20 @@ public:
                 pattern = hook::pattern("D8 3D ? ? ? ? D9 E0 D9 5E 54 D9 44 24 20");
                 injector::WriteMemory(pattern.get_first(2), &flt3, true);
             }
+
+            // Brake calipers in the front end. CarRenderInfo::Render draws the brakes with their A model in the
+            // front end and the B model in races. The PC A calipers sit 2-3 cm further out, inside the back of
+            // the rims, so the garage and showroom showed them barely or not at all. The front end uses the
+            // race model everywhere: setz cl -> mov cl, 1, and the check that a brake model exists looks at the
+            // B model too.
+            {
+                auto pattern = hook::pattern("0F 94 C1 8D 0C 49 8D BC C8 6C 14 00 00");
+                injector::WriteMemory<uint16_t>(pattern.get_first(0), 0x01B1, true);
+                injector::WriteMemory<uint8_t>(pattern.get_first(2), 0x90, true);
+
+                pattern = hook::pattern("39 B8 78 14 00 00 0F 84");
+                injector::WriteMemory<uint32_t>(pattern.get_first(2), 0x1490, true);
+            }
         };
     }
 } Rendering;

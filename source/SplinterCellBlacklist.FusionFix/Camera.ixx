@@ -50,6 +50,8 @@ namespace
         return std::isfinite(*Factor) ? std::clamp(*Factor, 0.5f, 2.0f) : 1.0f;
     }
 
+    // Only the views drawn to the window: the first one and the split screen view (engine +25Ch). The client also lists render
+    // target views with the player's controller, like the 1024x1024 character of the gear screens, their angle is made for them.
     uintptr_t Viewport(uintptr_t controller, uintptr_t wanted = 0, uintptr_t cameraActor = 0)
     {
         const auto engine = GetEngine ? GetEngine() : 0;
@@ -58,10 +60,11 @@ namespace
         const auto views = client ? *reinterpret_cast<const uintptr_t* const*>(client + 0x2C) : nullptr;
         if ((!controller && !cameraActor) || !views || count <= 0 || count > int(Contexts.size()))
             return 0;
+        const auto split = *reinterpret_cast<const uintptr_t*>(engine + 0x25C);
         for (int32_t i = 0; i < count; ++i)
         {
             const auto viewport = views[i];
-            if (!viewport || (wanted && wanted != viewport))
+            if (!viewport || (wanted && wanted != viewport) || (i != 0 && viewport != split))
                 continue;
             const auto actor = *reinterpret_cast<const uintptr_t*>(viewport + 0x30);
             if (cameraActor)

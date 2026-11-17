@@ -32,6 +32,7 @@ namespace fb
 
             CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
             CursorConfinement::Frame(hWnd.get());
+            FramePacing::BeforeFrame();
             WFP::onGameProcessEvent().executeAll();
 
             shinternalUpdate.unsafe_fastcall(Main, edx, lowLatencyUpdate);

@@ -28,6 +28,8 @@
   "WindowMode.2": "Sin bordes",
   "FullScreenRefreshRateInHz": "Frecuencia de pantalla completa",
   "FullScreenRefreshRateInHz.description": "Usa la mayor frecuencia de pantalla completa hasta este valor para la resolución elegida. 0 usa la del adaptador.",
+  "MAIN.SteamOverlay": "Overlay de Steam",
+  "MAIN.SteamOverlay.description": "Inicia el overlay de Steam cuando el juego se ejecuta desde Steam, algo que Steam no hace por sí solo con este juego. En algunos PC, por ejemplo al transmitir desde una segunda tarjeta gráfica, el overlay reduce la tasa de fotogramas. Se aplica tras reiniciar.",
   "ShadowMapResolution": "Resolución de mapas de sombras",
   "ShadowMapResolution.description": "Tamaño del mapa de sombras en píxeles, por ejemplo 2048, 4096 u 8192. 0 conserva el tamaño de la opción Calidad de sombras del juego (512, 1024 o 2048); los mapas mayores dan bordes de sombra más nítidos y usan más memoria de vídeo.",
   "HardShadows": "Sombras duras",

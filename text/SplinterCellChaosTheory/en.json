@@ -28,6 +28,8 @@
   "WindowMode.2": "Borderless",
   "FullScreenRefreshRateInHz": "Fullscreen Refresh Rate",
   "FullScreenRefreshRateInHz.description": "The fullscreen refresh rate: the highest one of the resolution up to this value. 0 uses the adapter's default rate.",
+  "MAIN.SteamOverlay": "Steam Overlay",
+  "MAIN.SteamOverlay.description": "Starts the Steam overlay when the game runs from Steam, which Steam does not do for this game by itself. On some PCs, for example while streaming from a second graphics card, the overlay lowers the frame rate. Applies after a restart.",
   "ShadowMapResolution": "Shadow Map Resolution",
   "ShadowMapResolution.description": "Shadow map size in pixels, for example 2048, 4096 or 8192. 0 keeps the size of the game's Shadow Quality option (512, 1024 or 2048); larger maps give sharper shadow edges and use more GPU memory.",
   "HardShadows": "Hard Shadows",

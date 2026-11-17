@@ -266,16 +266,27 @@ public:
 
         WFP::onInitEvent() += []()
         {
-            // default res
+            // Default video mode: the desktop resolution in 32-bit colour. A 16-bit mode makes Windows add its
+            // 8/16-bit colour compatibility layer to the game from then on
             auto [x, y] = GetDesktopRes();
             auto pattern = hook::pattern("81 3C ? ? ? ? ? 75 ? 81 7C 24 ? ? ? ? ? 75 ? 83 7C 24 ? ? 75 ? 8B 44 24 ? 83 E0 ? 75");
             injector::WriteMemory<int32_t>(pattern.get_first(3), x, true);
             injector::WriteMemory<int32_t>(pattern.get_first(13), y, true);
-            injector::MakeNOP(pattern.get_first(24), 2, true);
+            injector::WriteMemory<uint8_t>(pattern.get_first(23), 32, true);
 
-            // Every video mode of 640x480 or more in the resolution list, whatever the video memory the game finds
+            // Every 32-bit video mode of 640x480 or more in the resolution list, whatever the video memory the game finds.
+            // A saved 16-bit mode is no longer in the list, so the game starts in the default mode instead
             pattern = hook::pattern("29 C1 81 F9 00 00 C0 00 76");
             injector::MakeNOP(pattern.get_first(8), 2, true);
+
+            pattern = hook::pattern("8D 04 24 53 50 E8 ? ? ? ? 8B 44 24 14 59 83 E0 01");
+            static auto VideoModeListHook = safetyhook::create_mid(pattern.get_first(10), [](SafetyHookContext& regs)
+            {
+                auto depth = *reinterpret_cast<int32_t*>(regs.esp + 0x10);
+                auto& flags = *reinterpret_cast<uint32_t*>(regs.esp + 0x14);
+                if (depth != 32)
+                    flags &= ~1u;
+            });
 
             // Skip Intro: start with the loading screen and the main menu, without the logo videos. Each video
             // initializes COM and the state after it releases it, so the release that follows the last one is paired here

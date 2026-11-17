@@ -6,7 +6,7 @@
 
 
 
-**Cold Fear Fusion Fix** corrects resolution handling, HUD scaling, field of view and video scaling for widescreen displays, for the retail and the GOG version.
+**Cold Fear Fusion Fix** corrects resolution handling, HUD scaling, field of view and video scaling for widescreen displays, for the retail and the digital version.
 
 
 
@@ -26,7 +26,7 @@
 
 
 
-- **Resolution** — The game's own Screen Configuration offers every resolution of the display instead of its five (retail 640x480 to 1600x1200, GOG 1280x720 to 3840x2160). The choice is kept in the game's `res.bin` and applies after a restart, as in the game; without the fix the game falls back to its default resolution.
+- **Resolution** — The game's own Screen Configuration offers every resolution of the display instead of its five (retail 640x480 to 1600x1200, digital 1280x720 to 3840x2160). The choice is kept in the game's `res.bin` and applies after a restart, as in the game; without the fix the game falls back to its default resolution.
 
 - **HUD** — Correct HUD scaling for widescreen, with the health bars and the weapon display at the screen edges.
 
@@ -34,9 +34,9 @@
 
 - **Videos** — Correct FMV scaling for widescreen.
 
-- **GOG version** — Works with GOG's version, whose own widescreen patch (a fixed 16:9 field of view and a stretched HUD canvas) the fix replaces.
+- **Digital version** — Works with the digital version, whose own widescreen patch (a fixed 16:9 field of view and a stretched HUD canvas) the fix replaces.
 
-- **Stability (retail version)** — The fixes of GOG's version for the retail game: Alt+Tab without pausing and resetting the game, the cursor kept in the game window, the window shown at once, frame rates above 120 fps on high refresh rate displays, an invalid blend state modern drivers reject, two crashes on missing objects, an uninitialized constructor, wrong members used in a few places, shadows of objects outside the view, the window's messages handled while videos play, and the brightness and contrast bars of the Screen Configuration showing their values.
+- **Stability (retail version)** — Alt+Tab without pausing and resetting the game, the cursor kept in the game window, the window shown at once, frame rates above 120 fps on high refresh rate displays, an invalid blend state modern drivers reject, two crashes on missing objects, an uninitialized constructor, wrong members used in a few places, shadows of objects outside the view, the window's messages handled while videos play, and the brightness and contrast bars of the Screen Configuration showing their values.
 
 
 
@@ -78,7 +78,7 @@
 
 
 
-**Skip Press Start** goes straight from the title prompt to the main menu; the language and difficulty choices stay. Fast mouse movements are no longer lost. Controllers: the retail version uses updated default control mappings and reads Xbox-compatible controllers through the included Xidi; bind the buttons in the game's Controls page. The GOG version keeps its own controller support.
+**Skip Press Start** goes straight from the title prompt to the main menu; the language and difficulty choices stay. Fast mouse movements are no longer lost. Controllers: the retail version uses updated default control mappings and reads Xbox-compatible controllers through the included Xidi; bind the buttons in the game's Controls page. The digital version keeps its own controller support.
 
 
 
@@ -114,7 +114,7 @@
 
 > [!NOTE]
 
-> The archive's ASI loader is `winmm.dll`, for both versions: GOG's version ships its own `dinput8.dll` (GOG's controller support), which must stay. Earlier versions of this fix installed the loader as `dinput8.dll`: on the retail version, delete that `dinput8.dll` when updating. Don't copy a `dinput8.dll` into the GOG version.
+> The archive's ASI loader is `winmm.dll`, for both versions: the digital version ships its own `dinput8.dll` (its controller support), which must stay. Earlier versions of this fix installed the loader as `dinput8.dll`: on the retail version, delete that `dinput8.dll` when updating. Don't copy a `dinput8.dll` into the digital version.
 
 
 

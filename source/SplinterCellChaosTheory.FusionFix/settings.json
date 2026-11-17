@@ -228,6 +228,16 @@
       "max": 1000
     },
     {
+      "id": "MAIN.SteamOverlay",
+      "type": "bool",
+      "default": false,
+      "label": "@MAIN.SteamOverlay",
+      "description": "@MAIN.SteamOverlay.description",
+      "page": "compatibility",
+      "apply": "restart",
+      "visibility": "editor"
+    },
+    {
       "id": "GRAPHICS.ShadowMapResolution",
       "type": "int",
       "default": 0,

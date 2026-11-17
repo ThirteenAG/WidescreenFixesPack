@@ -162,6 +162,17 @@ public:
         {
             static bool bUnlockFrameRate = FixSettings().Int("FRAMERATE.UnlockFrameRate") != 0;
             static bool bUnlockCutscenes = FixSettings().Int("FRAMERATE.UnlockCutscenes") != 0;
+            LoadScreen::bEnabled = bUnlockFrameRate;
+            FramePacing::bEnabled = bUnlockFrameRate;
+            if (bUnlockFrameRate)
+            {
+                // Right after the render thread's call to Present
+                auto present = hook::pattern("57 ? ? 52 51 50 8B 47");
+                static auto PresentedHook = safetyhook::create_mid(present.get_first(0xB), [](SafetyHookContext& regs)
+                {
+                    FramePacing::Presented();
+                });
+            }
 
             // The frame rate limit; 0 gives the game its own value back
             WFP::onGameProcessEvent() += []()
