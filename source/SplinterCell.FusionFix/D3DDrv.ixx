@@ -519,6 +519,17 @@ namespace FD3DRenderInterface
     }
 }
 
+// Flush (every level and save load) frees all vertex shaders, and new ones can take a freed light shader's address
+namespace UD3DRenderDevice
+{
+    SafetyHookInline shFlush = {};
+    void __fastcall Flush(void* self, void* edx, void* viewport)
+    {
+        FD3DRenderInterface::ProjectedStages.clear();
+        shFlush.unsafe_fastcall(self, edx, viewport);
+    }
+}
+
 export void InitD3DDrv()
 {
     SCPreferredAdapter::Init(8);
@@ -699,6 +710,7 @@ export void InitD3DDrv()
     // Light passes: projected light and shadow buffer stages (see FD3DRenderInterface above)
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "83 EC 38 53 55 56 57 8B F1 6A 00 6A 00 6A 00 8B 06 6A 00 FF 50 3C 8B 5C 24 4C 8B 43 4C");
     FD3DRenderInterface::shSetupLightPass = safetyhook::create_inline(pattern.get_first(), FD3DRenderInterface::SetupLightPass);
+    UD3DRenderDevice::shFlush = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?Flush@UD3DRenderDevice@@UAEXPAVUViewport@@@Z"), UD3DRenderDevice::Flush);
 
     // State upload, vertex shader path: texture transform flags of every stage are set to 0 here
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "6A 00 6A 18 53 8B 82 84 46 00 00 50 8B 08 FF 91 FC 00 00 00");
