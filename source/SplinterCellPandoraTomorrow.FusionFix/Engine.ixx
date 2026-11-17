@@ -169,6 +169,8 @@ namespace UEngine
     SafetyHookInline shInputEvent = {};
     int __fastcall InputEvent(void* _this, void* edx, int a2, int inputID, int a4, int value)
     {
+        // The current release's UpdateInput passes pad and DirectInput events here without CauseInputEvent
+        Gamepad::OnInput(inputID, a4, std::bit_cast<float>(value));
         if (inputID == 202) // A on gamepad
         {
             auto EchelonMainHUDState = UObject::GetState(L"EchelonMainHUD");

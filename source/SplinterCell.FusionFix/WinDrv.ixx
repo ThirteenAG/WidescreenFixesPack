@@ -65,7 +65,6 @@ namespace UWindowsViewport
             {
                 if (hGameWindow != GetForegroundWindow())
                     return 0;
-                Gamepad::OnKeyboardMouse();
 
                 if (menuMouse)
                 {

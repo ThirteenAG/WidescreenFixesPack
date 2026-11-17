@@ -286,24 +286,34 @@ export namespace Gamepad
     void OnInput(int key, int action, float value)
     {
         constexpr int IST_Press = 1, IST_Axis = 4;
-        const bool padButton = key >= 0xC8 && key <= 0xD7;
+        // AnalogUp/Down/Left/Right (0xC4-0xC7) are the left stick as keys (UseAnalogAsPad), Joy1-16 follow
+        const bool padButton = key >= 0xC4 && key <= 0xD7;
         const bool padAxis = (key >= 0xE0 && key <= 0xE3) || key == 0xE8 || key == 0xE9;
         if (padButton && action == IST_Press)
             PadIsLastDevice = true;
         else if (padAxis && action == IST_Axis && std::abs(value) > 0.5f)
             PadIsLastDevice = true;
-        else if (key > 0 && key < 0xC8 && key != VK_LWIN && key != VK_RWIN && action == IST_Press)
+        else if (key > 0 && key < 0xC4 && key != VK_LWIN && key != VK_RWIN && action == IST_Press)
             PadIsLastDevice = false;
         else if ((key == 0xEC || key == 0xED) && action == IST_Press)
             PadIsLastDevice = false;
-        else if ((key == 0xE4 || key == 0xE5) && action == IST_Axis && std::abs(value) > 1.0f)
-            PadIsLastDevice = false;
-    }
-
-    // Keyboard or mouse messages of the game's window
-    void OnKeyboardMouse()
-    {
-        PadIsLastDevice = false;
+        else if ((key == 0xE4 || key == 0xE5) && action == IST_Axis && value != 0.0f)
+        {
+            // Only a deliberate move counts, a resting mouse can still report a few counts
+            constexpr uint64_t window = 250;
+            constexpr float travel = 16.0f;
+            static uint64_t windowStart = 0;
+            static float moved = 0.0f;
+            const auto now = GetTickCount64();
+            if (now - windowStart > window)
+            {
+                windowStart = now;
+                moved = 0.0f;
+            }
+            moved += std::abs(value);
+            if (moved > travel)
+                PadIsLastDevice = false;
+        }
     }
 
     bool IsPadLastDevice()

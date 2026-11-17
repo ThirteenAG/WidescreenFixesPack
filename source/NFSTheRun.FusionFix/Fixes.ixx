@@ -77,6 +77,14 @@ public:
             pattern = hook::pattern("8B F8 85 FF 74 13 8B 4D 18 8B 55 08 51 56 57 52 8B CB E8");
             shSpawnEffectEx = safetyhook::create_inline(pattern.get_first(-0x10F), SpawnEffectEx);
 
+            // The menus' memory allocator keeps the owning segment of each free block inside the block. A write
+            // to an already released menu object can overwrite it; the block is then handed out without being
+            // marked as used, and the next resize of it takes the text in it for free-list links (post-race
+            // reward screens). The segment is taken from the page instead, as the allocator does for the
+            // smallest blocks.
+            pattern = hook::pattern("83 F8 01 76 0B 8B 77 08 89 74 24 10 85 F6 75 12");
+            injector::WriteMemory<uint8_t>(pattern.get_first(3), 0xEB, true);
+
             // The race HUD's periodic heading check reads the player vehicle through a weak reference without a null
             // check. When the vehicle is already gone (leaving a stage from the post-race screen) the check is skipped,
             // as the HUD update that calls it already does.

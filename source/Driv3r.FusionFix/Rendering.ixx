@@ -15,6 +15,8 @@ std::atomic<float> hudAspectConstraint{ -1.0f };
 std::atomic<float> targetHudAspect{ 16.0f / 9.0f };
 std::atomic<bool> hudSettingChanged{ false };
 std::atomic<bool> fovSettingChanged{ false };
+std::atomic<float> fFOVFactor{ 1.0f };
+constexpr float MaxFieldOfView = 2.617993878f; // 150 degrees, horizontal
 
 ProtectedGameRef<float> fAspectRatio;
 ProtectedGameRef<float> fFieldOfView;
@@ -66,8 +68,8 @@ public:
                 const auto text = FixSettings().Get("MAIN.FOVFactor");
                 char* end = nullptr;
                 const float value = std::strtof(text.c_str(), &end);
-                const float factor = end != text.c_str() && *end == '\0' && std::isfinite(value) ? std::clamp(value, 0.5f, 2.0f) : 1.0f;
-                fFieldOfView = std::clamp(2.0f * std::atan(std::tan(1.04f * 0.5f) * (fAspectRatio / baseAspect)) * factor, 0.01f, 2.617993878f);
+                fFOVFactor.store(end != text.c_str() && *end == '\0' && std::isfinite(value) ? std::clamp(value, 0.5f, 2.0f) : 1.0f);
+                fFieldOfView = std::clamp(2.0f * std::atan(std::tan(1.04f * 0.5f) * (fAspectRatio / baseAspect)), 0.01f, MaxFieldOfView);
             };
             settings.OnChange("MAIN.FOVFactor", []() { fovSettingChanged.store(true); });
             WFP::onGameProcessEvent() += [updateFOV]()
@@ -258,13 +260,30 @@ public:
                 }
             }; injector::MakeInline<RadarHook>(pattern.get_first(0), pattern.get_first(12));
 
-            // Object disappearance fix
-            pattern = hook::pattern("D9 83 80 01 00 00 ? ? ? 01 00 00");
-            injector::WriteMemory<uint8_t>(pattern.count(2).get(0).get<uint8_t>(2), 0x84i8, true); //0x57D4C2
-            injector::WriteMemory<uint8_t>(pattern.count(2).get(1).get<uint8_t>(2), 0x84i8, true); //0x57D505
-
             pattern = hook::pattern("83 EC ? 53 8B 5C 24 ? 57 8B F9");
             shsub_53BC50 = safetyhook::create_inline(pattern.get_first(), sub_53BC50);
+
+            // Every camera starts from fFieldOfView (cutscene cameras too) and may zoom from it; widen the result only while
+            // the HUD is shown: cutscenes, replays and the film director hide it and keep their framing
+            pattern = hook::pattern("8B 75 0C 8B 44 24 50 D9 9E 84 01 00 00");
+            static auto CameraFOVHook = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
+            {
+                const uintptr_t hud = dword_8AC4C8;
+                if (!hud || !*(bool*)(hud + 0x1A24))
+                    return;
+
+                auto& fov = *reinterpret_cast<float*>(regs.esp + 0x50);
+                fov = std::min(fov * fFOVFactor.load(), std::max(fov, MaxFieldOfView));
+            });
+
+            // View frustum culling: the corners of the near plane, at tan(fov / 2) horizontally, but tan(fov / aspect / 2) vertically,
+            // which is narrower than the picture, so objects above and below the screen center vanished
+            pattern = hook::pattern("D9 5C 24 14 D9 44 24 70 8B 74 24 14 D9 E0");
+            static auto FrustumHook = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& regs)
+            {
+                const float aspect = *reinterpret_cast<float*>(regs.ebx + 0x184);
+                *reinterpret_cast<float*>(regs.esp + 0x14) = *reinterpret_cast<float*>(regs.esp + 0x70) / aspect;
+            });
         };
     }
 } Rendering;

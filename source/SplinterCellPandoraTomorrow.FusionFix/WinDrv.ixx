@@ -9,7 +9,6 @@ export module WinDrv;
 
 import ComVars;
 import Xidi;
-import Gamepad;
 
 namespace UWindowsViewport
 {
@@ -59,7 +58,6 @@ namespace UWindowsViewport
             }
             else if (Msg == WM_RAWINPUTMOUSE)
             {
-                Gamepad::OnKeyboardMouse();
                 if (hGameWindow != GetForegroundWindow())
                     return 0;
 
@@ -92,7 +90,6 @@ namespace UWindowsViewport
 
     int __fastcall CauseInputEvent(void* UWindowsViewport, void* edx, int inputID, int a3, float value)
     {
-        Gamepad::OnInput(inputID, a3, value);
         // Ignore release events the game triggers automatically, GetKeyState doesn't work for XButtons
         if (inputID == IK_MOUSE4 || inputID == IK_MOUSE5)
             return 1;
