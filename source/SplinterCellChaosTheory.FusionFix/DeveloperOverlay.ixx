@@ -59,6 +59,15 @@ export namespace DeveloperOverlay
         return Overlay.BlocksInput();
     }
 
+    // The renderer holds a reference to the device; it is made again on the next device
+    void ReleaseDevice(IDirect3DDevice9* device)
+    {
+        if (device != CurrentDevice)
+            return;
+        Overlay.ShutdownRenderer();
+        CurrentDevice = nullptr;
+    }
+
     void Present(IDirect3DDevice9* device)
     {
         if (!device)

@@ -128,16 +128,22 @@ IDirect3DDevice9* RecolorDevice = nullptr;
 IDirect3DPixelShader9* SurfacePassRecolorShader = nullptr;
 IDirect3DPixelShader9* GlowPassRecolorShader = nullptr;
 
+void ReleaseRecolorShaders()
+{
+    if (SurfacePassRecolorShader)
+        SurfacePassRecolorShader->Release();
+    if (GlowPassRecolorShader)
+        GlowPassRecolorShader->Release();
+    SurfacePassRecolorShader = nullptr;
+    GlowPassRecolorShader = nullptr;
+    RecolorDevice = nullptr;
+}
+
 IDirect3DPixelShader9* RecolorShader(IDirect3DDevice9* device, IDirect3DPixelShader9* shader)
 {
     if (device != RecolorDevice)
     {
-        if (SurfacePassRecolorShader)
-            SurfacePassRecolorShader->Release();
-        if (GlowPassRecolorShader)
-            GlowPassRecolorShader->Release();
-        SurfacePassRecolorShader = nullptr;
-        GlowPassRecolorShader = nullptr;
+        ReleaseRecolorShaders();
         device->CreatePixelShader(reinterpret_cast<const DWORD*>(SurfacePassRecolor), &SurfacePassRecolorShader);
         device->CreatePixelShader(reinterpret_cast<const DWORD*>(GlowPassRecolor), &GlowPassRecolorShader);
         RecolorDevice = device;
@@ -449,6 +455,21 @@ export void InitD3DDrv()
                 d3d->CreateDevice(adapter, D3DDEVTYPE_HAL, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, parameters, device);
         }
     });
+
+    // Every place the game releases its device (SetRes, a failed Reset, exit). References held here would keep the old
+    // device alive, and a fullscreen one keeps the display, so the new fullscreen device couldn't be created.
+    pattern = hook::pattern("8B 08 50 FF 51 08 C7 86 3C 4D 00 00 00 00 00 00");
+    static std::array<SafetyHookMid, 4> ReleaseDeviceHooks;
+    for (size_t i = 0; i < ReleaseDeviceHooks.size(); i++)
+    {
+        ReleaseDeviceHooks[i] = safetyhook::create_mid(pattern.count(4).get(i).get<void>(0), [](SafetyHookContext& regs)
+        {
+            auto device = reinterpret_cast<IDirect3DDevice9*>(regs.eax);
+            if (device == RecolorDevice)
+                ReleaseRecolorShaders();
+            DeveloperOverlay::ReleaseDevice(device);
+        });
+    }
 
     // Shadow Quality picks 512, 1024 or 2048; the override replaces the size for every quality level.
     // The shadow map, its colour buffer, viewport and depth bias all read the size stored here.
