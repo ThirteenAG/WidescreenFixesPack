@@ -7,9 +7,10 @@ export module WidescreenHUD;
 
 import ComVars;
 
-// The HUD is laid out in fractions of the 4:3 screen and drawn in the centered 4:3 area. HUD groups are identified by
-// their frame (the parent rectangle), single elements of the top frame by their position; those at the sides of the
-// original screen move to the sides of the HUD box (the whole screen in Auto).
+// The HUD is laid out in fractions of the 4:3 screen and drawn in the centered 4:3 area. During play every HUD group
+// (a frame of the screen's size, moved) and every single element of the top frame that lies wholly in the left or right
+// part of the original screen moves to that side of the HUD box (the whole screen in Auto); groups move as a whole.
+// The lists below are the known groups, which also move in menus and before their parts were seen.
 struct HUDIdentifier
 {
     float x, y;
@@ -47,6 +48,56 @@ constexpr HUDIdentifier LeftElements[] =
 bool GroupFrame(const float* frame)
 {
     return frame[3] == 1.0f && frame[4] == 1.0f && frame[5] == 1.0f && frame[6] == 1.0f;
+}
+
+enum class Side
+{
+    Center,
+    Left,
+    Right
+};
+
+Side SideOf(float left, float right)
+{
+    if (right <= 0.4f)
+        return Side::Left;
+    return left >= 0.6f ? Side::Right : Side::Center;
+}
+
+// The extent of each group's visible parts seen so far, by its frame position
+std::unordered_map<uint64_t, std::pair<float, float>> groupExtents;
+
+Side GroupSide(const float* frame, float left, float right)
+{
+    const uint64_t key = (uint64_t(std::bit_cast<uint32_t>(frame[1])) << 32) | std::bit_cast<uint32_t>(frame[2]);
+    auto found = groupExtents.find(key);
+    if (found == groupExtents.end())
+    {
+        if (groupExtents.size() >= 512)
+            groupExtents.clear();
+        found = groupExtents.emplace(key, std::pair{ left, right }).first;
+    }
+    else
+    {
+        found->second.first = std::min(found->second.first, left);
+        found->second.second = std::max(found->second.second, right);
+    }
+    return SideOf(found->second.first, found->second.second);
+}
+
+// The 2D layer manager: layer 1 is the HUD, layers 2 and 5 to 8 are menus over the game (pause, map, shops...), as is
+// the dialog flag. The front end (title, main menu) has no HUD layer.
+const uintptr_t* uiLayers = nullptr;
+const uint32_t* dialogOpen = nullptr;
+
+bool Playing()
+{
+    if (!uiLayers || !dialogOpen || !uiLayers[1] || *dialogOpen || bPause || nLoading != 0)
+        return false;
+    for (const size_t layer : { 2, 5, 6, 7, 8 })
+        if (uiLayers[layer])
+            return false;
+    return true;
 }
 
 template<size_t Count> bool Contains(const HUDIdentifier (&list)[Count], float x, float y)
@@ -91,6 +142,16 @@ void __cdecl WidescreenHUD(float* frame, float* element, int alignment, float* o
         {
             // Parked outside the screen (the phone between calls) stays outside it
             output[1] -= x + output[3] <= 0.0f ? Screen.fHudOffset : Screen.fWidescreenHudOffset;
+        }
+        else if (Playing() && output[3] > 0.0f)
+        {
+            const float right = x + output[3];
+            const bool hidden = right <= 0.0f || x >= 1.0f;
+            const Side side = hidden ? Side::Center : root ? SideOf(x, right) : GroupSide(frame, x, right);
+            if (side == Side::Right)
+                output[1] += Screen.fWidescreenHudOffset;
+            else if (side == Side::Left)
+                output[1] -= Screen.fWidescreenHudOffset;
         }
     }
 
@@ -210,6 +271,11 @@ public:
 
             pattern = hook::pattern("8B 44 24 ? F3 0F 2A C0 0F 28 C8 F3 0F 59 0D ? ? ? ? F3 0F 11 89");
             shsub_654780 = safetyhook::create_inline(pattern.get_first(), sub_654780);
+
+            pattern = hook::pattern("E8 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 8C 24");
+            uiLayers = reinterpret_cast<const uintptr_t*>(*pattern.get_first<uintptr_t>(6) + 0x0C);
+            pattern = hook::pattern("83 3D ? ? ? ? 00 0F 95 C0 C3 CC CC CC CC CC 8B 44 24 04 85 C0 74 12 68 FF 00 00 00");
+            dialogOpen = *pattern.get_first<const uint32_t*>(2);
 
             pattern = hook::pattern("8B 4C 24 ? 85 C9 56");
             //static auto shsub_654D60 = safetyhook::create_inline(pattern.get_first(), sub_654D60);

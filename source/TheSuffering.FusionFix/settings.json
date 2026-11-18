@@ -202,37 +202,15 @@
       "id": "MAIN.FPSLimit",
       "type": "int",
       "default": 60,
-      "min": -1,
-      "max": 1000,
+      "min": 30,
+      "max": 60,
       "unit": "fps",
-      "special": [
-        {
-          "value": 0,
-          "label": "@FPSLimit.unlimited"
-        },
-        {
-          "value": -1,
-          "label": "@FPSLimit.monitor"
-        }
-      ],
       "suggestions": [
         {
           "value": 30
         },
         {
           "value": 60
-        },
-        {
-          "value": 120
-        },
-        {
-          "value": 144
-        },
-        {
-          "value": 165
-        },
-        {
-          "value": 240
         }
       ],
       "label": "@FPSLimit",
@@ -244,7 +222,7 @@
         "dropdown"
       ],
       "presets": {
-        "vanilla": 0,
+        "vanilla": 60,
         "recommended": 60,
         "enhanced": 60
       },

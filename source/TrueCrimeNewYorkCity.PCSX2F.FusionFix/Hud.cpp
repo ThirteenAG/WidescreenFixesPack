@@ -263,4 +263,22 @@ namespace tcny
         blipHook = safetymips::create_mid<&Blips>(blips, nullptr, replace);
         radarDiscHook = safetymips::create_mid(radarDisc, [](SafetyMipsContext& regs) { regs.f1 += display.radar; });
     }
+
+    namespace
+    {
+        SafetyMipsMid trafficHook;
+        // The ambient car's driver removes its car outside a zone around the camera, where sideways distances count
+        // twice (the 4:3 view): on wider screens cars at the sides vanished in view. The zone follows the picture.
+        void TrafficZone(SafetyMipsContext& regs)
+        {
+            regs.at = Bits(std::min(2.0f, 2.0f * display.scale / std::max(fovFactor, 1.0f)));
+        }
+    } // namespace
+
+    void InstallTraffic(uintptr_t zone)
+    {
+        safetymips::Options replace;
+        replace.execute_original = false;
+        trafficHook = safetymips::create_mid<&TrafficZone>(zone, nullptr, replace);
+    }
 } // namespace tcny

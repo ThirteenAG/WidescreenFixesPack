@@ -19,7 +19,8 @@ import Skeleton;
 // key's picture (MAIN.KeyboardIcons) is written as one character of the Unicode private use area. The font measures
 // it by the picture's width (the width table it reads is extended by these characters) and the text renderer draws
 // the picture in its place. A shown help message is written again when the device or the icon style changes, so its
-// pictures follow the last device used.
+// pictures follow the last device used. The controls screen shows the pad's buttons in place of the keys while the
+// pad is used.
 // With a controller mod loaded that draws its own button pictures, none of it is installed.
 
 using namespace RWGTA::ButtonIcons;
@@ -134,7 +135,8 @@ namespace
             case VEHICLE_LOOKBEHIND: return { air ? None : P::RS };
             case VEHICLE_TURRETLEFT: case VEHICLE_TURRETRIGHT: return { P::RightStickLeftRight };
             case VEHICLE_TURRETUP: case VEHICLE_TURRETDOWN: return { P::RightStickUpDown };
-            case PED_CYCLE_TARGET_LEFT: case PED_CYCLE_TARGET_RIGHT: return { P::RightStickLeftRight };
+            // The modern layout's aim doesn't lock on: no target to cycle
+            case PED_CYCLE_TARGET_LEFT: case PED_CYCLE_TARGET_RIGHT: return { None };
             case PED_CENTER_CAMERA_BEHIND_PLAYER: return { P::RB };
             case PED_LOCK_TARGET: return { P::LT };
             default: return { None };
@@ -182,6 +184,58 @@ namespace
             }
         }
         return best;
+    }
+
+    bool IsVehicleAction(int action)
+    {
+        switch (action)
+        {
+            case VEHICLE_ACCELERATE: case VEHICLE_BRAKE: case VEHICLE_CHANGE_RADIO_STATION: case VEHICLE_HORN:
+            case TOGGLE_SUBMISSIONS: case VEHICLE_HANDBRAKE: case VEHICLE_LOOKLEFT: case VEHICLE_LOOKRIGHT:
+            case VEHICLE_LOOKBEHIND: case VEHICLE_TURRETLEFT: case VEHICLE_TURRETRIGHT: case VEHICLE_TURRETUP:
+            case VEHICLE_TURRETDOWN:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    // CMenuManager::DrawControllerBound draws a column of the controls screen: on foot (0) or in a vehicle
+    SafetyHookInline shDrawControllerBound;
+    int ControlsColumn = -1;
+    void __fastcall DrawControllerBound(void* manager, void* edx, int32_t y, int32_t x, int32_t unused, int8_t column)
+    {
+        ControlsColumn = column;
+        shDrawControllerBound.unsafe_thiscall(manager, y, x, unused, column);
+        ControlsColumn = -1;
+    }
+
+    // CControllerConfigManager::GetControllerSettingTextWithOrderNumber, the keys of the controls screen: while the
+    // pad is used, the pad's button of each control (in the layout in use) in place of the keys
+    SafetyHookInline shGetControllerSettingText;
+    wchar_t* __fastcall GetControllerSettingText(void* manager, void* edx, int action, int order)
+    {
+        if (Pad::IsPadLastDevice() && action >= 0 && action < ActionCount)
+        {
+            static wchar_t text[4];
+            if (order != 1)
+                return nullptr;
+            bool inVehicle = ControlsColumn >= 0 ? ControlsColumn != 0 : IsVehicleAction(action);
+            auto seat = inVehicle ? Pad::Seat::Vehicle : Pad::Seat::Foot;
+            auto prompt = Pad::IsModernLayout() ? ModernButton(action, seat) : ClassicButton(action);
+            if (prompt.first == None)
+                return nullptr;
+            int n = 0;
+            text[n++] = wchar_t(PadFirst + int(prompt.first));
+            if (prompt.second != None)
+            {
+                text[n++] = L'+';
+                text[n++] = wchar_t(PadFirst + int(prompt.second));
+            }
+            text[n] = 0;
+            return text;
+        }
+        return shGetControllerSettingText.unsafe_thiscall<wchar_t*>(manager, action, order);
     }
 
     // The game's CControllerConfigManager::GetWideStringOfCommandKeys at its call in InsertPlayerControlKeysInString
@@ -560,6 +614,11 @@ public:
 
             hbGetWideStringOfCommandKeys.fun = injector::MakeCALL(commandKeys.get_first(), GetWideStringOfCommandKeys, true).get();
             shRenderFontBuffer = safetyhook::create_inline(renderBuffer.get_first(), RenderFontBuffer);
+
+            auto settingText = hook::pattern("8B 54 24 04 53 31 DB 55 8D 2C 95 00 00 00 00 8B 44 24 10 39 84 E9 ? ? 00 00");
+            shGetControllerSettingText = safetyhook::create_inline(settingText.get_first(), GetControllerSettingText);
+            auto controllerBound = hook::pattern("8B 15 ? ? ? ? 53 56 57 55 31 F6");
+            shDrawControllerBound = safetyhook::create_inline(controllerBound.get_first(), DrawControllerBound);
 
             // The character the renderer reads: a picture is queued and drawn as a space, x and y on the stack
             static auto ReadCharHook = safetyhook::create_mid(readChar.get_first(), [](SafetyHookContext& regs)

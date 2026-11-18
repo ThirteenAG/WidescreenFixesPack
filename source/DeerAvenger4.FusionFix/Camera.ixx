@@ -6,11 +6,13 @@ module;
 #include "Hooking.Patterns.h"
 #include "gameref.hpp"
 #include "safetyhook.hpp"
+#include <ddraw.h>
 
 export module Camera;
 
 import Frontend;
 import ComVars;
+import Movie;
 
 export namespace DeerCamera
 {
@@ -31,6 +33,54 @@ export namespace DeerCamera
     };
     inline View view;
 
+    // The scope (and the close-up aim view) draw a 4:3 model through a camera of their own over the world. That camera
+    // gets the screen's shape like the main one, so the model keeps its proportions in the middle of the screen, and
+    // the sides beside its 4:3 area are black.
+    inline void** overlayCameras[2]{};
+    inline SafetyHookInline scopeDrawHook, aimDrawHook;
+
+    inline bool Overlay(void* camera)
+    {
+        for (auto slot : overlayCameras)
+            if (slot && *slot == camera)
+                return true;
+        return false;
+    }
+
+    inline void OverlaySides(void* camera)
+    {
+        if (!camera)
+            return;
+        const auto raster = DeerMenu::Read<void*>(reinterpret_cast<uintptr_t>(camera) + 96);
+        if (!raster)
+            return;
+        auto surface = DeerMovie::Surface(raster);
+        const int width = DeerMenu::Read<int>(reinterpret_cast<uintptr_t>(raster) + 12);
+        const int height = DeerMenu::Read<int>(reinterpret_cast<uintptr_t>(raster) + 16);
+        const int side = (width - height * 4 / 3) / 2;
+        if (!surface || side <= 0)
+            return;
+        DDBLTFX fx{};
+        fx.dwSize = sizeof(fx);
+        RECT left{ 0, 0, side, height }, right{ width - side, 0, width, height };
+        surface->Blt(&left, nullptr, nullptr, DDBLT_COLORFILL | DDBLT_WAIT, &fx);
+        surface->Blt(&right, nullptr, nullptr, DDBLT_COLORFILL | DDBLT_WAIT, &fx);
+    }
+
+    inline void __cdecl ScopeDraw()
+    {
+        scopeDrawHook.ccall();
+        OverlaySides(*overlayCameras[0]);
+    }
+
+    inline void __cdecl AimDraw()
+    {
+        const bool active = game_aim.get() != 0;
+        aimDrawHook.ccall();
+        if (active)
+            OverlaySides(*overlayCameras[1]);
+    }
+
     inline bool Extents(float x, float y)
     {
         return std::isfinite(x) && std::isfinite(y) && x > 0.0f && y > 0.0f;
@@ -50,6 +100,15 @@ export namespace DeerCamera
 
     inline void Correct(void* camera)
     {
+        if (!applying && camera && Overlay(camera))
+        {
+            const auto address = reinterpret_cast<uintptr_t>(camera);
+            const float x = DeerMenu::Read<float>(address + 104), y = DeerMenu::Read<float>(address + 108);
+            const float aspect = Aspect(camera);
+            if (Extents(x, y) && aspect > 0.0f && std::abs(x / y - 4.0f / 3.0f) <= 0.001f)
+                *reinterpret_cast<float*>(address + 104) = y * aspect;
+            return;
+        }
         if (applying || !camera || !cameraPrimary.is_initialized() || cameraPrimary.get() != camera)
             return;
         auto address = reinterpret_cast<uintptr_t>(camera);
@@ -156,6 +215,15 @@ export namespace DeerCamera
         setCanvasCamera = reinterpret_cast<decltype(setCanvasCamera)>(canvas.get_first());
         setView = reinterpret_cast<decltype(setView)>(nativeSetter.get_first());
         beginHook = safetyhook::create_inline(begin.get_first(), Begin);
+
+        auto scope = hook::pattern(game, "6A 00 6A 06 E8 ? ? ? ? 6A 00 6A 08 E8 ? ? ? ? A1 ? ? ? ? 50 FF 50 48 A1 ? ? ? ? 83 C4 1C 83 F8 01");
+        auto aim = hook::pattern(game, "A1 ? ? ? ? 85 C0 74 ? A1 ? ? ? ? 50 E8 ? ? ? ? 8B 0D ? ? ? ? 51 E8 ? ? ? ? 6A 00 6A 06");
+        auto scopeDraw = scope.get_first<uint8_t>(-0x17);
+        overlayCameras[0] = *reinterpret_cast<void***>(scopeDraw + 0x0D);
+        overlayCameras[1] = *aim.get_first<void**>(0x16);
+        game_aim.SetAddress(*aim.get_first<int*>(1));
+        scopeDrawHook = safetyhook::create_inline(scopeDraw, ScopeDraw);
+        aimDrawHook = safetyhook::create_inline(aim.get_first(), AimDraw);
         return true;
     }
 }

@@ -248,6 +248,7 @@ void ClearApartment() {
 }
 
 void DrawSprites(void* manager, int layer, float alpha) {
+    PollSettings();
     const bool previous = drawingHudSprites;
     drawingHudSprites = GameplayHud();
     if (drawingHudSprites) FindHintCluster();
@@ -322,11 +323,14 @@ void DrawPrimitive(uint32_t** context, int type, uint32_t format, unsigned count
 }
 }
 
-bool InstallHud() {
+void ReadHudSettings() {
     scale = console::bounded(inireader.ReadFloat("MAIN", "HudScale", 1.0f), 0.5f, 1.0f, 1.0f);
     cutsceneBorders = std::clamp(int(inireader.ReadInteger("MAIN", "CutsceneBorders", 3)), 0, 3);
     char box[16]{};
     hudAspect = console::parse_hud_aspect(inireader.ReadString("MAIN", "HudAspectRatioConstraint", "Auto", box, sizeof(box)));
+}
+bool InstallHud() {
+    ReadHudSettings();
     // Both sprite hooks must refer to the same manager before installing the HUD group.
     const auto spriteManager = injector::GetBranchDestination(Address<0x0898D388>()).as_int();
     if (Address<0x088E12B8>() != spriteManager + 0x3C) {

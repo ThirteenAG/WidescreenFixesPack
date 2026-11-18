@@ -77,6 +77,36 @@ export enum FrameLimiterMode : int8_t
     eOff, e30, e40, e50, e60, e75, e100, e120, e144, e165, e200, e240, e90, e180
 };
 
+// The Frame Limiter row's steps and their frame rates
+static constexpr std::pair<int8_t, int> FrameLimits[] = { { FrameLimiterMode::eOff, 0 }, { FrameLimiterMode::e30, 30 },
+    { FrameLimiterMode::e40, 40 }, { FrameLimiterMode::e50, 50 }, { FrameLimiterMode::e60, 60 }, { FrameLimiterMode::e75, 75 },
+    { FrameLimiterMode::e90, 90 }, { FrameLimiterMode::e100, 100 }, { FrameLimiterMode::e120, 120 }, { FrameLimiterMode::e144, 144 },
+    { FrameLimiterMode::e165, 165 }, { FrameLimiterMode::e180, 180 }, { FrameLimiterMode::e200, 200 }, { FrameLimiterMode::e240, 240 } };
+
+static int FrameLimitOfStep(int8_t step)
+{
+    for (auto& [mode, fps] : FrameLimits)
+    {
+        if (mode == step)
+            return fps;
+    }
+    return 0;
+}
+
+// The step of a frame rate: the nearest one (MAIN.FPSLimit may hold any rate)
+static int8_t StepOfFrameLimit(int fps)
+{
+    if (fps <= 0)
+        return FrameLimiterMode::eOff;
+    int8_t step = FrameLimiterMode::e30;
+    for (auto& [mode, rate] : FrameLimits)
+    {
+        if (rate && std::abs(rate - fps) < std::abs(FrameLimitOfStep(step) - fps))
+            step = mode;
+    }
+    return step;
+}
+
 static int8_t NextFrameLimiter(int8_t current, int direction)
 {
     static constexpr std::array<int8_t, 14> modes{ FrameLimiterMode::eOff, FrameLimiterMode::e30,
@@ -239,68 +269,93 @@ export GameRef<CMenuManager> FrontendMenuManager([]() -> CMenuManager*
     return *pattern.get_first<CMenuManager*>(1);
 });
 
+// The gameplay frame rate limit (MAIN.FPSLimit, 0: none)
+static int FrameLimit()
+{
+    static auto& fps = FixSettings().Int("MAIN.FPSLimit");
+    return std::max(0, fps);
+}
+
 namespace CText
 {
     void* TheText = nullptr;
     const char* (__fastcall* Get)(void*, void*, const char*) = nullptr;
 
-    auto CUTSCENE_BORDERS = "CUTSCENE BORDERS";
+    std::string BordersLabel, BordersValue, LimiterValue;
+
+    const char* GetCutsceneBordersLabel()
+    {
+        BordersLabel = FixOptions::GameText("cutsceneborders");
+        return BordersLabel.c_str();
+    }
 
     const char* GetCutsceneBordersText()
     {
+        const char* key = nullptr;
         switch (FrontendMenuManager->m_bWidescreenOn)
         {
             case CutsceneBordersMode::Off:
                 return Get(TheText, 0, "FEM_OFF");
             case CutsceneBordersMode::Letterbox:
-                return "LETTERBOX";
-            case CutsceneBordersMode::Pillarbox:
-                return "PILLARBOX";
-            case CutsceneBordersMode::Both:
-                return "LETTERBOX + PILLARBOX";
-            default:
+                key = "cutsceneborders.letterbox";
                 break;
+            case CutsceneBordersMode::Pillarbox:
+                key = "cutsceneborders.pillarbox";
+                break;
+            case CutsceneBordersMode::Both:
+                key = "cutsceneborders.both";
+                break;
+            default:
+                return Get(TheText, 0, "FEM_ON");
         };
-
-        return Get(TheText, 0, "FEM_ON");
+        BordersValue = FixOptions::GameText(key, true);
+        return BordersValue.c_str();
     }
 
     const char* GetFrameLimiterText()
     {
-        switch (FrontendMenuManager->m_bPrefsFrameLimiter)
+        int fps = FrameLimit();
+        if (!fps)
+            return Get(TheText, 0, "FEM_OFF");
+        LimiterValue = std::to_string(fps) + " FPS";
+        return LimiterValue.c_str();
+    }
+}
+
+// Cutscene Borders and the Frame Limiter are the game's rows of Display Setup and Advanced, saved in gta_sa.set, and
+// the fix's MAIN.CutsceneBorders and MAIN.FPSLimit (FusionFixHub, presets): the .cfg decides at the start, and a change
+// on either side is written to the other
+namespace NativeRows
+{
+    int8_t SyncedBorders = -1;
+    int8_t SyncedLimiter = -1;
+
+    void ApplyBorders()
+    {
+        static auto& borders = FixSettings().Int("MAIN.CutsceneBorders");
+        FrontendMenuManager->m_bWidescreenOn = int8_t(std::clamp(borders, 0, int(CutsceneBordersMode::Both)));
+        SyncedBorders = FrontendMenuManager->m_bWidescreenOn;
+    }
+
+    void ApplyLimiter()
+    {
+        FrontendMenuManager->m_bPrefsFrameLimiter = StepOfFrameLimit(FrameLimit());
+        SyncedLimiter = FrontendMenuManager->m_bPrefsFrameLimiter;
+    }
+
+    // The game's rows changed them (or its Restore Defaults)
+    void Update()
+    {
+        if (FrontendMenuManager->m_bWidescreenOn != SyncedBorders)
         {
-            case FrameLimiterMode::eOff:
-                return Get(TheText, 0, "FEM_OFF");
-            case FrameLimiterMode::e30:
-                return "30 FPS";
-            case FrameLimiterMode::e40:
-                return "40 FPS";
-            case FrameLimiterMode::e50:
-                return "50 FPS";
-            case FrameLimiterMode::e60:
-                return "60 FPS";
-            case FrameLimiterMode::e75:
-                return "75 FPS";
-            case FrameLimiterMode::e90:
-                return "90 FPS";
-            case FrameLimiterMode::e100:
-                return "100 FPS";
-            case FrameLimiterMode::e120:
-                return "120 FPS";
-            case FrameLimiterMode::e144:
-                return "144 FPS";
-            case FrameLimiterMode::e165:
-                return "165 FPS";
-            case FrameLimiterMode::e180:
-                return "180 FPS";
-            case FrameLimiterMode::e200:
-                return "200 FPS";
-            case FrameLimiterMode::e240:
-                return "240 FPS";
-            default:
-                break;
-        };
-        return Get(TheText, 0, "FEM_ON");
+            SyncedBorders = FrontendMenuManager->m_bWidescreenOn;
+            FixSettings().Set("MAIN.CutsceneBorders", std::to_string(SyncedBorders));
+        }
+        if (FrontendMenuManager->m_bPrefsFrameLimiter != SyncedLimiter)
+        {
+            SyncedLimiter = FrontendMenuManager->m_bPrefsFrameLimiter;
+            FixSettings().Set("MAIN.FPSLimit", std::to_string(FrameLimitOfStep(SyncedLimiter)));
+        }
     }
 }
 
@@ -463,25 +518,7 @@ private:
 
 static float GetFrameLimiterValue()
 {
-    switch (FrontendMenuManager->m_bPrefsFrameLimiter)
-    {
-        case FrameLimiterMode::e30:  return 30.0f;
-        case FrameLimiterMode::e40:  return 40.0f;
-        case FrameLimiterMode::e50:  return 50.0f;
-        case FrameLimiterMode::e60:  return 60.0f;
-        case FrameLimiterMode::e75:  return 75.0f;
-        case FrameLimiterMode::e90:  return 90.0f;
-        case FrameLimiterMode::e100: return 100.0f;
-        case FrameLimiterMode::e120: return 120.0f;
-        case FrameLimiterMode::e144: return 144.0f;
-        case FrameLimiterMode::e165: return 165.0f;
-        case FrameLimiterMode::e180: return 180.0f;
-        case FrameLimiterMode::e200: return 200.0f;
-        case FrameLimiterMode::e240: return 240.0f;
-        case FrameLimiterMode::eOff:
-        default:
-            return 0.0f;
-    }
+    return float(FrameLimit());
 }
 
 // Keep menu pacing independent of the gameplay limiter's timestamps and setting.
@@ -566,6 +603,13 @@ public:
 
         WFP::onGameInitEvent() += []()
         {
+            // The game has read gta_sa.set: the .cfg's values replace its two
+            NativeRows::ApplyBorders();
+            NativeRows::ApplyLimiter();
+            OnSettingChange("MAIN.CutsceneBorders", NativeRows::ApplyBorders);
+            OnSettingChange("MAIN.FPSLimit", NativeRows::ApplyLimiter);
+            WFP::onGameProcessEvent() += NativeRows::Update;
+
             menuFrameLimit = static_cast<float>(std::max(0, FixSettings().Int("MAIN.FPSLimitMenus")));
             OnSettingChange("MAIN.FPSLimitMenus", []()
             {
@@ -585,7 +629,7 @@ public:
                 {
                     if (std::string_view(ptr) == CText::Get(CText::TheText, 0, "FED_WIS"))
                     {
-                        *(char**)&regs.ebx = const_cast<char*>(CText::CUTSCENE_BORDERS);
+                        *(char**)&regs.ebx = const_cast<char*>(CText::GetCutsceneBordersLabel());
                     }
                 }
             });

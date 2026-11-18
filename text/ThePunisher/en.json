@@ -50,7 +50,7 @@
   "menu.details": "Details",
   "menu.restartshort": "Restart required",
   "FPSLimit": "FPS limit",
-  "FPSLimit.description": "Limits rendering to 30–1000 FPS. 0 disables the limit; -1 uses the desktop refresh rate. Applies immediately. 60 FPS is recommended for stable game behavior.",
+  "FPSLimit.description": "Limits rendering to 30–60 FPS; -1 uses the desktop refresh rate up to 60. The game is made for 60 FPS; higher frame rates break its timing. Applies immediately.",
   "fpslimit.unlimited": "Unlimited",
   "fpslimit.refreshrate": "Refresh Rate",
   "WindowMode": "Window mode",

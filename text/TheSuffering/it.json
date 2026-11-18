@@ -31,8 +31,7 @@
   "menu.recommended": "Consigliato",
   "menu.enhanced": "Migliorato",
   "FPSLimit": "Limite fotogrammi",
-  "FPSLimit.description": "Limita la frequenza dei fotogrammi. Il gioco è fatto per 60; valori più alti possono alterarne fisica e tempi. Si applica subito.",
-  "FPSLimit.unlimited": "Illimitato",
+  "FPSLimit.description": "Limita la frequenza dei fotogrammi tra 30 e 60. Il gioco è fatto per 60; valori più alti ne alterano fisica e tempi. Si applica subito.",
   "WindowMode": "Modalità finestra",
   "WindowMode.description": "Schermo intero, una finestra alla risoluzione scelta o senza bordi: una finestra che copre l'intero monitor alla sua risoluzione. Riavvio necessario.",
   "WindowMode.fullscreen": "Schermo intero",
@@ -42,7 +41,6 @@
   "PauseOnFocusLoss.description": "In una modalità finestra, il gioco va in pausa e resta muto mentre è attiva un'altra finestra. Disattivato continua a girare. Si applica subito.",
   "ConfineCursor": "Cursore nella finestra",
   "ConfineCursor.description": "Tiene il cursore nella finestra del gioco mentre il gioco è attivo, così non passa su un altro monitor. Si applica subito.",
-  "FPSLimit.monitor": "Frequenza del monitor",
   "SkipIntro": "Salta i loghi iniziali",
   "SkipIntro.description": "Salta il video dei loghi all'avvio. I filmati della storia restano. Riavvio necessario.",
   "HudAspectRatioConstraint": "Proporzioni dell'HUD",
@@ -62,5 +60,5 @@
   "menu.SkipIntro.help": "Salta il video dei loghi all'avvio. Riavvio necessario.",
   "menu.CheckForUpdates.help": "Chiede a fusionfix.io una volta per avvio.",
   "menu.HudAspectRatioConstraint.help": "Auto: HUD ai bordi. Un rapporto: riquadro centrato.",
-  "menu.FPSLimit.help": "Limite fotogrammi. Il gioco è fatto per 60."
+  "menu.FPSLimit.help": "Limite fotogrammi, da 30 a 60. Il gioco è fatto per 60."
 }

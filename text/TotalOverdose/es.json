@@ -36,5 +36,10 @@
   "CheckForUpdates": "Buscar actualizaciones",
   "CheckForUpdates.description": "Una vez por inicio, pregunta a fusionfix.io si hay una versión más reciente del parche y lo muestra en lugar del número de versión en el menú principal. Desactivado no hace ninguna petición de red.",
   "update.availablehub": "Actualización: FusionFixHub",
-  "update.availablesite": "Actualización: fusionfix.io"
+  "update.availablesite": "Actualización: fusionfix.io",
+  "SkipPressStart": "Omitir pantalla de título",
+  "SkipPressStart.description": "Tras la introducción de la historia, pasa directamente al menú principal sin la pantalla de título «Pulsa Intro». Requiere reiniciar.",
+  "page.compatibility": "Compatibilidad",
+  "TextLanguage": "Idioma del texto",
+  "TextLanguage.description": "Idioma de los textos del parche. Automático usa el inglés."
 }

@@ -8,6 +8,7 @@
     "Replay.cpp",
     "Hud.cpp",
     "Video.cpp",
+    "Icons.cpp",
     "../../external/injector/include/psp/injector.c",
     "../../external/injector/include/psp/log.c",
     "../../external/injector/include/psp/patterns.c",

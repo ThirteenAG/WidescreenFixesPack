@@ -7,6 +7,8 @@ module;
 
 export module System;
 
+import ComVars;
+
 // Things that make the PC port behave: no registry needed, no "safe mode" reset of the display settings after a
 // crash or Alt+F4, no long freeze every time Options opens, a steady 60 FPS instead of a jump between 30 and 60,
 // no white window border, and an optional start straight at the title menu.
@@ -73,6 +75,17 @@ public:
             // Steady 60 FPS: the frame pacing counted a frame late and kept falling back to 30 FPS
             auto pacing = hook::pattern("4A 03 C8 A3 ? ? ? ? 89 15");
             injector::WriteMemory<uint8_t>(pacing.get_first(), 0x42, true);
+
+            // Frame rate limit: the game advances in 1/60 s ticks and waits for its frame interval in ticks; 30 FPS
+            // keeps the interval at two ticks at least, the rate the game falls back to by itself
+            auto wait = hook::pattern("55 8B EC 83 E4 F8 83 EC 38 A1 ? ? ? ? 53 55 33 ED 3B C5 56 57 0F 84");
+            nFrameTicks.SetAddress(*wait.get_first<int32_t*>(10));
+            static const auto& limit = FixSettings().Int("MAIN.FPSLimit");
+            static SafetyHookMid WaitHook = safetyhook::create_mid(wait.get_first(9), [](SafetyHookContext&)
+            {
+                if (limit == 30 && nFrameTicks > 0 && nFrameTicks < 2)
+                    nFrameTicks = 2;
+            });
 
             // Start at the title menu: the first-boot flag that plays the logos, the content warning and the opening
             // movie stays off, so the game takes the path it takes when returning to the title

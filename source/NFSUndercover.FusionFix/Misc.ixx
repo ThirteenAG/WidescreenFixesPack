@@ -616,7 +616,7 @@ void Init2()
     code.insert(code.end(), { 0xEB, uint8_t(toAccept) });
     injector::WriteMemoryRaw(check, code.data(), code.size(), true);
 
-    if (bSkipIntro)
+    if (FixSettings().Bool("MAIN.SkipPressStart"))
     {
         // The title screen continues by itself once it's shown, as if Start was pressed after its minimum time
         auto padStart = hook::pattern("56 8B F1 8B 46 04 83 E8 12 0F 84 ? ? ? ? 83 E8 02 74");

@@ -15,8 +15,6 @@
   "windowmode.fullscreen": "Fullscreen",
   "windowmode.windowed": "Windowed",
   "windowmode.borderless": "Borderless",
-  "MAIN.HudSafeArea": "HUD Safe Area",
-  "MAIN.HudSafeArea.description": "Distance of the HUD from the screen's edges, in the game's 640x480 pixels.",
   "MAIN.HudAspectRatioConstraint": "HUD Aspect Ratio",
   "MAIN.HudAspectRatioConstraint.description": "Keeps the HUD in a centred box of this aspect ratio, such as 16:9 on wider screens. Auto uses the whole screen.",
   "CAMERA.SmoothFollow": "Smooth Follow",

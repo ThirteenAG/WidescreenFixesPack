@@ -46,7 +46,7 @@
 - **Skip Intro** - starts with the loading screen and the main menu, without the title screens and logo videos (on by default, after restart)
 - **Videos** - the intro videos are never cut off or stretched: **Original Aspect** shows them as the game does, inside its 4:3 picture; **Fill** fits them to the whole screen
 - **Animated Cutscene Borders** - the borders slide in and out
-- **In-Game Options** - a Cutscene Borders mode (off, letterbox, pillarbox, or both) and the Frame Limiter option turned into a full FPS selector (off, 30 up to 240 FPS), both available right in the Display menu. Above 30 FPS, mission countdowns and other timers, HUD flashing, the burning of an upside-down car, lightning, the spinning-down of vehicles and objects, and script-moved gates and doors keep the game's original speed
+- **In-Game Options** - a Cutscene Borders mode (off, letterbox, pillarbox, or both) and the Frame Limiter option turned into a full FPS selector (off, 30 up to 240 FPS), both available right in the Display menu and also in the settings file, FusionFixHub and the presets. Above 30 FPS, mission countdowns and other timers, HUD flashing, the burning of an upside-down car, lightning, the spinning-down of vehicles and objects, and script-moved gates and doors keep the game's original speed
 - **Subtitles** - large subtitle sizes stay on screen
 
 </td>
@@ -59,9 +59,9 @@
 <tr>
 <td colspan="2" valign="middle">
 
-- **Controllers** - Xbox and other XInput controllers work without extra mods, in the menus too (Start opens and closes the pause menu, B goes back), with vibration. **Modern Controls** (Enhanced preset) use the Definitive Edition's default layout: hold LT to aim over the shoulder and walk or run while shooting, RT fires, B attacks, A sprints, X jumps, Y enters, LB takes the next weapon, RB is the action button and answers the phone, L3 crouches, d-pad left shows the stats; in vehicles RT accelerates, LT brakes, A is the nitro, RB the handbrake, X/B look left/right, d-pad right changes the radio station; in aircraft LB/RB are the rudder. The PC game has no weapon or radio wheel, so those are single presses. Off keeps the original PS2 layout. With GInput installed, the fix leaves controllers to GInput
+- **Controllers** - Xbox and other XInput controllers work without extra mods, in the menus too (Start opens and closes the pause menu, B goes back), with vibration. **Modern Controls** (Enhanced preset) use the Definitive Edition's default layout: hold LT to aim over the shoulder and walk or run while shooting, RT fires, B attacks, A sprints, X jumps, Y enters, LB takes the next weapon, RB is the action button and answers the phone, L3 crouches, d-pad left shows the stats; in vehicles RT accelerates, LT brakes, A is the nitro, RB the handbrake, X/B look left/right, d-pad right changes the radio station, d-pad right and left answer yes and no; as a passenger RT fires the drive-by, aimed with the right stick; in aircraft LB/RB are the rudder. The PC game has no weapon or radio wheel, so those are single presses. Off keeps the original PS2 layout. On the map A sets the target and Y shows the legend. Vibration can be turned off. With GInput installed, the fix leaves controllers to GInput
 - **Mouse** - raw relative movement keeps the game's sensitivity and inverted-axis settings. Buttons, wheel and menu cursor keep their native behavior; GInput handles its own input when installed.
-- **Button Icons** - prompts and help texts show the buttons of the device you used last: controller icons (Auto uses Xbox; PlayStation or Nintendo can be selected manually) and keyboard and mouse keys as icons; they switch as soon as you change device. Camera speed and inverted look are adjustable
+- **Button Icons** - prompts, help texts and the menus' hints at the bottom of the screen show the buttons of the device you used last: controller icons (Auto uses Xbox; PlayStation or Nintendo can be selected manually) and keyboard and mouse keys as icons; they switch as soon as you change device. Camera speed and inverted look are adjustable
 - **Update Notice** - optional, off by default: tells you once in game when a newer version of the fix is out
 
 </td>
@@ -134,7 +134,7 @@
 ## Installation
 
 1. Download the `.zip` from this release.
-2. Extract the contents directly into the game folder - the same folder as `gta-sa.exe`.
+2. Extract the contents directly into the game folder - the same folder as `gta-sa.exe`. The fix needs the 1.0 US executable of the game (the 1.0 US `gta_sa.exe`, also as `gta-sa.exe`); the Steam and Rockstar Games Launcher executables must be downgraded to it first.
 3. Launch the game. Change the settings in **Options > Display Setup** and **Options > Plugins**, on fusionfix.io, or in FusionFixHub. The fix creates `scripts\GTASA.FusionFix.cfg` on its first start.
 
 > [!NOTE]

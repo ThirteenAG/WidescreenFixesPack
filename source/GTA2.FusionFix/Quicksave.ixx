@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include <atomic>
 #include "FixSettings.hpp"
 #include "Shared/GTAClassic/InputDevices.hpp"
 
@@ -13,6 +14,7 @@ export namespace GTA2Quicksave
 {
     uint16_t oldState = 0;
     uint16_t curState = 0;
+    std::atomic<bool> PadRequest = false;       // Back + Start on a pad
 
     uint32_t dword_45E510 = 0;                  // the save
     uint32_t dword_5EC070 = 0;
@@ -26,10 +28,11 @@ export namespace GTA2Quicksave
             regs.esi = *(uint32_t*)(regs.ebx + 4);
             regs.edi = 0;
 
-            if (!nQuicksaveKey || !InputDevices::Focused()) { oldState = 0; return; }
-            curState = GetAsyncKeyState(nQuicksaveKey) & 0x8000;
+            const bool padRequest = PadRequest.exchange(false);
+            if (!InputDevices::Focused()) { oldState = 0; return; }
+            curState = nQuicksaveKey ? GetAsyncKeyState(nQuicksaveKey) & 0x8000 : 0;
 
-            if (!curState && oldState)
+            if ((!curState && oldState) || padRequest)
             {
                 uint32_t missionFlag = **(uint32_t**)(dword_6644BC + 0x344);
                 uint32_t isMP = nMultiplayer;

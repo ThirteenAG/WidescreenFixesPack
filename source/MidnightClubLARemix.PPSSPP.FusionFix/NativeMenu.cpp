@@ -34,11 +34,11 @@ unsigned savedCount;
 enum Page { Native, Root, Settings, Presets, HelpTopics, HelpText };
 enum Id { None, Open = 100, Help, More, SettingRow = 200, PresetRow = 300, TopicRow = 400, Return = 900 };
 // Settings page rows after the preset row.
-enum Row { Fov, HudBox, HudSize, Borders, Skip, Analog, RowCount };
+enum Row { Fov, HudBox, HudSize, Borders, Skip, Analog, Speed, RowCount };
 constexpr Word rowLabels[RowCount]{ Word::FOVFactor, Word::HudAspectRatioConstraint, Word::HUDScale, Word::CutsceneBorders,
-                                    Word::SkipIntro, Word::DualAnalogPatch };
+                                    Word::SkipIntro, Word::DualAnalogPatch, Word::GamepadCameraSpeed };
 constexpr Word rowHelp[RowCount]{ Word::FOVFactorHelp, Word::HudAspectRatioConstraintHelp, Word::HUDScaleHelp, Word::CutsceneBordersHelp,
-                                  Word::SkipIntroHelp, Word::DualAnalogPatchHelp };
+                                  Word::SkipIntroHelp, Word::DualAnalogPatchHelp, Word::GamepadCameraSpeedHelp };
 constexpr const char* boxes[]{ "Auto", "4:3", "16:9", "21:9", "32:9" };
 constexpr float boxAspects[]{ 0.0f, 4.0f / 3.0f, 16.0f / 9.0f, 21.0f / 9.0f, 32.0f / 9.0f };
 constexpr const char* languageIds[]{ "auto", "en", "fr", "de", "it", "es" };
@@ -186,6 +186,7 @@ const char* Value(int row, char (&buffer)[32]) {
         case HudSize: text.integer(uint32_t(hudScale * 100.0f + 0.5f)); text.character('%'); break;
         case Borders: text.append(Label(Word(unsigned(Word::BordersOff) + unsigned(cutsceneBorders)))); break;
         case Skip: text.append(Label(skipIntro ? Word::On : Word::Off)); break;
+        case Speed: text.fixed(cameraSpeed, 1); break;
         default: text.append(Label(dualAnalog ? Word::On : Word::Off)); break;
     }
     return buffer;
@@ -251,6 +252,10 @@ void Change(int row) {
             preset = PresetOf();
             break;
         }
+        case Speed:
+            cameraSpeed = cameraSpeed >= 1.99f ? 0.5f : std::min(2.0f, std::round(cameraSpeed * 10.0f + 1.0f) / 10.0f);
+            SaveFloat("GamepadCameraSpeed", cameraSpeed);
+            break;
         case Skip:
             skipIntro = !skipIntro;
             Save("SkipIntro", skipIntro ? "1" : "0");
@@ -365,6 +370,11 @@ void RefreshDisplayOptions()
     fovFactor = std::clamp(nextFov, 0.5f, 2.0f);
     hudScale = std::clamp(nextScale, 0.5f, 1.5f);
     cutsceneBorders = int(std::clamp(nextBorders, 0l, 3l));
+    char speed[32]{};
+    if (rini_get_key("MAIN", "GamepadCameraSpeed", contents, size, speed, sizeof(speed), STRING_VAL)) {
+        const float nextSpeed = std::strtof(speed, &end);
+        if (end != speed && std::isfinite(nextSpeed)) cameraSpeed = std::clamp(nextSpeed, 0.5f, 2.0f);
+    }
     preset = PresetOf();
 }
 

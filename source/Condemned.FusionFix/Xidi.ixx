@@ -1,8 +1,64 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
+#include "Shared/PadInput.hpp"
 
 export module Xidi;
+
+// The device used last decides whether button prompts name keys or controller buttons; the mouse counts only when
+// it really moves.
+std::atomic<bool> PadLast{ false };
+POINT LastCursor{ LONG_MIN, LONG_MIN };
+
+export int PadIcons()
+{
+    return std::clamp(FixSettings().Int("MAIN.GamepadIcons"), 0, 3);
+}
+
+export bool PadUsedLast()
+{
+    return PadLast.load(std::memory_order_relaxed);
+}
+
+// Once per frame
+export void PollPad()
+{
+    XINPUT_STATE state{};
+    DWORD slot = 0;
+    if (PadInput::Read(state, slot))
+    {
+        const auto& pad = state.Gamepad;
+        const auto moved = [](SHORT value) { return std::abs(int(value)) > 16000; };
+        if (pad.wButtons || pad.bLeftTrigger > 64 || pad.bRightTrigger > 64 || moved(pad.sThumbLX) || moved(pad.sThumbLY) ||
+            moved(pad.sThumbRX) || moved(pad.sThumbRY))
+            PadLast.store(true, std::memory_order_relaxed);
+    }
+    POINT cursor{};
+    if (GetCursorPos(&cursor))
+    {
+        if (LastCursor.x != LONG_MIN && (std::abs(cursor.x - LastCursor.x) > 8 || std::abs(cursor.y - LastCursor.y) > 8))
+            PadLast.store(false, std::memory_order_relaxed);
+        LastCursor = cursor;
+    }
+}
+
+// From the game's window procedure
+export void InputMessage(UINT message)
+{
+    switch (message)
+    {
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+        case WM_LBUTTONDOWN:
+        case WM_RBUTTONDOWN:
+        case WM_MBUTTONDOWN:
+        case WM_XBUTTONDOWN:
+        case WM_MOUSEWHEEL:
+            PadLast.store(false, std::memory_order_relaxed);
+            break;
+    }
+}
 
 typedef bool (*XidiSendVibrationFunc)(short, unsigned short, unsigned short);
 export XidiSendVibrationFunc XidiSendVibration = nullptr;

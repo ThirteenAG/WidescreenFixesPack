@@ -69,6 +69,7 @@ void Install()
     auto reset = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 8B 08 68 ? ? ? ? 50 FF 51 40 85 C0");
     THAWDisplay::Reset = reinterpret_cast<void(__cdecl*)()>(reset.get_first());
     Presentation.SetAddress(*reset.get_first<D3DPRESENT_PARAMETERS*>(23));
+    DeviceLost.SetAddress(*reset.get_first<uint8_t*>(0x39));
     THAWDisplay::Resizable = std::clamp(settings.Int("MAIN.WindowMode"), 0, 2) == 1;
     THAWCinema::BeforePresent = []()
     {
@@ -90,6 +91,7 @@ public:
         WFP::onGameProcessEvent() += []()
         {
             THAWDevice::Attach();
+            THAWDisplay::UpdateMode();
             THAWDisplay::UpdateResize();
             THAWVibration::Frame();
             const bool gameplayCamera = std::any_of(TonyCamera::Cameras.begin(), TonyCamera::Cameras.end(),

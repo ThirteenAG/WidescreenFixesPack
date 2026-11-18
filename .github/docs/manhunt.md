@@ -23,7 +23,7 @@
 - **Cursor** - the mouse cursor stays inside the game's window while the game is in front, so it can't slip onto another monitor; it's let go when you switch away or move the window.
 - **Frame rate** - an optional limit that sleeps instead of the game's busy wait. The game never runs faster than its own 200 fps.
 - **Focus** - Pause When Unfocused pauses when another window is active. Turning it off lets Windowed and Borderless continue in the background; Fullscreen retains its native pause.
-- **Controller** - the included Xidi connects XInput controllers to the game's native controls. Modern provides a fixed layout, camera speed and Xbox, PlayStation or Nintendo artwork. Controls, menu hints and supported tutorials follow the last input device. Keyboard and mouse assignments are preserved; Original retains saved native controller assignments.
+- **Controller** - the included Xidi connects XInput controllers to the game's native controls. Modern provides a fixed layout, camera speed and Xbox, PlayStation or Nintendo artwork. Controls, menu hints and supported tutorials follow the last input device. Keyboard and mouse assignments are preserved; Original retains saved native controller assignments; the controls screen and supported tutorials show those buttons with the selected artwork too.
 - **Updates** - Check for Updates is off by default. When enabled, a new-version notice appears in Settings. FusionFixHub opens after the game exits if it is installed; otherwise the notice points to fusionfix.io.
 - **Skip intro** - the three-second wait on the legal screen and the opening logo video are skipped.
 - **Stability** - the folder in Documents for saves and settings is found even if its name isn't set up yet.
@@ -36,7 +36,7 @@ In FusionFixHub, Text Language follows the game when set to Auto, or you can cho
 
 | Setting | Values | Default |
 |---|---|---|
-| HUD aspect ratio | Auto (whole screen width), 4:3, 16:9, 21:9 or any width:height | Auto |
+| HUD aspect ratio | Auto (whole screen width), 4:3, 16:9, 21:9, 32:9 or any width:height | Auto |
 | Cutscene borders | Off, Letterbox, Pillarbox, Both | Both |
 | Window mode | Fullscreen, Windowed, Borderless (restart) | Fullscreen |
 | Confine cursor | On or off | On |

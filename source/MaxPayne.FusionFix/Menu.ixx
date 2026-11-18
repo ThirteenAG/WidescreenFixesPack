@@ -18,7 +18,7 @@ std::vector<MaxPayneMenu::Placement> MenuPlacements()
     return
     {
         { "GCID_VIDEOU", Spot::BeforeLastMenu, 2, { "MAIN.WindowMode", "MAIN.FOVFactor", "MAIN.HudAspectRatioConstraint", "GRAPHICS.AntiAliasing", "GRAPHICS.ConsoleGamma", "GRAPHICS.VSync", "MAIN.FPSLimit" } },
-        { "GCID_GENERICU", Spot::BeforeFirstItem, 0, { "MAIN.CutsceneBorders", "MAIN.AnimatedCutsceneBorders", "MAIN.GraphicNovelMode" } },
+        { "GCID_GENERICU", Spot::BeforeFirstItem, 0, { "MAIN.CutsceneBorders", "MAIN.AnimatedCutsceneBorders", "MAIN.FMVWidescreenMode", "MAIN.GraphicNovelMode" } },
         { "GCID_CONTROLSU", Spot::BeforeLastMenu, 3, { "MAIN.GamepadIcons", "MAIN.GamepadCameraSpeed", "MAIN.InvertGamepadY", "MAIN.Vibration" } },
         { "GCID_MOUSESETTINGSU", Spot::BeforeBack, 3, { "MAIN.RawInputMouse", "MAIN.MouseSmoothing" } },
     };

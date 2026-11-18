@@ -143,7 +143,12 @@ char __fastcall GenericVehicleCamera_ApplyRightStickMotion(float* mInputs, void*
         temporaryAimHold = false;
     }
 
-    if (GetAsyncKeyState(VK_RBUTTON))
+    // Holding the secondary mouse button keeps the aimed view. GetAsyncKeyState reads the physical buttons, so
+    // follow the system's left-handed setting; only while the game has the input.
+    const int secondaryButton = GetSystemMetrics(SM_SWAPBUTTON) ? VK_LBUTTON : VK_RBUTTON;
+    const bool hasInput = hWndInput.is_initialized() && hWndInput.get() && hWndInput.get() == GetForegroundWindow() &&
+        !ScarfaceOverlayInput::BlocksInput() && !OptionManager::ScarfaceHook_GetMenuActive();
+    if (hasInput && !OptionManager::bGamepadUsed && (GetAsyncKeyState(secondaryButton) & 0x8000))
     {
         // Preserve the existing native aim-hold mode; do not expire or clear it.
         timeSinceLook = 60.0f;

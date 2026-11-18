@@ -260,9 +260,10 @@ public:
             vehicleFovOutput = reinterpret_cast<uintptr_t>(vehicleOutput.get_first());
             viewFovHook = safetyhook::create_mid(viewFov.get_first(15), [](SafetyHookContext& regs)
             {
+                // Every camera keeps its 16:9 vertical view (Hor+); the multiplier only widens gameplay cameras.
                 auto* value = reinterpret_cast<float*>(regs.esp);
-                if (const auto factor = GameplayFovFactor(reinterpret_cast<void*>(regs.ebx), FixSettings().Float("MAIN.FOVFactor")))
-                    *value = BoundViewFov(HorGameplayFov(*value, fAspectRatio) * *factor);
+                const auto factor = GameplayFovFactor(reinterpret_cast<void*>(regs.ebx), FixSettings().Float("MAIN.FOVFactor"));
+                *value = BoundViewFov(HorGameplayFov(*value, fAspectRatio) * factor.value_or(1.0f));
             });
             auto& settings = FixSettings();
 

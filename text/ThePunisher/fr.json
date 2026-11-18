@@ -50,7 +50,7 @@
   "menu.details": "Détails",
   "menu.restartshort": "Redémarrage requis",
   "FPSLimit": "Limite de FPS",
-  "FPSLimit.description": "Limite le rendu à 30–1000 FPS. 0 désactive la limite ; -1 utilise la fréquence du bureau. Effet immédiat. 60 FPS sont recommandés pour un comportement stable du jeu.",
+  "FPSLimit.description": "Limite le rendu à 30–60 FPS ; -1 utilise la fréquence du bureau jusqu’à 60. Le jeu est conçu pour 60 FPS ; au-delà, son timing se dérègle. Effet immédiat.",
   "fpslimit.unlimited": "Illimitée",
   "fpslimit.refreshrate": "Fréquence de l'écran",
   "WindowMode": "Mode de fenêtre",

@@ -65,7 +65,7 @@
   "menu.restoredefaultshelp": "Sets the settings of this page to their defaults.",
   "menu.restartwarning": "Restart the game to apply changes.",
   "menu.help": "Help",
-  "menu.presethelp": "Choose with Left/Right, then confirm to apply. Vanilla keeps the original logo sequence and cinematic borders. Recommended and Enhanced skip the logos, add side borders to cutscenes and enable RGB lighting. Player preferences and values shared by every preset are kept. Restore defaults resets every setting.",
+  "menu.presethelp": "Choose with Left/Right, then confirm to apply. Vanilla keeps the original logos and title prompt, and cutscenes fill the screen. Recommended and Enhanced skip the logos and the title prompt, show cutscenes between side borders and enable RGB lighting. Player preferences and values shared by every preset are kept. Restore defaults resets every setting.",
   "menu.helphint": "F1: full help. You can also select Details.",
   "menu.auto": "Automatic",
   "menu.pluginshelp": "Manage this fix and other installed plugins.",

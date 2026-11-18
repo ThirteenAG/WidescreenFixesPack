@@ -76,6 +76,7 @@ namespace tcny
 
     void InstallHud(uintptr_t width, uintptr_t layout, uintptr_t subtitles, uintptr_t models, uintptr_t map,
                     uintptr_t blips, uintptr_t radar, uintptr_t radarDisc, uintptr_t scale3D);
+    void InstallTraffic(uintptr_t zone);
     void InstallTiming(uintptr_t process, uintptr_t frameSite, uintptr_t vsyncCall, uintptr_t wide);
     void InstallCutscene(uintptr_t barsBegin, uintptr_t barsHeight, uintptr_t barsEnd, uintptr_t barsReset);
     void InstallCamera(uintptr_t projectionCall);

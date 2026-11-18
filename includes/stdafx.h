@@ -78,14 +78,6 @@ BOOL CreateProcessInJob(
     LPSTARTUPINFO lpStartupInfo,
     LPPROCESS_INFORMATION ppi);
 
-BOOL CreateProcessInJobAsAdmin(
-    HANDLE hJob,
-    LPCTSTR lpApplicationName,
-    LPTSTR lpCommandLine,
-    int nShow,
-    LPCTSTR lpCurrentDirectory,
-    LPPROCESS_INFORMATION ppi);
-
 template<typename T>
 std::array<uint8_t, sizeof(T)> to_bytes(const T& object)
 {

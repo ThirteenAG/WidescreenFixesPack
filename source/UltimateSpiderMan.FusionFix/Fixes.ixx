@@ -10,14 +10,6 @@ import ComVars;
 
 void* (__thiscall* pCreateFrameTimer)(void*, float, float) = nullptr;
 
-SafetyHookInline shSwitchTimeOfDay;
-void __cdecl SwitchTimeOfDay(int)
-{
-    // Native preset 2 selects the rainy sky, lighting and water environment.
-    // Let the engine create/update its resources at the usual setup points.
-    shSwitchTimeOfDay.ccall<void>(2);
-}
-
 float fFPSLimit = 60.0f;
 float* FrameTimer = nullptr;
 void(__thiscall* pResetFrameTimer)(void*) = nullptr;
@@ -173,14 +165,6 @@ public:
         {
             hook::pattern pattern;
             auto& settings = FixSettings();
-            // Developer weather override, compiled in only on request.
-            // Rain particles and mission thunder effects may be script-driven.
-#ifdef USM_DEBUG_ALWAYS_RAIN
-            {
-                auto pattern = hook::pattern("64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 8B 44 24 10 64 89 25 00 00 00 00 83 EC 30 53 55 33 DB 3B C3 56 57"); //0x408790
-                shSwitchTimeOfDay = safetyhook::create_inline(pattern.get_first(), SwitchTimeOfDay);
-            }
-#endif
 
             if (FixSettings().Bool("MAIN.SkipIntro") != 0)
             {

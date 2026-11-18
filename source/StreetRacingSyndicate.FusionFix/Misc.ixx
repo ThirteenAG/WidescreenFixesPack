@@ -12,6 +12,7 @@ import Intro;
 import OptionsMenu;
 import Camera;
 import States;
+import Gamepad;
 
 class Misc
 {
@@ -108,6 +109,7 @@ public:
             }; injector::MakeInline<RearviewMirrorHook>(pattern.get_first<uint32_t>(0), pattern.get_first<uint32_t>(10));
 
             SRSCamera::Init(Screen.Width, Screen.Height);
+            SRSPad::Init();
         };
     }
 } Misc;

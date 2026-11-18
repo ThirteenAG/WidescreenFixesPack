@@ -65,9 +65,10 @@ inline constexpr float maximumAspect = 32767.0f / 4096.0f;
 void RefreshAspect() {
     if (automaticAspect) targetAspect = console::bounded(console::portable::Aspect(), 0.5f, maximumAspect, nativeAspect);
 }
-void InstallAspect() {
+void ReadAspectSettings() {
     char ratioBuffer[64]{};
     const char* ratio = inireader.ReadString("MAIN", "ForceAspectRatio", "auto", ratioBuffer, sizeof(ratioBuffer));
+    automaticAspect = true;
     char* separator = nullptr;
     const float numerator = std::strtof(ratio, &separator);
     if (separator && *separator == ':') {
@@ -80,6 +81,9 @@ void InstallAspect() {
     }
     RefreshAspect();
     fovFactor = console::bounded(inireader.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.0f, 1.0f);
+}
+void InstallAspect() {
+    ReadAspectSettings();
 #ifndef NDEBUG
     logger.WriteF("Camera builder %08X words %08X %08X previous %08X", unsigned(Address<0x088559AC>()), injector::ReadMemory<uint32_t>(Address<0x088559AC>()), injector::ReadMemory<uint32_t>(Address<0x088559AC>()+4), injector::ReadMemory<uint32_t>(Address<0x088559AC>()-4));
 #endif

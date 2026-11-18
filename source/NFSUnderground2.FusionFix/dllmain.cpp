@@ -57,6 +57,9 @@ void Init()
     pattern = hook::pattern("8B 0D ? ? ? ? 3B CB 74 ? E8 ? ? ? ? 83 FF");
     cFEng::pInstance = *pattern.get_first<void**>(2);
     cFEng::MakeLoadedPackagesDirty = (decltype(cFEng::MakeLoadedPackagesDirty))injector::GetBranchDestination(pattern.get_first(10)).as_int();
+    // The dialog shown over the front end
+    pattern = hook::pattern("A1 ? ? ? ? 8B 4C 24 04 50 51 68 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C4 0C 3B C1 75");
+    CurrentDialog.SetAddress(*pattern.get_first<int32_t*>(1));
     // The frame's time step, after PrepareRealTimestep. The time MainLoop passes to it is measured from the end
     // of the previous wait, so with a frame rate limit it leaves out the wait; PrepareRealTimestep stores the
     // whole step (with the wait, in 1/1800 s units, the remainder kept for the next frame).

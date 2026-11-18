@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/Console/Viewport.hpp"
+#include "Shared/TonyHawk/PadPrompts.hpp"
 
 export module Hud;
 
@@ -26,67 +27,134 @@ export namespace THUG2Hud
         return value;
     }
 
-    constexpr int Hidden = 2;
+    constexpr int Hidden = 3;
 
-    // -1 left edge, 1 right edge, 0 centred, Hidden for the cutscene bar sprites (the frame clears outside the picture)
-    inline int Classify(uintptr_t element)
+    struct Placement
+    {
+        int anchor = 0;     // -1 left edge, 1 right edge, 2 centre of a split-screen half, Hidden: cutscene bars
+        uintptr_t panel = 0;
+        int player = 0;
+    };
+
+    inline bool Split()
+    {
+        return HudLayout.get() == 1 || HudLayout.get() == 2;
+    }
+
+    // One view (and HORSE, one player at a time) keeps the native 640-wide frame; split screen places each
+    // player's panel in its own half. The cutscene bar sprites are hidden (the frame clears outside the picture).
+    inline Placement Classify(uintptr_t element)
     {
         if (const auto parent = *reinterpret_cast<uintptr_t*>(element + 76);
             parent && *reinterpret_cast<uint32_t*>(parent + 20) == Checksum("letterbox_anchor"))
-            return Hidden;
-        if (!HudLayout.is_initialized() || HudLayout != 0)
-            return 0;
-        int anchor = 0;
+            return { Hidden };
+        if (!HudLayout.is_initialized() || (HudLayout.get() != 0 && HudLayout.get() != 1 && HudLayout.get() != 2 &&
+            HudLayout.get() != 4 && HudLayout.get() != 5))
+            return {};
+        const bool split = Split();
+        Placement result;
         for (int depth = 0; element && depth < 32; ++depth)
         {
             if (*reinterpret_cast<uint32_t*>(element + 8) & 0x80000u)
-                return 0;
-            if (!anchor)
+                return {};
+            const auto id = *reinterpret_cast<uint32_t*>(element + 20);
+            if (id == Checksum("player1_panel_container") || id == Checksum("player2_panel_container"))
             {
-                switch (*reinterpret_cast<uint32_t*>(element + 20))
+                result.panel = element;
+                result.player = id == Checksum("player2_panel_container") ? 1 : 0;
+            }
+            if (!result.anchor && split)
+            {
+                switch (id)
                 {
                     case Checksum("the_score"):
                     case Checksum("the_score_sprite"):
+                    case Checksum("the_score") + 1:
+                    case Checksum("the_score_sprite") + 1:
+                        result.anchor = -1;
+                        break;
+                    case Checksum("the_run_timer"):
+                    case Checksum("the_run_timer") + 1:
+                        result.anchor = 1;
+                        break;
+                    case Checksum("trick_text_container"):
+                    case Checksum("trick_text_container") + 1:
+                    case Checksum("the_balance_meter"):
+                    case Checksum("the_balance_meter") + 1:
+                        result.anchor = 2;
+                        break;
+                }
+            }
+            else if (!result.anchor)
+            {
+                switch (id)
+                {
+                    case Checksum("the_score"):
+                    case Checksum("the_score_sprite"):
+                    case Checksum("the_score") + 1:
+                    case Checksum("the_score_sprite") + 1:
                     case Checksum("goal_points_display"):
                     case Checksum("pager_new_message_icon"):
                     case Checksum("console_message_vmenu"):
                     case Checksum("horse_score_menu"):
-                        anchor = -1;
+                        result.anchor = -1;
                         break;
                     case Checksum("current_goal"):
                     case Checksum("current_goal_key_combo_text"):
                     case Checksum("goal_points_text"):
-                        anchor = 1;
+                        result.anchor = 1;
                         break;
                 }
             }
             element = *reinterpret_cast<uintptr_t*>(element + 76);
         }
-        return anchor;
+        if (split && !result.panel)
+            return {};
+        return result;
     }
 
-    inline float Offset(int anchor)
+    inline float Offset(const Placement& placement)
     {
         if (!NativeScaleX.is_initialized() || !std::isfinite(NativeScaleX.get()) || NativeScaleX <= 0.0f)
             return 0.0f;
         const float aspect = Constraint ? console::parse_hud_aspect(Constraint->c_str()) : 0.0f;
-        const float boxWidth = aspect > 0.0f ? std::min(Width, Height * aspect) : Width;
         // The 640x480 frame: full height on wider screens, full width (letterboxed) on narrower ones
         const float frameWidth = std::min(Width, Height * (4.0f / 3.0f));
-        return anchor * std::max(0.0f, boxWidth - frameWidth) * 0.5f / NativeScaleX.get();
+        if (Split())
+        {
+            const bool vertical = HudLayout.get() == 1;
+            const float viewportWidth = vertical ? Width * 0.5f : Width;
+            const float viewportHeight = vertical ? Height : Height * 0.5f;
+            const float boxWidth = aspect > 0.0f ? std::min(viewportWidth, viewportHeight * aspect) : viewportWidth;
+            const float left = vertical ? placement.player * viewportWidth : 0.0f;
+            const float edge = placement.anchor == 1 ? 1.0f : placement.anchor == 2 ? 0.5f : 0.0f;
+            const float target = left + (viewportWidth - boxWidth) * 0.5f + edge * boxWidth;
+            const float panelX = *reinterpret_cast<float*>(placement.panel + 296);
+            if (!std::isfinite(panelX))
+                return 0.0f;
+            const float native = (Width - frameWidth) * 0.5f + panelX * NativeScaleX.get() +
+                edge * frameWidth * (vertical ? 0.5f : 1.0f);
+            return (target - native) / NativeScaleX.get();
+        }
+        const float boxWidth = aspect > 0.0f ? std::min(Width, Height * aspect) : Width;
+        return placement.anchor * std::max(0.0f, boxWidth - frameWidth) * 0.5f / NativeScaleX.get();
     }
 
     inline int Draw(uintptr_t element, bool sprite)
     {
+        // Text prompts look up their element for the controller icons
+        if (!sprite)
+            TonyPad::Prompts::SetTextContext(element);
         auto& original = sprite ? SpriteHook : TextHook;
-        const int anchor = Classify(element);
-        if (!anchor)
+        const auto placement = Classify(element);
+        if (!placement.anchor)
             return original.thiscall<int>(element);
         // The native draw hides an element whose frame x is far outside the 640 frame. Parked edge elements (the goal
         // points panel slides out to the left) were outside the 4:3 screen, so they stay hidden beside a narrower box.
         auto* cull = reinterpret_cast<float*>(element + 312);
         const float savedCull = *cull;
-        if (anchor == Hidden || (anchor < 0 && savedCull < 0.0f) || (anchor > 0 && savedCull > 640.0f))
+        const bool parked = !Split() && ((placement.anchor < 0 && savedCull < 0.0f) || (placement.anchor == 1 && savedCull > 640.0f));
+        if (placement.anchor == Hidden || parked)
         {
             *cull = -1000.0f;
             const auto result = original.thiscall<int>(element);
@@ -95,7 +163,7 @@ export namespace THUG2Hud
         }
         auto* x = reinterpret_cast<float*>(element + (sprite ? 296 : 308));
         const float savedX = *x;
-        *x = savedX + Offset(anchor);
+        *x = savedX + Offset(placement);
         auto* flags = reinterpret_cast<uint32_t*>(element + 8);
         const uint32_t savedFlags = *flags;
         if (sprite)

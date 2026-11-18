@@ -148,6 +148,7 @@ export namespace MenuCanvas
     inline int Depth = 0;
     inline int Suspensions = 0;
     inline float Offset = 0.0f;
+    inline int CanvasWidth = 0;
 
     __declspec(noinline) ResChange<int, int>& onLayoutChange()
     {
@@ -197,6 +198,7 @@ export namespace MenuCanvas
         PhysicalMaximumWidth = RsGlobal->maximumWidth;
         const int width = GetWidth(PhysicalWidth, RsGlobal->height);
         Offset = float(PhysicalWidth - width) * 0.5f;
+        CanvasWidth = width;
         RsGlobal->width = width;
         RsGlobal->maximumWidth = width;
         fMenuAspectRatio = float(width) / RsGlobal->height;
@@ -209,6 +211,17 @@ export namespace MenuCanvas
         RsGlobal->maximumWidth = PhysicalMaximumWidth;
         fMenuAspectRatio = 0.0f;
         onLayoutChange().executeAll(RsGlobal->width, RsGlobal->height);
+    }
+
+    // A camera resize while the canvas is applied (a windowed mode resizing the window from the
+    // resolution menu) writes the new physical size over the canvas values. Take it as the physical
+    // size, otherwise the end of the scope restores the old one.
+    void Resized()
+    {
+        if (!Depth || Suspensions) return;
+        if (RsGlobal->maximumWidth == CanvasWidth)
+            RsGlobal->maximumWidth = RsGlobal->width;
+        Apply();
     }
 
     class Scope
@@ -323,6 +336,28 @@ export namespace FOVManager
     }
 }
 
+// The scopes and first-person aims keep their zoom, and the scripts' cameras their framing
+static bool KeepsItsFieldOfView()
+{
+    if (TheCamera->WhoIsInControlOfTheCamera != 0)
+        return true;
+    switch (TheCamera->Cams[TheCamera->ActiveCam].Mode)
+    {
+        case CCam::MODE_SNIPER:
+        case CCam::MODE_ROCKETLAUNCHER:
+        case CCam::MODE_M16_1STPERSON:
+        case CCam::MODE_SNIPER_RUNABOUT:
+        case CCam::MODE_ROCKETLAUNCHER_RUNABOUT:
+        case CCam::MODE_1STPERSON_RUNABOUT:
+        case CCam::MODE_M16_1STPERSON_RUNABOUT:
+        case CCam::MODE_HELICANNON_1STPERSON:
+        case CCam::MODE_CAMERA:
+            return true;
+        default:
+            return false;
+    }
+}
+
 void CDraw::SetFOV(float fov)
 {
     if (!CCutsceneMgr::IsRunning() && !TheCamera->m_WideScreenOn)
@@ -333,7 +368,7 @@ void CDraw::SetFOV(float fov)
         // widened view stops at 150 degrees, past which the perspective collapses on wide screens.
         constexpr float MaxWidth = 3.7320508f; // tan(75 degrees)
         float width = tan(DEGTORAD(ConvertFOV(fov)) / 2.0f);
-        float scaled = width * FOVManager::GetCurrentMultiplier();
+        float scaled = width * (KeepsItsFieldOfView() ? 1.0f : FOVManager::GetCurrentMultiplier());
         if (scaled > MaxWidth)
             scaled = std::max(width, MaxWidth);
         ms_fScaledFOV = RADTODEG(2.0f * Atan(scaled));

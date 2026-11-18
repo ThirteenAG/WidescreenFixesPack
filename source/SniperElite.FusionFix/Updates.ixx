@@ -32,8 +32,33 @@ export namespace SniperUpdates
         Print(Line.c_str(), area, 0.0f, 0.0f, 0.75f, 0.5f, 0xFFFFFFFF, 0x1C5);
     }
 
+    // MAIN.TextLanguage: Automatic follows the language of the game's text files
+    inline void SelectLanguage()
+    {
+        auto language = FixSettings().String("MAIN.TextLanguage");
+        if (language.empty() || language == "auto")
+        {
+            language = "en";
+            static constexpr std::pair<const char*, const char*> files[] =
+            {
+                { "Text/PC_Text_Fre.asr", "fr" }, { "Text/PC_Text_Fra.asr", "fr" },
+                { "Text/PC_Text_Ger.asr", "de" }, { "Text/PC_Text_Deu.asr", "de" },
+                { "Text/PC_Text_Ita.asr", "it" }, { "Text/PC_Text_Spa.asr", "es" },
+                { "Text/PC_Text_Esp.asr", "es" },
+            };
+            for (const auto& [file, tag] : files)
+            {
+                if (GetFileAttributesA(file) != INVALID_FILE_ATTRIBUTES)
+                    language = tag;
+            }
+        }
+        FixSettings().GetTexts().Select(language);
+    }
+
     inline void Init(decltype(Print) print)
     {
+        SelectLanguage();
+        FixSettings().OnChange("MAIN.TextLanguage", SelectLanguage);
         auto font = hook::pattern("E8 ? ? ? ? D8 2D ? ? ? ? A1 ? ? ? ? 50 D9 5C 24 08"); //475092
         auto setFont = hook::pattern("8B 44 24 04 83 F8 FF 74 ? 8B 0D ? ? ? ? 83 3C 81 00"); //40E5F0
         Print = print;

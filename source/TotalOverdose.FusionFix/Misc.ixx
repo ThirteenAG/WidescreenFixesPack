@@ -18,6 +18,16 @@ export void SkipIntro()
     injector::WriteMemory<uint32_t>(reinterpret_cast<uint32_t*>(transition + 9), story, true);
 }
 
+// MAIN.SkipPressStart: after the story intro the start-up script continues with the loading step that pressing Enter
+// on the title starts, so the front end loads without the title. The attract movie only plays from the title.
+export void SkipPressStart()
+{
+    auto intro = hook::pattern("68 ? ? ? ? 68 ? ? ? ? 8B CE E8 ? ? ? ? 8B CE 5E E9 ? ? ? ? CC CC CC CC CC 83 EC 0C 55 8B 2D");
+    auto click = hook::pattern("8B 0D ? ? ? ? 51 55 68 ? ? ? ? 68 ? ? ? ? 8B CE E8 ? ? ? ? 5B 8B CE E8");
+    const auto loading = *click.get_first<uint32_t>(9); //0x726E80
+    injector::WriteMemory<uint32_t>(intro.get_first(1), loading, true); //0x727273
+}
+
 // MAIN.FOVFactor: the main view's vertical field of view (degrees) widened by the factor on its tangent, so 1.0 is
 // the game's own camera; bounded to 150 degrees across. The other views (fixed 60 degrees) stay as they are.
 SafetyHookInline SetProjectionHook;

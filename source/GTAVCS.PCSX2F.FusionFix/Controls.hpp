@@ -1,7 +1,7 @@
 #pragma once
 #include "Game.hpp"
 #include "../Shared/Console/Input.hpp"
-#include "MouseInput.hpp"
+#include "../Shared/Console/StoriesMouse.hpp"
 #include "../Shared/Console/StoriesBindings.hpp"
 extern "C" {
 #include "../../external/injector/include/ps2/pcsx2f_api.h"
@@ -38,7 +38,7 @@ constexpr unsigned num0 = 96, num2 = 98, num4 = 100, num5 = 101, num6 = 102, num
 constexpr unsigned pause = 192;
 }
 inline console::Input input;
-inline MouseMotion mouseMotion;
+inline console::stories::MouseMotion mouseMotion;
 inline Pad* playerPad = nullptr;
 using Act = console::stories::Action;
 inline console::stories::Bindings bindings;
@@ -68,4 +68,7 @@ bool SaveBindings();
 void InstallMouseCamera();
 void ApplyMouseCamera();
 void UpdateCheats();
+// The GXT key whose text names the button an action has in the modern
+// scheme, or nullptr.
+const char* ModernTextKey(const char* key);
 }

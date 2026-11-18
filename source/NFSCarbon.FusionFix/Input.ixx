@@ -19,9 +19,11 @@ import PostFX;
 // Steam Input or DS4Windows. Xidi presents each pad as a "Xidi virtual controller". The bundled
 // Xidi.ini uses the XInputNative layout with each trigger on its own half axis: X/Y = left stick,
 // RotX/RotY = right stick, Z+ = LT, RotZ+ = RT, POV = d-pad, buttons 1-10 = A B X Y LB RB Back Start
-// LS RS. This module gives such pads modern default bindings, proper names in the controls menu,
-// controller icons in the front end, front end actions for the PC-only hotkeys and the right stick
-// for the camera. Other devices (wheels and so on) keep the game's own behaviour.
+// LS RS. Without Xidi, Windows shows an Xbox pad to DirectInput with the same layout except for the
+// triggers, which share the Z axis: LT above the centre, RT below it. This module gives both modern
+// default bindings, proper names in the controls menu, controller icons in the front end, front end
+// actions for the PC-only hotkeys and the right stick for the camera. Other devices (wheels and so on)
+// keep the game's own behaviour.
 
 namespace
 {
@@ -114,22 +116,38 @@ namespace
 
     // The device states are read by the game's input library, which may run on a thread of its own, while the
     // bindings and the camera are handled on the game's thread: what's shared is guarded or atomic.
-    bool IsXidiDevice(IDirectInputDevice8A* device)
+    enum class PadKind
     {
-        // Xidi virtual controller instance GUIDs end with "XIDIVC"
-        static std::map<IDirectInputDevice8A*, bool> cache;
+        None,       // not a gamepad this module knows
+        Xidi,       // a Xidi virtual controller, each trigger on its own axis
+        XInput,     // an Xbox pad shown to DirectInput by Windows, both triggers on the Z axis
+    };
+
+    PadKind GetPadKind(IDirectInputDevice8A* device)
+    {
+        static std::map<IDirectInputDevice8A*, PadKind> cache;
         static std::mutex mutex;
         if (!device)
-            return false;
+            return PadKind::None;
 
         std::lock_guard lock(mutex);
         if (auto it = cache.find(device); it != cache.end())
             return it->second;
 
+        // Xidi virtual controller instance GUIDs end with "XIDIVC". Pads that Windows also offers through
+        // XInput have "IG_" in their device path.
+        PadKind kind = PadKind::None;
         DIDEVICEINSTANCEA info = { sizeof(DIDEVICEINSTANCEA) };
-        bool isXidi = SUCCEEDED(device->GetDeviceInfo(&info)) && memcmp(info.guidInstance.Data4, "XIDIVC", 6) == 0;
-        cache[device] = isXidi;
-        return isXidi;
+        DIPROPGUIDANDPATH path = {};
+        path.diph.dwSize = sizeof(DIPROPGUIDANDPATH);
+        path.diph.dwHeaderSize = sizeof(DIPROPHEADER);
+        path.diph.dwHow = DIPH_DEVICE;
+        if (SUCCEEDED(device->GetDeviceInfo(&info)) && memcmp(info.guidInstance.Data4, "XIDIVC", 6) == 0)
+            kind = PadKind::Xidi;
+        else if (SUCCEEDED(device->GetProperty(DIPROP_GUIDANDPATH, &path.diph)) && (wcsstr(path.wszPath, L"IG_") || wcsstr(path.wszPath, L"ig_")))
+            kind = PadKind::XInput;
+        cache[device] = kind;
+        return kind;
     }
 
     IDirectInputDevice8A* GetJoystick(int index)
@@ -140,19 +158,9 @@ namespace
         return (joystick && joystick != uintptr_t(-4)) ? *reinterpret_cast<IDirectInputDevice8A**>(joystick + 0x218) : nullptr;
     }
 
-    bool IsXidiJoystick(int index)
+    PadKind GetJoystickPadKind(int index)
     {
-        return IsXidiDevice(GetJoystick(index));
-    }
-
-    bool AnyXidiJoystick()
-    {
-        for (int i = 0; i < MaxJoysticks; ++i)
-        {
-            if (IsXidiJoystick(i))
-                return true;
-        }
-        return false;
+        return GetPadKind(GetJoystick(index));
     }
 }
 
@@ -245,7 +253,7 @@ export namespace Input
     }
 }
 
-// Modern default bindings for Xidi pads
+// Modern default bindings for gamepads
 namespace
 {
     int DefaultsDevice = 0;
@@ -277,14 +285,17 @@ namespace
     void __stdcall SetJoystickDefaults(int device)
     {
         shSetJoystickDefaults.unsafe_stdcall(device);
-        if (!Actions || !IsXidiJoystick(device))
+        auto kind = GetJoystickPadKind(device);
+        if (!Actions || kind == PadKind::None)
             return;
 
         DefaultsDevice = device;
+        Binding leftTrigger = AxisHigh(AxisZ);
+        Binding rightTrigger = kind == PadKind::Xidi ? RotationHigh(AxisZ) : AxisLow(AxisZ);
 
         // Race and free roam
-        Bind(ActionGas, RotationHigh(AxisZ));                   // RT
-        Bind(ActionBrake, AxisHigh(AxisZ));                     // LT
+        Bind(ActionGas, rightTrigger);
+        Bind(ActionBrake, leftTrigger);
         Bind(ActionSteerLeft, AxisLow(AxisX), Pov(PovLeft));
         Bind(ActionSteerRight, AxisHigh(AxisX), Pov(PovRight));
         Bind(ActionHandbrake, Button(PadA));
@@ -317,15 +328,15 @@ namespace
         Bind(ActionFEStart, Button(PadStart));
         Bind(ActionFEPrevious, Button(PadLB));
         Bind(ActionFENext, Button(PadRB));
-        Bind(ActionFELeftTrigger, AxisHigh(AxisZ));
-        Bind(ActionFERightTrigger, RotationHigh(AxisZ));
+        Bind(ActionFELeftTrigger, leftTrigger);
+        Bind(ActionFERightTrigger, rightTrigger);
         Bind(ActionFEKey1, Button(PadY));
         Bind(ActionFEKey2, Button(PadX));
         Bind(ActionFEKey3, Button(PadBack));
     }
 }
 
-// Controls menu labels for Xidi pads
+// Controls menu labels for gamepads
 namespace
 {
     struct PadNames
@@ -343,7 +354,7 @@ namespace
         return CurrentIconStyle == IconStyle::PlayStation ? PlayStationNames : XboxNames;
     }
 
-    const char* BindingName(const Binding& binding)
+    const char* BindingName(const Binding& binding, PadKind kind)
     {
         const auto& names = CurrentNames();
         static constexpr const char* PovNames[] = { "D-pad Up", "D-pad Right", "D-pad Down", "D-pad Left" };
@@ -360,12 +371,12 @@ namespace
             case BindAxisLow:
             case BindAxisHigh:
                 if (binding.index == AxisZ)
-                    return high ? names.leftTrigger : nullptr;
+                    return high ? names.leftTrigger : (kind == PadKind::XInput ? names.rightTrigger : nullptr);
                 return (binding.index == AxisX || binding.index == AxisY) ? LeftStick[binding.index][high] : nullptr;
             case BindRotationLow:
             case BindRotationHigh:
                 if (binding.index == AxisZ)
-                    return high ? names.rightTrigger : nullptr;
+                    return high && kind == PadKind::Xidi ? names.rightTrigger : nullptr;
                 return (binding.index == AxisX || binding.index == AxisY) ? RightStick[binding.index][high] : nullptr;
         }
         return nullptr;
@@ -375,9 +386,10 @@ namespace
     void __cdecl GetBindingName(char* text, size_t size, int deviceType, Binding* binding)
     {
         constexpr int DeviceKeyboard = 1;
-        if (deviceType != DeviceKeyboard && binding && binding->type != BindKey && IsXidiJoystick(binding->device))
+        auto kind = binding ? GetJoystickPadKind(binding->device) : PadKind::None;
+        if (deviceType != DeviceKeyboard && binding && binding->type != BindKey && kind != PadKind::None)
         {
-            if (auto name = BindingName(*binding))
+            if (auto name = BindingName(*binding, kind))
             {
                 strncpy_s(text, size, name, _TRUNCATE);
                 return;
@@ -626,7 +638,8 @@ public:
             {
                 auto device = *reinterpret_cast<IDirectInputDevice8A**>(regs.esi + 0x468);
                 auto state = reinterpret_cast<DIJOYSTATE2*>(regs.ebp - 0x13C);
-                if (!IsXidiDevice(device))
+                auto kind = GetPadKind(device);
+                if (kind == PadKind::None)
                     return;
 
                 static const float& leftDeadzone = FixSettings().Float("GAMEPAD.LeftStickDeadzone");
@@ -670,22 +683,29 @@ public:
 
                 float lookX = axis(state->lRx);
                 float lookY = axis(state->lRy);
-                Input::Look.stickX = lookX;
-                Input::Look.stickY = lookY;
-
+                bool triggers = kind == PadKind::Xidi ? (axis(state->lZ) > 0.5f || axis(state->lRz) > 0.5f) : std::fabs(axis(state->lZ)) > 0.5f;
                 bool active = std::fabs(axis(state->lX)) > 0.5f || std::fabs(axis(state->lY)) > 0.5f ||
-                    std::fabs(lookX) > 0.5f || std::fabs(lookY) > 0.5f ||
-                    axis(state->lZ) > 0.5f || axis(state->lRz) > 0.5f || LOWORD(state->rgdwPOV[0]) != 0xFFFF;
+                    std::fabs(lookX) > 0.5f || std::fabs(lookY) > 0.5f || triggers || LOWORD(state->rgdwPOV[0]) != 0xFFFF;
                 for (int i = 0; i < PadButtonCount && !active; ++i)
                     active = (state->rgbButtons[i] & 0x80) != 0;
                 if (active)
                     MarkInput(LastPadInput);
 
-                static bool bWasCombo = false;
+                // The right stick of the pad in use turns the camera; other pads at rest don't reset it
+                static IDirectInputDevice8A* lookDevice = nullptr;
+                if (active)
+                    lookDevice = device;
+                if (!lookDevice || device == lookDevice)
+                {
+                    Input::Look.stickX = lookX;
+                    Input::Look.stickY = lookY;
+                }
+
+                static std::map<IDirectInputDevice8A*, bool> comboHeld;
                 bool combo = (state->rgbButtons[PadLS] & 0x80) && (state->rgbButtons[PadRS] & 0x80);
-                if (combo && !bWasCombo)
+                if (combo && !comboHeld[device])
                     Pad.quitCombo = true;
-                bWasCombo = combo;
+                comboHeld[device] = combo;
             });
 
             // Mouse: deltas at ebp-0x14

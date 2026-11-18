@@ -24,11 +24,9 @@ export __declspec(noinline) ResChange<int, int>& onResChange()
 }
 
 std::optional<float> fHudAspectRatioConstraint;
-std::optional<float> fSCMAspectRatioConstraint;
 int lastScreenWidth = 0;
 int lastScreenHeight = 0;
 export float fWidescreenHudOffset = 0.0f;
-export float fWidescreenSCMOffset = 0.0f;
 export float fMenuAspectRatio = 0.0f;
 
 // current cutscene camera zoom (tan-space), maintained by the border system
@@ -85,7 +83,6 @@ public:
         fWidescreenHudOffset43 = CalculateWidescreenOffset(SCREEN_HEIGHT * (4.0f / 3.0f), SCREEN_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT, 0.0, true);
 
         fWidescreenHudOffset = GetConstraintOffset(fHudAspectRatioConstraint, 0.0f);
-        fWidescreenSCMOffset = GetConstraintOffset(fSCMAspectRatioConstraint, fWidescreenHudOffset);
 
         onResChange().executeAll(RsGlobal->width, RsGlobal->height);
     }
@@ -364,15 +361,9 @@ public:
         WFP::onGameInitEvent() += []()
         {
             fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
-            fSCMAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.SCMAspectRatioConstraint"));
             OnSettingChange("MAIN.HudAspectRatioConstraint", []()
             {
                 fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
-                CDraw::Refresh();
-            });
-            OnSettingChange("MAIN.SCMAspectRatioConstraint", []()
-            {
-                fSCMAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.SCMAspectRatioConstraint"));
                 CDraw::Refresh();
             });
 

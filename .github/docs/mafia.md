@@ -15,7 +15,7 @@
 - **Aspect Ratio** - corrected for all rendered elements
 - **HUD** - repositioned and scaled to match the active aspect ratio; HUD Aspect Ratio Constraint 4:3 keeps the original centered HUD
 - **Field of View** - corrected for widescreen; the field of view multiplier applies while the game runs and affects normal on-foot and driving cameras while preserving scripted, aiming and cutscene views
-- **FMVs** - fullscreen videos are shown whole in a centered 4:3 area
+- **FMVs** - videos keep their own shape: with **Videos: Fill** they are as large as the screen allows, with **Original Aspect** they appear as in the original game, inside a centered 4:3 picture
 - **Shadow Flickering** - fixed the z-fighting of shadows
 - **Map / Text / Menus** - scaled to match the active aspect ratio, with centered 4:3 or widescreen map layouts
 - **Cutscenes** - restores the original 4:3 shot composition and fits its visible image to the screen; borders can be off, letterbox, pillarbox, or both, with optional sliding animations
@@ -62,17 +62,17 @@ The fix creates `scripts/Mafia.FusionFix.cfg` on first launch; FusionFixHub can 
 
 In game, **Options** (title menu and pause menu) has one added row, **Plugins**: it lists Mafia Fusion Fix first, then every other loaded plugin with settings. Each plugin's page starts with its Preset row (left/right to choose, Enter twice to apply), lists its settings and ends with Restore Defaults (Enter twice; resets that plugin's settings to their defaults). A page with more rows than fit continues on a numbered page. Mafia's Options have only Control and Audio pages (video settings are in Setup.exe), so all of the fix's settings are on its own page. Press **F1** for the selected option’s complete help text; use arrows or Page Up/Page Down to scroll. When a changed setting applies only after a restart, the help text says so.
 
-HUD Aspect Ratio Constraint, Cutscene Borders, Animated Cutscene Borders, Gameplay FOV Multiplier, Pause on Focus Loss, Raw Mouse Input, Controller Icons, FPS Limit and Check for Updates apply at once. Resolution changes require a restart. Confine Cursor is also available in the native plugin menu.
+HUD Aspect Ratio Constraint, Cutscene Borders, Animated Cutscene Borders, Videos (from the next video), Free Camera with its return delay and speed, Controller Layout, Gameplay FOV Multiplier, Pause on Focus Loss, Raw Mouse Input, Controller Icons, FPS Limit and Check for Updates apply at once. Resolution changes require a restart. Confine Cursor is also available in the native plugin menu.
 
 **Raw Mouse Input** keeps the game’s native relative DirectInput mouse movement and removes its per-frame movement cap. Sensitivity and inversion remain controlled by the game. **Controller Icons** offers Xbox, PlayStation and Nintendo artwork; Auto uses Xbox. The bundled Xidi wrapper connects XInput controllers to the game’s native DirectInput controls.
 
-On version 1.2, **Controller Layout: Modern** adds controller bindings alongside your saved keyboard and mouse controls. Choose **Original** to use your saved controller assignments instead. Changing layouts does not overwrite your saved controls. The Controls pages show the keyboard or mouse binding alongside the modern controller picture.
+**Controller Layout: Modern** adds controller bindings alongside your saved keyboard and mouse controls. Choose **Original** to use your saved controller assignments instead. Changing layouts does not overwrite your saved controls. The Controls pages show the keyboard or mouse binding alongside the modern controller picture.
 
-With Modern, the left stick moves, the right stick looks, RT fires and LT uses the game's sniper aim. A jumps, B crouches, X reloads and Y interacts. The bumpers change weapons; clicking the left stick changes walking speed, and clicking the right stick hides the weapon. Back opens the map and Start pauses. In menus, use the stick or D-pad to navigate, A to confirm, B to go back and Y for help.
+With Modern, the left stick moves, the right stick looks, RT fires and LT uses the game's sniper aim. A jumps, B crouches, X reloads and Y interacts. The bumpers change weapons; clicking the left stick changes walking speed, and clicking the right stick hides the weapon. Back opens the map and Start pauses. In menus, use the stick or D-pad to navigate, A to confirm, B to go back and Y for help. Start pause and menu navigation also work with the Original layout.
 
 For the Modern layout, Gamepad Camera Speed adjusts the right stick independently of mouse sensitivity. Invert Gamepad Y reverses the stick's vertical look relative to the game's own inversion setting. Both apply immediately.
 
-While driving, RT accelerates, LT brakes and the left stick steers. A uses the handbrake, X/B change gears, the left stick click sounds the horn and LB operates the clutch. RB fires and the right stick click reloads. D-pad Up toggles the speed limiter, Left changes manual/automatic transmission and Right changes the camera.
+While driving, RT accelerates and LT brakes, both by how far they are pressed, and the left stick steers. A uses the handbrake, X/B change gears, the left stick click sounds the horn and LB operates the clutch. RB fires and the right stick click reloads. D-pad Up toggles the speed limiter, Left changes manual/automatic transmission and Right changes the camera.
 
 **Check for Updates** is off by default. When enabled, an available update appears in the native Plugins menu. **Ctrl+F10** opens a developer overlay with settings and rendering information; it requires the bundled D3D8-to-D3D9 wrapper.
 
@@ -85,8 +85,8 @@ If **Plugins** is missing from Options, configure the fix in FusionFixHub or on 
 - Draw Distance is an absolute distance in metres, rather than a multiplier.
 
 - The title menu retains its original frame clock. The live limiter and frame-rate counter cover gameplay. The game still simulates using integer milliseconds. Unlimited retains a positive one-millisecond engine delta; high frame rates can expose original mission or physics problems.
-- Controller artwork replaces native binding labels. Hardcoded keyboard instructions retain their original text. LT uses the original sniper-aim action; the game has no separate ordinary aim-down-sights action.
-- The native Plugins menu and Modern controller layout support version 1.2. On 1.0 and 1.1, configure settings through FusionFixHub or the configuration file and assign controller controls in the original Controls pages.
+- Controller artwork replaces native binding labels, and the tutorial hints that name default keys show the controller buttons while the controller was used last. Other hardcoded keyboard instructions retain their original text. LT uses the original sniper-aim action; the game has no separate ordinary aim-down-sights action.
+- The native Plugins menu, the update notice, controller menu navigation and Start pause need version 1.1 or 1.2. On 1.0, configure settings through FusionFixHub or the configuration file.
 
 ---
 

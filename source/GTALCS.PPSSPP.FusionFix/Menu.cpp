@@ -30,16 +30,16 @@ constexpr unsigned displayScreen = 5;
 constexpr uintptr_t screenOffset = 0x564, optionOffset = 0x568, editOffset = 0x56C, activeOffset = 0x131;
 
 enum Option : int16_t { FrameRate = 0x60, MoreOptions, HudSize, RadarSize, FieldOfView, CutsceneBorders,
-    CutsceneFov, FastLoading, SkipIntro, ModernControls, MultiplayerRadar, DisplayOptions, GameOptions,
+    HoldCamera, FastLoading, SkipIntro, ModernControls, MultiplayerRadar, DisplayOptions, GameOptions,
     FixOptions, Preset, ApplyPreset, Back, VehicleLights, FixDefaults,
     LayoutOptions, AspectRatio, HudConstraint, RadarX, RadarY, MultiplayerY, PcCheats, IconSet, OptionEnd };
 constexpr unsigned optionCount = OptionEnd - FrameRate;
 constexpr char keys[optionCount][8] = {"WF_FPS", "WF_MORE", "WF_HUD", "WF_RAD", "WF_FOV", "WF_CBOR",
-    "WF_CFOV", "WF_LOAD", "WF_INTR", "WF_CTRL", "WF_MRAD", "WF_DISP", "WF_GAME", "WF_FIX",
+    "WF_HOLD", "WF_LOAD", "WF_INTR", "WF_CTRL", "WF_MRAD", "WF_DISP", "WF_GAME", "WF_FIX",
     "WF_PRE", "WF_APLY", "WF_BACK", "WF_VLIT", "WF_FDEF",
     "WF_LAY", "WF_ASP", "WF_HASP", "WF_RADX", "WF_RADY", "WF_MRY", "WF_PCC", "WF_ICON"};
 constexpr char16_t captions[optionCount][28] = {u"FRAME RATE:", u"PLUGINS", u"HUD SIZE:",
-    u"RADAR SIZE:", u"FIELD OF VIEW:", u"CUTSCENE BORDERS:", u"ORIGINAL CUTSCENE FOV:", u"FAST LOADING:",
+    u"RADAR SIZE:", u"FIELD OF VIEW:", u"CUTSCENE BORDERS:", u"HOLD VEHICLE CAMERA:", u"FAST LOADING:",
     u"SKIP INTRO:", u"MODERN CONTROLS:", u"MULTIPLAYER RADAR SIZE:", u"DISPLAY AND CAMERA",
     u"GAME AND CONTROLS", u"FUSION FIX", u"PRESET:", u"APPLY PRESET", u"",
     u"VEHICLE LIGHTS:", u"RESTORE DEFAULTS", u"LAYOUT",
@@ -97,7 +97,7 @@ void Write(bool sub) {
             add(FixOptions);
             break;
         case Page::Fix: add(Preset); add(ApplyPreset); add(DisplayOptions); add(LayoutOptions); add(GameOptions); add(FixDefaults); break;
-        case Page::Display: add(HudSize); add(RadarSize); add(MultiplayerRadar); add(FieldOfView); add(CutsceneBorders); break;
+        case Page::Display: add(HudSize); add(RadarSize); add(MultiplayerRadar); add(FieldOfView); add(CutsceneBorders); add(HoldCamera); break;
         case Page::Game: add(FrameRate); add(FastLoading); add(SkipIntro); add(ModernControls); add(PcCheats); add(IconSet); add(VehicleLights); break;
         case Page::Layout: add(AspectRatio); add(HudConstraint); add(RadarX); add(RadarY); add(MultiplayerY); break;
         default: break;
@@ -162,18 +162,19 @@ int Value(int option) {
     case FastLoading: return settings.unthrottle;
     case SkipIntro: return settings.skipIntro;
     case ModernControls: return settings.modernControls;
+    case HoldCamera: return settings.holdVehicleCamera;
     case PcCheats: return settings.pcCheats;
     case VehicleLights: return settings.vehicleLights;
     default: return 0;
     }
 }
 // The descriptor's presets: 0 vanilla, 1 recommended (the defaults), 2 enhanced.
-// The control scheme is the player's choice and no preset changes it.
-struct PresetValues { bool fps, unthrottle, skipIntro; float hud, radar, multiplayerRadar, fov; int cutsceneBorders; bool vehicleLights; int icons; };
+struct PresetValues { bool fps, unthrottle, skipIntro; float hud, radar, multiplayerRadar, fov; int cutsceneBorders; bool vehicleLights; int icons;
+    bool modernControls, holdCamera; };
 constexpr PresetValues presetValues[3] = {
-    {false, false, false, 1.0f, 1.0f, 1.0f, 1.0f, 1, false, 0},
-    {false, true, true, 0.75f, 0.83f, 0.63f, 1.0f, 3, true, 8},
-    {false, true, true, 0.75f, 0.83f, 0.63f, 1.0f, 3, true, 8}};
+    {false, false, false, 1.0f, 1.0f, 1.0f, 1.0f, 1, false, 0, false, false},
+    {false, true, true, 0.75f, 0.83f, 0.63f, 1.0f, 3, true, 8, true, false},
+    {true, true, true, 0.75f, 0.83f, 0.63f, 1.0f, 3, true, 8, true, true}};
 constexpr int recommendedPreset = 1;
 bool PresetMatches(int preset) {
     if (preset < 0 || preset > 2) return false;
@@ -181,7 +182,8 @@ bool PresetMatches(int preset) {
     return settings.unthrottle == p.unthrottle && settings.skipIntro == p.skipIntro &&
         std::fabs(Drawing::settings.hud - p.hud) < 0.0001f && std::fabs(Drawing::settings.radar - p.radar) < 0.0001f &&
         std::fabs(Drawing::settings.multiplayerRadar - p.multiplayerRadar) < 0.0001f && settings.cutsceneBorders == p.cutsceneBorders &&
-        settings.vehicleLights == p.vehicleLights && settings.icons == p.icons;
+        settings.vehicleLights == p.vehicleLights && settings.icons == p.icons && (settings.fps != 0) == p.fps &&
+        settings.modernControls == p.modernControls && settings.holdVehicleCamera == p.holdCamera;
 }
 int MatchingPreset() { return PresetMatches(1) ? 1 : PresetMatches(0) ? 0 : PresetMatches(2) ? 2 : -1; }
 constexpr float aspects[] = {0.0f, 4.0f / 3.0f, 16.0f / 9.0f, 21.0f / 9.0f, 32.0f / 9.0f};
@@ -204,13 +206,16 @@ void ApplyPresetValues(int preset, bool& confirm) {
     settings.cutsceneBorders = p.cutsceneBorders;
     settings.vehicleLights = p.vehicleLights;
     settings.icons = p.icons;
+    settings.fps = p.fps;
+    settings.modernControls = p.modernControls;
+    settings.holdVehicleCamera = p.holdCamera;
     ApplyFrameRate(); dirty = true; confirm = false;
     shownPreset = preset;
 }
 bool DefaultsMatch()
 {
     return PresetMatches(recommendedPreset) && settings.fps == 0 && settings.fov == 1.0f &&
-        !settings.modernControls && !settings.pcCheats && settings.icons == 8 &&
+        settings.modernControls && !settings.holdVehicleCamera && !settings.pcCheats && settings.icons == 8 &&
         settings.textLanguage == TextLanguage::Auto && autoAspect && Drawing::settings.hudAspect == 0.0f &&
         Drawing::settings.radarX == 12.0f && Drawing::settings.radarY == 196.0f &&
         Drawing::settings.multiplayerRadarY == 170.0f;
@@ -250,6 +255,7 @@ void Adjust(int option, int direction) {
     case CutsceneBorders: settings.cutsceneBorders = (settings.cutsceneBorders + (direction < 0 ? 3 : 1)) % 4; break;
     case SkipIntro: settings.skipIntro = !settings.skipIntro; break;
     case ModernControls: settings.modernControls = !settings.modernControls; break;
+    case HoldCamera: settings.holdVehicleCamera = !settings.holdVehicleCamera; break;
     case PcCheats: settings.pcCheats = !settings.pcCheats; break;
     case IconSet:
         if (!IconsAvailable()) return;
@@ -468,6 +474,10 @@ void DrawMenus(uintptr_t menu, int argument) {
         help = u"Keep the original cinematic frame with black borders.";
         second = u"Off crops it to fill; Both preserves the whole shot.";
         break;
+    case HoldCamera:
+        help = u"The vehicle camera stays where the right stick turned it";
+        second = u"until the stick rests for two seconds.";
+        break;
     case FastLoading: help = u"Temporarily remove the emulator speed limit while loading."; break;
     case SkipIntro: help = u"Skip the opening intro on the next game start."; break;
     case ModernControls:
@@ -503,14 +513,14 @@ void DrawMenus(uintptr_t menu, int argument) {
 void Save() {
     if (!dirty) return;
     using console::portable::IniValue;
-    IniValue values[18] = {
+    IniValue values[19] = {
         {"MAIN", "FPSLimit", {}}, {"MAIN", "UnthrottleEmuDuringLoading", {}},
         {"MAIN", "HudScale", {}}, {"RADAR", "RadarScale", {}}, {"MAIN", "FOVFactor", {}},
         {"MAIN", "CutsceneBorders", {}},
         {"MAIN", "SkipIntro", {}}, {"CONTROLS", "ModernControlScheme", {}}, {"MPRADAR", "RadarScale", {}},
         {"MAIN", "ForceAspectRatio", {}}, {"MAIN", "HudAspectRatioConstraint", {}}, {"RADAR", "RadarPosX", {}},
         {"RADAR", "RadarPosY", {}}, {"MPRADAR", "RadarPosY", {}}, {"CONTROLS", "PCCheats", {}}, {"MAIN", "GamepadIcons", {}}, {"MAIN", "TextLanguage", {}},
-        {"MAIN", "VehicleLights", {}}};
+        {"MAIN", "VehicleLights", {}}, {"CONTROLS", "HoldVehicleCamera", {}}};
     std::strcpy(values[0].value, settings.fps ? "60" : "30");
     std::strcpy(values[1].value, settings.unthrottle ? "1" : "0");
     console::decimal(values[2].value, Drawing::settings.hud, 2);
@@ -533,8 +543,9 @@ void Save() {
     std::strcpy(values[15].value, iconSets[settings.icons]);
     std::strcpy(values[16].value, settings.textLanguage == TextLanguage::Auto ? "auto" : "en");
     std::strcpy(values[17].value, settings.vehicleLights ? "1" : "0");
+    std::strcpy(values[18].value, settings.holdVehicleCamera ? "1" : "0");
     static console::portable::IniWriter<> writer;
-    const bool saved = writer.update(iniPath, values, 18);
+    const bool saved = writer.update(iniPath, values, 19);
 #ifndef NDEBUG
     logger.WriteF("Menu settings %s", saved ? "saved" : "could not be saved");
 #endif

@@ -26,7 +26,8 @@ import Entity;
 //   R3 looks behind, d-pad left shows the stats. In a vehicle: RT accelerates, LT brakes, A is the nitro (and the
 //   vehicle's weapon), RB the handbrake, X/B look left/right, R3 looks behind, L3 is the horn, d-pad up starts a side
 //   mission (and the hydraulics), d-pad right takes the next radio station (no radio wheel either; d-pad down the
-//   previous one), d-pad left is the second weapon. In aircraft LB/RB are the rudder.
+//   previous one), d-pad left is the second weapon; d-pad right and left also answer yes and no. In aircraft LB/RB
+//   are the rudder. As a passenger RT fires the drive-by, which aims with the right stick (the console's aiming).
 // The last device used decides the prompts' icons and, for the pad, the console's camera (the mouse camera of the
 // PC's standard controls returns with the mouse). Start opens and closes the pause menu, as Escape does. The pad's
 // state replaces what the game read from the same pad through DirectInput; other DirectInput pads keep working.
@@ -108,7 +109,9 @@ namespace
     enum class To : uint8_t
     {
         None, L1, L2, R1, R2, DPadUp, DPadDown, DPadLeft, DPadRight, Start, Select, Square, Triangle, Cross, Circle,
-        L3, R3, LookBehind, ActionLeft
+        L3, R3, LookBehind, ActionLeft,
+        SecondWeapon,       // the vehicle's second weapon, and "no" in conversations
+        NextStation         // the next radio station, and "yes" in conversations
     };
 
     enum Src { A, B, X, Y, LB, RB, LT, RT, LS, RS, Back, Start, DUp, DDown, DLeft, DRight, SrcCount };
@@ -124,9 +127,9 @@ namespace
         To::L3, To::R3, To::Select, To::None, To::DPadUp, To::DPadDown, To::ActionLeft, To::DPadRight };
     // LT and RT are analog (brake, accelerate); the radio's next station is the console's d-pad up
     constexpr To LayoutModernVehicle[SrcCount] = { To::Circle, To::R2, To::L2, To::Triangle, To::None, To::R1, To::None, To::None,
-        To::L3, To::LookBehind, To::Select, To::None, To::R3, To::DPadDown, To::L1, To::DPadUp };
+        To::L3, To::LookBehind, To::Select, To::None, To::R3, To::DPadDown, To::SecondWeapon, To::NextStation };
     constexpr To LayoutModernAircraft[SrcCount] = { To::Circle, To::None, To::None, To::Triangle, To::L2, To::R2, To::None, To::None,
-        To::L3, To::None, To::Select, To::None, To::R3, To::DPadDown, To::L1, To::DPadUp };
+        To::L3, To::None, To::Select, To::None, To::R3, To::DPadDown, To::SecondWeapon, To::NextStation };
 
     const auto& XInput() { return PadInput::XInput(); }
 
@@ -182,6 +185,14 @@ namespace
     int16_t ToAxis(float v)
     {
         return int16_t(std::clamp(int(std::lround(v * 128.0f)), -128, 127));
+    }
+
+    // The camera's stick: a camera speed above 1 reaches the game's full turn sooner and goes past it at full tilt
+    // (the camera code takes the stick's value as it is)
+    int16_t ToCameraAxis(float v, float speed)
+    {
+        float range = std::max(speed, 1.0f);
+        return int16_t(std::clamp(int(std::lround(v * speed * 128.0f)), int(-128 * range), int(127 * range)));
     }
 
     bool HasInput(const XINPUT_GAMEPAD& now, const XINPUT_GAMEPAD& before)
@@ -295,6 +306,8 @@ namespace
             case To::R3: set(s.RightShock); break;
             case To::LookBehind: set(s.LeftShoulder2); set(s.RightShoulder2); break;
             case To::ActionLeft: set(s.DPadLeft); set(s.LeftShoulder1); break;
+            case To::SecondWeapon: set(s.LeftShoulder1); set(s.DPadLeft); break;
+            case To::NextStation: set(s.DPadUp); set(s.DPadRight); break;
             default: break;
         }
     }
@@ -331,7 +344,15 @@ namespace
         return int16_t((value - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) * 255 / (255 - XINPUT_GAMEPAD_TRIGGER_THRESHOLD));
     }
 
-    enum class Context { Frontend, Classic, ModernFoot, ModernScope, ModernVehicle, ModernAircraft };
+    enum class Context { Frontend, Classic, ModernFoot, ModernScope, ModernVehicle, ModernAircraft, ModernPassenger };
+
+    // The player rides in a vehicle someone else drives
+    bool DrivenByOther(CEntity* vehicle)
+    {
+        // CVehicle::m_pDriver
+        auto driver = *reinterpret_cast<CEntity**>(reinterpret_cast<uint8_t*>(vehicle) + 0x460);
+        return FindPlayerPed && driver != FindPlayerPed(-1);
+    }
 
     Context CurrentContext()
     {
@@ -342,6 +363,8 @@ namespace
             return Context::Classic;
         if (auto vehicle = PlayerVehicle())
         {
+            if (DrivenByOther(vehicle))
+                return Context::ModernPassenger;
             // CVehicle's subclass: 3 helicopter, 4 plane
             auto subclass = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(vehicle) + 0x594);
             return subclass == 3 || subclass == 4 ? Context::ModernAircraft : Context::ModernVehicle;
@@ -359,13 +382,12 @@ namespace
         Stick(g.sThumbRX, g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
         static auto& invert = FixSettings().Int("MAIN.InvertGamepadY");
         static auto& speed = FixSettings().Float("MAIN.GamepadCameraSpeed");
-        // The PlayStation 2 sticks: down is positive. The camera's stick reaches the game's full turn sooner or later
-        // by the camera speed.
+        // The PlayStation 2 sticks: down is positive. The camera's stick turns faster or slower by the camera speed.
         float look = context == Context::Frontend ? 1.0f : speed;
         s.LeftStickX = ToAxis(lx);
         s.LeftStickY = ToAxis(-ly);
-        s.RightStickX = ToAxis(rx * look);
-        s.RightStickY = ToAxis((invert && context != Context::Frontend ? ry : -ry) * look);
+        s.RightStickX = ToCameraAxis(rx, look);
+        s.RightStickY = ToCameraAxis(invert && context != Context::Frontend ? ry : -ry, look);
 
         const To* layout = LayoutClassic;
         switch (context)
@@ -375,6 +397,7 @@ namespace
             case Context::ModernScope: layout = LayoutModernFoot; break;
             case Context::ModernVehicle: layout = LayoutModernVehicle; break;
             case Context::ModernAircraft: layout = LayoutModernAircraft; break;
+            case Context::ModernPassenger: layout = LayoutModernVehicle; break;
             default: break;
         }
         for (int i = 0; i < SrcCount; ++i)
@@ -382,6 +405,9 @@ namespace
             if (Down(g, Src(i)))
                 Press(s, layout[i]);
         }
+        // The map: A sets and clears the target (the console's Circle)
+        if (context == Context::Frontend && Down(g, A) && FrontendMenuManager->GetCurrentScreen() == SCREEN_MAP)
+            Press(s, To::Circle);
 
         // The modern aim turns the camera as the mouse does
         if (ModernAiming)
@@ -396,6 +422,11 @@ namespace
             case Context::ModernAircraft:
                 s.Cross = std::max(s.Cross, Trigger(g.bRightTrigger));
                 s.Square = std::max(s.Square, Trigger(g.bLeftTrigger));
+                break;
+            case Context::ModernPassenger:
+                // RT fires the drive-by (the console's Circle, as the vehicle's weapon)
+                if (Down(g, RT))
+                    Press(s, To::Circle);
                 break;
             case Context::ModernScope:
                 // The left stick zooms
@@ -422,10 +453,11 @@ namespace
             return;
 
         // The PC game sets the shake but never runs it down
+        static auto& vibration = FixSettings().Int("MAIN.Vibration");
         WORD motor = 0;
         if (pad.ShakeDur > 0)
         {
-            if (PadIsLastDevice && !MenuActive())
+            if (PadIsLastDevice && !MenuActive() && vibration)
                 motor = WORD(pad.ShakeFreq * 257);
             pad.ShakeDur = int16_t(std::max<int64_t>(0, pad.ShakeDur - int64_t(elapsed)));
             if (pad.ShakeDur == 0)
@@ -458,9 +490,9 @@ namespace
         float dt = CTimer::ms_fTimeStep / 50.0f;
         auto curve = [](float v) { return v * std::abs(v); };
         // The aiming camera turns by mouse units times its sensitivity and the field of view (by 2.5 and 4 times its
-        // accelerations, by FOV / 80): the stick's speed is the same whatever the mouse slider
+        // accelerations, by FOV / 80; the scopes by 3 and 4): the stick's speed is the same whatever the mouse slider
         float fovScale = TheCamera->m_aCams[TheCamera->m_nActiveCam].FOV / 80.0f;
-        float perUnitX = std::max(*MouseAccelHorizontal * 2.5f * fovScale, 1e-5f);
+        float perUnitX = std::max(*MouseAccelHorizontal * (context == Context::ModernScope ? 3.0f : 2.5f) * fovScale, 1e-5f);
         float perUnitY = std::max(*MouseAccelVertical * 4.0f * fovScale, 1e-5f);
         NewMouseState->X += curve(rx) * DEGTORAD(TurnRate) * speed * dt / perUnitX;
         NewMouseState->Y += curve(invert ? ry : -ry) * DEGTORAD(PitchRate) * speed * dt / perUnitY;
@@ -476,6 +508,17 @@ namespace
         }
         // On a pad the console's camera, and the mouse's aiming only while the modern layout aims
         *UseMouse3rdPerson = ModernAiming;
+    }
+
+    // The map: Y shows and hides the legend (the keyboard's L)
+    bool LegendWasDown = false;
+    void UpdateMapLegend(Context context)
+    {
+        bool down = ActiveSlot >= 0 && context == Context::Frontend && Down(Current, Y) &&
+            FrontendMenuManager->GetCurrentScreen() == SCREEN_MAP;
+        if (down && !LegendWasDown)
+            FrontendMenuManager->m_bMapLegend = !FrontendMenuManager->m_bMapLegend;
+        LegendWasDown = down;
     }
 
     // Start is Escape: it opens the pause menu and goes back (and out) in the menus
@@ -508,6 +551,7 @@ namespace
             PadIsLastDevice = false;
 
         auto context = CurrentContext();
+        UpdateMapLegend(context);
         UpdateModernAim(pad, context);
         if (ActiveSlot >= 0)
             pad.PCTempJoyState = Compose(context, Current);
@@ -554,6 +598,13 @@ export namespace Pad
     bool IsModernAiming()
     {
         return ModernAiming;
+    }
+
+    // The player rides in a vehicle someone else drives
+    bool IsPassenger()
+    {
+        auto vehicle = PlayerVehicle();
+        return vehicle && DrivenByOther(vehicle);
     }
 }
 

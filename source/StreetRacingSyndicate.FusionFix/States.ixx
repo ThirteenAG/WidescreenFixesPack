@@ -15,8 +15,7 @@ export namespace SRSStates
     inline void Init()
     {
         auto pattern = hook::pattern("53 B9 ? ? ? ? E8 ? ? ? ? 33 DB B0 01 68");
-        if (auto* top = *pattern.get_first<uint8_t*>(2))
-            StateTop.SetAddress(top);
+        StateTop.SetAddress(*pattern.get_first<uint8_t*>(2));
     }
 
     inline const char* Name(const uint8_t* state)

@@ -12,6 +12,8 @@ inline uintptr_t CameraActivityFirst() { return Required("00 00 00 00 01 00 08 3
 inline uintptr_t CameraActivitySecond() { return Required("00 00 00 00 01 00 08 34 25 38 E8 00 2B 38 07 00 00 00 C7 A0 1C 01 AC C4 4A 00 06 26 00 00 C7 90", 8); }
 inline uintptr_t CameraActivityIdle() { return Required("01 00 08 34 24 28 E8 00 00 00 C5 A0 02 00 05 34 10 00 85 14 00 00 00 00 38 01 B6 E7 30 03 2C C6", 4); }
 inline uintptr_t Projection() { return Required("E1 3F 05 3C C0 00 0C C6 E2 E1 A5 34 C4 00 0E C6 00 68 85 44", 20); }
+// Draw call of the world's desaturation pass, which reads the 32-bit frame back as an 8-bit paletted texture.
+inline uintptr_t Desaturation() { return Required("2C 00 A4 A0 ? ? BE C7 A4 08 24 8E 08 00 85 8C 10 00 A5 24 00 00 A6 84 04 00 A5 8C 09 F8 A0 00", 28); }
 inline uintptr_t Movie() { return Required("70 3F 08 3C 06 B3 00 46 00 70 88 44 25 20 00 00 08 3F 08 3C", -48); }
 inline uintptr_t ptr_88950F4() { return Required("18 00 04 8E ? ? ? ? 01 00 06 34 ? ? ? ? ? ? ? ? ? ? ? ? 18 00 04 8E", -8); }
 inline uintptr_t ptr_8895108() { return Required("18 00 04 8E 01 00 06 34 ? ? ? ? ? ? ? ? ? ? ? ? 00 00 00 00", -12); }

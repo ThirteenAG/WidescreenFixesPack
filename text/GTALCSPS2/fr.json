@@ -118,5 +118,11 @@
   "gamepadicons.playstation": "PlayStation",
   "gamepadicons.nintendo": "Nintendo",
   "lights": "Feux des véhicules",
-  "lights.description": "Allume les phares, feux arrière, feux stop et feux de recul sur les textures de carrosserie des voitures et motos, générés à partir des textures du jeu. Activé par défaut."
+  "lights.description": "Allume les phares, feux arrière, feux stop et feux de recul sur les textures de carrosserie des voitures et motos, générés à partir des textures du jeu. Activé par défaut.",
+  "controls.moderncontrolscheme": "Commandes modernes",
+  "controls.moderncontrolscheme.description": "Utilise les gâchettes pour conduire, viser et tirer. Les commandes natives propres à chaque mode restent prises en charge.",
+  "controls.gamepadcameraspeed": "Vitesse caméra manette",
+  "controls.gamepadcameraspeed.description": "Vitesse de la caméra au stick droit, à pied et en véhicule. 1.0 est la vitesse d'origine.",
+  "controls.invertgamepady": "Inverser manette Y",
+  "controls.invertgamepady.description": "Inverse la direction verticale de la caméra au stick droit."
 }

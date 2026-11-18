@@ -115,7 +115,7 @@ namespace StartupScreens
 
     void __fastcall QueuePage(uint8_t* pages, int32_t page, bool force)
     {
-        if (bTitleEnter && page == 9)
+        if (bTitleEnter && page == 9 && FixSettings().Bool("MAIN.SkipPressStart"))
         {
             if (*reinterpret_cast<uint64_t*>(pages + 0x38) == 0)
                 *(pages + 0x44) = 1;  // nothing else queued: the pages are done
@@ -133,10 +133,13 @@ namespace StartupScreens
 
     void Init()
     {
-        auto pattern = hook::pattern("48 89 5C 24 08 57 48 83 EC 20 48 8B D9 E8 ? ? ? ? 33 FF 48 8B 90 C0 00 00 00 48 85 D2 48 8D 8A D0 02 00 00");
-        shStartupEnter = safetyhook::create_inline(pattern.get_first(), StartupEnter);
+        if (FixSettings().Bool("MAIN.SkipIntro"))
+        {
+            auto pattern = hook::pattern("48 89 5C 24 08 57 48 83 EC 20 48 8B D9 E8 ? ? ? ? 33 FF 48 8B 90 C0 00 00 00 48 85 D2 48 8D 8A D0 02 00 00");
+            shStartupEnter = safetyhook::create_inline(pattern.get_first(), StartupEnter);
+        }
 
-        pattern = hook::pattern("48 8B C4 48 89 58 08 57 48 83 EC 70 48 8B D9 89 50 10 48 83 C1 18 48 8D 50 10 41 0F B6 F8 E8 ? ? ? ? 83 7B 40 05");
+        auto pattern = hook::pattern("48 8B C4 48 89 58 08 57 48 83 EC 70 48 8B D9 89 50 10 48 83 C1 18 48 8D 50 10 41 0F B6 F8 E8 ? ? ? ? 83 7B 40 05");
         shQueuePage = safetyhook::create_inline(pattern.get_first(), QueuePage);
 
         pattern = hook::pattern("48 89 5C 24 10 48 89 74 24 18 57 48 83 EC 40 48 8B D9 48 8D 54 24 30 48 8B 0D ? ? ? ? E8 ? ? ? ? 48 8D 4C 24 30");
@@ -149,8 +152,7 @@ void Init()
     MessagePump::Init();
     MenuCursor::Init();
 
-    if (FixSettings().Bool("MAIN.SkipIntro"))
-        StartupScreens::Init();
+    StartupScreens::Init();
 }
 
 CEXP void InitializeASI()

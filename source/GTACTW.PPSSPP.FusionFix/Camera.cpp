@@ -1,18 +1,18 @@
 #include "Game.hpp"
-#include <cstdlib>
+#include "Shared/Console/PortableIni.hpp"
 extern "C" {
 #include "../../external/injector/include/psp/nanoprintf.h"
 }
 namespace ctw {
 namespace {
-constexpr auto path = "ms0:/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.dat";
 injector::hook_back<int(int16_t*, int16_t)> pitch;
 SafetyMipsMid height;
 bool enabled, dirty;
 int angle, elevation = 13464;
 uint32_t previous;
-// A failed write (read-only or full memory stick) is retried with backoff:
-// 1, 2, 4 ... 32 s at 60 calls per second, then not again this session.
+// The camera toggle and view are kept in the cfg ([CAMERA]). A failed write
+// (read-only or full memory stick) is retried with backoff: 1, 2, 4 ... 32 s
+// at 60 calls per second, then not again this session.
 unsigned retryDelay, failures;
 constexpr unsigned maximumFailures = 6;
 void SaveFailed() {
@@ -22,33 +22,20 @@ void SaveFailed() {
 void Save() {
     if (failures >= maximumFailures) return;
     if (retryDelay) { --retryDelay; return; }
-    const SceUID file = sceIoOpen(path, PSP_O_WRONLY | PSP_O_CREAT | PSP_O_TRUNC, 0777);
-    if (file < 0) { SaveFailed(); return; }
-    char buffer[64];
-    const int length = npf_snprintf(buffer, sizeof(buffer), "%d %d %d", int(enabled), angle, elevation);
-    const bool written = length > 0 && unsigned(length) < sizeof(buffer) &&
-                         sceIoWrite(file, buffer, length) == length;
-    const int closed = sceIoClose(file);
-    if (written && closed >= 0) { dirty = false; failures = 0; }
+    IniValue values[] = {{"CAMERA", "Active", {}}, {"CAMERA", "Angle", {}}, {"CAMERA", "Elevation", {}}};
+    npf_snprintf(values[0].value, sizeof(values[0].value), "%d", int(enabled));
+    npf_snprintf(values[1].value, sizeof(values[1].value), "%d", angle);
+    npf_snprintf(values[2].value, sizeof(values[2].value), "%d", elevation);
+    static IniWriter<> writer;
+    if (writer.update(cfgPath, values, 3)) { dirty = false; failures = 0; }
     else SaveFailed();
 }
 void Load() {
-    const SceUID file = sceIoOpen(path, PSP_O_RDONLY, 0777);
-    if (file < 0) return;
-    char buffer[64]{};
-    const int length = sceIoRead(file, buffer, sizeof(buffer) - 1);
-    sceIoClose(file);
-    if (length <= 0) return;
-    buffer[length] = 0;
-    char* next = buffer;
-    long values[3];
-    for (auto& value : values) {
-        char* end = nullptr; value = std::strtol(next, &end, 10);
-        if (end == next) return;
-        next = end;
-    }
-    if (values[0] < 0 || values[0] > 1 || values[1] < -10000 || values[1] > 0 || values[2] < 13464 || values[2] > 120000) return;
-    enabled = values[0] != 0; angle = int(values[1]); elevation = int(values[2]);
+    const int active = inireader.ReadInteger("CAMERA", "Active", 0);
+    const int savedAngle = inireader.ReadInteger("CAMERA", "Angle", 0);
+    const int savedElevation = inireader.ReadInteger("CAMERA", "Elevation", 13464);
+    if (active < 0 || active > 1 || savedAngle < -10000 || savedAngle > 0 || savedElevation < 13464 || savedElevation > 120000) return;
+    enabled = active != 0; angle = savedAngle; elevation = savedElevation;
 }
 int Axis(uint8_t value) {
     return value < 118 ? int(value) - 118 : value > 138 ? int(value) - 138 : 0;

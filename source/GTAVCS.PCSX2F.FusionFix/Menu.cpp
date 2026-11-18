@@ -43,7 +43,7 @@ static_assert(sizeof(MenuItem) == 220 && sizeof(Widget) == 240 && sizeof(MenuPag
 enum Option { HudSize = 0x100, FastLoading, MouseSensitivity, InvertMouse, FrameRate,
     DisplayOptions, ControlOptions, Bindings, NextBindings, Back, CutsceneBorders,
     PcControls, ResetBindings, Preset, ApplyPreset, VehicleLights, FixPage, FixDefaults,
-    FieldOfView, HudAspect, SkipIntro, ModernControls, GamepadIcons, OptionEnd, Binding = 0x200 };
+    FieldOfView, HudAspect, SkipIntro, ModernControls, GamepadIcons, HoldCamera, OptionEnd, Binding = 0x200 };
 constexpr unsigned widgetCount = OptionEnd - HudSize;
 constexpr unsigned maxItems = 32, maxPages = 4;
 constexpr char keys[4][16] = {"WF_HUD_SIZE", "WF_FAST_LOADING", "WF_MOUSE_SPEED", "WF_INVERT_MOUSE"};
@@ -51,11 +51,11 @@ constexpr char16_t english[4][24] = {u"HUD size", u"Fast loading", u"Mouse sensi
 constexpr unsigned extraCount = OptionEnd - FrameRate;
 constexpr char extraKeys[extraCount][20] = {"WF_FRAME_RATE", "WF_DISPLAY_OPTIONS", "WF_CONTROL_OPTIONS", "WF_BINDINGS",
     "WF_NEXT_BINDINGS", "WF_BACK", "WF_CUTSCENE_BORDERS", "WF_PC_CONTROLS", "WF_RESET_BINDINGS", "WF_PRESET", "WF_APPLY_PRESET", "WF_LIGHTS",
-    "WF_FIX_PAGE", "WF_FIX_DEFAULTS", "WF_FOV", "WF_HUD_ASPECT", "WF_SKIP_INTRO", "WF_MODERN", "WF_ICONS"};
-constexpr char16_t extraText[extraCount][24] = {u"Frame rate", u"Plugins", u"PC controls", u"Key bindings",
+    "WF_FIX_PAGE", "WF_FIX_DEFAULTS", "WF_FOV", "WF_HUD_ASPECT", "WF_SKIP_INTRO", "WF_MODERN", "WF_ICONS", "WF_HOLD_CAMERA"};
+constexpr char16_t extraText[extraCount][24] = {u"Frame rate", u"Plugins", u"Controls", u"Key bindings",
     u"Next page", u"Back", u"Cutscene borders", u"Keyboard and mouse", u"Reset to defaults", u"Preset", u"Apply preset",
     u"Vehicle lights", u"Fusion Fix", u"Restore defaults", u"Field of view", u"HUD aspect ratio",
-    u"Skip intro", u"Modern controls", u"Button icons"};
+    u"Skip intro", u"Modern controls", u"Button icons", u"Hold vehicle camera"};
 // One line of help per row, shown under the menu (nullptr: none).
 const char* Help(unsigned option) {
     switch (option) {
@@ -65,7 +65,7 @@ const char* Help(unsigned option) {
     case InvertMouse: return "Inverts the vertical mouse camera.";
     case FrameRate: return "Runs the game at 60 frames per second instead of 30.";
     case DisplayOptions: return "Settings of the Fusion Fix and the other plugins.";
-    case ControlOptions: return "Keyboard and mouse controls and key bindings.";
+    case ControlOptions: return "Pad, keyboard and mouse controls and key bindings.";
     case Bindings: return "Change the keys of every action. Delete clears a key.";
     case NextBindings: return "Shows the next page of actions.";
     case CutsceneBorders: return "Black bars in cutscenes: letterbox, pillarbox on wide screens, or both.";
@@ -81,6 +81,7 @@ const char* Help(unsigned option) {
     case SkipIntro: return "Skips the logo movies when the game starts.";
     case ModernControls: return "Drive, aim and shoot with the triggers.";
     case GamepadIcons: return "Button pictures in prompts and menus.";
+    case HoldCamera: return "The vehicle camera stays where the right stick turned it.";
     default: return nullptr;
     }
 }
@@ -170,16 +171,19 @@ bool dirty = false;
 int selectedPreset = 0;
 bool confirmPreset = false, confirmDefaults = false;
 // The descriptor's presets: 1 vanilla, 2 recommended (the defaults), 3 enhanced (0 = custom).
-// Only the settings whose values differ between them; the others (frame rate, FOV, HUD,
-// controls, sensitivity, bindings, icons) keep the player's choice.
-struct PresetValues { bool unthrottle, skipIntro, vehicleLights; int cutsceneBorders, gamepadIcons; };
-constexpr PresetValues presetValues[4] = {{}, {false, false, false, 1, 2}, {true, true, true, 3, 0}, {true, true, true, 3, 0}};
+// Only the settings whose values differ between them; the others (FOV, HUD, PC controls,
+// sensitivity, bindings) keep the player's choice.
+struct PresetValues { bool unthrottle, skipIntro, vehicleLights, sixtyFPS, modernControls, holdVehicleCamera; int cutsceneBorders, gamepadIcons; };
+constexpr PresetValues presetValues[4] = {{}, {false, false, false, false, false, false, 1, 2},
+    {true, true, true, false, true, false, 3, 0}, {true, true, true, true, true, true, 3, 0}};
 constexpr int recommendedPreset = 2;
 bool PresetMatches(int preset) {
     if (preset < 1 || preset > 3) return false;
     const auto& p = presetValues[preset];
     return settings.unthrottle == p.unthrottle && settings.skipIntro == p.skipIntro && settings.vehicleLights == p.vehicleLights &&
-        settings.cutsceneBorders == p.cutsceneBorders && settings.gamepadIcons == p.gamepadIcons;
+        settings.sixtyFPS == p.sixtyFPS && settings.modernControls == p.modernControls &&
+        settings.holdVehicleCamera == p.holdVehicleCamera && settings.cutsceneBorders == p.cutsceneBorders &&
+        settings.gamepadIcons == p.gamepadIcons;
 }
 int MatchingPreset() { return PresetMatches(2) ? 2 : PresetMatches(1) ? 1 : PresetMatches(3) ? 3 : 0; }
 // Press once to arm, again to apply; nothing happens when the values already match.
@@ -189,6 +193,9 @@ bool ApplyPresetValues(int preset, bool& confirm) {
     const auto& p = presetValues[preset];
     settings.unthrottle = p.unthrottle; settings.skipIntro = p.skipIntro; settings.vehicleLights = p.vehicleLights;
     settings.cutsceneBorders = p.cutsceneBorders; settings.gamepadIcons = p.gamepadIcons;
+    settings.holdVehicleCamera = p.holdVehicleCamera;
+    if (settings.sixtyFPS != p.sixtyFPS) { settings.sixtyFPS = p.sixtyFPS; ApplyFrameRate(); }
+    if (settings.modernControls != p.modernControls) { settings.modernControls = p.modernControls; ApplyPcControls(); }
     dirty = true; confirm = false;
     return true;
 }
@@ -249,6 +256,7 @@ int Value(unsigned option) {
     case SkipIntro: return settings.skipIntro;
     case ModernControls: return settings.modernControls;
     case GamepadIcons: return settings.gamepadIcons;
+    case HoldCamera: return settings.holdVehicleCamera;
     default: return 0;
     }
 }
@@ -274,6 +282,7 @@ void SetValue(MenuItem* item, int value) {
         ApplyPcControls();
         break;
     case GamepadIcons: settings.gamepadIcons = value; break;
+    case HoldCamera: settings.holdVehicleCamera = value != 0; break;
     case PcControls:
         if (settings.pcControls == (value != 0)) return;
         settings.pcControls = value != 0;
@@ -356,6 +365,7 @@ const uint16_t* GetText(void* text, const char* key) {
         return reinterpret_cast<const uint16_t*>(blank);
     }
     if (const auto* rewritten = ButtonText(key)) return rewritten;
+    if (const char* modern = ModernTextKey(key)) return getText.call(text, modern);
     return getText.call(text, key);
 }
 void InitializeWidget(Widget& widget, const Widget& prototype, unsigned option, const MenuItem& position) {
@@ -418,10 +428,10 @@ void OpenSubmenu(PageExtension& extension, unsigned mode) {
         if (BindingPages() > 1) option(NextBindings);
         option(ResetBindings);
     } else if (mode == 3) {
-        option(PcControls); option(MouseSensitivity); option(InvertMouse); option(Bindings);
+        option(ModernControls); option(HoldCamera); option(PcControls); option(MouseSensitivity); option(InvertMouse); option(Bindings);
     } else if (mode == 5) {
         option(Preset); option(ApplyPreset); option(FrameRate); option(FieldOfView); option(HudSize); option(HudAspect);
-        option(CutsceneBorders); option(FastLoading); option(SkipIntro); option(VehicleLights); option(ModernControls);
+        option(CutsceneBorders); option(FastLoading); option(SkipIntro); option(VehicleLights);
         option(GamepadIcons); option(ControlOptions); option(FixDefaults);
     } else {
         // The plugin list.
@@ -469,7 +479,7 @@ void Attach(MenuPage* page) {
     // Own boolean controls must not inherit the game's translated value keys.
     for (unsigned option=HudSize; option<OptionEnd; ++option)
         if (option == FastLoading || option == InvertMouse || option == PcControls || option == SkipIntro || option == ModernControls ||
-            option == VehicleLights) {
+            option == VehicleLights || option == HoldCamera) {
             auto& widget = WidgetFor(*extension, option);
             widget.toggle.strings = {extension->boolValues,extension->boolValues+2,0,extension->boolValues+2};
             widget.toggle.count = 2;
@@ -702,6 +712,7 @@ void SaveSettings() {
     set("MAIN", "HudAspectRatioConstraint", aspect >= 0 ? number : config::values[11].value);
     set("MAIN", "SkipIntro", settings.skipIntro ? "1" : "0");
     set("CONTROLS", "ModernControlScheme", settings.modernControls ? "1" : "0");
+    set("CONTROLS", "HoldVehicleCamera", settings.holdVehicleCamera ? "1" : "0");
     number[0] = char('0' + (settings.gamepadIcons & 3)); number[1] = 0; set("MAIN", "GamepadIcons", number);
     set("MAIN", "VehicleLights", settings.vehicleLights ? "1" : "0");
     if (request.count) {

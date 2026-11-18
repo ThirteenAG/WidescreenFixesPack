@@ -40,6 +40,9 @@ void DrawCutsceneBorders(void*) {
     borders.draw(cinematic.window(Drawing::settings.aspect, 480, 272), 480, 272,
         [&](const console::Rect& rect) { Drawing::solidHook.call<void>(&rect, &black, true); }, settings.cutsceneBorders);
 }
+SafetyMipsMid followCarSwing;
+bool cameraHeld = false;
+uint32_t cameraHeldUntil = 0;
 }
 void InstallCamera() {
     console::slot_zero::PatchPortable<4>(pattern.text_addr, pattern.text_size); // Script handles in slot 0 are valid.
@@ -49,5 +52,14 @@ void InstallCamera() {
     // place of the native fixed widescreen bars after the pickup text.
     injector::MakeNOP(Address<0x89C2BEC>());
     injector::MakeCALL(Address<0x89C2BF4>(), DrawCutsceneBorders);
+    // CCam::Process_FollowCar_SA: f12 is this frame's right stick turn, f13 the turn that swings
+    // the camera back behind the vehicle. While held, the stick's direction stays.
+    followCarSwing=safetymips::create_mid(Address<0x88F496C>(),[](SafetyMipsContext& regs) {
+        if (!settings.holdVehicleCamera) { cameraHeld=false; return; }
+        const uint32_t now=*reinterpret_cast<const uint32_t*>(Address<0x8B5E144>()); // CTimer::m_snTimeInMilliseconds
+        if (float(regs.f12)!=0.0f) { cameraHeld=true; cameraHeldUntil=now+2000; }
+        else if (cameraHeld && (int32_t(now-cameraHeldUntil)>=0 || int32_t(cameraHeldUntil-now)>2000)) cameraHeld=false; // also after a timer reset
+        if (cameraHeld) regs.f13=0.0f;
+    });
 }
 }

@@ -208,6 +208,8 @@ inline constexpr uint32_t fadeAlphaWords[]={0xAFBF0020u,0x14A00016u,0x00808025u,
 inline constexpr uint8_t fadeAlphaMasks[]={0,0,0,1,1,0,0,0,0,0,0,0};
 inline constexpr uint32_t bordersBranchWords[]={0x00000000u,0x0C000000u,0x00000000u,0x92040000u,0x10800003u,0x00000000u,0x0C000000u,0x02002025u,0x02009825u,0x0C000000u,0x34100000u,0x9264007Fu};
 inline constexpr uint8_t bordersBranchMasks[]={0,2,0,1,0,0,2,0,0,2,0,0};
+inline constexpr uint32_t followCarSwingWords[]={0x48640020u,0x4484C000u,0xC6560024u,0xC7AD03CCu,0xC7AE03D8u,0x460D7343u,0x460D6300u,0x3C043F80u,0x4484E000u,0x4616603Eu,0x00000000u,0x45010003u};
+inline constexpr uint8_t followCarSwingMasks[]={0,0,0,0,0,0,0,0,0,0,0,0};
 inline constexpr uint32_t bordersCallWords[]={0x00000000u,0x92040000u,0x10800003u,0x00000000u,0x0C000000u,0x02002025u,0x02009825u,0x0C000000u,0x34100000u,0x9264007Fu,0x00042100u,0x00043021u};
 inline constexpr uint8_t bordersCallMasks[]={0,1,0,0,2,0,0,2,0,0,0,0};
 inline constexpr uint32_t cameraWords[]={0x3C110000u,0x92240000u,0x3C100000u,0x10800003u,0x26100000u,0x0C000000u,0x00000000u,0x0C000000u,0x00000000u,0x92040000u,0x10800003u,0x00000000u};
@@ -247,7 +249,7 @@ inline constexpr uint8_t sliderBarsMasks[]={0,0,0,0,0,0,0,0,0,0,0,0};
 // RenderOneXLUSprite: the CHud weapon icon and aiming dots.
 inline constexpr uint32_t xluSpriteWords[]={0x27BDFF80u,0xAFB00058u,0x309000FFu,0xAFB30064u,0x00079C00u,0x3C043F00u,0xE7B40054u,0xAFB1005Cu,0xAFB20060u,0xAFB40068u,0x4484A000u,0x30B100FFu};
 inline constexpr uint8_t xluSpriteMasks[]={0,0,0,0,0,0,0,0,0,0,0,0};
-inline constexpr std::array<console::AddressRule,110> rules={{
+inline constexpr std::array<console::AddressRule,111> rules={{
     {0x088646F4u,0x088646F4u,words0,masks0,24,10,0,0,0,console::AddressKind::Code},
     {0x0886ACF4u,0x0886ACE4u,words1,masks1,12,8,16,0,0,console::AddressKind::Code},
     {0x0886AD10u,0x0886AD00u,words2,masks2,12,12,16,0,0,console::AddressKind::Code},
@@ -255,6 +257,7 @@ inline constexpr std::array<console::AddressRule,110> rules={{
     {0x0887BB90u,0x0887BB80u,words4,masks4,12,24,16,0,0,console::AddressKind::Code},
     {0x088EBAD8u,0x088EBAD8u,freeAimAboveWords,freeAimAboveMasks,12,4,0,0,0,console::AddressKind::Code},
     {0x088F35CCu,0x088F35BCu,words5,masks5,12,19,16,0,0,console::AddressKind::Code},
+    {0x088F496Cu,0x088F4954u,followCarSwingWords,followCarSwingMasks,12,12,24,0,0,console::AddressKind::Code},
     {0x08902530u,0x08902520u,words6,masks6,12,33,16,0,0,console::AddressKind::Code},
     {0x08913AD4u,0x08913ADCu,textGet3Words,textGet3Masks,24,39,-8,0,0,console::AddressKind::Code},
     {0x089432B4u,0x089432A4u,words7,masks7,12,32,16,0,0,console::AddressKind::Code},

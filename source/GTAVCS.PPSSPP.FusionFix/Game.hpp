@@ -12,7 +12,7 @@ struct Settings {
         // English is the only shipped native console menu catalog.
         return textLanguage == TextLanguage::Auto ? TextLanguage::English : textLanguage;
     }
-    bool modernControls = false, skipIntro = true, unthrottle = true, pcCheats = false;
+    bool modernControls = true, skipIntro = true, unthrottle = true, pcCheats = false;
     int fps = 0, unthrottleMode = 1;
     float fov = 1.0f;
     void SetFovRequest(float value) {
@@ -30,6 +30,7 @@ inline Settings settings;
 inline bool autoAspect=true;
 inline constexpr char cfgPath[]="ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.cfg";
 void ReloadTextLanguage();
+void PollSettings();
 void ApplyFrameRate();
 void InstallControls();
 void InstallCamera();

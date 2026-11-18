@@ -54,7 +54,7 @@ FOV Factor changes the normal gameplay camera’s field of view. The default is 
 
 Frame Limit changes presentation: 0 is unlimited, -1 follows the monitor refresh rate, or choose 30–1000 FPS. The game’s simulation keeps its original 60 updates per second. Recommended uses 60 FPS; Enhanced removes the presentation cap.
 
-XInput controllers use the bundled Xidi with the supplied Onimusha 3 layout. A interacts, B absorbs souls or cancels, X attacks and Y uses magic. LB guards, RB readies the weapon, LT opens the map and RT turns around. Start pauses, Back opens inventory, LS transforms and RS performs the firefly jump. PlayStation controllers can use Steam Input or DS4Windows; select PlayStation icons in the settings.
+XInput controllers use the bundled Xidi with the supplied Onimusha 3 layout. A interacts, B absorbs souls or cancels, X attacks and Y uses magic. LB guards, RB readies the weapon, LT opens the map and RT turns around. Start pauses, Back opens inventory, LS transforms and RS performs the firefly jump. PlayStation controllers can use Steam Input or DS4Windows; select PlayStation icons or Nintendo letters in the settings.
 
 Game Language selects the game’s own text and fonts after a restart. Text Language selects the plugin’s settings language immediately. Saves stay in the game’s SAVE folder when it is writable. If that folder cannot be written, saves use Saved Games\Onimusha 3\SAVE, copying an existing save only when the destination has none.
 

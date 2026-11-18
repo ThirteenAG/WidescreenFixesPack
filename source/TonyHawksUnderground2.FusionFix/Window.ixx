@@ -5,6 +5,8 @@ module;
 #include "FixSettings.hpp"
 #include "overlay/OverlayD3D9.hpp"
 #include "Shared/TonyHawk/Display.hpp"
+#include "Shared/TonyHawk/PadPrompts.hpp"
+#include "Shared/TonyHawk/ModeSwitch.hpp"
 
 #pragma comment(lib, "version.lib")
 
@@ -33,7 +35,8 @@ export namespace THUG2Device
             limit = EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1
                 ? static_cast<int>(mode.dmDisplayFrequency) : 60;
         }
-        FrameLimit.store(limit > 0 ? std::clamp(limit, 30, 1000) : 0, std::memory_order_relaxed);
+        // The game's main loop runs at no more than 60 frames per second
+        FrameLimit.store(limit > 0 ? std::clamp(limit, 30, 60) : 0, std::memory_order_relaxed);
     }
 
     inline void LimitFrameRate()
@@ -137,9 +140,13 @@ export namespace THUG2Device
             Overlay.Present(device, ThisModule());
             if (MouseFrame)
                 MouseFrame(Window, Overlay.BlocksInput());
+            TonyPad::Frame();
             LimitFrameRate();
         }
-        return PresentHook.unsafe_stdcall<HRESULT>(device, source, destination, window, dirty);
+        const auto result = PresentHook.unsafe_stdcall<HRESULT>(device, source, destination, window, dirty);
+        if (GameDevice.is_initialized() && device == GameDevice.get())
+            TonyModeSwitch::Update(device, Window);
+        return result;
     }
 
     inline HRESULT WINAPI Reset(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* parameters)
@@ -171,6 +178,8 @@ export namespace THUG2Device
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
             return 0;
+        if (TonyModeSwitch::Message(message, wParam, lParam))
+            return 0;
         if (Overlay.Message(window, message, wParam, lParam, result))
             return result;
         // The game stops while its window is inactive (and minimizes it); in a window mode it can keep running
@@ -186,6 +195,8 @@ export namespace THUG2Device
         KeyboardHook.unsafe_ccall<void>();
         if (Overlay.BlocksInput())
             std::memset(KeyBuffer.get().data(), 0, 256);
+        TonyModeSwitch::KeysRead(KeyBuffer.get().data());
+        TonyPad::KeysRead(KeyBuffer.get().data(), PreviousKeys.get().data());
     }
 
     inline void Install()
@@ -196,6 +207,7 @@ export namespace THUG2Device
         auto window = hook::pattern("8B 44 24 08 3D 00 01 00 00 0F 87 ? ? ? ? 0F 84");
         auto keyboard = hook::pattern("A1 ? ? ? ? 56 57 68 ? ? ? ? B9 40 00 00 00 BE");
         KeyBuffer.SetAddress(*keyboard.get_first<uint8_t*>(8));
+        PreviousKeys.SetAddress(*keyboard.get_first<uint8_t*>(23));
         CreateHook = safetyhook::create_inline(create.get_first(), Create);
         WindowHook = safetyhook::create_inline(window.get_first(), WindowProc);
         KeyboardHook = safetyhook::create_inline(keyboard.get_first(), ReadKeyboard);
@@ -208,6 +220,7 @@ export namespace THUG2Display
     {
         auto& settings = FixSettings();
         auto mode = std::clamp(settings.Int("MAIN.WindowMode"), 0, 2);
+        TonyModeSwitch::Install("A0 ? ? ? ? 84 C0 74 ? A1 ? ? ? ? 8B 08 50 FF 51 0C 3D 68 08 76 88 74 ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 8B 10 68 ? ? ? ? 50 FF 52 40 85 C0 7C ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? C6 05 ? ? ? ? 00 C3", 1, 0x32, mode, width, height);
         WindowedModeWrapper::EnableDpiAwareness();
         TonyDisplay::Window(0, width, height);
         if (mode != 0)

@@ -174,6 +174,11 @@ extern "C" void init()
     InstallHud(width, layout, subtitle, models, map, blips, radar, radarDisc, scale);
     InstallCutscene(barsBegin, barsHeight, barsEnd, barsReset);
     InstallCamera(projection);
+    // Optional: builds without this driver code keep the original zone.
+    if (const auto traffic = sites::at_19ABDC())
+    {
+        InstallTraffic(traffic);
+    }
     injector::WriteMemory<uint32_t>(wide, 0x0000282B);      // SLTU a1, zero, zero
     injector::WriteMemory<uint32_t>(radarClip, 0x00073A00); // SLL a3, a3, 8
     // A rejected session installs nothing, including the frame hook that ends boot fast-forward.

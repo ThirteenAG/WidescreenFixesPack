@@ -61,7 +61,7 @@
       "description": "@ForceAspectRatio.description",
       "page": "display",
       "visibility": "editor",
-      "apply": "restart",
+      "apply": "live",
       "maxLength": 14,
       "suggestions": [
         {
@@ -92,7 +92,7 @@
       "description": "@FOVFactor.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "min": 0.5,
       "max": 2.0,
       "step": 0.05
@@ -105,7 +105,7 @@
       "description": "@HudAspectRatioConstraint.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "maxLength": 14,
       "special": [
         {
@@ -136,11 +136,64 @@
       "description": "@ModernControls.description",
       "page": "controls",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 0,
         "recommended": 1,
         "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": "Auto",
+      "label": "@GamepadIcons",
+      "description": "@GamepadIcons.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": "Auto",
+          "label": "@auto"
+        },
+        {
+          "value": "PSP",
+          "label": "PSP"
+        },
+        {
+          "value": "360",
+          "label": "Xbox 360"
+        },
+        {
+          "value": "XBO",
+          "label": "Xbox One"
+        },
+        {
+          "value": "PS3",
+          "label": "PlayStation 3"
+        },
+        {
+          "value": "PS4",
+          "label": "PlayStation 4"
+        },
+        {
+          "value": "PS5",
+          "label": "PlayStation 5"
+        },
+        {
+          "value": "SWI",
+          "label": "Nintendo Switch"
+        },
+        {
+          "value": "DEK",
+          "label": "Steam Deck"
+        }
+      ],
+      "presets": {
+        "vanilla": "PSP",
+        "recommended": "Auto",
+        "enhanced": "Auto"
       }
     },
     {
@@ -176,7 +229,7 @@
       "description": "@UnthrottleEmuDuringLoading.description",
       "page": "gameplay",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 0,
         "recommended": 1,
@@ -201,7 +254,7 @@
       "description": "@HudScale.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "min": 0.5,
       "max": 1.0,
       "step": 0.05
@@ -214,7 +267,7 @@
       "description": "@CutsceneBorders.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 1,
         "recommended": 3,

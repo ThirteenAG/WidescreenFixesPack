@@ -41,7 +41,9 @@
   "update.availablehub": "A new {name} version is available. Update it in FusionFixHub after closing the game.",
   "update.availablesite": "A new {name} version is available at fusionfix.io.",
   "CutsceneBorders": "Cutscene borders",
-  "CutsceneBorders.description": "Preserves the original story camera framing with side borders. Off shows a wider view. Applies immediately.",
+  "CutsceneBorders.description": "Keeps the story scenes and race intros in their original 4:3 framing. Letterbox adds bars above and below on screens narrower than 4:3, Pillarbox adds side bars on wider screens, Both does either. Off fills the screen with a wider view. Applies immediately.",
   "CutsceneBorders.0": "Off",
-  "CutsceneBorders.1": "Pillarbox"
+  "CutsceneBorders.1": "Letterbox",
+  "CutsceneBorders.2": "Pillarbox",
+  "CutsceneBorders.3": "Both"
 }

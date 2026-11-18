@@ -9,6 +9,8 @@ constexpr float native = 512.0f / 320.0f;
 constexpr float frame = 480.0f / 272.0f;
 inline float forced, fovFactor{ 1.0f }, hudConstraint;
 inline float aspect{ native }, cameraAspect;
+// Virtual table of the scripted-scene camera (Cam_Scene).
+inline uintptr_t sceneCamera;
 inline float shiftX, shiftY;
 inline injector::game_fn<void(float)> setGameAspect;
 inline SafetyMipsMid cameraHook, projectionHook, canvasHook;
@@ -56,17 +58,19 @@ inline void Install()
         regs.f12 = aspect;
         cameraAspect = aspect;
     }, scalar);
+    sceneCamera = Absolute(Required("? ? 02 3C FF FF 03 24 ? ? 42 24 DC 01 03 AE"), 0, 8);
     // Projection tangents (x, y) before they are stored. The vertical angle is
     // kept on wider screens; narrower screens keep the native horizontal view.
     projectionHook = safetymips::create_mid(Required("5C 00 01 C6 60 00 00 C6 04 00 BF 8F 64 00 01 E6 68 00 00 E6", 12),
         [](SafetyMipsContext& regs)
     {
-        float scale = fovFactor;
+        const auto camera = uintptr_t(regs.s0);
+        // The FOV factor is for gameplay; cutscenes keep their framing.
+        float scale = *reinterpret_cast<const uintptr_t*>(camera) == sceneCamera ? 1.0f : fovFactor;
         if (aspect < native)
             scale *= native / aspect;
         regs.f1 *= scale;
         regs.f0 *= scale;
-        const auto camera = uintptr_t(regs.s0);
         *reinterpret_cast<float*>(camera + 0x5C) = regs.f1;
         *reinterpret_cast<float*>(camera + 0x60) = regs.f0;
     }, scalar);

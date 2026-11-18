@@ -33,6 +33,11 @@ struct Settings {
     int gamepadIcons = 0;
     // MAIN.VehicleLights: lit head, tail, brake and reverse lights on vehicle bodies.
     bool vehicleLights = true;
+    // CONTROLS.ModernControlScheme: triggers drive, aim and shoot.
+    bool modernControls = true;
+    // MAIN.GamepadCameraSpeed and MAIN.InvertGamepadY: the right stick camera.
+    float padCameraSpeed = 1.0f;
+    bool invertPad = false;
 };
 inline Settings settings;
 namespace address {

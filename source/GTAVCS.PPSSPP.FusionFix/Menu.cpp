@@ -1,4 +1,5 @@
 #include "Game.hpp"
+#include "ModernControlText.hpp"
 #include "../Shared/Console/PortableIni.hpp"
 #include "../Shared/Console/Text.hpp"
 #include <cstddef>
@@ -47,20 +48,22 @@ static_assert(sizeof(MenuItem) == 0xB8 && offsetof(MenuItem, hook) == 0x28 && of
 static_assert(sizeof(Widget) == 0xC8 && sizeof(MenuPage) == 0x38 && offsetof(MenuPage, items) == 0x24);
 
 enum Option : int { FrameRate = 0x100, MoreOptions, HudSize, RadarSize, MultiplayerRadar,
-    FieldOfView, CutsceneBorders, CutsceneFov, FastLoading, Preset, ApplyPreset,
+    FieldOfView, CutsceneBorders, FastLoading, Preset, ApplyPreset,
     DisplayPage, GamePage, VehicleLights, IconSet,
-    FixPage, FixDefaults, SkipIntro, HudBox, HoldCamera, Back, OptionEnd };
+    FixPage, FixDefaults, SkipIntro, HudBox, HoldCamera, ModernControls, PcCheats, AspectRatio, RadarPosition,
+    Back, OptionEnd };
 constexpr unsigned optionCount = OptionEnd - FrameRate;
 constexpr char keys[optionCount][20] = {"WF_FRAME_RATE", "WF_MORE_OPTIONS", "WF_HUD_SIZE", "WF_RADAR_SIZE",
-    "WF_MP_RADAR", "WF_FOV", "WF_CUT_BORDERS", "WF_CUT_FOV", "WF_FAST_LOADING", "WF_PRESET",
+    "WF_MP_RADAR", "WF_FOV", "WF_CUT_BORDERS", "WF_FAST_LOADING", "WF_PRESET",
     "WF_APPLY_PRESET", "WF_DISPLAY", "WF_GAME", "WF_LIGHTS",
-    "WF_ICONS", "WF_FIX_PAGE", "WF_FIX_DEFAULTS", "WF_SKIP_INTRO", "WF_HUD_BOX", "WF_HOLD_CAMERA", "WF_BACK"};
+    "WF_ICONS", "WF_FIX_PAGE", "WF_FIX_DEFAULTS", "WF_SKIP_INTRO", "WF_HUD_BOX", "WF_HOLD_CAMERA",
+    "WF_MODERN_CONTROLS", "WF_PC_CHEATS", "WF_ASPECT", "WF_RADAR_POSITION", "WF_BACK"};
 constexpr char16_t captions[optionCount][28] = {u"FRAME RATE:", u"PLUGINS", u"HUD SIZE:",
     u"RADAR SIZE:", u"MULTIPLAYER RADAR SIZE:", u"FIELD OF VIEW:", u"CUTSCENE BORDERS:",
-    u"ORIGINAL CUTSCENE FOV:", u"FAST LOADING:", u"PRESET:", u"APPLY PRESET", u"DISPLAY AND CAMERA",
+    u"FAST LOADING:", u"PRESET:", u"APPLY PRESET", u"DISPLAY AND CAMERA",
     u"GAME", u"VEHICLE LIGHTS (RESTART):",
     u"CONTROLLER ICONS:", u"FUSION FIX", u"RESTORE DEFAULTS", u"SKIP INTRO (RESTART):", u"HUD ASPECT RATIO:",
-    u"HOLD VEHICLE CAMERA:", u""};
+    u"HOLD VEHICLE CAMERA:", u"MODERN LAYOUT (RESTART):", u"PC CHEATS:", u"ASPECT RATIO:", u"RADAR POSITION (RESTART):", u""};
 constexpr char fpsKeys[2][12] = {"WF_FPS_30", "WF_FPS_60"};
 constexpr char16_t fpsText[2][4] = {u"30", u"60"};
 constexpr char onOff[2][16] = {"WF_BOOL_OFF", "WF_BOOL_ON"};
@@ -76,6 +79,11 @@ constexpr char iconKeys[9][16] = {"WF_ICON_PSP", "WF_ICON_360", "WF_ICON_XBO", "
 constexpr char16_t iconText[9][16] = {u"ORIGINAL PSP", u"XBOX 360", u"XBOX ONE", u"PLAYSTATION 3", u"PLAYSTATION 4", u"PLAYSTATION 5", u"NINTENDO SWITCH", u"STEAM DECK", u"AUTO"};
 constexpr char hudBoxKeys[5][12] = {"WF_HB_AUTO", "WF_HB_43", "WF_HB_169", "WF_HB_219", "WF_HB_329"};
 constexpr char16_t hudBoxText[5][8] = {u"AUTO", u"4:3", u"16:9", u"21:9", u"32:9"};
+constexpr char aspectKeys[5][12] = {"WF_AR_AUTO", "WF_AR_43", "WF_AR_169", "WF_AR_219", "WF_AR_329"};
+constexpr char radarKeys[2][16] = {"WF_RADAR_BOTTOM", "WF_RADAR_TOP"};
+constexpr char16_t radarText[2][8] = {u"BOTTOM", u"TOP"};
+// RADAR.RadarPosY: the original bottom left corner, or the top left corner
+constexpr float radarY[2] = {196.0f, -45.0f};
 constexpr char hudBoxNames[5][8] = {"Auto", "4:3", "16:9", "21:9", "32:9"};
 constexpr float hudBoxAspects[5] = {0.0f, 4.0f / 3.0f, 16.0f / 9.0f, 21.0f / 9.0f, 32.0f / 9.0f};
 // A custom CFG ratio shows as Auto until a choice is picked; it is saved unchanged.
@@ -108,14 +116,16 @@ struct Extension {
 };
 Extension extension;
 bool dirty = false;
+bool startupModernControls = false;
 int selectedPreset = 0;
 bool confirmPreset = false, confirmDefaults = false;
 // The descriptor's presets: 1 vanilla, 2 recommended (the defaults), 3 enhanced (0 = custom).
-struct PresetValues { int fps, unthrottleMode; float hud, radar, multiplayerRadar; int cutsceneBorders; bool skipIntro; bool vehicleLights; unsigned icons; bool holdCamera; };
+struct PresetValues { int fps, unthrottleMode; float hud, radar, multiplayerRadar; int cutsceneBorders; bool skipIntro; bool vehicleLights; unsigned icons; bool holdCamera;
+    bool modernControls; };
 constexpr PresetValues presetValues[4] = {{},
-    {0, 0, 1.0f, 1.0f, 1.0f, 1, false, false, 0, false},
-    {0, 1, 0.75f, 0.83f, 0.63f, 3, true, true, 8, false},
-    {1, 1, 0.75f, 0.83f, 0.63f, 3, true, true, 8, true}};
+    {0, 0, 1.0f, 1.0f, 1.0f, 1, false, false, 0, false, false},
+    {0, 1, 0.75f, 0.83f, 0.63f, 3, true, true, 8, false, true},
+    {1, 1, 0.75f, 0.83f, 0.63f, 3, true, true, 8, true, true}};
 constexpr int recommendedPreset = 2;
 bool PresetMatches(int preset) {
     if (preset < 1 || preset > 3) return false;
@@ -126,7 +136,7 @@ bool PresetMatches(int preset) {
         std::fabs(Drawing::settings.multiplayerRadar - p.multiplayerRadar) < 0.001f &&
         settings.cutsceneBorders == p.cutsceneBorders && settings.skipIntro == p.skipIntro &&
         settings.vehicleLights == p.vehicleLights && GamepadIconSet() == p.icons &&
-        settings.holdVehicleCamera == p.holdCamera;
+        settings.holdVehicleCamera == p.holdCamera && settings.modernControls == p.modernControls;
 }
 int MatchingPreset() { return PresetMatches(2) ? 2 : PresetMatches(1) ? 1 : PresetMatches(3) ? 3 : 0; }
 
@@ -170,6 +180,10 @@ int Value(int option) {
     case Preset: return selectedPreset;
     case VehicleLights: return settings.vehicleLights;
     case HoldCamera: return settings.holdVehicleCamera;
+    case ModernControls: return settings.modernControls;
+    case PcCheats: return settings.pcCheats;
+    case AspectRatio: return autoAspect ? 0 : HudBoxIndex(Drawing::settings.aspect);
+    case RadarPosition: return Drawing::settings.radarY < 0.0f ? 1 : 0;
     case IconSet: return int(GamepadIconSet());
     default: return 0;
     }
@@ -189,6 +203,13 @@ void SetOption(int option, int value) {
     case Preset: selectedPreset = value; confirmPreset = false; return;
     case VehicleLights: settings.vehicleLights = value != 0; break;
     case HoldCamera: settings.holdVehicleCamera = value != 0; break;
+    case ModernControls: settings.modernControls = value != 0; break;
+    case PcCheats: settings.pcCheats = value != 0; break;
+    case AspectRatio:
+        autoAspect = value <= 0 || value >= 5;
+        Drawing::settings.aspect = autoAspect ? console::portable::Aspect() : hudBoxAspects[value];
+        break;
+    case RadarPosition: Drawing::settings.radarY = radarY[value == 1 ? 1 : 0]; break;
     // Applied and saved at once, like the game's own controller menu does.
     case IconSet: if (value >= 0) SelectGamepadIcons(unsigned(value)); return;
     default: return;
@@ -206,6 +227,14 @@ void SetHookData(MenuItem* item, int value) {
     setHookHook.call<void>(item, value);
 }
 const uint16_t* GetText(void* text, const char* key) {
+    // Help texts name the buttons the modern control scheme moved actions to.
+    switch (ControlText(key, startupModernControls))
+    {
+    case ModernControlText::Right: return textHook.call<const uint16_t*>(text, "C0VELR");
+    case ModernControlText::Left: return textHook.call<const uint16_t*>(text, "C0VELL");
+    case ModernControlText::Circle: return textHook.call<const uint16_t*>(text, "C0PDFW");
+    default: break;
+    }
     // Multistate widgets look up a copy of their value key; compare contents.
     if (settings.MenuLanguage() == TextLanguage::English && key && key[0] == 'W' && key[1] == 'F' && key[2] == '_') {
         for (unsigned i = 0; i < unsigned(Back - FrameRate); ++i)
@@ -225,7 +254,9 @@ const uint16_t* GetText(void* text, const char* key) {
         for (unsigned i = 0; i < 9; ++i)
             if (!std::strcmp(key, iconKeys[i])) return reinterpret_cast<const uint16_t*>(GamepadIconsAvailable() ? iconText[i] : u"UNAVAILABLE");
         for (unsigned i = 0; i < 5; ++i)
-            if (!std::strcmp(key, hudBoxKeys[i])) return reinterpret_cast<const uint16_t*>(hudBoxText[i]);
+            if (!std::strcmp(key, hudBoxKeys[i]) || !std::strcmp(key, aspectKeys[i])) return reinterpret_cast<const uint16_t*>(hudBoxText[i]);
+        for (unsigned i = 0; i < 2; ++i)
+            if (!std::strcmp(key, radarKeys[i])) return reinterpret_cast<const uint16_t*>(radarText[i]);
         for (unsigned i = 1; i < 3; ++i)
             if (!std::strcmp(key, loadingKeys[i])) return reinterpret_cast<const uint16_t*>(loadingText[i - 1]);
         if (!std::strcmp(key, "WF_BACK")) return reinterpret_cast<const uint16_t*>(u"BACK");
@@ -264,11 +295,13 @@ void Initialize(Extension& e, const Widget& slider, const Widget& toggle, const 
             // Match native centred actions: one caption without a label.
             widget.item.render = 0; widget.item.x = 0; widget.item.width = 480; widget.item.horizontal = 1;
         } else {
-            const unsigned count = option == IconSet ? 9 : option == HudBox ? 5 : option == Preset || option == CutsceneBorders ? 4 : option == FastLoading ? 3 : 2;
+            const unsigned count = option == IconSet ? 9 : option == HudBox || option == AspectRatio ? 5 :
+                option == Preset || option == CutsceneBorders ? 4 : option == FastLoading ? 3 : 2;
             for (unsigned j = 0; j < count; ++j)
                 e.values[i][j] = Literal(option == Preset ? presetKeys[j] : option == IconSet ? iconKeys[j] :
                     option == FastLoading ? loadingKeys[j] :
-                    option == FrameRate ? fpsKeys[j] : option == CutsceneBorders ? bordersKeys[j] : option == HudBox ? hudBoxKeys[j] : onOff[j]);
+                    option == FrameRate ? fpsKeys[j] : option == CutsceneBorders ? bordersKeys[j] : option == HudBox ? hudBoxKeys[j] :
+                    option == AspectRatio ? aspectKeys[j] : option == RadarPosition ? radarKeys[j] : onOff[j]);
             widget.toggle.strings = {e.values[i], e.values[i] + count, e.values[i] + count};
             widget.toggle.count = uint8_t(count);
         }
@@ -288,14 +321,14 @@ void Show(unsigned mode) {
         if (*p && (*p)->hook == 0) e.subItems[count++] = *p;
     constexpr int plugins[] = {FixPage, Back};
     constexpr int fix[] = {Preset, ApplyPreset, DisplayPage, GamePage, FixDefaults, Back};
-    constexpr int display[] = {HudSize, HudBox, RadarSize, MultiplayerRadar, FieldOfView, CutsceneBorders, Back};
-    constexpr int game[] = {FrameRate, FastLoading, SkipIntro, VehicleLights, HoldCamera, IconSet, Back};
+    constexpr int display[] = {AspectRatio, HudSize, HudBox, RadarSize, RadarPosition, MultiplayerRadar, FieldOfView, CutsceneBorders, Back};
+    constexpr int game[] = {FrameRate, FastLoading, SkipIntro, ModernControls, PcCheats, VehicleLights, HoldCamera, IconSet, Back};
     const int* options = game;
-    unsigned rows = 7;
+    unsigned rows = 9;
     switch (mode) {
     case Plugins: options = plugins; rows = 2; break;
     case FixMode: options = fix; rows = 6; break;
-    case DisplayMode: options = display; rows = 7; break;
+    case DisplayMode: options = display; rows = 9; break;
     default: break;
     }
     unsigned visibleRows = 0;
@@ -320,6 +353,7 @@ void ApplyPresetValues(int preset, bool& confirm) {
     settings.cutsceneBorders = p.cutsceneBorders;
     settings.skipIntro = p.skipIntro; settings.vehicleLights = p.vehicleLights;
     settings.holdVehicleCamera = p.holdCamera;
+    settings.modernControls = p.modernControls;
     SelectGamepadIcons(p.icons);
     selectedPreset = preset;
     dirty = true; confirm = false;
@@ -453,12 +487,13 @@ void InputTrigger(MenuItem* item, int trigger) {
 void Save() {
     if (!dirty) return;
     using console::portable::IniValue;
-    IniValue values[11] = {
+    IniValue values[15] = {
         {"MAIN", "FPSLimit", {}}, {"MAIN", "UnthrottleEmuDuringLoading", {}}, {"MPRADAR", "RadarScale", {}},
         {"MAIN", "HudScale", {}}, {"RADAR", "RadarScale", {}}, {"MAIN", "FOVFactor", {}},
         {"MAIN", "CutsceneBorders", {}}, {"MAIN", "SkipIntro", {}},
         {"MAIN", "HudAspectRatioConstraint", {}}, {"MAIN", "VehicleLights", {}},
-        {"CONTROLS", "HoldVehicleCamera", {}}};
+        {"CONTROLS", "HoldVehicleCamera", {}}, {"CONTROLS", "ModernControlScheme", {}}, {"CONTROLS", "PCCheats", {}},
+        {"MAIN", "ForceAspectRatio", {}}, {"RADAR", "RadarPosY", {}}};
     std::strcpy(values[0].value, settings.fps ? "60" : "30");
     // A configured value of 2 (also fast-forward fades) is kept while enabled.
     std::strcpy(values[1].value, !settings.unthrottle ? "0" : settings.unthrottleMode == 2 ? "2" : "1");
@@ -474,8 +509,14 @@ void Save() {
     else console::format(values[8].value, "", hudAspect, 4);
     std::strcpy(values[9].value, settings.vehicleLights ? "1" : "0");
     std::strcpy(values[10].value, settings.holdVehicleCamera ? "1" : "0");
+    std::strcpy(values[11].value, settings.modernControls ? "1" : "0");
+    std::strcpy(values[12].value, settings.pcCheats ? "1" : "0");
+    if (autoAspect) std::strcpy(values[13].value, "auto");
+    else if (const int index = HudBoxIndex(Drawing::settings.aspect)) std::strcpy(values[13].value, hudBoxNames[index]);
+    else console::format(values[13].value, "", Drawing::settings.aspect, 4);
+    console::decimal(values[14].value, Drawing::settings.radarY, 2);
     static console::portable::IniWriter<> writer;
-    const bool saved = writer.update(cfgPath, values, 11);
+    const bool saved = writer.update(cfgPath, values, 15);
 #ifndef NDEBUG
     logger.WriteF("Menu settings %s", saved ? "saved" : "could not be saved");
 #endif
@@ -517,6 +558,7 @@ void Draw(void* menu) {
 }
 }
 void InstallMenu() {
+    startupModernControls = settings.modernControls;
     playSound = reinterpret_cast<void (*)(void*, uint16_t, uint32_t)>(Address<0x8A062F0>());
     dmAudio = Address<0x8BB3BB8>();
     drawHook = safetymips::create_inline(Address<0x882E518>(), Draw);

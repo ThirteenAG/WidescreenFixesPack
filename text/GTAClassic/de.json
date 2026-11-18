@@ -15,8 +15,6 @@
   "windowmode.fullscreen": "Vollbild",
   "windowmode.windowed": "Fenster",
   "windowmode.borderless": "Rahmenlos",
-  "MAIN.HudSafeArea": "HUD-Randabstand",
-  "MAIN.HudSafeArea.description": "Abstand des HUD von den Bildschirmrändern, in 640x480-Pixeln des Spiels.",
   "MAIN.HudAspectRatioConstraint": "HUD-Seitenverhältnis",
   "MAIN.HudAspectRatioConstraint.description": "Hält das HUD in einer zentrierten Fläche dieses Seitenverhältnisses, etwa 16:9 auf breiteren Bildschirmen. Auto nutzt den ganzen Bildschirm.",
   "CAMERA.SmoothFollow": "Weiches Folgen",

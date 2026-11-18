@@ -121,13 +121,31 @@
       "apply": "live"
     },
     {
-      "id": "MAIN.ImproveWindowedMode",
-      "type": "bool",
-      "default": 1,
-      "label": "@MAIN.ImproveWindowedMode",
-      "description": "@MAIN.ImproveWindowedMode.description",
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 2,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@MAIN.WindowMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@MAIN.WindowMode.1"
+        },
+        {
+          "value": 2,
+          "label": "@MAIN.WindowMode.2"
+        }
+      ],
+      "label": "@MAIN.WindowMode",
+      "description": "@MAIN.WindowMode.description",
       "page": "display",
-      "apply": "restart"
+      "apply": "live",
+      "control": [
+        "cycler",
+        "dropdown"
+      ]
     },
     {
       "id": "MAIN.ConfineCursor",
@@ -474,7 +492,12 @@
       "min": 0,
       "max": 8192,
       "step": 256,
-      "unit": "px"
+      "unit": "px",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 4096
+      }
     },
     {
       "id": "UNLOCKS.UnlockAllCars",
@@ -517,11 +540,11 @@
       "apply": "live"
     },
     {
-      "id": "MISC.RightStickDeadzone",
+      "id": "GAMEPAD.RightStickDeadzone",
       "type": "float",
       "default": 10,
-      "label": "@MISC.RightStickDeadzone",
-      "description": "@MISC.RightStickDeadzone.description",
+      "label": "@GAMEPAD.RightStickDeadzone",
+      "description": "@GAMEPAD.RightStickDeadzone.description",
       "page": "controls",
       "apply": "live",
       "min": 0,

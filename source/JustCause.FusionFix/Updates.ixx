@@ -112,6 +112,26 @@ export namespace JCUpdates
         config.fileVersion = rsc_FileVersion;
         config.settings = &FixSettings();
         config.playable = []() { return true; };
+        // The notice in the fix's text language
+        config.format = [](const std::string& latest, bool hub)
+        {
+            auto texts = FixSettings().GetTexts();
+            std::string language = FixSettings().String("MAIN.TextLanguage");
+            if (language.empty() || language == "auto")
+            {
+                wchar_t locale[LOCALE_NAME_MAX_LENGTH]{};
+                language = GetUserDefaultLocaleName(locale, LOCALE_NAME_MAX_LENGTH) ? asi_settings::text::Narrow(locale) : "en";
+            }
+            texts.Select(language);
+            auto line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
+            for (const auto& [key, value] : { std::pair<std::string, std::string>{ "{name}", texts.Resolve(FixSettings().GetDescription().name) },
+                std::pair<std::string, std::string>{ "{version}", latest } })
+            {
+                if (const auto at = line.find(key); at != std::string::npos)
+                    line.replace(at, key.size(), value);
+            }
+            return asi_settings::text::Widen(line);
+        };
         config.show = [](const std::wstring& line)
         {
             const std::lock_guard lock(mutex);

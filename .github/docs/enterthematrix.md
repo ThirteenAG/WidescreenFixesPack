@@ -27,7 +27,7 @@
 - **Window mode** (restart) — Fullscreen, Windowed or Borderless. Windowed uses the resolution chosen in MatrixOptions; Borderless covers the monitor at its own resolution.
 - **HUD aspect ratio** — Auto puts the HUD at the screen edges; 4:3, 16:9, 21:9, 32:9 or any ratio keeps it in a centered box of that shape. Applies immediately.
 - **Cutscene borders** — Both (default) always shows the original 16:9 cutscene framing with bars where the screen is wider or narrower; Letterbox keeps only the bars above and below (as the original on 4:3 screens); Pillarbox keeps only the side bars; Off fills the screen. Vanilla uses Letterbox. Applies immediately, also during a cutscene.
-- **Frame rate limit** — Off by default; choose a limit or the monitor refresh rate. The game or VSync may impose a lower limit. Applies immediately.
+- **Frame rate limit** — 60 by default (the Vanilla preset leaves the frame rate unlimited, as the original game); choose another limit, unlimited or the monitor refresh rate. The game or VSync may impose a lower limit. Applies immediately.
 - **Movie framing** — Original aspect shows the movies as the game does, whole inside the centered 4:3 frame (Vanilla). Fill shows each whole movie as large as the screen allows without cutting anything off (Recommended, Enhanced). Applies immediately.
 - **Field of view factor** — 0.5–2.0; 1.0 keeps the intended view. Cutscenes keep their framing. Applies immediately.
 - **Skip intro** (restart) — Skips the logo movies and the copyright notice; the game opens at the title menu. Vanilla off, Recommended and Enhanced on.

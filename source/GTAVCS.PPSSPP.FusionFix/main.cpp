@@ -8,6 +8,7 @@
 #include "../Shared/Console/PspPluginConflict.hpp"
 extern "C" {
 #include <pspkernel.h>
+#include <pspiofilemgr.h>
 }
 PSP_MODULE_INFO("GTAVCS.PPSSPP.FusionFix",PSP_MODULE_USER,2,0);
 namespace vcsws {
@@ -30,7 +31,7 @@ void ReadSettings() {
     if (settings.unthrottleMode < 0 || settings.unthrottleMode > 2) settings.unthrottleMode = 1;
     settings.unthrottle=settings.unthrottleMode!=0;
     settings.fps=inireader.ReadInteger("MAIN","FPSLimit",30)==60;
-    settings.modernControls=inireader.ReadBoolean("CONTROLS","ModernControlScheme",0);
+    settings.modernControls=inireader.ReadBoolean("CONTROLS","ModernControlScheme",1);
     settings.pcCheats=inireader.ReadBoolean("CONTROLS","PCCheats",0);
     settings.SetFovRequest(ReadCfgFloat("MAIN","FOVFactor",1));
     settings.cutsceneBorders=int(bounded(ReadCfgFloat("MAIN","CutsceneBorders",3),0,3,3));
@@ -38,6 +39,7 @@ void ReadSettings() {
     settings.holdVehicleCamera=inireader.ReadBoolean("CONTROLS","HoldVehicleCamera",0);
     auto& drawing=Drawing::settings;
     drawing.aspect=console::portable::Aspect();
+    autoAspect=true;
     char ratioBuffer[64];const char* ratio=inireader.ReadString("MAIN","ForceAspectRatio","auto",ratioBuffer,sizeof(ratioBuffer));
     char* separator=nullptr;float numerator=std::strtof(ratio,&separator);
     if (separator && *separator==':') {
@@ -57,6 +59,35 @@ void ReadSettings() {
     drawing.multiplayerRadar=bounded(ReadCfgFloat("MPRADAR","RadarScale",0.63f),0.1f,2,0.63f);
     drawing.multiplayerRadarY=bounded(ReadCfgFloat("MPRADAR","RadarPosY",170.0f),-272,272,170.0f);
 }
+}
+namespace {
+SceIoStat observedCfg{};
+unsigned lastSettingsPoll;
+bool cfgObserved;
+}
+// Changes from FusionFixHub or the website apply during gameplay: the cfg is read again when it changes.
+void PollSettings()
+{
+    const unsigned now = sceKernelGetSystemTimeLow();
+    if (now - lastSettingsPoll < 1000000u) return;
+    lastSettingsPoll = now;
+    if (*reinterpret_cast<const uint8_t*>(Address<0x8BC9100>() + 0x20)) return;
+    SceIoStat current{};
+    if (sceIoGetstat(cfgPath, &current) < 0 || current.st_size <= 0) return;
+    if (cfgObserved && current.st_size == observedCfg.st_size &&
+        !std::memcmp(&current.sce_st_mtime, &observedCfg.sce_st_mtime, sizeof(current.sce_st_mtime))) return;
+    const bool first = !cfgObserved;
+    observedCfg = current;
+    cfgObserved = true;
+    if (first) return;
+    ReadSettings();
+    ApplyFrameRate();
+    if (!settings.unthrottle) console::portable::Unthrottle(false);
+    char icons[16]{};
+    const char* selected = inireader.ReadString("MAIN", "GamepadIcons", "Auto", icons, sizeof(icons));
+    static constexpr const char* iconSets[] = {"PSP", "360", "XBO", "PS3", "PS4", "PS5", "SWI", "DEK", "Auto"};
+    for (unsigned i = 0; i < 9; ++i)
+        if (!std::strcmp(selected, iconSets[i]) && i != GamepadIconSet()) { SelectGamepadIcons(i); break; }
 }
 void ReloadTextLanguage() {
     // Refresh the full native CFG buffer only at startup/menu reopening.
@@ -83,7 +114,7 @@ extern "C" int module_start(SceSize,void*) {
         {"MAIN", "ForceAspectRatio", "auto"},
         {"MAIN", "FPSLimit", "30"},
         {"MAIN", "UnthrottleEmuDuringLoading", "1"},
-        {"CONTROLS", "ModernControlScheme", "0"},
+        {"CONTROLS", "ModernControlScheme", "1"},
         {"CONTROLS", "PCCheats", "0"},
         {"CONTROLS", "HoldVehicleCamera", "0"},
         {"MAIN", "HudScale", "0.75"},

@@ -52,10 +52,11 @@
 - **In-Game Options** - settings that belong to one of the game's options are listed next to it: Console Gamma, SMAA, Frame Rate and Display Mode under Graphics > Advanced, Shadow Resolution and Motion Blur under Graphics > World, HUD Aspect Ratio under Interface. Everything else is under one new **Plugins** entry of the Options menu (in place of Credits, and at the end of the race's pause Options, where the fix's page also has the graphics settings): it lists Fusion Fix first and then every other loaded plugin with in-game settings. Each opens its page, split into screens by the settings' pages (Graphics, Movies & Cutscenes, Camera, Controls, Interface): a **Preset** row first, the settings, and **Restore Defaults** last (accept, then accept again to confirm; it resets only the settings on the current screen). Large plugin and section lists open through numbered ranges, keeping every entry reachable. All settings are stored in `NFSProStreet.FusionFix.cfg` next to the plugin, which the fix writes with every setting and a comment above each; settings can also be changed on fusionfix.io or in FusionFixHub.
 - **Presets** - Vanilla (no free look, a 60 FPS limit, no cutscene borders, no SMAA or raw mouse, intros shown), Recommended (the defaults) or Enhanced (adds console gamma and 4096 shadows), picked with left/right on the Preset row of the fix's page and applied with accept, then accept again to confirm; they never change window mode, language, sensitivities or controls
 - **Language** - the game's language on the fix's Interface screen (after a restart), offering only the languages whose text files are installed. Korean, Chinese and Thai crash this exe and aren't offered (#665)
-- **Skip Intro** - bypass startup FMVs and the title screen
+- **Skip Intro** - bypass startup FMVs
+- **Skip Press Start** - the title screen continues by itself
 - **Display Mode** - borderless, bordered, resizable, or borderless fullscreen; in every mode the picture is neither cropped nor blurred on scaled desktops
 - **FPS Limit** - synced to the monitor refresh rate (the default), twice the refresh rate, or a fixed value from 30; the game itself limits races to 30 FPS
-- **Gamepad Support** - Xbox, PlayStation, Switch and other controllers through [Xidi](https://github.com/samuelgr/Xidi) using XInput (PlayStation and Switch pads use Steam Input or DS4Windows): the Xbox 360 version's default controls, controller button names in the controls menu and console button icons in the front end (Xbox or PlayStation icons, Xbox in Auto, PlayStation when chosen in the menu)
+- **Gamepad Support** - Xbox, PlayStation, Switch and other controllers through [Xidi](https://github.com/samuelgr/Xidi) using XInput (PlayStation and Switch pads use Steam Input or DS4Windows): the Xbox 360 version's default controls, controller button names in the controls menu and console button icons in the front end (Xbox or PlayStation icons, Xbox in Auto, PlayStation when chosen in the menu); Xbox pads get the same controls when Xidi isn't loaded, with both triggers on one axis (pressing both at once cancels them out)
 - **Stick Dead Zones** - separate dead zones for the left and right stick, in percent (default 10)
 - **Field of View** - multiplies the driving camera field of view from 0.5 to 2.0 (default 1.0) and applies while the game runs; native angle limits still apply; menus, movies and the garage keep theirs
 - **Custom Save Directory** - redirect user files to any subfolder in the game directory
@@ -105,6 +106,7 @@ Shadow Resolution can keep the game’s original quality-dependent sizes with Or
 
 ## Known limits
 
+- The fix needs version 1.1 of the game (`nfsps.exe` from patch 1.1 or a digital release); update an older disc version before installing it.
 - The frame-rate setting requires a restart and also selects the simulation rate. Unlimited rendering and separate limits for menus and loading are not supported.
 
 ---

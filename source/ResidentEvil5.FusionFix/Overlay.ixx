@@ -11,6 +11,7 @@ module;
 export module Overlay;
 
 import FrameRate;
+import ButtonIcons;
 
 // The developer overlay (Ctrl+F10, handled by the overlay in the window procedure) on the game's Direct3D 9 device. While it has the keyboard and mouse, the game's
 // input sees its window as unfocused, as it does when another window is active: it reads nothing.
@@ -96,6 +97,7 @@ namespace
         if (process != GetCurrentProcessId())
             return;
         FrameRate::Frame(window);
+        ButtonIcons::Frame(device);
         AttachWindow(window);
         if (CursorWindow.load() != window)
             PostMessageW(window, WM_NULL, 0, 0);

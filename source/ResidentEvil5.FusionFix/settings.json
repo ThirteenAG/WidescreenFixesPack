@@ -88,6 +88,34 @@
       ]
     },
     {
+      "id": "MAIN.SplitScreenLayout",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@SplitScreenLayout.game"
+        },
+        {
+          "value": 1,
+          "label": "@SplitScreenLayout.sidebyside"
+        }
+      ],
+      "label": "@SplitScreenLayout",
+      "description": "@SplitScreenLayout.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "MAIN.SkipIntro",
       "type": "bool",
       "default": 1,
@@ -195,6 +223,38 @@
       }
     },
     {
+      "id": "GRAPHICS.ShadowResolution",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@ShadowResolution.game"
+        },
+        {
+          "value": 2048,
+          "label": "2048"
+        },
+        {
+          "value": 4096,
+          "label": "4096"
+        }
+      ],
+      "label": "@ShadowResolution",
+      "description": "@ShadowResolution.description",
+      "page": "graphics",
+      "visibility": "menu",
+      "apply": "restart",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 2048,
+        "enhanced": 4096
+      }
+    },
+    {
       "id": "MAIN.ModernControls",
       "type": "bool",
       "default": 0,
@@ -221,6 +281,22 @@
       "control": [
         "slider"
       ]
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        { "value": 0, "label": "@GamepadIcons.auto" },
+        { "value": 1, "label": "@GamepadIcons.xbox" },
+        { "value": 2, "label": "@GamepadIcons.playstation" },
+        { "value": 3, "label": "@GamepadIcons.nintendo" }
+      ],
+      "label": "@GamepadIcons",
+      "description": "@GamepadIcons.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
     },
     {
       "id": "MAIN.ForceLaserSight",

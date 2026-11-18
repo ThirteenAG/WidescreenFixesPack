@@ -100,5 +100,7 @@
   "icons.playstation": "PlayStation",
   "icons.nintendo": "Nintendo",
   "pauseonfocusloss": "Pause im Hintergrund",
-  "pauseonfocusloss.description": "Pausiert, während ein anderes Fenster aktiv ist. Aus lässt das Spiel im Fenster- und randlosen Modus im Hintergrund weiterlaufen; im Vollbild pausiert es immer. Gilt sofort."
+  "pauseonfocusloss.description": "Pausiert, während ein anderes Fenster aktiv ist. Aus lässt das Spiel im Fenster- und randlosen Modus im Hintergrund weiterlaufen; im Vollbild pausiert es immer. Gilt sofort.",
+  "ConfineCursor": "Mauszeiger begrenzen",
+  "ConfineCursor.description": "Hält den Mauszeiger im Spielfenster, solange es aktiv ist."
 }

@@ -12,7 +12,9 @@ struct Settings {
         // English is the only shipped native console menu catalog.
         return textLanguage == TextLanguage::Auto ? TextLanguage::English : textLanguage;
     }
-    bool modernControls = false, skipIntro = true, unthrottle = true, pcCheats = false;
+    bool modernControls = true, skipIntro = true, unthrottle = true, pcCheats = false;
+    // CONTROLS.HoldVehicleCamera: the vehicle camera stays where the right stick turned it until the stick rests for a moment.
+    bool holdVehicleCamera = false;
     int fps = 0;
     float fov = 1.0f;
     // MAIN.CutsceneBorders: 0 off, 1 letterbox, 2 pillarbox, 3 both.

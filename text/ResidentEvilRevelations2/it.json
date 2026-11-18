@@ -100,5 +100,7 @@
   "icons.playstation": "PlayStation",
   "icons.nintendo": "Nintendo",
   "pauseonfocusloss": "Pausa in secondo piano",
-  "pauseonfocusloss.description": "Mette in pausa quando è attiva un’altra finestra. Disattivato, il gioco continua in background in finestra e senza bordi; a schermo intero va sempre in pausa. Effetto immediato."
+  "pauseonfocusloss.description": "Mette in pausa quando è attiva un’altra finestra. Disattivato, il gioco continua in background in finestra e senza bordi; a schermo intero va sempre in pausa. Effetto immediato.",
+  "ConfineCursor": "Limita cursore",
+  "ConfineCursor.description": "Mantiene il cursore nella finestra di gioco mentre è attiva."
 }

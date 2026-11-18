@@ -48,4 +48,12 @@ export ScreenState Screen;
 
 
 export GameRef<std::array<uint8_t, 512>> KeyBuffer;
+// Per player (192 bytes each): the selected pad's instance GUID followed by its 22 binding codes
+export GameRef<uint8_t> PlayerControls;
+export GameRef<uint8_t*> ButtonFont;
+export GameRef<uint8_t*> BatchFont;
 export GameRef<int32_t> KeyBufferIndex;
+
+// Prompts show pad buttons while the pad was the last device used
+export std::atomic<bool> UsingPad = false;
+export std::atomic<int> ActivePadPlayer = 0;

@@ -37,9 +37,9 @@ Vanilla shows the logos and the intro movie; Recommended and Enhanced skip them.
 - **Window modes** at any Windows display scaling, without rounded corners: Windowed opens a centered window with exactly the chosen client size, also for sizes the monitor doesn't list. In windowed modes the window is not minimized when another window becomes active; the game keeps running in the background and takes keyboard input again when you return.
 - **Closing the game** with the window's close button works on the title screen, during loading, while skating and in the pause menu.
 
-Controllers: the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox controller to it. Choose it under **Options → Player Controls** and bind the buttons there. PlayStation and Switch pads work through Steam Input or DS4Windows set to Xbox controller mode.
+Controllers: the game reads gamepads through DirectInput and uses the first one by itself; the bundled Xidi presents an Xbox controller to it with the game's default layout (A jump, B grab, X flip, Y grind, LB and RB spin, LT nollie, RT switch, Start pause). **Options → Player Controls** changes the bindings. PlayStation and Switch pads work through Steam Input or DS4Windows set to Xbox controller mode.
 
-**Frame rate limit** defaults to 60 FPS and can be changed live. Higher rates may affect gameplay; 0 removes the limit and -1 follows the monitor refresh rate.
+**Frame rate limit** is 30–60 fps (default 60) and can be changed live. The game's physics, animation and timers are made for 60 fps, so higher rates are not offered.
 
 ## Known limits
 

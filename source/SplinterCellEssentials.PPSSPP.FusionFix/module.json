@@ -6,6 +6,7 @@
     "Hud.cpp",
     "Camera.cpp",
     "Timing.cpp",
+    "Icons.cpp",
     "Loader.cpp",
     "Loading.cpp",
     "../../external/injector/include/psp/injector.c",

@@ -12,6 +12,7 @@ import HudLayout;
 namespace
 {
     std::atomic<float> Constraint{ 0.0f };
+    const float* HudScale = nullptr;
     struct Number
     {
         int type = 0, pad = 0;
@@ -73,6 +74,32 @@ namespace
         Adjust(movie, clip, member, offset, false);
     }
 
+    // The clip's position on one axis, without the adjustment made last
+    std::optional<double> Native(uintptr_t movie, const char* clip, char axis)
+    {
+        const std::string base = std::string("_root.") + clip;
+        const char member[]{ '_', axis, 0 };
+        auto value = Get(movie, (base + "." + member).c_str());
+        const auto previous = Get(movie, (base + ".FixHudLast" + member).c_str());
+        const auto adjustment = Get(movie, (base + ".FixHudAdjustment" + member).c_str());
+        if (value && previous && adjustment && *value == *previous)
+            *value -= *adjustment;
+        return value;
+    }
+
+    // Moves the clip by offset and scales its position from the edge (stage coordinates) it's anchored to,
+    // together with its scale that keeps every point of it at the same place relative to that edge.
+    void MoveScaled(uintptr_t movie, const char* clip, char axis, double offset, double edge, double scale)
+    {
+        const auto native = Native(movie, clip, axis);
+        if (!native)
+            return;
+        const char member[]{ '_', axis, 0 };
+        Adjust(movie, clip, member, offset + (*native - edge) * (scale - 1.0), false);
+        const char scaleMember[]{ '_', axis, 's', 'c', 'a', 'l', 'e', 0 };
+        Adjust(movie, clip, scaleMember, scale, true);
+    }
+
     bool IsHud(uintptr_t movie)
     {
         const auto path = *reinterpret_cast<const char**>(movie + 4);
@@ -103,6 +130,7 @@ export namespace Hud
     {
         UpdateConstraint();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", UpdateConstraint);
+        HudScale = &FixSettings().Float("MAIN.HudScale");
     }
 
     SCCHud::Offsets Frame(int width, int height, int left, int top, int viewWidth, int viewHeight,
@@ -145,6 +173,8 @@ export namespace Hud
         // The reticle sits in the middle of the player's half of the stage, which is off the middle of the player's area in the HUD rect
         // on screens other than 16:9: it's moved to where the camera aims, the middle of the area.
         int shiftX = 0, shiftY = 0;
+        // the player's part of the stage, the HUD is scaled from its edges
+        double stageLeft = 0.0, stageTop = 0.0;
         if (splitMovie && (viewLeft < 0 || viewLeft + viewWidth > areaWidth))
         {
             viewWidth /= 2;
@@ -152,11 +182,13 @@ export namespace Hud
             viewLeft += player * viewWidth;
             promptCenter = width * (player ? 0.75 : 0.25);
             shiftX = (areaWidth - viewWidth) / 2 - viewLeft;
+            stageLeft = double(player) * stageWidth;
         }
         if (splitMovie && (viewTop < 0 || viewTop + viewHeight > areaHeight))
         {
             viewHeight /= 2;
             stageHeight /= 2;
+            stageTop = double(player) * stageHeight;
             viewTop += player * viewHeight;
             shiftY = (areaHeight - viewHeight) / 2 - viewTop;
         }
@@ -183,10 +215,14 @@ export namespace Hud
             { "HunterMod.HunterStatus", 1, -1 }, { "LastStandMod.HunterStatus", 1, -1 },
             { "CoopObjectives", 1, 0 }, { "EMPHealthObjectives", 1, 0 }
         };
+        const double scale = HudScale && std::isfinite(*HudScale) ? std::clamp(double(*HudScale), 0.5, 1.5) : 1.0;
+        auto edge = [](int side, double start, double size) { return start + size * (side + 1) * 0.5; };
         for (const auto& anchor : anchors)
         {
-            if (anchor.x) Move(view, anchor.clip, 'x', anchor.x < 0 ? offset.left : offset.right);
-            if (anchor.y) Move(view, anchor.clip, 'y', anchor.y < 0 ? offset.top : offset.bottom);
+            MoveScaled(view, anchor.clip, 'x', anchor.x < 0 ? offset.left : anchor.x > 0 ? offset.right : 0.0,
+                edge(anchor.x, stageLeft, stageWidth), scale);
+            MoveScaled(view, anchor.clip, 'y', anchor.y < 0 ? offset.top : anchor.y > 0 ? offset.bottom : 0.0,
+                edge(anchor.y, stageTop, stageHeight), scale);
         }
         const double subtitleInset = viewport[5] > 0 ?
             Cinematics::SubtitleInset(!splitMovie && GetLocalPlayerViewport(0) ? -1 : player, areaWidth, areaHeight) * height / viewport[5] : 0.0;
@@ -197,13 +233,14 @@ export namespace Hud
             "HudDPadLeftRightButton", "ButtonTips" };
         for (const auto clip : prompts)
         {
-            const auto base = std::string("_root.") + clip;
-            auto x = Get(view, (base + "._x").c_str());
-            const auto previous = Get(view, (base + ".FixHudLast_x").c_str());
-            const auto adjustment = Get(view, (base + ".FixHudAdjustment_x").c_str());
-            if (x && previous && adjustment && *x == *previous)
-                *x -= *adjustment;
-            if (x) Move(view, clip, 'x', *x < promptCenter ? offset.left : offset.right);
+            // anchored to the nearest side
+            if (const auto x = Native(view, clip, 'x'))
+            {
+                const int side = *x < promptCenter ? -1 : 1;
+                MoveScaled(view, clip, 'x', side < 0 ? offset.left : offset.right, edge(side, stageLeft, stageWidth), scale);
+            }
+            if (const auto y = Native(view, clip, 'y'))
+                MoveScaled(view, clip, 'y', 0.0, edge(*y < stageTop + stageHeight * 0.5 ? -1 : 1, stageTop, stageHeight), scale);
         }
 
         if (areaWidth > 0 && areaHeight > 0 && viewport[4] > 0 && viewport[5] > 0)

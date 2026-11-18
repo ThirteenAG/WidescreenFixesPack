@@ -180,14 +180,22 @@ namespace UI
     }
 
     float TextShift = 0.0f; //game text in the HUD box
+    float SubtitleWidth = 0.0f; //cutscene subtitles span the cinematic frame
     int32_t __cdecl DrawMenu();
 
     char __cdecl Print(const wchar_t* text, const float* clip, float x, float y,
         float spacing, float scale, uint32_t color, uint32_t format);
 
+    inline bool Subtitle()
+    {
+        return Mode == Game && SubtitleWidth > 0.0f;
+    }
+
     // The width the game's text maps its coordinates to
     inline int32_t TextCanvas(uint32_t format)
     {
+        if (Subtitle())
+            return static_cast<int32_t>(SubtitleWidth);
         return (Mode != Game || (format & 1)) ? Screen.Width43 : static_cast<int32_t>(Hud::TextWidth);
     }
 
@@ -297,7 +305,8 @@ int32_t __cdecl UI::DrawMenu()
 char __cdecl UI::Print(const wchar_t* text, const float* clip, float x, float y,
     float spacing, float scale, uint32_t color, uint32_t format)
 {
-    auto centered = std::exchange(CenteredText, Mode != Game || (format & 1));
+    const bool subtitle = Subtitle();
+    auto centered = std::exchange(CenteredText, !subtitle && (Mode != Game || (format & 1)));
     auto width = std::exchange(FontWidth, TextCanvas(format));
     float side = 0.0f;
     if (CenteredText && Mode == Game) //HUD text on the 4:3 canvas: with its element at the side it is on
@@ -309,7 +318,9 @@ char __cdecl UI::Print(const wchar_t* text, const float* clip, float x, float y,
         side = position < 0.45f ? -1.0f : position > 0.55f ? 1.0f : 0.0f;
     }
     float textShift = Hud::TextOffset;
-    if (CenteredText)
+    if (subtitle)
+        textShift = (Screen.fWidth - SubtitleWidth) / 2.0f;
+    else if (CenteredText)
         textShift = side * Hud::Shift.load(std::memory_order_relaxed);
     auto shift = std::exchange(TextShift, textShift);
     auto result = PrintText.unsafe_ccall<char>(text, clip, x, y, spacing, scale, color, format);

@@ -159,10 +159,16 @@ public:
             mINI::INIFile userIniFile(userIniPath);
             if (userIniFile.read(userIni) && userIni.has("Engine.Input"))
             {
+                auto& input = userIni["Engine.Input"];
+                // The pad layout's command aliases
                 for (const auto& [id, key] : std::array{
                     std::pair{ "INPUT.Aliases14", "Aliases[14]" },
                     std::pair{ "INPUT.Aliases15", "Aliases[15]" },
-                    std::pair{ "INPUT.Aliases33", "Aliases[33]" },
+                    std::pair{ "INPUT.Aliases33", "Aliases[33]" }
+                })
+                    input.setAll(key, settings.Get(id));
+                // Pad bindings fill only unbound keys, so bindings changed in the game survive
+                for (const auto& [id, key] : std::array{
                     std::pair{ "INPUT.Joy1", "Joy1" },
                     std::pair{ "INPUT.Joy2", "Joy2" },
                     std::pair{ "INPUT.Joy3", "Joy3" },
@@ -190,9 +196,10 @@ public:
                     std::pair{ "INPUT.AnalogLeft", "AnalogLeft" },
                     std::pair{ "INPUT.AnalogRight", "AnalogRight" }
                 })
-                    userIni["Engine.Input"].setAll(key, settings.Get(id));
-                userIni["Engine.Input"].setAll("JoyZ", Gamepad::TurnBinding());
-                userIni["Engine.Input"].setAll("JoyV", Gamepad::LookUpBinding());
+                {
+                    if (input.get(key).empty())
+                        input.set(key, settings.Get(id));
+                }
                 userIni["Engine.EPCGameOptions"]["Resolution"] = std::to_string(Screen.Width) + "x" + std::to_string(Screen.Height);
                 userIniFile.generate(userIni);
             }

@@ -32,7 +32,7 @@
   "CutsceneBorders": "Cutscene borders",
   "CutsceneBorders.description": "Preserves the original story camera framing with side borders. Off shows a wider view. Applies immediately.",
   "CutsceneBorders.0": "Off",
-  "CutsceneBorders.1": "Pillarbox",
+  "CutsceneBorders.3": "Both",
   "CheckForUpdates": "Check for updates",
   "CheckForUpdates.description": "Checks for a newer fix when enabled. A notice appears at the main menu. FusionFixHub opens the update page after the game exits, when installed beside the game. Disabled by default.",
   "update.availablehub": "A new {name} version is available. Update it in FusionFixHub after closing the game.",

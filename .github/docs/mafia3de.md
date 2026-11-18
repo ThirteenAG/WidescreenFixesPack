@@ -14,14 +14,14 @@
 
 ## Options
 
-- **Borderless window** — On by default: with FULLSCREEN off in the game's display options, the game runs in a borderless window covering its monitor at the desktop resolution, sharp on monitors with display scaling. Off shows the game's framed window. FULLSCREEN on is unchanged. Applies at once.
+- **Window mode** — applies while FULLSCREEN is off in the game's display options. Borderless (default) runs the game in a borderless window covering its monitor at the desktop resolution, sharp on monitors with display scaling. Windowed shows the game's framed window. FULLSCREEN on is unchanged. Applies at once.
 - **Skip intro** — On by default: the game starts straight at the main menu, without the middleware and studio logos and the save warning screen. Off shows them as in the original game. Needs a restart.
 
 ---
 
 ## Settings and hub
 
-The fix creates `plugins/Mafia3DefinitiveEdition.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it. Vanilla shows the intro screens; Recommended and Enhanced skip them. The window setting remains your choice when switching presets. Texts are available in English, French, German, Italian and Spanish. The text language can be selected in the settings editor.
+The fix creates `plugins/Mafia3DefinitiveEdition.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it. Vanilla shows the intro screens; Recommended and Enhanced skip them. The window mode remains your choice when switching presets. Texts are available in English, French, German, Italian and Spanish. The text language can be selected in the settings editor.
 
 ## Known limits
 

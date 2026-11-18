@@ -260,11 +260,17 @@ namespace
             SetText("WFPT1", Model.Pages()[CurrentShownPage].title);
     }
 
+    // Settings that are the game's own rows (Display Setup's Widescreen and Frame Limiter, Menu.ixx): not on the
+    // fix's pages
+    constexpr const char* NativeRows[] = { "MAIN.CutsceneBorders", "MAIN.FPSLimit" };
+
     void OpenModel()
     {
         HMODULE self = nullptr;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&OpenModel), &self);
-        Model.OpenPlugins(self, LanguageTag(), PageRows, JoinedIds(), true);
+        auto hidden = JoinedIds();
+        hidden.insert(std::begin(NativeRows), std::end(NativeRows));
+        Model.OpenPlugins(self, LanguageTag(), PageRows, hidden, true);
     }
 
     // The model's row of a setting on the game's screens
@@ -743,6 +749,15 @@ export namespace FixOptions
 
 export namespace FixOptions
 {
+    // A text of the fix in the game's font, in the language of the menus
+    std::string GameText(const char* key, bool upper = false)
+    {
+        std::string text;
+        for (auto c : RWGTAMenu::ToGameFont(RWGTAMenu::PluginText(FixSettings(), LanguageTag(), key), upper))
+            text += char(c < 0x100 ? c : '?');
+        return text;
+    }
+
     void BeginMenuDraw()
     {
         ValueAreas.bounds.clear();

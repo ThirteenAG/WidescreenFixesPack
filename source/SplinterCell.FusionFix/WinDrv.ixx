@@ -80,7 +80,10 @@ namespace UWindowsViewport
                 {
                     if (hGameWindow == GetForegroundWindow() &&
                         !(WindowsMenuMouseActive && WindowsMenuMouseActive(UWindowsViewport)))
+                    {
+                        Gamepad::OnInput(inputID, a3, value);
                         shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, inputID, a3, value);
+                    }
                 };
 
                 auto pViewport = reinterpret_cast<uint8_t*>(UWindowsViewport);
@@ -193,6 +196,15 @@ export void InitWinDrv()
             regs.eax = *(uint32_t*)(regs.esi + 0x18);
         }
     }; injector::MakeInline<OpenWindowHook>(pattern.get_first(0), pattern.get_first(6));
+
+    // [Init] UseDIMouse: a DirectInput mouse takes the process' raw mouse input away from the raw input reader,
+    // so with raw input on the viewport keeps the window messages route for menus
+    pattern = hook::module_pattern(GetModuleHandle(L"WinDrv"), "39 2D ? ? ? ? 0F 85 ? ? ? ? 39 2E 0F 84");
+    static auto UseDIMouseHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (FixSettings().Bool("MAIN.RawInputMouse"))
+            *reinterpret_cast<int32_t*>(regs.esi) = 0;
+    });
 
     pattern = hook::module_pattern(GetModuleHandle(L"WinDrv"), "8D 4D B8 68 ? ? ? ? C7 45 ? ? ? ? ? 51");
     injector::WriteMemory<LONG>(pattern.get_first<LONG>(4), *pattern.get_first<LONG>(4) & ~WS_OVERLAPPEDWINDOW, true);

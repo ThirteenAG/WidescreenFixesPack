@@ -47,7 +47,7 @@
   "graphicnovel.fill": "Bildschirm füllen",
   "graphicnovel.original": "Original",
   "graphicnovelkey": "Taste für Graphic-Novel-Ausschnitt",
-  "graphicnovelkey.description": "Schaltet Graphic-Novel-Seiten zwischen bildschirmfüllend und ursprünglichem Ausschnitt um.",
+  "graphicnovelkey.description": "Schaltet Graphic-Novel-Seiten zwischen bildschirmfüllend und ursprünglichem Ausschnitt um. Y auf dem Controller tut dasselbe.",
   "borderless": "Randloses Fenster",
   "borderless.description": "Ein randloses Fenster in der Bildschirmmitte, wenn das Spiel mit -window läuft.",
   "antialiasing": "Kantenglättung",

@@ -21,6 +21,8 @@
   "SkipIntro.description": "Überspringt die Rechts-, Rockstar- und Anfangsvideos sowie den Starthinweis, der nur eine OK-Taste hat. Nach einer Änderung das emulierte Spiel neu starten.",
   "DualAnalogPatch": "Dual-Analog-Kamera",
   "DualAnalogPatch.description": "Dreht die Verfolgerkamera mit dem rechten Stick: seitlich blickt nach links und rechts, nach hinten ziehen blickt zurück. Die Blicktasten des Steuerkreuzes funktionieren weiter. Nach einer Änderung das emulierte Spiel neu starten.",
+  "GamepadCameraSpeed": "Kamerageschwindigkeit",
+  "GamepadCameraSpeed.description": "Wie schnell der rechte Stick die Verfolgerkamera um das Auto dreht, von 0,5 bis 2,0. Kurz nach dem Loslassen des Sticks kehrt die Kamera hinter das Auto zurück. Änderungen gelten sofort im Spiel.",
   "TextLanguage": "Plugin-Sprache",
   "TextLanguage.description": "Sprache der Fusion-Fix-Seiten im Pausenmenü. Auto folgt der PSP-Systemsprache. Änderungen im Plugins-Menü gelten sofort.",
   "auto": "Auto",

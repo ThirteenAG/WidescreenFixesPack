@@ -29,8 +29,6 @@
   "GRAPHICS.ShadowResolution": "Shadow resolution",
   "GRAPHICS.ShadowResolution.description": "Size of the shadow maps. Higher values give sharper, less blocky shadows and use more video memory. Applies at the next start.",
   "GRAPHICS.ShadowResolution.1024": "1024 (original)",
-  "controls.auto": "Automatic controller",
-  "controls.auto.description": "Uses the controller or keyboard and mouse, whichever was used last, and finds controllers plugged in during play.",
   "controls.speed": "Controller camera speed",
   "controls.speed.description": "Multiplies the camera speed of the controller. 1.00 is the original speed. Mouse not affected.",
   "controls.deadzone": "Stick deadzone",

@@ -22,6 +22,8 @@
   "WFP_GAMEPADICONS": "Icônes des boutons",
   "WFP_ICONS_AUTO": "Automatique",
   "WFP_SKIPINTRO": "Passer l'introduction",
+  "WFP_SKIPPRESSSTART": "Passer « Appuyez sur Start »",
+  "WFP_DESC_SKIPPRESSSTART": "L'écran titre continue tout seul, sans attendre Start.",
   "WFP_U2SAVEBONUS": "Bonus de sauvegarde Underground 2",
   "WFP_FPSLIMIT": "Fréquence d'images",
   "WFP_FPS_CUSTOM": "Personnalisé",

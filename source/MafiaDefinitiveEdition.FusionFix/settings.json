@@ -42,6 +42,21 @@
       }
     },
     {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipPressStart",
+      "description": "@SkipPressStart.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
       "id": "MAIN.TextLanguage",
       "type": "choice",
       "default": "auto",

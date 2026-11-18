@@ -65,7 +65,7 @@
   "menu.restoredefaultshelp": "Restablece los ajustes de esta página a sus valores predeterminados.",
   "menu.restartwarning": "Reinicia el juego para aplicar los cambios.",
   "menu.help": "Ayuda",
-  "menu.presethelp": "Elige con Izquierda/Derecha y confirma. Vanilla conserva los logotipos y las bandas cinematográficas originales. Recommended y Enhanced omiten los logotipos, añaden bandas laterales a las cinemáticas y activan la iluminación RGB. Se conservan las preferencias personales y los valores comunes a todos los ajustes predefinidos. Restaurar valores predeterminados restablece todos los ajustes.",
+  "menu.presethelp": "Elige con Izquierda/Derecha y confirma. Vanilla conserva los logotipos y el aviso del título originales, y las cinemáticas ocupan la pantalla. Recommended y Enhanced omiten los logotipos y el aviso del título, muestran las cinemáticas entre bandas laterales y activan la iluminación RGB. Se conservan las preferencias personales y los valores comunes a todos los ajustes predefinidos. Restaurar valores predeterminados restablece todos los ajustes.",
   "menu.helphint": "F1: ayuda completa. También puedes elegir Detalles.",
   "menu.auto": "Automático",
   "menu.pluginshelp": "Administra esta corrección y los demás plugins instalados.",

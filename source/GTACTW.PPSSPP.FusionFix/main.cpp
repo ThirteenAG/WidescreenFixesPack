@@ -7,8 +7,21 @@ namespace {
 SafetyMipsInline radio;
 SafetyMipsMid loading, loaded;
 injector::hook_back<void()> boot;
+SceIoStat observedCfg{};
+unsigned lastSettingsPoll;
+bool cfgObserved;
 int Radio() { return 1; }
 void Boot() { boot.fun(); Unthrottle(false); }
+// Settings that apply without a restart.
+void ReadSettings() {
+    ReadAspectSettings();
+    ReadHudSettings();
+    modernControls = Option("ModernControls", true);
+    fastLoading = Option("UnthrottleEmuDuringLoading", true);
+    if (!fastLoading) Unthrottle(false);
+    char icons[16]{};
+    SelectIcons(inireader.ReadString("MAIN", "GamepadIcons", "Auto", icons, sizeof(icons)));
+}
 int Install() {
     if (!BeginWithNotice()) return -1;
     if (!InitializeAddresses())
@@ -45,32 +58,51 @@ int Install() {
 #ifndef NDEBUG
     logger.WriteF("HUD patches: %u", unsigned(injector::detail::startup.error));
 #endif
+    InstallIcons();
+    ReadSettings();
     if (radioCycle) {
         radio = safetymips::create_inline(Address<0x0884F52C>(), Radio);
         // Remove the two conditional skip tests, retaining their delay slots.
         injector::MakeNOP(radioCycle); injector::MakeNOP(radioCycle + 16);
     }
-    if (Option("UnthrottleEmuDuringLoading", 1)) {
-        boot.fun = injector::MakeCALL(Address<0x088CFC1C>(), Boot).get();
-        // Run before each virtual loading notification. The game still calls
-        // its original method with its own this adjustment and return value.
-        loading = safetymips::create_mid(Address<0x08992490>(), [](SafetyMipsContext&) { Unthrottle(true); });
-        loaded = safetymips::create_mid(Address<0x089924B0>(), [](SafetyMipsContext&) { Unthrottle(false); });
-    }
+    boot.fun = injector::MakeCALL(Address<0x088CFC1C>(), Boot).get();
+    // Run before each virtual loading notification. The game still calls
+    // its original method with its own this adjustment and return value.
+    loading = safetymips::create_mid(Address<0x08992490>(), [](SafetyMipsContext&) { if (fastLoading) Unthrottle(true); });
+    loaded = safetymips::create_mid(Address<0x089924B0>(), [](SafetyMipsContext&) { Unthrottle(false); });
     const int result = Finish();
-    if (result == 0 && Option("UnthrottleEmuDuringLoading", 1)) Unthrottle(true);
+    if (result == 0 && fastLoading) Unthrottle(true);
     return result;
 }
 }
+// Changes from FusionFixHub or the website apply during gameplay: the cfg is
+// read again when it changes, but not while the PDA or a menu is open.
+void PollSettings() {
+    const unsigned now = sceKernelGetSystemTimeLow();
+    if (now - lastSettingsPoll < 1000000u) return;
+    lastSettingsPoll = now;
+    if (!GameplayApp()) return;
+    SceIoStat current{};
+    if (sceIoGetstat(cfgPath, &current) < 0 || current.st_size <= 0) return;
+    if (cfgObserved && current.st_size == observedCfg.st_size &&
+        !std::memcmp(&current.sce_st_mtime, &observedCfg.sce_st_mtime, sizeof(current.sce_st_mtime))) return;
+    const bool first = !cfgObserved;
+    observedCfg = current;
+    cfgObserved = true;
+    if (first) return;
+    inireader.SetIniPath(cfgPath);
+    ReadSettings();
+}
 }
 extern "C" int module_start(SceSize, void*) {
-    if (!console::portable::StartReported("CTW", "ms0:/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.cfg",
+    if (!console::portable::StartReported("CTW", ctw::cfgPath,
                    "ms0:/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.log")) return 0;
     // Only CFG is opened; the old fix INI is never read or migrated.
     console::portable::IniValue values[] = {
         {"MAIN", "SkipIntro", "1"},
         {"MAIN", "ForceAspectRatio", "Auto"},
         {"MAIN", "ModernControls", "1"},
+        {"MAIN", "GamepadIcons", "Auto"},
         {"MAIN", "Enable3rdPersonCamera", "1"},
         {"MAIN", "RadioInAllVehicles", "1"},
         {"MAIN", "UnthrottleEmuDuringLoading", "1"},
@@ -80,6 +112,6 @@ extern "C" int module_start(SceSize, void*) {
         {"MAIN", "FOVFactor", "1.0"},
         {"MAIN", "CutsceneBorders", "3"},
     };
-    (void)console::portable::CompleteCfg("ms0:/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.cfg", values);
+    (void)console::portable::CompleteCfg(ctw::cfgPath, values);
     return ctw::Install();
 }

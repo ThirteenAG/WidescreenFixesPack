@@ -74,7 +74,7 @@ Open **Options → Plugins → Ultimate Spider-Man Fusion Fix**, or use fusionfi
 <td width="58%" valign="middle">
 
 - **Draw Distance** - 1.0 keeps the original distance. Raise it up to 2.0 for more distant detail, or above 2.0 up to 10.0 for the experimental extended-distance mode. Higher values can reduce performance, and some objects may still appear as you approach. The extended-distance mode may cause crashes
-- **Frame Rate Limit** - Defaults to 60. Use 0 for unlimited or -1 for the current monitor's refresh rate. Changes apply while the game runs; higher rates still need full gameplay testing
+- **Frame Rate Limit** - Defaults to 60 (the original game runs at 30; the Vanilla preset keeps 30). Use 0 for unlimited or -1 for the current monitor's refresh rate. Changes apply while the game runs; higher rates still need full gameplay testing
 - **Smoother Edges** - SMAA reduces jagged edges in the game world without smoothing the HUD or menu text. On by default; does not work with MSAA
 - **Console-Style Colors** - Console gamma gives stronger contrast and deeper colors. Off by default
 - **Skip Startup Screens** - Skips the opening logos and copyright screen

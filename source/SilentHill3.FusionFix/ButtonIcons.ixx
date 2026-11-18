@@ -3,10 +3,11 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/SilentHill/Display.hpp"
+#include "Shared/SilentHill/Gamepad.hpp"
 
 export module ButtonIcons;
 
-// Pad button icons in the game's text
+// Pad button icons in the game's text, and the buttons the messages name for the last device used
 export namespace SH3Icons
 {
     SafetyHookInline GlyphsHook, MeasureHook, LineHook;
@@ -49,6 +50,19 @@ export namespace SH3Icons
         Texture->UnlockRect(0);
     }
 
+    // The messages name the PS2's L1 and R1 for switching Options pages (the Extra Options unlock): they become the
+    // shoulder button icons after pad input, or the Page Up and Page Down keys after keyboard or mouse input
+    constexpr uint16_t Letter(char c) { return uint16_t(c - 32); }
+    bool Separator(uint16_t code) { return code == 0 || code >= 0xFF00 || code == Letter('.') || code == Letter(','); }
+
+    int ShoulderAt(const uint16_t* source, size_t i)
+    {
+        if ((source[i] != Letter('L') && source[i] != Letter('R')) || source[i + 1] != Letter('1') ||
+            (i > 0 && !Separator(source[i - 1])) || !Separator(source[i + 2]))
+            return -1;
+        return source[i] == Letter('L') ? 0 : 1;
+    }
+
     struct Text
     {
         std::vector<uint16_t> value;
@@ -59,9 +73,31 @@ export namespace SH3Icons
         {
             if (!source)
                 return;
+            const bool pad = SHPad::LastInputWasPad();
             for (size_t i = 0; i < 2048; ++i)
             {
                 uint16_t code = source[i];
+                if (code != 0xFFFF && i + 2 < 2048)
+                {
+                    if (int shoulder = ShoulderAt(source, i); shoulder >= 0)
+                    {
+                        if (pad && Texture)
+                        {
+                            icons.push_back(shoulder == 0 ? 4 : 5);
+                            value.push_back(0xFE00 + IconWidth);
+                        }
+                        else
+                        {
+                            const char* name = pad ? SHPad::ButtonName(shoulder == 0 ? SHPad::LayoutLB : SHPad::LayoutRB) :
+                                (shoulder == 0 ? "Page Up" : "Page Down");
+                            for (auto c = name; *c; ++c)
+                                value.push_back(*c == ' ' ? 0 : Letter(*c));
+                        }
+                        changed = true;
+                        ++i;
+                        continue;
+                    }
+                }
                 if (code == Marker && i + 1 < 2048 && source[i + 1] >= FirstIcon && source[i + 1] < FirstIcon + IconCount)
                 {
                     icons.push_back(source[++i] - FirstIcon);

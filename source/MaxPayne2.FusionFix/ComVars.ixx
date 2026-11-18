@@ -529,6 +529,7 @@ export enum class eGamepadProfile : int32_t
     Menu,
     Main,
     Pause,
+    GraphicNovel,
 };
 export std::atomic<eGamepadProfile> GamepadProfile = eGamepadProfile::Menu;
 

@@ -56,5 +56,18 @@
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvrira quand vous quitterez le jeu.",
   "update.availablesite": "{name} {version} est disponible sur fusionfix.io.",
   "MovingTurnSpeed": "Vitesse de rotation en mouvement",
-  "MovingTurnSpeed.description": "Vitesse à laquelle le personnage tourne en marchant et en courant, à la souris ou au stick. Le jeu tourne plus lentement en mouvement qu'à l'arrêt ; 1.0x garde la vitesse du jeu. Avec les commandes modernes, la caméra tourne librement et ce réglage ne s'applique pas."
+  "MovingTurnSpeed.description": "Vitesse à laquelle le personnage tourne en marchant et en courant, à la souris ou au stick. Le jeu tourne plus lentement en mouvement qu'à l'arrêt ; 1.0x garde la vitesse du jeu. Avec les commandes modernes, la caméra tourne librement et ce réglage ne s'applique pas.",
+  "ShadowResolution": "Résolution des ombres",
+  "ShadowResolution.description": "Taille des textures d’ombre avec la qualité d’ombres Élevée du jeu. Jeu garde 1024 ; des valeurs plus hautes donnent des ombres plus nettes. Redémarrage nécessaire.",
+  "ShadowResolution.game": "Jeu",
+  "GamepadIcons": "Icônes de manette",
+  "GamepadIcons.description": "Les symboles des boutons de la manette dans les indications et les boutons d'action. Auto et Xbox gardent les symboles du jeu.",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.xbox": "Xbox",
+  "GamepadIcons.playstation": "PlayStation",
+  "GamepadIcons.nintendo": "Nintendo",
+  "SplitScreenLayout": "Disposition de l'écran partagé",
+  "SplitScreenLayout.description": "Comment la coopération locale partage l'écran. Jeu garde l'option d'écran partagé du jeu (un joueur au-dessus de l'autre). Côte à côte donne à chaque joueur la moitié gauche ou droite ; sur un écran 32:9, c'est une vue 16:9 par joueur. L'ATH de chaque joueur tient dans sa moitié. S'applique immédiatement.",
+  "SplitScreenLayout.game": "Jeu",
+  "SplitScreenLayout.sidebyside": "Côte à côte"
 }

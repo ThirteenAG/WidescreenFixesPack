@@ -80,42 +80,41 @@ export namespace MafiaIcons
         return result;
     }
 
-    const char* __fastcall Name(uintptr_t object, void*, uintptr_t binding)
+    // The icon of a pad binding (buttons, D-pad, stick axes); 27 when there's none
+    unsigned int Icon(const MafiaPad::Binding& binding)
     {
-        if (!binding || !Ready()) return nameHook.unsafe_thiscall<const char*>(object, binding);
-        const auto original = binding;
-        const auto mapped = MafiaPad::ForBinding(binding);
-        if (mapped) binding = reinterpret_cast<uintptr_t>(mapped);
-        if (Field<uint16_t>(binding, 4) != 3) return nameHook.unsafe_thiscall<const char*>(object, original);
-        const auto button = Field<uint16_t>(binding, 6);
-        unsigned int icon = 27;
+        if (binding.type != 3) return 27;
+        const auto button = binding.code;
         if (button >= 0x100 && button < 0x10C)
         {
             constexpr unsigned int buttons[] = { 0, 1, 2, 3, 4, 5, 6, 7, 10, 11, 8, 9 };
-            icon = buttons[button - 0x100];
+            return buttons[button - 0x100];
         }
-        else if (button >= 0x200)
+        if (button >= 0x200)
         {
             switch (button & 0xF)
             {
-                case 1: icon = 12; break;
-                case 2: icon = 15; break;
-                case 4: icon = 13; break;
-                case 8: icon = 14; break;
-                default: icon = 16; break;
+                case 1: return 12;
+                case 2: return 15;
+                case 4: return 13;
+                case 8: return 14;
+                default: return 16;
             }
         }
-        else
+        switch (button)
         {
-            switch (button)
-            {
-                case 0: icon = 21; break;
-                case 1: icon = 20; break;
-                case 3: icon = 26; break;
-                case 4: icon = 25; break;
-            }
+            case 0: return 21;
+            case 1: return 20;
+            case 2: return 7;
+            case 5: return 6;
+            case 3: return 26;
+            case 4: return 25;
         }
-        if (icon >= 27) return nameHook.unsafe_thiscall<const char*>(object, original);
+        return 27;
+    }
+
+    const std::array<std::array<char, 4>, 27>& Labels()
+    {
         static const auto labels = []()
         {
             std::array<std::array<char, 4>, 27> values{};
@@ -123,16 +122,28 @@ export namespace MafiaIcons
                 values[index] = { static_cast<char>(marker), static_cast<char>('A' + index), static_cast<char>(marker), 0 };
             return values;
         }();
+        return labels;
+    }
+
+    const char* __fastcall Name(uintptr_t object, void*, uintptr_t binding)
+    {
+        if (!binding || !Ready()) return nameHook.unsafe_thiscall<const char*>(object, binding);
+        const auto original = binding;
+        const auto mapped = MafiaPad::ForBinding(binding);
+        if (mapped) binding = reinterpret_cast<uintptr_t>(mapped);
+        if (Field<uint16_t>(binding, 4) != 3) return nameHook.unsafe_thiscall<const char*>(object, original);
+        const unsigned int icon = Icon(*reinterpret_cast<const MafiaPad::Binding*>(binding));
+        if (icon >= 27) return nameHook.unsafe_thiscall<const char*>(object, original);
         if (mapped && Field<uint16_t>(original, 4) != 3)
         {
             static std::array<std::string, MafiaPad::ActionCount> combined;
             const auto index = (original - MafiaPad::profileBindings) / sizeof(MafiaPad::Binding);
             const char* native = nameHook.unsafe_thiscall<const char*>(object, original);
             combined[index] = native && *native ? std::string(native).substr(0, 96) + " / " : "";
-            combined[index] += labels[icon].data();
+            combined[index] += Labels()[icon].data();
             return combined[index].c_str();
         }
-        return labels[icon].data();
+        return Labels()[icon].data();
     }
 
     double __fastcall Measure(void* fonts, void*, const char* text, float height, unsigned int font, const char* end)
@@ -232,6 +243,100 @@ export namespace MafiaIcons
         return result;
     }
 
+    // Tutorial hints that name the default keys: the keys become the pad buttons of the same actions while the pad
+    // is the device used last. Ids from the text database; "(Default: ...)" or "Action: key" in every language.
+    struct Hint
+    {
+        uint32_t id;
+        bool afterColon;
+        std::array<MafiaPad::Action, 2> actions;
+    };
+    using enum MafiaPad::Action;
+    constexpr Hint hints[] =
+    {
+        { 21930000, false, { Forwards, Forwards } }, { 21930002, false, { Jump, Jump } },
+        { 21930004, false, { Use, Use } }, { 21930007, false, { Inventory, Inventory } },
+        { 21930008, false, { Fire, Fire } }, { 21930009, false, { Reload, Reload } },
+        { 21930010, false, { NextWeapon, PreviousWeapon } }, { 21930011, false, { HideWeapon, HideWeapon } },
+        { 21930013, false, { DropWeapon, DropWeapon } }, { 21930020, true, { Accelerate, Accelerate } },
+        { 21930021, true, { Brake, Brake } }, { 21930022, true, { SteerLeft, SteerLeft } },
+        { 21930023, true, { SteerRight, SteerRight } }, { 21930024, true, { Handbrake, Handbrake } },
+        { 21930025, false, { ManualGears, ManualGears } }, { 21930030, false, { Horn, Horn } },
+        { 21930032, false, { Crouch, Left } }, { 21930040, false, { Objectives, Objectives } },
+        { 21930041, false, { GearUp, GearDown } }, { 21930043, false, { SpeedLimiter, SpeedLimiter } },
+    };
+    struct HintText
+    {
+        const char* original = nullptr;
+        std::array<char, 1024> text{};
+    };
+    std::array<HintText, std::size(hints)> hintTexts;
+    SafetyHookInline textHook, optionalTextHook;
+    bool hintsPad = false;
+
+    void BuildHint(size_t index)
+    {
+        auto& entry = hintTexts[index];
+        std::string text = entry.original ? entry.original : "";
+        std::string icons;
+        if (hintsPad && Ready())
+        {
+            for (size_t i = 0; i < hints[index].actions.size(); ++i)
+            {
+                if (i && hints[index].actions[i] == hints[index].actions[i - 1]) continue;
+                const auto* binding = MafiaPad::PadBinding(hints[index].actions[i]);
+                const unsigned int icon = binding ? Icon(*binding) : 27;
+                if (icon >= 27) continue;
+                if (!icons.empty()) icons += " / ";
+                icons += Labels()[icon].data();
+            }
+        }
+        if (!icons.empty())
+        {
+            if (hints[index].afterColon)
+            {
+                const auto colon = text.rfind(':');
+                if (colon != std::string::npos) text = text.substr(0, colon + 1) + " " + icons;
+            }
+            else
+            {
+                const auto open = text.rfind('(');
+                const auto close = open == std::string::npos ? open : text.find(')', open);
+                if (close != std::string::npos) text = text.substr(0, open + 1) + icons + text.substr(close);
+            }
+        }
+        const size_t length = std::min(text.size(), entry.text.size() - 1);
+        std::memcpy(entry.text.data(), text.data(), length);
+        entry.text[length] = 0;
+    }
+
+    template<SafetyHookInline& Hook> const char* __fastcall Text(void* database, void*, uint32_t id)
+    {
+        const char* text = Hook.unsafe_thiscall<const char*>(database, id);
+        if (!text || !*text) return text;
+        for (size_t index = 0; index < std::size(hints); ++index)
+        {
+            if (hints[index].id != id) continue;
+            auto& entry = hintTexts[index];
+            if (entry.original != text)
+            {
+                entry.original = text;
+                BuildHint(index);
+            }
+            return entry.text.data();
+        }
+        return text;
+    }
+
+    // Shown hints keep their text pointer, so they follow the device without being looked up again
+    void Tick()
+    {
+        if (hintsPad == MafiaPad::padLastUsed) return;
+        hintsPad = MafiaPad::padLastUsed;
+        for (size_t index = 0; index < hintTexts.size(); ++index)
+            if (hintTexts[index].original) BuildHint(index);
+    }
+
     void Install()
     {
         auto name = hook::pattern("53 55 8B 6C 24 0C 33 C0 56 8B F1 85 ED 0F 84 ? ? ? ? 8D 9E ? ? ? ? 57 B9 08 00 00 00 8B FB F3 AB 66 8B 45 04");
@@ -242,6 +347,11 @@ export namespace MafiaIcons
         measureHook = safetyhook::create_inline(measure.get_first(), Measure);
         drawHook = safetyhook::create_inline(draw.get_first(), Draw);
         nameHook = safetyhook::create_inline(name.get_first(), Name);
+        // The text database lookups: the empty-string and the null-returning one
+        auto text = hook::pattern("8B 51 04 B8 00 10 00 00 3B C2 76 0C D1 E8 75 F8 B8 ? ? ? ? C2 04 00");
+        auto optionalText = hook::pattern("8B 51 04 B8 00 10 00 00 3B C2 76 09 D1 E8 75 F8 33 C0 C2 04 00");
+        textHook = safetyhook::create_inline(text.get_first(), Text<textHook>);
+        optionalTextHook = safetyhook::create_inline(optionalText.get_first(), Text<optionalTextHook>);
         FixSettings().Availability("MAIN.GamepadIcons", [](std::string_view value)
         {
             return value == "0" || Ready();

@@ -8,6 +8,8 @@
   "MAIN.FPSLimit.description": "Attiva la patch nativa a 60 FPS. Riavvia il gioco emulato dopo aver modificato questa impostazione nell'hub.",
   "MAIN.UnthrottleEmuDuringLoading": "Caricamento rapido",
   "MAIN.UnthrottleEmuDuringLoading.description": "Rimuove il limite di fotogrammi dell'emulatore durante i caricamenti. Riavvia il gioco emulato dopo aver modificato questa impostazione nell'hub.",
+  "CONTROLS.HoldVehicleCamera": "Mantieni telecamera del veicolo",
+  "CONTROLS.HoldVehicleCamera.description": "Quando ruoti la telecamera con lo stick destro in un veicolo, resta in quella posizione, così puoi guardare indietro mentre guidi. Torna dietro al veicolo due secondi dopo aver rilasciato lo stick. Off mantiene la telecamera originale, che torna dietro al veicolo mentre guidi.",
   "CONTROLS.ModernControlScheme": "Comandi moderni",
   "CONTROLS.ModernControlScheme.description": "Usa lo schema di comandi moderno alternativo. Per un'esperienza migliore, scambia pulsanti e grilletti nelle impostazioni dell'emulatore, così LT/RT servono per mirare e sparare, frenare e accelerare. Mira + Salto ricarica l'arma. Riavvia il gioco emulato dopo aver modificato questa impostazione nell'hub.",
   "CONTROLS.PCCheats": "Trucchi PC",

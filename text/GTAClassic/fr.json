@@ -15,8 +15,6 @@
   "windowmode.fullscreen": "Plein écran",
   "windowmode.windowed": "Fenêtré",
   "windowmode.borderless": "Sans bordure",
-  "MAIN.HudSafeArea": "Marge du HUD",
-  "MAIN.HudSafeArea.description": "Distance du HUD aux bords de l'écran, en pixels 640x480 du jeu.",
   "MAIN.HudAspectRatioConstraint": "Format du HUD",
   "MAIN.HudAspectRatioConstraint.description": "Garde le HUD dans une zone centrée de ce format, comme 16:9 sur les écrans plus larges. Auto utilise tout l'écran.",
   "CAMERA.SmoothFollow": "Suivi fluide",

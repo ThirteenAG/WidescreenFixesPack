@@ -65,5 +65,15 @@
   "FPSLimit.description": "Limita la frequenza dei fotogrammi. Si applica subito.",
   "HudAspectRatioConstraint": "Proporzioni dell'HUD",
   "HudAspectRatioConstraint.auto": "Auto",
-  "HudAspectRatioConstraint.description": "Auto distribuisce l’interfaccia su tutto lo schermo. Un rapporto la tiene in un riquadro centrato di quella forma. Richiede un riavvio."
+  "HudAspectRatioConstraint.description": "Auto distribuisce l’interfaccia su tutto lo schermo. Un rapporto la tiene in un riquadro centrato di quella forma. Si applica subito.",
+  "FMVWidescreenMode": "Visualizzazione filmati",
+  "FMVWidescreenMode.original": "Originale",
+  "FMVWidescreenMode.fill": "Riempi",
+  "FMVWidescreenMode.description": "Originale mostra i filmati interi nella cornice 16:9 centrata del gioco. Riempi adatta l’intero filmato allo schermo. Nulla viene tagliato o stirato.",
+  "GamepadIcons": "Tasti del controller",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.xbox": "Xbox",
+  "GamepadIcons.playstation": "PlayStation",
+  "GamepadIcons.nintendo": "Nintendo",
+  "GamepadIcons.description": "I suggerimenti indicano i tasti del controller se è stato usato per ultimo il controller, altrimenti i tasti di tastiera e mouse. Auto usa i nomi Xbox."
 }

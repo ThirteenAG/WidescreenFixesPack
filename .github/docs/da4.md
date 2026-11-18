@@ -33,13 +33,13 @@
 
 ## Known limits
 
-The Field of View setting applies to the hunting levels only. Exhibition previews and the scope overlay keep their native framing. Some native rendering issues remain visible in widescreen. Accents in added menu text are simplified to match the game font. If video framing is unavailable, playback uses the original fitted view.
+The Field of View setting applies to the hunting levels only. Exhibition previews keep their native framing; the scope keeps its round shape in the middle of the screen with black sides. Some native rendering issues remain visible in widescreen. Accents in added menu text are simplified to match the game font.
 
 ## Configuration
 
-Settings open from the Plugins button in the launcher and from the Plugins entry below the in-game pause menu (press Down past Exit Game). Both read "Plugins" in every language. The added settings text is available in English, French, German, Italian and Spanish. Automatic uses English; select Text Language in FusionFixHub to use another language.
+Settings open from the Plugins button in the launcher and from the Plugins entry below the in-game pause menu (press Down past Exit Game). Both read "Plugins" in every language. The added settings text is available in English, French, German, Italian and Spanish. The game is English only, so Automatic uses English; select Text Language in FusionFixHub to use another language.
 
-Recommended uses the default setup. Vanilla and Enhanced offer alternative presets. Settings marked for restart take effect on the next launch. If Plugins is unavailable in your game version, use FusionFixHub or the generated `.cfg` file.
+Recommended uses the default setup. Vanilla and Enhanced offer alternative presets. Settings marked for restart take effect on the next launch.
 
 ## Installation
 

@@ -172,6 +172,8 @@
   "menu.restartwarning": "The game must be restarted to apply some settings.",
   "menu.previous": "Previous",
   "windowmode.windowed": "Windowed",
+  "MAIN.PauseOnFocusLoss": "Pause on Focus Loss",
+  "MAIN.PauseOnFocusLoss.description": "Pauses gameplay when the game window loses focus.",
   "MAIN.ConfineCursor": "Confine Cursor",
   "MAIN.ConfineCursor.description": "Keeps the mouse cursor inside the game window while the game is active, so it can't move to another monitor.",
   "MAIN.GamepadIcons": "Gamepad Buttons",

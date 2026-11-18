@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <psputility_sysparam.h>
 #include "../Shared/Console/PortableCfg.hpp"
 extern "C" { PSP_MODULE_INFO("TheWarriors.FusionFix", PSP_MODULE_USER, 2, 0); }
 namespace {
@@ -45,16 +46,45 @@ void Rejected(psp_hook_status status)
 SafetyMipsInline input;
 SafetyMipsMid loading;
 injector::hook_back<int(int, char)> load;
+uint8_t StickByte(float value)
+{
+    return uint8_t(128 + int(std::clamp(value, -1.0f, 1.0f) * 127.0f));
+}
+// Without a right-stick mapping in PPSSPP, read the host pad's right stick
+// (published as Z and RZ) with a radial deadzone.
+bool HostRightStick(uint8_t& x, uint8_t& y)
+{
+    float hx{}, hy{};
+    if (sceIoDevctl("kemulator:", 0x33, reinterpret_cast<void*>(11), 0, &hx, sizeof(hx)) < 0 ||
+        sceIoDevctl("kemulator:", 0x33, reinterpret_cast<void*>(14), 0, &hy, sizeof(hy)) < 0 ||
+        !std::isfinite(hx) || !std::isfinite(hy))
+        return false;
+    hx = std::clamp(hx, -1.0f, 1.0f);
+    hy = std::clamp(hy, -1.0f, 1.0f);
+    constexpr float dead = 8689.0f / 32767.0f;
+    const float magnitude = std::sqrt(hx * hx + hy * hy);
+    if (magnitude <= dead)
+        return false;
+    const float scale = (std::min(magnitude, 1.0f) - dead) / (magnitude * (1.0f - dead));
+    x = StickByte(hx * scale);
+    y = StickByte(-hy * scale);
+    return true;
+}
 int Input(uintptr_t object, int controller) {
     const int result = input.call<int>(object, controller);
     SceCtrlData pad{};
     uint8_t x = 128, y = 128;
     if (sceCtrlPeekBufferPositive(&pad, 1) > 0) {
         x = pad.Rsrv[0];
-        // The native camera expects Y in the opposite direction. Its own
-        // inversion option remains responsible for the final camera direction.
-        y = uint8_t(255 - pad.Rsrv[1]);
+        y = pad.Rsrv[1];
     }
+    if ((x == 128 && y == 128) || (x == 0 && y == 0)) {
+        x = y = 128;
+        HostRightStick(x, y);
+    }
+    // The native camera expects Y in the opposite direction. Its own
+    // inversion option remains responsible for the final camera direction.
+    y = uint8_t(255 - y);
     if (object) {
         *reinterpret_cast<uint8_t*>(object + 0x1A) = x;
         *reinterpret_cast<uint8_t*>(object + 0x1B) = y;
@@ -68,6 +98,16 @@ void ReadOptions() {
     char text[64]{};
     const char* language = inireader.ReadString("MAIN", "TextLanguage", "auto", text, sizeof(text));
     constexpr const char* languages[] = { "en", "fr", "de", "it", "es" };
+    int system = 0;
+    sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_LANGUAGE, &system);
+    switch (system)
+    {
+        case PSP_SYSTEMPARAM_LANGUAGE_FRENCH: textLanguage = 1; break;
+        case PSP_SYSTEMPARAM_LANGUAGE_GERMAN: textLanguage = 2; break;
+        case PSP_SYSTEMPARAM_LANGUAGE_ITALIAN: textLanguage = 3; break;
+        case PSP_SYSTEMPARAM_LANGUAGE_SPANISH: textLanguage = 4; break;
+        default: textLanguage = 0; break;
+    }
     for (int i = 0; i < 5; ++i)
     {
         if (!std::strcmp(language, languages[i]))
@@ -101,6 +141,7 @@ int Install() {
         "60 FE BD 27 60 01 B4 AF 21 A0 A0 00 54 01 B1 AF 74 01 BF AF 70 01 BE AF",
         "A0 FE BD 27 2C 01 B7 AF ? ? 03 3C ? ? 62 24 14 01 B1 AF 21 B8 A0 00 01 00 05 24",
         "10 01 02 24 00 00 A2 AF ? ? D4 AE ? ? ? ? 04 00 A0 AF",
+        "? ? 02 3C FF FF 03 24 ? ? 42 24 DC 01 03 AE",
     };
     for (unsigned i = 0; i < sizeof(sites) / sizeof(sites[0]); ++i)
     {

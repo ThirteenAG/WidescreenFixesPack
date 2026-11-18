@@ -169,7 +169,8 @@ export namespace KnightRider2Overlay
         KnightRider2Frame::OverlayFrame = Frame;
         KnightRider2Frame::InputBlocked = []()
         {
-            return Overlay.BlocksInput();
+            const auto window = WindowedModeWrapper::GameHWND;
+            return Overlay.BlocksInput() || (window && GetForegroundWindow() != window && FixSettings().Bool("MAIN.PauseOnFocusLoss"));
         };
     }
 }

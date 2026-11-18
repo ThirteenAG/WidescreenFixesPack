@@ -14,7 +14,7 @@
 
 - **Any resolution** — The game's startup settings dialog (shown on the first start, or with Ctrl held) lists every display mode. In a window any size works.
 - **Field of view** — The view widens with the screen (Hor+) instead of being cut off at the top and bottom.
-- **HUD** — The health silhouette, badge meter, weapon and money stay at the right side of the screen, the radar, crime alerts, button prompts and phone at the left side, the street sign and objectives in the middle; nothing is stretched.
+- **HUD** — The health silhouette, badge meter, weapon and money stay at the right side of the screen, the radar, crime alerts, button prompts and phone at the left side, the street sign and objectives in the middle; nothing is stretched. Other HUD parts, such as mission timers and meters, also go to the side of the screen they had on a 4:3 screen.
 - **Menus, map and loading screens** — Kept at their 4:3 shape in the middle of the screen, with the map markers in place.
 - **Cutscene and title scene borders** — The cinematic borders are sized for the screen's height instead of a fixed size, and keep the original picture at any aspect ratio.
 - **Movies** — The startup movies are shown whole at their own shape, never stretched or cut off.
@@ -37,7 +37,7 @@
 - **Skip Intro** — Skips the logo movies and the legal notice at startup.
 - **Frame Rate** — 30 (original) or 60 FPS with the correct game speed; scenes that need it still run at 30. It can be changed while playing.
 - **Language** — The game's language (English US/UK, French, German, Spanish, Italian, Russian) when its files are installed.
-- **Mouse camera** — The mouse turns the camera on foot and in vehicles and moves the map cursor, with its own speed and vertical inversion on top of the game's settings; both apply while playing. It is read every drawn frame, so it stays smooth with high polling rate mice. After 5 seconds without mouse movement the game's camera takes over again; Look Behind always shows the game's view behind and then returns to the game's camera.
+- **Mouse camera** — The mouse turns the camera on foot and in vehicles and moves the map cursor, with its own speed and vertical inversion on top of the game's settings; both apply while playing. It uses the mouse's own movement, without Windows pointer speed or acceleration, and is read every drawn frame, so fast and slow moves of the same distance turn the camera equally and high polling rate mice stay smooth. After 5 seconds without mouse movement the game's camera takes over again; Look Behind always shows the game's view behind and then returns to the game's camera.
 - **High Resolution Shadows**, **Distance Blur** (like the PlayStation 2 version), **Bloom**, **Anti-Aliasing** (SMAA) and **Console Gamma** (Xbox 360 contrast).
 - **Check for Updates** — Once per start, asks fusionfix.io whether a newer version of the fix is out; with FusionFixHub installed, it opens on the update when you close the game.
 
@@ -48,7 +48,6 @@ Change the settings in FusionFixHub, on fusionfix.io or in `scripts/TrueCrimeNew
 ## Known limits
 
 - The window can't be resized while the game runs; choose its size in the game's settings dialog.
-- HUD elements of situations not shown above (for example some mission timers and meters) may still sit in the 4:3 area.
 
 ## Installation
 

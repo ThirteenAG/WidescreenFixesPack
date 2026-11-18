@@ -1056,7 +1056,6 @@ export namespace GTA1Options
             { "QUIT GAME", nullptr, [](int step) { if (step == 0) { Close(); QueuedEscape = true; } } } };
         Sections[Display] = {
             Resolution(),
-            Range("HUD SAFE AREA", "MAIN", "HudSafeArea", GTA1Hud::SafeArea, 0, 32, 4),
             { "HUD ASPECT RATIO", [] { return Upper(FixSettings().String("MAIN.HudAspectRatioConstraint")); },
                 [](int step)
                 {
@@ -1078,10 +1077,7 @@ export namespace GTA1Options
                 {
                     int mode = GTA1Window::Exclusive ? 0 : GTA1Window::Fullscreen ? 2 : 1;
                     mode = (mode + (step < 0 ? 2 : 1)) % 3;
-                    GTA1Window::DisplayMode(false);
-                    GTA1Window::Exclusive = mode == 0;
-                    GTA1Window::Fullscreen = mode != 1;
-                    GTA1Window::Place();
+                    GTA1Window::ApplyMode(mode);
                     SaveInt("MAIN", "WindowMode", mode, true);
                 }, false, "MAIN.WindowMode" },
             Setting("CONFINE CURSOR", "MAIN.ConfineCursor", 2),

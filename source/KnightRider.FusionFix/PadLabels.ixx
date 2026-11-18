@@ -17,6 +17,10 @@ export namespace KnightRiderPadLabels
     inline uintptr_t FirstLabelReturn = 0;
     inline void* CurrentMenu = nullptr;
     inline std::atomic<bool> UsingPad{ false }, RefreshRequested{ false };
+    inline SafetyHookInline SetTextHook, NavigationHook, NavigationDestroyHook;
+    inline void (__thiscall* FreeString)(void*) = nullptr;
+    inline uint8_t* Navigation = nullptr;
+    inline std::string NavigationText[2];
 
     inline const char* Label(int key)
     {
@@ -59,6 +63,67 @@ export namespace KnightRiderPadLabels
         if (!label)
             return NameHook.thiscall<void*>(menu, output, key, keyboard);
         return Construct(output, label);
+    }
+
+    // Frontend footer: the accept label (OK, Yes, ...) and the back label (No, Back, ...) of the shared
+    // navigation form. Their key pictures stay; the pad button is written before the text while a pad is used.
+    inline void* NavigationLabel(int slot)
+    {
+        if (!Navigation)
+            return nullptr;
+        const auto label = *reinterpret_cast<uint8_t**>(Navigation + (slot == 0 ? 0x2D4 : 0x2C0));
+        return label ? label + 0x628 : nullptr;
+    }
+
+    inline void __fastcall SetText(void* text, void*, char* value)
+    {
+        int slot = -1;
+        for (int i = 0; i < 2; ++i)
+        {
+            if (text && text == NavigationLabel(i))
+                slot = i;
+        }
+        if (slot < 0 || !value)
+            return SetTextHook.thiscall<void>(text, value);
+        NavigationText[slot] = value + 6;
+        if (!UsingPad.load(std::memory_order_relaxed) || NavigationText[slot].empty())
+            return SetTextHook.thiscall<void>(text, value);
+        const auto caption = std::format("{} {}", Label(slot == 0 ? 7 : 8), NavigationText[slot]);
+        char* replaced = nullptr;
+        Construct(&replaced, caption.c_str());
+        FreeString(&value);
+        // The callee takes over the by-value string reference.
+        SetTextHook.thiscall<void>(text, replaced);
+    }
+
+    inline void RefreshNavigation()
+    {
+        for (int slot = 0; slot < 2; ++slot)
+        {
+            const auto text = NavigationLabel(slot);
+            if (!text || NavigationText[slot].empty())
+                continue;
+            char* value = nullptr;
+            Construct(&value, std::string(NavigationText[slot]).c_str());
+            SetText(text, nullptr, value);
+        }
+    }
+
+    inline void __fastcall NavigationReset(uint8_t* navigation, void*)
+    {
+        Navigation = navigation;
+        NavigationHook.thiscall<void>(navigation);
+    }
+
+    inline void* __fastcall NavigationDestroy(uint8_t* navigation, void*, int flags)
+    {
+        if (Navigation == navigation)
+        {
+            Navigation = nullptr;
+            NavigationText[0].clear();
+            NavigationText[1].clear();
+        }
+        return NavigationDestroyHook.thiscall<void*>(navigation, flags);
     }
 
     inline void Keyboard()
@@ -116,8 +181,12 @@ export namespace KnightRiderPadLabels
         else if (connected)
             Keyboard();
         connected = present;
-        if (RefreshRequested.exchange(false) && CurrentMenu)
-            Refresh(CurrentMenu);
+        if (RefreshRequested.exchange(false))
+        {
+            if (CurrentMenu)
+                Refresh(CurrentMenu);
+            RefreshNavigation();
+        }
     }
 
     inline void* __fastcall Destroy(void* menu, void*)
@@ -139,6 +208,14 @@ export namespace KnightRiderPadLabels
         Refresh = reinterpret_cast<decltype(Refresh)>(refresh.get_first());
         auto destroy = hook::pattern("53 56 8B F1 57 8D 8E 6C 08 00 00 E8");
         DestroyHook = safetyhook::create_inline(destroy.get_first(), Destroy);
+        auto freeString = hook::pattern("57 8B F9 8B 07 66 FF 08 8B 07 66 83 38 00 75 24 56 33 F6 66 8B 70 04");
+        FreeString = reinterpret_cast<decltype(FreeString)>(freeString.get_first());
+        auto setText = hook::pattern("53 56 8B F1 57 8D 4C 24 10 8D 7E 34 57 E8 ? ? ? ? 84 C0 74 61 8A 46 10");
+        SetTextHook = safetyhook::create_inline(setText.get_first(), SetText);
+        auto navigation = hook::pattern("56 57 8B F9 68 ? ? ? ? 8D 8F A0 02 00 00 E8 ? ? ? ? 8D 87 90 02 00 00 8B CF 50 E8 ? ? ? ? 8B B7 AC 02 00 00");
+        NavigationHook = safetyhook::create_inline(navigation.get_first(), NavigationReset);
+        auto navigationDestroy = hook::pattern("56 8B F1 8D 8E CC 02 00 00 E8 ? ? ? ? 8D 8E B8 02 00 00 E8 ? ? ? ? 8D 8E A4 02 00 00 E8");
+        NavigationDestroyHook = safetyhook::create_inline(navigationDestroy.get_first(), NavigationDestroy);
         FixSettings().OnChange("MAIN.GamepadIcons", []() { RefreshRequested = true; });
         KnightRiderFrame::InputFrame = Frame;
         KnightRiderFrame::KeyboardInput = Keyboard;

@@ -12,6 +12,73 @@ import GUI;
 import Focus;
 import GameplayCamera;
 
+// Cloth moves with the level frame time, which the engine clamps to at least 15 ms; above 66 FPS cloth sped up.
+// Every cloth now steps at 60 Hz, as many steps per frame as the real frame time adds up to.
+namespace UESoftBody
+{
+    constexpr float kStep = 1.0f / 60.0f;
+    constexpr int kMaxSteps = 3;
+
+    float fStep = kStep;
+    float accumulator = 0.0f;
+    int stepsThisFrame = 0;
+
+    void Advance(float deltaTime)
+    {
+        if (!(deltaTime > 0.0f))
+            return;
+        accumulator += deltaTime;
+        stepsThisFrame = 0;
+        while (accumulator >= kStep)
+        {
+            accumulator -= kStep;
+            if (++stepsThisFrame >= kMaxSteps)
+            {
+                accumulator = 0.0f;
+                break;
+            }
+        }
+    }
+
+    // A cloth that pulls an attached actor along moves by the real frame time and keeps one update per frame
+    void* AttachedActorUpdate = nullptr;
+
+    SafetyHookInline shTick = {};
+    void __fastcall Tick(void* softBody, void* edx)
+    {
+        constexpr size_t kUpdateIndex = 0x98 / sizeof(void*);
+        if ((*reinterpret_cast<void***>(softBody))[kUpdateIndex] == AttachedActorUpdate)
+            return shTick.unsafe_fastcall(softBody, edx);
+
+        for (int i = 0; i < stepsThisFrame; ++i)
+            shTick.unsafe_fastcall(softBody, edx);
+    }
+}
+
+// Animated textures without their own rate (fire, water, screens) changed once per frame; keep them at 30 Hz
+namespace UTexture
+{
+    constexpr uintptr_t kMaxFrameRateOff = 0xB0;
+    constexpr uintptr_t kAccumulatorOff = 0xB4;
+    constexpr float kStep = 1.0f / 30.0f;
+
+    SafetyHookInline shTick = {};
+    void __fastcall Tick(void* texture, void* edx, float deltaSeconds)
+    {
+        const auto base = reinterpret_cast<uintptr_t>(texture);
+        if (*reinterpret_cast<float*>(base + kMaxFrameRateOff) != 0.0f || !(deltaSeconds > 0.0f))
+            return shTick.unsafe_fastcall(texture, edx, deltaSeconds);
+
+        float& accumulator = *reinterpret_cast<float*>(base + kAccumulatorOff);
+        accumulator += deltaSeconds;
+        if (accumulator >= kStep)
+        {
+            accumulator = std::min(accumulator - kStep, kStep);
+            shTick.unsafe_fastcall(texture, edx, deltaSeconds);
+        }
+    }
+}
+
 namespace UGameEngine
 {
     SafetyHookInline shTick = {};
@@ -34,6 +101,7 @@ namespace UGameEngine
             UWindowsViewport::deferredCauseInputEventForRawInput = nullptr;
         }
 
+        UESoftBody::Advance(deltaTime);
         return shTick.unsafe_fastcall(UGameEngine, edx, deltaTime);
     }
 }
@@ -255,6 +323,17 @@ export void InitEngine()
 
     pattern = hook::pattern("83 EC 1C 53 55 56 8B F1 8A 86 CC 01 00 00");
     UGameEngine::shTick = safetyhook::create_inline(pattern.get_first(), UGameEngine::Tick);
+
+    // Cloth at a fixed rate: the update reads the step instead of the level frame time
+    pattern = hook::pattern("8B 4B 58 8B 51 78 D9 82 5C 07 00 00 D8 15");
+    injector::WriteMemory<uint16_t>(pattern.get_first(6), 0x05D9, true); // fld dword ptr [fStep]
+    injector::WriteMemory(pattern.get_first(8), &UESoftBody::fStep, true);
+    pattern = hook::pattern("8B 41 58 85 C0 74 24 D9 05 ? ? ? ? 8B 40 78 D8 81 70 01 00 00");
+    UESoftBody::AttachedActorUpdate = hook::get_pattern("81 EC 38 01 00 00 53 8B D9 8B 43 58 8B 88 8C 03 00 00");
+    UESoftBody::shTick = safetyhook::create_inline(pattern.get_first(), UESoftBody::Tick);
+
+    pattern = hook::pattern("83 EC 08 56 8B F1 8B 06 FF 90 14 01 00 00 D9 05 ? ? ? ? D9 86 B0 00 00 00");
+    UTexture::shTick = safetyhook::create_inline(pattern.get_first(), UTexture::Tick);
 
     // Shadows and lights draw distance
     static float TurnOffDistance = 0.0f;

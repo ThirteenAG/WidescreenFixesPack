@@ -7,5 +7,7 @@
   "UnthrottleEmuDuringDoorSkip": "Transizioni porte rapide",
   "UnthrottleEmuDuringDoorSkip.description": "Mentre il gioco carica la stanza successiva, Dolphin va alla massima velocità invece che alla velocità della console, così i cambi di stanza finiscono prima. Il gioco vero e proprio va a velocità normale. Funziona con o senza porte saltate. Riavvia Dolphin dopo aver modificato questa impostazione.",
   "LightSyncRGB": "Illuminazione RGB",
-  "LightSyncRGB.description": "Le tastiere Logitech G LIGHTSYNC mostrano le condizioni del giocatore: verde per Fine, arancione per Caution, rosso per Danger, viola se avvelenato, con un effetto battito cardiaco. Richiede Logitech G HUB; senza di esso questa impostazione non ha effetto. Riavvia Dolphin dopo aver modificato questa impostazione."
+  "LightSyncRGB.description": "Le tastiere Logitech G LIGHTSYNC mostrano le condizioni del giocatore: verde per Fine, arancione per Caution, rosso per Danger, viola se avvelenato, con un effetto battito cardiaco. Richiede Logitech G HUB; senza di esso questa impostazione non ha effetto. Riavvia Dolphin dopo aver modificato questa impostazione.",
+  "SkipIntro": "Salta intro",
+  "SkipIntro.description": "Si parte dalla schermata del titolo: Resident Evil 2 salta l'avviso e il filmato del titolo, Resident Evil 3 l'avviso, la nota di licenza, il logo Capcom e il filmato del titolo. Il filmato d'apertura di una nuova partita viene comunque riprodotto. Riavvia Dolphin dopo aver cambiato questa impostazione."
 }

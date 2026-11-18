@@ -77,6 +77,7 @@ void InstallOptions(void* setPage)
           Entry{ L"WINDOW MODE", [] { return std::wstring(windowMode == 1 ? L"WINDOWED" : windowMode == 2 ? L"BORDERLESS" : L"FULLSCREEN"); },
               [](int step) { SaveInt("MAIN", "WindowMode", (windowMode + (step < 0 ? 2 : 1)) % 3); },
               NoAction, nullptr, "MAIN.WindowMode" },
+          Toggle(L"PAUSE ON FOCUS LOSS", "MAIN", "PauseOnFocusLoss", GTA2Input::PauseOnFocusLoss),
           Toggle(L"FILL MENU BACKGROUND", "MAIN", "FillFrontendBackground", bFillBackground),
           Entry{ L"HUD ASPECT RATIO", [] { auto& value = FixSettings().String("MAIN.HudAspectRatioConstraint"); return Upper(std::wstring(value.begin(), value.end())); },
               [](int step)
@@ -128,7 +129,6 @@ void InstallOptions(void* setPage)
         { NativeKey(L"PREVIOUS WEAPON", 7), NativeKey(L"NEXT WEAPON", 8), NativeKey(L"SPECIAL 1", 9),
           NativeKey(L"SPECIAL 2", 10), NativeKey(L"SPECIAL 3", 11), Back() },
         { language, RegRange(L"TEXT SPEED", "Option", "text_speed", 1, 3, 1, 3),
-          RegToggle(L"PLAY INTRO MOVIE", "Screen", "do_play_movie", 1),
           Toggle(L"SKIP INTRO MOVIE", "MAIN", "SkipIntro", bSkipMovie),
           Toggle(L"SKIP CREDITS", "MISC", "SkipCredits", bSkipCredits),
           RegToggle(L"SHOW PLAYER NAMES", "Network", "show_player_names", 1), Back() },

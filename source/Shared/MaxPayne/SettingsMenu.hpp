@@ -25,7 +25,8 @@
 // script loader reads it, with IDs of its own, and answers those IDs in the menu mode.
 //
 // - Numbers with a range and a step are sliders with a tick per step; everything else (switches, choices, special
-//   values, suggestions, aspect ratios) is an item that steps to the next usable value when pressed. The game's own
+//   values, suggestions, aspect ratios) is an item that steps to the next usable value when pressed, Left and Right
+//   step to the previous and the next one. The game's own
 //   toggles aren't used: their box sits at a fixed distance from the middle of the menu, over longer names.
 //   Sliders and items show their value in their name, "Field of View: 1.10 x", which follows every change (the menu
 //   mode updates every line every frame, the fix prints the name again when its text changed).
@@ -973,6 +974,30 @@ namespace MaxPayneMenu
         return true;
     }
 
+    // Left and Right on an item: the previous or the next value
+    inline void StepItem(int32_t id, int direction)
+    {
+        auto row = Find(id);
+        if (!row || row->widget != Widget::Item)
+            return;
+        auto& s = Get();
+        if (row->kind == Row::Kind::Preset)
+        {
+            auto& shown = s.presets[row->plugin];
+            shown = shown < 0 ? (direction > 0 ? 0 : 2) : (shown + direction + 3) % 3;
+            return;
+        }
+        if (row->kind != Row::Kind::Setting || !row->setting)
+            return;
+        auto plugin = PluginOf(*row);
+        if (!OtherPlugins::Enabled(*plugin, *row->setting, false))
+            return;
+        auto value = OtherPlugins::NextValue(*plugin, *row->setting, direction);
+        if (value != OtherPlugins::Get(*plugin, *row->setting))
+            OtherPlugins::Set(*plugin, *row->setting, value);
+        RefreshPresets();
+    }
+
     // The game's Restore Defaults of a menu with the fix's rows resets them too
     inline void GameDefaults(int32_t id)
     {
@@ -1096,6 +1121,7 @@ namespace MaxPayneMenu
     {
         ptrdiff_t text, id;
         int update;
+        int step = 10;  // the slot Left and Right call with -1 or 1 (sliders move, items do nothing)
     };
 
     namespace MenuMode
@@ -1150,6 +1176,13 @@ namespace MaxPayneMenu
             if (id >= FirstId)
                 UpdateLine(id, *reinterpret_cast<void**>(_this + Layout.text));
         }
+
+        inline void __fastcall step(uint8_t* _this, void* edx, float direction)
+        {
+            auto id = *reinterpret_cast<int32_t*>(_this + Layout.id);
+            if (id >= FirstId && direction != 0.0f)
+                StepItem(id, direction > 0.0f ? 1 : -1);
+        }
     }
 
     // Hooks the menu mode's functions (from its vtable) and the update of the item and slider lines (from theirs),
@@ -1167,6 +1200,8 @@ namespace MaxPayneMenu
         Lines::Layout = layout;
         Lines::shUpdate[0] = safetyhook::create_inline(item[layout.update], Lines::update<0>);
         Lines::shUpdate[1] = safetyhook::create_inline(slider[layout.update], Lines::update<1>);
+        // The item lines' slot is an empty function shared with other classes, so their table entry is replaced
+        injector::WriteMemory(&item[layout.step], &Lines::step, true);
     }
 
     // Before the menu is read: hooks the script loader (rlmfc) and the text functions (e2mfc). host: the fix's module,

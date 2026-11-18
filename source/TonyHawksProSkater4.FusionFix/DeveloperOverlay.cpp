@@ -70,8 +70,20 @@ namespace
     int __cdecl ReadKeyboard()
     {
         const auto result = KeyboardHook.unsafe_ccall<int>();
+        const int current = KeyBufferIndex.get() & 1;
         if (Overlay.BlocksInput())
-            std::memset(KeyBuffer.get().data() + 256 * (KeyBufferIndex.get() & 1), 0, 256);
+            std::memset(KeyBuffer.get().data() + 256 * current, 0, 256);
+        // A newly pressed key switches the prompts back to the keyboard
+        const auto* keys = KeyBuffer.get().data() + 256 * current;
+        const auto* previous = KeyBuffer.get().data() + 256 * (current ^ 1);
+        for (int i = 0; i < 256; ++i)
+        {
+            if ((keys[i] & 0x80) && !(previous[i] & 0x80))
+            {
+                UsingPad.store(false, std::memory_order_relaxed);
+                break;
+            }
+        }
         return result;
     }
 }

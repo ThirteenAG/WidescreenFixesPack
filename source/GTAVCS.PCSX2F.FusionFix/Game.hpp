@@ -34,6 +34,8 @@ struct Settings {
     int gamepadIcons = 0;
     // MAIN.VehicleLights: lit head, tail, brake and reverse lights on vehicle bodies.
     bool vehicleLights = true;
+    // CONTROLS.HoldVehicleCamera: the vehicle camera stays where the right stick left it.
+    bool holdVehicleCamera = false;
 };
 inline Settings settings;
 
@@ -49,10 +51,13 @@ constexpr uintptr_t camera = 0x6F44D0;
 void InstallCamera();
 void InstallAim();
 void InstallVehicleLights();
+void InstallTiming();
 void InstallDrawing();
 void InstallHud();
 void InstallMenu();
 void ApplyFrameRate();
+// Per game frame: the concert mission's frame rate.
+void TickTiming();
 void ReloadBindings();
 void ReloadMenuLanguage();
 

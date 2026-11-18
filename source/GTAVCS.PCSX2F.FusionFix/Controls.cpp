@@ -73,16 +73,57 @@ int16_t PCQuery(Action action) {
     }
     return 0;
 }
+// Manual reload in the modern scheme: L2 + Square enters the native reload
+// state of the held gun. CWeapon::Update finishes it (animation, clip, sound).
+uintptr_t reloadWeapon = 0;
+uintptr_t HeldWeapon() {
+    const auto ped = reinterpret_cast<uintptr_t (*)()>(0x24A430)(); // FindPlayerPed
+    if (!ped) return 0;
+    return ped + 0x574 + *reinterpret_cast<const uint8_t*>(ped + 0x789) * 28;
+}
+bool Reloading() {
+    const auto weapon = HeldWeapon();
+    if (!weapon || weapon != reloadWeapon || *reinterpret_cast<const int*>(weapon + 8) != 2) {
+        reloadWeapon = 0;
+        return false;
+    }
+    return true;
+}
+void Reload(Pad* pad) {
+    if (!pad->current.l2 || !Edge(&Controller::square, pad) || Reloading()) return;
+    const auto ped = reinterpret_cast<uintptr_t (*)()>(0x24A430)();
+    if (!ped) return;
+    const unsigned slot = *reinterpret_cast<const uint8_t*>(ped + 0x789);
+    if (slot < 3 || slot > 8) return;
+    const uintptr_t weapon = ped + 0x574 + slot * 28;
+    auto* state = reinterpret_cast<int*>(weapon + 8);
+    const int clip = *reinterpret_cast<const int*>(weapon + 12), total = *reinterpret_cast<const int*>(weapon + 16);
+    if (total <= 0 || clip >= total || *state == 2) return;
+    // CWeaponInfo::GetWeaponInfo: +16 reload time, +20 clip size.
+    const auto info = reinterpret_cast<uintptr_t (*)(int)>(0x407120)(*reinterpret_cast<const int*>(weapon + 4));
+    if (!info || clip >= *reinterpret_cast<const int*>(info + 20)) return;
+    unsigned duration = *reinterpret_cast<const unsigned*>(info + 16);
+    if (duration < 100 || duration > 10000) duration = 1000;
+    *state = 2;
+    *reinterpret_cast<unsigned*>(weapon + 20) = *reinterpret_cast<const unsigned*>(0x4CD104) + duration;
+    reloadWeapon = weapon;
+}
 bool ModernQuery(Action action, Pad* pad, int16_t& value) {
     auto& now = pad->current;
     switch (action) {
+    // Square jumps unless the target button holds it for the reload.
+    case Action::Jump:
+        if (!now.l2) return false;
+        value = 0;
+        break;
     case Action::Handbrake: value = now.cross; break;
     case Action::Brake: value = now.l2; break;
-    case Action::Weapon: case Action::Accelerate: value = now.r2; break;
+    case Action::Weapon: value = Reloading() ? 1 : now.r2; break;
+    case Action::Accelerate: value = now.r2; break;
     case Action::WeaponDown: value = Edge(&Controller::r2, pad); break;
     case Action::RadioUp: case Action::WeaponRight: case Action::ShiftRight: value = Edge(&Controller::right, pad); break;
     case Action::RadioDown: case Action::WeaponLeft: case Action::ShiftLeft: value = Edge(&Controller::left, pad); break;
-    case Action::Target: value = now.l2 != 0; break;
+    case Action::Target: Reload(pad); value = now.l2 != 0; break;
     case Action::TargetDown: value = Edge(&Controller::l2, pad); break;
     case Action::Duck: value = Edge(&Controller::down, pad); break;
     case Action::ZoomIn: value = now.square || now.leftY < -10; break;
@@ -299,6 +340,21 @@ void Update(Pad* pad, int16_t number) {
         return;
     }
 }
+}
+const char* ModernTextKey(const char* key) {
+    if (!settings.modernControls || KeyboardActive() || !key || key[0] != 'C' || key[1] < '0' || key[1] > '3') return nullptr;
+    // Help texts name the button of an action (C<pad config><action>); these
+    // actions moved. The replacement is the game's own text for that button.
+    static constexpr struct { const char* action; const char* text; } moved[] = {
+        {"VEACC", "C0VELR"}, {"PDFW", "C0VELR"},   // R2
+        {"VEBRK", "C0VELL"}, {"PDLT", "C0VELL"},   // L2
+        {"VEHB", "C0PDSPR"},                       // Cross
+        {"VELL", "C0PUCF"}, {"VELR", "C0PUTE"},    // L1, R1
+        {"VECRS", "C0VEWEL"}, {"PDCWE", "C0VEWEL"}, {"PDCTL", "C0VEWEL"}, // d-pad left and right
+        {"TGSUB", "C0FLUP"},                       // d-pad up
+    };
+    for (const auto& entry : moved) if (!std::strcmp(key + 2, entry.action)) return entry.text;
+    return nullptr;
 }
 void ApplyPcControls() {
     ApplyDpad(Remapped());

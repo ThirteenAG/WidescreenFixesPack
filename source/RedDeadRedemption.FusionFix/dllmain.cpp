@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "FixSettings.hpp"
 #include "Shared/PadInput.hpp"
+#include "Shared/WidescreenFixConflict.hpp"
 
 ASI_SETTINGS_EXPORT(FixSettings())
 
@@ -133,9 +134,13 @@ CEXP void InitializeASI()
 {
     std::call_once(CallbackHandler::flag, []()
     {
+        // The fix was first released as RedDeadRedemption.FusionMod; both hook the intro handler
+        if (WidescreenFixConflict::Found({ L"RedDeadRedemption.FusionMod.asi" }))
+            return;
         FixSettings();
         asi_settings::LiveLink::Start();
-        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init);
+        // rdrFlashIntroHandler::Update
+        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("40 56 57 41 57 48 83 EC 30 48 89 6C 24 58 45 33 FF 40 32 ED 48 8B F9 81 79 08 E8 03 00 00"));
     });
 }
 

@@ -41,7 +41,7 @@
   "menu.help": "Einstellungen und Hilfe für Fusion Fix.",
   "page.compatibility": "Kompatibilität",
   "menu.help.button": "Hilfe",
-  "menu.preset.help": "Original behält Intros, Steuerung und PSP-Symbole bei. Empfohlen und Erweitert aktivieren das Überspringen der Intros, zwei Analogsticks, reduzierte Kameraglättung, schnelleres Laden und Xbox-Symbole. Andere Einstellungen behalten Ihre Werte.",
+  "menu.preset.help": "Original behält Intros, Steuerung und PSP-Symbole bei. Empfohlen und Erweitert aktivieren das Überspringen der Intros, zwei Analogsticks, reduzierte Kameraglättung, schnelleres Laden und Xbox-Symbole und schalten die Farbkorrektur aus. Andere Einstellungen behalten Ihre Werte.",
   "icons": "Controllersymbole",
   "icons.description": "Ersetzt Tastensymbole in Menüs und Spielhinweisen. Auto verwendet Xbox-Symbole, da das offizielle PPSSPP den angeschlossenen Controllertyp nicht meldet. PlayStation behält die ursprünglichen PSP-Symbole. Nur die Bilder ändern sich; die Steuerung wird in PPSSPP eingerichtet. Änderungen unter Plugins gelten sofort; nach Dateiänderungen das emulierte Spiel neu starten.",
   "icons.auto": "Automatisch",
@@ -53,5 +53,9 @@
   "fps": "Bildrate",
   "fps.description": "Wählen Sie das ursprüngliche Limit von 30 FPS oder 60 FPS. Das Spiel verwendet die verstrichene Zeit; Effekte, abklingende Kamerabewegungen und Textanzeige folgen derselben Uhr. PPSSPP steuert Emulationsgeschwindigkeit und Frameskipping. Änderungen unter Plugins gelten sofort; nach Dateiänderungen das emulierte Spiel neu starten.",
   "fps.30": "30 FPS",
-  "fps.60": "60 FPS"
+  "fps.60": "60 FPS",
+  "grading": "Farbkorrektur",
+  "grading.description": "Original behält die graue Farbkorrektur des Spiels bei. Mit den Hardware-Renderern von PPSSPP (Vulkan, Direct3D, OpenGL) kann dabei ein verschobenes Doppelbild von Figuren und Gebäuden entstehen; der Software-Renderer zeigt sie korrekt. Aus überspringt die Farbkorrektur: volle Farben, kein Doppelbild. Änderungen unter Plugins gelten sofort; nach Dateiänderungen das emulierte Spiel neu starten.",
+  "grading.original": "Original",
+  "grading.off": "Aus"
 }

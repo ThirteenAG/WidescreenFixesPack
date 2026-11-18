@@ -281,6 +281,7 @@ namespace
     // "Controller (...)" by their driver, got no default controls. They're taken for an Xbox 360 controller, which has
     // the same DirectInput layout.
     constexpr uint32_t Xbox360ControllerHash = 0x2A5E19E0;    // "Controller (XBOX 360 For Windows)"
+    constexpr int32_t JoystickSlots = 8;
     uintptr_t* JoystickDevices = nullptr;                      // the game's joystick devices, name at +0x114
 
     SafetyHookInline shGetDeviceType = {};
@@ -288,7 +289,8 @@ namespace
     {
         auto result = shGetDeviceType.unsafe_stdcall<uint32_t>(type, index);
         constexpr int32_t Joystick = 3;
-        if (type != Joystick || index < 0 || !JoystickDevices)
+        // The game asks for 2 * joysticks + 2 indices, past the eight slots with four or more joysticks
+        if (type != Joystick || index < 0 || index >= JoystickSlots)
             return result;
 
         auto device = JoystickDevices[index];
@@ -318,7 +320,7 @@ public:
             JoystickDevices = *controllerName.get_first<uintptr_t*>(12);
             static auto controllerNameHook = safetyhook::create_mid(controllerName.get_first(9), [](SafetyHookContext& regs)
             {
-                if (regs.eax >= 8)
+                if (regs.eax >= JoystickSlots)
                     regs.eip = emptyControllerName;
             });
 

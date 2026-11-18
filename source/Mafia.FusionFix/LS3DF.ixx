@@ -141,11 +141,26 @@ export void InitMovie()
         "8B 4C 24 14 8B 54 24 00 8D 41 2C 89 10 8B 54 24 04");
     static auto MoviePositionHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
+        // The game letterboxes each movie inside a 4:3 screen from its nominal size (x, y, width, height)
         auto& rect = Field<RECT>(regs.esp, 0);
-        const float scaleX = Screen.fWidth / 4.0f;
-        const float scaleY = Screen.fHeight / 3.0f;
-        const float scale = std::min(scaleX, scaleY);
-        const float width = scale * 4.0f, height = scale * 3.0f;
+        float movieAspect = 4.0f / 3.0f;
+        if (rect.bottom > 0 && rect.right > 0)
+        {
+            const float rows = static_cast<float>(rect.bottom) / Screen.fHeight;
+            if (rows > 0.1f && rows < 1.0f) movieAspect = (4.0f / 3.0f) / rows;
+        }
+        float width, height;
+        if (FixSettings().Int("MAIN.FMVWidescreenMode") == 1)
+        {
+            width = std::min(Screen.fWidth, Screen.fHeight * movieAspect);
+            height = width / movieAspect;
+        }
+        else
+        {
+            const float frame = std::min(Screen.fWidth, Screen.fHeight * (4.0f / 3.0f));
+            width = frame;
+            height = frame / movieAspect;
+        }
         rect.left = static_cast<LONG>(std::nearbyint((Screen.fWidth - width) * 0.5f));
         rect.top = static_cast<LONG>(std::nearbyint((Screen.fHeight - height) * 0.5f));
         rect.right = static_cast<LONG>(std::nearbyint(width));

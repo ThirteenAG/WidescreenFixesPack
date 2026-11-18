@@ -17,6 +17,10 @@ namespace
     std::atomic<uint64_t> PromptRevision = 1;
     thread_local SplinterCell::PromptCache Prompts;
 
+    // The Joy1-16, JoyX and JoyY commands the game really uses (its user ini), filled in at startup
+    std::mutex BindingsMutex;
+    std::array<std::string, 18> Bindings;
+
     using Family = PadInput::Family;
 
     Family CurrentFamily()
@@ -24,22 +28,71 @@ namespace
         return PadInput::ResolveFamily(FixSettings().Int("MAIN.GamepadIcons"));
     }
 
+    constexpr const char* Languages[] = { "en", "fr", "de", "it", "es" };
+
+    const wchar_t* (__cdecl* GetLanguage)() = nullptr;
+
+    std::string Language()
+    {
+        const auto& chosen = FixSettings().String("MAIN.TextLanguage");
+        if (!chosen.empty() && chosen != "auto")
+            return chosen;
+        const auto language = GetLanguage ? GetLanguage() : nullptr;
+        if (language)
+        {
+            if (!_wcsicmp(language, L"fra")) return "fr";
+            if (!_wcsicmp(language, L"deu")) return "de";
+            if (!_wcsicmp(language, L"ita")) return "it";
+            if (!_wcsicmp(language, L"esp")) return "es";
+        }
+        return "en";
+    }
+
+    std::wstring Text(const std::string& language, const std::string& key)
+    {
+        thread_local std::map<std::string, asi_settings::Texts> languages;
+        auto found = languages.find(language);
+        if (found == languages.end())
+        {
+            auto texts = FixSettings().GetTexts();
+            texts.Select(language);
+            found = languages.emplace(language, std::move(texts)).first;
+        }
+        thread_local std::map<std::pair<std::string, std::string>, std::wstring> cache;
+        const auto id = std::make_pair(language, key);
+        if (const auto cached = cache.find(id); cached != cache.end())
+            return cached->second;
+        const auto value = found->second.Resolve("@padPrompt." + key);
+        const int length = MultiByteToWideChar(CP_UTF8, 0, value.data(), int(value.size()), nullptr, 0);
+        std::wstring wide(length, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, value.data(), int(value.size()), wide.data(), length);
+        cache.emplace(id, wide);
+        return wide;
+    }
+
     // DirectInput button 1-16 as Xidi maps the pad
-    std::wstring MakeButtonName(int button, Family family)
+    std::wstring MakeButtonName(int button, Family family, const std::string& language)
     {
         static const wchar_t* xbox[] = { L"A", L"B", L"X", L"Y", L"LB", L"RB", L"LT", L"RT", L"Back", L"Start", L"LS", L"RS" };
         static const wchar_t* playstation[] = { L"Cross", L"Circle", L"Square", L"Triangle", L"L1", L"R1", L"L2", L"R2", L"Share", L"Options", L"L3", L"R3" };
         static const wchar_t* nintendo[] = { L"B", L"A", L"Y", L"X", L"L", L"R", L"ZL", L"ZR", L"-", L"+", L"L Stick", L"R Stick" };
-        static const wchar_t* dpad[] = { L"D-pad Up", L"D-pad Down", L"D-pad Left", L"D-pad Right" };
+        static const char* dpad[] = { "dpadUp", "dpadDown", "dpadLeft", "dpadRight" };
         if (button >= 13 && button <= 16)
-            return dpad[button - 13];
+            return Text(language, dpad[button - 13]);
         if (button < 1 || button > 12)
             return L"?";
         switch (family)
         {
             case Family::PlayStation:
+                if (button <= 4)
+                {
+                    static const char* shapes[] = { "cross", "circle", "square", "triangle" };
+                    return Text(language, shapes[button - 1]);
+                }
                 return playstation[button - 1];
             case Family::Nintendo:
+                if (button == 11 || button == 12)
+                    return Text(language, button == 11 ? "leftStick" : "rightStick");
                 return nintendo[button - 1];
             default:
                 return xbox[button - 1];
@@ -52,8 +105,12 @@ namespace
         if (Prompts.Current(revision))
             return;
         Prompts.Refresh(revision,
-            [](int button) { return FixSettings().String("INPUT.Joy" + std::to_string(button)); },
-            [family = CurrentFamily()](int button) { return MakeButtonName(button, family); });
+            [](int button)
+            {
+                std::lock_guard lock(BindingsMutex);
+                return Bindings[button - 1];
+            },
+            [family = CurrentFamily(), language = Language()](int button) { return MakeButtonName(button, family, language); });
     }
 
     const std::wstring& ButtonName(int button)
@@ -69,26 +126,57 @@ namespace
 
     void ReplaceAll(std::wstring& text, std::wstring_view from, std::wstring_view to)
     {
+        if (from.empty())
+            return;
         for (size_t at = text.find(from); at != std::wstring::npos; at = text.find(from, at + to.size()))
             text.replace(at, from.size(), to);
     }
 
-    // Training texts name keyboard keys and the mouse
+    // Training texts that talk about the mouse or the movement keys, replaced as whole sentences in the game's
+    // language. An original may list several versions separated by U+001E.
+    void ReplaceSentences(std::wstring& text)
+    {
+        for (const auto language : Languages)
+        {
+            for (const auto key : { "look", "move", "speed", "lockPicks", "pick", "continue" })
+            {
+                auto replacement = Text(language, key);
+                bool bound = true;
+                for (const auto& [placeholder, command] : std::array{
+                    std::pair{ L"{interact}", "Interaction" }, std::pair{ L"{inventory}", "QuickInventory" } })
+                {
+                    if (replacement.find(placeholder) == std::wstring::npos)
+                        continue;
+                    const auto button = Button(command);
+                    if (button.empty())
+                    {
+                        bound = false;
+                        break;
+                    }
+                    ReplaceAll(replacement, placeholder, button);
+                }
+                if (!bound)
+                    continue;
+                const auto originals = Text(language, std::string(key) + ".original");
+                size_t start = 0;
+                for (size_t end; start <= originals.size(); start = end + 1)
+                {
+                    end = originals.find(L'\x1E', start);
+                    if (end == std::wstring::npos)
+                        end = originals.size();
+                    ReplaceAll(text, std::wstring_view(originals).substr(start, end - start), replacement);
+                }
+            }
+        }
+    }
+
+    // Replace native keyboard tokens in one pass so a new face-button name cannot become another key.
     bool PadPrompt(std::wstring& text)
     {
-        if (text.find(L'(') == std::wstring::npos && text.find(L"mouse") == std::wstring::npos && text.find(L"Space bar") == std::wstring::npos)
-            return false;
         const auto original = text;
-        ReplaceAll(text, L"Move the mouse around", L"Move the right stick");
-        ReplaceAll(text, L"Use (W) to move Forward. Use (S) to move Backwards. Adjust Sam's speed with the mouse wheel. Wheeling up will accelerate. Wheeling down will decelerate.",
-            L"Use the left stick to move. The further you push it, the faster Sam moves.");
-        ReplaceAll(text, L"Press (W) to move forward. Press (S) to move backward. Adjust Sam's speed with the mouse wheel. Scrolling up will accelerate. Scrolling down will decelerate.",
-            L"Use the left stick to move. The further you push it, the faster Sam moves.");
-        ReplaceAll(text, L"Use the accelerate key (Mouse Wheel Up) to increase Sam's speed. Use the decelerate key (Mouse Wheel Down) to decrease Sam's speed.",
-            L"Push the left stick further to increase Sam's speed and less to decrease it.");
-        ReplaceAll(text, L"press the correct movement key (W or S or A or D by default)", L"move the left stick in the correct direction");
-        ReplaceAll(text, L"press the same key repeatedly", L"move it the same way repeatedly");
-        ReplaceAll(text, L"use your mouse to naviguate", L"use the stick to navigate");
+        ReplaceSentences(text);
+        if (text.find(L'(') == std::wstring::npos)
+            return text != original;
         struct Token
         {
             std::wstring_view key;
@@ -98,31 +186,31 @@ namespace
         static constexpr Token tokens[] =
         {
             { L"(Left mouse button)", "Fire", 8 }, { L"(Left Mouse)", "Fire", 8 },
+            { L"(touche gauche de la souris)", "Fire", 8 }, { L"(Touche gauche de la souris)", "Fire", 8 },
+            { L"(linke Maustaste)", "Fire", 8 }, { L"(Linke Maustaste)", "Fire", 8 },
+            { L"(pulsante sinistro del mouse)", "Fire", 8 }, { L"(Pulsante sinistro del mouse)", "Fire", 8 },
+            { L"(pulsante dinistro del mouse)", "Fire", 8 },
+            { L"(Botón izquierdo del ratón)", "Fire", 8 }, { L"(Botón Izquierdo Del Ratón)", "Fire", 8 },
             { L"(левая кнопка мыши)", "Fire", 8 },
+            { L"(touche droite de la souris)", "AltFire", 7 }, { L"(rechte Maustaste)", "AltFire", 7 },
+            { L"(pulsante destro del mouse)", "AltFire", 7 }, { L"(Botón derecho del ratón)", "AltFire", 7 },
             { L"(правая кнопка мыши)", "AltFire", 7 },
-            { L"(Space Bar)", "Interaction", 1 }, { L"(Space)", "Interaction", 1 },
-            { L"(пробел)", "Interaction", 1 },
-            { L"(Shift)", "Jump", 4 }, { L"(C)", "Duck", 2 }, { L"(Q)", "BackToWall", 5 },
-            { L"(X)", "ResetCamera", 12 }, { L"(Ctrl)", "QuickInventory", 6 },
-            { L"(CRTL)", "QuickInventory", 6 },
-            { L"(Z)", "SwitchROF", 11 },
-            { L"(ESC)", "", 10 }, { L"(Esc)", "", 10 }, { L"(2)", "DPadRight", 16 },
-            { L"(E)", "Scope", 3 }
+            { L"(Space Bar)", "Interaction", 1 }, { L"(Space)", "Interaction", 1 }, { L"(barre espace)", "Interaction", 1 },
+            { L"(Leertaste)", "Interaction", 1 }, { L"(Barra spaziatrice)", "Interaction", 1 },
+            { L"(Barra espaciadora)", "Interaction", 1 }, { L"(пробел)", "Interaction", 1 },
+            { L"(Shift)", "Jump", 4 }, { L"(Umschalt-Taste)", "Jump", 4 }, { L"(Maiusc)", "Jump", 4 }, { L"(Mayús)", "Jump", 4 },
+            { L"(C)", "Duck", 2 }, { L"(touche C)", "Duck", 2 }, { L"(C-Taste)", "Duck", 2 },
+            { L"(Q)", "BackToWall", 5 }, { L"(X)", "ResetCamera", 12 },
+            { L"(Ctrl)", "QuickInventory", 6 }, { L"(CTRL)", "QuickInventory", 6 }, { L"(CRTL)", "QuickInventory", 6 },
+            { L"(Strg)", "QuickInventory", 6 },
+            { L"(Z)", "SwitchROF", 11 }, { L"(E)", "Scope", 3 }, { L"(2)", "DPadLeft", 15 },
+            { L"(ESC)", "", 10 }, { L"(Esc)", "", 10 }
         };
         std::wstring result;
         for (size_t at = 0; at < text.size();)
         {
             const auto token = std::find_if(std::begin(tokens), std::end(tokens), [&](const Token& entry)
             {
-                if (entry.key == L"(Z)" && !std::wstring_view(text).substr(0, at).ends_with(L"В режиме стрельбы нажатие "))
-                    return false;
-                if (entry.key == L"(E)")
-                {
-                    const auto before = std::wstring_view(text).substr(0, at);
-                    if (!before.ends_with(L"Equip key ") && !before.ends_with(L"'Взять в руки' ") &&
-                        !before.ends_with(L"пистолет в руки "))
-                        return false;
-                }
                 return std::wstring_view(text).substr(at).starts_with(entry.key);
             });
             if (token == std::end(tokens))
@@ -135,31 +223,56 @@ namespace
             }
         }
         text = std::move(result);
-        if (const auto button = Button("Interaction"); !button.empty())
-            ReplaceAll(text, L"Space bar to continue", button + L" to continue");
         return text != original;
     }
 
+    // A converted text drawn through a nested canvas call must not be converted again ("(X)" is a key and a button)
+    thread_local int PromptDepth = 0;
+
+    struct PromptScope
+    {
+        PromptScope() { ++PromptDepth; }
+        ~PromptScope() { --PromptDepth; }
+    };
+
     std::wstring Prompt(const wchar_t* text)
     {
-        if (!text || !PadIsLastDevice.load(std::memory_order_relaxed))
+        if (!text || PromptDepth > 1 || !PadIsLastDevice.load(std::memory_order_relaxed))
             return {};
         RefreshPrompts();
         return Prompts.Prompt(text, PadPrompt);
     }
 
-    void(__fastcall* DrawTextAligned)(void*, void*, const wchar_t*, int, float, float) = nullptr;
-    void __fastcall DrawTextAlignedHook(void* canvas, void* edx, const wchar_t* text, int align, float scaleX, float scaleY)
+    SafetyHookInline DrawTextAlignedHook;
+    void __fastcall DrawTextAligned(void* canvas, void* edx, const wchar_t* text, int align, float scaleX, float scaleY)
     {
+        PromptScope scope;
         const auto prompt = Prompt(text);
-        DrawTextAligned(canvas, edx, prompt.empty() ? text : prompt.c_str(), align, scaleX, scaleY);
+        DrawTextAlignedHook.unsafe_fastcall(canvas, edx, prompt.empty() ? text : prompt.c_str(), align, scaleX, scaleY);
     }
 
-    int(__fastcall* GetNumberOfLines)(void*, void*, const wchar_t*, float) = nullptr;
-    int __fastcall GetNumberOfLinesHook(void* canvas, void* edx, const wchar_t* text, float scale)
+    SafetyHookInline GetNumberOfLinesHook;
+    int __fastcall GetNumberOfLines(void* canvas, void* edx, const wchar_t* text, float scale)
     {
+        PromptScope scope;
         const auto prompt = Prompt(text);
-        return GetNumberOfLines(canvas, edx, prompt.empty() ? text : prompt.c_str(), scale);
+        return GetNumberOfLinesHook.unsafe_fastcall<int>(canvas, edx, prompt.empty() ? text : prompt.c_str(), scale);
+    }
+
+    SafetyHookInline WrappedPrintHook;
+    void __cdecl WrappedPrint(void* canvas, int style, int* width, int* height, void* font, int center, const wchar_t* text)
+    {
+        PromptScope scope;
+        const auto prompt = Prompt(text);
+        WrappedPrintHook.unsafe_ccall(canvas, style, width, height, font, center, prompt.empty() ? text : prompt.c_str());
+    }
+
+    SafetyHookInline WrappedPrintScaleHook;
+    void __cdecl WrappedPrintScale(void* canvas, int style, float* width, float* height, void* font, const wchar_t* text, float scaleX, float scaleY, DWORD flags)
+    {
+        PromptScope scope;
+        const auto prompt = Prompt(text);
+        WrappedPrintScaleHook.unsafe_ccall(canvas, style, width, height, font, prompt.empty() ? text : prompt.c_str(), scaleX, scaleY, flags);
     }
 
     // "Axis aTurn DeadZone=0.3" with its speed multiplied
@@ -233,6 +346,24 @@ export namespace Gamepad
         return PadIsLastDevice;
     }
 
+    // The command of pad button 1-16 (17 = JoyX, 18 = JoyY) as the game's user ini binds it
+    void SetBinding(int button, const std::string& command)
+    {
+        if (button < 1 || button > 18)
+            return;
+        {
+            std::lock_guard lock(BindingsMutex);
+            Bindings[button - 1] = command;
+        }
+        PromptRevision.fetch_add(1, std::memory_order_release);
+    }
+
+    std::string Binding(int button)
+    {
+        std::lock_guard lock(BindingsMutex);
+        return button >= 1 && button <= 18 ? Bindings[button - 1] : std::string{};
+    }
+
     // The pad's look bindings with MAIN.GamepadCameraSpeed and MAIN.InvertGamepadY
     std::string TurnBinding()
     {
@@ -253,21 +384,27 @@ export namespace Gamepad
 
     void Init()
     {
-        for (const auto& setting : FixSettings().GetDescription().settings)
-            if (setting.id == "MAIN.GamepadIcons" || setting.id == "MAIN.TextLanguage" || setting.id.starts_with("INPUT.Joy"))
-                FixSettings().OnChange(setting.id, []() { PromptRevision.fetch_add(1, std::memory_order_release); });
+        for (const auto id : { "MAIN.GamepadIcons", "MAIN.TextLanguage" })
+            FixSettings().OnChange(id, []() { PromptRevision.fetch_add(1, std::memory_order_release); });
 
         for (auto id : { "MAIN.GamepadCameraSpeed", "MAIN.InvertGamepadY", "INPUT.JoyZ", "INPUT.JoyV" })
             FixSettings().OnChange(id, []() { BindingsChanged = true; });
     }
 
-    // The HUD's text drawing (training prompts)
+    // The canvas text drawing (training prompts)
     void InitEchelonHUD()
     {
-        auto originals = IATHook::Replace(GetModuleHandle(L"EchelonHUD"), "Echelon.dll",
-            std::forward_as_tuple("?DrawTextAligned@UECanvas@@QAEXPBGW4ETextAligned@@MM@Z", reinterpret_cast<void*>(DrawTextAlignedHook)),
-            std::forward_as_tuple("?GetNumberOfLines@UECanvas@@QAEHPBGM@Z", reinterpret_cast<void*>(GetNumberOfLinesHook)));
-        DrawTextAligned = reinterpret_cast<decltype(DrawTextAligned)>(originals.at("?DrawTextAligned@UECanvas@@QAEXPBGW4ETextAligned@@MM@Z").get());
-        GetNumberOfLines = reinterpret_cast<decltype(GetNumberOfLines)>(originals.at("?GetNumberOfLines@UECanvas@@QAEHPBGM@Z").get());
+        auto Export = [](const wchar_t* module, const char* name)
+        {
+            auto address = GetProcAddress(GetModuleHandle(module), name);
+            if (!address)
+                throw std::runtime_error(std::string("Export not found: ") + name);
+            return address;
+        };
+        GetLanguage = reinterpret_cast<decltype(GetLanguage)>(Export(L"Core", "?GetLanguage@UObject@@SAPBGXZ"));
+        WrappedPrintHook = safetyhook::create_inline(Export(L"Engine", "?WrappedPrint@UCanvas@@IAAXW4ERenderStyle@@AAH1PAVUFont@@HPBG@Z"), WrappedPrint);
+        WrappedPrintScaleHook = safetyhook::create_inline(Export(L"Echelon", "?WrappedPrintScale@UECanvas@@QAAXW4ERenderStyle@@AAM1PAVUFont@@PBGMMK@Z"), WrappedPrintScale);
+        DrawTextAlignedHook = safetyhook::create_inline(Export(L"Echelon", "?DrawTextAligned@UECanvas@@QAEXPBGW4ETextAligned@@MM@Z"), DrawTextAligned);
+        GetNumberOfLinesHook = safetyhook::create_inline(Export(L"Echelon", "?GetNumberOfLines@UECanvas@@QAEHPBGM@Z"), GetNumberOfLines);
     }
 }

@@ -14,7 +14,7 @@
 
 Open Settings → Plugins → Splinter Cell Blacklist Fusion Fix in the title or pause menu. Use the page links for more options and F1 for full help. Restart-only changes show a restart notice. Presets apply to this plugin after confirmation. FusionFixHub and fusionfix.io also edit the settings. The default setup enables split screen and keeps detection failure enabled in Ghost mode. The default frame rate limit is 60 FPS.
 
-Menus and dialogs remain in an undistorted, centered 16:9 area. The 3D view fills the screen, and HUD Aspect Ratio controls the width used by side HUD elements. Ambient occlusion is disabled during split screen, and player 1 controls the shared pause menu.
+Menus and dialogs remain in an undistorted, centered 16:9 area. The 3D view fills the screen, and HUD Aspect Ratio controls the width used by side HUD elements. Ambient occlusion and planar reflections are disabled during split screen.
 
 ### Startup and input
 
@@ -35,6 +35,7 @@ Menus and dialogs remain in an undistorted, centered 16:9 area. The 3D view fill
 - **Field of view** — Adjust the locomotion camera from 0.5 to 2.0 while playing, with a maximum horizontal view of 150 degrees and the game's normal camera smoothing.
 - **Pause when unfocused** — Enabled by default in single player. Disable it to keep the world running while the game window is unfocused.
 - **Draw distance** — Adjust the screen cull bias; lower values keep distant objects visible for longer.
+- **Display changes** — The DirectX 9 version waits for the display when another program changes the display mode during startup, instead of crashing.
 - **Developer overlay** — Press Ctrl+F10 to open the settings and diagnostics overlay, including Debug → Info.
 
 ### Gameplay and files
@@ -45,7 +46,7 @@ Menus and dialogs remain in an undistorted, centered 16:9 area. The 3D view fill
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 - **Forced walking** — Allow running during forced walking sections.
 - **Gamepad icons** — Auto uses Xbox prompts. PlayStation and Nintendo prompts can be selected separately; restart the game after changing the icon set.
-- **Split screen co-op** — Restores the console split screen co-op, DX11 and DX9: pick a co-op mission in the SMI and choose SPLIT-SCREEN, player 2 joins with START on their gamepad in the lobby and customizes their gear with X (it's saved in the profile). **Gamepad player 1** and **Gamepad player 2** assign the gamepads; by default player 1 uses keyboard and mouse only and player 2 the first gamepad while player 2 is in; single player isn't affected. Each player gets their own HUD, button prompts and markers in their half, also on ultrawide screens; player 2 can open and close the pause menu with START, the menu itself is controlled by player 1. Ambient occlusion is turned off while in split screen.
+- **Split screen co-op** — Restores the console split screen co-op, DX11 and DX9: pick a co-op mission in the SMI and choose SPLIT-SCREEN, player 2 joins with START on their gamepad in the lobby and customizes their gear with X (it's saved in the profile). **Gamepad player 1** and **Gamepad player 2** assign the gamepads; by default player 1 uses keyboard and mouse only and player 2 the first gamepad while player 2 is in; single player isn't affected. Each player gets their own HUD, button prompts and markers in their half, also on ultrawide screens; player 2 opens the pause menu with START and controls it with their gamepad. Ambient occlusion and planar reflections are turned off while in split screen.
 
 ### Fixes
 
@@ -54,7 +55,7 @@ Ultrawide correction, full CPU availability and the mouse speed-cap fix are alwa
 - The grid transition no longer stays over the ending cutscene at high frame rates.
 - The game no longer crashes after about 30 minutes of play because of the shut down online servers (the failed logins used up its pool of network requests).
 
-Difficulty tweaks: **Mark and Execute**, sonar and drop crates enabled on **Perfectionist**, unlimited ammo disabled on **Rookie**. To go back to original behavior, delete `update/difficultyconfiguration.ini` and set `DisablePerfectionistChecks` to 0.
+**Difficulty Tweaks** (on by default, off in the Vanilla preset): **Mark and Execute**, sonar, drop crates and weapon stashes enabled on **Perfectionist**, unlimited pistol ammo disabled on **Rookie**. Turn it off to play with the original difficulty rules.
 
 # Extraction Mode
 

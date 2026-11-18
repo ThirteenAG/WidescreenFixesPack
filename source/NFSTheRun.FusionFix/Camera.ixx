@@ -28,7 +28,6 @@ float MinCamDistance = 1.5f;
 constexpr float DEG2RAD = 0.0174533f;
 
 constexpr float StickDegreesPerSecond = 150.0f;
-constexpr float StickDeadzone = 0.1f;
 constexpr float CarMoveThreshold = 0.5f;
 
 float CarVelocityX = 0.0f;
@@ -215,14 +214,9 @@ namespace fb
             g_Mouse.DeltaY = 0;
 
             // Degrees: the stick turns at a speed, the same at any frame rate; the mouse by its movement
-            // A stick at rest isn't exactly centred: below the deadzone it doesn't turn the camera
-            auto deadzone = [](float value)
-            {
-                float magnitude = fabsf(value);
-                return magnitude < StickDeadzone ? 0.0f : copysignf((magnitude - StickDeadzone) / (1.0f - StickDeadzone), value);
-            };
-            float stickX = -deadzone(g_RightStick.X) * StickDegreesPerSecond * StickLookSensitivity * dt;
-            float stickY = (OnlyAllowHorizontalStickMovement ? 0.0f : deadzone(g_RightStick.Y)) * StickDegreesPerSecond * StickLookSensitivity * dt;
+            // The stick comes with its dead zone applied (Input)
+            float stickX = -g_RightStick.X * StickDegreesPerSecond * StickLookSensitivity * dt;
+            float stickY = (OnlyAllowHorizontalStickMovement ? 0.0f : g_RightStick.Y) * StickDegreesPerSecond * StickLookSensitivity * dt;
             float deltaX = stickX - mouseDeltaX * MouseLookSensitivity;
             float deltaY = stickY + mouseDeltaY * MouseLookSensitivity;
 
@@ -374,7 +368,11 @@ public:
                 if (inRace && factor != 1.0f)
                 {
                     // The picture stays within 150 degrees across, or the game's own view if that is wider
+                    // The window's own shape: a resized window can differ from the saved resolution
+                    RECT client{};
                     auto [width, height] = GetRes();
+                    if (hWnd.get() && GetClientRect(hWnd.get(), &client) && client.right > 0 && client.bottom > 0)
+                        std::tie(width, height) = std::make_pair(int(client.right), int(client.bottom));
                     float aspect = height > 0 ? float(width) / float(height) : 16.0f / 9.0f;
                     float limit = 2.0f * std::atan(std::tan(1.308997f) / aspect);
                     *fov = std::clamp(*fov * factor, 0.0002f, std::max(std::min(limit, 2.96706f), *fov));

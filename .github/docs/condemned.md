@@ -18,15 +18,16 @@
 - **Menus** — Menu backgrounds keep their proportions.
 - **Frame rate drops** — No drop to roughly 20–30 FPS after several minutes.
 - **Save folder** — Saves and the game's settings are kept in your own Documents folder instead of the public one, so no administrator rights are needed. Saves already in the public folder are copied over the first time.
-- **Gamepad** — XInput controllers use [Xidi](https://github.com/samuelgr/Xidi). New profiles are configured with controller bindings alongside keyboard and mouse controls. If a controller does not respond, configure its bindings in the controls menu. Existing profiles keep their bindings. PlayStation and Switch controllers need an XInput mapping through Steam Input or DS4Windows.
+- **Gamepad** — XInput controllers use [Xidi](https://github.com/samuelgr/Xidi). New profiles are configured with controller bindings alongside keyboard and mouse controls; profiles without any controller bindings get them added next to their own. If a controller does not respond, configure its bindings in the controls menu. PlayStation and Switch controllers need an XInput mapping through Steam Input or DS4Windows.
 
 ## Options
 
 - **Window mode** — Fullscreen, Windowed or Borderless, then restart. No `autoexec.cfg` edit is needed. Windowed gives a centred window whose picture area is exactly the chosen resolution; Borderless fills the current monitor.
 - **Field of view** — A multiplier (0.5–2.0, default 1.0) on the gameplay camera's field of view, limited to 150 degrees horizontally; it applies while the game runs. Scripted cameras and the scope zoom keep their own.
-- **HUD aspect ratio** — Auto spreads the HUD over the whole screen; a ratio such as 16:9 keeps it in a centred box of that shape. Needs a restart.
+- **HUD aspect ratio** — Auto spreads the HUD over the whole screen; a ratio such as 16:9 keeps it in a centred box of that shape. Applies at once.
 - **Cutscene borders** — For cinematic cameras that show the game's black bars: Letterbox keeps them, Pillarbox adds side bars that keep the picture at 16:9 on wider screens, Both does both, Off removes them. Animated cutscene borders keeps the game's fade of the bars.
-- **Movies** — Movie screens show the whole video at its own aspect between bars, never cut off or stretched; the extras and credits videos are shown at 16:9.
+- **Movie display** — Movie screens show the whole video at its own aspect, never cut off or stretched: Original inside the game's centred 16:9 frame, Fill (default) as large as the screen allows. The extras and credits videos are shown at 16:9.
+- **Controller buttons** — Button prompts name the controller's buttons after the controller was used last, and keys after the keyboard or mouse: Auto (Xbox names), Xbox, PlayStation or Nintendo.
 - **Frame rate limit** — Off, the monitor's refresh rate (default) or a number of frames per second; applies at once.
 - **Pause in background** — On by default: the game pauses while another window is active, as it always has. Off keeps it running in a window mode.
 - **Confine cursor** — Keeps the mouse cursor inside the game window while the game is active.
@@ -39,13 +40,12 @@
 
 Open **Options → Plugins → Condemned Fusion Fix** (in the main menu or the pause menu) for the fix's settings, presets and help. A line at the bottom tells you when a change needs a restart. Press **Ctrl+F10** for the developer overlay with every setting and a Debug › Info page.
 
-The fix creates `scripts/Condemned.FusionFix.cfg` on first start; FusionFixHub can change it, also while the game runs. Vanilla shows the intro, the game's own bars and its own frame rate; Recommended and Enhanced skip the intro, add pillarbox bars and limit the frame rate to the monitor's. Window, input and compatibility settings aren't changed by presets. Texts are available in English, French, German, Italian and Spanish.
+The fix creates `scripts/Condemned.FusionFix.cfg` on first start; FusionFixHub can change it, also while the game runs. Vanilla shows the intro, the game's own bars, movies in the game's 16:9 frame and its own frame rate; Recommended and Enhanced skip the intro, add pillarbox bars and limit the frame rate to the monitor's. Window, input and compatibility settings aren't changed by presets. Texts are available in English, French, German, Italian and Spanish.
 
 ## Known limits
 
 - Only cinematic cameras that the game shows with black bars get borders; the others fill the screen, as in the original.
-- The HUD aspect ratio and window mode apply after a restart; Alt+Enter switching is not supported.
-- Existing profiles keep their controller bindings; configure them in the controls menu if needed. Button prompts show keyboard keys.
+- The window mode applies after a restart; Alt+Enter switching is not supported.
 - Auto uses English for the in-game settings menu. Select French, German, Italian or Spanish with the text-language setting, then reopen Plugins.
 - The bottom hint can retain the game's stock text; help for the selected fix setting appears above it.
 

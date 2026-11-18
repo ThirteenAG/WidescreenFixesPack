@@ -26,6 +26,9 @@ Up and Down choose a row, Left and Right change a value, Enter steps it forward.
 | Cutscene borders | None, Top/bottom, Sides or Both; live | Both |
 | Pause in background | On stops the game while another window is active, as the original does; Off keeps it running; live | On |
 | Field of view | 0.5–2.0; larger values widen the skating camera; live | 1.0 |
+| Raw mouse input, mouse sensitivity, invert mouse Y | Mouse camera during gameplay; live | On, 1.0, Off |
+| Gamepad camera speed, invert gamepad Y, vibration | live | 1.0, Off, On |
+| Gamepad icons | Automatic (Xbox), Xbox, PlayStation or Nintendo; live | Automatic |
 | Check for updates | Off makes no network request; live | Off |
 | Confine cursor | On keeps the cursor inside the active game window; FusionFixHub/settings file; live | On |
 
@@ -39,23 +42,20 @@ Vanilla shows the logos and the intro movie, shows the movies in the game's 4:3 
 - **Story cutscenes** are a 16:9 picture between black bars, as in the original. **Both** keeps exactly that picture in the middle of the screen; **Top/bottom** spans the screen width between the bars; **Sides** fills the screen height up to 16:9; **None** fills the whole screen. Every mode shows the scene undistorted and can be changed while a cutscene plays.
 - **Movies** are never cut off or stretched: Original shows them inside the game's centered 4:3 frame, Fill fits them to the screen. The game's movies are 4:3 pictures, so on wide screens both show them at full height with black bars at the sides.
 - **Window modes** at any Windows display scaling, without rounded corners: Windowed opens a centered window with exactly the chosen client size, also for sizes the monitor doesn't list. The window is not minimized when another window becomes active.
-- **Keyboard without the launcher:** when the launcher never saved controls, the launcher's default keys are used.
+- **Keyboard without the launcher:** when the launcher never saved controls, or left an action without a key, the launcher's default key is used for it.
+- **Controllers:** the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox controller to it. When no controller is assigned, the first one found at startup gets the default layout; existing assignments and bindings stay. Button prompts show the chosen icon set while the controller is in use and the keyboard keys again after a key press or mouse use.
 - **Soundtrack:** the random song order works.
 - **Update notice:** with **Check for updates** on, a new version is announced at the top of the Plugins list; FusionFixHub opens after the game exits when it is installed.
 - **Ctrl+F10** opens the in-game settings overlay.
 
-Controllers: the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox controller to it. Choose and bind it under **Options → Control Setup**.
-
-**Frame rate limit** defaults to 60 FPS and can be changed live. Higher rates may affect gameplay; 0 removes the limit and -1 follows the monitor refresh rate.
+**Frame rate limit** defaults to 60 FPS and can be changed live; the game itself runs at no more than 60 FPS, so the limit can only lower that. 0 removes the limit and -1 follows the monitor refresh rate.
 
 **Raw mouse input** enables a gameplay mouse camera, with live sensitivity and vertical inversion settings.
 
 ## Known limits
 
-- The window size is set at startup (resolution settings); resizing the window while playing and Alt+Enter aren't supported.
+- The window size is set at startup (resolution settings); resizing the window while playing isn't supported.
 - Turning **Pause in background** off while the game is already paused in the background takes effect when the game window is active again.
-- Prompts use the game's own button names; controller icon sets are not available.
-- Split screen keeps the game's own HUD layout.
 - Mouse-camera behavior, including physical input and controller switching, needs gameplay testing.
 - The fix supports the game's DRM-free executable (the `THUG.exe` of current releases).
 

@@ -22,6 +22,7 @@ export namespace THAWDevice
     inline HWND Window = nullptr;
     inline bool HotkeyDown = false;
     inline std::atomic<int> FrameLimit{ 60 };
+    inline std::atomic<bool> ModeSwitch{ false };
 
     inline void UpdateFrameLimit()
     {
@@ -33,7 +34,8 @@ export namespace THAWDevice
             limit = EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1
                 ? static_cast<int>(mode.dmDisplayFrequency) : 60;
         }
-        FrameLimit.store(limit > 0 ? std::clamp(limit, 30, 1000) : 0, std::memory_order_relaxed);
+        // The game's main loop runs at no more than 60 frames per second
+        FrameLimit.store(limit > 0 ? std::clamp(limit, 30, 60) : 0, std::memory_order_relaxed);
     }
 
     inline void LimitFrameRate()
@@ -155,6 +157,9 @@ export namespace THAWDevice
         D3DDEVICE_CREATION_PARAMETERS parameters{};
         if (SUCCEEDED((GameDevice.get())->GetCreationParameters(&parameters)))
             Window = parameters.hFocusWindow;
+        // In fullscreen the window wrapper never saw the game's window; input focus checks and Alt+Enter need it
+        if (!WindowedModeWrapper::GameHWND)
+            WindowedModeWrapper::GameHWND = Window;
         auto table = *reinterpret_cast<void***>(GameDevice.get());
         PresentHook = safetyhook::create_inline(table[17], Present);
         ResetHook = safetyhook::create_inline(table[16], Reset);
@@ -171,6 +176,13 @@ export namespace THAWDevice
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
             return 0;
+        // Alt+Enter switches between fullscreen and the window, on the next frame
+        if (wParam == VK_RETURN && (message == WM_SYSKEYDOWN || message == WM_SYSKEYUP))
+        {
+            if (message == WM_SYSKEYDOWN && (lParam & (1u << 29)) && !(lParam & (1u << 30)))
+                ModeSwitch.store(true, std::memory_order_relaxed);
+            return 0;
+        }
         if (Overlay.Message(window, message, wParam, lParam, result))
             return result;
         // The game stops while its window is inactive; in a window mode it can keep running
@@ -281,10 +293,97 @@ export namespace THAWDisplay
         Reset();
     }
 
+    inline int LastWindowMode = 1;
+    inline RECT FramedRect{};
+    inline bool HaveFramedRect = false;
+    inline UINT FullscreenRefresh = 0;
+
+    void SetMode(int mode)
+    {
+        WindowedModeWrapper::bEnableWindowResize = mode == 1;
+        Resizable = mode == 1;
+        TonyDisplay::Window(mode, Screen.Width, Screen.Height);
+    }
+
+    void Place(HWND window, int mode)
+    {
+        if (mode)
+        {
+            WindowedModeWrapper::afterCreateWindow();
+            if (mode == 2)
+                WindowedModeWrapper::CenterWindowPosition(Screen.Width, Screen.Height);
+            if (mode == 1 && HaveFramedRect)
+                SetWindowPos(window, HWND_NOTOPMOST, FramedRect.left, FramedRect.top, FramedRect.right - FramedRect.left,
+                    FramedRect.bottom - FramedRect.top, SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
+        }
+        else
+        {
+            MONITORINFO monitor{ sizeof(monitor) };
+            if (!GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST), &monitor))
+                return;
+            const auto style = GetWindowLongA(window, GWL_STYLE);
+            SetWindowLongA(window, GWL_STYLE, (style & ~WS_OVERLAPPEDWINDOW) | WS_POPUP);
+            SetWindowPos(window, HWND_TOP, monitor.rcMonitor.left, monitor.rcMonitor.top, Screen.Width, Screen.Height,
+                SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
+        }
+        TonyDisplay::SquareCorners(window);
+    }
+
+    // Alt+Enter: fullscreen and the window mode (Windowed unless the game started borderless) swap at the same size;
+    // the game's device reset recreates its resources
+    void UpdateMode()
+    {
+        if (!THAWDevice::ModeSwitch.load(std::memory_order_relaxed) || !Reset || !GameDevice.is_initialized() || !GameDevice.get())
+            return;
+        const HWND window = WindowedModeWrapper::GameHWND;
+        if (!window || GetForegroundWindow() != window || (GameDevice.get())->TestCooperativeLevel() != D3D_OK)
+            return;
+        THAWDevice::ModeSwitch.store(false, std::memory_order_relaxed);
+        const auto saved = Presentation.get();
+        const int previousMode = TonyDisplay::Mode;
+        const int nextMode = previousMode ? 0 : LastWindowMode;
+        const auto style = GetWindowLongA(window, GWL_STYLE);
+        const auto exStyle = GetWindowLongA(window, GWL_EXSTYLE);
+        RECT previousRect{};
+        GetWindowRect(window, &previousRect);
+        if (previousMode == 1)
+        {
+            FramedRect = previousRect;
+            HaveFramedRect = true;
+        }
+        if (!previousMode)
+            FullscreenRefresh = saved.FullScreen_RefreshRateInHz;
+        auto requested = saved;
+        requested.Windowed = nextMode != 0;
+        requested.FullScreen_RefreshRateInHz = nextMode ? 0 : FullscreenRefresh;
+        SetMode(nextMode);
+        Place(window, nextMode);
+        Presentation = requested;
+        DeviceLost = 1;
+        Reset();
+        if (!DeviceLost.get())
+        {
+            if (nextMode)
+                LastWindowMode = nextMode;
+            Place(window, nextMode);
+            return;
+        }
+        // The mode was refused (a fullscreen size the monitor doesn't list): back to the previous one
+        SetMode(previousMode);
+        Presentation = saved;
+        SetWindowLongA(window, GWL_STYLE, style);
+        SetWindowLongA(window, GWL_EXSTYLE, exStyle);
+        SetWindowPos(window, (exStyle & WS_EX_TOPMOST) ? HWND_TOPMOST : HWND_NOTOPMOST, previousRect.left, previousRect.top,
+            previousRect.right - previousRect.left, previousRect.bottom - previousRect.top,
+            SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
+        Reset();
+    }
+
     void Init(int width, int height)
     {
         auto& settings = FixSettings();
         auto mode = std::clamp(settings.Int("MAIN.WindowMode"), 0, 2);
+        LastWindowMode = mode ? mode : 1;
         WindowedModeWrapper::EnableDpiAwareness();
         WindowedModeWrapper::bEnableWindowResize = mode == 1;
         TonyDisplay::Window(0, width, height);

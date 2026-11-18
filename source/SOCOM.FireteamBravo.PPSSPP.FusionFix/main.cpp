@@ -27,11 +27,12 @@ using namespace console::portable;
 #include "FrameRate.hpp"
 #include "PadIcons.hpp"
 #include "NativeMenu.hpp"
+#include "Stick.hpp"
 injector::hook_back<int(Input*, float)> update;
 SafetyMipsMid loading, dialogue;
 int* introState;
 uintptr_t introDialogue;
-bool dialogueSkipped;
+bool dialogueSkipped, dualAnalog;
 constexpr char cfgPath[] = "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.cfg";
 void SkipIntro() { *introState = 2; }
 // The callbacks below use no VFPU and call no game code. Saving VFPU state
@@ -44,6 +45,14 @@ safetymips::Options Scalar(bool executeOriginal = true) {
 int Update(Input* input, float delta) {
     const int result = update.fun(input, delta);
     NativeMenu::Input(input);
+    if (dualAnalog)
+    {
+        // The Plugins page reads the pad itself; keep the camera still while it is open
+        if (NativeMenu::level)
+            input->pad.Rsrv[0] = input->pad.Rsrv[1] = 128;
+        else
+            Stick::Sample(input);
+    }
     console::socom::KeepAwake(input);
     return result;
 }
@@ -172,7 +181,8 @@ int Install() {
         }, Scalar(false));
     }
     update.fun = injector::MakeCALL(sites::ptr_8809724(), Update).get();
-    if (inireader.ReadBoolean("MAIN", "DualAnalogPatch", true)) {
+    dualAnalog = inireader.ReadBoolean("MAIN", "DualAnalogPatch", true);
+    if (dualAnalog) {
         injector::MakeCALL(sites::ptr_88885DC(), console::socom::Camera);
         injector::MakeCALL(sites::ptr_8888ADC(), console::socom::Camera);
         for (auto site : {sites::ptr_8888674(), sites::ptr_8888508(), sites::ptr_89DDF9C(), sites::ptr_89DDF6C()}) injector::MakeNOP(site);

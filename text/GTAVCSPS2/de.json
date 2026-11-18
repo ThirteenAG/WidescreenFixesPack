@@ -121,5 +121,7 @@
   "gamepadicons.playstation": "PlayStation",
   "gamepadicons.nintendo": "Nintendo",
   "lights": "Fahrzeuglichter",
-  "lights.description": "Lässt Scheinwerfer, Rück-, Brems- und Rückfahrlichter auf den Karosserietexturen von Autos und Motorrädern leuchten, erzeugt aus den Spieltexturen. Standardmäßig aktiv."
+  "lights.description": "Lässt Scheinwerfer, Rück-, Brems- und Rückfahrlichter auf den Karosserietexturen von Autos und Motorrädern leuchten, erzeugt aus den Spieltexturen. Standardmäßig aktiv.",
+  "controls.holdvehiclecamera": "Fahrzeugkamera halten",
+  "controls.holdvehiclecamera.description": "Wenn du die Kamera in einem Fahrzeug mit dem rechten Stick drehst, bleibt sie dort, sodass du während der Fahrt nach hinten schauen kannst. Zwei Sekunden nach dem Loslassen schwenkt sie wieder hinter das Fahrzeug. Aus behält die Originalkamera, die beim Fahren wieder hinter das Fahrzeug schwenkt."
 }

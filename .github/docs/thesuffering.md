@@ -21,6 +21,7 @@
 - **Skip intro** — The Surreal logo movie is skipped at startup.
 - **Level loading hang** — Loading a level could freeze on multi-core processors; fixed.
 - **Display scaling** — The game gets the full resolution on scaled desktops.
+- **Controller** — The PC version reads only the keyboard and mouse. The fix comes with Xidi, which turns an Xbox-compatible controller into the game's default keys and mouse: left stick move, right stick look, RT fire, LT throw, A jump, B use, X reload, Y insanity, LB/RB previous/next weapon, D-pad up flashlight, down health, left/right thrown weapons, stick clicks run/walk and first person, Back map, Start pause. In menus the left stick moves the cursor and A clicks. The layout is in `Xidi.ini`; keep the game's default keyboard settings for it.
 
 Applies to The Suffering and The Suffering: Ties That Bind.
 
@@ -39,9 +40,9 @@ In The Suffering, open **Options → Graphics** for field of view and cutscene b
 | HUD aspect ratio | Auto, 4:3, 16:9, 21:9, 32:9 | Auto | while playing |
 | Cutscene borders | Off, Letterbox, Pillarbox, Both | Both | while playing |
 | Field of view factor | 0.5–2.0 | 1.0 | while playing |
-| Frame rate limit | Unlimited, monitor refresh rate, 30–1000 FPS | 60 | while playing |
+| Frame rate limit | 30–60 FPS | 60 | while playing |
 
-Presets: Vanilla keeps the original letterbox bars, shows the intro and leaves the frame rate unlimited; Recommended and Enhanced use both border types, skip the intro and limit the game to 60 FPS. The field of view factor is 1.0 and the HUD Auto in every preset.
+Presets: Vanilla keeps the original letterbox bars and shows the intro; Recommended and Enhanced use both border types and skip the intro. Every preset limits the game to 60 FPS. The field of view factor is 1.0 and the HUD Auto in every preset.
 
 Ctrl+F10 opens the developer overlay for supporters.
 
@@ -49,7 +50,8 @@ Ctrl+F10 opens the developer overlay for supporters.
 
 - Hold Shift while starting the game to open its setup dialog. If the desktop resolution is unavailable on a first run, the dialog remains open for a manual choice.
 - Skip intro removes the Surreal logo; the Midway logo and the legal screen still show.
-- The game is made for 60 FPS; higher limits can upset its physics and timing.
+- The game is made for 60 FPS; its physics and timing go wrong above that, so the frame rate limit goes up to 60.
+- Button prompts and tutorials name the keyboard keys also when a controller is used.
 - In Ties That Bind the fix's settings are on fusionfix.io and in FusionFixHub; its in-game Plugins page isn't available there.
 
 ## Installation

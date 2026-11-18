@@ -17,15 +17,9 @@ export namespace THPS3Display
 
     inline void UpdateFrameLimit()
     {
-        int limit = FixSettings().Int("MAIN.FPSLimit");
-        if (limit == -1)
-        {
-            DEVMODEW mode{};
-            mode.dmSize = sizeof(mode);
-            limit = EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1
-                ? static_cast<int>(mode.dmDisplayFrequency) : 60;
-        }
-        FrameLimit.store(limit > 0 ? std::clamp(limit, 30, 1000) : 0, std::memory_order_relaxed);
+        // The game is made for 60 fps: its physics, animation and timers are not fixed for more
+        const int limit = FixSettings().Int("MAIN.FPSLimit");
+        FrameLimit.store(limit > 0 ? std::clamp(limit, 30, 60) : 60, std::memory_order_relaxed);
     }
 
     inline void LimitFrameRate()

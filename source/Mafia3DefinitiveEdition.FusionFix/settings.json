@@ -32,14 +32,24 @@
   ],
   "settings": [
     {
-      "id": "MAIN.BorderlessWindowed",
-      "type": "bool",
-      "default": true,
-      "label": "@BorderlessWindowed",
-      "description": "@BorderlessWindowed.description",
+      "id": "MAIN.WindowMode",
+      "type": "choice",
+      "default": 2,
+      "label": "@windowmode",
+      "description": "@windowmode.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "live"
+      "apply": "live",
+      "choices": [
+        {
+          "value": 1,
+          "label": "@windowmode.1"
+        },
+        {
+          "value": 2,
+          "label": "@windowmode.2"
+        }
+      ]
     },
     {
       "id": "MAIN.SkipIntro",

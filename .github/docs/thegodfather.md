@@ -28,7 +28,7 @@ Cutscene Borders offers Off, Letterbox, Pillarbox and Both. Both preserves the o
 
 Movie Framing offers Original Aspect, which shows the whole movie inside the game's centred 4:3 frame, and Fill, which fits the whole movie to the screen. Skip Intro controls the startup logo sequence.
 
-Controller Icons offers Automatic (Xbox), Xbox, PlayStation and Nintendo artwork. Keyboard and mouse keep their own prompts.
+Controller Icons offers Automatic (Xbox), Xbox, PlayStation and Nintendo artwork. Keyboard and mouse keep their own prompts. Controller Camera Speed scales right-stick camera turning (1.0 is the original speed), Invert Controller Y Axis reverses vertical right-stick camera motion, and Vibration turns controller rumble on or off; rumble stops while the game is paused or in the background.
 
 Pause When Unfocused stops simulation while the game is inactive. Ctrl+F10 opens or closes the settings overlay at the title screen or during gameplay. Its Info page shows the version, build time, renderer and render size.
 

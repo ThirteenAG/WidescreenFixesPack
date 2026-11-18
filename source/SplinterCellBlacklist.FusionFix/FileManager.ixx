@@ -292,11 +292,26 @@ namespace FileLoader
         return name;
     }
 
+    // The shipped difficulty tweaks (update\difficultyconfiguration.ini) apply with MAIN.DisablePerfectionistChecks only, otherwise
+    // the archives' file is read
+    bool difficultyTweaks = true;
+
+    bool IsDifficultyConfiguration(std::string_view path)
+    {
+        constexpr std::string_view name = "difficultyconfiguration.ini";
+        if (path.size() < name.size() || _strnicmp(path.data() + path.size() - name.size(), name.data(), name.size()) != 0)
+            return false;
+        return path.size() == name.size() || path[path.size() - name.size() - 1] == '\\' || path[path.size() - name.size() - 1] == '/';
+    }
+
     // Requests don't always use the disk path (maps are opened as "maps\x.unr", packages by any path), the archives find them by
     // the normalized name. Returns the path to open the override with, or nullptr if the file isn't overridden.
     const char* ResolveOverride(const char* path)
     {
         if (!path || !*path || !GetOverloadedFilePathA)
+            return nullptr;
+
+        if (!difficultyTweaks && IsDifficultyConfiguration(path))
             return nullptr;
 
         if (GetOverloadedFilePathA(path, nullptr, 0))
@@ -1140,6 +1155,7 @@ export void InitFileManager()
         FileLoader::exePath = FileLoader::exePath.parent_path();
     FileLoader::ReadPackagePaths();
     FileLoader::ReadControllerArtwork(settings.Int("MAIN.GamepadIcons"));
+    FileLoader::difficultyTweaks = settings.Int("MAIN.DisablePerfectionistChecks") != 0;
 
     // FFileManagerLinear::FileSize: NormalizeName (stdcall) and the FString destructor
     auto pattern = hook::pattern("6A 01 57 8D 4D E8 51 8B 4C 96 2C E8");

@@ -16,7 +16,7 @@ export namespace KnightRiderCamera
     inline thread_local bool DrawingMain = false;
     inline thread_local void* Caller = nullptr;
     inline thread_local void* CallerNext = nullptr;
-    inline std::atomic<int> Borders{ 1 };
+    inline std::atomic<int> Borders{ 3 };
     inline SafetyHookMid AnimationHook, StaticHook;
     inline SafetyHookInline DrawHook;
     inline void (__thiscall* UpdateWorld)(void*) = nullptr;
@@ -77,7 +77,7 @@ export namespace KnightRiderCamera
             return DrawHook.thiscall<void>(camera);
         const float aspect = static_cast<float>(KnightRiderWindow::Width) / KnightRiderWindow::Height;
         const float nativeAspect = 4.0f / 3.0f;
-        const bool preserve = Cinematic && Borders.load(std::memory_order_relaxed) != 0;
+        const bool preserve = Cinematic && (Borders.load(std::memory_order_relaxed) & (aspect > nativeAspect ? 2 : 1)) != 0;
         const float factor = Cinematic ? 1.0f : std::clamp(FixSettings().Float("MAIN.FOVFactor"), 0.5f, 2.0f);
         const float halfHeight = std::tan(std::min(NativeFOV * factor, 170.0f) * 0.0087266462f) / nativeAspect;
         const float projectionAspect = preserve ? nativeAspect : aspect;
@@ -119,7 +119,7 @@ export namespace KnightRiderCamera
     {
         const auto update = []()
         {
-            Borders.store(std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 1), std::memory_order_relaxed);
+            Borders.store(std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3), std::memory_order_relaxed);
         };
         update();
         FixSettings().OnChange("MAIN.CutsceneBorders", update);

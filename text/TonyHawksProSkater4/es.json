@@ -54,14 +54,14 @@
   "menu.restartwarning": "Reinicia el juego para aplicar los ajustes de inicio modificados.",
   "menu.presethelp": "Elige un preajuste y confirma dos veces para aplicarlo a este plugin.",
   "FPSLimit": "Límite de fotogramas",
-  "FPSLimit.description": "Limita la presentación; 0 desactiva el límite y -1 usa la frecuencia del escritorio. Los cambios se aplican al instante. Se recomiendan 60 FPS; valores superiores pueden causar fallos.",
-  "FPSLimit.unlimited": "Sin límite",
-  "FPSLimit.refresh": "Frecuencia del escritorio",
+  "FPSLimit.description": "Limita la tasa de fotogramas (30–60 FPS). La física, las animaciones y los temporizadores del juego están hechos para 60 FPS, por eso no se ofrecen valores mayores. Los cambios se aplican al instante.",
   "menu.details": "Detalles",
   "checkupdates": "Buscar actualizaciones",
   "checkupdates.description": "Busca una nueva versión una vez al activarlo. El aviso aparece en Plugins; FusionFixHub se abre al salir si está instalado. Desactivado no envía solicitudes de red.",
   "update.availablehub": "Hay una actualización de Tony Hawk Pro Skater 4 Fusion Fix. FusionFixHub se abrirá al salir del juego.",
   "update.availablesite": "Hay una actualización de Tony Hawk Pro Skater 4 Fusion Fix en fusionfix.io.",
   "PauseOnFocusLoss": "Pausa en segundo plano",
-  "PauseOnFocusLoss.description": "En un modo de ventana, el juego se detiene mientras otra ventana está activa, como siempre hizo. Desactivado sigue en marcha. Se aplica al instante."
+  "PauseOnFocusLoss.description": "En un modo de ventana, el juego se detiene mientras otra ventana está activa, como siempre hizo. Desactivado sigue en marcha. Se aplica al instante.",
+  "MAIN.GamepadIcons": "Iconos del mando",
+  "MAIN.GamepadIcons.description": "Iconos de los botones del mando en las indicaciones mientras se usa un mando. Auto usa Xbox; elige PlayStation o Nintendo para otro mando. Al usar el teclado vuelven sus indicaciones."
 }

@@ -41,7 +41,7 @@
   "menu.help": "Réglages et aide de Fusion Fix.",
   "page.compatibility": "Compatibilité",
   "menu.help.button": "Aide",
-  "menu.preset.help": "Original conserve les introductions, commandes et icônes PSP. Recommandé et Amélioré activent le saut des introductions, le double stick, le lissage réduit, le chargement accéléré et les icônes Xbox. Les autres réglages conservent vos valeurs.",
+  "menu.preset.help": "Original conserve les introductions, commandes et icônes PSP. Recommandé et Amélioré activent le saut des introductions, le double stick, le lissage réduit, le chargement accéléré et les icônes Xbox, et désactivent l’étalonnage des couleurs. Les autres réglages conservent vos valeurs.",
   "icons": "Icônes de manette",
   "icons.description": "Remplace les icônes des boutons dans les menus et en jeu. Auto utilise les icônes Xbox, car PPSSPP officiel ne fournit pas le type de manette connecté. PlayStation conserve les icônes PSP originales. Seules les images changent ; configurez les commandes dans PPSSPP. Les changements dans Plugins sont immédiats ; après modification du fichier, redémarrez le jeu émulé.",
   "icons.auto": "Auto",
@@ -53,5 +53,9 @@
   "fps": "Fréquence d’images",
   "fps.description": "Choisissez la limite originale de 30 images/s ou 60 images/s. Le jeu utilise le temps écoulé ; les effets, l’atténuation des secousses et la temporisation du texte suivent la même horloge. PPSSPP gère la vitesse d’émulation et le saut d’images. Les changements dans Plugins sont immédiats ; après modification du fichier, redémarrez le jeu émulé.",
   "fps.30": "30 FPS",
-  "fps.60": "60 FPS"
+  "fps.60": "60 FPS",
+  "grading": "Étalonnage des couleurs",
+  "grading.description": "Original conserve l’étalonnage gris du jeu. Avec les moteurs de rendu matériels de PPSSPP (Vulkan, Direct3D, OpenGL), il peut laisser une double image fantôme des personnages et des bâtiments ; le rendu logiciel l’affiche correctement. Désactivé ignore l’étalonnage : couleurs complètes, sans image fantôme. Les changements dans Plugins sont immédiats ; après modification du fichier, redémarrez le jeu émulé.",
+  "grading.original": "Original",
+  "grading.off": "Désactivé"
 }

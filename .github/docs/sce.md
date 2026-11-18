@@ -2,7 +2,7 @@
 
 <img src="https://thirteenag.github.io/screens/sce/main2.jpg" width="760" alt="Splinter Cell: Essentials Fusion Fix (PPSSPP)">
 
-**Splinter Cell: Essentials Fusion Fix (PPSSPP)** adds a widescreen camera and HUD, menus and movies in their own proportions, right-stick controls, analog movement speed, optional 60 FPS and faster loading.
+**Splinter Cell: Essentials Fusion Fix (PPSSPP)** adds a widescreen camera and HUD, menus and movies in their own proportions, right-stick controls, Xbox or Nintendo button icons, analog movement speed, optional 60 FPS and faster loading.
 
 [Website](https://thirteenag.github.io/wfp#sce) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/SplinterCellEssentials.PPSSPP.FusionFix/main.cpp)
 
@@ -19,7 +19,15 @@
 - **Movies** — The startup and story movies are shown complete at their own proportions, with black bars at the sides on wide screens and above and below on narrow ones. The movies use the PSP's full 480×272 frame, so there is no separate movie zoom setting.
 - **Cutscenes** — The story is told in movies; there are no cutscene border settings.
 - **Controls** — The right stick turns the camera; map it in PPSSPP. Analog movement speed lets the left stick set the walking and running speed. Stick deadzone adjusts how far a stick moves before it responds.
+- **Button icons** — Menu hints, the interaction list and HUD prompts can show Xbox (A, B, X, Y) or Nintendo letters on the face buttons instead of the PSP symbols, drawn in the game's own style. Shoulder buttons, Start and Select keep their labels.
 - **Startup, loading and frame rate** — Skip Intro skips the first startup movie (the second one is required by the game's loader). Faster loading temporarily unthrottles PPSSPP during loading screens. 60 FPS is optional.
+
+## Supported versions
+
+- **USA** — ULUS10070, tested.
+- **Europe** — ULES00281, supported, not tested.
+
+Other releases are not supported: PPSSPP does not load the plugin for them.
 
 ## Installation
 
@@ -30,9 +38,10 @@
 
 ## Settings
 
-The game has no settings menu for plugins, so the fix is configured outside the game. Skip Intro, analog movement speed, 60 FPS, faster loading and stick deadzone require a restart of the emulated game.
+The game has no settings menu for plugins, so the fix is configured outside the game. Skip Intro, analog movement speed, button icons, 60 FPS, faster loading and stick deadzone require a restart of the emulated game.
 
 - **Skip intro**, **Analog movement speed** and **Faster loading** — on or off.
+- **Button icons** — Auto, Xbox, PlayStation or Nintendo. Auto uses the Xbox letters; PlayStation keeps the game's symbols.
 - **Frame rate** — choose 30 or 60 FPS (`MAIN.FPSLimit` in the cfg).
 - **Stick deadzone** — 0 to 0.95.
 - **FOV factor** — 0.5 to 2.0; 1.0 keeps the game's view.
@@ -40,7 +49,7 @@ The game has no settings menu for plugins, so the fix is configured outside the 
 - **HUD scale** — 0.5 to 1.5.
 - **Force aspect ratio** (file and editor only) — Auto follows PPSSPP's display; `W:H` or a decimal from 1:1 to 4:1 overrides it.
 
-**Vanilla** turns off intro skipping, analog movement speed, faster loading and 60 FPS. **Recommended** (the defaults) and **Enhanced** turn them on. Deadzone, FOV, HUD and aspect choices keep your values.
+**Vanilla** turns off intro skipping, analog movement speed, faster loading and 60 FPS and keeps the PSP button symbols. **Recommended** (the defaults) and **Enhanced** turn them on and use Auto button icons. Deadzone, FOV, HUD and aspect choices keep your values.
 
 Setting texts: English, French, German, Italian and Spanish.
 

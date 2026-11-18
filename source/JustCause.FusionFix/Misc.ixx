@@ -141,7 +141,6 @@ void InstallLogoSkip()
 void InitializeGame()
 {
     hook::pattern pattern;
-    auto& settings = FixSettings();
     asi_settings::LiveLink::Start();
     InstallLogoSkip();
     JCHud::Install();
@@ -149,13 +148,8 @@ void InitializeGame()
     JCCamera::Install();
     JCOverlay::Install();
     JCUpdates::Init();
-    Screen.nWidth = settings.Int("MAIN.ResX");
-    Screen.nHeight = settings.Int("MAIN.ResY");
-
-    if (Screen.nWidth <= 0 || Screen.nHeight <= 0 || Screen.nWidth > 16384 || Screen.nHeight > 16384)
-        std::tie(Screen.nWidth, Screen.nHeight) = GetDesktopRes();
-    if (Screen.nWidth <= 0 || Screen.nHeight <= 0)
-        std::tie(Screen.nWidth, Screen.nHeight) = std::make_tuple(640, 480);
+    JCResolution::Init();
+    std::tie(Screen.nWidth, Screen.nHeight) = JCResolution::Desktop();
 
     int32_t defX = 0, defY = 0;
     std::tie(defX, defY) = GetDesktopRes();
@@ -171,6 +165,7 @@ void InitializeGame()
         void operator()(injector::reg_pack& regs)
         {
             *(uint32_t*)(regs.esi + 0x1C) = 0x15;
+            std::tie(Screen.nWidth, Screen.nHeight) = JCResolution::Size();
             *(int32_t*)(regs.esi + 0x08) = Screen.nWidth;
             *(int32_t*)(regs.esi + 0x0C) = Screen.nHeight;
 

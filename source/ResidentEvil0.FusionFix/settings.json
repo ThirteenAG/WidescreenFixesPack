@@ -277,7 +277,7 @@
       "presets": {
         "vanilla": 0,
         "recommended": 0,
-        "enhanced": 0
+        "enhanced": 1
       }
     },
     {

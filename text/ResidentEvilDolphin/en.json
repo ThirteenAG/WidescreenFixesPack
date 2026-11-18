@@ -7,5 +7,7 @@
   "UnthrottleEmuDuringDoorSkip": "Faster door transitions",
   "UnthrottleEmuDuringDoorSkip.description": "While the game loads the next room, Dolphin runs at full speed instead of the console's speed, so room changes finish sooner. Gameplay runs at normal speed. Works with or without skipped doors. Restart Dolphin after changing this setting.",
   "LightSyncRGB": "RGB lighting",
-  "LightSyncRGB.description": "Logitech G LIGHTSYNC keyboards show the player's condition: green for Fine, orange for Caution, red for Danger, purple when poisoned, with a heartbeat effect. Needs Logitech G HUB; without it this setting does nothing. Restart Dolphin after changing this setting."
+  "LightSyncRGB.description": "Logitech G LIGHTSYNC keyboards show the player's condition: green for Fine, orange for Caution, red for Danger, purple when poisoned, with a heartbeat effect. Needs Logitech G HUB; without it this setting does nothing. Restart Dolphin after changing this setting.",
+  "SkipIntro": "Skip intro",
+  "SkipIntro.description": "Start at the title screen: Resident Evil 2 skips the warning screen and the title movie, Resident Evil 3 the warning screen, the licence notice, the Capcom logo and the title movie. The opening movie of a new game still plays. Restart Dolphin after changing this setting."
 }

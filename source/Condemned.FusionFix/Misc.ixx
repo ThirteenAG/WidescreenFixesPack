@@ -97,16 +97,25 @@ void InstallInit()
             auto w = *(uint32_t*)(regs.esp + 0x08);
             auto h = *(uint32_t*)(regs.esp + 0x0C);
 
-            // Looked up once, not for every quad
+            // Return addresses into the executable or GameClient; looked up once, not for every quad
+            const auto imageSize = [](size_t base) -> size_t
+            {
+                const auto dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+                return reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew)->OptionalHeader.SizeOfImage;
+            };
             static const auto exe = (size_t)GetModuleHandle(NULL);
-            static size_t client = 0;
+            static const auto exeSize = imageSize(exe);
+            static size_t client = 0, clientSize = 0;
             if (!client)
+            {
                 client = (size_t)GetModuleHandle(L"GameClient");
+                clientSize = client ? imageSize(client) : 0;
+            }
 
             uint32_t arr[10]{};
             for (size_t i = regs.esp, j = 0; j < 9; i += 4)
             {
-                if ((*(size_t*)i > exe && *(size_t*)i < exe + 0x176004) || (*(size_t*)i > client && *(size_t*)i < client + 0x172AD8))
+                if ((*(size_t*)i > exe && *(size_t*)i < exe + exeSize) || (*(size_t*)i > client && *(size_t*)i < client + clientSize))
                 {
                     arr[j] = *(size_t*)i;
                     ++j;

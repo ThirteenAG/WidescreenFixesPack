@@ -121,5 +121,7 @@
   "gamepadicons.playstation": "PlayStation",
   "gamepadicons.nintendo": "Nintendo",
   "lights": "Luces de vehículos",
-  "lights.description": "Ilumina los faros y las luces traseras, de freno y de marcha atrás en las texturas de carrocería de coches y motos, generadas a partir de las texturas del juego. Activado por defecto."
+  "lights.description": "Ilumina los faros y las luces traseras, de freno y de marcha atrás en las texturas de carrocería de coches y motos, generadas a partir de las texturas del juego. Activado por defecto.",
+  "controls.holdvehiclecamera": "Mantener cámara del vehículo",
+  "controls.holdvehiclecamera.description": "Cuando giras la cámara con el stick derecho en un vehículo, se queda ahí, para que puedas mirar atrás mientras conduces. Vuelve detrás del vehículo dos segundos después de soltarlo. Desactivado mantiene la cámara original, que vuelve detrás del vehículo mientras conduces."
 }

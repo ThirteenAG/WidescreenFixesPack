@@ -78,7 +78,7 @@
       "description": "@HudAspectRatioConstraint.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "suggestions": [
         {
           "value": "Auto",
@@ -140,6 +140,31 @@
       "page": "display",
       "visibility": "menu",
       "apply": "live"
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@FMVWidescreenMode.original"
+        },
+        {
+          "value": 1,
+          "label": "@FMVWidescreenMode.fill"
+        }
+      ],
+      "label": "@FMVWidescreenMode",
+      "description": "@FMVWidescreenMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
     },
     {
       "id": "MAIN.FPSLimit",
@@ -224,6 +249,34 @@
       "default": 1,
       "label": "@ConfineCursor",
       "description": "@ConfineCursor.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@GamepadIcons.auto"
+        },
+        {
+          "value": 1,
+          "label": "@GamepadIcons.xbox"
+        },
+        {
+          "value": 2,
+          "label": "@GamepadIcons.playstation"
+        },
+        {
+          "value": 3,
+          "label": "@GamepadIcons.nintendo"
+        }
+      ],
+      "label": "@GamepadIcons",
+      "description": "@GamepadIcons.description",
       "page": "game",
       "visibility": "menu",
       "apply": "live"

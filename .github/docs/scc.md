@@ -14,8 +14,7 @@
 
 - **Gamepad** — Keep the game’s native XInput support, sensitivity, inversion and vibration controls. Auto icons use Xbox artwork; PlayStation and Nintendo artwork can be selected manually.
 - **DLC crash** — Prevent crashes when Xbox 360 achievement conditions are met in DLC levels, including “King of the Crypt” in New Orleans and “Watch the Soap” in Portland.
-- **Co-op frame rate** — Changed coop FPS limit to 60 (custom values can be set via `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter)
-- **Ammunition** — Disabled unlimited ammo for all weapons (restore original behavior by deleting `update/weapontuning.ini`)
+- **Co-op frame rate** — The co-op frame rate limit is raised to 60 FPS, with less input delay (custom values can be set via `update/convictionsettings.ini`, `SyncMaxStepFrequency` parameter).
 - **Window focus** — In windowed mode, the game window starts focused and shows the cursor without a click.
 - **Mouse acceleration** — Negative mouse acceleration is removed.
 - **Hardware detection** — Skip hardware detection messages on startup.
@@ -38,7 +37,7 @@
 
 ### Display and effects
 
-- **Widescreen** — Projection and UI placement are corrected on wide and narrow screens. HUD Aspect Ratio Constraint uses Auto for the full player view, or a selected safe-area ratio.
+- **Widescreen** — Projection and UI placement are corrected on wide and narrow screens. HUD Aspect Ratio Constraint uses Auto for the full player view, or a selected safe-area ratio. HUD Scale makes the HUD and button prompts smaller or larger; they stay at their screen edges.
 - **Cinematics** — Cutscene Borders preserves the authored 16:9 frame. Both fits it with side bars on wide screens and top/bottom bars on narrow screens; Off fills the view.
 - **Videos** — The 16:9 movies are shown whole at their own aspect, centered, with black bars where the screen is wider or narrower. Window resize requests made during a fullscreen video apply when playback finishes, keeping its picture and captions correctly proportioned.
 - **Depth of field** — Optionally disable the depth of field effect.
@@ -52,6 +51,7 @@
 
 - **Loose files** — Load unpacked files from disk.
 - **DLC** — Restores DLC content made unavailable by the server shutdown.
+- **Limited ammo** — Weapons with unlimited ammo in the original game use magazines and ammo like the others. On by default; the Vanilla preset turns it off. A `src/system/update/weapontuning.ini` left over from an older version keeps ammo limited even with this option off; that file can be deleted.
 - **Last known position** — Optionally hide the silhouette that marks where enemies last saw you.
 - **Controls** — Enable the Blacklist control scheme on keyboard and gamepad: cover is toggled with a press and released by any action that leaves it, drops from ledges are on the cover button, as in Blacklist, and Death from Above is on E / X. The default keyboard keys put crouch on Ctrl, reload on R and the gadget on the middle mouse button; an existing profile keeps its own keys, change them in the controls menu.
 

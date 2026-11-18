@@ -55,7 +55,7 @@
   "MAIN.TextLanguage.description": "Lingua del menu Plugin. Automatico usa l’inglese. Riapri il menu dopo la modifica.",
   "page.compatibility": "Compatibilità",
   "PauseOnFocusLoss": "Pausa in background",
-  "FPSLimit.description": "Limita la frequenza dei fotogrammi. Si applica subito.",
+  "FPSLimit.description": "Limita la frequenza dei fotogrammi a 120 FPS al massimo, il limite del gioco; l’opzione monitor segue la frequenza fino a 120. Si applica subito.",
   "PauseOnFocusLoss.description": "In una modalità finestra, il gioco va in pausa e resta muto mentre è attiva un'altra finestra. Disattivato continua a girare. Si applica subito.",
   "FPSLimit.unlimited": "Illimitato",
   "FPSLimit": "Limite fotogrammi",

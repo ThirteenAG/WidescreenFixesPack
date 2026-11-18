@@ -105,7 +105,7 @@ export namespace HD2Cutscene
             [](SafetyHookContext& context) { Viewport(context, *w, *h); });
         const auto update = []()
         {
-            mode.store(std::clamp(std::stoi(FixSettings().Get("MAIN.CutsceneBorders")), 0, 3), std::memory_order_relaxed);
+            mode.store(std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3), std::memory_order_relaxed);
             dirty.store(true, std::memory_order_release);
         };
         update();

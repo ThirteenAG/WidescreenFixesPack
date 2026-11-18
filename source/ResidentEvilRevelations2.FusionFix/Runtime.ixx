@@ -5,6 +5,7 @@ module;
 #include "FixSettings.hpp"
 #include "Shared/D3D9Options.hpp"
 #include "Shared/PadInput.hpp"
+#include "Shared/WindowCursor.hpp"
 #include <mutex>
 #include <map>
 
@@ -159,6 +160,7 @@ namespace Rev2Runtime
         Rev2Overlay::AttachWindow(parameters.hFocusWindow);
         if (Rev2Overlay::cursorWindow.load() != parameters.hFocusWindow)
             PostMessageW(parameters.hFocusWindow, WM_NULL, 0, 0);
+        CursorConfinement::Suspend(Rev2Overlay::BlocksInput());
         Rev2Overlay::Keyboard(parameters.hFocusWindow);
         Rev2Overlay::Draw(device);
     }
@@ -181,6 +183,8 @@ namespace Rev2Runtime
 
     export void Init()
     {
+        WindowCursor::Initialize(FixSettings());
+        WFP::onShutdownEvent() += []() { WindowCursor::Shutdown(); };
         const auto updatePause = []()
         {
             Rev2Overlay::PauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"));

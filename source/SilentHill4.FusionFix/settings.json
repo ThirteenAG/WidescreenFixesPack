@@ -28,6 +28,11 @@
       "section": "camera"
     },
     {
+      "id": "graphics",
+      "title": "@page.graphics",
+      "section": "graphics"
+    },
+    {
       "id": "game",
       "title": "@page.game",
       "section": "gameplay"
@@ -85,7 +90,7 @@
       "page": "display",
       "group": "@group.resolution",
       "visibility": "editor",
-      "apply": "restart"
+      "apply": "live"
     },
     {
       "id": "MAIN.ResY",
@@ -105,7 +110,7 @@
       "page": "display",
       "group": "@group.resolution",
       "visibility": "editor",
-      "apply": "restart"
+      "apply": "live"
     },
     {
       "id": "MAIN.CutsceneBorders",
@@ -188,7 +193,12 @@
       "control": [
         "cycler",
         "segmented"
-      ]
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
     },
     {
       "id": "CAMERA.CameraSpeed",
@@ -269,6 +279,45 @@
       "enabledIf": {
         "setting": "CAMERA.Camera",
         "equals": 1
+      }
+    },
+    {
+      "id": "GRAPHICS.AnisotropicFiltering",
+      "type": "choice",
+      "default": 16,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 2,
+          "label": "2x"
+        },
+        {
+          "value": 4,
+          "label": "4x"
+        },
+        {
+          "value": 8,
+          "label": "8x"
+        },
+        {
+          "value": 16,
+          "label": "16x"
+        }
+      ],
+      "label": "@anisotropy",
+      "description": "@anisotropy.description",
+      "page": "graphics",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 16,
+        "enhanced": 16
       }
     },
     {

@@ -49,11 +49,10 @@ Vanilla shows the logos and the intro movie, shows the movies in the game's 4:3 
 - **Update notice:** with **Check for updates** on, a new version is announced in the help bar of the Plugins list; FusionFixHub opens after the game exits when it is installed.
 - **Ctrl+F10** opens the in-game settings overlay.
 
-**Frame rate limit** defaults to 60 FPS and can be changed live. Higher rates may affect gameplay; 0 removes the limit and -1 follows the monitor refresh rate.
+**Frame rate limit** defaults to 60 FPS and can be changed live; the game itself runs at no more than 60 FPS, so the limit can only lower that. 0 removes the limit and -1 follows the monitor refresh rate.
 
 ## Known limits
 
-- Alt+Enter isn't handled; the window mode applies at start.
 - Turning **Pause in background** off while the game is already paused in the background takes effect when the game window is active again.
 
 ## Installation

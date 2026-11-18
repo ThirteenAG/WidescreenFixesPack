@@ -196,7 +196,26 @@
       "label": "@UNLOCKS.UnlockDLC",
       "description": "@UNLOCKS.UnlockDLC.description",
       "page": "gameplay",
-      "apply": "restart"
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "GAMEPLAY.LimitedAmmo",
+      "type": "bool",
+      "default": true,
+      "label": "@GAMEPLAY.LimitedAmmo",
+      "description": "@GAMEPLAY.LimitedAmmo.description",
+      "page": "gameplay",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
     },
     {
       "id": "2INSTANCESPLITSCREEN.Enable",
@@ -244,16 +263,6 @@
       "default": false,
       "label": "@FILELOADER.DumpPackedFiles",
       "description": "@FILELOADER.DumpPackedFiles.description",
-      "page": "compatibility",
-      "apply": "restart",
-      "visibility": "file"
-    },
-    {
-      "id": "LAN.LANHelperExePath",
-      "type": "string",
-      "default": "",
-      "label": "@LAN.LANHelperExePath",
-      "description": "@LAN.LANHelperExePath.description",
       "page": "compatibility",
       "apply": "restart",
       "visibility": "file"
@@ -356,7 +365,12 @@
       "label": "@GAMEPLAY.LastKnownPosition",
       "description": "@GAMEPLAY.LastKnownPosition.description",
       "page": "gameplay",
-      "apply": "live"
+      "apply": "live",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
     },
     {
       "id": "MAIN.RawInputMouse",
@@ -642,6 +656,22 @@
         {
           "value": "32:9"
         }
+      ]
+    },
+    {
+      "id": "MAIN.HudScale",
+      "type": "float",
+      "default": 1,
+      "label": "@HudScale",
+      "description": "@HudScale.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "min": 0.5,
+      "max": 1.5,
+      "step": 0.05,
+      "control": [
+        "stepper"
       ]
     }
   ]

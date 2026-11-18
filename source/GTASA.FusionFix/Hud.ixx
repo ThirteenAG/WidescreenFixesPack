@@ -241,7 +241,7 @@ static float GetScriptLeftOffset()
     // Use the game's current scale, including HudWidthScale, to align 29-unit
     // script panels with that edge while preserving their relative spacing.
     const float helpBoxMargin = SCREEN_WIDTH * *HelpTextScaleX.get() * 34.0f - 5.0f;
-    return -fWidescreenSCMOffset + helpBoxMargin - SCREEN_SCALE_X(29.0f);
+    return -fWidescreenHudOffset + helpBoxMargin - SCREEN_SCALE_X(29.0f);
 }
 
 static float GetScriptOffset(ScriptLayout layout, float left, float right)
@@ -249,7 +249,7 @@ static float GetScriptOffset(ScriptLayout layout, float left, float right)
     if (layout == ScriptLayout::LeftPanels && right < 240.0f)
         return GetScriptLeftOffset();
     if (layout == ScriptLayout::RightPanels && left > 400.0f)
-        return -2.0f * fWidescreenHudOffset43 + fWidescreenSCMOffset;
+        return -2.0f * fWidescreenHudOffset43 + fWidescreenHudOffset;
     return -fWidescreenHudOffset43;
 }
 
@@ -397,7 +397,7 @@ void __cdecl DisplayScriptMenu(uint8_t id, uint8_t bright)
         // Stock shop/gym panels start at 29/31; result tables remain centered.
         const float x = panel->position.x / SCREEN_SCALE_X(1.0f);
         if (x < 160.0f) offset = GetScriptLeftOffset();
-        else if (x > 480.0f) offset = -2.0f * fWidescreenHudOffset43 + fWidescreenSCMOffset;
+        else if (x > 480.0f) offset = -2.0f * fWidescreenHudOffset43 + fWidescreenHudOffset;
     }
     else if (FrontendMenuManager->m_bDrawingMap)
         offset = 0.0f;

@@ -29,9 +29,16 @@ inline bool RotateCameraBasis(float* matrix, float yaw, float pitch)
     }
     return true;
 }
+// After the look input stops, the view waits this long and then eases back behind the car
+constexpr float LookReturnDelay = 1.5f;
+inline float LookReturnFade(float dt)
+{
+    return std::exp(-6.0f * dt);
+}
+
 struct PadOrbit
 {
-    float yaw = 0, pitch = 0;
+    float yaw = 0, pitch = 0, hold = 0;
     static float Axis(float v)
     {
         if (!std::isfinite(v)) return 0;
@@ -47,13 +54,19 @@ struct PadOrbit
         if (invert) y = -y;
         if (x == 0 && y == 0)
         {
-            const float fade = 1.0f / (1.0f + 6.0f * dt);
+            if (hold > 0)
+            {
+                hold -= dt;
+                return;
+            }
+            const float fade = LookReturnFade(dt);
             yaw *= fade; pitch *= fade;
             if (std::fabs(yaw) < 0.0001f) yaw = 0;
             if (std::fabs(pitch) < 0.0001f) pitch = 0;
         }
         else
         {
+            hold = LookReturnDelay;
             yaw = std::clamp(yaw + x * speed * 2.4f * dt, -2.0943951f, 2.0943951f);
             pitch = std::clamp(pitch + y * speed * 1.2f * dt, -0.6108652f, 0.6108652f);
         }

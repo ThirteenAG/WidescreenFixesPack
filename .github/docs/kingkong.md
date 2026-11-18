@@ -58,7 +58,7 @@ Widescreen, HUD, videos, input, timing and existing Direct3D 9 shader replacemen
 - The "Press SPACE to continue" screen after the logos stays; press a key to continue.
 - The Ctrl+F10 overlay is not available in the DirectX 8 executable (kingkong8.exe of the Signature Edition).
 - Long menu entries can continue on another line or page. Changing a value can move nearby entries to a different page.
-- Controller bindings are configured with SettingsApplication.exe. Automatic full-game bindings and selectable controller prompt sets are not provided.
+- Gamer's Edition: a controller works out of the box with an Xbox 360 layout (Jack: A use/help, B magazines, LT arm, RT fire, RB reload, LS crouch, RS precise aim; Kong: A hit, B grab, X jump, Y rage; left stick moves) while no controller bindings are saved; SettingsApplication.exe changes them. Selectable controller prompt sets are not provided.
 - Some small effects, such as swinging chains, still move faster above 60 FPS.
 
 ---

@@ -26,6 +26,7 @@ Use **More Pages** and **Previous Pages** to move through settings. **Details** 
 | Video mode | Original aspect shows the whole frame with its black bars; Fill enlarges the movie past the black bars around the picture until the picture fits the screen, nothing is cut off; live | Fill |
 | Pause when unfocused | On pauses while another window is active; live | On |
 | Confine cursor | On keeps the cursor inside the active game window; live | On |
+| Gamepad icons | Automatic (Xbox), Xbox, PlayStation or Nintendo button pictures in prompts while the controller is in use; live | Automatic |
 | Skip intro | Skip publisher and studio logos while preserving the game's intro; restart | On |
 | Check for updates | Off makes no network request; live | Off |
 
@@ -41,13 +42,12 @@ The HUD keeps its proportions. With **HUD aspect ratio** on Auto, the weapon and
 
 Ctrl+F10 opens the developer overlay with every setting and a Debug › Info page.
 
-Controllers: the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox controller to it. Bind the controller in **Options → Controls**.
+Controllers: the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox 360 controller to it, and the game's own Xbox 360 control layout is used out of the box. **Options → Controls** changes the bindings. While the controller is in use, prompts show its buttons; using the keyboard or moving the mouse brings back the key names. A prompt changes when the game shows it again.
 
 ## Known limits
 
 - The game runs and renders at its own fixed 30 frames per second.
 - The gameplay FOV multiplier leaves native zoom, active cutscenes and unavailable camera state unchanged.
-- Prompts show keyboard keys; controller button icons are not available.
 - Long labels and descriptions continue across lines or pages. The menu remains translucent over the title scene.
 
 ## Installation

@@ -7,5 +7,7 @@
   "UnthrottleEmuDuringDoorSkip": "Schnellere Türübergänge",
   "UnthrottleEmuDuringDoorSkip.description": "Während das Spiel den nächsten Raum lädt, läuft Dolphin mit voller Geschwindigkeit statt mit der Konsolengeschwindigkeit, sodass Raumwechsel schneller enden. Das Spiel selbst läuft mit normaler Geschwindigkeit. Funktioniert mit und ohne übersprungene Türen. Nach einer Änderung Dolphin neu starten.",
   "LightSyncRGB": "RGB-Beleuchtung",
-  "LightSyncRGB.description": "Logitech-G-LIGHTSYNC-Tastaturen zeigen den Zustand des Spielers: Grün für Fine, Orange für Caution, Rot für Danger, Lila bei Vergiftung, mit einem Herzschlag-Effekt. Benötigt Logitech G HUB; ohne es hat diese Einstellung keine Wirkung. Nach einer Änderung Dolphin neu starten."
+  "LightSyncRGB.description": "Logitech-G-LIGHTSYNC-Tastaturen zeigen den Zustand des Spielers: Grün für Fine, Orange für Caution, Rot für Danger, Lila bei Vergiftung, mit einem Herzschlag-Effekt. Benötigt Logitech G HUB; ohne es hat diese Einstellung keine Wirkung. Nach einer Änderung Dolphin neu starten.",
+  "SkipIntro": "Intro überspringen",
+  "SkipIntro.description": "Direkt zum Titelbild: Resident Evil 2 überspringt den Warnhinweis und den Titelfilm, Resident Evil 3 den Warnhinweis, den Lizenzhinweis, das Capcom-Logo und den Titelfilm. Der Eröffnungsfilm eines neuen Spiels läuft weiterhin. Starte Dolphin nach einer Änderung neu."
 }

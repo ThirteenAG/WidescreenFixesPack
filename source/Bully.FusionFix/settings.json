@@ -233,20 +233,6 @@
       }
     },
     {
-      "id": "MAIN.AutoGamepad",
-      "type": "bool",
-      "default": true,
-      "label": "@controls.auto",
-      "description": "@controls.auto.description",
-      "page": "controls",
-      "apply": "live",
-      "presets": {
-        "vanilla": false,
-        "recommended": true,
-        "enhanced": true
-      }
-    },
-    {
       "id": "MAIN.GamepadCameraSpeed",
       "type": "float",
       "default": 1.0,

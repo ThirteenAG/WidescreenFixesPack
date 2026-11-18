@@ -71,6 +71,13 @@ void InstallButtonIcons();
 void InstallMenu();
 void LoadBindings();
 bool SaveBindings();
+// Applies the scheme-dependent code patches (menu toggles, device switch).
+void ApplyControls();
+// Typed cheats of the PC scheme.
+void UpdateCheats();
+// The GXT key whose text names the button an action has in the modern
+// scheme, or nullptr.
+const char* ModernTextKey(const char* key);
 // Per-frame menu bookkeeping, from the pad update.
 void TickMenu();
 }

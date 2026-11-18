@@ -138,10 +138,23 @@ export namespace TrueCrimeInput
     inline std::vector<SafetyHookMid> AimHooks;
     inline float AimRest[2]{};
 
+    // Precision aim from the car (drive-by): its turn adds axis^3 x 5e-11 rad an update to two angles, clamped; the mouse
+    // turns them directly instead. The car's turn runs after the input is built, so the input sees it from the last update.
+    inline std::atomic<bool> CarAimSeen{ false };
+    inline bool CarAimActive = false;
+    inline float* CarAimAngles[2]{};        // turn, pitch
+    inline uint8_t* GameInvertY = nullptr;
+
+    inline void UpdateCarAim()
+    {
+        CarAimActive = CarAimSeen.exchange(false, std::memory_order_relaxed);
+    }
+
     inline bool OnFootAim()
     {
         auto player = PlayerObject.get();
-        const bool aiming = player && player[9] != 5 && *reinterpret_cast<int*>(player + 0xD68) == 3;
+        const bool aiming = player && ((player[9] != 5 && *reinterpret_cast<int*>(player + 0xD68) == 3) ||
+            (player[9] == 5 && CarAimActive));
         if (!aiming)
         {
             AimX.store(0, std::memory_order_relaxed);
@@ -170,6 +183,26 @@ export namespace TrueCrimeInput
         const int part = static_cast<int>(std::clamp(movement, double(INT32_MIN), double(INT32_MAX)));
         rest = movement > INT32_MIN && movement < INT32_MAX ? static_cast<float>(movement - part) : 0.0f;
         return static_cast<int>(std::clamp(int64_t(game) + part, int64_t(INT32_MIN), int64_t(INT32_MAX)));
+    }
+
+    template<bool Pitch> int __fastcall CarAimAxis(void* state, void* edx, int axis, int deadzone)
+    {
+        const int game = AxisValue(state, edx, axis, deadzone);
+        CarAimSeen.store(true, std::memory_order_relaxed);
+        const int32_t counts = (Pitch ? AimY : AimX).exchange(0, std::memory_order_relaxed);
+        if (!counts)
+            return game;
+        const float configuredSensitivity = FixSettings().Float("MAIN.MouseSensitivity");
+        const float sensitivity = std::isfinite(configuredSensitivity) ? std::clamp(configuredSensitivity, 0.1f, 5.0f) : 1.0f;
+        float turn = float(counts) * 0.002f * sensitivity;
+        if (Pitch)
+        {
+            // The game's own vertical axis is the negated mouse, then its invert option
+            turn = -turn * (*GameInvertY ? -1.0f : 1.0f) * (FixSettings().Bool("MAIN.InvertMouseY") ? -1.0f : 1.0f);
+        }
+        float& angle = *CarAimAngles[Pitch];
+        angle = std::clamp(angle + turn, -0.3f, Pitch ? 0.3f : 1.3f);
+        return game;
     }
 
     inline float __cdecl Unwrapped(float value)
@@ -232,6 +265,7 @@ export namespace TrueCrimeInput
             {
                 AimHooks.push_back(safetyhook::create_mid(match.get<void>(6), [](SafetyHookContext& context)
                 {
+                    UpdateCarAim();
                     if (!OnFootAim())
                         return;
                     TakeAim(*reinterpret_cast<int32_t*>(context.esp + 0x2C), *reinterpret_cast<int32_t*>(context.esp + 0x30));
@@ -247,11 +281,25 @@ export namespace TrueCrimeInput
             // The yaw and pitch turns, without their wrap
             injector::MakeCALL(hook::get_pattern("F3 0F 59 05 ? ? ? ? 51 F3 0F 11 04 24 E8 ? ? ? ? D8 0D ? ? ? ? 8D 84 24", 14), Unwrapped, true);
             injector::MakeCALL(hook::get_pattern("F7 DB F3 0F 2A C3 F3 0F 59 05 ? ? ? ? 51 F3 0F 11 04 24 E8", 20), Unwrapped, true);
+            // The car's precision aim turn: axis reads, the two angles and the game's invert option
+            auto car = hook::pattern("8B 4D 08 6A 01 6A 02 E8 ? ? ? ? 8B 4D 08 6A 01 6A 03 8B F8 E8");
+            injector::MakeCALL(car.get_first(7), CarAimAxis<false>, true);
+            injector::MakeCALL(car.get_first(21), CarAimAxis<true>, true);
+            auto angles = hook::pattern("DC 0D ? ? ? ? D8 05 ? ? ? ? D9 1D ? ? ? ? D9 05 ? ? ? ? D9 05");
+            if (angles.size() != 2)
+            {
+                angles.count(2);
+                std::abort();
+            }
+            CarAimAngles[0] = *angles.get(0).get<float*>(8);
+            CarAimAngles[1] = *angles.get(1).get<float*>(8);
+            GameInvertY = *hook::pattern("A0 ? ? ? ? 84 C0 74 02 F7 D9 8B D1 0F AF D1").get_first<uint8_t*>(1);
         }
         else // TrueCrimeMB.exe: x at esp+20, y in eax before it is negated, counts at esp+38/3C
         {
             AimHooks.push_back(safetyhook::create_mid(hook::pattern("F7 D8 89 44 24 2C DD D8").get_first(), [](SafetyHookContext& context)
             {
+                UpdateCarAim();
                 if (!OnFootAim())
                     return;
                 TakeAim(*reinterpret_cast<int32_t*>(context.esp + 0x38), *reinterpret_cast<int32_t*>(context.esp + 0x3C));
@@ -266,6 +314,13 @@ export namespace TrueCrimeInput
             // The yaw and pitch turns, without their wrap
             injector::MakeCALL(hook::get_pattern("D8 0D ? ? ? ? 51 D9 1C 24 E8 ? ? ? ? D8 0D ? ? ? ? 8D 84 24", 10), Unwrapped, true);
             injector::MakeCALL(hook::get_pattern("F7 DB 89 5C 24 18 DB 44 24 18 68 00 00 00 3F 68 00 00 00 BF 51 D8 0D", 30), Unwrapped, true);
+            // The car's precision aim turn: axis reads, the two angles and the game's invert option
+            auto car = hook::pattern("6A 01 6A 02 8B CF E8 ? ? ? ? 6A 01 6A 03 8B CF 89 44 24 ? E8").count(2).get(0);
+            injector::MakeCALL(car.get<void>(6), CarAimAxis<false>, true);
+            injector::MakeCALL(car.get<void>(21), CarAimAxis<true>, true);
+            CarAimAngles[0] = *hook::pattern("68 66 66 A6 3F DB 44 24 ? 68 9A 99 99 BE 51 DC 0D ? ? ? ? D8 05").get_first<float*>(23);
+            CarAimAngles[1] = *hook::pattern("68 9A 99 99 3E DB 44 24 ? 68 9A 99 99 BE 51 DC 0D ? ? ? ? D8 05").get_first<float*>(23);
+            GameInvertY = *hook::pattern("A0 ? ? ? ? 84 C0 74 02 F7 DF 8B D7 0F AF D7").get_first<uint8_t*>(1);
         }
         // Guns mode: the mouse part of the camera axes, where the game's input builds them (x stored, y about to be)
         auto flags = hook::pattern("8A 0D ? ? ? ? 74 ? 80 3D");

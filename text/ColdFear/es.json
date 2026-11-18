@@ -55,7 +55,7 @@
   "MAIN.TextLanguage.description": "Idioma del menú Plugins. Automático usa inglés. Vuelve a abrir el menú tras cambiarlo.",
   "page.compatibility": "Compatibilidad",
   "PauseOnFocusLoss": "Pausa en segundo plano",
-  "FPSLimit.description": "Limita la tasa de fotogramas. Se aplica al instante.",
+  "FPSLimit.description": "Limita la tasa de fotogramas a 120 FPS como máximo, el límite propio del juego; la opción del monitor sigue la frecuencia hasta 120. Se aplica al instante.",
   "PauseOnFocusLoss.description": "En un modo de ventana, el juego se pausa y se silencia mientras otra ventana está activa. Desactivado sigue en marcha. Se aplica al instante.",
   "FPSLimit.unlimited": "Ilimitado",
   "FPSLimit": "Límite de fotogramas",

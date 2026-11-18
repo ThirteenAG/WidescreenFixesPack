@@ -20,11 +20,15 @@ constexpr auto logPath = "ms0:/PSP/PLUGINS/SplinterCellEssentials.PPSSPP.FusionF
 // so two "Loaded plugin" messages are expected. A duplicate plugin folder or
 // ini would start a second copy in the same stage; it must not hook twice.
 void CompleteSettings() {
+    // Read the file here: in the loader stage the reader's size is cleared after Start
+    // reads it, so every saved value would be rewritten with its default.
+    inireader.SetIniPath(ini);
     console::portable::IniValue defaults[] = {
         {"MAIN", "SkipIntro", "1"},
         {"MAIN", "StickDeadzone", "0.1"},
         {"MAIN", "SpeedStickControl", "1"},
         {"MAIN", "FPSLimit", "60"},
+        {"MAIN", "GamepadIcons", "0"},
         {"MAIN", "UnthrottleEmuDuringLoading", "1"},
         {"MAIN", "FOVFactor", "1.0"},
         {"MAIN", "HudAspectRatioConstraint", "Auto"},
@@ -82,6 +86,7 @@ int Install() {
     }
     InstallCamera();
     InstallTiming();
+    InstallIcons();
     return Finish();
 }
 }

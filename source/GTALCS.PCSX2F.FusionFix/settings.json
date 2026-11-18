@@ -55,7 +55,12 @@
       "choices": [
         { "value": 30, "label": "30 FPS" },
         { "value": 60, "label": "60 FPS" }
-      ]
+      ],
+      "presets": {
+        "vanilla": 30,
+        "recommended": 30,
+        "enhanced": 60
+      }
     },
     {
       "id": "MAIN.UnthrottleEmuDuringLoading",
@@ -134,6 +139,44 @@
         "recommended": 0,
         "enhanced": 0
       }
+    },
+    {
+      "id": "CONTROLS.ModernControlScheme",
+      "type": "bool",
+      "default": 1,
+      "label": "@controls.moderncontrolscheme",
+      "description": "@controls.moderncontrolscheme.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.25,
+      "max": 4.0,
+      "step": 0.25,
+      "label": "@controls.gamepadcameraspeed",
+      "description": "@controls.gamepadcameraspeed.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.InvertGamepadY",
+      "type": "bool",
+      "default": 0,
+      "label": "@controls.invertgamepady",
+      "description": "@controls.invertgamepady.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
     },
     {
       "id": "CONTROLS.PCControlScheme",

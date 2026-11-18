@@ -26,7 +26,7 @@
 - **Window mode** — Fullscreen, Windowed or Borderless; restart required. Borderless uses the desktop resolution.
 - **HUD aspect ratio constraint** — Auto uses the screen edges; 4:3, 16:9, 21:9 or 32:9 limits the HUD to a centered box. Applies live.
 - **Frame rate limit** — 0 is unlimited, −1 follows the display refresh rate; a positive value selects the cap. Default 60; applies live.
-- **Cutscene borders** — Off or Pillarbox; applies live. Pillarbox keeps the original story framing with side borders.
+- **Cutscene borders** — Off or Both; applies live. Both keeps the original 4:3 story framing with black bars at the sides (above and below on screens narrower than 4:3).
 - **Pause when unfocused** — Pauses gameplay while another window is active; applies live.
 - **Confine cursor** — Keeps the cursor inside the focused game window; applies live.
 - **Skip intro** — Enabled by default; restart required.
@@ -41,7 +41,7 @@ Settings can be changed on fusionfix.io or in FusionFixHub. Live settings apply 
 
 The archive includes Xidi for the game's native DirectInput controls. Connect an XInput controller, or expose a PlayStation or Nintendo controller through Steam Input or DS4Windows.
 
-Use the left stick to steer, RT to accelerate and LT to brake. A activates Turbo Boost, B reverses, X activates Super Pursuit Mode, Y scans, LB/RB ski left/right, the right-stick button toggles night vision and the left-stick button resets KITT. View/Back changes camera, Menu/Start pauses or starts a mission, and d-pad left/right selects the scan target. Menus use the d-pad, A to confirm and B to return. The Controls page switches its button labels with the last device used.
+Use the left stick to steer, RT to accelerate and LT to brake. A activates Turbo Boost, B reverses, X activates Super Pursuit Mode, Y scans, LB/RB ski left/right, the right-stick button toggles night vision and the left-stick button resets KITT. View/Back changes camera, Menu/Start pauses or starts a mission, and d-pad left/right selects the scan target. Menus use the d-pad, A to confirm and B to return. The Controls page and the OK/Yes and Back/No labels of the front-end menus switch their button labels with the last device used.
 
 The PC engine has fixed camera positions and no free-look camera or force-feedback effects. No separate camera-speed, invert-look or vibration option is needed. The game uses rendered story scenes and contains no separate video movies requiring a playback-mode option.
 
@@ -65,7 +65,7 @@ Compatible version: **SLES-51011** (crc **989192FE**).
 - **Cockpit view** — the dashboard is a 4:3 model, so the cockpit view shows the original 4:3 picture with black sides on wider screens. Its HUD stays on the dashboard.
 - **Menus and loading screens** — keep their 4:3 proportions in the middle of the screen; the background bands fill the width.
 - **Mission start scenes** — Cutscene Borders chooses the bars: Off (the scene fills the screen), Letterbox (the original bars above and below), Pillarbox (the original 4:3 framing with bars at the sides) or Both. Subtitles stay in the 4:3 picture with Pillarbox and Both, and move to the left edge with Letterbox and Off.
-- **Videos** — the videos keep their whole 4:3 frame, including its own black bars: wider screens get bars at the sides, narrower ones above and below.
+- **Videos** — Video Display chooses Original (the whole 4:3 frame with its own black bars, with bars at the sides on wider screens) or Fill (the widescreen picture between the bars shown as large as the screen allows); applies live.
 - **Skip intro** — skips the Davilex logo and the opening video at startup. The language choice, copyright and memory card screens stay.
 
 ### Installation
@@ -78,7 +78,7 @@ Compatible version: **SLES-51011** (crc **989192FE**).
 
 The settings are stored in `PLUGINS/KnightRider.PCSX2F.FusionFix.cfg`, which is created on the first start. Change them in FusionFixHub or on fusionfix.io. The game's menus are fixed scene files, so the fix adds no settings page inside the game. Display settings apply during play within about a second and after loading a save state; Skip Intro applies the next time the emulated game starts.
 
-- **Presets** — Vanilla shows the intro and the original letterbox bars; Recommended (the default) and Enhanced skip the intro and use Both for the borders. Field of view, HUD aspect ratio and display aspect ratio keep your choice.
+- **Presets** — Vanilla shows the intro, the original letterbox bars and the videos in their original frame; Recommended (the default) and Enhanced skip the intro, use Both for the borders and Fill for the videos. Field of view, HUD aspect ratio and display aspect ratio keep your choice.
 - Setting texts: English, French, German, Italian and Spanish.
 
 ### Known limits

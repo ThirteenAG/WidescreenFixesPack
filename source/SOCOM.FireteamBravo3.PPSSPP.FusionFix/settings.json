@@ -313,6 +313,31 @@
         "recommended": 60,
         "enhanced": 60
       }
+    },
+    {
+      "id": "MAIN.ColorGrading",
+      "type": "choice",
+      "default": 0,
+      "label": "@grading",
+      "description": "@grading.description",
+      "page": "options",
+      "visibility": "menu",
+      "apply": "restart",
+      "choices": [
+        {
+          "value": 1,
+          "label": "@grading.original"
+        },
+        {
+          "value": 0,
+          "label": "@grading.off"
+        }
+      ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 0,
+        "enhanced": 0
+      }
     }
   ]
 }

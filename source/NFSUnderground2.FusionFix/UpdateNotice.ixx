@@ -22,14 +22,7 @@ export namespace NFSU2UpdateNotice
     {
         // The OK dialog with a printf text (parent package, dialog package, format, arguments); the dialog shown
         auto dialog = hook::pattern("81 EC 38 03 00 00 8D 4C 24 00 E8 ? ? ? ? 8B 84 24 48 03 00 00 8B 8C 24 44 03 00 00 50 51 8D 54 24 08 52 E8 ? ? ? ? 8B 8C 24 48 03 00 00 8B 94 24 4C 03 00 00 B8 01 00 00 00");
-        auto current = hook::pattern("A1 ? ? ? ? 8B 4C 24 04 50 51 68 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C4 0C 3B C1 75");
         static auto showDialog = reinterpret_cast<int (__cdecl*)(const char*, const char*, const char*, const void*)>(dialog.get_first());
-        static const bool initialized = [&]()
-        {
-            CurrentDialog.SetAddress(*current.get_first<int32_t*>(1));
-            return true;
-        }();
-        (void)initialized;
         RWGTA::UpdateCheck::Config config;
         config.pluginId = "NFSUnderground2.FusionFix";
         config.fileVersion = rsc_FileVersion;

@@ -5,9 +5,7 @@ module;
 #include "DeveloperOverlay.hpp"
 #include "Shared/MaxPayne/GamepadButtons.hpp"
 #include "Shared/MaxPayne/NativeIcons.hpp"
-#define DIRECTINPUT_VERSION 0x0700
-#include <dinput.h>
-#include "Shared/PadInput.hpp"
+#include "Shared/MaxPayne/Pad.hpp"
 #include <stdexcept>
 
 export module input;
@@ -15,211 +13,10 @@ export module input;
 import ComVars;
 import xidi;
 
-#pragma comment(lib, "dinput.lib")
-#pragma comment(lib, "dxguid.lib")
-
-// DirectInput 7 interface pointers
-static IDirectInput* g_pDI = nullptr;
-static IDirectInputDevice* g_pJoystick = nullptr;
-static DIJOYSTATE g_LastJoyState = {};
-static DIJOYSTATE g_PrevJoyState = {};
-static bool g_InputEnabled = false;
-static bool g_JoystickDisconnected = false;
-static ULONGLONG g_NextJoystickProbe = 0;
-
-DIJOYSTATE NeutralJoystickState()
-{
-    DIJOYSTATE state{};
-    state.lX = state.lY = state.lZ = 32768;
-    state.lRx = state.lRy = state.lRz = 32768;
-    state.rglSlider[0] = state.rglSlider[1] = 32768;
-    for (auto& pov : state.rgdwPOV)
-        pov = DWORD(-1);
-    return state;
-}
-
-// Callback for device enumeration
-BOOL CALLBACK EnumJoysticksCallback(const DIDEVICEINSTANCE* pdidInstance, LPVOID pContext)
-{
-    auto pDI = static_cast<IDirectInput*>(pContext);
-
-    // Create device
-    HRESULT hr = pDI->CreateDevice(pdidInstance->guidInstance, &g_pJoystick, nullptr);
-    if (FAILED(hr))
-        return DIENUM_CONTINUE;
-
-    // Set data format for joystick
-    hr = g_pJoystick->SetDataFormat(&c_dfDIJoystick);
-    if (FAILED(hr))
-    {
-        g_pJoystick->Release();
-        g_pJoystick = nullptr;
-        return DIENUM_CONTINUE;
-    }
-
-    hr = g_pJoystick->SetCooperativeLevel(nullptr, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE);
-    if (SUCCEEDED(hr))
-        hr = g_pJoystick->Acquire();
-    if (FAILED(hr))
-    {
-        g_pJoystick->Release();
-        g_pJoystick = nullptr;
-        return DIENUM_CONTINUE;
-    }
-
-    // Stop enumeration once the device can be used.
-    return DIENUM_STOP;
-}
-
-void CreateInput()
-{
-    g_InputEnabled = true;
-    g_NextJoystickProbe = GetTickCount64() + 1000;
-    if (g_pJoystick)
-        return;
-    HRESULT hr;
-
-    // Create DirectInput interface (DirectInput 7)
-    if (!g_pDI)
-    {
-        hr = DirectInputCreate(GetModuleHandleA(nullptr), DIRECTINPUT_VERSION, &g_pDI, nullptr);
-        if (FAILED(hr))
-            return;
-    }
-
-    // Enumerate joysticks
-    hr = g_pDI->EnumDevices(DIDEVTYPE_JOYSTICK, EnumJoysticksCallback, g_pDI, DIEDFL_ATTACHEDONLY);
-    if (FAILED(hr))
-    {
-        if (g_pDI)
-        {
-            g_pDI->Release();
-            g_pDI = nullptr;
-        }
-        return;
-    }
-
-}
-
-void UpdateOverlayPad()
-{
-    static constexpr uint16_t buttons[] =
-    {
-        0x4000, 0x2000, 0x8000, 0x1000, 0x400, 0x800, 0x100, 0x200,
-        0x1, 0x8, 0x2, 0x4, 0x10, 0x40, 0x80, 0x20,
-    };
-    uint16_t held = 0;
-    for (size_t i = 0; i < std::size(buttons); ++i)
-    {
-        if (g_LastJoyState.rgbButtons[i] & 0x80)
-            held |= buttons[i];
-    }
-    auto axis = [](LONG value)
-    {
-        return static_cast<int8_t>(std::clamp((value - 32768) / 256, LONG(-127), LONG(127)));
-    };
-    MaxPayneOverlay::Gamepad(held, axis(g_LastJoyState.lX), axis(g_LastJoyState.lY));
-}
-
 void UpdateInput()
 {
-    struct OverlayPadUpdate
-    {
-        ~OverlayPadUpdate()
-        {
-            UpdateOverlayPad();
-        }
-    } overlayPadUpdate;
-    g_JoystickDisconnected = false;
-    g_PrevJoyState = g_LastJoyState;
-    if (!g_InputEnabled)
-        return;
-    if (!g_pJoystick && GetTickCount64() >= g_NextJoystickProbe)
-        CreateInput();
-    if (!g_pJoystick)
-    {
-        g_LastJoyState = NeutralJoystickState();
-        return;
-    }
-
-    DIJOYSTATE state{};
-    HRESULT hr = g_pJoystick->GetDeviceState(sizeof(state), &state);
-    if (FAILED(hr) && SUCCEEDED(g_pJoystick->Acquire()))
-        hr = g_pJoystick->GetDeviceState(sizeof(state), &state);
-    if (FAILED(hr))
-    {
-        g_LastJoyState = NeutralJoystickState();
-        g_JoystickDisconnected = true;
-        g_pJoystick->Unacquire();
-        g_pJoystick->Release();
-        g_pJoystick = nullptr;
-        g_NextJoystickProbe = GetTickCount64() + 1000;
-        return;
-    }
-    g_LastJoyState = state;
-
-    // Held input must not take the device back from a newer keyboard or mouse action.
-    auto ChangedAxis = [](LONG value, LONG previous)
-    {
-        return std::abs(value - 32768) > 4915 && std::abs(value - previous) > 128;
-    };
-    bool bActive = ChangedAxis(g_LastJoyState.lX, g_PrevJoyState.lX) || ChangedAxis(g_LastJoyState.lY, g_PrevJoyState.lY) ||
-        ChangedAxis(g_LastJoyState.lRx, g_PrevJoyState.lRx) || ChangedAxis(g_LastJoyState.lRy, g_PrevJoyState.lRy);
-    for (int i = 0; i < 16 && !bActive; ++i)
-        bActive = (g_LastJoyState.rgbButtons[i] & 0x80) != 0 && (g_PrevJoyState.rgbButtons[i] & 0x80) == 0;
-    if (bActive)
-        MaxPayneGamepadButtons::OnPadActivity();
-}
-
-void CleanupInput()
-{
-    g_InputEnabled = false;
-    g_JoystickDisconnected = false;
-    g_LastJoyState = NeutralJoystickState();
-    g_PrevJoyState = g_LastJoyState;
-    if (g_pJoystick)
-    {
-        g_pJoystick->Unacquire();
-        g_pJoystick->Release();
-        g_pJoystick = nullptr;
-    }
-
-    if (g_pDI)
-    {
-        g_pDI->Release();
-        g_pDI = nullptr;
-    }
-}
-
-export DIJOYSTATE* GetJoyState()
-{
-    return &g_LastJoyState;
-}
-
-export DIJOYSTATE* GetPrevJoyState()
-{
-    return &g_PrevJoyState;
-}
-
-// Buttons that skip videos, pressed on any controller. Read with XInput directly: the intro plays
-// before the game sets up its controller, and Xidi's keyboard mapping only starts with that.
-WORD GetVideoSkipButtons()
-{
-    auto pXInputGetState = PadInput::XInput().getState;
-
-    WORD wButtons = 0;
-    if (pXInputGetState)
-    {
-        for (DWORD i = 0; i < XUSER_MAX_COUNT; ++i)
-        {
-            XINPUT_STATE state = {};
-            if (pXInputGetState(i, &state) == ERROR_SUCCESS)
-                wButtons |= state.Gamepad.wButtons;
-        }
-    }
-
-    constexpr WORD wSkipButtons = XINPUT_GAMEPAD_A | XINPUT_GAMEPAD_B | XINPUT_GAMEPAD_X | XINPUT_GAMEPAD_Y | XINPUT_GAMEPAD_START | XINPUT_GAMEPAD_BACK;
-    return wButtons & wSkipButtons;
+    MaxPaynePad::Update();
+    MaxPaynePad::ToOverlay(MaxPayneOverlay::Gamepad);
 }
 
 // Stands in for PeekMessageA in the loop of the video player, which stops on a key press message.
@@ -237,7 +34,7 @@ export BOOL WINAPI VideoPeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin,
         // The loop calls this all the time, a longer gap means another video started. Buttons
         // held from before it, like the one that started a new game, don't skip it.
         bool bNewVideo = now - lastPoll > 500ms;
-        WORD wButtons = GetVideoSkipButtons();
+        WORD wButtons = MaxPaynePad::VideoSkipButtons();
         WORD wNewlyPressed = bNewVideo ? 0 : (wButtons & ~wPrevButtons);
         wPrevButtons = wButtons;
         lastPoll = now;
@@ -250,47 +47,6 @@ export BOOL WINAPI VideoPeekMessageA(LPMSG lpMsg, HWND hWnd, UINT wMsgFilterMin,
     }
 
     return PeekMessageA(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
-}
-
-// Helper to check if a button is currently pressed
-inline bool IsButtonPressed(uint8_t buttonState)
-{
-    return (buttonState & 0x80) != 0;
-}
-
-// Helper to check if a button was just pressed (pressed now but wasn't before)
-inline bool IsButtonJustPressed(uint8_t currState, uint8_t prevState)
-{
-    return IsButtonPressed(currState) && !IsButtonPressed(prevState);
-}
-
-// Helper to check if a button was just released (not pressed now but was before)
-inline bool IsButtonJustReleased(uint8_t currState, uint8_t prevState)
-{
-    return !IsButtonPressed(currState) && IsButtonPressed(prevState);
-}
-
-// Helper to convert joystick range [0-65535] to normalized [-1, 1]
-// then to mouse-like movement delta
-float ConvertJoystickToMouseDelta(LONG joystickValue, float sensitivity)
-{
-    // DirectInput joystick range: 0-65535, center at 32767
-    float normalized = ((float)joystickValue - 32768.0f) / 32767.0f;
-
-    // Apply deadzone (typically 0.15 of the range)
-    const float deadzone = 0.15f;
-    if (fabsf(normalized) < deadzone)
-        return 0.0f;
-
-    // Scale past deadzone
-    if (normalized > 0.0f)
-        normalized = (normalized - deadzone) / (1.0f - deadzone);
-    else
-        normalized = (normalized + deadzone) / (1.0f - deadzone);
-
-    // Convert to mouse-like delta with sensitivity
-    // Typical mouse movement units: scale by sensitivity factor
-    return normalized * sensitivity;
 }
 
 // The game slows the mouse down by the sniper zoom factor while zooming, the right stick needs the same
@@ -414,83 +170,52 @@ namespace MaxPayne_InputControl
         if (MaxPayneOverlay::BlocksInput())
             return 0.0f;
         auto ret = shgetFloat.unsafe_fastcall<float>(_this, edx);
+        if (ret != 0.0f)
+            return ret;
 
-        if (ret == 0.0f && g_pJoystick)
+        uint32_t inputType = *(uint32_t*)((uintptr_t)_this + 0x24);
+        switch (inputType)
         {
-            DIJOYSTATE* joyState = GetJoyState();
-            if (joyState)
+            case 0: // Movement axes
             {
-                const float stickSensitivity = 1.0f;
-
-                uint32_t inputType = *(uint32_t*)((uintptr_t)_this + 0x24);
-                switch (inputType)
-                {
-                    case 0: // Movement axes
-                    {
-                        if (_this == MaxPayne_ConfiguredInput::LeftRight)
-                        {
-                            float stickX = ConvertJoystickToMouseDelta(joyState->lX, stickSensitivity);
-                            ret = -stickX;
-                        }
-                        else if (_this == MaxPayne_ConfiguredInput::ForwardBackward)
-                        {
-                            float stickY = ConvertJoystickToMouseDelta(joyState->lY, stickSensitivity);
-                            ret = -stickY;
-                        }
-                        break;
-                    }
-                    case 1: // Right stick X
-                    {
-                        float stickX = ConvertJoystickToMouseDelta(joyState->lRx,
-                            FixSettings().Float("MAIN.GamepadCameraSpeed") * GetAimZoomSensitivity());
-                        ret = stickX;
-                        break;
-                    }
-                    case 2: // Right stick Y
-                    {
-                        float stickY = ConvertJoystickToMouseDelta(joyState->lRy,
-                            FixSettings().Float("MAIN.GamepadCameraSpeed") * GetAimZoomSensitivity());
-
-                        if (_this == MaxPayne_ConfiguredInput::AimUpDown)
-                        {
-                            auto Mouse = (uintptr_t)X_Input::getMouse();
-                            bool bInvertY = (*(uint8_t*)(Mouse + 81)) != 0;
-                            if (bInvertY)
-                                stickY = -stickY;
-                        }
-                        if (FixSettings().Bool("MAIN.InvertGamepadY"))
-                            stickY = -stickY;
-
-                        ret = stickY;
-                        break;
-                    }
-                    case 3: // D-pad weapon scrolling
-                    {
-                        bool bLeftPressed = IsButtonPressed(joyState->rgbButtons[g_ControlScheme.PreviousWeapon]) &&
-                            !IsButtonPressed(GetPrevJoyState()->rgbButtons[g_ControlScheme.PreviousWeapon]);
-                        bool bRightPressed = IsButtonPressed(joyState->rgbButtons[g_ControlScheme.NextWeapon]) &&
-                            !IsButtonPressed(GetPrevJoyState()->rgbButtons[g_ControlScheme.NextWeapon]);
-
-                        if (bLeftPressed)
-                        {
-                            ret = 1.0f;  // Previous weapon
-                        }
-                        else if (bRightPressed)
-                        {
-                            ret = -1.0f;  // Next weapon
-                        }
-                        else
-                        {
-                            ret = 0.0f;
-                        }
-                        break;
-                    }
-                    default:
-                        break;
-                }
+                auto stick = MaxPaynePad::LeftStick();
+                if (_this == MaxPayne_ConfiguredInput::LeftRight)
+                    ret = -stick.x;
+                else if (_this == MaxPayne_ConfiguredInput::ForwardBackward)
+                    ret = -stick.y;
+                break;
             }
+            case 1: // Right stick X
+            {
+                ret = MaxPaynePad::RightStick().x * FixSettings().Float("MAIN.GamepadCameraSpeed") * GetAimZoomSensitivity();
+                break;
+            }
+            case 2: // Right stick Y
+            {
+                float stickY = MaxPaynePad::RightStick().y * FixSettings().Float("MAIN.GamepadCameraSpeed") * GetAimZoomSensitivity();
+                if (_this == MaxPayne_ConfiguredInput::AimUpDown)
+                {
+                    auto Mouse = (uintptr_t)X_Input::getMouse();
+                    bool bInvertY = (*(uint8_t*)(Mouse + 81)) != 0;
+                    if (bInvertY)
+                        stickY = -stickY;
+                }
+                if (FixSettings().Bool("MAIN.InvertGamepadY"))
+                    stickY = -stickY;
+                ret = stickY;
+                break;
+            }
+            case 3: // D-pad weapon scrolling
+            {
+                if (MaxPaynePad::JustPressed(g_ControlScheme.PreviousWeapon))
+                    ret = 1.0f;
+                else if (MaxPaynePad::JustPressed(g_ControlScheme.NextWeapon))
+                    ret = -1.0f;
+                break;
+            }
+            default:
+                break;
         }
-
         return ret;
     }
 
@@ -500,43 +225,17 @@ namespace MaxPayne_InputControl
         if (MaxPayneOverlay::BlocksInput())
             return 0.0f;
         auto ret = shgetFloatWithSingleClicks.unsafe_fastcall<float>(_this, edx);
+        if (ret != 0.0f)
+            return ret;
 
-        if (ret == 0.0f && g_pJoystick)
+        uint32_t inputType = *(uint32_t*)((uintptr_t)_this + 0x24);
+        if (inputType == 3) // D-pad weapon scrolling
         {
-            DIJOYSTATE* joyState = GetJoyState();
-            DIJOYSTATE* prevJoyState = GetPrevJoyState();
-            if (joyState && prevJoyState)
-            {
-                uint32_t inputType = *(uint32_t*)((uintptr_t)_this + 0x24);
-                switch (inputType)
-                {
-                    case 3: // D-pad weapon scrolling with single-click
-                    {
-                        bool bLeftPressed = IsButtonJustPressed(joyState->rgbButtons[g_ControlScheme.PreviousWeapon],
-                                                                     prevJoyState->rgbButtons[g_ControlScheme.PreviousWeapon]);
-                        bool bRightPressed = IsButtonJustPressed(joyState->rgbButtons[g_ControlScheme.NextWeapon],
-                                                                      prevJoyState->rgbButtons[g_ControlScheme.NextWeapon]);
-
-                        if (bLeftPressed)
-                        {
-                            ret = 1.0f;  // Previous weapon
-                        }
-                        else if (bRightPressed)
-                        {
-                            ret = -1.0f;  // Next weapon
-                        }
-                        else
-                        {
-                            ret = 0.0f;
-                        }
-                        break;
-                    }
-                    default:
-                        break;
-                }
-            }
+            if (MaxPaynePad::JustPressed(g_ControlScheme.PreviousWeapon))
+                ret = 1.0f;
+            else if (MaxPaynePad::JustPressed(g_ControlScheme.NextWeapon))
+                ret = -1.0f;
         }
-
         return ret;
     }
 
@@ -546,20 +245,8 @@ namespace MaxPayne_InputControl
         if (MaxPayneOverlay::BlocksInput())
             return 0;
         auto ret = shgetButton.unsafe_fastcall<char>(_this, edx, a2);
-
-        if (ret == 0 && g_pJoystick)
-        {
-            DIJOYSTATE* joyState = GetJoyState();
-            if (joyState)
-            {
-                JoystickButton button = GetButtonForInput(_this);
-                if (button >= 0 && button < 16)
-                {
-                    ret = IsButtonPressed(joyState->rgbButtons[button]) ? 1 : 0;
-                }
-            }
-        }
-
+        if (ret == 0)
+            ret = MaxPaynePad::Pressed(GetButtonForInput(_this)) ? 1 : 0;
         return ret;
     }
 
@@ -569,22 +256,8 @@ namespace MaxPayne_InputControl
         if (MaxPayneOverlay::BlocksInput())
             return 0;
         auto ret = shgetButtonSingleClicked.unsafe_fastcall<char>(_this, edx, a2);
-
-        if (ret == 0 && g_pJoystick)
-        {
-            DIJOYSTATE* joyState = GetJoyState();
-            DIJOYSTATE* prevJoyState = GetPrevJoyState();
-
-            if (joyState && prevJoyState)
-            {
-                JoystickButton button = GetButtonForInput(_this);
-                if (button >= 0 && button < 16)
-                {
-                    ret = IsButtonJustPressed(joyState->rgbButtons[button], prevJoyState->rgbButtons[button]) ? 1 : 0;
-                }
-            }
-        }
-
+        if (ret == 0)
+            ret = MaxPaynePad::JustPressed(GetButtonForInput(_this)) ? 1 : 0;
         return ret;
     }
 
@@ -594,22 +267,8 @@ namespace MaxPayne_InputControl
         if (MaxPayneOverlay::BlocksInput())
             return 0;
         auto ret = shgetButtonReleased.unsafe_fastcall<char>(_this, edx, a2);
-
-        if (ret == 0 && (g_pJoystick || g_JoystickDisconnected))
-        {
-            DIJOYSTATE* joyState = GetJoyState();
-            DIJOYSTATE* prevJoyState = GetPrevJoyState();
-
-            if (joyState && prevJoyState)
-            {
-                JoystickButton button = GetButtonForInput(_this);
-                if (button >= 0 && button < 16)
-                {
-                    ret = IsButtonJustReleased(joyState->rgbButtons[button], prevJoyState->rgbButtons[button]) ? 1 : 0;
-                }
-            }
-        }
-
+        if (ret == 0)
+            ret = MaxPaynePad::JustReleased(GetButtonForInput(_this)) ? 1 : 0;
         return ret;
     }
 
@@ -807,13 +466,13 @@ void InitInput()
     pattern = hook::pattern("89 1D ? ? ? ? 8B 4D");
     static auto X_InputconstructHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        CreateInput();
+        MaxPaynePad::Enable(true);
     });
 
     pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? 8B CF");
     static auto X_InputdestructHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        CleanupInput();
+        MaxPaynePad::Enable(false);
     });
 
     pattern = hook::pattern("8B 0D ? ? ? ? 85 C9 74 ? 8B 01 56 FF 50 ? 5E");

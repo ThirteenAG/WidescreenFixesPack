@@ -145,15 +145,17 @@ export namespace ColdFearRuntime
 
     inline void UpdateFrameLimit()
     {
-        requestedFrameLimit.store(std::clamp(FixSettings().Int("MAIN.FPSLimit"), -1, 1000), std::memory_order_relaxed);
+        requestedFrameLimit.store(std::clamp(FixSettings().Int("MAIN.FPSLimit"), -1, 120), std::memory_order_relaxed);
     }
 
     inline void ApplyFrameLimit(HWND target)
     {
         const int requested = requestedFrameLimit.load(std::memory_order_relaxed);
+        // The game is timed for at most 120 frames per second
+        constexpr int maxFrameRate = 120;
         if (requested >= 0)
         {
-            D3D9Options::frameLimit = requested > 0 ? std::clamp(requested, 30, 1000) : 0;
+            D3D9Options::frameLimit = requested > 0 ? std::clamp(requested, 30, maxFrameRate) : maxFrameRate;
             return;
         }
         static HMONITOR previous = nullptr;
@@ -173,7 +175,7 @@ export namespace ColdFearRuntime
                 EnumDisplaySettingsW(info.szDevice, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1 ?
                 int(mode.dmDisplayFrequency) : 60;
         }
-        D3D9Options::frameLimit = refresh;
+        D3D9Options::frameLimit = std::min(refresh, maxFrameRate);
     }
 
     inline void InstallRetailController()

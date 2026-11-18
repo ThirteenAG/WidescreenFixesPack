@@ -1,6 +1,7 @@
 module;
 
 #include "stdafx.h"
+#include "Shared/PadInput.hpp"
 
 export module SaveCommon;
 
@@ -29,21 +30,34 @@ export struct MissionState
     }
 };
 
+namespace
+{
+    // F5, or both sticks clicked together on a pad
+    bool QuicksaveHeld()
+    {
+        if (GetAsyncKeyState(VK_F5) & 0x8000)
+            return true;
+        XINPUT_STATE pad{};
+        DWORD slot = 0;
+        constexpr WORD sticks = XINPUT_GAMEPAD_LEFT_THUMB | XINPUT_GAMEPAD_RIGHT_THUMB;
+        return PadInput::Read(pad, slot) && (pad.Gamepad.wButtons & sticks) == sticks;
+    }
+}
+
 export void RegisterQuicksave(std::function<bool()> canSave, std::function<void()> save)
 {
     const auto state = reinterpret_cast<const int*>(GameStateAddress());
-    auto held = std::make_shared<std::atomic_bool>((GetAsyncKeyState(VK_F5) & 0x8000) != 0);
+    auto held = std::make_shared<std::atomic_bool>(QuicksaveHeld());
     WFP::onActivateApp() += [held](bool)
     {
-        // Holding F5 while switching windows must not save on reactivation.
-        held->store((GetAsyncKeyState(VK_F5) & 0x8000) != 0);
+        // Holding the quicksave input while switching windows must not save on reactivation.
+        held->store(QuicksaveHeld());
     };
     WFP::onGameProcessEvent() += [held, state, canSave = std::move(canSave), save = std::move(save)]()
     {
-        const bool pressed = (GetAsyncKeyState(VK_F5) & 0x8000) != 0;
+        const bool pressed = QuicksaveHeld();
         const bool previous = held->exchange(pressed);
         if (*state == GS_PLAYING_GAME && IsGameFocused() && pressed && !previous && canSave())
             save();
     };
 }
-

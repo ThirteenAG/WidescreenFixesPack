@@ -7,9 +7,19 @@ export module Windowed;
 
 import ComVars;
 
+// MAIN.WindowMode: 0 the game's own window, 1 a framed window that can be resized, 2 borderless
+bool bOwnWindow = false;
 bool bBorderlessWindowed = true;
 bool bEnableWindowResize = false;
 HWND GameHWND = NULL;
+
+void ReadWindowMode()
+{
+    const int mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
+    bOwnWindow = mode == 0;
+    bBorderlessWindowed = mode == 2;
+    bEnableWindowResize = mode == 1;
+}
 
 namespace
 {
@@ -87,7 +97,7 @@ RECT GetMonitorBounds()
 
 void ApplyWindowStyle()
 {
-    if (!GameHWND)
+    if (!GameHWND || bOwnWindow)
         return;
     LONG lStyle = GetWindowLong(GameHWND, GWL_STYLE);
     lStyle &= ~(WS_HSCROLL | WS_VSCROLL);
@@ -193,6 +203,8 @@ HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpW
 {
     if (hWndParent && hWndParent != GetDesktopWindow())
         return CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    if (bOwnWindow)
+        return GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
 
     auto [resW, resH] = GetRes();
 
@@ -213,6 +225,8 @@ HWND WINAPI CreateWindowExW_Hook(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR l
 {
     if (hWndParent && hWndParent != GetDesktopWindow())
         return CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    if (bOwnWindow)
+        return GameHWND = CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
 
     auto [resW, resH] = GetRes();
 
@@ -266,6 +280,8 @@ LONG WINAPI SetWindowLongW_Hook(HWND hWnd, int nIndex, LONG dwNewLong)
 
 BOOL WINAPI AdjustWindowRectEx_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle)
 {
+    if (bOwnWindow)
+        return AdjustWindowRectEx(lpRect, dwStyle, bMenu, dwExStyle);
     if (bBorderlessWindowed)
     {
         ApplyWindowStyle();
@@ -318,14 +334,24 @@ public:
                     setAttribute(window, 33, &preference, sizeof(preference));
             };
 
-            auto bImproveWindowedMode = FixSettings().Int("MAIN.ImproveWindowedMode") != 0;
+            ReadWindowMode();
 
             {
                 static bool bResChanged = false;
+                static std::atomic<bool> bModeChanged = false;
+                FixSettings().OnChange("MAIN.WindowMode", []() { bModeChanged = true; });
 
-                WFP::onGameProcessEvent() += [bImproveWindowedMode]()
+                WFP::onGameProcessEvent() += []()
                 {
-                    if (!bImproveWindowedMode)
+                    if (bModeChanged.exchange(false))
+                    {
+                        // Window and Borderless restyle the window at once; the game's own frame comes back on the next start
+                        ReadWindowMode();
+                        if (!bOwnWindow)
+                            ApplyWindowStyle();
+                    }
+
+                    if (bOwnWindow)
                         return;
 
                     UpdateSystemCursor();
@@ -358,8 +384,7 @@ public:
                     bResChanged = true;
                 });
 
-                if (bImproveWindowedMode)
-                    IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
+                IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
                         std::forward_as_tuple("CreateWindowExA", CreateWindowExA_Hook),
                         std::forward_as_tuple("CreateWindowExW", CreateWindowExW_Hook),
                         //std::forward_as_tuple("SetWindowLongA", SetWindowLongA_Hook),

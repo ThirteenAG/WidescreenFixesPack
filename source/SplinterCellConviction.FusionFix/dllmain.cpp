@@ -54,6 +54,7 @@ void Init()
     bWindowedMode = FixSettings().Int("MAIN.WindowMode") != 0;
     bDisableBlackAndWhiteFilter = FixSettings().Bool("GRAPHICS.DisableBlackAndWhiteFilter") != 0;
     bBlacklistControlScheme = FixSettings().Bool("GAMEPLAY.BlacklistControlScheme") != 0;
+    bLimitedAmmo = FixSettings().Bool("GAMEPLAY.LimitedAmmo") != 0;
     auto bUnlockDLC = FixSettings().Bool("UNLOCKS.UnlockDLC") != 0;
     bEnableSplitscreen = FixSettings().Bool("2INSTANCESPLITSCREEN.Enable") != 0;
 

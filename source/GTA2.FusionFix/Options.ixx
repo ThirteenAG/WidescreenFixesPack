@@ -341,7 +341,7 @@ export namespace GTA2Options
     }
     const std::set<std::string> JoinedSettings
     {
-        "MAIN.ResX", "MAIN.ResY", "MAIN.WindowMode",
+        "MAIN.ResX", "MAIN.ResY", "MAIN.WindowMode", "MAIN.PauseOnFocusLoss",
         "MAIN.FillFrontendBackground", "MAIN.HudAspectRatioConstraint", "MAIN.SkipIntro",
         "MISC.SkipCredits", "MISC.QuicksaveKey",
         "MISC.ZoomIncreaseKey", "MISC.ZoomDecreaseKey", "MISC.RecoverPlayerKey",

@@ -9,7 +9,8 @@ int Install() {
     IniValue defaults[] = {{"MAIN", "DualAnalogPatch", "1"}, {"MAIN", "ForceAspectRatio", "Auto"},
                            {"MAIN", "HudScale", "1.0"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
                            {"MAIN", "SkipIntro", "1"}, {"MAIN", "FOVFactor", "1.0"},
-                           {"MAIN", "CutsceneBorders", "3"}, {"MAIN", "TextLanguage", "auto"}};
+                           {"MAIN", "CutsceneBorders", "3"}, {"MAIN", "TextLanguage", "auto"},
+                           {"MAIN", "GamepadCameraSpeed", "1.0"}};
     CompleteCfg("ms0:/PSP/PLUGINS/MidnightClubLARemix.PPSSPP.FusionFix/MidnightClubLARemix.PPSSPP.FusionFix.cfg", defaults);
     skipIntro = inireader.ReadInteger("MAIN", "SkipIntro", 1) != 0;
     dualAnalog = inireader.ReadInteger("MAIN", "DualAnalogPatch", 1) != 0;

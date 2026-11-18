@@ -29,6 +29,8 @@ namespace kr
     inline float forcedAspect, hudAspect, fovFactor = 1.0f;
     inline int cutsceneBorders = 3;
     inline bool skipIntro = true;
+    // MAIN.FMVWidescreenMode: Fill shows the story videos' picture without their baked bars.
+    inline bool fmvFill = true;
 
     // Frames rendered (main scene draws), and the last frames that showed the
     // cockpit dashboard or a scripted camera.
@@ -73,5 +75,9 @@ namespace kr
         const float aspect = Aspect(), k = Fit();
         const float box = std::min(1.0f, (hudAspect > 0 ? hudAspect : aspect) / aspect);
         return box > k ? 0.5f * (box - k) : 0;
+    }
+    namespace movie
+    {
+        void Install();
     }
 } // namespace kr

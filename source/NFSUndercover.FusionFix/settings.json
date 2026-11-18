@@ -276,6 +276,20 @@
       }
     },
     {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": 1,
+      "label": "@WFP_SKIPPRESSSTART",
+      "description": "@WFP_DESC_SKIPPRESSSTART",
+      "page": "movies",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "MAIN.PauseOnFocusLoss",
       "type": "bool",
       "default": 1,
@@ -464,7 +478,7 @@
       ],
       "apply": "restart",
       "presets": {
-        "vanilla": 30,
+        "vanilla": -1,
         "recommended": -1,
         "enhanced": -1
       }

@@ -39,6 +39,11 @@
       "id": "advanced",
       "title": "@page.advanced",
       "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
     }
   ],
   "settings": [
@@ -413,6 +418,24 @@
       "page": "game",
       "visibility": "menu",
       "apply": "live"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "compatibility",
+      "apply": "menu",
+      "visibility": "editor",
+      "choices": [
+        { "value": "auto", "label": "@menu.auto" },
+        { "value": "en", "label": "English" },
+        { "value": "fr", "label": "Français" },
+        { "value": "de", "label": "Deutsch" },
+        { "value": "it", "label": "Italiano" },
+        { "value": "es", "label": "Español" }
+      ]
     }
   ]
 }

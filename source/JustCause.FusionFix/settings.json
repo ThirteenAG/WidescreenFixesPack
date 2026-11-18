@@ -37,30 +37,6 @@
   ],
   "settings": [
     {
-      "id": "MAIN.ResX",
-      "type": "int",
-      "default": 0,
-      "label": "@ResX",
-      "description": "@ResX.description",
-      "page": "advanced",
-      "apply": "restart",
-      "visibility": "editor",
-      "min": 0,
-      "max": 16384
-    },
-    {
-      "id": "MAIN.ResY",
-      "type": "int",
-      "default": 0,
-      "label": "@ResY",
-      "description": "@ResY.description",
-      "page": "advanced",
-      "apply": "restart",
-      "visibility": "editor",
-      "min": 0,
-      "max": 16384
-    },
-    {
       "id": "MAIN.SkipIntro",
       "type": "bool",
       "default": 1,
@@ -143,7 +119,7 @@
       "id": "MAIN.FPSLimit",
       "type": "int",
       "default": 60,
-      "min": 30,
+      "min": -1,
       "max": 1000,
       "unit": "fps",
       "special": [
@@ -254,6 +230,43 @@
       "page": "game",
       "visibility": "menu",
       "apply": "live"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "@menu.auto"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ],
+      "label": "@MAIN.TextLanguage",
+      "description": "@MAIN.TextLanguage.description",
+      "page": "advanced",
+      "apply": "live",
+      "visibility": "editor",
+      "maxLength": 32
     }
   ]
 }

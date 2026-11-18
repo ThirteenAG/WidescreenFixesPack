@@ -126,6 +126,14 @@ export void InitMouse()
             *reinterpret_cast<int32_t*>(regs.esp + 0x38) = RawMouse::cursorY;
         });
 
+        // UseDIMouse=True (UWindowsViewport +410h, read in its constructor) skips the WM_MOUSEMOVE handling and reads a DirectInput
+        // mouse instead, raw input would never be used: it stays off
+        pattern = hook::pattern("8D BE 10 04 00 00 57 89 86 54 04 00 00 89 1F");
+        static auto UseDIMouseHook = safetyhook::create_mid(pattern.get_first(0x23), [](SafetyHookContext& regs)
+        {
+            *reinterpret_cast<int32_t*>(regs.esi + 0x410) = 0;
+        });
+
         // not captured (menus)
         pattern = hook::pattern("8D 83 20 04 00 00 50 FF 15 ? ? ? ? 8B 43 18");
         static auto NotCapturedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

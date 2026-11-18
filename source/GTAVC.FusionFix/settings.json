@@ -179,6 +179,44 @@
       ]
     },
     {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 1,
+          "label": "@cutsceneborders.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@cutsceneborders.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@cutsceneborders.both"
+        }
+      ],
+      "label": "@cutsceneborders",
+      "description": "@cutsceneborders.description43",
+      "page": "display",
+      "group": "@group.hud",
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      },
+      "control": [
+        "segmented",
+        "cycler"
+      ],
+      "apply": "live",
+      "visibility": "editor"
+    },
+    {
       "id": "MAIN.AnimatedCutsceneBorders",
       "type": "bool",
       "default": 1,
@@ -223,6 +261,58 @@
       "control": [
         "cycler"
       ]
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": -1,
+      "min": -1,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@fpslimit.unlimited"
+        },
+        {
+          "value": -1,
+          "label": "@fpslimit.monitor"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
+        }
+      ],
+      "label": "@fpslimit",
+      "description": "@fpslimit.description",
+      "page": "display",
+      "presets": {
+        "vanilla": 30,
+        "recommended": -1,
+        "enhanced": -1
+      },
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "apply": "live",
+      "visibility": "editor"
     },
     {
       "id": "MAIN.FPSLimitMenus",
@@ -368,12 +458,7 @@
       "default": 0,
       "label": "@moderncontrols",
       "description": "@moderncontrols.description",
-      "page": "controls",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 1
-      }
+      "page": "controls"
     },
     {
       "id": "MAIN.GamepadIcons",
@@ -439,6 +524,15 @@
       "label": "@invertgamepady",
       "description": "@invertgamepady.description",
       "page": "controls"
+    },
+    {
+      "id": "MAIN.Vibration",
+      "type": "bool",
+      "default": 1,
+      "label": "@vibration",
+      "description": "@vibration.description",
+      "page": "controls",
+      "apply": "live"
     },
     {
       "id": "MAIN.FMVWidescreenMode",
@@ -545,7 +639,7 @@
       "apply": "restart",
       "presets": {
         "vanilla": 0,
-        "recommended": 0,
+        "recommended": 1,
         "enhanced": 1
       }
     },

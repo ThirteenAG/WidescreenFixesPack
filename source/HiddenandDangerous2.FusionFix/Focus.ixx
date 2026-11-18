@@ -82,11 +82,11 @@ export namespace HD2Focus
         });
         FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
         {
-            pauseOnFocusLoss.store(FixSettings().Get("MAIN.PauseOnFocusLoss") != "0", std::memory_order_relaxed);
+            pauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
             const auto thread = messageThread.load(std::memory_order_relaxed);
             if (thread)
                 PostThreadMessageW(thread, WM_NULL, 0, 0);
         });
-        pauseOnFocusLoss.store(FixSettings().Get("MAIN.PauseOnFocusLoss") != "0", std::memory_order_relaxed);
+        pauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
     }
 }

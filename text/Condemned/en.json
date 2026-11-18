@@ -65,5 +65,15 @@
   "FPSLimit.description": "Limits the frame rate. Applies immediately.",
   "HudAspectRatioConstraint": "HUD aspect ratio",
   "HudAspectRatioConstraint.auto": "Auto",
-  "HudAspectRatioConstraint.description": "Auto spreads the HUD across the whole screen. A ratio keeps it in a centred box of that shape. Needs a restart."
+  "HudAspectRatioConstraint.description": "Auto spreads the HUD across the whole screen. A ratio keeps it in a centred box of that shape. Applies immediately.",
+  "FMVWidescreenMode": "Movie display",
+  "FMVWidescreenMode.original": "Original",
+  "FMVWidescreenMode.fill": "Fill",
+  "FMVWidescreenMode.description": "Original shows the movies whole inside the game's centred 16:9 frame. Fill fits the whole movie to the screen. Neither cuts off or stretches the picture.",
+  "GamepadIcons": "Controller buttons",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.xbox": "Xbox",
+  "GamepadIcons.playstation": "PlayStation",
+  "GamepadIcons.nintendo": "Nintendo",
+  "GamepadIcons.description": "Button prompts name the controller's buttons after the controller was used last, the keys after the keyboard or mouse. Auto uses Xbox names."
 }

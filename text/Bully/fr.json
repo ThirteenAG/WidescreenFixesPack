@@ -29,8 +29,6 @@
   "GRAPHICS.ShadowResolution": "Résolution des ombres",
   "GRAPHICS.ShadowResolution.description": "Taille des textures d’ombre. Des valeurs plus élevées donnent des ombres plus nettes, moins pixelisées, et utilisent plus de mémoire vidéo. S’applique au prochain démarrage.",
   "GRAPHICS.ShadowResolution.1024": "1024 (original)",
-  "controls.auto": "Manette automatique",
-  "controls.auto.description": "Utilise la manette ou le clavier et la souris, selon le dernier utilisé, et détecte les manettes branchées en jeu.",
   "controls.speed": "Vitesse caméra manette",
   "controls.speed.description": "Multiplie la vitesse de la caméra à la manette. 1,00 = vitesse d'origine. Sans effet sur la souris.",
   "controls.deadzone": "Zone morte des sticks",

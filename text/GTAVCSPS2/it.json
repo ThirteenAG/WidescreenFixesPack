@@ -121,5 +121,7 @@
   "gamepadicons.playstation": "PlayStation",
   "gamepadicons.nintendo": "Nintendo",
   "lights": "Luci dei veicoli",
-  "lights.description": "Accende fari, luci posteriori, di stop e di retromarcia sulle texture della carrozzeria di auto e moto, generate dalle texture del gioco. Attivo per impostazione predefinita."
+  "lights.description": "Accende fari, luci posteriori, di stop e di retromarcia sulle texture della carrozzeria di auto e moto, generate dalle texture del gioco. Attivo per impostazione predefinita.",
+  "controls.holdvehiclecamera": "Mantieni telecamera del veicolo",
+  "controls.holdvehiclecamera.description": "Quando ruoti la telecamera con lo stick destro in un veicolo, resta in quella posizione, così puoi guardare indietro mentre guidi. Torna dietro al veicolo due secondi dopo aver rilasciato lo stick. Off mantiene la telecamera originale, che torna dietro al veicolo mentre guidi."
 }

@@ -12,7 +12,7 @@
 
 ## Fixes
 
-- **Resolution** — Any resolution; 0 uses the desktop's.
+- **Resolution** — Settings › Video › Screen Resolution lists the monitor's own resolutions, up to six, the desktop's included; the choice applies after a restart.
 - **Field of view** — The view widens with the screen; the field of view factor widens it further, up to 150 degrees across. Cinematics keep their framing.
 - **HUD** — The health bar and weapon selector sit at the left edge, the minimap with its markers, the meter beside it and the distance display at the right edge, or in a centred box of the ratio you choose. Objectives, messages and subtitles stay in the central area.
 - **Menus and loading screens** — Kept at their original shape in the middle of the screen.
@@ -42,15 +42,14 @@ Change the settings on fusionfix.io, in FusionFixHub or in the developer overlay
 | Field of view factor | 0.5–2.0 | 1.0 | while playing |
 | Cutscene borders | Off, Letterbox, Pillarbox, Both | Both | while playing |
 | Check for updates | On, Off | Off | while playing |
-| Resolution (width, height) | pixels; 0 = desktop | 0 | after a restart |
+| Text language | Auto, English, French, German, Italian, Spanish | Auto | while playing |
 
 Presets: Vanilla keeps the original cinematic bars, shows the logo videos and leaves the frame rate unlimited; Recommended and Enhanced use both border types, skip the logos and limit the game to 60 FPS. Videos always retain their aspect ratio. Field of view and HUD aspect ratio keep their current values when switching presets; their defaults are 1.0 and Auto.
 
 ## Known limits
 
 - No page in the game's own settings menu: its menu pages come from the game's packed menu data, so the fix's settings are on fusionfix.io, in FusionFixHub and in the overlay.
-- The controller uses the game's own controller bindings and button names.
-- The resolution is set by the fix; the game's own resolution list still shows its original entries.
+- The controller uses the game's own controller bindings; button prompts show keyboard keys.
 
 ## Installation
 

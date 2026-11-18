@@ -15,10 +15,10 @@ export module NativeMenu;
 
 import ComVars;
 
-// The fix's settings as a native page behind the game's Options (Mafia 1.2)
+// The fix's settings as a native page behind the game's Options (Mafia 1.1 and 1.2)
 export namespace MafiaMenu
 {
-    // Mafia 1.2 addresses, resolved by Resolve() once the executable is recognised
+    // Mafia 1.1/1.2 addresses, resolved by Resolve() once the executable is recognised
     struct Addresses
     {
         uintptr_t select, close, push, createButton, allocate, free, measure;
@@ -84,7 +84,7 @@ export namespace MafiaMenu
             fMenuScaleY.SetAddress(global("D8 0D ? ? ? ? D8 6C 24 14 D9 54 24 14", 2));
             a.fonts = reinterpret_cast<float*>(global("B9 ? ? ? ? 85 C0 74 BA E8 ? ? ? ?", 1));
             a.fontMaps = reinterpret_cast<const uint8_t* const*>(global("8B 3C 85 ? ? ? ? D9 44 24 14 C1 E2 03", 3));
-            nLanguage.SetAddress(global("A1 ? ? ? ? C3 E8 ? ? ? ? E9 ? ? ? ? 56", 1));
+            nLanguage.SetAddress(global("56 E8 ? ? ? ? 5E 83 C4 40 C2 04 00 90 90 90 90 90 90 90 90 A1 ? ? ? ? C3", 22));
             return true;
         }();
         (void)resolved;
@@ -1364,9 +1364,8 @@ export namespace MafiaMenu
         if (ready) return;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<LPCWSTR>(&Init), &module);
-        // The native menu is built for Mafia 1.2, recognised by its page stack pop; the operands stay in the pattern
-        // because 1.1 has the same code with other addresses
-        if (hook::pattern("8B 0D 90 D8 6B 00 E8 1D E9 FF FF A1 2C 3A 6C 00 C7 05 90 D8 6B 00 00 00 00 00").empty()) return;
+        // The native menu is built on the 1.1/1.2 menu code (recognised by its page stack pop); 1.0's menus differ
+        if (hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00").empty()) return;
         Resolve();
         if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
             reinterpret_cast<LPCWSTR>(&Init), &module)) { Log("process lifetime pin refused"); return; }

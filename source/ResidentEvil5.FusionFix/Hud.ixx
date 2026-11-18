@@ -15,7 +15,7 @@ export module Hud;
 // right, the rest stays centred. The move is made in the element's own position before the game builds its world
 // matrix, so its children and the texts the game places from that position move with it. Markers projected from 3D
 // positions keep their place. Menus and full screens (inventory, map, loading) stay in the 16:9 box; in split screen the game's own
-// layout stays.
+// layout stays (SplitScreen fits it into each player's half with the side-by-side layout).
 
 namespace
 {

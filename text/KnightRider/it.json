@@ -32,7 +32,7 @@
   "CutsceneBorders": "Bande dei filmati",
   "CutsceneBorders.description": "Mantiene l’inquadratura originale delle scene con bande laterali. Disattivate amplia la visuale. Si applica subito.",
   "CutsceneBorders.0": "Disattivate",
-  "CutsceneBorders.1": "Pillarbox",
+  "CutsceneBorders.3": "Entrambi",
   "CheckForUpdates": "Cerca aggiornamenti",
   "CheckForUpdates.description": "Se attivo, cerca una versione più recente. Un avviso appare nel menu principale. FusionFixHub apre la pagina dopo l’uscita, se installato nella cartella del gioco. Disattivato per impostazione predefinita.",
   "update.availablehub": "È disponibile una nuova versione di {name}. Aggiornala in FusionFixHub dopo aver chiuso il gioco.",

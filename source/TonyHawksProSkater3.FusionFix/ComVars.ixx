@@ -7,6 +7,8 @@ export module ComVars;
 export GameRef<uint8_t> ModeFlags;
 export GameRef<int32_t> dword_851084;
 export GameRef<int32_t> dword_851088;
+export GameRef<int32_t> DeviceCount;
+export GameRef<uint8_t*> Skater;
 export GameRef<void*> NativeFrontend;
 export GameRef<void*> NativeManager;
 export GameRef<void*> NativeResources;

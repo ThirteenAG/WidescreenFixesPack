@@ -154,6 +154,35 @@ int ClearEvent(SceUID event, u32 bits) { Unthrottle(false); return sceKernelClea
 // loader's sceKernelStartModule call).
 struct Options { float fov; bool skipIntro, dualAnalog, smoothing, unthrottle; } options;
 bool RawCameraEnabled() { return options.dualAnalog; }
+namespace ColorGrading
+{
+// PPSSPP's hardware renderers sample the frame read back as a paletted texture
+// at the wrong texel offsets, which blends shifted copies of the scene over the
+// picture (ghosted characters and buildings). Off skips the grey grading pass.
+inline bool original;
+inline uintptr_t site;
+inline uint32_t call;
+inline bool Write()
+{
+    return injector::WriteMemory<uint32_t>(site, original ? call : 0) == PSP_HOOK_OK;
+}
+inline bool ApplyLive()
+{
+    if (Write() && Finish() == 0)
+        return true;
+    original = !original;
+    Write();
+    Finish();
+    PatchRejected(PSP_HOOK_WRITE_FAILED);
+    return false;
+}
+inline void Install()
+{
+    site = sites::Desaturation();
+    call = *reinterpret_cast<const uint32_t*>(site);
+    Write();
+}
+}
 #include "Startup.hpp"
 #include "NativeMenu.hpp"
 void ReadOptions() {
@@ -162,7 +191,8 @@ void ReadOptions() {
         {"MAIN", "FOVFactor", "1.0"}, {"MAIN", "ForceAspectRatio", "Auto"},
         {"MAIN", "HudScale", "1.0"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
         {"MAIN", "CutsceneBorders", "3"}, {"MAIN", "TextLanguage", "auto"},
-        {"MAIN", "GamepadIcons", "0"}, {"MAIN", "SkipPressStart", "1"}, {"MAIN", "FPSLimit", "60"}};
+        {"MAIN", "GamepadIcons", "0"}, {"MAIN", "SkipPressStart", "1"}, {"MAIN", "FPSLimit", "60"},
+        {"MAIN", "ColorGrading", "0"}};
     constexpr auto cfg = "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo3.PPSSPP.FusionFix/SOCOM.FireteamBravo3.PPSSPP.FusionFix.cfg";
     (void)CompleteCfg(cfg, defaults);
     char buffer[64];
@@ -183,6 +213,7 @@ void ReadOptions() {
     PadIcons::style = std::clamp(inireader.ReadInteger("MAIN", "GamepadIcons", 0), 0, 3);
     Startup::skipPressStart = inireader.ReadInteger("MAIN", "SkipPressStart", 1) != 0;
     FrameRate::ReadOptions();
+    ColorGrading::original = inireader.ReadInteger("MAIN", "ColorGrading", 0) != 0;
     NativeMenu::ReadOptions();
 }
 int Install() {
@@ -247,6 +278,7 @@ int Install() {
         "25 28 00 00 ? ? ? ? 25 20 40 00 ? ? ? ? ? ? ? ? ? ? ? ? 01 00 14 34",
         "F0 FF BD 27 00 00 B0 AF 04 00 B1 AF 25 80 80 00 ? ? 11 3C ? ? 24 8E 25 28 00 00 08 00 BF AF ? ? ? ? 25 30 00 00 0F 00 40 10 00 00 00 00",
         "? ? A5 24 ? ? 05 3C 25 20 00 02 ? ? ? ? ? ? A5 24 ? ? 24 8E 01 00 05 34",
+        "2C 00 A4 A0 ? ? BE C7 A4 08 24 8E 08 00 85 8C 10 00 A5 24 00 00 A6 84 04 00 A5 8C 09 F8 A0 00",
     };
     for (const auto* site : sitesToCheck)
     {
@@ -275,6 +307,7 @@ int Install() {
         Cinematics::Camera(regs);
     }, projectionOptions);
     movie.fun = injector::MakeCALL(sites::Movie(), Movie).get();
+    ColorGrading::Install();
     Hud::Install();
     Cinematics::Install();
     NativeMenu::Install();

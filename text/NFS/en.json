@@ -24,6 +24,8 @@
   "WFP_ICONS_XBOX": "Xbox",
   "WFP_ICONS_PLAYSTATION": "PlayStation",
   "WFP_SKIPINTRO": "Skip Intro",
+  "WFP_SKIPPRESSSTART": "Skip Press Start",
+  "WFP_DESC_SKIPPRESSSTART": "The title screen continues by itself, without waiting for Start.",
   "WFP_U2SAVEBONUS": "Underground 2 Save Bonus",
   "WFP_FPSLIMIT": "Frame Rate",
   "WFP_FPS_CUSTOM": "Custom",

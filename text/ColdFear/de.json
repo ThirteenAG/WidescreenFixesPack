@@ -55,7 +55,7 @@
   "MAIN.TextLanguage.description": "Sprache des Plugins-Menüs. Automatisch verwendet Englisch. Menü nach einem Wechsel erneut öffnen.",
   "page.compatibility": "Kompatibilität",
   "PauseOnFocusLoss": "Im Hintergrund pausieren",
-  "FPSLimit.description": "Begrenzt die Bildrate. Wirkt sofort.",
+  "FPSLimit.description": "Begrenzt die Bildrate auf höchstens 120 FPS, das eigene Limit des Spiels; die Monitoreinstellung folgt der Bildwiederholrate bis 120. Wirkt sofort.",
   "PauseOnFocusLoss.description": "In einem Fenstermodus pausiert das Spiel und wird stumm, während ein anderes Fenster aktiv ist. Aus lässt es weiterlaufen. Wirkt sofort.",
   "FPSLimit.unlimited": "Unbegrenzt",
   "FPSLimit": "Bildratenbegrenzung",

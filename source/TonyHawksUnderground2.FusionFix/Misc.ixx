@@ -2,6 +2,8 @@ module;
 
 #include <stdafx.h>
 #include <random>
+#include "FixSettings.hpp"
+#include "Shared/TonyHawk/PadPrompts.hpp"
 
 export module Misc;
 
@@ -9,17 +11,37 @@ import ComVars;
 
 export void InstallControls()
 {
-    hook::pattern pattern("");
-    // Without the launcher's saved controls the keyboard has no bindings at all; use the launcher's defaults then
-    pattern = hook::pattern("83 C8 FF B9 98 00 00 00 BF ? ? ? ? F3 AB");
-    auto readControls = hook::pattern("E8 ? ? ? ? 8B 44 24 0C 83 C4 04 6A 00");
-    keyboardMap.SetAddress(*pattern.get_first<int32_t*>(9));
-    static auto defaultKeysHook = safetyhook::create_mid(readControls.get_first(5), [](SafetyHookContext&)
-    {
-        static constexpr int32_t defaults[24] = { 17, 31, 30, 32, 44, 45, 46, 47, 80, 77, 75, 72, -1, 15, 79, 81, 71, 73, 82, -1, 199, 207, 211, 209 };
-        if (std::all_of(keyboardMap.get().begin(), keyboardMap.get().end(), [](int32_t key) { return key == -1; }))
-            std::copy(std::begin(defaults), std::end(defaults), keyboardMap.get().begin());
-    });
+    auto& settings = FixSettings();
+    TonyPad::Install(
+        {
+            "THUG2",
+            "83 EC 50 53 55 8B 6C 24 5C 8B 45 24 56 25 FF 00 00 00 33 F6 83 F8 15",
+            "83 CB FF 33 D2 B8 ? ? ? ? C7 44 24 10 02 00 00 00", 6,
+            304,
+            "53 8B 5C 24 08 8B 04 9D ? ? ? ? 85 C0 74 ? 8B 08 55 50 FF 51 64",
+            "8D A8 ? ? ? ? 55 8D B8 ? ? ? ? B9 44 00 00 00 8B F5 68 10 01 00 00", 9,
+            "A1 ? ? ? ? 85 C0 0F 84 ? ? ? ? 8B 08 50 FF 51 64 85 C0 7D",
+            "A1 ? ? ? ? 89 15 ? ? ? ? 8B 15", 7,
+            // Sticks, A B X Y, Start Back, LT RT LB RB, LS RS, D-pad
+            { 2, 2, 1, 1, 8, 8, 3, 3, 11, 12, 13, 14, 20, 19, 17, 18, 15, 16, 21, 22, 5, 5, 4, 4 },
+            "83 C8 FF B9 98 00 00 00 BF ? ? ? ? F3 AB", 9,
+            "E8 ? ? ? ? 8B 44 24 0C 83 C4 04 6A 00", 5,
+            { 17, 31, 30, 32, 44, 45, 46, 47, 80, 77, 75, 72, -1, 15, 79, 81, 71, 73, 82, -1, 199, 207, 211, 209 },
+            "83 EC 44 55 56 8B 74 24 50 8B 04 B5 ? ? ? ? 8D 0C B5",
+            "E8 ? ? ? ? D9 5C 24 0C 8A 46 18 84 C0 0F 85",
+            "D9 87 14 02 00 00 D8 15",
+            "8B 44 24 04 50 E8 ? ? ? ? 8A 80 ? ? ? ? 83 C4 04 C3",
+            "45 55 E8 ? ? ? ? 83 C4 04 EB ? 45 55 E8", 2,
+            "8D 54 24 17 52 88 44 24 1B E8 ? ? ? ? 83 C4 08 3C 04", 9,
+            "43 53 E8 ? ? ? ? 83 C4 04 89 44 24 44 EB", 2,
+            "8D 54 24 17 52 88 44 24 1B E8 ? ? ? ? 83 C4 08 89 44 24 44", 9,
+            "8B 2D ? ? ? ? 0F B6 84 28 0C 01 00 00",
+            "8B 96 7C 01 00 00 8B 86 78 01 00 00 52 50 6A 00 E8", 16,
+            0x178,
+            20, 76, 0x178,
+            0x1C
+        }, &settings.Int("MAIN.Vibration"), &settings.Float("MAIN.GamepadCameraSpeed"), &settings.Int("MAIN.InvertGamepadY"),
+        &settings.Int("MAIN.GamepadIcons"));
 }
 
 export void InstallMusic()

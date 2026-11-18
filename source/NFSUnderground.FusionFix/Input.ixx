@@ -21,7 +21,9 @@ using namespace usercall;
 // Gamepads are handled by Xidi (Xidi.32.dll, loaded by the ASI loader). PlayStation and Switch pads use
 // Steam Input or DS4Windows. Xidi presents each pad as a "Xidi virtual controller" using its
 // XInputNative layout: X/Y = left stick, RotX/RotY = right stick, Z = LT, RotZ = RT, POV = d-pad,
-// buttons 1-10 = A B X Y LB RB Back Start LS RS. This module gives such pads modern default bindings,
+// buttons 1-10 = A B X Y LB RB Back Start LS RS. Without Xidi, Windows shows an Xbox pad to DirectInput
+// with the same layout except for the triggers, which share the Z axis: LT above the centre, RT below it.
+// This module gives both modern default bindings,
 // proper names in the controls menu, button icons, front end actions for the PC-only hotkeys and
 // the right stick for the camera. Other devices (wheels and so on) keep the game's own behaviour.
 
@@ -105,24 +107,45 @@ namespace
     std::atomic<bool> bDevicesChanged = false;     // rescan for new game controllers
     std::atomic<bool> bIconStyleOutdated = false;  // detect the icon style again
 
-    // Devices known to be Xidi's or not. The game releases and creates its devices again when controllers change,
-    // and a new device can get the address of an old one, so this is forgotten then.
-    std::map<IDirectInputDevice8A*, bool> XidiDeviceCache;
-
-    bool IsXidiDevice(IDirectInputDevice8A* device)
+    enum class PadKind
     {
-        // Xidi virtual controller instance GUIDs end with "XIDIVC"
+        None,       // not a gamepad this module knows
+        Xidi,       // a Xidi virtual controller, each trigger on its own axis
+        XInput,     // an Xbox pad shown to DirectInput by Windows, both triggers on the Z axis
+    };
+
+    // Known devices. The game releases and creates its devices again when controllers change, and a new device
+    // can get the address of an old one, so this is forgotten then.
+    std::map<IDirectInputDevice8A*, PadKind> XidiDeviceCache;
+
+    PadKind GetPadKind(IDirectInputDevice8A* device)
+    {
         auto& cache = XidiDeviceCache;
         if (!device)
-            return false;
+            return PadKind::None;
 
         if (auto it = cache.find(device); it != cache.end())
             return it->second;
 
+        // Xidi virtual controller instance GUIDs end with "XIDIVC". Pads that Windows also offers through
+        // XInput have "IG_" in their device path.
+        PadKind kind = PadKind::None;
         DIDEVICEINSTANCEA info = { sizeof(DIDEVICEINSTANCEA) };
-        bool isXidi = SUCCEEDED(device->GetDeviceInfo(&info)) && memcmp(info.guidInstance.Data4, "XIDIVC", 6) == 0;
-        cache[device] = isXidi;
-        return isXidi;
+        DIPROPGUIDANDPATH path = {};
+        path.diph.dwSize = sizeof(DIPROPGUIDANDPATH);
+        path.diph.dwHeaderSize = sizeof(DIPROPHEADER);
+        path.diph.dwHow = DIPH_DEVICE;
+        if (SUCCEEDED(device->GetDeviceInfo(&info)) && memcmp(info.guidInstance.Data4, "XIDIVC", 6) == 0)
+            kind = PadKind::Xidi;
+        else if (SUCCEEDED(device->GetProperty(DIPROP_GUIDANDPATH, &path.diph)) && (wcsstr(path.wszPath, L"IG_") || wcsstr(path.wszPath, L"ig_")))
+            kind = PadKind::XInput;
+        cache[device] = kind;
+        return kind;
+    }
+
+    bool IsGamepad(IDirectInputDevice8A* device)
+    {
+        return GetPadKind(device) != PadKind::None;
     }
 
     IDirectInputDevice8A* GetJoystick(int index)
@@ -232,7 +255,7 @@ export namespace Input
         for (int i = 0; i < MaxJoysticks; ++i)
         {
             auto device = GetJoystick(i);
-            if (!IsXidiDevice(device))
+            if (!IsGamepad(device))
                 continue;
             for (DWORD offset : { OfsLeftX, OfsLeftY, OfsRightX, OfsRightY })
                 SetStickDeadzone(device, offset, DIPH_BYOFFSET, offset);
@@ -445,7 +468,7 @@ namespace
     const char* __stdcall GetJoystickBindingName(uintptr_t channel, int action, int secondary)
     {
         auto index = Channel::At<int32_t>(channel, Channel::Index);
-        if (!IsXidiDevice(GetJoystick(index)))
+        if (!IsGamepad(GetJoystick(index)))
             return OriginalJoystickBindingName(channel, action, secondary);
 
         // Same search as the game: axis bindings first, then buttons, then d-pad directions.
@@ -471,7 +494,11 @@ namespace
 
         if (axis >= 0 && match())
         {
-            if (auto name = ObjectName(Channel::At<DWORD>(channel, Channel::AxisOffset + axis * 4)))
+            // Without Xidi both triggers are on Z: the lower half is RT
+            auto offset = Channel::At<DWORD>(channel, Channel::AxisOffset + axis * 4);
+            if (offset == OfsLT && Channel::At<int32_t>(channel, Channel::AxisSign + axis * 4) < 0)
+                return CurrentNames().rightTrigger;
+            if (auto name = ObjectName(offset))
                 return name;
         }
 
@@ -523,16 +550,19 @@ namespace
         shSetDefaultJoystickBindings.unsafe_stdcall(channel);
 
         auto index = Channel::At<int32_t>(channel, Channel::Index);
-        if (!IsXidiDevice(GetJoystick(index)))
+        auto kind = GetPadKind(GetJoystick(index));
+        if (kind == PadKind::None)
             return;
 
-        // Left stick steers, RT accelerates, LT brakes and reverses
+        // Left stick steers, RT accelerates, LT brakes and reverses. Without Xidi RT is the lower half of Z.
         Channel::At<DWORD>(channel, Channel::AxisOffset + 0) = OfsLeftX;
-        Channel::At<DWORD>(channel, Channel::AxisOffset + 4) = OfsRT;
+        Channel::At<DWORD>(channel, Channel::AxisOffset + 4) = kind == PadKind::Xidi ? OfsRT : OfsLT;
         Channel::At<DWORD>(channel, Channel::AxisOffset + 8) = OfsLT;
         Channel::At<DWORD>(channel, Channel::AxisOffset + 12) = OfsLeftY;
         for (int i = 0; i < 4; ++i)
             Channel::At<int32_t>(channel, Channel::AxisSign + i * 4) = 1;
+        if (kind == PadKind::XInput)
+            Channel::At<int32_t>(channel, Channel::AxisSign + 4) = -1;
         Channel::At<uint8_t>(channel, Channel::AxisEnabled + 0) = 1;
         Channel::At<uint8_t>(channel, Channel::AxisEnabled + 1) = 1;
         Channel::At<uint8_t>(channel, Channel::AxisEnabled + 2) = 1;
@@ -594,7 +624,7 @@ namespace
         BOOL result = shEnumJoystickObject.unsafe_stdcall<BOOL>(object, ref);
 
         auto device = GetJoystick(int(reinterpret_cast<intptr_t>(ref)));
-        if (object && (object->dwType & DIDFT_AXIS) && IsXidiDevice(device))
+        if (object && (object->dwType & DIDFT_AXIS) && IsGamepad(device))
         {
             auto ofs = object->dwOfs;
             if (ofs == OfsLeftX || ofs == OfsLeftY || ofs == OfsRightX || ofs == OfsRightY)
@@ -634,6 +664,8 @@ namespace
             if (!Channel::At<uint8_t>(channel, Channel::AxisEnabled + axis) || (offset != OfsLT && offset != OfsRT))
                 return;
             auto value = *reinterpret_cast<const LONG*>(reinterpret_cast<const uint8_t*>(state) + offset);
+            if (Channel::At<int32_t>(channel, Channel::AxisSign + axis * 4) < 0)
+                value = -value;
             Channel::At<uint8_t>(channel, byte) = uint8_t(std::clamp(value * 254 / 10000, 0L, 254L));
         };
         pedal(1, Channel::ThrottleByte);
@@ -695,7 +727,7 @@ namespace
             PreviousPad[index].valid = false;
         }
 
-        if (!IsXidiDevice(device))
+        if (!IsGamepad(device))
         {
             // Some devices report a stick or pedal that never returns to the centre. In the front end that
             // reads as the left stick being held up and the menus keep scrolling. Ignore the analog

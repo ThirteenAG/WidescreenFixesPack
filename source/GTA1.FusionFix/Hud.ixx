@@ -19,7 +19,7 @@ export namespace GTA1Hud
     void (__cdecl* BuildRows)(void*, int, int) = nullptr;
     bool Enabled = true, Drawing = false, LabelsPending = false;
     int Width = 0, Height = 0, Bytes = 0;
-    int SafeArea = 8;
+    constexpr int SafeArea = 8;           // fixed inset from the screen edges, in 640x480 pixels
     std::optional<float> Constraint;        // HUD Aspect Ratio: a centred box of this aspect (Auto: the whole screen)
     std::vector<uint8_t> Canvas, Alpha;
     std::vector<std::pair<int, int>> Bounds;
@@ -154,11 +154,9 @@ export namespace GTA1Hud
         // Changes from FusionFixHub or a preset apply at once, as from the in-game options
         static auto read = []
         {
-            SafeArea = std::clamp(FixSettings().Int("MAIN.HudSafeArea"), 0, 32);
             Constraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
         };
         read();
-        FixSettings().OnChange("MAIN.HudSafeArea", read);
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", read);
         using GTA1Build::Find;
         auto draw = Find("A1 ? ? ? ? 55 33 ED 3B C5 0F 85 ? ? ? ? A1 ? ? ? ? 53 56 3B C5", "53 A1 ? ? ? ? 56 85 C0 57 55 0F 85 ? ? ? ? A1",

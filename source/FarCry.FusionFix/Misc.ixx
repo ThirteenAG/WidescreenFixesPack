@@ -67,6 +67,17 @@ public:
     inline QUAD() {}
 };
 
+// Script images that reach the screen edges in both directions: whole-screen art, halves or quarters drawn
+// from the centre (scope, binoculars and rocket launcher masks, flashes, blur)
+bool FullScreenLayer(float x, float y, float w, float h)
+{
+    const auto left = std::min(x, x + w);
+    const auto right = std::max(x, x + w);
+    const auto top = std::min(y, y + h);
+    const auto bottom = std::max(y, y + h);
+    return right - left >= 400.0f && bottom - top >= 300.0f && (left <= 0.0f || right >= 800.0f) && (top <= 0.0f || bottom >= 600.0f);
+}
+
 int WINAPI GetSystemMetricsHook(int nIndex)
 {
     auto [DesktopResW, DesktopResH] = GetDesktopRes();
@@ -84,6 +95,7 @@ int WINAPI GetSystemMetricsHook(int nIndex)
 }
 
 #ifndef _WIN64
+std::array<void*, 4> ScriptImageReturns{}; // System:DrawImage, DrawImageColor, DrawImageCoords, DrawImageColorCoords
 void* dword_36552A15 = nullptr;
 void* dword_365526AD = nullptr;
 void* dword_3302ED49 = nullptr;
@@ -232,7 +244,7 @@ export void InitXRenderD3D9()
     pattern = hook::module_pattern(GetModuleHandle(L"XRenderD3D9"), "64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 64 89 25 00 00 00 00 83 EC 18 55 8B 6C 24 3C 81 FD 00 10 00 00 56");
     static auto DrawImage = (void(__thiscall*)(void* _this, float x, float y, float w, float h, int tex, float a6, float a7, float a8, float a9, float a10, float r, float g, float b, float alpha, float a15)) pattern.get_first(0);
 
-    static auto DrawBorders = [](uint32_t _this)
+    static auto DrawBorders = [](uint32_t _this, float sideAlpha = 0.5f)
     {
         if (Screen.bStretch)
         {
@@ -245,10 +257,25 @@ export void InitXRenderD3D9()
                 Screen.bStretch = true;
                 return;
             }
-            DrawImage((void*)_this, 0.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
-            DrawImage((void*)_this, 800.0f - Screen.fHudOffset - 1.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
+            DrawImage((void*)_this, 0.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, sideAlpha, 0.5f);
+            DrawImage((void*)_this, 800.0f - Screen.fHudOffset - 1.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, sideAlpha, 0.5f);
             Screen.bStretch = true;
         }
+    };
+
+    // Masks are 4:3 art: solid black where the art ends, whatever blend mode the script set for the mask
+    static auto DrawMaskSides = [](uint32_t _this)
+    {
+        const auto device = FarCryRuntime::Device;
+        DWORD blend = FALSE;
+        if (device)
+        {
+            device->GetRenderState(D3DRS_ALPHABLENDENABLE, &blend);
+            device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+        }
+        DrawBorders(_this, 1.0f);
+        if (device)
+            device->SetRenderState(D3DRS_ALPHABLENDENABLE, blend);
     };
     #else
     static SafetyHookInline Draw_2DImageHook{};
@@ -257,7 +284,7 @@ export void InitXRenderD3D9()
         return Draw_2DImageHook.unsafe_fastcall(_this, x, y, w, h, tex, a6, a7, a8, a9, a10, r, g, b, alpha, a15);
     };
 
-    static auto DrawBorders = [](void* _this)
+    static auto DrawBorders = [](void* _this, float sideAlpha = 0.5f)
     {
         if (Screen.bStretch)
         {
@@ -270,10 +297,25 @@ export void InitXRenderD3D9()
                 Screen.bStretch = true;
                 return;
             }
-            DrawImage(_this, 0.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
-            DrawImage(_this, 800.0f - Screen.fHudOffset - 1.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);
+            DrawImage(_this, 0.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, sideAlpha, 0.5f);
+            DrawImage(_this, 800.0f - Screen.fHudOffset - 1.0f, 0.0f, Screen.fHudOffset + 1.0f, 600.0f, 0, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, sideAlpha, 0.5f);
             Screen.bStretch = true;
         }
+    };
+
+    // Masks are 4:3 art: solid black where the art ends, whatever blend mode the script set for the mask
+    static auto DrawMaskSides = [](void* _this)
+    {
+        const auto device = FarCryRuntime::Device;
+        DWORD blend = FALSE;
+        if (device)
+        {
+            device->GetRenderState(D3DRS_ALPHABLENDENABLE, &blend);
+            device->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
+        }
+        DrawBorders(_this, 1.0f);
+        if (device)
+            device->SetRenderState(D3DRS_ALPHABLENDENABLE, blend);
     };
     #endif
 
@@ -336,7 +378,7 @@ export void InitXRenderD3D9()
                 return;
             }
 
-            // binoculars HUD compass strip (Binoculars.lua), drawn every frame while the binoculars are up
+            // binoculars compass strip (Binoculars.lua), drawn every frame while the binoculars are up
             if (x1 == 401.0f && y1 == 185.0f && x2 == 60.0f && y2 == 16.0f)
                 Screen.bBinocularsActive = true;
 
@@ -418,24 +460,32 @@ export void InitXRenderD3D9()
             }
             else
             {
-                if (ret == dword_365526AD) // Objectives window on Tab
+                const bool script = std::find(ScriptImageReturns.begin(), ScriptImageReturns.end(), ret) != ScriptImageReturns.end();
+                if (ret == dword_365526AD && y2 > 0.0f && x2 >= 50.0f && x2 <= 850.0f && x2 == y2 * 2.0f)
                 {
-                    if (y2 > 0.0f && x2 >= 50.0f && x2 <= 850.0f && x2 == y2 * 2.0f) // enemy markers (binoculars)
-                    {
-                        // MoTrackLayer.lua draws the motion-tracker ring 2:1 (50x25 when fully tracked, up to
-                        // 850x425 while it fades in), centred on Game:GetEntitiesScreenSpace, which is a raw
-                        // screen position -> draw it with the raw mapping, keeping the ring centred.
-                        const float fW = x2 / Screen.fHudScale;
-                        *(float*)(regs.esp + 0x30) = x1 + (x2 - fW) * 0.5f;
-                        *(float*)(regs.esp + 0x38) = fW;
-                        Screen.bStretch = false;
-                    }
-                    else
-                        Screen.bStretch = true;
+                    // MoTrackLayer.lua draws the motion-tracker ring 2:1 (50x25 when fully tracked, up to
+                    // 850x425 while it fades in), centred on Game:GetEntitiesScreenSpace, which is a raw
+                    // screen position -> draw it with the raw mapping, keeping the ring centred.
+                    const float fW = x2 / Screen.fHudScale;
+                    *(float*)(regs.esp + 0x30) = x1 + (x2 - fW) * 0.5f;
+                    *(float*)(regs.esp + 0x38) = fW;
+                    Screen.bStretch = false;
+                }
+                else if (script && FullScreenLayer(x1, y1, x2, y2))
+                {
+                    // System:DrawImageColor draws tints, flashes and blur that fill the screen; the other
+                    // script functions draw the scope and binocular masks
+                    Screen.bStretch = ret != dword_365526AD;
+                    if (Screen.bStretch)
+                        DrawMaskSides(regs.ecx);
                 }
                 else if (ret2 == dword_330193CE) // Damage overlay
                 {
                     Screen.bStretch = false;
+                }
+                else if (script)
+                {
+                    Screen.bStretch = true;
                 }
                 else
                 {
@@ -456,7 +506,7 @@ export void InitXRenderD3D9()
         if (FarCryCinematics::StockBar(x1, y1, x2, y2))
             return 0;
 
-        // binoculars HUD compass strip (Binoculars.lua), drawn every frame while the binoculars are up
+        // binoculars compass strip (Binoculars.lua), drawn every frame while the binoculars are up
         if (x1 == 401.0f && y1 == 185.0f && x2 == 60.0f && y2 == 16.0f)
             Screen.bBinocularsActive = true;
 
@@ -527,22 +577,22 @@ export void InitXRenderD3D9()
         }
         else
         {
-            if (ret == dword_100B0A58) // Objectives window on Tab
+            if (ret == dword_100B0A58 && y2 > 0.0f && x2 >= 50.0f && x2 <= 850.0f && x2 == y2 * 2.0f)
             {
-                if (y2 > 0.0f && x2 >= 50.0f && x2 <= 850.0f && x2 == y2 * 2.0f) // enemy markers (binoculars)
-                {
-                    // MoTrackLayer.lua draws the motion-tracker ring 2:1 (50x25 when fully tracked, up to
-                    // 850x425 while it fades in), centred on Game:GetEntitiesScreenSpace, which is a raw
-                    // screen position -> draw it with the raw mapping, keeping the ring centred.
-                    const float fW = x2 / Screen.fHudScale;
-                    x1 += (x2 - fW) * 0.5f;
-                    x2 = fW;
-                    Screen.bStretch = false;
-                }
-                else
-                    Screen.bStretch = true;
+                // MoTrackLayer.lua draws the motion-tracker ring 2:1 (50x25 when fully tracked, up to
+                // 850x425 while it fades in), centred on Game:GetEntitiesScreenSpace, which is a raw
+                // screen position -> draw it with the raw mapping, keeping the ring centred.
+                const float fW = x2 / Screen.fHudScale;
+                x1 += (x2 - fW) * 0.5f;
+                x2 = fW;
+                Screen.bStretch = false;
             }
-            else if (ret2 == dword_100B72BB) // Damage overlay (and scopes in x64 version)
+            else if (ret == dword_100B0A58)
+            {
+                // System:DrawImageColor: tints, flashes and blur fill the screen
+                Screen.bStretch = !FullScreenLayer(x1, y1, x2, y2);
+            }
+            else if (ret2 == dword_100B72BB) // other script images: damage overlay, scope and binocular masks
             {
                 if ((x1 == 0.0f && x2 == 800.0f && y1 == 0.0f && y2 == 90.0f) || (x1 == 0.0f && x2 == 800.0f && y1 == 510.0f && y2 == 90.0f) ||
                     (x1 == 0.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f) || (x1 == 710.0f && x2 == 90.0f && y1 == 0.0f && y2 == 600.0f))
@@ -550,7 +600,8 @@ export void InitXRenderD3D9()
                 else
                 {
                     Screen.bStretch = true;
-                    DrawBorders(_this);
+                    if (FullScreenLayer(x1, y1, x2, y2))
+                        DrawMaskSides(_this);
                 }
             }
             else
@@ -800,18 +851,12 @@ export void InitCryGame()
 SafetyHookInline shSetCamera = {};
 void __fastcall SetCamera(void* engine, void* edx, float* cam, char bToTheScreen)
 {
+    // Hor+ everywhere: script screen positions (motion tracker, rocket lock) come from the renderer's
+    // projection, so they follow it. The binoculars keep their own lens: no FOV factor while they are up.
+    if (bToTheScreen && Screen.fHudScale > 0.0f)
+        FarCryCamera::Apply(cam, Screen.fAspectRatio, Screen.bBinocularsActive ? 1.0f : Screen.fIniFOV);
     if (bToTheScreen)
-    {
-        // bBinocularsActive is armed by the binoculars HUD drawing its compass strip (Binoculars.lua,
-        // nothing else draws a 60x16 quad at 401,185, and it draws it every frame while up). While
-        // armed the game keeps its own fov - no Hor+ factor - so the rendered view and the scripts'
-        // ProjectToScreen agree and the motion-tracker markers line up. It is disarmed here and only
-        // re-armed by the next HUD draw.
-        if (Screen.bBinocularsActive)
-            Screen.bBinocularsActive = false;
-        else if (Screen.fHudScale > 0.0f)
-            FarCryCamera::Apply(cam, Screen.fAspectRatio, Screen.fIniFOV);
-    }
+        Screen.bBinocularsActive = false;
 
     shSetCamera.unsafe_fastcall(engine, edx, cam, bToTheScreen);
 }
@@ -819,18 +864,12 @@ void __fastcall SetCamera(void* engine, void* edx, float* cam, char bToTheScreen
 SafetyHookInline shSetCamera = {};
 void __fastcall SetCamera(void* engine, float* cam, char bToTheScreen)
 {
+    // Hor+ everywhere: script screen positions (motion tracker, rocket lock) come from the renderer's
+    // projection, so they follow it. The binoculars keep their own lens: no FOV factor while they are up.
+    if (bToTheScreen && Screen.fHudScale > 0.0f)
+        FarCryCamera::Apply(cam, Screen.fAspectRatio, Screen.bBinocularsActive ? 1.0f : Screen.fIniFOV);
     if (bToTheScreen)
-    {
-        // bBinocularsActive is armed by the binoculars HUD drawing its compass strip (Binoculars.lua,
-        // nothing else draws a 60x16 quad at 401,185, and it draws it every frame while up). While
-        // armed the game keeps its own fov - no Hor+ factor - so the rendered view and the scripts'
-        // ProjectToScreen agree and the motion-tracker markers line up. It is disarmed here and only
-        // re-armed by the next HUD draw.
-        if (Screen.bBinocularsActive)
-            Screen.bBinocularsActive = false;
-        else if (Screen.fHudScale > 0.0f)
-            FarCryCamera::Apply(cam, Screen.fAspectRatio, Screen.fIniFOV);
-    }
+        Screen.bBinocularsActive = false;
 
     shSetCamera.unsafe_fastcall(engine, cam, bToTheScreen);
 }
@@ -860,8 +899,11 @@ export void InitCrySystem()
     FarCryCamera::Install(GetModuleHandleW(L"CryGame.dll"), GetModuleHandleW(L"CrySystem.dll"));
 
     #ifndef _WIN64
-    dword_36552A15 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00 8B 06 8B CE FF 50 40 5F 5E 5B C9 C2 04 00 55 8B EC 83 EC 30").get_first(0);
-    dword_365526AD = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00").get(1).get<void>(0);
+    auto scriptImages = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00").count(4);
+    for (size_t i = 0; i < ScriptImageReturns.size(); ++i)
+        ScriptImageReturns[i] = scriptImages.get(i).get<void>(0);
+    dword_36552A15 = ScriptImageReturns[3];
+    dword_365526AD = ScriptImageReturns[1];
     #else
     dword_100B0A58 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 BC 24 ? ? ? ? ? 74 12 48 8B 4E 38 BA ? ? ? ? 48 8B 01").count(4).get(1).get<void*>(0);
     dword_100B1018 = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 BC 24 ? ? ? ? ? 74 12 48 8B 4E 38 BA ? ? ? ? 48 8B 01").count(4).get(3).get<void*>(0);

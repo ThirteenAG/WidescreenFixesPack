@@ -3,7 +3,6 @@
   "page.display": "Affichage",
   "page.game": "Jeu",
   "page.advanced": "Avancé",
-  "page.compatibility": "Compatibilité",
   "ResX": "Largeur de la résolution",
   "ResX.description": "Largeur en pixels. Zéro choisit la résolution du bureau. Redémarrage nécessaire.",
   "ResY": "Hauteur de la résolution",
@@ -12,8 +11,6 @@
   "FOVFactor.description": "Multiplie le champ de vision en jeu, jusqu’à 150 degrés horizontalement. Les cinématiques, le zoom actif et les états de caméra inconnus gardent leur cadrage. Effet immédiat.",
   "SkipIntro": "Passer l'intro",
   "SkipIntro.description": "Passe les vidéos des logos de l'éditeur et des studios. L'intro du jeu est toujours jouée. Redémarrage nécessaire.",
-  "GameSpeed": "Vitesse du jeu",
-  "GameSpeed.description": "Valeur de cadence interne ; 30 par défaut. Plus petit accélère le jeu, plus grand le ralentit. Zéro garde la valeur du jeu. Redémarrage nécessaire.",
   "WindowMode": "Mode fenêtre",
   "WindowMode.description": "Plein écran, une fenêtre avec cadre à la résolution choisie, ou sans bordure à la résolution de l'écran. S'applique à l'image suivante. Alt+Entrée revient au dernier mode fenêtre.",
   "windowmode.fullscreen": "Plein écran",
@@ -70,5 +67,7 @@
   "borders.both": "Les deux",
   "HudAspectRatioConstraint": "Format de l'ATH",
   "HudAspectRatioConstraint.description": "Auto répartit l'ATH sur tout l'écran, sur ses bords. Un format le garde dans un cadre centré de cette forme. Les menus gardent leur disposition 4:3. S'applique immédiatement.",
-  "HudAspectRatioConstraint.auto": "Auto"
+  "HudAspectRatioConstraint.auto": "Auto",
+  "GamepadIcons": "Icônes de manette",
+  "GamepadIcons.description": "Images des boutons de la manette. Auto utilise Xbox ; choisissez PlayStation ou Nintendo pour une autre manette. Le clavier rétablit ses propres indications."
 }

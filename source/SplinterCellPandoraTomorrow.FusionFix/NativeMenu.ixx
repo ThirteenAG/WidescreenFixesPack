@@ -431,8 +431,6 @@ export namespace PTMenu
         tickHook = safetyhook::create_inline(tick, Tick);
         buttonDrawHook = safetyhook::create_inline(button, DrawButton);
         tabDrawHook = safetyhook::create_inline(tab, DrawTab);
-        if (!tickHook || !buttonDrawHook || !tabDrawHook)
-            throw std::runtime_error("Native drawing hook installation failed");
         actualLeft = reinterpret_cast<decltype(actualLeft)>(GetProcAddress(gui, "?ActualLeft@UGUIComponent@@UAEMXZ"));
         actualTop = reinterpret_cast<decltype(actualTop)>(GetProcAddress(gui, "?ActualTop@UGUIComponent@@UAEMXZ"));
         actualWidth = reinterpret_cast<decltype(actualWidth)>(GetProcAddress(gui, "?ActualWidth@UGUIComponent@@UAEMXZ"));
@@ -1364,16 +1362,7 @@ export namespace PTMenu
             throw std::runtime_error("Native menu host module unavailable");
         }
         destroyHook = safetyhook::create_inline(destroy, Destroy);
-        if (!destroyHook)
-        {
-            throw std::runtime_error("ConditionalDestroy hook failed");
-        }
         internalHook = safetyhook::create_inline(internal, Internal);
-        if (!internalHook)
-        {
-            destroyHook.reset();
-            throw std::runtime_error("ProcessInternal hook failed");
-        }
     }
 }
 
@@ -1780,11 +1769,6 @@ export namespace PTMenu
             throw std::runtime_error("Native controls export unavailable");
         }
         controlsDrawHook = safetyhook::create_inline(draw, DrawControls);
-        if (!controlsDrawHook)
-        {
-            destroyArray = nullptr;
-            throw std::runtime_error("Native controls drawing hook installation failed");
-        }
     }
 }
 

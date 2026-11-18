@@ -394,30 +394,6 @@
       "apply": "live"
     },
     {
-      "id": "MOUSE.SensitivityFactor",
-      "type": "float",
-      "default": 0,
-      "min": 0,
-      "max": 10,
-      "step": 0.1,
-      "decimals": 1,
-      "unit": "x",
-      "special": [
-        {
-          "value": 0,
-          "label": "@sensfactor.game"
-        }
-      ],
-      "label": "@sensfactor",
-      "description": "@sensfactor.description",
-      "page": "controls",
-      "control": [
-        "slider"
-      ],
-      "apply": "restart",
-      "visibility": "editor"
-    },
-    {
       "id": "MISC.HighResolutionShadows",
       "type": "bool",
       "default": 1,

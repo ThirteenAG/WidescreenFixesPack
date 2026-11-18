@@ -21,6 +21,8 @@
   "SkipIntro.description": "Skips the legal, Rockstar and opening videos and the startup notice that only has an OK button. Restart the emulated game after changing this setting.",
   "DualAnalogPatch": "Dual analog camera",
   "DualAnalogPatch.description": "Turns the chase camera with the right stick: sideways looks left and right, pulling back looks behind. The D-pad look buttons keep working. Restart the emulated game after changing this setting.",
+  "GamepadCameraSpeed": "Camera speed",
+  "GamepadCameraSpeed.description": "How fast the right stick turns the chase camera around the car, from 0.5 to 2.0. The camera returns behind the car shortly after the stick is released. Changes apply while playing.",
   "TextLanguage": "Plugin text language",
   "TextLanguage.description": "Language of the Fusion Fix pages in the pause menu. Auto follows the PSP system language. Changes in the Plugins menu apply immediately.",
   "auto": "Auto",

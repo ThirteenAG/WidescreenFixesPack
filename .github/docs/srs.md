@@ -44,7 +44,18 @@ Defaults are the Recommended preset. No preset changes the resolution or the dis
 
 ## Controller
 
-The bundled Xidi presents an Xbox-style controller to the game. Choose it under **Options › Controls** (Player 1) and assign the driving actions there.
+The bundled Xidi presents an Xbox-style controller to the game, and the fix binds it for player 1 next to the keyboard, so it works without setup:
+
+| Button | Action | Button | Action |
+|---|---|---|---|
+| RT | Accelerate | LT | Brake / Reverse |
+| Left stick, D-pad | Steer, menus | A | NOS, menu select |
+| B | Rear view, menu back | X | Hand brake |
+| Y | Change view | RB / LB | Gear up / down |
+| LS | Clutch | RS | High beam |
+| Back | View map | Start | Pause |
+
+Both triggers are analog and can be held together. Choosing the controller under **Options › Controls** gives the game's own controller layout instead, which can be changed there.
 
 ## Known limits
 

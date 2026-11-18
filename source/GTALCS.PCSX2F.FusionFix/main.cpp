@@ -14,6 +14,7 @@ int PCSX2Data[PCSX2Data_Size] = {1};
 char OSDText[OSDStringNum][OSDStringSize] = {{1}};
 char KeyboardState[StateNum][StateSize] = {{1}};
 CMouseControllerState MouseState[StateNum] = {{1}};
+char CheatString[CheatStringLen] = {1};
 char FrameLimitUnthrottle;
 }
 namespace lcs {
@@ -25,6 +26,16 @@ pcsx2::Patch blurPatch;
 // thread (init / menu), so no plugin code runs inside the interrupt handler.
 constexpr uintptr_t sixtyFPSSite = 0x2D92C4;
 pcsx2::Patch sixtyFPSPatch;
+// cDMAudio::Service calls cAudioManager::Service (0x2380B0) once per frame;
+// at 60 FPS every other frame is skipped, so sound effects and streamed audio
+// keep the cadence they were made for.
+pcsx2::GameCallback<void(uintptr_t)> audioService;
+pcsx2::GameFunction<void(uintptr_t)> serviceAudio;
+bool audioFrame = false;
+void AudioService(uintptr_t manager) {
+    audioFrame = !audioFrame;
+    if (audioFrame || !settings.sixtyFPS) serviceAudio(manager);
+}
 void BlurFailure(pcsx2_hook_status status)
 {
     static constexpr const char* languages[] = { "en", "fr", "de", "it", "es" };
@@ -77,6 +88,9 @@ void ReadSettings() {
     settings.skipIntro = config::Boolean(0, true);
     settings.gamepadIcons = int(config::Number(13, 0.0f, 0.0f, 3.0f));
     settings.vehicleLights = config::Boolean(14, true);
+    settings.modernControls = config::Boolean(15, true);
+    settings.padCameraSpeed = config::Number(16, 1.0f, 0.25f, 4.0f);
+    settings.invertPad = config::Boolean(17, false);
 }
 void RefreshSettings() {
     // Everything the menu changes applies live; Skip Intro keeps the value the
@@ -88,6 +102,7 @@ void RefreshSettings() {
     UpdateViewport();
     ApplyBlur();
     ApplyFrameRate();
+    ApplyControls();
 }
 namespace {
 void Rejected(pcsx2_hook_status status) {
@@ -117,6 +132,9 @@ extern "C" void init() {
     InstallHud();
     InstallFrontend();
     InstallVehicleLights();
+    serviceAudio.bind(0x2380B0);
+    audioService.bind(AudioService);
+    injector::MakeCALL(0x2A1E04, audioService.address());
     // The blur pass (sub_194178) calls its renderer at 0x1941A0 when the gate
     // gp-0x6094 is set; dropping the call (the delay slot only copies f12 to
     // f13) removes the blur. HEAD's NOPs at 0x194194 / 0x3D0E64 left it drawn.

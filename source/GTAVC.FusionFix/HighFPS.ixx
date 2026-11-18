@@ -17,8 +17,10 @@ import Timer;
 //   rampage counter's flashing count frames of 30 per second.
 // - Particles (smoke, sparks, blood, explosions) and their emitters update 30 times per second with the time that
 //   passed, so they fade, grow and spawn as at 30 fps.
-// - The radio station's name, the clouds' turning, the vehicles' spin damping and the script-moved objects (gates,
-//   lifts, doors of missions) are scaled by the time step.
+// - The radio station's name, the clouds' turning and spinning, the vehicles' spin damping, the car's and the bike's
+//   handbrake, the wheels' rolling resistance off the throttle and the script-moved objects (gates, lifts, doors of
+//   missions) are scaled by the time step.
+// - Sounds that fade out as they end (the releasing sounds) lose volume and frames 30 times per second.
 // Above 30 fps only; at 30 fps or less everything is as the game had it.
 
 namespace
@@ -38,6 +40,11 @@ namespace
 
     float CloudsTurn = 0.0f, CloudsTurnBase = 0.0f;
     float TurnDamping = 0.99f, TurnDampingBase = 0.99f;
+    float CloudsSpin = 0.3f, CloudsSpinBase = 0.3f;
+    float HandbrakeBrake = 20000.0f, HandbrakeBrakeBase = 20000.0f;
+    float BikeHandbrakeBrake = 20000.0f, BikeHandbrakeBrakeBase = 20000.0f;
+    float WheelFriction = 0.0f;
+    float* WheelFrictionBase = nullptr;
 
     void UpdateSteps()
     {
@@ -63,6 +70,11 @@ namespace
         StepScale = step / FrameStep30;
         CloudsTurn = CloudsTurnBase * StepScale;
         TurnDamping = std::pow(TurnDampingBase, StepScale);
+        CloudsSpin = CloudsSpinBase * StepScale;
+        HandbrakeBrake = HandbrakeBrakeBase * StepScale;
+        BikeHandbrakeBrake = BikeHandbrakeBrakeBase * StepScale;
+        if (WheelFrictionBase)
+            WheelFriction = *WheelFrictionBase * StepScale;
     }
 
     // The code section of the game
@@ -208,6 +220,39 @@ public:
                 slideParams[4] *= StepScale;
                 slideParams[5] *= StepScale;
                 slideParams[6] *= StepScale;
+            });
+
+            // CClouds::Update: the clouds' own spin per frame
+            auto cloudsSpin = hook::pattern("D8 05 ? ? ? ? D8 0D ? ? ? ? DF 6C 24 08 DE C1");
+            CloudsSpinBase = CloudsSpin = **cloudsSpin.get_first<float*>(2);
+            injector::WriteMemory(cloudsSpin.get_first(2), &CloudsSpin, true);
+
+            // CAutomobile::ProcessControl and CBike::ProcessControl: the handbrake's brake force, per frame
+            auto handbrake = hook::pattern("24 01 74 ? D9 05 ? ? ? ? D9 9C 24 AC 00 00 00");
+            HandbrakeBrakeBase = HandbrakeBrake = **handbrake.get_first<float*>(6);
+            injector::WriteMemory(handbrake.get_first(6), &HandbrakeBrake, true);
+            auto bikeHandbrake = hook::pattern("74 1E D9 05 ? ? ? ? D9 9C 24 A8 00 00 00");
+            BikeHandbrakeBrakeBase = BikeHandbrakeBrake = **bikeHandbrake.get_first<float*>(4);
+            injector::WriteMemory(bikeHandbrake.get_first(4), &BikeHandbrakeBrake, true);
+
+            // CVehicle::ProcessWheel and ProcessBikeWheel: the rolling resistance off the throttle (the handling's
+            // wheel friction, read nowhere else), per frame
+            auto rolling = hook::pattern("0F BF 43 5C 3D AB 00 00 00 75 11 D9 05 ? ? ? ? D8 0D ? ? ? ?");
+            WheelFrictionBase = *rolling.get_first<float*>(19);
+            WheelFriction = *WheelFrictionBase;
+            auto [codeBegin, codeEnd] = CodeRange();
+            Redirect(codeBegin, codeEnd, WheelFrictionBase, &WheelFriction, { { 0xD9, 0x05 }, { 0xD8, 0x0D } });
+
+            // cAudioManager::AddReleasingSounds: a fading sound's volume and frames left, one step per frame
+            auto releasing = hook::pattern("83 7B 20 00 75 ? 80 7B ? FF 8D 4B 18");
+            // Past the frame count's decrement, where the jne after the loop count's test goes (dec dword ptr, 3 bytes)
+            auto jne = releasing.get_first<uint8_t>(4);
+            static uintptr_t releasingDone = reinterpret_cast<uintptr_t>(jne + 2 + int8_t(jne[1])) + 3;
+            static auto ReleasingHook = safetyhook::create_mid(releasing.get_first(), [](SafetyHookContext& regs)
+            {
+                // Between the 30 fps frames the sound keeps its volume and its frames
+                if (StepScale < 1.0f && !Frames30Passed)
+                    regs.eip = releasingDone;
             });
 
             WFP::onGameProcessEvent() += []()

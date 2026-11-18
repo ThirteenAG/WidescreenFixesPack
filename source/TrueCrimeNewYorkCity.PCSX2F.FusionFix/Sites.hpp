@@ -47,4 +47,6 @@ namespace tcny::sites
     inline uintptr_t at_204E1C() { return pattern.get(0, "? ? 10 3C 00 A0 82 44 00 00 00 00 20 A5 80 46 ? ? ? 0C ? ? 10 26", 0); }
     // World camera projection in the frame's world rendering.
     inline uintptr_t at_4A1924() { return pattern.get(0, "FA 44 01 3C 00 68 81 44 ? ? ? 0C 2D 20 20 02 ? ? 0C C6 ? ? ? 0C 2D 20 20 02", 0); }
+    // Ambient car driver: the sideways weight of its removal zone (lui at, 2.0).
+    inline uintptr_t at_19ABDC() { return pattern.get(0, "08 00 02 24 ? ? 62 10 00 00 00 00 00 40 01 3C 00 00 81 44 3C 23 E3 4B", 12); }
 } // namespace tcny::sites

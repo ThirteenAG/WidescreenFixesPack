@@ -27,7 +27,8 @@
 - **Window mode** — Fullscreen, Windowed or Borderless; restart required. Borderless uses the desktop resolution.
 - **HUD aspect ratio constraint** — Auto uses the screen edges; 4:3, 16:9, 21:9 or 32:9 places the HUD inside a centered box. Applies live.
 - **Frame rate limit** — 0 is unlimited, −1 follows the display refresh rate, and a positive value selects the cap. Default 60; applies live.
-- **Cutscene borders** — Off or Pillarbox; applies live. Pillarbox keeps the original story framing with side borders.
+- **Cutscene borders** — Off or Both; applies live. Both keeps the original 4:3 story framing with black bars at the sides (above and below on screens narrower than 4:3).
+- **Pause when unfocused** — Pauses gameplay while another window is active; applies live.
 - **Video framing** — Original or Fill, as described above.
 - **Confine cursor** — Keeps the cursor inside the focused game window; applies live.
 - **Skip intro / Skip press start** — Enabled by default; restart required.
@@ -41,7 +42,7 @@ Settings can be changed on fusionfix.io or in FusionFixHub. Recommended is the d
 
 The archive includes Xidi for the game's native DirectInput controls. Connect an XInput controller, or expose a PlayStation or Nintendo controller through Steam Input or DS4Windows.
 
-Use the left stick to steer, RT to accelerate and LT to brake. A/B/X/Y select laser, plasma, rockets or no weapon; RB fires the selected offensive gadget, LB jumps, left-stick click resets the car, right-stick click scans and View changes camera. The right stick operates shield, micro jammer and target/camera cycling. The d-pad selects Super Pursuit Mode, targets and ski modes in gameplay; menus use the d-pad, A to confirm and B to go back. Menu pauses or continues. In the pause menu's quit question, A answers yes and B no. The Controls page and the front-end menus follow the last input device; the in-game pause, quit, retry and loading boxes keep their keyboard key pictures.
+Use the left stick to steer, RT to accelerate and LT to brake. A/B/X/Y select laser, plasma, rockets or no weapon; RB fires the selected offensive gadget, LB jumps, left-stick click resets the car, right-stick click scans and View changes camera. The right stick operates shield, micro jammer and target/camera cycling. The d-pad selects Super Pursuit Mode, targets and ski modes in gameplay; menus use the d-pad, A to confirm and B to go back. Menu pauses or continues. In the pause menu's quit question, A answers yes and B no, and its answers show A and B while a pad is used. The Controls page and the front-end menus follow the last input device; the in-game pause, quit, retry and loading boxes hide their keyboard key pictures while a pad is used.
 
 ## Installation
 

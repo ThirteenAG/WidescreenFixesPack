@@ -43,7 +43,7 @@ Open full option help with F1, the Help button, or Y on an Xbox controller (Tria
 
 Pause on Focus Loss applies immediately and is enabled by default. Disable it to let the game continue running in the background. The game ignores controls while another application has focus.
 
-Automatic Gamepad detects XInput controllers connected during play and switches bindings and button prompts to match your latest input. Disconnecting returns control to the keyboard and mouse. Gamepad Deadzone adjusts both sticks immediately (default 15%). Gamepad Camera Speed adjusts both axes. The game's invert-Y and vibration options remain available. Gamepad Icons selects Xbox, PlayStation or Nintendo pictures; Auto uses Xbox. Keep `plugins/Bully.FusionFix/buttons.nft` with the fix, since it contains the button artwork.
+The fix detects XInput controllers connected during play and switches bindings and button prompts to match your latest input. Disconnecting returns control to the keyboard and mouse. Gamepad Deadzone adjusts both sticks immediately (default 15%). Gamepad Camera Speed adjusts both axes. The game's invert-Y and vibration options remain available. Gamepad Icons selects Xbox, PlayStation or Nintendo pictures; Auto uses Xbox. Keep `plugins/Bully.FusionFix/buttons.nft` with the fix, since it contains the button artwork.
 
 Raw Mouse Input uses Windows raw relative mouse movement and removes the game's horizontal movement bias. It applies immediately and keeps the game's sensitivity and bindings.
 

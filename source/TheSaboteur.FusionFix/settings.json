@@ -65,9 +65,14 @@
       "label": "@FPSLimit",
       "description": "@FPSLimit.description",
       "page": "display",
+      "presets": {
+        "vanilla": 60,
+        "recommended": 60,
+        "enhanced": 60
+      },
       "apply": "live",
       "visibility": "menu",
-      "min": 30,
+      "min": -1,
       "max": 1000,
       "step": 1,
       "unit": "fps",
@@ -102,7 +107,7 @@
     {
       "id": "GRAPHICS.AntiAliasing",
       "type": "choice",
-      "default": 0,
+      "default": 1,
       "label": "@AntiAliasing",
       "description": "@AntiAliasing.description",
       "page": "graphics",
@@ -110,7 +115,7 @@
       "visibility": "menu",
       "presets": {
         "vanilla": 0,
-        "recommended": 0,
+        "recommended": 1,
         "enhanced": 1
       },
       "choices": [

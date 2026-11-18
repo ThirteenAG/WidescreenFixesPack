@@ -8,6 +8,8 @@
   "MAIN.FPSLimit.description": "Enable the native 60 FPS patch. Restart the emulated game after changing this setting in the hub.",
   "MAIN.UnthrottleEmuDuringLoading": "Faster loading",
   "MAIN.UnthrottleEmuDuringLoading.description": "Unthrottle the emulator during loading. Restart the emulated game after changing this setting in the hub.",
+  "CONTROLS.HoldVehicleCamera": "Hold vehicle camera",
+  "CONTROLS.HoldVehicleCamera.description": "When you turn the camera with the right stick in a vehicle, it stays there, so you can look back while driving. It swings back behind the vehicle two seconds after you let go. Off keeps the original camera, which swings back behind the vehicle as you drive.",
   "CONTROLS.ModernControlScheme": "Modern controls",
   "CONTROLS.ModernControlScheme.description": "Use the alternate modern control scheme. For the best experience, swap buttons and triggers in the emulator settings, so LT/RT aim and shoot, brake and accelerate. Press Aim + Jump to reload the weapon. Restart the emulated game after changing this setting in the hub.",
   "CONTROLS.PCCheats": "PC cheats",

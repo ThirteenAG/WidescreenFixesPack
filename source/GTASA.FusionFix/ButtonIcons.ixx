@@ -12,6 +12,7 @@ export module ButtonIcons;
 
 import Pad;
 import Skeleton;
+import Options;
 
 // Button pictures in the game's prompts. The game writes a control's keys into a prompt where its text has
 // ~k~~ACTION~ (CMessages::InsertPlayerControlKeysInString): there the pad's button (while the pad is used) or the
@@ -19,7 +20,9 @@ import Skeleton;
 // the form of the font's own button tokens (~X~, ~<~...). The font's token parser shows them like its button symbols:
 // the text renderer draws the picture in the symbol's place and moves on by the picture's width, and the font's width
 // measuring counts that width, which it leaves out for symbols. A shown help message is written again when the
-// device or the icon style changes, so its pictures follow the last device used.
+// device or the icon style changes, so its pictures follow the last device used (the other texts insert the keys each
+// time they are drawn). The frontend's helper texts at the bottom right name the mouse and keyboard ("CLICK LMB /
+// RETURN - BACK"): while the pad is used they name its buttons.
 // With a controller mod loaded that draws its own button pictures, none of it is installed.
 
 using namespace RWGTA::ButtonIcons;
@@ -148,7 +151,7 @@ namespace
         }
     }
 
-    enum class Seat { Foot, Vehicle, Aircraft };
+    enum class Seat { Foot, Vehicle, Aircraft, Passenger };
 
     PadPrompt ModernButton(int action, Seat seat)
     {
@@ -156,7 +159,7 @@ namespace
         switch (action)
         {
             case PED_FIREWEAPON: return { P::RT };
-            case VEHICLE_FIREWEAPON: return { P::A };
+            case VEHICLE_FIREWEAPON: return { seat == Seat::Passenger ? P::RT : P::A };
             case PED_FIREWEAPON_ALT: return { P::RB };
             case VEHICLE_FIREWEAPON_ALT: return { P::DPadLeft };
             case PED_CYCLE_WEAPON_RIGHT: return { P::LB };
@@ -191,8 +194,8 @@ namespace
             case PED_CYCLE_TARGET_LEFT: case PED_CYCLE_TARGET_RIGHT: return { P::RightStickLeftRight };
             case PED_CENTER_CAMERA_BEHIND_PLAYER: return { P::RB };
             case PED_LOCK_TARGET: return { P::LT };
-            case CONVERSATION_YES: return { seat == Seat::Foot ? P::DPadRight : None };
-            case CONVERSATION_NO: return { seat == Seat::Foot ? P::DPadLeft : None };
+            case CONVERSATION_YES: return { P::DPadRight };
+            case CONVERSATION_NO: return { P::DPadLeft };
             case GROUP_CONTROL_FWD: return { P::DPadUp };
             case GROUP_CONTROL_BWD: return { P::DPadDown };
             default: return { None };
@@ -241,6 +244,8 @@ namespace
         auto vehicle = FindPlayerVehicle ? FindPlayerVehicle(-1, false) : nullptr;
         if (!vehicle)
             return Seat::Foot;
+        if (Pad::IsPassenger())
+            return Seat::Passenger;
         // CVehicle's subclass: 3 helicopter, 4 plane
         auto subclass = *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(vehicle) + 0x594);
         return subclass == 3 || subclass == 4 ? Seat::Aircraft : Seat::Vehicle;
@@ -516,6 +521,70 @@ namespace
         if (kept)
             std::memcpy(LastHelpMessage, text.data(), HelpLength);
     }
+
+    // The frontend's helper texts of the keyboard and mouse, and the fix's text with the pad's buttons
+    struct PadHelp
+    {
+        const char* gameKey;
+        const char* textKey;
+    };
+    constexpr PadHelp PadHelps[] =
+    {
+        { "FEH_BPO", "padhelp.back" },      // CLICK LMB / RETURN - BACK
+        { "FET_APP", "padhelp.apply" },     // CLICK LMB / RETURN - APPLY NEW SETTING
+        { "FEH_JMP", "padhelp.enter" },     // CLICK LMB / RETURN - ENTER MENU
+        { "FEH_SNC", "padhelp.scan" },      // CLICK LMB / RETURN - SCAN USER TRACKS
+        { "FET_MIG", "padhelp.adjust" },    // LEFT / RIGHT / MOUSEWHEEL - ADJUST
+        { "FEH_SSA", "padhelp.move" },      // CURSORS - MOVE~n~S - SAVE TO FILE
+        { "FEH_MPH", "padhelp.map" },       // the map's keys
+    };
+
+    void* TheText = nullptr;
+    const char* (__fastcall* GetText)(void*, void*, const char*) = nullptr;
+    std::string PadHelpText;
+    void (__cdecl* HelperPrintPrevious)(float, float, const char*) = nullptr;
+
+    // {A}, {LeftStick}...: the pad's pictures
+    std::string WithPadTokens(std::string text)
+    {
+        static constexpr std::pair<const char*, P> Names[] =
+        {
+            { "A", P::A }, { "B", P::B }, { "X", P::X }, { "Y", P::Y }, { "LB", P::LB }, { "RB", P::RB }, { "LT", P::LT },
+            { "RT", P::RT }, { "LeftStick", P::LeftStick }, { "RightStick", P::RightStick }, { "DPadUpDown", P::DPadUpDown },
+            { "DPadLeftRight", P::DPadLeftRight },
+        };
+        for (auto& [name, icon] : Names)
+        {
+            std::string tag = std::string("{") + name + "}";
+            std::string token = { '~', char(PadFirst + int(icon)), '~' };
+            for (size_t at = text.find(tag); at != std::string::npos; at = text.find(tag, at + token.size()))
+                text.replace(at, tag.size(), token);
+        }
+        return text;
+    }
+
+    const char* PadHelpFor(const char* text)
+    {
+        if (!text || !GetText || !Pad::IsPadLastDevice())
+            return text;
+        for (auto& help : PadHelps)
+        {
+            if (GetText(TheText, nullptr, help.gameKey) == text)
+            {
+                auto padText = FixOptions::GameText(help.textKey);
+                if (padText.empty())
+                    return text;
+                PadHelpText = WithPadTokens(padText);
+                return PadHelpText.c_str();
+            }
+        }
+        return text;
+    }
+
+    void __cdecl HelperPrint(float x, float y, const char* text)
+    {
+        HelperPrintPrevious(x, y, PadHelpFor(text));
+    }
 }
 
 class ButtonIcons
@@ -588,6 +657,15 @@ public:
             {
                 RefreshHelpMessage();
             };
+
+            // CMenuManager::DisplayHelperText's CFont::PrintStringFromBottom (Misc.ixx calls through it too). Menu mods
+            // that hide the helper text replace the call with NOPs; it stays hidden then.
+            auto text = hook::pattern("B9 ? ? ? ? ? ? ? E8 ? ? ? ? 50 E8 ? ? ? ? 83 C4 ? 8B 46");
+            auto helperPrint = hook::pattern("68 00 80 18 44 E8 ? ? ? ? 51 D9 1C 24");
+            TheText = *text.get_first<void*>(1);
+            GetText = reinterpret_cast<decltype(GetText)>(injector::GetBranchDestination(text.get_first(8)).as_int());
+            if (*helperPrint.get_first<uint8_t>(14) == 0xE8)
+                HelperPrintPrevious = reinterpret_cast<decltype(HelperPrintPrevious)>(injector::MakeCALL(helperPrint.get_first(14), HelperPrint, true).as_int());
         };
     }
 } ButtonIcons;

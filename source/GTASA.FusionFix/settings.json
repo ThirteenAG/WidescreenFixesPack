@@ -177,7 +177,47 @@
       "group": "@group.hud",
       "control": [
         "slider"
-      ]
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
+    },
+    {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@off"
+        },
+        {
+          "value": 1,
+          "label": "@cutsceneborders.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@cutsceneborders.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@cutsceneborders.both"
+        }
+      ],
+      "label": "@cutsceneborders",
+      "description": "@cutsceneborders.description",
+      "page": "display",
+      "group": "@group.hud",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      }
     },
     {
       "id": "MAIN.AnimatedCutsceneBorders",
@@ -226,35 +266,6 @@
       ]
     },
     {
-      "id": "MAIN.SCMAspectRatioConstraint",
-      "type": "string",
-      "default": "16:9",
-      "special": [
-        {
-          "value": "Auto",
-          "label": "@auto"
-        }
-      ],
-      "suggestions": [
-        {
-          "value": "16:9"
-        },
-        {
-          "value": "21:9"
-        },
-        {
-          "value": "4:3"
-        }
-      ],
-      "label": "@scmaspect",
-      "description": "@scmaspect.description",
-      "page": "display",
-      "group": "@group.menus",
-      "control": [
-        "cycler"
-      ]
-    },
-    {
       "id": "MISC.FullscreenMap",
       "type": "bool",
       "default": 1,
@@ -266,6 +277,73 @@
         "vanilla": 0,
         "recommended": 1,
         "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "int",
+      "default": 60,
+      "min": 0,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
+        {
+          "value": 0,
+          "label": "@off"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 40
+        },
+        {
+          "value": 50
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 75
+        },
+        {
+          "value": 90
+        },
+        {
+          "value": 100
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 180
+        },
+        {
+          "value": 200
+        },
+        {
+          "value": 240
+        }
+      ],
+      "label": "@fpslimit",
+      "description": "@fpslimit.description",
+      "page": "display",
+      "group": "@group.menus",
+      "control": [
+        "cycler"
+      ],
+      "presets": {
+        "vanilla": 30,
+        "recommended": 60,
+        "enhanced": 60
       }
     },
     {
@@ -302,7 +380,7 @@
         }
       ],
       "label": "@menufps",
-      "description": "@menufps.description",
+      "description": "@menufps.gameplaylimit.description",
       "page": "display",
       "group": "@group.menus",
       "control": [
@@ -387,7 +465,12 @@
       "label": "@crosshairdot",
       "description": "@crosshairdot.description",
       "page": "camera",
-      "apply": "restart"
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
     },
     {
       "id": "MAIN.ModernControls",
@@ -468,6 +551,14 @@
       "page": "controls"
     },
     {
+      "id": "MAIN.Vibration",
+      "type": "bool",
+      "default": 1,
+      "label": "@vibration",
+      "description": "@vibration.description",
+      "page": "controls"
+    },
+    {
       "id": "MAIN.FMVWidescreenMode",
       "type": "choice",
       "default": 1,
@@ -542,7 +633,12 @@
       "label": "@speedblur",
       "description": "@speedblur.description",
       "page": "graphics",
-      "group": "@group.postfx"
+      "group": "@group.postfx",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
     },
     {
       "id": "GRAPHICS.TransparentMenu",

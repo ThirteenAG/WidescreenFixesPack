@@ -157,6 +157,13 @@ export namespace JCWindow
         if (!parameters) return;
         window = parameters->hDeviceWindow ? parameters->hDeviceWindow : focus;
         const auto mode = appliedMode;
+        // A device reset carries the resolution chosen in the game's options
+        if (reset && mode != 2)
+        {
+            const auto [width, height] = JCResolution::Size();
+            parameters->BackBufferWidth = width;
+            parameters->BackBufferHeight = height;
+        }
         if (mode != 0)
         {
             parameters->Windowed = TRUE;
@@ -168,15 +175,6 @@ export namespace JCWindow
                 {
                     parameters->BackBufferWidth = monitor.rcMonitor.right - monitor.rcMonitor.left;
                     parameters->BackBufferHeight = monitor.rcMonitor.bottom - monitor.rcMonitor.top;
-                }
-            }
-            else if (reset)
-            {
-                RECT client{};
-                if (GetClientRect(window, &client) && client.right > 0 && client.bottom > 0)
-                {
-                    parameters->BackBufferWidth = client.right;
-                    parameters->BackBufferHeight = client.bottom;
                 }
             }
         }

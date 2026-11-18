@@ -4,6 +4,11 @@ module;
 #include <d3d9.h>
 #include "FixSettings.hpp"
 
+#ifndef DIRECTINPUT_VERSION
+#define DIRECTINPUT_VERSION 0x0800
+#endif
+#include <dinput.h>
+
 export module Focus;
 
 import ComVars;
@@ -44,5 +49,39 @@ export namespace CoCFocus
 
         auto active = hook::pattern("83 EC 4C 57 8B F9 E8 ? ? ? ? 8B C8 E8 ? ? ? ? 84 C0 0F 84");
         static auto ActiveHook = safetyhook::create_mid(active.get_first(18), Run);
+    }
+}
+
+// The game reads only the DirectInput keyboard and mouse. The bundled Xidi turns the controller into keys and mouse
+// movement (Xidi.ini), and starts reading the controller once a game controller device exists, so one is opened on
+// the game's DirectInput object.
+export namespace CoCPad
+{
+    inline HRESULT(WINAPI* NativeCreate)(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN) = nullptr;
+    inline IDirectInputDevice8A* controller = nullptr;
+
+    inline BOOL CALLBACK First(LPCDIDEVICEINSTANCEA instance, LPVOID context)
+    {
+        *static_cast<GUID*>(context) = instance->guidInstance;
+        return DIENUM_STOP;
+    }
+
+    inline HRESULT WINAPI Create(HINSTANCE instance, DWORD version, REFIID iid, LPVOID* output, LPUNKNOWN outer)
+    {
+        const auto result = NativeCreate(instance, version, iid, output, outer);
+        if (SUCCEEDED(result) && output && *output && !controller && GetModuleHandleW(L"Xidi.32.dll"))
+        {
+            auto input = static_cast<IDirectInput8A*>(*output);
+            GUID guid{};
+            if (SUCCEEDED(input->EnumDevices(DI8DEVCLASS_GAMECTRL, First, &guid, DIEDFL_ATTACHEDONLY)) && guid != GUID{})
+                input->CreateDevice(guid, &controller, nullptr);
+        }
+        return result;
+    }
+
+    inline void Init()
+    {
+        auto original = IATHook::Replace(GetModuleHandleW(nullptr), "DINPUT8.dll", std::forward_as_tuple("DirectInput8Create", Create));
+        NativeCreate = reinterpret_cast<decltype(NativeCreate)>(original.at("DirectInput8Create").get());
     }
 }

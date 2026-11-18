@@ -72,6 +72,27 @@
       }
     },
     {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "label": "@GamepadIcons",
+      "description": "@GamepadIcons.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "restart",
+      "choices": [
+        { "value": 0, "label": "@GamepadIcons.auto" },
+        { "value": 1, "label": "@GamepadIcons.xbox" },
+        { "value": 2, "label": "@GamepadIcons.playstation" },
+        { "value": 3, "label": "@GamepadIcons.nintendo" }
+      ],
+      "presets": {
+        "vanilla": 2,
+        "recommended": 0,
+        "enhanced": 0
+      }
+    },
+    {
       "id": "MAIN.FPSLimit",
       "type": "choice",
       "default": 60,

@@ -1,5 +1,4 @@
 #include "Controls.hpp"
-#include "MouseInput.hpp"
 #include "../../external/injector/include/ps2/patches.hpp"
 
 namespace vcs {

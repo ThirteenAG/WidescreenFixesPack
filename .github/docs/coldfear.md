@@ -36,7 +36,7 @@
 
 - **Digital version** — Works with the digital version, whose own widescreen patch (a fixed 16:9 field of view and a stretched HUD canvas) the fix replaces.
 
-- **Stability (retail version)** — Alt+Tab without pausing and resetting the game, the cursor kept in the game window, the window shown at once, frame rates above 120 fps on high refresh rate displays, an invalid blend state modern drivers reject, two crashes on missing objects, an uninitialized constructor, wrong members used in a few places, shadows of objects outside the view, the window's messages handled while videos play, and the brightness and contrast bars of the Screen Configuration showing their values.
+- **Stability (retail version)** — Alt+Tab without pausing and resetting the game, the cursor kept in the game window, the window shown at once, the frame rate following 60 Hz and other refresh rates up to 120 fps, an invalid blend state modern drivers reject, two crashes on missing objects, an uninitialized constructor, wrong members used in a few places, shadows of objects outside the view, the window's messages handled while videos play, and the brightness and contrast bars of the Screen Configuration showing their values.
 
 
 
@@ -74,7 +74,7 @@
 
 
 
-**Frame Rate Limit** caps the frame rate at the monitor's refresh rate, at a number of your choice, or not at all. **Pause in Background** pauses the game while another window is active and resumes it when you return; a pause you started yourself stays. **Check for Updates** shows a notice in the main menu when a newer version is out. **Ctrl+F10** opens the settings overlay.
+**Frame Rate Limit** caps the frame rate at the monitor's refresh rate or at a number of your choice, up to the game's own limit of 120 fps. **Pause in Background** pauses the game while another window is active and resumes it when you return; a pause you started yourself stays. **Check for Updates** shows a notice in the main menu when a newer version is out. **Ctrl+F10** opens the settings overlay.
 
 
 
@@ -90,7 +90,7 @@
 
 - The PC interface uses its original button labels and has no controller icon-family selector.
 
-- Raising the frame limit does not repair every possible timing issue.
+- The frame rate stays at 120 fps or below, the limit the game was made for.
 
 
 

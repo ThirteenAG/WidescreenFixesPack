@@ -24,6 +24,9 @@ inline console::ps2settings::Value values[] = {
     {"MAIN", "ForceAspectRatio", "Auto"},
     {"MAIN", "GamepadIcons", "0"},
     {"MAIN", "VehicleLights", "1"},
+    {"CONTROLS", "ModernControlScheme", "1"},
+    {"MAIN", "GamepadCameraSpeed", "1.0"},
+    {"MAIN", "InvertGamepadY", "0"},
 };
 inline float Number(unsigned index, float fallback, float minimum, float maximum) {
     char* end = nullptr;

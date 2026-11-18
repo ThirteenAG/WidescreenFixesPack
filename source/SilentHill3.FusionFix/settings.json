@@ -111,7 +111,7 @@
     {
       "id": "MAIN.FullscreenImages",
       "type": "choice",
-      "default": 1,
+      "default": 0,
       "choices": [
         {
           "value": 0,
@@ -132,8 +132,8 @@
       ],
       "presets": {
         "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
+        "recommended": 0,
+        "enhanced": 0
       }
     },
     {
@@ -236,7 +236,12 @@
       "control": [
         "cycler",
         "segmented"
-      ]
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
     },
     {
       "id": "CAMERA.CameraSpeed",
@@ -510,6 +515,29 @@
         "recommended": 16,
         "enhanced": 16
       }
+    },
+    {
+      "id": "MAIN.FPSLimit",
+      "type": "choice",
+      "default": 0,
+      "choices": [
+        {
+          "value": 0,
+          "label": "60 FPS"
+        },
+        {
+          "value": 30,
+          "label": "30 FPS"
+        }
+      ],
+      "label": "@fpslimit",
+      "description": "@fpslimit.description",
+      "page": "game",
+      "control": [
+        "cycler",
+        "segmented"
+      ],
+      "apply": "live"
     },
     {
       "id": "MAIN.SkipIntro",

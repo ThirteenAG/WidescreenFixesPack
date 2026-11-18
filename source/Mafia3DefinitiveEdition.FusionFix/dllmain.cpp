@@ -19,7 +19,11 @@ namespace BorderlessWindow
     LONG framedStyle = 0;
     LONG framedWidth = 0;
     LONG framedHeight = 0;
-    const int* enabled = nullptr;
+    const int* windowMode = nullptr;
+    bool Borderless()
+    {
+        return *windowMode == 2;
+    }
 
     LONG BorderlessStyle(LONG style)
     {
@@ -32,7 +36,7 @@ namespace BorderlessWindow
         {
             window = hWnd;
             gameWindowed = !(value & WS_POPUP);
-            applied = gameWindowed && *enabled;
+            applied = gameWindowed && Borderless();
             if (gameWindowed)
                 framedStyle = value;
             if (applied)
@@ -109,7 +113,7 @@ namespace BorderlessWindow
     void __fastcall CreateGameWindow(void* app, uint8_t* display)
     {
         auto settings = reinterpret_cast<int32_t*>(display + 0x94);   // x, y, width, height, fullscreen
-        if (*enabled && settings[4] == 0)
+        if (Borderless() && settings[4] == 0)
         {
             RECT rect{ settings[0], settings[1], settings[0] + settings[2], settings[1] + settings[3] };
             MONITORINFO info{ sizeof(info) };
@@ -151,7 +155,7 @@ namespace BorderlessWindow
     {
         if (!window)
             return;
-        bool want = gameWindowed && *enabled;
+        bool want = gameWindowed && Borderless();
         if (want != applied)
         {
             // The option changed: restyle; a framed window at the game's resolution is centered
@@ -203,7 +207,7 @@ namespace BorderlessWindow
 
     void Init()
     {
-        enabled = &FixSettings().Int("MAIN.BorderlessWindowed");
+        windowMode = &FixSettings().Int("MAIN.WindowMode");
 
         // Window sizes in pixels on monitors with display scaling
         WindowedModeWrapper::EnableDpiAwareness();

@@ -42,6 +42,9 @@ export namespace MHPad
     inline GameRef<uint32_t>* nativePadRef = nullptr;
     inline int(__cdecl* menuBlocked)() = nullptr;
     inline const wchar_t* (*iconLabel)(uint32_t) = nullptr;
+    // Native controller assignments: a joystick button mask per action, two assignment slots of 38 actions. The bundled
+    // Xidi numbers the buttons in the order of Button, so bit n is the same pad button here.
+    inline const uint32_t* nativeBindings = nullptr;
     inline const wchar_t* (*movementLabel)() = nullptr;
 
     inline uint32_t ActionButton(int action)
@@ -64,6 +67,24 @@ export namespace MHPad
             case 37: return Down;
             default: return 0;
         }
+    }
+
+    inline uint32_t NativeButton(int action, int slot)
+    {
+        if (!nativeBindings || action < 0 || action >= 38 || slot < 0 || slot > 1)
+            return 0;
+        const uint32_t mask = nativeBindings[action + 38 * slot] & 0xFFFF;
+        return mask & (~mask + 1);
+    }
+
+    // The pad button of an action in the selected layout
+    inline uint32_t PadButton(int action)
+    {
+        if (modern && *modern)
+            return ActionButton(action);
+        if (const uint32_t button = NativeButton(action, 0))
+            return button;
+        return NativeButton(action, 1);
     }
 
     inline bool Active()
@@ -241,6 +262,18 @@ export namespace MHPad
             if (auto name = Label(ActionButton(action)))
                 return name;
         }
+        else if (!(modern && *modern) && lastPad)
+        {
+            // Original: the saved native assignment of this column
+            if (const uint32_t button = NativeButton(action, slot))
+            {
+                if (iconLabel)
+                    if (auto icon = iconLabel(button))
+                        return icon;
+                if (auto name = Label(button))
+                    return name;
+            }
+        }
         return nameHook.unsafe_ccall<const wchar_t*>(action, slot);
     }
 
@@ -262,6 +295,7 @@ export namespace MHPad
         mouseModeRef = BindGameRef(mouseMode, *mouse.get_first<int32_t*>(1));
         nativePadRef = BindGameRef(nativePad, *analog.get_first<uint32_t*>(2));
         menuBlocked = reinterpret_cast<int(__cdecl*)()>(blocked.get_first());
+        nativeBindings = *bindings.get_first<const uint32_t*>(3);
         modern = &FixSettings().Int("MAIN.ControllerLayout");
         family = &FixSettings().Int("MAIN.GamepadIcons");
         cameraSpeed = &FixSettings().Float("MAIN.GamepadCameraSpeed");

@@ -48,7 +48,7 @@
   "menu.restoredefaultshelp": "Riporta le impostazioni di questa pagina ai valori predefiniti.",
   "menu.restartwarning": "Riavvia il gioco per applicare le modifiche.",
   "menu.help": "Aiuto",
-  "menu.presethelp": "Scegli una preimpostazione con Sinistra/Destra e conferma. Originale mantiene i loghi. Consigliata e Migliorata li saltano, nascondono il cursore inattivo e attivano RGB. Solo Migliorata salta le transizioni delle porte e attiva la profondità di campo. Le preferenze personali e i valori comuni sono mantenuti. Ripristina predefiniti reimposta tutte le opzioni. Originale e Consigliata usano 60 FPS; Migliorata rimuove il limite. La sincronizzazione verticale può comunque limitare i fotogrammi.",
+  "menu.presethelp": "Scegli un preset con Sinistra/Destra, poi conferma per applicarlo. Vanilla mantiene i loghi e il limite del gioco di 120 FPS in modalità Variabile. Recommended ed Enhanced saltano i loghi, nascondono il cursore inattivo, attivano le luci RGB e seguono la frequenza del monitor in modalità Variabile. Solo Enhanced salta le transizioni delle porte e attiva la profondità di campo. Le preferenze personali e i valori comuni a tutti i preset vengono mantenuti. Ripristina predefiniti reimposta tutte le impostazioni. Il V-Sync può comunque limitare la frequenza.",
   "menu.helphint": "F1 / tasto Predefinito: guida completa",
   "PauseOnFocusLoss": "Pausa senza focus",
   "PauseOnFocusLoss.description": "Mette in pausa quando la finestra del gioco non è attiva. Disattiva per continuare in background.",

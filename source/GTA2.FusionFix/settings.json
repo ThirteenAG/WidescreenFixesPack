@@ -156,6 +156,9 @@
         },
         {
           "value": "21:9"
+        },
+        {
+          "value": "32:9"
         }
       ],
       "label": "@MAIN.HudAspectRatioConstraint",
@@ -174,6 +177,15 @@
       "page": "display"
     },
     {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": false,
+      "label": "@MAIN.PauseOnFocusLoss",
+      "description": "@MAIN.PauseOnFocusLoss.description",
+      "page": "display",
+      "apply": "live"
+    },
+    {
       "id": "MAIN.SkipIntro",
       "type": "bool",
       "default": true,
@@ -189,22 +201,16 @@
     },
     {
       "id": "MISC.SkipCredits",
-      "type": "int",
-      "default": 1,
+      "type": "bool",
+      "default": true,
       "label": "@MISC.SkipCredits",
       "description": "@MISC.SkipCredits.description",
       "page": "gameplay",
       "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      },
-      "min": 0,
-      "max": 1,
-      "step": 1,
-      "control": [
-        "stepper"
-      ]
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
     },
     {
       "id": "MAIN.CheckForUpdates",
@@ -289,7 +295,12 @@
       "default": true,
       "label": "@CAMERA.RotateInVehicles",
       "description": "@CAMERA.RotateInVehicles.description",
-      "page": "camera"
+      "page": "camera",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
     },
     {
       "id": "CAMERA.RotateOnFoot",
@@ -297,7 +308,12 @@
       "default": false,
       "label": "@CAMERA.RotateOnFoot",
       "description": "@CAMERA.RotateOnFoot.description",
-      "page": "camera"
+      "page": "camera",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
     },
     {
       "id": "CAMERA.RotationSmoothing",
@@ -312,7 +328,12 @@
       "control": [
         "slider",
         "stepper"
-      ]
+      ],
+      "presets": {
+        "vanilla": 0.35,
+        "recommended": 0.35,
+        "enhanced": 0.35
+      }
     },
     {
       "id": "CAMERA.ToggleRotationKey",
@@ -354,7 +375,12 @@
       "control": [
         "slider",
         "stepper"
-      ]
+      ],
+      "presets": {
+        "vanilla": 0.25,
+        "recommended": 0.25,
+        "enhanced": 0.25
+      }
     },
     {
       "id": "CAMERA.HeightTime",
@@ -369,7 +395,12 @@
       "control": [
         "slider",
         "stepper"
-      ]
+      ],
+      "presets": {
+        "vanilla": 0.35,
+        "recommended": 0.35,
+        "enhanced": 0.35
+      }
     },
     {
       "id": "CAMERA.MaxLookAhead",
@@ -384,7 +415,12 @@
       "control": [
         "slider",
         "stepper"
-      ]
+      ],
+      "presets": {
+        "vanilla": 0.5,
+        "recommended": 0.5,
+        "enhanced": 0.5
+      }
     },
     {
       "id": "MAIN.FOVFactor",
@@ -399,7 +435,12 @@
       "control": [
         "slider",
         "stepper"
-      ]
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
     },
     {
       "id": "INPUT.ModernControls",
@@ -428,7 +469,12 @@
       "default": false,
       "label": "@INPUT.StickThrottle",
       "description": "@INPUT.StickThrottle.description",
-      "page": "controls"
+      "page": "controls",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
     },
     {
       "id": "INPUT.StickDeadzone",
@@ -1116,6 +1162,22 @@
         {
           "value": "en",
           "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
         }
       ]
     }

@@ -8,7 +8,7 @@
   "plugin.name": "Tony Hawk's Underground 2 Fusion Fix",
   "page.display": "Display",
   "FPSLimit": "Frame rate limit",
-  "FPSLimit.description": "Limits the frame rate. Higher rates may affect gameplay. 0 is unlimited; -1 uses the monitor refresh rate.",
+  "FPSLimit.description": "Limits the frame rate. The game runs at up to 60 FPS. 0 is unlimited; -1 uses the monitor refresh rate.",
   "FPSLimit.unlimited": "Unlimited",
   "FPSLimit.refresh": "Monitor refresh rate",
   "page.camera": "Camera",
@@ -67,5 +67,13 @@
   "checkupdates": "Check for updates",
   "checkupdates.description": "Checks once for a new fix version when turned on. A notice appears in the Plugins menu; FusionFixHub opens after the game exits if it is installed. Off makes no network request.",
   "update.availablehub": "An update for Tony Hawk's Underground 2 Fusion Fix is available. FusionFixHub will open after you exit the game.",
-  "update.availablesite": "An update for Tony Hawk's Underground 2 Fusion Fix is available at fusionfix.io."
+  "update.availablesite": "An update for Tony Hawk's Underground 2 Fusion Fix is available at fusionfix.io.",
+  "MAIN.GamepadIcons": "Gamepad icons",
+  "MAIN.GamepadIcons.description": "Controller button pictures. Auto uses Xbox; choose PlayStation or Nintendo for another controller. Keyboard prompts follow keyboard input.",
+  "MAIN.GamepadCameraSpeed": "Gamepad camera speed",
+  "MAIN.GamepadCameraSpeed.description": "Adjusts how quickly the camera responds to the gamepad.",
+  "MAIN.InvertGamepadY": "Invert gamepad Y",
+  "MAIN.InvertGamepadY.description": "Reverses vertical gamepad camera movement.",
+  "MAIN.Vibration": "Vibration",
+  "MAIN.Vibration.description": "Allows controller vibration."
 }

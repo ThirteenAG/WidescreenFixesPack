@@ -2,7 +2,7 @@
   "plugin.name": "Tony Hawk's American Wasteland Fusion Fix",
   "page.display": "Anzeige",
   "FPSLimit": "Bildratenlimit",
-  "FPSLimit.description": "Begrenzt die Bildrate. Höhere Werte können das Spiel beeinflussen. 0: unbegrenzt; -1: Bildschirmfrequenz.",
+  "FPSLimit.description": "Begrenzt die Bildrate. Das Spiel läuft mit höchstens 60 FPS. 0: unbegrenzt; -1: Bildschirmfrequenz.",
   "FPSLimit.unlimited": "Unbegrenzt",
   "FPSLimit.refresh": "Bildschirmfrequenz",
   "page.camera": "Kamera",

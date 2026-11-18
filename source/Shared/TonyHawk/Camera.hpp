@@ -32,11 +32,6 @@ namespace TonyCamera
     inline const float* NativeZoomScale = nullptr;
     inline SafetyHookMid RegisterHook, ConstructHook, UpdateHook, DestroyHook;
 
-    inline void Log(const char* message)
-    {
-        OutputDebugStringA((std::string(Native.name) + ": " + message + "\n").c_str());
-    }
-
     inline float Correct(uintptr_t camera, float fov, float aspect)
     {
         float factor = 1.0f;
@@ -98,14 +93,5 @@ namespace TonyCamera
         {
             Cameras.erase(regs.ecx);
         });
-        if (!RegisterHook || !ConstructHook || !UpdateHook || !DestroyHook)
-        {
-            RegisterHook.reset();
-            ConstructHook.reset();
-            UpdateHook.reset();
-            DestroyHook.reset();
-            Cameras.clear();
-            Log("gameplay camera hooks unavailable.");
-        }
     }
 }

@@ -70,7 +70,6 @@ public:
             Screen.Width = FixSettings().Int("MAIN.ResX");
             Screen.Height = FixSettings().Int("MAIN.ResY");
             bool bSkipIntro = FixSettings().Bool("MAIN.SkipIntro");
-            uint32_t nGameSpeed = static_cast<uint32_t>(std::clamp<int32_t>(FixSettings().Int("MISC.GameSpeed"), 0, 1000));
 
             if (Screen.Width <= 0 || Screen.Height <= 0 || Screen.Width > 16384 || Screen.Height > 16384)
                 std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -213,13 +212,6 @@ public:
                 pattern = hook::pattern("81 EC 14 01 00 00 A1 ? ? ? ? 53 56 57 33 DB 53 89 84 24 20 01 00 00 E8 ? ? ? ? 83 C4 04 8B F0 E8");
                 shPlayMovie = safetyhook::create_inline(pattern.get_first(), PlayMovie);
             }
-
-            if (nGameSpeed)
-            {
-                pattern = hook::pattern("C7 05 ? ? ? ? 1E 00 00 00 A2 ? ? ? ? C3"); //0x52E7CA
-                injector::WriteMemory<uint32_t>(pattern.get_first<uint32_t>(6), nGameSpeed, true);
-            }
-            //43F8B8 - fps
 
             GunMenu::Init();
             GunMenu::Scene = []()

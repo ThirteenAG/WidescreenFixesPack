@@ -368,8 +368,8 @@ export namespace PsiOpsMenu
                 if (mesh)
                     for (size_t j = 0; j < 4; ++j)
                     {
-                        injector::WriteMemory<float>(reinterpret_cast<float*>(font + 88) + j, screen.stockColors[i][j], true);
-                        injector::WriteMemory<float>(reinterpret_cast<float*>(mesh) + 17 + j, screen.stockMeshColors[i][j], true);
+                        reinterpret_cast<float*>(font + 88)[j] = screen.stockColors[i][j];
+                        reinterpret_cast<float*>(mesh)[17 + j] = screen.stockMeshColors[i][j];
                     }
             }
         }
@@ -619,7 +619,7 @@ export namespace PsiOpsMenu
         {
             const auto transform = Pointer(screen->helpRoot[5]);
             if (transform)
-                injector::WriteMemory<float>(reinterpret_cast<float*>(transform) + 15, 1.0f, true);
+                reinterpret_cast<float*>(transform)[15] = 1.0f;
         }
         screen->labels[stockRows] = RWGTAMenu::PluginText(FixSettings(), screen->language, "menu.plugins");
         container[6] = reinterpret_cast<uint32_t>(screen->children.data());
@@ -1000,14 +1000,14 @@ export namespace PsiOpsMenu
         {
             saved[i] = *(color + i);
             savedMesh[i] = *(meshColor + i);
-            injector::WriteMemory<float>(color + i, 1.0f, true);
+            color[i] = 1.0f;
             std::memcpy(&local[i + 2], &rgba[i], sizeof(float));
         }
         const auto result = drawTextHook.thiscall<int>(self, reinterpret_cast<int>(local.data()));
         for (size_t i = 0; i < saved.size(); ++i)
         {
-            injector::WriteMemory<float>(color + i, saved[i], true);
-            injector::WriteMemory<float>(meshColor + i, savedMesh[i], true);
+            color[i] = saved[i];
+            meshColor[i] = savedMesh[i];
         }
         return result;
     }

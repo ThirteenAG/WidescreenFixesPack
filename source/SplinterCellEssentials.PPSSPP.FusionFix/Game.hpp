@@ -61,6 +61,7 @@ void InstallInput();
 bool InstallHud();
 void InstallCamera();
 void InstallTiming();
+void InstallIcons();
 void InstallLoaderScreens();
 void InstallLoadingScreens();
 void InstallLoaderRestart(uintptr_t text, size_t size);

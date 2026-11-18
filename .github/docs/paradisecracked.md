@@ -12,7 +12,7 @@
 
 ## Settings
 
-`scripts/ParadiseCracked.FusionFix.cfg` is created on first start. Change the settings on fusionfix.io, in FusionFixHub, or in the game with **Ctrl+F10**.
+`scripts/ParadiseCracked.FusionFix.cfg` is created on first start. Change the settings on fusionfix.io or in FusionFixHub; supporters can also change them in the game with **Ctrl+F10**.
 
 | Setting | Values | Default |
 |---|---|---|
@@ -37,11 +37,11 @@ Vanilla shows the intro and the movies as the game does; Recommended and Enhance
 - **Movies** are never cut off or stretched: Original shows them as the game does, inside its centred 4:3 picture; Fill shows the whole movie as large as the screen allows.
 - **Window modes** at any Windows display scaling, without rounded corners: Windowed opens a centred window with exactly the chosen picture size (a window as large as the monitor puts its frame outside the screen), Borderless covers the monitor. The window keeps its size when the game switches between menus, movies and missions, and isn't minimized when another window becomes active.
 - **Update notice:** with **Check for updates** on, a new version is announced at the main menu; FusionFixHub opens after the game exits when it is installed.
-- **Ctrl+F10** opens the in-game settings overlay.
+- **Ctrl+F10** opens the in-game settings overlay for supporters.
 
 ## Not included
 
-- **In-game settings page:** the game's option screens are fixed layouts loaded from its data; the settings are in the overlay, on fusionfix.io and in FusionFixHub.
+- **In-game settings page:** the game's option screens are fixed layouts loaded from its data; the settings are on fusionfix.io and in FusionFixHub, and for supporters in the Ctrl+F10 overlay.
 - **Controller:** the game is played with the mouse (turn-based tactics) and has no controller support.
 - **Cutscene borders:** the story is told in movies and dialog windows; there are no in-engine cutscenes.
 - **Frame rate:** the game's own frame limiter (about 66 FPS) stays.
@@ -57,4 +57,4 @@ Vanilla shows the intro and the movies as the game does; Recommended and Enhance
 
 1. Download the fix archive from this release.
 2. Extract the archive into the game folder, beside `game.exe`, preserving the folders in the archive.
-3. Launch the game; configure the fix with Ctrl+F10, on fusionfix.io or in FusionFixHub. Restart the game when an option requires it.
+3. Launch the game; configure the fix on fusionfix.io or in FusionFixHub (supporters also with Ctrl+F10). Restart the game when an option requires it.

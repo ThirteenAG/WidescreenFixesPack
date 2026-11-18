@@ -11,8 +11,10 @@ import AimWalk;
 import Controls;
 import KnifeParry;
 import Menu;
+import SplitScreen;
 import Hud;
 import Overlay;
+import ButtonIcons;
 
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
 ASI_SETTINGS_EXPORT(FixSettings())
@@ -35,7 +37,9 @@ void Init()
     Controls::Init();
     KnifeParry::Init();
     Menu::Init();
+    SplitScreen::Init();
     Hud::Init();
+    ButtonIcons::Init();
     Overlay::Init();
 }
 

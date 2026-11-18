@@ -19,6 +19,21 @@
   ],
   "settings": [
     {
+      "id": "MAIN.SkipIntro",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipIntro",
+      "description": "@SkipIntro.description",
+      "page": "gameplay",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "MAIN.EnableDoorSkip",
       "type": "bool",
       "default": 0,

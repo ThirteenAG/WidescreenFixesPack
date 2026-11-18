@@ -47,7 +47,7 @@
   "graphicnovel.fill": "Plein écran",
   "graphicnovel.original": "Original",
   "graphicnovelkey": "Touche de cadrage du roman graphique",
-  "graphicnovelkey.description": "Bascule les pages du roman graphique entre plein écran et cadrage d'origine.",
+  "graphicnovelkey.description": "Bascule les pages du roman graphique entre plein écran et cadrage d'origine. Y sur la manette fait de même.",
   "borderless": "Fenêtre sans bordure",
   "borderless.description": "Une fenêtre sans bordure centrée sur l'écran quand le jeu est lancé avec -window.",
   "antialiasing": "Anticrénelage",

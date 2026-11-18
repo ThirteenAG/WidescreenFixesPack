@@ -19,6 +19,7 @@ static GameRef<uintptr_t>* GameCamera = nullptr;
 static GameRef<int>* CameraCount = nullptr;
 static GameRef<uintptr_t>* Players = nullptr;
 static uintptr_t TrackingUpdate = 0;
+static uintptr_t SeatSettings = 0; // the camera settings of a vehicle seat (driver or passenger)
 
 static bool GameplayLens()
 {
@@ -34,15 +35,19 @@ static bool GameplayLens()
     if (!transition || (*reinterpret_cast<uintptr_t**>(transition))[2] != TrackingUpdate)
         return false;
     const auto settings = transition ? *reinterpret_cast<uintptr_t*>(transition + 400) : 0;
-    const auto blueprint = settings ? *reinterpret_cast<uintptr_t*>(settings + 8) : 0;
-    if (!blueprint || !(*reinterpret_cast<uint8_t*>(blueprint + 260) & 2))
-        return false;
     for (const auto action : { 23, 24 })
     {
         const auto state = Players->get() + 6824 + action * 20;
         if (std::abs(*reinterpret_cast<float*>(state)) > 0.001f || *reinterpret_cast<uint32_t*>(state + 12))
             return false;
     }
+    // Vehicle cameras blend their lens with the speed, so their angle is never the blueprint's own: a seat camera
+    // counts as gameplay as it is
+    if (settings && *reinterpret_cast<uintptr_t*>(settings) == SeatSettings)
+        return true;
+    const auto blueprint = settings ? *reinterpret_cast<uintptr_t*>(settings + 8) : 0;
+    if (!blueprint || !(*reinterpret_cast<uint8_t*>(blueprint + 260) & 2))
+        return false;
     const auto getFOV = reinterpret_cast<double(__thiscall*)(uintptr_t)>((*reinterpret_cast<uintptr_t**>(settings))[19]);
     const auto intended = getFOV(settings);
     const auto actual = *reinterpret_cast<float*>(camera + 176);
@@ -104,6 +109,8 @@ public:
             CameraCount = BindGameRef(fovCameraCount, *cameras.get_first<int*>(11));
             GameCamera = BindGameRef(fovGameCamera, *cameras.get_first<uintptr_t*>(29));
             TrackingUpdate = reinterpret_cast<uintptr_t>(tracking.get_first());
+            auto seat = hook::pattern("89 46 08 89 46 0C D9 5E 18 C7 06 ? ? ? ? 8B C6 5E C3");
+            SeatSettings = *seat.get_first<uintptr_t>(11);
             SetFOVHook = safetyhook::create_inline(pattern.get_first(), OdinCamera::SetFOV, safetyhook::InlineHook::StartDisabled);
             (void)SetFOVHook.enable();
         };

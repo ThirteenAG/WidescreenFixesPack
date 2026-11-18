@@ -72,6 +72,7 @@ void Tick(void*) {
         SetLimiter(!settings.fps || concertActive);
     }
     if (settings.pcCheats) TickCheats();
+    PollSettings();
 }
 int BeginMission(void* script) {
     uintptr_t space=*reinterpret_cast<uintptr_t*>(Address<0x8BAAB84>());

@@ -15,8 +15,15 @@ export namespace THPS4Hud
     inline SafetyHookInline TextHook, SpriteHook;
     inline float Width = 640.0f, Height = 480.0f, FrameWidth = 640.0f, Scale = 1.0f;
     inline const std::string* Constraint = nullptr;
-    inline int Anchor = 0;
     inline bool FullWidth = false;
+
+    struct Placement
+    {
+        int anchor = 0;
+        int player = -1;
+        bool Active() const { return anchor != 0 || player >= 0; }
+    };
+    inline Placement Current;
 
     constexpr uint32_t Checksum(const char* name)
     {
@@ -30,53 +37,86 @@ export namespace THPS4Hud
         return value;
     }
 
-    inline int Classify(uintptr_t element)
+    inline Placement Classify(uintptr_t element)
     {
-        if (!CameraLayout.is_initialized() || CameraLayout != 0)
-            return 0;
+        if (!CameraLayout.is_initialized())
+            return {};
+        Placement result;
         for (int depth = 0; element && depth < 32; ++depth)
         {
-            switch (*reinterpret_cast<uint32_t*>(element + 20))
+            const auto id = *reinterpret_cast<uint32_t*>(element + 20);
+            if (id == Checksum("player1_panel_container"))
+                result.player = 0;
+            else if (id == Checksum("player2_panel_container"))
+                result.player = 1;
+            if (!result.anchor)
             {
-                case Checksum("the_score"):
-                case Checksum("the_score_sprite"):
-                case Checksum("the_special_bar_special"):
-                case Checksum("the_special_bar_sprite"):
-                case Checksum("the_boardstance_sprite"):
-                case Checksum("minigame_timer"):
-                    return -1;
-                case Checksum("current_goal"):
-                case Checksum("cash_goal_sprite"):
-                case Checksum("cash_text"):
-                case Checksum("goal_points_text"):
-                    return 1;
+                switch (id)
+                {
+                    case Checksum("the_score"):
+                    case Checksum("the_score_sprite"):
+                    case Checksum("the_special_bar_special"):
+                    case Checksum("the_special_bar_sprite"):
+                    case Checksum("the_boardstance_sprite"):
+                    case Checksum("minigame_timer"):
+                        result.anchor = -1;
+                        break;
+                    case Checksum("current_goal"):
+                    case Checksum("cash_goal_sprite"):
+                    case Checksum("cash_text"):
+                    case Checksum("goal_points_text"):
+                        result.anchor = 1;
+                        break;
+                }
             }
             if (*reinterpret_cast<uint32_t*>(element + 8) & 0x80000u)
-                return 0;
+                return {};
             element = *reinterpret_cast<uintptr_t*>(element + 64);
         }
-        return 0;
+        // Split screen: only the players' own panels follow their half
+        if (CameraLayout != 0 && result.player < 0)
+            return {};
+        if (CameraLayout == 0)
+            result.player = -1;
+        return result;
+    }
+
+    // Screen pixels to move the current element by
+    inline float Offset()
+    {
+        const float aspect = Constraint ? console::parse_hud_aspect(Constraint->c_str()) : 0.0f;
+        const float anchor = static_cast<float>(Current.anchor);
+        if (Current.player < 0 || CameraLayout != 1)
+        {
+            const float boxWidth = aspect > 0.0f ? std::min(Width, Height * aspect) : Width;
+            return anchor * (boxWidth - FrameWidth) * 0.5f;
+        }
+        // Side by side: each player's half of the 4:3 frame goes to the middle of their half of the screen, and its
+        // edges to that half's edges (or its HUD box)
+        const float halfBox = aspect > 0.0f ? std::min(Width * 0.5f, Height * aspect) : Width * 0.5f;
+        const float side = Current.player == 0 ? 0.25f : 0.75f;
+        const float frameLeft = (Width - FrameWidth) * 0.5f;
+        const float target = Width * side + anchor * halfBox * 0.5f;
+        const float native = frameLeft + FrameWidth * side + anchor * FrameWidth * 0.25f;
+        return target - native;
     }
 
     inline float Position(float x)
     {
-        const float aspect = Constraint ? console::parse_hud_aspect(Constraint->c_str()) : 0.0f;
-        const float boxWidth = aspect > 0.0f ? std::min(Width, Height * aspect) : Width;
         // Native X conversion includes the original 32-pixel canvas margins.
-        const float offset = Anchor * (boxWidth - FrameWidth) * 0.5f;
-        return x * Scale + offset * (704.0f / Width);
+        return x * Scale + Offset() * (704.0f / Width);
     }
 
     inline void __fastcall DrawText(uintptr_t element, void*)
     {
-        const auto previous = std::exchange(Anchor, Classify(element));
+        const auto previous = std::exchange(Current, Classify(element));
         TextHook.thiscall<void>(element);
-        Anchor = previous;
+        Current = previous;
     }
 
     inline int __fastcall DrawSprite(uintptr_t element, void*)
     {
-        const auto previous = std::exchange(Anchor, Classify(element));
+        const auto previous = std::exchange(Current, Classify(element));
         // The bar behind the button help is wider than the 4:3 frame on purpose: it keeps spanning the whole screen
         const auto parent = *reinterpret_cast<uintptr_t*>(element + 64);
         const auto previousFull = std::exchange(FullWidth, parent && *reinterpret_cast<uint32_t*>(parent + 20) == Checksum("helper_text_anchor"));
@@ -84,11 +124,11 @@ export namespace THPS4Hud
         // box can change live, so refresh classified panels on every draw.
         auto* flags = reinterpret_cast<uint32_t*>(element + 8);
         const auto savedFlags = *flags;
-        if (Anchor) *flags |= 0x800u;
+        if (Current.Active()) *flags |= 0x800u;
         const auto result = SpriteHook.thiscall<int>(element);
-        if (Anchor) *flags = savedFlags;
+        if (Current.Active()) *flags = savedFlags;
         FullWidth = previousFull;
-        Anchor = previous;
+        Current = previous;
         return result;
     }
 

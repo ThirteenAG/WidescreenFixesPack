@@ -14,7 +14,6 @@ export namespace BullyInput
 {
     SafetyHookInline PollHook, LookXHook, LookYHook;
     SafetyHookMid StateHook, RumbleHook;
-    const int* AutoGamepad = nullptr;
     const float* CameraSpeed = nullptr;
     const float* Deadzone = nullptr;
     DWORD(WINAPI* GetState)(DWORD, XINPUT_STATE*) = nullptr;
@@ -108,7 +107,7 @@ export namespace BullyInput
 
     void Refresh()
     {
-        if (!GetState || !Initialize || !AutoGamepad || !*AutoGamepad || !Focused())
+        if (!GetState || !Initialize || !Focused())
             return;
         const auto now = GetTickCount64();
         if (now < NextProbe)
@@ -215,11 +214,10 @@ export namespace BullyInput
         DeadzoneSquared = deadzone * deadzone;
         DeadzoneRadius = deadzone;
         DeadzoneRange = 1.0 - DeadzoneRadius;
-        const bool automatic = AutoGamepad && *AutoGamepad;
         const bool pad = slot > 0 && *context != 0;
         const auto index = pad ? *reinterpret_cast<uint32_t*>(context + 316) : 4;
         const bool wasConnected = slot >= 0 && PolledConnected[slot];
-        if (automatic && GetState && pad && !wasConnected && (index >= 4 || !Connected[index]))
+        if (GetState && pad && !wasConnected && (index >= 4 || !Connected[index]))
         {
             Clear(context, true);
             return 0;
@@ -231,7 +229,7 @@ export namespace BullyInput
                 PrimaryController = 0;
             result = 1;
         }
-        if (slot >= 0 && automatic && result && Focused() && (!pad || PolledConnected[slot]) && Changed(context))
+        if (slot >= 0 && result && Focused() && (!pad || PolledConnected[slot]) && Changed(context))
         {
             Activity[slot] = GetTickCount64();
             PrimaryController = slot;
@@ -297,7 +295,7 @@ export namespace BullyInput
         DeadzoneOperands.clear();
     }
 
-    void Install(const int& automatic, const float& speed, const float& deadzone, HMODULE module = GetModuleHandle(nullptr), bool resolveApi = true)
+    void Install(const float& speed, const float& deadzone, HMODULE module = GetModuleHandle(nullptr), bool resolveApi = true)
     {
         auto poll = hook::module_pattern(module, "83 EC 24 53 55 8B E9 56 33 DB 38 5D 00 57 8D B5 44 01 00 00 8D BD F8 04 00 00 B9 ED 00 00 00");
         auto end = hook::module_pattern(module, "5F 5E C6 85 B4 08 00 00 00 5D 8A C3 5B 83 C4 24 C3");
@@ -319,7 +317,6 @@ export namespace BullyInput
             hook::range_pattern(begin, finish, "D9 05 ? ? ? ? D8 D9 DF E0 F6 C4 41 75 18").get_first<uint8_t>(),
             hook::range_pattern(begin, finish, "D9 05 ? ? ? ? D8 DB").get_first<uint8_t>()
         };
-        AutoGamepad = &automatic;
         CameraSpeed = &speed;
         Deadzone = &deadzone;
         InputContexts.SetAddress(*contexts.get_first<uint8_t*>(12));

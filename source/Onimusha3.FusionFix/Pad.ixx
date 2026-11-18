@@ -42,8 +42,11 @@ export namespace OnimushaPad
             "D-pad Left", "D-pad Right", "LT", "RT", "A", "B", "X", "Y", "LB", "RB", "Back", "Start", "LS", "RS", "Guide", "Share" };
         static constexpr const char* playstation[] = { "LS X", "LS Y", "RS X", "RS Y", "D-pad Up", "D-pad Down",
             "D-pad Left", "D-pad Right", "L2", "R2", "Cross", "Circle", "Square", "Triangle", "L1", "R1", "Select", "Start", "L3", "R3", "PS", "Share" };
+        static constexpr const char* nintendo[] = { "LS X", "LS Y", "RS X", "RS Y", "D-pad Up", "D-pad Down",
+            "D-pad Left", "D-pad Right", "ZL", "ZR", "B", "A", "Y", "X", "L", "R", "-", "+", "LS", "RS", "Home", "Capture" };
+        const int family = Icons.load(std::memory_order_relaxed);
         for (int i = 0; i < int(std::size(xbox)); ++i)
-            label(i, Icons.load(std::memory_order_relaxed) == 2 ? playstation[i] : xbox[i]);
+            label(i, family == 2 ? playstation[i] : family == 3 ? nintendo[i] : xbox[i]);
     }
 
     inline void Glyph(uint16_t* quad, int glyph)
@@ -68,12 +71,17 @@ export namespace OnimushaPad
                 16 * ((int(quad[9]) - 8) / (CellHeight * 16));
             if (glyph < 103 || glyph > 110)
                 continue;
-            if (glyph >= 107 && count >= 6144)
+            // The PS2 icons Circle, Cross, Triangle, Square, R1, R2, L1, L2 as letters of the font (A = 33): Xbox
+            // B A Y X RB RT LB LT, Nintendo A B X Y R ZR L ZL. Two letters share the icon's cell.
+            const bool nintendo = Icons.load(std::memory_order_relaxed) == 3;
+            static constexpr int xbox[8][2] = { { 34, 0 }, { 33, 0 }, { 57, 0 }, { 56, 0 }, { 50, 34 }, { 50, 52 }, { 44, 34 }, { 44, 52 } };
+            static constexpr int switchPad[8][2] = { { 33, 0 }, { 34, 0 }, { 56, 0 }, { 57, 0 }, { 50, 0 }, { 58, 50 }, { 44, 0 }, { 58, 44 } };
+            const auto& letters = (nintendo ? switchPad : xbox)[glyph - 103];
+            if (letters[1] && count >= 6144)
                 continue;
             // Keep the original icon's advance, colour and alpha; labels stay inside its cell.
-            static constexpr int letters[] = { 34, 33, 57, 56, 50, 50, 44, 44 };
-            Glyph(quad, letters[glyph - 103]);
-            if (glyph >= 107 && count < 6144)
+            Glyph(quad, letters[0]);
+            if (letters[1])
             {
                 auto second = reinterpret_cast<uint16_t*>(owner + 49216 + count++ * 32);
                 std::memcpy(second, quad, 32);
@@ -84,7 +92,7 @@ export namespace OnimushaPad
                 const int height = int16_t(quad[15]) - top;
                 quad[13] = second[13] = uint16_t(top + height / 4);
                 quad[15] = second[15] = uint16_t(top + height / 4 + (height + 1) / 2);
-                Glyph(second, glyph == 107 || glyph == 109 ? 34 : 52);
+                Glyph(second, letters[1]);
             }
         }
     }
@@ -103,10 +111,10 @@ export namespace OnimushaPad
     inline void Init()
     {
         auto& settings = FixSettings();
-        Icons = std::clamp(settings.Int("MAIN.GamepadIcons"), 0, 2);
+        Icons = std::clamp(settings.Int("MAIN.GamepadIcons"), 0, 3);
         settings.OnChange("MAIN.GamepadIcons", []()
         {
-            Icons = std::clamp(FixSettings().Int("MAIN.GamepadIcons"), 0, 2);
+            Icons = std::clamp(FixSettings().Int("MAIN.GamepadIcons"), 0, 3);
             Names();
         });
         auto metrics = hook::pattern("A1 ? ? ? ? 8B 1D ? ? ? ? EB 0B A1 ? ? ? ? 8B 1D");

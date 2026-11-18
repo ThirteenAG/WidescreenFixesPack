@@ -172,6 +172,8 @@
   "menu.restartwarning": "Certains réglages nécessitent un redémarrage du jeu.",
   "menu.previous": "Précédent",
   "windowmode.windowed": "Fenêtré",
+  "MAIN.PauseOnFocusLoss": "Pause hors focus",
+  "MAIN.PauseOnFocusLoss.description": "Met le jeu en pause lorsque sa fenêtre perd le focus.",
   "MAIN.ConfineCursor": "Garder le curseur",
   "MAIN.ConfineCursor.description": "Garde le curseur de la souris dans la fenêtre du jeu tant que le jeu est actif, pour qu'il ne passe pas sur un autre écran.",
   "MAIN.GamepadIcons": "Boutons de manette",

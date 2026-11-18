@@ -142,12 +142,22 @@ namespace
         return window && GetWindowThreadProcessId(window, &owner) && owner == GetCurrentProcessId();
     }
 
+    // While another program changes the display mode, the device can't be created; the game then went on without a
+    // renderer and crashed. Creation waits as long as the device is lost or unavailable, and a few seconds for other
+    // errors.
     HRESULT WINAPI Create9(IDirect3D9* factory, UINT adapter, D3DDEVTYPE type, HWND window, DWORD behavior,
         D3DPRESENT_PARAMETERS* parameters, IDirect3DDevice9** device)
     {
-        const auto result = Create9Hook.unsafe_stdcall<HRESULT>(factory, adapter, type, window, behavior, parameters, device);
-        const auto error = GetLastError();
         const auto target = parameters && parameters->hDeviceWindow ? parameters->hDeviceWindow : window;
+        auto result = Create9Hook.unsafe_stdcall<HRESULT>(factory, adapter, type, window, behavior, parameters, device);
+        const auto start = GetTickCount64();
+        while (FAILED(result) && OwnedWindow(target) &&
+            (result == D3DERR_DEVICELOST || result == D3DERR_NOTAVAILABLE || GetTickCount64() - start < 5000))
+        {
+            Sleep(100);
+            result = Create9Hook.unsafe_stdcall<HRESULT>(factory, adapter, type, window, behavior, parameters, device);
+        }
+        const auto error = GetLastError();
         if (SUCCEEDED(result) && device && *device && OwnedWindow(target))
         {
             auto table = *reinterpret_cast<void***>(*device);

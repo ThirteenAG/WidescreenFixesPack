@@ -260,6 +260,72 @@
       ]
     },
     {
+      "id": "MAIN.ScopeWidescreenMode",
+      "type": "bool",
+      "default": false,
+      "label": "@ScopeWidescreenMode",
+      "description": "@ScopeWidescreenMode.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu"
+    },
+    {
+      "id": "BONUS.GogglesLightColor",
+      "type": "choice",
+      "default": 0,
+      "label": "@GogglesLightColor",
+      "description": "@GogglesLightColor.description",
+      "page": "graphics",
+      "apply": "restart",
+      "visibility": "menu",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@GogglesLightColor.color0"
+        },
+        {
+          "value": 1,
+          "label": "@GogglesLightColor.color1"
+        },
+        {
+          "value": 2,
+          "label": "@GogglesLightColor.color2"
+        },
+        {
+          "value": 3,
+          "label": "@GogglesLightColor.color3"
+        },
+        {
+          "value": 4,
+          "label": "@GogglesLightColor.color4"
+        },
+        {
+          "value": 5,
+          "label": "@GogglesLightColor.color5"
+        },
+        {
+          "value": 6,
+          "label": "@GogglesLightColor.color6"
+        },
+        {
+          "value": 7,
+          "label": "@GogglesLightColor.color7"
+        },
+        {
+          "value": 8,
+          "label": "@GogglesLightColor.color8"
+        },
+        {
+          "value": 9,
+          "label": "@GogglesLightColor.color9"
+        },
+        {
+          "value": 10,
+          "label": "@GogglesLightColor.color10"
+        }
+      ]
+    },
+    {
       "id": "MAIN.GrainScale",
       "type": "float",
       "default": 1.0,
@@ -342,11 +408,6 @@
       "description": "@MISC.FPSLimit.description",
       "page": "gameplay",
       "apply": "live",
-      "presets": {
-        "vanilla": 200,
-        "recommended": 60,
-        "enhanced": 60
-      },
       "min": -1,
       "max": 1000,
       "step": 1,
@@ -474,7 +535,7 @@
     {
       "id": "INPUT.Joy9",
       "type": "string",
-      "default": "",
+      "default": "Quicksave",
       "label": "@INPUT.Joy9",
       "description": "@INPUT.Joy9.description",
       "page": "compatibility",

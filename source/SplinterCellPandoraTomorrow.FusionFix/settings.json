@@ -209,7 +209,7 @@
       "label": "@ScopeWidescreenMode",
       "description": "@ScopeWidescreenMode.description",
       "page": "display",
-      "apply": "restart",
+      "apply": "live",
       "visibility": "menu"
     },
     {

@@ -271,7 +271,7 @@ char __fastcall UpdateStartupMovie(uint8_t* owner, void*, int time)
 
 void InstallLogoSkip()
 {
-    if (StartupMovieHook || FixSettings().Get("MAIN.SkipIntro") == "0")
+    if (StartupMovieHook || !FixSettings().Bool("MAIN.SkipIntro"))
         return;
     auto movie = hook::pattern("51 8B 44 24 0C 53 56 6A 1C 89 4C 24 0C 89 41 7C E8 ? ? ? ? 33 DB 83 C4 04 3B C3 74 20");
     StartupMovieHook = safetyhook::create_inline(movie.get_first(), StartMovie);
@@ -306,6 +306,29 @@ namespace HD2Update
     inline std::string notice;
     SafetyHookInline textHook;
     inline void(__cdecl* makeText)(void**, const char*, ...){};
+
+    // The game reads its texts from Lang<Language>.dta next to the exe
+    inline std::string GameLanguage()
+    {
+        static constexpr std::pair<const char*, const char*> languages[] =
+        {
+            { "LangGerman.dta", "de" }, { "LangFrench.dta", "fr" }, { "LangItalian.dta", "it" },
+            { "LangSpanish.dta", "es" }, { "LangEnglish.dta", "en" },
+        };
+        const auto folder = GetExeModulePath();
+        for (const auto& [file, tag] : languages)
+        {
+            if (std::filesystem::exists(folder / file))
+                return tag;
+        }
+        return "en";
+    }
+
+    inline void SelectLanguage()
+    {
+        auto tag = FixSettings().Get("MAIN.TextLanguage");
+        FixSettings().GetTexts().Select(tag.empty() || tag == "auto" ? GameLanguage() : tag);
+    }
 
     // Text 2006 is the version line ("... ver. %d.%d.%d") of the menus and the briefing
     inline void** __fastcall Text(void* table, void*, void** out, int id)
@@ -348,6 +371,7 @@ namespace HD2Update
         // The version line is short: name and version only, the hub opens after the game
         update.format = [](const std::string& latest, bool)
         {
+            SelectLanguage();
             auto line = FixSettings().GetTexts().Resolve("@update.menu");
             if (auto at = line.find("{version}"); at != line.npos)
                 line.replace(at, 9, latest);
@@ -442,16 +466,16 @@ void Install()
     HD2Setup::Init();
     HD2Focus::Init(graphics);
     auto& settings = FixSettings();
-    WindowMode = std::clamp(std::stoi(settings.Get("MAIN.WindowMode")), 0, 2);
+    WindowMode = std::clamp(settings.Int("MAIN.WindowMode"), 0, 2);
     const auto updateMovieMode = []()
     {
-        MovieMode.store(std::clamp(std::stoi(FixSettings().Get("MAIN.FMVWidescreenMode")), 0, 1), std::memory_order_relaxed);
+        MovieMode.store(std::clamp(FixSettings().Int("MAIN.FMVWidescreenMode"), 0, 1), std::memory_order_relaxed);
     };
     updateMovieMode();
     settings.OnChange("MAIN.FMVWidescreenMode", updateMovieMode);
     const auto updateFOV = []()
     {
-        ProjectionFactor.store(std::clamp(std::stof(FixSettings().Get("MAIN.FOVFactor")), 0.5f, 2.0f), std::memory_order_relaxed);
+        ProjectionFactor.store(std::clamp(FixSettings().Float("MAIN.FOVFactor"), 0.5f, 2.0f), std::memory_order_relaxed);
         ProjectionDirty.store(true, std::memory_order_release);
     };
     updateFOV();
@@ -490,9 +514,15 @@ void Install()
         void operator()(injector::reg_pack& regs)
         {
             auto& flags = *reinterpret_cast<uint32_t*>(regs.ebp - 0x1C);
+            auto& depth = *reinterpret_cast<uint8_t*>(regs.ebp - 0x20);
             flags |= 0x20u;
             if (WindowMode == 0)
+            {
+                // The colour depth is only passed on when the setup itself asks for fullscreen
                 flags |= 2;
+                if (depth != 16 && depth != 32)
+                    depth = 32;
+            }
             else
                 flags &= ~6u;
             regs.eax = reinterpret_cast<uint32_t>(getGraph());

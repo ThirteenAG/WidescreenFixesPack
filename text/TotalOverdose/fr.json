@@ -36,5 +36,10 @@
   "CheckForUpdates": "Rechercher les mises à jour",
   "CheckForUpdates.description": "Une fois par lancement, demande à fusionfix.io si une version plus récente du correctif est sortie et l'affiche à la place du numéro de version dans le menu principal. Désactivé, aucune requête réseau n'est faite.",
   "update.availablehub": "Mise à jour : FusionFixHub",
-  "update.availablesite": "Mise à jour : fusionfix.io"
+  "update.availablesite": "Mise à jour : fusionfix.io",
+  "SkipPressStart": "Passer l'écran titre",
+  "SkipPressStart.description": "Après l'intro de l'histoire, passe directement au menu principal sans l'écran titre « Appuyez sur Entrée ». Nécessite un redémarrage.",
+  "page.compatibility": "Compatibilité",
+  "TextLanguage": "Langue du texte",
+  "TextLanguage.description": "Langue des textes du correctif. Automatique utilise l'anglais."
 }

@@ -556,6 +556,21 @@ namespace
 
 export namespace FixOptions
 {
+    // A text of the fix in the game's language, upper case in the game's font (empty when it has none)
+    const wchar_t* GameText(const std::string& key)
+    {
+        static std::map<std::string, std::u16string, std::less<>> cache;
+        auto language = LanguageTag();
+        auto& text = cache[language + ":" + key];
+        if (text.empty())
+        {
+            auto utf8 = RWGTAMenu::PluginText(FixSettings(), language, key);
+            if (utf8 != key && utf8 != "@" + key)
+                text = RWGTAMenu::ToGameFont(utf8, true, false);
+        }
+        return reinterpret_cast<const wchar_t*>(text.c_str());
+    }
+
     void BeginMenuDraw()
     {
         ValueAreas.bounds.clear();
@@ -616,7 +631,10 @@ public:
                 bJoined = true;
                 static auto RestoreHook = safetyhook::create_mid(restore.get_first(), [](SafetyHookContext&)
                 {
-                    RWGTAMenu::RestoreDefaults(FixSettings(), JoinedIds());
+                    // With the game's own rows of Display Setup that keep their values in the fix's settings
+                    auto ids = JoinedIds();
+                    ids.insert({ "MAIN.CutsceneBorders", "MAIN.FPSLimit" });
+                    RWGTAMenu::RestoreDefaults(FixSettings(), ids);
                     if (Model.IsOpen())
                         FillJoined();
                 });

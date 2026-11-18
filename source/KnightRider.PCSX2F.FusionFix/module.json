@@ -1,6 +1,7 @@
 {
   "sources": [
     "main.cpp",
+    "Movie.cpp",
     "../../external/injector/include/ps2/log.c",
     "../../external/injector/include/ps2/memalloc.c",
     "../../external/injector/include/ps2/patterns.c",

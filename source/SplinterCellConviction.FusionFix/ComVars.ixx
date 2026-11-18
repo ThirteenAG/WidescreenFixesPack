@@ -22,6 +22,7 @@ export std::atomic<float> gVisibility{ 1.0f };
 export std::atomic<int32_t> gBlacklistIndicators{ 0 };
 export bool bDisableBlackAndWhiteFilter = false;
 export bool bBlacklistControlScheme = true;
+export bool bLimitedAmmo = false;
 export int BackBufferWidth = 0;
 export int BackBufferHeight = 0;
 export bool bEnableSplitscreen = false;

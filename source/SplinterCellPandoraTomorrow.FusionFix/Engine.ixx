@@ -1103,6 +1103,25 @@ export void InitEngine()
     else // digital
         digitalHealth.get_first();
 
+    // Thermal vision grain: angle, V and U offsets held at 30 Hz
+    VisionNoiseGrain::Init();
+    pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 80 8C 04 00 00 89 41 4C FF 15");
+    if (!pattern.empty()) // digital
+    {
+        VisionNoiseGrain::RedirectCallSite(pattern.get_first(9), VisionNoiseGrain::HeldFrand<1, 0>);
+        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "FF 15 ? ? ? ? D8 8D B0 FD FF FF D9 9D A8 FD FF FF FF 15 ? ? ? ? D8 8D B4 FD FF FF");
+        VisionNoiseGrain::RedirectCallSite(pattern.get_first(0), VisionNoiseGrain::HeldFrand<1, 1>);
+        VisionNoiseGrain::RedirectCallSite(pattern.get_first(0x12), VisionNoiseGrain::HeldFrand<1, 2>);
+    }
+    else
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "8B 82 8C 04 00 00 8B 0D ? ? ? ? 89 41 4C FF 15");
+        VisionNoiseGrain::RedirectCallSite(pattern.get_first(0x0F), VisionNoiseGrain::HeldFrand<1, 0>);
+        pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "FF 15 ? ? ? ? D8 4C 24 48 51 D9 1C 24 FF 15 ? ? ? ? D8 4C 24 40");
+        VisionNoiseGrain::RedirectCallSite(pattern.get_first(0), VisionNoiseGrain::HeldFrand<1, 1>);
+        VisionNoiseGrain::RedirectCallSite(pattern.get_first(0x0E), VisionNoiseGrain::HeldFrand<1, 2>);
+    }
+
     // Fix thermal vision grain scaling at high resolutions
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "8B 46 04 8B 80 84 00 00 00 99 F7 F9 66 0F 6E C0", "04 8B C8 8B 82 84 00 00 00 99 F7 F9");
     {

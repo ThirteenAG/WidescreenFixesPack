@@ -14,11 +14,8 @@ export namespace CDraw
     float GetHudAspectRatio(float screenAspect)
     {
         // Auto: the whole width of the screen, elements at the sides go to the screen's edges. A ratio limits the HUD
-        // to a centered box of that aspect. Values outside the ratio range are the pixel offsets of older settings
-        // files: those count as Auto.
-        float value = screenAspect;
-        if (fHudAspectRatioConstraint && *fHudAspectRatioConstraint > 0.0f && *fHudAspectRatioConstraint <= 32.0f / 9.0f)
-            value = *fHudAspectRatioConstraint;
+        // to a centered box of that aspect.
+        const float value = fHudAspectRatioConstraint ? *fHudAspectRatioConstraint : screenAspect;
         return ClampHudAspectRatio(value, screenAspect);
     }
 

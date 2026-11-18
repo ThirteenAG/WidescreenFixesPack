@@ -34,6 +34,7 @@ public:
         WFP::onGameProcessEvent() += []()
         {
             MafiaPad::Frame(WindowedModeWrapper::GameHWND);
+            MafiaIcons::Tick();
             MafiaUpdates::Tick();
             MafiaMenu::Notice();
         };

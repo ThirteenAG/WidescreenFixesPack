@@ -37,21 +37,21 @@ constexpr uintptr_t screenOffset = 0x588, rowOffset = 0x58C, editOffset = 0x590,
 enum Option : int16_t {
     FrameRate = 0x60, MoreOptions, HudSize, CutsceneBorders, FastLoading, PcMenu, PcControls,
     MouseSensitivity, InvertMouse, BindingsMenu, NextPage, ResetBindings, Back, Blur, Preset, ApplyPreset,
-    FieldOfView, HudAspect, SkipIntro, GamepadIcons, OptionEnd,
-    BindingRow = 0x76, BindingEnd = 0x80,
+    FieldOfView, HudAspect, SkipIntro, GamepadIcons, ModernControls, PadCameraSpeed, InvertPad, OptionEnd,
+    BindingRow = 0x78, BindingEnd = 0x82,
     // Rows of the plugin list and the fix's page.
-    FixOptions = 0x80, FixDefaults, VehicleLights, PluginEnd
+    FixOptions = 0x88, FixDefaults, VehicleLights, PluginEnd
 };
 constexpr unsigned bindingsPerPage = BindingEnd - BindingRow;
 constexpr unsigned optionCount = OptionEnd - FrameRate;
 static_assert(OptionEnd <= BindingRow && BindingEnd <= FixOptions);
 constexpr char keys[optionCount][8] = {"WF_FPS", "WF_MORE", "WF_HUD", "WF_CBOR", "WF_LOAD", "WF_PCM",
     "WF_PC", "WF_SENS", "WF_INV", "WF_BIND", "WF_NEXT", "WF_RST", "WF_BACK", "WF_BLUR", "WF_PRE", "WF_APLY",
-    "WF_FOV", "WF_HUDA", "WF_SKIP", "WF_ICON"};
+    "WF_FOV", "WF_HUDA", "WF_SKIP", "WF_ICON", "WF_MOD", "WF_PCAM", "WF_PINV"};
 constexpr char captions[optionCount][28] = {"FRAME RATE:", "PLUGINS", "HUD SIZE", "CUTSCENE BORDERS",
-    "FAST LOADING", "PC CONTROLS", "KEYBOARD AND MOUSE", "MOUSE SENSITIVITY", "INVERT MOUSE Y", "KEY BINDINGS",
+    "FAST LOADING", "CONTROLS", "KEYBOARD AND MOUSE", "MOUSE SENSITIVITY", "INVERT MOUSE Y", "KEY BINDINGS",
     "NEXT PAGE", "RESET TO DEFAULTS", "", "BLUR EFFECT", "PRESET", "APPLY PRESET", "FIELD OF VIEW", "HUD ASPECT RATIO",
-    "SKIP INTRO", "BUTTON ICONS"};
+    "SKIP INTRO", "BUTTON ICONS", "MODERN CONTROLS", "PAD CAMERA SPEED", "INVERT PAD Y"};
 constexpr unsigned pluginRowCount = PluginEnd - FixOptions;
 constexpr char pluginKeys[pluginRowCount][8] = {"WF_FIX", "WF_FDEF", "WF_VLIT"};
 constexpr char pluginCaptions[pluginRowCount][28] = {"FUSION FIX", "RESTORE DEFAULTS", "VEHICLE LIGHTS"};
@@ -62,7 +62,7 @@ constexpr const char* optionHelp[optionCount] = {
     "Size of the HUD.",
     "Black bars in cutscenes, top and bottom or at the sides.",
     "Runs the emulator at full speed while loading.",
-    "Keyboard and mouse controls and key bindings.",
+    "Pad, keyboard and mouse controls and key bindings.",
     "Mouse camera and aim, keys shown on screen.",
     "Speed of the mouse camera.",
     "Inverts the vertical mouse camera.",
@@ -77,6 +77,9 @@ constexpr const char* optionHelp[optionCount] = {
     "Keeps the HUD in a centered box on wide screens.",
     "Skips the logo movies when the game starts.",
     "Button pictures shown while you play with a pad.",
+    "Drive, aim and shoot with the triggers.",
+    "Speed of the right stick camera.",
+    "Inverts the vertical right stick camera.",
 };
 constexpr const char* pluginHelp[pluginRowCount] = {
     "Widescreen, HUD, camera, frame rate, lights and controls.",
@@ -135,7 +138,7 @@ bool Centered(int action) {
     return action == MoreOptions || action == PcMenu || action == BindingsMenu || action == NextPage ||
         action == ResetBindings || action == Back || action == FixOptions;
 }
-bool Slider(int action) { return action == HudSize || action == MouseSensitivity || action == FieldOfView; }
+bool Slider(int action) { return action == HudSize || action == MouseSensitivity || action == FieldOfView || action == PadCameraSpeed; }
 
 struct ActionList {
     Act list[console::stories::ActionCount]{};
@@ -234,7 +237,10 @@ void Write(Extension& extension) {
                            SkipIntro, VehicleLights, GamepadIcons, PcMenu, FixDefaults, Back}) { add(Row(option, y, displayScreen)); y += 13; }
     } else if (extension.mode == 1 || extension.mode == 3) {
         int16_t y = 30;
-        for (int option : {PcControls, MouseSensitivity, InvertMouse, BindingsMenu, Back}) { add(Row(option, y, extension.index)); y += 18; }
+        for (int option : {ModernControls, PadCameraSpeed, InvertPad, PcControls, MouseSensitivity, InvertMouse, BindingsMenu, Back}) {
+            add(Row(option, y, extension.index));
+            y += 18;
+        }
     } else {
         int16_t y = 26;
         static constexpr char names[bindingsPerPage][8] = {"WF_B0", "WF_B1", "WF_B2", "WF_B3", "WF_B4", "WF_B5", "WF_B6", "WF_B7", "WF_B8", "WF_B9"};
@@ -316,20 +322,25 @@ int Value(int option) {
     case FieldOfView: return int(settings.fovFactor * 100.0f + 0.5f);
     case SkipIntro: return settings.skipIntro;
     case VehicleLights: return settings.vehicleLights;
+    case ModernControls: return settings.modernControls;
+    case PadCameraSpeed: return int(settings.padCameraSpeed * 100.0f + 0.5f);
+    case InvertPad: return settings.invertPad;
     default: return 0;
     }
 }
 // The descriptor's presets: 0 vanilla, 1 recommended (the defaults), 2 enhanced. Only the
-// settings whose values differ between them; the others (frame rate, FOV, HUD size and shape,
+// settings whose values differ between them; the others (FOV, HUD size and shape, PC
 // controls, sensitivity, bindings) keep the player's choice.
-struct PresetValues { bool unthrottle, disableBlur, skipIntro, vehicleLights; int cutsceneBorders, gamepadIcons; };
-constexpr PresetValues presetValues[3] = {{false, false, false, false, 1, 2}, {true, true, true, true, 3, 0}, {true, true, true, true, 3, 0}};
+struct PresetValues { bool unthrottle, disableBlur, skipIntro, vehicleLights, sixtyFPS, modernControls; int cutsceneBorders, gamepadIcons; };
+constexpr PresetValues presetValues[3] = {{false, false, false, false, false, false, 1, 2},
+    {true, true, true, true, false, true, 3, 0}, {true, true, true, true, true, true, 3, 0}};
 constexpr int recommendedPreset = 1;
 bool PresetMatches(int preset) {
     if (preset < 0 || preset > 2) return false;
     const auto& p = presetValues[preset];
     return settings.unthrottle == p.unthrottle && settings.disableBlur == p.disableBlur &&
-        settings.skipIntro == p.skipIntro && settings.vehicleLights == p.vehicleLights && settings.cutsceneBorders == p.cutsceneBorders && settings.gamepadIcons == p.gamepadIcons;
+        settings.skipIntro == p.skipIntro && settings.vehicleLights == p.vehicleLights && settings.sixtyFPS == p.sixtyFPS &&
+        settings.modernControls == p.modernControls && settings.cutsceneBorders == p.cutsceneBorders && settings.gamepadIcons == p.gamepadIcons;
 }
 int MatchingPreset() { return PresetMatches(1) ? 1 : PresetMatches(0) ? 0 : PresetMatches(2) ? 2 : -1; }
 // Press once to arm, again to apply; nothing happens when the values already match.
@@ -341,6 +352,8 @@ void ApplyPresetValues(int preset, bool& confirm) {
     const auto& p = presetValues[preset];
     settings.unthrottle = p.unthrottle; settings.disableBlur = p.disableBlur;
     settings.skipIntro = p.skipIntro; settings.vehicleLights = p.vehicleLights; settings.cutsceneBorders = p.cutsceneBorders; settings.gamepadIcons = p.gamepadIcons;
+    if (settings.sixtyFPS != p.sixtyFPS) { settings.sixtyFPS = p.sixtyFPS; ApplyFrameRate(); }
+    if (settings.modernControls != p.modernControls) { settings.modernControls = p.modernControls; ApplyControls(); }
     ApplyBlur(); dirty = true; confirm = false;
     shownPreset = preset;
 }
@@ -364,7 +377,7 @@ void Adjust(int option, int direction) {
     }
     case CutsceneBorders: settings.cutsceneBorders = (settings.cutsceneBorders + (direction < 0 ? 3 : 1)) % 4; break;
     case FastLoading: settings.unthrottle = !settings.unthrottle; break;
-    case PcControls: settings.pcControls = !settings.pcControls; break;
+    case PcControls: settings.pcControls = !settings.pcControls; ApplyControls(); break;
     case MouseSensitivity: {
         int step = Value(MouseSensitivity) + (direction > 0 ? 1 : -1);
         step = step < 1 ? 1 : step > 40 ? 40 : step;
@@ -397,6 +410,14 @@ void Adjust(int option, int direction) {
     case GamepadIcons:
         settings.gamepadIcons = (settings.gamepadIcons + (direction < 0 ? 3 : 1)) % 4;
         break;
+    case ModernControls: settings.modernControls = !settings.modernControls; ApplyControls(); break;
+    case PadCameraSpeed: {
+        int percent = Value(PadCameraSpeed) + (direction > 0 ? 25 : -25);
+        percent = (percent + 12) / 25 * 25;
+        settings.padCameraSpeed = console::bounded(percent * 0.01f, 0.25f, 4.0f, 1.0f);
+        break;
+    }
+    case InvertPad: settings.invertPad = !settings.invertPad; break;
     default: return;
     }
     dirty = true;
@@ -425,6 +446,7 @@ const uint16_t* GetText(void* text, const char* key) {
         return emptyText;
     }
     if (const auto* rewritten = ButtonText(key)) return rewritten;
+    if (const char* modern = ModernTextKey(key)) return getText.call(text, modern);
     return getText.call(text, key);
 }
 const uint16_t* Ascii(unsigned slot, const char* text) { return Upper(text, valueText[slot % 16]); }
@@ -509,7 +531,8 @@ void DrawValue(SafetyMipsContext& regs) {
     } else if (Slider(action)) {
         if (pass) {
             const float value = action == HudSize ? (Value(HudSize) - 50) * 0.01f
-                : action == FieldOfView ? (Value(FieldOfView) - 50) / 150.0f : Value(MouseSensitivity) / 40.0f;
+                : action == FieldOfView ? (Value(FieldOfView) - 50) / 150.0f
+                : action == PadCameraSpeed ? (Value(PadCameraSpeed) - 25) / 375.0f : Value(MouseSensitivity) / 40.0f;
             DrawBars(Menu(), focused, float(entry.x + 12), float(entry.y - 1), console::bounded(value, 0.0f, 1.0f, 0.5f));
         }
     } else if (action == FrameRate) {
@@ -683,6 +706,9 @@ void Save() {
     set("MAIN", "SkipIntro", settings.skipIntro ? "1" : "0");
     number[0] = char('0' + (settings.gamepadIcons & 3)); number[1] = 0; set("MAIN", "GamepadIcons", number);
     set("MAIN", "VehicleLights", settings.vehicleLights ? "1" : "0");
+    set("CONTROLS", "ModernControlScheme", settings.modernControls ? "1" : "0");
+    console::decimal(number, settings.padCameraSpeed, 2); set("MAIN", "GamepadCameraSpeed", number);
+    set("MAIN", "InvertGamepadY", settings.invertPad ? "1" : "0");
     if (request.count) {
         const auto result = console::ps2settings::request(request);
         if (result != PCSX2F_SETTINGS_OK) status = result;

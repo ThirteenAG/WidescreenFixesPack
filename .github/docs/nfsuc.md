@@ -33,7 +33,8 @@
 <img src="https://thirteenag.github.io/screens/nfsuc/race2.jpg" width="360" align="left" style="margin: 0 24px 0px 0;" alt="Gameplay">
 
 - **In-Game Options** - the fix's display, camera, graphics and control settings appear beside the matching game options. **Options > Plugins > Fusion Fix** contains the remaining settings, with the fix first in the plugin list. Large pages are split into categories. All settings are stored in `NFSUndercover.FusionFix.cfg` next to the plugin, with comments explaining each setting; they can also be changed on fusionfix.io or in FusionFixHub.
-- **Skip Intro** - bypass startup FMVs and the title screen
+- **Skip Intro** - bypass startup FMVs
+- **Skip Press Start** - the title screen continues by itself
 - **Presets** - **Options > Plugins > Fusion Fix > Preset** selects Vanilla, Recommended or Enhanced for that plugin. Accept the game's confirmation dialog to apply it. Window mode, language, sensitivities and controls keep their current values. **Restore Defaults** resets the settings on that plugin's page; the game's **Default Settings** also resets the added rows on its graphics pages.
 - **Language** - the game's language under **Options > Plugins > Fusion Fix > Gameplay**, after a restart; only languages whose text files are installed are listed, so the game no longer crashes on a missing language
 - **Display Mode** - borderless, bordered, resizable, or borderless fullscreen; in every mode the picture is neither cropped nor blurred on scaled desktops. A bordered window's inner size is exactly the chosen resolution, and in the resizable window the HUD, field of view and movies follow the window's shape

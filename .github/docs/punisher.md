@@ -27,7 +27,7 @@ Use **More Pages** and **Previous Pages** to browse a plugin's settings. **Detai
 | Resolution width and height | 0 = desktop resolution, or a size; Hub/settings file; restart | 0 |
 | HUD aspect ratio | Auto for full HUD width, or 4:3, 16:9, 21:9/custom up to 32:9; live | Auto |
 | FOV multiplier | 0.5–2.0; larger values widen the view up to 150° horizontally; live | 1.0 |
-| FPS limit | 0 = unlimited, -1 = desktop refresh, or 30–1000; live | 60 |
+| FPS limit | 30–60; live | 60 |
 | Raw mouse input | On uses raw relative mouse movement; live | On |
 | Text language | Auto follows the Windows display language, or choose English, French, German, Italian or Spanish; Hub/settings file | Auto |
 | Skip intro | On or Off; restart | On |
@@ -38,7 +38,7 @@ Use **More Pages** and **Previous Pages** to browse a plugin's settings. **Detai
 | Animated cutscene borders | On slides the borders like the original; Off shows them at once; live | On |
 | Check for updates | Off makes no network request; live | Off |
 
-Vanilla disables the FPS limit, shows the intro, and keeps the original letterbox only. Recommended and Enhanced skip the intro. The game's videos are all 4:3 and keep their aspect. Hub texts are available in English, French, German, Italian and Spanish.
+Vanilla shows the intro and keeps the original letterbox only. Recommended and Enhanced skip the intro. The game's videos are all 4:3 and keep their aspect. Hub texts are available in English, French, German, Italian and Spanish.
 
 In-engine cutscenes keep their original framing: the full width of the original picture in a 16:9 frame. Narrower screens show the original bars above and below, wider screens get bars at the sides. With the borders off, cutscenes fill the screen with the gameplay view. The FOV multiplier does not change cutscenes.
 
@@ -58,7 +58,7 @@ The fix’s own text is available in English, French, German, Italian and Spanis
 - Window mode changes require a restart; live resizing and Alt+Enter switching are unavailable.
 - Anti-aliasing options are unavailable.
 - The PC version has no controller support; use the keyboard and mouse.
-- 60 FPS is recommended. Higher frame rates may affect game behavior.
+- The frame rate stays at 60 FPS or below; the game's timing breaks at higher frame rates.
 - Other executables can use fusionfix.io, FusionFixHub or the settings file when the in-game menu is unavailable.
 
 <p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile-dark.svg"><source media="(max-width: 768px)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-mobile.svg"><source media="(prefers-color-scheme: dark)" srcset="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp-dark.svg"><img width="100%" src="https://fusionlegacyinitiative.com/sponsors-progress/sponsors-progress-wfp.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>

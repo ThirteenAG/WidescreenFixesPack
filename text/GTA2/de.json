@@ -172,6 +172,8 @@
   "menu.restartwarning": "Einige Einstellungen gelten erst nach einem Neustart des Spiels.",
   "menu.previous": "Zurück",
   "windowmode.windowed": "Fenster",
+  "MAIN.PauseOnFocusLoss": "Bei Fokusverlust pausieren",
+  "MAIN.PauseOnFocusLoss.description": "Pausiert das Spiel, wenn das Spielfenster den Fokus verliert.",
   "MAIN.ConfineCursor": "Mauszeiger festhalten",
   "MAIN.ConfineCursor.description": "Hält den Mauszeiger im Spielfenster, solange das Spiel aktiv ist, damit er nicht auf einen anderen Monitor wandert.",
   "MAIN.GamepadIcons": "Controller-Tasten",

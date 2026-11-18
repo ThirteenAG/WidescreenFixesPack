@@ -14,6 +14,8 @@
 
 - **Skip intro** — On by default: the game starts at the title screen, past the Rockstar Games and Double Eleven logos. Off shows them as in the original game. Needs a restart.
 
+The mouse pointer is hidden while you play with a controller and comes back as soon as you move or click the mouse.
+
 ---
 
 ## Settings and hub

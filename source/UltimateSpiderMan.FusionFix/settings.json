@@ -93,7 +93,12 @@
       "visibility": "menu",
       "apply": "live",
       "min": -1,
-      "max": 1000
+      "max": 1000,
+      "presets": {
+        "vanilla": 30,
+        "recommended": 60,
+        "enhanced": 60
+      }
     },
     {
       "id": "MAIN.ConfineCursor",

@@ -29,6 +29,7 @@ public:
             CoCWindow::Init();
             CoCIntro::Init();
             CoCFocus::Init();
+            CoCPad::Init();
             asi_settings::LiveLink::Start();
 
             auto pattern = hook::pattern("8B 4C 24 18 BF 01 00 00 00 C7"); //0x406344

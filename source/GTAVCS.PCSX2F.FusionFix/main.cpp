@@ -24,13 +24,6 @@ namespace vcs {
 namespace {
 safetymips::GameInline<uint64_t()> gameTick;
 SafetyMipsMid littleWillie;
-// 60 FPS: the VBlank interrupt handler (sub_370300) only runs its phase-2 frame
-// work when a0 == 2 ("bne a0, v0" at 0x370314). NOP-ing that branch (HEAD's
-// patch) runs it on every notification. The word is switched from the game
-// thread (init / menu), so no plugin code runs inside the interrupt handler.
-constexpr uintptr_t sixtyFPSSite = 0x370314;
-pcsx2::Patch sixtyFPSPatch;
-
 float DisplayAspect() {
     switch (PCSX2Data[PCSX2Data_AspectRatioSetting]) {
     case RAuto4_3_3_2: case R4_3: return 4.0f / 3.0f;
@@ -66,6 +59,7 @@ void ReadSettings() {
     settings.forcedAspect = console::parse_forced_aspect(config::values[12].value);
     settings.gamepadIcons = int(config::Number(13, 0.0f, 0.0f, 3.0f));
     settings.vehicleLights = config::Boolean(14, true);
+    settings.holdVehicleCamera = config::Boolean(15, false);
 }
 console::ps2settings::StateLoads stateLoads;
 void RefreshSettings() {
@@ -81,6 +75,7 @@ void RefreshSettings() {
 uint64_t GameTick() {
     stateLoads.poll(RefreshSettings);
     UpdateViewport();
+    TickTiming();
     if (KeyboardActive()) UpdateCheats();
     FrameLimitUnthrottle = false;
     if (settings.unthrottle) {
@@ -102,16 +97,6 @@ void LittleWillieCamera(SafetyMipsContext& regs) {
 void Rejected(pcsx2_hook_status status) {
     std::snprintf(OSDText[0], OSDStringSize, "VCS fix disabled: patch validation failed (%u)", unsigned(status));
 }
-}
-void ApplyFrameRate() {
-    if (sixtyFPSPatch)
-    {
-        const auto status = settings.sixtyFPS ? sixtyFPSPatch.enable() : sixtyFPSPatch.disable();
-        if (status != PCSX2_HOOK_OK)
-        {
-            std::snprintf(OSDText[0], OSDStringSize, "VCS 60 FPS patch failed (%u)", unsigned(status));
-        }
-    }
 }
 }
 
@@ -149,19 +134,8 @@ extern "C" void init() {
     InstallVehicleLights();
     gameTick = safetymips::create_inline_game(0x21E950, GameTick);
     littleWillie = safetymips::create_mid<&LittleWillieCamera>(0x37281C);
-    if (injector::FlushCaches() == PCSX2_HOOK_OK) {
-        FrameLimitUnthrottle = settings.unthrottle;
-        static constexpr uint32_t nop = 0;
-        const auto status = sixtyFPSPatch.create(injector::detail::backend, sixtyFPSSite, &nop, 1);
-        if (status == PCSX2_HOOK_OK)
-        {
-            ApplyFrameRate();
-        }
-        else
-        {
-            std::snprintf(OSDText[0], OSDStringSize, "VCS 60 FPS patch failed (%u)", unsigned(status));
-        }
-    }
+    InstallTiming();
+    if (injector::FlushCaches() == PCSX2_HOOK_OK) FrameLimitUnthrottle = settings.unthrottle;
 }
 
 extern "C" int main() { return 0; }

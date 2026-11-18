@@ -29,8 +29,9 @@ export namespace KnightRider2PadLabels
     inline SafetyHookInline LocalizedHook;
     inline SafetyHookInline TextUpdateHook, TextDestroyHook;
     inline std::unordered_map<void*, int> TextDevices;
-    inline void* LocalizedCaption[2]{};
-    inline std::string PreviousCaption[2];
+    inline void* LocalizedCaption[4]{};
+    inline std::string PreviousCaption[4];
+    inline bool QuitOpening = false;
     inline WORD Buttons = 0;
     inline WORD QuitHeld = 0;
     inline SafetyHookMid QuitOpenHook, QuitPromptHook;
@@ -74,11 +75,13 @@ export namespace KnightRider2PadLabels
 
     inline void* __fastcall Localized(void* dictionary, void*, int key)
     {
-        if (!UsingPad.load(std::memory_order_relaxed) || (key != 30 && key != 5701))
+        // The quit question's Yes and No answers (A and B) while its box is being built.
+        const bool answer = QuitOpening && (key == 105 || key == 106);
+        if (!UsingPad.load(std::memory_order_relaxed) || (key != 30 && key != 5701 && !answer))
             return LocalizedHook.thiscall<void*>(dictionary, key);
-        const int index = key == 30 ? 0 : 1;
-        const auto native = LocalizedHook.thiscall<char**>(dictionary, key == 30 ? 26 : 107);
-        const auto caption = std::format("{} {}", Label(key == 30 ? 16 : 7), *native + 6);
+        const int index = key == 30 ? 0 : key == 5701 ? 1 : key == 105 ? 2 : 3;
+        const auto native = LocalizedHook.thiscall<char**>(dictionary, key == 30 ? 26 : key == 5701 ? 107 : key);
+        const auto caption = std::format("{} {}", Label(key == 30 ? 16 : key == 106 ? 8 : 7), *native + 6);
         if (caption != PreviousCaption[index])
         {
             if (LocalizedCaption[index])
@@ -120,8 +123,9 @@ export namespace KnightRider2PadLabels
                     return;
                 const auto name = *reinterpret_cast<const char**>(object + 8);
                 navigation = navigation || (name && std::strcmp(name, "Navigation") == 0);
-                if (navigation && name && (std::strcmp(name, "ObjSquare") == 0
-                    || std::strcmp(name, "ObjTriangle") == 0 || std::strcmp(name, "ObjCross") == 0))
+                // Frontend footers show PS2 button pictures; the in-game boxes show the PC key picture (CROSS_nw).
+                if (name && ((navigation && (std::strcmp(name, "ObjSquare") == 0 || std::strcmp(name, "ObjTriangle") == 0
+                    || std::strcmp(name, "ObjCross") == 0)) || std::strncmp(name, "CROSS_nw", 8) == 0))
                 {
                     hidden.emplace_back(object, object[204]);
                     object[204] |= 1;
@@ -241,6 +245,7 @@ export namespace KnightRider2PadLabels
         static bool connected = false;
         const bool present = GetModuleHandleW(L"Xidi.32.dll") && PadInput::Read(state, slot);
         Buttons = present ? state.Gamepad.wButtons : 0;
+        QuitOpening = false;
         if (present)
         {
             if (LastPadSlot != slot)
@@ -346,7 +351,11 @@ export namespace KnightRider2PadLabels
         PlayClick = reinterpret_cast<decltype(PlayClick)>(injector::GetBranchDestination(quitKey.get_first(0x36)).as_int());
         auto quitOpen = hook::pattern("8B 4F 48 C7 87 90 00 00 00 02 00 00 00 E8");
         // The button that opened the question must be released first.
-        QuitOpenHook = safetyhook::create_mid(quitOpen.get_first(3), [](SafetyHookContext&) { QuitHeld = 0xFFFF; });
+        QuitOpenHook = safetyhook::create_mid(quitOpen.get_first(3), [](SafetyHookContext&)
+        {
+            QuitHeld = 0xFFFF;
+            QuitOpening = true;
+        });
         auto quitPrompt = hook::pattern("83 EC 14 56 8B F1 57 8B 46 34 85 C0 0F 84 ? ? ? ? 8D 4E 4C E8");
         QuitPromptHook = safetyhook::create_mid(quitPrompt.get_first(), [](SafetyHookContext& context)
         {

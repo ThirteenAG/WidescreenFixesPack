@@ -34,7 +34,12 @@
 - **Frame Rate Limit** - choose a limit from 30 to 1000 FPS, follow the monitor refresh rate, or use Unlimited. The default is 60 FPS; demanding scenes may run below the selected limit.
 - **Anisotropic Filtering** - sharper textures at steep viewing angles, up to 16x
 - **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to GTA IV on the Xbox 360; restart to change
-- **Clip Cursor** - Locks the mouse cursor to the game window
+- **Confine Cursor** - keeps the mouse cursor inside the game window
+- **Pause on Focus Loss** - pauses the game while another window is active; off keeps it running in the background
+- **Raw Mouse Input** - keeps every bit of mouse movement between controller updates, for smoother mouse look and menu cursor
+- **Controller Icons** - Xbox, PlayStation or Nintendo button pictures wherever the game names a controller button
+- **Controller Deadzone** - how far the sticks move before the game reacts
+- **Vibration** - turns the controller's force feedback on or off
 - **Modern Controls** - keyboard, mouse and Xbox controller bindings laid out like in modern games, used by new profiles and by Reset in the controls menu; the controller can also pause the game with Start
 ---
 
@@ -56,7 +61,7 @@
 
 <img src="https://thirteenag.github.io/screens/driv3r/indicators.gif" width="400" alt="Turn indicators">
 
-**Turn indicators** activate automatically when making a turn. Manual keyboard controls are available on fusionfix.io or in FusionFixHub.
+**Turn indicators** activate automatically when making a turn. Manual turn indicators (two keyboard keys, or LB and RB on the controller) can be turned on on fusionfix.io or in FusionFixHub.
 
 </div>
 

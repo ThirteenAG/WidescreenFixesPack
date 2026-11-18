@@ -56,5 +56,18 @@
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abrirá al cerrar el juego.",
   "update.availablesite": "{name} {version} está disponible en fusionfix.io.",
   "MovingTurnSpeed": "Velocidad de giro en movimiento",
-  "MovingTurnSpeed.description": "Lo rápido que gira el personaje al caminar y correr, con el ratón o un stick. El juego gira más despacio en movimiento que parado; 1.0x mantiene la velocidad del juego. Con los controles modernos la cámara gira libremente y esto no se aplica."
+  "MovingTurnSpeed.description": "Lo rápido que gira el personaje al caminar y correr, con el ratón o un stick. El juego gira más despacio en movimiento que parado; 1.0x mantiene la velocidad del juego. Con los controles modernos la cámara gira libremente y esto no se aplica.",
+  "ShadowResolution": "Resolución de sombras",
+  "ShadowResolution.description": "Tamaño de los mapas de sombras con la calidad de sombras Alta del juego. Juego mantiene 1024; valores mayores dan sombras más nítidas. Requiere reiniciar.",
+  "ShadowResolution.game": "Juego",
+  "GamepadIcons": "Iconos del mando",
+  "GamepadIcons.description": "Los símbolos de los botones del mando en las indicaciones y los botones de acción. Automático y Xbox mantienen los símbolos del juego.",
+  "GamepadIcons.auto": "Automático",
+  "GamepadIcons.xbox": "Xbox",
+  "GamepadIcons.playstation": "PlayStation",
+  "GamepadIcons.nintendo": "Nintendo",
+  "SplitScreenLayout": "Disposición de pantalla dividida",
+  "SplitScreenLayout.description": "Cómo divide la pantalla el cooperativo local. Juego mantiene la opción de pantalla dividida del juego (un jugador encima del otro). Lado a lado da a cada jugador la mitad izquierda o derecha; en una pantalla 32:9 es una vista 16:9 por jugador. El HUD de cada jugador cabe en su mitad. Se aplica al instante.",
+  "SplitScreenLayout.game": "Juego",
+  "SplitScreenLayout.sidebyside": "Lado a lado"
 }

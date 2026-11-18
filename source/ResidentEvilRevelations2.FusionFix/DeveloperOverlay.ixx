@@ -4,6 +4,7 @@ module;
 #include <d3d9.h>
 #include "FixSettings.hpp"
 #include "overlay/OverlayD3D9.hpp"
+#include "Shared/WindowCursor.hpp"
 
 export module DeveloperOverlay;
 
@@ -102,6 +103,7 @@ export namespace Rev2Overlay
         }
         if (message == WM_NULL && cursorWindow.load() != window)
         {
+            WindowCursor::Attach(window);
             cursorWindow.store(window);
         }
         if (message == WM_NCDESTROY && cursorWindow.load() == window)

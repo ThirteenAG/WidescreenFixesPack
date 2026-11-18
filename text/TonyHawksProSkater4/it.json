@@ -54,14 +54,14 @@
   "menu.restartwarning": "Riavvia il gioco per applicare le impostazioni di avvio modificate.",
   "menu.presethelp": "Scegli un profilo e conferma due volte per applicarlo a questo plugin.",
   "FPSLimit": "Limite fotogrammi",
-  "FPSLimit.description": "Limita la presentazione; 0 disattiva il limite e -1 usa la frequenza del desktop. Le modifiche sono immediate. Consigliati 60 FPS; valori superiori possono causare problemi.",
-  "FPSLimit.unlimited": "Illimitato",
-  "FPSLimit.refresh": "Frequenza del desktop",
+  "FPSLimit.description": "Limita la frequenza dei fotogrammi (30–60 FPS). Fisica, animazioni e timer del gioco sono pensati per 60 FPS, quindi non sono disponibili valori più alti. Le modifiche sono immediate.",
   "menu.details": "Dettagli",
   "checkupdates": "Cerca aggiornamenti",
   "checkupdates.description": "Controlla una nuova versione una volta quando attivato. Un avviso appare in Plugin; FusionFixHub si apre all’uscita, se installato. Disattivato non invia richieste di rete.",
   "update.availablehub": "È disponibile un aggiornamento di Tony Hawk Pro Skater 4 Fusion Fix. FusionFixHub si aprirà dopo l'uscita dal gioco.",
   "update.availablesite": "È disponibile un aggiornamento di Tony Hawk Pro Skater 4 Fusion Fix su fusionfix.io.",
   "PauseOnFocusLoss": "Pausa in background",
-  "PauseOnFocusLoss.description": "In una modalità finestra, il gioco si ferma mentre è attiva un'altra finestra, come ha sempre fatto. Disattivato continua a girare. Si applica subito."
+  "PauseOnFocusLoss.description": "In una modalità finestra, il gioco si ferma mentre è attiva un'altra finestra, come ha sempre fatto. Disattivato continua a girare. Si applica subito.",
+  "MAIN.GamepadIcons": "Icone del controller",
+  "MAIN.GamepadIcons.description": "Icone dei pulsanti del controller nei suggerimenti mentre si usa un controller. Auto usa Xbox; scegli PlayStation o Nintendo per un altro controller. Usando la tastiera tornano i suoi suggerimenti."
 }

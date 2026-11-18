@@ -45,8 +45,16 @@ void Update()
         double rx = (double)state.Gamepad.sThumbRX / 32767.5;
         double ry = -(double)state.Gamepad.sThumbRY / 32767.5;
 
-        if (std::abs(rx) <= fDeadzone) rx = 0.0;
-        if (std::abs(ry) <= fDeadzone) ry = 0.0;
+        // One round dead zone; past it the stick's travel is rescaled to the full range
+        double magnitude = std::hypot(rx, ry);
+        if (magnitude <= fDeadzone)
+            rx = ry = 0.0;
+        else
+        {
+            double scale = (std::min(magnitude, 1.0) - fDeadzone) / (1.0 - fDeadzone) / magnitude;
+            rx *= scale;
+            ry *= scale;
+        }
 
         g_RightStick.X = (float)rx;
         g_RightStick.Y = (float)ry;
@@ -102,14 +110,13 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            float fRightStickDeadzone = FixSettings().Float("MISC.RightStickDeadzone");
-            fDeadzone = (fRightStickDeadzone > 0.0f) ? fRightStickDeadzone / 200.0f : 0.0f;
+            fDeadzone = std::clamp(FixSettings().Float("GAMEPAD.RightStickDeadzone"), 0.0f, 50.0f) / 100.0f;
 
             Init();
 
             WFP::onGameProcessEvent() += []()
             {
-                fDeadzone = std::clamp(FixSettings().Float("MISC.RightStickDeadzone"), 0.0f, 50.0f) / 200.0f;
+                fDeadzone = std::clamp(FixSettings().Float("GAMEPAD.RightStickDeadzone"), 0.0f, 50.0f) / 100.0f;
                 RawMouse::Enabled = FixSettings().Bool("MAIN.RawInputMouse") && FixSettings().Bool("CAMERA.Enable");
                 RawMouse::Update(hWnd.get());
                 Update();

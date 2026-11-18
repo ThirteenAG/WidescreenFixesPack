@@ -54,14 +54,14 @@
   "menu.restartwarning": "Redémarrez le jeu pour appliquer les réglages de démarrage modifiés.",
   "menu.presethelp": "Choisissez un préréglage et validez deux fois pour l'appliquer à ce plugin.",
   "FPSLimit": "Limite d’images par seconde",
-  "FPSLimit.description": "Limite l’affichage ; 0 désactive la limite et -1 utilise la fréquence du bureau. Les changements sont immédiats. 60 FPS conseillés ; les valeurs supérieures peuvent perturber le jeu.",
-  "FPSLimit.unlimited": "Illimité",
-  "FPSLimit.refresh": "Fréquence du bureau",
+  "FPSLimit.description": "Limite la fréquence d’images (30–60 FPS). La physique, les animations et les minuteurs du jeu sont prévus pour 60 FPS ; les valeurs supérieures ne sont donc pas proposées. Les changements sont immédiats.",
   "menu.details": "Détails",
   "checkupdates": "Rechercher les mises à jour",
   "checkupdates.description": "Vérifie une nouvelle version une fois à l’activation. Un avis apparaît dans Plugins ; FusionFixHub s’ouvre après le jeu s’il est installé. Désactivé : aucune requête réseau.",
   "update.availablehub": "Une mise à jour de Tony Hawk Pro Skater 4 Fusion Fix est disponible. FusionFixHub s'ouvrira à la fermeture du jeu.",
   "update.availablesite": "Une mise à jour de Tony Hawk Pro Skater 4 Fusion Fix est disponible sur fusionfix.io.",
   "PauseOnFocusLoss": "Pause en arrière-plan",
-  "PauseOnFocusLoss.description": "En mode fenêtré, le jeu s'arrête quand une autre fenêtre est active, comme il l'a toujours fait. Désactivé, il continue. S'applique immédiatement."
+  "PauseOnFocusLoss.description": "En mode fenêtré, le jeu s'arrête quand une autre fenêtre est active, comme il l'a toujours fait. Désactivé, il continue. S'applique immédiatement.",
+  "MAIN.GamepadIcons": "Icônes de manette",
+  "MAIN.GamepadIcons.description": "Images des boutons de la manette dans les indications tant qu’une manette est utilisée. Auto utilise Xbox ; choisissez PlayStation ou Nintendo pour une autre manette. Le clavier rétablit ses propres indications."
 }

@@ -22,6 +22,8 @@
   "WFP_GAMEPADICONS": "Icone dei tasti",
   "WFP_ICONS_AUTO": "Automatiche",
   "WFP_SKIPINTRO": "Salta introduzione",
+  "WFP_SKIPPRESSSTART": "Salta «Premi Start»",
+  "WFP_DESC_SKIPPRESSSTART": "La schermata del titolo prosegue da sola, senza attendere Start.",
   "WFP_U2SAVEBONUS": "Bonus salvataggio Underground 2",
   "WFP_FPSLIMIT": "Frequenza fotogrammi",
   "WFP_FPS_CUSTOM": "Personalizzato",

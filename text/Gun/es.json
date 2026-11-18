@@ -3,7 +3,6 @@
   "page.display": "Pantalla",
   "page.game": "Juego",
   "page.advanced": "Avanzado",
-  "page.compatibility": "Compatibilidad",
   "ResX": "Ancho de resolución",
   "ResX.description": "Ancho en píxeles. Cero elige la resolución del escritorio. Requiere reiniciar.",
   "ResY": "Alto de resolución",
@@ -12,8 +11,6 @@
   "FOVFactor.description": "Multiplica el campo de visión de juego, hasta 150 grados horizontales. Las escenas, el zoom activo y los estados de cámara desconocidos conservan el encuadre. Se aplica al instante.",
   "SkipIntro": "Saltar introducción",
   "SkipIntro.description": "Salta los vídeos de logotipos del editor y los estudios. La introducción del juego se sigue reproduciendo. Requiere reiniciar.",
-  "GameSpeed": "Velocidad del juego",
-  "GameSpeed.description": "Valor de temporización interno; 30 por defecto. Valores menores aceleran el juego y mayores lo ralentizan. Cero deja el valor del juego. Requiere reiniciar.",
   "WindowMode": "Modo de ventana",
   "WindowMode.description": "Pantalla completa, una ventana con marco a la resolución elegida o sin bordes a la resolución del monitor. Se aplica en el siguiente fotograma. Alt+Intro vuelve al último modo de ventana.",
   "windowmode.fullscreen": "Pantalla completa",
@@ -70,5 +67,7 @@
   "borders.both": "Ambos",
   "HudAspectRatioConstraint": "Relación de aspecto del HUD",
   "HudAspectRatioConstraint.description": "Auto reparte el HUD por toda la pantalla, en sus bordes. Una relación lo mantiene en un recuadro centrado con esa forma. Los menús conservan su diseño 4:3. Se aplica al instante.",
-  "HudAspectRatioConstraint.auto": "Auto"
+  "HudAspectRatioConstraint.auto": "Auto",
+  "GamepadIcons": "Iconos del mando",
+  "GamepadIcons.description": "Iconos de los botones del mando. Auto usa Xbox; elige PlayStation o Nintendo para otro mando. El teclado restaura sus propias indicaciones."
 }

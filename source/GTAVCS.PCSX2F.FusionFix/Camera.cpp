@@ -60,6 +60,21 @@ void DrawCutsceneBorders(void*) {
     borders.draw(cinematic.window(settings.aspect, 480, 272), 480, 272,
         [&](const Rect& rect) { drawRect(&rect, &black, true); }, settings.cutsceneBorders);
 }
+// CONTROLS.HoldVehicleCamera. In CCam::Process_FollowCar_SA, f20 is this
+// frame's right stick turn and f27 the turn that swings the camera back behind
+// the vehicle; they are added at 0x2A1108. While held, the swing waits two
+// seconds after the stick was last used.
+SafetyMipsMid followCarSwing;
+bool cameraHeld = false;
+uint32_t cameraHeldUntil = 0;
+void FollowCarSwing(SafetyMipsContext& regs) {
+    if (!settings.holdVehicleCamera) { cameraHeld = false; return; }
+    const uint32_t now = *reinterpret_cast<const uint32_t*>(0x4CD104); // CTimer::m_snTimeInMilliseconds
+    if (float(regs.f20) != 0.0f) { cameraHeld = true; cameraHeldUntil = now + 2000; }
+    // Also ends after a timer reset (loading a save).
+    else if (cameraHeld && (int32_t(now - cameraHeldUntil) >= 0 || int32_t(cameraHeldUntil - now) > 2000)) cameraHeld = false;
+    if (cameraHeld) regs.f27 = 0.0f;
+}
 }
 void InstallCamera() {
     // Script handles in slot 0 are valid: DOES_OBJECT_EXIST, "object destroyed", DOES_VEHICLE_EXIST.
@@ -77,5 +92,6 @@ void InstallCamera() {
     // camera's WideScreenOn flag is clearing, so the bars can animate out.
     injector::MakeNOP(0x21F3E0);
     injector::MakeCALL(0x21F404, borderCallback.address());
+    followCarSwing = safetymips::create_mid<&FollowCarSwing>(0x2A1108);
 }
 }

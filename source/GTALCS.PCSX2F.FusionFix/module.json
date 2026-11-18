@@ -8,6 +8,7 @@
     "Frontend.cpp",
     "MouseCamera.cpp",
     "Controls.cpp",
+    "Cheats.cpp",
     "ButtonIcons.cpp",
     "Menu.cpp",
     "VehicleLights.cpp",

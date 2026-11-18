@@ -55,7 +55,12 @@
       "choices": [
         { "value": 30, "label": "30 FPS" },
         { "value": 60, "label": "60 FPS" }
-      ]
+      ],
+      "presets": {
+        "vanilla": 30,
+        "recommended": 30,
+        "enhanced": 60
+      }
     },
     {
       "id": "MAIN.UnthrottleEmuDuringLoading",
@@ -80,7 +85,27 @@
       "description": "@controls.moderncontrolscheme.description",
       "page": "controls",
       "visibility": "menu",
-      "apply": "live"
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "CONTROLS.HoldVehicleCamera",
+      "type": "bool",
+      "default": 0,
+      "label": "@controls.holdvehiclecamera",
+      "description": "@controls.holdvehiclecamera.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
     },
     {
       "id": "MAIN.VehicleLights",

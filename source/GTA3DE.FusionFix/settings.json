@@ -196,7 +196,12 @@
       "page": "advanced",
       "visibility": "menu",
       "apply": "live",
-      "min": 0
+      "min": 0,
+      "presets": {
+        "vanilla": 1,
+        "recommended": 5,
+        "enhanced": 5
+      }
     },
     {
       "id": "MAIN.RawInputMouse",
@@ -208,7 +213,7 @@
       "visibility": "menu",
       "apply": "live",
       "presets": {
-        "vanilla": 0,
+        "vanilla": 1,
         "recommended": 1,
         "enhanced": 1
       }

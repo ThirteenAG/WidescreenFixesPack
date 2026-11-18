@@ -47,7 +47,8 @@ export namespace MafiaPad
         button(NextWeapon, 5); button(PreviousWeapon, 4); button(HideWeapon, 11);
         button(Reload, 2); button(SniperAim, 6); button(CityMap, 8);
         hat(Inventory, 1); hat(DropWeapon, 4); hat(ToggleWalk, 8); hat(Objectives, 2);
-        button(Accelerate, 7); button(Brake, 6); axis(SteerLeft, 0, 2); axis(SteerRight, 0, 1);
+        // Analog triggers: RT is also the Z axis and LT the Z rotation (Xidi.ini)
+        axis(Accelerate, 2, 1); axis(Brake, 5, 1); axis(SteerLeft, 0, 2); axis(SteerRight, 0, 1);
         button(Handbrake, 0); button(GearUp, 2); button(GearDown, 1); button(Horn, 10); button(Clutch, 4);
         hat(SpeedLimiter, 1); hat(ManualGears, 8); hat(ChangeCamera, 2);
         return bindings;
@@ -67,7 +68,9 @@ export namespace MafiaPad
     uint32_t previousButtons = 0;
     int previousDirection = 0;
     DWORD repeatTick = 0, pauseTick = 0;
-    bool ready = false, pauseRequested = false, padActive = false;
+    bool ready = false, pauseRequested = false;
+    // The device the player used last: pad, or keyboard/mouse (the mouse only after real movement)
+    bool padLastUsed = false;
     SafetyHookMid pauseHook;
     std::atomic<bool> resetRequested{ false };
     void RefreshNames()
@@ -95,7 +98,7 @@ export namespace MafiaPad
 
     bool Enabled()
     {
-        return ready && FixSettings().Int("MAIN.ControllerLayout") == 1;
+        return profileBindings && FixSettings().Int("MAIN.ControllerLayout") == 1;
     }
     const Binding* ForBinding(uintptr_t binding)
     {
@@ -103,6 +106,14 @@ export namespace MafiaPad
             (binding - profileBindings) % sizeof(Binding)) return nullptr;
         const auto& mapped = (GameplayDriving ? driving : modern)[(binding - profileBindings) / sizeof(Binding)];
         return mapped.type ? &mapped : nullptr;
+    }
+    // The pad binding of an action in the current layout, or nullptr
+    const Binding* PadBinding(size_t action)
+    {
+        if (!profileBindings || action >= ActionCount) return nullptr;
+        if (Enabled()) return modern[action].type ? &modern[action] : nullptr;
+        const auto* binding = reinterpret_cast<const Binding*>(profileBindings) + action;
+        return binding->type == 3 ? binding : nullptr;
     }
     void Install()
     {
@@ -118,7 +129,7 @@ export namespace MafiaPad
             {
                 const bool requested = std::exchange(pauseRequested, false);
                 const bool blocked = MafiaMenu::blocksInput && MafiaMenu::blocksInput();
-                if (Enabled() && !blocked && requested && GetTickCount() - pauseTick <= 250) context.eip = resume;
+                if (ready && !blocked && requested && GetTickCount() - pauseTick <= 250) context.eip = resume;
             });
             auto labels = hook::pattern("53 55 8B E9 8B 45 0C 8D 5D 40 8D 4C 40 7E C6 03 00 66 83 3C 8D ? ? ? ? 03");
             labelUpdate = reinterpret_cast<uintptr_t>(labels.get_first());
@@ -128,8 +139,8 @@ export namespace MafiaPad
             auto legacy = hook::pattern("F7 85 A4 90 00 00 00 00 00 02 74 ? 39 BD 4C 94 00 00");
             legacy.get_first();
         }
-        ready = MafiaMenu::ready; // 1.2
-        FixSettings().Availability("MAIN.ControllerLayout", [](std::string_view value) { return value == "0" || ready; });
+        // Pad menu navigation and Start pause go through the native menu (1.1/1.2)
+        ready = MafiaMenu::ready;
         FixSettings().OnChange("MAIN.ControllerLayout", []() { resetRequested.store(true); });
     }
     void InitJoy()
@@ -141,7 +152,8 @@ export namespace MafiaPad
     void Frame(HWND window)
     {
         ResetPending();
-        if (!Enabled() || !cacheGetter || !inputObject) return;
+        // Menu navigation and Start pause work with either layout
+        if (!ready || !cacheGetter || !inputObject) return;
         const auto first = Field<uintptr_t>(inputObject, 8), last = Field<uintptr_t>(inputObject, 12);
         if (!first || last < first + 140) return;
         const auto device = Field<uintptr_t>(first, 0);
@@ -150,7 +162,9 @@ export namespace MafiaPad
         if (Field<uintptr_t>(table, 80) != cacheGetter) return;
         const auto state = device + 0x130;
         const uint32_t buttons = Field<uint32_t>(state, 52);
-        const uint32_t pressed = buttons & ~std::exchange(previousButtons, buttons);
+        const uint32_t before = std::exchange(previousButtons, buttons);
+        const uint32_t pressed = buttons & ~before;
+        if (pressed && before != UINT32_MAX) padLastUsed = true;
         if (!window || GetForegroundWindow() != window || (MafiaMenu::blocksInput && MafiaMenu::blocksInput()))
         {
             previousDirection = 0;
@@ -190,7 +204,30 @@ export namespace MafiaPad
         if (key)
         {
             MafiaMenu::padKey = key;
-            padActive = true;
+            padLastUsed = true;
+        }
+    }
+
+    bool Active(size_t action, float value, bool pad)
+    {
+        if (!std::isfinite(value)) return false;
+        const bool look = action == LookX || action == LookY;
+        return std::abs(value) > (pad ? 0.3f : look ? 0.1f : 0.5f);
+    }
+    // Original layout: each action has one binding, so its type tells the device
+    void TrackDevice(uintptr_t object)
+    {
+        const auto& bindings = Field<Vector>(object, InputBindingsOffset);
+        const auto& values = Field<Vector>(object, InputBindingsOffset + 16);
+        if (!bindings.begin || !values.begin || bindings.end - bindings.begin != ActionCount * sizeof(Binding) ||
+            values.end - values.begin != ActionCount * sizeof(float)) return;
+        const auto* binding = reinterpret_cast<const Binding*>(bindings.begin);
+        const auto* value = reinterpret_cast<const float*>(values.begin);
+        for (size_t index = 0; index < ActionCount; ++index)
+        {
+            if (!binding[index].type) continue;
+            const bool pad = binding[index].type == 3;
+            if (Active(index, value[index], pad)) padLastUsed = pad;
         }
     }
 
@@ -198,7 +235,12 @@ export namespace MafiaPad
     {
         ResetPending();
         ModernPadActions.fill(false);
-        if (!Enabled()) return read();
+        if (!Enabled())
+        {
+            const auto result = read();
+            TrackDevice(object);
+            return result;
+        }
         const size_t bindingsOffset = InputBindingsOffset;
         const size_t valuesOffset = bindingsOffset + 16;
         auto& bindings = Field<Vector>(object, bindingsOffset);
@@ -250,6 +292,8 @@ export namespace MafiaPad
             reinterpret_cast<float*>(savedPressed.begin)[index] = strongest(events[index], padEvent);
             ModernPadActions[index] = std::isfinite(padValue) && std::abs(padValue) > 0.001f &&
                 std::abs(padValue) >= std::abs(state[index]);
+            if (Active(index, state[index + ActionCount], true)) padLastUsed = true;
+            else if (Active(index, state[index], false)) padLastUsed = false;
         }
         return result;
     }

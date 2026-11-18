@@ -47,7 +47,7 @@
   "graphicnovel.fill": "Fill Screen",
   "graphicnovel.original": "Original",
   "graphicnovelkey": "Graphic Novel Framing Key",
-  "graphicnovelkey.description": "Switches graphic novel pages between filling the screen and the original framing.",
+  "graphicnovelkey.description": "Switches graphic novel pages between filling the screen and the original framing. Y on a controller does the same.",
   "borderless": "Borderless Window",
   "borderless.description": "A borderless window centered on the screen when the game runs with -window.",
   "antialiasing": "Anti-Aliasing",

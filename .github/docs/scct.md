@@ -22,14 +22,15 @@
 ### Input and compatibility
 
 - **Mouse input** - Use raw mouse input with a separate sensitivity multiplier, and choose whether Windows mouse speed and acceleration apply.
-- **Gamepad** — Support controllers through [Xidi](https://github.com/ThirteenAG/Xidi). Choose Xbox, PlayStation or Nintendo button labels; Auto uses Xbox. Vibration can be disabled independently. Camera sensitivity and inversion use the game’s own Joystick options. The d-pad moves through the interaction list (up and down) and the quick inventory instead of switching vision modes while they are open.
+- **Gamepad** — Support controllers through [Xidi](https://github.com/ThirteenAG/Xidi). Choose Xbox, PlayStation or Nintendo button labels for the Joystick page of the Controls menu; Auto uses Xbox. Vibration can be disabled independently. Camera sensitivity and inversion use the game’s own Joystick options. The d-pad moves through the interaction list (up and down) and the quick inventory instead of switching vision modes while they are open.
 - **Audio** — Restore EAX support through [DSOAL](https://github.com/kcat/dsoal).
 - **Saved settings** — Prevent settings from resetting on each launch.
-- **Steam overlay** — Restore the Steam overlay when available.
+- **High frame rates** — Camera hit, tilt and shake effects, ledge grabs while falling, cloth and animated textures keep their normal speed above 60 FPS.
 
 ## Options
 
-- **Frame rate limit** — Limit FPS to reduce game bugs; the default is 60 FPS.
+- **Frame rate limit** — Up to 144 FPS; the default is 60 FPS.
+- **Steam overlay** — Off by default. Turn it on to start the Steam overlay when the game runs from Steam; on some PCs it lowers the frame rate.
 - **Skip intro** — Skip startup intros.
 - **Startup prompt** — Skip the “Press Any Key to Continue” screen (on by default).
 - **Save location** — Keep profiles and saves in Documents\My Games\Splinter Cell Chaos Theory or in the Save folder of the game instead of the hidden ProgramData folder. Profiles already made are not moved; copy them from ProgramData\Ubisoft\Tom Clancy's Splinter Cell Chaos Theory\Profiles to keep playing them.
@@ -57,7 +58,7 @@ Some videos contain black bars in the video itself; they stay visible.
 
 Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets.
 
-The frame rate limit applies immediately: 0 is unlimited, -1 follows the current monitor refresh rate, and the default is 60 FPS.
+The frame rate limit applies immediately and goes up to 144 FPS, the highest rate the frame rate fixes were checked at: 0 uses 144, -1 follows the current monitor refresh rate up to 144, and the default is 60 FPS.
 
 Pause When Unfocused pauses through the game’s own pause and sound handling. Turn it off to keep a windowed game running in the background. Confine Cursor can be changed independently of raw input.
 
@@ -65,7 +66,7 @@ Check for Updates is off by default. When enabled, a newer release is announced 
 
 Press **Ctrl+F10** to open the developer overlay when supporter access is available. Debug → Info shows the fix version, build time, graphics API and render resolution.
 
-The added settings menu is for single-player. Co-op and multiplayer use their own menus.
+The added settings menu is for single-player. Co-op and multiplayer use their own menus. Versus runs from its own executable (Versus\System\SCCT_Versus.exe), which the fix does not cover.
 
 ## Configuration
 

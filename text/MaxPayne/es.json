@@ -47,7 +47,7 @@
   "graphicnovel.fill": "Llenar pantalla",
   "graphicnovel.original": "Original",
   "graphicnovelkey": "Tecla de encuadre de la novela gráfica",
-  "graphicnovelkey.description": "Cambia las páginas de la novela gráfica entre llenar la pantalla y el encuadre original.",
+  "graphicnovelkey.description": "Cambia las páginas de la novela gráfica entre llenar la pantalla y el encuadre original. Y en el mando hace lo mismo.",
   "borderless": "Ventana sin bordes",
   "borderless.description": "Una ventana sin bordes centrada en la pantalla cuando el juego se inicia con -window.",
   "antialiasing": "Antialiasing",

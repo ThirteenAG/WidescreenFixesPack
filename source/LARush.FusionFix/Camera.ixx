@@ -72,7 +72,14 @@ export namespace LARushCamera
 
         const int index = CurrentCamera;
         const auto player = Player.get();
-        const bool borders = std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 1) == 1;
+        // Cutscene borders: 1 letterbox (bars above and below on screens narrower than 4:3), 2 pillarbox (side bars on
+        // wider screens), 3 both. The story cameras then keep their 4:3 framing inside the box.
+        const int borderMode = std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3);
+        const int sceneWidth = (borderMode & 2) ? boxWidth : Width;
+        const int sceneHeight = (borderMode & 1) ? boxHeight : Height;
+        const int sceneLeft = (Width - sceneWidth) / 2;
+        const int sceneTop = (Height - sceneHeight) / 2;
+        const bool borders = sceneWidth < Width || sceneHeight < Height;
         const bool lowrider = LARushWindow::IsLowrider && LARushWindow::IsLowrider();
         LowriderActive.store(lowrider, std::memory_order_relaxed);
         const bool special = LARushWindow::GameState == 56 && player && player[1712] && !lowrider && index >= 0 && index < 26;
@@ -94,12 +101,12 @@ export namespace LARushCamera
                 SavedAspect = *reinterpret_cast<float*>(camera + 452);
                 BorderedCamera = camera;
             }
-            viewport[0] = left; viewport[1] = top; viewport[2] = boxWidth; viewport[3] = boxHeight;
-            *reinterpret_cast<float*>(camera + 452) = static_cast<float>(boxWidth) / boxHeight;
+            viewport[0] = sceneLeft; viewport[1] = sceneTop; viewport[2] = sceneWidth; viewport[3] = sceneHeight;
+            *reinterpret_cast<float*>(camera + 452) = static_cast<float>(sceneWidth) / sceneHeight;
             *reinterpret_cast<int32_t*>(camera + 808) = 1;
             *reinterpret_cast<int32_t*>(camera + 812) = 1;
             if (LARushWindow::Device.get())
-                ClearOutside(LARushWindow::Device.get(), left, top, boxWidth, boxHeight);
+                ClearOutside(LARushWindow::Device.get(), sceneLeft, sceneTop, sceneWidth, sceneHeight);
         }
         if (Refresh.exchange(false, std::memory_order_relaxed) && index >= 0 && index < 26)
         {

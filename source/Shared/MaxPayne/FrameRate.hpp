@@ -6,7 +6,8 @@
 [[nodiscard]] uint32_t GetDesktopRefreshRate() noexcept;
 
 // The frame rate limit of both Max Payne games (MAIN.FPSLimit): 0 = unlimited (the games' own behaviour, they run on
-// variable frame times without a cap), -1 = the monitor's refresh rate, else frames per second, 30 to 1000.
+// variable frame times without a cap), -1 = the monitor's refresh rate, else frames per second, 30 to 1000. nMaxFPS caps
+// the refresh rate and the number.
 // Called once a frame before the frame is shown. Each frame gets its time slot after the one before, so the pace
 // doesn't drift; a frame that came late (loading, a hitch) starts the count anew instead of rushing the next ones.
 namespace MaxPayneFrameRate
@@ -45,7 +46,7 @@ namespace MaxPayneFrameRate
             YieldProcessor();
     }
 
-    inline void Limit(int32_t nFPSLimit)
+    inline void Limit(int32_t nFPSLimit, int32_t nMaxFPS = 1000)
     {
         static LONGLONG next = 0;
         if (nFPSLimit == 0)
@@ -65,7 +66,7 @@ namespace MaxPayneFrameRate
             nRefreshRateTime = GetTickCount64();
         }
 
-        int32_t nFPS = nFPSLimit < 0 ? int32_t(nRefreshRate) : std::clamp(nFPSLimit, 30, 1000);
+        int32_t nFPS = std::min(nFPSLimit < 0 ? int32_t(nRefreshRate) : std::clamp(nFPSLimit, 30, 1000), nMaxFPS);
         LONGLONG period = Frequency() / nFPS;
         LONGLONG now = Now();
         if (next == 0 || now - next > period * 4)

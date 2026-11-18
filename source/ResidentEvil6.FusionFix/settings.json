@@ -257,7 +257,7 @@
       "description": "@DisableDamageOverlay.description",
       "page": "game",
       "visibility": "menu",
-      "apply": "restart"
+      "apply": "live"
     },
     {
       "id": "MAIN.DisableDBNOEffects",
@@ -267,7 +267,7 @@
       "description": "@DisableDBNOEffects.description",
       "page": "game",
       "visibility": "menu",
-      "apply": "restart"
+      "apply": "live"
     },
     {
       "id": "MAIN.DisableObjectiveIndicator",

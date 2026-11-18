@@ -112,7 +112,7 @@
       "apply": "live",
       "visibility": "menu",
       "presets": {
-        "vanilla": false,
+        "vanilla": true,
         "recommended": true,
         "enhanced": true
       }
@@ -269,7 +269,12 @@
       "description": "@MAIN.DisablePerfectionistChecks.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
     },
     {
       "id": "MAIN.DefaultMissionFilter",
@@ -340,7 +345,12 @@
       "description": "@UNLOCKS.UnlockDLC.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
     },
     {
       "id": "UNLOCKS.UnlockAllNonCampaignMissions",
@@ -350,7 +360,12 @@
       "description": "@UNLOCKS.UnlockAllNonCampaignMissions.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
     },
     {
       "id": "UNLOCKS.UnlockAllCampaignMissions",
@@ -360,7 +375,12 @@
       "description": "@UNLOCKS.UnlockAllCampaignMissions.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
     },
     {
       "id": "EXTRACTION.ExtractionWaveConfigs",
@@ -424,7 +444,12 @@
       "description": "@EXTRACTION.EnableKobinAndGrimMaps.description",
       "page": "extraction",
       "apply": "restart",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
     },
     {
       "id": "EXTRACTION.EnableCoopCampaignMaps",
@@ -434,7 +459,12 @@
       "description": "@EXTRACTION.EnableCoopCampaignMaps.description",
       "page": "extraction",
       "apply": "restart",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
     },
     {
       "id": "KESTREL.EnableKestrelDLC",
@@ -444,7 +474,12 @@
       "description": "@KESTREL.EnableKestrelDLC.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
     },
     {
       "id": "HUNTER.ReinforcementsNumber",
@@ -508,7 +543,12 @@
       "description": "@GHOST.DisableMissionFailOnDetection.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
     },
     {
       "id": "COOP.ReinforcementsNumber",
@@ -572,7 +612,12 @@
       "description": "@COOP.DisableMissionFailOnDetection.description",
       "page": "coop",
       "apply": "restart",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
     },
     {
       "id": "CAMPAIGN.DisableMissionFailOnDetection",
@@ -582,7 +627,12 @@
       "description": "@CAMPAIGN.DisableMissionFailOnDetection.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 0
+      }
     },
     {
       "id": "CAMPAIGN.EnableRunDuringForcedWalk",
@@ -592,7 +642,12 @@
       "description": "@CAMPAIGN.EnableRunDuringForcedWalk.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
     },
     {
       "id": "MAIN.LightSyncRGB",

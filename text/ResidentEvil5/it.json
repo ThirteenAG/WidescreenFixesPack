@@ -56,5 +56,18 @@
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",
   "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
   "MovingTurnSpeed": "Velocità di rotazione in movimento",
-  "MovingTurnSpeed.description": "Quanto velocemente il personaggio si gira camminando e correndo, con il mouse o una levetta. Il gioco gira più lentamente in movimento che da fermo; 1.0x mantiene la velocità del gioco. Con i controlli moderni la telecamera ruota liberamente e questa opzione non si applica."
+  "MovingTurnSpeed.description": "Quanto velocemente il personaggio si gira camminando e correndo, con il mouse o una levetta. Il gioco gira più lentamente in movimento che da fermo; 1.0x mantiene la velocità del gioco. Con i controlli moderni la telecamera ruota liberamente e questa opzione non si applica.",
+  "ShadowResolution": "Risoluzione ombre",
+  "ShadowResolution.description": "Dimensione delle mappe d’ombra con la qualità ombre Alta del gioco. Gioco mantiene 1024; valori più alti danno ombre più nitide. Serve un riavvio.",
+  "ShadowResolution.game": "Gioco",
+  "GamepadIcons": "Icone del controller",
+  "GamepadIcons.description": "I simboli dei tasti del controller nei suggerimenti e nei tasti azione. Automatico e Xbox mantengono i simboli del gioco.",
+  "GamepadIcons.auto": "Automatico",
+  "GamepadIcons.xbox": "Xbox",
+  "GamepadIcons.playstation": "PlayStation",
+  "GamepadIcons.nintendo": "Nintendo",
+  "SplitScreenLayout": "Disposizione schermo condiviso",
+  "SplitScreenLayout.description": "Come la cooperativa locale divide lo schermo. Gioco mantiene l'opzione dello schermo condiviso del gioco (un giocatore sopra l'altro). Affiancato dà a ogni giocatore la metà sinistra o destra; su uno schermo 32:9 è una vista 16:9 per giocatore. L'HUD di ogni giocatore sta nella sua metà. Si applica subito.",
+  "SplitScreenLayout.game": "Gioco",
+  "SplitScreenLayout.sidebyside": "Affiancato"
 }

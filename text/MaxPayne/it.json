@@ -47,7 +47,7 @@
   "graphicnovel.fill": "Riempi lo schermo",
   "graphicnovel.original": "Originale",
   "graphicnovelkey": "Tasto inquadratura graphic novel",
-  "graphicnovelkey.description": "Alterna le pagine della graphic novel tra schermo pieno e inquadratura originale.",
+  "graphicnovelkey.description": "Alterna le pagine della graphic novel tra schermo pieno e inquadratura originale. Y sul controller fa lo stesso.",
   "borderless": "Finestra senza bordi",
   "borderless.description": "Una finestra senza bordi al centro dello schermo quando il gioco è avviato con -window.",
   "antialiasing": "Antialiasing",

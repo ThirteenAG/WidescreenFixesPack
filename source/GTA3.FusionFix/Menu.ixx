@@ -24,17 +24,48 @@ export enum FrameLimiterMode : int8_t
     eOff, e30, e40, e50, e60, e75, e100, e120, e144, e165, e200, e240, e90, e180
 };
 
-static int8_t NextFrameLimiter(int8_t current, int direction)
+// MAIN.FPSLimit: 0 unlimited, -1 the monitor's refresh rate, or frames per second; the native row's steps
+constexpr int FrameLimitSteps[] = { 0, -1, 30, 40, 50, 60, 75, 90, 100, 120, 144, 165, 180, 200, 240 };
+
+static int NextFrameLimit(int current, int direction)
 {
-    static constexpr std::array<int8_t, 14> modes{ FrameLimiterMode::eOff, FrameLimiterMode::e30,
-        FrameLimiterMode::e40, FrameLimiterMode::e50, FrameLimiterMode::e60, FrameLimiterMode::e75,
-        FrameLimiterMode::e90, FrameLimiterMode::e100, FrameLimiterMode::e120, FrameLimiterMode::e144,
-        FrameLimiterMode::e165, FrameLimiterMode::e180, FrameLimiterMode::e200, FrameLimiterMode::e240 };
-    const auto it = std::find(modes.begin(), modes.end(), current);
-    if (it == modes.end())
-        return FrameLimiterMode::eOff;
-    const auto index = static_cast<int>(it - modes.begin());
-    return modes[(index + static_cast<int>(modes.size()) + direction) % static_cast<int>(modes.size())];
+    constexpr int count = int(std::size(FrameLimitSteps));
+    auto it = std::find(std::begin(FrameLimitSteps), std::end(FrameLimitSteps), current);
+    if (it != std::end(FrameLimitSteps))
+        return FrameLimitSteps[(int(it - std::begin(FrameLimitSteps)) + count + direction) % count];
+    // A value set elsewhere: the nearest step that way
+    if (direction > 0)
+    {
+        for (int i = 2; i < count; ++i)
+            if (FrameLimitSteps[i] > current)
+                return FrameLimitSteps[i];
+        return FrameLimitSteps[0];
+    }
+    for (int i = count - 1; i >= 2; --i)
+        if (FrameLimitSteps[i] < current)
+            return FrameLimitSteps[i];
+    return FrameLimitSteps[count - 1];
+}
+
+static int CutsceneBordersSetting()
+{
+    static auto& borders = FixSettings().Int("MAIN.CutsceneBorders");
+    return std::clamp(borders, 0, 3);
+}
+
+static int FrameLimitSetting()
+{
+    static auto& limit = FixSettings().Int("MAIN.FPSLimit");
+    return limit;
+}
+
+static int MonitorRefreshRate()
+{
+    DEVMODEW mode{};
+    mode.dmSize = sizeof(mode);
+    if (EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency >= 30)
+        return int(mode.dmDisplayFrequency);
+    return 60;
 }
 
 export namespace CMenuManager
@@ -69,27 +100,32 @@ namespace CText
     const wchar_t* __fastcall GetMenuOptionText(void* CText, void* edx, const char* name)
     {
         if (std::string_view(name) == "FED_WIS")
-            return L"CUTSCENE BORDERS";
+        {
+            auto text = FixOptions::GameText("cutsceneborders");
+            return *text ? text : L"CUTSCENE BORDERS";
+        }
         return hbGetRowText.fun(CText, edx, name);
+    }
+
+    const wchar_t* Translated(const char* key, const wchar_t* fallback)
+    {
+        auto text = FixOptions::GameText(key);
+        return *text ? text : fallback;
     }
 
     const wchar_t* GetCutsceneBordersText(void* CText, void* edx, const char* name)
     {
-        switch (CMenuManager::m_PrefsUseWideScreen)
+        switch (CutsceneBordersSetting())
         {
             case CutsceneBordersMode::Off:
                 return hbGet.fun(CText, edx, "FEM_OFF");
             case CutsceneBordersMode::Letterbox:
-                return L"LETTERBOX";
+                return Translated("cutsceneborders.letterbox", L"LETTERBOX");
             case CutsceneBordersMode::Pillarbox:
-                return L"PILLARBOX";
-            case CutsceneBordersMode::Both:
-                return L"LETTERBOX + PILLARBOX";
+                return Translated("cutsceneborders.pillarbox", L"PILLARBOX");
             default:
-                break;
-        };
-
-        return hbGet.fun(CText, edx, "FEM_ON");
+                return Translated("cutsceneborders.both", L"LETTERBOX + PILLARBOX");
+        }
     }
 
     const wchar_t* __fastcall GetCutsceneBordersOn(void* CText, void* edx, const char* name)
@@ -104,41 +140,19 @@ namespace CText
 
     const wchar_t* GetFrameLimiterText(void* CText, void* edx, const char* name)
     {
-        switch (CMenuManager::m_PrefsFrameLimiter)
-        {
-            case FrameLimiterMode::eOff:
-                return hbGet.fun(CText, edx, "FEM_OFF");
-            case FrameLimiterMode::e30:
-                return L"30 FPS";
-            case FrameLimiterMode::e40:
-                return L"40 FPS";
-            case FrameLimiterMode::e50:
-                return L"50 FPS";
-            case FrameLimiterMode::e60:
-                return L"60 FPS";
-            case FrameLimiterMode::e75:
-                return L"75 FPS";
-            case FrameLimiterMode::e90:
-                return L"90 FPS";
-            case FrameLimiterMode::e100:
-                return L"100 FPS";
-            case FrameLimiterMode::e120:
-                return L"120 FPS";
-            case FrameLimiterMode::e144:
-                return L"144 FPS";
-            case FrameLimiterMode::e165:
-                return L"165 FPS";
-            case FrameLimiterMode::e180:
-                return L"180 FPS";
-            case FrameLimiterMode::e200:
-                return L"200 FPS";
-            case FrameLimiterMode::e240:
-                return L"240 FPS";
-            default:
-                break;
-        };
-
-        return hbGet.fun(CText, edx, "FEM_ON");
+        int limit = FrameLimitSetting();
+        if (limit == 0)
+            return Translated("fpslimit.unlimited", L"UNLIMITED");
+        if (limit < 0)
+            return Translated("fpslimit.monitor", L"MONITOR REFRESH RATE");
+        static std::wstring value;
+        value = Translated("fpslimit.value", L"{0} FPS");
+        auto at = value.find(L"{0}");
+        if (at == std::wstring::npos)
+            value = std::to_wstring(limit) + L" " + value;
+        else
+            value.replace(at, 3, std::to_wstring(limit));
+        return value.c_str();
     }
 
     const wchar_t* __fastcall GetFrameLimiterOn(void* CText, void* edx, const char* name)
@@ -307,25 +321,17 @@ private:
 
 static float GetFrameLimiterValue()
 {
-    switch (CMenuManager::m_PrefsFrameLimiter)
-    {
-        case FrameLimiterMode::e30:  return 30.0f;
-        case FrameLimiterMode::e40:  return 40.0f;
-        case FrameLimiterMode::e50:  return 50.0f;
-        case FrameLimiterMode::e60:  return 60.0f;
-        case FrameLimiterMode::e75:  return 75.0f;
-        case FrameLimiterMode::e90:  return 90.0f;
-        case FrameLimiterMode::e100: return 100.0f;
-        case FrameLimiterMode::e120: return 120.0f;
-        case FrameLimiterMode::e144: return 144.0f;
-        case FrameLimiterMode::e165: return 165.0f;
-        case FrameLimiterMode::e180: return 180.0f;
-        case FrameLimiterMode::e200: return 200.0f;
-        case FrameLimiterMode::e240: return 240.0f;
-        case FrameLimiterMode::eOff:
-        default:
-            return 0.0f;
-    }
+    int limit = FrameLimitSetting();
+    if (limit < 0)
+        return float(MonitorRefreshRate());
+    return float(limit);
+}
+
+// The game's own preferences follow the settings: the cutscene borders' mode, and the frame limiter on or off
+static void MirrorPreferences()
+{
+    CMenuManager::m_PrefsUseWideScreen = int8_t(CutsceneBordersSetting());
+    CMenuManager::m_PrefsFrameLimiter = int8_t(FrameLimitSetting() != 0 ? FrameLimiterMode::e30 : FrameLimiterMode::eOff);
 }
 
 // Keep menu pacing independent of the gameplay limiter's timestamps and setting.
@@ -410,6 +416,13 @@ public:
 
         WFP::onGameInitEvent() += []()
         {
+            // The cutscene borders and the frame limit are the fix's settings, whatever the game's settings file had
+            MirrorPreferences();
+            WFP::onGameProcessEvent() += []()
+            {
+                MirrorPreferences();
+            };
+
             menuFrameLimit = static_cast<float>(std::max(0, FixSettings().Int("MAIN.FPSLimitMenus")));
             OnSettingChange("MAIN.FPSLimitMenus", []()
             {
@@ -432,19 +445,10 @@ public:
             injector::MakeNOP(pattern.get_first(-6), 1, true);
             static auto ProcessOnOffMenuOptionsHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
-                auto pref = CMenuManager::m_PrefsUseWideScreen;
-
-                auto menuDirection = 1;
-
-                if (!*(uint8_t*)(regs.esp + 0xC))
-                    menuDirection = -1;
-
-                pref += menuDirection;
-
-                if (pref > CutsceneBordersMode::Both)
-                    pref = CutsceneBordersMode::Off;
-                if (pref < CutsceneBordersMode::Off)
-                    pref = CutsceneBordersMode::Both;
+                int direction = *(uint8_t*)(regs.esp + 0xC) ? 1 : -1;
+                int borders = (CutsceneBordersSetting() + direction + 4) % 4;
+                FixSettings().Set("MAIN.CutsceneBorders", std::to_string(borders));
+                MirrorPreferences();
             });
 
             pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? E9 ? ? ? ? 89 C0");
@@ -458,14 +462,9 @@ public:
             injector::MakeNOP(pattern.get_first(-6), 1, true);
             static auto ProcessOnOffMenuOptionsHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
-                auto pref = CMenuManager::m_PrefsFrameLimiter;
-
-                auto menuDirection = 1;
-
-                if (!*(uint8_t*)(regs.esp + 0xC))
-                    menuDirection = -1;
-
-                pref = NextFrameLimiter(pref, menuDirection);
+                int direction = *(uint8_t*)(regs.esp + 0xC) ? 1 : -1;
+                FixSettings().Set("MAIN.FPSLimit", std::to_string(NextFrameLimit(FrameLimitSetting(), direction)));
+                MirrorPreferences();
             });
 
             pattern = hook::pattern("74 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0 80 E4 ? 80 FC ? 0F 85 ? ? ? ? 6A");

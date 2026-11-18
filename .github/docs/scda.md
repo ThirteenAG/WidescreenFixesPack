@@ -26,18 +26,19 @@
 - **Audio** — Restore EAX support through [DSOAL](https://github.com/kcat/dsoal).
 - **AI hearing** — Fix the [AI hearing issue](https://www.youtube.com/watch?v=uX_FcPvM64c).
 - **Loading videos** — Press Enter to skip loading screens that are playing a video.
+- **Loading screens** — The loading picture is shown whole with black bars. On screens wider than 16:9, loading videos and their caption strips keep the 16:9 layout in the middle of the screen.
 - **Startup crash** — Fix the crash on startup that otherwise needs the `-ll` command line switch.
 
 ## Options
 
-- **Shadows** — Increase shadow resolution.
+- **Shadows** — Increase shadow resolution, and keep dynamic shadows and lights visible four times farther away than the game's highest setting.
 - **Glow and bloom** — Increase the resolution of glow and bloom effects.
 - **Console gamma** — Apply a gamma curve approximating the Xbox 360 version.
 - **Anisotropic filtering** — Keep textures sharp at steep viewing angles, up to 16x.
 
 ### Startup and frame rate
 
-- **Frame rate limit** — Limit FPS to reduce game bugs; 60 FPS by default.
+- **Frame rate limit** — Limit FPS up to 60, the highest rate at which AI and physics work correctly; 60 FPS by default.
 - **Skip intro** — Skip startup intros.
 - **Save location** — Keep profiles and saves in Documents\My Games\Splinter Cell Double Agent or in the Save folder of the game instead of the hidden ProgramData folder. Saves already made are not moved; copy them from ProgramData\Ubisoft\SplinterCell4\Save\Offline to keep playing them.
 
@@ -46,16 +47,17 @@
 - **Goggles** — Keep the original lights, which change with your visibility, or pick one of the Splinter Cell Blacklist suit light colors: Classic Green, Topaz, Voron Red, Navy, Pink, Violet, White, Gold, Amber or Ghost Blue.
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 - **Suit indicators** — Use Blacklist-style indicators that respond to the player's visibility.
+- **Brighter lights** — Double the brightness of dynamic lights.
 
 ---
 
 ## Settings
 
-Open Options > Plugins > Splinter Cell Double Agent Fusion Fix in the single-player menu, including from Pause > Options. On/off options show On or Off, while indicator and color choices use names. More Pages reaches the remaining settings; F1 opens the selected option’s full help, and Back returns. FusionFixHub and fusionfix.io also configure the fix. HUD width changes apply immediately: Auto puts the HUD at the screen edges, 4:3 keeps the original layout. The gameplay FOV multiplier changes the normal following camera; aiming, cinematic and minimap views keep their own framing.
+Open Options > Plugins > Splinter Cell Double Agent Fusion Fix in the single-player menu, including from Pause > Options. On/off options show On or Off, while indicator and color choices use names. More Pages reaches the remaining settings; F1 opens the selected option’s full help, and Back returns. FusionFixHub and fusionfix.io also configure the fix. HUD width changes apply to the HUD after the next loading screen: Auto puts the HUD at the screen edges, 4:3 keeps the original layout. The gameplay FOV multiplier changes the normal following camera; aiming, cinematic and minimap views keep their own framing.
 
-Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets. The live frame rate limit defaults to 60 FPS; 0 removes the limit and -1 follows the monitor refresh rate.
+Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets. The live frame rate limit defaults to 60 FPS; -1 follows the monitor refresh rate up to 60. Higher rates are not offered because AI and physics misbehave above 60 FPS.
 
-Native Graphics Overrides lets the fix apply its graphics choices to the game. Disable it to keep the game's own graphics settings. Leave an individual override empty to leave that setting unchanged. A custom loading image can be placed beside the plugin with the same filename and a `.png` extension.
+The fix never changes the game's own ini files. Native Graphics Overrides (off by default, in the configuration file) uses the graphics values from the fix's configuration instead of the game's Video menu; leave an individual value empty to keep the game's choice. Controller bindings from the fix are used only for buttons that have no binding in the game's settings, so bindings changed in the game's menu are kept. A custom loading image can be placed beside the plugin with the same filename and a `.png` extension.
 
 Window Mode selects fullscreen, a framed window or borderless and applies on restart. A framed window uses the chosen client resolution; borderless renders at the target monitor’s resolution. Pause on Focus Loss and Confine Cursor apply immediately. Check for Updates is off by default; enabling it shows an available update in the game’s own menu.
 
@@ -63,7 +65,7 @@ Gamepad Icons uses Xbox labels in Auto; PlayStation and Nintendo labels are sele
 
 Ctrl+F10 opens the developer overlay when available. Debug > Info reports the build, graphics API and back-buffer resolution.
 
-The online window and frame rate options apply to multiplayer. The added settings menu is for single-player.
+The fix covers the single-player game only; the multiplayer game (SCDA-Online) is not changed.
 
 ## Configuration
 
@@ -71,7 +73,7 @@ The added settings and help text are available in English, French, German, Itali
 
 Recommended uses the default setup. Vanilla and Enhanced offer alternative presets. Settings marked for restart take effect on the next launch. If Plugins is unavailable in your game version, use FusionFixHub or the generated `.cfg` file.
 
-Vanilla uses the original shadow, glow and reflection resolutions and disables the added RGB lighting. Run during forced walk remains your choice when switching presets. Single Core Affinity is an experimental compatibility option for loading hangs; it is off by default and can reduce performance.
+Vanilla uses the original shadow, glow and reflection resolutions, the original light brightness and shadow distance, keeps forced walking and disables the added RGB lighting. Single Core Affinity is an experimental compatibility option for loading hangs; it is off by default and can reduce performance.
 
 Some custom window sizes are absent from the game’s resolution dropdown. Use the fix’s Horizontal Resolution and Vertical Resolution controls for those sizes. If the display reports fewer than seven modes, some entries can repeat.
 

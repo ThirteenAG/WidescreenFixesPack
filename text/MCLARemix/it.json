@@ -21,6 +21,8 @@
   "SkipIntro.description": "Salta i filmati legali, Rockstar e iniziali e l'avviso di avvio che ha solo il pulsante OK. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
   "DualAnalogPatch": "Visuale stick destro",
   "DualAnalogPatch.description": "Ruota la telecamera di inseguimento con lo stick destro: di lato guarda a sinistra e a destra, all'indietro guarda dietro. I tasti di visuale della croce direzionale continuano a funzionare. Riavvia il gioco emulato dopo aver modificato questa impostazione.",
+  "GamepadCameraSpeed": "Velocità telecamera",
+  "GamepadCameraSpeed.description": "Velocità con cui la levetta destra ruota la telecamera di inseguimento attorno all'auto, da 0,5 a 2,0. La telecamera torna dietro l'auto poco dopo aver rilasciato la levetta. Le modifiche si applicano durante il gioco.",
   "TextLanguage": "Lingua del plugin",
   "TextLanguage.description": "Lingua delle pagine Fusion Fix nel menu di pausa. Auto segue la lingua di sistema della PSP. Le modifiche nel menu Plugins si applicano subito.",
   "auto": "Auto",

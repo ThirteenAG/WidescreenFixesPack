@@ -211,7 +211,7 @@ namespace THPS2Menu
             a.optionsCommand = at("53 8B D9 56 33 F6 8B 83 A8 00 00 00");
             a.pauseSelect = at("8A 44 24 04 56 88 41 06 33 F6 8D 41");
             a.titleConstruct = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 20 53 55 56 57 6A FF 33");
-            a.titleDelete = at("56 8B F1 E8 ? ? ? ? F6 44 24 08 01 74 09 56 E8 ? ? ? ? 83 C4 04 8B C6 5E C2 04 00 90 90 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 53 8B D9 56 57 89 5C 24 0C C7 03 ? ? ? ? BF ? ? ? ? 83 C9 FF 33 C0 C7 05 ? ? ? ? F1");
+            a.titleDelete = at("56 8B F1 E8 ? ? ? ? F6 44 24 08 01 74 09 56 E8 ? ? ? ? 83 C4 04 8B C6 5E C2 04 00 90 90 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 53 8B D9 56 57 89 5C 24 0C C7 03 ? ? ? ? BF ? ? ? ? 83 C9 FF 33 C0 C7 05 ? ? ? ? ? ? ? ? F2 AE F7 D1 2B F9 68 ? ? ? ? 8B C1 8B F7 BF ? ? ? ? C7 44 24 1C 02 00 00 00 C1 E9 02 F3 A5 8B C8 83 E1 03 F3 A4 8B B3 AC 00 00 00 85 F6 0F 95 C1 51 E8 ? ? ? ? 8B B3 AC 00 00 00 83 C4 08 85 F6 74 10 8B CE E8 ? ? ? ? 56 E8 ? ? ? ? 83 C4 04 BF");
             a.titleInput = at("8B D1 8B 82 6C 09 00 00 83 C0 EC 83");
             a.titleUpdate = at("51 53 55 8B E9 56 57 8B 85 70 09 00");
             a.pauseCenter = at("33 D2 56 8A 51 09 57 33 F6 33 FF 85");
@@ -222,9 +222,9 @@ namespace THPS2Menu
             a.fontDraw = at("81 EC 14 04 00 00 53 55 8B E9 56 57");
             a.pauseDispatch = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 50 A0");
             a.textConstruct = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 56 57 8B");
-            a.listAdd = at("53 56 8B D9 57 BF ? ? ? ? 83 C9 FF 33 C0 C7 05 ? ? ? ? E4");
+            a.listAdd = at("53 56 8B D9 57 BF ? ? ? ? 83 C9 FF 33 C0 C7 05 ? ? ? ? ? ? ? ? F2 AE F7 D1 2B F9 68 ? ? ? ? 8B C1 8B F7 BF ? ? ? ? C1 E9 02 F3 A5 8B C8 83 E1 03 F3 A4 83 BB 94 01 00 00 60 0F 9C C1 51 E8 ? ? ? ? 8B 93 94 01 00 00 8B 44 24 18");
             a.listSelect = at("53 8B D9 56 57 8B 83 98 01 00 00 6A");
-            a.pauseAdd = at("53 56 8B D9 57 BF ? ? ? ? 83 C9 FF 33 C0 C7 05 ? ? ? ? 0A");
+            a.pauseAdd = at("53 56 8B D9 57 BF ? ? ? ? 83 C9 FF 33 C0 C7 05 ? ? ? ? ? ? ? ? F2 AE F7 D1 2B F9 68 ? ? ? ? 8B C1 8B F7 BF ? ? ? ? C1 E9 02 F3 A5 8B C8 83 E1 03 F3 A4 80 7B 09 0F");
             a.fontWidth = at("53 8B 5C 24 08 56 57 8A 03 33 FF 84");
             a.fontHeight = at("53 56 57 8B 7C 24 10 8B F1 57 E8 ? ? ? ? 57");
             a.modal = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 55 8B 2D ? ? ? ? 56 57 C7 05 ? ? ? ? 00 00 00 00 E8 ? ? ? ? 8B 0D ? ? ? ? 6A 00 68 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 68 00");
@@ -235,7 +235,7 @@ namespace THPS2Menu
             a.listDelete = at("56 8B F1 E8 ? ? ? ? F6 44 24 08 01 74 09 56 E8 ? ? ? ? 83 C4 04 8B C6 5E C2 04 00 90 90 C7 01 ? ? ? ? C3 90 90 90 90 90 90 90 90 90 83 EC 08 53 55 56 8B F1 57 33");
             a.textDelete = at("56 8B F1 E8 ? ? ? ? F6 44 24 08 01 74 09 56 E8 ? ? ? ? 83 C4 04 8B C6 5E C2 04 00 90 90 C7 01 ? ? ? ? E9 ? ? ? ? 90 90 90 90 90 8B 44 24 04 8B");
             a.listConstruct = at("8B D1 57 B9 60 00 00 00 33 C0 8D 7A 14 C7 02");
-            a.textSet = at("53 55 56 8B D9 57 BF ? ? ? ? 83 C9 FF 33 C0 F2 AE F7 D1 2B F9 C7 05 ? ? ? ? CF");
+            a.textSet = at("53 55 56 8B D9 57 BF ? ? ? ? 83 C9 FF 33 C0 F2 AE F7 D1 2B F9 C7 05 ? ? ? ? ? ? ? ? 8B C1 8B F7 BF ? ? ? ? 68 ? ? ? ? C1 E9 02 F3 A5 8B C8 33 C0");
             a.listLayout = at("83 EC 08 53 55 56 8B F1 57 33 FF 8B");
             a.listInput = at("56 57 8B 7C 24 0C 8B F1 85 FF 74 05");
             a.listRefresh = at("53 8B D9 56 33 F6 8B 83 94 01 00 00");
@@ -2139,6 +2139,7 @@ namespace THPS2DeferredClose
         if (msg == WM_CLOSE && (launchDepth || pending))
         {
             pending = true;
+            CloseRequested = true;
             window = hwnd;
             if (loopDepth) gameExit = 8;
             return 0;

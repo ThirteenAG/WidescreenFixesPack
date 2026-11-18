@@ -4,6 +4,7 @@ module;
 #include "common.h"
 #include "FixSettings.hpp"
 #include "callargs.h"
+#include <intrin.h>
 
 export module Sprite2d;
 
@@ -327,10 +328,41 @@ void __fastcall Draw2(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* colorL
     g_isFullscreen = false; g_hasTexture = false;
 }
 
+// The scope's (sniper rifle, laser scope, camera viewfinder) four quarters, drawn by CHud::Draw: their return addresses
+// in the order drawn, and the screen they cover so far
+uintptr_t ScopeQuarterReturns[4] = {};
+bool g_drawingScopeQuarter = false;
+bool ScopeBoundsSet = false;
+CRect ScopeBounds;
+
+// The world around the scope, which the 4:3 game never showed at the sides, is masked in black
+static void DrawScopeMask()
+{
+    g_skipXCorrection = true;
+    g_drawingBars = true;
+    CRGBA black(0, 0, 0, 255);
+    CRect top(0.0f, ScopeBounds.top, SCREEN_WIDTH, 0.0f);
+    CRect bottom(0.0f, SCREEN_HEIGHT, SCREEN_WIDTH, ScopeBounds.bottom);
+    CRect left(0.0f, ScopeBounds.bottom, ScopeBounds.left, ScopeBounds.top);
+    CRect right(ScopeBounds.right, ScopeBounds.bottom, SCREEN_WIDTH, ScopeBounds.top);
+    shDrawRect1.unsafe_ccall(&top, &black);
+    shDrawRect1.unsafe_ccall(&bottom, &black);
+    shDrawRect1.unsafe_ccall(&left, &black);
+    shDrawRect1.unsafe_ccall(&right, &black);
+    g_drawingBars = false;
+    g_skipXCorrection = false;
+}
+
 SafetyHookInline shDraw3 = {};
 void __fastcall Draw3(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col,
     float u0, float v0, float u1, float v1, float u3, float v3, float u2, float v2)
 {
+    auto from = reinterpret_cast<uintptr_t>(_ReturnAddress());
+    int quarter = int(std::find(std::begin(ScopeQuarterReturns), std::end(ScopeQuarterReturns), from) - std::begin(ScopeQuarterReturns));
+    if (quarter == 0)
+        ScopeBoundsSet = false;
+    g_drawingScopeQuarter = quarter < 4;
+
     g_isFullscreen = IsFullscreen(rect);
     g_hasTexture = sprite2d->m_pTexture != nullptr;
     g_alpha = reinterpret_cast<uint8_t*>(col)[3];
@@ -338,6 +370,10 @@ void __fastcall Draw3(CSprite2d* sprite2d, void* edx, CRect* rect, CRGBA* col,
     shDraw3.unsafe_fastcall(sprite2d, edx, rect, col, u0, v0, u1, v1, u3, v3, u2, v2);
     if (g_isFullscreen && g_hasTexture) DrawPillarBars(g_contentRect);
     g_isFullscreen = false; g_hasTexture = false;
+
+    g_drawingScopeQuarter = false;
+    if (quarter == 3 && ScopeBoundsSet)
+        DrawScopeMask();
 }
 
 SafetyHookInline shDraw4 = {};
@@ -396,6 +432,47 @@ void __cdecl RenderOneXLUSprite_Rotate_Aspect(float x, float y, float z, float w
     shRenderOneXLUSprite_Rotate_Aspect.unsafe_ccall(x, y, z, w, h, r, g, b, intensity, rhw, alpha);
 }
 
+// The scope's four quarters meet at the screen centre, on a row and a column of pixel centres. With multisampling both
+// quarters shade those pixels and the crosshair line on the texture's edge comes out twice as thick. The shared edges
+// go between two pixels instead, with the texture coordinates following them, so every pixel shows what it shows
+// without multisampling. Corners: (left, top) u1 v1, (right, top) u2 v2, (left, bottom) u3 v3, (right, bottom) u4 v4.
+static void SnapScopeQuarter(CRect* r, float& u1, float& v1, float& u2, float& v2, float& u3, float& v3, float& u4, float& v4)
+{
+    const float seamX = float(RsGlobal->width / 2) - 0.5f;
+    const float seamY = float(RsGlobal->height / 2) - 0.5f;
+    const CRect o = *r;
+    const float ou1 = u1, ov1 = v1, ou2 = u2, ov2 = v2, ou3 = u3, ov3 = v3, ou4 = u4, ov4 = v4;
+    auto snap = [](float& edge, float target) -> float
+    {
+        if (std::abs(edge - (target + 0.5f)) >= 0.25f)
+            return 0.0f;
+        const float moved = target - edge;
+        edge = target;
+        return moved;
+    };
+
+    if (float t = snap(r->left, seamX) / (o.right - o.left); t != 0.0f)
+    {
+        u1 += t * (ou2 - ou1); v1 += t * (ov2 - ov1);
+        u3 += t * (ou4 - ou3); v3 += t * (ov4 - ov3);
+    }
+    if (float t = snap(r->right, seamX) / (o.right - o.left); t != 0.0f)
+    {
+        u2 += t * (ou2 - ou1); v2 += t * (ov2 - ov1);
+        u4 += t * (ou4 - ou3); v4 += t * (ov4 - ov3);
+    }
+    if (float t = snap(r->top, seamY) / (o.bottom - o.top); t != 0.0f)
+    {
+        u1 += t * (ou3 - ou1); v1 += t * (ov3 - ov1);
+        u2 += t * (ou4 - ou2); v2 += t * (ov4 - ov2);
+    }
+    if (float t = snap(r->bottom, seamY) / (o.bottom - o.top); t != 0.0f)
+    {
+        u3 += t * (ou3 - ou1); v3 += t * (ov3 - ov1);
+        u4 += t * (ou4 - ou2); v4 += t * (ov4 - ov2);
+    }
+}
+
 SafetyHookInline shSetVertices1 = {};
 void __cdecl SetVertices1(CRect* posn, CRGBA* colorLeft, CRGBA* colorTop, CRGBA* colorRight, CRGBA* colorBottom, float u1, float v1, float u2, float v2, float u3, float v3, float u4, float v4)
 {
@@ -403,6 +480,17 @@ void __cdecl SetVertices1(CRect* posn, CRGBA* colorLeft, CRGBA* colorTop, CRGBA*
         *posn = g_contentRect;
     else
         ScaleRect(posn);
+    if (g_drawingScopeQuarter)
+    {
+        SnapScopeQuarter(posn, u1, v1, u2, v2, u3, v3, u4, v4);
+        float left = std::min(posn->left, posn->right), right = std::max(posn->left, posn->right);
+        float top = std::min(posn->top, posn->bottom), bottom = std::max(posn->top, posn->bottom);
+        if (!ScopeBoundsSet)
+            ScopeBounds = CRect(left, bottom, right, top);
+        else
+            ScopeBounds = CRect(std::min(ScopeBounds.left, left), std::max(ScopeBounds.bottom, bottom), std::max(ScopeBounds.right, right), std::min(ScopeBounds.top, top));
+        ScopeBoundsSet = true;
+    }
     return shSetVertices1.unsafe_ccall(posn, colorLeft, colorTop, colorRight, colorBottom, u1, v1, u2, v2, u3, v3, u4, v4);
 }
 
@@ -610,7 +698,18 @@ public:
                 shDraw2 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw2);
 
                 pattern = hook::pattern("E8 ? ? ? ? E9 CB 09 00 00");
-                shDraw3 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw3);
+                auto draw3 = injector::GetBranchDestination(pattern.get_first()).as_int();
+                shDraw3 = safetyhook::create_inline(draw3, Draw3);
+
+                // CHud::Draw: the scope's quarters, the four calls of Draw after the camera's viewfinder is chosen
+                pattern = hook::pattern("83 F8 24 75 ? A1 ? ? ? ? 8B 3D ? ? ? ? 89 44 24 ? BB 43 00 00 00");
+                auto scan = pattern.get_first<uint8_t>();
+                int found = 0;
+                for (auto p = scan; p < scan + 0x400 && found < 4; ++p)
+                {
+                    if (*p == 0xE8 && injector::GetBranchDestination(p).as_int() == draw3)
+                        ScopeQuarterReturns[found++] = reinterpret_cast<uintptr_t>(p + 5);
+                }
 
                 pattern = hook::pattern("E8 ? ? ? ? 83 BB ? ? ? ? ? 0F 85 ? ? ? ? 8B 83");
                 shDraw4 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), Draw4);

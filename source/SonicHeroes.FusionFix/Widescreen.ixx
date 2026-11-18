@@ -142,7 +142,7 @@ export namespace Widescreen
         uintptr_t loc_63AA3B = reinterpret_cast<uintptr_t>(hook::pattern("83 EC 14 56 57 E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ?").get_first(0)) + 0xB;
         static uintptr_t ShadowStuffAddr = *reinterpret_cast<uintptr_t*>(loc_63AA3B) + 0xC;
 
-        // TODO - if any more things break thanks to this jank here, target function at 64AC80 in specific places instead
+        // The shared 2D scale read: the shadow setup keeps 1.0, every other caller gets the HUD scale
         struct ExceptionalHudScale1
         {
             void operator()(injector::reg_pack& regs)

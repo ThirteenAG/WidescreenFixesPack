@@ -42,9 +42,10 @@ namespace
         return RegistryWrapper::RegCloseKey(key == PortableKey ? nullptr : key);
     }
 
-    LSTATUS WINAPI RegDelete(HKEY key, LPCSTR name)
+    // The game only deletes its SafeMode flag (the check is removed below); nothing reaches the registry
+    LSTATUS WINAPI RegDelete(HKEY, LPCSTR)
     {
-        return key == PortableKey ? ERROR_SUCCESS : ::RegDeleteValueA(key, name);
+        return ERROR_SUCCESS;
     }
 
     // Languages: 1 English, 2 French, 3 German, 4 Italian, 5 Spanish (0 Japanese and 6 Korean need other fonts)

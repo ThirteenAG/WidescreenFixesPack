@@ -822,10 +822,15 @@ export void InitD3DDrv()
     RainSplashFix::Init();
     RainSplashFix::Apply();
 
-    // Fix night vision grain scaling at high resolutions
+    // Fix night vision grain scaling at high resolutions and its frame-rate-dependent animation
     pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 5E C8 F3 0F 11 8D 18 FA FF FF FF D0 66 0F 6E 8D 14 FA FF FF 0F 5B C9 66 0F 6E C0 0F 5B C0 F3 0F 5E C8 F3 0F 11 8D 04 FA FF FF");
+    VisionNoiseGrain::Init();
     if (!pattern.empty()) // digital
     {
+        // Grain angle, V and U offsets held at 30 Hz; redirected before the scale hook moves the first call
+        VisionNoiseGrain::RedirectCallSite(pattern.get_first(0x2C), VisionNoiseGrain::HeldFrand<0, 0>);
+        VisionNoiseGrain::RedirectCallSite(pattern.get_first(0x38), VisionNoiseGrain::HeldFrand<0, 1>);
+        VisionNoiseGrain::RedirectCallSite(pattern.get_first(0x4A), VisionNoiseGrain::HeldFrand<0, 2>);
         static auto NightVisionGrainHook = safetyhook::create_mid(pattern.get_first(0x2C), [](SafetyHookContext& regs)
             {
                 if (Screen.fGrainScale == 0.0f)
@@ -846,6 +851,9 @@ export void InitD3DDrv()
     {
         pattern = find_module_pattern(GetModuleHandle(L"D3DDrv"), "DB 45 08 8B 4C 24 1C 8B 11 D9 5C 24 14 FF 52 68 89 44 24 18 DB 44 24 18 8B 4C 24 1C 8B 01 D8 7C 24 14 D9 5C 24 18 DB 45 0C D9 5C 24 20 FF 50 6C 89 44 24 1C DB 44 24 1C D8 7C 24 20 D9 5C 24 1C");
         {
+            VisionNoiseGrain::RedirectCallSite(pattern.get_first(0x40), VisionNoiseGrain::HeldFrand<0, 0>);
+            VisionNoiseGrain::RedirectCallSite(pattern.get_first(0x4A), VisionNoiseGrain::HeldFrand<0, 1>);
+            VisionNoiseGrain::RedirectCallSite(pattern.get_first(0x58), VisionNoiseGrain::HeldFrand<0, 2>);
             static auto NightVisionGrainHookRetail = safetyhook::create_mid(pattern.get_first(0x40), [](SafetyHookContext& regs)
                 {
                     if (Screen.fGrainScale == 0.0f)

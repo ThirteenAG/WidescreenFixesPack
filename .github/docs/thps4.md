@@ -23,31 +23,30 @@ Left and Right change a value, Enter steps it forward. **Details** below a setti
 | Skip intro | Skip the Activision, Aspyr and Neversoft logos and the intro movie at startup; restart | On |
 | HUD aspect ratio | Auto for the whole screen width, or 4:3, 16:9, 21:9, 32:9 or a custom ratio; live | Auto |
 | Pause in background | On stops the game while another window is active, as the original does; Off keeps it running; live | On |
-| Frame rate limit | 30–1000 fps, Unlimited, or the desktop refresh rate; live | 60 |
+| Frame rate limit | 30–60 fps; the game's physics, animation and timers are made for 60 fps; live | 60 |
+| Gamepad icons | Auto (Xbox), Xbox, PlayStation or Nintendo button pictures in prompts; live | Auto |
 | Check for updates | Off makes no network request; live | Off |
 | Field of view | 0.5–2.0; larger values widen the skating camera; live | 1.0 |
 | Confine cursor | On keeps the cursor inside the active game window; Hub/settings file; live | On |
 
-Vanilla shows the logos and the intro movie and leaves the frame rate to the game; Recommended and Enhanced skip the intro and limit the game to 60 fps. The logos and the intro can still be watched in **Options → Movies**. Texts are available in English, French, German, Italian and Spanish; Automatic uses English, and **Text Language** in FusionFixHub selects another one.
+Vanilla shows the logos and the intro movie; Recommended and Enhanced skip them. The logos and the intro can still be watched in **Options → Movies**. Texts are available in English, French, German, Italian and Spanish; Automatic uses English, and **Text Language** in FusionFixHub selects another one.
 
 ## What the fix does
 
 - **Any resolution and aspect ratio** from 5:4 to 32:9, with square pixels. The 3D view keeps the original vertical view and shows more at the sides (Hor+).
-- **HUD:** with **HUD aspect ratio** on Auto, the score, special meter and stance sit at the left edge of the screen, and the goal, cash and pro points at the right edge; trick text, the balance meter and messages stay centered. A ratio keeps them in a centered box of that shape. Nothing is stretched.
+- **HUD:** with **HUD aspect ratio** on Auto, the score, special meter and stance sit at the left edge of the screen, and the goal, cash and pro points at the right edge; trick text, the balance meter and messages stay centered. A ratio keeps them in a centered box of that shape. Nothing is stretched. In side-by-side split screen each player's HUD sits in their own half.
 - **Menus and 2D screens** (main menu, options, level select, skater select, dialogs) keep their 4:3 layout in the middle of the screen; the button help bar at the bottom spans the whole width. On screens narrower than 4:3, such as 5:4, they fit the width with the 3D scene above and below.
 - **Movies** are never cut off or stretched. All of the game's movies are 4:3 pictures, shown at full height with black bars at the sides.
 - **Window modes** at any Windows display scaling, without rounded corners: Windowed opens a centered window with exactly the chosen client size, also for sizes the monitor doesn't list. The window is not minimized when another window becomes active.
 - **Soundtrack:** the random song order works.
 - **Ctrl+F10** opens the in-game settings overlay.
 
-Controllers: the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox controller to it. Choose and bind it under **Options → Control Setup**.
+Controllers: the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox controller to it. Without a controller chosen in the game's launcher, the first controller is player 1's and a second one player 2's, with the console layout: A ollie, X flip, B grab, Y grind, Start pause, shoulder buttons for spins and revert. **Options → Control Setup** still changes the bindings. While the controller is in use, the button help and other prompts show its buttons (pick the set under **Gamepad icons**); a key press brings the keyboard keys back.
 
 ## Known limits
 
 - The window size is set at startup (resolution settings); resizing the window while playing isn't supported.
 - The game has no letterboxed cutscenes; level intros use the same widened camera as gameplay.
-- Prompts use the game's own button names; controller icon sets are not available.
-- Split-screen keeps the game's own HUD layout.
 
 ## Installation
 

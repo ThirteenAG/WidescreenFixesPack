@@ -78,15 +78,9 @@ export namespace THPS2Display
 
     inline void UpdateFrameLimit()
     {
-        int limit = FixSettings().Int("MAIN.FPSLimit");
-        if (limit == -1)
-        {
-            DEVMODEW mode{};
-            mode.dmSize = sizeof(mode);
-            limit = EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1
-                ? static_cast<int>(mode.dmDisplayFrequency) : 60;
-        }
-        FrameLimit.store(limit > 0 ? std::clamp(limit, 30, 1000) : 0, std::memory_order_relaxed);
+        // The game is made for 60 fps: its physics, animation and timers are not fixed for more
+        const int limit = FixSettings().Int("MAIN.FPSLimit");
+        FrameLimit.store(limit > 0 ? std::clamp(limit, 30, 60) : 60, std::memory_order_relaxed);
     }
 
     inline void LimitFrameRate()
@@ -313,10 +307,78 @@ export namespace THPS2Display
         return Call<12, HRESULT>(surface, caps, output);
     }
 
+    inline HRESULT WINAPI RestoreAll(IDirectDraw7* object)
+    {
+        if (!Draws.contains(object))
+            return Forward<25, HRESULT>(object);
+        auto& draw = *Draws.at(object);
+        // Another program in fullscreen changes the display mode; the surfaces come back once it is restored.
+        // The game quits on any failure here, so wait for it while the window keeps answering.
+        for (;;)
+        {
+            const auto result = Call<25, HRESULT>(draw);
+            if (result != DDERR_WRONGMODE)
+                return result;
+            MSG message{};
+            while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
+            {
+                if (message.message == WM_QUIT)
+                    ExitProcess(0);
+                TranslateMessage(&message);
+                DispatchMessageW(&message);
+            }
+            if (CloseRequested || !IsWindow(draw.window))
+                ExitProcess(0);
+            Sleep(100);
+        }
+    }
+
+    // Direct3D device: BeginScene 5, EndScene 6
+    inline GameRef<void*> Device;
+    inline std::map<void**, std::array<void*, 7>> DeviceTables;
+
+    inline HRESULT WINAPI BeginScene(void* device)
+    {
+        auto begin = reinterpret_cast<HRESULT(WINAPI*)(void*)>(DeviceTables.at(*reinterpret_cast<void***>(device))[5]);
+        auto result = begin(device);
+        if (result == DDERR_SURFACELOST || result == DDERR_WRONGMODE)
+        {
+            // Most of the game's scene starts quit on a lost surface; bring the surfaces back and start again
+            for (const auto& [object, draw] : Draws)
+                RestoreAll(object);
+            result = begin(device);
+        }
+        return result;
+    }
+
+    inline HRESULT WINAPI EndScene(void* device)
+    {
+        auto end = reinterpret_cast<HRESULT(WINAPI*)(void*)>(DeviceTables.at(*reinterpret_cast<void***>(device))[6]);
+        const auto result = end(device);
+        // A scene that could not start ends as a lost frame, which the game restores
+        constexpr HRESULT sceneNotInScene = MAKE_HRESULT(1, 0x876, 761);
+        return result == sceneNotInScene ? DDERR_SURFACELOST : result;
+    }
+
+    inline void PatchDevice()
+    {
+        auto device = Device.get();
+        if (!device)
+            return;
+        auto table = *reinterpret_cast<void***>(device);
+        auto [it, inserted] = DeviceTables.try_emplace(table);
+        if (!inserted)
+            return;
+        std::copy_n(table, it->second.size(), it->second.begin());
+        injector::WriteMemory<void*>(table + 5, reinterpret_cast<void*>(BeginScene), true);
+        injector::WriteMemory<void*>(table + 6, reinterpret_cast<void*>(EndScene), true);
+    }
+
     inline HRESULT WINAPI Flip(IDirectDrawSurface7* object, IDirectDrawSurface7* target, DWORD flags)
     {
         if (!Surfaces.contains(object))
             return Forward<11, HRESULT>(object, target, flags);
+        PatchDevice();
         auto& surface = *Surfaces.at(object);
         auto result = Call<5, HRESULT>(surface, static_cast<RECT*>(nullptr), surface.back, static_cast<RECT*>(nullptr),
             DWORD{ DDBLT_WAIT }, static_cast<DDBLTFX*>(nullptr));
@@ -450,9 +512,11 @@ export namespace THPS2Display
         return DD_OK;
     }
 
-    inline HRESULT WINAPI CreateDraw(GUID* device, LPVOID* output, REFIID iid, IUnknown* outer)
+    inline HRESULT WINAPI CreateDraw(GUID*, LPVOID* output, REFIID iid, IUnknown* outer)
     {
-        auto result = Create(device, output, iid, outer);
+        // The game picks the last listed display device, on several monitors one that need not hold the window,
+        // and its primary surface then shows nothing in the window; the primary display driver covers every monitor
+        auto result = Create(nullptr, output, iid, outer);
         if (FAILED(result) || !output || !*output)
             return result;
         auto draw = std::make_unique<Draw>();
@@ -462,7 +526,8 @@ export namespace THPS2Display
             { 2, reinterpret_cast<void*>(ReleaseDraw) },
             { 6, reinterpret_cast<void*>(CreateSurface) },
             { 20, reinterpret_cast<void*>(Cooperative) },
-            { 21, reinterpret_cast<void*>(DisplayMode) }
+            { 21, reinterpret_cast<void*>(DisplayMode) },
+            { 25, reinterpret_cast<void*>(RestoreAll) }
         });
         Draws[draw->object] = std::move(draw);
         return result;
@@ -477,6 +542,7 @@ export namespace THPS2Display
         auto initial = hook::pattern("68 ? ? ? ? 89 44 24 14 52 89 44 24 1C A1 ? ? ? ? 50 8B 08 FF 51 30");
         auto recreate = hook::pattern("68 ? ? ? ? 89 54 24 18 89 54 24 1C 8B 08 8D 54 24 10 52 50 FF 51 30");
         CachedBack.SetAddress(*initial.get_first<IDirectDrawSurface7**>(1));
+        Device.SetAddress(*hook::pattern("A1 ? ? ? ? 50 8B 08 FF 51 14 8B F8 81 FF C2 01 76 88").get_first<void**>(1));
         auto borrowed = [](SafetyHookContext& context)
         {
             if (SUCCEEDED(static_cast<HRESULT>(context.eax)))

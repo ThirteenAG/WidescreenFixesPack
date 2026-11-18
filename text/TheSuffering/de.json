@@ -31,8 +31,7 @@
   "menu.recommended": "Empfohlen",
   "menu.enhanced": "Erweitert",
   "FPSLimit": "Bildratenbegrenzung",
-  "FPSLimit.description": "Begrenzt die Bildrate. Das Spiel ist für 60 gemacht; höhere Bildraten können Physik und Timing stören. Wirkt sofort.",
-  "FPSLimit.unlimited": "Unbegrenzt",
+  "FPSLimit.description": "Begrenzt die Bildrate auf 30 bis 60. Das Spiel ist für 60 gemacht; höhere Bildraten stören Physik und Timing. Wirkt sofort.",
   "WindowMode": "Fenstermodus",
   "WindowMode.description": "Vollbild, ein Fenster in der gewählten Auflösung oder rahmenlos: ein Fenster, das den ganzen Monitor in dessen Auflösung abdeckt. Neustart erforderlich.",
   "WindowMode.fullscreen": "Vollbild",
@@ -42,7 +41,6 @@
   "PauseOnFocusLoss.description": "In einem Fenstermodus pausiert das Spiel und wird stumm, während ein anderes Fenster aktiv ist. Aus lässt es weiterlaufen. Wirkt sofort.",
   "ConfineCursor": "Mauszeiger im Fenster halten",
   "ConfineCursor.description": "Hält den Mauszeiger im Spielfenster, solange das Spiel aktiv ist, damit er nicht auf einen anderen Monitor rutscht. Wirkt sofort.",
-  "FPSLimit.monitor": "Bildwiederholrate des Monitors",
   "SkipIntro": "Intro-Logos überspringen",
   "SkipIntro.description": "Überspringt das Logo-Video beim Start. Story-Videos laufen weiterhin. Neustart erforderlich.",
   "HudAspectRatioConstraint": "HUD-Seitenverhältnis",
@@ -62,5 +60,5 @@
   "menu.SkipIntro.help": "Überspringt das Logo-Video beim Start. Neustart nötig.",
   "menu.CheckForUpdates.help": "Fragt fusionfix.io einmal pro Start nach Updates.",
   "menu.HudAspectRatioConstraint.help": "Auto: HUD an den Rändern. Verhältnis: mittiger Rahmen.",
-  "menu.FPSLimit.help": "Bildratenbegrenzung. Das Spiel ist für 60 gemacht."
+  "menu.FPSLimit.help": "Bildratenbegrenzung, 30 bis 60. Das Spiel ist für 60 gemacht."
 }

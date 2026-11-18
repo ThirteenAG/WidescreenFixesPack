@@ -58,6 +58,7 @@ export GameRef<int32_t> nCameraMode;                // 0 = gameplay camera
 export GameRef<uint32_t> nCameraFlags;              // bits 0/1: a script forces the camera position or target
 export GameRef<uint8_t> nRenderMode;                // 2 = in-engine cutscene
 export GameRef<uint8_t> bPauseActive;
+export GameRef<int32_t> nFrameTicks;                // frame interval in 1/60 s ticks
 export GameRef<float> fPlayerDt;                    // seconds of the current player tick
 export GameRef<std::array<uint8_t, 2>> aHeadingSlot;        // byte index into aHeadingReference, then the latch byte
 export GameRef<std::array<float, 2>> aHeadingReference;     // two camera yaws used by camera-relative movement

@@ -36,6 +36,7 @@ Open **Options → Plugins → Resident Evil Revelations 2 Fusion Fix** (the las
 | Frame rate limit | Unlimited, the game window's monitor refresh rate or a number; caps the game's VARIABLE option; live | 120 FPS |
 | Window mode | Windowed or Borderless when the game's own Full Screen option is off; restart | Borderless |
 | Pause when unfocused | On pauses in the background; off keeps the game running in windowed modes; live | On |
+| Confine cursor | Keeps the cursor inside the game window while it is active; live | On |
 | Skip intro | Skips the logos and the OK-only startup notices; restart | On |
 | Skip title prompt | Continues past the first press-start prompt; restart | On |
 | Split screen layout | Top and bottom or Side by side give each player half of the screen in local co-op; Original keeps the game's two smaller staggered views; applies when split screen starts | Top and bottom |

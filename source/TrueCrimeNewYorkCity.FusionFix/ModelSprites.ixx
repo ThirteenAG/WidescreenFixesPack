@@ -123,7 +123,8 @@ namespace ModelSprites
         device->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
         device->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
         device->SetRenderState(D3DRS_ZENABLE, TRUE);
-        device->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESSEQUAL);
+        // The game's depth is reversed (near = 1, far = 0) and tested with GREATEREQUAL
+        device->SetRenderState(D3DRS_ZFUNC, D3DCMP_GREATEREQUAL);
         device->SetRenderState(D3DRS_STENCILENABLE, FALSE);
         device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
         device->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD);

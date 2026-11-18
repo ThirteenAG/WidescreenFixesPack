@@ -3,7 +3,6 @@
   "page.display": "Display",
   "page.game": "Game",
   "page.advanced": "Advanced",
-  "page.compatibility": "Compatibility",
   "ResX": "Resolution width",
   "ResX.description": "Width in pixels. Zero selects the desktop resolution. Restart required.",
   "ResY": "Resolution height",
@@ -12,8 +11,6 @@
   "FOVFactor.description": "Multiplies gameplay field of view; larger is wider, up to 150 degrees across. Cutscenes, active zoom and unavailable camera state keep their native framing. Applies at once.",
   "SkipIntro": "Skip intro",
   "SkipIntro.description": "Skips the publisher and studio logo videos. The game's intro still plays. Needs a restart.",
-  "GameSpeed": "Game speed timing",
-  "GameSpeed.description": "Native timing value; the shipped default is 30. Lower values increase game speed and higher values decrease it. Zero leaves the native value unchanged. Restart required.",
   "WindowMode": "Window mode",
   "WindowMode.description": "Fullscreen, a framed window at the selected resolution, or borderless at the monitor resolution. Changes apply at the next game frame. Alt+Enter returns to the last window mode.",
   "windowmode.fullscreen": "Fullscreen",
@@ -70,5 +67,7 @@
   "borders.both": "Both",
   "HudAspectRatioConstraint": "HUD aspect ratio",
   "HudAspectRatioConstraint.description": "Auto spreads the HUD across the whole screen, at its sides. A ratio keeps it in a centred box of that shape. Menus keep their 4:3 layout. Applies immediately.",
-  "HudAspectRatioConstraint.auto": "Auto"
+  "HudAspectRatioConstraint.auto": "Auto",
+  "GamepadIcons": "Gamepad Icons",
+  "GamepadIcons.description": "Controller button pictures. Auto uses Xbox; choose PlayStation or Nintendo for another controller. Keyboard prompts follow keyboard input."
 }

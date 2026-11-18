@@ -50,7 +50,7 @@ uint32_t padOrbitFrame[2] = {~0u, ~0u};
 console::Input mouseInput;
 char noKeyboard[StateSize]{};
 float mouseYaw, mousePitch;
-unsigned mouseHold;
+float mouseHold;
 int movieMode;
 void ReadSettings()
 {
@@ -398,19 +398,22 @@ void PollMouse(uintptr_t game)
         return;
     }
     const float dx = mouseInput.mouse.x, dy = mouseInput.mouse.y;
+    float dt = *reinterpret_cast<const float*>(0x4F509C);
+    dt = std::isfinite(dt) ? std::clamp(dt, 0.0f, 0.1f) : 0.0f;
     if (dx != 0.0f || dy != 0.0f)
     {
         mouseYaw = std::clamp(mouseYaw + dx * 0.0025f * mouseSensitivity, -2.0943951f, 2.0943951f);
         mousePitch = std::clamp(mousePitch + dy * (invertMouseY ? 0.0025f : -0.0025f) * mouseSensitivity,
                                 -0.6108652f, 0.6108652f);
-        mouseHold = 90;
+        mouseHold = burnout::LookReturnDelay;
     }
-    else if (mouseHold)
-        --mouseHold;
+    else if (mouseHold > 0)
+        mouseHold -= dt;
     else
     {
-        mouseYaw *= 0.9f;
-        mousePitch *= 0.9f;
+        const float fade = burnout::LookReturnFade(dt);
+        mouseYaw *= fade;
+        mousePitch *= fade;
         if (std::fabs(mouseYaw) < 0.0001f) mouseYaw = 0.0f;
         if (std::fabs(mousePitch) < 0.0001f) mousePitch = 0.0f;
     }

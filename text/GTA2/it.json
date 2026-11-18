@@ -172,6 +172,8 @@
   "menu.restartwarning": "Alcune impostazioni richiedono il riavvio del gioco.",
   "menu.previous": "Precedente",
   "windowmode.windowed": "Finestra",
+  "MAIN.PauseOnFocusLoss": "Pausa alla perdita del focus",
+  "MAIN.PauseOnFocusLoss.description": "Mette in pausa il gioco quando la finestra perde il focus.",
   "MAIN.ConfineCursor": "Blocca il cursore",
   "MAIN.ConfineCursor.description": "Tiene il cursore del mouse dentro la finestra del gioco mentre il gioco è attivo, così non passa su un altro monitor.",
   "MAIN.GamepadIcons": "Pulsanti del controller",

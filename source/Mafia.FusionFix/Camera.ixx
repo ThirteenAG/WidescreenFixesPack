@@ -19,9 +19,10 @@ namespace Camera
     float lookX, lookY;
     bool stickX, stickY;
     float dt, yaw, pitch, idleTimer;
-    float CameraReturnTimeout, CameraReturnSpeed;
+    const int* FreeCamera = nullptr;
+    const float* CameraReturnTimeout = nullptr;
+    const float* CameraReturnSpeed = nullptr;
     bool engaged;
-    bool FreeCameraEnabled = false;
     constexpr float pi = std::numbers::pi_v<float>;
 
     void Reset()
@@ -89,7 +90,11 @@ namespace Camera
 
     int __fastcall UpdateCamera(uintptr_t _this, void*, uint32_t elapsed)
     {
-        if (FreeCameraEnabled)
+        if (!*FreeCamera)
+        {
+            if (owner) Reset();
+        }
+        else
         {
             DWORD now = GetTickCount();
             auto mode = Field<int>(_this, 16);
@@ -152,10 +157,12 @@ namespace Camera
             idleTimer += dt;
             // Keep the view while stationary or aiming/firing. Once driving
             // again, return along the shortest arc, independently of FPS.
-            if (engaged && idleTimer > CameraReturnTimeout &&
+            const float timeout = std::isfinite(*CameraReturnTimeout) ? std::max(*CameraReturnTimeout, 0.0f) : 0.0f;
+            const float speed = std::isfinite(*CameraReturnSpeed) ? std::max(*CameraReturnSpeed, 0.0f) : 0.0f;
+            if (engaged && idleTimer > timeout &&
                 !Field<uint8_t>(camera, 148) && std::abs(Field<float>(vehicle, 1548)) > 0.5f)
             {
-                float blend = 1.0f - std::exp(-CameraReturnSpeed * dt);
+                float blend = 1.0f - std::exp(-speed * dt);
                 yaw += std::remainder(nativeYaw - yaw, 2.0f * pi) * blend;
                 pitch += (nativePitch - pitch) * blend;
                 if (std::abs(std::remainder(nativeYaw - yaw, 2.0f * pi)) < 0.0001f &&
@@ -185,7 +192,7 @@ namespace Camera
 
 export void CaptureCameraInput(uintptr_t object)
 {
-    if (Camera::FreeCameraEnabled)
+    if (Camera::FreeCamera && *Camera::FreeCamera)
         Camera::CaptureInput(object);
 }
 
@@ -197,10 +204,10 @@ export void InitCamera()
         "81 EC ? ? ? ? 53 55 56 8B F1 33 ED 57 8B 46 04 8B 7E 1C 3B C5"); // 1.1 and 1.2
     auto aim = find_pattern("A0 ? ? ? ? 83 EC 24 A8 01 56 57 8B F9 0F 85");
     nControlFlags.SetAddress(*aim.get_first<uint8_t*>(1));
+    FreeCamera = &FixSettings().Int("CAMERA.FreeCamera");
+    CameraReturnTimeout = &FixSettings().Float("CAMERA.CameraReturnTimeout");
+    CameraReturnSpeed = &FixSettings().Float("CAMERA.CameraReturnSpeed");
     shUpdate = safetyhook::create_inline(update.get_first(), UpdateCamera);
-    if (!FixSettings().Bool("CAMERA.FreeCamera")) return;
-    CameraReturnTimeout = std::max(FixSettings().Float("CAMERA.CameraReturnTimeout"), 0.0f);
-    CameraReturnSpeed = std::max(FixSettings().Float("CAMERA.CameraReturnSpeed"), 0.0f);
 
     auto place = find_pattern("83 EC 3C 8B 44 24 44 56 8B F1 8B 08 89 4C 24 04 8B 50 04 89 54 24 08");
     auto aimStart = reinterpret_cast<uintptr_t>(aim.get_first());
@@ -214,5 +221,4 @@ export void InitCamera()
     bInvertMouse.SetAddress(*vertical.get_first<uint8_t*>(11));
     shPlace = safetyhook::create_inline(place.get_first(), PlaceCamera);
     shAim = safetyhook::create_inline(aim.get_first(), AimCamera);
-    FreeCameraEnabled = true;
 }

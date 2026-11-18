@@ -1499,7 +1499,7 @@ export namespace DeerMenu
     inline HMODULE module = nullptr;
     inline std::shared_ptr<Pause> pauseHost;
     inline SafetyHookInline titleHook, keyHook, menuHook, menuDrawHook, drawHook, frameHook, appHook;
-    inline bool installed = false, attempted = false, draining = false, stopping = false;
+    inline bool attempted = false, draining = false, stopping = false;
     inline unsigned frameDepth = 0, drawDepth = 0, inputDepth = 0, menuDepth = 0, appDepth = 0, titleDepth = 0;
 
     struct Depth
@@ -1549,7 +1549,7 @@ export namespace DeerMenu
 
     inline void Drain()
     {
-        if (!installed || !Outside() || draining) return;
+        if (!Outside() || draining) return;
         Session::Busy scope(draining);
         try
         {
@@ -1572,7 +1572,7 @@ export namespace DeerMenu
         std::shared_ptr<Launcher> host;
         const auto found = launchers.find(window);
         if (found != launchers.end()) host = found->second;
-        if (installed && host)
+        if (host)
         {
             try
             {
@@ -1588,7 +1588,7 @@ export namespace DeerMenu
             catch (...) { host->Retire(); Log("title transaction refused; stock controls preserved"); }
         }
         const auto result = titleHook.unsafe_stdcall<INT_PTR>(window, message, wParam, lParam);
-        if (installed && message == WM_INITDIALOG)
+        if (message == WM_INITDIALOG)
         {
             std::shared_ptr<Launcher> created;
             try
@@ -1627,7 +1627,7 @@ export namespace DeerMenu
             Depth depth(inputDepth);
             auto host = pauseHost;
             bool consumed = false;
-            if (installed && !stopping && event == 18 && host && data)
+            if (!stopping && event == 18 && host && data)
             {
                 try { consumed = host->Key(data[1]); }
                 catch (...) { Cancel("input queue failure"); }
@@ -1643,7 +1643,7 @@ export namespace DeerMenu
     {
         Depth depth(menuDepth);
         auto host = pauseHost;
-        if (installed && !stopping && host && host->Private())
+        if (!stopping && host && host->Private())
         {
             // Clear the pause menu's command slots and return 0, as the game does
             // when no item is chosen; our commands are handled in Key.
@@ -1651,7 +1651,7 @@ export namespace DeerMenu
                 Pause::Write(address, 0);
             return 0;
         }
-        if (installed && (DeerMenu::Game(), game_menuPage.get()) == 5 && (DeerMenu::Game(), game_menuSelection.get()) == 3 && (!host || !host->Current()))
+        if ((DeerMenu::Game(), game_menuPage.get()) == 5 && (DeerMenu::Game(), game_menuSelection.get()) == 3 && (!host || !host->Current()))
             Pause::Write((Game(), reinterpret_cast<uintptr_t>(game_menuSelection.get_ptr())), 2);
         return menuHook.unsafe_ccall<int>();
     }
@@ -1661,7 +1661,7 @@ export namespace DeerMenu
         Depth depth(drawDepth);
         auto host = pauseHost;
         // This function draws only menu sprites; hide the pause pane while our page replaces it.
-        if (installed && !stopping && host && host->Private() && host->session->ready)
+        if (!stopping && host && host->Private() && host->session->ready)
             return 0;
         if (PauseContext::PauseShown())
         {
@@ -1675,7 +1675,7 @@ export namespace DeerMenu
     {
         Depth depth(drawDepth);
         const int result = drawHook.unsafe_ccall<int>();
-        if (!installed || stopping) return result;
+        if (stopping) return result;
         try
         {
             if (!PauseContext::PauseShown())
@@ -1707,7 +1707,7 @@ export namespace DeerMenu
         static std::once_flag once;
         std::call_once(once, []() { WFP::onGameInitEvent().executeAll(); });
         WFP::onGameProcessEvent().executeAll();
-        if (installed && Outside() && (DeerMenu::Game(), game_worldState.get()) != 1)
+        if (Outside() && (DeerMenu::Game(), game_worldState.get()) != 1)
         {
             try { ReleasePause(); } catch (...) { Cancel("pre-world retirement failure"); }
         }
@@ -1720,7 +1720,7 @@ export namespace DeerMenu
 
     inline int __cdecl App(int event, int* data)
     {
-        if (installed && event == 13)
+        if (event == 13)
         {
             stopping = true;
             Cancel("native engine retirement");
@@ -1746,13 +1746,6 @@ export namespace DeerMenu
         return result;
     }
 
-    inline void Rollback() noexcept
-    {
-        installed = false;
-        titleHook.reset(); keyHook.reset(); menuHook.reset(); menuDrawHook.reset();
-        drawHook.reset(); frameHook.reset(); appHook.reset();
-    }
-
     inline void WINAPI Exit(UINT code)
     {
         RWGTA::UpdateCheck::OnExit();
@@ -1761,11 +1754,6 @@ export namespace DeerMenu
 
     inline void InitUpdates()
     {
-        FixSettings().Availability("MAIN.CheckForUpdates", [](std::string_view value)
-        {
-            return value == "0" || installed;
-        });
-        if (!installed) return;
         IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", Exit));
         RWGTA::UpdateCheck::Config config;
         config.pluginId = "DeerAvenger4.FusionFix";
@@ -1793,30 +1781,20 @@ export namespace DeerMenu
         RWGTA::UpdateCheck::Init(std::move(config));
     }
 
-    inline void Init(HMODULE owner) noexcept
+    inline void Init(HMODULE owner)
     {
         if (attempted) return;
         attempted = true;
         module = owner;
-        try
-        {
-            if (!owner) return;
-            HMODULE pinned = nullptr;
-            if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
-                reinterpret_cast<LPCWSTR>(&Init), &pinned) || pinned != owner)
-            { Log("process-lifetime pin failed; no exposure"); return; }
-            titleHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().title), Title, SafetyHookInline::StartDisabled);
-            keyHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().key), Key, SafetyHookInline::StartDisabled);
-            menuHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().menu), Menu, SafetyHookInline::StartDisabled);
-            menuDrawHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().menuDraw), MenuDraw, SafetyHookInline::StartDisabled);
-            drawHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().draw), Draw, SafetyHookInline::StartDisabled);
-            frameHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().frame), Frame, SafetyHookInline::StartDisabled);
-            appHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().app), App, SafetyHookInline::StartDisabled);
-            for (auto hook : { &titleHook, &keyHook, &menuHook, &menuDrawHook, &drawHook, &frameHook, &appHook })
-                (void)hook->enable();
-            installed = true;
-            InitUpdates();
-        }
-        catch (...) { Rollback(); Log("bridge allocation failed; originals restored"); }
+        HMODULE pinned = nullptr;
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN, reinterpret_cast<LPCWSTR>(&Init), &pinned);
+        titleHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().title), Title);
+        keyHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().key), Key);
+        menuHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().menu), Menu);
+        menuDrawHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().menuDraw), MenuDraw);
+        drawHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().draw), Draw);
+        frameHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().frame), Frame);
+        appHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().app), App);
+        InitUpdates();
     }
 }

@@ -9,7 +9,7 @@ keys = [
     ("Back", "menu.back"), ("Help", "menu.help"), ("Restart", "menu.restart"), ("SaveError", "menu.save.error"),
     ("PresetHelp", "menu.preset.help"),
 ]
-for name in ["FOVFactor", "HudAspectRatioConstraint", "HUDScale", "CutsceneBorders", "SkipIntro", "DualAnalogPatch"]:
+for name in ["FOVFactor", "HudAspectRatioConstraint", "HUDScale", "CutsceneBorders", "SkipIntro", "DualAnalogPatch", "GamepadCameraSpeed"]:
     keys.extend([(name, name), (name + "Help", name + ".description")])
 for label in ["off", "letterbox", "pillarbox", "both"]:
     keys.append(("Borders" + label.title(), "borders." + label))

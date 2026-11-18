@@ -9,8 +9,7 @@
         "name": "Splinter Cell Double Agent",
         "exe": [
           "SplinterCell4.exe",
-          "SplinterCell4steam.exe",
-          "SCDA_online.exe"
+          "SplinterCell4steam.exe"
         ]
       }
     ]
@@ -150,6 +149,34 @@
       }
     },
     {
+      "id": "GRAPHICS.BrighterLights",
+      "type": "bool",
+      "default": true,
+      "label": "@GRAPHICS.BrighterLights",
+      "description": "@GRAPHICS.BrighterLights.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "GRAPHICS.ShadowDrawDistance",
+      "type": "bool",
+      "default": true,
+      "label": "@GRAPHICS.ShadowDrawDistance",
+      "description": "@GRAPHICS.ShadowDrawDistance.description",
+      "page": "graphics",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
       "id": "MAIN.ResX",
       "type": "int",
       "default": 0,
@@ -246,12 +273,12 @@
       "id": "MAIN.FPSLimit",
       "type": "int",
       "default": 60,
-      "label": "@MISC.FPSLimit",
-      "description": "@MISC.FPSLimit.description",
+      "label": "@MAIN.FPSLimit",
+      "description": "@MAIN.FPSLimit.description",
       "page": "gameplay",
       "apply": "live",
       "min": -1,
-      "max": 1000,
+      "max": 60,
       "step": 1,
       "control": [
         "stepper"
@@ -356,7 +383,12 @@
       "label": "@MISC.EnableRunDuringForcedWalk",
       "description": "@MISC.EnableRunDuringForcedWalk.description",
       "page": "gameplay",
-      "apply": "restart"
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
     },
     {
       "id": "MAIN.DisablePreCache",
@@ -393,110 +425,6 @@
       "visibility": "editor"
     },
     {
-      "id": "ONLINE.ForceWindowedMode",
-      "type": "bool",
-      "default": false,
-      "label": "@ONLINE.ForceWindowedMode",
-      "description": "@ONLINE.ForceWindowedMode.description",
-      "page": "advanced",
-      "apply": "restart",
-      "visibility": "editor"
-    },
-    {
-      "id": "ONLINE.FPSLimit",
-      "type": "int",
-      "default": 60,
-      "label": "@ONLINE.FPSLimit",
-      "description": "@ONLINE.FPSLimit.description",
-      "page": "advanced",
-      "apply": "restart",
-      "visibility": "editor",
-      "min": 0,
-      "max": 1000,
-      "step": 1,
-      "control": [
-        "stepper"
-      ]
-    },
-    {
-      "id": "ONLINE.FullScreenRefreshRateInHz",
-      "type": "int",
-      "default": 0,
-      "label": "@ONLINE.FullScreenRefreshRateInHz",
-      "description": "@ONLINE.FullScreenRefreshRateInHz.description",
-      "page": "advanced",
-      "apply": "restart",
-      "visibility": "editor",
-      "min": 0,
-      "max": 1000,
-      "step": 1,
-      "control": [
-        "stepper"
-      ]
-    },
-    {
-      "id": "FORCEWINDOWED.UsePrimaryMonitor",
-      "type": "bool",
-      "default": false,
-      "label": "@FORCEWINDOWED.UsePrimaryMonitor",
-      "description": "@FORCEWINDOWED.UsePrimaryMonitor.description",
-      "page": "advanced",
-      "apply": "restart",
-      "visibility": "editor"
-    },
-    {
-      "id": "FORCEWINDOWED.CenterWindow",
-      "type": "bool",
-      "default": true,
-      "label": "@FORCEWINDOWED.CenterWindow",
-      "description": "@FORCEWINDOWED.CenterWindow.description",
-      "page": "advanced",
-      "apply": "restart",
-      "visibility": "editor"
-    },
-    {
-      "id": "FORCEWINDOWED.AlwaysOnTop",
-      "type": "bool",
-      "default": false,
-      "label": "@FORCEWINDOWED.AlwaysOnTop",
-      "description": "@FORCEWINDOWED.AlwaysOnTop.description",
-      "page": "advanced",
-      "apply": "restart",
-      "visibility": "editor"
-    },
-    {
-      "id": "FORCEWINDOWED.ForceWindowStyle",
-      "type": "int",
-      "default": 0,
-      "label": "@FORCEWINDOWED.ForceWindowStyle",
-      "description": "@FORCEWINDOWED.ForceWindowStyle.description",
-      "page": "advanced",
-      "apply": "restart",
-      "visibility": "editor",
-      "min": 0,
-      "max": 2,
-      "step": 1,
-      "control": [
-        "stepper"
-      ]
-    },
-    {
-      "id": "ONLINE.FPSLimitMode",
-      "type": "int",
-      "default": 1,
-      "label": "@ONLINE.FPSLimitMode",
-      "description": "@ONLINE.FPSLimitMode.description",
-      "page": "advanced",
-      "apply": "restart",
-      "visibility": "editor",
-      "min": 1,
-      "max": 2,
-      "step": 1,
-      "control": [
-        "stepper"
-      ]
-    },
-    {
       "id": "GRAPHICS.ConsoleGamma",
       "type": "bool",
       "default": false,
@@ -517,7 +445,12 @@
       "label": "@GRAPHICS.BlurEnabled",
       "description": "@GRAPHICS.BlurEnabled.description",
       "page": "graphics",
-      "apply": "restart"
+      "apply": "restart",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
     },
     {
       "id": "GRAPHICS.BlurStrength",
@@ -532,26 +465,21 @@
       "step": 0.05,
       "control": [
         "stepper"
-      ]
+      ],
+      "presets": {
+        "vanilla": 5,
+        "recommended": 5,
+        "enhanced": 5
+      }
     },
     {
       "id": "NATIVE.Enabled",
       "type": "bool",
-      "default": true,
+      "default": false,
       "label": "@ui.nativegraphicsoverrides",
       "description": "@ui.nativegraphicsoverrides.description",
       "page": "compatibility",
       "visibility": "editor",
-      "apply": "restart"
-    },
-    {
-      "id": "NATIVE_WINDOW.StartupFullscreen",
-      "type": "string",
-      "default": "True",
-      "label": "@NATIVE_WINDOW.StartupFullscreen",
-      "description": "@NATIVE_WINDOW.StartupFullscreen.description",
-      "page": "compatibility",
-      "visibility": "file",
       "apply": "restart"
     },
     {

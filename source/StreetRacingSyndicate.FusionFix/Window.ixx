@@ -164,8 +164,7 @@ export namespace SRSWindow
         auto setActive = hook::pattern("8A 44 24 04 38 81 AD 00 00 00 74");
         SetActive = reinterpret_cast<decltype(SetActive)>(setActive.get_first());
         auto renderer = hook::pattern("A1 ? ? ? ? 85 C0 75 ? 56 68 74 73 27 00");
-        if (auto* rendererAddress = *renderer.get_first<uint8_t**>(1))
-            WindowRenderer.SetAddress(rendererAddress);
+        WindowRenderer.SetAddress(*renderer.get_first<uint8_t**>(1));
         auto app = hook::pattern("53 33 DB 53 B9 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? C7 05");
         App.SetAddress(*app.get_first<uint8_t*>(5));
         // Wakes the waiting game loop, which then follows the new setting

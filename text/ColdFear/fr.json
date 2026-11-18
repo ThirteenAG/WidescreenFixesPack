@@ -55,7 +55,7 @@
   "MAIN.TextLanguage.description": "Langue du menu Plugins. Automatique utilise l’anglais. Rouvrez le menu après un changement.",
   "page.compatibility": "Compatibilité",
   "PauseOnFocusLoss": "Pause en arrière-plan",
-  "FPSLimit.description": "Limite la fréquence d’images. S’applique immédiatement.",
+  "FPSLimit.description": "Limite la fréquence d’images à 120 FPS au plus, la limite du jeu ; le réglage écran suit la fréquence jusqu’à 120. S’applique immédiatement.",
   "PauseOnFocusLoss.description": "En mode fenêtré, le jeu se met en pause et devient muet quand une autre fenêtre est active. Désactivé, il continue. S'applique immédiatement.",
   "FPSLimit.unlimited": "Illimitée",
   "FPSLimit": "Limite d'images par seconde",

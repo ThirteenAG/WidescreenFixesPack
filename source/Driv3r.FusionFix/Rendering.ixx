@@ -122,6 +122,9 @@ public:
             static auto dword_53BDAD = (uint32_t)hook::get_pattern("E8 ? ? ? ? 8B 87 48 1A 00 00 8B 8F 10 1B 00 00", 5);
             static auto dword_53BE23 = (uint32_t)hook::get_pattern("E8 ? ? ? ? 80 BF 58 1A 00 00 00 75 ? 80 BF 59 1A 00 00 00", 5);
             static auto dword_53BE3E = (uint32_t)hook::get_pattern("8D 47 34 53 E8 ? ? ? ? 5F 5B 83 C4 64 C2 04 00", 9);
+            auto damagePattern = hook::pattern("E8 ? ? ? ? 83 C4 50 C2 08 00");
+            static auto dword_53CEFD = (uint32_t)damagePattern.count(2).get(0).get<void>(5);
+            static auto dword_53CF59 = (uint32_t)damagePattern.count(2).get(1).get<void>(5);
             struct HudHook
             {
                 void operator()(injector::reg_pack& regs)
@@ -141,6 +144,10 @@ public:
                     // Skip radar border/overlay — position handled by RadarHook via sub_53D790
                     // Skip fullscreen fades — they cover the full widescreen viewport intentionally
                     if (retAddr == dword_53F06F || retAddr == dword_53F08A)
+                        return;
+
+                    // Damage flash along the screen edge the hit came from
+                    if (retAddr == dword_53CEFD || retAddr == dword_53CF59)
                         return;
 
                     // Pause map: the HUD viewport shrinks from full screen into the radar's place (and back), showing a capture of the game view.

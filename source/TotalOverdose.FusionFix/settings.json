@@ -28,6 +28,12 @@
       "id": "advanced",
       "title": "@page.advanced",
       "section": "advanced"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility",
+      "order": 1000
     }
   ],
   "settings": [
@@ -99,6 +105,20 @@
       "default": true,
       "label": "@SkipIntro",
       "description": "@SkipIntro.description",
+      "page": "game",
+      "apply": "restart",
+      "presets": {
+        "vanilla": false,
+        "recommended": true,
+        "enhanced": true
+      }
+    },
+    {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": true,
+      "label": "@SkipPressStart",
+      "description": "@SkipPressStart.description",
       "page": "game",
       "apply": "restart",
       "presets": {
@@ -254,6 +274,42 @@
       "page": "game",
       "visibility": "menu",
       "apply": "live"
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@TextLanguage",
+      "description": "@TextLanguage.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "live",
+      "choices": [
+        {
+          "value": "auto",
+          "label": "Automatic"
+        },
+        {
+          "value": "en",
+          "label": "English"
+        },
+        {
+          "value": "fr",
+          "label": "Français"
+        },
+        {
+          "value": "de",
+          "label": "Deutsch"
+        },
+        {
+          "value": "it",
+          "label": "Italiano"
+        },
+        {
+          "value": "es",
+          "label": "Español"
+        }
+      ]
     }
   ]
 }

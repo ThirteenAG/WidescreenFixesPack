@@ -239,43 +239,21 @@
       "page": "display",
       "apply": "live",
       "visibility": "menu",
-      "min": -1,
-      "max": 1000,
+      "min": 30,
+      "max": 60,
       "step": 1,
       "presets": {
-        "vanilla": 0,
+        "vanilla": 60,
         "recommended": 60,
         "enhanced": 60
       },
       "unit": "fps",
-      "special": [
-        {
-          "value": 0,
-          "label": "@fpslimit.unlimited"
-        },
-        {
-          "value": -1,
-          "label": "@fpslimit.refreshrate"
-        }
-      ],
       "suggestions": [
         {
           "value": 30
         },
         {
           "value": 60
-        },
-        {
-          "value": 120
-        },
-        {
-          "value": 144
-        },
-        {
-          "value": 165
-        },
-        {
-          "value": 240
         }
       ],
       "control": [

@@ -3,6 +3,7 @@
 #include "../Shared/Console/PSP.hpp"
 namespace ctw {
 using namespace console::portable;
+inline constexpr auto cfgPath = "ms0:/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.cfg";
 // CFG writers pad values and the Hub can use textual booleans. Parse the
 // complete trimmed token instead of the SDK reader's untrimmed bool prefix.
 inline bool Option(const char* key, bool fallback) {
@@ -34,6 +35,10 @@ inline float fovFactor = 1.0f;
 // MAIN.CutsceneBorders: story scenes keep the native 16:9 frame, bit 0 with
 // bars above and below on narrower screens, bit 1 with side bars on wider ones.
 inline int cutsceneBorders = 3;
+// MAIN.ModernControls and MAIN.UnthrottleEmuDuringLoading, read again when the
+// cfg changes.
+inline bool modernControls = true;
+inline bool fastLoading = true;
 inline float HorizontalScale() { return nativeAspect / targetAspect; }
 // 2D layout fitted to the screen: wider screens narrow the native layout,
 // narrower screens shrink it vertically, so it always keeps its proportions.
@@ -75,6 +80,11 @@ inline bool GameplayCamera() {
     return player && Vehicle() && !at<uint8_t>(player + 0xE31);
 }
 void ClearOutside(unsigned left, unsigned bottom);
+void ReadAspectSettings();
+void ReadHudSettings();
+void SelectIcons(const char* name);
+void PollSettings();
+void InstallIcons();
 void InstallInput();
 void InstallCamera();
 void InstallAspect();

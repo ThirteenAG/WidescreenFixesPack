@@ -59,6 +59,9 @@ export namespace THAWController
         // The open overlay keeps the keys for itself
         if (BlockKeys && BlockKeys())
             std::memset(CurrentKeys.get().data(), 0, 256);
+        // Alt+Enter switches the window mode; Enter doesn't also reach the game
+        else if ((CurrentKeys.get()[0x38] & 0x80) || (CurrentKeys.get()[0xB8] & 0x80))
+            CurrentKeys.get()[0x1C] = 0;
         if (result >= 0 && Focused())
         {
             for (int i = 0; i < 256; ++i)

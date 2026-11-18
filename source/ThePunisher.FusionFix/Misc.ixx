@@ -25,15 +25,8 @@ export std::atomic<int> PunisherFrameLimit{ 60 };
 
 void UpdateFrameLimit()
 {
-    int limit = FixSettings().Int("MAIN.FPSLimit");
-    if (limit == -1)
-    {
-        DEVMODEW mode{};
-        mode.dmSize = sizeof(mode);
-        limit = EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1
-            ? static_cast<int>(mode.dmDisplayFrequency) : 60;
-    }
-    PunisherFrameLimit.store(limit > 0 ? std::clamp(limit, 30, 1000) : 0, std::memory_order_relaxed);
+    // The game's timing holds up to 60 frames per second
+    PunisherFrameLimit.store(std::clamp(FixSettings().Int("MAIN.FPSLimit"), 30, 60), std::memory_order_relaxed);
 }
 
 void InitPatches()

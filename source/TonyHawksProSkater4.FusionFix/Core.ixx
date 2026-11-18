@@ -15,6 +15,7 @@ import Movies;
 import Window;
 import ComVars;
 import Camera;
+import Pad;
 
 void Install()
 {
@@ -55,6 +56,8 @@ void Install()
     InstallCameraFix(&fFOVFactor);
 
     InstallHud();
+
+    THPS4Pad::Install();
 
     {
         auto pattern = hook::pattern("E8 ? ? ? ? 8B E8 8B 87 D0");

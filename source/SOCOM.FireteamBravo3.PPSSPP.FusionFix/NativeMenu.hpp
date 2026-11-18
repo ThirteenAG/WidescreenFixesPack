@@ -20,14 +20,15 @@ inline IniValue values[]
     { "MAIN", "TextLanguage", "auto" },
     { "MAIN", "GamepadIcons", "0" },
     { "MAIN", "SkipPressStart", "1" },
-    { "MAIN", "FPSLimit", "60" }
+    { "MAIN", "FPSLimit", "60" },
+    { "MAIN", "ColorGrading", "0" }
 };
 inline char customAspect[2][16];
 inline float customRatios[2];
-inline bool pending[13], hasCustomAspect[2], draining, saveError;
+inline bool pending[14], hasCustomAspect[2], draining, saveError;
 inline bool pluginFocused, pluginDrawFocused;
 inline void Open();
-inline int ticks[13], systemLanguage, level, selected, preset{ 1 };
+inline int ticks[14], systemLanguage, level, selected, preset{ 1 };
 inline bool Capturing() { return level || draining; }
 inline uint32_t previousButtons, presses, heldDirection, repeatAt;
 inline SafetyMipsInline layerHook, buttonHook;
@@ -47,12 +48,12 @@ inline FooterIcon icons[3];
 inline constexpr Word rowLabels[]
 {
     Word::Skip, Word::Analog, Word::Smoothing, Word::Loading, Word::Fov,
-    Word::Aspect, Word::Hudaspect, Word::Hudscale, Word::Borders, Word::Language, Word::Icons, Word::Start, Word::Fps
+    Word::Aspect, Word::Hudaspect, Word::Hudscale, Word::Borders, Word::Language, Word::Icons, Word::Start, Word::Fps, Word::Grading
 };
 inline constexpr Word rowHelp[]
 {
     Word::SkipHelp, Word::AnalogHelp, Word::SmoothingHelp, Word::LoadingHelp, Word::FovHelp,
-    Word::AspectHelp, Word::HudaspectHelp, Word::HudscaleHelp, Word::BordersHelp, Word::LanguageHelp, Word::IconsHelp, Word::StartHelp, Word::FpsHelp
+    Word::AspectHelp, Word::HudaspectHelp, Word::HudscaleHelp, Word::BordersHelp, Word::LanguageHelp, Word::IconsHelp, Word::StartHelp, Word::FpsHelp, Word::GradingHelp
 };
 inline constexpr const char* ratios[]{ "Auto", "4:3", "16:9", "21:9", "32:9" };
 inline constexpr const char* languages[]{ "auto", "en", "fr", "de", "it", "es" };
@@ -66,7 +67,7 @@ inline const char* Label(Word key)
 }
 inline void ReadOptions()
 {
-    for (unsigned i = 0; i < 13; ++i)
+    for (unsigned i = 0; i < 14; ++i)
     {
         char buffer[16]{};
         const auto text = inireader.ReadString("MAIN", values[i].key, values[i].value, buffer, sizeof(buffer));
@@ -82,6 +83,7 @@ inline void ReadOptions()
     ticks[10] = PadIcons::style;
     ticks[11] = Startup::skipPressStart;
     ticks[12] = FrameRate::limit == 60 ? 60 : 30;
+    ticks[13] = ColorGrading::original;
     ticks[9] = 0;
     for (int i = 0; i < 6; ++i)
         if (std::strcmp(values[9].value, languages[i]) == 0)
@@ -108,15 +110,15 @@ inline void ReadOptions()
         case PSP_SYSTEMPARAM_LANGUAGE_SPANISH: systemLanguage = 4; break;
         default: systemLanguage = 0; break;
     }
-    const bool on = ticks[0] && ticks[1] && ticks[2] && ticks[3] && ticks[10] == 0 && ticks[11] && ticks[12] == 60 && ticks[8] == 3;
-    const bool off = !ticks[0] && !ticks[1] && !ticks[2] && !ticks[3] && ticks[10] == 2 && !ticks[11] && ticks[12] == 30 && ticks[8] == 1;
+    const bool on = ticks[0] && ticks[1] && ticks[2] && ticks[3] && ticks[10] == 0 && ticks[11] && ticks[12] == 60 && ticks[8] == 3 && !ticks[13];
+    const bool off = !ticks[0] && !ticks[1] && !ticks[2] && !ticks[3] && ticks[10] == 2 && !ticks[11] && ticks[12] == 30 && ticks[8] == 1 && ticks[13];
     preset = on ? 1 : off ? 0 : 3;
 }
 inline bool Save()
 {
-    IniValue changed[13]{};
+    IniValue changed[14]{};
     unsigned count = 0;
-    for (unsigned i = 0; i < 13; ++i)
+    for (unsigned i = 0; i < 14; ++i)
         if (pending[i])
             changed[count++] = values[i];
     if (!count)
@@ -124,7 +126,7 @@ inline bool Save()
     IniWriter<> writer;
     saveError = !writer.update(cfg, changed, count);
     if (!saveError)
-        std::fill(pending, pending + 13, false);
+        std::fill(pending, pending + 14, false);
     return !saveError;
 }
 inline bool RestartNeeded()
@@ -135,7 +137,7 @@ inline bool RestartNeeded()
 inline void Store(unsigned row)
 {
     auto& output = values[row].value;
-    if (row < 4 || row == 11)
+    if (row < 4 || row == 11 || row == 13)
         std::strcpy(output, ticks[row] ? "1" : "0");
     else if (row == 4 || row == 7)
     {
@@ -178,6 +180,15 @@ inline void ApplyLive(unsigned row)
         if (!FrameRate::ApplyLive())
         {
             ticks[row] = FrameRate::limit;
+            Store(row);
+        }
+    }
+    else if (row == 13)
+    {
+        ColorGrading::original = ticks[row] != 0;
+        if (!ColorGrading::ApplyLive())
+        {
+            ticks[row] = ColorGrading::original;
             Store(row);
         }
     }
@@ -232,12 +243,18 @@ inline void Change(int direction)
             Store(12);
             ApplyLive(12);
         }
+        if (ticks[13] != (preset == 0))
+        {
+            ticks[13] = preset == 0;
+            Store(13);
+            ApplyLive(13);
+        }
     }
     else
     {
         const unsigned row = unsigned(selected - 1);
         const int previous = ticks[row];
-        if (row < 4 || row == 11)
+        if (row < 4 || row == 11 || row == 13)
             ticks[row] = !ticks[row];
         else if (row == 12)
             ticks[row] = ticks[row] == 60 ? 30 : 60;
@@ -252,7 +269,7 @@ inline void Change(int direction)
             return;
         Store(row);
         ApplyLive(row);
-        if (row < 4 || row == 8 || row == 10 || row == 11 || row == 12)
+        if (row < 4 || (row >= 8 && row != 9))
             preset = 3;
     }
     Save();
@@ -408,6 +425,8 @@ inline const char* Value(unsigned row, char (&buffer)[64])
         return ticks[row] == 5 ? customAspect[row - 5] : ticks[row] ? ratios[ticks[row]] : Label(Word::Auto);
     if (row == 8)
         return Label(Word(unsigned(Word::BordersOff) + unsigned(ticks[row])));
+    if (row == 13)
+        return Label(ticks[row] ? Word::GradingOriginal : Word::GradingOff);
     if (row == 10)
     {
         constexpr const char* styles[]{ "", "Xbox", "PlayStation", "Nintendo" };
@@ -496,9 +515,9 @@ inline void Render(uintptr_t manager = 0)
         if (input & PSP_CTRL_TRIANGLE)
             level = 3;
         else if (input & PSP_CTRL_UP)
-            selected = (selected + 13) % 14;
+            selected = (selected + 14) % 15;
         if (input & PSP_CTRL_DOWN)
-            selected = (selected + 1) % 14;
+            selected = (selected + 1) % 15;
         if (input & PSP_CTRL_LEFT)
             Change(-1);
         else if (input & (PSP_CTRL_RIGHT | PSP_CTRL_CROSS))
@@ -518,7 +537,7 @@ inline void Render(uintptr_t manager = 0)
     else if (level == 2)
     {
         const int first = selected / 8 * 8;
-        for (int row = first; row < std::min(first + 8, 14); ++row)
+        for (int row = first; row < std::min(first + 8, 15); ++row)
         {
             const int y = 42 + (row - first) * 18;
             if (row == selected)

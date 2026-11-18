@@ -198,14 +198,15 @@ void Install(const char* name) {
     guiRight = decltype(guiRight)(pattern.get(1, gui, -4));
     const auto read = pattern.get_first("25 28 C0 00 00 00 02 AE", -4);
     const auto set = pattern.get_first("25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00 FF 00 86 30 25 20 A0 00 ? ? ? ? 25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00 FF 00 86 30 25 20 A0 00 ? ? ? ? 25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00", -4);
-    // The texture hooks use the US addresses; the read site's call target tells that layout apart.
-    if (!getPad || !guiLeft || !guiRight || !read || !set || injector::GetBranchDestination(read).as_int() != 0x08A65C4C)
+    // The texture reader is the read site's call target; the display list destructor is found by its code.
+    const auto destroy = pattern.get_first("F0 FF BD 27 00 00 B0 AF 25 80 80 00 00 00 04 8E 04 00 BF AF 06 00 80 10 00 00 00 00 00 00 85 8C", 0);
+    if (!getPad || !guiLeft || !guiRight || !read || !set || !destroy)
     {
-        logger.Write("Controller icons unavailable: unsupported game version.\n");
+        logger.Write("Controller icons unavailable: unsupported game code.\n");
         return;
     }
-    readTexture = safetymips::create_inline(0x08A65C4C, ReadTexture);
-    destroyDisplayList = safetymips::create_inline(0x08B21348, DestroyDisplayList);
+    readTexture = safetymips::create_inline(injector::GetBranchDestination(read).as_int(), ReadTexture);
+    destroyDisplayList = safetymips::create_inline(destroy, DestroyDisplayList);
     controller.fun = injector::MakeCALL(set, SetController).get();
     installed = true;
 }

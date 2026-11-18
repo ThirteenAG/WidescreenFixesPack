@@ -48,7 +48,7 @@
   "menu.restoredefaultshelp": "Restablece los ajustes de esta página a sus valores predeterminados.",
   "menu.restartwarning": "Reinicia el juego para aplicar los cambios.",
   "menu.help": "Ayuda",
-  "menu.presethelp": "Elige un preajuste con Izquierda/Derecha y confirma. Original mantiene los logotipos. Recomendado y Mejorado los omiten, ocultan el cursor inactivo y activan RGB. Solo Mejorado omite las transiciones de puertas y activa la profundidad de campo. Se conservan las preferencias personales y los valores comunes. Restaurar valores predeterminados reinicia todas las opciones. Original y Recomendado usan 60 FPS; Mejorado elimina el límite. La sincronización vertical puede seguir limitando la frecuencia.",
+  "menu.presethelp": "Elige un ajuste con Izquierda/Derecha y confirma para aplicarlo. Vanilla conserva los logotipos y el límite propio del juego de 120 FPS en el modo Variable. Recommended y Enhanced omiten los logotipos, ocultan el cursor inactivo, activan la iluminación RGB y siguen la frecuencia del monitor en el modo Variable. Solo Enhanced omite las transiciones de puertas y activa la profundidad de campo. Se conservan las preferencias personales y los valores comunes a todos los ajustes. Restaurar valores predeterminados restablece todos los ajustes. La sincronización vertical aún puede limitar la tasa.",
   "menu.helphint": "F1 / botón Predeterminado: ayuda completa",
   "PauseOnFocusLoss": "Pausar sin enfoque",
   "PauseOnFocusLoss.description": "Pausa cuando la ventana del juego está inactiva. Desactiva para que continúe en segundo plano.",

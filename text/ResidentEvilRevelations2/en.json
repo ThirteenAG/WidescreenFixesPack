@@ -100,5 +100,7 @@
   "icons.playstation": "PlayStation",
   "icons.nintendo": "Nintendo",
   "pauseonfocusloss": "Pause when unfocused",
-  "pauseonfocusloss.description": "Pause while another window is active. Turn off to keep the game running in the background in windowed and borderless modes; fullscreen always pauses. Applies immediately."
+  "pauseonfocusloss.description": "Pause while another window is active. Turn off to keep the game running in the background in windowed and borderless modes; fullscreen always pauses. Applies immediately.",
+  "ConfineCursor": "Confine cursor",
+  "ConfineCursor.description": "Keeps the cursor inside the game window while it is active."
 }

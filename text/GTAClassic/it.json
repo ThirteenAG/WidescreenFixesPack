@@ -15,8 +15,6 @@
   "windowmode.fullscreen": "Schermo intero",
   "windowmode.windowed": "Finestra",
   "windowmode.borderless": "Senza bordi",
-  "MAIN.HudSafeArea": "Margine HUD",
-  "MAIN.HudSafeArea.description": "Distanza dell'HUD dai bordi dello schermo, in pixel 640x480 del gioco.",
   "MAIN.HudAspectRatioConstraint": "Proporzioni HUD",
   "MAIN.HudAspectRatioConstraint.description": "Mantiene l'HUD in un'area centrata di queste proporzioni, come 16:9 sugli schermi più larghi. Auto usa tutto lo schermo.",
   "CAMERA.SmoothFollow": "Inseguimento fluido",

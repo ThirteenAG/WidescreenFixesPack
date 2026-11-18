@@ -29,8 +29,6 @@
   "GRAPHICS.ShadowResolution": "Resolución de sombras",
   "GRAPHICS.ShadowResolution.description": "Tamaño de los mapas de sombras. Los valores más altos dan sombras más nítidas y menos pixeladas y usan más memoria de vídeo. Se aplica en el próximo inicio.",
   "GRAPHICS.ShadowResolution.1024": "1024 (original)",
-  "controls.auto": "Mando automático",
-  "controls.auto.description": "Usa el mando o el teclado y ratón, según el último usado, y detecta mandos conectados durante el juego.",
   "controls.speed": "Velocidad cámara mando",
   "controls.speed.description": "Multiplica la velocidad de la cámara con el mando. 1,00 = velocidad original. No afecta al ratón.",
   "controls.deadzone": "Zona muerta de sticks",

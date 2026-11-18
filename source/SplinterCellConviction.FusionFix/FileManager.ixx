@@ -338,6 +338,20 @@ namespace FileLoader
             }
         }
 
+        // weapon tuning without unlimited ammo, from update
+        if (bLimitedAmmo)
+        {
+            std::string_view request(path);
+            auto file = request.substr(request.find_last_of("\\/") + 1);
+            if (_stricmp(std::string(file).c_str(), "WeaponTuning.ini") == 0)
+            {
+                thread_local std::string overridePath;
+                overridePath = std::string(request.substr(0, request.size() - file.size())) + "weapontuning_limitedammo.ini";
+                if (GetOverloadedFilePathA(overridePath.c_str(), nullptr, 0))
+                    return overridePath.c_str();
+            }
+        }
+
         if (GetOverloadedFilePathA(path, nullptr, 0))
             return path;
 

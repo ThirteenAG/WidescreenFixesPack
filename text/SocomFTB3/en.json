@@ -41,7 +41,7 @@
   "menu.help": "Fusion Fix settings and help.",
   "page.compatibility": "Compatibility",
   "menu.help.button": "Help",
-  "menu.preset.help": "Vanilla keeps the original intros, controls and PSP icons. Recommended and Enhanced enable intro skipping, dual analog controls, reduced camera smoothing, faster loading and Xbox icons. Other settings keep your values.",
+  "menu.preset.help": "Vanilla keeps the original intros, controls and PSP icons. Recommended and Enhanced enable intro skipping, dual analog controls, reduced camera smoothing, faster loading and Xbox icons and turn color grading off. Other settings keep your values.",
   "icons": "Controller icons",
   "icons.description": "Replace button artwork in menus and gameplay prompts. Auto uses Xbox artwork because stock PPSSPP does not expose the connected controller family. PlayStation keeps the original PSP artwork. This changes artwork only; configure controls in PPSSPP. Changes in Plugins apply immediately; file edits require restarting the emulated game.",
   "icons.auto": "Auto",
@@ -53,5 +53,9 @@
   "fps": "Frame rate",
   "fps.description": "Choose the original 30 FPS limit or 60 FPS. Gameplay uses elapsed time; effect updates, camera-shake decay and text timing follow the same clock. PPSSPP controls emulation speed and frame skipping. Changes in Plugins apply immediately; restart the emulated game after editing the file.",
   "fps.30": "30 FPS",
-  "fps.60": "60 FPS"
+  "fps.60": "60 FPS",
+  "grading": "Color grading",
+  "grading.description": "Original keeps the game's grey color grading. On PPSSPP's hardware renderers (Vulkan, Direct3D, OpenGL) it can leave a ghosted double image of characters and buildings; the software renderer draws it correctly. Off skips the grading for full colors and no ghosting. Changes in Plugins apply immediately; restart the emulated game after editing the file.",
+  "grading.original": "Original",
+  "grading.off": "Off"
 }

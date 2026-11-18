@@ -56,5 +56,18 @@
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
   "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
   "MovingTurnSpeed": "Drehgeschwindigkeit in Bewegung",
-  "MovingTurnSpeed.description": "Wie schnell sich die Figur beim Gehen und Laufen dreht, mit Maus oder Stick. Das Spiel dreht in Bewegung langsamer als im Stand; 1.0x behält die Geschwindigkeit des Spiels. Mit moderner Steuerung dreht sich die Kamera frei, dann gilt dies nicht."
+  "MovingTurnSpeed.description": "Wie schnell sich die Figur beim Gehen und Laufen dreht, mit Maus oder Stick. Das Spiel dreht in Bewegung langsamer als im Stand; 1.0x behält die Geschwindigkeit des Spiels. Mit moderner Steuerung dreht sich die Kamera frei, dann gilt dies nicht.",
+  "ShadowResolution": "Schattenauflösung",
+  "ShadowResolution.description": "Größe der Schattentexturen bei der Schattenqualität Hoch des Spiels. Spiel behält 1024; höhere Werte ergeben schärfere Schatten. Neustart nötig.",
+  "ShadowResolution.game": "Spiel",
+  "GamepadIcons": "Controller-Symbole",
+  "GamepadIcons.description": "Die Tastensymbole eines Controllers in Hinweisen und Aktionstasten. Automatisch und Xbox behalten die Symbole des Spiels.",
+  "GamepadIcons.auto": "Automatisch",
+  "GamepadIcons.xbox": "Xbox",
+  "GamepadIcons.playstation": "PlayStation",
+  "GamepadIcons.nintendo": "Nintendo",
+  "SplitScreenLayout": "Splitscreen-Aufteilung",
+  "SplitScreenLayout.description": "Wie lokaler Koop den Bildschirm teilt. Spiel behält die Splitscreen-Option des Spiels (beide Spieler übereinander). Nebeneinander gibt jedem Spieler die linke oder rechte Hälfte; auf einem 32:9-Bildschirm ist das eine 16:9-Ansicht pro Spieler. Das HUD jedes Spielers passt in seine Hälfte. Wirkt sofort.",
+  "SplitScreenLayout.game": "Spiel",
+  "SplitScreenLayout.sidebyside": "Nebeneinander"
 }

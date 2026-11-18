@@ -105,6 +105,15 @@ export namespace SCCMenu
         wideDtor(result + 0x20, nullptr); stringDtor(result + 0x0C, nullptr); stringDtor(path, nullptr);
         return result[0] == 4 && (result[4] & 1) && MovieValid(movie);
     }
+    // movie virtual +6Ch: sets a variable to a number
+    inline void SetNumber(void* movie, const std::string& name, float value)
+    {
+        if (!MovieValid(movie)) return;
+        uint8_t path[20] = {};
+        stringCtor(path, nullptr, name.c_str());
+        reinterpret_cast<void(__thiscall*)(void*, void*, float)>((*reinterpret_cast<uintptr_t**>(movie))[0x6C / 4])(movie, path, value);
+        stringDtor(path, nullptr);
+    }
 
     enum class Kind { Page, Next, Previous, Back, Setting };
     struct Link { Kind kind; size_t index = 0; RWGTAMenu::Row row; };
@@ -192,6 +201,9 @@ export namespace SCCMenu
             if (context == ctx) { Close(); Invoke(ctx->movie, "leaveFixMenu", ""); }
             return;
         }
+        // the list shows all seven row clips, their background bars stayed below a shorter list
+        for (size_t i = rows.size(); i < 7; ++i)
+            SetNumber(ctx->movie, "_root.FlashMenu.callbackObject.privateMenu.Menu" + std::to_string(i) + "._visible", 0.0f);
         RWGTAMenu::Model::Changed() = false;
         ctx->committed = true;
     }

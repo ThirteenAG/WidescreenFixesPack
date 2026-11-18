@@ -54,17 +54,24 @@ namespace
 
     SafetyHookInline AnalogHook, DefaultsHook, ReadBindingsHook, VibrationOnHook, VibrationOffHook;
 
-    bool UsesModernAnalogBindings()
+    // How far the pad pushes a bound analog element (0..1); -1 for buttons and the d-pad, which stay on/off
+    float ElementValue(const SHPad::State& pad, uint32_t code)
     {
-        if (!aPadBindings.is_initialized())
-            return false;
-        auto analog = aPadBindings->data() + 21;
-        for (int i = 0; i < 8; ++i)
+        float axis = 0.0f;
+        switch (code >> 8)
         {
-            if (analog[i] != ModernFileOrder[RuntimeAnalog[i]])
-                return false;
+            case 0x00: axis = pad.lx; break;
+            case 0x04: axis = pad.ly; break;
+            case 0x08: axis = pad.rx; break;
+            case 0x14: axis = pad.ry; break;
+            default: return -1.0f;
         }
-        return true;
+        switch (code & 0xFF)
+        {
+            case 1: return std::max(0.0f, -axis);
+            case 3: return std::max(0.0f, axis);
+            default: return -1.0f;
+        }
     }
 
     // UI index of a code in the configuration screen's list of pad elements
@@ -105,18 +112,18 @@ namespace
 
         auto pad = SHPad::Get();
         bool modern = IsModernCameraActive();
-        if (pad.connected && UsesModernAnalogBindings())
+        if (pad.connected && aPadBindings.is_initialized())
         {
-            auto word = [](float v) { return int16_t(std::clamp(v, -1.0f, 1.0f) * 32767.0f); };
-            if (pad.lx != 0.0f || pad.ly != 0.0f)
+            // The game's analog actions in pairs (right/left turn, forward/back, camera right/left, camera up/down),
+            // whatever pad elements they are bound to
+            auto analog = aPadBindings->data() + 21;
+            int16_t* words[4] = { turn, move, cameraX, cameraY };
+            for (int i = 0; i < 4; ++i)
             {
-                *turn = word(pad.lx);
-                *move = word(-pad.ly);
-            }
-            if (pad.rx != 0.0f || pad.ry != 0.0f)
-            {
-                *cameraX = word(pad.rx);
-                *cameraY = word(-pad.ry);
+                const float positive = ElementValue(pad, analog[i * 2]), negative = ElementValue(pad, analog[i * 2 + 1]);
+                if (positive < 0.0f || negative < 0.0f || (positive == 0.0f && negative == 0.0f))
+                    continue;
+                *words[i] = int16_t(std::clamp(positive - negative, -1.0f, 1.0f) * 32767.0f);
             }
         }
         if (modern)

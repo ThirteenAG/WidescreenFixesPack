@@ -16,7 +16,7 @@
 
 ## Cameras and interface
 
-- Widescreen field of view always preserves the gameplay camera's original vertical view and expands horizontally. The normal gameplay FOV multiplier ranges from 0.5 to 2.0, with a 150° horizontal ceiling. Aim, zoom, scripted and special camera controllers retain their intended lens.
+- Widescreen field of view always preserves the gameplay camera's original vertical view and expands horizontally. The normal gameplay FOV multiplier ranges from 0.5 to 2.0, with a 150° horizontal ceiling, on foot and in vehicles. Aim, zoom, scripted and special camera controllers retain their intended lens.
 - **HUD aspect ratio constraint** moves edge information into a centered area at the chosen maximum aspect. Auto uses the available width. The minimap frame, map and markers move together; menus, subtitles, reticles and full-screen effects keep their own layout.
 - **Cutscene borders** preserve the original 16:9 cinematic frame. Letterbox retains the original horizontal artwork and fits the frame on narrower displays; Pillarbox adds side borders on wider displays; Both enables both. Off fills the screen with a view that expands horizontally. The gameplay multiplier leaves cinematic lenses unchanged.
 - **Animated cutscene borders** follows the original horizontal-bar animation, or makes those bars immediate when disabled. Scenes without authored bars remain unbarred apart from the borders needed to contain their frame.
@@ -32,6 +32,6 @@ Pause in Background and Confine Cursor apply live. Skip Intro Videos affects sta
 
 Controller icons offer Auto, Xbox, PlayStation and Nintendo artwork using the game's native XInput support and bindings. Auto uses Xbox icons. Icon changes require a restart because the game caches its movie textures.
 
-The existing SMAA, console gamma, map marker, high-resolution interface/font/cursor and shutdown audio fixes are retained. Enhanced adds SMAA and console gamma; Recommended uses the 60 FPS limit. Vanilla keeps the corrections active while retaining intros.
+The existing SMAA, console gamma, map marker, high-resolution interface/font/cursor and shutdown audio fixes are retained. Recommended and Enhanced add SMAA, Enhanced also console gamma; every preset uses the game's own 60 FPS limit. Vanilla keeps the corrections active while retaining intros.
 
 **Ctrl+F10** opens the developer overlay where available. After closing it, gameplay input resumes once held movement inputs return to neutral. **Debug → Info** shows the fix version, UTC build time, graphics API and actual backbuffer size. Native option help, full Details, per-plugin presets and restart notices are also available in the Plugins menu.

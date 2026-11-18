@@ -118,5 +118,11 @@
   "gamepadicons.playstation": "PlayStation",
   "gamepadicons.nintendo": "Nintendo",
   "lights": "Luci dei veicoli",
-  "lights.description": "Accende fari, luci posteriori, di stop e di retromarcia sulle texture della carrozzeria di auto e moto, generate dalle texture del gioco. Attivo per impostazione predefinita."
+  "lights.description": "Accende fari, luci posteriori, di stop e di retromarcia sulle texture della carrozzeria di auto e moto, generate dalle texture del gioco. Attivo per impostazione predefinita.",
+  "controls.moderncontrolscheme": "Comandi moderni",
+  "controls.moderncontrolscheme.description": "Usa i grilletti per guidare, mirare e sparare. I comandi nativi specifici di ogni modalità restano supportati.",
+  "controls.gamepadcameraspeed": "Velocità telecamera gamepad",
+  "controls.gamepadcameraspeed.description": "Velocità della telecamera con la levetta destra, a piedi e nei veicoli. 1.0 è la velocità originale.",
+  "controls.invertgamepady": "Inverti gamepad Y",
+  "controls.invertgamepady.description": "Inverte la direzione verticale della visuale con la levetta destra."
 }

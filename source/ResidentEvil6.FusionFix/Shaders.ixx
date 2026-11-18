@@ -99,19 +99,19 @@ public:
             // MAIN.DisableDamageOverlay / MAIN.DisableDBNOEffects: the player's condition skips the low health (20) and
             // the dying (10) states, whose screen effects then aren't shown
             auto& settings = FixSettings();
-            if (settings.Bool("MAIN.DisableDamageOverlay"))
+            static std::vector<uint8_t*> lowHealth;
+            for (auto ref : { "C6 46 38 14 E9 ? ? ? ? F3 0F 10 05", "C6 46 38 14 8B 4E 40" })
+                lowHealth.push_back(hook::pattern(ref).get_first<uint8_t>(3));
+            static auto dying = hook::pattern("C6 46 38 0A 8B 4E 40").get_first<uint8_t>(3);
+            static const auto apply = []()
             {
-                for (auto ref : { "C6 46 38 14 E9 ? ? ? ? F3 0F 10 05", "C6 46 38 14 8B 4E 40" })
-                {
-                    auto state = hook::pattern(ref);
-                    injector::WriteMemory<uint8_t>(state.get_first(3), 0x16, true);
-                }
-            }
-            if (settings.Bool("MAIN.DisableDBNOEffects"))
-            {
-                auto state = hook::pattern("C6 46 38 0A 8B 4E 40");
-                injector::WriteMemory<uint8_t>(state.get_first(3), 0x16, true);
-            }
+                for (auto state : lowHealth)
+                    injector::WriteMemory<uint8_t>(state, FixSettings().Bool("MAIN.DisableDamageOverlay") ? 0x16 : 0x14, true);
+                injector::WriteMemory<uint8_t>(dying, FixSettings().Bool("MAIN.DisableDBNOEffects") ? 0x16 : 0x0A, true);
+            };
+            apply();
+            settings.OnChange("MAIN.DisableDamageOverlay", apply);
+            settings.OnChange("MAIN.DisableDBNOEffects", apply);
 
             // Film grain (uTVNoiseFilter): the noise is tiled one texel per screen pixel and the rolling band is sized
             // and moved in pixels, both made for 720p: at higher resolutions the grain got finer and the band thinner

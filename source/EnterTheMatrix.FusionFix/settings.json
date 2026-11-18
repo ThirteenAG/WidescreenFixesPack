@@ -66,7 +66,7 @@
     {
       "id": "MAIN.FPSLimit",
       "type": "int",
-      "default": 0,
+      "default": 60,
       "min": 10,
       "max": 1000,
       "unit": "fps",
@@ -84,7 +84,12 @@
       "description": "@FPSLimit.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "live"
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 60,
+        "enhanced": 60
+      }
     },
     {
       "id": "MAIN.HudAspectRatioConstraint",

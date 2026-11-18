@@ -7,19 +7,22 @@ export module FrameRate;
 
 import ComVars;
 
+// AI and physics misbehave above 60 FPS, so the limit never goes higher.
+constexpr int MaxFrameRate = 60;
+
 float FrameInterval = 0.0f;
 HMONITOR FrameLimitMonitor = nullptr;
 void UpdateFrameLimit()
 {
     auto limit = FixSettings().Int("MAIN.FPSLimit");
     FrameLimitMonitor = MonitorFromWindow(hGameWindow, MONITOR_DEFAULTTOPRIMARY);
-    if (limit == -1)
+    if (limit <= 0)
     {
         MONITORINFOEXW monitor{ sizeof(monitor) };
         DEVMODEW mode{ .dmSize = sizeof(mode) };
-        limit = GetMonitorInfoW(FrameLimitMonitor, &monitor) && EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1 ? int(mode.dmDisplayFrequency) : 60;
+        limit = GetMonitorInfoW(FrameLimitMonitor, &monitor) && EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1 ? int(mode.dmDisplayFrequency) : MaxFrameRate;
     }
-    FrameInterval = limit > 0 ? 1.0f / float(std::clamp(limit, 1, 1000)) : 0.0f;
+    FrameInterval = 1.0f / float(std::clamp(limit, 1, MaxFrameRate));
 }
 
 class FrameRate
@@ -33,7 +36,7 @@ public:
             FixSettings().OnChange("MAIN.FPSLimit", UpdateFrameLimit);
             WFP::onGameProcessEvent() += []()
             {
-                if (FixSettings().Int("MAIN.FPSLimit") == -1 && MonitorFromWindow(hGameWindow, MONITOR_DEFAULTTOPRIMARY) != FrameLimitMonitor)
+                if (FixSettings().Int("MAIN.FPSLimit") <= 0 && MonitorFromWindow(hGameWindow, MONITOR_DEFAULTTOPRIMARY) != FrameLimitMonitor)
                     UpdateFrameLimit();
             };
 

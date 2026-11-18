@@ -50,6 +50,7 @@ namespace UObject
         L"EDoorMarker",
         L"EKeyPad",
         L"EElevatorPanel",
+        L"EQInvHUD",
         L"EDoorMarker",
     };
 

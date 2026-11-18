@@ -99,12 +99,22 @@
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/CallOfCthulhu.FusionFix/Engine/Xidi.ini",
+          "destination": "Engine/Xidi.ini"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "Engine/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Engine/Xidi.32.dll"
         }
       ]
     },
@@ -335,7 +345,16 @@
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/FarCry.FusionFix/Bin32/Xidi.ini",
+          "destination": "Bin32/Xidi.ini"
+        },
+        {
+          "source": "data/FarCry.FusionFix/Bin64/Xidi.ini",
+          "destination": "Bin64/Xidi.ini"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
@@ -346,6 +365,26 @@
           "id": "loader-x64",
           "member": "*.dll",
           "destination": "Bin64/version.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
+          "destination": "Bin32/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Bin32/Xidi.32.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/x64/dinput8.dll",
+          "destination": "Bin64/dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/x64/Xidi.64.dll",
+          "destination": "Bin64/Xidi.64.dll"
         }
       ]
     },
@@ -1816,12 +1855,27 @@
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/SecondSight.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
+          "destination": "dsound.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
           "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
@@ -2371,11 +2425,6 @@
           "destination": "System/Xidi.32.dll"
         },
         {
-          "id": "xidi-sdl3",
-          "member": "SDL.XidiPlugin.32.dll",
-          "destination": "System/SDL.XidiPlugin.32.dll"
-        },
-        {
           "id": "dsoal",
           "member": "DSOAL+HRTF/Win32/dsound.dll",
           "destination": "System/dsound.dll"
@@ -2613,8 +2662,8 @@
           "destination": "src/system/update/data/Flash/Ingame/3d_sp_pause.gfx"
         },
         {
-          "source": "data/SplinterCellConviction.FusionFix/src/system/update/weapontuning.ini",
-          "destination": "src/system/update/weapontuning.ini"
+          "source": "data/SplinterCellConviction.FusionFix/src/system/update/weapontuning_limitedammo.ini",
+          "destination": "src/system/update/weapontuning_limitedammo.ini"
         },
         {
           "source": "data/SplinterCellConviction.FusionFix/src/system/update/data/Flash/Ingame/buttons-playstation.gfx",
@@ -2827,7 +2876,12 @@
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/StreetRacingSyndicate.FusionFix/Bin/Xidi.ini",
+          "destination": "Bin/Xidi.ini"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
@@ -3266,12 +3320,27 @@
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/TheSuffering.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
+          "destination": "d3d9.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/dinput8.dll",
           "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },

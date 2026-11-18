@@ -56,5 +56,18 @@
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
   "update.availablesite": "{name} {version} is available at fusionfix.io.",
   "MovingTurnSpeed": "Turn Speed While Moving",
-  "MovingTurnSpeed.description": "How fast the character turns while walking and running, with the mouse or a stick. The game turns slower while moving than standing; 1.0x keeps the game's speed. With Modern controls the camera turns freely and this doesn't apply."
+  "MovingTurnSpeed.description": "How fast the character turns while walking and running, with the mouse or a stick. The game turns slower while moving than standing; 1.0x keeps the game's speed. With Modern controls the camera turns freely and this doesn't apply.",
+  "ShadowResolution": "Shadow Resolution",
+  "ShadowResolution.description": "Size of the shadow maps with the game's High shadow quality. Game keeps 1024; higher values give sharper shadows. Needs a restart.",
+  "ShadowResolution.game": "Game",
+  "GamepadIcons": "Controller icons",
+  "GamepadIcons.description": "The button symbols shown for a controller in prompts and action buttons. Auto and Xbox keep the game's symbols.",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.xbox": "Xbox",
+  "GamepadIcons.playstation": "PlayStation",
+  "GamepadIcons.nintendo": "Nintendo",
+  "SplitScreenLayout": "Split Screen Layout",
+  "SplitScreenLayout.description": "How local co-op divides the screen. Game keeps the game's own split mode option (both players one above the other). Side by Side gives each player the left or right half; on a 32:9 screen that is a 16:9 view per player. Each player's HUD fits into their half. Applies immediately.",
+  "SplitScreenLayout.game": "Game",
+  "SplitScreenLayout.sidebyside": "Side by Side"
 }

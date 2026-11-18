@@ -54,14 +54,14 @@
   "menu.restartwarning": "Spiel neu starten, um geänderte Startoptionen anzuwenden.",
   "menu.presethelp": "Voreinstellung wählen und zweimal bestätigen, um sie auf dieses Plugin anzuwenden.",
   "FPSLimit": "Bildratenlimit",
-  "FPSLimit.description": "Begrenzt die Bildausgabe; 0 deaktiviert das Limit, -1 verwendet die Bildwiederholrate des Desktops. Änderungen gelten sofort. 60 FPS empfohlen; höhere Werte können das Spiel stören.",
-  "FPSLimit.unlimited": "Unbegrenzt",
-  "FPSLimit.refresh": "Desktop-Bildwiederholrate",
+  "FPSLimit.description": "Begrenzt die Bildrate (30–60 FPS). Physik, Animationen und Timer des Spiels sind auf 60 FPS ausgelegt, daher gibt es keine höheren Werte. Änderungen gelten sofort.",
   "menu.details": "Details",
   "checkupdates": "Nach Updates suchen",
   "checkupdates.description": "Prüft beim Aktivieren einmal auf eine neue Version. Ein Hinweis erscheint unter Plugins; FusionFixHub öffnet sich nach Spielende, falls installiert. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "Ein Update für Tony Hawk Pro Skater 4 Fusion Fix ist verfügbar. FusionFixHub öffnet sich nach Spielende.",
   "update.availablesite": "Ein Update für Tony Hawk Pro Skater 4 Fusion Fix ist auf fusionfix.io verfügbar.",
   "PauseOnFocusLoss": "Im Hintergrund pausieren",
-  "PauseOnFocusLoss.description": "In einem Fenstermodus hält das Spiel an, während ein anderes Fenster aktiv ist, wie es das immer tat. Aus lässt es weiterlaufen. Wirkt sofort."
+  "PauseOnFocusLoss.description": "In einem Fenstermodus hält das Spiel an, während ein anderes Fenster aktiv ist, wie es das immer tat. Aus lässt es weiterlaufen. Wirkt sofort.",
+  "MAIN.GamepadIcons": "Controller-Symbole",
+  "MAIN.GamepadIcons.description": "Tastensymbole des Controllers in Hinweisen, solange ein Controller benutzt wird. Auto verwendet Xbox; für andere Controller PlayStation oder Nintendo wählen. Bei Tastatureingabe erscheinen wieder Tastaturhinweise."
 }

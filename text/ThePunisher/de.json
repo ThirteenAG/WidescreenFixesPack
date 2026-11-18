@@ -50,7 +50,7 @@
   "menu.details": "Details",
   "menu.restartshort": "Neustart erforderlich",
   "FPSLimit": "FPS-Limit",
-  "FPSLimit.description": "Begrenzt die Darstellung auf 30–1000 FPS. 0 deaktiviert das Limit; -1 verwendet die Bildwiederholrate des Desktops. Wirkt sofort. Für ein stabiles Spielverhalten werden 60 FPS empfohlen.",
+  "FPSLimit.description": "Begrenzt die Darstellung auf 30–60 FPS; -1 verwendet die Bildwiederholrate des Desktops bis 60. Das Spiel ist für 60 FPS gemacht; höhere Bildraten stören sein Timing. Wirkt sofort.",
   "fpslimit.unlimited": "Unbegrenzt",
   "fpslimit.refreshrate": "Bildwiederholrate",
   "WindowMode": "Fenstermodus",

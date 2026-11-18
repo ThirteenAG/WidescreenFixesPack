@@ -65,7 +65,7 @@
   "menu.restoredefaultshelp": "Setzt die Einstellungen dieser Seite auf ihre Standardwerte zurück.",
   "menu.restartwarning": "Spiel neu starten, um Änderungen anzuwenden.",
   "menu.help": "Hilfe",
-  "menu.presethelp": "Mit Links/Rechts wählen und zum Anwenden bestätigen. Vanilla behält die ursprünglichen Logos und Filmsequenzbalken. Recommended und Enhanced überspringen Logos, ergänzen seitliche Balken in Filmsequenzen und aktivieren RGB-Beleuchtung. Persönliche Einstellungen und Werte, die in allen Vorgaben gleich sind, bleiben erhalten. Standardwerte setzt alle Einstellungen zurück.",
+  "menu.presethelp": "Mit Links/Rechts wählen und zum Anwenden bestätigen. Vanilla behält die ursprünglichen Logos und die Titelaufforderung, Filmsequenzen füllen den Bildschirm. Recommended und Enhanced überspringen Logos und Titelaufforderung, zeigen Filmsequenzen zwischen seitlichen Balken und aktivieren RGB-Beleuchtung. Persönliche Einstellungen und Werte, die in allen Vorgaben gleich sind, bleiben erhalten. Standardwerte setzt alle Einstellungen zurück.",
   "menu.helphint": "F1: vollständige Hilfe. Alternativ Details auswählen.",
   "menu.auto": "Automatisch",
   "menu.pluginshelp": "Einstellungen dieses Fixes und anderer installierter Plugins verwalten.",

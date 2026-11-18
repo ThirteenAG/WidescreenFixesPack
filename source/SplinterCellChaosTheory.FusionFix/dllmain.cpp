@@ -34,7 +34,11 @@ void UpdateFrameLimit()
         DEVMODEW mode{ .dmSize = sizeof(mode) };
         limit = GetMonitorInfoW(FrameLimitMonitor, &monitor) && EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1 ? int(mode.dmDisplayFrequency) : 60;
     }
-    FrameInterval = limit > 0 ? 1.0f / float(std::clamp(limit, 1, 1000)) : 0.0f;
+    // The high frame rate fixes are checked up to this rate; 0 (unlimited) runs at it too
+    constexpr int MaxFrameRate = 144;
+    if (limit <= 0 || limit > MaxFrameRate)
+        limit = MaxFrameRate;
+    FrameInterval = 1.0f / float(std::max(limit, 30));
 }
 
 const wchar_t* aJoysticks = nullptr;
@@ -55,14 +59,52 @@ void* __fastcall sub_10CC8580(void* _this, void* edx)
             if (!joysticksIniFile.read(joysticksIni) || joysticksIni.size() == 0)
                 continue;
 
-            auto& settings = FixSettings();
-            for (const auto& setting : settings.GetDescription().settings)
+            // Xidi virtual controllers 1-4; sections already present keep the player's bindings
+            static constexpr std::pair<const char*, const char*> XidiControllerKeys[] =
             {
-                if (setting.section.starts_with("Joystick"))
-                    joysticksIni[setting.section].set(setting.key, settings.Get(setting.id));
+                { "AxisStrafe", "Axis_X" },
+                { "AxisForwardBackward", "Axis_Y" },
+                { "AxisTurnHead", "Axis_Z" },
+                { "AxisLookUpDown", "Axis_Rotation_Z" },
+                { "Joy1", "Interaction" },
+                { "Joy2", "Duck" },
+                { "Joy3", "Scope" },
+                { "Joy4", "Jump" },
+                { "Joy5", "QuickInventory" },
+                { "Joy6", "CoopActionWhistle" },
+                { "Joy7", "AltFire" },
+                { "Joy8", "Fire" },
+                { "Joy9", "OpsatMenu" },
+                { "Joy10", "PauseMenu" },
+                { "Joy11", "SwitchHandZoom" },
+                { "Joy12", "ZoomToggle" },
+                { "Joy13", "EEVMode" },
+                { "Joy14", "StickyCamMode" },
+                { "Joy15", "NightVision" },
+                { "Joy16", "ThermalVision" },
+                { "DPadUp", "" },
+                { "DPadDown", "" },
+                { "DPadLeft", "" },
+                { "DPadRight", "" },
+            };
+
+            bool bChanged = false;
+            for (int controller = 1; controller <= 4; ++controller)
+            {
+                const auto section = "Joystick" + std::to_string(18 + controller);
+                if (joysticksIni.has(section))
+                    continue;
+                auto& keys = joysticksIni[section];
+                keys.set("ProductName", "Xidi Virtual Controller " + std::to_string(controller));
+                keys.set("VendorID", "65535");
+                keys.set("ProductID", std::to_string(controller));
+                for (const auto& [key, value] : XidiControllerKeys)
+                    keys.set(key, value);
+                bChanged = true;
             }
 
-            joysticksIniFile.generate(joysticksIni);
+            if (bChanged)
+                joysticksIniFile.generate(joysticksIni);
         }
     }
 

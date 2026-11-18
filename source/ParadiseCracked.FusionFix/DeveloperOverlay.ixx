@@ -182,6 +182,29 @@ export namespace ParadiseOverlay
             return ParadiseDisplay::MenuReady && !ParadiseDisplay::GameRequest && !ParadiseDisplay::MovieFrame
                 && !Overlay.IsOpen() && GetForegroundWindow() == ParadiseDisplay::Window;
         };
+        config.format = [](const std::string& latest, bool hub)
+        {
+            // Automatic: the Windows display language when the texts have it, else English
+            auto language = FixSettings().String("MAIN.TextLanguage");
+            if (language.empty() || language == "auto")
+            {
+                switch (PRIMARYLANGID(GetUserDefaultUILanguage()))
+                {
+                    case LANG_FRENCH: language = "fr"; break;
+                    case LANG_GERMAN: language = "de"; break;
+                    case LANG_ITALIAN: language = "it"; break;
+                    case LANG_SPANISH: language = "es"; break;
+                    default: language = "en"; break;
+                }
+            }
+            auto texts = FixSettings().GetTexts();
+            texts.Select(language);
+            auto line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
+            for (const auto& [key, value] : { std::pair<std::string, std::string>{ "{name}", texts.Resolve("@plugin.name") }, { "{version}", latest } })
+                if (const auto at = line.find(key); at != std::string::npos)
+                    line.replace(at, key.size(), value);
+            return asi_settings::text::Widen(line);
+        };
         config.show = [](const std::wstring& line)
         {
             // The game's own notices are Windows message boxes too

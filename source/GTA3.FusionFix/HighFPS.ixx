@@ -17,8 +17,11 @@ import Timer;
 //   rampage counter's flashing count frames of 30 per second.
 // - Particles (smoke, sparks, blood, explosions) and their emitters update 30 times per second with the time that
 //   passed, so they fade, grow and spawn as at 30 fps.
-// - The radio station's name, the clouds' turning, the car's spin damping and the script-moved objects (gates,
-//   lifts, doors of missions) are scaled by the time step.
+// - The radio station's name, the clouds' turning and spinning, the car's spin damping, the handbrake, the wheels'
+//   rolling resistance off the throttle, the water's texture drift and the script-moved objects (gates, lifts, doors
+//   of missions) are scaled by the time step.
+// - Sounds that fade out as they end (the releasing sounds) lose volume and frames 30 times per second.
+// - The menu's help text fades as at 30 fps.
 // Above 30 fps only; at 30 fps or less everything is as the game had it.
 
 namespace
@@ -38,6 +41,10 @@ namespace
 
     float CloudsTurn = 0.0f, CloudsTurnBase = 0.0f;
     float TurnDamping = 0.99f, TurnDampingBase = 0.99f;
+    float CloudsSpin = 0.3f, CloudsSpinBase = 0.3f;
+    float HandbrakeBrake = 20000.0f, HandbrakeBrakeBase = 20000.0f;
+    float WheelFriction = 0.0f;
+    float* WheelFrictionBase = nullptr;
 
     void UpdateSteps()
     {
@@ -63,6 +70,10 @@ namespace
         StepScale = step / FrameStep30;
         CloudsTurn = CloudsTurnBase * StepScale;
         TurnDamping = std::pow(TurnDampingBase, StepScale);
+        CloudsSpin = CloudsSpinBase * StepScale;
+        HandbrakeBrake = HandbrakeBrakeBase * StepScale;
+        if (WheelFrictionBase)
+            WheelFriction = *WheelFrictionBase * StepScale;
     }
 
     // The code section of the game
@@ -209,6 +220,59 @@ public:
                 slideParams[5] *= StepScale;
                 slideParams[6] *= StepScale;
             });
+
+            // CClouds::Update: the clouds' own spin per frame
+            auto cloudsSpin = hook::pattern("D8 05 ? ? ? ? D8 0D ? ? ? ? DF 6C 24 08 DE C1");
+            CloudsSpinBase = CloudsSpin = **cloudsSpin.get_first<float*>(2);
+            injector::WriteMemory(cloudsSpin.get_first(2), &CloudsSpin, true);
+
+            // CAutomobile::ProcessControl: the handbrake's brake force on the rear wheels, per frame
+            auto handbrake = hook::pattern("74 0A D9 05 ? ? ? ? D9 5C 24 ? D9 85 90 04 00 00");
+            HandbrakeBrakeBase = HandbrakeBrake = **handbrake.get_first<float*>(4);
+            injector::WriteMemory(handbrake.get_first(4), &HandbrakeBrake, true);
+
+            // CVehicle::ProcessWheel: the rolling resistance off the throttle (the wheel friction), per frame
+            auto rolling = hook::pattern("3D 83 00 00 00 75 19 D9 05 ? ? ? ? D8 0D ? ? ? ? 8B 83 28 01 00 00 EB 11 ? ? ? ? ? D9 05 ? ? ? ? 8B 83 28 01 00 00 D8 70 04");
+            WheelFrictionBase = *rolling.get_first<float*>(15);
+            WheelFriction = *WheelFrictionBase;
+            injector::WriteMemory(rolling.get_first(15), &WheelFriction, true);
+            injector::WriteMemory(rolling.get_first(34), &WheelFriction, true);
+
+            // cAudioManager::AddReleasingSounds: a fading sound's volume and frames left, one step per frame
+            auto releasing = hook::pattern("83 7B 20 00 75 ? 80 7B 58 FF 8D 4B 18");
+            // Past the frame count's decrement, where the jne after the loop count's test goes (dec dword ptr, 3 bytes)
+            auto jne = releasing.get_first<uint8_t>(4);
+            static uintptr_t releasingDone = reinterpret_cast<uintptr_t>(jne + 2 + int8_t(jne[1])) + 3;
+            static auto ReleasingHook = safetyhook::create_mid(releasing.get_first(), [](SafetyHookContext& regs)
+            {
+                // Between the 30 fps frames the sound keeps its volume and its frames
+                if (StepScale < 1.0f && !Frames30Passed)
+                    regs.eip = releasingDone;
+            });
+
+            // CWaterLevel::RenderWater: the texture's drift per frame
+            auto waterStart = hook::pattern("DE D9 DE D9 E8 ? ? ? ? 25 FF FF 00 00");
+            auto waterEnd = hook::pattern("D9 1D ? ? ? ? D9 05 ? ? ? ? D8 1D ? ? ? ? DF E0 F6 C4 05 75 0A C7 05");
+            static float* textureU = *waterEnd.get_first<float*>(8);
+            static float* textureV = *waterEnd.get_first<float*>(2);
+            static float lastU = 0.0f, lastV = 0.0f;
+            static auto WaterStartHook = safetyhook::create_mid(waterStart.get_first(4), [](SafetyHookContext&)
+            {
+                lastU = *textureU;
+                lastV = *textureV;
+            });
+            static auto WaterEndHook = safetyhook::create_mid(waterEnd.get_first(6), [](SafetyHookContext&)
+            {
+                *textureU = lastU + (*textureU - lastU) * StepScale;
+                *textureV = lastV + (*textureV - lastV) * StepScale;
+                // While the game is paused the drift isn't added: nothing to scale
+                lastU = *textureU;
+                lastV = *textureV;
+            });
+
+            // CMenuManager::DisplayHelperText: the help text fades a step every 10 ms; every 30 fps frame instead
+            auto helperFade = hook::pattern("2B 05 ? ? ? ? 83 F8 0A 76 ? A1 ? ? ? ? A3 ? ? ? ? 83 AD ? ? ? ? 02");
+            injector::WriteMemory<uint8_t>(helperFade.get_first(8), 33, true);
 
             WFP::onGameProcessEvent() += []()
             {

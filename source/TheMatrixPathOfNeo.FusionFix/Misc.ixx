@@ -40,8 +40,9 @@ public:
                 Screen.nHeight = 480;
             }
 
-            auto pattern1 = hook::pattern("68 ? ? ? ? 6A 01 68 ? ? ? ? 68 ? ? ? ? FF D6 48 83 F8 0B");
-            auto pattern2 = hook::pattern("C6 05 ? ? ? ? 01 C7 05 ? ? ? ? 01 00 00 00 E9 ? ? ? ? 6A 64");
+            // The switch over the RESOLUTION value; both exe versions share it, only the code before it differs
+            auto pattern1 = hook::pattern("48 83 F8 0B C6 05 ? ? ? ? 00 0F 87");
+            auto pattern2 = hook::pattern("1A 04 00 00 C6 05 ? ? ? ? 01 C7 05 ? ? ? ? 01 00 00 00");
             dword_6CACDC.SetAddress(*hook::get_pattern<int32_t*>("C7 05 ? ? ? ? 00 04 00 00 C7 05 ? ? ? ? 00 03 00 00", 2));
             dword_6CACE0.SetAddress(*hook::get_pattern<int32_t*>("C7 05 ? ? ? ? 00 04 00 00 C7 05 ? ? ? ? 00 03 00 00", 12));
             struct ResHook
@@ -61,13 +62,13 @@ public:
                     Screen.fHudScale = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
                     Screen.nAspectRatioDiff = static_cast<int32_t>(Screen.fWidth / (((4.0f / 3.0f)) / (Screen.fAspectRatio)));
                 }
-            }; injector::MakeInline<ResHook>(pattern1.get_first(), pattern2.get_first()); //0x40DD33, 0x40DE21
+            }; injector::MakeInline<ResHook>(pattern1.get_first(), pattern2.get_first(4));
 
             //forcing 4:3 aspect, maybe better to hook sub_4BC320
             pattern = hook::pattern("A3 ? ? ? ? A1 ? ? ? ? 85 C0 0F 84 ? ? ? ? 6A 01");
             injector::MakeNOP(pattern.get_first(0), 5, true);
-            injector::WriteMemory<uint32_t>(pattern2.get_first<uint32_t>(13), 0, true);
-            injector::WriteMemory<uint32_t>(reinterpret_cast<uint32_t*>(*pattern2.get_first<uint32_t>(9)), 0, true);
+            injector::WriteMemory<uint32_t>(pattern2.get_first<uint32_t>(17), 0, true);
+            injector::WriteMemory<uint32_t>(reinterpret_cast<uint32_t*>(*pattern2.get_first<uint32_t>(13)), 0, true);
 
             pattern = hook::pattern("05 94 00 00 00 D9 5C 24 08");
             struct AspectHook

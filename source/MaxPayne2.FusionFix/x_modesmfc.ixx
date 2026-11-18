@@ -5,6 +5,7 @@ module;
 #include "DeveloperOverlay.hpp"
 #include "Shared/CursorConfinement.hpp"
 #include "Shared/MaxPayne/FrameRate.hpp"
+#include "Shared/MaxPayne/Pad.hpp"
 
 export module x_modesmfc;
 
@@ -61,6 +62,8 @@ namespace X_ModeSwitch
         auto profile = eGamepadProfile::Menu;
         if (pActiveMode && CurrentGameMode == "game")
             profile = *(pActiveMode + MP_GameMode::PAUSED) ? eGamepadProfile::Pause : eGamepadProfile::Main;
+        else if (CurrentGameMode == "graphicnovel")
+            profile = eGamepadProfile::GraphicNovel;
         GamepadProfile.store(profile, std::memory_order_relaxed);
 
         if (X_Crosshair::sm_bCameraPathRunning.is_initialized() && !X_Crosshair::sm_bCameraPathRunning)
@@ -81,7 +84,9 @@ namespace X_ModeSwitch
             return;
         }
 
-        bool bPressed = nGraphicNovelModeKey && (GetAsyncKeyState(nGraphicNovelModeKey) & 0x8000) != 0;
+        // the key, or Y on a controller
+        bool bPressed = (nGraphicNovelModeKey && (GetAsyncKeyState(nGraphicNovelModeKey) & 0x8000) != 0) ||
+            MaxPaynePad::Pressed(MaxPaynePad::Button::Y);
         if (!bPressed && bWasPressed)
         {
             // Applied through the setting, which the menu and the settings file follow
@@ -92,6 +97,10 @@ namespace X_ModeSwitch
 
         MP_GraphicNovelMode::Update(pActiveMode);
     }
+
+    // Max Payne 2 has no corrections for its physics at high frame rates: the frame rate limit, the refresh rate
+    // included, stays at or below this
+    constexpr int32_t MaxFPS = 240;
 
     // Before the last X_VideoInterface::endScene of the frame, after the overlaid modes (HUD) are
     // drawn. The bars the Fusion Fix adds are drawn here with P_Driver::clearScreen, the same
@@ -140,7 +149,7 @@ namespace X_ModeSwitch
         CursorConfinement::Suspend(MaxPayneOverlay::BlocksInput());
         CursorConfinement::Frame(window);
         UpdateRawMouseWindow(window);
-        MaxPayneFrameRate::Limit(nFPSLimit);
+        MaxPayneFrameRate::Limit(nFPSLimit, MaxFPS);
     }
 }
 

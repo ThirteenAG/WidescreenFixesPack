@@ -17,6 +17,8 @@
 - **Field of View** - corrected for widescreen
 - **FMVs** - fullscreen videos are scaled and centered at the correct aspect ratio
 - **Text** - drawn without the widescreen HUD scaling, keeping it at its original proportions
+- **Scopes and binoculars** - the sniper, rocket launcher and weapon scopes and the binoculars keep their art whole with solid black beside it; the binocular view is widescreen too
+- **Controller** - an Xbox-style controller plays the game out of the box (see Controller below)
 
 ---
 
@@ -68,7 +70,6 @@ Texts are available in English, French, German, Italian and Spanish.
 
 - Vanilla turns SMAA off; Recommended and Enhanced turn it on.
 - Pause when unfocused applies to single-player; it does not pause multiplayer.
-- The PC game has no native gameplay controller bindings. This fix keeps the native keyboard and mouse controls; it does not emulate keys from a controller.
 - Use the supported patched executable.
 
 Movie framing also respects smaller videos embedded in menus: they are shown whole with black bars. Subtitles and other interface elements keep their normal placement.
@@ -81,10 +82,36 @@ Cursor confinement follows focus and releases the pointer when disabled. Compati
 
 The FOV multiplier follows the normal player view. Aiming, death views, camera overrides and scripted views keep their intended framing.
 
+## Controller
+
+The PC game has no controller bindings, so the fix includes Xidi, which turns the controller into the game's default keys and mouse. Keyboard and mouse keep working, and the in-game control settings still apply.
+
+| Controller | Action |
+|:---|:---|
+| Left stick | Move |
+| Right stick | Look |
+| RT / LT | Fire / Aim and zoom |
+| A | Jump; hold breath while zoomed |
+| B | Crouch |
+| X | Reload |
+| Y | Next weapon; zoom in while zoomed |
+| LB | Throw grenade |
+| RB | Use; enter and leave vehicles |
+| Left stick click | Sprint |
+| Right stick click | Prone |
+| D-pad up | Binoculars |
+| D-pad down | Flashlight |
+| D-pad left | Previous weapon; zoom out while zoomed |
+| D-pad right | Fire mode |
+| Back | Objectives |
+| Start | Menu |
+
+In menus the right stick moves the pointer and RT clicks. The layout is in `Xidi.ini` next to `FarCry.exe` in `Bin32` and `Bin64`. It uses the default keys: if you change those keys in the game, change `Xidi.ini` to match.
+
 ## Installation
 
 1. Download the `.zip` from this release.
-2. Extract the archive into the installation folder that contains `Bin32` and `Bin64`. Keep those folders: each contains the loader, its matching fix and FusionFixHub beside that version of `FarCry.exe`.
+2. Extract the archive into the installation folder that contains `Bin32` and `Bin64`. Keep those folders: each contains the loader, its matching fix, Xidi and FusionFixHub beside that version of `FarCry.exe`.
 3. Launch the game once to create the settings file next to the fix: `FarCry.FusionFix.cfg` for 32-bit or `FarCry64.FusionFix.cfg` for 64-bit.
 4. Configure the fix in Options → Plugins, on fusionfix.io or in FusionFixHub. Restart only when the settings menu requests it.
 

@@ -95,23 +95,9 @@
       "label": "@MAIN.WindowMode",
       "description": "@MAIN.WindowMode.description",
       "page": "display",
-      "apply": "restart",
+      "apply": "live",
       "control": [
         "cycler"
-      ]
-    },
-    {
-      "id": "MAIN.HudSafeArea",
-      "type": "int",
-      "default": 8,
-      "label": "@MAIN.HudSafeArea",
-      "description": "@MAIN.HudSafeArea.description",
-      "page": "display",
-      "min": 0,
-      "max": 32,
-      "step": 4,
-      "control": [
-        "stepper"
       ]
     },
     {
@@ -133,6 +119,9 @@
         },
         {
           "value": "21:9"
+        },
+        {
+          "value": "32:9"
         }
       ],
       "label": "@MAIN.HudAspectRatioConstraint",
@@ -185,7 +174,12 @@
       "control": [
         "slider",
         "stepper"
-      ]
+      ],
+      "presets": {
+        "vanilla": 0.25,
+        "recommended": 0.25,
+        "enhanced": 0.25
+      }
     },
     {
       "id": "CAMERA.HeightTime",
@@ -200,7 +194,12 @@
       "control": [
         "slider",
         "stepper"
-      ]
+      ],
+      "presets": {
+        "vanilla": 0.35,
+        "recommended": 0.35,
+        "enhanced": 0.35
+      }
     },
     {
       "id": "MAIN.FOVFactor",
@@ -215,7 +214,12 @@
       "control": [
         "slider",
         "stepper"
-      ]
+      ],
+      "presets": {
+        "vanilla": 1.0,
+        "recommended": 1.0,
+        "enhanced": 1.0
+      }
     },
     {
       "id": "CAMERA.RotateWithPlayer",
@@ -236,7 +240,12 @@
       "default": true,
       "label": "@CAMERA.RotateInVehicles",
       "description": "@CAMERA.RotateInVehicles.description",
-      "page": "camera"
+      "page": "camera",
+      "presets": {
+        "vanilla": true,
+        "recommended": true,
+        "enhanced": true
+      }
     },
     {
       "id": "CAMERA.RotateOnFoot",
@@ -244,7 +253,12 @@
       "default": false,
       "label": "@CAMERA.RotateOnFoot",
       "description": "@CAMERA.RotateOnFoot.description",
-      "page": "camera"
+      "page": "camera",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
     },
     {
       "id": "CAMERA.RotationSmoothing",
@@ -259,7 +273,12 @@
       "control": [
         "slider",
         "stepper"
-      ]
+      ],
+      "presets": {
+        "vanilla": 0.35,
+        "recommended": 0.35,
+        "enhanced": 0.35
+      }
     },
     {
       "id": "CAMERA.ToggleRotationKey",
@@ -315,7 +334,12 @@
       "default": false,
       "label": "@INPUT.StickThrottle",
       "description": "@INPUT.StickThrottle.description",
-      "page": "controls"
+      "page": "controls",
+      "presets": {
+        "vanilla": false,
+        "recommended": false,
+        "enhanced": false
+      }
     },
     {
       "id": "INPUT.StickDeadzone",

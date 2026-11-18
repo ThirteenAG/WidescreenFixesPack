@@ -226,6 +226,80 @@ struct UOverride
     }
 };
 
+// Night and thermal vision grain: the renderer draws a new random grain transform every frame, so the grain
+// flickers faster at high frame rates. The random values are held at 30 Hz instead.
+export namespace VisionNoiseGrain
+{
+    constexpr double fStep = 1.0 / 30.0;
+
+    float(__cdecl* pAppFrand)() = nullptr;
+
+    void Init()
+    {
+        if (!pAppFrand)
+            pAppFrand = (decltype(pAppFrand))GetProcAddress(GetModuleHandle(L"Core"), "?appFrand@@YAMXZ");
+        if (!pAppFrand)
+            throw std::runtime_error("Core appFrand export not found");
+    }
+
+    double NowSeconds()
+    {
+        static const double fFreq = []
+        {
+            LARGE_INTEGER liFreq;
+            QueryPerformanceFrequency(&liFreq);
+            return static_cast<double>(liFreq.QuadPart);
+        }();
+        LARGE_INTEGER liNow;
+        QueryPerformanceCounter(&liNow);
+        return static_cast<double>(liNow.QuadPart) / fFreq;
+    }
+
+    struct HeldCluster
+    {
+        float v[3] = {};
+        double fLast = -1.0;
+
+        void Refresh()
+        {
+            const double fNow = NowSeconds();
+            if (fLast >= 0.0)
+            {
+                const double fElapsed = fNow - fLast;
+                if (fElapsed < fStep)
+                    return;
+                // Whole 30 Hz steps keep the update rate exact
+                fLast += static_cast<double>(static_cast<int64_t>(fElapsed / fStep)) * fStep;
+            }
+            else
+                fLast = fNow;
+
+            v[0] = pAppFrand();
+            v[1] = pAppFrand();
+            v[2] = pAppFrand();
+        }
+    };
+
+    // 0 = night vision, 1 = thermal vision
+    HeldCluster Clusters[2] = {};
+
+    // Index 0 is the first of the three calls and refreshes the cluster
+    template <int Cluster, int Index>
+    float __cdecl HeldFrand()
+    {
+        if constexpr (Index == 0)
+            Clusters[Cluster].Refresh();
+        return Clusters[Cluster].v[Index];
+    }
+
+    // Replaces a 6-byte call through the import table
+    void RedirectCallSite(void* addr, float(__cdecl* fn)())
+    {
+        injector::MakeCALL(addr, fn, true);
+        injector::MakeNOP(reinterpret_cast<uintptr_t>(addr) + 5, 1, true);
+    }
+}
+
 // Type aliases for current override kinds.
 export using UIntOverrides = UOverride<int(*)()>;
 export using UFloatOverrides = UOverride<float(*)()>;

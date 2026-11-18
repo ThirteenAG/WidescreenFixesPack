@@ -687,7 +687,21 @@ namespace Splitscreen
         auto saved = layout;
         if (player2Pad)
             layout = 0;
+
+        // The menus take an event's key from player 1's input (its current key, +3648h): player 2's own pad events reached their pause
+        // menu as player 1's last key (A, B and the D-pad did nothing). Player 1's input has player 2's key meanwhile. START (207) is
+        // given to the pause menu by PauseMenuPlayer2.
+        auto first = GetFirstViewport();
+        auto player1Input = first ? *reinterpret_cast<uint8_t**>(first + 0x54) : nullptr;
+        auto firstKey = player1Input && !sharedUpdate && viewport == GetSplitViewport() && player2Pad && key != 207 && IsPlayer2Screen() ?
+            reinterpret_cast<int32_t*>(player1Input + 0x3648) : nullptr;
+        auto savedKey = firstKey ? *firstKey : 0;
+        if (firstKey)
+            *firstKey = key;
+
         auto result = shViewportInput.thiscall<int32_t>(viewport, input, key, action, delta, int32_t(args[4]), a7);
+        if (firstKey)
+            *firstKey = savedKey;
         if (player2Pad)
             layout = saved;
         return result;
@@ -808,7 +822,8 @@ namespace Splitscreen
         return false;
     }
 
-    // Player 2's pause menu in the mission: START doesn't reach it (taken before), the plugin calls its handler (scene virtual +60h)
+    // Player 2's pause menu in the mission: START doesn't reach it (taken before), the plugin calls its handler (scene virtual +60h). The
+    // other buttons reach it from player 2's input (ViewportInput).
     void PauseMenuPlayer2(void* scene)
     {
         static WORD previous = 0;

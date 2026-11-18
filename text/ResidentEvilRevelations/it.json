@@ -65,7 +65,7 @@
   "menu.restoredefaultshelp": "Riporta le impostazioni di questa pagina ai valori predefiniti.",
   "menu.restartwarning": "Riavvia il gioco per applicare le modifiche.",
   "menu.help": "Aiuto",
-  "menu.presethelp": "Scegli con Sinistra/Destra, poi conferma. Vanilla mantiene i loghi e le bande cinematiche originali. Recommended ed Enhanced saltano i loghi, aggiungono bande laterali ai filmati e attivano le luci RGB. Le preferenze personali e i valori comuni a tutti i preset vengono mantenuti. Ripristina predefiniti reimposta tutte le impostazioni.",
+  "menu.presethelp": "Scegli con Sinistra/Destra, poi conferma. Vanilla mantiene i loghi e la richiesta della schermata del titolo originali, e i filmati riempiono lo schermo. Recommended ed Enhanced saltano i loghi e la richiesta del titolo, mostrano i filmati tra bande laterali e attivano le luci RGB. Le preferenze personali e i valori comuni a tutti i preset vengono mantenuti. Ripristina predefiniti reimposta tutte le impostazioni.",
   "menu.helphint": "F1: guida completa. Puoi anche selezionare Dettagli.",
   "menu.auto": "Automatica",
   "menu.pluginshelp": "Gestisci questa correzione e gli altri plugin installati.",

@@ -23,6 +23,10 @@ void Init()
 
     SHDisplay::Install(FixSettings().Int("MAIN.WindowMode") == 0 ? SHDisplay::Mode::Fullscreen : (FixSettings().Int("MAIN.WindowMode") == 1 ? SHDisplay::Mode::Windowed : SHDisplay::Mode::Borderless));
 
+    // Anisotropic filtering of world textures
+    SHDisplay::SetAnisotropy(FixSettings().Int("GRAPHICS.AnisotropicFiltering"));
+    FixSettings().OnChange("GRAPHICS.AnisotropicFiltering", []() { SHDisplay::SetAnisotropy(FixSettings().Int("GRAPHICS.AnisotropicFiltering")); });
+
     SHDisplay::OnPresent().push_back([]()
     {
         auto window = SHDisplay::Get().window;

@@ -60,6 +60,7 @@ export namespace GTA1Presentation
         if (GTA1Options::KeyMessage(message, key, flags)) return 0;
         if (GTA1Window::Paint(window, message)) return message == WM_ERASEBKGND ? 1 : 0;
         if (GTA1Window::KeyDown(message, key, flags)) return 0;
+        if (GTA1Window::SettingMessage(message, key)) return 0;
         GTA1Window::Activate(message, key);
         if (GTA1Options::OverlayMessage(message, key)) return 0;
         InputDevices::KeyboardMessage(message, key);

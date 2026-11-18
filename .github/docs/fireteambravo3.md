@@ -31,6 +31,8 @@ If a button texture cannot be replaced, the game keeps its original icon. If the
 - Menus and loading screens retain the PSP canvas proportions. Map content, marker art, subtitles and text backdrops follow their relevant screen or HUD layout.
 - **Cutscene borders:** Off, Letterbox, Pillarbox or Both. Both preserves the original framing on narrow and wide displays; Off uses a full-screen view with the normal aspect correction. The game has no original animated cinematic bars, so there is no animation setting.
 
+- **Color grading:** Original keeps the game's grey color grading. On PPSSPP's hardware renderers (Vulkan, Direct3D, OpenGL) this pass can leave a ghosted double image of characters and buildings; PPSSPP's software renderer draws it correctly. Off skips the grading for full colors and no ghosting. The Plugins menu switches it immediately.
+
 Movies are shown whole at their own aspect ratio, including subtitles, with black bars at the sides on wider screens. The PSP movies match the PSP screen, so there is no separate movie setting.
 
 ## Controls and frame rate
@@ -45,9 +47,9 @@ Movies are shown whole at their own aspect ratio, including subtitles, with blac
 
 ## Presets and language
 
-Vanilla keeps the original intros, title screen, controls, PSP icons and 30 FPS. Recommended and Enhanced enable startup skipping, dual analog controls, reduced camera smoothing, faster loading, Xbox icons and 60 FPS. Settings shared by all presets, including your FOV, HUD, aspect and language choices, retain your values when switching presets.
+Vanilla keeps the original intros, title screen, controls, PSP icons, 30 FPS and color grading. Recommended and Enhanced enable startup skipping, dual analog controls, reduced camera smoothing, faster loading, Xbox icons and 60 FPS, and turn color grading off. Settings shared by all presets, including your FOV, HUD, aspect and language choices, retain your values when switching presets.
 
-Plugin text is available in English, French, German, Italian and Spanish. Auto follows the emulated PSP's language when supported, otherwise English. Text language, icon style, aspect, HUD, borders, FOV and frame rate changes made through Plugins apply without restarting. The menu shows a restart notice for changes to startup or control options.
+Plugin text is available in English, French, German, Italian and Spanish. Auto follows the emulated PSP's language when supported, otherwise English. Text language, icon style, aspect, HUD, borders, FOV, frame rate and color grading changes made through Plugins apply without restarting. The menu shows a restart notice for changes to startup or control options.
 
 ## Compatibility
 

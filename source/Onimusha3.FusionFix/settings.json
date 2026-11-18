@@ -319,6 +319,10 @@
         {
           "value": 2,
           "label": "@GamepadIcons.playstation"
+        },
+        {
+          "value": 3,
+          "label": "@GamepadIcons.nintendo"
         }
       ]
     },

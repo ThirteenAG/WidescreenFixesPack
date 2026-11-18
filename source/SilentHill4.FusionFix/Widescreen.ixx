@@ -401,18 +401,58 @@ namespace
 
 namespace
 {
-    // The Resolution row of the options shows the real resolution: its six value messages become one of ours
+    // Values that follow the resolution: the 3D view's Hor+ zoom and aspect, the soft shadow blur offsets and the
+    // game's display size
+    float* NativeZoom = nullptr;
+    float* NativeAspect = nullptr;
+    std::vector<std::pair<float*, float>> BlurTaps;     // offset, its value at 640x480
+    std::vector<int32_t*> WidthWrites, HeightWrites;    // immediates of the game's display size writes
+
+    void SetScreen(int32_t width, int32_t height)
+    {
+        Screen.Width = width;
+        Screen.Height = height;
+        Screen.Aspect = float(width) / float(height);
+        Screen.Scale = Screen.Aspect / (4.0f / 3.0f);
+        if (NativeZoom)
+        {
+            injector::WriteMemory<float>(NativeZoom, 1.0f / Screen.Scale, true);
+            injector::WriteMemory<float>(NativeAspect, 0.78125f / Screen.Scale, true);
+        }
+        const float k = std::max(1.0f, float(height) / 480.0f);
+        for (auto [offset, value] : BlurTaps)
+            injector::WriteMemory<float>(offset, value * k, true);
+        for (auto immediate : WidthWrites)
+            injector::WriteMemory(immediate, width, true);
+        for (auto immediate : HeightWrites)
+            injector::WriteMemory(immediate, height, true);
+    }
+
+    // The Resolution row of the options lists the monitor's resolutions (only the desktop's in a borderless window).
+    // A choice applies when the options are accepted, through the game's own resolution change.
+    std::vector<std::pair<int32_t, int32_t>> Modes;
+    std::vector<int32_t> ModeMessages;
+    int CurrentMode = 0;
+    bool RowChanged = false;
+    bool StoringSize = false;
+    uint8_t* SavedResolution = nullptr;     // the options block's Resolution byte
     constexpr int32_t ResolutionMessage = 0x7F00;
-    SafetyHookInline MessageHook;
+    SafetyHookInline MessageHook, ApplyChoiceHook;
+    SafetyHookMid ApplyModeHook;
+    int(__cdecl* NativeRow)(uint8_t*) = nullptr;
+    int32_t* ChoiceGate[2] = {};
+
     const uint16_t* __cdecl Message(int bank, int id)
     {
-        if (bank == 0 && id == ResolutionMessage)
+        if (bank == 0 && id >= ResolutionMessage && id < ResolutionMessage + int(Modes.size()))
         {
-            static std::vector<uint16_t> text;
+            static std::map<int, std::vector<uint16_t>> texts;
+            auto& text = texts[id];
             if (text.empty())
             {
                 // Longer than the native "640x480": tighten the letters (0xFCnn moves back n units) to stay clear of the arrow
-                auto value = std::format("{}x{}", Screen.Width, Screen.Height);
+                auto [width, height] = Modes[id - ResolutionMessage];
+                auto value = std::format("{}x{}", width, height);
                 for (size_t i = 0; i < value.size(); ++i)
                 {
                     if (i && value.size() > 7)
@@ -427,15 +467,147 @@ namespace
         return MessageHook.ccall<const uint16_t*>(bank, id);
     }
 
-    void ShowResolution()
+    int __cdecl ModeCount()
     {
+        return int(Modes.size());
+    }
+
+    int __cdecl ResolutionRow(uint8_t* options)
+    {
+        const auto before = options[32];
+        int result = NativeRow(options);
+        if (options[32] != before)
+            RowChanged = true;
+        return result;
+    }
+
+    // The accepted options: their choice becomes the resolution to apply, unless the row wasn't changed
+    int __cdecl ApplyChoice(int choice)
+    {
+        if (!RowChanged)
+            choice = CurrentMode;
+        if ((*ChoiceGate[0] || *ChoiceGate[1]) && choice >= 0 && choice < int(Modes.size()))
+            nResolutionRequest = choice;
+        return choice;
+    }
+
+    int ModeIndex(int32_t width, int32_t height)
+    {
+        auto it = std::find(Modes.begin(), Modes.end(), std::pair{ width, height });
+        return it == Modes.end() ? -1 : int(it - Modes.begin());
+    }
+
+    void SetupResolutions()
+    {
+        if (FixSettings().Int("MAIN.WindowMode") == 2)
+            Modes = { { Screen.Width, Screen.Height } };
+        else
+        {
+            std::vector<std::string> list;
+            GetResolutionsList(list);
+            for (auto& entry : list)
+            {
+                int32_t width = 0, height = 0;
+                if (sscanf_s(entry.c_str(), "%dx%d", &width, &height) == 2 && ModeIndex(width, height) < 0)
+                    Modes.emplace_back(width, height);
+            }
+            if (ModeIndex(Screen.Width, Screen.Height) < 0)
+            {
+                Modes.emplace_back(Screen.Width, Screen.Height);
+                std::sort(Modes.begin(), Modes.end());
+            }
+            // The options keep the choice in a signed byte
+            while (Modes.size() > 100)
+                Modes.erase(Modes.begin() + (Modes.front() == std::pair{ Screen.Width, Screen.Height } ? 1 : 0));
+        }
+        CurrentMode = std::max(0, ModeIndex(Screen.Width, Screen.Height));
+        for (size_t i = 0; i < Modes.size(); ++i)
+            ModeMessages.push_back(ResolutionMessage + int32_t(i));
+
         auto lookup = hook::pattern("56 8B 74 24 08 85 F6 7D 06 8B 44 24 0C");
         auto resolutionRow = hook::pattern("89 BF A8 00 00 00 C7 87 AC 00 00 00 ? ? ? ? 89 9F F8 00 00 00");
+        auto count = hook::pattern("A1 ? ? ? ? 33 C9 3D 00 04 00 00 77 2B 74 20 3D 80 02 00 00");
+        auto choice = hook::pattern("A1 ? ? ? ? 85 C0 75 09 A1 ? ? ? ? 85 C0 74 51 8B 44 24 04 83 F8 05 77 48 FF 24 85");
+        auto apply = hook::pattern("56 57 E8 ? ? ? ? 8B 0D ? ? ? ? 8B 15 ? ? ? ? 8B 35 ? ? ? ? 8B 3D ? ? ? ? 48 3B CA 0F 84");
+        auto config = hook::pattern("B8 ? ? ? ? C3 90 90 90 90 90 90 90 90 90 90 A1 ? ? ? ? C3 90 90 90 90 90 90 90 90 90 90 8B 54 24 04");
+
+        // The row: its value messages, its count and its input
         auto row = *resolutionRow.get_first<uint32_t*>(12);
-        auto values = reinterpret_cast<uint32_t*>(row[3]);
-        for (int v = 0; v < 6; ++v)
-            injector::WriteMemory(&values[v], ResolutionMessage, true);
+        injector::WriteMemory(&row[3], uint32_t(reinterpret_cast<uintptr_t>(ModeMessages.data())), true);
+        NativeRow = reinterpret_cast<decltype(NativeRow)>(row[0]);
+        injector::WriteMemory(&row[0], uint32_t(reinterpret_cast<uintptr_t>(&ResolutionRow)), true);
+        injector::MakeJMP(count.get_first(), &ModeCount, true);
+        // Its help text getter picks one message per native resolution (all the same): the first for every choice
+        auto help = reinterpret_cast<uint8_t*>(row[6]);
+        const auto helpMessage = **reinterpret_cast<int32_t**>(help + 10);
+        injector::WriteMemory<uint8_t>(help, 0xB8, true);      // mov eax, message; ret
+        injector::WriteMemory(help + 1, helpMessage, true);
+        injector::WriteMemory<uint8_t>(help + 5, 0xC3, true);
         MessageHook = safetyhook::create_inline(lookup.get_first(), &Message);
+
+        // The accepted choice and the game's resolution change
+        ChoiceGate[0] = *choice.get_first<int32_t*>(1);
+        ChoiceGate[1] = *choice.get_first<int32_t*>(10);
+        ApplyChoiceHook = safetyhook::create_inline(choice.get_first(), &ApplyChoice);
+        nResolutionRequest.SetAddress(*apply.get_first<int32_t*>(9));
+        nResolutionApplied.SetAddress(*apply.get_first<int32_t*>(15));
+        nResolutionRequest = CurrentMode;
+        nResolutionApplied = CurrentMode;
+        auto start = reinterpret_cast<uintptr_t>(apply.get_first());
+        auto modeSwitch = hook::range_pattern(start, start + 0x40, "83 F9 05 0F 87");
+        ApplyModeHook = safetyhook::create_mid(modeSwitch.get_first(), [](SafetyHookContext& regs)
+        {
+            const int index = std::clamp(int(regs.ecx), 0, int(Modes.size()) - 1);
+            nDisplayWidth = Modes[index].first;
+            nDisplayHeight = Modes[index].second;
+            regs.ecx = 6;       // past the native six cases
+            RowChanged = false;
+        });
+
+        // The options open on the current resolution
+        SavedResolution = *config.get_first<uint8_t*>(1) + 32;
+        SHDisplay::OnPresent().push_back([]()
+        {
+            if (!RowChanged)
+                *SavedResolution = uint8_t(CurrentMode);
+        });
+
+        // A new size takes effect once the device has it, and is kept in the settings
+        SHDisplay::OnDeviceReady().push_back([](IDirect3DDevice8*)
+        {
+            const auto& display = SHDisplay::Get();
+            const int32_t width = int32_t(display.backBufferWidth), height = int32_t(display.backBufferHeight);
+            if (width <= 0 || height <= 0 || (width == Screen.Width && height == Screen.Height))
+                return;
+            SetScreen(width, height);
+            *reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(RenderCamera.get_ptr()) + 0x48) = 0.78125f / Screen.Scale;
+            RenderCamera->nFlags |= 1;
+            CurrentMode = std::max(0, ModeIndex(width, height));
+            if (FixSettings().Int("MAIN.WindowMode") != 2)
+            {
+                auto [desktopWidth, desktopHeight] = GetDesktopRes();
+                const bool desktop = width == desktopWidth && height == desktopHeight;
+                StoringSize = true;
+                FixSettings().Set("MAIN.ResX", std::to_string(desktop ? 0 : width));
+                FixSettings().Set("MAIN.ResY", std::to_string(desktop ? 0 : height));
+                StoringSize = false;
+            }
+        });
+
+        // A resolution set from outside the game applies when it is one of the list's
+        auto changed = []()
+        {
+            if (StoringSize)
+                return;
+            int32_t width = FixSettings().Int("MAIN.ResX"), height = FixSettings().Int("MAIN.ResY");
+            if (width <= 0 || height <= 0)
+                std::tie(width, height) = GetDesktopRes();
+            const int index = ModeIndex(width, height);
+            if (index >= 0 && index != CurrentMode)
+                nResolutionRequest = index;
+        };
+        FixSettings().OnChange("MAIN.ResX", changed);
+        FixSettings().OnChange("MAIN.ResY", changed);
     }
 }
 
@@ -485,7 +657,7 @@ public:
             Screen.Aspect = float(Screen.Width) / float(Screen.Height);
             Screen.Scale = Screen.Aspect / (4.0f / 3.0f);
 
-            // Resolution: the game's six resolutions all become the screen's
+            // Resolution: the game's display size writes all give the screen's
             auto size = hook::pattern("A1 ? ? ? ? 8B 0D ? ? ? ? 6A 00 50 51 E8");
             auto height = hook::pattern("8B 0D ? ? ? ? 89 44 24 1C 39");
             nDisplayWidth.SetAddress(*size.get_first<int32_t*>(7));
@@ -498,7 +670,11 @@ public:
                 hook::pattern(signature).get_first();
                 auto writes = hook::pattern(signature);
                 for (size_t i = 0; i < writes.size(); ++i)
-                    injector::WriteMemory(writes.get(i).get<void>(6), value, true);
+                {
+                    auto immediate = writes.get(i).get<int32_t>(6);
+                    (variable == &nDisplayWidth ? WidthWrites : HeightWrites).push_back(immediate);
+                    injector::WriteMemory(immediate, value, true);
+                }
                 *variable = value;
             }
 
@@ -507,8 +683,10 @@ public:
             auto aspect = hook::pattern("C7 46 48 ? ? ? ? C7 46 44");
             RenderCamera.SetAddress(*fov.get_first<RenderCameraData*>(4));
             injector::MakeNOP(fov.get_first(8), 5, true);
-            injector::WriteMemory<float>(fov.get_first(14), 1.0f / Screen.Scale, true);
-            injector::WriteMemory<float>(aspect.get_first(3), 0.78125f / Screen.Scale, true);
+            NativeZoom = fov.get_first<float>(14);
+            NativeAspect = aspect.get_first<float>(3);
+            injector::WriteMemory<float>(NativeZoom, 1.0f / Screen.Scale, true);
+            injector::WriteMemory<float>(NativeAspect, 0.78125f / Screen.Scale, true);
 
             // Cutscene framing, every frame where the game applies its camera
             auto sceneFlags = hook::pattern("A1 ? ? ? ? 83 E0 01 C3 90 90 90 90 90 90 90 55 8B EC 83 EC 1C");
@@ -646,18 +824,19 @@ public:
                 return CursorIn(429.6f, 39.2f, 48.0f, 28.0f) ? 1 : 0;
             }));
 
-            ShowResolution();
-
             // Soft shadow blur offsets in pixels: scaled with the resolution
             auto taps = hook::pattern("8B 0D ? ? ? ? 05 A8 00 00 00 89 44 24 20 89 08 D9 05").count(4);
             float k = std::max(1.0f, float(Screen.Height) / 480.0f);
             for (size_t i = 0; i < 4; ++i)
             {
-                auto x = *taps.get(i).get<float*>(2);
-                auto y = *taps.get(i).get<float*>(0x13);
-                injector::WriteMemory<float>(x, *x * k, true);
-                injector::WriteMemory<float>(y, *y * k, true);
+                for (auto x : { *taps.get(i).get<float*>(2), *taps.get(i).get<float*>(0x13) })
+                {
+                    BlurTaps.emplace_back(x, *x);
+                    injector::WriteMemory<float>(x, *x * k, true);
+                }
             }
+
+            SetupResolutions();
         };
     }
 } Widescreen;

@@ -81,6 +81,31 @@ namespace UpdateNotice
         config.fileVersion = rsc_FileVersion;
         config.settings = &FixSettings();
         config.playable = []() { return Intro::Done.load(); };
+        config.format = [](const std::string& latest, bool hub)
+        {
+            auto language = FixSettings().String("MAIN.TextLanguage");
+            if (language.empty() || _stricmp(language.c_str(), "auto") == 0)
+            {
+                switch (PRIMARYLANGID(GetUserDefaultUILanguage()))
+                {
+                    case LANG_FRENCH: language = "fr"; break;
+                    case LANG_GERMAN: language = "de"; break;
+                    case LANG_ITALIAN: language = "it"; break;
+                    case LANG_SPANISH: language = "es"; break;
+                    default: language = "en"; break;
+                }
+            }
+            auto& texts = FixSettings().GetTexts();
+            texts.Select(language);
+            auto line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
+            for (auto [key, value] : { std::pair<std::string, std::string>{ "{name}", texts.Resolve(FixSettings().GetDescription().name) },
+                std::pair<std::string, std::string>{ "{version}", latest } })
+            {
+                if (auto at = line.find(key); at != std::string::npos)
+                    line.replace(at, key.size(), value);
+            }
+            return asi_settings::text::Widen(line);
+        };
         config.show = [](const std::wstring& text)
         {
             Notice::Text = text;

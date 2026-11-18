@@ -12,12 +12,12 @@
 
 ## Features
 
-- **Camera and FOV** — Wider screens keep the vertical field of view and show more at the sides; narrower screens keep the full width and show more above and below. The FOV factor scales all 3D views from 0.5 to 2.0.
+- **Camera and FOV** — Wider screens keep the vertical field of view and show more at the sides; narrower screens keep the full width and show more above and below. The FOV factor scales the gameplay camera from 0.5 to 2.0; in-engine cutscenes keep their own framing.
 - **HUD** — Auto places the name and health panel, the radar, tutorial and objective messages and the menu prompts at the screen edges, without stretching them. A 4:3, 16:9, 21:9 or 32:9 HUD box keeps them in a centered area; boxes narrower than the game's own layout keep that layout. On narrow screens the top and bottom rows also move to the screen edges.
 - **Menus** — Menus and the pause screen keep their proportions; the pause screen stays centered.
 - **Movies** — The startup and story movies are shown complete at their own proportions, with black bars at the sides on wide screens and above and below on narrow ones. The movies use the PSP's full 480×272 frame, so there is no separate movie zoom setting.
 - **Cutscenes** — In-engine cutscenes keep the game's own letterbox bars and show more at the sides on wide screens.
-- **Controls** — Dual analog controls use the right stick for the camera and keep the left stick on movement, together with the game's camera inversion option.
+- **Controls** — Dual analog controls use the right stick for the camera and keep the left stick on movement, together with the game's camera inversion option. Without a right-stick binding in PPSSPP, the controller's right stick is read directly.
 - **Startup, loading and frame rate** — Skip Intro skips the startup logos and the opening movie. Faster loading temporarily unthrottles PPSSPP during loading screens. 60 FPS is optional.
 
 ## Installation
@@ -38,7 +38,7 @@ All settings apply the next time the emulated game starts. The game has no setti
 
 **Vanilla** turns off intro skipping, dual analog controls and faster loading. **Recommended** and **Enhanced** turn them on. Frame rate, FOV, HUD and aspect choices keep your values.
 
-Setting texts and patch notices are available in English, French, German, Italian and Spanish. Text Language selects the patch notice language; Auto uses English.
+Setting texts and patch notices are available in English, French, German, Italian and Spanish. Text Language selects the patch notice language; Auto follows the PSP system language.
 
 ## PPSSPP settings
 

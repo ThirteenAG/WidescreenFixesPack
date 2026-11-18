@@ -221,34 +221,7 @@ namespace LAN
 
 export void InitLAN()
 {
-
-    auto sLANHelperExePath = FixSettings().String("LAN.LANHelperExePath");
     static auto sServerAddr = FixSettings().String("LAN.ServerAddr");
-
-    if (!sLANHelperExePath.empty())
-    {
-        std::error_code ec;
-        auto dsPath = std::filesystem::path(sLANHelperExePath);
-        auto processPath = dsPath.is_absolute() ? dsPath : (GetExeModulePath() / dsPath);
-        auto workingDir = std::filesystem::path(processPath).remove_filename();
-        if (std::filesystem::exists(processPath, ec))
-        {
-            HANDLE hJob = CreateJobObject(nullptr, nullptr);
-            JOBOBJECT_EXTENDED_LIMIT_INFORMATION info = { };
-            info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-            SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &info, sizeof(info));
-            PROCESS_INFORMATION pi;
-            if (CreateProcessInJobAsAdmin(hJob,
-                processPath.c_str(),
-                NULL,
-                SW_HIDE,
-                workingDir.c_str(), &pi))
-            {
-                CloseHandle(pi.hProcess);
-                CloseHandle(pi.hThread);
-            }
-        }
-    }
 
     // LAN play
     {

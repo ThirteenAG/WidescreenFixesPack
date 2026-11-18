@@ -7,13 +7,15 @@
 * **HUD** - repositioned and scaled to match the active aspect ratio; at the screen edges or in a centred box (4:3, 16:9, 21:9 or custom)
 * **Field of View** - corrected FOV to match the 4:3 values
 * **FMVs** - shown whole at their aspect at widescreen resolutions; 480p playback limit removed
-* **Framerate Issues** - animated textures, camera shake, cloth physics and AI pathing no longer have issues at higher framerates
+* **Framerate Issues** - animated textures, camera shake, ledge grabs and cloth physics no longer have issues at higher framerates
 * **Resolution Scale** - vision mode grain now correctly scales at higher resolutions
 
 ## Visual Improvements
 
 * **Character LOD** - forces the highest character LOD models
 * **Xbox Shadows and Water Shader** - restores these effects from the original Xbox version
+* **Widescreen Scope** - optional: the sniper scope frame sits at the screen edges instead of the 4:3 edges
+* **Goggles Light Color** - optional: recolors the lights of Sam's goggles and OPSAT with the Ops Suit Light colors from Splinter Cell Blacklist
 * **Shadow Resolution** - shadow resolution can now be increased past the default values
 * **Buffered Shadows** - shadow buffers and spot light textures render correctly on current drivers without a D3D8 wrapper
 
@@ -25,8 +27,8 @@
 * **Cutscene Borders** - cinematics keep their 16:9 picture: Letterbox bars on screens narrower than 16:9, Pillarbox bars on wider ones, Both, or Off to fill the screen
 * **Mouse Acceleration** - disabled mouse acceleration
 * **Raw Mouse Input** - added raw input support for mouse
-* **Gamepad Support** - improved gamepad support via [Xidi](https://github.com/samuelgr/Xidi): vibration (can be turned off), camera speed and look inversion for the right stick. In the original game’s menus, the sticks move the pointer, A clicks, B goes back and the D-pad sends arrow keys.
-* **Controller Prompts** - while a pad is used, supported English training prompts name its buttons (Xbox, PlayStation or Nintendo names, selected with Gamepad Icons; Auto uses Xbox names); keyboard keys return when the keyboard or mouse is used
+* **Gamepad Support** - improved gamepad support via [Xidi](https://github.com/samuelgr/Xidi): vibration (can be turned off), camera speed and look inversion for the right stick. Back quick-saves. In the original game’s menus, the sticks move the pointer, A clicks, B goes back and the D-pad sends arrow keys. Pad buttons rebound in `SplinterCellUser.ini` are kept; the fix only fills in pad buttons that have no binding there.
+* **Controller Prompts** - while a pad is used, the training prompts name its buttons in English, French, German, Italian and Spanish (Xbox, PlayStation or Nintendo names, selected with Gamepad Icons; Auto uses Xbox names); keyboard keys return when the keyboard or mouse is used
 * **Confine Cursor** - keeps the mouse cursor inside the game window while the game is active
 * **Pause on Focus Loss** - in windowed and borderless modes the game pauses while another window is active, as the original does; turn it off to keep the game running in the background
 * **Save Location** - optional: keeps profiles and saves in Documents\My Games\Splinter Cell instead of the game's Save folder (saves already made are not moved; copy them over to keep playing them)

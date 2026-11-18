@@ -32,6 +32,8 @@ export void InitXidi()
                 return L"Main";
             case eGamepadProfile::Pause:
                 return L"Pause";
+            case eGamepadProfile::GraphicNovel:
+                return L"GraphicNovel";
             default:
                 return L"Menu";
         }

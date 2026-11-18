@@ -8,7 +8,7 @@
   "plugin.name": "Tony Hawk's Underground 2 Fusion Fix",
   "page.display": "Pantalla",
   "FPSLimit": "Límite de fotogramas",
-  "FPSLimit.description": "Limita los fotogramas por segundo. Los valores altos pueden afectar al juego. 0: sin límite; -1: frecuencia del monitor.",
+  "FPSLimit.description": "Limita los fotogramas por segundo. El juego funciona a 60 FPS como máximo. 0: sin límite; -1: frecuencia del monitor.",
   "FPSLimit.unlimited": "Sin límite",
   "FPSLimit.refresh": "Frecuencia del monitor",
   "page.camera": "Cámara",
@@ -67,5 +67,13 @@
   "checkupdates": "Buscar actualizaciones",
   "checkupdates.description": "Busca una vez una nueva versión al activarlo. El aviso aparece en el menú Plugins; FusionFixHub se abre al salir si está instalado. Desactivado no envía solicitudes de red.",
   "update.availablehub": "Hay una actualización de Tony Hawk's Underground 2 Fusion Fix. FusionFixHub se abrirá al salir del juego.",
-  "update.availablesite": "Hay una actualización de Tony Hawk's Underground 2 Fusion Fix en fusionfix.io."
+  "update.availablesite": "Hay una actualización de Tony Hawk's Underground 2 Fusion Fix en fusionfix.io.",
+  "MAIN.GamepadIcons": "Iconos del mando",
+  "MAIN.GamepadIcons.description": "Iconos de los botones del mando. Auto usa Xbox; elige PlayStation o Nintendo para otro mando. El teclado restaura sus propias indicaciones.",
+  "MAIN.GamepadCameraSpeed": "Velocidad de cámara del mando",
+  "MAIN.GamepadCameraSpeed.description": "Ajusta la rapidez de respuesta de la cámara al mando.",
+  "MAIN.InvertGamepadY": "Invertir eje Y del mando",
+  "MAIN.InvertGamepadY.description": "Invierte el movimiento vertical de la cámara con el mando.",
+  "MAIN.Vibration": "Vibración",
+  "MAIN.Vibration.description": "Permite la vibración del mando."
 }

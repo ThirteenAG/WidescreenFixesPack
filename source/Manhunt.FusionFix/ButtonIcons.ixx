@@ -183,7 +183,7 @@ export namespace MHIcons
 
     bool PadText()
     {
-        return MHPad::lastPad && MHPad::modern && *MHPad::modern && Ready();
+        return MHPad::lastPad && Ready();
     }
 
     int __fastcall Wrap(void* self, void*, const wchar_t* text)
@@ -269,8 +269,8 @@ export namespace MHIcons
         if (*text >= 0xE200 && *text < 0xE200 + std::size(MHPrompts::spans))
         {
             const auto action = MHPrompts::spans[*text - 0xE200].action;
-            cell = action == 14 ? 19 : action == 38 ? 24 : action == 39 ? 16 : Cell(MHPad::ActionButton(action));
-            if (!MHPad::lastPad || !MHPad::modern || !*MHPad::modern || cell < 0 || !Ready())
+            cell = action == 14 ? 19 : action == 38 ? 24 : action == 39 ? 16 : Cell(MHPad::PadButton(action));
+            if (!MHPad::lastPad || cell < 0 || !Ready())
             {
                 if (auto found = originals.find(*text); found != originals.end())
                     for (const auto& character : found->second)

@@ -124,17 +124,12 @@
       "type": "int",
       "default": 60,
       "min": 30,
-      "max": 1000,
+      "max": 60,
       "unit": "fps",
       "label": "@FPSLimit",
       "description": "@FPSLimit.description",
       "page": "display",
-      "apply": "live",
-      "special": [
-        { "value": 0, "label": "@FPSLimit.unlimited" },
-        { "value": -1, "label": "@FPSLimit.refresh" }
-      ],
-      "presets": { "vanilla": 0, "recommended": 60, "enhanced": 60 }
+      "apply": "live"
     },
     {
       "id": "MAIN.SkipIntro",

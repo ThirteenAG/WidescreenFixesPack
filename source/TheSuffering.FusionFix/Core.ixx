@@ -68,39 +68,17 @@ void InitSkipIntro()
     }); //0x48683B
 }
 
-std::atomic<int> requestedFrameLimit{ 0 };
+// The game is made for 60 FPS: its physics and timing go wrong above that, so the limit stays between 30 and 60
+std::atomic<int> requestedFrameLimit{ 60 };
 
 void UpdateFrameLimit()
 {
-    requestedFrameLimit.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
+    requestedFrameLimit.store(std::clamp(FixSettings().Int("MAIN.FPSLimit"), 30, 60), std::memory_order_relaxed);
 }
 
-void ApplyFrameLimit(HWND target)
+void ApplyFrameLimit()
 {
-    const int requested = requestedFrameLimit.load(std::memory_order_relaxed);
-    if (requested >= 0)
-    {
-        D3D9Options::frameLimit = requested;
-        return;
-    }
-    static HMONITOR previous = nullptr;
-    static ULONGLONG lastCheck = 0;
-    static int refresh = 60;
-    const auto monitor = MonitorFromWindow(target, MONITOR_DEFAULTTOPRIMARY);
-    const auto now = GetTickCount64();
-    if (monitor != previous || now - lastCheck >= 2000)
-    {
-        previous = monitor;
-        lastCheck = now;
-        MONITORINFOEXW info{};
-        info.cbSize = sizeof(info);
-        DEVMODEW mode{};
-        mode.dmSize = sizeof(mode);
-        refresh = GetMonitorInfoW(monitor, &info) &&
-            EnumDisplaySettingsW(info.szDevice, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1 ?
-            int(mode.dmDisplayFrequency) : 60;
-    }
-    D3D9Options::frameLimit = refresh;
+    D3D9Options::frameLimit = requestedFrameLimit.load(std::memory_order_relaxed);
 }
 
 void InitFrame()
@@ -114,7 +92,7 @@ void InitFrame()
     });
     D3D9Options::frame = [](IDirect3DDevice9* device)
     {
-        ApplyFrameLimit(hGameWindow);
+        ApplyFrameLimit();
         CursorConfinement::Suspend(SufferingOverlay::BlocksInput());
         CursorConfinement::Frame(hGameWindow);
         RWGTA::UpdateCheck::Tick();
@@ -123,7 +101,7 @@ void InitFrame()
         UpdateCameraLenses();
         ResetIconProjection();
         HookIconDevice(device);
-        DrawPillarbox(device);
+        EndCutsceneFrame(device);
         SufferingOverlay::Present(device, hGameWindow);
     };
     D3D9Options::beforeReset = SufferingOverlay::BeforeReset;
@@ -146,6 +124,29 @@ void InitFrame()
     WindowProcedureHook = safetyhook::create_inline(pattern.get_first(), WindowProcedure); //0x437AA0
 }
 
+// Gamepad: the PC game reads only the keyboard and mouse. The bundled Xidi turns the pad into the game's keys and
+// mouse (Xidi.ini): its Menu profile in menus, pause and loading screens, Main in play. The game never opens a pad
+// itself, so Xidi's controller polling is started here.
+void InitGamepad()
+{
+    const auto xidi = LoadLibraryW(L"Xidi.32.dll");
+    if (!xidi)
+        return;
+    using RegisterProfile = bool(*)(const wchar_t* (*)());
+    using SendVibration = bool(*)(short, unsigned short, unsigned short);
+    const auto registerProfile = reinterpret_cast<RegisterProfile>(GetProcAddress(xidi, "XidiRegisterProfileCallback"));
+    const auto sendVibration = reinterpret_cast<SendVibration>(GetProcAddress(xidi, "XidiSendVibration"));
+    if (registerProfile)
+    {
+        registerProfile([]() -> const wchar_t*
+        {
+            return InGameplay() && !SufferingOverlay::BlocksInput() ? L"Main" : L"Menu";
+        });
+    }
+    if (sendVibration)
+        sendVibration(0, 0, 0);
+}
+
 void InitPatches()
 {
     hook::pattern pattern;
@@ -155,6 +156,7 @@ void InitPatches()
     InitLoadingDeadlockFix();
     InitCameraLenses();
     InitSkipIntro();
+    InitGamepad();
     pCutsceneBorders = &FixSettings().Int("MAIN.CutsceneBorders");
     pFOVFactor = &FixSettings().Float("MAIN.FOVFactor");
 

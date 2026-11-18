@@ -54,6 +54,9 @@ export namespace GTA2WindowProc
                 break;
             case WM_KEYUP:
                 break;
+            case WM_ACTIVATEAPP:
+                if (!wParam) GTA2Input::FocusLost = true;
+                break;
             case WM_KILLFOCUS:
                 GTA2Input::MenuKeys = 0;
                 GTA2Input::TextKey = 0;

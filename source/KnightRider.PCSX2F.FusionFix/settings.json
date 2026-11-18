@@ -127,6 +127,31 @@
       }
     },
     {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@FMVWidescreenMode",
+      "description": "@FMVWidescreenMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        {
+          "value": 0,
+          "label": "@fmv.original"
+        },
+        {
+          "value": 1,
+          "label": "@fmv.fill"
+        }
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "MAIN.SkipIntro",
       "type": "bool",
       "default": true,

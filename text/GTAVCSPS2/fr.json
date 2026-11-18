@@ -121,5 +121,7 @@
   "gamepadicons.playstation": "PlayStation",
   "gamepadicons.nintendo": "Nintendo",
   "lights": "Feux des véhicules",
-  "lights.description": "Allume les phares, feux arrière, feux stop et feux de recul sur les textures de carrosserie des voitures et motos, générés à partir des textures du jeu. Activé par défaut."
+  "lights.description": "Allume les phares, feux arrière, feux stop et feux de recul sur les textures de carrosserie des voitures et motos, générés à partir des textures du jeu. Activé par défaut.",
+  "controls.holdvehiclecamera": "Maintenir la caméra du véhicule",
+  "controls.holdvehiclecamera.description": "Quand vous tournez la caméra avec le stick droit dans un véhicule, elle reste orientée ainsi, pour regarder derrière vous en roulant. Elle revient derrière le véhicule deux secondes après avoir relâché le stick. Désactivé garde la caméra d'origine, qui revient derrière le véhicule pendant que vous roulez."
 }

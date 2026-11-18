@@ -154,16 +154,32 @@ export void InitEngine()
                 }
             }
 
-            if ((w == 1275.0f && h == 637.0f) || (w == 800.0f)) // loadscreen and fullscreen images
+            if (w == 1275.0f && h == 637.0f) // loading picture
+            {
+                // The whole 2:1 picture fitted to the screen and centered. The quad covers the screen and the texture
+                // coordinates shrink the picture into it, so the clamped black edge of the picture fills the bars
+                // instead of the last frame.
+                auto quad = reinterpret_cast<float*>(&dword_109E09F0[regs.eax / 4]);
+                const float screenWidth = 600.0f * Screen.fAspectRatio;
+                const float screenHeight = 600.0f;
+                const float fit = std::min(screenWidth / w, screenHeight / h);
+                const float spanU = screenWidth / (w * fit);
+                const float spanV = screenHeight / (h * fit);
+                quad[0] = 0.0f;
+                quad[1] = 0.0f;
+                quad[2] = screenWidth;
+                quad[3] = screenHeight;
+                const float centerU = (quad[4] + quad[6]) / 2.0f, halfU = (quad[6] - quad[4]) / 2.0f * spanU;
+                const float centerV = (quad[5] + quad[7]) / 2.0f, halfV = (quad[5] - quad[7]) / 2.0f * spanV;
+                quad[4] = centerU - halfU;
+                quad[6] = centerU + halfU;
+                quad[5] = centerV + halfV;
+                quad[7] = centerV - halfV;
+            }
+            else if (w == 800.0f) // fullscreen images
             {
                 *(float*)&dword_109E09F0[regs.eax / 4] *= Screen.fHudScaleX;
                 *(float*)&dword_109E09F8[regs.eax / 4] *= Screen.fHudScaleX;
-
-                if (w == 1275.0f && h == 637.0f)
-                {
-                    *(float*)&dword_109E09F4[regs.eax / 4] *= Screen.fHudScaleX;
-                    *(float*)&dword_109E09FC[regs.eax / 4] *= Screen.fHudScaleX;
-                }
             }
         }
     }; injector::MakeInline<ImageUnrealDrawHook>(pattern.get_first(0), pattern.get_first(104));
@@ -339,9 +355,12 @@ export void InitEngine()
     // Tick hook for deferred input and raw input helper
     UGameEngine::shTick = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Tick@UGameEngine@@UAEXM@Z"), UGameEngine::Tick);
 
-    // Shadows and lights draw distance
-    ALight::shGetShadowTurnOffRatio = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?GetShadowTurnOffRatio@ALight@@UAEMXZ"), ALight::GetShadowTurnOffRatio);
-    AActor::shGetShadowTurnOffRatio = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?GetShadowTurnOffRatio@AActor@@UAEMXZ"), AActor::GetShadowTurnOffRatio);
+    // Shadows and lights draw distance, four times the game's highest setting
+    if (FixSettings().Bool("GRAPHICS.ShadowDrawDistance"))
+    {
+        ALight::shGetShadowTurnOffRatio = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?GetShadowTurnOffRatio@ALight@@UAEMXZ"), ALight::GetShadowTurnOffRatio);
+        AActor::shGetShadowTurnOffRatio = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?GetShadowTurnOffRatio@AActor@@UAEMXZ"), AActor::GetShadowTurnOffRatio);
+    }
 
     // Helper for video skipping
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "FF D7 83 C4 08 68 ? ? ? ? 68 ? ? ? ? FF D7 83 C4 08");

@@ -138,4 +138,22 @@ export void InitWinDrv()
     UWindowsViewport::shUpdateRumble = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"WinDrv"), "?UpdateRumble@UWindowsViewport@@UAEXMM@Z"), UWindowsViewport::UpdateRumble);
     UWindowsViewport::shCauseInputEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"WinDrv"), "?CauseInputEvent@UWindowsViewport@@QAEHHW4EInputAction@@M@Z"), UWindowsViewport::CauseInputEvent);
     UWindowsViewport::shViewportWndProc = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"WinDrv"), "?ViewportWndProc@UWindowsViewport@@QAEJIIJ@Z"), UWindowsViewport::ViewportWndProc);
+
+    // UseDIMouse=True: a DirectInput mouse takes the mouse input away from the raw input reader,
+    // so with raw input on the viewport keeps the window messages route
+    static auto UseDIMouseOff = [](SafetyHookContext& regs)
+    {
+        if (FixSettings().Int("MAIN.RawInputMouse") != 0)
+            *reinterpret_cast<int32_t*>(regs.edi) = 0;
+    };
+    auto pattern = find_module_pattern(GetModuleHandle(L"WinDrv"), "8D BE B0 01 00 00 C7 07 00 00 00 00 A1 ? ? ? ? 6A 00 57 68 ? ? ? ? 8B 08 68 ? ? ? ? 8B 01 FF 10");
+    if (!pattern.empty()) // digital
+    {
+        static auto UseDIMouseHook = safetyhook::create_mid(pattern.get_first(36), UseDIMouseOff);
+    }
+    else
+    {
+        pattern = hook::module_pattern(GetModuleHandle(L"WinDrv"), "8D BE B0 01 00 00 89 1F 8B 0D ? ? ? ? 8B 09 8B 11 57 68 ? ? ? ? 68 ? ? ? ? FF 12");
+        static auto UseDIMouseHook = safetyhook::create_mid(pattern.get_first(31), UseDIMouseOff);
+    }
 }

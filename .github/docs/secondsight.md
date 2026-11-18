@@ -16,6 +16,7 @@
 - **Aspect ratio and field of view** — Correct widescreen projection for gameplay, cutscenes and the 3D menus, with the original tuned framing; it follows a resolution change.
 - **Menus** — The menus stay in their 4:3 frame in the middle of the screen.
 - **Display scaling** — The game gets the full resolution on scaled desktops.
+- **Controller** — The PC version reads only the keyboard and mouse. The fix comes with Xidi, which turns an Xbox-compatible controller into the game's default keys and mouse, laid out like the console version: left stick move, right stick look, RT fire, LT aim, A, B, X, Y, LB, RB and the D-pad on the console buttons' keys, stick clicks crouch and zoom, Start the in-game menu. The layout is in `Xidi.ini`; keep the game's default controls for it.
 
 ## Options
 
@@ -28,7 +29,7 @@
 - **Skip intro** — On by default: the game starts at the title screen, past the logo videos and the copyright screen. Needs a restart.
 - **Pause in background** — On by default: in a window mode the game pauses while another window is active, as it always has. Off keeps it running.
 - **Confine cursor** — Keeps the mouse cursor inside the game window while the game is active.
-- **Check for updates** — Off by default. When on, the fix asks fusionfix.io once per start whether a newer version is out; FusionFixHub opens when you close the game.
+- **Check for updates** — Off by default. When on, the fix asks fusionfix.io once per start whether a newer version is out and names it in one line under the game's logo on the title screen; FusionFixHub opens when you close the game.
 - **Resolution width / height** — Only in the cfg and FusionFixHub's text editor: override the resolution chosen in the game. 0 uses the game's choice.
 
 ---
@@ -37,12 +38,12 @@
 
 The fix creates `scripts/SecondSight.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it, also while the game runs. Vanilla shows the intro, keeps the game's own cutscene bars, runs at the game's own frame rate and plays the logo videos with black bars; Recommended and Enhanced skip the intro, add side bars in cutscenes, fit the logo videos to the screen and limit the frame rate to the monitor's. Window, resolution and input settings aren't changed by presets. Texts are available in English, French, German, Italian and Spanish.
 
-The settings-language choice in FusionFixHub or the settings file selects the language used by the developer overlay.
+The settings-language choice in FusionFixHub or the settings file selects the language of the update notice and the developer overlay; Automatic follows the language of Windows.
 
 ## Known limits
 
 - The game's menus are built by its own scripts, so the fix has no page in them: change its settings in FusionFixHub or on fusionfix.io.
-- The PC version reads only keyboard and mouse; it has no controller support, so the fix adds none.
+- Button prompts name the keyboard keys also when a controller is used.
 - The mouse is read through DirectInput without Windows pointer acceleration, so no raw input option is needed.
 - The menu logo may still sit partly above the top edge in some views.
 - Wider views (field of view above 1.0) can show through-wall rendering in some locations.

@@ -16,14 +16,17 @@
 - **Field of view** - Widens the gameplay view without stretching. Field of View (0.5–2.0) adjusts the gameplay view further without changing cutscenes.
 - **HUD** - Keeps HUD elements in proportion at the screen edges. HUD Size changes their size. HUD Aspect Ratio (Auto, 4:3, 16:9, 21:9, 32:9 or a custom ratio in FusionFixHub) keeps the HUD inside a centered area on wide screens; Auto uses the whole screen.
 - **Cutscenes** - always keep their 16:9 framing at any aspect ratio: nothing cut off, nothing stretched. Cutscene Borders chooses which bars cover the rest: Off, Letterbox (top and bottom, on screens narrower than 16:9), Pillarbox (sides, on wider screens) or Both. With the bars off the cutscene fills the screen. The bars slide in and out.
+- **Menus and map** - the pause menu, map and settings pages keep their proportions on wide screens.
 - **Light glows and reticle** - stay round at any aspect ratio.
 - **Little Willie camera** - corrected camera distance for the Little Willie helicopter.
+- **60 FPS missions** - at 60 FPS, the missions that count frames (Boomshine Blowout, Hose the Hoes, The Exchange, Balls, Farewell to Arms, a truck timer and a Lance mission) keep their original timing, and the rhythm part of In the Air Tonight runs at 30 FPS.
 - **Vehicle lights** - lit headlights, tail, brake and reverse lights on car and bike bodies. Vehicle Lights is on by default and switches at once; the Vanilla preset turns it off.
 - **PC controls** - [keyboard and mouse controls](https://youtu.be/EhDviiFHYkE) with mouse camera, rebindable actions, key pictures in prompts and keyboard cheats. A pad keeps working next to them: the device used last drives the game and its prompts.
 
 ## Options
 
-- **Modern controls** - Use the triggers to drive, aim and shoot.
+- **Modern controls** - drive, aim and shoot with the triggers: R2 accelerates and fires, L2 brakes and targets, L2 + Square reloads, Cross is the handbrake, the d-pad switches weapons, targets and radio stations, and the right stick aims. Help texts name the new buttons. On by default; the Vanilla preset turns it off.
+- **Hold vehicle camera** - when you turn the camera with the right stick in a vehicle, it stays there and swings back two seconds after you let go. Off by default; the Enhanced preset turns it on.
 - **Frame rate** - 30 or 60 FPS (`MAIN.FPSLimit` in the cfg); 30 FPS by default.
 - **Loading** - temporarily unthrottles the emulator during loading screens.
 - **Skip intro** - skips the logo and intro movies at startup.
@@ -48,9 +51,9 @@ Ultra-wide screenshot:
 
 ## Settings
 
-The settings are stored in `PLUGINS/GTAVCS.PCSX2F.FusionFix.cfg`, which the fix creates on the first start. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), frame rate, field of view, HUD size and aspect ratio, cutscene borders, fast loading, skip intro, vehicle lights, modern controls, button icons, keyboard and mouse controls with bindings, and Restore Defaults. A line under the menu describes the selected row. Menu changes apply at once and are saved when the menu closes; Skip Intro applies the next time the game starts, and the menu says so. Changes made on fusionfix.io or in FusionFixHub apply the next time the emulated game starts, or when a save state is loaded.
+The settings are stored in `PLUGINS/GTAVCS.PCSX2F.FusionFix.cfg`, which the fix creates on the first start. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), frame rate, field of view, HUD size and aspect ratio, cutscene borders, fast loading, skip intro, vehicle lights, button icons, a Controls page (modern controls, hold vehicle camera, keyboard and mouse controls with bindings), and Restore Defaults. A line under the menu describes the selected row. Menu changes apply at once and are saved when the menu closes; Skip Intro applies the next time the game starts, and the menu says so. Changes made on fusionfix.io or in FusionFixHub apply the next time the emulated game starts, or when a save state is loaded.
 
-- **Presets** - Vanilla keeps the original look (cutscene letterbox, intros, normal loading, no vehicle lights); Recommended is the default, and Enhanced is the same. Applying a preset changes only the settings that differ between presets; Vanilla uses PlayStation icons; Recommended and Enhanced use Auto. Frame rate, field of view, HUD, controls, mouse sensitivity and bindings keep your choice.
+- **Presets** - Vanilla keeps the original game (cutscene letterbox, intros, normal loading, no vehicle lights, original controls, 30 FPS, PlayStation icons); Recommended is the default (modern controls, 30 FPS, Auto icons), and Enhanced adds 60 FPS and the held vehicle camera. Applying a preset changes only the settings that differ between presets. Field of view, HUD, keyboard and mouse controls, mouse sensitivity and bindings keep your choice.
 - **Save states** - after loading a state, the fix reads its settings file again, so your current settings apply instead of the ones saved in the state. Skip intro keeps the value the game started with.
 
 ## Not covered

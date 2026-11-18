@@ -22,11 +22,12 @@
 ## Options
 
 - **Dual analog controls** - right-stick camera and aim.
-- **Vehicle controls** - Modern Control Scheme swaps L/Square and R/Cross in vehicles; swap buttons and triggers in PPSSPP for trigger-based driving.
-- **Frame rate** - 30 or 60 FPS (`MAIN.FPSLimit` in the cfg); 30 FPS by default.
+- **Vehicle controls** - Modern Control Scheme (on by default) swaps L/Square and R/Cross in vehicles; swap buttons and triggers in PPSSPP for trigger-based driving.
+- **Hold vehicle camera** - when you turn the vehicle camera with the right stick, it stays there until the stick rests for two seconds, instead of swinging back behind the vehicle at once. Off by default; the Enhanced preset turns it on.
+- **Frame rate** - 30 or 60 FPS (`MAIN.FPSLimit` in the cfg); 30 FPS by default, 60 FPS in the Enhanced preset.
 - **Loading** - temporarily unthrottles the emulator during loading screens.
 - **Skip intro** - skips the startup intros.
-- **PC cheats** - Optional keyboard cheat words during gameplay: THUGSTOOLS, PROFESSIONALTOOLS, NUTTERTOOLS, ALWAYSCARRYCASH, PRECIOUSPROTECTION, ASPIRINE, YOUWONTTAKEMEALIVE and LEAVEMEALONE. Keep this off when you do not want typed words to activate cheats.
+- **PC cheats** - Optional keyboard cheat words during gameplay: THUGSTOOLS, PROFESSIONALTOOLS and NUTTERTOOLS (weapons), ALWAYSCARRYCASH (money), PRECIOUSPROTECTION (armour), ASPIRINE (health), YOUWONTTAKEMEALIVE (more wanted level), LEAVEMEALONE (no wanted level), SKINCANCERFORME (sunny), TOODAMNHOT (extra sunny), ILIKESCOTLAND (cloudy), ILOVESCOTLAND (rain), PEASOUP (fog), GIVEUSATANK (Rhino), RUBBISHCAR (Trashmaster), BANGBANGBANG (destroy all cars), ILIKEDRESSINGUP (change outfit), ONSPEED (faster gameplay), BOOOOORING (slower gameplay) and ICANTTAKEITANYMORE (suicide). Keep this off when you do not want typed words to activate cheats.
 - **Vehicle lights** - lit headlights, tail, brake and reverse lights on car and bike bodies. Vehicle Lights is on by default; the Vanilla preset turns it off. A change applies the next time the emulated game starts.
 - **Controller icons** - Auto uses Xbox 360 artwork; PSP, Xbox 360, Xbox One, PlayStation 3/4/5, Nintendo Switch and Steam Deck sets are also available. Choose the set that matches your PPSSPP bindings; the guest cannot identify the host controller. Missing or incompatible files keep the affected original artwork. Select PSP to restore it.
 
@@ -53,9 +54,9 @@ https://user-images.githubusercontent.com/4904157/218305955-3a8a244f-aae8-456b-a
 
 ## Settings
 
-The settings are stored in `memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.cfg`, created on the first start. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), Display and Camera (HUD, radar and multiplayer radar size, field of view and cutscene borders), Layout (aspect override, HUD constraint and radar positions), Game and Controls (with vehicle lights), and Restore Defaults. Menu changes are saved when the menu closes. Skip intro, modern controls and vehicle lights need a restart. Other changed cfg values are read during gameplay, including after loading a PPSSPP save state. Restart after installing an updated plugin before making new save states: old states contain the older plugin code.
+The settings are stored in `memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.cfg`, created on the first start. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), Display and Camera (HUD, radar and multiplayer radar size, field of view, cutscene borders and hold vehicle camera), Layout (aspect override, HUD constraint and radar positions), Game and Controls (with vehicle lights), and Restore Defaults. Menu changes are saved when the menu closes. Skip intro, modern controls and vehicle lights need a restart. Other changed cfg values are read during gameplay, including after loading a PPSSPP save state. Restart after installing an updated plugin before making new save states: old states contain the older plugin code.
 
-- **Presets** - Vanilla keeps the original look (HUD, radar and multiplayer radar at full size, cutscene letterbox, original controller icons, intros, normal loading and no vehicle lights); Recommended is the default, and Enhanced is the same. Applying a preset changes only settings that differ between presets, preserving your other preferences. Restore Defaults resets all settings.
+- **Presets** - Vanilla keeps the original look (HUD, radar and multiplayer radar at full size, cutscene letterbox, original controller icons, intros, normal loading and no vehicle lights); the Vanilla preset also uses the original control scheme. Recommended is the default; Enhanced adds 60 FPS and Hold vehicle camera. Applying a preset changes only settings that differ between presets, preserving your other preferences. Restore Defaults resets all settings.
 
 After updating from an older release, reapply your preferences in FusionFixHub.
 

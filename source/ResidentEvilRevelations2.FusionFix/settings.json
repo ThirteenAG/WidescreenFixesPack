@@ -433,6 +433,16 @@
       "apply": "live"
     },
     {
+      "id": "MAIN.ConfineCursor",
+      "type": "bool",
+      "default": true,
+      "label": "@ConfineCursor",
+      "description": "@ConfineCursor.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
       "id": "MAIN.CheckForUpdates",
       "type": "bool",
       "default": false,

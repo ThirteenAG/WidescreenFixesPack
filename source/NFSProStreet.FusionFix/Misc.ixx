@@ -759,7 +759,10 @@ public:
                 injector::WriteMemory(pattern.get_first(1), &"SkipThis", true);
                 pattern = hook::pattern("68 ? ? ? ? 6A ? 8B CE FF D2");
                 injector::WriteMemory(pattern.get_first(1), &"SkipThis", true);
+            }
 
+            if (FixSettings().Bool("MAIN.SkipPressStart"))
+            {
                 // The title screen: it continues by itself once it's shown, as if Start was pressed after its
                 // minimum time. That also resets the profile data, before the profile is loaded.
                 auto padStart = hook::pattern("51 56 8B F1 83 7E 04 11 74");

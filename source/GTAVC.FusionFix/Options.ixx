@@ -544,6 +544,21 @@ export namespace FixOptions
 
 export namespace FixOptions
 {
+    // A text of the fix in the game's language, upper case in the game's font (empty when it has none)
+    const wchar_t* GameText(const std::string& key)
+    {
+        static std::map<std::string, std::u16string, std::less<>> cache;
+        auto language = LanguageTag();
+        auto& text = cache[language + ":" + key];
+        if (text.empty())
+        {
+            auto utf8 = RWGTAMenu::PluginText(FixSettings(), language, key);
+            if (utf8 != key && utf8 != "@" + key)
+                text = RWGTAMenu::ToGameFont(utf8, true, false);
+        }
+        return reinterpret_cast<const wchar_t*>(text.c_str());
+    }
+
     void BeginMenuDraw()
     {
         ValueAreas.bounds.clear();

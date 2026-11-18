@@ -129,10 +129,35 @@ export namespace SCMenu
             auto mask = Read<uint32_t>(prop, 84);
             return mask && !(mask & (mask - 1)) && (*static_cast<uint32_t*>(Address(viewport, prop)) & mask) != 0;
         };
-        const bool shown = enabled(show), windows = enabled(available);
         // Captured software-cursor menus have shown=true, available=false.
         // Both native cursor routes must keep their own movement and picking.
-        return shown;
+        if (!enabled(show))
+            return false;
+
+        // Returning to play leaves bShowWindowsMouse set; the menus are the console's UWindow state (FakeWindow extends it)
+        static void* consoleProp = nullptr;
+        if (!consoleProp)
+            consoleProp = Property(viewport, L"Console", L"ObjectProperty", 4);
+        auto console = consoleProp ? Read<void*>(Address(viewport, consoleProp), 0) : nullptr;
+        auto frame = console ? Read<void*>(console, 0x0C) : nullptr; // UObject::StateFrame
+        if (!frame)
+            return false;
+
+        static std::unordered_map<void*, bool> menuStates;
+        auto node = Read<void*>(frame, 28); // FStateFrame::StateNode, the class itself outside states
+        auto [it, added] = menuStates.try_emplace(node, false);
+        if (added)
+        {
+            for (auto state = node; state; state = Read<void*>(state, 44)) // UStruct::SuperField
+            {
+                if (Type(state, L"State") && Leaf(state) == L"UWindow")
+                {
+                    it->second = true;
+                    break;
+                }
+            }
+        }
+        return it->second;
     }
     inline void __cdecl FocusPause(void* viewport, bool lost)
     {

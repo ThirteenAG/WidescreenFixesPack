@@ -123,6 +123,9 @@ inline constexpr uint32_t words58[]={0x00073B03u,0x0C000000u,0x00078040u,0x3C110
 inline constexpr uint8_t masks58[]={0,2,0,1,1,0,0,0,1,0,0,1};
 inline constexpr uint32_t words59[]={0x27BDFE50u,0xAFB00194u,0x00808025u,0xAFB10198u,0x27B10010u,0x86050130u,0xAFB2019Cu,0xAFB301A0u,0xAFBF01A4u,0x0C000000u,0x02202025u,0x8604012Cu};
 inline constexpr uint8_t masks59[]={0,0,0,0,0,0,0,0,0,2,0,0};
+// Texture binder: GE texture commands from a texture header and its palette.
+inline constexpr uint32_t bindWords[]={0x3C040000u,0x8C870000u,0x3C091E00u,0x35290001u,0xACE90000u,0x80AA0007u,0x3C092100u,0x012A4825u,0xACE90004u,0x80AC0002u,0x3C09C200u,0x35290001u};
+inline constexpr uint8_t bindMasks[]={1,1,0,0,0,0,0,0,0,0,0,0};
 // Sprite-manager layer loop (0x088E127C); its per-instance draw call at +0x3C.
 inline constexpr uint32_t spriteCallWords[]={0x27BDFFF0u,0x000528C0u,0xAFB00004u,0x00858021u,0xE7B40000u,0x46006506u,0x26100008u,0xAFB10008u,0xAFBF000Cu,0x8E040000u,0x02008823u,0x12240008u,0x00000000u,0x8E310004u,0x4600A306u,0x0C000000u,0x02202025u};
 inline constexpr uint8_t spriteCallMasks[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0};
@@ -161,7 +164,7 @@ inline constexpr uint8_t introMasks[]={1,0,0,0,2,1,1,2,1,2,0,0};
 // Startup movie completion: native forced-stop argument, after normal loading.
 inline constexpr uint32_t introFinishWords[]={0xA2D200ACu,0x02C02025u,0x0C000000u,0x00002825u,0xA2C000ACu,0x0C000000u,0x34110000u,0x00402025u};
 inline constexpr uint8_t introFinishMasks[]={0,0,2,0,0,2,0,0};
-inline constexpr std::array<console::AddressRule,76> rules={{
+inline constexpr std::array<console::AddressRule,77> rules={{
     {0x0884F52Cu,0x0884F51Cu,words0,masks0,12,16,16,0,0,console::AddressKind::Code},
     {0x088559ACu,0x088559ACu,words59,masks59,12,0,0,0,0,console::AddressKind::Code},
     {0x088559F0u,0x088559E0u,words1,masks1,12,44,16,0,0,console::AddressKind::Code},
@@ -228,6 +231,7 @@ inline constexpr std::array<console::AddressRule,76> rules={{
     {0x08A36E2Cu,0x08A36E1Cu,words50,masks50,12,2,16,0,0,console::AddressKind::Code},
     {0x08A6DD1Cu,0x08A6DD0Cu,words51,masks51,12,30,16,0,0,console::AddressKind::Code},
     {0x08A6DE68u,0x08A6DE58u,words52,masks52,12,44,16,0,0,console::AddressKind::Code},
+    {0x08A88AE0u,0x08A88AE0u,bindWords,bindMasks,12,9,0,0,0,console::AddressKind::Code},
     {0x08AC79A4u,0x08AC7994u,words53,masks53,12,38,16,0,0,console::AddressKind::Code},
     {0x08AC7C50u,0x08AC7C40u,words54,masks54,12,36,16,0,0,console::AddressKind::Code},
     {0x08B5B238u,0x0883DEA8u,words55,masks55,12,8,16,12,0,console::AddressKind::Absolute},

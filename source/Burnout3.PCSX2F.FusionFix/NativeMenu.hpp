@@ -318,12 +318,13 @@ void Populate()
     }
     else if (page == 2)
     {
-        Label(0, l.intro, Toggle(3, l));
-        descriptions[0] = l.introHelp;
+        // The preset comes first, then what it sets
         const char* presets[] = {l.vanilla, l.recommended, l.enhanced};
         const int activePreset = DetectedPreset();
-        Label(1, l.preset, activePreset < 0 ? l.custom : presets[activePreset]);
-        descriptions[1] = l.presetHelp;
+        Label(0, l.preset, activePreset < 0 ? l.custom : presets[activePreset]);
+        descriptions[0] = l.presetHelp;
+        Label(1, l.intro, Toggle(3, l));
+        descriptions[1] = l.introHelp;
         Label(2, "FPS", std::clamp(std::atoi(values[11].value), 30, 60) > 30 ? "60" : l.original);
         static const char16_t* fpsHelp[] = {
             u"ORIGINAL OR 60 FPS. RESTART REQUIRED.",
@@ -421,7 +422,7 @@ void Change(unsigned row, int direction)
     {
         ChangeOne(5, std::atoi(values[5].value) == 0 ? "1" : "0");
     }
-    else if (page == 2 && row == 0)
+    else if (page == 2 && row == 1)
         ChangeOne(3, console::ps2settings::boolean(values[3], true) ? "0" : "1", true);
     else if (page == 3 && row == 0)
     {
@@ -447,7 +448,7 @@ void Change(unsigned row, int direction)
         ChangeOne(9, console::ps2settings::boolean(values[9], false) ? "0" : "1");
     else if (page == 3 && row == 5)
         ChangeOne(10, console::ps2settings::boolean(values[10], false) ? "0" : "1");
-    else if (page == 2 && row == 1)
+    else if (page == 2 && row == 0)
     {
         const int activePreset = DetectedPreset();
         const int next = activePreset < 0 ? 0 : (activePreset + direction + 3) % 3;

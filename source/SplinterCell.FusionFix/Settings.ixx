@@ -90,13 +90,25 @@ public:
             mINI::INIFile userIniFile(userIniPath);
             if (userIniFile.read(userIni) && userIni.has("Engine.Input"))
             {
-                // Only native input commands are copied; the fix's legacy INI is never read.
-                for (auto key : { "Joy1", "Joy2", "Joy3", "Joy4", "Joy5", "Joy6", "Joy7", "Joy8", "Joy9", "Joy10", "Joy11", "Joy12", "Joy13", "Joy14", "Joy15", "Joy16", "JoyX", "JoyY" })
-                    userIni["Engine.Input"].setAll(key, FixSettings().String(std::string("INPUT.") + key));
-                userIni["Engine.Input"].setAll("JoyZ", Gamepad::TurnBinding());
-                userIni["Engine.Input"].setAll("JoyV", Gamepad::LookUpBinding());
+                // The pad layout fills only unbound pad keys, so a binding changed in the user ini stays. The look
+                // axes carry the camera speed and invert settings and are always written.
+                auto& input = userIni["Engine.Input"];
+                for (int button = 1; button <= 18; ++button)
+                {
+                    const auto key = button <= 16 ? "Joy" + std::to_string(button) : std::string(button == 17 ? "JoyX" : "JoyY");
+                    if (input.get(key).empty())
+                        input.setAll(key, FixSettings().String("INPUT." + key));
+                    Gamepad::SetBinding(button, input.get(key));
+                }
+                input.setAll("JoyZ", Gamepad::TurnBinding());
+                input.setAll("JoyV", Gamepad::LookUpBinding());
                 userIni["Engine.EPCGameOptions"]["Resolution"] = std::to_string(Screen.Width) + "x" + std::to_string(Screen.Height);
                 userIniFile.generate(userIni);
+            }
+            else
+            {
+                for (int button = 1; button <= 18; ++button)
+                    Gamepad::SetBinding(button, FixSettings().String(button <= 16 ? "INPUT.Joy" + std::to_string(button) : std::string(button == 17 ? "INPUT.JoyX" : "INPUT.JoyY")));
             }
 
             auto gameIniPath = exePath / "SplinterCell.ini";

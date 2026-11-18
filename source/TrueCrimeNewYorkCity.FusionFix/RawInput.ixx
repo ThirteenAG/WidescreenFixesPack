@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include <xmmintrin.h>
 #include <cmath>
+#include <dinput.h>
 #include "FixSettings.hpp"
 
 export module RawInput;
@@ -67,25 +68,93 @@ export void RawInputWindow(HWND hWnd)
         hGameWindow = hWnd;
 }
 
-// Mouse movement since the last read: the cursor's distance from the window's centre, where it is put back. The
-// game's DirectInput mouse reads the raw input itself, so a raw input registration of the fix's own would take the
-// mouse from it (or lose to it); the cursor works alongside.
+// The game's DirectInput mouse carries the raw counts: no pointer acceleration or speed, nothing lost between reads.
+// Every read of its state (the game's and the fix's own) adds to the counts, which the camera takes once per frame.
+namespace TCDirectInputMouse
+{
+    // The vtable slots are replaced rather than the functions: wrappers like Xidi share one function between methods
+    HRESULT(WINAPI* nativeCreate)(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN) = nullptr;
+    HRESULT(WINAPI* nativeCreateDevice)(void*, REFGUID, void**, void*) = nullptr;
+    HRESULT(WINAPI* nativeDeviceState)(void*, DWORD, void*) = nullptr;
+    std::atomic<void*> mouse{ nullptr };
+    std::atomic<int32_t> countsX{ 0 }, countsY{ 0 };
+
+    HRESULT WINAPI DeviceState(void* device, DWORD size, void* data)
+    {
+        const auto result = nativeDeviceState(device, size, data);
+        if (SUCCEEDED(result) && data && device == mouse.load(std::memory_order_relaxed) &&
+            (size == sizeof(DIMOUSESTATE) || size == sizeof(DIMOUSESTATE2)))
+        {
+            const auto state = static_cast<const DIMOUSESTATE*>(data);
+            countsX.fetch_add(state->lX, std::memory_order_relaxed);
+            countsY.fetch_add(state->lY, std::memory_order_relaxed);
+        }
+        return result;
+    }
+
+    bool IsMouse(REFGUID guid)
+    {
+        // GUID_SysMouse, GUID_SysMouseEm and GUID_SysMouseEm2
+        constexpr GUID mouse{ 0x6F1D2B60, 0xD5A0, 0x11CF, { 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } };
+        GUID base = guid;
+        if (base.Data1 == 0x6F1D2B80 || base.Data1 == 0x6F1D2B81)
+            base.Data1 = mouse.Data1;
+        return base == mouse;
+    }
+
+    template<class Function> void ReplaceSlot(void* object, size_t slot, Function replacement, Function& original)
+    {
+        auto entry = *reinterpret_cast<void***>(object) + slot;
+        if (*entry == reinterpret_cast<void*>(replacement))
+            return;
+        original = reinterpret_cast<Function>(*entry);
+        injector::WriteMemory(entry, reinterpret_cast<void*>(replacement), true);
+    }
+
+    HRESULT WINAPI CreateDevice(void* input, REFGUID guid, void** device, void* outer)
+    {
+        const auto result = nativeCreateDevice(input, guid, device, outer);
+        if (SUCCEEDED(result) && device && *device && IsMouse(guid))
+        {
+            ReplaceSlot(*device, 9, &DeviceState, nativeDeviceState);
+            mouse.store(*device, std::memory_order_relaxed);
+        }
+        return result;
+    }
+
+    HRESULT WINAPI Create(HINSTANCE instance, DWORD version, REFIID iid, LPVOID* output, LPUNKNOWN outer)
+    {
+        const auto result = nativeCreate(instance, version, iid, output, outer);
+        if (SUCCEEDED(result) && output && *output)
+            ReplaceSlot(*output, 3, &CreateDevice, nativeCreateDevice);
+        return result;
+    }
+
+    void Install()
+    {
+        auto original = IATHook::Replace(GetModuleHandleW(nullptr), "dinput8.dll", std::forward_as_tuple("DirectInput8Create", Create));
+        nativeCreate = reinterpret_cast<decltype(nativeCreate)>(original.at("DirectInput8Create").get());
+    }
+
+    void Poll()
+    {
+        if (auto device = mouse.load(std::memory_order_relaxed); device && nativeDeviceState)
+        {
+            DIMOUSESTATE2 state{};
+            DeviceState(device, sizeof(state), &state);
+        }
+    }
+}
+
+// Mouse movement since the last read
 void ReadMouse()
 {
-    if (!hGameWindow || hGameWindow != GetForegroundWindow())
+    TCDirectInputMouse::Poll();
+    const int32_t x = TCDirectInputMouse::countsX.exchange(0, std::memory_order_relaxed);
+    const int32_t y = TCDirectInputMouse::countsY.exchange(0, std::memory_order_relaxed);
+    if (!hGameWindow || hGameWindow != GetForegroundWindow() || TCOverlay::BlocksInput() || (!x && !y))
         return;
-    RECT window{};
-    POINT cursor{};
-    if (!GetWindowRect(hGameWindow, &window) || !GetCursorPos(&cursor))
-        return;
-    const int centerX = (window.right - window.left) / 2 + window.left;
-    const int centerY = (window.bottom - window.top) / 2 + window.top;
-    if (cursor.x == centerX && cursor.y == centerY)
-        return;
-    SetCursorPos(centerX, centerY);
-    if (TCOverlay::BlocksInput())
-        return;
-    auto delta = TCRawMouse::FromCounts(cursor.x - centerX, cursor.y - centerY, fMouseSens.is_initialized() ? fMouseSens.get() : 0.0f);
+    auto delta = TCRawMouse::FromCounts(x, y, fMouseSens.is_initialized() ? fMouseSens.get() : 0.0f);
     MouseDeltaX += delta.x;
     MouseDeltaY += delta.y;
 }
@@ -310,6 +379,7 @@ void __stdcall sub_40D990(float a1)
 
 void InitRawInput()
 {
+    TCDirectInputMouse::Install();
     IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("PeekMessageA", PeekMessageOnePass));
     nActionFlags.SetAddress(*hook::pattern("80 0D ? ? ? ? 08 EB ? 80 25 ? ? ? ? F7").get_first<uintptr_t>(2) - 1);
 
@@ -426,7 +496,6 @@ public:
         WFP::onInitEvent() += []()
         {
             auto& settings = FixSettings();
-            static float fSensitivityFactor = std::abs(settings.Float("MOUSE.SensitivityFactor"));
             bRawInputMouse = settings.Bool("MAIN.RawInputMouse");
             TCRawMouse::SetSensitivity(settings.Float("MAIN.MouseSensitivity"));
             TCRawMouse::invertY.store(settings.Bool("MAIN.InvertMouseY"), std::memory_order_relaxed);
@@ -439,15 +508,27 @@ public:
                 TCRawMouse::SetSensitivity(FixSettings().Float("MAIN.MouseSensitivity"));
             });
 
-            if (fSensitivityFactor)
+            if (!bRawInputMouse)
             {
-                fSensitivityFactor *= 0.0099999998f;
-
-                auto pattern = hook::pattern("D8 0D ? ? ? ? DD 1C 24");
-                injector::WriteMemory(pattern.get_first(2), &fSensitivityFactor, true);
-
-                pattern = hook::pattern("F3 0F 59 05 ? ? ? ? 83 C2 FF");
-                injector::WriteMemory(pattern.get_first(4), &fSensitivityFactor, true);
+                // Without the fix's camera the setting scales the game's own mouse sensitivity
+                static float nativeSensitivity[2]{}, scaledSensitivity[2]{};
+                const char* sites[] = { "D8 0D ? ? ? ? DD 1C 24", "F3 0F 59 05 ? ? ? ? 83 C2 FF" };
+                const int offsets[] = { 2, 4 };
+                for (size_t i = 0; i < std::size(sites); ++i)
+                {
+                    auto operand = hook::pattern(sites[i]).get_first<float*>(offsets[i]);
+                    nativeSensitivity[i] = **operand;
+                    injector::WriteMemory(operand, &scaledSensitivity[i], true);
+                }
+                static auto update = []
+                {
+                    const float value = FixSettings().Float("MAIN.MouseSensitivity");
+                    const float factor = std::isfinite(value) ? std::clamp(value, 0.1f, 5.0f) : 1.0f;
+                    for (size_t i = 0; i < std::size(scaledSensitivity); ++i)
+                        scaledSensitivity[i] = nativeSensitivity[i] * factor;
+                };
+                update();
+                settings.OnChange("MAIN.MouseSensitivity", [] { update(); });
             }
 
             if (bRawInputMouse)

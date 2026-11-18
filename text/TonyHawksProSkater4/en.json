@@ -54,14 +54,14 @@
   "menu.restartwarning": "Restart the game to apply changed startup settings.",
   "menu.presethelp": "Choose a preset, then press twice to apply it to this plugin.",
   "FPSLimit": "Frame Rate Limit",
-  "FPSLimit.description": "Limits presentation to the selected frame rate; 0 disables the limiter and -1 uses the desktop refresh rate. Changes apply immediately. 60 FPS is recommended; higher rates can break gameplay.",
-  "FPSLimit.unlimited": "Unlimited",
-  "FPSLimit.refresh": "Desktop refresh rate",
+  "FPSLimit.description": "Limits the frame rate (30–60 fps). The game's physics, animation and timers are made for 60 fps, so higher rates are not offered. Changes apply immediately.",
   "menu.details": "Details",
   "checkupdates": "Check for updates",
   "checkupdates.description": "Check for a new fix version once when enabled. A notice appears in Plugins; FusionFixHub opens after the game exits if installed. Off makes no network request.",
   "update.availablehub": "An update for Tony Hawk Pro Skater 4 Fusion Fix is available. FusionFixHub will open after you exit the game.",
   "update.availablesite": "An update for Tony Hawk Pro Skater 4 Fusion Fix is available at fusionfix.io.",
   "PauseOnFocusLoss": "Pause in background",
-  "PauseOnFocusLoss.description": "In a window mode, the game stops while another window is active, as it always did. Off keeps it running. Applies immediately."
+  "PauseOnFocusLoss.description": "In a window mode, the game stops while another window is active, as it always did. Off keeps it running. Applies immediately.",
+  "MAIN.GamepadIcons": "Gamepad Icons",
+  "MAIN.GamepadIcons.description": "Controller button pictures in prompts while a controller is in use. Auto uses Xbox; choose PlayStation or Nintendo for another controller. Keyboard prompts return when the keyboard is used."
 }

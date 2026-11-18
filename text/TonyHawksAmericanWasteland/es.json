@@ -2,7 +2,7 @@
   "plugin.name": "Tony Hawk's American Wasteland Fusion Fix",
   "page.display": "Pantalla",
   "FPSLimit": "Límite de fotogramas",
-  "FPSLimit.description": "Limita los fotogramas por segundo. Los valores altos pueden afectar al juego. 0: sin límite; -1: frecuencia del monitor.",
+  "FPSLimit.description": "Limita los fotogramas por segundo. El juego funciona a 60 FPS como máximo. 0: sin límite; -1: frecuencia del monitor.",
   "FPSLimit.unlimited": "Sin límite",
   "FPSLimit.refresh": "Frecuencia del monitor",
   "page.camera": "Cámara",

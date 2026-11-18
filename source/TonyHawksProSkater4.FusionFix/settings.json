@@ -203,27 +203,39 @@
       "type": "int",
       "default": 60,
       "min": 30,
-      "max": 1000,
+      "max": 60,
       "unit": "fps",
       "label": "@FPSLimit",
       "description": "@FPSLimit.description",
       "page": "display",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "label": "@MAIN.GamepadIcons",
+      "description": "@MAIN.GamepadIcons.description",
+      "page": "gameplay",
       "apply": "live",
-      "special": [
+      "choices": [
         {
           "value": 0,
-          "label": "@FPSLimit.unlimited"
+          "label": "@menu.auto"
         },
         {
-          "value": -1,
-          "label": "@FPSLimit.refresh"
+          "value": 1,
+          "label": "Xbox"
+        },
+        {
+          "value": 2,
+          "label": "PlayStation"
+        },
+        {
+          "value": 3,
+          "label": "Nintendo"
         }
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 60,
-        "enhanced": 60
-      }
+      ]
     },
     {
       "id": "MAIN.CheckForUpdates",

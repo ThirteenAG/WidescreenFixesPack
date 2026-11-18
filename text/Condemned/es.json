@@ -65,5 +65,15 @@
   "FPSLimit.description": "Limita la tasa de fotogramas. Se aplica al instante.",
   "HudAspectRatioConstraint": "Relación de aspecto del HUD",
   "HudAspectRatioConstraint.auto": "Auto",
-  "HudAspectRatioConstraint.description": "Auto extiende la interfaz por toda la pantalla. Una proporción la mantiene en un recuadro centrado de esa forma. Requiere reiniciar."
+  "HudAspectRatioConstraint.description": "Auto extiende la interfaz por toda la pantalla. Una proporción la mantiene en un recuadro centrado de esa forma. Se aplica al instante.",
+  "FMVWidescreenMode": "Vídeos",
+  "FMVWidescreenMode.original": "Original",
+  "FMVWidescreenMode.fill": "Llenar",
+  "FMVWidescreenMode.description": "Original muestra los vídeos completos dentro del marco 16:9 centrado del juego. Llenar ajusta el vídeo entero a la pantalla. No se corta ni se estira nada.",
+  "GamepadIcons": "Botones del mando",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.xbox": "Xbox",
+  "GamepadIcons.playstation": "PlayStation",
+  "GamepadIcons.nintendo": "Nintendo",
+  "GamepadIcons.description": "Los avisos nombran los botones del mando si se usó el mando por última vez, y las teclas si se usó el teclado o el ratón. Auto usa los nombres de Xbox."
 }

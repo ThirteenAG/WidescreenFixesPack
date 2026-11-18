@@ -22,11 +22,11 @@
 
 ## Options
 
-- **In-game options** — The fourth Options page, **Plugins** (LB/RB, Page Up/Down or the title arrows), lists plugins with settings, with Fusion Fix first. Open a plugin to change its settings; longer lists scroll within the same plugin page. Its **Preset** row selects Vanilla, Recommended or Enhanced; accept twice to confirm. **Restore Defaults** resets that plugin's settings. F1 or the native Map button opens the selected option's complete help; Up/Down scroll long help and Escape goes back. Most changes apply at once; one footer notice marks changes that require a restart. Open this page from the title menu. Settings are saved in `scripts/SilentHill3.FusionFix.cfg` and can also be changed on fusionfix.io or in FusionFixHub. Camera mode remains the player's choice when changing presets.
+- **In-game options** — The fourth Options page, **Plugins** (LB/RB, Page Up/Down or the title arrows), lists plugins with settings, with Fusion Fix first. Open a plugin to change its settings; longer lists scroll within the same plugin page. Its **Preset** row selects Vanilla, Recommended or Enhanced; accept twice to confirm. **Restore Defaults** resets that plugin's settings. F1 or the native Map button opens the selected option's complete help; Up/Down scroll long help and Escape goes back. Most changes apply at once; one footer notice marks changes that require a restart. Open this page from the title menu. Settings are saved in `scripts/SilentHill3.FusionFix.cfg` and can also be changed on fusionfix.io or in FusionFixHub. The Vanilla preset selects the classic camera; Recommended and Enhanced select the modern one.
 - **Field of view** — The gameplay multiplier changes live, with 1.0 preserving the normal view and widening bounded to 150 degrees across. Scripted cameras and aiming keep their own framing.
 - **Camera** — Classic fixed angles or a modern free camera over the shoulder (right stick or mouse), with its speed, inversion, distance and field of view.
 - **Cutscene borders** — Letterbox keeps the game's bars above and below, Pillarbox keeps the original 4:3 picture with bars at the sides, Both keeps the original framing exactly, Off uses the full screen Hor+. Changes apply at once, also during a cutscene.
-- **Movies and pictures** — Movies are shown whole in both choices; notes, pictures and the pause screen keep their original framing or fill the screen.
+- **Movies and pictures** — Movies are shown whole in both choices; notes, pictures and the pause screen keep their original framing (the default) or fill the screen, which cuts off their top and bottom on screens wider than 4:3.
 - **Effects** — Resolution of the soft shadows, the blur and depth of field and the pause background; finer fog; anisotropic filtering.
 - **Intro** — Start at the title menu without the logos, the content warning and the opening movie (the opening movie still plays when the title menu is left idle).
 
@@ -44,8 +44,8 @@ Long labels may be shortened with an ellipsis to leave room for their values.
 
 - The game's only corner HUD element is the low-health cross; messages, menus and the inventory keep their centred 4:3 layout.
 - The native resolution picker retains its original slots. Set custom display and render sizes in the fix's CFG, FusionFixHub or fusionfix.io, then restart.
-- The native 60 FPS cap remains. The modern camera uses native DirectInput mouse counts.
-- Artwork covers native controller-binding names; hardcoded instructions retain the game's text.
+- The game runs at up to 60 FPS; the **Frame Rate** setting can lower it to 30 FPS at the same game speed. The modern camera uses native DirectInput mouse counts.
+- Artwork covers native controller-binding names. The hint that names L1 and R1 for Extra Options shows the shoulder buttons or Page Up and Page Down, whichever was used last; the game's other text names actions, not buttons.
 - No Ctrl+F10 developer overlay: the game draws with Direct3D 8, which the overlay doesn't support. Every setting is in the game's Options > Plugins page, FusionFixHub and fusionfix.io.
 - The window size is set at startup; resizing the window by dragging isn't supported.
 

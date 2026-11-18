@@ -28,7 +28,7 @@
 - **Window mode** — Fullscreen, Windowed or Borderless (restart). Borderless uses the desktop resolution.
 - **Field of view** — 0.5–2.0; 1.0 preserves the intended driving view. The opening special camera retains its framing.
 - **HUD aspect ratio** — Auto or a centered aspect-ratio box; applies live.
-- **Cutscene borders** — Pillarbox keeps story scenes and race intros in their original 4:3 framing; Off shows them wider. Applies live.
+- **Cutscene borders** — story scenes and race intros keep their original 4:3 framing: Pillarbox with side bars on wide screens, Letterbox with bars above and below on screens narrower than 4:3, Both (the default) as needed; Off shows them wider. Applies live.
 - **Menu frame limit** — Applies in menus, including pause. 0 disables the additional limit without changing the game's native timing (Vanilla); Recommended and Enhanced use 60. Values from 1 to 29 use 30; driving and loading retain the game's native timing.
 - **Controller labels** — Selects Xbox, PlayStation or Nintendo button names on the joystick bindings screen. Auto uses Xbox names; applies live.
 - **Pause when unfocused** — Pauses driving while another window is active; applies live.

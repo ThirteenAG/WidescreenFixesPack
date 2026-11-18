@@ -12,12 +12,42 @@ import ComVars;
 import Window;
 import PostFX;
 import Shaders;
+import DeviceLoss;
 
 injector::hook_back<void* (__fastcall*)(float*, void*, uintptr_t, float, float, float, float, float, float, float, float)> hbsub_10077470;
+// Loading videos with caption strips: the video is fitted between a strip above and below it. On screens wider than
+// 16:9 the strips would shrink to nothing, so the video, its strips and the loading icon keep the 16:9 layout, centered,
+// with black at the sides.
+namespace LoadingVideo
+{
+    GameRef<uint8_t> bCaptionStrips;
+    float fOffsetX = 0.0f;
+
+    float LayoutWidth(float width, float height)
+    {
+        return std::min(width, height * (16.0f / 9.0f));
+    }
+
+    SafetyHookInline shDisplayVideo = {};
+    void __fastcall DisplayVideo(void* device, void* edx, void* canvas, void* video)
+    {
+        fOffsetX = 0.0f;
+        shDisplayVideo.unsafe_fastcall(device, edx, canvas, video);
+        fOffsetX = 0.0f;
+    }
+
+    // The video's screen quads, in pixels
+    SafetyHookInline shQuad = {};
+    void* __fastcall Quad(float* _this, void* edx, uintptr_t ctx, float x1, float y1, float x2, float y2, float u1, float v1, float u2, float v2)
+    {
+        return shQuad.unsafe_fastcall<void*>(_this, edx, ctx, x1 + fOffsetX, y1, x2 + fOffsetX, y2, u1, v1, u2, v2);
+    }
+}
+
 void* __fastcall VideoTopOverlay(float* _this, void* edx, uintptr_t ctx, float x, float y, float w, float h, float u1, float v1, float u2, float v2)
 {
-    auto width = static_cast<float>(*(int*)(ctx + 0x5A08));
     auto height = static_cast<float>(*(int*)(ctx + 0x5A0C));
+    auto width = LoadingVideo::LayoutWidth(static_cast<float>(*(int*)(ctx + 0x5A08)), height);
 
     auto verticalOffset = ((height * ((width / height) / (4.0f / 3.0f))) - height) / 2.0f;
     y -= verticalOffset;
@@ -27,8 +57,8 @@ void* __fastcall VideoTopOverlay(float* _this, void* edx, uintptr_t ctx, float x
 
 void* __fastcall VideoBottomOverlay(float* _this, void* edx, uintptr_t ctx, float x, float y, float w, float h, float u1, float v1, float u2, float v2)
 {
-    auto width = static_cast<float>(*(int*)(ctx + 0x5A08));
     auto height = static_cast<float>(*(int*)(ctx + 0x5A0C));
+    auto width = LoadingVideo::LayoutWidth(static_cast<float>(*(int*)(ctx + 0x5A08)), height);
 
     auto verticalOffset = ((height * ((width / height) / (4.0f / 3.0f))) - height) / 2.0f;
     h += verticalOffset;
@@ -550,15 +580,18 @@ export void InitD3DDrv()
     }
 
     // Brighter lights
-    constexpr float fLightsMultiplier = 2.0f;
+    if (FixSettings().Bool("GRAPHICS.BrighterLights"))
+    {
+        constexpr float fLightsMultiplier = 2.0f;
 
-    static float f4 = 4.0f * fLightsMultiplier;
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 1D ? ? ? ? F3 0F 10 66 ? F3 0F 59 64 24 ? 8B 8C 24");
-    injector::WriteMemory<float*>(pattern.get_first<float*>(4), &f4, true);
+        static float f4 = 4.0f * fLightsMultiplier;
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 1D ? ? ? ? F3 0F 10 66 ? F3 0F 59 64 24 ? 8B 8C 24");
+        injector::WriteMemory<float*>(pattern.get_first<float*>(4), &f4, true);
 
-    static float f8 = 8.0f * fLightsMultiplier;
-    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 25 ? ? ? ? 0F 28 C8 F3 0F 59 0D ? ? ? ? F3 0F 58 0D ? ? ? ? F3 0F 59 C8 F3 0F 10 47");
-    injector::WriteMemory<float*>(pattern.get_first<float*>(4), &f8, true);
+        static float f8 = 8.0f * fLightsMultiplier;
+        pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 10 25 ? ? ? ? 0F 28 C8 F3 0F 59 0D ? ? ? ? F3 0F 58 0D ? ? ? ? F3 0F 59 C8 F3 0F 10 47");
+        injector::WriteMemory<float*>(pattern.get_first<float*>(4), &f8, true);
+    }
 
     // Video Loadscreens scaling
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 8B C8 E8 ? ? ? ? 8B 9E");
@@ -566,6 +599,27 @@ export void InitD3DDrv()
 
     pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 8B C8 E8 ? ? ? ? 80 3D");
     hbsub_10077470.fun = injector::MakeCALL(pattern.get_first(0), VideoBottomOverlay, true).get();
+
+    LoadingVideo::shQuad = safetyhook::create_inline(hbsub_10077470.fun, LoadingVideo::Quad);
+    LoadingVideo::shDisplayVideo = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"D3DDrv"), "?DisplayVideo@UD3DRenderDevice@@UAEXPAVUCanvas@@PAX@Z"), LoadingVideo::DisplayVideo);
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "80 3D ? ? ? ? 00 D9 5C 24 ? 74 ? 80 3D ? ? ? ? 00 75");
+    LoadingVideo::bCaptionStrips.SetAddress(*pattern.get_first<uint8_t*>(2));
+    // The layout's screen width (xmm3, also kept on the stack) and height (xmm4), before the video is fitted
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "F3 0F 11 5C 24 ? F3 0F 11 64 24 ? 7D ? D8 05");
+    static const auto layoutWidthSlot = *pattern.get_first<uint8_t>(5);
+    pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "0F 57 C0 F3 0F 11 44 24 ? F3 0F 11 44 24 ? F3 0F 10 05 ? ? ? ? F3 0F 5E C1");
+    static auto LoadingVideoLayoutHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        if (!LoadingVideo::bCaptionStrips)
+            return;
+        const float width = regs.xmm3.f32[0];
+        const float layoutWidth = LoadingVideo::LayoutWidth(width, regs.xmm4.f32[0]);
+        if (layoutWidth >= width)
+            return;
+        LoadingVideo::fOffsetX = (width - layoutWidth) / 2.0f;
+        regs.xmm3.f32[0] = layoutWidth;
+        *reinterpret_cast<float*>(regs.esp + layoutWidthSlot) = layoutWidth;
+    });
 
     //pattern = hook::module_pattern(GetModuleHandle(L"D3DDrv"), "E8 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? 6A ? 8B C8 E8 ? ? ? ? 8B 4C 24");
     //hbsub_10077470.fun = injector::MakeCALL(pattern.get_first(0), VideoBackground, true).get();
@@ -575,4 +629,5 @@ export void InitD3DDrv()
 
     InitPostFX();
     InitShaders();
+    InitDeviceLoss();
 }

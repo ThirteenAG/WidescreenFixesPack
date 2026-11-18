@@ -1,5 +1,7 @@
 {
   "plugin.name": "Knight Rider 2 Fusion Fix",
+  "PauseOnFocusLoss": "Pausar en segundo plano",
+  "PauseOnFocusLoss.description": "Pausa el juego cuando hay otra ventana activa.",
   "page.camera": "Cámara",
   "page.advanced": "Avanzado",
   "ResX": "Ancho de resolución",
@@ -30,7 +32,7 @@
   "CutsceneBorders": "Bordes de las cinemáticas",
   "CutsceneBorders.description": "Conserva el encuadre original de las escenas con bandas laterales. Desactivados amplía la vista. Se aplica inmediatamente.",
   "CutsceneBorders.0": "Desactivados",
-  "CutsceneBorders.1": "Pillarbox",
+  "CutsceneBorders.3": "Ambos",
   "CheckForUpdates": "Buscar actualizaciones",
   "CheckForUpdates.description": "Si se activa, busca una versión más reciente. Avisa en el menú principal. FusionFixHub abre la página al salir si está instalado en la carpeta del juego. Desactivado por defecto.",
   "update.availablehub": "Hay una nueva versión de {name}. Actualízala en FusionFixHub después de cerrar el juego.",

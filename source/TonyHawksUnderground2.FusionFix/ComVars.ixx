@@ -19,6 +19,7 @@ export GameRef<int32_t> FrameTargetHeight;
 export GameRef<float> AngleRatio;
 export GameRef<IDirect3DDevice9*> GameDevice;
 export GameRef<std::array<uint8_t, 256>> KeyBuffer;
+export GameRef<std::array<uint8_t, 256>> PreviousKeys;
 export GameRef<float> NativeScaleX;
 export GameRef<int> HudLayout;
 
@@ -27,7 +28,6 @@ export GameRef<int32_t> dword_67FBD0;
 export GameRef<int32_t> dword_787A7C;
 export GameRef<int32_t> dword_787A80;
 export GameRef<int32_t> dword_787D88;
-export GameRef<std::array<int32_t, 24>> keyboardMap;
 export GameRef<int32_t> dword_69B718;
 export GameRef<int32_t> dword_681D14;
 

@@ -34,6 +34,7 @@
   "settings": [
     {
       "id": "MAIN.FOVFactor",
+      "apply": "live",
       "type": "float",
       "default": 1.0,
       "min": 0.5,
@@ -51,6 +52,7 @@
     },
     {
       "id": "MAIN.HudAspectRatioConstraint",
+      "apply": "live",
       "type": "string",
       "default": "Auto",
       "special": [
@@ -87,6 +89,7 @@
     },
     {
       "id": "MAIN.CutsceneBorders",
+      "apply": "live",
       "type": "choice",
       "default": 3,
       "choices": [
@@ -134,6 +137,7 @@
     },
     {
       "id": "MAIN.FMVWidescreenMode",
+      "apply": "live",
       "type": "choice",
       "default": 1,
       "choices": [
@@ -291,13 +295,9 @@
       "type": "int",
       "default": -1,
       "min": -1,
-      "max": 1000,
+      "max": 120,
       "unit": "fps",
       "special": [
-        {
-          "value": 0,
-          "label": "@FPSLimit.unlimited"
-        },
         {
           "value": -1,
           "label": "@FPSLimit.monitor"
@@ -312,15 +312,6 @@
         },
         {
           "value": 120
-        },
-        {
-          "value": 144
-        },
-        {
-          "value": 165
-        },
-        {
-          "value": 240
         }
       ],
       "label": "@FPSLimit",
@@ -332,7 +323,7 @@
         "dropdown"
       ],
       "presets": {
-        "vanilla": 0,
+        "vanilla": 120,
         "recommended": -1,
         "enhanced": -1
       },

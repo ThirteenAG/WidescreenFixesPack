@@ -101,6 +101,24 @@
       "apply": "live"
     },
     {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "choices": [
+        { "value": "auto", "label": "@TextLanguage.auto" },
+        { "value": "en", "label": "English" },
+        { "value": "fr", "label": "Français" },
+        { "value": "de", "label": "Deutsch" },
+        { "value": "it", "label": "Italiano" },
+        { "value": "es", "label": "Español" }
+      ],
+      "label": "@TextLanguage",
+      "description": "@TextLanguage.description",
+      "page": "advanced",
+      "visibility": "editor",
+      "apply": "live"
+    },
+    {
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
@@ -131,7 +149,7 @@
     {
       "id": "MAIN.CutsceneBorders",
       "type": "choice",
-      "default": 1,
+      "default": 3,
       "choices": [
         {
           "value": 0,
@@ -139,7 +157,15 @@
         },
         {
           "value": 1,
-          "label": "@CutsceneBorders.on"
+          "label": "@CutsceneBorders.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@CutsceneBorders.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@CutsceneBorders.both"
         }
       ],
       "label": "@CutsceneBorders",
@@ -149,8 +175,8 @@
       "apply": "live",
       "presets": {
         "vanilla": 1,
-        "recommended": 1,
-        "enhanced": 1
+        "recommended": 3,
+        "enhanced": 3
       }
     },
     {

@@ -172,6 +172,8 @@
   "menu.restartwarning": "Algunos ajustes requieren reiniciar el juego.",
   "menu.previous": "Anterior",
   "windowmode.windowed": "Ventana",
+  "MAIN.PauseOnFocusLoss": "Pausar al perder el foco",
+  "MAIN.PauseOnFocusLoss.description": "Pausa el juego cuando su ventana pierde el foco.",
   "MAIN.ConfineCursor": "Retener el cursor",
   "MAIN.ConfineCursor.description": "Mantiene el cursor del ratón dentro de la ventana del juego mientras el juego está activo, para que no pase a otro monitor.",
   "MAIN.GamepadIcons": "Botones del mando",

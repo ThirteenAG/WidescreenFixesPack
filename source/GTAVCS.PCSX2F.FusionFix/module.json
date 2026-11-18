@@ -10,6 +10,7 @@
     "Controls.cpp",
     "MouseCamera.cpp",
     "Cheats.cpp",
+    "Timing.cpp",
     "VehicleLights.cpp",
     "../../external/injector/include/ps2/memalloc.c",
     "../../external/injector/include/ps2/patterns.c",

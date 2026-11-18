@@ -1,6 +1,6 @@
 <div align="center">
 
-**Mafia: Definitive Edition Fusion Fix** removes the stutter of high polling rate mice, makes the menu cursor follow the mouse directly and can skip the startup screens.
+**Mafia: Definitive Edition Fusion Fix** removes the stutter of high polling rate mice, makes the menu cursor follow the mouse directly and can skip the startup screens and the "Press Enter" screen.
 
 [Website](https://thirteenag.github.io/wfp#mafiade) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/MafiaDefinitiveEdition.FusionFix/dllmain.cpp)
 
@@ -15,13 +15,14 @@
 
 ## Options
 
-- **Skip intro** — On by default: the game goes straight to the main menu, past the middleware logos, the disclaimer page, the 2K and Hangar 13 logo movie and the "Press Enter to start" screen. Signing in to the profile and loading still happen as before. Off shows the screens as in the original game. Needs a restart.
+- **Skip intro** — On by default: the game goes straight on past the middleware logos, the disclaimer page and the 2K and Hangar 13 logo movie. Signing in to the profile and loading still happen as before. Off shows the screens as in the original game. Needs a restart.
+- **Skip "Press Enter"** — On by default: the title goes straight to the main menu, without the "Press Enter to start" screen. Off shows it as in the original game.
 
 ---
 
 ## Settings and hub
 
-The fix creates `plugins/MafiaDefinitiveEdition.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it. Vanilla shows the startup screens; Recommended and Enhanced skip them. Texts are available in English, French, German, Italian and Spanish. The text language can be selected in the settings editor.
+The fix creates `plugins/MafiaDefinitiveEdition.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it. Vanilla shows the startup screens and the "Press Enter" screen; Recommended and Enhanced skip them. Texts are available in English, French, German, Italian and Spanish. The text language can be selected in the settings editor.
 
 ## Known limits
 

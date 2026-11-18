@@ -10,6 +10,12 @@ namespace mc3 {
 namespace {
 SafetyMipsMid projection, sample, neutral, pan;
 float stickX, stickY; // right stick, -1..1, y up
+// Free look: the stick turns the camera around the car; after a short delay
+// without input it eases back behind the car.
+constexpr float pi = 3.14159265358979323846f;
+constexpr float returnDelay = 1.0f;
+float lookYaw, lookHold;
+uint32_t lookTime;
 
 float Axis(uint8_t value) {
     const float axis = (float(value) - 127.5f) / 127.5f;
@@ -26,6 +32,7 @@ void InstallAspect() {
     fovFactor = std::clamp(inireader.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.0f);
     hudScale = std::clamp(inireader.ReadFloat("MAIN", "HudScale", 1.0f), 0.5f, 1.5f);
     cutsceneBorders = std::clamp(inireader.ReadInteger("MAIN", "CutsceneBorders", 3), 0, 3);
+    cameraSpeed = std::clamp(inireader.ReadFloat("MAIN", "GamepadCameraSpeed", 1.0f), 0.5f, 2.0f);
     char box[64]{};
     hudAspect = console::parse_hud_aspect(inireader.ReadString("MAIN", "HudAspectRatioConstraint", "Auto", box, sizeof(box)));
 
@@ -67,7 +74,18 @@ void InstallCamera() {
         const auto object = uintptr_t(regs.s0);
         const auto pad = reinterpret_cast<const SceCtrlData*>(uintptr_t(regs.sp) + 4);
         const bool available = regs.v0 != 0 && !(uint32_t(regs.a3) & PSP_CTRL_HOLD);
-        const uint8_t x = available ? pad->Rsrv[0] : 128, y = available ? pad->Rsrv[1] : 128;
+        uint8_t x = available ? pad->Rsrv[0] : 128, y = available ? pad->Rsrv[1] : 128;
+        if (available && ((x == 128 && y == 128) || (x == 0 && y == 0))) {
+            // Without a right-stick binding in PPSSPP, the host pad's right stick (Z and RZ).
+            float hx{}, hy{};
+            x = y = 128;
+            if (sceIoDevctl("kemulator:", 0x33, reinterpret_cast<void*>(11), 0, &hx, sizeof(hx)) >= 0 &&
+                sceIoDevctl("kemulator:", 0x33, reinterpret_cast<void*>(14), 0, &hy, sizeof(hy)) >= 0 &&
+                std::isfinite(hx) && std::isfinite(hy)) {
+                x = uint8_t(128 + int(std::clamp(hx, -1.0f, 1.0f) * 127.0f));
+                y = uint8_t(128 + int(std::clamp(-hy, -1.0f, 1.0f) * 127.0f));
+            }
+        }
         at<uint8_t>(object + 18) = x;
         at<uint8_t>(object + 19) = y;
         stickX = Axis(x);
@@ -85,18 +103,34 @@ void InstallCamera() {
             state[0] = axis ? 128 : 0;
             state[1] = uint8_t(regs.a3);
         }, replace);
-    // Chase camera pan: D-pad left/right select +-90 degrees (f12) and the
-    // camera applies the change against the previous frame's pan. The right
-    // stick supplies the same pan continuously: sideways looks left/right,
-    // pulling back looks behind the car. The D-pad keeps priority.
+    // Chase camera pan: D-pad left/right select +-90 degrees (f12, radians)
+    // and the camera applies the change against the previous frame's pan.
+    // The right stick orbits the camera at a set speed (pulling back looks
+    // behind the car); the D-pad keeps priority.
     pan = safetymips::create_mid(panSite,
         [](SafetyMipsContext& regs) {
-            if (float(regs.f12) != 0.0f) return;
+            const uint32_t now = sceKernelGetSystemTimeLow();
+            const float dt = lookTime ? std::clamp(float(now - lookTime) * 0.000001f, 0.0f, 0.1f) : 0.0f;
+            lookTime = now;
+            if (float(regs.f12) != 0.0f) {
+                lookYaw = lookHold = 0.0f;
+                return;
+            }
             constexpr float deadzone = 0.2f;
-            const float length = std::sqrt(stickX * stickX + stickY * stickY);
-            if (length <= deadzone) return;
-            const float amount = length >= 1.0f ? 1.0f : (length - deadzone) / (1.0f - deadzone);
-            regs.f12 = -std::atan2(stickX, stickY) * amount;
+            const float x = std::fabs(stickX) <= deadzone ? 0.0f : std::copysign((std::fabs(stickX) - deadzone) / (1.0f - deadzone), stickX);
+            if (stickY < -0.75f && std::fabs(stickX) < 0.5f) {
+                lookYaw = lookYaw > 0.0f ? pi : -pi;
+                lookHold = returnDelay;
+            } else if (x != 0.0f) {
+                lookYaw = std::clamp(lookYaw - x * cameraSpeed * 2.4f * dt, -pi, pi);
+                lookHold = returnDelay;
+            } else if (lookHold > 0.0f) {
+                lookHold -= dt;
+            } else {
+                lookYaw *= std::exp(-6.0f * dt);
+                if (std::fabs(lookYaw) < 0.001f) lookYaw = 0.0f;
+            }
+            if (lookYaw != 0.0f) regs.f12 = lookYaw;
         });
 }
 }

@@ -37,6 +37,7 @@ export GameRef<uint8_t> game_matrixStack;
 export GameRef<void*> cameraPrimary;
 export GameRef<void*> cameraCanvas;
 export GameRef<int> game_scope;
+export GameRef<int> game_aim;
 export GameRef<int> game_scripted;
 export GameRef<int> game_followBlocked;
 export GameRef<int> game_controlBlocked;

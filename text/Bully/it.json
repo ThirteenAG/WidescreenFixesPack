@@ -29,8 +29,6 @@
   "GRAPHICS.ShadowResolution": "Risoluzione ombre",
   "GRAPHICS.ShadowResolution.description": "Dimensione delle mappe delle ombre. Valori più alti danno ombre più nitide e meno squadrate e usano più memoria video. Si applica al prossimo avvio.",
   "GRAPHICS.ShadowResolution.1024": "1024 (originale)",
-  "controls.auto": "Controller automatico",
-  "controls.auto.description": "Usa il controller o tastiera e mouse, in base all'ultimo usato, e rileva i controller collegati durante il gioco.",
   "controls.speed": "Velocità telecamera pad",
   "controls.speed.description": "Moltiplica la velocità della telecamera col controller. 1,00 = velocità originale. Il mouse non cambia.",
   "controls.deadzone": "Zona morta levette",

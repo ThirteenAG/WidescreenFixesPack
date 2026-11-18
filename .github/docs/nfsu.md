@@ -27,7 +27,6 @@
 - **Fix** for sticky steering, where the opposite direction was ignored until the wheels were centred
 - **Audio** - 44.1 kHz output instead of 22 kHz
 - **Stability** - fixes the random "0xAAAAAAAA" crash on multi-core CPUs at its cause (the game's memory allocator wasn't thread safe), so the game no longer needs to run on a single CPU core
-- **Unsupported versions** - game versions other than 1.4 (such as the original 1.0) show a message and start without the fix instead of crashing
 <br clear="both">
 
 ---
@@ -48,7 +47,7 @@ Menu Text Language (the language of the Plugins menu) is on fusionfix.io and in 
 - **Language** - the game's language, chosen from the languages whose text and speech files are installed; applies after a restart
 - **Display Mode** - borderless, bordered, resizable, or borderless fullscreen; in every mode the picture is neither cropped nor blurred on scaled desktops
 - **Frame Rate** - uncapped, a fixed limit, or the monitor's refresh rate (or twice it); applies at once; Vanilla keeps the original 60 FPS
-- **Gamepad Support** - Xbox, PlayStation, Switch and other controllers through [Xidi](https://github.com/samuelgr/Xidi) using XInput (PlayStation and Switch pads use Steam Input or DS4Windows): modern default controls with analog triggers, controller button names in the controls menu, gamepad buttons for all front end actions, and button icons that follow the last device used (Xbox style in Auto, or PlayStation style chosen in the menu); the PC menu bar's quit, delete, default/stock, tutorial, performance and customize actions are on pad buttons (see the table below)
+- **Gamepad Support** - Xbox, PlayStation, Switch and other controllers through [Xidi](https://github.com/samuelgr/Xidi) using XInput (PlayStation and Switch pads use Steam Input or DS4Windows): modern default controls with analog triggers, controller button names in the controls menu, gamepad buttons for all front end actions, and button icons that follow the last device used (Xbox style in Auto, or PlayStation style chosen in the menu); the PC menu bar's quit, delete, default/stock, tutorial, performance and customize actions are on pad buttons (see the table below); Xbox pads get the same controls when Xidi isn't loaded, with both triggers on one axis (pressing both at once cancels them out)
 - **Stick Dead Zones** - separate dead zones for the left and right stick, in percent (default 10)
 - **Field of View** - multiplies the driving camera field of view from 0.5 to 2.0 (default 1.0) and applies while the game runs; native angle limits still apply
 
@@ -101,6 +100,7 @@ Menu Text Language (the language of the Plugins menu) is on fusionfix.io and in 
 
 ## Known limits
 
+- The fix supports version 1.4 of the game only; update the game to 1.4 before installing it.
 - Menus and pause screens have a separate frame rate limit; loading screens do not have their own limit.
 - The race start flybys and drag intro shots have no black bars in the original game, so the fix has no Cutscene Borders option; they use the same widescreen view as the race.
 

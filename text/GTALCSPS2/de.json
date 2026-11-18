@@ -118,5 +118,11 @@
   "gamepadicons.playstation": "PlayStation",
   "gamepadicons.nintendo": "Nintendo",
   "lights": "Fahrzeuglichter",
-  "lights.description": "Lässt Scheinwerfer, Rück-, Brems- und Rückfahrlichter auf den Karosserietexturen von Autos und Motorrädern leuchten, erzeugt aus den Spieltexturen. Standardmäßig aktiv."
+  "lights.description": "Lässt Scheinwerfer, Rück-, Brems- und Rückfahrlichter auf den Karosserietexturen von Autos und Motorrädern leuchten, erzeugt aus den Spieltexturen. Standardmäßig aktiv.",
+  "controls.moderncontrolscheme": "Moderne Steuerung",
+  "controls.moderncontrolscheme.description": "Fahren, Zielen und Schießen mit den Triggern. Die nativen modusabhängigen Steuerungen bleiben unterstützt.",
+  "controls.gamepadcameraspeed": "Gamepad-Kameratempo",
+  "controls.gamepadcameraspeed.description": "Tempo der Kamera mit dem rechten Stick, zu Fuß und in Fahrzeugen. 1.0 ist das Originaltempo.",
+  "controls.invertgamepady": "Gamepad Y umkehren",
+  "controls.invertgamepady.description": "Kehrt die vertikale Kamerarichtung des rechten Sticks um."
 }

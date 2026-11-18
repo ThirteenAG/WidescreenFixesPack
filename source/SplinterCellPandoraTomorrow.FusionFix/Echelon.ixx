@@ -164,35 +164,31 @@ namespace AEPlayerControllerCheckpoint
     // Returns empty if no save folder exists.
     std::filesystem::path FindActiveProfileFolder()
     {
-        try
-        {
-            const auto saveRoot = GetExeModulePath() / L".." / L"Save";
-            if (!std::filesystem::is_directory(saveRoot))
-                return {};
-
-            std::filesystem::path best;
-            std::filesystem::file_time_type bestTime{};
-            bool haveBest = false;
-
-            for (const auto& entry : std::filesystem::directory_iterator(saveRoot))
-            {
-                if (!entry.is_directory())
-                    continue;
-
-                const auto t = entry.last_write_time();
-                if (!haveBest || t > bestTime)
-                {
-                    best     = entry.path();
-                    bestTime = t;
-                    haveBest = true;
-                }
-            }
-            return best;
-        }
-        catch (...)
-        {
+        std::error_code ec;
+        const auto saveRoot = GetExeModulePath() / L".." / L"Save";
+        if (!std::filesystem::is_directory(saveRoot, ec))
             return {};
+
+        std::filesystem::path best;
+        std::filesystem::file_time_type bestTime{};
+        bool haveBest = false;
+
+        for (const auto& entry : std::filesystem::directory_iterator(saveRoot, ec))
+        {
+            if (!entry.is_directory(ec))
+                continue;
+
+            const auto t = entry.last_write_time(ec);
+            if (ec)
+                continue;
+            if (!haveBest || t > bestTime)
+            {
+                best     = entry.path();
+                bestTime = t;
+                haveBest = true;
+            }
         }
+        return best;
     }
 
     // Pick the next checkpoint slot, preferring empty slots before overwriting the oldest save

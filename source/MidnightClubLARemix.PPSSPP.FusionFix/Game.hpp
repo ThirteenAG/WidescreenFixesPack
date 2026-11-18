@@ -11,6 +11,7 @@ inline float targetAspect = nativeAspect;
 inline bool automaticAspect = true;
 inline float hudScale = 1.0f;
 inline float fovFactor = 1.0f;
+inline float cameraSpeed = 1.0f;
 inline float hudAspect = 0.0f;
 inline bool skipIntro = true, dualAnalog = true;
 // MAIN.CutsceneBorders: bit 0 letterbox on narrow screens, bit 1 pillarbox on wide screens.

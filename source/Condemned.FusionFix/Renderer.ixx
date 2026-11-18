@@ -12,6 +12,8 @@ export module Renderer;
 import Frontend;
 import DeveloperOverlay;
 import Xidi;
+import ControllerDefaults;
+import Hud;
 
 // Frame limit, cursor confinement, developer overlay and update check on the game's device; focus handling in the
 // game's window procedure.
@@ -61,6 +63,7 @@ export namespace CondemnedRenderer
     inline LRESULT CALLBACK WindowProcedure(HWND target, UINT message, WPARAM wParam, LPARAM lParam)
     {
         window = target;
+        InputMessage(message);
         LRESULT result = 0;
         if (CondemnedOverlay::Message(target, message, wParam, lParam, result))
             return result;
@@ -89,6 +92,9 @@ export namespace CondemnedRenderer
         {
             const HWND target = window;
             UpdateXidi();
+            PollPad();
+            UpdateControllerDefaults();
+            CondemnedHud::Frame();
             ApplyFrameLimit(target);
             CursorConfinement::Suspend(CondemnedOverlay::BlocksInput());
             CursorConfinement::Frame(target);

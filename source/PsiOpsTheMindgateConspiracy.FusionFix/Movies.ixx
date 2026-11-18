@@ -30,8 +30,7 @@ export namespace PsiOpsMovies
                 {
                     float position[2];
                     std::memcpy(position, copy.data() + i * 24, sizeof(position));
-                    injector::WriteMemory<float>(reinterpret_cast<float*>(vertices + i * 24), position[0], true);
-                    injector::WriteMemory<float>(reinterpret_cast<float*>(vertices + i * 24 + 4), position[1], true);
+                    std::memcpy(vertices + i * 24, position, sizeof(position));
                 }
             }
         }

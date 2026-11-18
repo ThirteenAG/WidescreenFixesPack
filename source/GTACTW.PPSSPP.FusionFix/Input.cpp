@@ -63,7 +63,7 @@ bool GameplayPad(uintptr_t pad) {
 // e.g. throwables are aimed with held(50)/held(38) and fired by released/
 // pressed queries from different functions, which broke the old per-call swap.
 bool Remap(uintptr_t pad, int action, uintptr_t caller) {
-    if (!Guest(pad, 180) || unsigned(action) >= 52 || !GameplayApp() || !GameplayPad(pad)) return false;
+    if (!modernControls || !Guest(pad, 180) || unsigned(action) >= 52 || !GameplayApp() || !GameplayPad(pad)) return false;
     return action <= 38 || Gameplay(caller) || ThrowPower(caller, action);
 }
 bool querying;
@@ -96,7 +96,6 @@ int ResetRepeat(uintptr_t pad, int action, uint8_t reset) {
 }
 }
 void InstallInput() {
-    if (!Option("ModernControls", 1)) return;
     BindGameplay();
     safetymips::Options caller;caller.preserve_game_callees=false;
     held = safetymips::create_inline(Address<0x08891160>(), Held, caller);

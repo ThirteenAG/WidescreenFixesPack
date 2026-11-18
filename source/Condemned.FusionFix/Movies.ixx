@@ -8,12 +8,24 @@ export module Movies;
 
 
 // Movie screens (menu, extras, credits) draw the video into a box the game fits to the screen at 16:9 (its WideScreen
-// default), stretching 4:3 videos. The video is fitted to the whole screen at its own aspect instead, never cut off or
-// stretched. The square videos (extras, credits) are 16:9 pictures stored in square textures, as the game shows them;
-// the others (logos) have square pixels.
+// default), stretching 4:3 videos. The video keeps its own aspect, never cut off or stretched: inside that 16:9 box
+// (MAIN.FMVWidescreenMode Original) or fitted to the whole screen (Fill). The square videos (extras, credits) are 16:9
+// pictures stored in square textures, as the game shows them; the others (logos) have square pixels.
 export namespace CondemnedMovies
 {
     inline SafetyHookMid rectangleHook;
+
+    // The largest box of the given aspect inside the screen, centred, as parts of the screen
+    inline void Inside(float* rectangle, float screen, float aspect)
+    {
+        const bool wider = screen > aspect;
+        const float width = wider ? aspect / screen : 1.0f;
+        const float height = wider ? 1.0f : screen / aspect;
+        rectangle[0] = (1.0f - width) * 0.5f;
+        rectangle[1] = (1.0f - height) * 0.5f;
+        rectangle[2] = 1.0f - rectangle[0];
+        rectangle[3] = 1.0f - rectangle[1];
+    }
 
     inline void Fit(float* rectangle, float screenWidth, float screenHeight, float videoWidth, float videoHeight)
     {
@@ -25,14 +37,21 @@ export namespace CondemnedMovies
         }
         const float screen = screenWidth / screenHeight;
         const float video = videoWidth == videoHeight ? 16.0f / 9.0f : videoWidth / videoHeight;
-        // The whole video inside the screen
-        const bool wider = screen > video;
-        const float width = wider ? video / screen : 1.0f;
-        const float height = wider ? 1.0f : screen / video;
-        rectangle[0] = (1.0f - width) * 0.5f;
-        rectangle[1] = (1.0f - height) * 0.5f;
-        rectangle[2] = 1.0f - rectangle[0];
-        rectangle[3] = 1.0f - rectangle[1];
+        if (FixSettings().Int("MAIN.FMVWidescreenMode") != 0)
+        {
+            Inside(rectangle, screen, video);
+            return;
+        }
+        // The game's 16:9 box, with the video inside it
+        constexpr float box = 16.0f / 9.0f;
+        float outer[4]{}, inner[4]{};
+        Inside(outer, screen, box);
+        Inside(inner, box, video);
+        const float width = outer[2] - outer[0], height = outer[3] - outer[1];
+        rectangle[0] = outer[0] + inner[0] * width;
+        rectangle[1] = outer[1] + inner[1] * height;
+        rectangle[2] = outer[0] + inner[2] * width;
+        rectangle[3] = outer[1] + inner[3] * height;
     }
 
     inline void Init(HMODULE gameClient)

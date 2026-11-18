@@ -17,7 +17,6 @@ import Echelon;
 import Core;
 import WinDrv;
 import Xidi;
-import Online;
 import Eax;
 import GUI;
 import WidescreenHUD;
@@ -138,17 +137,15 @@ CEXP void InitializeASI()
         asi_settings::LiveLink::Start();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("74 ? 68 ? ? ? ? 53 FF D7"));
         CallbackHandler::RegisterCallback(L"Window.dll", InitWindow);
-        CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
+        CallbackHandler::RegisterCallback(L"Engine.dll", [] { InitEngineConfigReads(); InitEngine(); });
         CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
         CallbackHandler::RegisterCallback(L"gear_RD.dll", InitGear);
         CallbackHandler::RegisterCallback(L"EchelonMenus.dll", [] { InitEchelonMenus(); DAMenu::Init(); NativeWindowsMenuHelp = DAMenu::WindowsHelp; });
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
-        CallbackHandler::RegisterCallback(L"Core.dll", []() { InitCore(); InitUpdateCheck(); });
+        CallbackHandler::RegisterCallback(L"Core.dll", []() { InitConfigReads(); InitCore(); InitUpdateCheck(); });
         CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
         CallbackHandler::RegisterCallback(L"Xidi.32.dll", InitXidi);
         CallbackHandler::RegisterCallback(L"eax.dll", InitEAX);
-
-        CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(InitOnline, hook::pattern("8B F9 8B 47 30 85 C0 74 18"));
     });
 }
 

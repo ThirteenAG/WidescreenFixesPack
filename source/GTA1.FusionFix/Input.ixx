@@ -69,6 +69,12 @@ export namespace GTA1Input
             if (!IsPaused() && Focused())
                 Damage(state);
             UpdateRumble(IsPaused() || !Focused());
+            // R3 toggles the rotating camera, like the keyboard's rotation key
+            static bool rotationButton = false;
+            const bool rotationPressed = Button(XINPUT_GAMEPAD_RIGHT_THUMB) && !IsPaused();
+            if (rotationPressed && !rotationButton)
+                GTA1Rotation::Enabled = !GTA1Rotation::Enabled;
+            rotationButton = rotationPressed;
             auto [x, y] = Movement(type != 2);
             if (IsPaused()) x = y = 0;
             auto [aimX, aimY] = Stick(true);

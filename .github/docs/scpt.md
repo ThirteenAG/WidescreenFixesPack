@@ -4,10 +4,10 @@
 
 * **Resolution** - native support for any display resolution, including ultrawide
 * **Aspect Ratio** - corrected for all rendered elements
-* **HUD** - repositioned and scaled to match the active aspect ratio; at the screen edges or in a centred box (4:3, 16:9, 21:9 or custom)
+* **HUD** - repositioned and scaled to match the active aspect ratio; at the screen edges or in a centred box (4:3, 16:9, 21:9 or custom). The objective bar and quick inventory stay next to the weapon box
 * **Field of View** - corrected FOV to match the 4:3 values; cinematics keep their original framing at any aspect ratio
 * **FMVs** - Fill enlarges the movies past the black bars of the game's 4:3 movie area until the picture fits the screen, without cutting it; Original keeps the 4:3 display; 480p playback limit removed
-* **Framerate Issues** - animated textures, camera shake, cloth physics and AI pathing no longer have issues at higher framerates
+* **Framerate Issues** - animated textures, camera shake and cloth physics no longer have issues at higher framerates; night and thermal vision grain changes 30 times a second at any frame rate
 * **Resolution Scale** - vision mode grain, thermal vision, rain particles now correctly scale at higher resolutions
 
 ## Visual Improvements
@@ -40,9 +40,9 @@ Open Options → Plugins to change the fix’s settings in the game. Window Mode
 
 Choose the resolution, HUD width, gameplay field of view and video framing in FusionFixHub or on fusionfix.io. Video framing offers the original 4:3 display or Fill, which never cuts the picture.
 
-HUD Aspect Ratio and Vision Grain Scaling apply while playing. Shadow, reflection and post-process buffer sizes require a restart because the renderer creates those textures at startup.
+HUD Aspect Ratio, Widescreen Scope and Vision Grain Scaling apply while playing. Shadow, reflection and post-process buffer sizes require a restart because the renderer creates those textures at startup.
 
-Gamepad Icons, Gamepad Camera Speed, Invert Gamepad Y and Vibration are under Options → Plugins → this fix. Choose More pages until the controller rows appear. Camera speed, inversion and vibration changes apply while playing. Keyboard and mouse input returns the training hints to keyboard keys. The prompts assume the supplied Xidi mappings and the default keyboard bindings.
+Gamepad Icons, Gamepad Camera Speed, Invert Gamepad Y and Vibration are under Options → Plugins → this fix. Choose More pages until the controller rows appear. Camera speed, inversion and vibration changes apply while playing. Keyboard and mouse input returns the training hints to keyboard keys. The prompts assume the supplied Xidi mappings and the default keyboard bindings. The fix fills in the pad bindings only where the game has none, so pad bindings changed in the game's own settings are kept.
 
 Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets. The default frame rate limit is 60 FPS; higher rates can affect AI and physics.
 
@@ -56,7 +56,7 @@ Recommended uses the default setup. Vanilla and Enhanced offer alternative prese
 
 ## Installation
 
-Retail and current digital executables are supported. Buffered-shadow corrections apply to retail; use projector shadows (`ForceShadowMode=0`, or automatic selection) in the current digital release. Forcing buffered shadows there can prevent startup. The native Direct3D 8 renderer is retained; the Direct3D 9/11 developer overlay does not apply.
+Retail and current digital executables are supported. The single-player game is covered; the multiplayer mode (Spies vs. Mercs, a separate executable in the retail release) is not. Buffered-shadow corrections apply to retail; use projector shadows (`ForceShadowMode=0`, or automatic selection) in the current digital release. Forcing buffered shadows there can prevent startup. The native Direct3D 8 renderer is retained; the Direct3D 9/11 developer overlay does not apply.
 
 1. Download `SplinterCellPandoraTomorrow.FusionFix.zip` from this release.
 2. Extract the contents directly into the game folder.

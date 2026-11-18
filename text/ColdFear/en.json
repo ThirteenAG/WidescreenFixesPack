@@ -55,7 +55,7 @@
   "MAIN.TextLanguage.description": "Language of the Plugins menu. Automatic uses English. Reopen the menu after changing it.",
   "page.compatibility": "Compatibility",
   "PauseOnFocusLoss": "Pause in background",
-  "FPSLimit.description": "Limits the frame rate. Applies immediately.",
+  "FPSLimit.description": "Limits the frame rate to at most 120 FPS, the game's own limit; the monitor setting follows the refresh rate up to 120. Applies immediately.",
   "PauseOnFocusLoss.description": "In a window mode, the game pauses and goes silent while another window is active. Off keeps it running. Applies immediately.",
   "FPSLimit.unlimited": "Unlimited",
   "FPSLimit": "Frame Rate Limit",

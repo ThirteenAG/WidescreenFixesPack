@@ -175,6 +175,19 @@
       }
     },
     {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1.0,
+      "label": "@GamepadCameraSpeed",
+      "description": "@GamepadCameraSpeed.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live",
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.1
+    },
+    {
       "id": "MAIN.TextLanguage",
       "type": "choice",
       "default": "auto",

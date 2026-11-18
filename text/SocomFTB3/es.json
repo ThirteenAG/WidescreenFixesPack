@@ -41,7 +41,7 @@
   "menu.help": "Ajustes y ayuda de Fusion Fix.",
   "page.compatibility": "Compatibilidad",
   "menu.help.button": "Ayuda",
-  "menu.preset.help": "Original conserva introducciones, controles e iconos PSP. Recomendado y Mejorado activan el salto de introducciones, dos sticks analógicos, menor suavizado de cámara, cargas rápidas e iconos Xbox. Los demás ajustes mantienen tus valores.",
+  "menu.preset.help": "Original conserva introducciones, controles e iconos PSP. Recomendado y Mejorado activan el salto de introducciones, dos sticks analógicos, menor suavizado de cámara, cargas rápidas e iconos Xbox, y desactivan la corrección de color. Los demás ajustes mantienen tus valores.",
   "icons": "Iconos del mando",
   "icons.description": "Sustituye los iconos de los botones en los menús y las indicaciones del juego. Auto usa iconos Xbox porque PPSSPP oficial no comunica el tipo de mando conectado. PlayStation conserva los iconos PSP originales. Solo cambian las imágenes; configura los controles en PPSSPP. Los cambios en Plugins son inmediatos; después de editar el archivo, reinicia el juego emulado.",
   "icons.auto": "Auto",
@@ -53,5 +53,9 @@
   "fps": "Tasa de fotogramas",
   "fps.description": "Elige el límite original de 30 FPS o 60 FPS. El juego usa el tiempo transcurrido; los efectos, la atenuación de las sacudidas y los tiempos del texto siguen el mismo reloj. PPSSPP controla la velocidad de emulación y el salto de fotogramas. Los cambios en Plugins son inmediatos; después de editar el archivo, reinicia el juego emulado.",
   "fps.30": "30 FPS",
-  "fps.60": "60 FPS"
+  "fps.60": "60 FPS",
+  "grading": "Corrección de color",
+  "grading.description": "Original conserva la corrección de color gris del juego. Con los renderizadores por hardware de PPSSPP (Vulkan, Direct3D, OpenGL) puede dejar una doble imagen fantasma de personajes y edificios; el renderizador por software la muestra correctamente. Desactivado omite la corrección: colores completos y sin imagen fantasma. Los cambios en Plugins son inmediatos; después de editar el archivo, reinicia el juego emulado.",
+  "grading.original": "Original",
+  "grading.off": "Desactivado"
 }

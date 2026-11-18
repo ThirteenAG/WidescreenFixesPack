@@ -10,6 +10,16 @@ import CutsceneFrame;
 
 // The turret and retinal scanner screens: their whole interface sits at the right HUD margin
 bool bRightSideInterface = false;
+// The quick inventory opens to the left of the weapon box
+bool bQuickInventory = false;
+
+// The current goal bar spans from the left HUD margin to the weapon box. Its background comes first (Left + Right =
+// 533 at every HUD position setting, 20 high), then its outline and right-aligned text inside the outline's area.
+struct GoalBarArea
+{
+    float left, right, top, bottom;
+};
+std::optional<GoalBarArea> GoalBar;
 
 // Once per frame on the game thread: the live HUD settings, consumed by the HUD draw hooks
 export void RefreshHudConstraint()
@@ -19,7 +29,10 @@ export void RefreshHudConstraint()
     const auto playerState = UObject::GetState(L"EPlayerController");
     bRightSideInterface = (hudState == L"MainHUD" && playerState == L"s_Turret") ||
         (hudState == L"s_Slavery" && (playerState == L"s_RetinalScanner" || playerState == L"s_Grab"));
+    bQuickInventory = UObject::GetState(L"EQInvHUD") == L"s_QDisplay";
+    GoalBar.reset();
     Screen.fGrainScale = std::clamp(FixSettings().Float("MAIN.GrainScale"), 0.0f, 1.0f);
+    Screen.bScopeWidescreenMode = FixSettings().Int("MAIN.ScopeWidescreenMode") != 0;
     if (Screen.Width <= 0 || Screen.Height <= 0 || Screen.fWidth <= 0.0f || Screen.fHeight <= 0.0f ||
         !std::isfinite(Screen.fWidth) || !std::isfinite(Screen.fHeight) || !std::isfinite(Screen.fAspectRatio))
         return;
@@ -246,6 +259,22 @@ namespace HudMatchers
         return timerText || timerTopBorder || timerBottomBorder || timerLeftBorder || timerRightBorder || timerBackground;
     }
 
+    // Gadget categories and items of the open quick inventory, left of the weapon box
+    inline bool IsQuickInventory(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
+    {
+        return bQuickInventory &&
+            offsetX1 >= 40 && offsetX2 <= 482 &&
+            offsetY1 >= 300 && offsetY2 <= 450;
+    }
+
+    inline bool IsGoalBar(float offsetX1, float offsetX2, float offsetY1, float offsetY2)
+    {
+        if (offsetY2 - offsetY1 == 20.0f && offsetX1 + offsetX2 == 533.0f && offsetX1 >= 2.0f && offsetX1 <= 150.0f && offsetY1 >= 300.0f)
+            GoalBar = GoalBarArea{ offsetX1 - 2.0f, offsetX2 + 2.0f, offsetY1 - 2.0f, offsetY2 + 2.0f };
+        return GoalBar && offsetX1 >= GoalBar->left && offsetX2 <= GoalBar->right &&
+            offsetY1 >= GoalBar->top && offsetY2 <= GoalBar->bottom;
+    }
+
     inline bool ShouldOffsetRight(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
     {
         return IsStealthMeterLine(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
@@ -267,7 +296,8 @@ namespace HudMatchers
             IsInteractionMenuBackground(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
             IsInteractionMenuBorder(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
             IsInteractionMenuText(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
-            IsTurretInterface(offsetX1, offsetX2, offsetY1, offsetY2, color);
+            IsTurretInterface(offsetX1, offsetX2, offsetY1, offsetY2, color) ||
+            IsQuickInventory(offsetX1, offsetX2, offsetY1, offsetY2, color);
     }
 
     inline bool ShouldOffsetLeft(uint32_t offsetX1, uint32_t offsetX2, uint32_t offsetY1, uint32_t offsetY2, FColor color)
@@ -291,7 +321,8 @@ export void WidescreenHud(float& offsetX1, float& offsetX2, float& offsetY1, flo
     uint32_t n_offsetY1 = static_cast<uint32_t>(offsetY1);
     uint32_t n_offsetY2 = static_cast<uint32_t>(offsetY2);
 
-    if (HudMatchers::ShouldOffsetRight(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color))
+    if (HudMatchers::ShouldOffsetRight(n_offsetX1, n_offsetX2, n_offsetY1, n_offsetY2, Color) ||
+        HudMatchers::IsGoalBar(offsetX1, offsetX2, offsetY1, offsetY2))
     {
         offsetX1 += Screen.fWidescreenHudOffset;
         offsetX2 += Screen.fWidescreenHudOffset;

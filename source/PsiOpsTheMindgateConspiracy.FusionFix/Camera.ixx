@@ -97,7 +97,7 @@ export namespace PsiOpsCamera
     inline uintptr_t __fastcall Update(void* self, void*, uint8_t force, uint8_t parent)
     {
         if (self == worldCamera.load() && changed.exchange(false))
-            injector::WriteMemory<uint8_t>(static_cast<uint8_t*>(self) + 41, 1, true);
+            *(static_cast<uint8_t*>(self) + 41) = 1;
         return updateHook.unsafe_thiscall<uintptr_t>(self, force, parent);
     }
 

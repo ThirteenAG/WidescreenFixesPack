@@ -44,8 +44,9 @@ The fix creates `scripts/TheMatrixPathOfNeo.FusionFix.cfg` on first start; Fusio
 ## Known limits
 
 - The game's menus are built by its own scripts, so the fix has no page in them: change its settings in FusionFixHub or on fusionfix.io.
-- The game runs at 30 frames per second, as it always has; the fix doesn't change its frame rate.
+- The game runs at 30 frames per second, as it always has. Its world moves in fixed steps of 1/30 second and every frame shows one of those steps, so a higher frame rate would only repeat pictures; the fix keeps the original rate.
 - The button prompts show keyboard and mouse keys also when a controller is used.
+- The resolution list in the game's own options has only its original modes and is built by the game's scripts; the fix uses the desktop resolution or the one set in its options instead, so a choice in that list has no effect.
 - The window can't be resized by dragging; pick the size in the fix's options.
 - The startup logo screens are already skipped by the game itself; Skip intro removes the copyright screen.
 - The mouse is read through DirectInput without Windows pointer acceleration, so no raw input option is needed.

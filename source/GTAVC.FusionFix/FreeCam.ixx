@@ -15,16 +15,19 @@ import Vehicle;
 import Entity;
 import Draw;
 
-// MAIN.FreeCamera: an orbiting camera behind the vehicle (CCam::Process_Cam_On_A_String and Process_BehindBoat) and
-// behind the player on foot (CCam::Process_FollowPed, the pad's camera; the mouse keeps the game's own). The right
-// stick, or the mouse in a vehicle when it doesn't steer, turns it around freely; it stays where it was turned while
-// the vehicle drives on, and after a moment without input it swings back behind the direction the vehicle or the
-// player moves. Looking left, right and behind, the tank's and the fire truck's turrets, cutscenes and scripted
-// cameras stay the game's.
+// MAIN.FreeCamera: the rotating cameras of the later games.
+// - On foot (CCam::Process_FollowPed): the right stick or the mouse turns the camera around the player, who walks and
+//   runs where the stick or the keys point, under the camera. The camera goes behind the player on the camera-behind
+//   button and while shooting. Aiming (LT in the modern layout, the target or fire button with the mouse) is the
+//   game's own mouse aiming: the player turns with the camera and fires at the crosshair (see Pad.ixx).
+// - In a vehicle (CCam::Process_Cam_On_A_String and Process_BehindBoat): a chase camera that swings behind the way the
+//   vehicle moves, with distances, heights and limits for each kind of vehicle (cars, bikes, helicopters, planes,
+//   boats, the remote control toys). The right stick, or the mouse when it
+//   doesn't steer, turns it; the tank's and the fire truck's turrets follow it.
+// Looking left, right and behind, cutscenes and scripted cameras stay the game's.
 
 namespace
 {
-    static_assert(offsetof(CCam, ResetStatics) == 0x0A);
     static_assert(offsetof(CCam, Mode) == 0x0C);
     static_assert(offsetof(CCam, Alpha) == 0xAC);
     static_assert(offsetof(CCam, FOV) == 0xB4);
@@ -33,10 +36,20 @@ namespace
     static_assert(offsetof(CCam, Source) == 0x174);
     static_assert(offsetof(CCam, CamTargetEntity) == 0x1B0);
 
-    constexpr int16_t MI_FIRETRUCK = 137, MI_RHINO = 162;
+    constexpr int16_t MI_FIRETRUCK = 137, MI_VOODOO = 142, MI_RHINO = 162, MI_RCBANDIT = 171, MI_RCBARON = 194, MI_RCRAIDER = 195,
+        MI_RCGOBLIN = 231;
     constexpr int LOOKING_FORWARD = 3;
+    constexpr int CAM_ZOOM_1 = 1, CAM_ZOOM_2 = 2, CAM_ZOOM_3 = 3;
+    constexpr int WEAPON_UNARMED = 0, WEAPON_BASEBALLBAT = 6, WEAPON_DETONATOR = 34;
     constexpr float DefaultNear = 0.9f;
     constexpr float DefaultFOV = 70.0f;
+    constexpr float TweakFOV = 1.05f;
+    constexpr float StickSensitivity = 0.01f;
+
+    // CAutomobile and CBike
+    constexpr size_t HeightAboveRoad = 0x530, CarGunLR = 0x5B4, CarGunUD = 0x5B8, WheelsOnGround = 0x5C4, BikeWheelsOnGround = 0x5FC;
+    // The remote control aircraft are this much further away
+    constexpr float RcHeliExtra = 6.0f, RcPlaneExtra = 9.5f;
 
     struct CColPoint
     {
@@ -53,8 +66,15 @@ namespace
     CEntity* (__cdecl* TestSphereAgainstWorld)(CVector, float, CEntity*, bool, bool, bool, bool, bool, bool) = nullptr;
     bool (__cdecl* GetWaterLevelNoWaves)(float, float, float, float*) = nullptr;
     GameRef<CEntity*> pIgnoreEntity;
+    CColPoint* TempSphereColPoints = nullptr;
     uint8_t*** ModelInfoPtrs = nullptr;
     GameRef<bool> DisableMouseSteering;
+
+    template <typename T>
+    T& Field(void* object, size_t offset)
+    {
+        return *reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(object) + offset);
+    }
 
     // The vehicle's collision box (min, max)
     bool BoundingBox(CEntity* entity, CVector& min, CVector& max)
@@ -70,31 +90,83 @@ namespace
         return true;
     }
 
-    float Wrap(float a)
+    float LimitRadianAngle(float angle)
     {
-        while (a > PI)
-            a -= TWOPI;
-        while (a < -PI)
-            a += TWOPI;
-        return a;
+        angle = std::clamp(angle, -25.0f, 25.0f);
+        while (angle >= PI)
+            angle -= TWOPI;
+        while (angle < -PI)
+            angle += TWOPI;
+        return angle;
     }
 
-    // Approaches target by a share that grows with the frame's length
-    float Ease(float value, float target, float perStep, float steps)
+    // The angle of (x, y), 0..2pi
+    float ATanOfXY(float x, float y)
     {
-        float share = 1.0f - std::pow(1.0f - std::clamp(perStep, 0.0f, 1.0f), steps);
-        return value + (target - value) * share;
+        float angle = std::atan2(y, x);
+        return angle < 0.0f ? angle + TWOPI : angle;
     }
 
-    float EaseAngle(float value, float target, float perStep, float steps)
+    // Moves a value towards a target with a speed that accelerates and is capped
+    void WellBufferMe(float target, float* value, float* speed, float maxSpeed, float acceleration, bool isAngle)
     {
-        float share = 1.0f - std::pow(1.0f - std::clamp(perStep, 0.0f, 1.0f), steps);
-        return Wrap(value + Wrap(target - value) * share);
+        float step = CTimer::ms_fTimeStep;
+        float delta = target - *value;
+        if (isAngle)
+        {
+            while (delta >= PI)
+                delta -= TWOPI;
+            while (delta < -PI)
+                delta += TWOPI;
+        }
+        float targetSpeed = delta * maxSpeed;
+        *speed += acceleration * (targetSpeed - *speed) * step;
+        if (targetSpeed < 0.0f && *speed < targetSpeed)
+            *speed = targetSpeed;
+        else if (targetSpeed > 0.0f && *speed > targetSpeed)
+            *speed = targetSpeed;
+        *value += *speed * std::min(10.0f, step);
     }
 
-    CVector Direction(float yaw, float pitch)
+    // Up, square to the view and without roll, as CCam::GetVectorsReadyForRW
+    void GetVectorsReadyForRW(CCam* cam)
     {
-        return CVector(std::cos(yaw) * std::cos(pitch), std::sin(yaw) * std::cos(pitch), std::sin(pitch));
+        cam->Front.Normalise();
+        if (cam->Front.x == 0.0f && cam->Front.y == 0.0f)
+        {
+            cam->Front.x = 0.0001f;
+            cam->Front.y = 0.0001f;
+        }
+        CVector right = CrossProduct(cam->Front, CVector(0.0f, 0.0f, 1.0f));
+        right.Normalise();
+        cam->Up = CrossProduct(right, cam->Front);
+    }
+
+    // The target averaged over the last frames, as CCam::DoAverageOnVector
+    CVector DoAverageOnVector(CCam* cam, const CVector& vec)
+    {
+        if (cam->ResetStatics)
+        {
+            cam->m_iRunningVectorArrayPos = 0;
+            cam->m_iRunningVectorCounter = 1;
+        }
+        if (cam->m_iRunningVectorCounter == 3)
+        {
+            cam->m_arrPreviousVectors[0] = cam->m_arrPreviousVectors[1];
+            cam->m_arrPreviousVectors[1] = vec;
+        }
+        else
+            cam->m_arrPreviousVectors[cam->m_iRunningVectorArrayPos] = vec;
+
+        CVector average(0.0f, 0.0f, 0.0f);
+        int i = 0;
+        for (; i <= cam->m_iRunningVectorArrayPos; i++)
+            average += cam->m_arrPreviousVectors[i];
+        average /= float(i);
+
+        cam->m_iRunningVectorArrayPos = std::min(cam->m_iRunningVectorArrayPos + 1, int(std::size(cam->m_arrPreviousVectors)) - 1);
+        cam->m_iRunningVectorCounter = std::min(cam->m_iRunningVectorCounter + 1, int(std::size(cam->m_arrPreviousVectors)) + 1);
+        return average;
     }
 
     RwCamera* SceneCamera()
@@ -102,104 +174,62 @@ namespace
         return Scene.get_ptr() ? Scene->m_pRwCamera : nullptr;
     }
 
-    // Keeps the camera out of walls: pulled in front of what lies between it and the target, the near plane
-    // brought closer when that is close, and moved forward while its near plane still cuts into something
-    void AvoidCollision(CCam* cam, const CVector& target, CEntity* ignore, bool withCars)
+    // Keeps the camera out of what lies between it and the target, and its near plane out of walls
+    void ClipSource(CCam* cam, RwCamera* rwCamera, const CVector& target, float distance, bool vehicles, bool peds,
+        bool seeThrough, bool sphereIgnoreSomeObjects)
     {
-        auto rwCamera = SceneCamera();
-        if (!rwCamera)
-            return;
-
         CColPoint point{};
-        CEntity* hit = nullptr;
-        *pIgnoreEntity = ignore;
-        if (ProcessLineOfSight(target, cam->Source, point, hit, true, withCars, false, true, false, true, true, false) && hit)
+        CEntity* entity = nullptr;
+        *pIgnoreEntity = cam->CamTargetEntity;
+        if (ProcessLineOfSight(target, cam->Source, point, entity, true, vehicles, peds, true, false, seeThrough, true, false) && entity)
         {
-            cam->Source = point.point;
-            float distance = (target - point.point).Magnitude();
-            if (distance < DefaultNear + 0.3f)
-                RwCameraSetNearClipPlane(rwCamera, std::max(distance - 0.3f, 0.05f));
+            float pedColDist = (target - point.point).Magnitude();
+            float colCamDist = distance - pedColDist;
+            if (entity->IsPed() && colCamDist > DefaultNear + 0.1f)
+            {
+                // A pedestrian in the way that the camera doesn't pass through
+                if (ProcessLineOfSight(point.point, cam->Source, point, entity, true, vehicles, peds, true, false, seeThrough, true, false))
+                {
+                    pedColDist = (target - point.point).Magnitude();
+                    cam->Source = point.point;
+                    if (pedColDist < DefaultNear + 0.3f)
+                        RwCameraSetNearClipPlane(rwCamera, std::max(pedColDist - 0.3f, 0.05f));
+                }
+                else
+                    RwCameraSetNearClipPlane(rwCamera, std::min(colCamDist - 0.35f, DefaultNear));
+            }
+            else
+            {
+                cam->Source = point.point;
+                if (pedColDist < DefaultNear + 0.3f)
+                    RwCameraSetNearClipPlane(rwCamera, std::max(pedColDist - 0.3f, 0.05f));
+            }
         }
         *pIgnoreEntity = nullptr;
 
-        CVector front = target - cam->Source;
-        front.Normalise();
-        float viewWidth = std::tan(DEGTORAD(cam->FOV) * 0.5f) * SCREEN_ASPECT_RATIO;
-        for (int i = 0; i < 5; ++i)
+        float viewPlaneHeight = std::tan(DEGTORAD(cam->FOV) / 2.0f);
+        float viewPlaneWidth = viewPlaneHeight * SCREEN_ASPECT_RATIO * TweakFOV;
+        float nearPlane = rwCamera->nearPlane;
+        float radius = viewPlaneWidth * nearPlane;
+        entity = TestSphereAgainstWorld(cam->Source + cam->Front * nearPlane, radius, nullptr, true, true, false, true, false, sphereIgnoreSomeObjects);
+        for (int i = 0; entity && i <= 5; ++i)
         {
-            float nearPlane = rwCamera->nearPlane;
-            if (!TestSphereAgainstWorld(cam->Source + front * nearPlane, viewWidth * nearPlane, ignore, true, withCars, false, true, false, true))
-                break;
-            if (nearPlane > 0.15f)
-                RwCameraSetNearClipPlane(rwCamera, std::max(nearPlane * 0.5f, 0.1f));
-            else
+            CVector camToCol = TempSphereColPoints[0].point - cam->Source;
+            float frontDist = DotProduct(camToCol, cam->Front);
+            float dist = (camToCol - cam->Front * frontDist).Magnitude() / viewPlaneWidth;
+
+            // A nearer near plane, or a step forward
+            dist = std::max(std::min(nearPlane, dist), 0.1f);
+            if (dist < nearPlane)
+                RwCameraSetNearClipPlane(rwCamera, dist);
+            if (dist == 0.1f)
                 cam->Source += (target - cam->Source) * 0.3f;
+
+            nearPlane = rwCamera->nearPlane;
+            radius = viewPlaneWidth * nearPlane;
+            entity = TestSphereAgainstWorld(cam->Source + cam->Front * nearPlane, radius, nullptr, true, true, false, true, false, sphereIgnoreSomeObjects);
         }
     }
-
-    void KeepAboveWater(CCam* cam)
-    {
-        float level = 0.0f;
-        if (GetWaterLevelNoWaves && GetWaterLevelNoWaves(cam->Source.x, cam->Source.y, cam->Source.z, &level) && cam->Source.z < level + 0.5f)
-            cam->Source.z = level + 0.5f;
-    }
-
-    void Finish(CCam* cam, const CVector& target)
-    {
-        cam->Front = target - cam->Source;
-        cam->Front.Normalise();
-        cam->m_cvecTargetCoorsForFudgeInter = target;
-        cam->Alpha = std::asin(std::clamp(cam->Front.z, -1.0f, 1.0f));
-        cam->Beta = std::atan2(-cam->Front.y, -cam->Front.x);
-        cam->ResetStatics = false;
-        // Up, square to the view and without roll
-        CVector right = CrossProduct(cam->Front, CVector(0.0f, 0.0f, 1.0f));
-        if (right.MagnitudeSqr() < 1e-6f)
-            right = CVector(1.0f, 0.0f, 0.0f);
-        right.Normalise();
-        cam->Up = CrossProduct(right, cam->Front);
-        cam->Up.Normalise();
-    }
-
-    // The player's input for the camera: radians to turn this frame (yaw left positive, pitch up positive)
-    bool CameraInput(bool mouseAllowed, float& yaw, float& pitch)
-    {
-        yaw = pitch = 0.0f;
-        static auto& speed = FixSettings().Float("MAIN.GamepadCameraSpeed");
-        float sx, sy;
-        Pad::RightStick(sx, sy);
-        if (sx || sy)
-        {
-            float dt = CTimer::ms_fTimeStep / 50.0f;
-            auto curve = [](float v) { return v * std::abs(v); };
-            yaw = -curve(sx) * DEGTORAD(150.0f) * speed * dt;
-            pitch = curve(sy) * DEGTORAD(90.0f) * speed * dt;
-            return true;
-        }
-        if (mouseAllowed && !Pad::IsPadLastDevice())
-        {
-            float mx, my;
-            Pad::MouseDelta(mx, my);
-            if (mx || my)
-            {
-                float sensitivity = Pad::MouseSensitivity();
-                yaw = -mx * sensitivity * 2.5f;
-                pitch = my * sensitivity * 2.5f;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    struct OrbitState
-    {
-        float yaw = 0.0f;               // where the camera looks, 0 = +x
-        float pitch = 0.0f;             // up positive
-        uint32_t lastInput = 0;
-        int lastDirection = LOOKING_FORWARD;
-        CEntity* target = nullptr;
-    };
-    OrbitState CarOrbit, PedOrbit;
 
     bool FreeCameraOn()
     {
@@ -207,139 +237,603 @@ namespace
         return freeCamera && !TheCamera->m_WideScreenOn && TheCamera->WhoIsInControlOfTheCamera == 0;
     }
 
-    // Behind the vehicle: CCam::Process_Cam_On_A_String / Process_BehindBoat
+    // Behind the player on foot, turned by the right stick or the mouse
+    bool ProcessPed(CCam* cam, const CVector& cameraTarget, float targetOrientation)
+    {
+        auto entity = cam->CamTargetEntity;
+        auto rwCamera = SceneCamera();
+        // With GInput the pad's camera is GInput's
+        if (!FreeCameraOn() || Pad::IsGInputLoaded() || !rwCamera || !entity || !entity->IsPed() || !FindPlayerPed || entity != FindPlayerPed())
+            return false;
+
+        cam->FOV = DefaultFOV;
+        constexpr float MinDist = 2.0f;
+        const float MaxDist = 2.0f + TheCamera->m_fPedZoomValueSmooth;
+        constexpr float BaseOffset = 0.75f;     // the camera's height above the target, so that alpha evens out at 0
+
+        CVector targetCoors = cameraTarget;
+        targetCoors.z += cam->m_fSyphonModeTargetZOffSet;
+        targetCoors = DoAverageOnVector(cam, targetCoors);
+        targetCoors.z += BaseOffset;
+
+        CVector dist = cam->Source - targetCoors;
+
+        auto weapon = Pad::PlayerWeapon();
+        bool shooting = weapon != WEAPON_UNARMED && weapon != WEAPON_DETONATOR && weapon != WEAPON_BASEBALLBAT && Pad::Fire();
+
+        if (cam->ResetStatics)
+        {
+            // Keep the direction the camera had, level
+            cam->Beta = ATanOfXY(dist.x, dist.y);
+            cam->Alpha = 0.0f;
+            dist = MaxDist * CVector(std::cos(cam->Alpha) * std::cos(cam->Beta), std::cos(cam->Alpha) * std::sin(cam->Beta), std::sin(cam->Alpha));
+            cam->Source = targetCoors + dist;
+            cam->ResetStatics = false;
+        }
+
+        // Dragged along at a distance between the minimum and the zoom's
+        float camDist = dist.Magnitude();
+        if (camDist == 0.0f)
+            dist = CVector(1.0f, 1.0f, 0.0f);
+        else if (camDist < MinDist)
+            dist *= MinDist / camDist;
+        else if (camDist > MaxDist)
+            dist *= MaxDist / camDist;
+        camDist = dist.Magnitude();
+
+        // Beta 0 looks east, half pi north; alpha positive looks up
+        float groundDist = dist.Magnitude2D();
+        cam->Beta = LimitRadianAngle(ATanOfXY(-dist.x, -dist.y));
+        cam->Alpha = LimitRadianAngle(ATanOfXY(groundDist, -dist.z));
+
+        // Looking around: the mouse turns it by its own sensitivity, the stick by its speed
+        float betaOffset = 0.0f, alphaOffset = 0.0f;
+        float stickX, stickY;
+        Pad::RightStick(stickX, stickY);
+        float mouseX, mouseY;
+        Pad::MouseDelta(mouseX, mouseY);
+        if (!Pad::IsPadLastDevice() && (mouseX || mouseY) && !Pad::ControlsDisabled())
+        {
+            float accelX, accelY;
+            Pad::MouseAccel(accelX, accelY);
+            betaOffset = -2.5f * mouseX * accelX * cam->FOV / 80.0f;
+            alphaOffset = 4.0f * mouseY * accelY * cam->FOV / 80.0f;
+        }
+        else if (stickX || stickY)
+        {
+            static auto& speed = FixSettings().Float("MAIN.GamepadCameraSpeed");
+            // The stick past the game's own dead zone, in its units
+            float lookLeftRight = -stickX * 170.0f * speed;
+            float lookUpDown = stickY * 170.0f * speed;
+            betaOffset = lookLeftRight * StickSensitivity * (1.0f / 20.0f) * cam->FOV / 80.0f * CTimer::ms_fTimeStep;
+            alphaOffset = lookUpDown * StickSensitivity * (0.6f / 20.0f) * cam->FOV / 80.0f * CTimer::ms_fTimeStep;
+        }
+
+        // Turning by hand stops the swing behind
+        if (betaOffset)
+            cam->Rotating = false;
+
+        cam->Beta = LimitRadianAngle(cam->Beta + betaOffset);
+        cam->Alpha = std::clamp(cam->Alpha + alphaOffset, -DEGTORAD(89.5f), DEGTORAD(45.0f));
+
+        float betaDiff = LimitRadianAngle(targetOrientation + PI - cam->Beta);
+        float targetAlpha = cam->Alpha;
+        // Walking towards the camera keeps the view near level (12 degrees for the height offset)
+        constexpr float AlphaLimitUp = DEGTORAD(15.0f) + DEGTORAD(12.0f);
+        constexpr float AlphaLimitDown = -DEGTORAD(15.0f) + DEGTORAD(12.0f);
+        if (std::abs(betaDiff) < DEGTORAD(25.0f) && reinterpret_cast<CPhysical*>(entity)->GetMoveSpeed().Magnitude2D() > 0.01f)
+            targetAlpha = std::clamp(targetAlpha, AlphaLimitDown, AlphaLimitUp);
+
+        WellBufferMe(targetAlpha, &cam->Alpha, &cam->AlphaSpeed, 0.2f, 0.1f, true);
+
+        if (Pad::CameraBehind() || shooting)
+        {
+            cam->m_fTargetBeta = targetOrientation;
+            cam->Rotating = true;
+        }
+
+        if (cam->Rotating)
+        {
+            WellBufferMe(cam->m_fTargetBeta, &cam->Beta, &cam->BetaSpeed, 0.1f, 0.06f, true);
+            if (std::abs(LimitRadianAngle(cam->m_fTargetBeta - cam->Beta)) < 0.06f)
+                cam->Rotating = false;
+        }
+
+        if (TheCamera->m_bUseTransitionBeta)
+            cam->Beta = ATanOfXY(-std::cos(cam->m_fTransitionBeta), -std::sin(cam->m_fTransitionBeta));
+
+        cam->Front = CVector(std::cos(cam->Alpha) * std::cos(cam->Beta), std::cos(cam->Alpha) * std::sin(cam->Beta), std::sin(cam->Alpha));
+        cam->Source = targetCoors - cam->Front * camDist;
+        targetCoors.z -= BaseOffset;
+        cam->m_cvecTargetCoorsForFudgeInter = targetCoors;
+        cam->Front = targetCoors - cam->Source;
+        cam->Front.Normalise();
+
+        ClipSource(cam, rwCamera, targetCoors, camDist, true, true, false, false);
+        GetVectorsReadyForRW(cam);
+        return true;
+    }
+
+    // The distance, height and limits for each kind of vehicle: 0 cars, 1 bikes, 2 helicopters, 3 planes, 4 boats,
+    // 5 remote control cars, 6 remote control aircraft, 7 the fire truck
+    constexpr float CarCamSet[8][15] =
+    {
+        { 1.3f, 1.0f, 0.4f, 10.0f, 15.0f, 0.5f, 1.0f, 1.0f, 0.85f, 0.2f, 0.075f, 0.05f, 0.8f, DEGTORAD(45.0f), DEGTORAD(89.0f) },
+        { 1.1f, 1.0f, 0.1f, 10.0f, 11.0f, 0.5f, 1.0f, 1.0f, 0.85f, 0.2f, 0.075f, 0.05f, 0.75f, DEGTORAD(45.0f), DEGTORAD(89.0f) },
+        { 1.1f, 1.0f, 0.2f, 10.0f, 15.0f, 0.05f, 0.05f, 0.0f, 0.9f, 0.05f, 0.01f, 0.05f, 1.0f, DEGTORAD(10.0f), DEGTORAD(70.0f) },
+        { 1.1f, 1.0f, 0.2f, 10.0f, 15.0f, 0.5f, 1.0f, 1.0f, 0.75f, 0.1f, 0.005f, 0.2f, 1.0f, DEGTORAD(89.0f), DEGTORAD(89.0f) },
+        { 0.9f, 1.0f, 0.1f, 10.0f, 15.0f, 0.5f, 1.0f, 0.0f, 0.9f, 0.05f, 0.005f, 0.05f, 1.0f, -0.2f, DEGTORAD(70.0f) },
+        { 1.1f, 1.0f, 0.2f, 10.0f, 5.0f, 0.5f, 1.0f, 1.0f, 0.75f, 0.1f, 0.005f, 0.2f, 1.0f, DEGTORAD(45.0f), DEGTORAD(89.0f) },
+        { 1.1f, 1.0f, 0.2f, 10.0f, 5.0f, 0.5f, 1.0f, 1.0f, 0.75f, 0.1f, 0.005f, 0.2f, 1.0f, DEGTORAD(20.0f), DEGTORAD(70.0f) },
+        { 1.3f, 1.0f, 0.4f, 10.0f, 15.0f, 0.5f, 1.0f, 1.0f, 0.85f, 0.2f, 0.075f, 0.05f, 0.8f, -0.18f, DEGTORAD(40.0f) },
+    };
+    constexpr float ZoomOneAlphaOffset[] = { 0.12f, 0.08f, 0.15f, 0.08f, 0.08f };
+    constexpr float ZoomTwoAlphaOffset[] = { 0.1f, 0.08f, 0.3f, 0.08f, 0.08f };
+    constexpr float ZoomThreeAlphaOffset[] = { 0.065f, 0.05f, 0.15f, 0.06f, 0.08f };
+    // The zoom steps of this camera for cars, bikes, helicopters, planes and boats
+    constexpr float ZoomDistance[3][5] =
+    {
+        { -1.0f, -0.2f, -3.2f, 0.05f, -2.41f },
+        { 2.0f, 2.2f, 1.65f, 2.9f, 6.49f },
+        { 6.0f, 6.0f, 15.9f, 15.9f, 15.0f },
+    };
+
+    struct CarState
+    {
+        CVector historyOne, historyTwo;
+        float lastBeta = -9999.0f;
+        float lastAlpha = -9999.0f;
+        float stepsLeftToChangeBetaByMouse = 0.0f;
+        float dontCollideWithCars = 0.0f;
+        bool alphaCorrected = false;
+        float zoom = 0.0f;
+        uint32_t lastTime = 0;
+    } Car;
+
+    // The zoom of the game's three steps in this camera's distances
+    float CarZoomValue(int kind, bool reset)
+    {
+        if (TheCamera->m_bUseScriptZoomValueCar || TheCamera->m_bPlayerIsInGarage)
+            return TheCamera->CarZoomValueSmooth;
+        int step = std::clamp(int(TheCamera->CarZoomIndicator), CAM_ZOOM_1, CAM_ZOOM_3) - CAM_ZOOM_1;
+        float target = ZoomDistance[step][kind];
+        if (reset)
+            Car.zoom = target;
+        else if (Car.zoom < target)
+            Car.zoom = std::min(Car.zoom + 0.12f * CTimer::ms_fTimeStep, target);
+        else
+            Car.zoom = std::max(Car.zoom - 0.12f * CTimer::ms_fTimeStep, target);
+        return Car.zoom;
+    }
+
+    float HeightAboveRoadOf(CVehicle* car, const CVector& boxMin)
+    {
+        return car->IsCar() ? Field<float>(car, HeightAboveRoad) : -boxMin.z;
+    }
+
+    // The tank's turret and the fire truck's water cannon turn towards where the camera looks
+    void TurretFollowsCamera(CCam* cam, CVehicle* car)
+    {
+        auto model = car->GetModelIndex();
+        float& gunLR = Field<float>(car, CarGunLR);
+        CVector hi = Multiply3x3(cam->Front, car->GetMatrix());
+        float angleToFace = model == MI_FIRETRUCK ? -hi.Heading() : hi.Heading();
+        if (angleToFace > gunLR + PI)
+            angleToFace -= TWOPI;
+        else if (angleToFace < gunLR - PI)
+            angleToFace += TWOPI;
+
+        float neededTurn = angleToFace - gunLR;
+        float turnPerFrame = CTimer::ms_fTimeStep * (model == MI_FIRETRUCK ? 0.05f : 0.015f);
+        if (neededTurn > turnPerFrame)
+            angleToFace = gunLR + turnPerFrame;
+        else if (neededTurn < -turnPerFrame)
+            angleToFace = gunLR - turnPerFrame;
+        gunLR = angleToFace;
+        if (gunLR < -PI)
+            gunLR += TWOPI;
+        else if (gunLR > PI)
+            gunLR -= TWOPI;
+
+        if (model == MI_FIRETRUCK)
+        {
+            float& gunUD = Field<float>(car, CarGunUD);
+            float alphaToFace = std::atan2(hi.z, hi.Magnitude2D()) + DEGTORAD(15.0f);
+            float neededAlphaTurn = alphaToFace - gunUD;
+            float alphaTurnPerFrame = CTimer::ms_fTimeStep / 50.0f;
+            if (neededAlphaTurn > alphaTurnPerFrame)
+                gunUD += alphaTurnPerFrame;
+            else if (neededAlphaTurn < -alphaTurnPerFrame)
+                gunUD -= alphaTurnPerFrame;
+            else
+                gunUD = alphaToFace;
+            gunUD = std::clamp(gunUD, 0.05f, 0.3f);
+        }
+    }
+
+    // Behind the vehicle
     bool ProcessCar(CCam* cam, const CVector& cameraTarget)
     {
         auto entity = cam->CamTargetEntity;
-        if (!FreeCameraOn() || !entity || !entity->IsVehicle() || !::FindPlayerVehicle || entity != reinterpret_cast<CEntity*>(::FindPlayerVehicle()))
-            return false;
-        auto model = entity->GetModelIndex();
-        if (model == MI_RHINO || model == MI_FIRETRUCK)
+        auto rwCamera = SceneCamera();
+        if (!FreeCameraOn() || !rwCamera || !entity || !entity->IsVehicle() || !::FindPlayerVehicle || entity != reinterpret_cast<CEntity*>(::FindPlayerVehicle()))
             return false;
         auto car = reinterpret_cast<CVehicle*>(entity);
         CVector boxMin, boxMax;
         if (!BoundingBox(entity, boxMin, boxMax))
             return false;
 
-        auto& orbit = CarOrbit;
-        uint32_t now = CTimer::m_snTimeInMilliseconds;
-        float steps = std::max(float(CTimer::ms_fTimeStep), 0.01f);
-        const CVector& forward = car->GetForward();
-        float carYaw = std::atan2(forward.y, forward.x);
-        float carPitch = std::atan2(forward.z, std::sqrt(forward.x * forward.x + forward.y * forward.y));
+        float step = CTimer::ms_fTimeStep;
+        auto model = car->GetModelIndex();
+        CVector targetCoors = cameraTarget;
+        bool isPlane = car->IsRealPlane();
+        bool isHeli = car->IsRealHeli();
+        bool isBike = car->IsBike();
+        bool isCar = car->IsCar() && !isPlane && !isHeli;
+        bool remote = car->GetStatus() == STATUS_PLAYER_REMOTE;
 
-        // Higher than the roof and as far as the vehicle is long, by the game's zoom
-        float raise = std::max(boxMax.z * 1.3f - 0.4f, 0.0f);
-        float length = 2.0f * std::abs(boxMin.y);
-        float distance = std::max(TheCamera->CarZoomValueSmooth + 1.0f + length + raise, 3.5f);
-        CVector target = cameraTarget;
-        target.z += raise;
-        float defaultPitch = -0.12f - 0.3f / distance * raise;
+        // The player looks forward
+        bool nextDirectionIsForward = !(Pad::LookBehindForCar() || Pad::LookBehindForPed() || Pad::LookLeft() || Pad::LookRight()) &&
+            cam->DirectionWasLooking == LOOKING_FORWARD;
 
-        // Just entered, back from a scripted camera, or back from looking aside or behind: behind the vehicle again
-        if (cam->ResetStatics || orbit.target != entity || orbit.lastDirection != LOOKING_FORWARD || TheCamera->m_bJustCameOutOfGarage)
-        {
-            orbit.yaw = carYaw;
-            orbit.pitch = defaultPitch + carPitch;
-            orbit.lastInput = 0;
-            orbit.target = entity;
-            cam->FOV = DefaultFOV;
-        }
-        orbit.lastDirection = cam->DirectionWasLooking;
+        int set = 0;
+        if (model == MI_FIRETRUCK)
+            set = 7;
+        else if (model == MI_RCBANDIT || model == MI_RCBARON)
+            set = 5;
+        else if (model == MI_RCGOBLIN || model == MI_RCRAIDER)
+            set = 6;
+        else if (car->IsBoat())
+            set = 4;
+        else if (isBike)
+            set = 1;
+        else if (isPlane)
+            set = 3;
+        else if (isHeli)
+            set = 2;
+        const float* params = CarCamSet[set];
 
-        float yawInput, pitchInput;
-        bool mouseFree = *DisableMouseSteering;
-        if (CameraInput(mouseFree, yawInput, pitchInput))
+        // The remote control aircraft take the aircraft's angles
+        int alphaSet = set > 4 ? (isPlane ? 3 : (isHeli ? 2 : 0)) : set;
+        float zoomModeAlphaOffset = 0.0f;
+        if (isHeli && remote)
+            zoomModeAlphaOffset = ZoomTwoAlphaOffset[alphaSet];
+        else
         {
-            orbit.yaw = Wrap(orbit.yaw + yawInput);
-            orbit.pitch += pitchInput;
-            orbit.lastInput = now;
-        }
-        else if (now - orbit.lastInput > 1200)
-        {
-            // Swing back behind where the vehicle goes; reversing keeps the camera behind it
-            const CVector& speed = car->GetMoveSpeed();
-            float speed2D = std::sqrt(speed.x * speed.x + speed.y * speed.y);
-            float forwardSpeed = DotProduct(speed, forward);
-            if (speed2D > 0.02f)
+            switch (TheCamera->CarZoomIndicator)
             {
-                float goal = forwardSpeed >= 0.0f ? std::atan2(speed.y, speed.x) : carYaw;
-                float rate = 0.015f + 0.1f * std::min(speed2D, 1.0f);
-                orbit.yaw = EaseAngle(orbit.yaw, goal, rate, steps);
-                orbit.pitch = Ease(orbit.pitch, defaultPitch + carPitch, rate, steps);
+                case CAM_ZOOM_1: zoomModeAlphaOffset = ZoomOneAlphaOffset[alphaSet]; break;
+                case CAM_ZOOM_2: zoomModeAlphaOffset = ZoomTwoAlphaOffset[alphaSet]; break;
+                case CAM_ZOOM_3: zoomModeAlphaOffset = ZoomThreeAlphaOffset[alphaSet]; break;
+                default: break;
             }
         }
-        orbit.pitch = std::clamp(orbit.pitch, -DEGTORAD(70.0f), DEGTORAD(40.0f));
 
-        // The field of view: the game's, widened with speed when that option is on
-        static auto& speedFov = FixSettings().Int("MISC.CarSpeedDependantFOV");
-        if (speedFov && !cam->ResetStatics)
+        int kind = car->IsBoat() ? 4 : isBike ? 1 : isHeli ? 2 : isPlane ? 3 : 0;
+        float colMaxZ = boxMax.z;
+        float approxCarLength = 2.0f * std::abs(boxMin.y);
+        float newDistance = CarZoomValue(kind, cam->ResetStatics) + params[1] + approxCarLength;
+        // Out of the small remote control aircraft
+        if (model == MI_RCRAIDER || model == MI_RCGOBLIN)
+            newDistance += RcHeliExtra;
+        else if (model == MI_RCBARON)
+            newDistance += RcPlaneExtra;
+        float minDistForThisCar = approxCarLength * params[3];
+
+        if (!isHeli || remote)
         {
-            float forwardSpeed = DotProduct(forward, car->GetMoveSpeed());
-            if (forwardSpeed > 0.4f)
-                cam->FOV += (forwardSpeed - 0.4f) * CTimer::ms_fTimeStep;
-            if (cam->FOV > DefaultFOV)
-                cam->FOV = std::pow(0.98f, CTimer::ms_fTimeStep) * (cam->FOV - DefaultFOV) + DefaultFOV;
-            cam->FOV = std::clamp(cam->FOV, DefaultFOV, DefaultFOV + 30.0f);
+            float radiusToStayOutside = colMaxZ * params[0] - params[2];
+            if (radiusToStayOutside > 0.0f)
+            {
+                targetCoors.z += radiusToStayOutside;
+                newDistance += radiusToStayOutside;
+                zoomModeAlphaOffset += 0.3f / newDistance * radiusToStayOutside;
+            }
         }
         else
+            targetCoors += 0.6f * car->GetUp() * colMaxZ;
+
+        if (model == MI_RCGOBLIN)
+            zoomModeAlphaOffset += 0.178997f;
+
+        float minDistForVehType = params[4];
+        if (TheCamera->CarZoomIndicator == CAM_ZOOM_1 && (set < 2 || set == 7))
+            minDistForVehType *= 0.65f;
+        float nextDistance = std::max(newDistance, minDistForVehType);
+
+        cam->CA_MAX_DISTANCE = newDistance;
+        cam->CA_MIN_DISTANCE = 3.5f;
+
+        // The field of view: wider with speed when that option is on
+        static auto& speedFov = FixSettings().Int("MISC.CarSpeedDependantFOV");
+        if (cam->ResetStatics || !speedFov)
+        {
             cam->FOV = DefaultFOV;
-
-        cam->Source = target - Direction(orbit.yaw, orbit.pitch) * distance;
-        AvoidCollision(cam, target, entity, car->GetMoveSpeed().Magnitude() < 0.1f);
-        KeepAboveWater(cam);
-        Finish(cam, target);
-        return true;
-    }
-
-    // Behind the player on foot: CCam::Process_FollowPed, while the pad drives the console camera
-    bool ProcessPed(CCam* cam, const CVector& cameraTarget, float orientation)
-    {
-        auto entity = cam->CamTargetEntity;
-        if (!FreeCameraOn() || !entity || !entity->IsPed() || !FindPlayerPed || entity != FindPlayerPed() || !Pad::IsPadLastDevice())
-            return false;
-
-        auto& orbit = PedOrbit;
-        uint32_t now = CTimer::m_snTimeInMilliseconds;
-        float steps = std::max(float(CTimer::ms_fTimeStep), 0.01f);
-        float distance = 2.0f + TheCamera->m_fPedZoomValueSmooth;
-        CVector target = cameraTarget;
-        target.z += 0.75f;
-        // The player's heading: orientation is the way the player faces (0 = +y)
-        float pedYaw = orientation + HALFPI;
-
-        if (cam->ResetStatics || orbit.target != entity)
-        {
-            CVector toTarget = target - cam->Source;
-            orbit.yaw = (toTarget.x || toTarget.y) ? std::atan2(toTarget.y, toTarget.x) : pedYaw;
-            orbit.pitch = -0.1f;
-            orbit.lastInput = 0;
-            orbit.target = entity;
+            if (cam->ResetStatics && TheCamera->m_bIdleOn)
+                TheCamera->m_uiTimeWeEnteredIdle = CTimer::m_snTimeInMilliseconds;
         }
-        if (TheCamera->m_bUseTransitionBeta)
-            orbit.yaw = Wrap(cam->m_fTransitionBeta + PI);
-
-        float yawInput, pitchInput;
-        if (CameraInput(false, yawInput, pitchInput))
+        else
         {
-            orbit.yaw = Wrap(orbit.yaw + yawInput);
-            orbit.pitch += pitchInput;
-            orbit.lastInput = now;
+            if (isCar || isBike)
+            {
+                float forwardSpeed = DotProduct(car->GetForward(), car->m_vecMoveSpeed);
+                if (forwardSpeed > 0.4f)
+                    cam->FOV += (forwardSpeed - 0.4f) * step;
+            }
+            if (cam->FOV > DefaultFOV)
+                cam->FOV = std::pow(0.98f, step) * (cam->FOV - DefaultFOV) + DefaultFOV;
+            cam->FOV = std::clamp(cam->FOV, DefaultFOV, DefaultFOV + 30.0f);
         }
-        else if (now - orbit.lastInput > 2000)
-        {
-            const CVector& speed = reinterpret_cast<CPhysical*>(entity)->GetMoveSpeed();
-            float speed2D = std::sqrt(speed.x * speed.x + speed.y * speed.y);
-            if (speed2D > 0.03f)
-                orbit.yaw = EaseAngle(orbit.yaw, pedYaw, 0.01f + 0.05f * std::min(speed2D * 5.0f, 1.0f), steps);
-            orbit.pitch = Ease(orbit.pitch, -0.1f, 0.02f, steps);
-        }
-        orbit.pitch = std::clamp(orbit.pitch, -DEGTORAD(70.0f), DEGTORAD(60.0f));
 
-        cam->FOV = DefaultFOV;
-        cam->Source = target - Direction(orbit.yaw, orbit.pitch) * distance;
-        AvoidCollision(cam, target, entity, true);
-        Finish(cam, target);
+        // Looking behind, and back from looking aside or behind
+        if (Pad::LookBehindForCar() && (cam->DirectionWasLooking == LOOKING_FORWARD || !cam->LookingBehind))
+            TheCamera->m_bCamDirectlyInFront = true;
+        if (!(Pad::LookBehindForCar() || Pad::LookBehindForPed() || Pad::LookLeft() || Pad::LookRight()) && cam->DirectionWasLooking != LOOKING_FORWARD)
+            TheCamera->m_bCamDirectlyBehind = true;
+
+        // Just entered, or back from looking aside or behind: behind the vehicle
+        if (cam->ResetStatics || TheCamera->m_bCamDirectlyBehind || TheCamera->m_bCamDirectlyInFront)
+        {
+            cam->ResetStatics = false;
+            cam->Rotating = false;
+            cam->m_bCollisionChecksOn = true;
+            if (!TheCamera->m_bJustCameOutOfGarage)
+            {
+                cam->Alpha = 0.0f;
+                cam->Beta = car->GetForward().Heading() - HALFPI;
+                if (TheCamera->m_bCamDirectlyInFront)
+                    cam->Beta += PI;
+            }
+            cam->BetaSpeed = 0.0f;
+            cam->AlphaSpeed = 0.0f;
+            cam->Distance = 1000.0f;
+
+            cam->Front.x = -(std::cos(cam->Beta) * std::cos(cam->Alpha));
+            cam->Front.y = -(std::sin(cam->Beta) * std::cos(cam->Alpha));
+            cam->Front.z = std::sin(cam->Alpha);
+            Car.historyOne = targetCoors - nextDistance * cam->Front;
+            Car.historyTwo = targetCoors - newDistance * cam->Front;
+            if (!TheCamera->m_bJustCameOutOfGarage)
+                cam->Alpha = -zoomModeAlphaOffset;
+        }
+
+        cam->Front = targetCoors - Car.historyOne;
+        cam->Front.Normalise();
+
+        // Swings round towards where the vehicle goes
+        float camRightHeading = cam->Front.Heading() - HALFPI;
+        if (camRightHeading < -PI)
+            camRightHeading += TWOPI;
+        float velocityRightHeading = car->m_vecMoveSpeed.Magnitude2D() <= 0.02f ? camRightHeading : car->m_vecMoveSpeed.Heading() - HALFPI;
+        if (velocityRightHeading < camRightHeading - PI)
+            velocityRightHeading += TWOPI;
+        else if (velocityRightHeading > camRightHeading + PI)
+            velocityRightHeading -= TWOPI;
+
+        float betaChangeMult1 = step * params[10];
+        float betaChangeLimit = step * params[11];
+        float betaChangeMult2 = (car->m_vecMoveSpeed - DotProduct(car->m_vecMoveSpeed, cam->Front) * cam->Front).Magnitude();
+        float betaChange = std::clamp(std::min(1.0f, betaChangeMult1 * betaChangeMult2) * (velocityRightHeading - camRightHeading), -betaChangeLimit, betaChangeLimit);
+        float targetBeta = camRightHeading + betaChange;
+        if (targetBeta < cam->Beta - HALFPI)
+            targetBeta += TWOPI;
+        else if (targetBeta > cam->Beta + PI)
+            targetBeta -= TWOPI;
+
+        float carPosChange = (targetCoors - Car.historyTwo).Magnitude();
+        if (carPosChange < newDistance && newDistance > minDistForThisCar)
+            newDistance = std::max(minDistForThisCar, carPosChange);
+
+        // Not below the vehicle's roof line seen from behind
+        float maxAlphaAllowed = params[13];
+        bool grounded = (!isBike || Field<uint8_t>(car, BikeWheelsOnGround) > 3) && !isHeli && (!isPlane || Field<uint8_t>(car, WheelsOnGround));
+        if (model != MI_FIRETRUCK && grounded)
+        {
+            const CVector& forward = car->GetForward();
+            CVector left = CrossProduct(forward, CVector(0.0f, 0.0f, 1.0f));
+            left.Normalise();
+            CVector up = CrossProduct(left, forward);
+            up.Normalise();
+            if (DotProduct(up, cam->Front) > 0.0f)
+            {
+                float side = std::asin(std::abs(std::sin(cam->Beta - (forward.Heading() - HALFPI))));
+                float reach;
+                if (side <= std::atan2(boxMax.x, -boxMin.y))
+                    reach = (1.5f - boxMin.y) / std::cos(side);
+                else
+                    reach = (1.2f + boxMax.x) / std::cos(std::max(0.0f, HALFPI - side));
+                maxAlphaAllowed = std::cos(cam->Beta - (forward.Heading() - HALFPI)) * std::atan2(forward.z, forward.Magnitude2D()) +
+                    std::atan2(targetCoors.z - car->GetPosition().z + HeightAboveRoadOf(car, boxMin), reach * 1.2f);
+                if (isCar && Field<uint8_t>(car, WheelsOnGround) > 1 && std::abs(DotProduct(car->m_vecTurnSpeed, forward)) < 0.05f)
+                {
+                    const CVector& right = car->GetRight();
+                    maxAlphaAllowed += std::cos(cam->Beta - (forward.Heading() - HALFPI) + HALFPI) * std::atan2(right.z, right.Magnitude2D());
+                }
+            }
+        }
+
+        float targetAlpha = std::asin(std::clamp(cam->Front.z, -1.0f, 1.0f)) - zoomModeAlphaOffset;
+        if (targetAlpha > maxAlphaAllowed)
+            targetAlpha = maxAlphaAllowed;
+        else if (targetAlpha < -params[14])
+            targetAlpha = -params[14];
+        float maxAlphaBlendAmount = step * params[6];
+        float targetAlphaBlendAmount = std::clamp((1.0f - std::pow(params[5], step)) * (targetAlpha - cam->Alpha), -maxAlphaBlendAmount, maxAlphaBlendAmount);
+
+        // The right stick, in the game's units (-128..127)
+        float rx, ry;
+        Pad::RightStick(rx, ry);
+        float stickX = -rx * 128.0f;
+        // Up and down move it in cars only while the stick is used
+        float stickY = (Pad::IsPadLastDevice() || isCar) ? ry * 128.0f : 0.0f;
+        static auto& speed = FixSettings().Float("MAIN.GamepadCameraSpeed");
+        float xMovement = std::abs(stickX) * (cam->FOV / 80.0f * 5.0f / 70.0f) * stickX * 0.007f * 0.007f * speed;
+        float yMovement = std::abs(stickY) * (cam->FOV / 80.0f * 3.0f / 70.0f) * stickY * 0.007f * 0.007f * speed;
+
+        // The Voodoo levels the camera instead of turning it
+        bool correctAlpha = isCar && model == MI_VOODOO;
+        if (correctAlpha)
+            xMovement = yMovement = 0.0f;
+        if (!nextDirectionIsForward)
+            xMovement = yMovement = 0.0f;
+
+        if ((set == 0 || set == 7) && std::abs(Pad::SteeringUpDown()) > 120 && car->pDriver)
+        {
+            float upDown = Pad::SteeringUpDown();
+            yMovement += std::abs(upDown) * (cam->FOV / 80.0f * 3.0f / 70.0f) * upDown * 0.007f * 0.007f * 0.5f;
+        }
+        if (yMovement > 0.0f)
+            yMovement *= 0.5f;
+
+        // The mouse turns it when it doesn't steer
+        bool mouseChangesBeta = false;
+        if (!Pad::IsPadLastDevice() && *DisableMouseSteering && !Pad::ControlsDisabled() && nextDirectionIsForward)
+        {
+            float mouseX, mouseY;
+            Pad::MouseDelta(mouseX, mouseY);
+            mouseX *= -2.0f;
+            mouseY *= 2.0f;
+            float accelX, accelY;
+            Pad::MouseAccel(accelX, accelY);
+            if (mouseX || mouseY)
+            {
+                yMovement = mouseY * cam->FOV / 80.0f * accelX;
+                xMovement = mouseX * cam->FOV / 80.0f * accelX;
+                cam->BetaSpeed = cam->AlphaSpeed = 0.0f;
+                targetAlpha = cam->Alpha;
+                Car.stepsLeftToChangeBetaByMouse = 50.0f;
+                mouseChangesBeta = true;
+            }
+            else if (Car.stepsLeftToChangeBetaByMouse > 0.0f)
+            {
+                // Settles once the mouse stops
+                cam->BetaSpeed = cam->AlphaSpeed = 0.0f;
+                xMovement = yMovement = 0.0f;
+                targetAlpha = cam->Alpha;
+                Car.stepsLeftToChangeBetaByMouse = std::max(0.0f, Car.stepsLeftToChangeBetaByMouse - step);
+                mouseChangesBeta = true;
+            }
+        }
+
+        if (correctAlpha)
+        {
+            // Corrected once each time this camera starts
+            if (CTimer::m_snTimeInMilliseconds - Car.lastTime > 200)
+                Car.alphaCorrected = false;
+            if (!Car.alphaCorrected && std::abs(zoomModeAlphaOffset + cam->Alpha) > 0.05f)
+                yMovement = (-zoomModeAlphaOffset - cam->Alpha) * 0.05f;
+            else
+                Car.alphaCorrected = true;
+        }
+        Car.lastTime = CTimer::m_snTimeInMilliseconds;
+
+        float alphaSpeedFromStickY = yMovement * params[12];
+        float betaSpeedFromStickX = xMovement * params[12];
+
+        float newAngleSpeedMaxBlendAmount = params[9];
+        float angleChangeStep = std::pow(params[8], step);
+        float targetBetaWithStickBlendAmount = std::clamp(betaSpeedFromStickX + (targetBeta - cam->Beta) / std::max(step, 1.0f),
+            -newAngleSpeedMaxBlendAmount, newAngleSpeedMaxBlendAmount);
+
+        float angleChangeStepLeft = 1.0f - angleChangeStep;
+        cam->BetaSpeed = targetBetaWithStickBlendAmount * angleChangeStepLeft + angleChangeStep * cam->BetaSpeed;
+        if (std::abs(cam->BetaSpeed) < 0.0001f)
+            cam->BetaSpeed = 0.0f;
+        cam->Beta += mouseChangesBeta ? betaSpeedFromStickX : step * cam->BetaSpeed;
+
+        if (TheCamera->m_bJustCameOutOfGarage)
+        {
+            float invHeading = std::atan2(cam->Front.y, cam->Front.x);
+            if (invHeading < 0.0f)
+                invHeading += TWOPI;
+            cam->Beta = invHeading + PI;
+        }
+
+        cam->Beta = LimitRadianAngle(cam->Beta);
+        if (cam->Beta < 0.0f)
+            cam->Beta += TWOPI;
+
+        if ((set <= 1 || set == 7) && targetAlpha < cam->Alpha && carPosChange >= newDistance &&
+            ((isCar && Field<uint8_t>(car, WheelsOnGround) > 1) || (isBike && Field<uint8_t>(car, BikeWheelsOnGround) > 1)))
+            alphaSpeedFromStickY += (targetAlpha - cam->Alpha) * 0.075f;
+
+        cam->AlphaSpeed = angleChangeStepLeft * alphaSpeedFromStickY + angleChangeStep * cam->AlphaSpeed;
+        float maxAlphaSpeed = alphaSpeedFromStickY > 0.0f ? newAngleSpeedMaxBlendAmount * 0.5f : newAngleSpeedMaxBlendAmount;
+        cam->AlphaSpeed = std::clamp(cam->AlphaSpeed, -maxAlphaSpeed, maxAlphaSpeed);
+        if (std::abs(cam->AlphaSpeed) < 0.0001f)
+            cam->AlphaSpeed = 0.0f;
+
+        float alphaWithSpeedAccounted;
+        if (mouseChangesBeta)
+        {
+            alphaWithSpeedAccounted = alphaSpeedFromStickY + targetAlpha;
+            cam->Alpha += alphaSpeedFromStickY;
+        }
+        else
+        {
+            alphaWithSpeedAccounted = step * cam->AlphaSpeed + targetAlpha;
+            cam->Alpha += targetAlphaBlendAmount;
+        }
+
+        if (cam->Alpha > maxAlphaAllowed)
+        {
+            cam->Alpha = maxAlphaAllowed;
+            cam->AlphaSpeed = 0.0f;
+        }
+        else if (cam->Alpha < -params[14])
+        {
+            cam->Alpha = -params[14];
+            cam->AlphaSpeed = 0.0f;
+        }
+
+        // No tiny changes
+        if (std::abs(Car.lastAlpha - cam->Alpha) < 0.0001f)
+            cam->Alpha = Car.lastAlpha;
+        Car.lastAlpha = cam->Alpha;
+        if (std::abs(Car.lastBeta - cam->Beta) < 0.0001f)
+            cam->Beta = Car.lastBeta;
+        Car.lastBeta = cam->Beta;
+
+        cam->Front.x = -(std::cos(cam->Beta) * std::cos(cam->Alpha));
+        cam->Front.y = -(std::sin(cam->Beta) * std::cos(cam->Alpha));
+        cam->Front.z = std::sin(cam->Alpha);
+        GetVectorsReadyForRW(cam);
+        TheCamera->m_bCamDirectlyBehind = false;
+        TheCamera->m_bCamDirectlyInFront = false;
+
+        cam->Source = targetCoors - newDistance * cam->Front;
+        cam->m_cvecTargetCoorsForFudgeInter = targetCoors;
+
+        float nextAlpha = alphaWithSpeedAccounted + zoomModeAlphaOffset;
+        CVector nextFront(-(std::cos(cam->Beta) * std::cos(nextAlpha)), -(std::sin(cam->Beta) * std::cos(nextAlpha)), std::sin(nextAlpha));
+        Car.historyOne = targetCoors - nextFront * nextDistance;
+        Car.historyTwo = targetCoors - nextFront * newDistance;
+
+        if (nextDirectionIsForward)
+        {
+            float timestepFactor = std::pow(0.99f, step);
+            Car.dontCollideWithCars = timestepFactor * Car.dontCollideWithCars + (1.0f - timestepFactor) * car->m_vecMoveSpeed.Magnitude();
+            ClipSource(cam, rwCamera, targetCoors, newDistance, Car.dontCollideWithCars < 0.1f, false, true, true);
+        }
+        TheCamera->m_bCamDirectlyBehind = false;
+        TheCamera->m_bCamDirectlyInFront = false;
+
+        if (set == 5 && cam->Source.z < 1.0f)
+            cam->Source.z = 1.0f;
+
+        // Above the water
+        if (cameraTarget.z >= -2.0f)
+        {
+            float level = -6000.0f;
+            if (GetWaterLevelNoWaves(cam->Source.x, cam->Source.y, cam->Source.z, &level) && cam->Source.z < level)
+                cam->Source.z = level;
+        }
+        cam->Front = targetCoors - cam->Source;
+        GetVectorsReadyForRW(cam);
+
+        // The turret follows the camera when the player turns it
+        if ((model == MI_RHINO || model == MI_FIRETRUCK) && (Pad::IsPadLastDevice() || *DisableMouseSteering))
+            TurretFollowsCamera(cam, car);
         return true;
     }
 
@@ -348,28 +842,19 @@ namespace
     void __fastcall ProcessCamOnAString(CCam* cam, void* edx, const CVector& target, float orientation, float a, float b)
     {
         if (!ProcessCar(cam, target))
-        {
-            CarOrbit.target = nullptr;
             shProcessCamOnAString.unsafe_thiscall(cam, &target, orientation, a, b);
-        }
     }
 
     void __fastcall ProcessBehindBoat(CCam* cam, void* edx, const CVector& target, float orientation, float a, float b)
     {
         if (!ProcessCar(cam, target))
-        {
-            CarOrbit.target = nullptr;
             shProcessBehindBoat.unsafe_thiscall(cam, &target, orientation, a, b);
-        }
     }
 
     void __fastcall ProcessFollowPed(CCam* cam, void* edx, const CVector& target, float orientation, float a, float b)
     {
         if (!ProcessPed(cam, target, orientation))
-        {
-            PedOrbit.target = nullptr;
             shProcessFollowPed.unsafe_thiscall(cam, &target, orientation, a, b);
-        }
     }
 }
 
@@ -388,6 +873,8 @@ public:
             auto behindBoat = hook::pattern("53 56 89 CB 57 55 ? ? ? ? 00 00 8B BB B0 01 00 00 8A 47 50 8B 94");
             // CWorld::pIgnoreEntity, set before the line of sight in CCam::Process_FollowPedWithMouse
             auto ignore = hook::pattern("A3 ? ? ? ? 8D 84 24 84");
+            // gaTempSphereColPoints, passed by CWorld::TestSphereAgainstSectorList
+            auto sphereColPoints = hook::pattern("8B 70 1C 8D 45 04 6A 00 68 ? ? ? ? 56 50 8D 44 24 34");
             // CModelInfo::ms_modelInfoPtrs, read by Process_Cam_On_A_String for the vehicle's box
             auto modelInfo = hook::pattern("8B 04 95 ? ? ? ? 8B 40 1C 83 C0 1C");
             // CVehicle::m_bDisableMouseSteering, read by CAutomobile::ProcessControlInputs
@@ -396,6 +883,7 @@ public:
             TestSphereAgainstWorld = reinterpret_cast<decltype(TestSphereAgainstWorld)>(sphere.get_first());
             GetWaterLevelNoWaves = reinterpret_cast<decltype(GetWaterLevelNoWaves)>(water.get_first());
             pIgnoreEntity.SetAddress(*ignore.get_first<CEntity**>(1));
+            TempSphereColPoints = *sphereColPoints.get_first<CColPoint*>(9);
             ModelInfoPtrs = reinterpret_cast<uint8_t***>(modelInfo.get_first(3));
             DisableMouseSteering.SetAddress(*mouseSteering.get_first<bool*>(2));
 

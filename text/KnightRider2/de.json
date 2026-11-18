@@ -1,5 +1,7 @@
 {
   "plugin.name": "Knight Rider 2 Fusion Fix",
+  "PauseOnFocusLoss": "Bei Fokusverlust pausieren",
+  "PauseOnFocusLoss.description": "Pausiert das Spiel, solange ein anderes Fenster aktiv ist.",
   "page.camera": "Kamera",
   "page.advanced": "Erweitert",
   "ResX": "Auflösungsbreite",
@@ -30,7 +32,7 @@
   "CutsceneBorders": "Zwischensequenzbalken",
   "CutsceneBorders.description": "Bewahrt den ursprünglichen Bildausschnitt der Zwischensequenzen mit seitlichen Balken. Aus erweitert die Ansicht. Gilt sofort.",
   "CutsceneBorders.0": "Aus",
-  "CutsceneBorders.1": "Pillarbox",
+  "CutsceneBorders.3": "Beide",
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Sucht bei Aktivierung nach einer neueren Version. Ein Hinweis erscheint im Hauptmenü. FusionFixHub öffnet die Update-Seite nach dem Beenden, wenn es im Spielordner installiert ist. Standardmäßig aus.",
   "update.availablehub": "Eine neue Version von {name} ist verfügbar. Nach dem Beenden in FusionFixHub aktualisieren.",

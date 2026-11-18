@@ -100,7 +100,8 @@ namespace
     };
 
     // The camera modes of the first-person weapons (the pad's sticks swap there in the modern layout)
-    constexpr int16_t MODE_SNIPER = 7, MODE_ROCKETLAUNCHER = 8, MODE_M16_1STPERSON = 34;
+    constexpr int16_t MODE_FOLLOWPED = 4, MODE_SNIPER = 7, MODE_ROCKETLAUNCHER = 8, MODE_CAM_ON_A_STRING = 18, MODE_BEHINDBOAT = 22,
+        MODE_M16_1STPERSON = 34;
 
     // What a pad button becomes in the game's controller state
     enum class To : uint8_t
@@ -139,6 +140,8 @@ namespace
     bool Installed = false;
     bool GInputLoaded = false;
     bool ModernAiming = false;
+    bool MouseAiming = false;           // the free camera's aim with the keyboard and mouse
+    CPad* Pad0 = nullptr;               // the player's pad, as the game updates it
     int16_t SavedMode = -1;            // the player's controller configuration while the modern layout needs config 1
     ULONGLONG LastShakeTick = 0;
     XINPUT_GAMEPAD Current{};
@@ -159,6 +162,13 @@ namespace
     {
         auto pattern = hook::pattern("80 3D ? ? ? ? 00 8B 54 24 04");
         return *pattern.get_first<bool*>(2);
+    });
+
+    // CPad::Pads, from CPad::GetPad
+    GameRef<CPad> Pads([]() -> CPad*
+    {
+        auto pattern = hook::pattern("8B 44 24 04 69 C0 FC 00 00 00 05");
+        return *pattern.get_first<CPad*>(11);
     });
 
     GameRef<CMouseControllerState> NewMouseState([]() -> CMouseControllerState*
@@ -367,6 +377,41 @@ namespace
         return Context::ModernFoot;
     }
 
+    bool FreeCameraTakesRightStick(Context context)
+    {
+        static auto& freeCamera = FixSettings().Int("MAIN.FreeCamera");
+        if (!freeCamera || context == Context::Frontend || context == Context::ModernScope)
+            return false;
+        if (!InVehicle())
+            return true;
+        auto mode = ActiveCameraMode();
+        return mode == MODE_CAM_ON_A_STRING || mode == MODE_BEHINDBOAT;
+    }
+
+    bool IsGun(int weapon)
+    {
+        return weapon >= WEAPON_COLT45 && weapon <= WEAPON_FLAMETHROWER;
+    }
+
+    // The free camera with the keyboard and mouse: the player moves freely under the camera, and the target button
+    // (with any weapon that aims) or the fire button (with a gun) aims, as the game's mouse controls do: the player
+    // turns with the camera, the crosshair shows and the shots go to it
+    void UpdateMouseAim(const CPad& pad)
+    {
+        static auto& freeCamera = FixSettings().Int("MAIN.FreeCamera");
+        bool aim = false;
+        if (freeCamera && !PadIsLastDevice && ControlMethod == 0 && !CMenuManager::m_bIsActive && !InVehicle() &&
+            !pad.DisablePlayerControls && !CCutsceneMgr::IsRunning())
+        {
+            auto weapon = CurrentWeapon();
+            bool target = pad.PCTempKeyState.RightShoulder1 || pad.PCTempMouseState.RightShoulder1;
+            bool fire = pad.PCTempKeyState.Circle || pad.PCTempMouseState.Circle;
+            bool aims = weapon != WEAPON_UNARMED && weapon != WEAPON_BASEBALLBAT && weapon != WEAPON_DETONATOR;
+            aim = (target && aims) || (fire && IsGun(weapon));
+        }
+        MouseAiming = aim;
+    }
+
     CControllerState Compose(Context context, const XINPUT_GAMEPAD& g)
     {
         CControllerState s{};
@@ -395,9 +440,9 @@ namespace
                 Press(s, layout[i]);
         }
 
-        // On foot the free camera reads the right stick itself; the game would take it as the first-person look
-        static auto& freeCamera = FixSettings().Int("MAIN.FreeCamera");
-        if (freeCamera && (context == Context::Classic || context == Context::ModernFoot) && !InVehicle())
+        // The free camera reads the right stick itself: the game would take it as the first-person look on foot and
+        // as the turret in the tank and the fire truck (whose turrets follow the free camera)
+        if (FreeCameraTakesRightStick(context) || ModernAiming)
             s.RightStickX = s.RightStickY = 0;
 
         switch (context)
@@ -449,13 +494,16 @@ namespace
         auto now = GetTickCount64();
         auto elapsed = LastShakeTick ? now - LastShakeTick : 0;
         LastShakeTick = now;
+        // The game shakes the pad only with its vibration preference on, which the PC menus don't show: the setting's
+        static auto& vibration = FixSettings().Int("MAIN.Vibration");
+        PrefsUseVibration = vibration != 0;
         if (ActiveSlot < 0 || !XInput().setState)
             return;
 
         WORD motor = 0;
         if (pad.ShakeDur > 0)
         {
-            if (PrefsUseVibration.get_ptr() && *PrefsUseVibration.get_ptr() && PadIsLastDevice && !CMenuManager::m_bIsActive)
+            if (vibration && PadIsLastDevice && !CMenuManager::m_bIsActive)
                 motor = WORD(pad.ShakeFreq * 257);
             pad.ShakeDur = int16_t(std::max<int64_t>(0, pad.ShakeDur - int64_t(elapsed)));
             if (pad.ShakeDur == 0)
@@ -502,9 +550,17 @@ namespace
     void UpdateCameraStyle(CPad& pad, Context context)
     {
         bool standard = ControlMethod == 0;
-        if (!PadIsLastDevice || context == Context::Frontend)
+        if (context == Context::Frontend)
         {
             UseMouse3rdPerson = standard;
+            return;
+        }
+        if (!PadIsLastDevice)
+        {
+            // With the free camera on foot the console's camera and movement, and the mouse's aiming while aiming
+            static auto& freeCamera = FixSettings().Int("MAIN.FreeCamera");
+            bool onFoot = !InVehicle() && ActiveCameraMode() == MODE_FOLLOWPED;
+            UseMouse3rdPerson = standard && (!freeCamera || !onFoot || MouseAiming);
             return;
         }
         // On a pad the console's camera, and the mouse's aiming only while the modern layout aims
@@ -531,6 +587,7 @@ namespace
     // Before CPad::Update of the first pad: the keyboard, mouse and DirectInput states are in place
     void BeforePadUpdate(CPad& pad)
     {
+        Pad0 = &pad;
         bool padUsed = PollPads();
         bool kbmUsed = KeyboardOrMouseUsed(pad);
         if (padUsed)
@@ -544,6 +601,7 @@ namespace
 
         UpdateMode(pad, context);
         UpdateModernAim(pad, context);
+        UpdateMouseAim(pad);
         UpdateCameraStyle(pad, context);
         UpdateVibration(pad);
     }
@@ -599,6 +657,97 @@ export namespace Pad
     bool IsModernAiming()
     {
         return ModernAiming;
+    }
+
+    // The player's weapon (eWeaponType)
+    int PlayerWeapon()
+    {
+        return CurrentWeapon();
+    }
+
+    // The game's actions on the player's pad as its CPad functions read them: the configuration decides the button
+    const CPad& Player()
+    {
+        return *Pads.get_ptr();
+    }
+
+    bool ControlsDisabled()
+    {
+        return Player().DisablePlayerControls != 0;
+    }
+
+    bool Fire()
+    {
+        auto& pad = Player();
+        if (pad.DisablePlayerControls)
+            return false;
+        switch (pad.Mode)
+        {
+            case 0: case 1: return pad.NewState.Circle != 0;
+            case 2: return pad.NewState.Cross != 0;
+            case 3: return pad.NewState.RightShoulder1 != 0;
+            default: return false;
+        }
+    }
+
+    bool CameraBehind()
+    {
+        auto& pad = Player();
+        if (pad.DisablePlayerControls)
+            return false;
+        switch (pad.Mode)
+        {
+            case 0: case 1: return pad.NewState.LeftShoulder1 != 0;
+            case 2: return pad.NewState.Triangle != 0;
+            case 3: return pad.NewState.Circle != 0;
+            default: return false;
+        }
+    }
+
+    bool LookLeft()
+    {
+        auto& pad = Player();
+        return !pad.DisablePlayerControls && pad.NewState.LeftShoulder2 && !pad.NewState.RightShoulder2;
+    }
+
+    bool LookRight()
+    {
+        auto& pad = Player();
+        return !pad.DisablePlayerControls && pad.NewState.RightShoulder2 && !pad.NewState.LeftShoulder2;
+    }
+
+    bool LookBehindForCar()
+    {
+        auto& pad = Player();
+        return !pad.DisablePlayerControls && pad.NewState.LeftShoulder2 && pad.NewState.RightShoulder2;
+    }
+
+    bool LookBehindForPed()
+    {
+        auto& pad = Player();
+        return !pad.DisablePlayerControls && pad.NewState.RightShock;
+    }
+
+    // The left stick's (or d-pad's) up and down in a vehicle, -128..127, down positive
+    int16_t SteeringUpDown()
+    {
+        auto& pad = Player();
+        if (pad.DisablePlayerControls)
+            return 0;
+        if (pad.Mode == 0 || pad.Mode == 2)
+        {
+            int16_t axis = pad.NewState.LeftStickY;
+            int16_t dpad = int16_t((pad.NewState.DPadUp - pad.NewState.DPadDown) / 2);
+            return std::abs(axis) > std::abs(dpad) ? axis : dpad;
+        }
+        return pad.NewState.LeftStickY;
+    }
+
+    // The mouse camera's sensitivity, radians per mouse unit at a field of view of 80
+    void MouseAccel(float& horizontal, float& vertical)
+    {
+        horizontal = TheCamera->m_fMouseAccelHorzntl;
+        vertical = TheCamera->m_fMouseAccelVertical;
     }
 
     // This frame's mouse movement, in the game's units

@@ -44,7 +44,7 @@ void Init()
     static auto readLive = []
     {
         fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
-        bSkipCredits = FixSettings().Int("MISC.SkipCredits") != 0;
+        bSkipCredits = FixSettings().Bool("MISC.SkipCredits");
         bFillBackground = FixSettings().Bool("MAIN.FillFrontendBackground");
         CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
         nQuicksaveKey = FixSettings().Int("MISC.QuicksaveKey");
@@ -56,7 +56,7 @@ void Init()
         FixSettings().OnChange(id, readLive);
 
     bSkipMovie = iniReader.ReadBoolean("MAIN", "SkipIntro", true);
-    bSkipCredits = iniReader.ReadInteger("MISC", "SkipCredits", 1) != 0;
+    bSkipCredits = iniReader.ReadBoolean("MISC", "SkipCredits", true);
     bFillBackground = iniReader.ReadBoolean("MAIN", "FillFrontendBackground", false);
 
     nQuicksaveKey = iniReader.ReadInteger("MISC", "QuicksaveKey", VK_F5);

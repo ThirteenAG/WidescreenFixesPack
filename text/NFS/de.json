@@ -22,6 +22,8 @@
   "WFP_GAMEPADICONS": "Tastensymbole",
   "WFP_ICONS_AUTO": "Automatisch",
   "WFP_SKIPINTRO": "Intro überspringen",
+  "WFP_SKIPPRESSSTART": "„Start drücken“ überspringen",
+  "WFP_DESC_SKIPPRESSSTART": "Der Titelbildschirm geht von selbst weiter, ohne auf Start zu warten.",
   "WFP_U2SAVEBONUS": "Underground-2-Spielstandbonus",
   "WFP_FPSLIMIT": "Bildrate",
   "WFP_FPS_CUSTOM": "Benutzerdefiniert",

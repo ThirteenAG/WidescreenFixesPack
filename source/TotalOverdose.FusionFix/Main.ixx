@@ -45,6 +45,8 @@ void InitializeFix()
 
     if (settings.Bool("MAIN.SkipIntro"))
         SkipIntro();
+    if (settings.Bool("MAIN.SkipPressStart"))
+        SkipPressStart();
 
     auto outputResolution = hook::pattern("B9 ? ? ? ? 89 8E 28 03 00 00 B8 ? ? ? ? 89 86 2C 03 00 00");
     auto cameraAspect = hook::pattern("84 C0 F3 0F 10 05 ? ? ? ? 75 08 F3 0F 10 05");

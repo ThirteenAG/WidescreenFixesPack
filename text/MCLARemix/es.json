@@ -21,6 +21,8 @@
   "SkipIntro.description": "Omite los vídeos legales, de Rockstar y de apertura y el aviso de inicio que solo tiene el botón OK. Reinicia el juego emulado tras cambiar este ajuste.",
   "DualAnalogPatch": "Cámara stick derecho",
   "DualAnalogPatch.description": "Gira la cámara de persecución con el stick derecho: hacia los lados mira a izquierda y derecha, hacia atrás mira detrás. Los botones de mirada de la cruceta siguen funcionando. Reinicia el juego emulado tras cambiar este ajuste.",
+  "GamepadCameraSpeed": "Velocidad de cámara",
+  "GamepadCameraSpeed.description": "Velocidad con la que el stick derecho gira la cámara de persecución alrededor del coche, de 0,5 a 2,0. La cámara vuelve detrás del coche poco después de soltar el stick. Los cambios se aplican durante el juego.",
   "TextLanguage": "Idioma del plugin",
   "TextLanguage.description": "Idioma de las páginas de Fusion Fix en el menú de pausa. Auto sigue el idioma del sistema de la PSP. Los cambios en el menú Plugins se aplican al momento.",
   "auto": "Auto",

@@ -21,6 +21,8 @@
   "SkipIntro.description": "Passe les vidéos légales, Rockstar et d'ouverture ainsi que l'avis de démarrage qui n'a qu'un bouton OK. Redémarrez le jeu émulé après avoir modifié ce réglage.",
   "DualAnalogPatch": "Caméra stick droit",
   "DualAnalogPatch.description": "Le stick droit tourne la caméra de poursuite : sur les côtés pour regarder à gauche et à droite, vers l'arrière pour regarder derrière. Les boutons de regard de la croix directionnelle fonctionnent toujours. Redémarrez le jeu émulé après avoir modifié ce réglage.",
+  "GamepadCameraSpeed": "Vitesse de la caméra",
+  "GamepadCameraSpeed.description": "Vitesse à laquelle le stick droit fait tourner la caméra de poursuite autour de la voiture, de 0,5 à 2,0. La caméra revient derrière la voiture peu après le relâchement du stick. Les changements s'appliquent en jeu.",
   "TextLanguage": "Langue du plugin",
   "TextLanguage.description": "Langue des pages Fusion Fix du menu pause. Auto suit la langue système de la PSP. Les changements dans le menu Plugins s'appliquent aussitôt.",
   "auto": "Auto",

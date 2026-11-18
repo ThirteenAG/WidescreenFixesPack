@@ -21,7 +21,8 @@ void ReadSettings() {
     settings.skipIntro=inireader.ReadBoolean("MAIN","SkipIntro",1);
     settings.unthrottle=inireader.ReadBoolean("MAIN","UnthrottleEmuDuringLoading",1);
     settings.fps=inireader.ReadInteger("MAIN","FPSLimit",30)==60;
-    settings.modernControls=inireader.ReadBoolean("CONTROLS","ModernControlScheme",0);
+    settings.modernControls=inireader.ReadBoolean("CONTROLS","ModernControlScheme",1);
+    settings.holdVehicleCamera=inireader.ReadBoolean("CONTROLS","HoldVehicleCamera",0);
     settings.pcCheats=inireader.ReadBoolean("CONTROLS","PCCheats",0);
     settings.vehicleLights=inireader.ReadBoolean("MAIN","VehicleLights",1);
     float fov=inireader.ReadFloat("MAIN","FOVFactor",1);
@@ -96,7 +97,8 @@ extern "C" int module_start(SceSize,void*) {
         {"MAIN", "ForceAspectRatio", "auto"},
         {"MAIN", "FPSLimit", "30"},
         {"MAIN", "UnthrottleEmuDuringLoading", "1"},
-        {"CONTROLS", "ModernControlScheme", "0"},
+        {"CONTROLS", "ModernControlScheme", "1"},
+        {"CONTROLS", "HoldVehicleCamera", "0"},
         {"CONTROLS", "PCCheats", "0"},
         {"MAIN", "HudScale", "0.75"},
         {"MAIN", "HudAspectRatioConstraint", "Auto"},

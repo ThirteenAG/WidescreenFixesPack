@@ -11,7 +11,7 @@ Widens the 3D view without stretching, keeps the race HUD at the screen edges, k
 - **Menus and loading screens** — Menus, the pause menu, loading screens and prompts keep their original proportions, centered. Loading screens get black bars at the sides instead of the last 3D frame.
 - **Race opening fly-by** — Cutscene borders keep the fly-by camera framed like the original: Pillarbox adds side bars on screens wider than 16:9, Letterbox adds bars above and below on narrower screens, Both does both. Off fills the screen with a wider view.
 - **Movies** — The attract and intro movies are shown whole, with bars where the screen shape differs. They are made for the PSP screen and have no black bars of their own, so there is nothing to zoom past and no separate movie setting.
-- **Dual analog camera** — The right stick turns the chase camera: sideways looks left and right, pulling back looks behind. The D-pad look buttons keep working.
+- **Dual analog camera** — The right stick turns the chase camera around the car at the chosen camera speed; pulling back looks behind. Shortly after the stick is released, the camera eases back behind the car. The D-pad look buttons keep working.
 - **Skip intro** — Skips the legal, Rockstar and opening videos and the startup notice that only has an OK button.
 
 ## Installation
@@ -25,7 +25,7 @@ Widens the 3D view without stretching, keeps the race HUD at the screen edges, k
 
 During a race or cruise, press Start and choose **Plugins**. The first row opens the settings, **Help** explains every setting. Cross changes the selected value (values cycle), **Back** returns.
 
-FOV factor, HUD aspect ratio, HUD scale and cutscene borders apply immediately in the Plugins menu. External changes to those settings and the forced aspect ratio are read while playing when the Plugins page is closed. Skip intro and the dual analog camera require a restart.
+FOV factor, HUD aspect ratio, HUD scale, cutscene borders and camera speed apply immediately in the Plugins menu. External changes to those settings and the forced aspect ratio are read while playing when the Plugins page is closed. Skip intro and the dual analog camera require a restart.
 
 **Vanilla** keeps the intro and the original D-pad-only camera. **Recommended** and **Enhanced** skip the intro and turn on the right-stick camera. Other settings keep your values.
 
@@ -33,7 +33,7 @@ The pages follow the PSP system language (English, French, German, Italian or Sp
 
 ## PPSSPP settings
 
-For Auto, set the display layout you want in PPSSPP (stretched to the window or screen); the fix follows its shape. Aspect ratio in the Hub or `.cfg` can force a `W:H` value instead. Resolution, anti-aliasing, window size and controller bindings are PPSSPP's settings. Bind the right analog stick in PPSSPP's control mapping to use the camera.
+For Auto, set the display layout you want in PPSSPP (stretched to the window or screen); the fix follows its shape. Aspect ratio in the Hub or `.cfg` can force a `W:H` value instead. Resolution, anti-aliasing, window size and controller bindings are PPSSPP's settings. Without a right-stick binding in PPSSPP's control mapping, the fix reads the controller's right stick directly.
 
 ## Known limits
 

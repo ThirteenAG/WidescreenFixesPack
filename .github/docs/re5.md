@@ -2,7 +2,7 @@
 
 <img src="https://thirteenag.github.io/screens/re5/main2.jpg" width="760" alt="Resident Evil 5 Fusion Fix">
 
-**Resident Evil 5 Fusion Fix** puts the HUD at the edges of wide screens, fixes camera near clipping in co-op and the menus' side panels, and adds modern controls, a knife parry, a colour filter switch, a field of view setting, intro skipping, window modes, play in the background and Logitech RGB lighting.
+**Resident Evil 5 Fusion Fix** puts the HUD at the edges of wide screens, fixes camera near clipping in co-op and the menus' side panels, and adds modern controls, a knife parry, a colour filter switch, a field of view setting, a side-by-side split screen layout, intro skipping, window modes, play in the background and Logitech RGB lighting.
 
 [Website](https://thirteenag.github.io/wfp#re5) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/ResidentEvil5.FusionFix/dllmain.cpp)
 
@@ -22,6 +22,7 @@
 
 - **Field of view** — Adjusts the gameplay view; aiming and cutscenes keep their original framing.
 - **HUD aspect ratio** — Auto spreads the HUD across the whole screen; 4:3, 16:9, 21:9 or 32:9 keep it in a centred box of that shape.
+- **Split screen layout** — Game keeps the game's own split screen (one player above the other, its split mode option chooses the size). Side by side gives each player the left or right half; on a 32:9 screen that is a 16:9 view per player. Each player's HUD, prompts, subtitles and pause menu are scaled to fit their half.
 - **Frame rate limit** — 60 FPS by default, Unlimited, monitor refresh rate or a chosen rate. This works alongside the game’s own frame rate option.
 - **Settings language** — Choose the Plugins-page language in FusionFixHub or the settings file; Automatic follows the game. Reopen the page to apply it.
 - **Confine cursor** — On or Off; applies while playing.
@@ -30,6 +31,7 @@
 - **Skip intro** — Skip the logos and the logo movie at start-up, confirm the start-up notices that only have an OK button ("Load successful", the auto-save notice) and go past the PRESS ANY KEY screen; story movies stay.
 - **Window mode** — Windowed or borderless when the game's full screen option is off.
 - **RGB lighting** — Support [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
+- **Shadow resolution** — Sharper shadows: the game's High shadow quality uses 2048 or 4096 shadow maps instead of 1024. Needs a restart.
 - **Colour filter** — Off removes the yellow-orange colour grade of the levels; the game's own Special Settings filters still work.
 - **Modern controls** — Controls like Resident Evil 6, for pad and keyboard/mouse:
   - A free over-the-shoulder camera: the right stick or the mouse turns it around the character and it stays where you leave it. It uses the game's own camera rig and wall handling; the mouse turns the view 1:1 in the same frame (the game's camera smoothing stays for the pad).
@@ -39,6 +41,7 @@
   - One-button reload on the move: X on the pad when no X prompt is up (the keyboard's reload key already works outside the aim).
   - Quick turn: A with the stick toward the camera (keyboard: the quick turn key); the camera swings behind.
   - Dodges: while aiming, A with the stick to a side or back (keyboard: the quick turn key with a direction) plays the game's avoid actions (the dodges of the QTEs): a side roll or a jump back.
+- **Controller icons** — Auto, Xbox, PlayStation or Nintendo button symbols in the prompts and the action buttons; Auto and Xbox keep the game's own.
 - **Laser sight with keyboard/mouse** — Keyboard/mouse aiming looks exactly like the pad's: the weapon's laser sight shows and the crosshair is hidden (the sniper scope keeps its reticle).
 - **Turn speed while moving** — How fast the character turns while walking and running, with the mouse or a stick. The game turns much slower on the move than standing still, slowest while running; 1.0x keeps the game's speed, higher values turn faster. With modern controls the camera turns freely, so this doesn't apply there.
 - **Knife parry** — Raise or swing the knife just before a Majini's melee attack or grab lands to block it: no damage (a grab doesn't latch on), the character plays the game's guard reaction (or keeps swinging) and the enemy reels as from a head shot, which opens the usual melee prompt for a follow-up.
@@ -58,7 +61,7 @@ The game's Options menu (at the title screen and in the pause menu) has the fix'
 Field of view, Modern controls, Laser sight with keyboard/mouse and Knife parry under the game's own rows (its Restore
 to default resets them too), and the added **PLUGINS** row lists the fix and every other loaded plugin with settings.
 Each plugin's page has its preset, its settings and Restore defaults for that page. FusionFixHub and fusionfix.io change
-the same settings; the first launch creates `scripts/ResidentEvil5.FusionFix.cfg`. **Vanilla** shows the logos; **Recommended** skips them; **Enhanced** also turns off the colour filter. Modern controls, laser sight, turn speed while moving and knife parry remain player choices. The field of view, HUD aspect ratio, frame rate limit, cursor confinement, pause when unfocused, colour filter, modern
+the same settings; the first launch creates `scripts/ResidentEvil5.FusionFix.cfg`. **Vanilla** shows the logos; **Recommended** skips them; **Enhanced** also turns off the colour filter. Modern controls, laser sight, turn speed while moving and knife parry remain player choices. The field of view, HUD aspect ratio, split screen layout, controller icons, frame rate limit, cursor confinement, pause when unfocused, colour filter, modern
 controls, laser sight, turn speed while moving, knife parry and update check apply at once. Reopen the Plugins page after changing its language;
 window mode, intro skipping and RGB lighting apply after a restart. The window mode and update check are the player's choice. Ctrl+F10 opens the developer overlay (supporters).
 
@@ -72,9 +75,9 @@ window mode, intro skipping and RGB lighting apply after a restart. The window m
   would stretch the picture.
 - The chapter title cards and the PAUSED label stay where the game places them in the 16:9 area.
 - The fix doesn't force a window mode: **Window mode** applies when the game's own full screen option is off.
-- Split screen stays top and bottom: the per-player HUD layout is computed for those halves in many places, and the
-  HUD keeps the game's layout there.
-- The controls and controller icons are the game's own (tutorial texts still describe the original controls).
+- Side-by-side split screen keeps the game's split HUD layout, scaled down to fit each half and centred in it, so on
+  16:9 and 21:9 screens it is smaller and sits in the middle band of each half.
+- The controls are the game's own (tutorial texts still describe the original controls), and the controller diagrams in the options keep their Xbox labels.
 - Modern controls: the camera and the legs are local. In online co-op the partner's game sees the character's actions,
   position and facing as usual; walking while aiming, reloading or switching is off online (the partner's game would
   not move the character), so these stand still there as in the original game. RE6's quick shot is not added: RE5 has

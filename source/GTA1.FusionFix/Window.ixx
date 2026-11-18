@@ -556,6 +556,23 @@ export namespace GTA1Window
         if (Shown) Present(Shown);
         return true;
     }
+    // 0 fullscreen, 1 windowed, 2 borderless; switches at once
+    void ApplyMode(int mode)
+    {
+        if (mode < 0 || mode > 2 || mode == (Exclusive ? 0 : Fullscreen ? 2 : 1)) return;
+        DisplayMode(false);
+        Exclusive = mode == 0;
+        Fullscreen = mode != 1;
+        Place();
+    }
+    // Window Mode changed from FusionFixHub: applied on the window's thread
+    constexpr UINT ModeMessage = WM_APP + 0x31;
+    bool SettingMessage(UINT message, WPARAM value)
+    {
+        if (!Enabled || message != ModeMessage) return false;
+        ApplyMode(int(value));
+        return true;
+    }
     bool KeyDown(UINT message, WPARAM key, LPARAM flags)
     {
         if (!Enabled || !Window) return false;
@@ -576,6 +593,10 @@ export namespace GTA1Window
         int mode = ini.ReadInteger("MAIN", "WindowMode", 0);
         Exclusive = mode == 0;
         Fullscreen = mode != 1;
+        FixSettings().OnChange("MAIN.WindowMode", []
+        {
+            if (Window) PostMessageW(Window, ModeMessage, WPARAM(FixSettings().Int("MAIN.WindowMode")), 0);
+        });
         // Per-monitor DPI awareness: the window and the picture are in real pixels at any scaling
         using SetContext = BOOL(WINAPI*)(HANDLE);
         auto setContext = reinterpret_cast<SetContext>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetProcessDpiAwarenessContext"));

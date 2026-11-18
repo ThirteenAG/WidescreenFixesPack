@@ -94,7 +94,7 @@
       "type": "int",
       "default": 60,
       "min": 30,
-      "max": 1000,
+      "max": 60,
       "unit": "fps",
       "label": "@FPSLimit",
       "description": "@FPSLimit.description",

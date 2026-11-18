@@ -31,8 +31,7 @@
   "menu.recommended": "Recommended",
   "menu.enhanced": "Enhanced",
   "FPSLimit": "Frame Rate Limit",
-  "FPSLimit.description": "Limits the frame rate. The game is made for 60; higher frame rates can upset its physics and timing. Applies immediately.",
-  "FPSLimit.unlimited": "Unlimited",
+  "FPSLimit.description": "Limits the frame rate between 30 and 60. The game is made for 60; higher frame rates upset its physics and timing. Applies immediately.",
   "WindowMode": "Window mode",
   "WindowMode.description": "Fullscreen, a window at the chosen resolution, or borderless: a window covering the whole monitor at its resolution. Restart required.",
   "WindowMode.fullscreen": "Fullscreen",
@@ -42,7 +41,6 @@
   "PauseOnFocusLoss.description": "In a window mode, the game pauses and goes silent while another window is active. Off keeps it running. Applies immediately.",
   "ConfineCursor": "Confine cursor",
   "ConfineCursor.description": "Keeps the mouse cursor inside the game window while the game is active, so it can't slip onto another monitor. Applies immediately.",
-  "FPSLimit.monitor": "Monitor refresh rate",
   "SkipIntro": "Skip intro logos",
   "SkipIntro.description": "Skips the logo movie at startup. Story movies still play. Restart required.",
   "HudAspectRatioConstraint": "HUD aspect ratio",
@@ -62,5 +60,5 @@
   "menu.SkipIntro.help": "Skips the startup logo movie. Restart required.",
   "menu.CheckForUpdates.help": "Asks fusionfix.io once per start for a newer version.",
   "menu.HudAspectRatioConstraint.help": "Auto: HUD at the screen edges. A ratio: a centred box.",
-  "menu.FPSLimit.help": "Frame rate limit. The game is made for 60."
+  "menu.FPSLimit.help": "Frame rate limit, 30 to 60. The game is made for 60."
 }

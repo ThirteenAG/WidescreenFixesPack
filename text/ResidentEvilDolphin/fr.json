@@ -7,5 +7,7 @@
   "UnthrottleEmuDuringDoorSkip": "Transitions de porte rapides",
   "UnthrottleEmuDuringDoorSkip.description": "Pendant que le jeu charge la pièce suivante, Dolphin tourne à pleine vitesse au lieu de la vitesse de la console, les changements de pièce sont donc plus rapides. Le jeu lui-même tourne à vitesse normale. Fonctionne avec ou sans passage des portes. Redémarrez Dolphin après avoir modifié ce réglage.",
   "LightSyncRGB": "Éclairage RGB",
-  "LightSyncRGB.description": "Les claviers Logitech G LIGHTSYNC affichent l'état du joueur : vert pour Fine, orange pour Caution, rouge pour Danger, violet en cas d'empoisonnement, avec un effet de battement de cœur. Nécessite Logitech G HUB ; sans lui, ce réglage n'a aucun effet. Redémarrez Dolphin après avoir modifié ce réglage."
+  "LightSyncRGB.description": "Les claviers Logitech G LIGHTSYNC affichent l'état du joueur : vert pour Fine, orange pour Caution, rouge pour Danger, violet en cas d'empoisonnement, avec un effet de battement de cœur. Nécessite Logitech G HUB ; sans lui, ce réglage n'a aucun effet. Redémarrez Dolphin après avoir modifié ce réglage.",
+  "SkipIntro": "Passer l'intro",
+  "SkipIntro.description": "Démarre à l'écran titre : Resident Evil 2 passe l'avertissement et la vidéo du titre, Resident Evil 3 l'avertissement, la mention de licence, le logo Capcom et la vidéo du titre. La vidéo d'ouverture d'une nouvelle partie est toujours jouée. Redémarrez Dolphin après avoir changé ce réglage."
 }

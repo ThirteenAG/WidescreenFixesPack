@@ -118,5 +118,11 @@
   "gamepadicons.playstation": "PlayStation",
   "gamepadicons.nintendo": "Nintendo",
   "lights": "Vehicle lights",
-  "lights.description": "Light headlights, tail, brake and reverse lights on car and bike body textures, generated from the game textures. Enabled by default."
+  "lights.description": "Light headlights, tail, brake and reverse lights on car and bike body textures, generated from the game textures. Enabled by default.",
+  "controls.moderncontrolscheme": "Modern control scheme",
+  "controls.moderncontrolscheme.description": "Use triggers to drive, aim and shoot. Native mode-specific controls remain supported.",
+  "controls.gamepadcameraspeed": "Gamepad camera speed",
+  "controls.gamepadcameraspeed.description": "Speed of the right stick camera on foot and in vehicles. 1.0 is the original speed.",
+  "controls.invertgamepady": "Invert gamepad Y",
+  "controls.invertgamepady.description": "Reverses the vertical right stick camera direction."
 }

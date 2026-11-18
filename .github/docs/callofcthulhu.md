@@ -23,6 +23,7 @@
 - **High resolutions** — Menus and pictures draw correctly on screens wider than 3276 pixels, where the game's own 2D drawing ran out of range.
 - **Crash fix** — The heal menu's cursor fix no longer writes into the game's read-only data (a crash at startup).
 - **Display scaling** — The game gets the full resolution on scaled desktops.
+- **Controller** — The included Xidi turns an XInput controller into the game's default keys and mouse, so the keyboard, the mouse and the in-game key configuration keep working alongside it.
 
 ## Options
 
@@ -49,10 +50,31 @@ With Check for updates on, a newer version of the fix is shown in the help line 
 
 The settings text is available in English, French, German, Italian and Spanish; Automatic uses English, and Text Language in FusionFixHub picks another.
 
+## Controller
+
+The game reads only the keyboard and mouse. The controller presses the default keys of the game's Key Configuration, so a changed key in that menu also needs the matching change in `Engine/Xidi.ini`.
+
+| Control | Action |
+|---|---|
+| Left stick | Move |
+| Right stick | Look |
+| RT / LT | Fire / Aim |
+| A | Action |
+| B | Crouch |
+| X | Reload |
+| Y | Jump |
+| LB / RB | Lean left / right |
+| Left stick click | Sneak |
+| Right stick click | Hide or show weapon |
+| D-pad up / down | Inventory / Quick heal |
+| D-pad left | Look strafe |
+| Back | Skip scene |
+| Start | Menu |
+
 ## Known limits
 
 - The game has no on-screen HUD in play (no health, ammunition or map display); subtitles and messages stay centred, so there's no HUD setting.
-- The PC version uses DirectInput for keyboard and mouse; controller input is not supported.
+- Button prompts and the Key Configuration menu name keyboard keys and mouse buttons.
 - Aiming, scripted views, camera effects and transitions keep their original framing; the factor changes the normal gameplay view.
 - Long help lines on the in-game page are shortened; FusionFixHub and fusionfix.io show them in full.
 - On screens narrower than 4:3 (5:4) the 4:3 menus are slightly wider than the screen at the sides.

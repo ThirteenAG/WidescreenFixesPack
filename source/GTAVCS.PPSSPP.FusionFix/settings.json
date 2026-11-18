@@ -60,8 +60,8 @@
       "label": "@MAIN.ForceAspectRatio",
       "description": "@MAIN.ForceAspectRatio.description",
       "page": "display",
-      "visibility": "editor",
-      "apply": "restart",
+      "visibility": "menu",
+      "apply": "live",
       "maxLength": 14,
       "suggestions": [
         "auto",
@@ -79,7 +79,7 @@
       "description": "@MAIN.FPSLimit.description",
       "page": "gameplay",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "choices": [
         { "value": 30, "label": "30 FPS" },
         { "value": 60, "label": "60 FPS" }
@@ -98,7 +98,7 @@
       "description": "@MAIN.UnthrottleEmuDuringLoading.description",
       "page": "gameplay",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 0,
         "recommended": 1,
@@ -111,12 +111,17 @@
     {
       "id": "CONTROLS.ModernControlScheme",
       "type": "bool",
-      "default": 0,
+      "default": 1,
       "label": "@CONTROLS.ModernControlScheme",
       "description": "@CONTROLS.ModernControlScheme.description",
-      "page": "advanced",
-      "visibility": "editor",
-      "apply": "restart"
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
     },
     {
       "id": "CONTROLS.PCCheats",
@@ -125,8 +130,8 @@
       "label": "@CONTROLS.PCCheats",
       "description": "@CONTROLS.PCCheats.description",
       "page": "compatibility",
-      "visibility": "editor",
-      "apply": "restart"
+      "visibility": "menu",
+      "apply": "live"
     },
     {
       "id": "MAIN.HudScale",
@@ -136,7 +141,7 @@
       "description": "@HUD.HudScale.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 1.0,
         "recommended": 0.75,
@@ -174,7 +179,7 @@
       "description": "@hudaspect.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "maxLength": 14
     },
     {
@@ -185,7 +190,7 @@
       "description": "@RADAR.RadarScale.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 1.0,
         "recommended": 0.83,
@@ -203,7 +208,7 @@
       "description": "@RADAR.RadarPosX.description",
       "page": "advanced",
       "visibility": "editor",
-      "apply": "restart",
+      "apply": "live",
       "min": -480,
       "max": 480,
       "step": 1
@@ -216,7 +221,7 @@
       "description": "@RADAR.RadarPosY.description",
       "page": "advanced",
       "visibility": "editor",
-      "apply": "restart",
+      "apply": "live",
       "min": -272,
       "max": 272,
       "step": 1
@@ -229,7 +234,7 @@
       "description": "@MPRADAR.RadarScale.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 1.0,
         "recommended": 0.63,
@@ -247,7 +252,7 @@
       "description": "@MPRADAR.RadarPosY.description",
       "page": "advanced",
       "visibility": "editor",
-      "apply": "restart",
+      "apply": "live",
       "min": -272,
       "max": 272,
       "step": 1
@@ -260,7 +265,7 @@
       "description": "@FOV.FOVFactor.description",
       "page": "camera",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "min": 0.5,
       "max": 2.0,
       "step": 0.05
@@ -291,7 +296,7 @@
       "description": "@FOV.CutsceneBorders.description",
       "page": "camera",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 1,
         "recommended": 3,
@@ -321,7 +326,7 @@
       "description": "@holdcamera.description",
       "page": "camera",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 0,
         "recommended": 0,
@@ -336,7 +341,7 @@
       "description": "@icons.description",
       "page": "controls",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "choices": [
         {
           "value": "Auto",

@@ -61,12 +61,32 @@ export namespace CondemnedHud
         return rectangle;
     }
 
+    // A changed setting lays the HUD out again on the game's thread, as after a resolution change
+    inline std::atomic<bool> relayout{ false };
+    inline uint8_t** interfaceManager = nullptr;
+
+    inline void Frame()
+    {
+        if (!relayout.exchange(false) || !interfaceManager || !*interfaceManager)
+            return;
+        const auto hud = *interfaceManager + 0x3970;
+        using UpdateLayout = void(__thiscall*)(void*);
+        reinterpret_cast<UpdateLayout>((*reinterpret_cast<void***>(hud))[6])(hud);
+    }
+
     inline void Init(HMODULE gameClient)
     {
         auto pattern = hook::pattern(gameClient, "83 EC 08 8B 0D ? ? ? ? 85 C9 C7 44 24 04 00 00 10 3F C7 04 24 39 8E E3 3F");
         const auto refresh = []() { constraint = ParseAspect(FixSettings().String("MAIN.HudAspectRatioConstraint")); };
         refresh();
-        FixSettings().OnChange("MAIN.HudAspectRatioConstraint", refresh);
+        FixSettings().OnChange("MAIN.HudAspectRatioConstraint", [refresh]()
+        {
+            refresh();
+            relayout = true;
+        });
         rectangleHook = safetyhook::create_inline(pattern.get_first(), Rectangle); //0x1006D5C0
+
+        pattern = hook::pattern(gameClient, "88 9E 95 01 00 00 E8 ? ? ? ? 8B 0D ? ? ? ? 8B 91 70 39 00 00 81 C1 70 39 00 00");
+        interfaceManager = *pattern.get_first<uint8_t**>(13);
     }
 }

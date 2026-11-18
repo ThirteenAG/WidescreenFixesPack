@@ -35,6 +35,7 @@ Change the settings on fusionfix.io, in FusionFixHub or in the developer overlay
 | Confine cursor | On, Off | On | while playing |
 | Skip intro logos | On, Off | On | after a restart |
 | Check for updates | On, Off | Off | while playing |
+| Text language | Automatic, English, French, German, Italian, Spanish; language of the update notice | Automatic | while playing |
 | HUD aspect ratio | Auto, 4:3, 16:9, 21:9, 32:9 | Auto | while playing |
 | Cutscene borders | Off, Letterbox, Pillarbox, Both | Both | while playing |
 | Video mode | Original aspect, Fill | Fill | while playing |

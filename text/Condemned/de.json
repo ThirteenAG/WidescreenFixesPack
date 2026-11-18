@@ -65,5 +65,15 @@
   "FPSLimit.description": "Begrenzt die Bildrate. Wirkt sofort.",
   "HudAspectRatioConstraint": "HUD-Seitenverhältnis",
   "HudAspectRatioConstraint.auto": "Auto",
-  "HudAspectRatioConstraint.description": "Auto verteilt das HUD über den ganzen Bildschirm. Ein Seitenverhältnis hält es in einem zentrierten Rahmen dieser Form. Erfordert einen Neustart."
+  "HudAspectRatioConstraint.description": "Auto verteilt das HUD über den ganzen Bildschirm. Ein Seitenverhältnis hält es in einem zentrierten Rahmen dieser Form. Wirkt sofort.",
+  "FMVWidescreenMode": "Filmdarstellung",
+  "FMVWidescreenMode.original": "Original",
+  "FMVWidescreenMode.fill": "Füllen",
+  "FMVWidescreenMode.description": "Original zeigt die Filme vollständig im mittigen 16:9-Rahmen des Spiels. Füllen passt den ganzen Film an den Bildschirm an. Nichts wird abgeschnitten oder verzerrt.",
+  "GamepadIcons": "Controller-Tasten",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.xbox": "Xbox",
+  "GamepadIcons.playstation": "PlayStation",
+  "GamepadIcons.nintendo": "Nintendo",
+  "GamepadIcons.description": "Tastenhinweise nennen die Tasten des Controllers, wenn zuletzt der Controller benutzt wurde, sonst die Tasten von Tastatur und Maus. Auto verwendet Xbox-Namen."
 }

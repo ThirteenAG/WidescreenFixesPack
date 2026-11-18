@@ -18,10 +18,11 @@ import PostFX;
 // Gamepads are handled by Xidi (Xidi.32.dll, loaded by the ASI loader). PlayStation and Switch pads use
 // Steam Input or DS4Windows. Xidi presents each pad as a "Xidi virtual controller" using its
 // XInputNative layout: X/Y = left stick, RotX/RotY = right stick, Z = LT, RotZ = RT, POV = d-pad,
-// buttons 1-10 = A B X Y LB RB Back Start LS RS. This module gives such pads modern default bindings,
-// proper names in the controls menu, controller button prompts in the front end, front end actions for
-// the PC-only hotkeys and the right stick for the camera. Other devices (wheels and so on) keep the
-// game's own behaviour.
+// buttons 1-10 = A B X Y LB RB Back Start LS RS. Without Xidi, Windows shows an Xbox pad to DirectInput
+// with the same layout except for the triggers, which share the Z axis: LT above the centre, RT below it.
+// This module gives both modern default bindings, proper names in the controls menu, controller button
+// prompts in the front end, front end actions for the PC-only hotkeys and the right stick for the camera.
+// Other devices (wheels and so on) keep the game's own behaviour.
 
 namespace
 {
@@ -53,7 +54,6 @@ namespace
         ActionMenuL1 = 0x26,            // [
         ActionMenuR1 = 0x27,            // ]
         ActionMenuPreset = 0x2E,        // P
-        ActionMenuQuit = 0x2F,          // Q
     };
 
     // Per-channel input mapping
@@ -104,20 +104,43 @@ namespace
     std::atomic<bool> bDevicesChanged = false;     // rescan for new game controllers
     std::atomic<bool> bIconStyleOutdated = false;  // detect the icon style again
 
-    bool IsXidiDevice(IDirectInputDevice8A* device)
+    enum class PadKind
     {
-        // Xidi virtual controller instance GUIDs end with "XIDIVC"
-        static std::map<IDirectInputDevice8A*, bool> cache;
-        if (!device)
-            return false;
+        None,       // not a gamepad this module knows
+        Xidi,       // a Xidi virtual controller, each trigger on its own axis
+        XInput,     // an Xbox pad shown to DirectInput by Windows, both triggers on the Z axis
+    };
 
+    PadKind GetPadKind(IDirectInputDevice8A* device)
+    {
+        static std::map<IDirectInputDevice8A*, PadKind> cache;
+        static std::mutex mutex;
+        if (!device)
+            return PadKind::None;
+
+        std::lock_guard lock(mutex);
         if (auto it = cache.find(device); it != cache.end())
             return it->second;
 
+        // Xidi virtual controller instance GUIDs end with "XIDIVC". Pads that Windows also offers through
+        // XInput have "IG_" in their device path.
+        PadKind kind = PadKind::None;
         DIDEVICEINSTANCEA info = { sizeof(DIDEVICEINSTANCEA) };
-        bool isXidi = SUCCEEDED(device->GetDeviceInfo(&info)) && memcmp(info.guidInstance.Data4, "XIDIVC", 6) == 0;
-        cache[device] = isXidi;
-        return isXidi;
+        DIPROPGUIDANDPATH path = {};
+        path.diph.dwSize = sizeof(DIPROPGUIDANDPATH);
+        path.diph.dwHeaderSize = sizeof(DIPROPHEADER);
+        path.diph.dwHow = DIPH_DEVICE;
+        if (SUCCEEDED(device->GetDeviceInfo(&info)) && memcmp(info.guidInstance.Data4, "XIDIVC", 6) == 0)
+            kind = PadKind::Xidi;
+        else if (SUCCEEDED(device->GetProperty(DIPROP_GUIDANDPATH, &path.diph)) && (wcsstr(path.wszPath, L"IG_") || wcsstr(path.wszPath, L"ig_")))
+            kind = PadKind::XInput;
+        cache[device] = kind;
+        return kind;
+    }
+
+    bool IsGamepad(IDirectInputDevice8A* device)
+    {
+        return GetPadKind(device) != PadKind::None;
     }
 
     IDirectInputDevice8A* GetJoystick(int index)
@@ -140,13 +163,6 @@ namespace
     DIJOYSTATE2* GetJoyState(int index)
     {
         return (JoyStateCopy && *JoyStateCopy) ? reinterpret_cast<DIJOYSTATE2*>(*JoyStateCopy + JoyStateSize * index) : nullptr;
-    }
-
-    void SetActionPressed(uintptr_t channel, uint32_t action, bool pressed)
-    {
-        auto& mask = Channel::At<uint32_t>(channel, action < 32 ? Channel::ActionMaskLow : Channel::ActionMaskHigh);
-        uint32_t bit = 1u << (action % 32);
-        mask = pressed ? (mask & ~bit) : (mask | bit);
     }
 }
 
@@ -219,7 +235,7 @@ export namespace Input
         for (int i = 0; i < MaxJoysticks; ++i)
         {
             auto device = GetJoystick(i);
-            if (!IsXidiDevice(device))
+            if (!IsGamepad(device))
                 continue;
             for (DWORD offset : { OfsLeftX, OfsLeftY, OfsRightX, OfsRightY })
                 SetStickDeadzone(device, offset, DIPH_BYOFFSET, offset);
@@ -242,14 +258,18 @@ export namespace Input
     };
 
     LookInput Look;
+    SteadyClock::time_point LastStickUpdate = {};
 
-    // Called once per camera update; mouse deltas accumulate between calls
+    // Called once per camera update; mouse deltas accumulate between calls. The stick only counts while its pad
+    // is read: a pad that is unplugged doesn't leave the camera turning.
     LookInput ConsumeLook()
     {
         LookInput result = Look;
         result.rawMouse = RawMouse::Consume(result.mouseX, result.mouseY);
         if (result.rawMouse && (result.mouseX || result.mouseY))
             LastKeyboardMouseInput = SteadyClock::now();
+        if (SteadyClock::now() - LastStickUpdate > std::chrono::milliseconds(100))
+            result.stickX = result.stickY = 0.0f;
         Look.mouseX = 0;
         Look.mouseY = 0;
         if (DeveloperOverlay::BlocksInput())
@@ -398,6 +418,10 @@ namespace
         if (!prompt)
             return nullptr;
 
+        // Both stick clicks don't work while a dialog is shown, such as the quit dialog with its own "Quit Game"
+        if (prompt->button == PromptQuit && CurrentDialog != 0)
+            return nullptr;
+
         const auto& icons = CurrentIconStyle == IconStyle::PlayStation ? PlayStationIcons : XboxIcons;
         const char* icon = prompt->button == PromptQuit ? "BUTTON_QUIT" : icons[prompt->button];
 
@@ -411,7 +435,7 @@ namespace
     }
 
     // Strings are only laid out again when they change. When the input switches between pad and
-    // keyboard, all of them are laid out again for a moment.
+    // keyboard or a dialog opens or closes, all of them are laid out again for a moment.
     bool bLastPromptsForPad = false;
     SteadyClock::time_point RefreshStringsUntil = {};
 
@@ -421,11 +445,14 @@ namespace
             CurrentIconStyle = DetectIconStyle();
 
         bool pad = LastInputWasPad();
+        bool dialog = CurrentDialog != 0;
         static IconStyle lastStyle = CurrentIconStyle;
-        if (pad != bLastPromptsForPad || lastStyle != CurrentIconStyle)
+        static bool bLastDialog = false;
+        if (pad != bLastPromptsForPad || lastStyle != CurrentIconStyle || dialog != bLastDialog)
         {
             bLastPromptsForPad = pad;
             lastStyle = CurrentIconStyle;
+            bLastDialog = dialog;
             RefreshStringsUntil = SteadyClock::now() + std::chrono::milliseconds(250);
         }
     }
@@ -483,14 +510,14 @@ namespace ButtonIcons
     }
 }
 
-// Controls menu labels for Xidi pads
+// Controls menu labels for gamepads
 namespace
 {
     SafetyHookInline shGetJoystickBindingName = {};
     const char* __fastcall GetJoystickBindingName(uintptr_t channel, void* edx, int action, int secondary)
     {
         auto index = Channel::At<int32_t>(channel, Channel::Index);
-        if (!IsXidiDevice(GetJoystick(index)))
+        if (!IsGamepad(GetJoystick(index)))
             return shGetJoystickBindingName.unsafe_fastcall<const char*>(channel, edx, action, secondary);
 
         // Same search as the game: axis bindings first, then buttons, then d-pad directions.
@@ -516,7 +543,11 @@ namespace
 
         if (axis >= 0 && match())
         {
-            if (auto name = ObjectName(Channel::At<DWORD>(channel, Channel::AxisOffset + axis * 4)))
+            // Without Xidi both triggers are on Z: the lower half is RT
+            auto offset = Channel::At<DWORD>(channel, Channel::AxisOffset + axis * 4);
+            if (offset == OfsLT && Channel::At<int32_t>(channel, Channel::AxisSign + axis * 4) < 0)
+                return CurrentNames().rightTrigger;
+            if (auto name = ObjectName(offset))
                 return name;
         }
 
@@ -543,7 +574,7 @@ namespace
     }
 }
 
-// Default bindings for Xidi pads, used when there's no saved configuration and by "Reset Keys To Default"
+// Default bindings for gamepads, used when there's no saved configuration and by "Reset Keys To Default"
 namespace
 {
     SafetyHookInline shSetDefaultJoystickBindings = {};
@@ -552,16 +583,19 @@ namespace
         char result = shSetDefaultJoystickBindings.unsafe_fastcall<char>(channel, edx);
 
         auto index = Channel::At<int32_t>(channel, Channel::Index);
-        if (!IsXidiDevice(GetJoystick(index)))
+        auto kind = GetPadKind(GetJoystick(index));
+        if (kind == PadKind::None)
             return result;
 
-        // Left stick steers, RT accelerates, LT brakes and reverses
+        // Left stick steers, RT accelerates, LT brakes and reverses. Without Xidi RT is the lower half of Z.
         Channel::At<DWORD>(channel, Channel::AxisOffset + 0) = OfsLeftX;
-        Channel::At<DWORD>(channel, Channel::AxisOffset + 4) = OfsRT;
+        Channel::At<DWORD>(channel, Channel::AxisOffset + 4) = kind == PadKind::Xidi ? OfsRT : OfsLT;
         Channel::At<DWORD>(channel, Channel::AxisOffset + 8) = OfsLT;
         Channel::At<DWORD>(channel, Channel::AxisOffset + 12) = OfsLeftY;
         for (int i = 0; i < 4; ++i)
             Channel::At<int32_t>(channel, Channel::AxisSign + i * 4) = 1;
+        if (kind == PadKind::XInput)
+            Channel::At<int32_t>(channel, Channel::AxisSign + 4) = -1;
         Channel::At<uint8_t>(channel, Channel::AxisEnabled + 0) = 1;
         Channel::At<uint8_t>(channel, Channel::AxisEnabled + 1) = 1;
         Channel::At<uint8_t>(channel, Channel::AxisEnabled + 2) = 1;
@@ -621,7 +655,7 @@ namespace
     }
 }
 
-// Stick dead zones for Xidi pads, set when the game enumerates the device's axes
+// Stick dead zones for gamepads, set when the game enumerates the device's axes
 namespace
 {
     SafetyHookInline shEnumJoystickObject = {};
@@ -630,7 +664,7 @@ namespace
         BOOL result = shEnumJoystickObject.unsafe_stdcall<BOOL>(object, ref);
 
         auto device = GetJoystick(int(reinterpret_cast<intptr_t>(ref)));
-        if (object && (object->dwType & DIDFT_AXIS) && IsXidiDevice(device))
+        if (object && (object->dwType & DIDFT_AXIS) && IsGamepad(device))
         {
             auto ofs = object->dwOfs;
             if (ofs == OfsLeftX || ofs == OfsLeftY || ofs == OfsRightX || ofs == OfsRightY)
@@ -638,6 +672,23 @@ namespace
         }
 
         return result;
+    }
+}
+
+// Both stick clicks do what the Q key does. The PC front end reads its Q hotkey from typed characters, not
+// from the input actions, so the click is handed to the game's hotkey handler as the character 'q', on
+// the game's thread like a typed key.
+namespace
+{
+    void* MenuHotkeys = nullptr;
+    void* HandleMenuHotkey = nullptr;   // thiscall (character)
+    std::atomic<bool> bQuitRequested = false;
+    bool bQuitComboHeld[MaxJoysticks] = {};
+
+    void ProcessQuitRequest()
+    {
+        if (bQuitRequested.exchange(false))
+            reinterpret_cast<void(__thiscall*)(void*, int)>(HandleMenuHotkey)(MenuHotkeys, 'q');
     }
 }
 
@@ -670,6 +721,8 @@ namespace
             if (!Channel::At<uint8_t>(channel, Channel::AxisEnabled + axis) || (offset != OfsLT && offset != OfsRT))
                 return;
             auto value = *reinterpret_cast<const LONG*>(reinterpret_cast<const uint8_t*>(state) + offset);
+            if (Channel::At<int32_t>(channel, Channel::AxisSign + axis * 4) < 0)
+                value = -value;
             Channel::At<uint8_t>(channel, byte) = uint8_t(std::clamp(value * 254 / 10000, 0L, 254L));
         };
         pedal(1, Channel::ThrottleByte);
@@ -694,7 +747,7 @@ namespace
             PreviousPad[index].valid = false;
         }
 
-        if (!IsXidiDevice(device))
+        if (!IsGamepad(device))
         {
             // Some devices report a stick or pedal that never returns to the centre. In the front end that
             // reads as the left stick being held up and the menus keep scrolling. Ignore the analog
@@ -743,18 +796,16 @@ namespace
         // The right stick of the pad in use drives the camera
         Input::Look.stickX = std::clamp(state->lRx / 10000.0f, -1.0f, 1.0f);
         Input::Look.stickY = std::clamp(state->lRy / 10000.0f, -1.0f, 1.0f);
+        Input::LastStickUpdate = SteadyClock::now();
 
+        // Left stick up/down navigates menus the same way combined pedals do
         if (IsFrontEnd())
-        {
-            // Left stick up/down navigates menus the same way combined pedals do
             Channel::At<uint8_t>(channel, Channel::PedalsByte) = AxisToByte(state->lY);
 
-            // Both stick clicks quit, like the Q key
-            bool ls = (state->rgbButtons[PadLS] & 0x80) != 0;
-            bool rs = (state->rgbButtons[PadRS] & 0x80) != 0;
-            if (ls && rs)
-                SetActionPressed(channel, ActionMenuQuit, true);
-        }
+        bool quitCombo = (state->rgbButtons[PadLS] & 0x80) && (state->rgbButtons[PadRS] & 0x80);
+        if (quitCombo && !bQuitComboHeld[index])
+            bQuitRequested = true;
+        bQuitComboHeld[index] = quitCombo;
     }
 }
 
@@ -773,6 +824,7 @@ public:
             });
             WFP::onGameProcessEvent() += []()
             {
+                ProcessQuitRequest();
                 RawMouse::Update(hWnd.get());
                 if (OverlayPadActive && SteadyClock::now() - LastOverlayPadUpdate > std::chrono::milliseconds(100))
                 {
@@ -800,6 +852,11 @@ public:
 
             pattern = hook::pattern("83 EC 0C 53 55 8B 6C 24 18 8B D9 57 33 C0 B9 4F 00 00 00 BF");
             shGetJoystickBindingName = safetyhook::create_inline(pattern.get_first(), GetJoystickBindingName);
+
+            // The front end's character hotkeys, called for WM_CHAR when no text field is edited
+            pattern = hook::pattern("8B 74 24 08 56 B9 ? ? ? ? E8 ? ? ? ? A0");
+            MenuHotkeys = *pattern.get_first<void*>(6);
+            HandleMenuHotkey = injector::GetBranchDestination(pattern.get_first(10)).get();
 
             pattern = hook::pattern("E8 ? ? ? ? 8B 46 08 8B 0D");
             static auto JoystickChannelHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)

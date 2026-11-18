@@ -26,6 +26,8 @@ export struct FlushBatchCount
 export ProtectedGameRef<int32_t> bFullscreen;
 export GameRef<int32_t> nDisplayWidth;
 export GameRef<int32_t> nDisplayHeight;
+export GameRef<int32_t> nResolutionRequest;                 // index of the Resolution row's choice to apply
+export GameRef<int32_t> nResolutionApplied;
 export GameRef<RenderCameraData> RenderCamera;
 export GameRef<uint8_t*> pCurrentCamera;
 export GameRef<int32_t> aCinemaBarFlags[2];

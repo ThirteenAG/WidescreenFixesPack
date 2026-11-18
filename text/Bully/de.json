@@ -29,8 +29,6 @@
   "GRAPHICS.ShadowResolution": "Schattenauflösung",
   "GRAPHICS.ShadowResolution.description": "Größe der Schattentexturen. Höhere Werte ergeben schärfere, weniger pixelige Schatten und brauchen mehr Grafikspeicher. Gilt ab dem nächsten Start.",
   "GRAPHICS.ShadowResolution.1024": "1024 (Original)",
-  "controls.auto": "Automatischer Controller",
-  "controls.auto.description": "Nutzt Controller oder Tastatur und Maus, je nachdem was zuletzt benutzt wurde, und erkennt neu verbundene Controller.",
   "controls.speed": "Kamera-Tempo (Controller)",
   "controls.speed.description": "Multipliziert das Kameratempo mit dem Controller. 1,00 = Originaltempo. Die Maus bleibt gleich.",
   "controls.deadzone": "Stick-Totzone",

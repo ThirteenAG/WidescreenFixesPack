@@ -74,6 +74,16 @@
       "max": 16384
     },
     {
+      "id": "MAIN.PauseOnFocusLoss",
+      "type": "bool",
+      "default": true,
+      "label": "@PauseOnFocusLoss",
+      "description": "@PauseOnFocusLoss.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
       "id": "MAIN.WindowMode",
       "type": "choice",
       "default": 0,
@@ -222,15 +232,15 @@
     {
       "id": "MAIN.CutsceneBorders",
       "type": "choice",
-      "default": 1,
+      "default": 3,
       "choices": [
         {
           "value": 0,
           "label": "@CutsceneBorders.0"
         },
         {
-          "value": 1,
-          "label": "@CutsceneBorders.1"
+          "value": 3,
+          "label": "@CutsceneBorders.3"
         }
       ],
       "label": "@CutsceneBorders",

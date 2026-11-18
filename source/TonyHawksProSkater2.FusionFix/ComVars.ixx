@@ -22,6 +22,7 @@ export GameRef<int32_t> dword_5606D0;
 export GameRef<uint32_t> dword_29D6FF0;
 export GameRef<int> gameExit;
 export GameRef<int> startScreen;
+export bool CloseRequested = false;
 export GameRef<IDirectDrawSurface7*> CachedBack;
 
 export GameRef<int> LastBinding;

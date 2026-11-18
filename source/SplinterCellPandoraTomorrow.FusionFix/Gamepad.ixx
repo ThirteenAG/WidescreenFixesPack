@@ -277,7 +277,8 @@ namespace
         return result;
     }
 
-    std::atomic<bool> BindingsChanged = false;
+    // Starts set so the first input tick applies the camera speed and invert to the stick axes
+    std::atomic<bool> BindingsChanged = true;
 }
 
 export namespace Gamepad

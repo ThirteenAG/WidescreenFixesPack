@@ -22,6 +22,34 @@ namespace
             *result = 0;
         return native;
     }
+
+    // Resuming without any save leaves the front end with no player and crashes the game
+    bool AnySaveExists()
+    {
+        PWSTR documents = nullptr;
+        if (FAILED(SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &documents)))
+            return true;
+        const auto root = std::filesystem::path(documents) / L"Rockstar Games" / L"GTA Vice City Definitive Edition";
+        CoTaskMemFree(documents);
+        const auto hasSave = [](const std::filesystem::path& folder)
+        {
+            std::error_code error;
+            for (const auto& entry : std::filesystem::directory_iterator(folder, error))
+            {
+                const auto name = entry.path().filename().wstring();
+                if (name.starts_with(L"GTAVCsf") && entry.path().extension() == L".sav" && entry.is_regular_file(error) && entry.file_size(error) > 0)
+                    return true;
+            }
+            return false;
+        };
+        if (hasSave(root / L"SaveGames"))
+            return true;
+        std::error_code error;
+        for (const auto& profile : std::filesystem::directory_iterator(root / L"Profiles", error))
+            if (profile.is_directory(error) && hasSave(profile.path()))
+                return true;
+        return false;
+    }
 }
 
 class StartupModule
@@ -33,7 +61,7 @@ public:
         {
             if (Settings.skipIntro)
                 legalScreenHook = safetyhook::create_inline(LegalScreenAddress(), ShouldShow);
-            if (!Settings.skipMenu)
+            if (!Settings.skipMenu || !AnySaveExists())
                 return;
             const auto update = InterfaceUpdateAddress();
             const auto resume = ResumeGameAddress();

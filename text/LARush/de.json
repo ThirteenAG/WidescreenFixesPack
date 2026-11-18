@@ -41,7 +41,9 @@
   "update.availablehub": "Eine neue Version von {name} ist verfügbar. Nach dem Beenden in FusionFixHub aktualisieren.",
   "update.availablesite": "Eine neue Version von {name} ist auf fusionfix.io verfügbar.",
   "CutsceneBorders": "Zwischensequenzbalken",
-  "CutsceneBorders.description": "Bewahrt den ursprünglichen Bildausschnitt der Zwischensequenzen mit seitlichen Balken. Aus erweitert die Ansicht. Gilt sofort.",
+  "CutsceneBorders.description": "Bewahrt den ursprünglichen 4:3-Bildausschnitt der Story-Szenen und Rennintros. Letterbox setzt Balken oben und unten auf Bildschirmen schmaler als 4:3, Pillarbox seitliche Balken auf breiteren, Beide je nach Bildschirm. Aus füllt den Bildschirm mit einer breiteren Ansicht. Gilt sofort.",
   "CutsceneBorders.0": "Aus",
-  "CutsceneBorders.1": "Pillarbox"
+  "CutsceneBorders.1": "Letterbox",
+  "CutsceneBorders.2": "Pillarbox",
+  "CutsceneBorders.3": "Beide"
 }

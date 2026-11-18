@@ -102,7 +102,7 @@
     {
       "id": "MAIN.CutsceneBorders",
       "type": "choice",
-      "default": 1,
+      "default": 3,
       "choices": [
         {
           "value": 0,
@@ -111,8 +111,21 @@
         {
           "value": 1,
           "label": "@CutsceneBorders.1"
+        },
+        {
+          "value": 2,
+          "label": "@CutsceneBorders.2"
+        },
+        {
+          "value": 3,
+          "label": "@CutsceneBorders.3"
         }
       ],
+      "presets": {
+        "vanilla": 3,
+        "recommended": 3,
+        "enhanced": 3
+      },
       "label": "@CutsceneBorders",
       "description": "@CutsceneBorders.description",
       "page": "display",

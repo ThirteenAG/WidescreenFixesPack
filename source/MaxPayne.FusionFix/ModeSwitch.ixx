@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/MaxPayne/Pad.hpp"
 
 export module ModeSwitch;
 
@@ -123,7 +124,9 @@ public:
                         return;
                     }
 
-                    bool bPressed = nGraphicNovelModeKey && (GetAsyncKeyState(nGraphicNovelModeKey) & 0x8000) != 0;
+                    // the key, or Y on a controller
+                    bool bPressed = (nGraphicNovelModeKey && (GetAsyncKeyState(nGraphicNovelModeKey) & 0x8000) != 0) ||
+                        MaxPaynePad::Pressed(MaxPaynePad::Button::Y);
                     if (!bPressed && bWasPressed)
                     {
                         // Applied through the setting, which the menu and the settings file follow
