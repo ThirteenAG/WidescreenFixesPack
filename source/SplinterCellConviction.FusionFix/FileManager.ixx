@@ -1117,11 +1117,11 @@ export void InitFileManager()
         pattern = hook::pattern("55 8B EC 83 EC 14 53 56 8B 75 0C 57 8B CE E8");
         Dumper::SerializeLinearTable = (decltype(Dumper::SerializeLinearTable))pattern.get_first();
 
-        pattern = hook::pattern("E8 ? ? ? ? 3B C7 59 74 09 8B C8 E8 ? ? ? ? EB 02 33");
+        pattern = hook::pattern("E8 ? ? ? ? 3B C7 59 74 09 8B C8 E8 ? ? ? ? EB 02 33 C0 8B 8E 8C 01 00 00 89 44 8E 2C 8B 86 8C 01 00 00 3B C7");
         Dumper::appMalloc = (decltype(Dumper::appMalloc))injector::GetBranchDestination(pattern.get_first(0)).as_int();
         Dumper::LinearTableConstructor = (decltype(Dumper::LinearTableConstructor))injector::GetBranchDestination(pattern.get_first(12)).as_int();
 
-        pattern = hook::pattern("3B DF 74 0E 8B CB E8 ? ? ? ? 53 E8 ? ? ? ? 59 8B 86 8C 01");
+        pattern = hook::pattern("3B DF 74 0E 8B CB E8 ? ? ? ? 53 E8 ? ? ? ? 59 8B 86 8C 01 00 00 89 7C 86 2C EB");
         Dumper::LinearTableDestructor = (decltype(Dumper::LinearTableDestructor))injector::GetBranchDestination(pattern.get_first(6)).as_int();
         Dumper::appFree = (decltype(Dumper::appFree))injector::GetBranchDestination(pattern.get_first(12)).as_int();
 

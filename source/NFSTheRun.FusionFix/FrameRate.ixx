@@ -252,6 +252,22 @@ public:
                 }
             }
 
+            // The frame's place between the ticks comes from the frame times added up since the last tick, divided by
+            // the tick's length. In slow motion the tick's length is in game time, a fraction of the real 1/30 s
+            // between the ticks, while the frame times are real: the place reaches the end of the tick on the first
+            // frame after it, and everything stops until the next tick, so slow motion plays at 30 frames per second.
+            // The frame times are scaled to game time as well.
+            if (bUnlockFrameRate)
+            {
+                auto pattern = hook::pattern("0F 28 D0 0F 5A C0 0F 5A C9 F2 0F 58 C1 66 0F 5A C0 F3 0F 11 86 A0 01 00 00");
+                static auto SlowMotionPlaceHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
+                {
+                    float timeScale = *(float*)(regs.ebx + 0x1C);   // the update's time scale
+                    if (timeScale > 0.0f)
+                        regs.xmm1.f32[0] *= timeScale;              // the frame time
+                });
+            }
+
             // The engine sound's pitch glides to each new value. Above 30 frames per second a new value comes before
             // the glide moves, the glide starts over and the pitch stays where it was, so the engine sounds stuck at one
             // tone. Then the glide carries on to the new value instead of starting over.

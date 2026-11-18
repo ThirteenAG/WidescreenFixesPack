@@ -10,6 +10,7 @@ export module Frontend;
 
 import Window;
 import Device;
+import Hud;
 
 export namespace TrueCrimeFrontend
 {
@@ -34,7 +35,19 @@ export namespace TrueCrimeFrontend
     // 2D vertex batch: buffer at +16, write position at +20; the buffer's stride at +20 and vertex count at +44
     inline int __fastcall Batch(uintptr_t renderer, void*)
     {
-        if (Drawing)
+        if (TrueCrimeHud::Scaling())
+        {
+            const auto buffer = *reinterpret_cast<uintptr_t*>(renderer + 16);
+            const auto end = *reinterpret_cast<uintptr_t*>(renderer + 20);
+            if (buffer && end)
+            {
+                const auto stride = *reinterpret_cast<uint32_t*>(buffer + 20);
+                const auto count = *reinterpret_cast<uint32_t*>(buffer + 44);
+                if (stride >= 16 && count > 0 && count <= 65536 && end >= count * stride)
+                    TrueCrimeHud::Transform(reinterpret_cast<float*>(end - count * stride), count, stride);
+            }
+        }
+        else if (Drawing)
         {
             const auto buffer = *reinterpret_cast<uintptr_t*>(renderer + 16);
             const auto end = *reinterpret_cast<uintptr_t*>(renderer + 20);

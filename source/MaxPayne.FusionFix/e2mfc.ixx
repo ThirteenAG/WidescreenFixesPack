@@ -207,7 +207,11 @@ namespace WidescreenHud
             return 0.0f;
 
         auto it = Elements.find(pObject);
-        return it != Elements.end() ? it->second * Screen.fWidescreenHudOffset : 0.0f;
+        if (it == Elements.end())
+            return 0.0f;
+
+        // Inside the cutscene picture, not under its pillarbox bars
+        return it->second * std::min(Screen.fWidescreenHudOffset, Screen.fCutsceneHudOffsetLimit);
     }
 
     // Runs executeAlways of a P_Sprite or P_Text with the object moved, nPositionX is where its

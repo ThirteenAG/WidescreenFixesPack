@@ -18,7 +18,7 @@ export namespace TrueCrimeWindow
     inline decltype(&CreateWindowExA) NativeCreateWindow{};
     
     inline int Mode{}, Width{}, Height{};
-    inline bool PausedByFix = false;
+    inline bool PausedByFix = false, ReleasedByFix = false;
 
     inline std::atomic_bool PauseOnFocusLoss{ true };
     inline bool (*Message)(HWND, UINT, WPARAM, LPARAM, LRESULT&){};
@@ -108,10 +108,32 @@ export namespace TrueCrimeWindow
         const auto native = OriginalProc;
         if (message == WM_ACTIVATEAPP && EngineState.is_initialized())
         {
-            // The game's own handler releases and recreates its device around a pause; the loop's idle state (1)
-            // stops the game the same way while the device stays.
-            const bool pause = !wParam && PauseOnFocusLoss.load(std::memory_order_relaxed);
             const int state = EngineState.get();
+            // Fullscreen loses the device with the focus: the game's own way is taken, the loop releases the device
+            // and idles in state 0 and creates it again in state 2.
+            if (Mode == 0)
+            {
+                if (!wParam && state == 3)
+                {
+                    EngineState = 0;
+                    ReleasedByFix = true;
+                }
+                else if (wParam && ReleasedByFix)
+                {
+                    // Not released yet: back once the loop is idle
+                    if (state == 0)
+                        PostMessageW(window, WM_ACTIVATEAPP, TRUE, 0);
+                    else
+                    {
+                        if (state == 1)
+                            EngineState = 2;
+                        ReleasedByFix = false;
+                    }
+                }
+                return 0;
+            }
+            // In a window the device stays; the loop's idle state (1) stops the game the same way
+            const bool pause = !wParam && PauseOnFocusLoss.load(std::memory_order_relaxed);
             if (pause && state == 3)
             {
                 EngineState = 1;

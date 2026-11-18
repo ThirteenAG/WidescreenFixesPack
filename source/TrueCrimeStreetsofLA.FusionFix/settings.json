@@ -115,6 +115,36 @@
       ]
     },
     {
+      "id": "MAIN.HudScale",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "decimals": 2,
+      "unit": "x",
+      "label": "@HudScale",
+      "description": "@HudScale.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.SubtitleScale",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.05,
+      "decimals": 2,
+      "unit": "x",
+      "label": "@SubtitleScale",
+      "description": "@SubtitleScale.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
       "id": "MAIN.CutsceneBorders",
       "type": "choice",
       "default": 3,

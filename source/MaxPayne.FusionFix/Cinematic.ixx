@@ -118,6 +118,12 @@ export namespace Cinematic
         auto borders = GetBorders(fBordersWideScreenMultiplier);
         CurrentBorders.fLetterbox = borders.fLetterbox * fBordersShown;
         CurrentBorders.fPillarbox = borders.fPillarbox * fBordersShown;
+
+        // Captions at the screen edges, like the place and time ones, stay in the picture between the bars
+        if (CurrentBorders.fPillarbox > 0.0f)
+            Screen.fCutsceneHudOffsetLimit = std::max(0.0f, 320.0f * Screen.fAspectScaleX * (1.0f - CurrentBorders.fPillarbox) - 320.0f);
+        else
+            Screen.fCutsceneHudOffsetLimit = FLT_MAX;
     }
 
     // Replaces MaxPayne_GameInformation::getCurrentHeightMultiplier in MaxPayne_HUDMode's render

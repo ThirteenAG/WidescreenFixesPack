@@ -14,6 +14,7 @@ module;
 export module Runtime;
 
 import Window;
+import Gamepad;
 
 export namespace FarCryOverlayMouse
 {
@@ -57,8 +58,8 @@ export namespace FarCryRuntime
     inline asi_overlay::D3D9Overlay Overlay;
     inline IDirect3DDevice9* Device = nullptr;
     inline bool HotkeyDown = false;
-    inline std::atomic<void*> MouseDevice{ nullptr };
-    inline SafetyHookInline InputCreateHook, InputStateHook, InputDataHook;
+    inline std::atomic<void*> MouseDevice{ nullptr }, KeyboardDevice{ nullptr };
+    inline SafetyHookInline InputCreateHook, InputEnumHook, InputStateHook, InputDataHook;
     inline HRESULT(WINAPI* NativeInput)(HINSTANCE, DWORD, REFIID, void**, IUnknown*) = nullptr;
 
     inline HRESULT WINAPI InputState(void* device, DWORD size, void* data)
@@ -70,6 +71,10 @@ export namespace FarCryRuntime
                 [](float steps) { Overlay.MouseWheel(steps); });
         if (SUCCEEDED(result) && data && Overlay.BlocksInput())
             std::memset(data, 0, size);
+        else if (SUCCEEDED(result) && device == MouseDevice.load())
+            FarCryPad::MouseState(data, size);
+        else if (SUCCEEDED(result) && device == KeyboardDevice.load())
+            FarCryPad::KeyboardState(data, size);
         return result;
     }
 
@@ -83,6 +88,10 @@ export namespace FarCryRuntime
                 [](float steps) { Overlay.MouseWheel(steps); });
         if (SUCCEEDED(result) && count && Overlay.BlocksInput())
             *count = 0;
+        else if (SUCCEEDED(result) && count && *count <= capacity && device == MouseDevice.load())
+            FarCryPad::MouseData(data, size, count, capacity, (flags & DIGDD_PEEK) != 0);
+        else if (SUCCEEDED(result) && count && *count <= capacity && device == KeyboardDevice.load())
+            FarCryPad::KeyboardData(data, size, count, capacity, (flags & DIGDD_PEEK) != 0);
         return result;
     }
 
@@ -98,6 +107,13 @@ export namespace FarCryRuntime
                 auto previous = *device;
                 MouseDevice.compare_exchange_strong(previous, nullptr);
             }
+            if (guid && IsEqualGUID(*guid, GUID_SysKeyboard))
+                KeyboardDevice.store(*device);
+            else
+            {
+                auto previous = *device;
+                KeyboardDevice.compare_exchange_strong(previous, nullptr);
+            }
         }
         if (SUCCEEDED(result) && device && *device && !InputStateHook)
         {
@@ -108,6 +124,13 @@ export namespace FarCryRuntime
         return result;
     }
 
+    inline HRESULT WINAPI InputEnum(void* input, DWORD type, void* callback, void* context, DWORD flags)
+    {
+        if (FarCryPad::HideDevices(type))
+            return DI_OK;
+        return InputEnumHook.stdcall<HRESULT>(input, type, callback, context, flags);
+    }
+
     inline HRESULT WINAPI Input(HINSTANCE instance, DWORD version, REFIID iid, void** output, IUnknown* outer)
     {
         const auto result = NativeInput(instance, version, iid, output, outer);
@@ -115,6 +138,7 @@ export namespace FarCryRuntime
         {
             const auto table = *reinterpret_cast<void***>(*output);
             InputCreateHook = safetyhook::create_inline(table[3], InputCreate);
+            InputEnumHook = safetyhook::create_inline(table[4], InputEnum);
         }
         return result;
     }
@@ -214,6 +238,7 @@ export namespace FarCryRuntime
         D3D9Options::beforeReset = [](IDirect3DDevice9*) { Overlay.BeforeReset(); };
         FarCryWindow::OnFrame = Bind;
         FarCryWindow::OnMessage = Message;
+        FarCryPad::SetBlocked([]() { return Overlay.BlocksInput(); });
 
     }
 }

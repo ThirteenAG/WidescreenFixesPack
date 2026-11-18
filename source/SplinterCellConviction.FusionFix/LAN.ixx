@@ -248,8 +248,8 @@ export void InitLAN()
         injector::MakeNOP(pattern.get_first(8), 6, true);
         injector::MakeCALL(pattern.get_first(8), LAN::recvfrom, true);
 
-        // LANMessageManager::receive, session reply handler
-        pattern = hook::pattern("8D 45 E0 50 FF 75 F0 E8 ? ? ? ? E9");
+        // LANMessageManager::receive, receiveSessionReplyMessage case
+        pattern = hook::pattern("8D 45 E0 50 FF 75 F0 E8 ? ? ? ? E9 ? ? ? ? 8B 4D E8 8D 45 E0 50 FF 75 F0 E8 ? ? ? ? E9 ? ? ? ? 8B 4D E8 8D 45 E0 50 FF 75 F0 E8 ? ? ? ? EB");
         static auto SessionReplyStart = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
         {
             LAN::replySource = LAN::lastSender;

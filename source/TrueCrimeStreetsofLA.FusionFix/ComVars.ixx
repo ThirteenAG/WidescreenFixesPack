@@ -27,4 +27,4 @@ export GameRef<int> GameMode;
 export GameRef<uint8_t*> PlayerObject;
 // Action flags held this update (the game's controller state)
 export GameRef<uint32_t> HeldFlags;
-export ProtectedGameRef<int> HudLeftBound, HudRightBound;
+export ProtectedGameRef<int> HudLeftBound, HudRightBound, HudBottomBound;

@@ -23,6 +23,7 @@ export struct Screen
     float fHudOffsetReal;        // in pixels
     float fWidescreenHudOffset;  // virtual units the edge anchored HUD moves outwards
     std::optional<float> fHudAspectRatioConstraint;
+    float fCutsceneHudOffsetLimit = FLT_MAX; // the most the edge anchored HUD moves outwards while cutscene pillarbox bars are shown
     float fFOVFactor = 1.0f;
     uint32_t nGeneration;        // changes whenever the values above do
     bool bDrawBordersToFillGap;

@@ -16,9 +16,10 @@
 - **Resolution** — Options › Display › Resolution lists your monitor's resolutions (up to 16, those of your desktop's shape first) and Apply Changes switches at once; the game keeps the choice in `TrueCrime.INI`. A first start uses the desktop resolution. The start-up crash with resolutions the game didn't know is fixed.
 - **Aspect ratio and field of view** — Gameplay keeps the original vertical view and shows more at the sides on wider screens.
 - **Menus** — The title, save, episode, options, pause, map and loading screens stay in their 4:3 frame in the middle of the screen with black sides.
-- **HUD** — The HUD sits at the screen edges at any aspect ratio, with its original size.
+- **HUD and subtitles** — The HUD sits at the screen edges at any aspect ratio. The HUD, its texts and the subtitles grow with the screen height, so they keep the size they have at 640x480 at any resolution.
 - **Story scenes** — Scenes with the game's black bars keep their original framing on any screen.
 - **Videos** — The startup videos keep their proportions.
+- **Alt+Tab** — Switching away and back works in every window mode. In fullscreen the game lets go of the screen while it is in the background and takes it back when you return.
 - **Closing the window** — The game quits when its window is closed, as with Exit in the main menu.
 - **High polling rate mice** — The game's message loop no longer stalls on thousands of mouse reports a second.
 - **Display scaling** — The game gets the full resolution on scaled desktops.
@@ -29,6 +30,8 @@
 - **Frame rate limit** — 60 by default; 0 is unlimited and -1 uses the monitor's refresh rate. Applies at once.
 - **Anti-aliasing** — SMAA (default) smooths the edges of the 3D picture; the HUD and menus stay sharp. Applies at once.
 - **Console gamma** — Off by default (on in Enhanced): the deeper contrast of the Xbox 360 gamma curve. Applies at once.
+- **HUD scale** — A multiplier (0.5–2.0, default 1.0) on the HUD size; 1.0 is the size it has at 640x480. Applies at once.
+- **Subtitle scale** — A multiplier (0.5–2.0, default 1.0) on the subtitle size; 1.0 is the size they have at 640x480. Applies to the next subtitles.
 - **HUD aspect ratio** — Auto keeps the HUD at the screen edges; a ratio such as 16:9 or 4:3 keeps it in a centred box of that shape, the left part (portrait, health, radar) at the box's left edge and the right part at its right edge. Applies at once.
 - **Cutscene borders** — Both (default) keeps the original framing: the game's bars above and below and, on screens wider than the original picture, bars at the sides. Letterbox keeps only the game's bars, Pillarbox keeps the picture at 4:3 between side bars, Off fills the screen and shows more at the sides. Applies at once.
 - **Animated cutscene borders** — On by default: the bars slide in and out as in the original. Off shows them at once.
@@ -39,7 +42,7 @@
 - **Mouse steering** — The game's own option, now off by default so the mouse turns the camera in cars; the fix keeps it in its settings instead of `TrueCrime.INI`, and the game's Controls menu still turns it on (the mouse then steers, as in the original). Changes apply while the game runs.
 - **Mouse camera speed** — A multiplier (0.1–5.0, default 1.0) on how fast the mouse turns the camera. Applies at once.
 - **Skip intro** — On by default: the game starts at the title screen, past the publisher and studio logo videos. Needs a restart.
-- **Pause in background** — On by default: the game pauses while another window is active. Off keeps it running; controller input is ignored until the game is focused again.
+- **Pause in background** — On by default: the game pauses while another window is active. Off keeps it running in Windowed and Borderless mode (Fullscreen always pauses); controller input is ignored until the game is focused again.
 - **Confine cursor** — Keeps the mouse cursor inside the game window while the game is active.
 - **Check for updates** — Off by default. When on, the fix asks fusionfix.io once per start whether a newer version is out; FusionFixHub opens when you close the game.
 - **Resolution width / height** — Only in the cfg and FusionFixHub's text editor: a fixed start resolution instead of the one chosen in the game. 0 uses the game's choice.
@@ -78,10 +81,8 @@ The fix creates `scripts/TrueCrimeStreetsofLA.FusionFix.cfg` on first start; Fus
 
 - The game's menus are built from its own data files, so the fix has no page in them: change its settings in FusionFixHub or on fusionfix.io.
 - Hints and prompts name keyboard keys also while a controller is used.
-- The HUD keeps the original pixel size, so it is small at high resolutions, as in the original.
 - The game's options list at most 16 resolutions.
 - At 21:9 and wider, Letterbox alone shows the game's own picture without bars, cropped above and below, as the original does at that width.
-- Exclusive fullscreen and switching away from it were not tested; use Borderless if Alt+Tab misbehaves.
 
 ## Installation
 

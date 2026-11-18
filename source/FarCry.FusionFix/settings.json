@@ -25,6 +25,11 @@
       "section": "camera"
     },
     {
+      "id": "controls",
+      "title": "@page.controls",
+      "section": "controls"
+    },
+    {
       "id": "graphics",
       "title": "@page.graphics",
       "section": "graphics"
@@ -149,6 +154,40 @@
       "min": 0.5,
       "max": 2.0,
       "step": 0.05
+    },
+    {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.25,
+      "max": 3.0,
+      "step": 0.05,
+      "decimals": 2,
+      "label": "@MAIN.GamepadCameraSpeed",
+      "description": "@MAIN.GamepadCameraSpeed.description",
+      "page": "controls",
+      "apply": "live",
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.InvertGamepadY",
+      "type": "bool",
+      "default": false,
+      "label": "@MAIN.InvertGamepadY",
+      "description": "@MAIN.InvertGamepadY.description",
+      "page": "controls",
+      "apply": "live",
+      "visibility": "menu"
+    },
+    {
+      "id": "MAIN.Vibration",
+      "type": "bool",
+      "default": true,
+      "label": "@MAIN.Vibration",
+      "description": "@MAIN.Vibration.description",
+      "page": "controls",
+      "apply": "live",
+      "visibility": "menu"
     },
     {
       "id": "GRAPHICS.AntiAliasing",

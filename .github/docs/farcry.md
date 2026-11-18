@@ -35,6 +35,7 @@
 - **Cutscene borders** - Both keeps the original cinematic frame on wide and narrow windows. Letterbox keeps top and bottom borders, Pillarbox keeps side borders, and Off extends the view. Borders can animate over a quarter of a second.
 - **Check for updates** - Disabled by default. When enabled, checks once per start and shows an update notice in Plugins.
 - **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
+- **Controller** - camera speed, invert look and vibration for the controller (see Controller below)
 - **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to the look of Xbox 360 games
 
 ---
@@ -84,34 +85,37 @@ The FOV multiplier follows the normal player view. Aiming, death views, camera o
 
 ## Controller
 
-The PC game has no controller bindings, so the fix includes Xidi, which turns the controller into the game's default keys and mouse. Keyboard and mouse keep working, and the in-game control settings still apply.
+Far Cry plays with an Xbox-style controller (or any controller that Windows sees as one, such as a PlayStation or Switch pad through Steam Input or DS4Windows). The fix reads the controller itself and sends the game's own actions, so keyboard and mouse keep working next to it and you can switch at any moment. Your keyboard bindings are not changed.
 
-| Controller | Action |
-|:---|:---|
-| Left stick | Move |
-| Right stick | Look |
-| RT / LT | Fire / Aim and zoom |
-| A | Jump; hold breath while zoomed |
-| B | Crouch |
-| X | Reload |
-| Y | Next weapon; zoom in while zoomed |
-| LB | Throw grenade |
-| RB | Use; enter and leave vehicles |
-| Left stick click | Sprint |
-| Right stick click | Prone |
-| D-pad up | Binoculars |
-| D-pad down | Flashlight |
-| D-pad left | Previous weapon; zoom out while zoomed |
-| D-pad right | Fire mode |
-| Back | Objectives |
-| Start | Menu |
+| Controller | On foot | In a vehicle |
+|:---|:---|:---|
+| Left stick | Move; push it gently to walk slowly | Drive and steer |
+| Left stick click | Sprint (until you stop) | Sprint |
+| Right stick | Look and aim | Look |
+| Right stick click | Fire mode | Fire mode |
+| RT | Fire | Fire |
+| LT | Aim / scope (hold) | |
+| RB | Throw grenade | Throw grenade |
+| LB | Binoculars | |
+| A | Jump; hold breath when scoped | Brake |
+| B | Crouch; hold to go prone | Crouch; hold to go prone |
+| X | Reload; hold to use, pick up or enter a vehicle | Reload; hold to leave the vehicle |
+| Y | Next weapon; hold to change grenade type | Change view; hold to change grenade type |
+| D-pad up / down | Flashlight / thermal vision; zoom in / out when scoped or using binoculars | Flashlight / thermal vision |
+| D-pad left / right | Lean left / right | |
+| Back | Objectives | Objectives |
+| Start | Menu; skips movies | Menu |
 
-In menus the right stick moves the pointer and RT clicks. The layout is in `Xidi.ini` next to `FarCry.exe` in `Bin32` and `Bin64`. It uses the default keys: if you change those keys in the game, change `Xidi.ini` to match.
+In menus the left stick moves the pointer, A clicks, B goes back, the d-pad moves through lists and the right stick scrolls.
+
+Controller settings on the Controls page: camera speed, invert look (the game's own Invert Mouse option turns the controller around too) and vibration. The controller rumbles with your shots, hits and nearby explosions.
+
+The 32-bit game moves at the speed of the stick. The 64-bit game only knows the eight directions, so there the stick walks or runs at full speed.
 
 ## Installation
 
 1. Download the `.zip` from this release.
-2. Extract the archive into the installation folder that contains `Bin32` and `Bin64`. Keep those folders: each contains the loader, its matching fix, Xidi and FusionFixHub beside that version of `FarCry.exe`.
+2. Extract the archive into the installation folder that contains `Bin32` and `Bin64`. Keep those folders: each contains the loader, its matching fix and FusionFixHub beside that version of `FarCry.exe`.
 3. Launch the game once to create the settings file next to the fix: `FarCry.FusionFix.cfg` for 32-bit or `FarCry64.FusionFix.cfg` for 64-bit.
 4. Configure the fix in Options → Plugins, on fusionfix.io or in FusionFixHub. Restart only when the settings menu requests it.
 

@@ -345,16 +345,7 @@
           "sign": true
         }
       ],
-      "files": [
-        {
-          "source": "data/FarCry.FusionFix/Bin32/Xidi.ini",
-          "destination": "Bin32/Xidi.ini"
-        },
-        {
-          "source": "data/FarCry.FusionFix/Bin64/Xidi.ini",
-          "destination": "Bin64/Xidi.ini"
-        }
-      ],
+      "files": [],
       "dependencies": [
         {
           "id": "loader-x86",
@@ -365,26 +356,6 @@
           "id": "loader-x64",
           "member": "*.dll",
           "destination": "Bin64/version.dll"
-        },
-        {
-          "id": "xidi",
-          "member": "Xidi-*/Win32/dinput8.dll",
-          "destination": "Bin32/dinput8.dll"
-        },
-        {
-          "id": "xidi",
-          "member": "Xidi-*/Win32/Xidi.32.dll",
-          "destination": "Bin32/Xidi.32.dll"
-        },
-        {
-          "id": "xidi",
-          "member": "Xidi-*/x64/dinput8.dll",
-          "destination": "Bin64/dinput8.dll"
-        },
-        {
-          "id": "xidi",
-          "member": "Xidi-*/x64/Xidi.64.dll",
-          "destination": "Bin64/Xidi.64.dll"
         }
       ]
     },
@@ -502,8 +473,32 @@
       ],
       "files": [
         {
-          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.dat",
-          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/GTACTW.PPSSPP.FusionFix.dat"
+          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/360.bin",
+          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/360.bin"
+        },
+        {
+          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/XBO.bin",
+          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/XBO.bin"
+        },
+        {
+          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/PS3.bin",
+          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/PS3.bin"
+        },
+        {
+          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/PS4.bin",
+          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/PS4.bin"
+        },
+        {
+          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/PS5.bin",
+          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/PS5.bin"
+        },
+        {
+          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/SWI.bin",
+          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/SWI.bin"
+        },
+        {
+          "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/DEK.bin",
+          "destination": "memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/icons/DEK.bin"
         },
         {
           "source": "data/GTACTW.PPSSPP.FusionFix/memstick/PSP/PLUGINS/GTACTW.PPSSPP.FusionFix/plugin.ini",

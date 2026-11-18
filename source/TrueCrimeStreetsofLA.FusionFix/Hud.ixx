@@ -12,32 +12,96 @@ import Window;
 
 export namespace TrueCrimeHud
 {
-    // The game lays out its HUD between two screen bounds (left/right side anchors) and places a few elements at
-    // fixed distances from the screen width. With a HUD box both are moved inward for the duration of the HUD draw.
+    // The game lays out its HUD and subtitles in screen pixels at a fixed size made for 640x480. While they draw, the
+    // game's screen size getters report a screen 480 units high (divided by the scale settings) and their 2D vertices
+    // are scaled up to the real screen, so both keep their 640x480 proportions at any resolution.
+    // The HUD is laid out between screen bounds (side anchors) and places a few elements at fixed distances from the
+    // screen width. With a HUD box both are moved inward for the duration of the HUD draw.
     inline std::atomic<float> RequestedAspect{ 0.0f };
-    inline SafetyHookInline DrawHook, WidthHook;
+    inline std::atomic<float> HudScale{ 1.0f }, SubtitleScale{ 1.0f };
+    // Subtitle boxes keep the scale they were laid out with
+    inline std::atomic<float> SubtitleLayout{ 1.0f };
+    inline SafetyHookInline DrawHook, WidthHook, HeightHook, SubtitleHook, SubtitleDrawHook;
     inline thread_local int Offset = 0;
 
-    inline int BoxOffset()
+    // Active virtual screen and its factors to the real screen; zero size while nothing is scaled
+    inline thread_local int VirtualWidth = 0, VirtualHeight = 0;
+    inline thread_local float FactorX = 1.0f, FactorY = 1.0f;
+
+    struct VirtualScreen
+    {
+        int width, height;
+        float x, y;
+
+        explicit VirtualScreen(float scale) : width(VirtualWidth), height(VirtualHeight), x(FactorX), y(FactorY)
+        {
+            VirtualWidth = 0;
+            const int realWidth = WidthHook.ccall<int>();
+            const int realHeight = HeightHook.ccall<int>();
+            const float factor = static_cast<float>(realHeight) / 480.0f * scale;
+            if (realWidth <= 0 || realHeight <= 0 || !(factor > 0.0f))
+                return;
+            VirtualWidth = std::max(1, static_cast<int>(std::lround(realWidth / factor)));
+            VirtualHeight = std::max(1, static_cast<int>(std::lround(realHeight / factor)));
+            FactorX = static_cast<float>(realWidth) / static_cast<float>(VirtualWidth);
+            FactorY = static_cast<float>(realHeight) / static_cast<float>(VirtualHeight);
+        }
+
+        ~VirtualScreen()
+        {
+            VirtualWidth = width;
+            VirtualHeight = height;
+            FactorX = x;
+            FactorY = y;
+        }
+    };
+
+    inline bool Scaling()
+    {
+        return VirtualWidth > 0;
+    }
+
+    // Pretransformed 2D vertices (x and y first) drawn on the virtual screen go to the real screen
+    inline void Transform(float* vertices, uint32_t count, uint32_t stride)
+    {
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            auto vertex = reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(vertices) + i * stride);
+            vertex[0] = (vertex[0] + 0.5f) * FactorX - 0.5f;
+            vertex[1] = (vertex[1] + 0.5f) * FactorY - 0.5f;
+        }
+    }
+
+    inline float Setting(const char* id)
+    {
+        const float value = FixSettings().Float(id);
+        return std::isfinite(value) ? std::clamp(value, 0.5f, 2.0f) : 1.0f;
+    }
+
+    inline int BoxOffset(int width, int height)
     {
         const float requested = RequestedAspect.load(std::memory_order_relaxed);
-        const auto width = static_cast<float>(TrueCrimeWindow::Width);
-        const auto height = static_cast<float>(TrueCrimeWindow::Height);
-        if (requested <= 0.0f || width <= 0.0f || height <= 0.0f)
+        if (requested <= 0.0f || width <= 0 || height <= 0)
             return 0;
-        return std::max(0, static_cast<int>(std::lround((width - std::min(width, height * requested)) * 0.5f)));
+        const auto w = static_cast<float>(width);
+        return std::max(0, static_cast<int>(std::lround((w - std::min(w, static_cast<float>(height) * requested)) * 0.5f)));
     }
 
     // Screen width: elements measured from the right edge get the right edge of the box
     inline int __cdecl Width()
     {
-        return WidthHook.ccall<int>() - Offset;
+        return (Scaling() ? VirtualWidth : WidthHook.ccall<int>()) - Offset;
     }
 
     // Centered elements halve the full width
     inline int __cdecl CenterWidth()
     {
-        return WidthHook.ccall<int>();
+        return Scaling() ? VirtualWidth : WidthHook.ccall<int>();
+    }
+
+    inline int __cdecl Height()
+    {
+        return Scaling() ? VirtualHeight : HeightHook.ccall<int>();
     }
 
     inline std::vector<SafetyHookMid> Fixed;
@@ -59,21 +123,45 @@ export namespace TrueCrimeHud
 
     inline int __fastcall Draw(uintptr_t hud, void*, int pass, int a2, int a3, int a4)
     {
-        if (pass == 4 && BeforeDraw)
-            BeforeDraw();
-        const int offset = BoxOffset();
-        if (!offset)
+        if (pass != 4)
             return DrawHook.thiscall<int>(hud, pass, a2, a3, a4);
+        if (BeforeDraw)
+            BeforeDraw();
+        // The bounds keep their margins from the screen edges
+        const int realWidth = WidthHook.ccall<int>();
+        const int realHeight = HeightHook.ccall<int>();
         const int left = HudLeftBound.get();
         const int right = HudRightBound.get();
+        const int bottom = HudBottomBound.get();
+        VirtualScreen screen(HudScale.load(std::memory_order_relaxed));
+        const int offset = BoxOffset(VirtualWidth, VirtualHeight);
         HudLeftBound = left + offset;
-        HudRightBound = right - offset;
+        HudRightBound = VirtualWidth - (realWidth - right) - offset;
+        HudBottomBound = VirtualHeight - (realHeight - bottom);
         Offset = offset;
         const int result = DrawHook.thiscall<int>(hud, pass, a2, a3, a4);
         Offset = 0;
         HudLeftBound = left;
         HudRightBound = right;
+        HudBottomBound = bottom;
         return result;
+    }
+
+    // Subtitle boxes: their position and line width come from the screen size when the text of a voice line loads
+    inline int __fastcall Subtitle(void* box, void*, const char* path, int font)
+    {
+        const float scale = SubtitleScale.load(std::memory_order_relaxed);
+        SubtitleLayout.store(scale, std::memory_order_relaxed);
+        VirtualScreen screen(scale);
+        return SubtitleHook.thiscall<int>(box, path, font);
+    }
+
+    inline int __fastcall SubtitleDraw(void* box, void*, int pass, int a2, int a3, int a4)
+    {
+        if (pass != 4)
+            return SubtitleDrawHook.thiscall<int>(box, pass, a2, a3, a4);
+        VirtualScreen screen(SubtitleLayout.load(std::memory_order_relaxed));
+        return SubtitleDrawHook.thiscall<int>(box, pass, a2, a3, a4);
     }
 
     template<class Action> void Add(void* address, Action action)
@@ -100,13 +188,23 @@ export namespace TrueCrimeHud
         };
         changed();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", changed);
+        auto scales = []()
+        {
+            HudScale.store(Setting("MAIN.HudScale"), std::memory_order_relaxed);
+            SubtitleScale.store(Setting("MAIN.SubtitleScale"), std::memory_order_relaxed);
+        };
+        scales();
+        FixSettings().OnChange("MAIN.HudScale", scales);
+        FixSettings().OnChange("MAIN.SubtitleScale", scales);
 
-        // HUD bounds, set by the layout code at start
+        // HUD bounds, set by the layout code at start: left, top, right, bottom
         auto bounds = hook::pattern("8B 44 24 04 8B 4C 24 08 8B 54 24 0C A3 ? ? ? ? 8B 44 24 10 89 0D ? ? ? ? 89 15 ? ? ? ? A3 ? ? ? ? C3");
         HudLeftBound.SetAddress(*bounds.get_first<int*>(13));
         HudRightBound.SetAddress(*bounds.get_first<int*>(29));
+        HudBottomBound.SetAddress(*bounds.get_first<int*>(34));
 
-        auto width = hook::pattern("8B 44 24 04 A3 ? ? ? ? C3 CC CC CC CC CC CC A1 ? ? ? ? C3");
+        // Screen width and height getters
+        auto width = hook::pattern("8B 44 24 04 A3 ? ? ? ? C3 CC CC CC CC CC CC A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC A1 ? ? ? ? C3");
         const auto getter = reinterpret_cast<uintptr_t>(width.get_first(16));
         // Calls that halve the width right away (cdq follows the call) center their element
         auto centered = hook::pattern("E8 ? ? ? ? 99");
@@ -126,6 +224,14 @@ export namespace TrueCrimeHud
             std::abort();
         }
         WidthHook = safetyhook::create_inline(getter, Width);
+        HeightHook = safetyhook::create_inline(width.get_first(32), Height);
+
+        // Subtitles: the box set up for a voice line and its drawing
+        SubtitleHook = safetyhook::create_inline(hook::pattern("83 EC 0C 56 57 8D 44 24 08 8B F9 8B 4C 24 18 50 51 E8 ? ? ? ? 8B F0 83 C4 08 85 F6 0F 84 ? ? ? ? E8").get_first(), Subtitle);
+        auto subtitleDraw = hook::pattern("51 83 7C 24 08 04 56 8B F1 0F 85 ? ? ? ? A0");
+        if (subtitleDraw.empty()) // TrueCrimeMB.exe
+            subtitleDraw = hook::pattern("8B 44 24 04 83 EC 08 83 F8 04 56 8B F1 0F 85 ? ? ? ? A0");
+        SubtitleDrawHook = safetyhook::create_inline(subtitleDraw.get_first(), SubtitleDraw);
 
         // Left-side elements with fixed screen positions: radar, compass, portrait, health ring, gauge and meters
         auto draw = hook::pattern("55 8B EC 83 E4 F0 81 EC 64 04 00 00 F3 0F 10 05");
