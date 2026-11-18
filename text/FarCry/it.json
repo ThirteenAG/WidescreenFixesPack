@@ -8,6 +8,8 @@
   "MAIN.GamepadCameraSpeed.description": "La velocità con cui la levetta destra ruota la telecamera e mira. Si applica subito.",
   "MAIN.InvertGamepadY": "Inverti visuale del controller",
   "MAIN.InvertGamepadY.description": "Spingere la levetta destra in alto guarda in basso. Anche l'opzione Inverti mouse del gioco inverte il controller. Si applica subito.",
+  "MAIN.GamepadIcons": "Icone controller",
+  "MAIN.GamepadIcons.description": "Nomi dei pulsanti nei suggerimenti del gioco quando giochi con il controller: Xbox, PlayStation o Nintendo. Automatico usa Xbox. I suggerimenti per tastiera e mouse restano invariati. Si applica subito.",
   "MAIN.Vibration": "Vibrazione",
   "MAIN.Vibration.description": "Fa vibrare il controller con spari, esplosioni e colpi. Si applica subito.",
   "HudAspectRatioConstraint": "Proporzioni HUD",

@@ -383,11 +383,10 @@ export void InitWidescreenFix()
 
         // Sticky camera PiP
         {
-            auto pattern = hook::pattern("55 8B EC 51 51 53 56 57 8B F1 E8 ? ? ? ? 8B 40 44 8B 10 8B C8 FF 92");
-            if (pattern.size() != 2)
-                throw std::runtime_error("Sticky-camera signatures not found");
-            shSetupPiPHidden = safetyhook::create_inline(pattern.get(0).get<void>(), SetupPiPHidden);
-            shSetupPiPShown = safetyhook::create_inline(pattern.get(1).get<void>(), SetupPiPShown);
+            auto pattern = hook::pattern("5E 5F C2 08 00 55 8B EC 51 51 53 56 57 8B F1 E8 ? ? ? ? 8B 40 44 8B 10 8B C8 FF 92");
+            shSetupPiPHidden = safetyhook::create_inline(pattern.get_first(5), SetupPiPHidden);
+            pattern = hook::pattern("5E 5B C9 C3 55 8B EC 51 51 53 56 57 8B F1 E8 ? ? ? ? 8B 40 44 8B 10 8B C8 FF 92");
+            shSetupPiPShown = safetyhook::create_inline(pattern.get_first(4), SetupPiPShown);
 
             // UWindowsViewport: don't remap the PiP viewport into the HUD rect, it's already laid out in it
             pattern = hook::pattern("E8 ? ? ? ? 3B C3 89 45 3C 0F 84");

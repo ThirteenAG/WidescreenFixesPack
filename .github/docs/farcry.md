@@ -35,7 +35,7 @@
 - **Cutscene borders** - Both keeps the original cinematic frame on wide and narrow windows. Letterbox keeps top and bottom borders, Pillarbox keeps side borders, and Off extends the view. Borders can animate over a quarter of a second.
 - **Check for updates** - Disabled by default. When enabled, checks once per start and shows an update notice in Plugins.
 - **SMAA** - enhanced subpixel morphological antialiasing as a post-processing effect
-- **Controller** - camera speed, invert look and vibration for the controller (see Controller below)
+- **Controller** - camera speed, invert look, vibration and button names for the controller (see Controller below)
 - **Xbox 360 Gamma** - a custom gamma curve that produces a higher-contrast image with deeper colors, similar to the look of Xbox 360 games
 
 ---
@@ -92,7 +92,7 @@ Far Cry plays with an Xbox-style controller (or any controller that Windows sees
 | Left stick | Move; push it gently to walk slowly | Drive and steer |
 | Left stick click | Sprint (until you stop) | Sprint |
 | Right stick | Look and aim | Look |
-| Right stick click | Fire mode | Fire mode |
+| Right stick click | Fire mode; hold to drop your weapon | Fire mode |
 | RT | Fire | Fire |
 | LT | Aim / scope (hold) | |
 | RB | Throw grenade | Throw grenade |
@@ -108,9 +108,11 @@ Far Cry plays with an Xbox-style controller (or any controller that Windows sees
 
 In menus the left stick moves the pointer, A clicks, B goes back, the d-pad moves through lists and the right stick scrolls.
 
-Controller settings on the Controls page: camera speed, invert look (the game's own Invert Mouse option turns the controller around too) and vibration. The controller rumbles with your shots, hits and nearby explosions.
+Controller settings on the Controls page: camera speed, invert look (the game's own Invert Mouse option turns the controller around too), vibration and controller icons. The controller rumbles with your shots, hits and nearby explosions.
 
-The 32-bit game moves at the speed of the stick. The 64-bit game only knows the eight directions, so there the stick walks or runs at full speed.
+While you play with the controller, the game's hints name the controller buttons instead of keys and the mouse, for example "Hold X to open the door" or "Use the right stick to look around". They switch back to the keyboard and mouse wording as soon as you use the keyboard or move the mouse. Controller Icons chooses the button names: Xbox, PlayStation or Nintendo (Automatic uses Xbox). The hints are written for every language the game was released in.
+
+The left stick moves in any direction, and pushing it gently walks slowly, in both the 32-bit and the 64-bit game.
 
 ## Installation
 

@@ -247,7 +247,7 @@ namespace Splitscreen
     void InitProfiles()
     {
         StringFromChars = reinterpret_cast<decltype(StringFromChars)>(hook::get_pattern("33 C0 56 8B F1 57 8B 7C 24 0C 89 46 04 89 46 08 89 06 89 46 0C 38 07 74"));
-        StringDestructor = reinterpret_cast<decltype(StringDestructor)>(hook::get_pattern("56 8B F1 33 C0 39 46 08 89 46 04 74 0A 6A 01 89"));
+        StringDestructor = reinterpret_cast<decltype(StringDestructor)>(hook::get_pattern("8B CE 5E E9 ? ? ? ? 56 8B F1 33 C0 39 46 08 89 46 04 74 0A 6A 01 89 46 08 E8", 8));
         GetEngine = reinterpret_cast<decltype(GetEngine)>(hook::get_pattern("83 3D ? ? ? ? 00 75 09 A1 ? ? ? ? 85 C0 75 05 A1 ? ? ? ? C3"));
         shSignIn = safetyhook::create_inline(hook::get_pattern("55 8B EC 53 56 57 FF 75 0C 8B F1 FF 75 08 8B 06 FF 90 00 01 00 00"), SignIn);
         shStartupSignIn = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 EC 14 56 8B F1 8B 06 FF 90 F0 01 00 00 85 C0 0F 84 ? ? ? ? 53 57 B9"), StartupSignIn);

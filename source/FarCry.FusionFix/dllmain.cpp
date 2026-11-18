@@ -10,6 +10,7 @@ import Updates;
 import Focus;
 import Runtime;
 import Gamepad;
+import Prompts;
 
 ASI_SETTINGS_EXPORT(FixSettings())
 
@@ -35,6 +36,7 @@ CEXP void InitializeASI()
                 FarCryFocus::Init();
                 InitCryGame();
                 FarCryPad::InitGame();
+                FarCryPrompts::Init();
                 FarCryMenu::Init();
             });
             CallbackHandler::RegisterModuleLoadCallback(L"Cry3DEngine.dll", InitCry3DEngine);

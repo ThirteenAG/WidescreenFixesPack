@@ -167,15 +167,20 @@ void Init()
             static auto UEChallengeProfileExternal2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs) { regs.eax = 0; });
         }
 
-        // MapConfigurationDLC.xml
-        pattern = hook::pattern("0F 85 ? ? ? ? 39 7D EC");
-        injector::MakeNOP(pattern.get_first(), 6, true);
+        // MapConfigurationDLC.xml: the 2015 re-release loads it unconditionally,
+        // the 2010 build only when the online service lists the map pack as owned
+        pattern = hook::pattern("53 C7 46 44 01 00 00 00 FF 35 ? ? ? ? 8B 0D ? ? ? ? 8B 01 53 68");
+        if (pattern.empty())
+        {
+            pattern = hook::pattern("0F 85 ? ? ? ? 39 7D EC");
+            injector::MakeNOP(pattern.get_first(), 6, true);
 
-        pattern = hook::pattern("0F 84 ? ? ? ? 8D 45 E8 50 8B CB");
-        injector::MakeNOP(pattern.get_first(), 6, true);
+            pattern = hook::pattern("0F 84 ? ? ? ? 8D 45 E8 50 8B CB");
+            injector::MakeNOP(pattern.get_first(), 6, true);
 
-        pattern = hook::pattern("7E 50 8B 45 E8");
-        injector::MakeJMP(pattern.get_first(), hook::pattern("8B 0D ? ? ? ? 8B 01 57 FF 35 ? ? ? ? 57 68 ? ? ? ? FF 50 10 8B D8").get_first(), true);
+            pattern = hook::pattern("7E 50 8B 45 E8");
+            injector::MakeJMP(pattern.get_first(), hook::pattern("8B 0D ? ? ? ? 8B 01 57 FF 35 ? ? ? ? 57 68 ? ? ? ? FF 50 10 8B D8").get_first(), true);
+        }
     }
 
     InitLAN();

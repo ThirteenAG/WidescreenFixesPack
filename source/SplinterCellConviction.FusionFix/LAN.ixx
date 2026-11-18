@@ -267,19 +267,11 @@ export void InitLAN()
 #ifdef LAN_LOG
     {
         auto pattern = hook::pattern("55 8B EC 51 53 56 57 E8 ? ? ? ? 8B 70 34 83 C0 2C 33 DB");
-        auto logger = injector::GetBranchDestination(pattern.get_first(7)).as_int();
         LAN::shLog = safetyhook::create_inline(pattern.get_first(), LAN::Log);
 
         // the level getter calls the same logger getter
-        pattern = hook::pattern("E8 ? ? ? ? 8B 40 28 C3");
-        for (size_t i = 0; i < pattern.size(); i++)
-        {
-            if (injector::GetBranchDestination(pattern.get(i).get<void>(0)).as_int() == logger)
-            {
-                LAN::shLogLevel = safetyhook::create_inline(pattern.get(i).get<void>(0), LAN::LogLevel);
-                break;
-            }
-        }
+        pattern = hook::pattern("E8 ? ? ? ? 8B 40 28 C3 E8 ? ? ? ? 8B C8");
+        LAN::shLogLevel = safetyhook::create_inline(pattern.get_first(), LAN::LogLevel);
     }
 #endif
 

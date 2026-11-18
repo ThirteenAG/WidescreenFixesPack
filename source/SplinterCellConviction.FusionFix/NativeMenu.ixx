@@ -351,7 +351,7 @@ export namespace SCCMenu
         currentMovie = reinterpret_cast<decltype(currentMovie)>(Find("E8 ? ? ? ? 85 C0 74 ? E8 ? ? ? ? 8B 40 4C C3"));
         currentManager = reinterpret_cast<decltype(currentManager)>(injector::GetBranchDestination(currentMovie).as_int());
         stringCtor = reinterpret_cast<decltype(stringCtor)>(Find("33 C0 56 8B F1 57 8B 7C 24 0C 89 46 04 89 46 08 89 06 89 46 0C 38 07 74"));
-        stringDtor = reinterpret_cast<decltype(stringDtor)>(Find("56 8B F1 33 C0 39 46 08 89 46 04 74 0A 6A 01 89 46 08 E8"));
+        stringDtor = reinterpret_cast<decltype(stringDtor)>(Find("8B CE 5E E9 ? ? ? ? 56 8B F1 33 C0 39 46 08 89 46 04 74 0A 6A 01 89 46 08 E8") + 8);
         wideDtor = reinterpret_cast<decltype(wideDtor)>(Find("56 8B F1 33 C0 39 46 08 89 46 04 74 0A 6A 02 89 46 08 E8"));
         invokeAddress = Find("55 8B EC 83 EC 34 56 8B 75 0C 8B CE E8 ? ? ? ? 8B 4D 08 8D 55 18 52 FF 75 14 8D 55 CC FF 75 10 C6 06 00 8B 01 52 FF 50 34");
         retireHook = safetyhook::create_inline(reinterpret_cast<void*>(retire), Retire);

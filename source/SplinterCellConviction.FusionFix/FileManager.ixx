@@ -1058,8 +1058,8 @@ export void InitFileManager()
         auto pattern = hook::pattern("55 8B EC 83 EC 3C 56 33 F6 39 75 10 74 2A FF 75 0C E8");
         FileLoader::NormalizeName = (decltype(FileLoader::NormalizeName))pattern.get_first();
 
-        pattern = hook::pattern("56 8B F1 33 C0 39 46 08 89 46 04 74 0A 6A 01 89 46 08 E8");
-        FileLoader::FStringDestructor = (decltype(FileLoader::FStringDestructor))pattern.get_first();
+        pattern = hook::pattern("8B CE 5E E9 ? ? ? ? 56 8B F1 33 C0 39 46 08 89 46 04 74 0A 6A 01 89 46 08 E8");
+        FileLoader::FStringDestructor = (decltype(FileLoader::FStringDestructor))pattern.get_first(8);
 
         pattern = hook::pattern("55 8B EC 83 EC 18 53 56 57 FF 75 08 8D 45 E8");
         FFileManagerArc::shLookup = safetyhook::create_inline(pattern.get_first(), FFileManagerArc::Lookup);

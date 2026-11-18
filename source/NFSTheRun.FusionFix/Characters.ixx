@@ -9,8 +9,8 @@ export module Characters;
 
 import ComVars;
 
-// Characters drawn between the 30 Hz physics ticks. Above 30 frames per second the game runs the animation once more
-// on every frame between the ticks, while the characters' parents (cars, the cutscene's objects) are already drawn
+// Animated objects drawn between the 30 Hz physics ticks. Above 30 frames per second the game runs the animation once
+// more on every frame between the ticks, while the objects' parents (cars, the cutscene's objects) are already drawn
 // between the ticks: the pose comes out ahead of where it's placed, and characters in cutscenes jump back and forth.
 // The animation's own blending between the ticks would need buffers that only exist when it's on from the start.
 // Instead the animation runs on the ticks only, a full tick at a time, and the bones asked for between the ticks are
@@ -29,17 +29,33 @@ namespace
 
     struct Pose
     {
-        std::vector<uint8_t> previous, current, blended;
+        std::vector<float> previous, current, blended;
         uint32_t previousTick = 0, currentTick = 0, seenTick = 0, blendedFrame = 0;
+        uintptr_t source = 0;
         std::mutex blendMutex;
     };
-    std::unordered_map<uintptr_t, Pose> Poses;      // by the address of the skeleton slot's bone matrices
 
-    constexpr uint32_t BoneSize = 48;                 // a bone: 3 rows of 4 floats
+    // Skinned characters: the bone matrices for the renderer, by their address
+    std::unordered_map<uintptr_t, Pose> Poses;
 
-    // AnimationManager +0x94 -> skeleton manager, +0x40 -> list of skeletons {next, prev, skeleton}
+    // Objects that aren't skinned (falling trees and rocks, planes, car doors, ...) take their parts' places from the
+    // animation's other output, a position and a rotation per bone, through a getter of their own. By the address of
+    // the animation's result data.
+    std::unordered_map<uintptr_t, Pose> Transforms;
+
+    constexpr uint32_t BoneSize = 48;               // a bone matrix: 3 rows of 4 floats
+    constexpr uint32_t TransformSize = 32;          // a bone transform: the position and scale, then the rotation
+
+    // The animation's result data: +0x08 bone matrices, +0x14 bone transforms, +0x24 written by the animation.
+    // It's at +0x1C in the animatable.
+    constexpr uintptr_t ResultInAnimatable = 0x1C;
+
+    // AnimationManager +0x94 -> skeleton manager, +0x40 -> list of skeletons {next, prev, skeleton}.
+    // Skeleton +0x04 bone count, +0x1C size of a slot's bone transforms (32 per bone), +0x20 size of a slot's bone
+    // matrices (48 per bone), +0xCC/+0xD0 active slots, +0xE0 blocks of 4 slots: +0x00/+0x04/+0x0C/+0x10 bone
+    // transforms, +0x08 bone matrices, +0x20 the result data reading each slot.
     template<typename Fn>
-    void ForEachPalette(Fn&& fn)
+    void ForEachSlot(Fn&& fn)
     {
         auto manager = *pAnimationManager;
         if (!manager)
@@ -54,11 +70,10 @@ namespace
             auto skeleton = *(uintptr_t*)(node + 8);
             if (!skeleton)
                 continue;
-            auto size = *(uint32_t*)(skeleton + 0x20);
             auto slot = *(int32_t**)(skeleton + 0xCC);
             auto slotEnd = *(int32_t**)(skeleton + 0xD0);
             auto blocks = *(uintptr_t**)(skeleton + 0xE0);
-            if (!size || size % BoneSize || !slot || !blocks)
+            if (!slot || !blocks)
                 continue;
             for (; slot < slotEnd; ++slot)
             {
@@ -70,12 +85,10 @@ namespace
                 if (!block || index > 3)
                     continue;
                 auto readers = *(uintptr_t*)(block + 0x20);
-                auto reader = readers ? *(uintptr_t*)(readers + index * 12) : 0;
-                if (!reader || !*(uint8_t*)(reader + 0x24))
+                auto result = readers ? *(uintptr_t*)(readers + index * 12) : 0;
+                if (!result || !*(uint8_t*)(result + 0x24))
                     continue;
-                auto palette = *(uintptr_t*)(block + 0x08);
-                if (palette)
-                    fn(palette + index * size, size);
+                fn(skeleton, block, uint32_t(index), result);
             }
         }
     }
@@ -86,6 +99,37 @@ namespace
         return std::clamp((Alpha + float(Tick - pose.currentTick)) / span, 0.0f, 1.0f);
     }
 
+    // Keeps the values of a tick with the ones of the tick before. position: where the first bone's position is
+    void Snapshot(Pose& pose, uintptr_t source, size_t count, const size_t (&position)[3])
+    {
+        pose.seenTick = Tick;
+        auto values = (const float*)source;
+        if (pose.source != source || pose.current.size() != count)
+        {
+            pose.source = source;
+            pose.current.assign(values, values + count);
+            pose.previous = pose.current;
+            pose.previousTick = pose.currentTick = Tick;
+            return;
+        }
+        if (memcmp(pose.current.data(), values, count * sizeof(float)) == 0)
+            return;
+        pose.previous.swap(pose.current);
+        pose.current.assign(values, values + count);
+        pose.previousTick = pose.currentTick;
+        pose.currentTick = Tick;
+
+        // Put somewhere else, or not animated for a while: no blending from where it was
+        float dx = pose.current[position[0]] - pose.previous[position[0]];
+        float dy = pose.current[position[1]] - pose.previous[position[1]];
+        float dz = pose.current[position[2]] - pose.previous[position[2]];
+        if (dx * dx + dy * dy + dz * dz > 5.0f * 5.0f || pose.currentTick - pose.previousTick > 10)
+        {
+            pose.previous = pose.current;
+            pose.previousTick = pose.currentTick;
+        }
+    }
+
     // After the animation of a tick: the new poses are kept with the one before
     void SnapshotPoses()
     {
@@ -93,39 +137,35 @@ namespace
         ++Tick;
         auto interpolation = fb::Settings::Field<bool>("ClientSettings", "VisualFrameInterpolation");
         bInterpolation = interpolation && *interpolation;
-        ForEachPalette([](uintptr_t palette, uint32_t size)
+        ForEachSlot([](uintptr_t skeleton, uintptr_t block, uint32_t index, uintptr_t result)
         {
-            auto& pose = Poses[palette];
-            pose.seenTick = Tick;
-            auto bytes = (const uint8_t*)palette;
-            if (pose.current.size() != size)
-            {
-                pose.current.assign(bytes, bytes + size);
-                pose.previous = pose.current;
-                pose.previousTick = pose.currentTick = Tick;
+            auto bones = *(uint32_t*)(skeleton + 0x04);
+            auto transformsSize = *(uint32_t*)(skeleton + 0x1C);
+            auto matricesSize = *(uint32_t*)(skeleton + 0x20);
+            if (!bones || bones > 1024)
                 return;
-            }
-            if (memcmp(pose.current.data(), bytes, size) == 0)
-                return;
-            pose.previous.swap(pose.current);
-            pose.current.assign(bytes, bytes + size);
-            pose.previousTick = pose.currentTick;
-            pose.currentTick = Tick;
 
-            // A character put somewhere else, or not animated for a while: no blending from where it was
-            float dx = ((float*)pose.current.data())[3] - ((float*)pose.previous.data())[3];
-            float dy = ((float*)pose.current.data())[7] - ((float*)pose.previous.data())[7];
-            float dz = ((float*)pose.current.data())[11] - ((float*)pose.previous.data())[11];
-            if (dx * dx + dy * dy + dz * dz > 5.0f * 5.0f || pose.currentTick - pose.previousTick > 10)
+            auto matrices = *(uintptr_t*)(result + 0x08);
+            if (matrices && matricesSize == bones * BoneSize && matrices == *(uintptr_t*)(block + 0x08) + index * matricesSize)
+                Snapshot(Poses[matrices], matrices, matricesSize / sizeof(float), { 3, 7, 11 });
+
+            // Only a slot's own bone transforms of this skeleton: exactly its bone count is read and given back
+            auto transforms = *(uintptr_t*)(result + 0x14);
+            if (!transforms || transformsSize != bones * TransformSize)
+                return;
+            for (auto buffer : { 0x00, 0x04, 0x0C, 0x10 })
             {
-                pose.previous = pose.current;
-                pose.previousTick = pose.currentTick;
+                if (transforms == *(uintptr_t*)(block + buffer) + index * transformsSize)
+                {
+                    Snapshot(Transforms[result], transforms, transformsSize / sizeof(float), { 0, 1, 2 });
+                    break;
+                }
             }
         });
 
-        // Skeletons that are gone
-        for (auto it = Poses.begin(); it != Poses.end();)
-            it = (Tick - it->second.seenTick > 30) ? Poses.erase(it) : std::next(it);
+        // Skeletons and objects that are gone
+        std::erase_if(Poses, [](const auto& entry) { return Tick - entry.second.seenTick > 30; });
+        std::erase_if(Transforms, [](const auto& entry) { return Tick - entry.second.seenTick > 30; });
     }
 
     // The animation update of a physics tick: arg +8 = the place of the frame between the ticks
@@ -148,36 +188,82 @@ namespace
         ++Frame;
     }
 
-    // The bone matrices of an animated object, for the renderer (GameAnimatable): outside the ticks it gets the bones
-    // between the last two tick poses
+    // Bone matrices: a straight line between the two tick poses
+    void BlendMatrices(const Pose& pose, float f, float* out)
+    {
+        auto a = pose.previous.data();
+        auto b = pose.current.data();
+        for (size_t i = 0, n = pose.current.size(); i < n; ++i)
+            out[i] = a[i] + (b[i] - a[i]) * f;
+    }
+
+    // Bone transforms: the position and scale in a line, the rotation along the shorter way
+    void BlendTransforms(const Pose& pose, float f, float* out)
+    {
+        for (size_t bone = 0, n = pose.current.size(); bone < n; bone += TransformSize / sizeof(float))
+        {
+            auto a = &pose.previous[bone];
+            auto b = &pose.current[bone];
+            auto o = &out[bone];
+            for (int i = 0; i < 4; ++i)
+                o[i] = a[i] + (b[i] - a[i]) * f;
+            float sign = (a[4] * b[4] + a[5] * b[5] + a[6] * b[6] + a[7] * b[7]) < 0.0f ? -1.0f : 1.0f;
+            float length = 0.0f;
+            for (int i = 4; i < 8; ++i)
+            {
+                o[i] = a[i] + (b[i] * sign - a[i]) * f;
+                length += o[i] * o[i];
+            }
+            length = std::sqrt(length);
+            if (length > 0.0f)
+                for (int i = 4; i < 8; ++i)
+                    o[i] /= length;
+        }
+    }
+
+    // The values between the last two ticks for this frame, or the game's own when there's nothing to blend
+    template<typename Blend>
+    uintptr_t Blended(std::unordered_map<uintptr_t, Pose>& poses, uintptr_t key, uintptr_t values, Blend&& blend)
+    {
+        std::shared_lock lock(PosesMutex);
+        auto it = poses.find(key);
+        if (it == poses.end())
+            return values;
+        auto& pose = it->second;
+        if (pose.source != values || pose.currentTick == pose.previousTick || pose.previous.size() != pose.current.size())
+            return values;
+
+        std::lock_guard blendLock(pose.blendMutex);
+        if (pose.blendedFrame != Frame || pose.blended.size() != pose.current.size())
+        {
+            pose.blended.resize(pose.current.size());
+            blend(pose, BlendFactor(pose), pose.blended.data());
+            pose.blendedFrame = Frame;
+        }
+        return (uintptr_t)pose.blended.data();
+    }
+
+    // The bone matrices of an animated object, for the renderer (GameAnimatable)
     SafetyHookInline shGetBones = {};
     uintptr_t __fastcall GetBones(void* animatable, void*)
     {
         auto bones = shGetBones.unsafe_thiscall<uintptr_t>(animatable);
         if (!bones || bInTick || !bInterpolation)
             return bones;
+        return Blended(Poses, bones, bones, BlendMatrices);
+    }
 
-        std::shared_lock lock(PosesMutex);
-        auto it = Poses.find(bones);
-        if (it == Poses.end())
-            return bones;
-        auto& pose = it->second;
-        if (pose.currentTick == pose.previousTick || pose.previous.size() != pose.current.size())
-            return bones;
-
-        std::lock_guard blendLock(pose.blendMutex);
-        if (pose.blendedFrame != Frame || pose.blended.size() != pose.current.size())
-        {
-            pose.blended.resize(pose.current.size());
-            float f = BlendFactor(pose);
-            auto a = (const float*)pose.previous.data();
-            auto b = (const float*)pose.current.data();
-            auto out = (float*)pose.blended.data();
-            for (size_t i = 0, n = pose.current.size() / sizeof(float); i < n; ++i)
-                out[i] = a[i] + (b[i] - a[i]) * f;
-            pose.blendedFrame = Frame;
-        }
-        return (uintptr_t)pose.blended.data();
+    // The bone transforms of an animated object (GameAnimatable): +0xB4 -> the animation
+    SafetyHookInline shGetBoneTransforms = {};
+    uintptr_t __fastcall GetBoneTransforms(void* animatable, void*)
+    {
+        auto transforms = shGetBoneTransforms.unsafe_thiscall<uintptr_t>(animatable);
+        if (!transforms || bInTick || !bInterpolation)
+            return transforms;
+        auto animation = *(uintptr_t*)((uintptr_t)animatable + 0xB4);
+        if (!animation)
+            return transforms;
+        return Blended(Transforms, animation + ResultInAnimatable, transforms, BlendTransforms);
     }
 }
 
@@ -195,6 +281,7 @@ public:
             auto tickDt = hook::pattern("F3 0F 10 47 0C F2 0F 10 0D ? ? ? ? 8B 35 ? ? ? ? 0F 5A C0 F2 0F 5C C8 F3 0F 10 47 08 0F 5A C0 F2 0F 58 C8 F3 0F 10 07");
             auto frame = hook::pattern("55 8B EC 83 E4 F0 81 EC C4 00 00 00 53 8B 1D ? ? ? ? 56 57 85 DB 0F 84");
             auto getBones = hook::pattern("83 B9 88 01 00 00 02 75 08 8A 81 44 02 00 00 EB 0D 8B 81 B4 00 00 00 85 C0 74 11 8A 40 40 84 C0 74 0A 8B 81 B4 00 00 00 8B 40 24 C3");
+            auto getTransforms = hook::pattern("83 B9 88 01 00 00 02 75 08 8A 81 44 02 00 00 EB 0D 8B 81 B4 00 00 00 85 C0 74 11 8A 40 40 84 C0 74 0A 8B 81 B4 00 00 00 8B 40 30 C3");
 
             pAnimationManager = *tick.get_first<uintptr_t*>(13);
 
@@ -205,6 +292,7 @@ public:
             shTickAnimation = safetyhook::create_inline(tick.get_first(), TickAnimation);
             shFrameAnimation = safetyhook::create_inline(frame.get_first(), FrameAnimation);
             shGetBones = safetyhook::create_inline(getBones.get_first(), GetBones);
+            shGetBoneTransforms = safetyhook::create_inline(getTransforms.get_first(), GetBoneTransforms);
         };
     }
 } Characters;

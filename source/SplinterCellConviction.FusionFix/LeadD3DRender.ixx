@@ -120,7 +120,7 @@ export void InitLeadD3DRender()
     {
         // Flash pass: don't restrict the viewport to the multi-monitor HUD rect (l3d::Options +0x1F8 enable, +0x1FC rect),
         // the Flash renderer places the stage into that rect itself (see InitWidescreenFix)
-        auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "38 98 F8 01 00 00 74");
+        auto pattern = hook::module_pattern(GetModuleHandle(L"LeadD3DRender"), "38 98 F8 01 00 00 74 2E D9 E8 51 51 D9 5C 24 04 D9 EE D9 1C 24 FF B0");
         injector::WriteMemory<uint8_t>(pattern.get_first<uint8_t>(6), 0xEB, true);
 
     }

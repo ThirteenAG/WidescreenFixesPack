@@ -8,6 +8,8 @@
   "MAIN.GamepadCameraSpeed.description": "How fast the right stick turns the camera and aims. Applies immediately.",
   "MAIN.InvertGamepadY": "Invert Gamepad Look",
   "MAIN.InvertGamepadY.description": "Pushing the right stick up looks down. The game's own Invert Mouse option turns the pad around too. Applies immediately.",
+  "MAIN.GamepadIcons": "Controller Icons",
+  "MAIN.GamepadIcons.description": "Button names in the game's hints while you play with a controller: Xbox, PlayStation or Nintendo. Automatic uses Xbox. Keyboard and mouse hints stay unchanged. Applies immediately.",
   "MAIN.Vibration": "Vibration",
   "MAIN.Vibration.description": "Lets the pad rumble with shots, explosions and hits. Applies immediately.",
   "HudAspectRatioConstraint": "HUD Aspect Ratio",

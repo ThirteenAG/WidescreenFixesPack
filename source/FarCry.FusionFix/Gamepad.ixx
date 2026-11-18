@@ -57,7 +57,7 @@ namespace FarCryPadState
     {
         MoveLeft = 1, MoveRight = 2, MoveForward = 3, MoveBackward = 4, Jump = 5, Fire = 7, ScoreBoard = 8,
         Reload = 9, Use = 10, TurnLR = 11, TurnUD = 12, NextWeapon = 14, LeanRight = 16, HoldBreath = 17,
-        FireMode = 18, LeanLeft = 19, FireGrenade = 20, CycleGrenade = 30, MoveLR = 33, MoveFB = 34,
+        FireMode = 18, LeanLeft = 19, FireGrenade = 20, CycleGrenade = 30, DropWeapon = 31,
         Binoculars = 35, Thermal = 36, ZoomToggle = 45, ZoomIn = 46, ZoomOut = 47, Prone = 49, Flashlight = 57,
         ChangeView = 58, Sprint = 59, CrouchToggle = 63,
     };
@@ -100,7 +100,7 @@ namespace FarCryPadState
         { XINPUT_GAMEPAD_DPAD_DOWN, Zoom | Binozoom, ZoomOut, Mode::Press },
         { XINPUT_GAMEPAD_DPAD_LEFT, Default | Zoom | Binozoom, LeanLeft, Mode::Hold },
         { XINPUT_GAMEPAD_DPAD_RIGHT, Default | Zoom | Binozoom, LeanRight, Mode::Hold },
-        { XINPUT_GAMEPAD_RIGHT_THUMB, Alive, FireMode, Mode::Press },
+        { XINPUT_GAMEPAD_RIGHT_THUMB, Alive, FireMode, Mode::Press, DropWeapon },
         { XINPUT_GAMEPAD_BACK, Alive, ScoreBoard, Mode::Hold },
     };
 
@@ -128,12 +128,24 @@ namespace FarCryPadState
     bool SprintLatch = false;
     float LookBoostTime = 0;
 
+    // Last device used: hints show controller wording until the keyboard or mouse is used again
+    bool PadInUse = false;
+
+    // The move direction sent this frame, for the analog movement
+    struct MoveSample
+    {
+        float x = 0, y = 0, magnitude = 0;
+        int qx = 0, qy = 0;
+        double time = 0;
+    };
+    MoveSample LastMove;
+
     void* Input = nullptr;
     void* Manager = nullptr;
     void* Maps[5]{};
     uint8_t CurrentMap = Default;
     uint64_t InputFrame = 0, ManagerFrame = 0;
-    bool ManagerEnabled = false, Gameplay = false, AnalogMove = false;
+    bool ManagerEnabled = false, Gameplay = false;
     double ManagerTime = 0, CursorTime = 0, WheelTime = 0;
 
     // Injected DirectInput state
@@ -221,6 +233,9 @@ namespace FarCryPadState
         Current.ly = Axis(pad.sThumbLY);
         Current.rx = Axis(pad.sThumbRX);
         Current.ry = Axis(pad.sThumbRY);
+        const float stick = std::max({ std::abs(Current.lx), std::abs(Current.ly), std::abs(Current.rx), std::abs(Current.ry) });
+        if ((Current.buttons & ~Previous.buttons) || stick > 0.4f)
+            PadInUse = true;
     }
 
     // A button held while play and menus swap stays silent until it is let go
@@ -306,28 +321,18 @@ namespace FarCryPadState
         if (!(CurrentMap & Alive))
             return;
 
+        // The stick sends the nearest of the eight key directions; the player movement hook below turns and scales
+        // the resulting walk to the stick
         if (moveMagnitude > 0)
         {
-            if (AnalogMove)
-            {
-                // The game removes its own 0.2 dead zone and rescales, so the stick value is mapped past it
-                if (mx != 0)
-                    Notify(MoveLR, std::copysign(0.2f + 0.8f * std::abs(mx), mx), Holding);
-                if (my != 0)
-                    Notify(MoveFB, std::copysign(0.2f + 0.8f * std::abs(my), -my), Holding);
-            }
-            else
-            {
-                const float x = mx / moveMagnitude, y = my / moveMagnitude;
-                if (x < -0.38f)
-                    Notify(MoveLeft, 0, Holding);
-                else if (x > 0.38f)
-                    Notify(MoveRight, 0, Holding);
-                if (y > 0.38f)
-                    Notify(MoveForward, 0, Holding);
-                else if (y < -0.38f)
-                    Notify(MoveBackward, 0, Holding);
-            }
+            const float x = mx / moveMagnitude, y = my / moveMagnitude;
+            const int qx = x < -0.38f ? -1 : x > 0.38f ? 1 : 0;
+            const int qy = y < -0.38f ? -1 : y > 0.38f ? 1 : 0;
+            if (qx)
+                Notify(qx < 0 ? MoveLeft : MoveRight, 0, Holding);
+            if (qy)
+                Notify(qy > 0 ? MoveForward : MoveBackward, 0, Holding);
+            LastMove = { x, y, moveMagnitude, qx, qy, now };
         }
 
         if (Pressed(XINPUT_GAMEPAD_LEFT_THUMB))
@@ -495,6 +500,63 @@ namespace FarCryPadState
 
     void HookManager(void* manager);
 
+    // The player movement only knows the eight key directions and one speed. Where the move keys the pad sent this
+    // frame reach the local player, the walk is turned to the stick's direction and scaled by how far it is pushed.
+#ifdef _WIN64
+    constexpr size_t playerOnLadderOffset = 344, cmdActionsOffset = 8;
+    bool (__fastcall* IsMyPlayer)(void* player) = nullptr;
+#else
+    constexpr size_t playerOnLadderOffset = 336, cmdActionsOffset = 4;
+    bool (__fastcall* IsMyPlayer)(void* player, void* edx) = nullptr;
+#endif
+    SafetyHookMid MoveHook;
+
+    void Move(SafetyHookContext& regs)
+    {
+        const auto move = LastMove;
+        if (!Gameplay || CurrentMap == Vehicle || move.magnitude <= 0 || Now() - move.time > 0.1)
+            return;
+#ifdef _WIN64
+        const auto cmd = regs.r14;
+        auto player = reinterpret_cast<void*>(regs.r12);
+#else
+        const auto cmd = regs.edi;
+        auto player = reinterpret_cast<void*>(regs.ebx);
+#endif
+        const auto bits = *reinterpret_cast<uint32_t*>(cmd + cmdActionsOffset);
+        const int qx = ((bits >> (MoveRight - 1)) & 1) - ((bits >> (MoveLeft - 1)) & 1);
+        const int qy = ((bits >> (MoveForward - 1)) & 1) - ((bits >> (MoveBackward - 1)) & 1);
+        if ((!qx && !qy) || qx != move.qx || qy != move.qy)
+            return;
+#ifdef _WIN64
+        if (!IsMyPlayer(player))
+            return;
+        auto velocity = reinterpret_cast<float*>(regs.rsp + 0x30);
+#else
+        if (!IsMyPlayer(player, nullptr))
+            return;
+        auto velocity = reinterpret_cast<float*>(regs.ebp - 0x1C);
+#endif
+        float x = velocity[0], y = velocity[1], z = velocity[2];
+        if (!Field<bool>(player, playerOnLadderOffset))
+        {
+            // Velocity is the key direction turned by the view yaw, so the stick's offset from it turns the same way
+            const float angle = std::atan2(move.y, move.x) - std::atan2(float(qy), float(qx));
+            const float c = std::cos(angle), s = std::sin(angle);
+            const float turnedX = x * c - y * s;
+            y = x * s + y * c;
+            x = turnedX;
+        }
+        velocity[0] = x * move.magnitude;
+        velocity[1] = y * move.magnitude;
+        velocity[2] = z * move.magnitude;
+#ifdef _WIN64
+        regs.xmm9.f32[0] = velocity[0];
+        regs.xmm7.f32[0] = velocity[1];
+        regs.xmm6.f32[0] = velocity[2];
+#endif
+    }
+
 #ifdef _WIN64
     void InputUpdate(void* input, bool focus)
     {
@@ -606,6 +668,11 @@ namespace FarCryPadState
 
 export namespace FarCryPad
 {
+    inline bool PadInUse()
+    {
+        return FarCryPadState::PadInUse;
+    }
+
     // Input the developer overlay takes for itself
     inline void SetBlocked(bool (*blocked)())
     {
@@ -625,16 +692,21 @@ export namespace FarCryPad
         if (FarCryPadState::ShakeHook)
             return;
         auto module = GetModuleHandleW(L"CryGame.dll");
-        // The 32-bit game has analog move actions; the 64-bit build only has the four move directions
 #ifdef _WIN64
-        FarCryPadState::AnalogMove = false;
+        auto isMyPlayer = hook::module_pattern(module, "48 53 48 83 EC 20 48 8B 81 98 02 00 00 48 8B 50 60 48 85 D2 75 08 32 C0");
+        auto move = hook::module_pattern(module, "F3 45 0F 59 CA F3 44 0F 11 4C 24 30 F3 41 0F 59 FA F3 0F 11 7C 24 34 F3 41 0F 59 F2 F3 0F 11 74 24 38 41 8B 46 08 C1 E8 04 A8 01");
+        constexpr size_t moveOffset = 34;
         auto shake = hook::module_pattern(module, "48 83 EC 58 48 C7 44 24 30 FE FF FF FF 48 89 5C 24 68 48 89 74 24 70 48 89 7C 24 78 48 8B FA 48 8B F1 48 8B 02 48 8B CA FF 50 18 83 F8 04 74 3A");
         auto shakeL = hook::module_pattern(module, "48 8B C4 48 83 EC 68 48 C7 44 24 30 FE FF FF FF 48 89 58 10 48 89 70 18 48 89 78 20 48 8B FA 48 8B F1 48 8B 02 48 8B CA FF 50 18 83 F8 03 74 3A");
 #else
-        FarCryPadState::AnalogMove = true;
+        auto isMyPlayer = hook::module_pattern(module, "8D 81 68 02 00 00 8B 10 83 7A 34 00 75 03 32 C0 C3");
+        auto move = hook::module_pattern(module, "D9 5D E8 D9 45 EC D8 C9 D9 5D EC DD D8 6A 05 8B CF E8");
+        constexpr size_t moveOffset = 13;
         auto shake = hook::module_pattern(module, "B8 ? ? ? ? E8 ? ? ? ? 83 EC 18 53 56 8B 75 08 8B 06 8B D9 57 8B CE FF 50 0C 83 F8 04 74 2F");
         auto shakeL = hook::module_pattern(module, "B8 ? ? ? ? E8 ? ? ? ? 83 EC 24 53 56 8B 75 08 8B 06 57 8B F9 8B CE FF 50 0C 83 F8 03 74 2F");
 #endif
+        FarCryPadState::IsMyPlayer = reinterpret_cast<decltype(FarCryPadState::IsMyPlayer)>(isMyPlayer.get_first());
+        FarCryPadState::MoveHook = safetyhook::create_mid(move.get_first(moveOffset), &FarCryPadState::Move);
         FarCryPadState::ShakeHook = safetyhook::create_inline(shake.get_first(), &FarCryPadState::Shake);
         FarCryPadState::ShakeLHook = safetyhook::create_inline(shakeL.get_first(), &FarCryPadState::ShakeL);
     }
@@ -651,6 +723,9 @@ export namespace FarCryPad
         if (!data || (size != sizeof(DIMOUSESTATE) && size != sizeof(DIMOUSESTATE2)))
             return;
         auto state = static_cast<DIMOUSESTATE*>(data);
+        const bool buttons = std::any_of(std::begin(state->rgbButtons), std::end(state->rgbButtons), [](BYTE b) { return (b & 0x80) != 0; });
+        if (std::abs(state->lX) > 2 || std::abs(state->lY) > 2 || state->lZ || buttons)
+            FarCryPadState::PadInUse = false;
         if (FarCryPadState::MouseButton)
             state->rgbButtons[0] |= 0x80;
         state->lZ += FarCryPadState::MouseWheel;
@@ -663,6 +738,8 @@ export namespace FarCryPad
         if (!data || size != 256)
             return;
         auto keys = static_cast<uint8_t*>(data);
+        if (std::any_of(keys, keys + size, [](uint8_t key) { return (key & 0x80) != 0; }))
+            FarCryPadState::PadInUse = false;
         for (size_t i = 0; i < FarCryPadState::Keys.size(); ++i)
         {
             if (FarCryPadState::Keys[i])
@@ -683,10 +760,31 @@ export namespace FarCryPad
         ++*count;
     }
 
+    // Real keyboard or mouse input in the device data, before the pad's own presses are added
+    inline bool Used(const void* data, DWORD stride, DWORD count, bool mouse)
+    {
+        if (!data || stride < sizeof(DIDEVICEOBJECTDATA))
+            return false;
+        for (DWORD i = 0; i < count; ++i)
+        {
+            auto entry = reinterpret_cast<const DIDEVICEOBJECTDATA*>(static_cast<const uint8_t*>(data) + size_t(i) * stride);
+            if (!mouse || entry->dwOfs >= DIMOFS_BUTTON0)
+            {
+                if (entry->dwData & 0x80)
+                    return true;
+            }
+            else if (entry->dwOfs == DIMOFS_Z || std::abs(int(entry->dwData)) > 2)
+                return true;
+        }
+        return false;
+    }
+
     inline void MouseData(void* data, DWORD stride, DWORD* count, DWORD capacity, bool peek)
     {
         if (peek)
             return;
+        if (Used(data, stride, *count, true))
+            FarCryPadState::PadInUse = false;
         if (FarCryPadState::MouseButton != FarCryPadState::MouseReported)
         {
             Append(data, stride, count, capacity, DIMOFS_BUTTON0, FarCryPadState::MouseButton ? 0x80 : 0);
@@ -703,6 +801,8 @@ export namespace FarCryPad
     {
         if (peek)
             return;
+        if (Used(data, stride, *count, false))
+            FarCryPadState::PadInUse = false;
         for (size_t i = 0; i < FarCryPadState::Keys.size(); ++i)
         {
             if (FarCryPadState::Keys[i] != FarCryPadState::KeysReported[i])
