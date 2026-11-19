@@ -23,10 +23,6 @@ export namespace FMV
     struct Stream { const VideoSize* Video; };
 }
 
-export GameRef<float> CinematicBand;
-export GameRef<int32_t> EffectBand;
-export GameRef<void*> BarsOverride;
-export GameRef<uint8_t> EffectAlpha;
 export GameRef<int32_t> LoadingTexture;
 export GameRef<int32_t> MovieHandle;
 export GameRef<FMV::Stream**> MovieStreams;
