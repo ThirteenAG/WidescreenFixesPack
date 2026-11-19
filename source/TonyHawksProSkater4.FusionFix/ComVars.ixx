@@ -18,6 +18,7 @@ export GameRef<D3DPRESENT_PARAMETERS> GamePresentation;
 export GameRef<IDirect3DDevice8*> GameDevice;
 export GameRef<uint8_t> GameInitialized;
 export GameRef<uint8_t> GameLost;
+export GameRef<uint8_t> AppActive;
 export GameRef<int> NativeWindowed;
 export GameRef<int> PresentationInterval;
 

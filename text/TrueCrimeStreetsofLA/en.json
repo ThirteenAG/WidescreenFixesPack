@@ -13,7 +13,7 @@
   "HudScale": "HUD scale",
   "HudScale.description": "Size of the HUD. 1.0 keeps the size it has at 640x480 at any resolution. Applies immediately.",
   "SubtitleScale": "Subtitle scale",
-  "SubtitleScale.description": "Size of the subtitles. 1.0 keeps the size they have at 640x480 at any resolution. Applies to the next subtitles.",
+  "SubtitleScale.description": "Size of the subtitles. 1.0 keeps the size they have at 640x480 at any resolution. Applies immediately.",
   "FMVWidescreenMode": "Video aspect ratio",
   "FMVWidescreenMode.description": "Original shows the movies whole inside the game's centred 4:3 frame. Fill fits the whole movie to the screen. Nothing is cut off or stretched.",
   "WindowMode": "Window mode",

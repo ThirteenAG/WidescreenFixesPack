@@ -144,7 +144,10 @@ export namespace THUGDevice
         }
         const auto result = PresentHook.unsafe_stdcall<HRESULT>(device, source, destination, window, dirty);
         if (GameDevice.is_initialized() && device == GameDevice.get())
+        {
+            TonyModeSwitch::Presented(result);
             TonyModeSwitch::Update(device, Window);
+        }
         return result;
     }
 
@@ -202,10 +205,23 @@ export namespace THUGDevice
     {
         UpdateFrameLimit();
         FixSettings().OnChange("MAIN.FPSLimit", UpdateFrameLimit);
+        // Changed while another window is active (from FusionFixHub): the game stops or continues at once. Its own
+        // activation would also bring the window to the front, so continuing sets the flag only
+        FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+        {
+            if (!Window || TonyDisplay::Mode == 0 || GetForegroundWindow() == Window)
+                return;
+            if (FixSettings().Int("MAIN.PauseOnFocusLoss"))
+                PostMessageA(Window, WM_ACTIVATE, WA_INACTIVE, 0);
+            else
+                AppActive = 1;
+        });
         auto create = hook::pattern("D9 E8 81 EC 84 01 00 00 57 D9 15");
         auto device = hook::pattern("A1 ? ? ? ? 8B 08 8B 51 40 68 ? ? ? ? 50 FF D2");
         auto window = hook::pattern("8B 44 24 08 3D 00 01 00 00 0F 87 ? ? ? ? 0F 84");
         auto keyboard = hook::pattern("A1 ? ? ? ? 56 57 68 ? ? ? ? B9 40 00 00 00 BE");
+        auto deactivate = hook::pattern("6A 01 6A 00 6A 00 C6 05 ? ? ? ? 00 C6 05 ? ? ? ? 01 FF 15");
+        AppActive.SetAddress(*deactivate.get_first<uint8_t*>(8));
         (void)*device.get_first<IDirect3DDevice9**>(1);
         KeyBuffer.SetAddress(*keyboard.get_first<uint8_t*>(8));
         PreviousKeys.SetAddress(*keyboard.get_first<uint8_t*>(23));

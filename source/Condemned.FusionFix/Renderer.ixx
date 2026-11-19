@@ -72,7 +72,16 @@ export namespace CondemnedRenderer
             CursorConfinement::Release();
             return 0;
         }
-        return windowProcedureHook.unsafe_stdcall<LRESULT>(target, message, wParam, lParam);
+        result = windowProcedureHook.unsafe_stdcall<LRESULT>(target, message, wParam, lParam);
+        if (message == WM_GETMINMAXINFO && windowMode && lParam)
+        {
+            // A client as big as the monitor puts the frame outside it; Windows would otherwise cap the window at
+            // the monitor's size plus a thin frame and cut the client short
+            auto info = reinterpret_cast<MINMAXINFO*>(lParam);
+            info->ptMaxTrackSize.x = (std::max)(info->ptMaxTrackSize.x, LONG(GetSystemMetrics(SM_CXVIRTUALSCREEN) * 2));
+            info->ptMaxTrackSize.y = (std::max)(info->ptMaxTrackSize.y, LONG(GetSystemMetrics(SM_CYVIRTUALSCREEN) * 2));
+        }
+        return result;
     }
 
     inline void Init(int mode)

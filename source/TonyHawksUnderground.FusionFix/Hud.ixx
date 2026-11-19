@@ -8,6 +8,7 @@ module;
 export module Hud;
 
 import ComVars;
+import Frame;
 
 export namespace THUGHud
 {
@@ -110,6 +111,20 @@ export namespace THUGHud
         return result;
     }
 
+    // The graffiti strips above and below the frontend menus (main menu, options and their pages)
+    inline bool InMenuStrip(uintptr_t element)
+    {
+        constexpr uint32_t topStrip = 0x9F1A1DD2, bottomStrip = 0x61D1CA96;
+        for (int depth = 0; element && depth < 32; ++depth)
+        {
+            const auto id = *reinterpret_cast<uint32_t*>(element + 20);
+            if (id == topStrip || id == bottomStrip)
+                return true;
+            element = *reinterpret_cast<uintptr_t*>(element + 64);
+        }
+        return false;
+    }
+
     inline float Offset(const Placement& placement)
     {
         if (!NativeScaleX.is_initialized() || !std::isfinite(NativeScaleX.get()) || NativeScaleX <= 0.0f)
@@ -144,6 +159,8 @@ export namespace THUGHud
             TonyPad::Prompts::SetTextContext(element);
         auto& original = sprite ? SpriteHook : TextHook;
         const auto placement = Classify(element);
+        if (sprite)
+            THUGFrame::PlaceSprite(element, InMenuStrip(element));
         if (!placement.anchor)
             return original.thiscall<int>(element);
         auto* x = reinterpret_cast<float*>(element + (sprite ? 276 : 288));

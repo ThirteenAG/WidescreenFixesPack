@@ -58,6 +58,15 @@ namespace TonyModeSwitch
         TonyDisplay::SquareCorners(window);
     }
 
+    // A windowed device is lost when another program changes the display mode or takes the screen in fullscreen. The
+    // game only resets after its own focus loss, which a window mode that keeps running never passes on: without
+    // this the picture stays frozen
+    inline void Presented(HRESULT result)
+    {
+        if (result == D3DERR_DEVICELOST)
+            *Lost = 1;
+    }
+
     // After a presented frame
     inline void Update(IDirect3DDevice9* device, HWND window)
     {

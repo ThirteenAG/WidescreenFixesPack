@@ -506,6 +506,15 @@ project "Mafia.FusionFix"
    dependson { "AsiSettingsValidator" }
    prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/Mafia/en.json') }
    add_postfx()
+   -- The water: shader model 1 assembly for Direct3D 8, shader model 2 HLSL for d3d8to9
+   buildshaders {
+      { files = "source/Mafia.FusionFix/*.vs", tool = "asm_shader", ext = ".vso" },
+      { files = "source/Mafia.FusionFix/*.ps", tool = "asm_shader", ext = ".pso" },
+      { files = "source/Mafia.FusionFix/*VS.hlsl", args = "/T vs_2_0 /E main", ext = ".cso" },
+      { files = "source/Mafia.FusionFix/*PS.hlsl", args = "/T ps_2_0 /E main", ext = ".cso" }
+   }
+   files { "source/%{prj.name}/*.vs", "source/%{prj.name}/*.ps", "source/%{prj.name}/*.hlsl" }
+   defines { "IDR_WATER_VS8=210", "IDR_WATER_PS8=211", "IDR_WATER_VS9=212", "IDR_WATER_PS9=213" }
     add_overlay_imgui()
    setpaths("MAFIA_DIR", "Game.exe")
 

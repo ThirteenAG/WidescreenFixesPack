@@ -52,6 +52,9 @@ namespace RawMouse
 
 export void InitMouse()
 {
+    // The message loop runs until the queue is empty and the viewport recenters the cursor on every WM_MOUSEMOVE: with a high
+    // polling rate mouse each pass would get a new one and the frame wouldn't end
+    MessagePumpGuard::Install(GetModuleHandle(nullptr));
 
     auto bRawMouseInput = FixSettings().Bool("MAIN.RawInputMouse") != 0;
     auto bDisableMouseSmoothing = !FixSettings().Bool("MAIN.MouseSmoothing");

@@ -35,7 +35,9 @@ namespace Mouse
 
     bool Enabled()
     {
-        return FixSettings().Bool("MAIN.RawInputMouse") && WindowHandle && GetForegroundWindow() == WindowHandle && !DeveloperOverlay::BlocksInput();
+        // runs for every raw mouse report, thousands a second with a high polling rate mouse
+        static const int& rawInputMouse = FixSettings().Int("MAIN.RawInputMouse");
+        return rawInputMouse && WindowHandle && GetForegroundWindow() == WindowHandle && !DeveloperOverlay::BlocksInput();
     }
 
     int __fastcall CauseInputEventHook(uintptr_t viewport, void* edx, uintptr_t input, int key, int action, float delta, int controller, int a7)
@@ -222,6 +224,9 @@ export void InitMouse()
 {
     IATHook::Replace(GetModuleHandleW(nullptr), "USER32.DLL",
         std::forward_as_tuple("SetCursorPos", Mouse::SetCursorPosHook));
+    // The main loop empties the message queue each frame and the viewport recenters the cursor on every WM_MOUSEMOVE: with a high
+    // polling rate mouse each pass would get a new one and the frame wouldn't end
+    MessagePumpGuard::Install(GetModuleHandleW(nullptr));
     auto& settings = FixSettings();
     TurnSpeed::multiplier = std::clamp(settings.Float("MAIN.TurnSpeed"), 0.5f, 10.0f);
 

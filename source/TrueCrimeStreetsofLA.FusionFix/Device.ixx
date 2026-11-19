@@ -23,6 +23,10 @@ export namespace TrueCrimeDevice
     // goes first
     inline std::vector<void (*)()> Releasing;
     inline SafetyHookMid ReleaseHook;
+    // At exit the game frees the world before its device; the vehicle textures, released with the device, would still
+    // clear their slots in the world's freed texture table, so they go before the world
+    inline GameRef<uintptr_t> Vehicles;
+    inline SafetyHookMid WorldShutdownHook;
     // The back buffer size the game asks for (its resolution choice)
     inline void (*Resolution)(int, int) = nullptr;
 
@@ -123,6 +127,19 @@ export namespace TrueCrimeDevice
         {
             for (auto release : Releasing)
                 release();
+        });
+        auto world = hook::pattern("B9 ? ? ? ? E8 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 68 CB 00 00 00");
+        Vehicles.SetAddress(*world.get_first<uintptr_t*>(11));
+        WorldShutdownHook = safetyhook::create_mid(hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 3B CB 74 ? E8 ? ? ? ? 89 1D ? ? ? ? E8").get_first(),
+            [](SafetyHookContext&)
+        {
+            const auto vehicles = Vehicles.get();
+            if (vehicles && (*reinterpret_cast<uint32_t*>(vehicles + 4) & 2))
+            {
+                using Release = void(__thiscall*)(uintptr_t);
+                (*reinterpret_cast<Release**>(vehicles))[3](vehicles);
+                *reinterpret_cast<uint32_t*>(vehicles + 4) &= ~2u;
+            }
         });
         CallbackHandler::RegisterCallback(L"d3d9.dll", []()
         {

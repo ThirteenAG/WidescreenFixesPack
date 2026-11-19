@@ -10,6 +10,7 @@ export GameRef<void*> NativeSymbols;
 export GameRef<int> NativeLanguage;
 
 export GameRef<int> NativeWindowed;
+export GameRef<uint8_t> AppActive;
 export GameRef<float> FrameScaleY;
 export GameRef<int32_t> FrameOffset2D;
 export GameRef<uint8_t> FrameLetterboxed;

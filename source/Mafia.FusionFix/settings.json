@@ -205,6 +205,34 @@
       ]
     },
     {
+      "id": "GRAPHICS.Water",
+      "type": "choice",
+      "default": 2,
+      "label": "@GRAPHICS.Water",
+      "description": "@GRAPHICS.Water.description",
+      "page": "graphics",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 2,
+        "enhanced": 2
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@water.0"
+        },
+        {
+          "value": 1,
+          "label": "@water.1"
+        },
+        {
+          "value": 2,
+          "label": "@water.2"
+        }
+      ]
+    },
+    {
       "id": "GRAPHICS.RestoreEyeAnimations",
       "type": "bool",
       "default": true,

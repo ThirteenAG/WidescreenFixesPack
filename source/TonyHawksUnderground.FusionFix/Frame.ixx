@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include <d3d9.h>
+#include <unordered_set>
 
 export module Frame;
 
@@ -21,8 +22,15 @@ export namespace THUGFrame
     inline float ProjectionAspect = 4.0f / 3.0f;   // read by the game's projection through its aspect getter
     inline const int32_t* Borders = nullptr;
     inline int32_t LetterboxShift = 0;
-    inline SafetyHookMid ScaleHook, ViewportHook, OverlayViewportHook;
+    inline SafetyHookMid ScaleHook, ViewportHook, OverlayViewportHook, ClearHook, SpriteHook, SpriteDoneHook;
     inline SafetyHookInline LetterboxHook, BarsHook;
+
+    // The frontend menus (main menu, options, skater and level select...) are 4:3 pictures between graffiti strips: 2D
+    // parts and 3D pictures made for a 4:3 screen, which spill past the frame on a wider one. These menus keep the 4:3
+    // view in the frame; other screens (the create-a-skater room, the game) fill the screen
+    inline std::unordered_set<uintptr_t> MenuStrips;    // the strips' drawn quads
+    inline bool MenuStripDrawn = false;                 // in this frame's 2D layer
+    inline bool FramedMenu = false;                     // the last frame showed a frontend menu
 
     // The cutscene picture on the screen: Both keeps the original 16:9 picture of the 4:3 frame, Letterbox spans the
     // screen width between the original bars, Pillarbox fills the height up to 16:9, Off fills the screen
@@ -47,10 +55,12 @@ export namespace THUGFrame
         return static_cast<float>(picture.width) / static_cast<float>(picture.height);
     }
 
-    // The original FOV of a cutscene camera frames 16:9; the picture widens it Hor+
+    // The original FOV of a cutscene camera frames 16:9; the picture widens it Hor+. Frontend menus keep 4:3
     inline float FovAspect()
     {
-        return FrameLetterboxed ? Aspect() * 0.75f : ScreenAspect;
+        if (FrameLetterboxed)
+            return Aspect() * 0.75f;
+        return FramedMenu ? 4.0f / 3.0f : ScreenAspect;
     }
 
     // The native switch squeezes the 2D layer into the letterbox area of the frame
@@ -72,10 +82,29 @@ export namespace THUGFrame
         ProjectionAspect = Aspect();
     }
 
+    // The 640x480 frame on the render target
+    inline RECT FrameRect()
+    {
+        const LONG width = FrameTargetWidth.get(), height = FrameTargetHeight.get();
+        const LONG frameWidth = std::min(width, static_cast<LONG>(std::lround(height * (4.0f / 3.0f))));
+        const LONG frameHeight = std::min(height, static_cast<LONG>(std::lround(width * 0.75f)));
+        const LONG left = (width - frameWidth) / 2, top = (height - frameHeight) / 2;
+        return { left, top, left + frameWidth, top + frameHeight };
+    }
+
     inline void SetViewport()
     {
         ProjectionAspect = Aspect();
-        if (!FrameLetterboxed || FrameViewport.get()[0] != 0 || FrameViewport.get()[2] != FrameTargetWidth.get())
+        auto& viewport = FrameViewport.get();
+        const bool fullWidth = viewport[0] == 0 && viewport[2] == FrameTargetWidth.get();
+        if (FramedMenu && !FrameLetterboxed && fullWidth && viewport[1] == 0 && viewport[3] == FrameTargetHeight.get())
+        {
+            const auto frame = FrameRect();
+            viewport = { frame.left, frame.top, frame.right - frame.left, frame.bottom - frame.top };
+            ProjectionAspect = static_cast<float>(viewport[2]) / static_cast<float>(viewport[3]);
+            return;
+        }
+        if (!FrameLetterboxed || !fullWidth)
             return;
         const auto picture = Picture();
         FrameViewport.get()[0] = picture.x;
@@ -106,6 +135,70 @@ export namespace THUGFrame
             (GameDevice.get())->Clear(count, bars, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
     }
 
+    // The game never clears the screen: its pictures cover the 4:3 frame, so the sides of a menu kept old frames
+    inline void ClearScreen()
+    {
+        FramedMenu = MenuStripDrawn;
+        MenuStripDrawn = false;
+        auto device = GameDevice.get();
+        if (!device)
+            return;
+        D3DVIEWPORT9 saved{};
+        if (FAILED(device->GetViewport(&saved)))
+            return;
+        D3DVIEWPORT9 full{ 0, 0, static_cast<DWORD>(FrameTargetWidth.get()), static_cast<DWORD>(FrameTargetHeight.get()), 0.0f, 1.0f };
+        device->SetViewport(&full);
+        device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
+        device->SetViewport(&saved);
+    }
+
+    inline DWORD SavedScissor = FALSE;
+    inline RECT SavedScissorRect{};
+    inline bool Scissored = false;
+
+    // A screen element's sprite (its drawn quad), from the element's draw
+    inline void PlaceSprite(uintptr_t element, bool menuStrip)
+    {
+        const auto sprite = *reinterpret_cast<uintptr_t*>(element + 0x160);
+        if (!sprite)
+            return;
+        const auto quad = *reinterpret_cast<uintptr_t*>(sprite + 0x3C);
+        if (!quad)
+            return;
+        if (menuStrip)
+            MenuStrips.insert(quad);
+        else
+            MenuStrips.erase(quad);
+    }
+
+    // Menu pictures larger than the frame (off the screen on a 4:3 display) end at its edges
+    inline void BeforeSprite(uintptr_t quad)
+    {
+        auto device = GameDevice.get();
+        if (!device)
+            return;
+        if (MenuStrips.contains(quad))
+            MenuStripDrawn = true;
+        if (!FramedMenu)
+            return;
+        const auto frame = FrameRect();
+        device->GetRenderState(D3DRS_SCISSORTESTENABLE, &SavedScissor);
+        device->GetScissorRect(&SavedScissorRect);
+        device->SetScissorRect(&frame);
+        device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+        Scissored = true;
+    }
+
+    inline void AfterSprite()
+    {
+        if (!Scissored)
+            return;
+        Scissored = false;
+        auto device = GameDevice.get();
+        device->SetRenderState(D3DRS_SCISSORTESTENABLE, SavedScissor);
+        device->SetScissorRect(&SavedScissorRect);
+    }
+
     inline void Install(float width, float height, const int32_t* borders)
     {
         Borders = borders;
@@ -122,6 +215,8 @@ export namespace THUGFrame
         auto overlayViewport = hook::pattern("A3 ? ? ? ? 8B C1 99 83 E2 03 03 C2 C1 F8 02 2B C8 89 0D ? ? ? ? A1");
         auto device = hook::pattern("A1 ? ? ? ? 8B 08 8B 51 40 68 ? ? ? ? 50 FF D2");
         auto target = hook::pattern("D9 EE A1 ? ? ? ? D9 1D ? ? ? ? D9 E8 8B 0D ? ? ? ? D9 1D");
+        auto sprite = hook::pattern("6A 1C 8D 54 24 ? 52 6A 65 68 ? ? ? ? 6A 02 6A 04 6A 00 6A 04 50 8B 81 50 01 00 00 FF D0");
+        auto render = hook::pattern("80 3D ? ? ? ? 00 53 55 56 57 0F 85 ? ? ? ? A1 ? ? ? ? 33 DB 3B C3 74 0D 50 FF 15");
 
         FrameScaleY.SetAddress(*scale.get_first<float*>(8));
         FrameOffset2D.SetAddress(*scale.get_first<int32_t*>(30));
@@ -143,6 +238,10 @@ export namespace THUGFrame
         BarsHook = safetyhook::create_inline(bars.get_first(), DrawBars);
         ViewportHook = safetyhook::create_mid(viewport.get_first(25), [](SafetyHookContext&) { SetViewport(); });
         OverlayViewportHook = safetyhook::create_mid(overlayViewport.get_first(24), [](SafetyHookContext&) { SetViewport(); });
+        ClearHook = safetyhook::create_mid(render.get_first(17), [](SafetyHookContext&) { ClearScreen(); });
+        // The sprite's draw call, the quad in esi
+        SpriteHook = safetyhook::create_mid(sprite.get_first(23), [](SafetyHookContext& regs) { BeforeSprite(regs.esi); });
+        SpriteDoneHook = safetyhook::create_mid(sprite.get_first(31), [](SafetyHookContext&) { AfterSprite(); });
     }
 }
 

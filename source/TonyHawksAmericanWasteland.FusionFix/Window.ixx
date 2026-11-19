@@ -196,8 +196,25 @@ export namespace THAWDevice
     {
         UpdateFrameLimit();
         FixSettings().OnChange("MAIN.FPSLimit", UpdateFrameLimit);
+        // Changed while another window is active (from FusionFixHub): the game stops or continues at once. Its own
+        // activation would also bring the window to the front, so continuing sets the flag only
+        FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+        {
+            if (!Window || TonyDisplay::Mode == 0 || GetForegroundWindow() == Window)
+                return;
+            if (FixSettings().Int("MAIN.PauseOnFocusLoss"))
+                PostMessageA(Window, WM_ACTIVATE, WA_INACTIVE, 0);
+            else
+            {
+                // The stopped game waits for window messages
+                AppActive = 1;
+                PostMessageA(Window, WM_NULL, 0, 0);
+            }
+        });
         auto present = hook::pattern("A1 ? ? ? ? 8B 08 6A 00 6A 00 6A 00 6A 00 50 FF 51 44");
         auto window = hook::pattern("8B 44 24 08 3D 00 01 00 00 0F 87 ? ? ? ? 74");
+        auto activate = hook::pattern("F7 44 24 0C FF FF 00 00 0F 95 C0 84 C0 A2");
+        AppActive.SetAddress(*activate.get_first<uint8_t*>(14));
         GameDevice.SetAddress(*present.get_first<IDirect3DDevice9**>(1));
         WindowHook = safetyhook::create_inline(window.get_first(), WindowProc);
     }

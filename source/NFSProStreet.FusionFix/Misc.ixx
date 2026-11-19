@@ -506,6 +506,17 @@ public:
             pattern = hook::pattern("75 11 01 6C 24 1C 83 43 28 01");
             injector::MakeNOP(pattern.get_first(0), 2, true);
 
+            // A worker thread fills a dynamic vertex buffer: it checks that the device isn't lost, locks the buffer and
+            // copies into it without checking the lock. When the full screen device was lost between the check and
+            // the lock (switching away during loading or in the race day hub), it copied to a null pointer and
+            // crashed. A failed lock copies nothing.
+            pattern = hook::pattern("FF D1 8B 15 ? ? ? ? 8B 44 24 14 57 52 50 E8");
+            static auto VertexBufferLockHook = safetyhook::create_mid(pattern.get_first(2), [](SafetyHookContext& regs)
+            {
+                if (FAILED(static_cast<HRESULT>(regs.eax)) || !*reinterpret_cast<void**>(regs.esp + 0x14))
+                    regs.edi = 0;
+            });
+
             // FE::Object::SetScript
             pattern = hook::pattern("57 8B 7C 24 08 85 FF 74 2C 8B 44 24 0C 56");
             FEScriptFix::shSetScript = safetyhook::create_inline(pattern.get_first(), FEScriptFix::SetScript);

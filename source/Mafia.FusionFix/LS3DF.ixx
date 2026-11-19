@@ -52,6 +52,7 @@ void RefreshCameraFov(SafetyHookContext& regs)
 {
     auto camera = regs.ecx;
     if (Field<uint8_t>(camera, 0x15C)) return; // orthographic camera
+    if (camera == ReflectionCamera) return; // the water's mirrored copy keeps the projection it was given
     for (auto [field, projection] : { std::pair{0x140u, 0x1A4u}, std::pair{0x14Cu, 0x364u} })
     {
         double angle = Field<float>(camera, field);

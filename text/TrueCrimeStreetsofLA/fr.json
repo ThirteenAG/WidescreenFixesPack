@@ -13,7 +13,7 @@
   "HudScale": "Taille de l'ATH",
   "HudScale.description": "Taille de l'ATH. 1.0 garde à toute résolution la taille qu'il a en 640x480. S'applique immédiatement.",
   "SubtitleScale": "Taille des sous-titres",
-  "SubtitleScale.description": "Taille des sous-titres. 1.0 garde à toute résolution la taille qu'ils ont en 640x480. S'applique aux sous-titres suivants.",
+  "SubtitleScale.description": "Taille des sous-titres. 1.0 garde à toute résolution la taille qu'ils ont en 640x480. S'applique immédiatement.",
   "FMVWidescreenMode": "Format des vidéos",
   "FMVWidescreenMode.description": "Original affiche les vidéos en entier dans le cadre 4:3 centré du jeu. Remplir adapte la vidéo entière à l'écran. Rien n'est coupé ni étiré.",
   "WindowMode": "Mode fenêtre",

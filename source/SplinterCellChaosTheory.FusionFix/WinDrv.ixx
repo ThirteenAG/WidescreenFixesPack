@@ -39,6 +39,13 @@ namespace UWindowsViewport
 
             auto menuMouse = (Msg == WM_MOUSEMOVE || Msg == WM_RAWINPUTMOUSE) &&
                 NativeWindowsMenuMouse && NativeWindowsMenuMouse(lParam, Msg == WM_MOUSEMOVE);
+            if (Msg == WM_KILLFOCUS || Msg == WM_DESTROY)
+            {
+                RawInputHandler<>::RawMouseDeltaX.exchange(0);
+                RawInputHandler<>::RawMouseDeltaY.exchange(0);
+                RawMouseFeed = nullptr;
+            }
+
             if (Msg == WM_MOUSEMOVE)
             {
                 return 0;
@@ -49,7 +56,7 @@ namespace UWindowsViewport
                 {
                     RawInputHandler<>::RawMouseDeltaX.exchange(0);
                     RawInputHandler<>::RawMouseDeltaY.exchange(0);
-                    deferredCauseInputEventForRawInput = nullptr;
+                    RawMouseFeed = nullptr;
                     return 0;
                 }
                 if (hGameWindow != GetForegroundWindow())
@@ -62,28 +69,38 @@ namespace UWindowsViewport
                     // and out of gameplay after the native page is dismissed.
                     RawInputHandler<>::RawMouseDeltaX.exchange(0);
                     RawInputHandler<>::RawMouseDeltaY.exchange(0);
-                    deferredCauseInputEventForRawInput = nullptr;
+                    RawMouseFeed = nullptr;
                     return 0;
                 }
 
-                deferredCauseInputEventForRawInput = [UWindowsViewport](int inputID, int a3, float value)
+                // The engine tick hands all movement since the last tick to the viewport at once and recenters the
+                // cursor once, so the work per message stays small however often the mouse reports
+                if (!RawMouseFeed)
                 {
-                    shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, inputID, a3, value);
-                };
+                    RawMouseFeed = [UWindowsViewport](int dx, int dy)
+                    {
+                        if (hGameWindow != GetForegroundWindow() || DeveloperOverlay::BlocksInput() ||
+                            (NativeWindowsMenuMouse && NativeWindowsMenuMouse(0, false)))
+                            return;
+                        if (dx)
+                            shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, 228, 4, static_cast<float>(dx));
+                        if (dy)
+                            shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, 229, 4, static_cast<float>(dy));
 
-                auto pViewport = reinterpret_cast<uint8_t*>(UWindowsViewport);
-                bool bCheck1 = (pViewport[0x204] & 1) != 0;
-                bool bCheck2 = *reinterpret_cast<int*>(pViewport + 0x218) != -1;
-
-                if ((bCheck1 || bCheck2))
-                {
-                    RECT rc{};
-                    GetClientRect(hGameWindow, &rc);
-                    POINT center{ (rc.left + rc.right) / 2, (rc.top + rc.bottom) / 2 };
-                    POINT screenPt = center;
-                    ClientToScreen(hGameWindow, &screenPt);
-                    SetCursorPos(screenPt.x, screenPt.y);
+                        auto pViewport = reinterpret_cast<uint8_t*>(UWindowsViewport);
+                        bool bCheck1 = (pViewport[0x204] & 1) != 0;
+                        bool bCheck2 = *reinterpret_cast<int*>(pViewport + 0x218) != -1;
+                        if (bCheck1 || bCheck2)
+                        {
+                            RECT rc{};
+                            GetClientRect(hGameWindow, &rc);
+                            POINT screenPt{ (rc.left + rc.right) / 2, (rc.top + rc.bottom) / 2 };
+                            ClientToScreen(hGameWindow, &screenPt);
+                            SetCursorPos(screenPt.x, screenPt.y);
+                        }
+                    };
                 }
+                return 0;
             }
         }
 
@@ -178,6 +195,9 @@ export void InitWinDrv()
 
     pattern = hook::pattern("56 8B F1 8B 46 18 8B 48 28 8B 81 A8 00 00 00 85 C0 74");
     UWindowsViewport::shCauseInputEvent = safetyhook::create_inline(pattern.get_first(), UWindowsViewport::CauseInputEvent);
+
+    // The main loop empties the message queue each frame; a high polling rate mouse must not keep it going
+    MessagePumpGuard::Install(GetModuleHandle(nullptr));
 
     pattern = hook::pattern("81 EC 8C 03 00 00");
     UWindowsViewport::shViewportWndProc = safetyhook::create_inline(pattern.get_first(), UWindowsViewport::ViewportWndProc);

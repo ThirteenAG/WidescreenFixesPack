@@ -88,7 +88,8 @@ export UINT nViewportWndProcMsg = 0;    // the message UWindowsViewport::Viewpor
 export namespace UWindowsViewport
 {
     std::queue<std::function<void()>> deferredCauseInputEvent;
-    std::function<void(int inputID, int a3, float value)> deferredCauseInputEventForRawInput;
+    // Feeds the raw mouse movement of an engine tick to the viewport; set while gameplay has the mouse
+    std::function<void(int dx, int dy)> RawMouseFeed;
 }
 
 export namespace UObject

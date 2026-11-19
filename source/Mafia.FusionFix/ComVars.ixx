@@ -17,6 +17,7 @@ export struct Screen
 export int nWindowMode = 0;
 export int nWindowWidth = 0, nWindowHeight = 0;
 export uintptr_t GameplayCamera = 0;
+export uintptr_t ReflectionCamera = 0;
 export bool GameplayFovEnabled = false;
 export bool GameplayDriving = false;
 export std::array<bool, 60> ModernPadActions{};

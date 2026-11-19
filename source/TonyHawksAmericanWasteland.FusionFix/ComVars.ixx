@@ -38,6 +38,7 @@ export ProtectedGameRef<float> AspectImmediate;
 export GameRef<uint8_t> Letterboxed;
 export GameRef<D3DPRESENT_PARAMETERS> Presentation;
 export GameRef<uint8_t> DeviceLost;
+export GameRef<uint8_t> AppActive;
 export GameRef<int32_t> dword_69B718;
 export GameRef<int32_t> dword_681D14;
 

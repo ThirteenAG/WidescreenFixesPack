@@ -45,7 +45,7 @@ namespace
 
         // Mouse movement during a movie doesn't turn the camera afterwards
         UWindowsViewport::deferredCauseInputEvent = {};
-        UWindowsViewport::deferredCauseInputEventForRawInput = nullptr;
+        UWindowsViewport::RawMouseFeed = nullptr;
         RawInputHandler<>::RawMouseDeltaX.exchange(0);
         RawInputHandler<>::RawMouseDeltaY.exchange(0);
 

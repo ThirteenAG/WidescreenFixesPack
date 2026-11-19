@@ -38,26 +38,31 @@ export void InitPostFX()
 
     InitDevicePointer();
 
+    auto hLS3DF = GetLS3DF();
+    // Before the engine resets the device: the effects and the water give up their render targets
+    auto pattern = hook::module_pattern(hLS3DF, "56 8A D9 74 ? 8B 0D");
+    {
+        static auto ResetHook = safetyhook::create_mid(pattern.get_first(), +[](SafetyHookContext& regs)
+        {
+            if (CPostFX::bConsoleGammaEnabled || CPostFX::bSmaaEnabled)
+            {
+                CPostFX::Shutdown();
+                CPostFX::OnDeviceReset();
+            }
+            WFP::onBeforeReset().executeAll();
+        });
+    }
+
     if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
         return;
 
-    auto hLS3DF = GetLS3DF();
-    auto pattern = hook::module_pattern(hLS3DF, "E8 ? ? ? ? 33 C9 ? ? ? ? ? ? ? E8 ? ? ? ? 6A ? 6A ? 6A ? FF 96 ? ? ? ? C6 05");
+    pattern = hook::module_pattern(hLS3DF, "E8 ? ? ? ? 33 C9 ? ? ? ? ? ? ? E8 ? ? ? ? 6A ? 6A ? 6A ? FF 96 ? ? ? ? C6 05");
     {
         static auto RenderHook = safetyhook::create_mid(pattern.get_first(), +[](SafetyHookContext& regs)
         {
             auto dev = GetDevice9();
             CPostFX::RenderSMAA(dev);
             CPostFX::RenderGamma(dev);
-        });
-    }
-
-    pattern = hook::module_pattern(hLS3DF, "56 8A D9 74 ? 8B 0D");
-    {
-        static auto ResetHook = safetyhook::create_mid(pattern.get_first(), +[](SafetyHookContext& regs)
-        {
-            CPostFX::Shutdown();
-            CPostFX::OnDeviceReset();
         });
     }
 }

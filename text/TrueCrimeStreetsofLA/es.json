@@ -13,7 +13,7 @@
   "HudScale": "Tamaño del HUD",
   "HudScale.description": "Tamaño del HUD. 1.0 mantiene a cualquier resolución el tamaño que tiene a 640x480. Se aplica al instante.",
   "SubtitleScale": "Tamaño de los subtítulos",
-  "SubtitleScale.description": "Tamaño de los subtítulos. 1.0 mantiene a cualquier resolución el tamaño que tienen a 640x480. Se aplica a los siguientes subtítulos.",
+  "SubtitleScale.description": "Tamaño de los subtítulos. 1.0 mantiene a cualquier resolución el tamaño que tienen a 640x480. Se aplica al instante.",
   "FMVWidescreenMode": "Relación de aspecto del vídeo",
   "FMVWidescreenMode.description": "Original muestra los vídeos completos dentro del marco 4:3 centrado del juego. Rellenar ajusta el vídeo entero a la pantalla. No se corta ni se estira nada.",
   "WindowMode": "Modo de ventana",

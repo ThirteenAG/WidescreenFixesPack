@@ -19,23 +19,51 @@ export namespace TrueCrimeHud
     // screen width. With a HUD box both are moved inward for the duration of the HUD draw.
     inline std::atomic<float> RequestedAspect{ 0.0f };
     inline std::atomic<float> HudScale{ 1.0f }, SubtitleScale{ 1.0f };
-    // Subtitle boxes keep the scale they were laid out with
+    // The subtitle box keeps the scale its current line was laid out with
     inline std::atomic<float> SubtitleLayout{ 1.0f };
-    inline SafetyHookInline DrawHook, WidthHook, HeightHook, SubtitleHook, SubtitleDrawHook;
+    inline SafetyHookInline DrawHook, WidthHook, HeightHook, SubtitleLineHook, SubtitleDrawHook;
+    // Subtitle box: length of the current line's text and the time the next line starts (they differ per build)
+    inline ptrdiff_t SubtitleLength = 28, SubtitleTimer = 40;
     inline thread_local int Offset = 0;
+    inline thread_local bool Drawing = false;
+    inline uint32_t HudFrame = 0;
 
-    // Active virtual screen and its factors to the real screen; zero size while nothing is scaled
+    // Active virtual screen, its factors to the real screen and where it starts there; zero size while nothing is
+    // scaled
     inline thread_local int VirtualWidth = 0, VirtualHeight = 0;
-    inline thread_local float FactorX = 1.0f, FactorY = 1.0f;
+    inline thread_local float FactorX = 1.0f, FactorY = 1.0f, OriginX = 0.0f, OriginY = 0.0f;
 
-    struct VirtualScreen
+    // Keeps the active virtual screen and brings it back at the end of the scope
+    struct ScreenScope
     {
         int width, height;
-        float x, y;
+        float x, y, originX, originY;
 
-        explicit VirtualScreen(float scale) : width(VirtualWidth), height(VirtualHeight), x(FactorX), y(FactorY)
+        ScreenScope() : width(VirtualWidth), height(VirtualHeight), x(FactorX), y(FactorY), originX(OriginX), originY(OriginY)
+        {
+        }
+
+        ~ScreenScope()
+        {
+            VirtualWidth = width;
+            VirtualHeight = height;
+            FactorX = x;
+            FactorY = y;
+            OriginX = originX;
+            OriginY = originY;
+        }
+
+        ScreenScope(const ScreenScope&) = delete;
+        ScreenScope& operator=(const ScreenScope&) = delete;
+    };
+
+    // A screen 480 units high (divided by the scale) across the whole real screen
+    struct VirtualScreen : ScreenScope
+    {
+        explicit VirtualScreen(float scale)
         {
             VirtualWidth = 0;
+            OriginX = OriginY = 0.0f;
             const int realWidth = WidthHook.ccall<int>();
             const int realHeight = HeightHook.ccall<int>();
             const float factor = static_cast<float>(realHeight) / 480.0f * scale;
@@ -46,13 +74,27 @@ export namespace TrueCrimeHud
             FactorX = static_cast<float>(realWidth) / static_cast<float>(VirtualWidth);
             FactorY = static_cast<float>(realHeight) / static_cast<float>(VirtualHeight);
         }
+    };
 
-        ~VirtualScreen()
+    // A fixed-size screen drawn at a factor from a point of the real screen
+    struct FixedScreen : ScreenScope
+    {
+        FixedScreen(int width, int height, float factor, float left, float top)
         {
             VirtualWidth = width;
             VirtualHeight = height;
-            FactorX = x;
-            FactorY = y;
+            FactorX = FactorY = factor;
+            OriginX = left;
+            OriginY = top;
+        }
+    };
+
+    // Code that works with the real screen inside a scaled scope
+    struct RealScreen : ScreenScope
+    {
+        RealScreen()
+        {
+            VirtualWidth = 0;
         }
     };
 
@@ -67,8 +109,8 @@ export namespace TrueCrimeHud
         for (uint32_t i = 0; i < count; ++i)
         {
             auto vertex = reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(vertices) + i * stride);
-            vertex[0] = (vertex[0] + 0.5f) * FactorX - 0.5f;
-            vertex[1] = (vertex[1] + 0.5f) * FactorY - 0.5f;
+            vertex[0] = (vertex[0] + 0.5f) * FactorX + OriginX - 0.5f;
+            vertex[1] = (vertex[1] + 0.5f) * FactorY + OriginY - 0.5f;
         }
     }
 
@@ -127,6 +169,7 @@ export namespace TrueCrimeHud
             return DrawHook.thiscall<int>(hud, pass, a2, a3, a4);
         if (BeforeDraw)
             BeforeDraw();
+        ++HudFrame;
         // The bounds keep their margins from the screen edges
         const int realWidth = WidthHook.ccall<int>();
         const int realHeight = HeightHook.ccall<int>();
@@ -139,7 +182,9 @@ export namespace TrueCrimeHud
         HudRightBound = VirtualWidth - (realWidth - right) - offset;
         HudBottomBound = VirtualHeight - (realHeight - bottom);
         Offset = offset;
+        Drawing = true;
         const int result = DrawHook.thiscall<int>(hud, pass, a2, a3, a4);
+        Drawing = false;
         Offset = 0;
         HudLeftBound = left;
         HudRightBound = right;
@@ -147,21 +192,119 @@ export namespace TrueCrimeHud
         return result;
     }
 
-    // Subtitle boxes: their position and line width come from the screen size when the text of a voice line loads
-    inline int __fastcall Subtitle(void* box, void*, const char* path, int font)
+    // Subtitle box: position (x, y) and line width, set from the screen size when a voice line's text loads. A
+    // cutscene loads all of its lines at once, so the box is placed again for every line it lays out.
+    inline void PlaceSubtitles(uintptr_t box)
     {
-        const float scale = SubtitleScale.load(std::memory_order_relaxed);
-        SubtitleLayout.store(scale, std::memory_order_relaxed);
-        VirtualScreen screen(scale);
-        return SubtitleHook.thiscall<int>(box, path, font);
+        const float unit = static_cast<float>(VirtualWidth) * 0.0015625f;
+        *reinterpret_cast<int16_t*>(box + 4) = static_cast<int16_t>(unit * 64.0f);
+        *reinterpret_cast<int16_t*>(box + 6) = static_cast<int16_t>(VirtualHeight - 10);
+        *reinterpret_cast<int16_t*>(box + 8) = static_cast<int16_t>(unit * 512.0f);
     }
 
-    inline int __fastcall SubtitleDraw(void* box, void*, int pass, int a2, int a3, int a4)
+    // Lays out the next line: word wrap, centering and its vertical position
+    inline int __fastcall SubtitleLine(uintptr_t box, void*)
+    {
+        const float scale = SubtitleScale.load(std::memory_order_relaxed);
+        VirtualScreen screen(scale);
+        if (Scaling())
+            PlaceSubtitles(box);
+        SubtitleLayout.store(scale, std::memory_order_relaxed);
+        return SubtitleLineHook.thiscall<int>(box);
+    }
+
+    // Lays out the line on screen again for a changed scale. The text pointer sits after the space that ends the
+    // line's timestamp; wraps the game put in (newlines in place of spaces) become spaces again.
+    inline void RelayoutSubtitles(uintptr_t box)
+    {
+        auto& text = *reinterpret_cast<char**>(box + 20);
+        auto& length = *reinterpret_cast<uint32_t*>(box + SubtitleLength);
+        const auto end = *reinterpret_cast<char**>(box + 16);
+        if (!text || !end || !length || text[-1] != ' ')
+            return;
+        for (char* c = text + 1; c < text + length; ++c)
+        {
+            if (*c == '\n' && c[-1] != '\r')
+                *c = ' ';
+        }
+        auto& timer = *reinterpret_cast<int*>(box + SubtitleTimer);
+        const int next = timer;
+        --text;
+        length = 0;
+        SubtitleLine(box, nullptr);
+        timer = next;
+    }
+
+    inline int __fastcall SubtitleDraw(uintptr_t box, void*, int pass, int a2, int a3, int a4)
     {
         if (pass != 4)
             return SubtitleDrawHook.thiscall<int>(box, pass, a2, a3, a4);
+        if (SubtitleScale.load(std::memory_order_relaxed) != SubtitleLayout.load(std::memory_order_relaxed))
+            RelayoutSubtitles(box);
         VirtualScreen screen(SubtitleLayout.load(std::memory_order_relaxed));
         return SubtitleDrawHook.thiscall<int>(box, pass, a2, a3, a4);
+    }
+
+    // HUD text boxes (hints) wrap to a fixed width made for 640x480 and sit at a distance from the left bound. On a
+    // virtual screen narrower than that (large HUD scale) a box that would run past the right bound moves left. Texts
+    // sharing an anchor (a hint's title and its text) move together, by the widest of them in this or the last frame.
+    inline int (__fastcall* MeasureText)(void* font, void*, const char* text) = nullptr;
+    inline ptrdiff_t TextFont = 0x100;
+
+    struct AnchorWidth
+    {
+        uint32_t key = 0, frame = 0;
+        int last = 0, current = 0;
+    };
+    inline std::array<AnchorWidth, 8> AnchorWidths{};
+
+    inline int SharedWidth(uint32_t key, int width)
+    {
+        AnchorWidth* slot = nullptr;
+        for (auto& entry : AnchorWidths)
+        {
+            if (entry.key == key && entry.frame)
+            {
+                slot = &entry;
+                break;
+            }
+            if (!slot || entry.frame < slot->frame)
+                slot = &entry;
+        }
+        if (slot->key != key || slot->frame + 1 < HudFrame)
+            *slot = { key, HudFrame, 0, 0 };
+        else if (slot->frame != HudFrame)
+            *slot = { key, HudFrame, slot->current, 0 };
+        slot->current = std::max(slot->current, width);
+        return std::max(slot->last, slot->current);
+    }
+
+    inline void FitText(SafetyHookContext& context)
+    {
+        // Text element in ebx (font and flags after its text), anchor flags in esi, its x in ax; on the stack the text
+        // scale and the anchor's own x
+        if (!Drawing || !Scaling() || !(context.esi & 1))
+            return;
+        const auto element = context.ebx;
+        if (*reinterpret_cast<uint32_t*>(element + TextFont + 4) & 0x100) // centered
+            return;
+        const auto font = *reinterpret_cast<void**>(element + TextFont);
+        int widest = 0;
+        for (auto line = reinterpret_cast<const char*>(element); line; line = std::strchr(line, '\n'))
+        {
+            if (*line == '\n')
+                ++line;
+            widest = std::max(widest, MeasureText(font, nullptr, line));
+        }
+        const uint32_t anchor = (*reinterpret_cast<uint32_t*>(context.esp + 0x38) << 8) | (context.esi & 0xFF);
+        const int width = SharedWidth(anchor, static_cast<int>(std::lround(widest * *reinterpret_cast<float*>(context.esp + 0x30))));
+        const int x = static_cast<int16_t>(context.eax);
+        const int right = HudRightBound.get();
+        if (x + width > right)
+        {
+            const int fitted = std::max(HudLeftBound.get(), right - width);
+            context.eax = (context.eax & 0xFFFF0000) | static_cast<uint16_t>(fitted);
+        }
     }
 
     template<class Action> void Add(void* address, Action action)
@@ -226,12 +369,25 @@ export namespace TrueCrimeHud
         WidthHook = safetyhook::create_inline(getter, Width);
         HeightHook = safetyhook::create_inline(width.get_first(32), Height);
 
-        // Subtitles: the box set up for a voice line and its drawing
-        SubtitleHook = safetyhook::create_inline(hook::pattern("83 EC 0C 56 57 8D 44 24 08 8B F9 8B 4C 24 18 50 51 E8 ? ? ? ? 8B F0 83 C4 08 85 F6 0F 84 ? ? ? ? E8").get_first(), Subtitle);
+        // Subtitles: line layout and drawing
+        auto subtitleLine = hook::pattern("83 EC 0C 56 8B F1 8B 46 14 57 33 FF 3B C7 0F 84 ? ? ? ? 8B 4E 1C 03 C8 8B C1 89 4E 14 89 7E 1C 80 38 0A");
         auto subtitleDraw = hook::pattern("51 83 7C 24 08 04 56 8B F1 0F 85 ? ? ? ? A0");
+        auto measure = hook::pattern("83 EC 0C 8B 41 28 53 8A 58 15 8A 40 14 55");
         if (subtitleDraw.empty()) // TrueCrimeMB.exe
+        {
+            subtitleLine = hook::pattern("83 EC 0C 53 56 8B F1 8B 46 14 33 DB 3B C3 0F 84 ? ? ? ? 8B 4E 20 03 C8 8B C1 89 4E 14 89 5E 20 89 5E 1C 80 38 0A");
             subtitleDraw = hook::pattern("8B 44 24 04 83 EC 08 83 F8 04 56 8B F1 0F 85 ? ? ? ? A0");
+            measure = hook::pattern("83 EC 14 8B 41 10 8A 50 14 84 D2 55 0F B6 68 15");
+            SubtitleLength = 32;
+            SubtitleTimer = 44;
+            TextFont = 0x200;
+        }
+        SubtitleLineHook = safetyhook::create_inline(subtitleLine.get_first(), SubtitleLine);
         SubtitleDrawHook = safetyhook::create_inline(subtitleDraw.get_first(), SubtitleDraw);
+
+        // HUD text boxes: their x, right after the anchor is resolved
+        MeasureText = reinterpret_cast<decltype(MeasureText)>(measure.get_first());
+        Fixed.push_back(safetyhook::create_mid(hook::pattern("8B 54 24 30 56 52 E8 ? ? ? ? 66 8B F8 8B 44 24 3C 56 50 E8").get_first(11), FitText));
 
         // Left-side elements with fixed screen positions: radar, compass, portrait, health ring, gauge and meters
         auto draw = hook::pattern("55 8B EC 83 E4 F0 81 EC 64 04 00 00 F3 0F 10 05");

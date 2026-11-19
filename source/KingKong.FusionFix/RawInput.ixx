@@ -65,9 +65,12 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
     const auto result = shWndProc.unsafe_stdcall<LRESULT>(hWnd, Msg, wParam, lParam);
     if (Msg == WM_ACTIVATEAPP && bAppInactive.is_initialized() && !FixSettings().Bool("MAIN.PauseOnFocusLoss"))
         bAppInactive = 0;
+    // Mouse moves, hit tests and raw input come thousands of times a second with a high polling rate mouse; the
+    // confinement doesn't change with them
+    const bool mouseTraffic = Msg == WM_MOUSEMOVE || Msg == WM_NCMOUSEMOVE || Msg == WM_INPUT || Msg == WM_NCHITTEST || Msg == WM_SETCURSOR;
     if (Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam))
         CursorConfinement::Release();
-    else if (Msg != WM_NCDESTROY)
+    else if (Msg != WM_NCDESTROY && !mouseTraffic)
         CursorConfinement::Frame(hWnd);
     return result;
 }

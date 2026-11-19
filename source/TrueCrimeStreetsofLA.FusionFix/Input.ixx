@@ -99,6 +99,10 @@ export namespace TrueCrimeInput
         }
         const BOOL result = PeekMessageA(message, window, first, last, remove);
         moved = result && (remove & PM_REMOVE) && message->message == WM_MOUSEMOVE;
+        // The pump drops system keys, so Alt+F4 never closed the game; it closes it the way the window's X does
+        if (result && (remove & PM_REMOVE) && message->message == WM_SYSKEYDOWN && message->wParam == VK_F4 &&
+            !(message->lParam & (1 << 30)))
+            SendMessageA(message->hwnd, WM_SYSCOMMAND, SC_CLOSE, 0);
         return result;
     }
 

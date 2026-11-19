@@ -182,6 +182,11 @@ export namespace THPS4Window
             result = PresentHook.stdcall<HRESULT>(device, source, destination, window, dirty);
             device->BeginScene();
         }
+        // A windowed device is lost when another program changes the display mode or takes the screen in fullscreen.
+        // The game only resets after its own focus loss, which a window mode that keeps running never passes on:
+        // without this the picture stays frozen
+        if (result == D3DERR_DEVICELOST && GameDevice.is_initialized() && device == GameDevice.get())
+            GameLost = 1;
         return result;
     }
 
@@ -224,6 +229,8 @@ export namespace THPS4Window
         auto device = hook::module_pattern(module, "A1 ? ? ? ? 68 ? ? ? ? 50 8B 10 FF 92 80 00 00 00 A1 ? ? ? ? 68 ? ? ? ? 50 8B 08 FF 91 84 00 00 00");
         auto reset = hook::module_pattern(module, "A0 ? ? ? ? 53 33 DB 3A C3 0F 84 ? ? ? ? 38 1D ? ? ? ? 0F 84 ? ? ? ? E8 ? ? ? ? E8");
         auto parameters = hook::module_pattern(module, "89 2D ? ? ? ? 89 0D ? ? ? ? 89 1D ? ? ? ? A3 ? ? ? ? 89 1D ? ? ? ? 89 2D ? ? ? ?");
+        auto deactivate = hook::module_pattern(module, "51 6A 00 6A 00 C6 05 ? ? ? ? 00 88 0D ? ? ? ? FF 15");
+        AppActive.SetAddress(*deactivate.get_first<uint8_t*>(7));
         GamePresentation.SetAddress(*parameters.get_first<uintptr_t>(2) - offsetof(D3DPRESENT_PARAMETERS, Windowed));
         GameDevice.SetAddress(*device.get_first<IDirect3DDevice8**>(1));
         GameInitialized.SetAddress(*reset.get_first<uint8_t*>(1));
@@ -233,6 +240,18 @@ export namespace THPS4Window
         FixSettings().OnChange("MAIN.WindowMode", []()
         {
             InterlockedExchange(&Pending, std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2) + 2);
+        });
+        // Changed while another window is active (from FusionFixHub): the game stops or continues at once. Its own
+        // activation would also bring the window to the front, so continuing sets the flag only
+        FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+        {
+            const auto window = GamePresentation.is_initialized() ? GamePresentation->hDeviceWindow : nullptr;
+            if (!window || TonyDisplay::Mode == 0 || GetForegroundWindow() == window)
+                return;
+            if (FixSettings().Int("MAIN.PauseOnFocusLoss"))
+                PostMessageA(window, WM_ACTIVATE, WA_INACTIVE, 0);
+            else
+                AppActive = 1;
         });
         FactoryHook = safetyhook::create_inline(factory.get_first(), CreateDevice);
     }

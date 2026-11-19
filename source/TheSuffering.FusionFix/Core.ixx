@@ -150,6 +150,9 @@ void InitGamepad()
 void InitPatches()
 {
     hook::pattern pattern;
+    // Windows counts the game's window as not responding while it runs, and after the next key or click it covered
+    // the game with a frozen "Not Responding" copy that also took the focus: the picture froze and keys went nowhere
+    DisableProcessWindowsGhosting();
     InitWindowMode();
     InitFrame();
     InitFrontBufferCopy();

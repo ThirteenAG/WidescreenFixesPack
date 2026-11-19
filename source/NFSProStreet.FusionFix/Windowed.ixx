@@ -111,11 +111,12 @@ public:
                     }));
                 }
 
-                // The device's windowed flag, set while the game fills in its present parameters
+                // The renderer's windowed flag: its constructor, which runs after this init, clears it just before
+                // this point. Left cleared, the device is full screen and losing focus minimizes and resets it.
                 auto presentParams = hook::pattern("89 5D 44 89 5D 48 8B 0D ? ? ? ? C6 44 24 ? 02 E8");
                 static auto PresentParamsHook = safetyhook::create_mid(presentParams.get_first(6), [](SafetyHookContext& regs)
                 {
-                    *reinterpret_cast<uint32_t*>(regs.ebp + 0x3C) = dwWindowedMode;
+                    *reinterpret_cast<uint32_t*>(regs.ebp + 0x3C) = 1;
                 });
 
                 // The window follows the resolution the game stores for it

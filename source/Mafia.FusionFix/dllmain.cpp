@@ -9,6 +9,7 @@ import Misc;
 import Mouse;
 import PostFX;
 import RestoredFeatures;
+import Water;
 import WidescreenFix;
 import Window;
 
@@ -55,6 +56,7 @@ CEXP void InitializeASI()
                 {
                     InitLS3DF();
                     InitPostFX();
+                    InitWater();
                 });
             });
         }

@@ -46,11 +46,13 @@ namespace UGameEngine
             }
         }
 
-        if (Screen.bRawInputMouse && UWindowsViewport::deferredCauseInputEventForRawInput)
+        // All raw mouse movement since the last tick, once per tick
+        if (Screen.bRawInputMouse && UWindowsViewport::RawMouseFeed)
         {
-            UWindowsViewport::deferredCauseInputEventForRawInput(228, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaX.exchange(0)));
-            UWindowsViewport::deferredCauseInputEventForRawInput(229, 4, static_cast<float>(RawInputHandler<>::RawMouseDeltaY.exchange(0)));
-            UWindowsViewport::deferredCauseInputEventForRawInput = nullptr;
+            const auto dx = RawInputHandler<>::RawMouseDeltaX.exchange(0);
+            const auto dy = RawInputHandler<>::RawMouseDeltaY.exchange(0);
+            if (dx || dy)
+                UWindowsViewport::RawMouseFeed(dx, dy);
         }
 
         return shTick.unsafe_fastcall(UGameEngine, edx, deltaTime);

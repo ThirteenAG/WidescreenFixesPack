@@ -1,0 +1,30 @@
+; Reflective water, Direct3D 8 path (pixel part)
+; stage 0: reflection, stages 1 and 2: wave normals, stage 3: the game's water texture, stages 4 and 5: a cube map
+; that normalizes the view and half vectors, which come per vertex from large triangles
+; c0 reflection distortion (in screen space: scaled by the depth the lookup divides by), c1 tint of the game's water
+; (a quarter, the color is taken four times), c2 fresnel scale, c3 sun highlight, c4 fresnel bias
+ps_1_4
+texld r1, t1
+texld r2, t2
+texld r4, t3
+texld r5, t5
+texcrd r0.xyz, t0
+add_d2 r3.xyz, r1_bx2, r2_bx2
+mul r1.xy, r3, r0.z
+mad r0.xy, r1, c0, r0
+dp3_sat r1, r3, r4_bx2
+dp3_sat r2, r3, r5_bx2
+mul r1, 1-r1, 1-r1
+mul r2, r2, r2
+mul r2, r2, r2
+phase
+texld r0, r0_dz
+texld r3, t4
+mul r2.rgb, r2, r2
+mul r2.rgb, r2, r2
+mad_sat r1.rgb, r1, c2, c4
+mul_x4 r3.rgb, r3, v0
+mul r3.rgb, r3, c1
+lrp r0.rgb, r1, r0, r3
+mad r0.rgb, r2, c3, r0
++mov r0.a, r3.a

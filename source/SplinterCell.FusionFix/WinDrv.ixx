@@ -43,11 +43,11 @@ namespace UWindowsViewport
 
         if (Screen.bRawInputMouse)
         {
-            if (Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam))
+            if (Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam) || Msg == WM_DESTROY)
             {
                 RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0);
                 RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0);
-                deferredCauseInputEventForRawInput = nullptr;
+                RawMouseFeed = nullptr;
             }
             static bool bOnce = false;
             if (!bOnce)
@@ -72,33 +72,41 @@ namespace UWindowsViewport
                     // not recenter the menu cursor or carry deltas into play.
                     RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0);
                     RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0);
-                    deferredCauseInputEventForRawInput = nullptr;
+                    RawMouseFeed = nullptr;
                     return 0;
                 }
 
-                deferredCauseInputEventForRawInput = [UWindowsViewport](int inputID, int a3, float value)
+                // The engine tick hands all movement since the last tick to the viewport at once and recenters the
+                // cursor once, so the work per message stays small however often the mouse reports
+                if (!RawMouseFeed)
                 {
-                    if (hGameWindow == GetForegroundWindow() &&
-                        !(WindowsMenuMouseActive && WindowsMenuMouseActive(UWindowsViewport)))
+                    RawMouseFeed = [UWindowsViewport](int dx, int dy)
                     {
-                        Gamepad::OnInput(inputID, a3, value);
-                        shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, inputID, a3, value);
-                    }
-                };
+                        if (hGameWindow != GetForegroundWindow() ||
+                            (WindowsMenuMouseActive && WindowsMenuMouseActive(UWindowsViewport)))
+                            return;
+                        for (auto [inputID, value] : { std::pair{ 228, dx }, std::pair{ 229, dy } })
+                        {
+                            if (!value)
+                                continue;
+                            Gamepad::OnInput(inputID, 4, static_cast<float>(value));
+                            shCauseInputEvent.unsafe_fastcall(UWindowsViewport, 0, inputID, 4, static_cast<float>(value));
+                        }
 
-                auto pViewport = reinterpret_cast<uint8_t*>(UWindowsViewport);
-                bool bCheck1 = (pViewport[404] & 1) != 0;
-                bool bCheck2 = *reinterpret_cast<int*>(pViewport + 108) != -1;
-
-                if ((bCheck1 || bCheck2))
-                {
-                    RECT rc{};
-                    GetClientRect(hGameWindow, &rc);
-                    POINT center{ (rc.left + rc.right) / 2, (rc.top + rc.bottom) / 2 };
-                    POINT screenPt = center;
-                    ClientToScreen(hGameWindow, &screenPt);
-                    SetCursorPos(screenPt.x, screenPt.y);
+                        auto pViewport = reinterpret_cast<uint8_t*>(UWindowsViewport);
+                        bool bCheck1 = (pViewport[404] & 1) != 0;
+                        bool bCheck2 = *reinterpret_cast<int*>(pViewport + 108) != -1;
+                        if (bCheck1 || bCheck2)
+                        {
+                            RECT rc{};
+                            GetClientRect(hGameWindow, &rc);
+                            POINT screenPt{ (rc.left + rc.right) / 2, (rc.top + rc.bottom) / 2 };
+                            ClientToScreen(hGameWindow, &screenPt);
+                            SetCursorPos(screenPt.x, screenPt.y);
+                        }
+                    };
                 }
+                return 0;
             }
         }
 
@@ -238,6 +246,9 @@ export void InitWinDrv()
             SetCursor(NULL);
         }
     }; injector::MakeInline<OpenWindowHook2>(pattern.get_first(0), pattern.get_first(9));
+
+    // The main loop empties the message queue each frame; a high polling rate mouse must not keep it going
+    MessagePumpGuard::Install(GetModuleHandle(nullptr));
 
     appRequestExit = (appRequestExit_t)GetProcAddress(GetModuleHandle(L"Core"), "?appRequestExit@@YAXH@Z");
 

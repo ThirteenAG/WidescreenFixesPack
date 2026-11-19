@@ -79,12 +79,16 @@ void __cdecl FrameWait(int ticks)
             }
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
+            // Windows makes a new mouse move from the input that came meanwhile; with a high polling rate mouse the
+            // loop wouldn't end before the tick. The newest move waits in the queue.
+            if (msg.message == WM_MOUSEMOVE)
+                break;
         }
 
         if (quit || int32_t(nTickCount - nLastWaitTick) >= ticks)
             break;
 
-        MsgWaitForMultipleObjects(1, &hTickEvent, FALSE, 100, QS_ALLINPUT);
+        MsgWaitForMultipleObjects(1, &hTickEvent, FALSE, 100, QS_ALLINPUT & ~QS_MOUSEMOVE);
     }
     return shFrameWait.unsafe_ccall(ticks);
 }

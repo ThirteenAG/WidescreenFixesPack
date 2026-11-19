@@ -7,6 +7,7 @@ module;
 export module Movie;
 
 import Window;
+import Hud;
 
 export namespace TrueCrimeMovie
 {
@@ -42,6 +43,16 @@ export namespace TrueCrimeMovie
             right = left + fittedWidth;
             bottom = top + fittedHeight;
         }
+        // The 640x480 title picture (copyright screen) on the whole screen: in the centred 4:3 area
+        else if (!TrueCrimeHud::Scaling() && left == 0.0f && top == 0.0f && right > 0 && bottom > 0 &&
+            u0 == 0.0f && v0 == 0.0f && u1 == 640.0f && v1 == 480.0f)
+        {
+            const float scale = std::min(right / 640.0f, bottom / 480.0f);
+            left = (right - 640.0f * scale) * 0.5f;
+            top = (bottom - 480.0f * scale) * 0.5f;
+            right = left + 640.0f * scale;
+            bottom = top + 480.0f * scale;
+        }
         return QuadHook.thiscall<int>(renderer, left, top, right, bottom, u0, v0, u1, v1, depth);
     }
 
@@ -51,6 +62,8 @@ export namespace TrueCrimeMovie
         if (FixSettings().Bool("MAIN.SkipIntro") && name &&
             (!_stricmp(name, "intro") || !_stricmp(name, "intro2") || !_stricmp(name, "GrayMatr")))
             return;
+        // Movies started from the menus play on the real screen
+        TrueCrimeHud::RealScreen screen;
         PlayHook.ccall<void>(name);
     }
 
