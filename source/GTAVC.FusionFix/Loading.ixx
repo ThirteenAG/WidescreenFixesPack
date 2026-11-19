@@ -280,27 +280,6 @@ class Loading
 public:
     Loading()
     {
-        WFP::onInitEvent() += []()
-        {
-            // Streaming memory: the game keeps at most 45 MB of models and textures. When that is full it deletes
-            // everything behind the camera, so turning around shows low-detail buildings and missing trees until they
-            // load again (all the time with larger textures). A value another mod has set is kept.
-            auto pattern = hook::pattern("C7 05 ? ? ? ? 00 00 D0 02");
-            static GameRef<uint32_t> ms_memoryAvailable(*pattern.get_first<uint32_t*>(2));
-            static auto StreamingMemoryHook = safetyhook::create_mid(pattern.get_first(10), [](SafetyHookContext& regs)
-            {
-                constexpr uint32_t vanillaMemory = 45 * 1024 * 1024;
-                if (*ms_memoryAvailable != vanillaMemory)
-                    return;
-
-                // Direct3D keeps a second copy of managed textures, so the budget stays well inside a 2 GB address space
-                SYSTEM_INFO info{};
-                GetSystemInfo(&info);
-                const bool largeAddressAware = reinterpret_cast<uintptr_t>(info.lpMaximumApplicationAddress) > 0x80000000u;
-                ms_memoryAvailable = (largeAddressAware ? 512u : 256u) * 1024u * 1024u;
-            });
-        };
-
         WFP::onGameInitEvent() += []()
         {
             gbNoIslandLoading = FixSettings().Bool("MISC.NoIslandLoading");
