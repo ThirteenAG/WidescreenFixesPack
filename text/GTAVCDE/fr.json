@@ -38,7 +38,7 @@
   "checkforupdates": "Rechercher les mises à jour",
   "checkforupdates.description": "Une fois par lancement, demande à fusionfix.io si une version plus récente du fix est sortie et vous le dit dans le jeu. Désactivé n'envoie aucune requête réseau.",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvrira quand vous quitterez le jeu.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io.",
+  "update.availablesite": "{name} {version} est disponible sur {page}",
   "startup.unsupported": "Cette version de ViceCity.exe n'est pas prise en charge. Le Fusion Fix nécessite la version actuelle du jeu (la mise à jour de novembre 2024 ou plus récente). Le jeu démarre sans le fix.",
   "auto": "Auto",
   "hudaspect": "Format du HUD",

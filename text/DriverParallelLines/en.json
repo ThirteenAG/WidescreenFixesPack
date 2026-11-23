@@ -100,7 +100,7 @@
   "MAIN.CheckForUpdates": "Check for Updates",
   "MAIN.CheckForUpdates.description": "Once per start, asks fusionfix.io whether a newer version of the fix is out and tells you in the game. Off makes no network request.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "MAIN.FMVWidescreenMode": "Video Widescreen Mode",
   "MAIN.FMVWidescreenMode.description": "Original aspect shows the movies as the game does, whole inside its centred 4:3 frame with black bars around them. Fill fits the whole movie to the screen, without cutting anything off or stretching it.",
   "MAIN.FMVWidescreenMode.0": "Original aspect",

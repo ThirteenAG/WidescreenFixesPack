@@ -36,7 +36,7 @@
   "CheckForUpdates": "Rechercher les mises à jour",
   "CheckForUpdates.description": "Recherche une nouvelle version si activé. Un message apparaît au menu principal. FusionFixHub ouvre la page après la fermeture du jeu s’il est installé à côté du jeu. Désactivé par défaut.",
   "update.availablehub": "Une nouvelle version de {name} est disponible. Mettez à jour dans FusionFixHub après avoir fermé le jeu.",
-  "update.availablesite": "Une nouvelle version de {name} est disponible sur fusionfix.io.",
+  "update.availablesite": "Une nouvelle version de {name} est disponible sur {page}",
   "page.controller": "Manette",
   "GamepadIcons": "Noms des boutons de manette",
   "GamepadIcons.description": "Les noms des boutons dans Options > Commandes suivent le dernier périphérique utilisé. Auto utilise les noms Xbox. Les noms Xbox, PlayStation et Nintendo correspondent au profil Xidi fourni. Application immédiate.",

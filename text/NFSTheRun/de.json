@@ -83,7 +83,7 @@
   "MAIN.FPSLimit.game": "Spielgrenze",
   "MAIN.FPSLimit.refresh": "Bildwiederholrate",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar.",
   "MAIN.HudAspectRatioConstraint": "HUD-Seitenverhältnis",
   "HUD.Auto": "Auto (Bildschirmränder)",
   "MAIN.HudAspectRatioConstraint.description": "Auto platziert seitlich verankerte HUD-Elemente an den Bildschirmrändern. Ein Seitenverhältnis begrenzt sie auf einen mittigen Bereich."

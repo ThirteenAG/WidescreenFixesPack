@@ -58,7 +58,7 @@
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Fragt einmal pro Start bei fusionfix.io, ob eine neuere Version des Fixes erschienen ist, und sagt es im Spiel. Aus stellt keine Netzwerkanfrage.",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar.",
   "CutsceneBorders.description": "Letterbox behält die Balken des Spiels über und unter Zwischensequenzen; Seitenbalken halten das Bild auf breiteren Bildschirmen bei 16:9 zwischen Balken an den Seiten; Beide macht beides; Aus füllt den Bildschirm. Wirkt sofort.",
   "AnimatedCutsceneBorders": "Animierte Filmstreifen",
   "AnimatedCutsceneBorders.description": "Behält das Ein- und Ausblenden der Filmstreifen bei. Aus zeigt und verbirgt sie sofort.",

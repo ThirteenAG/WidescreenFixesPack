@@ -58,5 +58,5 @@
   "checkupdates": "Nach Updates suchen",
   "checkupdates.description": "Prüft beim Aktivieren einmal auf eine neue Version. Ein Hinweis erscheint unter Plugins; FusionFixHub öffnet sich nach Spielende, falls installiert. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "Ein Update für Tony Hawk Pro Skater 3 Fusion Fix ist verfügbar. FusionFixHub öffnet sich nach Spielende.",
-  "update.availablesite": "Ein Update für Tony Hawk Pro Skater 3 Fusion Fix ist auf fusionfix.io verfügbar."
+  "update.availablesite": "Ein Update für Tony Hawk Pro Skater 3 Fusion Fix ist auf {page} verfügbar."
 }

@@ -44,7 +44,7 @@
   "CheckForUpdates": "Buscar actualizaciones",
   "CheckForUpdates.description": "Busca una versión más reciente del arreglo si está activado. Aparece un aviso en el menú principal. FusionFixHub abre la página de actualización al cerrar el juego, si está instalado junto al juego. Desactivado por defecto.",
   "update.availablehub": "Hay una nueva versión de {name}. Actualízala en FusionFixHub después de cerrar el juego.",
-  "update.availablesite": "Hay una nueva versión de {name} en fusionfix.io.",
+  "update.availablesite": "Hay una nueva versión de {name} en {page}",
   "menu.on": "Sí",
   "menu.off": "No",
   "menu.restart": "(tras reiniciar)",

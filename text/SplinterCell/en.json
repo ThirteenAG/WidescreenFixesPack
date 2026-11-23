@@ -137,7 +137,7 @@
   "MAIN.SaveLocation.game": "Game Folder",
   "MAIN.SaveLocation.documents": "Documents",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "startup.unsupported": "This version of Splinter Cell isn't supported. The Fusion Fix needs version 1.3 (Steam, Ubisoft Connect, or a retail copy with the 1.3 patch). The game starts without the fix.",
   "MAIN.FMVWidescreenMode": "Video Framing",
   "MAIN.FMVWidescreenMode.description": "Original fits the whole video within a 4:3 area. Fill fits the whole video within the screen. Neither crops or stretches the picture.",

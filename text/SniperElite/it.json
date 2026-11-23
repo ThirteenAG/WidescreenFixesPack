@@ -34,7 +34,7 @@
   "FPSLimit.unlimited": "Illimitato",
   "FPSLimit.monitor": "Frequenza del monitor",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "update.title": "Aggiornamento disponibile",
   "page.camera": "Telecamera",
   "CutsceneBorders.description": "Le barre nere delle scene animate mantengono la loro cornice originale, più ampia, indipendentemente dalle proporzioni dello schermo. Attivo: scene animate originali con barre nere. Disattivo: scene animate senza barre nere. Si applica immediatamente.",

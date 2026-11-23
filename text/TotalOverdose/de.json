@@ -36,7 +36,7 @@
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Fragt einmal pro Start bei fusionfix.io nach, ob eine neuere Version des Fixes erschienen ist, und zeigt das anstelle der Versionsnummer im Hauptmenü an. Aus stellt keine Netzwerkanfrage.",
   "update.availablehub": "Fix-Update im FusionFixHub",
-  "update.availablesite": "Fix-Update auf fusionfix.io",
+  "update.availablesite": "Fix-Update auf {page}",
   "SkipPressStart": "Titelbild überspringen",
   "SkipPressStart.description": "Geht nach dem Story-Intro direkt ins Hauptmenü, ohne das Titelbild mit „Enter drücken“. Erfordert einen Neustart.",
   "page.compatibility": "Kompatibilität",

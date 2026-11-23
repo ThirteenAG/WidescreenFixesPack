@@ -56,5 +56,5 @@
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Sucht beim Einschalten einmal nach einer neueren Version. Aus: keine Netzwerkanfrage. Der Hinweis erscheint unter Plugins.",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich nach dem Beenden. Mit Bestätigen oder Zurück schließen.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar. Mit Bestätigen oder Zurück schließen."
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar. Mit Bestätigen oder Zurück schließen."
 }

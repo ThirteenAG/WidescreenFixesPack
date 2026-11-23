@@ -100,7 +100,7 @@
   "MAIN.CheckForUpdates": "Rechercher les mises à jour",
   "MAIN.CheckForUpdates.description": "Une fois par lancement, demande à fusionfix.io si une version plus récente du fix est sortie et vous le dit dans le jeu. Désactivé n'envoie aucune requête réseau.",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvrira quand vous quitterez le jeu.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io.",
+  "update.availablesite": "{name} {version} est disponible sur {page}",
   "MAIN.FMVWidescreenMode": "Format des vidéos",
   "MAIN.FMVWidescreenMode.description": "Format d'origine affiche les vidéos comme le jeu, en entier dans son cadre 4:3 centré avec des bandes noires autour. Remplir adapte la vidéo entière à l'écran, sans rien couper ni étirer.",
   "MAIN.FMVWidescreenMode.0": "Format d'origine",

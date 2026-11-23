@@ -64,5 +64,5 @@
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Fragt bei jedem Start einmal bei fusionfix.io nach einer neueren Version des Fixes und zeigt sie hier an. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar."
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar."
 }

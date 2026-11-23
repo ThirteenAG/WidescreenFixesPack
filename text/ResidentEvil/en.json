@@ -68,7 +68,7 @@
   "MAIN.CheckForUpdates": "Check for Updates",
   "MAIN.CheckForUpdates.description": "Once per start, asks fusionfix.io whether a newer version of the fix is out and tells you in the game. Off makes no network request.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "MAIN.GamepadIcons": "Controller Icons",
   "MAIN.GamepadIcons.description": "Native controller button pictures: Xbox, PlayStation or Nintendo. Auto uses Xbox. Keyboard and mouse names stay unchanged.",
   "menu.pad.triangle": "Triangle",

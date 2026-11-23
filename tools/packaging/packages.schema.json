@@ -48,8 +48,7 @@
             }
           },
           "optionalTree": {"$ref": "#/$defs/file"},
-          "associatedPackages": {"type": "array", "items": {"type": "string"}},
-          "hub": {"type": "array", "items": {"type": "string", "pattern": "(^|/)FusionFixHub\\.exe$"}, "uniqueItems": true}
+          "associatedPackages": {"type": "array", "items": {"type": "string"}}
         }
       }
     }

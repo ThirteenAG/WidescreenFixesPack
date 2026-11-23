@@ -75,5 +75,5 @@
   "checkupdates": "Cerca aggiornamenti",
   "checkupdates.description": "Controlla una volta se c'è una nuova versione quando viene attivato. Un avviso appare nel menu Plugin; FusionFixHub si apre all'uscita, se installato. Disattivato non invia richieste di rete.",
   "update.availablehub": "È disponibile un aggiornamento di Tony Hawk's American Wasteland Fusion Fix. FusionFixHub si aprirà dopo l'uscita dal gioco.",
-  "update.availablesite": "È disponibile un aggiornamento di Tony Hawk's American Wasteland Fusion Fix su fusionfix.io."
+  "update.availablesite": "È disponibile un aggiornamento di Tony Hawk's American Wasteland Fusion Fix su {page}"
 }

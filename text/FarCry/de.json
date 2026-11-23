@@ -73,7 +73,7 @@
   "MAIN.CheckForUpdates.description": "Fragt einmal pro Start bei fusionfix.io nach einer neueren Version und zeigt einen Hinweis unter Plugins. Aus stellt keine Netzwerkanfrage.",
   "update.title": "Update verfügbar",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich beim Beenden des Spiels.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar.",
   "menu.helpkey": "F1: vollständige Hilfe",
   "CutsceneBorders": "Zwischensequenz-Ränder",
   "CutsceneBorders.description": "Beide erhält den ursprünglichen 4:3-Bildausschnitt auf breiten und schmalen Bildschirmen einschließlich der ursprünglichen Filmbalken. Letterbox zeigt Balken oben und unten, Pillarbox an den Seiten. Aus erweitert die Ansicht ohne Balken. Gilt sofort.",

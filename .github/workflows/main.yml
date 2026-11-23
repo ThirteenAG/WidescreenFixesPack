@@ -34,12 +34,10 @@ jobs:
       with:
         packaging_mode: ${{ github.event_name == 'push' && github.ref_name == 'master' && 'as-ready' || 'after-build' }}
         signing_profile: ${{ github.event_name == 'push' && github.ref_name == 'master' && 'required' || 'off' }}
-        hub_policy: ${{ github.event_name == 'push' && github.ref_name == 'master' && 'required' || 'optional' }}
         crash_dumps: on
       env:
         CODE_SIGNING_PFX: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.CODE_SIGNING_PFX || '' }}
         CODE_SIGNING_PASSWORD: ${{ github.event_name == 'push' && github.ref_name == 'master' && secrets.CODE_SIGNING_PASSWORD || '' }}
-        HUB_RELEASE_TOKEN: ${{ secrets.HUB_RELEASE_TOKEN }}
     # Nightly builds publish their settings descriptions to fusionfix.io's dev channel; a refused upload only warns
     - name: Publish the settings descriptions to fusionfix.io (dev)
       if: ${{ github.event_name == 'push' && github.ref_name == 'master' && github.repository == 'ThirteenAG/WidescreenFixesPack' }}

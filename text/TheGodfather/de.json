@@ -38,7 +38,7 @@
   "PauseOnFocusLoss.description": "Pausiert die Simulation, wenn das Spielfenster inaktiv ist. Aus lässt das Spiel im Hintergrund weiterlaufen. Eine manuelle Pause bleibt erhalten.",
   "checkupdates": "Nach Updates suchen",
   "update.availablehub": "Ein Update für The Godfather Fusion Fix ist verfügbar. FusionFixHub öffnet sich nach Spielende.",
-  "update.availablesite": "Ein Update für The Godfather Fusion Fix ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "Ein Update für The Godfather Fusion Fix ist auf {page} verfügbar.",
   "checkupdates.description": "Prüft beim Aktivieren einmal auf eine neue Version. Ein Hinweis erscheint unter Plugins; FusionFixHub öffnet sich nach Spielende, falls installiert. Aus sendet keine Netzwerkanfrage.",
   "CutsceneBorders": "Ränder in Zwischensequenzen",
   "CutsceneBorders.description": "Beide erhält den ursprünglichen Bildausschnitt mit Balken bei jedem Seitenverhältnis. Aus füllt den Bildschirm und zeigt auf breiten Bildschirmen seitlich mehr. Die anderen Modi behalten nur die genannten Balken.",

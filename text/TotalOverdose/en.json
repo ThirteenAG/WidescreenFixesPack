@@ -36,7 +36,7 @@
   "CheckForUpdates": "Check for Updates",
   "CheckForUpdates.description": "Once per start, asks fusionfix.io whether a newer version of the fix is out and shows it in place of the version number in the main menu. Off makes no network request.",
   "update.availablehub": "Fix update in FusionFixHub",
-  "update.availablesite": "Fix update at fusionfix.io",
+  "update.availablesite": "Fix update at {page}",
   "SkipPressStart": "Skip title screen",
   "SkipPressStart.description": "After the story intro, goes straight to the main menu without the \"press Enter\" title screen. Requires a restart.",
   "page.compatibility": "Compatibility",

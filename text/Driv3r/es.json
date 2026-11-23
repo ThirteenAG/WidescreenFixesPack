@@ -120,6 +120,6 @@
   "MAIN.Vibration": "Vibración",
   "MAIN.Vibration.description": "Permite la respuesta de fuerza nativa del juego. Desactivar detiene los efectos activos. La vibración también se suprime con la ventana inactiva o cuando el panel de desarrollo bloquea el juego.",
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abrirá al cerrar el juego.",
-  "update.availablesite": "{name} {version} está disponible en fusionfix.io.",
+  "update.availablesite": "{name} {version} está disponible en {page}",
   "menu.help.controls": "F1 / Esc    Arriba / Abajo"
 }

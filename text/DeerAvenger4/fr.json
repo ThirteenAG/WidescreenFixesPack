@@ -56,5 +56,5 @@
   "CheckForUpdates": "Vérifier les mises à jour",
   "CheckForUpdates.description": "Vérifie une fois si un correctif plus récent existe. Désactivé : aucune requête réseau. Le message apparaît dans Plugins.",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s’ouvrira après avoir quitté le jeu. Validez ou revenez pour fermer.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io. Validez ou revenez pour fermer."
+  "update.availablesite": "{name} {version} est disponible sur {page}. Validez ou revenez pour fermer."
 }

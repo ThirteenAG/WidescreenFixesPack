@@ -64,5 +64,5 @@
   "CheckForUpdates": "Rechercher les mises à jour",
   "CheckForUpdates.description": "À chaque lancement, demande à fusionfix.io si une nouvelle version du correctif existe et l'indique ici. Désactivé n'envoie aucune requête réseau.",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvrira à la fermeture du jeu.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io."
+  "update.availablesite": "{name} {version} est disponible sur {page}"
 }

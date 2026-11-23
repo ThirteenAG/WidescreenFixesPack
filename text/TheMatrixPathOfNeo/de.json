@@ -33,7 +33,7 @@
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Fragt bei jedem Start fusionfix.io, ob eine neuere Version des Fixes erschienen ist, und meldet es in den Menüs des Spiels. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar.",
   "ResX": "Auflösung (Breite)",
   "ResX.description": "Breite in Pixeln. Null verwendet die Desktop-Auflösung. Erfordert einen Neustart.",
   "ResY": "Auflösung (Höhe)",

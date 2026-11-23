@@ -186,5 +186,5 @@
   "checkforupdates": "Tarkista päivitykset",
   "checkforupdates.description": "Tarkistaa käynnistettäessä kerran fusionfix.io-palvelusta, onko korjauksesta uusi versio, ja ilmoittaa siitä pelissä. Pois ei lähetä verkkopyyntöä.",
   "update.availablehub": "{name} {version} on saatavilla. FusionFixHub avautuu, kun suljet pelin.",
-  "update.availablesite": "{name} {version} on saatavilla osoitteessa fusionfix.io."
+  "update.availablesite": "{name} {version} on saatavilla osoitteessa {page}"
 }

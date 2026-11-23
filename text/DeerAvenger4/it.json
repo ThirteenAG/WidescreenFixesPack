@@ -56,5 +56,5 @@
   "CheckForUpdates": "Controlla aggiornamenti",
   "CheckForUpdates.description": "Controlla una volta se esiste una versione più recente. Disattivato: nessuna richiesta di rete. L’avviso appare in Plugins.",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà dopo l’uscita dal gioco. Premi Conferma o Indietro per chiudere.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io. Premi Conferma o Indietro per chiudere."
+  "update.availablesite": "{name} {version} è disponibile su {page}. Premi Conferma o Indietro per chiudere."
 }

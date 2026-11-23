@@ -82,7 +82,7 @@
   "MAIN.CheckForUpdates": "Cerca aggiornamenti",
   "MAIN.CheckForUpdates.description": "Una volta per avvio chiede a fusionfix.io se è uscita una versione più recente del fix e te lo dice nel gioco. Disattivato non fa nessuna richiesta di rete.",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "update.title": "Aggiornamento disponibile",
   "update.short": "È disponibile un aggiornamento. Apri Plugins per i dettagli.",
   "skippressstart": "Salta il primo invito di avvio",

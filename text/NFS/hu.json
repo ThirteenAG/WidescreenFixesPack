@@ -186,5 +186,5 @@
   "checkforupdates": "Frissítések keresése",
   "checkforupdates.description": "Indításkor egyszer ellenőrzi a fusionfix.io oldalon, van-e újabb javítás, és jelzi a játékban. Kikapcsolva nem küld hálózati kérést.",
   "update.availablehub": "Elérhető: {name} {version}. A FusionFixHub a játék bezárásakor nyílik meg.",
-  "update.availablesite": "A(z) {name} {version} elérhető a fusionfix.io oldalon."
+  "update.availablesite": "A(z) {name} {version} elérhető a {page} oldalon."
 }

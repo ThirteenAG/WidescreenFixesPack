@@ -33,7 +33,7 @@
   "CheckForUpdates": "Rechercher les mises à jour",
   "CheckForUpdates.description": "À chaque démarrage, demande à fusionfix.io si une nouvelle version du correctif existe et l'indique dans les menus du jeu. Désactivé n'envoie aucune requête réseau.",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvre à la fermeture du jeu.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io.",
+  "update.availablesite": "{name} {version} est disponible sur {page}",
   "ResX": "Largeur de la résolution",
   "ResX.description": "Largeur en pixels. Zéro utilise la résolution du bureau. Nécessite un redémarrage.",
   "ResY": "Hauteur de la résolution",

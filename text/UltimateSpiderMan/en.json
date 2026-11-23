@@ -81,5 +81,5 @@
   "MAIN_CheckForUpdates": "Check for updates",
   "MAIN_CheckForUpdates.description": "Checks for a newer fix once when enabled. A notice appears in Options; FusionFixHub handles updates after the game exits. Off makes no network requests.",
   "update.availablehub": "A newer Fusion Fix is available. Open FusionFixHub after leaving the game.",
-  "update.availablesite": "A newer Fusion Fix is available at fusionfix.io."
+  "update.availablesite": "A newer Fusion Fix is available at {page}"
 }

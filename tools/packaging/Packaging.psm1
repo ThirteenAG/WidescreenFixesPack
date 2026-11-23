@@ -18,6 +18,7 @@ function Assert-PackageContents($Package, [string[]]$Paths, [string]$Stage) {
     foreach ($relative in $Paths) {
         $name = [IO.Path]::GetFileName($relative.Replace('\', '/'))
         if ($relative -match '(?i)automation') { throw "Automation files in package $($Package.id): $relative" }
+        if ($name -ieq 'FusionFixHub.exe') { throw "FusionFixHub.exe in package $($Package.id): $relative" }
         if ($name -match '(?i)\.cfg$') { throw "Generated CFG in package $($Package.id): $relative" }
         if ($name -match '(?i)^(?:widescreenfix|fusionfix)\.ini$' -or @($legacyNames | Where-Object { $name -ieq ($_ + '.ini') }).Count) {
             throw "Legacy fix INI in package $($Package.id): $relative"
@@ -34,22 +35,14 @@ function Assert-PackageContents($Package, [string[]]$Paths, [string]$Stage) {
         }
     }
 }
-function Get-HubExecutable([string]$Root) {
-    # CI downloads the signed release into build/hub; a local build takes the hub's own Release build next to this repository.
-    foreach ($candidate in @($env:FUSIONFIXHUB_EXE, (Join-Path $Root 'build/hub/FusionFixHub.exe'), (Join-Path $Root '../FusionFixHub-App/bin/Release/FusionFixHub.exe'))) {
-        if ($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)) { return [IO.Path]::GetFullPath($candidate) }
-    }
-    return $null
-}
-function Get-HubDestinations($Package) {
-    # FusionFixHub.exe goes next to the game's executable: where the ASI loader goes, else above the plugin's scripts/plugins folder.
-    # Emulator plugins get none: the hub manages a game folder on PC.
-    if ($null -ne $Package.hub) { return @($Package.hub) }
+function Get-GameFolders($Package) {
+    # The folders with the game's executable: where the ASI loader goes, else above the plugin's scripts/plugins folder.
+    # Emulator plugins have none.
     $native = @($Package.producers | Where-Object { $_.solution -notin @('PCSX2F', 'PPSSPP') -and $_.source -match '\.asi$' })
     if (-not $native.Count) { return @() }
     $folders = @($Package.dependencies | Where-Object { $_.id -like 'loader-*' } | ForEach-Object { $_.destination -replace '/?[^/]*$', '' })
     if (-not $folders.Count) { $folders = @($native | ForEach-Object { $_.destination -replace '/?[^/]*$', '' -replace '(^|/)(?i:scripts|plugins)$', '' }) }
-    return @($folders | Sort-Object -Unique | ForEach-Object { if ($_) { $_ + '/FusionFixHub.exe' } else { 'FusionFixHub.exe' } })
+    return @($folders | Sort-Object -Unique)
 }
 function Test-EmbeddedSettings([byte[]]$Bytes) {
     # The settings description is a resource of type ASISETTINGS; its type name is stored as UTF-16 in the resource directory.
@@ -161,11 +154,7 @@ function Read-PackageManifest([string]$Root = $script:RepositoryRoot) {
         if ($dependency.architecture -notin @('x86', 'x64')) { throw 'Invalid dependency architecture.' }
     }
     foreach ($package in $manifest.packages) {
-        Assert-Fields $package @('id', 'producers', 'files', 'dependencies', 'optionalTree', 'associatedPackages', 'hub') 'package'
-        foreach ($destination in @($package.hub | Where-Object { $null -ne $_ })) {
-            if ($destination -isnot [string] -or $destination -notmatch '(^|/)FusionFixHub\.exe$') { throw "Invalid hub destination: $($package.id)" }
-            $null = Resolve-PackagePath $Root $destination
-        }
+        Assert-Fields $package @('id', 'producers', 'files', 'dependencies', 'optionalTree', 'associatedPackages') 'package'
         if ($package.id -notmatch '^[A-Za-z0-9_.-]+$' -or $ids.ContainsKey($package.id)) { throw "Invalid/duplicate package: $($package.id)" }
         $ids[$package.id] = $true
         $destinations = @{}
@@ -331,7 +320,7 @@ function Invoke-DependencyDownloads($Manifest, $Packages, [string]$Root, [string
     }
     [IO.File]::WriteAllText((Join-Path $Work 'dependencies.json'), ($resolved | ConvertTo-Json -Depth 10))
 }
-function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Work, [string]$Signing = 'optional', [string]$Hub = '', [bool]$CrashDumps = $false) {
+function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Work, [string]$Signing = 'optional', [bool]$CrashDumps = $false) {
     if ($Signing -notin @('required', 'optional', 'off')) { throw 'Invalid signing profile.' }
     $packageWork = Join-Path $Work $Package.id
     $stage = Join-Path $packageWork 'stage'; $check = Join-Path $packageWork 'verify'
@@ -396,22 +385,10 @@ function Invoke-ManifestPackage($Manifest, $Package, [string]$Root, [string]$Wor
             $expected[$rule.destination] = Get-FileHashValue $target
             $dependencyHashes[$rule.id] = Get-FileHashValue $archive
         }
-        if ($Hub) {
-            # Shipped as released (already signed), never re-signed
-            Assert-PackageFile $Hub
-            if ((Get-PeInfo ([IO.File]::ReadAllBytes($Hub))).Architecture -ne 'x64') { throw 'FusionFixHub.exe is not an x64 binary.' }
-            foreach ($destination in @(Get-HubDestinations $Package)) {
-                if ($expected.ContainsKey($destination)) { throw "Destination collision: $($Package.id)/$destination" }
-                $target = Resolve-PackagePath $stage $destination
-                $null = New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target)
-                Copy-Item -LiteralPath $Hub -Destination $target
-                $expected[$destination] = Get-FileHashValue $target
-            }
-        }
         if ($CrashDumps) {
             # Developer builds: an empty CrashDumps folder next to the game's executable makes the ASI loader write crash dumps there
-            foreach ($destination in @(Get-HubDestinations $Package)) {
-                $null = New-Item -ItemType Directory -Force -Path (Resolve-PackagePath $stage ($destination -replace '[^/]+$', 'CrashDumps'))
+            foreach ($folder in @(Get-GameFolders $Package)) {
+                $null = New-Item -ItemType Directory -Force -Path (Resolve-PackagePath $stage $(if ($folder) { "$folder/CrashDumps" } else { 'CrashDumps' }))
             }
         }
         if ($Package.optionalTree) {

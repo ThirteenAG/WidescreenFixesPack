@@ -62,7 +62,7 @@
   "checkupdates": "Check for Updates",
   "checkupdates.description": "Checks for a new fix version once when enabled. A notice appears in Settings; FusionFixHub opens after the game exits if it is installed. Off makes no network request.",
   "update.availablehub": "An update for Manhunt Fusion Fix is available. FusionFixHub will open after you exit the game.",
-  "update.availablesite": "An update for Manhunt Fusion Fix is available at fusionfix.io.",
+  "update.availablesite": "An update for Manhunt Fusion Fix is available at {page}",
   "borders": "Cutscene Borders",
   "borders.description": "Keeps the original 4:3 cutscene frame with side borders on wider screens and top and bottom borders on narrower screens. Off removes these borders and fills the screen. The original game has no animated cutscene bars.",
   "borders.off": "Off",

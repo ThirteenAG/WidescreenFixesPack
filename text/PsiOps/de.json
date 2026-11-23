@@ -46,7 +46,7 @@
   "checkupdates": "Nach Updates suchen",
   "checkupdates.description": "Prüft beim Aktivieren einmal auf eine neue Version. Ein Hinweis erscheint unter Einstellungen. FusionFixHub öffnet sich nach Spielende, falls installiert. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "Ein Update für Psi-Ops Fusion Fix ist verfügbar. FusionFixHub öffnet sich nach Spielende.",
-  "update.availablesite": "Ein Update für Psi-Ops Fusion Fix ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "Ein Update für Psi-Ops Fusion Fix ist auf {page} verfügbar.",
   "page.framerate": "Bildrate",
   "FPSLimit": "Bildratenbegrenzung",
   "FPSLimit.description": "Maximale Bilder pro Sekunde. 0 ohne zusätzliche Grenze, -1 entspricht der Monitorfrequenz, sonst 30 bis 1000. Empfohlen sind 60; höhere Bildraten müssen im Spiel geprüft werden.",

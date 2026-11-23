@@ -186,5 +186,5 @@
   "checkforupdates": "Sök efter uppdateringar",
   "checkforupdates.description": "Kontrollerar en gång vid start på fusionfix.io om en nyare version finns och meddelar i spelet. Av skickar ingen nätverksbegäran.",
   "update.availablehub": "{name} {version} finns tillgänglig. FusionFixHub öppnas när du stänger spelet.",
-  "update.availablesite": "{name} {version} finns tillgänglig på fusionfix.io."
+  "update.availablesite": "{name} {version} finns tillgänglig på {page}"
 }

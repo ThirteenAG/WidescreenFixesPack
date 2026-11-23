@@ -120,6 +120,6 @@
   "MAIN.Vibration": "Vibration",
   "MAIN.Vibration.description": "Allows the game’s native force feedback. Off stops active effects. Vibration is also suppressed while the window is inactive or the developer overlay blocks gameplay.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "menu.help.controls": "F1 / Esc    Up / Down"
 }

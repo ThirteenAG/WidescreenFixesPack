@@ -62,7 +62,7 @@
   "checkupdates": "Cerca aggiornamenti",
   "checkupdates.description": "Controlla una nuova versione una volta quando attivato. Un avviso appare in Plugin; FusionFixHub si apre all’uscita, se installato. Disattivato non invia richieste di rete.",
   "update.availablehub": "È disponibile un aggiornamento di Onimusha 3 Fusion Fix. FusionFixHub si aprirà dopo l'uscita dal gioco.",
-  "update.availablesite": "È disponibile un aggiornamento di Onimusha 3 Fusion Fix su fusionfix.io.",
+  "update.availablesite": "È disponibile un aggiornamento di Onimusha 3 Fusion Fix su {page}",
   "TextLanguage": "Lingua del testo",
   "TextLanguage.description": "Scegli la lingua delle impostazioni del plugin. Auto segue il gioco. Le traduzioni con accenti usano il carattere occidentale fornito con il gioco.",
   "TextLanguage.auto": "Automatico",

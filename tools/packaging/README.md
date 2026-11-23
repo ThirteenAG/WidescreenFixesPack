@@ -15,13 +15,9 @@ solution project without a manifest entry fails rather than being omitted.
 Inactive data directories without build projects are not released.
 
 Every PC plugin `.asi` must embed its settings description (`ASISETTINGS` resource).
-PC fix packages also get `FusionFixHub.exe` next to the game's executable: beside the
-ASI loader, else above the plugin's `scripts`/`plugins` folder; a package's `hub`
-array overrides this. Emulator plugins get none. The hub is taken from
-`FUSIONFIXHUB_EXE`, `build/hub/FusionFixHub.exe` (CI downloads the signed release
-there) or `../FusionFixHub-App/bin/Release/FusionFixHub.exe`, and is never re-signed.
-`-Hub required|optional|off` (or `WFP_HUB_POLICY`) decides whether a missing hub
-fails; public releases require it.
+Packages never contain `FusionFixHub.exe`; it is distributed through fusionfix.io only.
+Developer builds (`-CrashDumps on`) get an empty `CrashDumps` folder next to the game's
+executable: beside the ASI loader, else above the plugin's `scripts`/`plugins` folder.
 
 PSP and PS2 builds put the settings description and every language from their validated
 sources into the module after compilation, as ELF sections that aren't loaded

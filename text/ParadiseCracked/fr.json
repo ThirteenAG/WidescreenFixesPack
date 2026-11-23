@@ -31,7 +31,7 @@
   "CheckForUpdates": "Rechercher les mises à jour",
   "CheckForUpdates.description": "À chaque démarrage, demande à fusionfix.io si une nouvelle version du correctif existe et l’indique au menu principal. FusionFixHub ouvre la page de mise à jour après la fermeture du jeu s’il est installé à côté du jeu. Désactivé : aucune requête réseau.",
   "update.availablehub": "Une nouvelle version de {name} est disponible. Mettez-la à jour dans FusionFixHub après avoir fermé le jeu.",
-  "update.availablesite": "Une nouvelle version de {name} est disponible sur fusionfix.io.",
+  "update.availablesite": "Une nouvelle version de {name} est disponible sur {page}",
   "MAIN.TextLanguage": "Langue du texte",
   "MAIN.TextLanguage.description": "Langue des réglages du correctif dans les éditeurs compatibles. Auto suit la langue de l’éditeur.",
   "menu.auto": "Auto"

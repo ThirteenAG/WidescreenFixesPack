@@ -36,7 +36,7 @@
   "CheckForUpdates": "Cerca aggiornamenti",
   "CheckForUpdates.description": "A ogni avvio chiede a fusionfix.io se è uscita una versione più recente della correzione e lo mostra al posto del numero di versione nel menu principale. Disattivato, non viene fatta alcuna richiesta di rete.",
   "update.availablehub": "Aggiornamento: FusionFixHub",
-  "update.availablesite": "Aggiornamento: fusionfix.io",
+  "update.availablesite": "Aggiornamento: {page}",
   "SkipPressStart": "Salta la schermata del titolo",
   "SkipPressStart.description": "Dopo l'introduzione della storia passa direttamente al menu principale, senza la schermata del titolo «Premi Invio». Richiede un riavvio.",
   "page.compatibility": "Compatibilità",

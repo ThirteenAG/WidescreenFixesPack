@@ -65,7 +65,7 @@
   "CheckForUpdates.description": "Checks once for a newer fix when enabled. Off makes no network request. The notice appears in Plugins; FusionFixHub opens after exit when available.",
   "menu.updatetitle": "Update available",
   "update.availablehub": "{name} {version} is available. FusionFixHub will open after you exit the game.",
-  "update.availablesite": "{name} {version} is available. Get the update at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available. Get the update at {page}",
   "HudAspectRatioConstraint": "HUD aspect ratio",
   "HudAspectRatioConstraint.description": "Auto spreads the HUD and on-screen text over the whole screen. A ratio keeps them in a centred box of that shape. Menus keep their 16:9 layout on wider screens."
 }

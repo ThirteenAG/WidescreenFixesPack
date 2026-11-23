@@ -63,7 +63,7 @@
   "FPSLimit.monitor": "Frequenza del monitor",
   "CheckForUpdates": "Cerca aggiornamenti",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "menu.details": "Dettagli",
   "menu.detailsnav": "Sinistra/destra: pagina. Indietro: impostazioni.",
   "SkipPressStart": "Salta Premi Start",

@@ -65,7 +65,7 @@
   "CheckForUpdates.description": "Busca una vez una versión más reciente al activar. Desactivado: ninguna solicitud de red. El aviso aparece en Plugins.",
   "menu.updatetitle": "Actualización disponible",
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abrirá al salir del juego.",
-  "update.availablesite": "{name} {version} está disponible en fusionfix.io.",
+  "update.availablesite": "{name} {version} está disponible en {page}",
   "HudAspectRatioConstraint": "Relación de aspecto del HUD",
   "HudAspectRatioConstraint.description": "Auto reparte el HUD y los textos en pantalla por toda la pantalla. Una proporción los mantiene en un recuadro centrado con esa forma. Los menús conservan su diseño 16:9 en pantallas más anchas."
 }

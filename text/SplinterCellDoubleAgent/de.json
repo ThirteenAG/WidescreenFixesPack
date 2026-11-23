@@ -203,7 +203,7 @@
   "padPrompt.leftStick": "Linker Stick",
   "padPrompt.rightStick": "Rechter Stick",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar.",
   "update.title": "Update verfügbar",
   "startup.unsupported": "Diese Programmversion wird nicht unterstützt. Installiere die originale Handels- oder Steam-Version von Splinter Cell Double Agent und den passenden aktuellen Fix. Das Spiel startet ohne den Fix.",
   "ui.auto": "Auto",

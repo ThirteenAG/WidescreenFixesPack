@@ -81,5 +81,5 @@
   "MAIN_CheckForUpdates": "Nach Updates suchen",
   "MAIN_CheckForUpdates.description": "Sucht beim Aktivieren einmal nach einer neueren Version. Ein Hinweis erscheint in den Optionen. FusionFixHub verwaltet Updates nach Spielende. Aus: keine Netzwerkanfragen.",
   "update.availablehub": "Eine neuere Version des Fusion Fix ist verfügbar. Öffne FusionFixHub nach dem Beenden des Spiels.",
-  "update.availablesite": "Eine neuere Version des Fusion Fix ist auf fusionfix.io verfügbar."
+  "update.availablesite": "Eine neuere Version des Fusion Fix ist auf {page} verfügbar."
 }

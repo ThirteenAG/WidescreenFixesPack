@@ -47,7 +47,7 @@
   "checkupdates": "Buscar actualizaciones",
   "checkupdates.description": "Comprueba una vez si hay una versión nueva al activarlo. Aparece un aviso en Ajustes; FusionFixHub se abre al salir del juego si está instalado. Desactivado no envía solicitudes de red.",
   "update.availablehub": "Hay una actualización de The Saboteur Fusion Fix. FusionFixHub se abrirá al salir del juego.",
-  "update.availablesite": "Hay una actualización de The Saboteur Fusion Fix en fusionfix.io.",
+  "update.availablesite": "Hay una actualización de The Saboteur Fusion Fix en {page}",
   "page.compatibility": "Compatibilidad",
   "menu.auto": "Automático",
   "MAIN.GamepadIcons": "Iconos del mando",

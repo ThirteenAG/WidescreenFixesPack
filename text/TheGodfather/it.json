@@ -38,7 +38,7 @@
   "PauseOnFocusLoss.description": "Mette in pausa la simulazione quando la finestra del gioco non è attiva. Disattivando, il gioco continua in background. La pausa manuale viene mantenuta.",
   "checkupdates": "Cerca aggiornamenti",
   "update.availablehub": "È disponibile un aggiornamento di The Godfather Fusion Fix. FusionFixHub si aprirà dopo l'uscita dal gioco.",
-  "update.availablesite": "È disponibile un aggiornamento di The Godfather Fusion Fix su fusionfix.io.",
+  "update.availablesite": "È disponibile un aggiornamento di The Godfather Fusion Fix su {page}",
   "checkupdates.description": "Controlla una nuova versione una volta quando attivato. Un avviso appare in Plugin; FusionFixHub si apre all’uscita, se installato. Disattivato non invia richieste di rete.",
   "CutsceneBorders": "Bordi dei filmati",
   "CutsceneBorders.description": "Entrambe conserva l’inquadratura cinematografica originale con bande a ogni formato. Disattivate riempie lo schermo e mostra più scena ai lati sugli schermi larghi. Gli altri modi mantengono solo le bande indicate.",

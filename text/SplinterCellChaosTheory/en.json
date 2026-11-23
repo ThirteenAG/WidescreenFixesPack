@@ -102,7 +102,7 @@
   "MAIN.Vibration": "Vibration",
   "MAIN.Vibration.description": "Lets the pad rumble with shots, explosions and hits. Applies immediately.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "startup.unsupported": "This executable is not supported by the Fusion Fix. Use the original Chaos Theory single-player retail or Steam executable and the latest ASI loader from the fix package. The game starts without the fix.",
   "padPrompt.cross": "Cross",
   "padPrompt.circle": "Circle",

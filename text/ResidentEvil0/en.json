@@ -62,7 +62,7 @@
   "MAIN.CheckForUpdates": "Check for Updates",
   "MAIN.CheckForUpdates.description": "Once per start, asks fusionfix.io whether a newer version of the fix is out and tells you in the game. Off makes no network request.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "update.title": "Update available",
   "update.short": "An update is available. Open Plugins for details.",
   "menu.pluginshelp": "Settings for this fix and other compatible plugins.",

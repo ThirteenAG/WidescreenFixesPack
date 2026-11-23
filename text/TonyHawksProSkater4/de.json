@@ -59,7 +59,7 @@
   "checkupdates": "Nach Updates suchen",
   "checkupdates.description": "Prüft beim Aktivieren einmal auf eine neue Version. Ein Hinweis erscheint unter Plugins; FusionFixHub öffnet sich nach Spielende, falls installiert. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "Ein Update für Tony Hawk Pro Skater 4 Fusion Fix ist verfügbar. FusionFixHub öffnet sich nach Spielende.",
-  "update.availablesite": "Ein Update für Tony Hawk Pro Skater 4 Fusion Fix ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "Ein Update für Tony Hawk Pro Skater 4 Fusion Fix ist auf {page} verfügbar.",
   "PauseOnFocusLoss": "Im Hintergrund pausieren",
   "PauseOnFocusLoss.description": "In einem Fenstermodus hält das Spiel an, während ein anderes Fenster aktiv ist, wie es das immer tat. Aus lässt es weiterlaufen. Wirkt sofort.",
   "MAIN.GamepadIcons": "Controller-Symbole",

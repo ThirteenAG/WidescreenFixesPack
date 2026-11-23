@@ -73,7 +73,7 @@
   "MAIN.CheckForUpdates.description": "Once per start, ask fusionfix.io whether a newer fix is available and display a notice in Plugins. Off makes no network request.",
   "update.title": "Update available",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "menu.helpkey": "F1: full help",
   "CutsceneBorders": "Cutscene borders",
   "CutsceneBorders.description": "Both preserves the original 4:3 cinematic frame on wide and narrow screens, including the game’s own cinematic bars. Letterbox keeps top and bottom borders, Pillarbox keeps side borders, and Off extends the view without borders. Changes apply immediately.",

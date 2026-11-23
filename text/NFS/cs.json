@@ -186,5 +186,5 @@
   "checkforupdates": "Kontrolovat aktualizace",
   "checkforupdates.description": "Jednou při spuštění ověří na fusionfix.io novou verzi opravy a oznámí ji ve hře. Vypnuto neposílá žádný síťový požadavek.",
   "update.availablehub": "Je dostupná verze {name} {version}. FusionFixHub se otevře po ukončení hry.",
-  "update.availablesite": "Verze {name} {version} je dostupná na fusionfix.io."
+  "update.availablesite": "Verze {name} {version} je dostupná na {page}"
 }

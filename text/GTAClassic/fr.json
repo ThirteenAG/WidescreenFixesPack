@@ -140,5 +140,5 @@
   "MAIN.CheckForUpdates": "Rechercher les mises à jour",
   "MAIN.CheckForUpdates.description": "Une fois par lancement, demande à fusionfix.io si une version plus récente du fix est sortie et vous le dit dans le menu principal. Désactivé n'envoie aucune requête réseau.",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvrira quand vous quitterez le jeu.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io."
+  "update.availablesite": "{name} {version} est disponible sur {page}"
 }

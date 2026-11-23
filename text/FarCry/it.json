@@ -73,7 +73,7 @@
   "MAIN.CheckForUpdates.description": "Controlla fusionfix.io una volta per avvio e mostra un avviso in Plugin se è disponibile una nuova versione. Disattivato, nessuna richiesta di rete.",
   "update.title": "Aggiornamento disponibile",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si apre alla chiusura del gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "menu.helpkey": "F1: guida completa",
   "CutsceneBorders": "Bande dei filmati",
   "CutsceneBorders.description": "Entrambe conserva l’inquadratura originale 4:3 su schermi larghi e stretti, comprese le bande del gioco. Letterbox mantiene le bande orizzontali, Pillarbox quelle laterali. Disattivato amplia la vista senza bande. Effetto immediato.",

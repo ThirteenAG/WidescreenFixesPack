@@ -38,7 +38,7 @@
   "checkforupdates": "Check for Updates",
   "checkforupdates.description": "Once per start, asks fusionfix.io whether a newer version of the fix is out and tells you in the game. Off makes no network request.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "startup.unsupported": "This version of SanAndreas.exe isn't supported. The Fusion Fix needs the current version of the game (the November 2024 update or newer). The game starts without the fix.",
   "auto": "Auto",
   "hudaspect": "HUD Aspect Ratio",

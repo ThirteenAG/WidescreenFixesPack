@@ -56,11 +56,9 @@ jobs:
         project: ${{ inputs.project }}
         packages: ${{ steps.selection.outputs.packages }}
         signing_profile: required
-        hub_policy: required
       env:
         CODE_SIGNING_PFX: ${{ secrets.CODE_SIGNING_PFX }}
         CODE_SIGNING_PASSWORD: ${{ secrets.CODE_SIGNING_PASSWORD }}
-        HUB_RELEASE_TOKEN: ${{ secrets.HUB_RELEASE_TOKEN }}
 
     - name: GTA SA The Definitive Edition Fusion Fix
       uses: ./.github/workflows/release_tag

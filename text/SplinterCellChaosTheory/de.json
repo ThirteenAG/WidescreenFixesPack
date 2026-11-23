@@ -102,7 +102,7 @@
   "MAIN.Vibration": "Vibration",
   "MAIN.Vibration.description": "Lässt den Controller bei Schüssen, Explosionen und Treffern vibrieren. Wirkt sofort.",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar.",
   "startup.unsupported": "Diese Programmdatei wird vom Fusion Fix nicht unterstützt. Verwende die originale Einzelspieler-Datei von Chaos Theory (Handelsversion oder Steam) und den aktuellen ASI Loader aus dem Fix-Paket. Das Spiel startet ohne den Fix.",
   "padPrompt.cross": "Kreuz",
   "padPrompt.circle": "Kreis",

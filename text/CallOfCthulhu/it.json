@@ -64,5 +64,5 @@
   "CheckForUpdates": "Cerca aggiornamenti",
   "CheckForUpdates.description": "A ogni avvio chiede una volta a fusionfix.io se esiste una versione più recente della correzione e la mostra qui. Disattivato non invia richieste di rete.",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si apre quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io."
+  "update.availablesite": "{name} {version} è disponibile su {page}"
 }

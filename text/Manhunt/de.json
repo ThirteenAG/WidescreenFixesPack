@@ -62,7 +62,7 @@
   "checkupdates": "Nach Updates suchen",
   "checkupdates.description": "Prüft beim Aktivieren einmal auf eine neue Version. Ein Hinweis erscheint unter Einstellungen. FusionFixHub öffnet sich nach Spielende, falls installiert. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "Ein Update für Manhunt Fusion Fix ist verfügbar. FusionFixHub öffnet sich nach Spielende.",
-  "update.availablesite": "Ein Update für Manhunt Fusion Fix ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "Ein Update für Manhunt Fusion Fix ist auf {page} verfügbar.",
   "borders": "Zwischensequenzbalken",
   "borders.description": "Erhält den ursprünglichen 4:3-Bildausschnitt mit seitlichen Balken auf breiten und horizontalen Balken auf schmalen Bildschirmen. Aus füllt den Bildschirm mit erweitertem Blickfeld. Das Original animiert keine Balken.",
   "borders.off": "Aus",

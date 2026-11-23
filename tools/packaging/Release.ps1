@@ -4,7 +4,6 @@ param(
     [string]$Project = '',
     [string]$Packages = '',
     [ValidateSet('required', 'optional', 'off')][string]$Signing = 'optional',
-    [ValidateSet('required', 'optional', 'off')][string]$Hub = $(if ($env:WFP_HUB_POLICY) { $env:WFP_HUB_POLICY } else { 'optional' }),
     [ValidateSet('on', 'off')][string]$CrashDumps = $(if ($env:WFP_CRASH_DUMPS) { $env:WFP_CRASH_DUMPS } else { 'off' }),
     [switch]$Existing,
     [switch]$Available,
@@ -62,11 +61,6 @@ if ($Available) {
 if (-not $selected.Count) { throw 'No packages selected.' }
 if ($Existing -and $Mode -ne 'after-build') { throw 'as-ready requires coordinated builds.' }
 if ($Signing -eq 'required' -and (-not $env:CODE_SIGNING_PFX -or -not $env:CODE_SIGNING_PASSWORD)) { throw 'Signing is required but its credentials are missing.' }
-# FusionFixHub.exe ships in every PC fix's zip; public releases require it
-$hubFile = if ($Hub -ne 'off') { Get-HubExecutable $RepositoryRoot } else { $null }
-if (-not $hubFile -and $Hub -eq 'required') { throw 'FusionFixHub.exe is required but missing (build/hub/FusionFixHub.exe or FUSIONFIXHUB_EXE).' }
-if (-not $hubFile -and $Hub -eq 'optional') { Write-Warning 'FusionFixHub.exe not found: packages are built without the hub.' }
-if (-not $hubFile) { $hubFile = '' }
 $producers = @{}; foreach ($producer in $selected.producers) { $producers[$producer.project] = $producer }
 foreach ($package in $selected) {
     foreach ($id in $package.associatedPackages) {
@@ -124,8 +118,8 @@ function Start-ReadyPackages {
         $state.Scheduled[$package.id] = $true
         Write-Host "Packaging $($package.id)"
         $shell = [PowerShell]::Create(); $shell.RunspacePool = $pool
-        $null = $shell.AddScript('param($module, $manifest, $package, $root, $work, $signing, $hub, $dumps); $ErrorActionPreference="Stop"; Import-Module $module -DisableNameChecking; Invoke-ManifestPackage $manifest $package $root $work $signing $hub $dumps')
-        foreach ($argument in @((Join-Path $PSScriptRoot 'Packaging.psm1'), $manifest, $package, $RepositoryRoot, $WorkDirectory, $Signing, $hubFile, ($CrashDumps -eq 'on'))) { $null = $shell.AddArgument($argument) }
+        $null = $shell.AddScript('param($module, $manifest, $package, $root, $work, $signing, $dumps); $ErrorActionPreference="Stop"; Import-Module $module -DisableNameChecking; Invoke-ManifestPackage $manifest $package $root $work $signing $dumps')
+        foreach ($argument in @((Join-Path $PSScriptRoot 'Packaging.psm1'), $manifest, $package, $RepositoryRoot, $WorkDirectory, $Signing, ($CrashDumps -eq 'on'))) { $null = $shell.AddArgument($argument) }
         $null = $state.Workers.Add(@{ Shell = $shell; Invocation = $shell.BeginInvoke(); Id = $package.id })
     }
 }

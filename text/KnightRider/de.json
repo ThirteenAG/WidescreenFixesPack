@@ -36,7 +36,7 @@
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Sucht bei Aktivierung nach einer neueren Version. Ein Hinweis erscheint im Hauptmenü. FusionFixHub öffnet die Update-Seite nach dem Beenden, wenn es im Spielordner installiert ist. Standardmäßig aus.",
   "update.availablehub": "Eine neue Version von {name} ist verfügbar. Nach dem Beenden in FusionFixHub aktualisieren.",
-  "update.availablesite": "Eine neue Version von {name} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "Eine neue Version von {name} ist auf {page} verfügbar.",
   "page.controller": "Controller",
   "GamepadIcons": "Controller-Tastenbezeichnungen",
   "GamepadIcons.description": "Tastennamen unter Optionen > Steuerung folgen dem zuletzt verwendeten Eingabegerät. Auto verwendet Xbox-Namen. Xbox-, PlayStation- und Nintendo-Namen entsprechen dem mitgelieferten Xidi-Profil. Gilt sofort.",

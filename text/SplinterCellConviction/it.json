@@ -118,7 +118,7 @@
   "MAIN.CheckForUpdates": "Cerca aggiornamenti",
   "MAIN.CheckForUpdates.description": "Una volta per avvio chiede a fusionfix.io se è uscita una versione più recente del fix e te lo dice nel gioco. Disattivato non fa nessuna richiesta di rete.",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "update.title": "Aggiornamento disponibile",
   "startup.unsupported": "Questo eseguibile non è supportato da Fusion Fix. Usa un eseguibile per giocatore singolo compatibile di Splinter Cell Conviction e il caricatore ASI più recente del pacchetto. Il gioco si avvia senza la correzione.",
   "SPLITSCREEN.GamepadPlayer1.0": "Tastiera e mouse",

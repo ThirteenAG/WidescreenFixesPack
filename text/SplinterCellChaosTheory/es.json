@@ -102,7 +102,7 @@
   "MAIN.Vibration": "Vibración",
   "MAIN.Vibration.description": "Hace vibrar el mando con disparos, explosiones y golpes. Se aplica al instante.",
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abrirá al cerrar el juego.",
-  "update.availablesite": "{name} {version} está disponible en fusionfix.io.",
+  "update.availablesite": "{name} {version} está disponible en {page}",
   "startup.unsupported": "El Fusion Fix no admite este ejecutable. Usa el ejecutable original para un jugador de Chaos Theory, en caja o Steam, y el cargador ASI más reciente del paquete. El juego se inicia sin el fix.",
   "padPrompt.cross": "Cruz",
   "padPrompt.circle": "Círculo",

@@ -57,7 +57,7 @@
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Fragt einmal pro Start bei fusionfix.io, ob eine neuere Version des Fixes erschienen ist, und sagt es im Spiel. Aus stellt keine Netzwerkanfrage.",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar.",
   "CutsceneBorders": "Zwischensequenz-Balken",
   "CutsceneBorders.off": "Aus",
   "CutsceneBorders.letterbox": "Letterbox",

@@ -43,7 +43,7 @@
   "CheckForUpdates": "Cerca aggiornamenti",
   "CheckForUpdates.description": "Una volta per avvio chiede a fusionfix.io se è uscita una versione più recente del fix; se FusionFixHub è installato, si apre sull'aggiornamento quando chiudi il gioco. Disattivato non fa nessuna richiesta di rete.",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "page.graphics": "Grafica",
   "page.controls": "Mouse",
   "group.postfx": "Post-elaborazione",

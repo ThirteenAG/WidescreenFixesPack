@@ -62,7 +62,7 @@
   "checkupdates": "Buscar actualizaciones",
   "checkupdates.description": "Comprueba una vez si hay una versión nueva al activarlo. Aparece un aviso en Ajustes; FusionFixHub se abre al salir del juego si está instalado. Desactivado no envía solicitudes de red.",
   "update.availablehub": "Hay una actualización de Manhunt Fusion Fix. FusionFixHub se abrirá al salir del juego.",
-  "update.availablesite": "Hay una actualización de Manhunt Fusion Fix en fusionfix.io.",
+  "update.availablesite": "Hay una actualización de Manhunt Fusion Fix en {page}",
   "borders": "Bandas de cinemáticas",
   "borders.description": "Conserva el encuadre original 4:3 con bandas laterales en pantallas anchas y horizontales en pantallas estrechas. Desactivado llena la pantalla con una vista más amplia. El juego original no anima las bandas.",
   "borders.off": "Desactivadas",

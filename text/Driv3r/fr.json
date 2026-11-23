@@ -120,6 +120,6 @@
   "MAIN.Vibration": "Vibration",
   "MAIN.Vibration.description": "Autorise le retour de force natif du jeu. Désactiver arrête les effets actifs. Les vibrations sont aussi coupées lorsque la fenêtre est inactive ou que l’overlay développeur bloque le jeu.",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvrira quand vous quitterez le jeu.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io.",
+  "update.availablesite": "{name} {version} est disponible sur {page}",
   "menu.help.controls": "F1 / Esc    Haut / Bas"
 }

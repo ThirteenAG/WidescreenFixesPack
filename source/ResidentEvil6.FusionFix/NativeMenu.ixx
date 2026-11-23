@@ -225,6 +225,7 @@ export namespace RE6Menu
         };
         replace("{name}", texts.Resolve(FixSettings().GetDescription().name));
         replace("{version}", version);
+        replace("{page}", RWGTA::UpdateCheck::Page());
         return asi_settings::text::Widen(line);
     }
 

@@ -186,5 +186,5 @@
   "checkforupdates": "Zoeken naar updates",
   "checkforupdates.description": "Controleert bij het starten één keer op fusionfix.io of er een nieuwere versie is en meldt dit in het spel. Uit verstuurt geen netwerkverzoek.",
   "update.availablehub": "{name} {version} is beschikbaar. FusionFixHub opent wanneer je het spel sluit.",
-  "update.availablesite": "{name} {version} is beschikbaar op fusionfix.io."
+  "update.availablesite": "{name} {version} is beschikbaar op {page}"
 }

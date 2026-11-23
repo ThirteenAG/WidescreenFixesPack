@@ -18,8 +18,8 @@ try {
     $producer = [pscustomobject]@{project='A'; solution='Win32'; source='data/A/A.asi'; destination='A.asi'; sign=$false}
     $package = [pscustomobject]@{id='A'; producers=@($producer); files=@([pscustomobject]@{source='data/A/config.ini'; destination='config.ini'}); dependencies=@()}
     $fixture = [pscustomobject]@{schemaVersion=1; solutions=@('Win32'); dependencies=[pscustomobject]@{}; packages=@($package)}
-    foreach ($file in @('A.cfg', 'A.ini', 'scripts/FusionFix.ini', 'scripts/nvngx_dlss.dll', 'scripts/ffx_fsr3upscaler_x64.dll', 'dxvk.dll', 'vkd3d-proton.dll', 'vulkan.dll', 'vulkan-1.dll', 'nvngx.dll', '_nvngx.dll', 'nvapi64.dll', 'scripts/capture-automation.asi')) {
-        Assert-Fails { Assert-PackageContents $package @($file) '' } 'Generated CFG|Legacy fix INI|Vendor graphics DLL|Automation files'
+    foreach ($file in @('A.cfg', 'A.ini', 'scripts/FusionFix.ini', 'scripts/nvngx_dlss.dll', 'scripts/ffx_fsr3upscaler_x64.dll', 'dxvk.dll', 'vkd3d-proton.dll', 'vulkan.dll', 'vulkan-1.dll', 'nvngx.dll', '_nvngx.dll', 'nvapi64.dll', 'scripts/capture-automation.asi', 'FusionFixHub.exe', 'Game/FusionFixHub.exe')) {
+        Assert-Fails { Assert-PackageContents $package @($file) '' } 'Generated CFG|Legacy fix INI|Vendor graphics DLL|Automation files|FusionFixHub'
     }
     Assert-PackageContents $package @('Xidi.ini', 'scripts/dxwrapper.ini', 'plugin.ini', 'scripts/global.ini', 'native/actionscheme.ini', 'Xidi.32.dll', 'A.asi') ''
 
@@ -43,25 +43,20 @@ try {
     $result = Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'invocation') 'off'
     Assert ($result.files.Count -eq 2 -and 'stale.asi' -notin $result.files) 'Unexpected archive inputs.'
     Assert ((Get-FileHashValue (Join-Path $work 'data/A/A.asi')) -eq $originalHash) 'Source binary was changed.'
-    Assert (@(Get-HubDestinations $package).Count -eq 1 -and @(Get-HubDestinations $package)[0] -eq 'FusionFixHub.exe') 'Wrong hub destination.'
+    Assert ('FusionFixHub.exe' -notin $result.files) 'FusionFixHub.exe is in the archive.'
+    Assert (@(Get-GameFolders $package).Count -eq 1 -and @(Get-GameFolders $package)[0] -eq '') 'Wrong game folder.'
     $nested = [pscustomobject]@{id='B'; producers=@([pscustomobject]@{project='B'; solution='Win32'; source='B.asi'; destination='Game/scripts/B.asi'}); files=@(); dependencies=@()}
-    Assert (@(Get-HubDestinations $nested)[0] -eq 'Game/FusionFixHub.exe') 'Wrong hub destination above scripts.'
+    Assert (@(Get-GameFolders $nested)[0] -eq 'Game') 'Wrong game folder above scripts.'
     $nested.dependencies = @([pscustomobject]@{id='loader-x64'; member='*.dll'; destination='Bin64/version.dll'})
-    Assert (@(Get-HubDestinations $nested)[0] -eq 'Bin64/FusionFixHub.exe') 'Wrong hub destination beside the loader.'
+    Assert (@(Get-GameFolders $nested)[0] -eq 'Bin64') 'Wrong game folder beside the loader.'
     $console = [pscustomobject]@{id='C'; producers=@([pscustomobject]@{project='C'; solution='PPSSPP'; source='C.prx'; destination='PLUGINS/C.prx'}); files=@(); dependencies=@()}
-    Assert (-not @(Get-HubDestinations $console).Count) 'An emulator plugin got the hub.'
-    $hubBytes = [byte[]]$bytes.Clone(); [BitConverter]::GetBytes([uint16]34404).CopyTo($hubBytes, 68)
-    $hubFile = Join-Path $work 'FusionFixHub.exe'; [IO.File]::WriteAllBytes($hubFile, $hubBytes)
-    Remove-Item -LiteralPath $result.file
-    $result = Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'with-hub') 'off' $hubFile
-    Assert ('FusionFixHub.exe' -in $result.files -and $result.files.Count -eq 3) 'The hub is missing from the archive.'
+    Assert (-not @(Get-GameFolders $console).Count) 'An emulator plugin got a game folder.'
     $listing = [Text.Encoding]::UTF8.GetString((Invoke-PackageTool (Join-Path $work 'data/7za.exe') @('l', '-slt', $result.file)))
     Assert ($listing.Replace("`r", '') -notmatch '(?m)^Path = CrashDumps$') 'A release build got the CrashDumps folder.'
     Remove-Item -LiteralPath $result.file
-    $result = Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'with-dumps') 'off' $hubFile $true
+    $result = Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'with-dumps') 'off' $true
     $listing = [Text.Encoding]::UTF8.GetString((Invoke-PackageTool (Join-Path $work 'data/7za.exe') @('l', '-slt', $result.file)))
-    Assert ($listing.Replace("`r", '') -match '(?m)^Path = CrashDumps$' -and $result.files.Count -eq 3) 'The CrashDumps folder is missing from a developer build.'
-    Assert-Fails { Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'x86-hub') 'off' (Join-Path $work 'data/A/A.asi') } 'not an x64'
+    Assert ($listing.Replace("`r", '') -match '(?m)^Path = CrashDumps$' -and $result.files.Count -eq 2) 'The CrashDumps folder is missing from a developer build.'
     Remove-Item -LiteralPath $result.file, (Join-Path $work 'data/A/config.ini')
     Assert-Fails { Invoke-ManifestPackage $fixture $package $work (Join-Path $work 'second') 'off' } 'does not exist|Cannot find'
     Assert (-not (Test-Path -LiteralPath $result.file)) 'A failed package created a ZIP.'

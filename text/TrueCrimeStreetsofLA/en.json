@@ -43,7 +43,7 @@
   "CheckForUpdates": "Check for updates",
   "CheckForUpdates.description": "Once per start, asks fusionfix.io whether a newer version of the fix is out; if FusionFixHub is installed, it opens on the update when you close the game. Off makes no network request.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "page.graphics": "Graphics",
   "page.controls": "Mouse",
   "group.postfx": "Post-Processing",

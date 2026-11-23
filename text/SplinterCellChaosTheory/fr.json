@@ -102,7 +102,7 @@
   "MAIN.Vibration": "Vibration",
   "MAIN.Vibration.description": "Fait vibrer la manette lors des tirs, explosions et coups. S'applique immédiatement.",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvrira quand vous quitterez le jeu.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io.",
+  "update.availablesite": "{name} {version} est disponible sur {page}",
   "startup.unsupported": "Cet exécutable n’est pas pris en charge par le Fusion Fix. Utilisez l’exécutable solo d’origine de Chaos Theory, version boîte ou Steam, et le dernier chargeur ASI du pack. Le jeu démarre sans le fix.",
   "padPrompt.cross": "Croix",
   "padPrompt.circle": "Rond",

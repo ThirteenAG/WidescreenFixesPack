@@ -73,5 +73,5 @@
   "checkupdates": "Rechercher les mises à jour",
   "checkupdates.description": "Vérifie une nouvelle version une fois à l’activation. Un avis apparaît dans Plugins ; FusionFixHub s’ouvre après le jeu s’il est installé. Désactivé : aucune requête réseau.",
   "update.availablehub": "Une mise à jour de The Punisher Fusion Fix est disponible. FusionFixHub s'ouvrira à la fermeture du jeu.",
-  "update.availablesite": "Une mise à jour de The Punisher Fusion Fix est disponible sur fusionfix.io."
+  "update.availablesite": "Une mise à jour de The Punisher Fusion Fix est disponible sur {page}"
 }

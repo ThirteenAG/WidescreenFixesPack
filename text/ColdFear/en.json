@@ -63,7 +63,7 @@
   "FPSLimit.monitor": "Monitor refresh rate",
   "CheckForUpdates": "Check for Updates",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "menu.details": "Details",
   "menu.detailsnav": "Left/right: page. Back: return to settings.",
   "SkipPressStart": "Skip Press Start",

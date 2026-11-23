@@ -95,7 +95,7 @@
   "checkforupdates": "Cerca aggiornamenti",
   "checkforupdates.description": "Una volta per avvio chiede a fusionfix.io se è uscita una versione più recente del fix e te lo dice nel gioco. Disattivato non fa nessuna richiesta di rete.",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "gamepadcameraspeed": "Velocità visuale del controller",
   "gamepadcameraspeed.description": "Regola la velocità di mira della levetta destra.",
   "invertgamepady": "Inverti asse Y del controller",

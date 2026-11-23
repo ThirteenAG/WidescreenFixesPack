@@ -46,7 +46,7 @@
   "checkupdates": "Check for Updates",
   "checkupdates.description": "Checks for a new fix version once when enabled. A notice appears in Settings; FusionFixHub opens after the game exits if it is installed. Off makes no network request.",
   "update.availablehub": "An update for Psi-Ops Fusion Fix is available. FusionFixHub will open after you exit the game.",
-  "update.availablesite": "An update for Psi-Ops Fusion Fix is available at fusionfix.io.",
+  "update.availablesite": "An update for Psi-Ops Fusion Fix is available at {page}",
   "page.framerate": "Frame rate",
   "FPSLimit": "Frame rate limit",
   "FPSLimit.description": "Maximum frames per second. 0 adds no limit, -1 uses the monitor refresh rate, or choose 30 to 1000. The recommended limit is 60; higher rates need gameplay checks.",

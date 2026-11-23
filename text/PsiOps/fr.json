@@ -46,7 +46,7 @@
   "checkupdates": "Rechercher les mises à jour",
   "checkupdates.description": "Vérifie une fois si une nouvelle version est disponible. Un avis apparaît dans Paramètres ; FusionFixHub installé s'ouvre à la fermeture du jeu. Désactivé : aucune requête réseau.",
   "update.availablehub": "Une mise à jour de Psi-Ops Fusion Fix est disponible. FusionFixHub s'ouvrira à la fermeture du jeu.",
-  "update.availablesite": "Une mise à jour de Psi-Ops Fusion Fix est disponible sur fusionfix.io.",
+  "update.availablesite": "Une mise à jour de Psi-Ops Fusion Fix est disponible sur {page}",
   "page.framerate": "Fréquence d’images",
   "FPSLimit": "Limite d’images par seconde",
   "FPSLimit.description": "Maximum d’images par seconde. 0 sans limite ajoutée, -1 suit le moniteur, ou de 30 à 1000. 60 est recommandé ; les valeurs supérieures restent à tester en jeu.",

@@ -117,7 +117,7 @@ The left stick moves in any direction, and pushing it gently walks slowly, in bo
 ## Installation
 
 1. Download the `.zip` from this release.
-2. Extract the archive into the installation folder that contains `Bin32` and `Bin64`. Keep those folders: each contains the loader, its matching fix and FusionFixHub beside that version of `FarCry.exe`.
+2. Extract the archive into the installation folder that contains `Bin32` and `Bin64`. Keep those folders: each contains the loader and its matching fix beside that version of `FarCry.exe`.
 3. Launch the game once to create the settings file next to the fix: `FarCry.FusionFix.cfg` for 32-bit or `FarCry64.FusionFix.cfg` for 64-bit.
 4. Configure the fix in Options → Plugins, on fusionfix.io or in FusionFixHub. Restart only when the settings menu requests it.
 

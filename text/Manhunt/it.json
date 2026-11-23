@@ -62,7 +62,7 @@
   "checkupdates": "Cerca aggiornamenti",
   "checkupdates.description": "Controlla una volta se è disponibile una nuova versione. Un avviso appare in Impostazioni; FusionFixHub si apre dopo l'uscita dal gioco, se installato. Disattivato: nessuna richiesta di rete.",
   "update.availablehub": "È disponibile un aggiornamento di Manhunt Fusion Fix. FusionFixHub si aprirà dopo l'uscita dal gioco.",
-  "update.availablesite": "È disponibile un aggiornamento di Manhunt Fusion Fix su fusionfix.io.",
+  "update.availablesite": "È disponibile un aggiornamento di Manhunt Fusion Fix su {page}",
   "borders": "Bande dei filmati",
   "borders.description": "Conserva l'inquadratura originale 4:3 con bande laterali su schermi larghi e orizzontali su schermi stretti. Disattivato riempie lo schermo con una vista più ampia. Il gioco originale non anima le bande.",
   "borders.off": "Disattivate",

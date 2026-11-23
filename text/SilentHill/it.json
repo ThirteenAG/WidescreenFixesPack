@@ -126,7 +126,7 @@
   "MAIN.CheckForUpdates": "Cerca aggiornamenti",
   "MAIN.CheckForUpdates.description": "Una volta per avvio chiede a fusionfix.io se è uscita una versione più recente del fix e te lo dice nel gioco. Disattivato non fa nessuna richiesta di rete.",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "display.pausefocus": "Pausa in background",
   "display.pausefocus.description": "Mette il gioco in pausa quando la finestra è inattiva. Disattivato: il gioco continua.",
   "sh2.unlimited": "Illimitato",

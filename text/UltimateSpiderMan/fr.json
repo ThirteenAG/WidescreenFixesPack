@@ -81,5 +81,5 @@
   "MAIN_CheckForUpdates": "Rechercher les mises à jour",
   "MAIN_CheckForUpdates.description": "Recherche une nouvelle version une fois activée. Un avis apparaît dans Options ; FusionFixHub gère les mises à jour après la fermeture du jeu. Désactivé : aucune requête réseau.",
   "update.availablehub": "Une nouvelle version du correctif est disponible. Ouvrez FusionFixHub après avoir quitté le jeu.",
-  "update.availablesite": "Une nouvelle version du correctif est disponible sur fusionfix.io."
+  "update.availablesite": "Une nouvelle version du correctif est disponible sur {page}"
 }

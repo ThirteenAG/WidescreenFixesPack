@@ -67,7 +67,7 @@
   "checkupdates": "Buscar actualizaciones",
   "checkupdates.description": "Busca una vez una nueva versión al activarlo. El aviso aparece en el menú Plugins; FusionFixHub se abre al salir si está instalado. Desactivado no envía solicitudes de red.",
   "update.availablehub": "Hay una actualización de Tony Hawk's Underground Fusion Fix. FusionFixHub se abrirá al salir del juego.",
-  "update.availablesite": "Hay una actualización de Tony Hawk's Underground Fusion Fix en fusionfix.io.",
+  "update.availablesite": "Hay una actualización de Tony Hawk's Underground Fusion Fix en {page}",
   "MAIN.GamepadIcons": "Iconos del mando",
   "MAIN.GamepadIcons.description": "Iconos de los botones del mando. Auto usa Xbox; elige PlayStation o Nintendo para otro mando. El teclado restaura sus propias indicaciones.",
   "MAIN.GamepadCameraSpeed": "Velocidad de cámara del mando",

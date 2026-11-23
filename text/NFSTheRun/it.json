@@ -83,7 +83,7 @@
   "MAIN.FPSLimit.game": "Limite del gioco",
   "MAIN.FPSLimit.refresh": "Frequenza dello schermo",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "MAIN.HudAspectRatioConstraint": "Proporzioni HUD",
   "HUD.Auto": "Auto (bordi dello schermo)",
   "MAIN.HudAspectRatioConstraint.description": "Auto posiziona gli elementi laterali dell’HUD ai bordi dello schermo. Un rapporto li mantiene in un riquadro centrato. Si applica subito."

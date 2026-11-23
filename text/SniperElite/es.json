@@ -34,7 +34,7 @@
   "FPSLimit.unlimited": "Ilimitado",
   "FPSLimit.monitor": "Frecuencia del monitor",
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abrirá al cerrar el juego.",
-  "update.availablesite": "{name} {version} está disponible en fusionfix.io.",
+  "update.availablesite": "{name} {version} está disponible en {page}",
   "update.title": "Actualización disponible",
   "page.camera": "Cámara",
   "CutsceneBorders.description": "Las barras negras de las escenas cinemáticas conservan su formato panorámico original independientemente de la relación de aspecto de la pantalla. Activado: las escenas cinemáticas originales con barras negras. Desactivado: escenas cinemáticas sin barras negras. Se aplica de inmediato.",

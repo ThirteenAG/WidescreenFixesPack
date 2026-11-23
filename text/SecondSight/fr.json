@@ -29,7 +29,7 @@
   "CheckForUpdates": "Rechercher les mises à jour",
   "CheckForUpdates.description": "Une fois par lancement, demande à fusionfix.io si une version plus récente du fix est sortie et vous le dit dans le jeu. Désactivé n'envoie aucune requête réseau.",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvrira quand vous quitterez le jeu.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io.",
+  "update.availablesite": "{name} {version} est disponible sur {page}",
   "WindowMode.description": "Plein écran, fenêtre, ou fenêtre sans bordure couvrant l’écran. Nécessite un redémarrage.",
   "SkipIntro": "Passer l'intro",
   "SkipIntro.description": "Démarre à l'écran titre, sans les vidéos des logos ni l'écran de copyright. Redémarrage nécessaire.",

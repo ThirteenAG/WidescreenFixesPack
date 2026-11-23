@@ -58,5 +58,5 @@
   "checkupdates": "Buscar actualizaciones",
   "checkupdates.description": "Comprueba una vez al inicio si hay una versión nueva del arreglo. Aparece un aviso en Plugins, y FusionFixHub se abre al salir del juego si está instalado. Desactivado no hace ninguna petición de red.",
   "update.availablehub": "Hay una actualización de Tony Hawk Pro Skater 2 Fusion Fix. FusionFixHub se abrirá al salir del juego.",
-  "update.availablesite": "Hay una actualización de Tony Hawk Pro Skater 2 Fusion Fix en fusionfix.io."
+  "update.availablesite": "Hay una actualización de Tony Hawk Pro Skater 2 Fusion Fix en {page}"
 }

@@ -118,7 +118,7 @@
   "MAIN.CheckForUpdates": "Check for Updates",
   "MAIN.CheckForUpdates.description": "Once per start, asks fusionfix.io whether a newer version of the fix is out and tells you in the game. Off makes no network request.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "update.title": "Update available",
   "startup.unsupported": "This executable is not supported by Fusion Fix. Use a supported Splinter Cell Conviction single-player executable and the latest ASI loader from the fix package. The game starts without the fix.",
   "SPLITSCREEN.GamepadPlayer1.0": "Keyboard and mouse",

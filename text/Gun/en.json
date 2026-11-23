@@ -58,7 +58,7 @@
   "checkupdates": "Check for updates",
   "checkupdates.description": "Check for a new fix version once when enabled. A notice appears in Plugins; FusionFixHub opens after the game exits if installed. Off makes no network request.",
   "update.availablehub": "An update for Gun Fusion Fix is available. FusionFixHub will open after you exit the game.",
-  "update.availablesite": "An update for Gun Fusion Fix is available at fusionfix.io.",
+  "update.availablesite": "An update for Gun Fusion Fix is available at {page}",
   "CutsceneBorders": "Cutscene borders",
   "CutsceneBorders.description": "Both keeps the original cinematic frame with borders at any aspect ratio. Off removes the borders and fills the screen, showing more at the sides on wider screens. Letterbox and Pillarbox retain only the named borders.",
   "borders.off": "Off",

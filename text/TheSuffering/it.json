@@ -51,7 +51,7 @@
   "CheckForUpdates": "Cerca aggiornamenti",
   "CheckForUpdates.description": "Una volta per avvio chiede a fusionfix.io se è uscita una versione più recente del fix e te lo dice nel gioco. Disattivato non fa nessuna richiesta di rete.",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "update.title": "Aggiornamento disponibile",
   "startup.unsupported": "Questo eseguibile non è supportato dal Fusion Fix. Usa l’eseguibile originale di The Suffering o di Ties That Bind e l’ultimo loader ASI del pacchetto. Il gioco si avvia senza il fix.",
   "menu.WindowMode.help": "Schermo intero, finestra o senza bordi. Riavvio necessario.",

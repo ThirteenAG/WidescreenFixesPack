@@ -59,7 +59,7 @@
   "checkupdates": "Buscar actualizaciones",
   "checkupdates.description": "Busca una nueva versión una vez al activarlo. El aviso aparece en Plugins; FusionFixHub se abre al salir si está instalado. Desactivado no envía solicitudes de red.",
   "update.availablehub": "Hay una actualización de Tony Hawk Pro Skater 4 Fusion Fix. FusionFixHub se abrirá al salir del juego.",
-  "update.availablesite": "Hay una actualización de Tony Hawk Pro Skater 4 Fusion Fix en fusionfix.io.",
+  "update.availablesite": "Hay una actualización de Tony Hawk Pro Skater 4 Fusion Fix en {page}",
   "PauseOnFocusLoss": "Pausa en segundo plano",
   "PauseOnFocusLoss.description": "En un modo de ventana, el juego se detiene mientras otra ventana está activa, como siempre hizo. Desactivado sigue en marcha. Se aplica al instante.",
   "MAIN.GamepadIcons": "Iconos del mando",

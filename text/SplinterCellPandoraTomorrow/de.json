@@ -164,7 +164,7 @@
   "MAIN.SaveLocation.game": "Spielordner",
   "MAIN.SaveLocation.documents": "Dokumente",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar.",
   "ui.off": "Aus",
   "ui.letterbox": "Balken oben/unten",
   "ui.pillarbox": "Balken seitlich",

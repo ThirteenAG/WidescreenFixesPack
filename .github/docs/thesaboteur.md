@@ -10,7 +10,7 @@
 
 ## Installation
 
-1. Extract the release beside `Saboteur.exe`, preserving its folders. Keep `dinput8.dll`, `FusionFixHub.exe`, the ASI and the accompanying movie and button artwork files together.
+1. Extract the release beside `Saboteur.exe`, preserving its folders. Keep `dinput8.dll`, the ASI and the accompanying movie and button artwork files together.
 2. Configure the fix in FusionFixHub or on fusionfix.io, or start the game and open **Settings → Plugins → The Saboteur Fusion Fix**. The pause menu has the same Plugins entry.
 3. The first launch creates `scripts/TheSaboteur.FusionFix.cfg`. Restart when the menu displays a restart notice.
 

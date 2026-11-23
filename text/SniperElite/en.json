@@ -34,7 +34,7 @@
   "FPSLimit.unlimited": "Unlimited",
   "FPSLimit.monitor": "Monitor refresh rate",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "update.title": "Update available",
   "page.camera": "Camera",
   "CutsceneBorders.description": "Cutscene black bars keep their original wide frame at any screen aspect ratio. On: the original cutscenes with black bars. Off: cutscenes without black bars. Applies immediately.",

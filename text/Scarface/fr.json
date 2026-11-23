@@ -93,7 +93,7 @@
   "menu.details": "Détails",
   "menu.restartshort": "Redémarrage requis",
   "update.availablehub": "Une mise à jour de Scarface Fusion Fix est disponible. FusionFixHub s'ouvrira à la fermeture du jeu.",
-  "update.availablesite": "Une mise à jour de Scarface Fusion Fix est disponible sur fusionfix.io.",
+  "update.availablesite": "Une mise à jour de Scarface Fusion Fix est disponible sur {page}",
   "checkupdates": "Rechercher les mises à jour",
   "checkupdates.description": "Vérifie une fois si une nouvelle version est disponible. Un avis apparaît dans Paramètres ; FusionFixHub installé s'ouvre à la fermeture du jeu. Désactivé : aucune requête réseau.",
   "GamepadCameraSpeed": "Vitesse caméra manette",

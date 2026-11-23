@@ -39,7 +39,7 @@
   "CheckForUpdates": "Check for updates",
   "CheckForUpdates.description": "Checks for a newer fix when enabled. A notice appears at the main menu. FusionFixHub opens the update page after the game exits, when installed beside the game. Disabled by default.",
   "update.availablehub": "A new {name} version is available. Update it in FusionFixHub after closing the game.",
-  "update.availablesite": "A new {name} version is available at fusionfix.io.",
+  "update.availablesite": "A new {name} version is available at {page}",
   "CutsceneBorders": "Cutscene borders",
   "CutsceneBorders.description": "Keeps the story scenes and race intros in their original 4:3 framing. Letterbox adds bars above and below on screens narrower than 4:3, Pillarbox adds side bars on wider screens, Both does either. Off fills the screen with a wider view. Applies immediately.",
   "CutsceneBorders.0": "Off",

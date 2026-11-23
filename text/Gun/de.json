@@ -58,7 +58,7 @@
   "checkupdates": "Nach Updates suchen",
   "checkupdates.description": "Prüft beim Aktivieren einmal auf eine neue Version. Ein Hinweis erscheint unter Plugins; FusionFixHub öffnet sich nach Spielende, falls installiert. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "Ein Update für Gun Fusion Fix ist verfügbar. FusionFixHub öffnet sich nach Spielende.",
-  "update.availablesite": "Ein Update für Gun Fusion Fix ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "Ein Update für Gun Fusion Fix ist auf {page} verfügbar.",
   "CutsceneBorders": "Ränder in Zwischensequenzen",
   "CutsceneBorders.description": "Beide erhält den ursprünglichen Bildausschnitt mit Balken bei jedem Seitenverhältnis. Aus füllt den Bildschirm und zeigt auf breiten Bildschirmen seitlich mehr. Die anderen Modi behalten nur die genannten Balken.",
   "borders.off": "Aus",

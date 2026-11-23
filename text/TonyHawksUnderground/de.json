@@ -67,7 +67,7 @@
   "checkupdates": "Nach Updates suchen",
   "checkupdates.description": "Prüft beim Einschalten einmal auf eine neue Version. Ein Hinweis erscheint im Menü Plugins; FusionFixHub öffnet sich nach Spielende, falls installiert. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "Ein Update für Tony Hawk's Underground Fusion Fix ist verfügbar. FusionFixHub öffnet sich nach Spielende.",
-  "update.availablesite": "Ein Update für Tony Hawk's Underground Fusion Fix ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "Ein Update für Tony Hawk's Underground Fusion Fix ist auf {page} verfügbar.",
   "MAIN.GamepadIcons": "Controller-Symbole",
   "MAIN.GamepadIcons.description": "Tastensymbole des Controllers. Auto verwendet Xbox; für andere Controller PlayStation oder Nintendo wählen. Tastatureingaben zeigen wieder Tastaturhinweise.",
   "MAIN.GamepadCameraSpeed": "Gamepad-Kamerageschwindigkeit",

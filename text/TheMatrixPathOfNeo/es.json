@@ -33,7 +33,7 @@
   "CheckForUpdates": "Buscar actualizaciones",
   "CheckForUpdates.description": "En cada inicio pregunta a fusionfix.io si hay una versión más reciente de la corrección y lo indica en los menús del juego. Desactivado no hace ninguna petición de red.",
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abre al cerrar el juego.",
-  "update.availablesite": "{name} {version} está disponible en fusionfix.io.",
+  "update.availablesite": "{name} {version} está disponible en {page}",
   "ResX": "Ancho de resolución",
   "ResX.description": "Ancho en píxeles. Cero usa la resolución del escritorio. Requiere reiniciar.",
   "ResY": "Alto de resolución",

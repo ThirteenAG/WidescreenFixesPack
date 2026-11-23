@@ -68,7 +68,7 @@
   "MAIN.CheckForUpdates": "Buscar actualizaciones",
   "MAIN.CheckForUpdates.description": "Una vez por inicio pregunta a fusionfix.io si hay una versión más nueva del fix y te lo dice en el juego. Desactivado no hace ninguna petición de red.",
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abrirá al cerrar el juego.",
-  "update.availablesite": "{name} {version} está disponible en fusionfix.io.",
+  "update.availablesite": "{name} {version} está disponible en {page}",
   "MAIN.GamepadIcons": "Iconos del mando",
   "MAIN.GamepadIcons.description": "Imágenes de los botones nativos: Xbox, PlayStation o Nintendo. Automático usa Xbox. Los nombres del teclado y ratón no cambian.",
   "menu.pad.triangle": "Triángulo",

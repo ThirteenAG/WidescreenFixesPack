@@ -93,7 +93,7 @@
   "menu.details": "Dettagli",
   "menu.restartshort": "Riavvio necessario",
   "update.availablehub": "È disponibile un aggiornamento di Scarface Fusion Fix. FusionFixHub si aprirà dopo l'uscita dal gioco.",
-  "update.availablesite": "È disponibile un aggiornamento di Scarface Fusion Fix su fusionfix.io.",
+  "update.availablesite": "È disponibile un aggiornamento di Scarface Fusion Fix su {page}",
   "checkupdates": "Cerca aggiornamenti",
   "checkupdates.description": "Controlla una volta se è disponibile una nuova versione. Un avviso appare in Impostazioni; FusionFixHub si apre dopo l'uscita dal gioco, se installato. Disattivato: nessuna richiesta di rete.",
   "GamepadCameraSpeed": "Velocità telecamera controller",

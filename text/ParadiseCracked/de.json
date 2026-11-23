@@ -31,7 +31,7 @@
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Fragt bei jedem Start fusionfix.io, ob eine neuere Version des Fixes erschienen ist, und meldet es im Hauptmenü. FusionFixHub öffnet die Updateseite nach dem Beenden des Spiels, wenn es neben dem Spiel installiert ist. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "Eine neue Version von {name} ist verfügbar. Aktualisiere sie nach dem Schließen des Spiels in FusionFixHub.",
-  "update.availablesite": "Eine neue Version von {name} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "Eine neue Version von {name} ist auf {page} verfügbar.",
   "MAIN.TextLanguage": "Textsprache",
   "MAIN.TextLanguage.description": "Sprache der Fix-Einstellungen in kompatiblen Editoren. Auto folgt der Sprache des Editors.",
   "menu.auto": "Auto"

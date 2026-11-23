@@ -33,7 +33,7 @@
   "CheckForUpdates": "Check for updates",
   "CheckForUpdates.description": "Once per start, asks fusionfix.io whether a newer version of the fix is out and tells you in the game's menus. Off makes no network request.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "ResX": "Resolution width",
   "ResX.description": "Width in pixels. Zero uses the desktop resolution. Needs a restart.",
   "ResY": "Resolution height",

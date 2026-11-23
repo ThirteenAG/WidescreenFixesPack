@@ -39,7 +39,7 @@
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Sucht bei Aktivierung nach einer neueren Version. Ein Hinweis erscheint im Hauptmenü. FusionFixHub öffnet die Update-Seite nach dem Beenden, wenn es im Spielordner installiert ist. Standardmäßig aus.",
   "update.availablehub": "Eine neue Version von {name} ist verfügbar. Nach dem Beenden in FusionFixHub aktualisieren.",
-  "update.availablesite": "Eine neue Version von {name} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "Eine neue Version von {name} ist auf {page} verfügbar.",
   "CutsceneBorders": "Zwischensequenzbalken",
   "CutsceneBorders.description": "Bewahrt den ursprünglichen 4:3-Bildausschnitt der Story-Szenen und Rennintros. Letterbox setzt Balken oben und unten auf Bildschirmen schmaler als 4:3, Pillarbox seitliche Balken auf breiteren, Beide je nach Bildschirm. Aus füllt den Bildschirm mit einer breiteren Ansicht. Gilt sofort.",
   "CutsceneBorders.0": "Aus",

@@ -65,7 +65,7 @@
   "CheckForUpdates.description": "Vérifie une fois si un correctif plus récent existe. Désactivé : aucune requête réseau. Le message apparaît dans Plugins.",
   "menu.updatetitle": "Mise à jour disponible",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s’ouvrira après avoir quitté le jeu.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io.",
+  "update.availablesite": "{name} {version} est disponible sur {page}",
   "HudAspectRatioConstraint": "Format de l'interface",
   "HudAspectRatioConstraint.description": "Auto répartit l'interface et les textes à l'écran sur tout l'écran. Un format les garde dans un cadre centré de cette forme. Les menus gardent leur disposition 16:9 sur les écrans plus larges."
 }

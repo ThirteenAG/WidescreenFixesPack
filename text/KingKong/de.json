@@ -65,7 +65,7 @@
   "CheckForUpdates.description": "Sucht beim Einschalten einmal nach einer neueren Version. Aus: keine Netzwerkanfrage. Der Hinweis erscheint unter Plugins.",
   "menu.updatetitle": "Update verfügbar",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich nach dem Beenden.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar.",
   "HudAspectRatioConstraint": "HUD-Seitenverhältnis",
   "HudAspectRatioConstraint.description": "Auto verteilt HUD und Bildschirmtexte über den ganzen Bildschirm. Ein Verhältnis hält sie in einem zentrierten Rahmen dieser Form. Menüs behalten auf breiteren Bildschirmen ihr 16:9-Layout."
 }

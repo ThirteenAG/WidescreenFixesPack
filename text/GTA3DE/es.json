@@ -38,7 +38,7 @@
   "checkforupdates": "Buscar actualizaciones",
   "checkforupdates.description": "Una vez por inicio pregunta a fusionfix.io si hay una versión más nueva del fix y te lo dice en el juego. Desactivado no hace ninguna petición de red.",
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abrirá al cerrar el juego.",
-  "update.availablesite": "{name} {version} está disponible en fusionfix.io.",
+  "update.availablesite": "{name} {version} está disponible en {page}",
   "startup.unsupported": "Esta versión de LibertyCity.exe no es compatible. El Fusion Fix necesita la versión actual del juego (la actualización de noviembre de 2024 o posterior). El juego se inicia sin el fix.",
   "auto": "Auto",
   "hudaspect": "Proporción del HUD",

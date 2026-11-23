@@ -58,7 +58,7 @@
   "checkupdates": "Cerca aggiornamenti",
   "checkupdates.description": "Controlla una nuova versione una volta quando attivato. Un avviso appare in Plugin; FusionFixHub si apre all’uscita, se installato. Disattivato non invia richieste di rete.",
   "update.availablehub": "È disponibile un aggiornamento di Gun Fusion Fix. FusionFixHub si aprirà dopo l'uscita dal gioco.",
-  "update.availablesite": "È disponibile un aggiornamento di Gun Fusion Fix su fusionfix.io.",
+  "update.availablesite": "È disponibile un aggiornamento di Gun Fusion Fix su {page}",
   "CutsceneBorders": "Bordi dei filmati",
   "CutsceneBorders.description": "Entrambe conserva l’inquadratura cinematografica originale con bande a ogni formato. Disattivate riempie lo schermo e mostra più scena ai lati sugli schermi larghi. Gli altri modi mantengono solo le bande indicate.",
   "borders.off": "Disattivato",

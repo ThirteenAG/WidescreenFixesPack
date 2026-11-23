@@ -37,7 +37,7 @@
   "CheckForUpdates": "Cerca aggiornamenti",
   "CheckForUpdates.description": "A ogni avvio chiede a fusionfix.io se è uscita una versione più recente della fix e lo indica nella schermata del titolo. Disattivato non invia richieste di rete.",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si apre quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "TextLanguage": "Lingua dei testi",
   "TextLanguage.description": "Lingua dei testi della fix. Auto segue la lingua di visualizzazione di Windows.",
   "auto": "Auto"

@@ -56,5 +56,5 @@
   "CheckForUpdates": "Buscar actualizaciones",
   "CheckForUpdates.description": "Busca una vez una versión más reciente al activar. Desactivado: ninguna solicitud de red. El aviso aparece en Plugins.",
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abrirá al salir del juego. Pulsa Aceptar o Atrás para cerrar.",
-  "update.availablesite": "{name} {version} está disponible en fusionfix.io. Pulsa Aceptar o Atrás para cerrar."
+  "update.availablesite": "{name} {version} está disponible en {page}. Pulsa Aceptar o Atrás para cerrar."
 }

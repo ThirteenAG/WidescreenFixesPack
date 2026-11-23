@@ -67,7 +67,7 @@
   "checkupdates": "Cerca aggiornamenti",
   "checkupdates.description": "Controlla una volta se c'è una nuova versione quando viene attivato. Un avviso appare nel menu Plugin; FusionFixHub si apre all'uscita, se installato. Disattivato non invia richieste di rete.",
   "update.availablehub": "È disponibile un aggiornamento di Tony Hawk's Underground 2 Fusion Fix. FusionFixHub si aprirà dopo l'uscita dal gioco.",
-  "update.availablesite": "È disponibile un aggiornamento di Tony Hawk's Underground 2 Fusion Fix su fusionfix.io.",
+  "update.availablesite": "È disponibile un aggiornamento di Tony Hawk's Underground 2 Fusion Fix su {page}",
   "MAIN.GamepadIcons": "Icone del controller",
   "MAIN.GamepadIcons.description": "Icone dei pulsanti del controller. Auto usa Xbox; scegli PlayStation o Nintendo per un altro controller. La tastiera ripristina i propri suggerimenti.",
   "MAIN.GamepadCameraSpeed": "Velocità telecamera del controller",

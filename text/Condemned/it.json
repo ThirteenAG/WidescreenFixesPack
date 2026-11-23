@@ -58,7 +58,7 @@
   "CheckForUpdates": "Cerca aggiornamenti",
   "CheckForUpdates.description": "Una volta per avvio chiede a fusionfix.io se è uscita una versione più recente del fix e te lo dice nel gioco. Disattivato non fa nessuna richiesta di rete.",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",
-  "update.availablesite": "{name} {version} è disponibile su fusionfix.io.",
+  "update.availablesite": "{name} {version} è disponibile su {page}",
   "CutsceneBorders.description": "Letterbox mantiene le bande del gioco sopra e sotto le scene; Bande laterali tiene l’immagine in 16:9 tra bande ai lati sugli schermi più larghi; Entrambe fa tutte e due; Disattivato riempie lo schermo. Si applica subito.",
   "AnimatedCutsceneBorders": "Bande dei filmati animate",
   "AnimatedCutsceneBorders.description": "Mantiene la dissolvenza originale delle bande. Disattivato le mostra e le nasconde subito.",

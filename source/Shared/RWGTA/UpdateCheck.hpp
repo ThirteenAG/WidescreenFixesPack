@@ -18,7 +18,7 @@
 // - off: nothing at all, no network request;
 // - on (at the start, or when turned on while playing): one request to https://fusionfix.io/api/versions on a thread
 //   of its own; when the fix's release there is newer than this build, a notice once the game is playable, pointing
-//   to FusionFixHub when it's in the game's folder, else to fusionfix.io;
+//   to FusionFixHub when it's in the game's folder, else to the fix's game page on fusionfix.io ({page} in the text);
 // - with the hub, when the game exits: FusionFixHub.exe --show-update <id> --wait-pid <pid>, which opens on the fix's
 //   update page. Never while the game runs; turning the option off cancels it.
 // The game shows the notice through Config::show (its help box), on the game's thread, from Tick.
@@ -46,6 +46,7 @@ namespace RWGTA::UpdateCheck
             std::atomic<State> state{ State::Idle };
             std::mutex lock;
             std::string latest;
+            std::string page = "fusionfix.io";
             bool hubAtExit = false;
             bool installed = false;
         };
@@ -191,13 +192,14 @@ namespace RWGTA::UpdateCheck
                 // Newer = the release was uploaded more than 30 minutes after this build was made (a release's own
                 // build is made just before its upload). The version text is only shown.
                 asi_settings::json::Value data;
-                std::string version, uploaded;
+                std::string version, uploaded, game;
                 if (auto body = Fetch(d.config.pluginId + "/" + d.config.fileVersion); !body.empty() && asi_settings::json::Parse(body, data))
                 {
                     if (auto fixes = data.Find("fixes"))
                         if (auto own = fixes->Find(d.config.pluginId))
                         {
                             version = std::string(own->Str("version"));
+                            game = std::string(own->Str("game"));
                             if (auto asset = own->Find("asset"))
                                 uploaded = std::string(asset->Str("updatedAt"));
                             if (uploaded.empty())
@@ -209,6 +211,8 @@ namespace RWGTA::UpdateCheck
                 {
                     std::lock_guard guard(d.lock);
                     d.latest = version.empty() ? uploaded.substr(0, 10) : version;
+                    if (!game.empty())
+                        d.page = "fusionfix.io/games/" + game;
                     d.state = State::Available;
                 }
                 else
@@ -222,6 +226,24 @@ namespace RWGTA::UpdateCheck
                 text.replace(at, key.size(), value);
             return text;
         }
+    }
+
+    // The fix's game page for the notice without the hub, e.g. "fusionfix.io/games/gta3" (known after the check)
+    inline std::string Page()
+    {
+        auto& d = detail::Get();
+        std::lock_guard guard(d.lock);
+        return d.page;
+    }
+
+    // {page} in a notice line from Config::format
+    inline std::wstring ReplacePage(std::wstring line)
+    {
+        static const std::wstring key = L"{page}";
+        auto page = asi_settings::text::Widen(Page());
+        for (size_t at = line.find(key); at != std::wstring::npos; at = line.find(key, at + page.size()))
+            line.replace(at, key.size(), page);
+        return line;
     }
 
     // Once, when the fix starts (the settings loaded)
@@ -265,13 +287,14 @@ namespace RWGTA::UpdateCheck
         }
         bool hub = detail::HubPresent();
         if (d.config.format)
-            d.config.show(d.config.format(latest, hub));
+            d.config.show(ReplacePage(d.config.format(latest, hub)));
         else
         {
             auto& texts = d.config.settings->GetTexts();
             std::string line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
             line = detail::Replace(line, "{name}", texts.Resolve(d.config.settings->GetDescription().name));
             line = detail::Replace(line, "{version}", latest);
+            line = detail::Replace(line, "{page}", Page());
             d.config.show(asi_settings::text::Widen(line));
         }
         d.hubAtExit = hub;

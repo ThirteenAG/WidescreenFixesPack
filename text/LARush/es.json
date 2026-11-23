@@ -39,7 +39,7 @@
   "CheckForUpdates": "Buscar actualizaciones",
   "CheckForUpdates.description": "Si se activa, busca una versión más reciente. Avisa en el menú principal. FusionFixHub abre la página al salir si está instalado en la carpeta del juego. Desactivado por defecto.",
   "update.availablehub": "Hay una nueva versión de {name}. Actualízala en FusionFixHub después de cerrar el juego.",
-  "update.availablesite": "Hay una nueva versión de {name} en fusionfix.io.",
+  "update.availablesite": "Hay una nueva versión de {name} en {page}",
   "CutsceneBorders": "Bordes de las cinemáticas",
   "CutsceneBorders.description": "Conserva el encuadre 4:3 original de las escenas de la historia y las presentaciones de carrera. Letterbox añade bandas arriba y abajo en pantallas más estrechas que 4:3, Pillarbox bandas laterales en pantallas más anchas, Ambos según la pantalla. Desactivados llena la pantalla con una vista más amplia. Se aplica inmediatamente.",
   "CutsceneBorders.0": "Desactivados",

@@ -133,7 +133,7 @@
   "MAIN.CheckForUpdates": "Check for Updates",
   "MAIN.CheckForUpdates.description": "Once per start, asks fusionfix.io whether a newer version of the fix is out and tells you in the game. Off makes no network request.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "update.title": "Update available",
   "MAIN.GamepadIcons": "Gamepad Icons",
   "MAIN.GamepadIcons.description": "Auto uses Xbox artwork. Choose PlayStation or Nintendo artwork manually. Native Flash caches prompt images, so changing this setting requires a restart.",

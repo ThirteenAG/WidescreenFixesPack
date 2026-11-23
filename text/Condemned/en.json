@@ -58,7 +58,7 @@
   "CheckForUpdates": "Check for Updates",
   "CheckForUpdates.description": "Once per start, asks fusionfix.io whether a newer version of the fix is out and tells you in the game. Off makes no network request.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "CutsceneBorders.description": "Letterbox keeps the game's bars above and below cinematics; Pillarbox keeps the picture at 16:9 between side bars on wider screens; Both does both; Off fills the screen. Applies immediately.",
   "AnimatedCutsceneBorders": "Animated cutscene borders",
   "AnimatedCutsceneBorders.description": "Keeps the game's fade of the cinematic bars. Off shows and hides them at once.",

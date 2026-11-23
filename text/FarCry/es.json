@@ -73,7 +73,7 @@
   "MAIN.CheckForUpdates.description": "Consulta fusionfix.io una vez por inicio y muestra un aviso en Complementos si hay una versión nueva. Desactivado, no hace ninguna petición de red.",
   "update.title": "Actualización disponible",
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abre al cerrar el juego.",
-  "update.availablesite": "{name} {version} está disponible en fusionfix.io.",
+  "update.availablesite": "{name} {version} está disponible en {page}",
   "menu.helpkey": "F1: ayuda completa",
   "CutsceneBorders": "Bandas de cinemáticas",
   "CutsceneBorders.description": "Ambas conserva el encuadre original 4:3 en pantallas anchas y estrechas, incluidas las bandas del juego. Letterbox mantiene las bandas horizontales, Pillarbox las laterales. Desactivado amplía la vista sin bandas. Efecto inmediato.",

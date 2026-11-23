@@ -68,7 +68,7 @@
   "MAIN.CheckForUpdates": "Nach Updates suchen",
   "MAIN.CheckForUpdates.description": "Fragt einmal pro Start bei fusionfix.io, ob eine neuere Version des Fixes erschienen ist, und sagt es im Spiel. Aus stellt keine Netzwerkanfrage.",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",
-  "update.availablesite": "{name} {version} ist auf fusionfix.io verfügbar.",
+  "update.availablesite": "{name} {version} ist auf {page} verfügbar.",
   "MAIN.GamepadIcons": "Controller-Symbole",
   "MAIN.GamepadIcons.description": "Native Controller-Tastensymbole: Xbox, PlayStation oder Nintendo. Automatisch verwendet Xbox. Tastatur- und Mausbezeichnungen bleiben unverändert.",
   "menu.pad.triangle": "Dreieck",

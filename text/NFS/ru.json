@@ -186,5 +186,5 @@
   "checkforupdates": "Проверять обновления",
   "checkforupdates.description": "Один раз при запуске проверяет на fusionfix.io наличие новой версии исправления и сообщает о ней в игре. Если выключено, сетевые запросы не отправляются.",
   "update.availablehub": "Доступна версия {name} {version}. FusionFixHub откроется после выхода из игры.",
-  "update.availablesite": "Версия {name} {version} доступна на fusionfix.io."
+  "update.availablesite": "Версия {name} {version} доступна на {page}"
 }

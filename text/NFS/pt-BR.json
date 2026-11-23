@@ -186,5 +186,5 @@
   "checkforupdates": "Buscar atualizações",
   "checkforupdates.description": "Ao iniciar, consulta uma vez fusionfix.io para buscar uma versão mais recente e avisa no jogo. Desativado não faz solicitações de rede.",
   "update.availablehub": "{name} {version} está disponível. O FusionFixHub abre quando você fechar o jogo.",
-  "update.availablesite": "{name} {version} está disponível em fusionfix.io."
+  "update.availablesite": "{name} {version} está disponível em {page}"
 }

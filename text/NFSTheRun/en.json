@@ -83,7 +83,7 @@
   "MAIN.FPSLimit.game": "Game limit",
   "MAIN.FPSLimit.refresh": "Refresh rate",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",
-  "update.availablesite": "{name} {version} is available at fusionfix.io.",
+  "update.availablesite": "{name} {version} is available at {page}",
   "MAIN.HudAspectRatioConstraint": "HUD aspect ratio",
   "HUD.Auto": "Auto (screen edges)",
   "MAIN.HudAspectRatioConstraint.description": "Auto places side-anchored HUD widgets at the screen edges. A ratio keeps them inside a centered box. Applies immediately."

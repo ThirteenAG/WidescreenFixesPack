@@ -56,5 +56,5 @@
   "CheckForUpdates": "Check for Updates",
   "CheckForUpdates.description": "Checks once for a newer fix when enabled. Off makes no network request. The notice appears in Plugins; FusionFixHub opens after exit when available.",
   "update.availablehub": "{name} {version} is available. FusionFixHub will open after you exit the game. Press Accept or Back to dismiss.",
-  "update.availablesite": "{name} {version} is available. Get the update at fusionfix.io. Press Accept or Back to dismiss."
+  "update.availablesite": "{name} {version} is available. Get the update at {page}. Press Accept or Back to dismiss."
 }

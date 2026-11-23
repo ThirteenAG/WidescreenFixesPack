@@ -47,7 +47,7 @@
   "checkupdates": "Rechercher les mises à jour",
   "checkupdates.description": "Vérifie une fois si une nouvelle version est disponible. Un avis apparaît dans Paramètres ; FusionFixHub installé s'ouvre à la fermeture du jeu. Désactivé : aucune requête réseau.",
   "update.availablehub": "Une mise à jour de The Saboteur Fusion Fix est disponible. FusionFixHub s'ouvrira à la fermeture du jeu.",
-  "update.availablesite": "Une mise à jour de The Saboteur Fusion Fix est disponible sur fusionfix.io.",
+  "update.availablesite": "Une mise à jour de The Saboteur Fusion Fix est disponible sur {page}",
   "page.compatibility": "Compatibilité",
   "menu.auto": "Automatique",
   "MAIN.GamepadIcons": "Icônes de manette",

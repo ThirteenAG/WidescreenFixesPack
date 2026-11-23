@@ -34,7 +34,7 @@
   "FPSLimit.unlimited": "Illimitée",
   "FPSLimit.monitor": "Fréquence de l'écran",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvrira quand vous quitterez le jeu.",
-  "update.availablesite": "{name} {version} est disponible sur fusionfix.io.",
+  "update.availablesite": "{name} {version} est disponible sur {page}",
   "update.title": "Mise à jour disponible",
   "page.camera": "Caméra",
   "CutsceneBorders.description": "Les barres noires des cinématiques conservent leur format large d'origine, quel que soit le format d'écran. Activé : les cinématiques d'origine avec barres noires. Désactivé : les cinématiques sans barres noires. S'applique immédiatement.",

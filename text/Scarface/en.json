@@ -93,7 +93,7 @@
   "menu.details": "Details",
   "menu.restartshort": "Restart required",
   "update.availablehub": "An update for Scarface Fusion Fix is available. FusionFixHub will open after you exit the game.",
-  "update.availablesite": "An update for Scarface Fusion Fix is available at fusionfix.io.",
+  "update.availablesite": "An update for Scarface Fusion Fix is available at {page}",
   "checkupdates": "Check for Updates",
   "checkupdates.description": "Checks for a new fix version once when enabled. A notice appears in Settings; FusionFixHub opens after the game exits if it is installed. Off makes no network request.",
   "GamepadCameraSpeed": "Controller Camera Speed",
