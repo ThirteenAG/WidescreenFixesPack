@@ -428,12 +428,13 @@ namespace
         float lx, ly, rx, ry;
         Stick(g.sThumbLX, g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, lx, ly);
         Stick(g.sThumbRX, g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
-        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
-        // The PlayStation 2 sticks: down is positive
+        // The PlayStation 2 sticks: down is positive. The game's cameras look up on a positive right stick Y; vehicles
+        // keep the console's sign (the guns, flying)
+        float look = RWGTA::PadOptions::LookUp(ry);
         s.LeftStickX = ToAxis(lx);
         s.LeftStickY = ToAxis(-ly);
         s.RightStickX = ToAxis(rx);
-        s.RightStickY = ToAxis(invert && context != Context::Frontend ? ry : -ry);
+        s.RightStickY = ToAxis(context == Context::Frontend ? -ry : InVehicle() ? -look : look);
 
         const To* layout = LayoutClassic;
         switch (context)
@@ -546,7 +547,6 @@ namespace
         float rx, ry;
         Stick(Current.sThumbRX, Current.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
         const auto speed = RWGTA::PadOptions::CameraSpeed.load(std::memory_order_relaxed);
-        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
         // Degrees per second at full tilt, eased near the center for fine aiming
         constexpr float TurnRate = 160.0f, PitchRate = 100.0f;
         float dt = CTimer::ms_fTimeStep / 50.0f;
@@ -556,7 +556,7 @@ namespace
         constexpr float RadiansPerUnit = 0.0025f;
         auto& mouse = *NewMouseState.get_ptr();
         mouse.x += curve(rx) * DEGTORAD(TurnRate) * speed * dt / RadiansPerUnit;
-        mouse.y += curve(invert ? ry : -ry) * DEGTORAD(PitchRate) * speed * dt / RadiansPerUnit;
+        mouse.y += curve(RWGTA::PadOptions::LookUp(ry)) * DEGTORAD(PitchRate) * speed * dt / RadiansPerUnit;
     }
 
     void UpdateCameraStyle(CPad& pad, Context context)
@@ -734,9 +734,7 @@ export namespace Pad
         if (!IsPadLastDevice() || CMenuManager::m_bIsActive || Player().DisablePlayerControls)
             return;
         Stick(Current.sThumbRX, Current.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, x, y);
-        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
-        if (invert)
-            y = -y;
+        y = RWGTA::PadOptions::LookUp(y);
     }
 
     bool IsModernAiming()

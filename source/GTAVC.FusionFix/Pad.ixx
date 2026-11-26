@@ -528,14 +528,15 @@ namespace
         float lx, ly, rx, ry;
         Stick(g.sThumbLX, g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, lx, ly);
         Stick(g.sThumbRX, g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
-        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
         auto vehicle = PlayerVehicle();
         bool hydraulics = vehicle && vehicle->GetModelIndex() == MI_VOODOO;
-        // The PlayStation 2 sticks: down is positive
+        // The PlayStation 2 sticks: down is positive. The game's cameras look up on a positive right stick Y; vehicles
+        // keep the console's sign (the guns, flying)
+        float look = RWGTA::PadOptions::LookUp(ry);
         s.LeftStickX = ToAxis(lx);
         s.LeftStickY = ToAxis(-ly);
         s.RightStickX = ToAxis(rx);
-        s.RightStickY = ToAxis(invert && context != Context::Frontend && !hydraulics ? ry : -ry);
+        s.RightStickY = ToAxis(context == Context::Frontend || hydraulics ? -ry : vehicle ? -look : look);
 
         const To* layout = LayoutClassic;
         switch (context)
@@ -571,7 +572,7 @@ namespace
             {
                 // The scope aims with the right stick, the left stick zooms
                 s.LeftStickX = ToAxis(rx);
-                s.LeftStickY = ToAxis(invert ? ry : -ry);
+                s.LeftStickY = ToAxis(look);
                 s.RightStickX = s.RightStickY = 0;
                 if (ly > 0.3f)
                     Press(s, To::Square);
@@ -639,7 +640,6 @@ namespace
         float rx, ry;
         Stick(Current.sThumbRX, Current.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
         const auto speed = RWGTA::PadOptions::CameraSpeed.load(std::memory_order_relaxed);
-        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
         // Degrees per second at full tilt, eased near the center for fine aiming
         constexpr float TurnRate = 160.0f, PitchRate = 100.0f;
         float dt = CTimer::ms_fTimeStep / 50.0f;
@@ -651,7 +651,7 @@ namespace
         float perUnitY = std::max(*MouseAccelVertical.get_ptr() * 4.0f * fovScale, 1e-5f);
         auto& mouse = *NewMouseState.get_ptr();
         mouse.x += curve(rx) * DEGTORAD(TurnRate) * speed * dt / perUnitX;
-        mouse.y += curve(invert ? ry : -ry) * DEGTORAD(PitchRate) * speed * dt / perUnitY;
+        mouse.y += curve(RWGTA::PadOptions::LookUp(ry)) * DEGTORAD(PitchRate) * speed * dt / perUnitY;
     }
 
     void UpdateCameraStyle(Context context)
@@ -863,9 +863,7 @@ export namespace Pad
         if (!IsPadLastDevice() || MenuActive() || Player().DisablePlayerControls)
             return;
         Stick(Current.sThumbRX, Current.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, x, y);
-        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
-        if (invert)
-            y = -y;
+        y = RWGTA::PadOptions::LookUp(y);
     }
 
     bool IsModernAiming()

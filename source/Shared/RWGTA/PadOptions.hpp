@@ -10,6 +10,12 @@ namespace RWGTA::PadOptions
     inline std::atomic<int> ModernControls{}, GamepadIcons{}, InvertGamepadY{}, Vibration{}, FreeCamera{}, SpeedFOV{};
     inline std::atomic<float> CameraSpeed{ 1.0f };
 
+    // The right stick's look up and down, up positive: pushing up looks up unless the look is inverted
+    inline float LookUp(float y)
+    {
+        return InvertGamepadY.load(std::memory_order_relaxed) ? -y : y;
+    }
+
     template<class T>
     void Bind(asi_settings::Plugin& plugin, const char* id, std::atomic<T>& destination)
     {

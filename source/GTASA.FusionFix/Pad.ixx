@@ -392,14 +392,16 @@ namespace
         float lx, ly, rx, ry;
         Stick(g.sThumbLX, g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, lx, ly);
         Stick(g.sThumbRX, g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
-        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
         const auto speed = RWGTA::PadOptions::CameraSpeed.load(std::memory_order_relaxed);
         // The PlayStation 2 sticks: down is positive. The camera's stick turns faster or slower by the camera speed.
+        // On foot the game's cameras look up on a positive right stick Y; vehicles keep the console's sign (the
+        // hydraulics, the guns, flying)
         float look = context == Context::Frontend ? 1.0f : speed;
+        float lookUp = RWGTA::PadOptions::LookUp(ry);
         s.LeftStickX = ToAxis(lx);
         s.LeftStickY = ToAxis(-ly);
         s.RightStickX = ToCameraAxis(rx, look);
-        s.RightStickY = ToCameraAxis(invert && context != Context::Frontend ? ry : -ry, look);
+        s.RightStickY = ToCameraAxis(context == Context::Frontend ? -ry : PlayerVehicle() ? -lookUp : lookUp, look);
 
         const To* layout = LayoutClassic;
         switch (context)
@@ -496,7 +498,6 @@ namespace
         float rx, ry;
         Stick(Current.sThumbRX, Current.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
         const auto speed = RWGTA::PadOptions::CameraSpeed.load(std::memory_order_relaxed);
-        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
         // Degrees per second at full tilt, eased near the center for fine aiming
         constexpr float TurnRate = 160.0f, PitchRate = 100.0f;
         float dt = CTimer::ms_fTimeStep / 50.0f;
@@ -507,7 +508,7 @@ namespace
         float perUnitX = std::max(*MouseAccelHorizontal * (context == Context::ModernScope ? 3.0f : 2.5f) * fovScale, 1e-5f);
         float perUnitY = std::max(*MouseAccelVertical * 4.0f * fovScale, 1e-5f);
         NewMouseState->X += curve(rx) * DEGTORAD(TurnRate) * speed * dt / perUnitX;
-        NewMouseState->Y += curve(invert ? ry : -ry) * DEGTORAD(PitchRate) * speed * dt / perUnitY;
+        NewMouseState->Y += curve(RWGTA::PadOptions::LookUp(ry)) * DEGTORAD(PitchRate) * speed * dt / perUnitY;
     }
 
     void UpdateCameraStyle(Context context)
