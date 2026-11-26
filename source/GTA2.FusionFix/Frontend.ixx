@@ -25,6 +25,7 @@ void InstallOptions(void* setPage)
     ResX = &nResX; ResY = &nResY;
     auto reload = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? 84 C0 75 09 A0 ? ? ? ? 84 C0 74 11");
     ReloadVideoMode = reinterpret_cast<decltype(ReloadVideoMode)>(reload.get_first());
+    bVideoModeChanged.SetAddress(*reload.get_first<uint8_t*>(15));
     ApplyResolution = []
     {
         // The video mode is re-read from the patched settings and reset, as after alt-tab.

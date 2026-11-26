@@ -163,6 +163,40 @@ namespace
         return true;
     }
 
+    // Cuts a quad with straight sides at the left and right screen edges of the 4:3 design
+    void ClipQuad(RwIm2DVertex* v, float width)
+    {
+        float minX, maxX;
+        GetExtent(v, 4, minX, maxX);
+        if (maxX - minX < 0.001f || (minX >= 0.0f && maxX <= width))
+            return;
+        int32_t atMin = 0, atMax = 0;
+        float uMin = 0.0f, uMax = 0.0f;
+        for (int32_t i = 0; i < 4; i++)
+        {
+            if (v[i].x == minX)
+            {
+                uMin = v[i].u;
+                atMin++;
+            }
+            else if (v[i].x == maxX)
+            {
+                uMax = v[i].u;
+                atMax++;
+            }
+        }
+        if (atMin != 2 || atMax != 2)
+            return;
+        const float left = std::clamp(minX, 0.0f, width);
+        const float right = std::clamp(maxX, 0.0f, width);
+        for (int32_t i = 0; i < 4; i++)
+        {
+            const float x = v[i].x == minX ? left : right;
+            v[i].u = uMin + (uMax - uMin) * (x - minX) / (maxX - minX);
+            v[i].x = x;
+        }
+    }
+
     // The video frame at its own aspect ratio. Returns whether black has to be drawn around it.
     bool FitMovie(RwIm2DVertex* v, void* raster, const Frame& frame)
     {
@@ -208,6 +242,11 @@ namespace
             return factor < 1.0f && IsOpaque(v, 4);
         }
 
+        // HUD parts at a side (the item bar) are cut where the 4:3 screen ended, so they end at the edge of the box
+        const bool sideElement = CurrentAnchor == Anchor::Left || CurrentAnchor == Anchor::Right;
+        if (sideElement)
+            ClipQuad(v, frame.width);
+
         const Anchor anchor = Resolve(CurrentAnchor, minX, maxX, frame);
         for (int32_t i = 0; i < 4; i++)
         {
@@ -219,9 +258,9 @@ namespace
             // Untextured quads at a screen edge (the scope's sides, bars) keep reaching that edge
             if (!raster)
             {
-                if (x <= 0.5f)
+                if (!sideElement && x <= 0.5f)
                     v[i].x = 0.0f;
-                else if (x >= frame.width - 0.5f)
+                else if (!sideElement && x >= frame.width - 0.5f)
                     v[i].x = frame.width;
                 if (y <= 0.5f)
                     v[i].y = 0.0f;

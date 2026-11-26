@@ -51,12 +51,8 @@ export namespace GodfatherIntro
         auto start = hook::pattern("8B 44 24 04 B1 01 83 EC 08 56 88 88 91 00 00 00 88 88 92 00 00 00 E8");
         if (GodfatherMenu::layoutShift) // Chinese executable
             start = hook::pattern("8B 44 24 04 B1 01 83 EC 08 56 88 88 95 00 00 00 88 88 96 00 00 00 E8");
-        skip.store(FixSettings().Bool("MAIN.SkipIntro"), std::memory_order_relaxed);
+        BindLiveSetting("MAIN.SkipIntro", skip);
         startHook = safetyhook::create_inline(start.get_first(), Start);
-        FixSettings().OnChange("MAIN.SkipIntro", []()
-        {
-            skip.store(FixSettings().Bool("MAIN.SkipIntro"), std::memory_order_relaxed);
-        });
     }
 }
 

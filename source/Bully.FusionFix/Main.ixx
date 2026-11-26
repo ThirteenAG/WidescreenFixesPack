@@ -33,11 +33,19 @@ public:
         WFP::onInitEvent() += []()
         {
             WindowedModeWrapper::EnableDpiAwareness();
-            static auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
+            BindLiveValue("MAIN.FOVFactor", GameplayCamera::FOVFactor);
+            BindLiveValue("MAIN.GamepadCameraSpeed", BullyInput::CameraSpeed);
+            BindLiveValue("MAIN.GamepadDeadzone", BullyInput::Deadzone);
+            BindLiveValue("MAIN.GamepadIcons", BullyIcons::Selected);
+            BindLiveValue("MAIN.PauseOnFocusLoss", BullyFocus::PauseOnFocusLoss);
             asi_settings::LiveLink::Start();
             BullyMenu::Init();
             BullyUpdates::Install();
-            BullyRawMouse::Install(FixSettings().Int("MAIN.RawInputMouse"));
+            auto updateRawMouse = []() { BullyRawMouse::Enabled = FixSettings().Get("MAIN.RawInputMouse") == "1"; };
+            updateRawMouse();
+            FixSettings().OnChange("MAIN.RawInputMouse", updateRawMouse);
+            BullyRawMouse::Install();
+            MessagePumpGuard::Install(GetModuleHandleW(nullptr));
             DisplayModes::Init();
             CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
             FixSettings().OnChange("MAIN.ConfineCursor", []()
@@ -45,10 +53,10 @@ public:
                 CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
             });
             BullyWindow::Install(FixSettings().Int("MAIN.WindowMode"));
-            BullyFocus::Install(FixSettings().Int("MAIN.PauseOnFocusLoss"));
+            BullyFocus::Install();
             BullyVideo::Install();
-            BullyIcons::Install(FixSettings().Int("MAIN.GamepadIcons"));
-            BullyInput::Install(FixSettings().Float("MAIN.GamepadCameraSpeed"), FixSettings().Float("MAIN.GamepadDeadzone"));
+            BullyIcons::Install();
+            BullyInput::Install();
             BullyMenu::UsingPad = BullyInput::UsingPad;
             BullyMenu::PadHelp = BullyInput::HelpPressed;
             BullyMenu::BlocksInput = []()
@@ -66,7 +74,7 @@ public:
             ScreenPatches::Install();
             BullyGeography::Install();
             BullyShadows::Install(FixSettings().Int("GRAPHICS.ShadowResolution"));
-            GameplayCamera::Install(fFOVFactor);
+            GameplayCamera::Install();
         };
     }
 } Main;

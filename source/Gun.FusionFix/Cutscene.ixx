@@ -19,22 +19,23 @@ export namespace GunCutscene
     inline SafetyHookInline Hook;
     inline std::atomic_bool Requested{ false };
     inline std::atomic<float> ScreenAspect{ 4.0f / 3.0f };
+    inline std::atomic<int> BorderMode{ Both };
 
     inline int Mode()
     {
-        static const auto& mode = FixSettings().Int("MAIN.CutsceneBorders");
-        return std::clamp(mode, 0, 3);
+        return std::clamp(BorderMode.load(std::memory_order_relaxed), 0, 3);
     }
 
-    inline bool Pillarboxed(float aspect)
+    inline bool Pillarboxed(int mode, float aspect)
     {
-        return (Mode() & Pillarbox) && aspect >= Aspect * 0.999f;
+        return (mode & Pillarbox) && aspect >= Aspect * 0.999f;
     }
 
     // The game's letterbox stays only where it gives the original frame or the player chose it.
     inline bool Letterboxed(float aspect)
     {
-        return Mode() == Letterbox || (Mode() == Both && !Pillarboxed(aspect));
+        const int mode = Mode();
+        return mode == Letterbox || (mode == Both && !Pillarboxed(mode, aspect));
     }
 
     inline bool Active()
@@ -45,7 +46,7 @@ export namespace GunCutscene
     // fov is the native angle for the 4:3 screen.
     inline float FieldOfView(float fov, float aspect)
     {
-        if (Pillarboxed(aspect))
+        if (Pillarboxed(Mode(), aspect))
             return AdjustFOV(fov, aspect, Aspect);
         return AdjustFOV(fov, aspect);
     }
@@ -68,33 +69,31 @@ export namespace GunCutscene
 
     inline void Draw(IDirect3DDevice9* device)
     {
-        if (!Active() || !device)
+        if (!Active() || !device || !(Mode() & Pillarbox))
             return;
         IDirect3DSurface9* surface = nullptr;
         if (FAILED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &surface)))
             return;
         D3DSURFACE_DESC desc{};
-        surface->GetDesc(&desc);
-        surface->Release();
-        if (!desc.Height || !Pillarboxed(static_cast<float>(desc.Width) / desc.Height))
-            return;
-        const auto bar = static_cast<LONG>((desc.Width - desc.Height * Aspect) * 0.5f);
-        if (bar <= 0)
-            return;
-        const D3DRECT bars[] =
+        if (SUCCEEDED(surface->GetDesc(&desc)) && desc.Height &&
+            Pillarboxed(Mode(), static_cast<float>(desc.Width) / desc.Height))
         {
-            { 0, 0, bar, static_cast<LONG>(desc.Height) },
-            { static_cast<LONG>(desc.Width) - bar, 0, static_cast<LONG>(desc.Width), static_cast<LONG>(desc.Height) },
-        };
-        D3DVIEWPORT9 viewport{}, full{ 0, 0, desc.Width, desc.Height, 0.0f, 1.0f };
-        device->GetViewport(&viewport);
-        device->SetViewport(&full);
-        device->Clear(2, bars, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-        device->SetViewport(&viewport);
+            const auto bar = static_cast<LONG>((desc.Width - desc.Height * Aspect) * 0.5f);
+            if (bar > 0)
+            {
+                const RECT left{ 0, 0, bar, static_cast<LONG>(desc.Height) };
+                const RECT right{ static_cast<LONG>(desc.Width) - bar, 0,
+                    static_cast<LONG>(desc.Width), static_cast<LONG>(desc.Height) };
+                if (SUCCEEDED(device->ColorFill(surface, &left, D3DCOLOR_XRGB(0, 0, 0))))
+                    device->ColorFill(surface, &right, D3DCOLOR_XRGB(0, 0, 0));
+            }
+        }
+        surface->Release();
     }
 
     inline void Init(float aspect)
     {
+        BindLiveSetting("MAIN.CutsceneBorders", BorderMode);
         ScreenAspect.store(aspect, std::memory_order_relaxed);
         auto letterbox = hook::pattern("8A 44 24 04 84 C0 A0 ? ? ? ? 74 27 84 C0 75 63 A1 ? ? ? ? D9 05 ? ? ? ? D8 0D");
         LetterboxFlag.SetAddress(*letterbox.get_first<uint8_t*>(7));

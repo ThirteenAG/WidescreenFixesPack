@@ -16,7 +16,7 @@ import RawInput;
 namespace
 {
     constexpr float MenuAspect = 16.0f / 9.0f;
-    float Constraint = 0.0f;
+    std::atomic<float> Constraint{ 0.0f };
 
     enum class Layer { None, Strings, Objects };
     Layer Drawing = Layer::None;
@@ -57,7 +57,8 @@ namespace
         const float screen = Screen.fAspectRatio;
         if (!std::isfinite(screen) || screen <= 0.0f)
             return;
-        float box = InMenu() ? MenuAspect : (Constraint > 0.0f ? Constraint : screen);
+        const float constraint = Constraint.load(std::memory_order_relaxed);
+        float box = InMenu() ? MenuAspect : (constraint > 0.0f ? constraint : screen);
         box = std::min(box, screen);
         Screen.fTextBox = box / screen;
         Screen.fTextScale = Screen.fHudScale / Screen.fTextBox;
@@ -171,9 +172,14 @@ public:
             }
             injector::WriteMemory<float*>(reinterpret_cast<float**>(textScale + 3), &Screen.fTextScale, true);
 
-            const auto refresh = []() { Constraint = ParseAspect(FixSettings().String("MAIN.HudAspectRatioConstraint")); };
-            refresh();
+            const auto refresh = []()
+            {
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                Constraint.store(ParseAspect(FixSettings().Get("MAIN.HudAspectRatioConstraint")), std::memory_order_relaxed);
+            };
             FixSettings().OnChange("MAIN.HudAspectRatioConstraint", refresh);
+            refresh();
 
             pattern = hook::pattern("81 EC D8 01 00 00 57 33 FF C7 84 24 DC 00 00 00 09 00 00 00");
             if (!Screen.bSignatureEdition) // Gamer's Edition

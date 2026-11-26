@@ -1,6 +1,6 @@
 #pragma once
-#include "../Shared/Console/NativeProfile.hpp"
-#include "../Shared/Console/PSP.hpp"
+#include "Shared/Console/NativeProfile.hpp"
+#include "Shared/Console/PSP.hpp"
 
 namespace lcsws {
 namespace profile_data {
@@ -30,10 +30,6 @@ inline constexpr uint32_t words11[]={0x34150000u,0x52800005u,0x92440058u,0x86640
 inline constexpr uint8_t masks11[]={0,0,0,0,0,0,0,0,0,2,0,0};
 inline constexpr uint32_t words12[]={0x27BD0010u,0x3C050000u,0x03E00008u,0xACA40000u,0x3C050000u,0x000431C0u,0x90A70000u,0x00042100u,0x3C050000u,0x8CA50000u,0x10E00004u,0x00C42023u};
 inline constexpr uint8_t masks12[]={0,1,0,1,1,0,1,0,1,1,0,0};
-inline constexpr uint32_t words13[]={0x3484999Au,0x44840000u,0x03E00008u,0x00000000u,0x3C040000u,0x90840000u,0x3C054140u,0x10800003u,0x44850000u,0x10000001u,0x00000000u,0x03E00008u};
-inline constexpr uint8_t masks13[]={0,0,0,0,1,1,0,0,0,0,0,0};
-inline constexpr uint32_t words14[]={0x10000001u,0x00000000u,0x03E00008u,0x00000000u,0x3C040000u,0x90840000u,0x10800004u,0x00000000u,0x3C04432Au,0x10000003u,0x44840000u,0x3C044344u};
-inline constexpr uint8_t masks14[]={0,0,0,0,1,1,0,0,0,0,0,0};
 inline constexpr uint32_t words15[]={0x00000000u,0x8FBF0024u,0x03E00008u,0x27BD0030u,0x27BDFF60u,0x3C050000u,0x90A50000u,0x000531C0u,0x00C64021u,0x00C83021u,0x00052900u,0x00C53023u};
 inline constexpr uint8_t masks15[]={0,0,0,0,0,1,1,0,0,0,0,0};
 inline constexpr uint32_t words16[]={0x8FB5008Cu,0x8FBF0090u,0x03E00008u,0x27BD00A0u,0x27BDFF60u,0x3C050000u,0x90A50000u,0x000531C0u,0x00C64021u,0x00C83021u,0x00052900u,0x00C53023u};
@@ -244,12 +240,10 @@ inline constexpr uint32_t freeAimAboveWords[]={0x27BDFE90u,0xAFB1015Cu,0x00A0882
 inline constexpr uint8_t freeAimAboveMasks[]={0,0,0,0,0,0,0,0,0,0,0,1};
 inline constexpr uint32_t menuSpriteWords[]={0x27BDFFB0u,0xAFB10044u,0x00808825u,0xE7B40030u,0xE7B60034u,0xE7B80038u,0xE7BA003Cu,0xAFB00040u,0x46007D06u,0x00A08025u,0x46007586u,0x46006E06u};
 inline constexpr uint8_t menuSpriteMasks[]={0,0,0,0,0,0,0,0,0,0,0,0};
-inline constexpr uint32_t sliderBarsWords[]={0x27BDFFA0u,0xAFB00044u,0x00808025u,0x3C044100u,0xE7BE0040u,0x4484F000u,0xE7BC003Cu,0x3C043D80u,0x4484E000u,0xE7BA0038u,0x3C0440E0u,0x3C054080u};
-inline constexpr uint8_t sliderBarsMasks[]={0,0,0,0,0,0,0,0,0,0,0,0};
 // RenderOneXLUSprite: the CHud weapon icon and aiming dots.
 inline constexpr uint32_t xluSpriteWords[]={0x27BDFF80u,0xAFB00058u,0x309000FFu,0xAFB30064u,0x00079C00u,0x3C043F00u,0xE7B40054u,0xAFB1005Cu,0xAFB20060u,0xAFB40068u,0x4484A000u,0x30B100FFu};
 inline constexpr uint8_t xluSpriteMasks[]={0,0,0,0,0,0,0,0,0,0,0,0};
-inline constexpr std::array<console::AddressRule,111> rules={{
+inline constexpr std::array<console::AddressRule,108> rules={{
     {0x088646F4u,0x088646F4u,words0,masks0,24,10,0,0,0,console::AddressKind::Code},
     {0x0886ACF4u,0x0886ACE4u,words1,masks1,12,8,16,0,0,console::AddressKind::Code},
     {0x0886AD10u,0x0886AD00u,words2,masks2,12,12,16,0,0,console::AddressKind::Code},
@@ -267,8 +261,6 @@ inline constexpr std::array<console::AddressRule,111> rules={{
     {0x0894A4A0u,0x0894A490u,words10,masks10,12,7,16,0,0,console::AddressKind::Code},
     {0x0894A4A2u,0x0894A490u,words11,masks11,12,7,18,0,0,console::AddressKind::Code},
     {0x0894D97Cu,0x0894D96Cu,words12,masks12,12,21,16,0,0,console::AddressKind::Code},
-    {0x08986FE4u,0x08986FD4u,words13,masks13,12,0,16,0,0,console::AddressKind::Code},
-    {0x08987008u,0x08986FF8u,words14,masks14,12,33,16,0,0,console::AddressKind::Code},
     {0x089870BCu,0x089870ACu,words15,masks15,12,38,16,0,0,console::AddressKind::Code},
     {0x08987568u,0x08987558u,words16,masks16,12,38,16,0,0,console::AddressKind::Code},
     {0x08987B94u,0x08987B94u,hudMoneyWords,hudMoneyMasks,12,13,0,0,0,console::AddressKind::Code},
@@ -344,7 +336,6 @@ inline constexpr std::array<console::AddressRule,111> rules={{
     {0x08AD42A4u,0x08AD4294u,words82,masks82,12,4,16,0,0,console::AddressKind::Code},
     {0x08AD43D4u,0x08AD43C4u,words83,masks83,12,12,16,0,0,console::AddressKind::Code},
     {0x08AD45B4u,0x08AD45A4u,words84,masks84,12,4,16,0,0,console::AddressKind::Code},
-    {0x08AD6FB0u,0x08AD6FB0u,sliderBarsWords,sliderBarsMasks,12,38,0,0,0,console::AddressKind::Code},
     {0x08ADA240u,0x08ADA248u,menuAdjust3Words,menuAdjust3Masks,12,9,-8,0,0,console::AddressKind::Code},
     {0x08ADD3D0u,0x08ADD3C0u,menuSelectWords,menuSelectMasks,12,23,16,0,0,console::AddressKind::Code},
     {0x08ADFC40u,0x08ADFC48u,drawMenus3Words,drawMenus3Masks,12,18,-8,0,0,console::AddressKind::Code},

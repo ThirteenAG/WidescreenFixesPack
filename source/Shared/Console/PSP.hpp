@@ -50,7 +50,7 @@ inline bool Start(const char* game, const char* ini, const char* log) {
         injector::SetModuleBaseAddress(own.text_addr, own.text_size);
     inireader.SetIniPath(ini);
 #ifndef NDEBUG
-    logger.SetPath(log);
+    if (log) logger.SetPath(log);
 #else
     (void)log;
 #endif
@@ -70,9 +70,14 @@ inline float Aspect() {
 }
 }
 
-// Release builds retain actionable failure logs for callers that opt in.
+// Report startup failures through the emulator diagnostic channel.
 namespace console::portable
 {
+    inline void EmulatorDiagnostic(const char* message)
+    {
+        sceIoDevctl("kemulator:", 2, const_cast<char*>(message), std::strlen(message), nullptr, 0);
+    }
+
     inline void ReportedRejection(psp_hook_status status)
     {
         Unthrottle(false);
@@ -83,10 +88,10 @@ namespace console::portable
             logger.WriteF("Fix disabled: patch validation failed (%u). Use a supported game version.\n", unsigned(status));
         }
     }
-    inline bool StartReported(const char* game, const char* cfg, const char* log)
+    inline bool StartReported(const char* game, const char* cfg)
     {
-        logger.SetPath(log);
-        if (Start(game, cfg, log))
+        logger.Write = EmulatorDiagnostic;
+        if (Start(game, cfg, nullptr))
             return true;
         logger.Write("Fix disabled: game module or emulator runtime unavailable.\n");
         return false;

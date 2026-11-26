@@ -12,12 +12,13 @@ namespace
 {
     SafetyHookInline PausePredicate;
     uintptr_t(__cdecl* GetEngine)() = nullptr;
+    std::atomic<bool> PauseOnFocusLoss{ true };
 
     BOOL __fastcall IsGameplayPaused(uintptr_t info, void* edx)
     {
         const auto paused = PausePredicate.fastcall<BOOL>(info, edx);
         if (paused || !info || !GetEngine || !WindowHandle || !IsWindow(WindowHandle) ||
-            (!DeveloperOverlay::BlocksInput() && (GetForegroundWindow() == WindowHandle || !FixSettings().Bool("MAIN.PauseOnFocusLoss"))) ||
+            (!DeveloperOverlay::BlocksInput() && (GetForegroundWindow() == WindowHandle || !PauseOnFocusLoss.load())) ||
             (*reinterpret_cast<const uint8_t*>(info + 0x5F0) & 2))
             return paused;
         const auto engine = GetEngine();
@@ -36,6 +37,15 @@ namespace
 
 export void InitFocus()
 {
+    auto publish = []()
+    {
+        static std::mutex mutex;
+        std::lock_guard lock(mutex);
+        PauseOnFocusLoss.store(FixSettings().Get("MAIN.PauseOnFocusLoss") == "1");
+    };
+    FixSettings().OnChange("MAIN.PauseOnFocusLoss", publish);
+    publish();
+
     auto pause = hook::pattern("55 8B EC 51 57 8B F9 F6 87 F0 05 00 00 02 74 07 33 C0 5F 8B E5 5D C3 8B 8F 48 01 00 00 E8 ? ? ? ? 85 C0 0F 84");
     auto engine = hook::pattern("83 3D ? ? ? ? 00 75 09 A1 ? ? ? ? 85 C0 75 05 A1 ? ? ? ? C3");
     GetEngine = reinterpret_cast<decltype(GetEngine)>(engine.get_first());

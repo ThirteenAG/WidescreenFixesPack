@@ -2,13 +2,14 @@ module;
 
 #include "stdafx.h"
 #include "Frame.hpp"
+#include "FixSettings.hpp"
 #include <stdexcept>
 
 export module Pacing;
 
 export namespace ScarfacePacing
 {
-    inline const int* LimitValue = nullptr;
+    inline std::atomic<int> LimitValue{ 0 };
     inline bool Registered = false;
 
     class Pacer
@@ -72,15 +73,16 @@ export namespace ScarfacePacing
             fps = std::clamp(fps, 30, 1000);
             const auto period = std::max<LONGLONG>(1, frequency / fps);
             const auto now = Now();
-            if (fps != previousFPS || !next || now > next + period || now < next - period * 4)
+            if (fps != previousFPS || !next || now < next - period * 4)
             {
                 next = now + period;
                 remainder = frequency % fps;
                 previousFPS = fps;
                 return;
             }
-            WaitUntil(next);
-            next += period;
+            if (now < next)
+                WaitUntil(next);
+            next = std::max(next, Now()) + period;
             remainder += frequency % fps;
             if (remainder >= fps)
             {
@@ -112,15 +114,25 @@ export namespace ScarfacePacing
         return rate;
     }
 
-    inline void Install(const int& value)
+    inline void Install()
     {
-        LimitValue = &value;
         if (Registered)
             return;
+        auto refresh = []()
+        {
+            static std::mutex settingsMutex;
+            std::lock_guard lock(settingsMutex);
+            const auto setting = FixSettings().Get("MAIN.FPSLimit");
+            int value = 0;
+            std::from_chars(setting.data(), setting.data() + setting.size(), value);
+            LimitValue.store(value);
+        };
+        FixSettings().OnChange("MAIN.FPSLimit", refresh);
+        refresh();
         ScarfaceFrame::Handlers.push_back([](void* display)
         {
             static Pacer pacer;
-            const int value = LimitValue ? *LimitValue : 0;
+            const int value = LimitValue.load();
             pacer.Limit(value < 0 ? MonitorRate(display) : value);
         });
         Registered = true;

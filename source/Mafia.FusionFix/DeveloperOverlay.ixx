@@ -53,6 +53,8 @@ export namespace MafiaOverlay
 
     bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -112,7 +114,8 @@ export namespace MafiaOverlay
             return true;
         }();
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
     }
 
     HRESULT WINAPI Present(IDirect3DDevice9* device, const RECT* source, const RECT* destination, HWND window, const RGNDATA* dirty)

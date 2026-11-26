@@ -4,7 +4,7 @@
 namespace NativeMenu
 {
 inline constexpr const char* cfg = "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.cfg";
-inline IniValue values[] {
+inline constexpr IniValue values[] {
     {"MAIN", "SkipIntro", "1"}, {"MAIN", "DualAnalogPatch", "1"},
     {"MAIN", "UnthrottleEmuDuringLoading", "1"}, {"MAIN", "FOVFactor", "1.0"},
     {"MAIN", "ForceAspectRatio", "Auto"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
@@ -36,8 +36,11 @@ inline constexpr const char* presetHelp[5] {
 };
 // -1 denotes the preset row; empty entries are not selectable.
 inline constexpr int pages[3][5] { {-1, 3, 5, 6, 7}, {9, 4, 0, 1, 2}, {8, 10, -2, -2, -2} };
-inline int ticks[settingCount]{}, preset{3}, systemLanguage{}, page{}, selected{1}, level{}, helpOffset{}, helpCount{};
-inline bool changed[settingCount]{}, saveError{}, draining{}, restartNeeded{};
+inline int ticks[settingCount]{1, 1, 1, 20, 0, 0, 20, 3, 0, 1, 0};
+inline int startTicks[3]{1, 1, 1};
+inline int preset{1}, systemLanguage{}, page{}, selected{1}, level{}, helpOffset{}, helpCount{};
+inline int helpTopic{-2};
+inline bool saveError{}, draining{}, restartNeeded{};
 inline uint32_t previousButtons{};
 inline uintptr_t pauseObject{};
 inline char display[7][128]{}, originalText[7][128]{}, helpLines[24][64]{};
@@ -50,6 +53,9 @@ inline injector::hook_back<const char*(int)> originalLabel;
 inline injector::hook_back<int(int)> originalAllowed;
 inline injector::hook_back<int(uintptr_t)> originalConfirm;
 inline injector::game_fn<void(uintptr_t)> refresh;
+inline IniSnapshot settings;
+enum class OptionsRead { Unavailable, Unchanged, Changed };
+inline OptionsRead ReadOptions();
 
 inline int Language() { return ticks[8] ? ticks[8] - 1 : systemLanguage; }
 inline const char* Label(Word word) { return labels[Language()][unsigned(word)]; }
@@ -81,24 +87,36 @@ inline void SetRow(unsigned i, const char* text, bool active)
     *reinterpret_cast<uint8_t*>(row + 13) = active;
     FontText(Font(i), display[i]); FontVisible(Font(i), active);
 }
-inline bool Save()
+inline bool Save(const IniValue* pending, unsigned count)
 {
-    IniValue pending[settingCount]{}; unsigned count{};
-    for (unsigned i = 0; i < settingCount; ++i) if (changed[i]) pending[count++] = values[i];
-    if (!count) return true;
-    IniWriter<> writer; saveError = !writer.update(cfg, pending, count);
-    if (!saveError) std::fill(changed, changed + settingCount, false);
+    IniWriter<> writer;
+    saveError = !writer.update(cfg, pending, count, IniUpdate::Replace, settings.Bytes());
     return !saveError;
 }
-inline void Store(unsigned i)
+inline IniValue Encode(unsigned i, int tick)
 {
-    char* out = values[i].value;
-    if (i == 3 || i == 6) console::decimal(values[i].value, float(ticks[i]) / 20, 2);
-    else if (i == 4 || i == 5) npf_snprintf(out, sizeof(values[i].value), "%s", ratios[ticks[i]]);
-    else if (i == 8) npf_snprintf(out, sizeof(values[i].value), "%s", languages[ticks[i]]);
-    else if (i == 9) npf_snprintf(out, sizeof(values[i].value), "%d", ticks[i] ? 60 : 30);
-    else npf_snprintf(out, sizeof(values[i].value), "%d", ticks[i]);
-    changed[i] = true;
+    IniValue entry = values[i];
+    if (i == 3 || i == 6)
+        console::decimal(entry.value, tick / 20.0f, 2);
+    else if (i == 4 || i == 5)
+        npf_snprintf(entry.value, sizeof(entry.value), "%s", ratios[tick]);
+    else if (i == 8)
+        npf_snprintf(entry.value, sizeof(entry.value), "%s", languages[tick]);
+    else
+        npf_snprintf(entry.value, sizeof(entry.value), "%d", i == 9 ? (tick ? 60 : 30) : tick);
+    return entry;
+}
+inline void CheckRestart()
+{
+    restartNeeded = !std::equal(startTicks, startTicks + 3, ticks);
+}
+inline int MatchingPreset()
+{
+    if (!ticks[0] && !ticks[1] && !ticks[2] && !ticks[9] && ticks[10] == 2 && ticks[7] == 1)
+        return 0;
+    if (ticks[0] && ticks[1] && ticks[2] && ticks[9] && ticks[10] == 0 && ticks[7] == 3)
+        return preset == 2 ? 2 : 1;
+    return 3;
 }
 inline void Apply(unsigned i)
 {
@@ -116,6 +134,11 @@ inline void Apply(unsigned i)
 }
 inline void Change(unsigned i, int direction)
 {
+    if (ReadOptions() == OptionsRead::Unavailable)
+    {
+        saveError = true;
+        return;
+    }
     int lo{}, hi{1};
     if (i == 3) { lo = 10; hi = 40; }
     else if (i == 4 || i == 5) hi = 4;
@@ -123,12 +146,20 @@ inline void Change(unsigned i, int direction)
     else if (i == 7) hi = 3;
     else if (i == 8) hi = 5;
     else if (i == 10) hi = 3;
-    if ((i == 4 || i == 5) && customRatio[i - 4]) { customRatio[i - 4] = false; ticks[i] = direction > 0 ? -1 : 5; }
-    ticks[i] += direction;
-    if (ticks[i] < lo) ticks[i] = hi;
-    if (ticks[i] > hi) ticks[i] = lo;
-    if (i < 3) restartNeeded = true;
-    preset = 3; Store(i); Apply(i); Save();
+    const bool custom = (i == 4 || i == 5) && customRatio[i - 4];
+    int next = custom ? (direction > 0 ? lo : hi) : ticks[i] + direction;
+    if (next < lo) next = hi;
+    if (next > hi) next = lo;
+    const auto entry = Encode(i, next);
+    if (!Save(&entry, 1))
+        return;
+    if (custom)
+        customRatio[i - 4] = false;
+    ticks[i] = next;
+    if (i < 3 || i == 7 || i >= 9)
+        preset = MatchingPreset();
+    Apply(i);
+    CheckRestart();
 }
 inline const char* Value(int i, char (&buffer)[64])
 {
@@ -143,16 +174,46 @@ inline const char* Value(int i, char (&buffer)[64])
 }
 inline void Preset(int direction)
 {
-    preset = (preset + direction + 4) % 4;
-    if (preset == 3) return;
-    for (unsigned i = 0; i < 3; ++i) { if (ticks[i] != (preset ? 1 : 0)) restartNeeded = true; ticks[i] = preset ? 1 : 0; Store(i); }
-    ticks[7] = preset ? 3 : 1; Store(7); Apply(7);
-    ticks[9] = preset ? 1 : 0; Store(9); Apply(9);
-    ticks[10] = preset ? 0 : 2; Store(10); Apply(10); Save();
+    if (ReadOptions() == OptionsRead::Unavailable)
+    {
+        saveError = true;
+        return;
+    }
+    const int next = (preset + direction + 4) % 4;
+    if (next == 3)
+    {
+        preset = next;
+        return;
+    }
+    const int enabled = next != 0;
+    constexpr unsigned rows[]{0, 1, 2, 7, 9, 10};
+    const int proposed[]{enabled, enabled, enabled, enabled ? 3 : 1, enabled, enabled ? 0 : 2};
+    IniValue pending[std::size(rows)]{};
+    for (unsigned i = 0; i < std::size(rows); ++i)
+        pending[i] = Encode(rows[i], proposed[i]);
+    if (!Save(pending, std::size(pending)))
+        return;
+    preset = next;
+    for (unsigned i = 0; i < std::size(rows); ++i)
+    {
+        ticks[rows[i]] = proposed[i];
+        Apply(rows[i]);
+    }
+    CheckRestart();
 }
-inline void WrapHelp(const char* source)
+inline void WrapHelp()
 {
-    helpCount = 0; helpOffset = 0;
+    constexpr const char* iconHelp[] {
+        "Auto uses Xbox art. PlayStation keeps PSP symbols. Configure controls in PPSSPP.",
+        "Auto utilise les icones Xbox. PlayStation garde les symboles PSP. Configurez les commandes dans PPSSPP.",
+        "Auto nutzt Xbox-Symbole. PlayStation behaelt PSP-Symbole. Steuerung in PPSSPP einstellen.",
+        "Auto usa icone Xbox. PlayStation mantiene i simboli PSP. Configura i comandi in PPSSPP.",
+        "Auto usa iconos Xbox. PlayStation conserva los simbolos PSP. Configura los controles en PPSSPP.",
+    };
+    const int language = Language();
+    const char* source = helpTopic == -1 ? presetHelp[language] :
+        helpTopic == 10 ? iconHelp[language] : helpTopic >= 0 ? descriptions[language][helpTopic] : Label(Word::Help);
+    helpCount = 0;
     while (*source && helpCount < 24)
     {
         while (*source == ' ') ++source;
@@ -162,6 +223,7 @@ inline void WrapHelp(const char* source)
         std::memcpy(helpLines[helpCount], source, n); helpLines[helpCount][n] = 0;
         ++helpCount; source += n;
     }
+    helpOffset = std::min(helpOffset, std::max(0, (helpCount - 1) / 5 * 5));
 }
 inline void Build()
 {
@@ -169,14 +231,17 @@ inline void Build()
     char line[128]{};
     constexpr const char* restart[] { "RESTART", "REDEMARRER", "NEUSTART", "RIAVVIA", "REINICIAR" };
     constexpr const char* error[] { "SAVE ERROR", "ERREUR SAUVEGARDE", "SPEICHERFEHLER", "ERRORE SALVATAGGIO", "ERROR AL GUARDAR" };
+    constexpr const char* navigation[] { "L/R PAGE  TRI HELP", "L/R PAGE  TRI AIDE", "L/R SEITE  TRI HILFE",
+        "L/R PAGINA  TRI AIUTO", "L/R PAGINA  TRI AYUDA" };
+    constexpr const char* helpNavigation[] { "L/R PAGE", "L/R PAGES", "L/R SEITE", "L/R PAGINA", "L/R PAGINA" };
     npf_snprintf(line, sizeof(line), "FUSION FIX %d/%d %s", level == 2 ? 1 + helpOffset / 5 : page + 1,
         level == 2 ? std::max(1, (helpCount + 4) / 5) : 3,
-        saveError ? error[Language()] : restartNeeded ? restart[Language()] : "L/R PAGE  TRI HELP");
+        saveError ? error[Language()] : restartNeeded ? restart[Language()] :
+        level == 2 ? helpNavigation[Language()] : navigation[Language()]);
     SetRow(0, line, true);
     if (level == 2)
     {
         for (int r = 0; r < 5; ++r) SetRow(unsigned(r + 1), helpOffset + r < helpCount ? helpLines[helpOffset + r] : "", helpOffset + r < helpCount);
-        selected = 1;
     }
     else
     {
@@ -191,7 +256,7 @@ inline void Build()
         }
         if (selected < 1 || selected > 5 || pages[page][selected - 1] == -2) selected = 1;
     }
-    *reinterpret_cast<int*>(pauseObject + 128) = selected;
+    *reinterpret_cast<int*>(pauseObject + 128) = level == 2 ? 1 : selected;
     refresh(pauseObject);
 }
 inline void Open(uintptr_t object)
@@ -209,7 +274,6 @@ inline void Open(uintptr_t object)
 inline void Close()
 {
     if (!pauseObject) return;
-    Save();
     for (unsigned i = 0; i < 7; ++i)
     {
         const auto row = Row(i);
@@ -236,12 +300,27 @@ inline void Input(console::socom::Input* input)
     previousButtons = buttons;
     constexpr uint32_t mask = PSP_CTRL_UP | PSP_CTRL_DOWN | PSP_CTRL_LEFT | PSP_CTRL_RIGHT | PSP_CTRL_CROSS | PSP_CTRL_CIRCLE | PSP_CTRL_TRIANGLE | PSP_CTRL_LTRIGGER | PSP_CTRL_RTRIGGER | PSP_CTRL_START;
     if (!level && !draining) return;
-    if (level && (presses & (PSP_CTRL_CIRCLE | PSP_CTRL_START))) { if (level == 2) { level = 1; selected = 1; Build(); } else Close(); }
-    else if (level == 2)
+    if (level == 2)
     {
-        if (presses & (PSP_CTRL_UP | PSP_CTRL_LTRIGGER)) { helpOffset = std::max(0, helpOffset - 5); Build(); }
-        if (presses & (PSP_CTRL_DOWN | PSP_CTRL_RTRIGGER)) { if (helpOffset + 5 < helpCount) helpOffset += 5; Build(); }
-        if (presses & PSP_CTRL_CROSS) { level = 1; selected = 1; Build(); }
+        if (presses & (PSP_CTRL_CIRCLE | PSP_CTRL_START | PSP_CTRL_CROSS))
+        {
+            level = 1;
+            Build();
+        }
+        else if (presses & (PSP_CTRL_UP | PSP_CTRL_LTRIGGER))
+        {
+            helpOffset = std::max(0, helpOffset - 5);
+            Build();
+        }
+        else if ((presses & (PSP_CTRL_DOWN | PSP_CTRL_RTRIGGER)) && helpOffset + 5 < helpCount)
+        {
+            helpOffset += 5;
+            Build();
+        }
+    }
+    else if (level == 1 && (presses & (PSP_CTRL_CIRCLE | PSP_CTRL_START)))
+    {
+        Close();
     }
     else if (level == 1)
     {
@@ -255,9 +334,11 @@ inline void Input(console::socom::Input* input)
         if (presses & (PSP_CTRL_LTRIGGER | PSP_CTRL_RTRIGGER)) { page = (page + ((presses & PSP_CTRL_RTRIGGER) ? 1 : 2)) % 3; selected = 1; Build(); }
         if (presses & PSP_CTRL_TRIANGLE)
         {
-            const int item = selected <= 5 ? pages[page][selected - 1] : -2;
-            constexpr const char* iconHelp[] { "Auto uses Xbox art. PlayStation keeps PSP symbols. Configure controls in PPSSPP.", "Auto utilise les icones Xbox. PlayStation garde les symboles PSP. Configurez les commandes dans PPSSPP.", "Auto nutzt Xbox-Symbole. PlayStation behaelt PSP-Symbole. Steuerung in PPSSPP einstellen.", "Auto usa icone Xbox. PlayStation mantiene i simboli PSP. Configura i comandi in PPSSPP.", "Auto usa iconos Xbox. PlayStation conserva los simbolos PSP. Configura los controles en PPSSPP." };
-            WrapHelp(item == -1 ? presetHelp[Language()] : item == 10 ? iconHelp[Language()] : item >= 0 ? descriptions[Language()][item] : Label(Word::Help)); level = 2; Build();
+            helpTopic = pages[page][selected - 1];
+            helpOffset = 0;
+            WrapHelp();
+            level = 2;
+            Build();
         }
         else if (presses & (PSP_CTRL_LEFT | PSP_CTRL_RIGHT))
         {
@@ -270,23 +351,100 @@ inline void Input(console::socom::Input* input)
     input->pad.Buttons &= ~mask; input->changed &= ~mask;
     if (!level && !(buttons & mask)) draining = false;
 }
-inline void ReadOptions()
+inline OptionsRead ReadOptions()
 {
-    for (unsigned i = 0; i < settingCount; ++i) { char buffer[sizeof(values[i].value)]{}; npf_snprintf(values[i].value, sizeof(values[i].value), "%s", inireader.ReadString(values[i].section, values[i].key, values[i].value, buffer, sizeof(buffer))); }
-    for (unsigned i = 0; i < 3; ++i) ticks[i] = inireader.ReadBoolean("MAIN", values[i].key, true);
-    ticks[3] = int(std::round(Geometry::fovFactor * 20)); ticks[6] = int(std::round(Hud::scale * 20)); ticks[7] = Geometry::borders; ticks[9] = FrameRate::limit > 30; ticks[10] = PadIcons::style;
+    if (!settings.Read(cfg))
+        return OptionsRead::Unavailable;
+
+    int previous[settingCount];
+    char priorRatios[2][32];
+    bool priorCustom[2];
+    std::copy(ticks, ticks + settingCount, previous);
+    std::memcpy(priorRatios, customRatios, sizeof(priorRatios));
+    std::copy(customRatio, customRatio + 2, priorCustom);
+    for (unsigned i = 0; i < 3; ++i)
+        ticks[i] = settings.Toggle("MAIN", values[i].key, ticks[i] != 0);
+
+    Geometry::fovFactor = std::clamp(settings.Real("MAIN", values[3].key, Geometry::fovFactor), 0.5f, 2.0f);
+    Hud::scale = std::clamp(settings.Real("MAIN", values[6].key, Hud::scale), 0.5f, 1.5f);
+    ticks[3] = int(std::round(Geometry::fovFactor * 20.0f));
+    ticks[6] = int(std::round(Hud::scale * 20.0f));
+
     for (int row = 4; row <= 5; ++row)
     {
-        bool known = false;
-        for (int i = 0; i < 5; ++i) if (!std::strcmp(values[row].value, ratios[i])) { ticks[row] = i; known = true; }
-        if (!known) { customRatio[row - 4] = true; npf_snprintf(customRatios[row - 4], sizeof(customRatios[0]), "%s", values[row].value); }
+        char text[32];
+        const int index = row - 4;
+        if (!settings.Text("MAIN", values[row].key, text, sizeof(text)))
+            continue;
+        float& aspect = row == 4 ? Geometry::forcedAspect : Hud::constraint;
+        aspect = row == 4 ? console::parse_forced_aspect(text) : console::parse_hud_aspect(text);
+        ticks[row] = 0;
+        customRatio[index] = false;
+        if (aspect <= 0.0f)
+            continue;
+        for (int i = 1; i < 5; ++i)
+        {
+            if (std::strcmp(text, ratios[i]) == 0)
+                ticks[row] = i;
+        }
+        if (!ticks[row])
+        {
+            customRatio[index] = true;
+            npf_snprintf(customRatios[index], sizeof(customRatios[index]), "%s", text);
+        }
     }
-    for (int i = 0; i < 6; ++i) if (!std::strcmp(values[8].value, languages[i])) ticks[8] = i;
-    const bool vanilla = !ticks[0] && !ticks[1] && !ticks[2] && !ticks[9] && ticks[10] == 2 && ticks[7] == 1;
-    const bool recommended = ticks[0] && ticks[1] && ticks[2] && ticks[9] && ticks[10] == 0 && ticks[7] == 3;
-    preset = vanilla ? 0 : recommended ? 1 : 3;
+
+    char languageId[16];
+    if (settings.Text("MAIN", values[8].key, languageId, sizeof(languageId)))
+    {
+        for (int i = 0; i < 6; ++i)
+            if (std::strcmp(languageId, languages[i]) == 0)
+                ticks[8] = i;
+    }
+    for (const unsigned row : {7u, 10u})
+    {
+        const float value = settings.Real("MAIN", values[row].key, float(ticks[row]));
+        if (value >= 0.0f && value <= 3.0f && float(int(value)) == value)
+            ticks[row] = int(value);
+    }
+    const float limit = settings.Real("MAIN", values[9].key, float(FrameRate::limit));
+    if (limit == 30.0f || limit == 60.0f)
+        ticks[9] = limit == 60.0f;
+    Apply(7);
+    Apply(9);
+    Apply(10);
+    if (!std::equal(previous, previous + 3, ticks) || previous[7] != ticks[7] ||
+        previous[9] != ticks[9] || previous[10] != ticks[10])
+        preset = MatchingPreset();
+    CheckRestart();
+    const bool changed = !std::equal(previous, previous + settingCount, ticks) ||
+        !std::equal(priorCustom, priorCustom + 2, customRatio) ||
+        (customRatio[0] && std::strcmp(priorRatios[0], customRatios[0]) != 0) ||
+        (customRatio[1] && std::strcmp(priorRatios[1], customRatios[1]) != 0);
+    return changed ? OptionsRead::Changed : OptionsRead::Unchanged;
+}
+inline void InitializeOptions()
+{
+    ReadOptions();
+    std::copy(ticks, ticks + 3, startTicks);
+    CheckRestart();
     int language{}; sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_LANGUAGE, &language);
     switch (language) { case PSP_SYSTEMPARAM_LANGUAGE_FRENCH: systemLanguage = 1; break; case PSP_SYSTEMPARAM_LANGUAGE_GERMAN: systemLanguage = 2; break; case PSP_SYSTEMPARAM_LANGUAGE_ITALIAN: systemLanguage = 3; break; case PSP_SYSTEMPARAM_LANGUAGE_SPANISH: systemLanguage = 4; break; default: systemLanguage = 0; }
+}
+inline void PollOptions()
+{
+    static uint32_t lastRead{};
+    const uint32_t now = sceKernelGetSystemTimeLow();
+    if (lastRead && now - lastRead < 1000000u)
+        return;
+    lastRead = now;
+    const int previousLanguage = Language();
+    if (ReadOptions() == OptionsRead::Changed && level)
+    {
+        if (level == 2 && previousLanguage != Language())
+            WrapHelp();
+        Build();
+    }
 }
 inline void Install()
 {

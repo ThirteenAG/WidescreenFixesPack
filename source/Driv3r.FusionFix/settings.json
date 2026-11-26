@@ -445,7 +445,12 @@
         {
           "value": "32:9"
         }
-      ]
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.FMVWidescreenMode",
@@ -479,6 +484,14 @@
       "description": "@MAIN.ForceMaxRefreshRate.description",
       "page": "display",
       "apply": "restart"
+    },
+    {
+      "id": "MAIN.DisplayMode",
+      "type": "string",
+      "default": "0x0x0",
+      "label": "Display Mode",
+      "visibility": "file",
+      "apply": "live"
     },
     {
       "id": "MAIN.MinResX",

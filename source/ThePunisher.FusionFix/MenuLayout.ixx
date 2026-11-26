@@ -8,9 +8,9 @@ export module MenuLayout;
 
 export namespace PunMenuLayout
 {
-    inline SafetyHookInline WidthHook, MainDrawHook;
+    inline SafetyHookInline WidthHook, HeightHook, MainDrawHook;
     inline thread_local bool Drawing = false;
-    inline int Width{}, Height{}, CanvasWidth{}, Left{};
+    inline int Width{}, Height{}, CanvasWidth{}, CanvasHeight{}, Left{}, Top{};
     inline void(__cdecl* Viewport)(int, int, int, int){};
     inline void(__cdecl* GetViewport)(int*, int*, int*, int*){};
     inline void(__cdecl* Colour)(int, int, int, int){};
@@ -21,6 +21,11 @@ export namespace PunMenuLayout
         return Drawing ? CanvasWidth : WidthHook.ccall<int>();
     }
 
+    inline int __cdecl GetHeight()
+    {
+        return Drawing ? CanvasHeight : HeightHook.ccall<int>();
+    }
+
     struct Scope
     {
         int x{}, y{}, width{}, height{};
@@ -29,23 +34,25 @@ export namespace PunMenuLayout
         {
             if (Drawing) return;
             Drawing = active = true;
-            if (CanvasWidth >= Width) return;
+            if (CanvasWidth == Width && CanvasHeight == Height) return;
             // Keep artwork, native clipping and mouse hit tests on the same canvas.
             auto* widget = reinterpret_cast<int*>(root);
             widget[11] = Left;
+            widget[12] = Top;
             widget[13] = CanvasWidth;
+            widget[14] = CanvasHeight;
             GetViewport(&x, &y, &width, &height);
             Viewport(0, 0, Width, Height);
             Colour(0, 0, 0, 255);
             if (Left > 0)
-            {
                 Fill(0, 0, Left, Height, 96, 0);
-            }
             if (Left + CanvasWidth < Width)
-            {
                 Fill(Left + CanvasWidth, 0, Width - Left - CanvasWidth, Height, 96, 0);
-            }
-            Viewport(Left, 0, CanvasWidth, Height);
+            if (Top > 0)
+                Fill(0, 0, Width, Top, 96, 0);
+            if (Top + CanvasHeight < Height)
+                Fill(0, Top + CanvasHeight, Width, Height - Top - CanvasHeight, 96, 0);
+            Viewport(Left, Top, CanvasWidth, CanvasHeight);
             clipped = true;
         }
         ~Scope()
@@ -76,12 +83,15 @@ export namespace PunMenuLayout
         Width = width;
         Height = height;
         CanvasWidth = std::min(width, static_cast<int>(std::lround(height * (4.0 / 3.0))));
+        CanvasHeight = std::min(height, static_cast<int>(std::lround(width * (3.0 / 4.0))));
         Left = (width - CanvasWidth) / 2;
+        Top = (height - CanvasHeight) / 2;
         Viewport = reinterpret_cast<decltype(Viewport)>(viewport.get_first());
         GetViewport = reinterpret_cast<decltype(GetViewport)>(getViewport.get_first());
         Colour = reinterpret_cast<decltype(Colour)>(colour.get_first());
         Fill = reinterpret_cast<decltype(Fill)>(fill.get_first());
         WidthHook = safetyhook::create_inline(screen.get_first(), GetWidth);
+        HeightHook = safetyhook::create_inline(screen.get_first(16), GetHeight);
         MainDrawHook = safetyhook::create_inline(main.get_first(), DrawMain);
     }
 }

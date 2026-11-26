@@ -23,6 +23,8 @@
   "ConfineCursor": "Mauszeiger festhalten",
   "ConfineCursor.description": "Hält den Mauszeiger im aktiven Spielfenster. Wird bei Fokusverlust, beim Ziehen des Fensters, in Systemmenüs oder beim Ausschalten freigegeben. Unabhängig von der Mauseingabe.",
   "FPSLimit": "Bildratenbegrenzung",
+  "FPSLimit.monitor": "Bildschirm",
+  "FPSLimit.unlimited": "Unbegrenzt",
   "FPSLimit.description": "Zielbildrate: 0 unbegrenzt, -1 aktuelle Monitorfrequenz oder 30–1000 FPS. Standard 60. Wirkt im laufenden Spiel. Höhere Raten können das Spielverhalten beeinflussen.",
   "SkipIntro": "Startlogos überspringen",
   "SkipIntro.description": "Überspringt die Studio-Logovideos beim Start. Handlungsvideos bleiben verfügbar. Nach Änderungen neu starten.",

@@ -5,6 +5,8 @@ module;
 #include "Shared/RWGTA/FixMenu.hpp"
 #include <array>
 #include <deque>
+#include <map>
+#include <set>
 
 // Options > Plugins: one more button in the game's Options menu (OptionsState). It opens the plugin list and each
 // plugin's page in the same menu, built from the game's own buttons and selector rows; the help line and the restart
@@ -13,6 +15,7 @@ module;
 export module OptionsMenu;
 
 import ComVars;
+import States;
 
 
 export namespace SRSMenu
@@ -56,6 +59,12 @@ export namespace SRSMenu
         void* widget{};
         int id{ -1 };
     };
+    using RestartKey = std::pair<uintptr_t, std::string>;
+    struct RestartSetting
+    {
+        RestartKey key;
+        const AsiSettingsApi* api;
+    };
     struct State
     {
         HMODULE module{};
@@ -68,17 +77,23 @@ export namespace SRSMenu
         int pluginsId{ -1 };
         std::string language;
         std::wstring heading;
+        std::wstring notice;
+        ULONGLONG lastCaption{}, noticeUntil{};
         NativeString title;
         std::deque<std::wstring> texts;
         std::deque<NativeString> values;
         std::deque<std::array<const NativeString*, 3>> choices;
         std::vector<Item> items;
+        std::vector<RestartSetting> restartSettings;
+        bool restartPending{};
         RWGTAMenu::Model model;
         SafetyHookInline buildHook, updateHook, showHook, eventHook, sliderHook, lookupHook, captionHook, destroyHook;
     };
     State state;
+    inline std::map<RestartKey, std::string> runningValues;
     constexpr int TitleId{ 0x7F000001 };
     constexpr size_t PageRows{ 6 };
+    constexpr size_t MenuOffset{ 2092 };
 
     template<class T> T Read(const void* base, size_t offset = 0)
     {
@@ -91,7 +106,7 @@ export namespace SRSMenu
     }
     inline void* Menu()
     {
-        return state.root ? reinterpret_cast<uint8_t*>(state.root) + 2092 : nullptr;
+        return state.root ? reinterpret_cast<uint8_t*>(state.root) + MenuOffset : nullptr;
     }
     inline std::wstring Wide(const std::string& text)
     {
@@ -137,10 +152,66 @@ export namespace SRSMenu
         state.texts.push_back(std::move(value));
         return { state.texts.back().c_str() };
     }
+    inline std::string ReadRestartSetting(const RestartSetting& setting)
+    {
+        return OtherPlugins::Fetch([&](char* buffer, uint32_t size)
+        {
+            return setting.api->Get(setting.key.second.c_str(), buffer, size);
+        });
+    }
+    inline void RememberRestartSettings()
+    {
+        const auto generation = state.generation;
+        std::vector<RestartSetting> settings;
+        std::set<RestartKey> keys;
+        for (const auto& page : state.model.Pages())
+        {
+            if (!page.plugin)
+                continue;
+            for (const auto& setting : page.plugin->file.description.settings)
+            {
+                if (!setting.HasValue() || setting.apply != "restart")
+                    continue;
+                RestartKey key{ reinterpret_cast<uintptr_t>(page.plugin->module), setting.id };
+                if (keys.insert(key).second)
+                    settings.push_back({ std::move(key), page.plugin->api });
+            }
+        }
+        for (const auto& setting : settings)
+        {
+            if (runningValues.contains(setting.key))
+                continue;
+            auto value = ReadRestartSetting(setting);
+            if (generation != state.generation)
+                return;
+            runningValues.try_emplace(setting.key, std::move(value));
+        }
+        state.restartSettings = std::move(settings);
+    }
+    inline bool UpdateRestartState()
+    {
+        const auto generation = state.generation;
+        const auto settings = state.restartSettings;
+        state.restartPending = false;
+        for (const auto& setting : settings)
+        {
+            const auto current = ReadRestartSetting(setting);
+            if (generation != state.generation || !state.open)
+                return false;
+            const auto running = runningValues.find(setting.key);
+            if (running != runningValues.end() && running->second != current)
+            {
+                state.restartPending = true;
+                break;
+            }
+        }
+        return true;
+    }
     inline void OpenModel()
     {
         state.language = Language();
         state.model.OpenPlugins(state.module, state.language, PageRows);
+        RememberRestartSettings();
     }
     inline void Clear()
     {
@@ -189,6 +260,9 @@ export namespace SRSMenu
     }
     inline void Build()
     {
+        RWGTAMenu::Model::Changed().exchange(false);
+        if (!UpdateRestartState())
+            return;
         Clear();
         api.initialize(Menu());
         const auto& pages = state.model.Pages();
@@ -222,7 +296,6 @@ export namespace SRSMenu
         api.finish(Menu());
         state.showHook.thiscall<void>(Menu());
         Write<int>(Menu(), 896, static_cast<int>(state.selected));
-        RWGTAMenu::Model::Changed() = false;
     }
     inline void Stock()
     {
@@ -282,8 +355,10 @@ export namespace SRSMenu
             state.items.clear();
             state.texts.clear();
             state.choices.clear();
-        state.values.clear();
+            state.values.clear();
             OpenModel();
+            if (state.root != root)
+                return 0;
         }
         state.building = root;
         const auto result = state.buildHook.thiscall<int>(root);
@@ -333,6 +408,12 @@ export namespace SRSMenu
             if (!state.open && id == state.pluginsId)
             {
                 Write<uint8_t>(root, 3660, 0);
+                const auto language = Language();
+                if (language != state.language)
+                {
+                    state.model.SelectLanguage(language);
+                    state.language = language;
+                }
                 state.open = true;
                 state.page = -1;
                 state.selected = 0;
@@ -352,7 +433,7 @@ export namespace SRSMenu
                         }
             }
         }
-        if (RWGTAMenu::Model::Changed().exchange(false) && state.open)
+        if (state.open && RWGTAMenu::Model::Changed())
             Build();
         return state.updateHook.thiscall<int>(root);
     }
@@ -360,30 +441,51 @@ export namespace SRSMenu
     {
         return id == TitleId ? &state.title : state.lookupHook.ccall<void*>(id);
     }
+    inline bool NoticeReady()
+    {
+        return state.lastCaption && GetTickCount64() - state.lastCaption < 250;
+    }
+    inline void ShowNotice(const std::wstring& text)
+    {
+        state.notice = text;
+        state.noticeUntil = GetTickCount64() + 12000;
+    }
     inline char __fastcall Caption(void* menu, void*)
     {
         const auto result = state.captionHook.thiscall<char>(menu);
-        if (!state.open || menu != Menu() || state.items.empty() || Read<float>(menu, 220) < 0.05f)
+        const bool options = menu == Menu();
+        const auto deepest = SRSStates::Deepest();
+        const bool main = deepest && std::string_view(SRSStates::Name(deepest)) == "MainMenuState" &&
+            menu == deepest + MenuOffset;
+        if ((!options && !main) || Read<float>(menu, 220) < 0.05f)
             return result;
         auto font = Font();
         auto table = Read<void**>(font);
         auto attributes = Read<void*>(font, 36);
         if (!table || !attributes)
             return result;
-        for (size_t i = 0; i < state.items.size(); ++i)
-            if (Read<uint8_t>(state.items[i].widget, 268))
-                state.selected = i;
-        auto text = state.model.RestartRequired() ? state.model.Text("menu.restartwarning") : state.items[state.selected].help;
-        const auto help = Wide(text);
+        state.lastCaption = GetTickCount64();
+        if (!state.notice.empty() && (state.lastCaption >= state.noticeUntil || FixSettings().Get("MAIN.CheckForUpdates") == "0"))
+            state.notice.clear();
+        auto help = state.notice;
+        if (help.empty())
+        {
+            if (!options || !state.open || state.items.empty())
+                return result;
+            for (size_t i = 0; i < state.items.size(); ++i)
+                if (Read<uint8_t>(state.items[i].widget, 268))
+                    state.selected = i;
+            help = Wide(state.restartPending ? state.model.Text("menu.restartwarning") : state.items[state.selected].help);
+        }
         const auto flags = Read<int>(attributes, 12);
         const auto color = Read<uint32_t>(attributes, 16);
         auto align = reinterpret_cast<void(__thiscall*)(void*, int)>(table[3]);
         auto tint = reinterpret_cast<void(__thiscall*)(void*, uint32_t)>(table[4]);
         align(font, 0);
         tint(font, 0xFFFFFFFF);
-        // Above the menu's banner, where the Options pages have no items; the game wraps it to the width
+        // Leave room for the Main Menu's sign-in status above the notice.
         const NativeString string{ help.c_str() };
-        const int rectangle[]{ 25, 4, 590, 0 };
+        const int rectangle[]{ 25, main ? 28 : 4, 590, 0 };
         int extent[2]{};
         api.drawText(font, extent, &string, rectangle, Read<int>(menu, 48) + 3);
         tint(font, color);
@@ -399,10 +501,12 @@ export namespace SRSMenu
             state.root = state.building = nullptr;
             state.open = false;
             state.pending = -1;
+            state.lastCaption = 0;
             state.items.clear();
             state.choices.clear();
-        state.values.clear();
+            state.values.clear();
             state.texts.clear();
+            state.restartSettings.clear();
             state.model.Close();
         }
         return result;
@@ -412,6 +516,10 @@ export namespace SRSMenu
     {
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
                            reinterpret_cast<LPCWSTR>(&Init), &state.module);
+        auto& settings = FixSettings();
+        for (const auto& setting : settings.GetDescription().settings)
+            if (setting.HasValue() && setting.apply == "restart")
+                runningValues.try_emplace(RestartKey{ reinterpret_cast<uintptr_t>(state.module), setting.id }, settings.Get(setting.id));
         auto build = hook::pattern("56 8B F1 57 8D BE 2C 08 00 00 8B CF E8 ? ? ? ? 68 14 04 00 00 E8 ? ? ? ? 83 C4 04 85 C0 74 18 6A 00 6A 00 8D 4E 04 51 6A 00 68 BD 01 00 00").get_first();
         auto update = hook::pattern("56 8B F1 E8 ? ? ? ? 84 C0 75 21 8A 86 4C 0E 00 00").get_first();
         auto show = hook::pattern("56 8B F1 83 BE B4 00 00 00 01 C7 86 70 03 00 00 FF FF FF FF C6 86 84 03 00 00 01").get_first();

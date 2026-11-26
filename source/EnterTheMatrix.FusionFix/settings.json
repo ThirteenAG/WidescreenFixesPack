@@ -67,7 +67,7 @@
       "id": "MAIN.FPSLimit",
       "type": "int",
       "default": 60,
-      "min": 10,
+      "min": 30,
       "max": 1000,
       "unit": "fps",
       "special": [
@@ -117,7 +117,12 @@
       "description": "@HudAspectRatioConstraint.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "live"
+      "apply": "live",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.CutsceneBorders",

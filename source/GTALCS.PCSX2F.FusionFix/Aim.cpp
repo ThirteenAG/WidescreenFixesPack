@@ -1,5 +1,5 @@
 #include "Game.hpp"
-#include "../Shared/Console/Aim.hpp"
+#include "Shared/Console/Aim.hpp"
 
 namespace lcs {
 namespace {

@@ -13,7 +13,7 @@
   "HudAspectRatioConstraint": "Proporzioni dell'HUD",
   "HudAspectRatioConstraint.description": "Auto mette l'HUD negli angoli dello schermo. Un rapporto come 4:3 o 16:9 lo tiene in un riquadro centrato di quella forma. I menu mantengono il layout 4:3. Effetto immediato.",
   "CutsceneBorders": "Bande dei filmati",
-  "CutsceneBorders.description": "Letterbox mantiene le bande sopra e sotto i filmati sugli schermi più stretti di 16:9; Pillarbox mantiene l'immagine 16:9 tra bande laterali sugli schermi più larghi; Entrambe fa entrambe le cose e mostra sempre l'inquadratura originale; No riempie lo schermo. Effetto immediato.",
+  "CutsceneBorders.description": "Letterbox aggiunge bande sopra e sotto se lo schermo è più stretto dell'immagine originale della scena. Pillarbox aggiunge bande laterali se lo schermo è più largo. L'opzione Entrambe conserva l'inquadratura di ogni scena, anche in 16:9 e in circa 2,35:1. No riempie lo schermo. Effetto immediato.",
   "CutsceneBorders.off": "No",
   "CutsceneBorders.letterbox": "Letterbox",
   "CutsceneBorders.pillarbox": "Pillarbox",

@@ -11,6 +11,7 @@ module;
 export module System;
 
 import ComVars;
+import Video;
 
 // Start-up, window and quality-of-life options: no logos at start (MAIN.SkipIntro), the window of the game's
 // windowed mode (MAIN.WindowMode), door animations skipped (MAIN.DoorSkip), the mouse cursor hidden when it doesn't
@@ -103,11 +104,8 @@ public:
         {
             auto& settings = FixSettings();
 
-            static std::atomic<bool> pauseOnFocusLoss{ settings.Bool("MAIN.PauseOnFocusLoss") };
-            settings.OnChange("MAIN.PauseOnFocusLoss", []()
-            {
-                pauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
-            });
+            static std::atomic<int> pauseOnFocusLoss{};
+            BindLiveInt("MAIN.PauseOnFocusLoss", pauseOnFocusLoss);
             static SafetyHookMid FocusHook;
             auto focus = hook::pattern("80 79 20 00 75 ? 80 B9 51 25 00 00 00 75 ? 6A 01 FF D6");
             FocusHook = safetyhook::create_mid(focus.get_first(4), [](SafetyHookContext& regs)
@@ -142,11 +140,8 @@ public:
                     regs.eax = uint32_t(D3DERR_DEVICELOST);
             });
 
-            static std::atomic<int> fpsLimit{ settings.Int("MAIN.FPSLimit") };
-            settings.OnChange("MAIN.FPSLimit", []()
-            {
-                fpsLimit.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
-            });
+            static std::atomic<int> fpsLimit{};
+            BindLiveInt("MAIN.FPSLimit", fpsLimit);
             static SafetyHookMid FrameRateHook;
             auto clock = hook::pattern("F3 0F 10 4B 38 F3 0F 5E 4B 3C 66 0F 5A C0 F3 0F 11 4C 24 ? F3 0F 5C C8");
             FrameRateHook = safetyhook::create_mid(clock.get_first(10), [](SafetyHookContext& regs)
@@ -203,11 +198,8 @@ public:
                 });
             }
 
-            static std::atomic<int> nHideMouseCursorAfterMs{ settings.Int("MAIN.HideMouseCursorAfterMs") };
-            settings.OnChange("MAIN.HideMouseCursorAfterMs", []()
-            {
-                nHideMouseCursorAfterMs.store(FixSettings().Int("MAIN.HideMouseCursorAfterMs"), std::memory_order_relaxed);
-            });
+            static std::atomic<int> nHideMouseCursorAfterMs{};
+            BindLiveInt("MAIN.HideMouseCursorAfterMs", nHideMouseCursorAfterMs);
             // Keep the hooks installed so a timeout of zero can be enabled while playing.
             static std::atomic<bool> cursorIdle{ false };
             {
@@ -215,6 +207,9 @@ public:
                 // The native cursor refresh stays intact. Hide only its shape, and restore its current handle after movement.
                 static auto MouseCursorHook = safetyhook::create_mid(pattern.get_first(28), [](SafetyHookContext& regs)
                 {
+                    // Off (0) with nothing to restore: nothing to do
+                    if (nHideMouseCursorAfterMs.load(std::memory_order_relaxed) == 0 && !cursorIdle.load(std::memory_order_relaxed))
+                        return;
                     auto window = *reinterpret_cast<HWND*>(regs.esi + 0x12C);
                     auto region = *reinterpret_cast<HWND*>(regs.esi + 0x2664);
                     auto foreground = GetForegroundWindow();
@@ -237,14 +232,21 @@ public:
                 });
 
                 // Menus draw their own pointer sprite at the mouse position; while idle, move it out of view. The next
-                // movement places it back.
+                // movement places it back. Movies and screens without a menu that uses it (+0x254 clear) still draw
+                // the sprite: with the timeout on it stays out of view there.
                 auto pointer = hook::pattern("83 EC 08 53 8B D9 56 8D B3 60 02 00 00 56 FF 15 ? ? ? ? 8B CB E8 ? ? ? ? 80 BB 54 02 00 00 00 0F 84 ? ? ? ? 83 BB 78 02 00 00 00");
                 auto start = reinterpret_cast<uintptr_t>(pointer.get_first());
                 auto unlock = hook::range_pattern(start, start + 0x140, "56 FF 15 ? ? ? ? 5E 5B 83 C4 08 C3").get_first();
                 static auto PointerHook = safetyhook::create_mid(unlock, [](SafetyHookContext& regs)
                 {
                     const auto node = *reinterpret_cast<uint8_t**>(regs.ebx + 0x278);
-                    if (!cursorIdle.load(std::memory_order_relaxed) || !*reinterpret_cast<uint8_t*>(regs.ebx + 0x254) || !node)
+                    if (!node)
+                        return;
+                    const bool menu = *reinterpret_cast<uint8_t*>(regs.ebx + 0x254) != 0 &&
+                                      RE0Video::fullscreenCount.load(std::memory_order_relaxed) == 0;
+                    const bool hide = menu ? cursorIdle.load(std::memory_order_relaxed)
+                                           : nHideMouseCursorAfterMs.load(std::memory_order_relaxed) != 0;
+                    if (!hide)
                         return;
                     *reinterpret_cast<float*>(node + 160) = -4096.0f;
                     *reinterpret_cast<float*>(node + 164) = -4096.0f;

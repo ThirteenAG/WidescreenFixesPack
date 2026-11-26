@@ -15,12 +15,7 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            auto& settings = FixSettings();
-            CursorConfinement::SetEnabled(settings.Bool("MAIN.ConfineCursor"));
-            settings.OnChange("MAIN.ConfineCursor", []()
-            {
-                CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
-            });
+            Driv3rSettings::Bind("MAIN.ConfineCursor", true, CursorConfinement::SetEnabled);
             WFP::onGameProcessEvent() += []()
             {
                 CursorConfinement::Frame(hWnd.get());

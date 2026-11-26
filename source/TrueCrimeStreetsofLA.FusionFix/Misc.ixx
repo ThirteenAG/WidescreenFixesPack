@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/MaxPayne/FrameRate.hpp"
 
 export module Misc;
 
@@ -22,15 +23,17 @@ import Gamepad;
 import FreeCamera;
 
 SafetyHookInline sub_5EE430_hook{};
+static std::atomic<float> GameplayFov{ 1.0f };
+static std::atomic<int> RequestedFrameLimit{ 60 };
+
 void __fastcall sub_5EE430(int _this, void* edx, float a2)
 {
-    static const auto& factor = FixSettings().Float("MAIN.FOVFactor");
     const uintptr_t controller = Controller.is_initialized()
         ? Controller.get() : 0;
     // Scripted camera flag of the game controller; horizontal scale of the frustum
     const bool scripted = controller && *reinterpret_cast<uint8_t*>(controller + 464);
     a2 = TrueCrimeCamera::Frustum(a2, *reinterpret_cast<float*>(_this + 12),
-        TrueCrimeCinema::CameraAspect(Screen.fAspectRatio), scripted || TrueCrimeCinema::Active() ? 1.0f : factor);
+        TrueCrimeCinema::CameraAspect(Screen.fAspectRatio), scripted || TrueCrimeCinema::Active() ? 1.0f : GameplayFov.load());
     return sub_5EE430_hook.unsafe_fastcall<void>(_this, edx, a2);
 }
 
@@ -42,7 +45,7 @@ public:
         WFP::onInitEvent() += []()
         {
             asi_settings::LiveLink::Start();
-            TrueCrimeWindow::Mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
+            TrueCrimeWindow::Mode = std::clamp(ReadNumericSetting("MAIN.WindowMode", 0), 0, 2);
             const auto [width, height] = TrueCrimeResolution::Startup();
             TrueCrimeResolution::Init(width, height);
             TrueCrimeWindow::Init(Screen.Width, Screen.Height);
@@ -51,20 +54,27 @@ public:
             TrueCrimeGamepad::Init();
             TrueCrimeFreeCamera::Init();
             TrueCrimeUpdates::Init();
+            const auto refreshFov = []()
+            {
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                GameplayFov.store(ReadNumericSetting("MAIN.FOVFactor", 1.0f));
+            };
+            const auto refreshFrameLimit = []()
+            {
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                RequestedFrameLimit.store(ReadNumericSetting("MAIN.FPSLimit", 60));
+            };
+            FixSettings().OnChange("MAIN.FOVFactor", refreshFov);
+            FixSettings().OnChange("MAIN.FPSLimit", refreshFrameLimit);
+            refreshFov();
+            refreshFrameLimit();
             TrueCrimeDevice::Initialize([]()
             {
-                const int requested = FixSettings().Int("MAIN.FPSLimit");
+                const int requested = RequestedFrameLimit.load();
                 if (requested == -1)
-                {
-                    MONITORINFOEXW monitor{};
-                    monitor.cbSize = sizeof(monitor);
-                    DEVMODEW mode{};
-                    mode.dmSize = sizeof(mode);
-                    if (GetMonitorInfoW(MonitorFromWindow(TrueCrimeWindow::Window, MONITOR_DEFAULTTOPRIMARY), &monitor) &&
-                        EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode))
-                        return static_cast<int>(std::max(30ul, mode.dmDisplayFrequency));
-                    return 60;
-                }
+                    return static_cast<int>(MaxPayneFrameRate::MonitorRate(TrueCrimeWindow::Window.load()));
                 return requested <= 0 ? 0 : std::clamp(requested, 30, 1000);
             });
             TrueCrimeMovie::Init();

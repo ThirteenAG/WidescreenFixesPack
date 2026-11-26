@@ -15,6 +15,8 @@ export namespace BullyShadows
     void Install(int resolution)
     {
         Resolution = std::clamp(resolution, 1024, 4096);
+        if (Resolution == 1024) // the game's own size
+            return;
 
         // The size a generator asks for when its 2D map is created, scaled with the setting
         auto mapSize = hook::pattern("0F B7 45 64 53 8A 5D 08 56 8B 75 0C 57 0F B7 F8");

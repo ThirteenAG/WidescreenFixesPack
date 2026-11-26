@@ -1,7 +1,7 @@
 #pragma once
-#include "../../external/injector/include/ps2/runtime.hpp"
-#include "../../external/injector/include/ps2/game_abi.hpp"
-#include "../Shared/Console/Viewport.hpp"
+#include "ps2/runtime.hpp"
+#include "ps2/game_abi.hpp"
+#include "Shared/Console/Viewport.hpp"
 #include <cstdint>
 
 namespace vcs {
@@ -29,15 +29,44 @@ struct Settings {
     // MAIN.ForceAspectRatio (0 = the emulator's display aspect).
     float forcedAspect = 0.0f;
     // MAIN.SkipIntro as the game started with (settings.skipIntro is the CFG's).
-    bool startedSkipIntro = true;
-    // MAIN.GamepadIcons: 0 the game's own, 1 Xbox, 2 PlayStation (the game's own), 3 Nintendo.
+    bool startedSkipIntro = false;
+    // MAIN.GamepadIcons: 0 Auto (Xbox), 1 Xbox, 2 PlayStation, 3 Nintendo.
     int gamepadIcons = 0;
     // MAIN.VehicleLights: lit head, tail, brake and reverse lights on vehicle bodies.
     bool vehicleLights = true;
     // CONTROLS.HoldVehicleCamera: the vehicle camera stays where the right stick left it.
     bool holdVehicleCamera = false;
+    // MAIN.GamepadCameraSpeed and MAIN.InvertGamepadY: the right stick camera.
+    float padCameraSpeed = 1.0f;
+    bool invertPad = false;
 };
 inline Settings settings;
+
+class VehicleCameraHold
+{
+public:
+    bool Active() const { return held; }
+    void Clear() { held = false; }
+
+    bool Update(uint32_t now, bool moved, uint32_t duration)
+    {
+        if (moved)
+        {
+            held = true;
+            lastMovement = now;
+        }
+        else if (held && (int32_t(now - lastUpdate) < 0 || now - lastMovement >= duration))
+        {
+            Clear();
+        }
+        lastUpdate = now;
+        return held;
+    }
+
+private:
+    uint32_t lastMovement = 0, lastUpdate = 0;
+    bool held = false;
+};
 
 namespace address {
 constexpr uintptr_t currentArea = 0x489F7C;
@@ -58,7 +87,7 @@ void InstallMenu();
 void ApplyFrameRate();
 // Per game frame: the concert mission's frame rate.
 void TickTiming();
-void ReloadBindings();
+bool ReloadBindings();
 void ReloadMenuLanguage();
 
 enum class DrawMode { None, Center, LeftBottom, RightTop, RightBottom, World };

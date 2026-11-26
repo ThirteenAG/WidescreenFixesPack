@@ -42,6 +42,8 @@ export namespace PsiOpsOverlay
 
     bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -58,6 +60,8 @@ export namespace PsiOpsOverlay
 
     void Keyboard(HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         const bool down = window && GetForegroundWindow() == window &&
             (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
         if (down)
@@ -100,7 +104,8 @@ export namespace PsiOpsOverlay
             return true;
         }();
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
     }
 
     inline SafetyHookInline inputHook;
@@ -115,8 +120,11 @@ export namespace PsiOpsOverlay
 
     inline void Install()
     {
-        auto input = hook::pattern("55 8B EC 83 EC 20 89 4D E0 8B 45 E0 BA 01 00 00 00 8B 48 08 D3 E2 89 55 FC");
-        inputHook = safetyhook::create_inline(input.get_first(), Input);
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            auto input = hook::pattern("55 8B EC 83 EC 20 89 4D E0 8B 45 E0 BA 01 00 00 00 8B 48 08 D3 E2 89 55 FC");
+            inputHook = safetyhook::create_inline(input.get_first(), Input);
+        }
         PsiOpsWindow::message = Message;
         PsiOpsWindow::blocksInput = BlocksInput;
         PsiOpsWindow::beforeReset = []() { Overlay.BeforeReset(); };

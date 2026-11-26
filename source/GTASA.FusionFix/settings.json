@@ -51,6 +51,11 @@
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "special": [
         {
           "value": "Auto",
@@ -461,7 +466,7 @@
     {
       "id": "MISC.DisableWhiteCrosshairDot",
       "type": "bool",
-      "default": 0,
+      "default": 1,
       "label": "@crosshairdot",
       "description": "@crosshairdot.description",
       "page": "camera",
@@ -557,32 +562,6 @@
       "label": "@vibration",
       "description": "@vibration.description",
       "page": "controls"
-    },
-    {
-      "id": "MAIN.FMVWidescreenMode",
-      "type": "choice",
-      "default": 1,
-      "choices": [
-        {
-          "value": 0,
-          "label": "@fmvmode.original"
-        },
-        {
-          "value": 1,
-          "label": "@fmvmode.fill"
-        }
-      ],
-      "label": "@fmvmode",
-      "description": "@fmvmode.description",
-      "page": "graphics",
-      "control": [
-        "cycler"
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
     },
     {
       "id": "GRAPHICS.AntiAliasing",

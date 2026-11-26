@@ -251,6 +251,11 @@
       "page": "display",
       "apply": "live",
       "visibility": "menu",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "suggestions": [
         {
           "value": "Auto"
@@ -277,11 +282,11 @@
       "description": "@MAIN.FPSLimit.description",
       "page": "gameplay",
       "apply": "live",
-      "min": -1,
+      "min": 30,
       "max": 60,
-      "step": 1,
-      "control": [
-        "stepper"
+      "unit": "fps",
+      "special": [
+        { "value": -1, "label": "@MAIN.FPSLimit.monitor" }
       ]
     },
     {

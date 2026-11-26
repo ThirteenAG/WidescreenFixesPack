@@ -60,6 +60,11 @@
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "label": "@MAIN_HudAspectRatioConstraint",
       "description": "@MAIN_HudAspectRatioConstraint.description",
       "page": "advanced",
@@ -92,8 +97,18 @@
       "page": "display",
       "visibility": "menu",
       "apply": "live",
-      "min": -1,
+      "min": 30,
       "max": 1000,
+      "special": [
+        {
+          "value": -1,
+          "label": "@MAIN_FPSLimit.monitor"
+        },
+        {
+          "value": 0,
+          "label": "@MAIN_FPSLimit.unlimited"
+        }
+      ],
       "presets": {
         "vanilla": 30,
         "recommended": 60,

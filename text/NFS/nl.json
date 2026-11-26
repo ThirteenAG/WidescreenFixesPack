@@ -22,6 +22,8 @@
   "WFP_GAMEPADICONS": "Knoppictogrammen",
   "WFP_ICONS_AUTO": "Automatisch",
   "WFP_SKIPINTRO": "Intro overslaan",
+  "WFP_SKIPPRESSSTART": "‘Druk op Start’ overslaan",
+  "WFP_DESC_SKIPPRESSSTART": "Het titelscherm gaat automatisch verder zonder dat je op Start hoeft te drukken.",
   "WFP_U2SAVEBONUS": "Bonus voor Underground 2-opslag",
   "WFP_FPSLIMIT": "Beeldsnelheid",
   "WFP_FPS_CUSTOM": "Aangepast",

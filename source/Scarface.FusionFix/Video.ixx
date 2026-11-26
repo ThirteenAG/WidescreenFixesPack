@@ -18,7 +18,7 @@ export namespace ScarfaceVideo
     };
 
     inline SafetyHookInline ConfigureHook, DrawHook, DestroyHook;
-    inline const int* Mode = nullptr;
+    inline std::atomic<int> Mode{ 1 };
     inline std::unordered_map<void*, float> PixelAspect;
 
     inline Geometry Layout(int sourceWidth, int sourceHeight, int width, int height, float pixelAspect, int mode)
@@ -66,7 +66,7 @@ export namespace ScarfaceVideo
     inline uintptr_t __fastcall Draw(void* object, void*)
     {
         const auto display = videoDisplay.is_initialized() ? videoDisplay.get() : nullptr;
-        if (!display || !Mode)
+        if (!display)
             return DrawHook.unsafe_fastcall<uintptr_t>(object, nullptr);
         auto& left = *reinterpret_cast<int*>(static_cast<uint8_t*>(object) + 20);
         auto& top = *reinterpret_cast<int*>(static_cast<uint8_t*>(object) + 24);
@@ -81,7 +81,7 @@ export namespace ScarfaceVideo
         const Geometry previous{ left, top, scaleX, scaleY };
         const auto aspect = PixelAspect.find(object);
         const auto geometry = Layout(sourceWidth, sourceHeight, width, height,
-            aspect == PixelAspect.end() ? 1.0f : aspect->second, *Mode);
+            aspect == PixelAspect.end() ? 1.0f : aspect->second, Mode.load());
         left = geometry.x;
         top = geometry.y;
         scaleX = geometry.scaleX;
@@ -101,9 +101,8 @@ export namespace ScarfaceVideo
         return DestroyHook.unsafe_fastcall<void*>(object, nullptr, flags);
     }
 
-    inline void Install(const int& mode, HMODULE module = GetModuleHandle(nullptr))
+    inline void Install(HMODULE module = GetModuleHandle(nullptr))
     {
-        Mode = &mode;
         if (ConfigureHook && DrawHook && DestroyHook)
             return;
         const auto tables = ScarfaceRTTI::ScanVtables(module);

@@ -8,7 +8,7 @@
   "FOVFactor": "Fattore campo visivo",
   "FOVFactor.description": "Scala il campo visivo della vista 3D da 0,5 a 2,0; 1,0 mantiene l'angolo originale. Il sorvolo iniziale delle gare mantiene la sua inquadratura. Le modifiche si applicano durante il gioco.",
   "HudAspectRatioConstraint": "Formato HUD",
-  "HudAspectRatioConstraint.description": "Auto posiziona l'HUD di gara ai bordi dello schermo. Un formato lo mantiene in un riquadro centrato (da 4:3 a 32:9). Le modifiche si applicano durante il gioco.",
+  "HudAspectRatioConstraint.description": "Auto posiziona l'HUD di gara ai bordi dello schermo. Un formato lo mantiene in un riquadro centrato (da 4:3 a 32:9). Le modifiche si applicano durante il gioco. Auto è il valore predefinito. I preset mantengono il formato scelto.",
   "HUDScale": "Dimensione HUD",
   "HUDScale.description": "Ridimensiona l'HUD di gara attorno ai suoi ancoraggi ai bordi dello schermo (da 0,5 a 1,5). Menu e schermate di caricamento mantengono la dimensione originale. Le modifiche si applicano durante il gioco.",
   "CutsceneBorders": "Bordi delle scene",
@@ -24,7 +24,7 @@
   "GamepadCameraSpeed": "Velocità telecamera",
   "GamepadCameraSpeed.description": "Velocità con cui la levetta destra ruota la telecamera di inseguimento attorno all'auto, da 0,5 a 2,0. La telecamera torna dietro l'auto poco dopo aver rilasciato la levetta. Le modifiche si applicano durante il gioco.",
   "TextLanguage": "Lingua del plugin",
-  "TextLanguage.description": "Lingua delle pagine Fusion Fix nel menu di pausa. Auto segue la lingua di sistema della PSP. Le modifiche nel menu Plugins si applicano subito.",
+  "TextLanguage.description": "Lingua delle pagine Fusion Fix nel menu di pausa. Auto segue la lingua di sistema della PSP. Riavvia il gioco emulato dopo aver cambiato questa impostazione.",
   "auto": "Auto",
   "menu.plugins": "Plugins",
   "menu.preset": "Preimpostazione",
@@ -36,7 +36,7 @@
   "menu.custom": "Personalizzata",
   "menu.back": "Indietro",
   "menu.help": "Aiuto",
-  "menu.restart": "Riavvia il gioco emulato per applicare tutte le modifiche.",
-  "menu.save.error": "Impossibile salvare le impostazioni.",
-  "menu.preset.help": "Originale mantiene l'introduzione e la visuale solo con la croce direzionale. Consigliata e Migliorata saltano l'introduzione e attivano la visuale con lo stick destro. Le altre impostazioni mantengono i tuoi valori."
+  "menu.restart": "Riavvia il gioco.",
+  "menu.save.error": "Salvataggio non riuscito.",
+  "menu.preset.help": "Originale mantiene l'introduzione e la visuale solo con la croce direzionale. Consigliata e Migliorata saltano l'introduzione e attivano la visuale con lo stick destro. Auto è il valore predefinito. I preset mantengono il formato scelto. Le altre impostazioni mantengono i tuoi valori."
 }

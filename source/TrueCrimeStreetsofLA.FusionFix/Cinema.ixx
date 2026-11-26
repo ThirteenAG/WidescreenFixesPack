@@ -2,13 +2,12 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include <atomic>
 
 
 export module Cinema;
 
+import ComVars;
 import Window;
-import Device;
 
 export namespace TrueCrimeCinema
 {
@@ -19,18 +18,34 @@ export namespace TrueCrimeCinema
     inline constexpr int FullSlide = 68;
 
     inline SafetyHookInline LetterboxHook;
-    inline std::atomic<uint32_t> LastFrame{ 0 };
     inline thread_local int PictureWidth = 0;
+    struct DrawNode
+    {
+        const DrawNode* next;
+        const DrawNode* previous;
+        const int* object;
+    };
+    inline const DrawNode* const* DrawList = nullptr;
 
     inline int Borders()
     {
-        return std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3);
+        return std::clamp(ReadNumericSetting("MAIN.CutsceneBorders", 3), 0, 3);
     }
 
     inline bool Active()
     {
-        const uint32_t last = LastFrame.load(std::memory_order_relaxed);
-        return last && TrueCrimeDevice::Frames.load(std::memory_order_relaxed) - last <= 2;
+        const auto controller = Controller.get();
+        if (!controller)
+            return false;
+        const auto bars = *reinterpret_cast<const int* const*>(controller + 0xE0);
+        if (!bars || bars[1] == 2)
+            return false;
+        for (auto node = *DrawList; node && node->next; node = node->next)
+        {
+            if (node->object == bars)
+                return true;
+        }
+        return false;
     }
 
     // Width of the picture area that shows the original framing (side bars cover the rest).
@@ -91,9 +106,8 @@ export namespace TrueCrimeCinema
     {
         if (pass != 4)
             return LetterboxHook.thiscall<int>(box, pass, a2, a3, a4);
-        LastFrame.store(std::max(1u, TrueCrimeDevice::Frames.load(std::memory_order_relaxed)), std::memory_order_relaxed);
         // box[1]: 1 sliding in, 2 sliding out; box[2]: slide position
-        if (!FixSettings().Bool("MAIN.AnimatedCutsceneBorders"))
+        if (FixSettings().Get("MAIN.AnimatedCutsceneBorders") == "0")
         {
             if (box[1] == 1)
                 box[2] = FullSlide - 1;
@@ -113,7 +127,8 @@ export namespace TrueCrimeCinema
             PictureWidth = static_cast<int>(std::lround(Width()));
         const int result = LetterboxHook.thiscall<int>(box, pass, a2, a3, a4);
         PictureWidth = 0;
-        SideBars();
+        if (state != 2 || slide > 0)
+            SideBars();
         return result;
     }
 
@@ -126,6 +141,9 @@ export namespace TrueCrimeCinema
 
     inline void Init()
     {
+        // Story entry queues the controller's letterbox in the renderer's native draw list.
+        auto queue = hook::pattern("C7 40 04 01 00 00 00 89 58 08 8B 8E E0 00 00 00 6A 01 51 B9 ? ? ? ? E8 ? ? ? ? 8B 44 24 38");
+        DrawList = reinterpret_cast<const DrawNode* const*>(*queue.get_first<uintptr_t>(20) + 0x104);
         auto letterbox = hook::pattern("8B 44 24 04 83 EC 14 83 F8 04 56 8B F1 0F 85 ? ? ? ? 53 55 E8");
         auto at = [&](ptrdiff_t offset) { return letterbox.get_first<uint8_t>(offset); };
         uint8_t* width = nullptr;

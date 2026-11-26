@@ -2,6 +2,8 @@ module;
 
 #include <stdafx.h>
 #include <d3d9.h>
+#include <commctrl.h>
+#pragma comment(lib, "comctl32.lib")
 #include "RawMouse.hpp"
 #include "Shared/CursorConfinement.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
@@ -17,9 +19,8 @@ export namespace BullyWindow
     SafetyHookMid ValidationHook;
     int Mode = 0, LastWindowMode = 1;
     HWND Window = nullptr;
-    WNDPROC OriginalProc = nullptr;
     bool Changing = false;
-    LONG Pending = 0;
+    std::atomic<HWND> Pending = nullptr;
     RECT FramedRect{};
     bool HaveFramedRect = false;
     int FramedWidth = 0, FramedHeight = 0;
@@ -104,40 +105,48 @@ export namespace BullyWindow
             SyncActivation();
     }
 
-    LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR subclass, DWORD_PTR)
     {
-        BullyRawMouse::Message(window, message, lParam, BullyOverlay::BlocksInput());
+        if (message == WM_NCDESTROY)
+            RemoveWindowSubclass(window, WindowProc, subclass);
+        if (window != Window)
+            return DefSubclassProc(window, message, wParam, lParam);
+        if (message == WM_KILLFOCUS || (message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE) ||
+            (message == WM_ACTIVATEAPP && !wParam))
+        {
+            Pending = nullptr;
+            BullyRawMouse::Clear();
+        }
+        if (message == WM_NCDESTROY)
+        {
+            BullyRawMouse::Attach(nullptr);
+            Window = nullptr;
+            Pending = nullptr;
+            return DefSubclassProc(window, message, wParam, lParam);
+        }
         LRESULT result = 0;
         if (BullyOverlay::Message(window, message, wParam, lParam, result))
             return result;
-        if (window == Window)
-            CursorConfinement::Message(message, wParam);
+        CursorConfinement::Message(message, wParam);
         if ((message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) && wParam == VK_RETURN)
         {
             if (message == WM_SYSKEYDOWN && (lParam & (1u << 29)) && !(lParam & (1u << 30)))
-                InterlockedExchange(&Pending, 1);
+                Pending = window;
             return 0;
         }
         if (Changing && (message == WM_ACTIVATE || message == WM_ACTIVATEAPP || message == WM_KILLFOCUS || message == WM_SETFOCUS || message == WM_SIZE))
             return DefWindowProcA(window, message, wParam, lParam);
-        auto original = OriginalProc;
-        if (message == WM_NCDESTROY)
-        {
-            Window = nullptr;
-            OriginalProc = nullptr;
-            InterlockedExchange(&Pending, 0);
-        }
-        return original ? CallWindowProcA(original, window, message, wParam, lParam) : DefWindowProcA(window, message, wParam, lParam);
+        return DefSubclassProc(window, message, wParam, lParam);
     }
 
     HWND WINAPI Create(DWORD exStyle, LPCSTR className, LPCSTR title, DWORD style, int x, int y, int width, int height,
         HWND parent, HMENU menu, HINSTANCE instance, LPVOID parameter)
     {
         auto window = CreateWindowExA(exStyle, className, title, style, x, y, width, height, parent, menu, instance, parameter);
-        if (window && !parent && !(style & WS_CHILD))
+        if (window && !parent && !(style & WS_CHILD) && SetWindowSubclass(window, WindowProc, 1, 0))
         {
+            Pending = nullptr;
             Window = window;
-            OriginalProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
             Place();
         }
         return window;
@@ -226,14 +235,15 @@ export namespace BullyWindow
 
     void Toggle()
     {
-        if (!Pending || Changing || !Window || GetForegroundWindow() != Window)
+        auto window = Window;
+        if (!window || Pending.load() != window || Changing || GetForegroundWindow() != window)
             return;
         if (!RendererState.is_initialized() || !RendererState.get() || (RendererState.get())[1272])
             return;
         auto device = *reinterpret_cast<IDirect3DDevice9**>(RendererState.get() + 164);
         if (!device || device->TestCooperativeLevel() != D3D_OK)
             return;
-        if (!InterlockedExchange(&Pending, 0))
+        if (Window != window || GetForegroundWindow() != window || !Pending.compare_exchange_strong(window, nullptr))
             return;
         const int previous = Mode;
         const int next = previous ? 0 : LastWindowMode;
@@ -273,7 +283,7 @@ export namespace BullyWindow
 
     int __cdecl Frame()
     {
-        BullyRawMouse::Attach(Window);
+        BullyRawMouse::Attach(BullyOverlay::BlocksInput() ? nullptr : Window);
         if (RendererState.is_initialized() && RendererState.get())
             BullyOverlay::Attach(*reinterpret_cast<IDirect3DDevice9**>(RendererState.get() + 164));
         BullyOverlay::Keyboard(Window);

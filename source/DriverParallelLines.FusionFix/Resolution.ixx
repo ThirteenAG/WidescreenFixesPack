@@ -49,7 +49,9 @@ static_assert(offsetof(ModeList, count) == 800);
 
 AdapterList* Adapters = nullptr;
 ModeList* GameModeList = nullptr;
+UINT ModeListAdapter = 0;
 std::vector<std::vector<D3DDISPLAYMODE>> AdapterModes;
+std::vector<std::vector<D3DDISPLAYMODE>> AvailableModes;
 
 bool bForceMaxRefreshRate = true;
 int32_t nMinResX = 0;
@@ -62,8 +64,8 @@ bool IsSameResolution(const D3DDISPLAYMODE& a, const D3DDISPLAYMODE& b)
     return a.Width == b.Width && a.Height == b.Height;
 }
 
-// 32 bit modes only, largest resolutions first; the lowest resolutions are cut off when the list is full
-std::vector<D3DDISPLAYMODE> BuildModeList(IDirect3D9* d3d, UINT adapter)
+// Enumerate valid 32-bit modes from largest to smallest, with the fastest refresh first at each size.
+std::vector<D3DDISPLAYMODE> EnumerateModes(IDirect3D9* d3d, UINT adapter)
 {
     const uint32_t minW = nMinResX > 0 ? nMinResX : 640;
     const uint32_t minH = nMinResY > 0 ? nMinResY : 480;
@@ -81,6 +83,9 @@ std::vector<D3DDISPLAYMODE> BuildModeList(IDirect3D9* d3d, UINT adapter)
         if (mode.Width >= minW && mode.Height >= minH && mode.Width <= maxW && mode.Height <= maxH)
             modes.push_back(mode);
     }
+    // Exact bounds can request a framed client size that the monitor does not advertise.
+    if (modes.empty() && DPLWindow::mode == 1 && nMinResX > 0 && nMinResY > 0 && minW == maxW && minH == maxH)
+        modes.push_back({ minW, minH, 0, D3DFMT_X8R8G8B8 });
 
     std::sort(modes.begin(), modes.end(), [](const D3DDISPLAYMODE& a, const D3DDISPLAYMODE& b)
     {
@@ -95,20 +100,55 @@ std::vector<D3DDISPLAYMODE> BuildModeList(IDirect3D9* d3d, UINT adapter)
 
     if (bForceMaxRefreshRate)
         modes.erase(std::unique(modes.begin(), modes.end(), IsSameResolution), modes.end());
+    return modes;
+}
 
+std::vector<D3DDISPLAYMODE> BuildModeList(const std::vector<D3DDISPLAYMODE>& modes, UINT width = 0, UINT height = 0)
+{
+    if (modes.size() <= MaxListModes)
+        return { modes.rbegin(), modes.rend() };
     std::vector<D3DDISPLAYMODE> result;
-    for (auto it = modes.begin(); it != modes.end();)
+    result.reserve(MaxListModes);
+    auto [desktopWidth, desktopHeight] = GetDesktopRes();
+    const D3DDISPLAYMODE desktop{ static_cast<UINT>(desktopWidth), static_cast<UINT>(desktopHeight) };
+    const D3DDISPLAYMODE selected{ width, height };
+    const auto include = [&](const D3DDISPLAYMODE& size)
     {
-        auto next = std::find_if_not(it, modes.end(), [&](const D3DDISPLAYMODE& mode) { return IsSameResolution(mode, *it); });
-        if (result.size() + std::distance(it, next) > MaxListModes)
-            break;
+        const auto mode = std::find_if(modes.begin(), modes.end(), [&](const auto& entry) { return IsSameResolution(entry, size); });
+        if (mode != modes.end())
+            result.push_back(*mode);
+    };
+    include(desktop);
+    if (!IsSameResolution(selected, desktop))
+        include(selected);
 
-        result.insert(result.end(), it, next);
-        it = next;
+    // Reserve one selectable refresh at each size before adding the remaining refresh rates.
+    for (size_t i = 0; i < modes.size() && result.size() < MaxListModes; ++i)
+    {
+        const auto& mode = modes[i];
+        if ((!i || !IsSameResolution(mode, modes[i - 1])) &&
+            !IsSameResolution(mode, desktop) && !IsSameResolution(mode, selected))
+            result.push_back(mode);
     }
+    for (size_t i = 1; i < modes.size() && result.size() < MaxListModes; ++i)
+        if (IsSameResolution(modes[i], modes[i - 1]))
+            result.push_back(modes[i]);
 
-    std::reverse(result.begin(), result.end());
+    std::sort(result.begin(), result.end(), [](const auto& a, const auto& b)
+    {
+        return std::tie(a.Width, a.Height, a.RefreshRate) < std::tie(b.Width, b.Height, b.RefreshRate);
+    });
     return result;
+}
+
+void SetAdapterModes(UINT adapter, std::vector<D3DDISPLAYMODE> modes)
+{
+    auto& info = Adapters->adapters[adapter];
+    std::copy(modes.begin(), modes.end(), info.modes);
+    info.modeCount = static_cast<uint32_t>(modes.size());
+    info.formats[0] = D3DFMT_X8R8G8B8;
+    info.formatCount = 1;
+    AdapterModes[adapter] = std::move(modes);
 }
 
 // 32 bit HD modes are dropped too, the back buffer is A8R8G8B8 with any of them
@@ -121,6 +161,7 @@ HRESULT __fastcall EnumAdapters(AdapterList* list, void* edx, IDirect3D9* d3d)
 
     Adapters = list;
     AdapterModes.assign(list->count, {});
+    AvailableModes.assign(list->count, {});
 
     for (uint32_t i = 0; i < list->count; ++i)
     {
@@ -128,16 +169,11 @@ HRESULT __fastcall EnumAdapters(AdapterList* list, void* edx, IDirect3D9* d3d)
         if (!info.initialized || !info.d3d)
             continue;
 
-        auto modes = BuildModeList(info.d3d, info.adapter);
-        if (modes.empty())
+        auto& available = AvailableModes[i];
+        available = EnumerateModes(info.d3d, info.adapter);
+        if (available.empty())
             continue;
-
-        std::copy(modes.begin(), modes.end(), info.modes);
-        info.modeCount = static_cast<uint32_t>(modes.size());
-        info.formats[0] = D3DFMT_X8R8G8B8;
-        info.formatCount = 1;
-
-        AdapterModes[i] = std::move(modes);
+        SetAdapterModes(i, BuildModeList(available));
     }
 
     return hr;
@@ -148,6 +184,7 @@ SafetyHookInline shFillModeList = {};
 int __fastcall FillModeList(ModeList* list, void* edx, UINT adapter, UINT minW, UINT minH, UINT maxW, UINT maxH)
 {
     GameModeList = list;
+    ModeListAdapter = adapter;
     return shFillModeList.unsafe_thiscall<int>(list, adapter, 0, 0, INT_MAX, INT_MAX);
 }
 
@@ -182,21 +219,44 @@ D3DDISPLAYMODE GetDefaultMode()
     return best ? *best : modes.back();
 }
 
-// Menu entries and profiles store an index into the mode list, it no longer matches when the list changed since
-int32_t ResolveModeIndex(int32_t width, int32_t height, int32_t index)
+int32_t FindModeIndex(UINT width, UINT height)
 {
-    if (auto mode = GetListMode(index); mode && mode->Width == static_cast<UINT>(width) && mode->Height == static_cast<UINT>(height))
-        return index;
-
     int32_t best = -1;
     UINT bestRefreshRate = 0;
     for (uint32_t i = 0; GameModeList && i < GameModeList->count; ++i)
     {
         auto mode = GetListMode(i);
-        if (mode && mode->Width == static_cast<UINT>(width) && mode->Height == static_cast<UINT>(height) && mode->RefreshRate >= bestRefreshRate)
+        if (mode && mode->Width == width && mode->Height == height && mode->RefreshRate >= bestRefreshRate)
         {
             best = static_cast<int32_t>(i);
             bestRefreshRate = mode->RefreshRate;
+        }
+    }
+    return best;
+}
+
+// The saved resolution is known when the game applies it. Keep it selectable even if the adapter reports too many modes.
+int32_t ResolveModeIndex(int32_t width, int32_t height, int32_t index)
+{
+    const auto w = static_cast<UINT>(width), h = static_cast<UINT>(height);
+    if (auto mode = GetListMode(index); mode && mode->Width == w && mode->Height == h)
+        return index;
+    auto best = FindModeIndex(w, h);
+    if (best < 0 && GameModeList && ModeListAdapter < AvailableModes.size())
+    {
+        const auto& available = AvailableModes[ModeListAdapter];
+        if (std::any_of(available.begin(), available.end(), [&](const auto& mode) { return mode.Width == w && mode.Height == h; }))
+        {
+            const auto previousList = *GameModeList;
+            auto previousModes = AdapterModes[ModeListAdapter];
+            SetAdapterModes(ModeListAdapter, BuildModeList(available, w, h));
+            if (SUCCEEDED(shFillModeList.unsafe_thiscall<int>(GameModeList, ModeListAdapter, 0, 0, INT_MAX, INT_MAX)))
+                best = FindModeIndex(w, h);
+            if (best < 0)
+            {
+                SetAdapterModes(ModeListAdapter, std::move(previousModes));
+                *GameModeList = previousList;
+            }
         }
     }
     return best >= 0 ? best : index;
@@ -205,8 +265,11 @@ int32_t ResolveModeIndex(int32_t width, int32_t height, int32_t index)
 // The new mode gets its size from the arguments, but its refresh rate from the mode at the index
 SafetyHookInline shSetMode = {};
 void* lastModeContext = nullptr;
+static bool committingMode = false;
 void* __fastcall SetMode(void* _this, void* edx, int32_t width, int32_t height, int32_t index)
 {
+    if (!committingMode)
+        DPLWindow::pendingMode = {};
     lastModeContext = _this;
     if (!DPLWindow::Dimensions(width, height)) return nullptr;
     index = ResolveModeIndex(width, height, index);
@@ -269,21 +332,62 @@ public:
             //stale mode indices
             pattern = hook::pattern("55 8B EC 83 EC 10 56 8B F1 8B 4D 10 8D 86 ? ? ? ? 39 08");
             shSetMode = safetyhook::create_inline(pattern.get_first(), SetMode);
-            DPLWindow::onModeChange = [](int width, int height)
+            // SetMode's native queue target owns the reset flags and the device used below.
+            auto renderer = hook::pattern("8D 45 F0 50 53 57 B9 ? ? ? ? E8 ? ? ? ? 83 C6 18");
+            static auto* nativeRenderer = *renderer.get_first<uint8_t*>(7);
+            static auto& resetPending = nativeRenderer[0];
+            static auto& deviceLost = nativeRenderer[1];
+            static auto& rendererDevice = *reinterpret_cast<IDirect3DDevice9**>(nativeRenderer + 0x164);
+            static int pendingIndex = -1;
+            DPLWindow::queueMode = [](DPLWindow::ModeChange& next)
             {
-                if (!lastModeContext) return false;
+                if (!lastModeContext || resetPending || deviceLost || next.device != rendererDevice)
+                    return false;
                 auto* native = static_cast<int32_t*>(lastModeContext);
-                if (width <= 0 || height <= 0)
+                if (next.width <= 0 || next.height <= 0)
                 {
-                    width = native[65814]; height = native[65815];
+                    next.width = native[65814];
+                    next.height = native[65815];
                 }
-                if (!DPLWindow::Dimensions(width, height)) return false;
-                const int index = ResolveModeIndex(width, height, native[65829]);
-                native[65829] = -1;
-                dwWindowedMode = DPLWindow::mode != 0;
-                SetMode(lastModeContext, nullptr, width, height, index);
+                if (!DPLWindow::Dimensions(next.target, next.width, next.height)) return false;
+                pendingIndex = ResolveModeIndex(next.width, next.height, native[65829]);
+                if (next.target == 0)
+                {
+                    const auto* selected = GetListMode(pendingIndex);
+                    if (!selected || selected->Width != static_cast<UINT>(next.width) ||
+                        selected->Height != static_cast<UINT>(next.height) || !selected->RefreshRate)
+                        return false;
+                    next.refresh = selected->RefreshRate;
+                }
+                // The reset loop consumes this flag. Keep the previous native parameters and
+                // viewports until the real Reset accepts the parameters in its local copy.
+                resetPending = 1;
                 return true;
             };
+            DPLWindow::commitMode = [](const DPLWindow::ModeChange& applied)
+            {
+                auto* native = static_cast<int32_t*>(lastModeContext);
+                native[65829] = -1;
+                dwWindowedMode = applied.target != 0;
+                committingMode = true;
+                SetMode(lastModeContext, nullptr, applied.width, applied.height, pendingIndex);
+                committingMode = false;
+            };
+
+            // Only the owning renderer's real IDirect3DDevice9::Reset resolves the request.
+            auto reset = hook::pattern("8B 08 50 FF 51 40 3D 68 08 76 88 5F 5E");
+            static SafetyHookMid BeginModeReset = safetyhook::create_mid(reset.get_first(), [](SafetyHookContext& regs)
+            {
+                const auto& pending = DPLWindow::pendingMode;
+                if (reinterpret_cast<uint8_t*>(regs.ebx) == nativeRenderer &&
+                    pending.device && pending.device == rendererDevice && pending.window == DPLWindow::Window())
+                    DPLWindow::StageModeReset(reinterpret_cast<D3DPRESENT_PARAMETERS*>(regs.ebp - 0x38));
+            });
+            static SafetyHookMid FinishModeReset = safetyhook::create_mid(reset.get_first(6), [](SafetyHookContext& regs)
+            {
+                if (DPLWindow::stagedReset.load() == reinterpret_cast<D3DPRESENT_PARAMETERS*>(regs.ebp - 0x38))
+                    DPLWindow::FinishModeReset(static_cast<HRESULT>(regs.eax));
+            });
 
             //resolution switch
             pattern = hook::pattern("C6 01 01 33 C0 C2 0C 00"); //0x5E4A6A

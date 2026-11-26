@@ -40,8 +40,6 @@ With **Check for updates** on, a notice appears in the Plugins page when a newer
 
 The HUD keeps its proportions. With **HUD aspect ratio** on Auto, the weapon and health panel sits at the left edge of the screen and the map and instructions at the right edge; a ratio keeps them in a centered box of that shape. Objectives, messages, dialogue and menus stay centered.
 
-Ctrl+F10 opens the developer overlay with every setting and a Debug › Info page.
-
 Controllers: the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox 360 controller to it, and the game's own Xbox 360 control layout is used out of the box. **Options → Controls** changes the bindings. While the controller is in use, prompts show its buttons; using the keyboard or moving the mouse brings back the key names. A prompt changes when the game shows it again.
 
 ## Known limits

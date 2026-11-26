@@ -57,8 +57,9 @@ export namespace NFSPSHud
             if (inserted)
                 found = entries.emplace(object, Placement{ identity, x, x, right, false }).first;
             auto& placement = found->second;
-            if (!inserted && (placement.identity.guid != identity.guid || placement.right != right ||
-                (!Same(x, placement.originalX) && !Same(x, placement.lastX))))
+            // A group the game's scripts placed again (after the pause menu) goes back to its place: the place it
+            // had when it was shown first plus the offset
+            if (!inserted && (placement.identity.guid != identity.guid || placement.right != right))
                 placement.refused = true;
             if (placement.refused)
                 return false;

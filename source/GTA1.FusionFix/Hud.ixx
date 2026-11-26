@@ -20,7 +20,7 @@ export namespace GTA1Hud
     bool Enabled = true, Drawing = false, LabelsPending = false;
     int Width = 0, Height = 0, Bytes = 0;
     constexpr int SafeArea = 8;           // fixed inset from the screen edges, in 640x480 pixels
-    std::optional<float> Constraint;        // HUD Aspect Ratio: a centred box of this aspect (Auto: the whole screen)
+    std::atomic<float> Constraint{ 0.0f };        // HUD Aspect Ratio: a centred box of this aspect (Auto: the whole screen)
     std::vector<uint8_t> Canvas, Alpha;
     std::vector<std::pair<int, int>> Bounds;
     std::vector<void*> Projected;
@@ -63,7 +63,13 @@ export namespace GTA1Hud
         auto pixels = rotated ? GTA1Rotation::Display.pixels : reinterpret_cast<uint8_t*>(GTA1Raster::Rows[1]);
         int bytes = (native[GTA1Build::RasterBytes] & 0xFF), pitch = rotated ? GTA1Rotation::Display.pitch : native[GTA1Build::RasterPitch];
         int width = nDisplayWidth, height = nDisplayHeight;
-        if (!Enabled || !pixels || (bytes != 2 && bytes != 4) || pitch < width * bytes || height <= 480)
+        // The HUD keeps to its box; elements at its sides stay at the box's sides
+        int box = width;
+        const auto constraint = Constraint.load(std::memory_order_relaxed);
+        if (constraint > 0.0f && constraint <= 32.0f / 9.0f && height > 0)
+            box = std::clamp(int(std::lround(height * ClampHudAspectRatio(constraint, float(width) / height))), 1, width);
+        // At the original 480 lines the game's own HUD already fits, unless a narrower box is chosen
+        if (!Enabled || !pixels || (bytes != 2 && bytes != 4) || pitch < width * bytes || (height <= 480 && box == width))
         {
             if (rotated) GTA1Rotation::Resolve();
             static bool reported = false;
@@ -75,10 +81,6 @@ export namespace GTA1Hud
             }
             return DrawHook.call<char>();
         }
-        // The HUD keeps to its box; elements at its sides stay at the box's sides
-        int box = width;
-        if (Constraint && *Constraint > 0.0f && *Constraint <= 32.0f / 9.0f)
-            box = std::clamp(int(std::lround(height * ClampHudAspectRatio(*Constraint, float(width) / height))), 1, width);
         int boxLeft = (width - box) / 2;
         float scale = std::min(height / 480.0f, box / 640.0f);
         int margin = std::clamp(int(std::lround(SafeArea * scale)), 0, std::min(box, height) / 4);
@@ -154,7 +156,7 @@ export namespace GTA1Hud
         // Changes from FusionFixHub or a preset apply at once, as from the in-game options
         static auto read = []
         {
-            Constraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            Constraint.store(ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint")).value_or(0.0f), std::memory_order_relaxed);
         };
         read();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", read);

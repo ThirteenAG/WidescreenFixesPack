@@ -91,7 +91,12 @@
       "description": "@HudAspectRatioConstraint.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "live"
+      "apply": "live",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.CutsceneBorders",

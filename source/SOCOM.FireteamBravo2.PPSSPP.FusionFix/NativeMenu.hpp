@@ -4,7 +4,7 @@
 namespace NativeMenu
 {
 inline constexpr const char* cfg = "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/SOCOM.FireteamBravo2.PPSSPP.FusionFix.cfg";
-inline IniValue values[]
+inline constexpr IniValue values[]
 {
     { "MAIN", "SkipIntro", "1" }, { "MAIN", "DualAnalogPatch", "1" },
     { "MAIN", "UnthrottleEmuDuringLoading", "1" }, { "MAIN", "FOVFactor", "1.0" },
@@ -17,11 +17,10 @@ inline constexpr Word rowLabels[]{ Word::Skip, Word::Analog, Word::Loading, Word
 inline constexpr Word rowHelp[]{ Word::SkipHelp, Word::AnalogHelp, Word::LoadingHelp, Word::FovHelp, Word::AspectHelp, Word::HudaspectHelp, Word::HudscaleHelp, Word::BordersHelp, Word::LanguageHelp, Word::IconsHelp, Word::FpsHelp };
 inline constexpr const char* ratios[]{ "Auto", "4:3", "16:9", "21:9", "32:9" };
 inline constexpr const char* languages[]{ "auto", "en", "fr", "de", "it", "es" };
-inline int ticks[settingCount], systemLanguage, level, helpTopic{ -1 }, helpParent{ 1 }, preset{ 1 };
-inline char customRatios[2][16];
-inline float customAspects[2];
-inline bool hasCustom[2];
-inline bool pending[settingCount], saveError, draining;
+inline int ticks[settingCount]{ 1, 1, 1, 20, 0, 0, 20, 3, 0, 0, 1 };
+inline int systemLanguage, level, helpTopic{ -1 }, helpParent{ 1 }, preset{ 1 };
+inline char customRatios[2][sizeof(values[0].value)];
+inline bool saveError, draining;
 inline uint32_t previousButtons, heldDirection, repeatAt;
 inline uintptr_t header;
 struct Row { char text[128]; int (*callback)(int); };
@@ -38,6 +37,9 @@ inline uint32_t resyncButton;
 inline int resyncTarget, resyncFrames;
 inline void Build(bool rewind = true);
 inline void Back();
+enum class OptionsRead { Unavailable, Unchanged, Changed };
+inline IniSnapshot settings;
+inline OptionsRead ReadOptions();
 inline int Selected() { return *reinterpret_cast<const int*>(header + 60); }
 // The pause movie moves its selection frame only after its own up/down
 // request. Select a neighbour row and let a pad press step onto the target.
@@ -93,19 +95,10 @@ inline bool RestartNeeded()
 {
     return ticks[0] != options.skipIntro || ticks[1] != options.dualAnalog || ticks[2] != options.unthrottle;
 }
-inline bool Save()
+inline bool Save(const IniValue* changed, unsigned total)
 {
-    IniValue changed[settingCount]{};
-    unsigned total{};
-    for (unsigned i = 0; i < settingCount; ++i)
-        if (pending[i])
-            changed[total++] = values[i];
-    if (!total)
-        return true;
     IniWriter<> writer;
-    saveError = !writer.update(cfg, changed, total);
-    if (!saveError)
-        std::fill(pending, pending + settingCount, false);
+    saveError = !writer.update(cfg, changed, total, IniUpdate::Replace, settings.Bytes());
     return !saveError;
 }
 inline const char* Value(unsigned row, char (&buffer)[64])
@@ -131,30 +124,31 @@ inline const char* Value(unsigned row, char (&buffer)[64])
         return ticks[row] ? "60 FPS" : "30 FPS";
     return ticks[row] ? languages[ticks[row]] : Label(Word::Auto);
 }
-inline void Store(unsigned row)
+inline IniValue Encode(unsigned row, int tick)
 {
-    auto& output = values[row].value;
+    auto entry = values[row];
+    auto& output = entry.value;
     if (row < 3)
-        std::strcpy(output, ticks[row] ? "1" : "0");
+        std::strcpy(output, tick ? "1" : "0");
     else if (row == 3 || row == 6)
     {
         console::Text<sizeof(output)> text(output);
-        text.decimal(float(ticks[row]) / 20, 2);
+        text.decimal(float(tick) / 20, 2);
     }
     else if (row == 4 || row == 5)
     {
-        std::strcpy(output, ticks[row] == 5 ? customRatios[row - 4] : ratios[ticks[row]]);
+        std::strcpy(output, ratios[tick]);
     }
     else if (row == 10)
-        std::strcpy(output, ticks[row] ? "60" : "30");
+        std::strcpy(output, tick ? "60" : "30");
     else if (row == 7 || row == 9)
     {
-        output[0] = char('0' + ticks[row]);
+        output[0] = char('0' + tick);
         output[1] = 0;
     }
     else
-        std::strcpy(output, languages[ticks[row]]);
-    pending[row] = true;
+        std::strcpy(output, languages[tick]);
+    return entry;
 }
 inline void Apply(unsigned row)
 {
@@ -163,8 +157,7 @@ inline void Apply(unsigned row)
         Geometry::fovFactor = float(ticks[row]) / 20;
     else if (row == 4 || row == 5)
     {
-        // The custom ratio was parsed at start.
-        const float aspect = ticks[row] == 5 ? customAspects[row - 4] : aspects[ticks[row]];
+        const float aspect = aspects[ticks[row]];
         if (row == 4)
             Geometry::forcedAspect = aspect;
         else
@@ -179,60 +172,60 @@ inline void Apply(unsigned row)
     else if (row == 10)
         FrameRate::limit = ticks[row] ? 60 : 30;
 }
+inline int MatchingPreset()
+{
+    if (!ticks[0] && !ticks[1] && !ticks[2] && ticks[7] == 1 && ticks[9] == 2 && !ticks[10])
+        return 0;
+    if (ticks[0] && ticks[1] && ticks[2] && ticks[7] == 3 && !ticks[9] && ticks[10])
+        return preset == 2 ? 2 : 1;
+    return 3;
+}
 inline void Change(unsigned row, int direction)
 {
+    if (ReadOptions() == OptionsRead::Unavailable)
+    {
+        saveError = true;
+        Build(false);
+        return;
+    }
+    int tick = ticks[row];
     if (row < 3 || row == 10)
-        ticks[row] ^= 1;
+        tick ^= 1;
     else if (row == 3 || row == 6)
-        ticks[row] = std::clamp(ticks[row] + direction, 10, row == 3 ? 40 : 30);
+        tick = std::clamp(tick + direction, 10, row == 3 ? 40 : 30);
     else
     {
-        const int limit = row == 7 || row == 9 ? 4 : row == 8 ? 6 : hasCustom[row - 4] ? 6 : 5;
-        ticks[row] = (ticks[row] + direction + limit) % limit;
+        const int limit = row == 7 || row == 9 ? 4 : row == 8 ? 6 : 5;
+        tick = tick >= limit ? (direction > 0 ? 0 : limit - 1) : (tick + direction + limit) % limit;
     }
-    Store(row);
-    Apply(row);
-    if ((row < 3 || row == 7 || row == 9 || row == 10) && preset != 3)
+    const auto change = Encode(row, tick);
+    if (Save(&change, 1))
     {
-        const bool vanilla = preset == 0;
-        if (ticks[0] != !vanilla || ticks[1] != !vanilla || ticks[2] != !vanilla ||
-            ticks[7] != (vanilla ? 1 : 3) || ticks[9] != (vanilla ? 2 : 0) || ticks[10] != !vanilla)
-            preset = 3;
+        ticks[row] = tick;
+        Apply(row);
+        preset = MatchingPreset();
     }
-    Save();
     Build(false);
 }
 inline void Preset(int value)
 {
-    preset = value;
-    for (unsigned i = 0; i < 3; ++i)
-        if (ticks[i] != (value != 0))
+    constexpr unsigned rows[]{ 0, 1, 2, 7, 9, 10 };
+    const int enabled = value != 0;
+    const int proposed[]{ enabled, enabled, enabled, enabled ? 3 : 1, enabled ? 0 : 2, enabled };
+    IniValue changed[std::size(rows)];
+    for (unsigned i = 0; i < std::size(rows); ++i)
+        changed[i] = Encode(rows[i], proposed[i]);
+    if (ReadOptions() == OptionsRead::Unavailable)
+        saveError = true;
+    else if (Save(changed, std::size(changed)))
+    {
+        preset = value;
+        for (unsigned i = 0; i < std::size(rows); ++i)
         {
-            ticks[i] = value != 0;
-            Store(i);
+            ticks[rows[i]] = proposed[i];
+            Apply(rows[i]);
         }
-    const int borders = value == 0 ? 1 : 3;
-    if (ticks[7] != borders)
-    {
-        ticks[7] = borders;
-        Store(7);
-        Apply(7);
     }
-    const int icons = value == 0 ? 2 : 0;
-    if (ticks[9] != icons)
-    {
-        ticks[9] = icons;
-        Store(9);
-        Apply(9);
-    }
-    const int fps = value != 0;
-    if (ticks[10] != fps)
-    {
-        ticks[10] = fps;
-        Store(10);
-        Apply(10);
-    }
-    Save();
     level = 2;
     Build();
 }
@@ -361,11 +354,6 @@ inline void Build(bool rewind)
 }
 inline void Back()
 {
-    if (!Save())
-    {
-        Build(false);
-        return;
-    }
     if (level == 1)
     {
         std::memcpy(reinterpret_cast<void*>(header + 48), savedHeader, sizeof(savedHeader));
@@ -404,20 +392,23 @@ inline int Show(uintptr_t object, int enabled)
     const int result = show.fun(object, enabled);
     if (enabled && !level)
     {
-        parentCount = *reinterpret_cast<const uint16_t*>(header + 74);
-        if (parentCount > 8)
-        {
-            MenuUnavailable();
-            return result;
-        }
         const auto original = *reinterpret_cast<const Row* const*>(header + 76);
-        std::memcpy(parentRows, original, parentCount * sizeof(Row));
+        if (original != parentRows)
+        {
+            parentCount = *reinterpret_cast<const uint16_t*>(header + 74);
+            if (parentCount >= std::size(parentRows))
+            {
+                MenuUnavailable();
+                return result;
+            }
+            std::memcpy(parentRows, original, parentCount * sizeof(Row));
+            *reinterpret_cast<uint16_t*>(header + 74) = uint16_t(parentCount + 1);
+            *reinterpret_cast<uintptr_t*>(header + 76) = uintptr_t(parentRows);
+            logger.WriteF("Native pause Plugins row appended after %u original rows.\n", parentCount);
+        }
         console::Text<128> text(parentRows[parentCount].text);
         text.append(Label(Word::Plugins));
         parentRows[parentCount].callback = nullptr;
-        *reinterpret_cast<uint16_t*>(header + 74) = uint16_t(parentCount + 1);
-        *reinterpret_cast<uintptr_t*>(header + 76) = uintptr_t(parentRows);
-        logger.WriteF("Native pause Plugins row appended after %u original rows.\n", parentCount);
     }
     return result;
 }
@@ -426,7 +417,6 @@ inline int Close(uintptr_t object)
     resyncButton = 0;
     if (level)
     {
-        Save();
         std::memcpy(reinterpret_cast<void*>(header + 48), savedHeader, sizeof(savedHeader));
         level = 0;
         draining = true;
@@ -474,40 +464,67 @@ inline void Input(console::socom::Input* input)
     if (!level && !(buttons & mask))
         draining = false;
 }
-inline void ReadOptions()
+inline OptionsRead ReadOptions()
 {
-    for (unsigned i = 0; i < settingCount; ++i)
+    if (!settings.Read(cfg))
+        return OptionsRead::Unavailable;
+    int previous[settingCount];
+    std::copy(ticks, ticks + settingCount, previous);
+    char previousRatios[sizeof(customRatios)];
+    std::memcpy(previousRatios, customRatios, sizeof(customRatios));
+    for (unsigned row = 0; row < 3; ++row)
+        ticks[row] = settings.Toggle("MAIN", values[row].key, ticks[row] != 0);
+
+    Geometry::fovFactor = std::clamp(settings.Real("MAIN", values[3].key, Geometry::fovFactor), 0.5f, 2.0f);
+    Hud::scale = std::clamp(settings.Real("MAIN", values[6].key, Hud::scale), 0.5f, 1.5f);
+    ticks[3] = int(std::round(Geometry::fovFactor * 20.0f));
+    ticks[6] = int(std::round(Hud::scale * 20.0f));
+    for (unsigned row = 4; row <= 5; ++row)
     {
-        char buffer[sizeof(values[i].value)]{};
-        std::strcpy(values[i].value, inireader.ReadString(values[i].section, values[i].key, values[i].value, buffer, sizeof(buffer)));
-    }
-    ticks[0] = options.skipIntro;
-    ticks[1] = options.dualAnalog;
-    ticks[2] = options.unthrottle;
-    ticks[3] = int(std::round(Geometry::fovFactor * 20));
-    ticks[6] = int(std::round(Hud::scale * 20));
-    ticks[7] = Geometry::borders;
-    ticks[9] = PadIcons::style;
-    ticks[10] = FrameRate::limit > 30;
-    for (unsigned row = 4; row < 6; ++row)
-    {
-        ticks[row] = 5;
-        for (int i = 0; i < 5; ++i)
-            if (!std::strcmp(values[row].value, ratios[i]))
-                ticks[row] = i;
-        if (ticks[row] == 5)
+        auto& token = customRatios[row - 4];
+        char buffer[sizeof(token)]{};
+        if (!settings.Text("MAIN", values[row].key, buffer, sizeof(buffer)))
+            continue;
+        auto& aspect = row == 4 ? Geometry::forcedAspect : Hud::constraint;
+        aspect = row == 4 ? console::parse_forced_aspect(buffer) : console::parse_hud_aspect(buffer);
+        ticks[row] = 0;
+        if (aspect > 0.0f)
         {
-            const float aspect = row == 4 ? Geometry::forcedAspect : Hud::constraint;
-            customAspects[row - 4] = aspect;
-            hasCustom[row - 4] = aspect > 0;
-            std::strcpy(customRatios[row - 4], values[row].value);
-            if (!hasCustom[row - 4])
-                ticks[row] = 0;
+            ticks[row] = 5;
+            for (int i = 1; i < 5; ++i)
+                if (std::strcmp(buffer, ratios[i]) == 0)
+                    ticks[row] = i;
         }
+        std::memcpy(token, buffer, sizeof(token));
     }
-    for (int i = 0; i < 6; ++i)
-        if (!std::strcmp(values[8].value, languages[i]))
-            ticks[8] = i;
+    char languageId[16]{};
+    if (settings.Text("MAIN", values[8].key, languageId, sizeof(languageId)))
+    {
+        for (unsigned i = 0; i < std::size(languages); ++i)
+            if (std::strcmp(languageId, languages[i]) == 0)
+                ticks[8] = i;
+    }
+    for (const unsigned row : { 7u, 9u })
+    {
+        const float value = settings.Real("MAIN", values[row].key, float(ticks[row]));
+        if (value >= 0.0f && value <= 3.0f && float(int(value)) == value)
+            ticks[row] = int(value);
+        Apply(row);
+    }
+    const float limit = settings.Real("MAIN", values[10].key, float(FrameRate::limit));
+    if (limit == 30.0f || limit == 60.0f)
+        ticks[10] = limit == 60.0f;
+    Apply(10);
+    preset = MatchingPreset();
+    const bool changed = !std::equal(previous, previous + settingCount, ticks) ||
+        std::memcmp(previousRatios, customRatios, sizeof(customRatios)) != 0;
+    return changed ? OptionsRead::Changed : OptionsRead::Unchanged;
+}
+inline void InitializeOptions()
+{
+    (void)CompleteCfg(cfg, values);
+    ReadOptions();
+    options = { ticks[0] != 0, ticks[1] != 0, ticks[2] != 0 };
     int language{};
     sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_LANGUAGE, &language);
     switch (language)
@@ -518,8 +535,23 @@ inline void ReadOptions()
         case PSP_SYSTEMPARAM_LANGUAGE_SPANISH: systemLanguage = 4; break;
         default: systemLanguage = 0; break;
     }
-    preset = ticks[0] && ticks[1] && ticks[2] && ticks[9] == 0 && ticks[10] == 1 && ticks[7] == 3 ? 1 :
-        !ticks[0] && !ticks[1] && !ticks[2] && ticks[9] == 2 && ticks[10] == 0 && ticks[7] == 1 ? 0 : 3;
+}
+inline void PollOptions()
+{
+    static uint32_t lastRead{};
+    const uint32_t now = sceKernelGetSystemTimeLow();
+    if (lastRead && now - lastRead < 1000000u)
+        return;
+    lastRead = now;
+    if (ReadOptions() != OptionsRead::Changed || !level)
+        return;
+    const int row = Selected();
+    Build(false);
+    if (row >= int(count))
+    {
+        reset(header, 1);
+        Resync(0);
+    }
 }
 inline void Install()
 {

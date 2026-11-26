@@ -15,7 +15,7 @@
   "controls.pccontrolscheme": "Commandes clavier et souris",
   "controls.pccontrolscheme.description": "Utilise le schéma de commandes PC ; désactivé, la manette native reste disponible.",
   "controls.mousesensitivity": "Sensibilité de la souris",
-  "controls.mousesensitivity.description": "Vitesse de la caméra à la souris. 1.0 tourne la caméra de 0.002 radian par pixel au zoom par défaut.",
+  "controls.mousesensitivity.description": "Une valeur plus élevée fait tourner davantage la caméra pour un même mouvement de la souris.",
   "controls.invertmousey": "Inverser l'axe Y",
   "controls.invertmousey.description": "Inverse le mouvement vertical de la caméra à la souris.",
   "hud.hudscale": "Taille du HUD",
@@ -124,5 +124,7 @@
   "controls.gamepadcameraspeed": "Vitesse caméra manette",
   "controls.gamepadcameraspeed.description": "Vitesse de la caméra au stick droit, à pied et en véhicule. 1.0 est la vitesse d'origine.",
   "controls.invertgamepady": "Inverser manette Y",
-  "controls.invertgamepady.description": "Inverse la direction verticale de la caméra au stick droit."
+  "controls.invertgamepady.description": "Inverse la direction verticale de la caméra au stick droit.",
+  "controls.holdvehiclecamera": "Maintenir la caméra du véhicule",
+  "controls.holdvehiclecamera.description": "Quand vous tournez la caméra avec le stick droit dans un véhicule, elle reste orientée ainsi, pour regarder derrière vous en roulant. Elle revient derrière le véhicule deux secondes après avoir relâché le stick. Désactivé garde la caméra d'origine, qui revient derrière le véhicule pendant que vous roulez."
 }

@@ -29,7 +29,9 @@ export namespace RE0Icons
     inline IDirect3DDevice9* savedDevice = nullptr;
     inline int applied = 0;
     inline bool managed = false, assetsReady = false, ready = false;
-    inline std::atomic<bool> textureFailed{ false }, hasTexture{ false };
+    inline bool dirty = false;
+    inline ULONGLONG retryAt{};
+    inline std::atomic<bool> hasTexture{ false };
 
     struct Glyph
     {
@@ -131,13 +133,31 @@ export namespace RE0Icons
         savedDevice = nullptr;
         managed = false;
         applied = 0;
+        dirty = false;
+        retryAt = 0;
         hasTexture.store(false);
     }
 
-    inline bool Restore(bool resetting = false)
+    inline void RetryLater()
     {
+        retryAt = GetTickCount64() + 250;
+    }
+
+    inline bool Restore()
+    {
+        if (dirty && !Copy(savedTexture, original.data(), false))
+        {
+            RetryLater();
+            return false;
+        }
         applied = 0;
-        if (savedTexture && !Copy(savedTexture, original.data(), false) && (!resetting || managed)) return false;
+        dirty = false;
+        return true;
+    }
+
+    inline bool DropTexture(bool resetting = false)
+    {
+        if (!Restore() && (!resetting || managed)) return false;
         Forget();
         return true;
     }
@@ -151,34 +171,49 @@ export namespace RE0Icons
 
     inline void Frame(IDirect3DDevice9* device)
     {
-        if (!family.load() && !hasTexture.load()) return;
+        if (family.load(std::memory_order_relaxed) < 2 && !hasTexture.load()) return;
         const std::lock_guard lock(mutex);
-        const auto selected = family.load();
-        if (!selected || textureFailed)
+        if (retryAt && GetTickCount64() < retryAt) return;
+        retryAt = 0;
+        const auto selected = family.load(std::memory_order_relaxed) - 1;
+        if (selected <= 0)
         {
-            Restore();
+            DropTexture();
             return;
         }
-        if (!ready || !assetsReady || selected < 1 || selected > 2) return;
+        if (!ready || !assetsReady || selected > 2) return;
         void* font = nullptr;
         IDirect3DTexture9* texture = nullptr;
         for (auto candidate : fonts)
             if ((texture = NativeTexture(candidate))) { font = candidate; break; }
         if (!texture)
         {
-            if (savedTexture) Restore();
+            if (savedTexture) DropTexture();
             return;
         }
         if (font != savedFont || texture != savedTexture || device != savedDevice)
         {
-            if (!Restore() || !MakeBlocks(font)) return;
+            if (!DropTexture()) return;
+            if (!MakeBlocks(font))
+            {
+                RetryLater();
+                return;
+            }
             D3DSURFACE_DESC desc{};
             IDirect3DDevice9* owner = nullptr;
-            if (FAILED(texture->GetDevice(&owner))) return;
+            if (FAILED(texture->GetDevice(&owner)))
+            {
+                RetryLater();
+                return;
+            }
             const bool own = owner == device;
             owner->Release();
             if (!own || FAILED(texture->GetLevelDesc(0, &desc)) || desc.Width != 256 || desc.Height != 256 ||
-                desc.Format != D3DFMT_DXT5 || !Copy(texture, original.data(), true)) return;
+                desc.Format != D3DFMT_DXT5 || !Copy(texture, original.data(), true))
+            {
+                RetryLater();
+                return;
+            }
             texture->AddRef();
             savedFont = font;
             savedTexture = texture;
@@ -187,14 +222,17 @@ export namespace RE0Icons
             hasTexture.store(true);
         }
         if (applied == selected) return;
+        if (dirty && !applied && !Restore()) return;
         std::array<uint8_t, 65536> pixels{};
         Compose(pixels.data(), artwork.data() + 128 + (selected - 1) * original.size());
+        // Unlock can fail after the texture has already been written.
+        dirty = true;
+        applied = 0;
         if (Copy(texture, pixels.data(), false)) applied = selected;
         else
         {
-            textureFailed = true;
             Restore();
-            OutputDebugStringA("Resident Evil 0: controller artwork update failed.\n");
+            RetryLater();
         }
     }
 
@@ -221,19 +259,12 @@ export namespace RE0Icons
     inline void BeforeReset(IDirect3DDevice9* device)
     {
         const std::lock_guard lock(mutex);
-        if (device == savedDevice) Restore(true);
-        textureFailed = false;
+        retryAt = 0;
+        if (device == savedDevice) DropTexture(true);
     }
 
     inline void Install(HMODULE module)
     {
-        const auto update = []()
-        {
-            const auto selected = FixSettings().Int("MAIN.GamepadIcons");
-            family.store(selected == 2 ? 1 : selected == 3 ? 2 : 0);
-        };
-        update();
-        FixSettings().OnChange("MAIN.GamepadIcons", update);
         wchar_t path[MAX_PATH]{};
         GetModuleFileNameW(module, path, DWORD(std::size(path)));
         std::ifstream file(std::filesystem::path(path).parent_path() / L"ResidentEvil0.FusionFix" / L"buttons.dds", std::ios::binary | std::ios::ate);
@@ -255,7 +286,8 @@ export namespace RE0Icons
         }
         FixSettings().Availability("MAIN.GamepadIcons", [](std::string_view value)
         {
-            return value == "0" || value == "1" || (ready && assetsReady && !textureFailed);
+            return value == "0" || value == "1" || (ready && assetsReady);
         });
+        BindLiveInt("MAIN.GamepadIcons", family);
     }
 }

@@ -29,7 +29,7 @@
   "fmv.original": "Formato original",
   "fmv.fill": "Rellenar",
   "FOVFactor": "Factor de campo de visión",
-  "FOVFactor.description": "Multiplica el campo de visión en el juego. 1.0 mantiene el encuadre previsto; valores mayores amplían la vista. Las cinemáticas no cambian. Se aplica al instante.",
+  "FOVFactor.description": "Multiplica el campo de visión de la cámara habitual del juego. 1.0 mantiene el encuadre previsto y los valores mayores amplían la vista. Las cinemáticas, las miras de francotirador y los prismáticos conservan su encuadre original. Se aplica al instante.",
   "SkipIntro": "Saltar intro",
   "SkipIntro.description": "Salta los vídeos de logotipos y el aviso de copyright al inicio; el juego abre en el menú principal. Requiere reiniciar.",
   "PauseOnFocusLoss": "Pausa en segundo plano",

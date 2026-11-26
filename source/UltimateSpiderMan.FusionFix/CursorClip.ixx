@@ -10,11 +10,23 @@ import ComVars;
 
 namespace
 {
+    std::atomic_bool RefreshConfinement{ true };
+    bool ConfineCursor = true;
+
+    void ApplyConfinement()
+    {
+        if (RefreshConfinement.exchange(false, std::memory_order_relaxed))
+            ConfineCursor = ReadNumericSetting("MAIN.ConfineCursor", 1) != 0;
+        CursorConfinement::SetEnabled(ConfineCursor && !USMOverlayBlocksInput());
+        CursorConfinement::Frame(hWnd.is_initialized() ? hWnd.get() : nullptr);
+    }
+
     BOOL WINAPI GameClipCursor(const RECT* rect)
     {
         if (rect)
-            return USMOverlayBlocksInput() ? TRUE : ClipCursor(rect);
-        CursorConfinement::Release();
+            ApplyConfinement();
+        else
+            CursorConfinement::Release();
         return TRUE;
     }
 }
@@ -26,18 +38,12 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            IATHook::Replace(GetModuleHandle(nullptr), "USER32.dll", std::forward_as_tuple("ClipCursor", GameClipCursor));
-            auto& settings = FixSettings();
-            CursorConfinement::SetEnabled(settings.Bool("MAIN.ConfineCursor") && !USMOverlayBlocksInput());
-            settings.OnChange("MAIN.ConfineCursor", []()
+            FixSettings().OnChange("MAIN.ConfineCursor", []()
             {
-                CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !USMOverlayBlocksInput());
+                RefreshConfinement.store(true, std::memory_order_relaxed);
             });
-            WFP::onGameProcessEvent() += []()
-            {
-                CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !USMOverlayBlocksInput());
-                CursorConfinement::Frame(hWnd.get());
-            };
+            IATHook::Replace(GetModuleHandle(nullptr), "USER32.dll", std::forward_as_tuple("ClipCursor", GameClipCursor));
+            WFP::onGameProcessEvent() += ApplyConfinement;
         };
         WFP::onShutdownEvent() += []()
         {

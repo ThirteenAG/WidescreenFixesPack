@@ -17,6 +17,7 @@ export namespace KnightRider2Camera
     inline thread_local bool DrawingMain = false;
     inline thread_local void* Caller = nullptr;
     inline std::atomic<int> Borders{ 3 };
+    inline std::atomic<float> FOVFactor{ 1.0f };
     inline SafetyHookMid AnimationHook, StaticHook;
     inline SafetyHookInline DrawHook, DirectorHook;
     inline SafetyHookInline FOVHook;
@@ -68,7 +69,7 @@ export namespace KnightRider2Camera
         const float aspect = static_cast<float>(KnightRider2Window::Width) / KnightRider2Window::Height;
         const float nativeAspect = 4.0f / 3.0f;
         const bool preserve = Cinematic && (Borders.load(std::memory_order_relaxed) & (aspect > nativeAspect ? 2 : 1)) != 0;
-        const float factor = Cinematic ? 1.0f : std::clamp(FixSettings().Float("MAIN.FOVFactor"), 0.5f, 2.0f);
+        const float factor = Cinematic ? 1.0f : FOVFactor.load(std::memory_order_relaxed);
         const float halfHeight = std::tan(std::min(NativeFOV * factor, 170.0f) * 0.0087266462f) / nativeAspect;
         const float projectionAspect = preserve ? nativeAspect : aspect;
         auto frustum = reinterpret_cast<float*>(camera + 324);
@@ -159,10 +160,14 @@ export namespace KnightRider2Camera
     {
         const auto update = []()
         {
-            Borders.store(std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3), std::memory_order_relaxed);
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            Borders.store(std::clamp(ReadFixNumber("MAIN.CutsceneBorders", 3), 0, 3), std::memory_order_relaxed);
+            FOVFactor.store(std::clamp(ReadFixNumber("MAIN.FOVFactor", 1.0f), 0.5f, 2.0f), std::memory_order_relaxed);
         };
-        update();
         FixSettings().OnChange("MAIN.CutsceneBorders", update);
+        FixSettings().OnChange("MAIN.FOVFactor", update);
+        update();
         auto fov = hook::pattern("83 EC 18 D9 44 24 1C 53 D8 0D ? ? ? ? 8B D9 8B 43 08 56 D9 F2 57 8D B0 44 01 00 00");
         FOVHook = safetyhook::create_inline(fov.get_first(), FieldOfView);
         auto animation = hook::pattern("83 EC 4C 53 8B D9 8B 43 0C 85 C0 0F 84 93 01 00 00 8B 48 08 85 C9 0F 84 88 01 00 00");

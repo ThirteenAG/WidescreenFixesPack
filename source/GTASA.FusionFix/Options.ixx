@@ -161,7 +161,7 @@ namespace
     // translations of the game that replaced one of its languages), or the game's language
     std::string LanguageTag()
     {
-        auto& chosen = FixSettings().String("MAIN.TextLanguage");
+        const auto chosen = FixSettings().Get("MAIN.TextLanguage");
         if (!chosen.empty() && chosen != "auto")
             return chosen;
         static const char* tags[] = { "en", "fr", "de", "it", "es" };
@@ -359,6 +359,7 @@ namespace
             {
                 if (!Model.IsOpen())
                     OpenModel();
+                Model.SelectLanguage(LanguageTag());
                 FillJoined();
             }
             else if (Model.IsOpen())
@@ -371,6 +372,14 @@ namespace
         {
             Close();
             return;
+        }
+        // The menu's language changed while the pages are open (an editor): their texts follow at once
+        if (Model.SelectLanguage(LanguageTag()))
+        {
+            ShownRows.clear();
+            SetText("WFPT0", Model.Text("menu.plugins"));
+            if (State == Mode::Root)
+                FillRoot();
         }
         if (State == Mode::Page)
             FillPage(manager);
@@ -780,6 +789,7 @@ class OptionsInit
 public:
     OptionsInit()
     {
+        WFP::onInitEvent() += []() { Model.RememberRunningSettings(FixSettings()); };
         WFP::onGameInitEvent() += []()
         {
             auto screens = hook::pattern("0F BE 86 ? ? ? ? 8B 4E 54 69 C0 E2 00 00 00 8D 14 C9 0F B6 94 50");

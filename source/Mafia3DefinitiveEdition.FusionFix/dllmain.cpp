@@ -260,16 +260,10 @@ namespace HighRateMouse
     SafetyHookInline RegisterHook{};
     BOOL WINAPI RegisterRawInputDevicesHook(PCRAWINPUTDEVICE devices, UINT count, UINT size)
     {
-        if (!devices || size != sizeof(RAWINPUTDEVICE))
-            return RegisterHook.stdcall<BOOL>(devices, count, size);
-        auto list = RawMouse::Redirect(devices, count);
-        BOOL result = RegisterHook.stdcall<BOOL>(list.data(), count, size);
-        if (!result && RawMouse::Active())
+        return RawMouse::RegisterDevices(devices, count, size, [](PCRAWINPUTDEVICE list, UINT entries, UINT bytes)
         {
-            RawMouse::Cancel();
-            result = RegisterHook.stdcall<BOOL>(devices, count, size);
-        }
-        return result;
+            return RegisterHook.stdcall<BOOL>(list, entries, bytes);
+        });
     }
 
     // The main thread's message pump removes messages until the queue is empty. Every legacy mouse move it removes makes

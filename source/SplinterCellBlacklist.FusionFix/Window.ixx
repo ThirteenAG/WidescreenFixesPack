@@ -295,38 +295,40 @@ namespace Window
     int __cdecl ModeLists(uintptr_t lists, int mode, int a3)
     {
         auto result = shModeLists.ccall<int>(lists, mode == Borderless ? Borderless : ExclusiveFullscreen, a3);
-        if (mode == Borderless)
+        if (mode != Windowed)
             return result;
-        if (!pOptions)
-            return result;
-        for (auto m : { Windowed })
+        auto data = *reinterpret_cast<Resolution**>(lists);
+        auto& count = *reinterpret_cast<int*>(lists + 4);
+        if (pOptions)
         {
-            Resolution resolution = { OptionsWidth(pOptions, m), OptionsHeight(pOptions, m), 0 };
-            auto data = *reinterpret_cast<Resolution**>(lists);
-            auto count = *reinterpret_cast<int*>(lists + 4);
-            if (resolution.width <= 0 || resolution.height <= 0 ||
-                std::any_of(data, data + count, [&](const Resolution& r) { return r.width == resolution.width && r.height == resolution.height; }))
-                continue;
-            AddResolution(lists, nullptr, &resolution);
-            data = *reinterpret_cast<Resolution**>(lists);
-            count = *reinterpret_cast<int*>(lists + 4);
-            std::stable_sort(data, data + count, [](const Resolution& a, const Resolution& b) { return std::tie(a.width, a.height) < std::tie(b.width, b.height); });
+            Resolution resolution{ OptionsWidth(pOptions, Windowed), OptionsHeight(pOptions, Windowed), 0 };
+            if (resolution.width > 0 && resolution.height > 0 &&
+                (!count || std::none_of(data, data + count, [&](const Resolution& r) { return r.width == resolution.width && r.height == resolution.height; })))
+            {
+                AddResolution(lists, nullptr, &resolution);
+                data = *reinterpret_cast<Resolution**>(lists);
+            }
         }
-        // the display modes are there for each refresh rate, which only exclusive fullscreen picks
-        if (mode != ExclusiveFullscreen)
+        if (count > 1)
         {
-            auto data = *reinterpret_cast<Resolution**>(lists);
-            auto& count = *reinterpret_cast<int*>(lists + 4);
             std::stable_sort(data, data + count, [](const Resolution& a, const Resolution& b) { return std::tie(a.width, a.height) < std::tie(b.width, b.height); });
             count = int(std::unique(data, data + count, [](const Resolution& a, const Resolution& b) { return a.width == b.width && a.height == b.height; }) - data);
         }
         return result;
     }
 
-    WNDPROC GameWndProc = nullptr;
-    LRESULT CALLBACK WndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    LRESULT CALLBACK WndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR id, DWORD_PTR sizing)
     {
-        static bool sizing = false;
+        if (window == WindowHandle && (message == WM_KILLFOCUS || message == WM_NCDESTROY ||
+            (message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE) || (message == WM_ACTIVATEAPP && !wParam)))
+            ResetShoulderKey.store(true);
+        if (message == WM_NCDESTROY)
+        {
+            RemoveWindowSubclass(window, WndProc, id);
+            return DefSubclassProc(window, message, wParam, lParam);
+        }
+        if (window != WindowHandle)
+            return DefSubclassProc(window, message, wParam, lParam);
         if (message == WM_KEYDOWN && wParam == VK_F1 && !(lParam & (1LL << 30)) && NativeMenuOpen.load())
         {
             NativeHelpRequested.store(true);
@@ -337,7 +339,7 @@ namespace Window
         CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
         if (consumed)
             return overlayResult;
-        auto result = CallWindowProcA(GameWndProc, window, message, wParam, lParam);
+        auto result = DefSubclassProc(window, message, wParam, lParam);
         switch (message)
         {
         case WM_GETMINMAXINFO:
@@ -355,10 +357,11 @@ namespace Window
             }
             break;
         case WM_ENTERSIZEMOVE:
-            sizing = true;
+            SetWindowSubclass(window, WndProc, id, 1);
             break;
         case WM_EXITSIZEMOVE:
-            sizing = false;
+            SetWindowSubclass(window, WndProc, id, 0);
+            sizing = 0;
             [[fallthrough]];
         case WM_SIZE:
             // the windowed resolution is the client size the window was resized to
@@ -384,11 +387,11 @@ namespace Window
 
     void Subclass()
     {
-        static HWND subclassed = nullptr;
-        if (!WindowHandle || subclassed == WindowHandle || !IsWindow(WindowHandle))
+        DWORD_PTR sizing = 0;
+        if (!WindowHandle || !IsWindow(WindowHandle) || GetWindowSubclass(WindowHandle, WndProc, 0, &sizing))
             return;
-        GameWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(WindowHandle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&WndProc)));
-        subclassed = WindowHandle;
+        if (!SetWindowSubclass(WindowHandle, WndProc, 0, 0))
+            return;
         WindowCursor::Attach(WindowHandle);
 
         // the windowed window can open behind other windows, it's brought to the front once

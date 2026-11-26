@@ -3,6 +3,7 @@ module;
 #include "stdafx.h"
 #include "FixSettings.hpp"
 #include "Shared/WindowCursor.hpp"
+#include "rawinput.hpp"
 #include <intrin.h>
 #include <random>
 #include "Shared/WidescreenFixConflict.hpp"
@@ -22,6 +23,8 @@ import Misc;
 
 void Install()
 {
+    // The main loop empties the message queue before each frame; a high polling rate mouse must not keep it going
+    MessagePumpGuard::Install(GetModuleHandle(nullptr));
     WindowCursor::Initialize(FixSettings());
     auto& settings = FixSettings();
     asi_settings::LiveLink::Start();

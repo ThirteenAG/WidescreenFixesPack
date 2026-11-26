@@ -8,6 +8,7 @@ module;
 
 export module PadBindings;
 
+import Window;
 
 export namespace KnightRiderPadBindings
 {
@@ -40,6 +41,44 @@ export namespace KnightRiderPadBindings
             case 18: return 22;
             case 19: return 21;
             case 22: return 16; // Start/continue a mission.
+        }
+        return -1;
+    }
+
+    inline int BoundKey(int action, DWORD slot)
+    {
+        const auto application = KnightRiderWindow::Application.is_initialized() ? KnightRiderWindow::Application.get() : nullptr;
+        if (!application)
+            return -1;
+        const auto manager = application + 124;
+        const auto actions = *reinterpret_cast<uint8_t***>(manager + 28);
+        const int actionCount = *reinterpret_cast<int*>(manager + 32);
+        struct BindingCombination
+        {
+            uint8_t** properties;
+            int count;
+            int capacity;
+        };
+        for (int i = 0; i < actionCount; ++i)
+        {
+            const auto entry = actions[i];
+            if (*reinterpret_cast<int*>(entry + 12) != action)
+                continue;
+            const auto combinations = *reinterpret_cast<BindingCombination**>(entry + 16);
+            const int count = *reinterpret_cast<int*>(entry + 20);
+            for (int j = 0; j < count; ++j)
+            {
+                const auto& combination = combinations[j];
+                for (int k = 0; k < combination.count; ++k)
+                {
+                    const auto property = combination.properties[k];
+                    const auto device = *reinterpret_cast<uint8_t**>(property + 12);
+                    if (*reinterpret_cast<uint16_t*>(device + 8) == 3 &&
+                        *reinterpret_cast<uint16_t*>(device + 10) == slot)
+                        return *reinterpret_cast<int*>(property + 8);
+                }
+            }
+            break;
         }
         return -1;
     }

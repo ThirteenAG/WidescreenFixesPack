@@ -8,6 +8,8 @@ class sc5.custom.containers.SettingsPage extends sc5.framework.containers.Page
    var hasCalibration = false;
    var fixIndex = -1;
    var fixPage = null;
+   var fixEntryPending = false;
+   var fixEntryTicker;
    function SettingsPage(hasCalibration)
    {
       super(sc5.custom.containers.MainMenuFrame.PAGE_SETTINGS);
@@ -16,7 +18,23 @@ class sc5.custom.containers.SettingsPage extends sc5.framework.containers.Page
    function activate()
    {
       super.activate();
-      _root.FlashMenu.sendCommand("FixMenuEntry","",this);
+      // the Plugins row is added on the next tick: a page added to the frame while it's still changing pages
+      // (the game reopening Settings at startup) left the menu without input
+      this.fixEntryPending = true;
+      if(this.fixEntryTicker == undefined)
+      {
+         var owner = this;
+         this.fixEntryTicker = new sc5.framework.input.InputLine(0);
+         this.fixEntryTicker.tick = function(delta)
+         {
+            if(owner.fixEntryPending && owner.activated)
+            {
+               owner.fixEntryPending = false;
+               _root.FlashMenu.sendCommand("FixMenuEntry","",owner);
+            }
+         };
+         _root.FlashMenu.tickables.addItem(this.fixEntryTicker);
+      }
    }
    function openFixNotice(title, text)
    {

@@ -29,7 +29,7 @@
   "fmv.original": "Format d'origine",
   "fmv.fill": "Remplir",
   "FOVFactor": "Facteur de champ de vision",
-  "FOVFactor.description": "Multiplie le champ de vision en jeu. 1.0 garde le cadrage prévu ; des valeurs plus grandes élargissent la vue. Les cinématiques ne changent pas. Effet immédiat.",
+  "FOVFactor.description": "Multiplie le champ de vision de la caméra de jeu habituelle. 1.0 conserve le cadrage prévu et des valeurs plus élevées élargissent la vue. Les cinématiques, les lunettes de tir et les jumelles conservent leur cadrage d’origine. Effet immédiat.",
   "SkipIntro": "Passer l'intro",
   "SkipIntro.description": "Passe les vidéos des logos et l'avis de copyright au démarrage ; le jeu s'ouvre sur le menu principal. Nécessite un redémarrage.",
   "PauseOnFocusLoss": "Pause en arrière-plan",

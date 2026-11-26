@@ -93,9 +93,9 @@ export namespace FarCryCinematics
 
     inline bool Active() { return Ready && DeviceReady && DrawReady && Depth.load() > 0; }
 
-    inline float Progress()
+    inline float Progress(bool animated)
     {
-        if (!FixSettings().Bool("MAIN.AnimatedCutsceneBorders"))
+        if (!animated)
             return Active() ? 1.0f : 0.0f;
         const auto elapsed = float(GetTickCount64() - Changed.load()) / 250.0f;
         return Active() ? std::clamp(elapsed, 0.0f, 1.0f) : std::clamp(1.0f - elapsed, 0.0f, 1.0f);
@@ -161,12 +161,17 @@ export namespace FarCryCinematics
 
     inline float Camera(float encoded, float aspect)
     {
-        return FarCryCinematicFrame::Camera(encoded, aspect, FixSettings().Int("MAIN.CutsceneBorders"), Progress());
+        const auto options = FarCryLive::Read();
+        return FarCryCinematicFrame::Camera(encoded, aspect, options.borders, Progress(options.animatedBorders));
     }
 
     inline void Draw(IDirect3DDevice9* device)
     {
-        if (!Ready || !DeviceReady || !DrawReady || !device || Progress() <= 0.0f || !FixSettings().Int("MAIN.CutsceneBorders"))
+        if (!Ready || !DeviceReady || !DrawReady || !device)
+            return;
+        const auto options = FarCryLive::Read();
+        const auto progress = Progress(options.animatedBorders);
+        if (progress <= 0.0f || !options.borders)
             return;
         IDirect3DSurface9* backbuffer = nullptr;
         if (FAILED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backbuffer)))
@@ -174,7 +179,7 @@ export namespace FarCryCinematics
         D3DSURFACE_DESC desc{};
         backbuffer->GetDesc(&desc);
         const auto borders = FarCryCinematicFrame::Layout(float(desc.Width) / desc.Height,
-            FixSettings().Int("MAIN.CutsceneBorders"), NativeBar.load(), Progress());
+            options.borders, NativeBar.load(), progress);
         const auto side = LONG(std::lround(desc.Width * borders.side));
         const auto top = LONG(std::lround(desc.Height * borders.top));
         if (!side && !top)

@@ -117,13 +117,17 @@ export namespace DeveloperOverlay
             });
             return true;
         }();
-        if (!ResetHook)
+        if constexpr (WFP::DeveloperOverlay)
         {
-            auto target = (*reinterpret_cast<void***>(device))[16];
-            ResetHook = safetyhook::create_inline(target, Reset);
+            if (!ResetHook)
+            {
+                auto target = (*reinterpret_cast<void***>(device))[16];
+                ResetHook = safetyhook::create_inline(target, Reset);
+            }
         }
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
         Focus::Frame(Overlay.BlocksInput());
     }
 }

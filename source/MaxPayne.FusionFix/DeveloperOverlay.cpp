@@ -122,6 +122,9 @@ namespace MaxPayneOverlay
 
     void Draw(void* current)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
+
         auto device = static_cast<IDirect3DDevice9*>(current);
         if (!device)
             return;

@@ -9,6 +9,8 @@ import ComVars;
 
 class Movies
 {
+    static inline std::atomic<int> Framing{ 1 };
+
 public:
     // The movie's whole picture: in the 4:3 frame as the game shows it, or as large as the screen allows
     static void Fit(SafetyHookContext& ctx)
@@ -23,7 +25,7 @@ public:
             aspect = 4.0f / 3.0f;
 
         float boxLeft = Screen.fBoxLeft, boxTop = Screen.fBoxTop, boxWidth = Screen.fBoxWidth, boxHeight = Screen.fBoxHeight;
-        if (std::clamp(FixSettings().Int("MAIN.FMVWidescreenMode"), 0, 1) == 1)
+        if (Framing.load() >= 1)
         {
             boxLeft = 0.0f;
             boxTop = 0.0f;
@@ -53,6 +55,7 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            WatchMatrixNumber("MAIN.FMVWidescreenMode", Framing);
             // FMVs
             auto pattern = hook::pattern("6A 1C 8D 85 70 FF FF FF 50 6A 02 6A 05 8B 0D");
             static auto movieHook = safetyhook::create_mid(pattern.get_first(), Fit);

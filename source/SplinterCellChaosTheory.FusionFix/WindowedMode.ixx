@@ -2,10 +2,12 @@ module;
 
 #include "stdafx.h"
 #include "FixSettings.hpp"
+#include <d3d9.h>
 
 export module WindowedMode;
 
 import ComVars;
+import D3DDrv;
 
 // The game's own window modes (WinDrv/D3DDrv):
 // - UWindowsViewport::OpenWindow always sets UWindowsClient::StartupFullscreen (+D8h) to 1, the ini value is never used,
@@ -23,6 +25,21 @@ namespace WindowedMode
     enum { Fullscreen, Windowed, Borderless };
 
     int nFullScreenRefreshRateInHz = 0;
+
+    UINT FullscreenRefreshRate(IDirect3D9* d3d, UINT adapter, D3DFORMAT format, UINT width, UINT height, UINT limit)
+    {
+        UINT rate = 0;
+        const UINT count = d3d->GetAdapterModeCount(adapter, format);
+        for (UINT i = 0; i < count; ++i)
+        {
+            D3DDISPLAYMODE mode{};
+            if (SUCCEEDED(d3d->EnumAdapterModes(adapter, format, i, &mode)) &&
+                mode.Width == width && mode.Height == height && mode.RefreshRate > 1 &&
+                mode.RefreshRate <= limit && mode.RefreshRate > rate)
+                rate = mode.RefreshRate;
+        }
+        return rate;
+    }
 
     HWND ViewportWindow(uintptr_t viewport)
     {
@@ -78,6 +95,7 @@ namespace WindowedMode
         auto style = GetWindowLong(window, GWL_STYLE) & ~(WS_MINIMIZE | WS_MAXIMIZE);
         auto exStyle = GetWindowLong(window, GWL_EXSTYLE);
         RECT rect = info.rcMonitor;
+        UINT flags = SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOACTIVATE;
         if (bBorderless)
         {
             style = (style & ~(WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX)) | WS_POPUP;
@@ -103,10 +121,12 @@ namespace WindowedMode
             }
             rect.right = rect.left + w;
             rect.bottom = rect.top + h;
+            if (width == area.right - area.left && height == area.bottom - area.top)
+                flags |= SWP_NOSENDCHANGING;
         }
         SetWindowLong(window, GWL_STYLE, style);
         SetWindowLong(window, GWL_EXSTYLE, exStyle);
-        SetWindowPos(window, HWND_NOTOPMOST, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOACTIVATE);
+        SetWindowPos(window, HWND_NOTOPMOST, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, flags);
         SquareCorners(window);
     }
 
@@ -115,6 +135,8 @@ namespace WindowedMode
     uint8_t resetRequestOffset = 0;
     int __fastcall SetRes(uintptr_t device, void* edx, uintptr_t viewport, int width, int height, int fullscreen, int a5)
     {
+        if (RecoveringDisplayDevice())
+            return 0;
         if (!fullscreen && bBorderless)
         {
             auto area = Monitor(ViewportWindow(viewport)).rcMonitor;
@@ -158,10 +180,9 @@ export void InitWindowedMode()
 {
     using namespace WindowedMode;
 
-    auto& settings = FixSettings();
-    auto nWindowMode = std::clamp(settings.Int("MAIN.WindowMode"), 0, 2);
+    auto nWindowMode = std::clamp(ReadFixInt("MAIN.WindowMode"), 0, 2);
     bBorderless = nWindowMode == Borderless;
-    nFullScreenRefreshRateInHz = settings.Int("WINDOWEDMODE.FullScreenRefreshRateInHz");
+    nFullScreenRefreshRateInHz = ReadFixInt("WINDOWEDMODE.FullScreenRefreshRateInHz");
 
     // Per monitor DPI awareness, so a scaled desktop doesn't crop or blur the game
     using SetContextFn = BOOL(WINAPI*)(HANDLE);
@@ -172,7 +193,29 @@ export void InitWindowedMode()
 
     // OpenWindow: StartupFullscreen = 1 -> the chosen mode
     auto pattern = hook::pattern("C7 85 D8 00 00 00 01 00 00 00 39 1D");
-    injector::WriteMemory<uint32_t>(pattern.get_first(6), nWindowMode == Fullscreen ? 1 : 0, true);
+    auto openWindow = pattern.get_first<uint8_t>();
+    injector::WriteMemory<uint32_t>(openWindow + 6, nWindowMode == Fullscreen ? 1 : 0, true);
+    static auto viewportSizes = safetyhook::create_mid(openWindow + 10, [](SafetyHookContext& regs)
+    {
+        if (Screen.Width < 640 || Screen.Height < 480)
+            return;
+
+        // TryRenderDevice reads the four client dimensions when the caller requests the default size.
+        auto sizes = reinterpret_cast<int*>(regs.ebp + 0x50);
+        sizes[0] = Screen.Width;
+        sizes[1] = Screen.Height;
+        DEVMODEW mode{ .dmSize = sizeof(mode) };
+        for (DWORD i = 0; EnumDisplaySettingsW(nullptr, i, &mode); ++i)
+        {
+            if (int(mode.dmPelsWidth) == Screen.Width && int(mode.dmPelsHeight) == Screen.Height)
+            {
+                sizes[2] = Screen.Width;
+                sizes[3] = Screen.Height;
+                return;
+            }
+        }
+        std::tie(sizes[2], sizes[3]) = GetDesktopRes();
+    });
 
     // ResizeViewport, window path: ecx = Viewport->Actor, its ShowFlags & SHOW_ChildWindow skip the MoveWindow.
     // The window is placed here (with the viewport's lock at +200h so WM_SIZE doesn't set the resolution again) and the game's
@@ -209,17 +252,13 @@ export void InitWindowedMode()
         pattern = hook::pattern("89 9E C8 46 00 00 EB");
         static auto RefreshRateHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
         {
-            auto width = *reinterpret_cast<uint32_t*>(regs.esi + 0x46C0);
-            auto height = *reinterpret_cast<uint32_t*>(regs.esi + 0x46C4);
-            uint32_t rate = 0;
-            DEVMODE mode = { .dmSize = sizeof(DEVMODE) };
-            for (DWORD i = 0; EnumDisplaySettings(NULL, i, &mode); ++i)
-            {
-                if (mode.dmPelsWidth == width && mode.dmPelsHeight == height && mode.dmDisplayFrequency > 1 &&
-                    mode.dmDisplayFrequency <= uint32_t(nFullScreenRefreshRateInHz) && mode.dmDisplayFrequency > rate)
-                    rate = mode.dmDisplayFrequency;
-            }
-            *reinterpret_cast<uint32_t*>(regs.esi + 0x46C8) = rate;
+            const auto d3d = *reinterpret_cast<IDirect3D9**>(regs.esi + 0x4D40);
+            const auto adapter = *reinterpret_cast<UINT*>(regs.esi + 0x46AC);
+            const auto format = *reinterpret_cast<D3DFORMAT*>(regs.esi + 0x4690);
+            const auto width = *reinterpret_cast<UINT*>(regs.esi + 0x46C0);
+            const auto height = *reinterpret_cast<UINT*>(regs.esi + 0x46C4);
+            *reinterpret_cast<UINT*>(regs.esi + 0x46C8) =
+                FullscreenRefreshRate(d3d, adapter, format, width, height, nFullScreenRefreshRateInHz);
         });
     }
 }

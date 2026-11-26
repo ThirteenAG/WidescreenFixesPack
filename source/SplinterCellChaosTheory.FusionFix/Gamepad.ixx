@@ -13,7 +13,7 @@ namespace
 
     std::string Language()
     {
-        const auto& selected = FixSettings().String("MAIN.TextLanguage");
+        const auto selected = FixSettings().Get("MAIN.TextLanguage");
         if (!selected.empty() && selected != "auto")
             return selected;
         const auto native = NativeLanguage ? NativeLanguage() : nullptr;
@@ -84,7 +84,8 @@ export namespace Gamepad
         const auto wanted = LabelsRevision.load(std::memory_order_acquire);
         if (revision != wanted)
         {
-            const auto id = std::make_pair(PadInput::ResolveFamily(FixSettings().Int("MAIN.GamepadIcons")), Language());
+            const int family = ReadFixInt("MAIN.GamepadIcons");
+            const auto id = std::make_pair(PadInput::ResolveFamily(family), Language());
             auto found = labels.find(id);
             if (found == labels.end())
                 found = labels.emplace(id, Labels(id.first, id.second)).first;

@@ -21,7 +21,7 @@
 
 ## Miscellaneous
 
-* **FPS Limit** - frame rate limit (60 by default, the original stops at 200; 0 = unlimited, -1 = the monitor's refresh rate), changes apply while playing
+* **FPS Limit** - frame rate limit: 30–1000 FPS, Unlimited or Monitor (60 by default; the original stops at 200), changes apply while playing
 * **Skip Intro** - skips startup logos and the intro in the original game. Enhanced controls its intro videos through its own setting.
 * **Skip Prompt** - added an option to skip "Press Fire to Continue" prompt
 * **Cutscene Borders** - cinematics keep their 16:9 picture: Letterbox bars on screens narrower than 16:9, Pillarbox bars on wider ones, Both, or Off to fill the screen
@@ -53,7 +53,7 @@ Recommended uses the default setup. Vanilla and Enhanced offer alternative prese
 
 ## Installation
 
-Use version 1.3, available as the retail patch and in the current digital releases. Version 1.0 is unsupported. Some Russian-language releases use a different engine build that is not currently supported. The native Direct3D 8 renderer is retained for buffered shadows; the Direct3D 9/11 developer overlay does not apply.
+Use version 1.3, available as the retail patch and in the current digital releases. Version 1.0 is unsupported. Some Russian-language releases use a different engine build that is not currently supported. The native Direct3D 8 renderer is retained for buffered shadows.
 
 1. Download `SplinterCell.FusionFix.zip` from this release.
 2. Extract the contents directly into the game folder - preserving the `system` folder beside the installed game files.

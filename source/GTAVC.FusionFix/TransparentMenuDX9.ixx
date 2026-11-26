@@ -27,6 +27,10 @@ private:
     static inline IDirect3DVertexDeclaration9* pQuadDecl = nullptr;
     static inline ID3DXEffect* pBlurEffect = nullptr;
 
+    // System-memory copy of the captured scene; it survives a device reset.
+    static inline IDirect3DSurface9* pSavedSurf = nullptr;
+    static inline bool savedReady = false;
+
     static inline UINT nScreenWidth = 0;
     static inline UINT nScreenHeight = 0;
     static inline bool bInitialized = false;
@@ -67,6 +71,7 @@ private:
 
 public:
     static bool CaptureFrame();
+    static bool RestoreFrame();
     static void RenderBlur();
     static void OnDeviceReset();
 };
@@ -90,6 +95,12 @@ void TransparentMenuDX9::OnDeviceReset()
 {
     ReleaseResources();
     SafeRelease(pD3D9Device);
+}
+
+static bool MatchesSize(IDirect3DSurface9* surf, UINT width, UINT height, D3DFORMAT format)
+{
+    D3DSURFACE_DESC desc{};
+    return surf && SUCCEEDED(surf->GetDesc(&desc)) && desc.Width == width && desc.Height == height && desc.Format == format;
 }
 
 bool TransparentMenuDX9::Initialize()
@@ -170,6 +181,72 @@ bool TransparentMenuDX9::CaptureFrame()
 
     const HRESULT hr = pD3D9Device->StretchRect(currentRT, nullptr, pSceneSurf, nullptr, D3DTEXF_POINT);
     currentRT->Release();
+
+    captureReady = SUCCEEDED(hr);
+    if (!captureReady)
+        return false;
+
+    // Keep a copy that a device reset (window mode or resolution change) cannot clear
+    savedReady = false;
+    D3DSURFACE_DESC desc{};
+    if (FAILED(pSceneSurf->GetDesc(&desc)))
+        return true;
+    if (!MatchesSize(pSavedSurf, desc.Width, desc.Height, desc.Format))
+    {
+        SafeRelease(pSavedSurf);
+        if (FAILED(pD3D9Device->CreateOffscreenPlainSurface(desc.Width, desc.Height, desc.Format, D3DPOOL_SYSTEMMEM, &pSavedSurf, nullptr)))
+            return true;
+    }
+    savedReady = SUCCEEDED(pD3D9Device->GetRenderTargetData(pSceneSurf, pSavedSurf));
+    return true;
+}
+
+bool TransparentMenuDX9::RestoreFrame()
+{
+    if (!savedReady || !pSavedSurf) return false;
+    if (!IsDeviceReady()) return false;
+    if (!Initialize()) return false;
+
+    // A recreated device cannot use the old copy
+    IDirect3DDevice9* owner = nullptr;
+    if (SUCCEEDED(pSavedSurf->GetDevice(&owner)) && owner)
+        owner->Release();
+    if (owner != pD3D9Device)
+    {
+        savedReady = false;
+        SafeRelease(pSavedSurf);
+        return false;
+    }
+
+    D3DSURFACE_DESC desc{};
+    if (FAILED(pSavedSurf->GetDesc(&desc)))
+        return false;
+
+    IDirect3DSurface9* upload = nullptr;
+    if (FAILED(pD3D9Device->CreateOffscreenPlainSurface(desc.Width, desc.Height, desc.Format, D3DPOOL_DEFAULT, &upload, nullptr)) || !upload)
+        return false;
+
+    // Crop the old picture to the new aspect ratio so it fills the screen undistorted
+    RECT src{ 0, 0, LONG(desc.Width), LONG(desc.Height) };
+    const double oldAspect = double(desc.Width) / double(desc.Height);
+    const double newAspect = double(nScreenWidth) / double(nScreenHeight);
+    if (oldAspect > newAspect)
+    {
+        const LONG w = LONG(desc.Height * newAspect + 0.5);
+        src.left = (LONG(desc.Width) - w) / 2;
+        src.right = src.left + w;
+    }
+    else if (oldAspect < newAspect)
+    {
+        const LONG h = LONG(desc.Width / newAspect + 0.5);
+        src.top = (LONG(desc.Height) - h) / 2;
+        src.bottom = src.top + h;
+    }
+
+    HRESULT hr = pD3D9Device->UpdateSurface(pSavedSurf, nullptr, upload, nullptr);
+    if (SUCCEEDED(hr))
+        hr = pD3D9Device->StretchRect(upload, &src, pSceneSurf, nullptr, D3DTEXF_LINEAR);
+    upload->Release();
 
     captureReady = SUCCEEDED(hr);
     return captureReady;

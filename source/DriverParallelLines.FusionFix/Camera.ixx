@@ -37,6 +37,7 @@ static constexpr float kCameraReturnSpeed = 0.052000001f;
 static float sIdleTimer = 0.0f;
 static constexpr float kSnapThreshold = 0.01f;
 static bool sIsReturning = false;
+static std::atomic<float> cameraReturnTimeout{ 3.0f }, cameraReturnSpeed{ 2.0f };
 
 static std::chrono::steady_clock::time_point sLastFrameTime = std::chrono::steady_clock::now();
 
@@ -127,14 +128,14 @@ namespace CLookAround
         else
         {
             sIdleTimer += dt;
-            if (sIdleTimer >= FixSettings().Float("CAMERA.CameraReturnTimeout"))
+            if (sIdleTimer >= cameraReturnTimeout.load(std::memory_order_relaxed))
                 sIsReturning = true;
         }
 
         // Apply return to cam.yaw() BEFORE GetAngle so it interpolates from our value
         if (sIsReturning)
         {
-            const float blend = 1.0f - expf(-FixSettings().Float("CAMERA.CameraReturnSpeed") * dt);
+            const float blend = 1.0f - expf(-cameraReturnSpeed.load(std::memory_order_relaxed) * dt);
 
             // Pitch return
             cam.turretPitch() *= (1.0f - blend);
@@ -228,6 +229,9 @@ public:
 
             if (!bEnable)
                 return;
+
+            BindLiveSetting("CAMERA.CameraReturnTimeout", cameraReturnTimeout);
+            BindLiveSetting("CAMERA.CameraReturnSpeed", cameraReturnSpeed);
 
             auto pattern = hook::pattern("BE ? ? ? ? 6A ? 8B CE A2");
             off_702640.SetAddress(*pattern.get_first<void**>(1));

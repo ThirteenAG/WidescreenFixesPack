@@ -23,7 +23,7 @@
 - **Tree foliage** — The leaves of the trees and bushes in Central Park and other parks are drawn again, lit by the time of day like on the PlayStation 2; the PC version showed bare trees.
 - **See-through leaves** — Potted bushes, flags, signs and other cut-out textures get soft, see-through edges like on the PlayStation 2 instead of dark outlines.
 - **Traffic** — Cars no longer appear at the roadside or far ahead only to vanish a moment later. Traffic stays at the sides of a wide picture instead of disappearing there, and cars and pedestrians fade in and out rather than popping.
-- **Install path** — The game loads its data from the Data folder next to the exe, so it runs from any folder.
+- **Install path** — The game loads the Data folder next to the executable. The fix uses a short Windows path if the full folder name exceeds the game's path limit or uses characters the game cannot read. If neither path fits, the fix shows an error at startup.
 
 ## Options
 
@@ -43,13 +43,15 @@
 
 Presets: Recommended is the default. Vanilla keeps the original look (original cutscene borders, intro movies, 30 FPS, no added effects) with all fixes applied; Enhanced adds console gamma.
 
-Change the settings in FusionFixHub, on fusionfix.io or in `scripts/TrueCrimeNewYorkCity.FusionFix.cfg`. Supporters can also open the settings overlay with Ctrl+F10. The game's own options are fixed menu pages, so the fix adds no page there.
+Change the settings in FusionFixHub, on fusionfix.io or in `scripts/TrueCrimeNewYorkCity.FusionFix.cfg`. The game's own options are fixed menu pages, so the fix adds no page there.
 
 ## Known limits
 
 - The window can't be resized while the game runs; choose its size in the game's settings dialog.
 
 ## Installation
+
+Compatible versions: version 1.0, both the DVD's `True Crime® New York City.exe` (20 MB) and the 5.5 MB `True Crime New York City.exe`.
 
 1. Download the fix archive from this release.
 2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.

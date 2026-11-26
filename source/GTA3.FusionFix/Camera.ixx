@@ -307,7 +307,7 @@ public:
 
     float CamFrontXNorm = 0.f;
     float CamFrontYNorm = 0.f;
-    std::int32_t CarZoomIndicator = 0;   // FIX_BUGS: int32 (was float)
+    float CarZoomIndicator = 0.0f;
     float CarZoomValue = 0.f;
     float CarZoomValueSmooth = 0.f;
     float DistanceToWater = 0.f;
@@ -343,7 +343,7 @@ public:
     float m_ScreenReductionSpeed = 0.f;
     float m_AlphaForPlayerAnim1rstPerson = 0.f;
     float Orientation = 0.f;
-    std::int32_t PedZoomIndicator = 0;   // FIX_BUGS: int32 (was float)
+    float PedZoomIndicator = 0.0f;
     float PlayerExhaustion = 0.f;
 
     float SoundDistUp = 0.f, SoundDistLeft = 0.f, SoundDistRight = 0.f;
@@ -496,22 +496,18 @@ export GameRef<CCamera> TheCamera([]() -> CCamera*
 // minSpeed: the vehicle speed (game units per frame) the shake starts at; intensity: 1.0 = the original strength
 void CCamera::UpdatePlayerVehicleSpeedBlur(CCamera* camera, float minSpeed, float intensity)
 {
-    if (camera->pTargetEntity->GetType() == ENTITY_TYPE_PED)
+    if (!camera->pTargetEntity || camera->pTargetEntity->GetType() != ENTITY_TYPE_VEHICLE)
         return;
 
     if (camera->Cams[camera->ActiveCam].Mode != CCam::MODE_CAM_ON_A_STRING)
         return;
 
-    if (!FindPlayerVehicle())
+    const auto vehicle = FindPlayerVehicle();
+    if (!vehicle || vehicle->IsBoat() || vehicle->IsHeli() || vehicle->IsPlane() || vehicle->IsBike())
         return;
 
-    float speed = FindPlayerVehicle()->GetMoveSpeed().Magnitude();
-
-    if (speed <= minSpeed ||
-        FindPlayerVehicle()->IsBoat() ||
-        FindPlayerVehicle()->IsHeli() ||
-        FindPlayerVehicle()->IsPlane() ||
-        FindPlayerVehicle()->IsBike())
+    float speed = vehicle->GetMoveSpeed().Magnitude();
+    if (speed <= minSpeed)
         return;
 
     // Grows to its full strength over the next 0.35 units of speed

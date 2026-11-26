@@ -169,6 +169,16 @@ export namespace GTA2Hud
             }
         }; injector::MakeInline<CameraZoom>(pattern.count(2).get(1).get<void*>(0));
 
+        // The cameras' screen size, set at start and on each video mode change: their HUD scale too, also while paused
+        static SafetyHookInline cameraScreenHook;
+        cameraScreenHook = safetyhook::create_inline(hook::get_pattern("51 8B 44 24 0C 56 57 8B 7C 24 10 8B F1 8B CF D1 E9 89 46 6C"),
+            static_cast<int(__fastcall*)(void*, void*, int, int)>([](void* camera, void*, int width, int height) -> int
+            {
+                auto result = cameraScreenHook.thiscall<int>(camera, width, height);
+                Field<int32_t>(camera, 0xA8) = int32_t(hud_scale() * one);
+                return result;
+            }));
+
         // Ped Shadows
         pattern = hook::pattern("A1 ? ? ? ? 8B 48 38 81 C1 ? ? ? ? E8 ? ? ? ? 84 C0"); //0x5EB4FC
         ptrToGame.SetAddress(*pattern.get_first<uint32_t*>(1));

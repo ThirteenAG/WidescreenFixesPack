@@ -14,7 +14,7 @@
 
 - **Widescreen** - Matches the display shape selected in PPSSPP. You can also choose an aspect ratio on the fix's Display page or in FusionFixHub.
 - **Field of view** - Widens the gameplay view for your screen. Gameplay FOV ranges from 0.5 to 2.0. The gameplay FOV multiplier does not change cutscenes.
-- **HUD** - Adjust the HUD, radar and multiplayer radar sizes separately. HUD Aspect Ratio keeps the HUD inside a centered 4:3, 16:9, 21:9 or 32:9 area, or uses the whole screen with Auto. The radar can sit in the bottom or top left corner (Radar Position); other positions can be set in FusionFixHub.
+- **HUD** - Adjust the HUD, radar and multiplayer radar sizes separately. HUD Aspect Ratio keeps the HUD inside a centered 4:3, 16:9, 21:9 or 32:9 area, or uses the whole screen with Auto. Both radars keep their native anchor inside that area.
 - **Menu artwork** - Keeps its proportions with black bars at the sides when needed.
 - **Cutscene borders** - Choose Off, Letterbox, Pillarbox or Both. Letterbox adds top and bottom bars on narrower screens; Pillarbox adds side bars on wider screens.
 - **Videos** - The logo and title videos keep their proportions, with black bars at the sides on wider screens and above and below on narrower ones.
@@ -41,13 +41,13 @@
 1. Download the fix archive from this release.
 2. Extract the archive into the directory containing PPSSPP's `memstick` folder, preserving the folders in the archive.
 3. Launch the game in PPSSPP.
-4. If an older `memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix`, `GTAVCS.PPSSPP.ImVehLM` or `GTAVCS.PPSSPP.GamepadIcons` folder is still there, delete it. All three are part of this Fusion Fix now; while one of them is installed, the Fusion Fix stays off and its log says why.
+4. If an older `memstick/PSP/PLUGINS/GTAVCS.PPSSPP.WidescreenFix`, `GTAVCS.PPSSPP.ImVehLM` or `GTAVCS.PPSSPP.GamepadIcons` folder is still there, delete it. All three are part of this Fusion Fix now; while one of them is installed, the Fusion Fix stays off and the PPSSPP diagnostic log identifies the conflicting folder.
 
 ## Settings
 
-The fix creates `memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.cfg` on the first launch. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), Display and Camera (aspect ratio, HUD size, HUD aspect ratio, radar size and position, multiplayer radar size, field of view, cutscene borders), Game (frame rate, fast loading, skip intro, modern controls, PC cheats, vehicle lights, hold vehicle camera, controller icons) and Restore Defaults. Menu changes are saved when the menu closes; skip intro, modern controls and vehicle lights need a restart. Changes made on fusionfix.io or in FusionFixHub are read during gameplay, outside the menus.
+The fix creates `memstick/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.cfg` on the first launch. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), Display and Camera (aspect ratio, HUD size, HUD aspect ratio, radar size, multiplayer radar size, field of view, cutscene borders), Game (frame rate, fast loading, skip intro, modern controls, PC cheats, vehicle lights, hold vehicle camera, controller icons) and Restore Defaults. Menu changes are saved when the menu closes; skip intro, modern controls and vehicle lights need a restart. Changes made on fusionfix.io or in FusionFixHub are read during gameplay, outside the menus.
 
-- **Presets** - Vanilla keeps the original look (HUD, radar and multiplayer radar at full size, cutscene letterbox, PSP controller icons, intros, normal loading, no vehicle lights, original controls); Recommended is the default; Enhanced adds 60 FPS and the held vehicle camera.
+- **Presets** - Vanilla keeps the original look (HUD, radar and multiplayer radar at full size, cutscene letterbox, PSP controller icons, intros, normal loading, no vehicle lights, original controls); Recommended is the default; Enhanced adds 60 FPS and the held vehicle camera. The in-game presets keep your HUD box. Restore Defaults returns it to Auto.
 
 After updating from an older release, reapply your preferences in FusionFixHub.
 

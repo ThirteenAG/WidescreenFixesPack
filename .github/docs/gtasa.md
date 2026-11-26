@@ -44,7 +44,7 @@
 - **Settings** - stored in `GTASA.FusionFix.cfg` next to the `.asi`, which the fix writes on its first start with every setting and a comment above each. Change settings in the game, on fusionfix.io or in FusionFixHub (also while the game runs)
 - **Field of View** - a multiplier (0.5 to 2.0) of the gameplay cameras' field of view, on top of the widescreen correction; cutscenes keep theirs.
 - **Skip Intro** - starts with the loading screen and the main menu, without the title screens and logo videos (on by default, after restart)
-- **Videos** - the intro videos are never cut off or stretched: **Original Aspect** shows them as the game does, inside its 4:3 picture; **Fill** fits them to the whole screen
+- The intro videos keep their 4:3 shape, centred with black bars at the sides: never cut off or stretched
 - **Animated Cutscene Borders** - the borders slide in and out
 - **In-Game Options** - a Cutscene Borders mode (off, letterbox, pillarbox, or both) and the Frame Limiter option turned into a full FPS selector (off, 30 up to 240 FPS), both available right in the Display menu and also in the settings file, FusionFixHub and the presets. Above 30 FPS, mission countdowns and other timers, HUD flashing, the burning of an upside-down car, lightning, the spinning-down of vehicles and objects, and script-moved gates and doors keep the game's original speed
 - **Subtitles** - large subtitle sizes stay on screen
@@ -97,7 +97,7 @@
 <tr>
 <td width="58%" valign="middle">
 
-- **Pause on Focus Loss** - off keeps the game running when focus is lost in windowed mode
+- **Pause on Focus Loss** - on opens the pause menu when the game window loses the focus, also with III.VC.SA.WindowedMode's own pause off; off keeps the game running in the background
 - **Crosshair Fix** - disables the small white dot shown while aiming with some weapons
 - **Text Outline** - replaces text shadows with an outline
 - **VCS Camera Shake** - enables GTA: Vice City Stories style camera shake in vehicles at high speed; **Shake Start Speed** and **Shake Intensity** set the speed it starts at and how strong it is

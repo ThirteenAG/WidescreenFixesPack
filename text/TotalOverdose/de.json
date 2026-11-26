@@ -1,6 +1,4 @@
 {
-  "RawInputMouse": "Rohe Mauseingabe",
-  "RawInputMouse.description": "Verwendet rohe relative Mausbewegungen und behält Tasten, Mausrad und Empfindlichkeit des Spiels bei.",
   "plugin.name": "Total Overdose Fusion Fix",
   "page.advanced": "Anzeige",
   "ResX": "Auflösungsbreite",
@@ -9,7 +7,7 @@
   "ResY.description": "Legt die Renderhöhe fest. Ist ein Wert null, wird die Desktopauflösung genutzt. Neustart erforderlich.",
   "page.game": "Spiel",
   "SkipIntro": "Intro überspringen",
-  "SkipIntro.description": "Überspringt die Logos von SCi und Deadline. Das Story-Intro und der Titelbildschirm bleiben erhalten. Neustart erforderlich.",
+  "SkipIntro.description": "Überspringt die Logos von SCi und Deadline. Das Story-Intro bleibt erhalten. Neustart erforderlich.",
   "FMVWidescreenMode": "Videoformat",
   "FMVWidescreenMode.description": "Original zeigt die Videos wie das Spiel, in seinem 4:3-Rahmen. Ausfüllen zeigt sie so groß, wie der Bildschirm es erlaubt. Beide behalten die Form des Videos und zeigen das ganze Bild. Wird sofort übernommen.",
   "FMVWidescreenMode.original": "Original",

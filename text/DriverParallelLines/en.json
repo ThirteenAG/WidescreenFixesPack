@@ -1,4 +1,8 @@
 {
+  "MAIN.CutsceneBorders": "Cutscene Borders",
+  "MAIN.CutsceneBorders.description": "Pillarbox keeps the 16:9 framing of rendered cutscenes on wider screens. Off fills the screen with a wider view.",
+  "MAIN.CutsceneBorders.0": "Off",
+  "MAIN.CutsceneBorders.2": "Pillarbox",
   "plugin.name": "Driver Parallel Lines Fusion Fix",
   "page.display": "Display",
   "page.graphics": "Graphics",
@@ -96,7 +100,8 @@
   "MAIN.GamepadDeadzone.description": "Native controller stick deadzone. Applies once to movement and camera input. Lower values respond sooner; raise it if the sticks drift.",
   "MAIN.GamepadIcons": "Controller Icons",
   "MAIN.GamepadIcons.description": "Native controller button pictures: Xbox, PlayStation or Nintendo. Auto uses Xbox. Keyboard and mouse names stay unchanged.",
-  "menu.help.controls": "F1 / Esc    Up / Down",
+  "menu.help.controls": "F1 / Esc / {toggle}    Up / Down {scroll}",
+  "menu.help.padScroll": "(D-pad)",
   "MAIN.CheckForUpdates": "Check for Updates",
   "MAIN.CheckForUpdates.description": "Once per start, asks fusionfix.io whether a newer version of the fix is out and tells you in the game. Off makes no network request.",
   "update.availablehub": "{name} {version} is available. FusionFixHub opens when you close the game.",

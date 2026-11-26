@@ -2,6 +2,7 @@ module;
 
 #include "stdafx.h"
 #include "FixSettings.hpp"
+#include "Shared/ActivePad.hpp"
 #include "overlay/OverlayD3D9.hpp"
 
 #pragma comment(lib, "version.lib")
@@ -25,22 +26,29 @@ export namespace USMOverlay
 
     inline std::string BuildTime()
     {
-        std::array<wchar_t, 32768> path{};
-        GetModuleFileNameW(Module(), path.data(), static_cast<DWORD>(path.size()));
+        const auto module = Module();
+        if (!module)
+            return "Unknown";
+        std::wstring path(32768, L'\0');
+        const DWORD length = GetModuleFileNameW(module, path.data(), static_cast<DWORD>(path.size()));
+        if (!length || length >= path.size())
+            return "Unknown";
         DWORD ignored = 0;
         const auto size = GetFileVersionInfoSizeW(path.data(), &ignored);
         std::vector<uint8_t> data(size);
         if (!size || !GetFileVersionInfoW(path.data(), 0, size, data.data()))
             return "Unknown";
         wchar_t* value = nullptr;
-        UINT length = 0;
-        if (!VerQueryValueW(data.data(), L"\\StringFileInfo\\040004b0\\BuildTimeUtc", reinterpret_cast<void**>(&value), &length) || !value)
+        UINT valueLength = 0;
+        if (!VerQueryValueW(data.data(), L"\\StringFileInfo\\040004b0\\BuildTimeUtc", reinterpret_cast<void**>(&value), &valueLength) || !value)
             return "Unknown";
         return asi_settings::text::Narrow(value);
     }
 
     inline bool Message(HWND window, UINT message, WPARAM key, LPARAM parameter, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             key == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -76,6 +84,8 @@ export namespace USMOverlay
 
     inline void Init()
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         auto action = hook::pattern("51 8B 44 24 08 3B 01 72 0A D9 05 ? ? ? ? 59 C2 04 00 D9 05");
         ActionHook = safetyhook::create_inline(action.get_first(), Action);
         auto mouse = hook::pattern("8B 44 24 04 3D 02 02 00 00 77 30 3D 00 02 00 00 73 3E 83 F8 0F");
@@ -99,9 +109,25 @@ export namespace USMOverlay
 
     inline void Frame(IDirect3DDevice9* device, HWND window)
     {
-        if (!device || !window)
+        if constexpr (!WFP::DeveloperOverlay)
             return;
-        const bool down = GetForegroundWindow() == window &&
+        static PadInput::ActivePad controller;
+        if (!device || !window)
+        {
+            controller.Reset();
+            return;
+        }
+        static const auto module = Module();
+        if (Overlay.window && Overlay.window != window)
+        {
+            Overlay.ShutdownRenderer();
+            Overlay.Shutdown();
+            controller.Reset();
+        }
+        if (!Overlay.Initialize(window, module))
+            return;
+        const bool active = GetForegroundWindow() == window;
+        const bool down = active &&
             (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
         if (down)
         {
@@ -110,11 +136,17 @@ export namespace USMOverlay
         }
         else
             InterlockedExchange(&HotkeyDown, 0);
-        const bool toggle = InterlockedExchange(&Requested, 0) && GetForegroundWindow() == window;
+        const bool toggle = InterlockedExchange(&Requested, 0) && active;
         Device = device;
-        if (toggle && Overlay.Initialize(window, Module()))
+        if (toggle)
             Overlay.SetOpen(!Overlay.IsOpen());
+        XINPUT_STATE state{};
+        if (active)
+            controller.Read(state);
+        else
+            controller.Reset();
+        PadInput::ToOverlay(Overlay, state.Gamepad);
         if (Overlay.IsOpen())
-            Overlay.Present(device, Module());
+            Overlay.Present(device, module);
     }
 }

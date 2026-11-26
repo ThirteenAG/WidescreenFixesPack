@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/WindowCursor.hpp"
+#include "rawinput.hpp"
 #include "FrameRate.hpp"
 #include "DeveloperOverlay.hpp"
 #include <random>
@@ -19,6 +20,8 @@ import Pad;
 
 void Install()
 {
+    // The main loop empties the message queue before each frame; a high polling rate mouse must not keep it going
+    MessagePumpGuard::Install(GetModuleHandle(nullptr));
     WindowCursor::Initialize(FixSettings());
     InitFrameRateLimit();
     InitDeveloperOverlay();

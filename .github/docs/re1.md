@@ -12,7 +12,7 @@
 
 ## Fixes
 
-- **Resolution list** — The game's resolution list offers every display mode instead of a fixed list that stopped at 2560×1600.
+- **Resolution list** — The game offers up to 127 distinct resolutions from its active display adapter. For longer lists, the fix keeps the current game size and the adapter's desktop size when they are supported, along with the ends of the supported range, then samples the remaining modes across the range.
 - **Noise filter at high resolutions** — The film grain, scanlines and rolling bar of the noise filter are drawn in screen pixels, so they shrank at 1440p and above. They are scaled by whole multiples of the screen height over 1080; 1080p and below look as before.
 
 ## Options
@@ -20,11 +20,12 @@
 - **Skip intro** — Go straight to the title without the logos. The save notice that only needs OK closes by itself. The opening movie stays.
 - **Skip press any key** — Continue through the first title prompt automatically. Save and load confirmations keep their normal behavior.
 - **Frame rate limit** — Set **FRAME RATE** to **VARIABLE** in the game's Video settings, then choose the limit in Plugins. 60 FPS by default; Monitor follows the display refresh rate and 0 is unlimited. The game's own 30 and 60 modes keep their timing. Rates above 60 can affect gameplay.
+- **Movie framing** — Original shows movies inside the picture frame chosen by the game's Display option (Wide or Original). Fill uses the whole screen, so with Display set to Original a widescreen movie is no longer boxed in a 4:3 frame. Both keep the whole picture at its own shape, with black bars where needed. Changes apply during playback.
 - **Pause when unfocused** — Pause the game while another window has focus, or keep it running in the background.
 - **Mouse cursor** — Hide the mouse pointer after an idle interval while the game is focused. Moving the mouse shows it again at the same place. 0 keeps the pointer visible; Always hides it while the game is focused.
 - **Door animations** — Skip door, stairs and lift transitions.
 - **Window mode** — Fullscreen, Windowed with the exact size chosen in the game, or Borderless at the monitor resolution. Changes apply while playing, and Alt+Enter switches between fullscreen and the last window mode. The window stays sharp at high display scaling.
-- **Confine cursor** — Keep the pointer inside the focused game window. Turning it off, changing focus or opening the developer overlay releases it.
+- **Confine cursor** — Keep the pointer inside the focused game window. Turning it off or changing focus releases it.
 - **Classic key links** — Keyboard keys linked as in the original game: the fire and check keys work as one key (fire while aiming, check otherwise) and both confirm in menus, and the run key cancels in menus. Set the keys in the game's keyboard options, for example Space for fire and V for run. A key that is also the run or quick turn key isn't linked during play, so running never checks. Off by default; applies immediately.
 - **Controller button icons** — Xbox, PlayStation or Nintendo button pictures. Auto uses Xbox. Keyboard names stay unchanged.
 - **Menu language** — The language of the fix's menu. Automatic follows the display language chosen in the game's Language options.
@@ -47,21 +48,17 @@ The **Options → Plugins** menu (from the title screen or the pause menu) and F
 `scripts/ResidentEvil.FusionFix.cfg`. Use Left/Right to change a value, **F1** (or the controller's help button) to read
 its full help, and Back to return. The menu works with the mouse, keyboard and controller.
 
-Presets: **Recommended** (the default) skips the logos and the first title prompt, hides an idle cursor and limits the
-frame rate to 60 FPS; door animations play as usual. **Vanilla** shows the logos and the title prompt, keeps door animations, never hides the
+Presets: **Recommended** (the default) skips the logos and the first title prompt, hides an idle cursor, lets movies fill the screen and limits the
+frame rate to 60 FPS; door animations play as usual. **Vanilla** shows the logos and the title prompt, keeps door animations, plays movies in the game's own frame, never hides the
 cursor, turns RGB lighting off and keeps the game's own 120 FPS ceiling in VARIABLE mode. **Enhanced** is Recommended
 plus door skipping. The visual filter options are off in every preset, and the window mode is always your own choice.
 
-Frame rate, background pause, cursor timeout, cursor confinement, window mode, button icons, classic key links and update
+Frame rate, movie framing, background pause, cursor timeout, cursor confinement, window mode, button icons, classic key links and update
 checks apply while playing. Logo and title-prompt skipping, door skipping, the visual filters and RGB lighting need a restart.
-
-**Ctrl+F10** opens the developer overlay; Debug → Info shows the fix version, build time, graphics API, resolution and
-frame rate. Its supporter access uses the normal Fusion Fix account check.
 
 ## Known limits
 
 - The game draws its pre-rendered backgrounds, characters, HUD, item and map screens and cutscenes inside its own 16:9 (Wide) or 4:3 (Original) frame and adds black bars on other screens, so nothing is stretched or cut off at any aspect ratio. A separate HUD aspect option, cutscene borders and a field-of-view setting therefore don't apply.
-- Movies always play whole at their own 16:9 shape inside the game's frame, with black bars on wider or narrower screens. All of the game's movies are 16:9, so there is no separate movie option.
 - The game reads controllers through XInput itself, with its own button layout and vibration settings. The icon selection changes button glyphs; other controller artwork keeps the game’s original graphics.
 
 <p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionfix.io/credits/supporters.svg?theme=dark&layout=mobile"><source media="(max-width: 768px)" srcset="https://fusionfix.io/credits/supporters.svg?layout=mobile"><source media="(prefers-color-scheme: dark)" srcset="https://fusionfix.io/credits/supporters.svg?theme=dark"><img width="100%" src="https://fusionfix.io/credits/supporters.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>

@@ -4,6 +4,7 @@ module;
 #include <mmsystem.h>
 #include <dsound.h>
 #include "FixSettings.hpp"
+#include "Shared/SilentHill/Display.hpp"
 
 export module System;
 
@@ -13,37 +14,90 @@ import ComVars;
 // crash or Alt+F4, no long freeze every time Options opens, a steady 60 FPS instead of a jump between 30 and 60,
 // no white window border, and an optional start straight at the title menu.
 
-export namespace Registry
+namespace Registry
 {
-    // The game (and SH3Config.exe) read their install paths from HKLM\SOFTWARE\KONAMI. They are answered from the
-    // game folder instead. Returns true for SH3Config.exe, where nothing else of the fix applies.
-    bool Patch()
+    namespace
+    {
+        HKEY InstallKey()
+        {
+            static uint8_t key;
+            return reinterpret_cast<HKEY>(&key);
+        }
+
+        bool IsInstallKey(HKEY root, LPCSTR name)
+        {
+            return root == HKEY_LOCAL_MACHINE && name && _stricmp(name, "SOFTWARE\\KONAMI\\SILENT HILL 3") == 0;
+        }
+
+        LSTATUS WINAPI Open(HKEY root, LPCSTR name, PHKEY key)
+        {
+            if (!IsInstallKey(root, name))
+                return ::RegOpenKeyA(root, name, key);
+            if (!key)
+                return ERROR_INVALID_PARAMETER;
+            *key = InstallKey();
+            return ERROR_SUCCESS;
+        }
+
+        LSTATUS WINAPI OpenEx(HKEY root, LPCSTR name, DWORD options, REGSAM access, PHKEY key)
+        {
+            if (!IsInstallKey(root, name))
+                return ::RegOpenKeyExA(root, name, options, access, key);
+            return Open(root, name, key);
+        }
+
+        LSTATUS WINAPI Query(HKEY key, LPCSTR name, LPDWORD reserved, LPDWORD type, LPBYTE data, LPDWORD size)
+        {
+            if (key != InstallKey())
+                return ::RegQueryValueExA(key, name, reserved, type, data, size);
+            if (reserved || !name || !size)
+                return ERROR_INVALID_PARAMETER;
+
+            const bool save = _stricmp(name, "save") == 0;
+            if (!save && _stricmp(name, "movie") != 0 && _stricmp(name, "sound") != 0 &&
+                _stricmp(name, "data") != 0 && _stricmp(name, "installdir") != 0)
+                return ERROR_FILE_NOT_FOUND;
+            auto path = GetExeModulePath<std::string>();
+            if (save)
+                path += "savedata\\";
+            const auto bytes = static_cast<DWORD>(path.size() + 1);
+            const auto capacity = data ? *size : 0;
+            *size = bytes;
+            if (type)
+                *type = REG_SZ;
+            if (data && capacity < bytes)
+                return ERROR_MORE_DATA;
+            if (data)
+                std::memcpy(data, path.c_str(), bytes);
+            return ERROR_SUCCESS;
+        }
+
+        LSTATUS WINAPI Close(HKEY key)
+        {
+            return key == InstallKey() ? ERROR_SUCCESS : ::RegCloseKey(key);
+        }
+    }
+
+    // Answer the game's installation path reads. The configuration utility still owns its native settings file.
+    export bool Patch()
     {
         auto config = hook::pattern("50 53 53 FF 75 F4 C7 45 F0 10 00 00 00 FF 15");
-        RegistryWrapper("KONAMI", "");
-        RegistryWrapper::AddPathWriter("movie", "sound", "data", "installdir");
-        RegistryWrapper::AddPathWriterWithPath("save", "savedata");
         if (config.size() > 0)
         {
-            auto iat = *config.get(0).get<uintptr_t*>(15);
-            injector::WriteMemory(&iat[0], RegistryWrapper::RegQueryValueExA, true);
-            injector::WriteMemory(&iat[1], RegistryWrapper::RegOpenKeyExA, true);
-            injector::WriteMemory(&iat[2], RegistryWrapper::RegDeleteKeyA, true);
-            injector::WriteMemory(&iat[3], RegistryWrapper::RegEnumKeyA, true);
-            injector::WriteMemory(&iat[4], RegistryWrapper::RegOpenKeyA, true);
-            injector::WriteMemory(&iat[5], RegistryWrapper::RegQueryValueA, true);
-            injector::WriteMemory(&iat[6], RegistryWrapper::RegCreateKeyExA, true);
-            injector::WriteMemory(&iat[7], RegistryWrapper::RegSetValueExA, true);
-            injector::WriteMemory(&iat[8], RegistryWrapper::RegCloseKey, true);
+            auto iat = *config.get_first<uintptr_t*>(15);
+            injector::WriteMemory(&iat[0], &Query, true);
+            injector::WriteMemory(&iat[1], &OpenEx, true);
+            injector::WriteMemory(&iat[4], &Open, true);
+            injector::WriteMemory(&iat[8], &Close, true);
             return true;
         }
 
-        auto game = hook::pattern("68 02 00 00 80 FF 15");
-        auto iat = *game.get_first<uintptr_t*>(7);
-        injector::WriteMemory(&iat[0], RegistryWrapper::RegOpenKeyExA, true);
-        injector::WriteMemory(&iat[1], RegistryWrapper::RegQueryValueExA, true);
-        injector::WriteMemory(&iat[2], RegistryWrapper::RegOpenKeyA, true);
-        injector::WriteMemory(&iat[3], RegistryWrapper::RegCloseKey, true);
+        auto game = hook::pattern("83 EC 14 53 57 8B D8 8D 44 24 0C 50 68 19 00 02 00 6A 00 68 ? ? ? ? 68 02 00 00 80 FF 15");
+        auto iat = *game.get_first<uintptr_t*>(31);
+        injector::WriteMemory(&iat[0], &OpenEx, true);
+        injector::WriteMemory(&iat[1], &Query, true);
+        injector::WriteMemory(&iat[2], &Open, true);
+        injector::WriteMemory(&iat[3], &Close, true);
         return false;
     }
 }
@@ -57,16 +111,9 @@ public:
         {
             // Safe mode: the game empties savedata\disp.ini at startup and only writes it again on a clean exit, so a
             // crash resets the display settings and shows a warning. The file is no longer emptied, and no warning.
-            static const char* NoMode = "";
-            auto safeMode = hook::pattern("BF 01 00 00 00 68 ? ? ? ? 68 ? ? ? ? 6A 01");
+            auto safeMode = hook::pattern("BF 01 00 00 00 68 ? ? ? ? 68 ? ? ? ? 6A 01 E8 ? ? ? ? 83 C4 08 50 E8 ? ? ? ? 83 C4 08 85 C0 74 09 50 E8 ? ? ? ? 83 C4 04 8B C7 5F");
             injector::WriteMemory(safeMode.get_first(1), 0, true);
-            injector::WriteMemory(safeMode.get_first(6), &NoMode, true);
-
-            // Options freeze: every time Options opens, the game test-switches the desktop to each of the hundreds of
-            // display modes modern drivers report, twice. The list only fed the native Resolution row with 4:3 modes,
-            // and the resolution is the fix's (the desktop's by default).
-            auto modeList = hook::pattern("81 EC D8 00 00 00 55 8B AC 24 E0 00");
-            injector::MakeRET(modeList.get_first());
+            injector::MakeJMP(safeMode.get_first(5), safeMode.get_first(0x2F), true);
 
             // The window gets no white edge on Windows 10 and later
             auto windowStyle = hook::pattern("68 00 03 00 00 FF 15 ? ? ? ? 5E");
@@ -76,15 +123,79 @@ public:
             auto pacing = hook::pattern("4A 03 C8 A3 ? ? ? ? 89 15");
             injector::WriteMemory<uint8_t>(pacing.get_first(), 0x42, true);
 
-            // Frame rate limit: the game advances in 1/60 s ticks and waits for its frame interval in ticks; 30 FPS
-            // keeps the interval at two ticks at least, the rate the game falls back to by itself
+            // Frame rate: the game advances in 1/60 s ticks and waits for its frame interval in ticks. 60 and 30 FPS
+            // keep that native pacing (30 keeps the interval at two ticks at least, the rate the game falls back to by
+            // itself). Any other limit skips the native wait and paces at Present; each frame then advances the game
+            // by the time that really passed, in fractions of a tick, which nearly all of the game reads as a float.
+            static std::atomic<int> limit{ 60 };
+            const auto readLimit = []()
+            {
+                const int value = FixSettingNumber("MAIN.FPSLimit", 60);
+                limit = value < 0 ? -1 : value == 0 ? 0 : std::clamp(value, 30, 1000);
+            };
+            readLimit();
+            FixSettings().OnChange("MAIN.FPSLimit", readLimit);
+            // In-engine cutscenes keep the native pacing: their animation, camera and voice timing were made for it
+            static const auto nativePacing = []() { return limit == 60 || limit == 30 || nRenderMode == 2; };
+
             auto wait = hook::pattern("55 8B EC 83 E4 F8 83 EC 38 A1 ? ? ? ? 53 55 33 ED 3B C5 56 57 0F 84");
             nFrameTicks.SetAddress(*wait.get_first<int32_t*>(10));
-            static const auto& limit = FixSettings().Int("MAIN.FPSLimit");
             static SafetyHookMid WaitHook = safetyhook::create_mid(wait.get_first(9), [](SafetyHookContext&)
             {
-                if (limit == 30 && nFrameTicks > 0 && nFrameTicks < 2)
+                if (!nativePacing())
+                    nFrameTicks = 0;    // no native wait; the game sets the interval again every frame
+                else if (limit == 30 && nFrameTicks > 0 && nFrameTicks < 2)
                     nFrameTicks = 2;
+            });
+
+            // The tick setter: integer ticks of the frame in, the frame's tick count, tick float, seconds and rate out
+            static GameRef<int32_t> nTicks, nTicksCopy;
+            static GameRef<float> fTicks, fTicksCopy, fSeconds, fRate;
+            auto ticks = hook::pattern("56 8B 74 24 08 83 FE 01 7F 09 BE 01 00 00 00 89 74 24 08 A1");
+            nTicks.SetAddress(*ticks.get_first<int32_t*>(0x7C));
+            nTicksCopy.SetAddress(*ticks.get_first<int32_t*>(0x82));
+            fTicks.SetAddress(*ticks.get_first<float*>(0x88));
+            fTicksCopy.SetAddress(*ticks.get_first<float*>(0x92));
+            fSeconds.SetAddress(*ticks.get_first<float*>(0xAF));
+            fRate.SetAddress(*ticks.get_first<float*>(0xBF));
+            static SafetyHookInline TicksHook = safetyhook::create_inline(ticks.get_first(), static_cast<void(__cdecl*)(int)>([](int count)
+            {
+                static LARGE_INTEGER frequency{}, previous{};
+                static double remainder = 0.0;
+                LARGE_INTEGER now;
+                QueryPerformanceCounter(&now);
+                if (!frequency.QuadPart)
+                    QueryPerformanceFrequency(&frequency);
+                const double elapsed = previous.QuadPart ? double(now.QuadPart - previous.QuadPart) / double(frequency.QuadPart) : 0.0;
+                previous = now;
+
+                if (nativePacing())
+                {
+                    remainder = 0.0;
+                    TicksHook.unsafe_ccall(count);
+                    return;
+                }
+                TicksHook.unsafe_ccall(1);  // the debug pause and the 50 Hz mode decide as before
+                if (fTicks <= 0.0f)
+                    return;                 // paused
+                const double tick = fSeconds;   // one tick in seconds: 1/60, or 1/50 in the 50 Hz mode
+                // A frame advances at most three ticks, as the game allows; a long stall doesn't make it jump ahead
+                const double frameTicks = std::clamp(elapsed / tick, 0.01, 3.0);
+                remainder += frameTicks;
+                const int whole = int(remainder);
+                remainder -= whole;
+                nTicks = whole;             // whole-tick counters still add up to the real time
+                nTicksCopy = whole;
+                fTicks = float(frameTicks);
+                fTicksCopy = float(frameTicks);
+                fSeconds = float(frameTicks * tick);
+                fRate = float(1.0 / (frameTicks * tick));
+            }));
+
+            SHDisplay::OnPresent().push_back([]()
+            {
+                // 30 also keeps the presentation rate capped if the native timer has a late frame to catch up
+                SHDisplay::SetFrameLimit(limit == 60 || (limit != 30 && nativePacing()) ? 0.0 : limit < 0 ? -1.0 : double(limit));
             });
 
             // Start at the title menu: the first-boot flag that plays the logos, the content warning and the opening
@@ -128,12 +239,26 @@ public:
             auto reverb = hook::pattern("E8 ? ? ? ? 83 C4 04 85 C0 7D 19 53 68");
             injector::WriteMemory<uint8_t>(reverb.get_first(10), 0xEB, true);
 
-            // Silent Hill 2 references of the PC release in new games
-            if (FixSettings().Bool("MAIN.SH2Reference"))
+            // Give the async sound worker time to run during both synchronous startup waits.
+            auto partition = hook::pattern("83 C4 10 83 F8 03 74 ? E8 ? ? ? ? 56 E8 ? ? ? ? 83 C4 04 83 F8 03 75");
+            auto waveCache = hook::pattern("83 C4 14 83 F8 03 74 ? 8B FF E8 ? ? ? ? 56 E8 ? ? ? ? 83 C4 04 83 F8 03 75");
+            static const auto ServiceSound = reinterpret_cast<unsigned(__cdecl*)()>(injector::GetBranchDestination(partition.get_first(8)).as_int());
+            const auto serviceWhileWaiting = +[]() -> unsigned
             {
-                auto reference = hook::pattern("A0 ? ? ? ? 84 C0 ? ? E8 ? ? ? ? A2 ? ? ? ? C6 05");
-                injector::WriteMemory<uint8_t>(reference.get_first(), 0xC3, true);
-            }
+                Sleep(1);
+                return ServiceSound();
+            };
+            injector::MakeCALL(partition.get_first(8), serviceWhileWaiting, true);
+            injector::MakeCALL(waveCache.get_first(10), serviceWhileWaiting, true);
+
+            // Keep the audio workers' affinity and let Windows schedule the game thread independently.
+            auto audioAffinity = hook::pattern("8B 15 ? ? ? ? 6A 01 52 FF D6 85 C0 74 ? A1 ? ? ? ? 6A 01 50 FF D6 85 C0 75 ? 68 ? ? ? ? E8 ? ? ? ? 83 C4 04 83 C8 FF 5E C3 33 C0 5E C3");
+            injector::MakeJMP(audioAffinity.get_first(0x0F), audioAffinity.get_first(0x2F), true);
+
+            // The new-game event gate returns the selected value regardless of installed games.
+            auto reference = hook::pattern("A0 ? ? ? ? 84 C0 ? ? E8 ? ? ? ? A2 ? ? ? ? C6 05");
+            static const int enableReference = FixSettings().Get("MAIN.SH2Reference") == "1";
+            injector::MakeJMP(reference.get_first(), +[]() -> int { return enableReference; }, true);
         };
     }
 } System;

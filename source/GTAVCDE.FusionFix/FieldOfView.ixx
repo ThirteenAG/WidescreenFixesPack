@@ -1,9 +1,10 @@
 module;
 
 #include "stdafx.h"
-#include "FixSettings.hpp"
 
 export module FieldOfView;
+
+import Settings;
 
 namespace
 {
@@ -24,7 +25,7 @@ namespace
 
     float ScaledFOV(float fov)
     {
-        static const auto& factor = FixSettings().Float("MAIN.FOVFactor");
+        const float factor = Settings.fovFactor;
         if (!std::isfinite(factor) || factor == 1.0f || !std::isfinite(fov) || fov <= 0.0f)
             return fov;
         // Up to 150 degrees: wider, the perspective collapses on wide screens

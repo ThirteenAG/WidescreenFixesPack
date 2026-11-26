@@ -51,9 +51,5 @@ void InstallDrawing() {
     Phase<0x88F6E68,Anchor::World,void()>();
     Phase<0x8A18294,Anchor::World,void()>();
     Phase<0x89c5cfc,Anchor::None,void(void*)>();
-    
-    injector::MakeInlineLUIORI(Address<0x89baa8c>(),Drawing::settings.radarX);
-    injector::MakeInlineLUIORI(Address<0x89baac0>(),Drawing::settings.radarY);
-    injector::MakeInlineLUIORI(Address<0x89baab4>(),Drawing::settings.multiplayerRadarY);
 }
 }

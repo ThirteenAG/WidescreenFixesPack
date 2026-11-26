@@ -40,8 +40,7 @@ export void InstallControls()
             0x178,
             20, 76, 0x178,
             0x1C
-        }, &settings.Int("MAIN.Vibration"), &settings.Float("MAIN.GamepadCameraSpeed"), &settings.Int("MAIN.InvertGamepadY"),
-        &settings.Int("MAIN.GamepadIcons"));
+        }, settings);
 }
 
 export void InstallMusic()

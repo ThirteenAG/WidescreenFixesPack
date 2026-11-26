@@ -17,6 +17,7 @@ export namespace KnightRiderPadLabels
     inline uintptr_t FirstLabelReturn = 0;
     inline void* CurrentMenu = nullptr;
     inline std::atomic<bool> UsingPad{ false }, RefreshRequested{ false };
+    inline DWORD LastPadSlot = XUSER_MAX_COUNT;
     inline SafetyHookInline SetTextHook, NavigationHook, NavigationDestroyHook;
     inline void (__thiscall* FreeString)(void*) = nullptr;
     inline uint8_t* Navigation = nullptr;
@@ -57,7 +58,7 @@ export namespace KnightRiderPadLabels
             if (address >= FirstLabelReturn && address < FirstLabelReturn + 28 * 57 && (address - FirstLabelReturn) % 57 == 0)
             {
                 static constexpr int actions[14]{ 5, 6, 14, 3, 4, 13, 11, 12, 15, 17, 16, 18, 19, 2 };
-                label = Label(KnightRiderPadBindings::DefaultKey(actions[(address - FirstLabelReturn) / (2 * 57)]));
+                label = Label(KnightRiderPadBindings::BoundKey(actions[(address - FirstLabelReturn) / (2 * 57)], LastPadSlot));
             }
         }
         if (!label)
@@ -134,53 +135,50 @@ export namespace KnightRiderPadLabels
 
     inline void Frame()
     {
-        XINPUT_STATE state{};
-        DWORD slot = 0;
-        static DWORD previousPacket = 0;
-        static bool connected = false;
-        const bool present = GetModuleHandleW(L"Xidi.32.dll") && PadInput::Read(state, slot);
-        uint16_t overlayButtons = 0;
-        if (present)
+        static std::array<DWORD, XUSER_MAX_COUNT> packets{};
+        static std::array<bool, XUSER_MAX_COUNT> wasConnected{};
+        const bool focused = GetForegroundWindow() == WindowedModeWrapper::GameHWND;
+        std::array<XINPUT_STATE, XUSER_MAX_COUNT> states{};
+        std::array<bool, XUSER_MAX_COUNT> connected{}, activity{};
+        DWORD firstConnected = XUSER_MAX_COUNT;
+        DWORD firstActive = XUSER_MAX_COUNT;
+        const auto getState = GetModuleHandleW(L"Xidi.32.dll") ? PadInput::XInput().getState : nullptr;
+        for (DWORD i = 0; getState && i < XUSER_MAX_COUNT; ++i)
         {
-            const auto buttons = state.Gamepad.wButtons;
-            const auto map = [&](WORD source, uint16_t target)
-            {
-                if (buttons & source)
-                    overlayButtons |= target;
-            };
-            map(XINPUT_GAMEPAD_BACK, 0x1);
-            map(XINPUT_GAMEPAD_START, 0x8);
-            map(XINPUT_GAMEPAD_DPAD_UP, 0x10);
-            map(XINPUT_GAMEPAD_DPAD_RIGHT, 0x20);
-            map(XINPUT_GAMEPAD_DPAD_DOWN, 0x40);
-            map(XINPUT_GAMEPAD_DPAD_LEFT, 0x80);
-            map(XINPUT_GAMEPAD_LEFT_SHOULDER, 0x400);
-            map(XINPUT_GAMEPAD_RIGHT_SHOULDER, 0x800);
-            map(XINPUT_GAMEPAD_Y, 0x1000);
-            map(XINPUT_GAMEPAD_B, 0x2000);
-            map(XINPUT_GAMEPAD_A, 0x4000);
-            map(XINPUT_GAMEPAD_X, 0x8000);
-        }
-        KnightRiderOverlay::Overlay.Gamepad(overlayButtons,
-            present ? static_cast<int8_t>(state.Gamepad.sThumbLX / 256) : 0,
-            present ? static_cast<int8_t>(-state.Gamepad.sThumbLY / 256) : 0);
-        if (present)
-        {
-            const auto& pad = state.Gamepad;
+            if (getState(i, &states[i]) != ERROR_SUCCESS)
+                continue;
+            connected[i] = true;
+            if (firstConnected == XUSER_MAX_COUNT)
+                firstConnected = i;
+            const auto& pad = states[i].Gamepad;
             const bool active = pad.wButtons || pad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD
                 || pad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD
                 || std::abs(static_cast<int>(pad.sThumbLX)) > 4915
                 || std::abs(static_cast<int>(pad.sThumbLY)) > 4915
                 || std::abs(static_cast<int>(pad.sThumbRX)) > XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE
                 || std::abs(static_cast<int>(pad.sThumbRY)) > XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE;
-            if (active && (!connected || previousPacket != state.dwPacketNumber)
-                && GetForegroundWindow() == WindowedModeWrapper::GameHWND && !UsingPad.exchange(true))
-                RefreshRequested = true;
-            previousPacket = state.dwPacketNumber;
+            activity[i] = focused && active && (!wasConnected[i] || states[i].dwPacketNumber != packets[i]);
+            packets[i] = states[i].dwPacketNumber;
+            if (activity[i] && firstActive == XUSER_MAX_COUNT)
+                firstActive = i;
         }
-        else if (connected)
+        wasConnected = connected;
+
+        DWORD slot = LastPadSlot;
+        if (firstActive != XUSER_MAX_COUNT && (slot == XUSER_MAX_COUNT || !activity[slot]))
+            slot = firstActive;
+        else if (slot == XUSER_MAX_COUNT || !connected[slot])
+            slot = firstConnected;
+        if (slot != LastPadSlot)
+            RefreshRequested = true;
+        LastPadSlot = slot;
+        const bool present = slot != XUSER_MAX_COUNT;
+        if constexpr (WFP::DeveloperOverlay)
+            PadInput::ToOverlay(KnightRiderOverlay::Overlay, present && focused ? states[slot].Gamepad : XINPUT_GAMEPAD{});
+        if (present && activity[slot] && !UsingPad.exchange(true))
+            RefreshRequested = true;
+        else if (!present)
             Keyboard();
-        connected = present;
         if (RefreshRequested.exchange(false))
         {
             if (CurrentMenu)

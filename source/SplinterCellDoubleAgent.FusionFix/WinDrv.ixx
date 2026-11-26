@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/SplinterCell/ViewportMouse.hpp"
 
 export module WinDrv;
 
@@ -11,13 +12,18 @@ import DeveloperOverlay;
 
 namespace UWindowsViewport
 {
+    std::atomic<bool> VibrationEnabled{ true };
     bool bCalledFromWndProc = false;
+    HWND feedWindow = nullptr;
+    void* feedViewport = nullptr;
 
     SafetyHookInline shCauseInputEvent = {};
     SafetyHookInline shViewportWndProc = {};
     int32_t __fastcall ViewportWndProc(void* UWindowsViewport, void* edx, UINT Msg, WPARAM wParam, LPARAM lParam)
     {
-        hGameWindow = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x230) + 4);
+        const HWND window = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x230) + 4);
+        if (!hGameWindow || window == GetForegroundWindow())
+            hGameWindow = window;
 
         LRESULT overlayResult = 0;
         if (DeveloperOverlay::Message(hGameWindow, Msg, wParam, lParam, overlayResult))
@@ -41,38 +47,24 @@ namespace UWindowsViewport
 
         if (Screen.bRawInputMouse)
         {
-            static bool bOnce = false;
-            if (!bOnce)
+            const bool inactive = Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam) ||
+                Msg == WM_DESTROY || Msg == WM_NCDESTROY;
+            if (inactive && window == feedWindow)
             {
-                RawInputHandler<>::RegisterRawInput(hGameWindow, FixSettings().Float("MAIN.MouseSensitivity") * 0.5f, Screen.bRawInputMouseRawData);
-                bOnce = true;
-            }
-            if (Msg == WM_KILLFOCUS || Msg == WM_DESTROY)
-            {
-                RawInputHandler<>::RawMouseDeltaX.exchange(0);
-                RawInputHandler<>::RawMouseDeltaY.exchange(0);
                 RawMouseFeed = nullptr;
+                feedViewport = nullptr;
+                feedWindow = nullptr;
+                deferredCauseInputEvent = {};
+                ViewportMouse::Bind(nullptr);
             }
-
-            if (Msg == WM_MOUSEMOVE)
+            else if (!inactive && window && window == GetForegroundWindow())
             {
-                return 0;
-            }
-            else if (Msg == WM_RAWINPUTMOUSE)
-            {
-                if (DeveloperOverlay::BlocksInput())
+                if (feedWindow != window || feedViewport != UWindowsViewport)
                 {
-                    RawInputHandler<>::RawMouseDeltaX.exchange(0);
-                    RawInputHandler<>::RawMouseDeltaY.exchange(0);
-                    return 0;
-                }
-                if (hGameWindow != GetForegroundWindow())
-                    return 0;
-
-                // The engine tick hands all movement since the last tick to the viewport at once and recenters the
-                // cursor once, so the work per message stays small however often the mouse reports
-                if (!RawMouseFeed)
-                {
+                    deferredCauseInputEvent = {};
+                    ViewportMouse::Bind(nullptr);
+                    feedWindow = window;
+                    feedViewport = UWindowsViewport;
                     RawMouseFeed = [UWindowsViewport](int dx, int dy)
                     {
                         if (hGameWindow != GetForegroundWindow() || DeveloperOverlay::BlocksInput())
@@ -95,7 +87,13 @@ namespace UWindowsViewport
                         }
                     };
                 }
-                return 0;
+                ViewportMouse::Bind(window);
+                if (Msg == WM_MOUSEMOVE)
+                {
+                    if (ViewportMouse::target.load() == window && ViewportMouse::movement.HasRelative() &&
+                        !ViewportMouse::nativeFrame)
+                        return 0;
+                }
             }
         }
 
@@ -109,6 +107,8 @@ namespace UWindowsViewport
     {
         if (DeveloperOverlay::BlocksInput() && a3 != 3)
             return 1;
+        if (Screen.bRawInputMouse && bCalledFromWndProc && (inputID == 228 || inputID == 229))
+            ViewportMouse::nativeFrame = true;
         if (Screen.bDeferredInput && bCalledFromWndProc && (inputID == 228 || inputID == 229))
         {
             deferredCauseInputEvent.emplace([UWindowsViewport, edx, inputID, a3, value]()
@@ -128,7 +128,7 @@ namespace UWindowsViewport
         if (!sendVibration)
             return shUpdateRumble.unsafe_fastcall(UWindowsViewport, edx, vibrateStrength, shakeStrength, a4);
 
-        if (!FixSettings().Bool("MAIN.Vibration"))
+        if (!VibrationEnabled.load())
             vibrateStrength = shakeStrength = 0.0f;
 
         constexpr float RUMBLE_MIN_STRENGTH = 0.0f;
@@ -144,6 +144,16 @@ namespace UWindowsViewport
 
 export void InitWinDrv()
 {
+    // The resize handler recreates impact graphics only after SetRes succeeds.
+    auto resize = hook::module_pattern(GetModuleHandleW(L"WinDrv.dll"),
+        "8B 4B 64 8B 11 6A 00 57 56 53 FF 52 7C 8B 0D ? ? ? ? 8B 43 64 8B 11 8B 4A 5C 50 FF 15 ? ? ? ? EB ?");
+    static const auto afterInitGraphic = reinterpret_cast<uintptr_t>(resize.get_first(34));
+    static SafetyHookMid resizeResult = safetyhook::create_mid(resize.get_first(13), [](SafetyHookContext& regs)
+    {
+        if (!regs.eax)
+            regs.eip = afterInitGraphic;
+    });
+
     // Override the two native StartupFullscreen reads without requiring an INI write.
     static std::vector<SafetyHookMid> startupModeHooks;
     const char* startupReads[] =
@@ -159,10 +169,11 @@ export void InitWinDrv()
             regs.ecx = FixSettings().Int("MAIN.WindowMode") == 0 ? 1 : 0;
         }));
     }
-    FixSettings().OnChange("MAIN.Vibration", []()
+    ObserveFixSetting("MAIN.Vibration", asi_settings::detail::ParseBool, [](int value)
     {
         const auto sendVibration = XidiSendVibration.load(std::memory_order_acquire);
-        if (!FixSettings().Bool("MAIN.Vibration") && sendVibration)
+        UWindowsViewport::VibrationEnabled.store(value != 0);
+        if (!value && sendVibration)
             sendVibration(-1, 0, 0);
     });
     UWindowsViewport::shUpdateRumble = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"WinDrv"), "?UpdateRumble@UWindowsViewport@@UAEXMMH@Z"), UWindowsViewport::UpdateRumble);

@@ -93,8 +93,10 @@ namespace
         // Native code rebuilds RGB gain from its baseline on every invocation.
         // Applying to that fresh result avoids accumulating colour each frame.
         const auto result = colourOptionsHook.ccall<uintptr_t>(volume);
+        if (Settings.visualStyle == VisualStyle::DE)
+            return result;
         const auto weather = GetWeatherColours();
-        if (Settings.visualStyle == VisualStyle::DE || !weather.valid || weather.specialEffect)
+        if (!weather.valid || weather.specialEffect)
             return result;
         const auto gain = ColourFilter(weather);
         auto* colourGain = reinterpret_cast<float*>(volume + 608 + 96);
@@ -106,8 +108,11 @@ namespace
 
     uintptr_t ApplyValues(uint8_t* actor)
     {
+        // The DE style leaves the native colours untouched.
+        if (Settings.visualStyle == VisualStyle::DE)
+            return applyValuesHook.ccall<uintptr_t>(actor);
         const auto weather = GetWeatherColours();
-        const bool active = Settings.visualStyle != VisualStyle::DE && weather.valid && !weather.specialEffect;
+        const bool active = weather.valid && !weather.specialEffect;
         if (active)
         {
             if (Settings.restoreWeatherColours)

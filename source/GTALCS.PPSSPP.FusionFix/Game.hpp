@@ -1,6 +1,6 @@
 #pragma once
 #include "Addresses.hpp"
-#include "../Shared/Console/PortableDrawing.hpp"
+#include "Shared/Console/PortableDrawing.hpp"
 namespace lcsws {
 struct Game {};
 using Drawing = console::portable::StoryDrawing<Game>;
@@ -32,6 +32,7 @@ void PollSettings();
 void ApplyFrameRate();
 void InstallMenu();
 void TickMenu();
+void ReadSettingsPreservingMenuEdits(void (*read)());
 void InstallAim();
 void InstallVehicleLights();
 void InstallControls();
@@ -44,6 +45,7 @@ bool IconDataValid();
 void InstallDrawing();
 void InstallTiming();
 void TickCheats();
+void ResetCheatInput();
 void InstallCheats();
 bool CheatsAvailable();
 }

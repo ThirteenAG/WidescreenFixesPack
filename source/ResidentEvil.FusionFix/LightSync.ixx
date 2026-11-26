@@ -6,24 +6,35 @@ module;
 
 export module LightSync;
 
-import ComVars;
-
-// Logitech LIGHTSYNC (MAIN.LightSyncRGB): health as the keyboard colour and a cardiogram, purple when poisoned, the
-// ammo left in the clip on the F-key row.
+import EngineText;
 
 namespace
 {
-    // The equipped weapon: ammo in the clip at +0xFFC, clip size at +0x1000. Taken from the game's weapon functions
-    // that set and check the clip.
-    uint32_t* ammoInClip = nullptr;
-    uint32_t* maxAmmoInClip = nullptr;
-
-    void AmmoInClip()
+    struct Ammo
     {
-        if (!ammoInClip || !maxAmmoInClip)
-            return;
+        int rounds{};
+        int capacity{};
+        bool operator==(const Ammo&) const = default;
+    };
 
-        static std::vector<LogiLed::KeyName> keys = {
+    struct LightingState
+    {
+        bool inGame{};
+        int health{};
+        bool poisoned{};
+        Ammo ammo;
+    };
+
+    using ActorGetter = void* (__thiscall*)(void*);
+    ActorGetter GetPlayer = nullptr;
+    ActorGetter GetWeapon = nullptr;
+    GameRef<void*> ActorManager;
+    std::mutex StateMutex;
+    LightingState State;
+
+    void SetAmmoLights(Ammo ammo)
+    {
+        static constexpr std::array keys{
             LogiLed::KeyName::F1, LogiLed::KeyName::F2, LogiLed::KeyName::F3,
             LogiLed::KeyName::F4, LogiLed::KeyName::F5, LogiLed::KeyName::F6,
             LogiLed::KeyName::F7, LogiLed::KeyName::F8, LogiLed::KeyName::F9,
@@ -31,32 +42,89 @@ namespace
             LogiLed::KeyName::PRINT_SCREEN, LogiLed::KeyName::SCROLL_LOCK,
             LogiLed::KeyName::PAUSE_BREAK,
         };
-
-        static auto oldAmmoInClip = -1;
-        if (*ammoInClip != oldAmmoInClip)
+        if (ammo.capacity == 255)
+            ammo.capacity = ammo.rounds;
+        const int count = static_cast<int>(keys.size());
+        const int rounds = std::clamp(ammo.rounds, 0, std::max(ammo.capacity, 0));
+        const int lit = ammo.capacity > 0 ? (rounds * count + ammo.capacity - 1) / ammo.capacity : 0;
+        for (int i = 0; i < count; ++i)
         {
-            auto maxAmmo = *maxAmmoInClip;
-            if (maxAmmo == 255) // grenade launcher
-                maxAmmo = *ammoInClip;
-
-            float ammoInClipPercent = maxAmmo ? ((float)*ammoInClip / (float)maxAmmo) * 100.0f : 0.0f;
-
-            for (size_t i = 0; i < keys.size(); i++)
-            {
-                auto indexInPercent = ((float)i / (float)keys.size()) * 100.0f;
-                if (ammoInClipPercent > indexInPercent)
-                    LogiLedSetLightingForKeyWithKeyName(keys[i], 100, 100, 100);
-                else
-                    LogiLedSetLightingForKeyWithKeyName(keys[i], 10, 10, 10);
-            }
+            const int brightness = i < lit ? 100 : 10;
+            LogiLedSetLightingForKeyWithKeyName(keys[i], brightness, brightness, brightness);
         }
-        oldAmmoInClip = *ammoInClip;
     }
 
-    void CaptureWeapon(SafetyHookContext& regs)
+    void UpdateLighting()
     {
-        ammoInClip = reinterpret_cast<uint32_t*>(regs.ecx + 0xFFC);
-        maxAmmoInClip = reinterpret_cast<uint32_t*>(regs.ecx + 0x1000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        LightingState state;
+        {
+            const std::lock_guard lock(StateMutex);
+            state = State;
+        }
+        static std::optional<Ammo> lastAmmo;
+        if (!state.inGame)
+        {
+            lastAmmo.reset();
+            LogiLedStopEffects();
+            LEDEffects::SetLighting(93, 12, 14);
+            return;
+        }
+        if (state.health <= 1)
+        {
+            lastAmmo.reset();
+            LEDEffects::SetLighting(26, 4, 4, false, true);
+            LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
+            return;
+        }
+
+        if (state.poisoned)
+            LEDEffects::SetLighting(51, 4, 53, true, false, true);
+        else if (state.health < 240)
+            LEDEffects::SetLighting(26, 4, 4, true, false, true);
+        else if (state.health < 720)
+            LEDEffects::SetLighting(50, 30, 4, true, false, true);
+        else
+            LEDEffects::SetLighting(10, 30, 4, true, false, true);
+
+        const int red = state.health < 240 ? 100 : state.health < 720 ? 67 : 0;
+        LEDEffects::DrawCardiogram(red, red ? 0 : 100, 0, 0, 0, 0);
+        if (lastAmmo != state.ammo)
+        {
+            SetAmmoLights(state.ammo);
+            lastAmmo = state.ammo;
+        }
+    }
+}
+
+export namespace RELightSync
+{
+    void Sample()
+    {
+        if (!LEDEffects::bLogiLedInitialized.load())
+            return;
+
+        LightingState state;
+        const auto manager = ActorManager.get();
+        const auto player = manager ? GetPlayer(manager) : nullptr;
+        if (player)
+        {
+            state.inGame = true;
+            state.health = REText::Read<int>(player, 0x13BC);
+            state.poisoned = REText::Read<int>(player, 0x1584) != 0;
+            if (const auto weapon = GetWeapon(player))
+            {
+                state.ammo.rounds = REText::Read<int>(weapon, 0xFFC);
+                state.ammo.capacity = REText::Read<int>(weapon, 0x1000);
+            }
+        }
+        const std::lock_guard lock(StateMutex);
+        State = state;
+    }
+
+    void Shutdown()
+    {
+        LEDEffects::Shutdown();
     }
 }
 
@@ -67,79 +135,16 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            if (!FixSettings().Bool("MAIN.LightSyncRGB"))
+            if (!StartupOption("MAIN.LightSyncRGB"))
                 return;
 
-            auto setClip = hook::pattern("8B 44 24 04 8B 91 ? ? ? ? 89 81 ? ? ? ? 3B C2");
-            auto checkClip = find_pattern("56 8B F1 8B 46 04 83 E8 00 74 25", "56 8B F1 8B 46 04 83 E8 00 74 29");
-            static SafetyHookMid SetClipHook = safetyhook::create_mid(setClip.get_first(), CaptureWeapon);
-            static SafetyHookMid CheckClipHook = safetyhook::create_mid(checkClip.get_first(), CaptureWeapon);
-
             auto player = find_pattern("8B D1 56 8B 42 24", "FF 71 24 FF 71 20 E8 ? ? ? ? C3");
+            auto weapon = hook::pattern("FF B1 D8 15 00 00 FF B1 D4 15 00 00 8B 0D ? ? ? ? E8 ? ? ? ? C3");
             auto manager = hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? 8B D0 89 54 24 18");
-            static auto sub_4898C0 = (int(__fastcall*)(void*, int))player.get_first();
-            dword_D7C938.SetAddress(*manager.get_first<void**>(2));
-            LEDEffects::Inject([]()
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-                if (dword_D7C938)
-                {
-                    auto sPlayerPtr = sub_4898C0(dword_D7C938, 0);
-                    if (sPlayerPtr)
-                    {
-                        auto Player1Health = PtrWalkthrough<int32_t>(&sPlayerPtr, 0x13BC);
-                        auto Player1Poisoned = PtrWalkthrough<int32_t>(&sPlayerPtr, 0x1584);
-
-                        if (Player1Health)
-                        {
-                            auto health1 = *Player1Health;
-                            auto poisoned = *Player1Poisoned;
-                            if (health1 > 1)
-                            {
-                                if (health1 < 240) {
-                                    if (!poisoned)
-                                        LEDEffects::SetLighting(26, 4, 4, true, false, true); //red
-                                    else
-                                        LEDEffects::SetLighting(51, 4, 53, true, false, true); //purple
-                                    LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0); //red
-                                }
-                                else if (health1 < 720) {
-                                    if (!poisoned)
-                                        LEDEffects::SetLighting(50, 30, 4, true, false, true); //orange
-                                    else
-                                        LEDEffects::SetLighting(51, 4, 53, true, false, true); //purple
-                                    LEDEffects::DrawCardiogram(67, 0, 0, 0, 0, 0); //orange
-                                }
-                                else {
-                                    if (!poisoned)
-                                        LEDEffects::SetLighting(10, 30, 4, true, false, true);  //green
-                                    else
-                                        LEDEffects::SetLighting(51, 4, 53, true, false, true); //purple
-                                    LEDEffects::DrawCardiogram(0, 100, 0, 0, 0, 0); //green
-                                }
-
-                                AmmoInClip();
-                            }
-                            else
-                            {
-                                LEDEffects::SetLighting(26, 4, 4, false, true); //red
-                                LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
-                            }
-                        }
-                        else
-                        {
-                            LogiLedStopEffects();
-                            LEDEffects::SetLighting(93, 12, 14); //umbrella red
-                        }
-                    }
-                    else
-                    {
-                        LogiLedStopEffects();
-                        LEDEffects::SetLighting(93, 12, 14); //umbrella red
-                    }
-                }
-            });
+            GetPlayer = reinterpret_cast<ActorGetter>(player.get_first());
+            GetWeapon = reinterpret_cast<ActorGetter>(weapon.get_first());
+            ActorManager.SetAddress(*manager.get_first<void**>(2));
+            LEDEffects::Inject(UpdateLighting, false);
         };
     }
 } LightSync;

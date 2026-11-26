@@ -1,7 +1,7 @@
 #include "Controls.hpp"
 #include "ButtonIcons.hpp"
-#include "../Shared/Console/StoriesButtonText.hpp"
-#include "../Shared/Console/PadButtonArtwork.hpp"
+#include "Shared/Console/StoriesButtonText.hpp"
+#include "Shared/Console/PadButtonArtwork.hpp"
 #include <cstring>
 // MAIN.GamepadIcons replaces the PS2 button glyphs of the help text and the
 // menu hint pictures with Xbox or Nintendo artwork.

@@ -20,14 +20,14 @@
 
 ## Settings and hub
 
-The fix creates `pc/scripts/Mafia2DefinitiveEdition.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it. Vanilla shows the intro; Recommended and Enhanced skip it. Texts are available in English, French, German, Italian and Spanish. The text language can be selected in the settings editor.
+The fix creates `pc/scripts/Mafia2DefinitiveEdition.FusionFix.cfg` on first start. You can change it in the standalone FusionFixHub settings editor. Vanilla shows the intro; Recommended and Enhanced skip it. Texts are available in English, French, German, Italian and Spanish. The text language can be selected in the settings editor.
 
 ## Known limits
 
 - The game already has widescreen, its own window modes, resolution list, frame rate limit and controller support, so the fix adds nothing there.
 - The first loading screen stays on screen as long as the game needs to load; with Skip intro it is a plain loading screen instead of the legal notices.
 - A 2K account prompt for a game without a linked account was not seen while testing; if it appears, it is shown as usual.
-- The fix has no page in the game's own settings menu: change it in FusionFixHub or on fusionfix.io.
+- The fix has no page in the game's own settings menu: change its options in FusionFixHub.
 
 ## Installation
 

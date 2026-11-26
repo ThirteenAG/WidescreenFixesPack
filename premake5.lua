@@ -166,17 +166,19 @@ function buildshaders(rules)
    end
 end
 
--- The developer overlay: FusionFixUtils' ImGui (Win32 + DX9 backends), the version its overlay is written for
-overlay_imgui_files = { "external/FusionFixUtils/imgui/imgui.cpp", "external/FusionFixUtils/imgui/imgui_draw.cpp",
-   "external/FusionFixUtils/imgui/imgui_tables.cpp", "external/FusionFixUtils/imgui/imgui_widgets.cpp",
-   "external/FusionFixUtils/imgui/backends/imgui_impl_win32.cpp", "external/FusionFixUtils/imgui/backends/imgui_impl_dx9.cpp" }
-
--- Release builds take these objects from the shared dependencies (tools/msbuild/shared-dependencies.lua)
-overlay_imgui_projects = {}
+-- The developer overlay (FusionFixUtils overlay/), Debug builds only: ASI_OVERLAY and FusionFixUtils' ImGui (Win32 +
+-- DX9 backends, the version the overlay is written for). Release builds compile the overlay headers to empty stubs
+-- and have no ImGui (also not a DX11 backend a project adds).
 function add_overlay_imgui()
-   overlay_imgui_projects[premake.api.scope.project.name] = true
    includedirs { "external/FusionFixUtils/imgui" }
-   files(overlay_imgui_files)
+   filter "configurations:Debug*"
+      defines { "ASI_OVERLAY" }
+      files { "external/FusionFixUtils/imgui/imgui.cpp", "external/FusionFixUtils/imgui/imgui_draw.cpp",
+         "external/FusionFixUtils/imgui/imgui_tables.cpp", "external/FusionFixUtils/imgui/imgui_widgets.cpp",
+         "external/FusionFixUtils/imgui/backends/imgui_impl_win32.cpp", "external/FusionFixUtils/imgui/backends/imgui_impl_dx9.cpp" }
+   filter { "configurations:Release*", "files:external/FusionFixUtils/imgui/**" }
+      excludefrombuild "On"
+   filter {}
 end
 
 function add_postfx(id_postfx, id_areatex, id_searchtex)
@@ -757,12 +759,6 @@ project "SecondSight.FusionFix"
    add_overlay_imgui()
 
 group "SilentHill"
-project "SilentHill2.FusionFix"
-   files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "text/SilentHill/*.json" }
-   -- A broken settings description fails the build
-   dependson { "AsiSettingsValidator" }
-   prebuildcommands { settings_check('%{wks.location}../source/%{prj.name}/settings.json', '%{wks.location}../text/SilentHill/en.json') }
-   setpaths("SILENT_HILL_2_DIR", "sh2pc.exe")
 project "SilentHill3.FusionFix"
    files { "source/%{prj.name}/resources.rc", "source/%{prj.name}/settings.json", "source/Shared/SilentHill/*.hpp", "text/SilentHill/*.json" }
    -- A broken settings description fails the build

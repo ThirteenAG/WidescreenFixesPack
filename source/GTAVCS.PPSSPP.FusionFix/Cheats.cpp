@@ -100,7 +100,9 @@ constexpr char sequences[][9] = {
 };
 
 char buffer[24]{};
-bool keys[26]{};
+constexpr char cheatKeys[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+bool keys[sizeof(cheatKeys) - 1]{};
+bool wasActive;
 bool Matches(const char* word) {
     size_t length=std::strlen(word);
     if (length>sizeof(buffer)) return false;
@@ -109,22 +111,41 @@ bool Matches(const char* word) {
 }
 }
 void InstallCheats() {}
-void TickCheats() {
-    if (*reinterpret_cast<uint8_t*>(Address<0x8BC9100>()+0x20)) return;
-    for (unsigned i=0;i<26;++i) {
+void ResetCheatInput()
+{
+    if (!wasActive) return;
+    wasActive = false;
+    std::memset(buffer, 0, sizeof(buffer));
+}
+
+void TickCheats()
+{
+    if (!settings.pcCheats || *reinterpret_cast<const uint8_t*>(Address<0x8BC9100>() + 0x20))
+    {
+        ResetCheatInput();
+        return;
+    }
+    for (unsigned i = 0; i < sizeof(keys); ++i) {
         uint8_t pressed=0;
-        if (sceIoDevctl("kemulator:",0x34,reinterpret_cast<void*>(i+29),0,&pressed,sizeof(pressed))<0) continue;
-        bool edge=pressed && !keys[i]; keys[i]=pressed!=0;
+        const char symbol = cheatKeys[i];
+        const uintptr_t keyCode = symbol >= 'A' ? 29 + symbol - 'A' : 7 + symbol - '0';
+        if (sceIoDevctl("kemulator:", 0x34, reinterpret_cast<void*>(keyCode), 0, &pressed, sizeof(pressed)) < 0)
+            continue;
+        const bool edge = wasActive && pressed && !keys[i];
+        keys[i] = pressed != 0;
         if (!edge) continue;
-        std::memmove(buffer+1,buffer,sizeof(buffer)-1);buffer[0]=char('A'+i);
+        std::memmove(buffer + 1, buffer, sizeof(buffer) - 1);
+        buffer[0] = symbol;
         for (const auto& cheat:cheats) {
             if (!Matches(cheat.word)) continue;
             injector::game_fn<void*(int)> get{Address<0x898B428>()};
             injector::game_fn<void(void*,char)> add{Address<0x898EBC0>()};
             void* pad=get(0);
             if (pad) for (unsigned j=0;j<8;++j) add(pad,sequences[cheat.id][j]);
-            buffer[0]=0;break;
+            std::memset(buffer, 0, sizeof(buffer));
+            break;
         }
     }
+    wasActive = true;
 }
 }

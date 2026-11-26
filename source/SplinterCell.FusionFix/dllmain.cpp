@@ -55,7 +55,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
         CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
         CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);
-        CallbackHandler::RegisterCallback(L"Core.dll", [] { InitCore(); SCMenu::Init(); InitUpdateCheck(); });
+        CallbackHandler::RegisterCallback(L"Core.dll", [] { InitConfigReads(); InitCore(); SCMenu::Init(); InitUpdateCheck(); });
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
         CallbackHandler::RegisterCallback(L"EchelonHUD.dll", [] { InitEchelonHUD(); Gamepad::InitEchelonHUD(); });
         CallbackHandler::RegisterCallback(L"EchelonMenus.dll", InitEchelonMenus);

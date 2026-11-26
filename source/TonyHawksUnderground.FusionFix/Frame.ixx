@@ -2,7 +2,9 @@ module;
 
 #include <stdafx.h>
 #include <d3d9.h>
+#include <atomic>
 #include <unordered_set>
+#include "FixSettings.hpp"
 
 export module Frame;
 
@@ -20,7 +22,7 @@ export namespace THUGFrame
     inline float FrameWidth = 640.0f, FrameHeight = 480.0f, OffsetY = 0.0f;
     inline float ScreenAspect = 4.0f / 3.0f;
     inline float ProjectionAspect = 4.0f / 3.0f;   // read by the game's projection through its aspect getter
-    inline const int32_t* Borders = nullptr;
+    inline std::atomic<int> Borders{ 3 };
     inline int32_t LetterboxShift = 0;
     inline SafetyHookMid ScaleHook, ViewportHook, OverlayViewportHook, ClearHook, SpriteHook, SpriteDoneHook;
     inline SafetyHookInline LetterboxHook, BarsHook;
@@ -32,12 +34,18 @@ export namespace THUGFrame
     inline bool MenuStripDrawn = false;                 // in this frame's 2D layer
     inline bool FramedMenu = false;                     // the last frame showed a frontend menu
 
+    inline void UpdateBorders()
+    {
+        const auto value = FixSettings().Get("MAIN.CutsceneBorders");
+        Borders.store(std::clamp(std::atoi(value.c_str()), 0, 3), std::memory_order_relaxed);
+    }
+
     // The cutscene picture on the screen: Both keeps the original 16:9 picture of the 4:3 frame, Letterbox spans the
     // screen width between the original bars, Pillarbox fills the height up to 16:9, Off fills the screen
     inline Rect Picture()
     {
         const float width = static_cast<float>(FrameTargetWidth.get()), height = static_cast<float>(FrameTargetHeight.get());
-        const int mode = Borders ? std::clamp(*Borders, 0, 3) : 3;
+        const int mode = Borders.load(std::memory_order_relaxed);
         float w = width, h = height;
         if (mode & 1)
             h = std::min(height, width * 0.75f) * 0.75f;
@@ -172,21 +180,35 @@ export namespace THUGFrame
     }
 
     // Menu pictures larger than the frame (off the screen on a 4:3 display) end at its edges
-    inline void BeforeSprite(uintptr_t quad)
+    inline bool BeforeSprite(uintptr_t quad)
     {
         auto device = GameDevice.get();
         if (!device)
-            return;
+            return true;
         if (MenuStrips.contains(quad))
             MenuStripDrawn = true;
         if (!FramedMenu)
-            return;
-        const auto frame = FrameRect();
-        device->GetRenderState(D3DRS_SCISSORTESTENABLE, &SavedScissor);
-        device->GetScissorRect(&SavedScissorRect);
-        device->SetScissorRect(&frame);
-        device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+            return true;
+        RECT clip = FrameRect();
+        if (FAILED(device->GetRenderState(D3DRS_SCISSORTESTENABLE, &SavedScissor)) ||
+            FAILED(device->GetScissorRect(&SavedScissorRect)))
+            return true;
+        if (SavedScissor)
+        {
+            RECT intersection{};
+            if (!IntersectRect(&intersection, &clip, &SavedScissorRect))
+                return false;
+            clip = intersection;
+        }
+        if (FAILED(device->SetScissorRect(&clip)))
+            return true;
+        if (!SavedScissor && FAILED(device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE)))
+        {
+            device->SetScissorRect(&SavedScissorRect);
+            return true;
+        }
         Scissored = true;
+        return true;
     }
 
     inline void AfterSprite()
@@ -199,9 +221,10 @@ export namespace THUGFrame
         device->SetScissorRect(&SavedScissorRect);
     }
 
-    inline void Install(float width, float height, const int32_t* borders)
+    inline void Install(float width, float height)
     {
-        Borders = borders;
+        FixSettings().OnChange("MAIN.CutsceneBorders", UpdateBorders);
+        UpdateBorders();
         FrameWidth = std::min(width, height * (4.0f / 3.0f));
         FrameHeight = std::min(height, width * 0.75f);
         OffsetY = (height - FrameHeight) * 0.5f;
@@ -240,7 +263,17 @@ export namespace THUGFrame
         OverlayViewportHook = safetyhook::create_mid(overlayViewport.get_first(24), [](SafetyHookContext&) { SetViewport(); });
         ClearHook = safetyhook::create_mid(render.get_first(17), [](SafetyHookContext&) { ClearScreen(); });
         // The sprite's draw call, the quad in esi
-        SpriteHook = safetyhook::create_mid(sprite.get_first(23), [](SafetyHookContext& regs) { BeforeSprite(regs.esi); });
+        static const auto spriteReturn = reinterpret_cast<uintptr_t>(sprite.get_first(31));
+        SpriteHook = safetyhook::create_mid(sprite.get_first(23), [](SafetyHookContext& regs)
+        {
+            if (!BeforeSprite(regs.esi))
+            {
+                // Skip DrawIndexedPrimitiveUP when the two clip rectangles do not overlap.
+                regs.esp += 9 * sizeof(uint32_t);
+                regs.eax = D3D_OK;
+                regs.eip = spriteReturn;
+            }
+        });
         SpriteDoneHook = safetyhook::create_mid(sprite.get_first(31), [](SafetyHookContext&) { AfterSprite(); });
     }
 }

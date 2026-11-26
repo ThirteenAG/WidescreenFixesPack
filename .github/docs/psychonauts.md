@@ -17,6 +17,7 @@
 - **Videos** — The intro and story movies keep their aspect ratio and are always shown whole at 4:3 between black bars.
 - **Window modes** — Fullscreen, a window with exactly the chosen resolution, or borderless covering the monitor at its own resolution; switched while playing.
 - **Background** — The game can keep running while another window is active, and the cursor stays inside the window while the game is active.
+- **Mouse and controller** — High-polling-rate mouse reports are read off the game thread. XInput controllers can connect and reconnect while the game is running, with the game's mappings and vibration.
 - **Skip intro** — The Double Fine logo movie is skipped, and the title screen goes to the menu without "Press ... to begin".
 - **Display scaling** — The game gets the full resolution on scaled desktops.
 
@@ -24,7 +25,7 @@ Applies to the retail and Steam versions of Psychonauts.
 
 ## Options
 
-In Psychonauts, open the journal (Esc) and choose **Options → Plugins → Psychonauts Fusion Fix**, from the title screen or while playing. Point at a row and press Enter (or the pad's accept button) for its next value; Left and Right step either way. The line at the bottom explains the row under the cursor and says when a change needs a restart. Back returns to the game's options.
+In Psychonauts, open the journal (Esc) and choose **Options → Plugins → Psychonauts Fusion Fix**, from the title screen or while playing. Point at a setting and press Enter or the pad's accept button for its next value. Left and Right step either way. Use More and Previous to page through the plugins and their settings. Select Restore defaults twice to reset a plugin's settings. The line at the bottom explains the row under the cursor and says when a change needs a restart. Back returns to the Plugins list, then to the game's options.
 
 | Setting | Values | Default | Applies |
 |---|---|---|---|
@@ -40,15 +41,12 @@ In Psychonauts, open the journal (Esc) and choose **Options → Plugins → Psyc
 | Field of view | 0.5–2.0 | 1.0 | while playing |
 | Frame rate limit | Unlimited, monitor refresh rate, 30–1000 FPS | 60 | while playing |
 
-Presets: Vanilla shows the logo and the title prompt and leaves the frame rate unlimited; Recommended and Enhanced skip both and limit the game to 60 FPS. The field of view factor is 1.0 and the HUD Auto in every preset.
-
-Ctrl+F10 opens the developer overlay for supporters.
+Vanilla shows the logo and the title prompt and leaves the frame rate unlimited. Recommended and Enhanced skip both and limit the game to 60 FPS. The default field of view factor is 1.0 and the default HUD aspect ratio is Auto. Applying a preset in the journal keeps your current field of view and HUD aspect ratio. The site exports Auto for the HUD in all three presets, and Restore defaults in the journal also resets it to Auto.
 
 ## Known limits
 
 - The story cutscenes are 4:3 movies without letterbox bars, so there's no cutscene-border setting; they're shown whole at 4:3.
 - Scripted cameras, zoom, map views and field of view transitions keep their original framing; the factor changes the normal gameplay and ball cameras.
-- The game reads the controller itself; the fix adds no controller handling.
 - A custom window size appears alongside the monitor's display modes in Options → Graphics.
 
 ## Installation

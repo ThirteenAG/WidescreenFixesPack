@@ -132,11 +132,7 @@ namespace GodfatherTiming
         (void)updateHook.enable();
         (void)resetHook.enable();
         GodfatherFrameRate::window = []() { return GodfatherWindow::window; };
-        limit.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
-        FixSettings().OnChange("MAIN.FPSLimit", []()
-        {
-            limit.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
-        });
+        BindLiveSetting("MAIN.FPSLimit", limit);
         injector::WriteMemory<decltype(nativeSleep)*>(sleep.get_first<decltype(nativeSleep)*>(5), &nativeSleep, true);
         GodfatherWindow::pace = Pace;
     }

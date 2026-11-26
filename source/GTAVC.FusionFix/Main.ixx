@@ -15,6 +15,7 @@ import Skeleton;
 import Camera;
 import Entity;
 import CutsceneMgr;
+import Menu;
 import Sprite2d;
 
 // ScanWorld and RequestObjectsInFrustum project only one pair of corners onto
@@ -261,8 +262,10 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
+            // The main loop empties the message queue each frame; a high polling rate mouse must not keep it going
+            MessagePumpGuard::Install(GetModuleHandle(nullptr));
             if (!GetModuleHandleW(L"GInputVC.asi"))
-                GtaRawMouse::Install(*reinterpret_cast<HWND*>(RsGlobal->ps));
+                GtaRawMouse::Install([] { return RsGlobal->ps ? *reinterpret_cast<HWND*>(RsGlobal->ps) : nullptr; }, []() { return !FrontendMenuManager->m_bMenuActive; });
         };
 
         WFP::onInitEvent() += []()

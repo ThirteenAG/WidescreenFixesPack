@@ -1,6 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include "Shared/NFS/BufferedRawMouse.hpp"
+#include "Shared/PadInput.hpp"
+#include "Shared/SilentHill/Display.hpp"
 #include "Shared/SilentHill/Gamepad.hpp"
 #include "FixSettings.hpp"
 
@@ -52,10 +55,192 @@ namespace
     constexpr int RuntimeAnalog[8] = { 5, 4, 0, 1, 24, 23, 25, 26 };
 
 
-    SafetyHookInline AnalogHook, DefaultsHook, ReadBindingsHook, VibrationOnHook, VibrationOffHook;
+    constexpr wchar_t MouseWindowClass[] = L"SilentHill4.FusionFix.Mouse";
+    using RawMouse = NFSBufferedRawMouse<MouseWindowClass>;
+    SafetyHookInline InputFrameHook, AnalogHook, DefaultsHook, ReadBindingsHook, VibrationOnHook, VibrationOffHook;
+    bool Motor[3]{};
+    int RumbleSlot = -1;
+
+    void SetRumble(int slot, WORD low, WORD high)
+    {
+        using XidiVibration = bool(__cdecl*)(short, WORD, WORD);
+        static const auto xidi = GetModuleHandleW(L"Xidi.32.dll");
+        static const auto send = xidi ? reinterpret_cast<XidiVibration>(GetProcAddress(xidi, "XidiSendVibration")) : nullptr;
+        if (send)
+        {
+            send(static_cast<short>(slot), low, high);
+            return;
+        }
+        if (const auto set = PadInput::XInput().setState)
+        {
+            XINPUT_VIBRATION vibration{ low, high };
+            set(static_cast<DWORD>(slot), &vibration);
+        }
+    }
+
+    void SendRumble()
+    {
+        if (RumbleSlot >= 0 && RumbleSlot != GameplayPad.slot)
+            SetRumble(RumbleSlot, 0, 0);
+        RumbleSlot = GameplayPad.slot;
+        if (RumbleSlot >= 0)
+        {
+            // The small motor is high-frequency, and the large motor is low-frequency.
+            const WORD low = Motor[2] ? 65535 : 0;
+            const WORD high = Motor[1] ? 39321 : 0;
+            SetRumble(RumbleSlot, low, high);
+        }
+    }
+
+    GameplayPadState ReadAxes(const XINPUT_GAMEPAD& pad)
+    {
+        const auto stick = [](SHORT rawX, SHORT rawY, float deadzone)
+        {
+            const float x = std::clamp(float(rawX) / 32767.0f, -1.0f, 1.0f);
+            const float y = std::clamp(-float(rawY) / 32767.0f, -1.0f, 1.0f);
+            const float magnitude = std::sqrt(x * x + y * y);
+            const float scale = magnitude <= deadzone ? 0.0f :
+                (std::min(1.0f, magnitude) - deadzone) / ((1.0f - deadzone) * magnitude);
+            return std::pair{ x * scale, y * scale };
+        };
+        const auto [lx, ly] = stick(pad.sThumbLX, pad.sThumbLY, 0.24f);
+        const auto [rx, ry] = stick(pad.sThumbRX, pad.sThumbRY, 0.20f);
+        return { lx, ly, rx, ry, true };
+    }
+
+    bool PadElementHeld(const XINPUT_GAMEPAD& pad, uint32_t code)
+    {
+        constexpr WORD buttons[] = { XINPUT_GAMEPAD_A, XINPUT_GAMEPAD_B, XINPUT_GAMEPAD_X, XINPUT_GAMEPAD_Y,
+            XINPUT_GAMEPAD_LEFT_SHOULDER, XINPUT_GAMEPAD_RIGHT_SHOULDER, 0, 0, XINPUT_GAMEPAD_BACK,
+            XINPUT_GAMEPAD_START, XINPUT_GAMEPAD_LEFT_THUMB, XINPUT_GAMEPAD_RIGHT_THUMB };
+        constexpr WORD directions[] = { XINPUT_GAMEPAD_DPAD_UP, XINPUT_GAMEPAD_DPAD_RIGHT,
+            XINPUT_GAMEPAD_DPAD_DOWN, XINPUT_GAMEPAD_DPAD_LEFT };
+        const auto kind = code & 0xFF;
+        const auto offset = code >> 8;
+        if (kind == 0x80 && offset >= 0x30 && offset < 0x30 + std::size(buttons))
+        {
+            const auto button = offset - 0x30;
+            if (button == LT)
+                return pad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+            if (button == RT)
+                return pad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+            return (pad.wButtons & buttons[button]) != 0;
+        }
+        if (offset == 0x20 && kind >= 1 && kind <= std::size(directions))
+            return (pad.wButtons & directions[kind - 1]) != 0;
+        int axis;
+        switch (offset)
+        {
+            case 0x00: axis = pad.sThumbLX; break;
+            case 0x04: axis = -int(pad.sThumbLY); break;
+            case 0x08: axis = pad.sThumbRX; break;
+            case 0x14: axis = -int(pad.sThumbRY); break;
+            default: return false;
+        }
+        return (kind == 1 && axis < -16384) || (kind == 3 && axis > 16384);
+    }
+
+    void ReadActivePad()
+    {
+        static DWORD active = XUSER_MAX_COUNT;
+        static std::array<bool, XUSER_MAX_COUNT> previousConnected{};
+        static std::array<XINPUT_GAMEPAD, XUSER_MAX_COUNT> previous{};
+        std::array<bool, XUSER_MAX_COUNT> connected{}, engaged{};
+        std::array<XINPUT_GAMEPAD, XUSER_MAX_COUNT> current{};
+        std::array<GameplayPadState, XUSER_MAX_COUNT> states{};
+        const auto get = PadInput::XInput().getState;
+        for (DWORD slot = 0; get && slot < XUSER_MAX_COUNT; ++slot)
+        {
+            XINPUT_STATE packet{};
+            if (get(slot, &packet) != ERROR_SUCCESS)
+                continue;
+            const auto& pad = current[slot] = packet.Gamepad;
+            auto& state = states[slot] = ReadAxes(pad);
+            connected[slot] = true;
+            engaged[slot] = pad.wButtons || pad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD ||
+                pad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD || state.lx || state.ly || state.rx || state.ry;
+        }
+        if (active >= XUSER_MAX_COUNT || !engaged[active])
+        {
+            DWORD fallback = active < XUSER_MAX_COUNT && connected[active] ? active : XUSER_MAX_COUNT;
+            for (DWORD slot = 0; slot < XUSER_MAX_COUNT; ++slot)
+            {
+                if (engaged[slot])
+                {
+                    fallback = slot;
+                    break;
+                }
+                if (fallback == XUSER_MAX_COUNT && connected[slot])
+                    fallback = slot;
+            }
+            active = fallback;
+        }
+        GameplayPad = active < XUSER_MAX_COUNT ? states[active] : GameplayPadState{};
+        if (active < XUSER_MAX_COUNT)
+            GameplayPad.slot = static_cast<int>(active);
+        if (active < XUSER_MAX_COUNT && previousConnected[active])
+        {
+            constexpr size_t MapAction = 7, RearCameraAction = 13;
+            const auto& bindings = *aPadBindings;
+            const auto pressed = [&](uint32_t code)
+            {
+                return PadElementHeld(current[active], code) && !PadElementHeld(previous[active], code);
+            };
+            GameplayPad.mapPressed = pressed(bindings[MapAction]);
+            GameplayPad.recentre = pressed(bindings[RearCameraAction]) || pressed(Button(RS));
+        }
+        previousConnected = connected;
+        previous = current;
+        if (RumbleSlot != GameplayPad.slot && (RumbleSlot >= 0 || Motor[1] || Motor[2]))
+            SendRumble();
+    }
+
+    int __cdecl InputFrame()
+    {
+        const int result = InputFrameHook.ccall<int>();
+        ReadActivePad();
+        RawMouse::Update(SHDisplay::Get().window);
+        int x = nMouseX, y = nMouseY;
+        RawMouse::Consume(x, y);
+        if (IsModernCameraActive())
+        {
+            LookMouse[0] += x;
+            LookMouse[1] += y;
+            nMouseX = nMouseY = 0;
+        }
+        else
+        {
+            LookMouse = {};
+            nMouseX = x;
+            nMouseY = y;
+        }
+        return result;
+    }
+
+    void LinearizeNativeMouse()
+    {
+        const auto x = hook::pattern(pattern_str(0xA1, to_bytes(nMouseX.get_ptr())) + "C3").get_first();
+        const auto y = hook::pattern(pattern_str(0xA1, to_bytes(nMouseY.get_ptr())) + "C3").get_first();
+        auto calls = hook::pattern("E8 ? ? ? ? 89 44 24 ? DB 44 24 ? D8 0D ? ? ? ?");
+        size_t patched = 0;
+        for (size_t i = 0; i < calls.size(); ++i)
+        {
+            const auto entry = reinterpret_cast<uintptr_t>(calls.get(i).get<void>());
+            const auto target = injector::GetBranchDestination(entry).get<void>();
+            if (target != x && target != y)
+                continue;
+            auto fold = hook::range_pattern(entry, entry + 0x40,
+                "99 33 C2 2B C2 89 44 24 ? DB 44 24 ? D9 05 ? ? ? ? D8 D9 DF E0 F6 C4 05 7A ?");
+            // Keep the native multiplier and the x87 stack balance while bypassing the fold.
+            injector::WriteMemory<uint8_t>(fold.get_first(26), 0xEB, true);
+            ++patched;
+        }
+        if (patched != 10)
+            std::terminate();
+    }
 
     // How far the pad pushes a bound analog element (0..1); -1 for buttons and the d-pad, which stay on/off
-    float ElementValue(const SHPad::State& pad, uint32_t code)
+    float ElementValue(const GameplayPadState& pad, uint32_t code)
     {
         float axis = 0.0f;
         switch (code >> 8)
@@ -110,8 +295,7 @@ namespace
     {
         AnalogHook.ccall<void>(turn, move, cameraX, cameraY);
 
-        auto pad = SHPad::Get();
-        bool modern = IsModernCameraActive();
+        const auto pad = GameplayPad;
         if (pad.connected && aPadBindings.is_initialized())
         {
             // The game's analog actions in pairs (right/left turn, forward/back, camera right/left, camera up/down),
@@ -126,30 +310,8 @@ namespace
                 *words[i] = int16_t(std::clamp(positive - negative, -1.0f, 1.0f) * 32767.0f);
             }
         }
-        if (modern)
-        {
-            // The modern camera owns the right stick and the mouse
+        if (IsModernCameraActive())
             *cameraX = *cameraY = 0;
-            if (nMouseX.is_initialized() && nMouseY.is_initialized())
-                nMouseX = nMouseY = 0;
-            return;
-        }
-
-        // The game folds mouse movement above 24 counts per frame back down (moving faster turns less): keep the
-        // per-frame value in its linear range and carry the rest to the next frames
-        if (nMouseX.is_initialized() && nMouseY.is_initialized())
-        {
-            static int32_t carryX = 0, carryY = 0;
-            auto limit = [](int32_t& value, int32_t& carry)
-            {
-                value += carry;
-                int32_t clamped = std::clamp(value, -23, 23);
-                carry = std::clamp(value - clamped, -96, 96);
-                value = clamped;
-            };
-            limit(nMouseX, carryX);
-            limit(nMouseY, carryY);
-        }
     }
 
     // Button names in the button configuration screen
@@ -162,7 +324,7 @@ namespace
 
     void __cdecl DrawPadElement(int bank, int message, int x, int y, int align, int flags)
     {
-        if ((SHPad::Get().connected || SH4Icons::Texture) && aPadMessageIds.is_initialized())
+        if ((GameplayPad.connected || SH4Icons::Texture) && aPadMessageIds.is_initialized())
         {
             for (int i = 0; i < 45; ++i)
             {
@@ -197,12 +359,6 @@ namespace
         DrawMessage(bank, message, x, y, align, flags);
     }
 
-    // Rumble: the PS2's two motors arrive here; the PC port played both as one constant force
-    bool Motor[3] = {};
-    void SendRumble()
-    {
-        SHPad::Vibrate(Motor[2] ? 1.0f : 0.0f, Motor[1] ? 0.6f : 0.0f);
-    }
 }
 
 class Input
@@ -212,15 +368,8 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            SHPad::Layout layout;
-            layout.rightX = DIJOFS_Z;
-            layout.rightY = DIJOFS_RZ;
-            layout.ltAxis = layout.rtAxis = -1;
-            int buttons[16] = { A, B, X, Y, LB, RB, Back, Start, LS, RS, LT, RT, -1, -1, -1, -1 };
-            std::copy(std::begin(buttons), std::end(buttons), layout.button);
-            SHPad::Install(layout);
             SH4Icons::Init();
-            auto updateIcons = []() { SHPad::SetIconFamily(FixSettings().Int("MAIN.GamepadIcons")); };
+            auto updateIcons = []() { SHPad::SetIconFamily(FixSettingNumber("MAIN.GamepadIcons", 0)); };
             updateIcons();
             FixSettings().OnChange("MAIN.GamepadIcons", updateIcons);
 
@@ -259,6 +408,15 @@ public:
             auto mouse = hook::pattern("8B 0D ? ? ? ? 33 C0 85 C9 74 05 B8 01 00 00").count(2);
             nMouseX.SetAddress(*mouse.get(0).get<int32_t*>(2));
             nMouseY.SetAddress(*mouse.get(1).get<int32_t*>(2));
+            auto inputFrame = hook::pattern("E8 ? ? ? ? 8B C8 E9 ? ? ? ? 90 90 90 90 55 8B EC 83 E4 F8 81 EC 1C 02 00 00");
+            InputFrameHook = safetyhook::create_inline(inputFrame.get_first(), &InputFrame);
+            RawMouse::Enabled = true;
+            SHDisplay::OnWindowMessage().push_back([](HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT&)
+            {
+                RawMouse::Message(window, message, wParam, lParam);
+                return false;
+            });
+            LinearizeNativeMouse();
             auto analog = hook::pattern("E8 ? ? ? ? 66 8B 48 3C 8B 54 24 04 66 89 0A 66 8B 48 3E 8B 54 24 08");
             AnalogHook = safetyhook::create_inline(analog.get_first(), &AnalogWords);
 
@@ -267,20 +425,16 @@ public:
             injector::WriteMemory<uint16_t>(pitch.get_first(2), 0xE1D9, true);   // fmul st, st(1) -> fabs
 
             // Pad names in the button configuration screen
-            auto names = hook::pattern("8B 2C 85 ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 53 81 C6 A2 01 00 00 56 55 6A 00 E8 ? ? ? ?");
+            auto names = hook::pattern("8B 2C 85 ? ? ? ? E8 ? ? ? ? 6A 00 6A 00 53 81 C6 ? 01 00 00 56 55 6A 00 E8 ? ? ? ?");
             auto fromAscii = hook::pattern("A1 ? ? ? ? 56 0F B7 35 ? ? ? ? C1 E6 08 81 C6 ? ? ? ? 40 0F");
             auto drawText = hook::pattern("83 EC 50 56 8B 74 24 58 33 C0 3B F0 75 19 A3 ? ? ? ? A3 ? ? ? ?");
             auto endText = hook::pattern("8B 44 24 04 A3 ? ? ? ? C3 90 90 90 90 90 90 83 EC 14 57");
-            // Not every build has this configuration screen code
-            if (!names.empty())
-            {
-                aPadMessageIds.SetAddress(*names.get_first<int32_t*>(3));
-                TextFromAscii = reinterpret_cast<decltype(TextFromAscii)>(fromAscii.get_first());
-                DrawGameText = reinterpret_cast<decltype(DrawGameText)>(drawText.get_first());
-                EndText = reinterpret_cast<decltype(EndText)>(endText.get_first());
-                DrawMessage = reinterpret_cast<DrawMessageFn>(injector::GetBranchDestination(names.get_first(0x1B)).as_int());
-                injector::MakeCALL(names.get_first(0x1B), &DrawPadElement, true);
-            }
+            aPadMessageIds.SetAddress(*names.get_first<int32_t*>(3));
+            TextFromAscii = reinterpret_cast<decltype(TextFromAscii)>(fromAscii.get_first());
+            DrawGameText = reinterpret_cast<decltype(DrawGameText)>(drawText.get_first());
+            EndText = reinterpret_cast<decltype(EndText)>(endText.get_first());
+            DrawMessage = reinterpret_cast<DrawMessageFn>(injector::GetBranchDestination(names.get_first(0x1B)).as_int());
+            injector::MakeCALL(names.get_first(0x1B), &DrawPadElement, true);
 
             // Rumble
             auto on = hook::pattern("8B 44 24 08 83 F8 01 75 0A 50 E8 ? ? ? ? 83 C4 04 C3 83 F8 02 75 07 50 E8 ? ? ? ? 59 C3 8B 44 24 08 83 F8 01 75");
@@ -310,6 +464,11 @@ public:
                 Motor[1] = Motor[2] = false;
                 SendRumble();
             });
+            WFP::onShutdownEvent() += []()
+            {
+                if (RumbleSlot >= 0)
+                    SetRumble(RumbleSlot, 0, 0);
+            };
         };
     }
 } Input;

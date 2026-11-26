@@ -15,6 +15,7 @@ float* FrameTimer = nullptr;
 void(__thiscall* pResetFrameTimer)(void*) = nullptr;
 std::atomic<bool> FrameLimitPending{ false };
 HMONITOR FrameLimitMonitor = nullptr;
+ULONGLONG FrameLimitRefreshAfter = 0;
 bool FrameLimitFollowsMonitor = false;
 SafetyHookInline shUpdateFrameTimer;
 
@@ -108,7 +109,7 @@ double __fastcall UpdateFrameTimer(void* timer, void*)
 
 float FrameRateLimit()
 {
-    auto limit = FixSettings().Int("MAIN.FPSLimit");
+    const auto limit = ReadNumericSetting("MAIN.FPSLimit", 60);
     FrameLimitFollowsMonitor = limit == -1;
     if (limit == -1)
     {
@@ -116,9 +117,10 @@ float FrameRateLimit()
         DEVMODEW mode{};
         mode.dmSize = sizeof(mode);
         FrameLimitMonitor = MonitorFromWindow(hWnd.get(), MONITOR_DEFAULTTOPRIMARY);
+        FrameLimitRefreshAfter = GetTickCount64() + 500;
         if (GetMonitorInfoW(FrameLimitMonitor, &monitor) &&
             EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1)
-            return static_cast<float>(std::clamp<DWORD>(mode.dmDisplayFrequency, 30, 1000));
+            return static_cast<float>(mode.dmDisplayFrequency);
         return 60.0f;
     }
     return limit == 0 ? 0.0f : static_cast<float>(std::clamp(limit, 30, 1000));
@@ -193,14 +195,19 @@ public:
             });
             WFP::onGameProcessEvent() += []()
             {
-                const auto monitorChanged = FrameLimitFollowsMonitor &&
-                    MonitorFromWindow(hWnd.get(), MONITOR_DEFAULTTOPRIMARY) != FrameLimitMonitor;
-                if (FrameLimitPending.exchange(false) || monitorChanged)
+                const auto refreshMonitor = FrameLimitFollowsMonitor &&
+                    (GetTickCount64() >= FrameLimitRefreshAfter ||
+                        MonitorFromWindow(hWnd.get(), MONITOR_DEFAULTTOPRIMARY) != FrameLimitMonitor);
+                if (FrameLimitPending.exchange(false) || refreshMonitor)
                 {
-                    fFPSLimit = FrameRateLimit();
-                    SetFrameTimerRate();
-                    if (FrameTimer)
-                        pResetFrameTimer(FrameTimer);
+                    const float limit = FrameRateLimit();
+                    if (limit != fFPSLimit)
+                    {
+                        fFPSLimit = limit;
+                        SetFrameTimerRate();
+                        if (FrameTimer)
+                            pResetFrameTimer(FrameTimer);
+                    }
                 }
             };
         };

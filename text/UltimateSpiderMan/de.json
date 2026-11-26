@@ -5,6 +5,8 @@
   "MAIN_HudAspectRatioConstraint": "HUD-Seitenverhältnis",
   "MAIN_HudAspectRatioConstraint.description": "Auto nutzt die volle Breite für das HUD, sonst 4:3, 16:9, 21:9 oder ein eigenes Verhältnis bis 32:9. Gilt ab dem nächsten Bild.",
   "MAIN_FPSLimit": "Bildratenbegrenzung",
+  "MAIN_FPSLimit.monitor": "Bildschirm",
+  "MAIN_FPSLimit.unlimited": "Unbegrenzt",
   "MAIN_FPSLimit.description": "Zielbildrate: 0 unbegrenzt, -1 aktuelle Monitorfrequenz oder 30–1000 FPS. Standard 60. Wirkt im laufenden Spiel. Höhere Raten können das Spielverhalten beeinflussen.",
   "MAIN_FOVFactor": "Sichtfeld-Faktor",
   "MAIN_FOVFactor.description": "Multiplikator für das Sichtfeld im Spiel, von 0.5 bis 2.0. 1.0 behält die korrigierte Originalansicht. Comic-Panels, Skriptkameras und Zoomansichten behalten ihren Ausschnitt. Gilt ab dem nächsten Bild. Die Erweiterung endet bei 150 Grad horizontal; eine bereits breitere Neutralansicht bleibt erhalten.",
@@ -80,6 +82,6 @@
   "MAIN_GamepadCameraSpeed.description": "Multipliziert das Kameratempo des rechten Sticks nach der ursprünglichen Reaktionskurve. Maus, Umkehrung, Bewegung und Zentrierung behalten ihre Einstellungen. 1.0 behält das ursprüngliche Tempo bei.",
   "MAIN_CheckForUpdates": "Nach Updates suchen",
   "MAIN_CheckForUpdates.description": "Sucht beim Aktivieren einmal nach einer neueren Version. Ein Hinweis erscheint in den Optionen. FusionFixHub verwaltet Updates nach Spielende. Aus: keine Netzwerkanfragen.",
-  "update.availablehub": "Eine neuere Version des Fusion Fix ist verfügbar. Öffne FusionFixHub nach dem Beenden des Spiels.",
-  "update.availablesite": "Eine neuere Version des Fusion Fix ist auf {page} verfügbar."
+  "update.availablehub": "Fusion Fix {version} ist verfügbar. Öffne FusionFixHub nach dem Beenden des Spiels.",
+  "update.availablesite": "Fusion Fix {version} ist auf {page} verfügbar."
 }

@@ -51,7 +51,7 @@
 
 - **Loose files** — Load unpacked files from disk.
 - **DLC** — Restores DLC content made unavailable by the server shutdown.
-- **Limited ammo** — Weapons with unlimited ammo in the original game use magazines and ammo like the others. On by default; the Vanilla preset turns it off. A `src/system/update/weapontuning.ini` left over from an older version keeps ammo limited even with this option off; that file can be deleted.
+- **Limited ammo** — Weapons with unlimited ammo in the original game use magazines and ammo like the others. On by default. A `src/system/update/weapontuning.ini` left over from an older version keeps ammo limited even with this option off; that file can be deleted.
 - **Last known position** — Optionally hide the silhouette that marks where enemies last saw you.
 - **Controls** — Enable the Blacklist control scheme on keyboard and gamepad: cover is toggled with a press and released by any action that leaves it, drops from ledges are on the cover button, as in Blacklist, and Death from Above is on E / X. The default keyboard keys put crouch on Ctrl, reload on R and the gadget on the middle mouse button; an existing profile keeps its own keys, change them in the controls menu.
 
@@ -65,7 +65,7 @@ Open Settings → Plugins → Splinter Cell Conviction Fusion Fix, from the titl
 
 Local split screen is enabled by default; launching a second instance is optional. Gamepad camera speed and the gameplay FOV multiplier change live. FOV 1.00 is neutral; extra widening is bounded to 150°. The multiplier affects locomotion views; aiming, gadgets and cinematic cameras keep their own framing. Controller artwork applies after restarting because the game caches its Flash image library.
 
-Pause on Focus Loss and Confine Cursor apply immediately. Check for Updates is off by default; enabling it allows an available-update notice in the game’s own menu. Ctrl+F10 opens the developer overlay when available; Debug → Info shows the build, graphics API and backbuffer resolution.
+Pause on Focus Loss and Confine Cursor apply immediately. Check for Updates is off by default; enabling it allows an available-update notice in the game’s own menu.
 
 ## Configuration
 

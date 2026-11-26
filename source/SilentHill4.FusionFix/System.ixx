@@ -15,37 +15,65 @@ import ComVars;
 
 namespace
 {
-    // The game's movie-path initialiser tests the returned key handle for null, which RegistryWrapper uses
-    // internally, so it gets a private non-null handle instead
-    HKEY PortableKey = reinterpret_cast<HKEY>(UINT_PTR(0x534834));
+    constexpr char InstallPath[] = "SOFTWARE\\Konami\\SILENT HILL 4\\1.00.000";
+    char InstallLanguage[64] = "English";
+
+    HKEY PortableKey()
+    {
+        static uint8_t key;
+        return reinterpret_cast<HKEY>(&key);
+    }
 
     LSTATUS WINAPI RegOpen(HKEY root, LPCSTR path, PHKEY out)
     {
-        auto result = RegistryWrapper::RegOpenKeyA(root, path, out);
-        if (result == ERROR_SUCCESS && out && !*out)
-            *out = PortableKey;
-        return result;
+        if (root != HKEY_LOCAL_MACHINE || !path || _stricmp(path, InstallPath) != 0)
+            return ::RegOpenKeyA(root, path, out);
+        if (!out)
+            return ERROR_INVALID_PARAMETER;
+        *out = PortableKey();
+        return ERROR_SUCCESS;
     }
 
     LSTATUS WINAPI RegQuery(HKEY key, LPCSTR name, LPDWORD reserved, LPDWORD type, LPBYTE data, LPDWORD size)
     {
-        return RegistryWrapper::RegQueryValueExA(key == PortableKey ? nullptr : key, name, reserved, type, data, size);
+        if (key != PortableKey())
+            return ::RegQueryValueExA(key, name, reserved, type, data, size);
+        if (reserved || !name || !size)
+            return ERROR_INVALID_PARAMETER;
+
+        std::string value;
+        if (_stricmp(name, "Movie Install") == 0 || _stricmp(name, "Install Path") == 0)
+            value = GetExeModulePath<std::string>();
+        else if (_stricmp(name, "Install Language") == 0)
+            value = InstallLanguage;
+        else
+            return ERROR_FILE_NOT_FOUND;
+
+        const auto bytes = static_cast<DWORD>(value.size() + 1);
+        const auto capacity = data ? *size : 0;
+        *size = bytes;
+        if (type)
+            *type = REG_SZ;
+        if (data && capacity < bytes)
+            return ERROR_MORE_DATA;
+        if (data)
+            std::memcpy(data, value.c_str(), bytes);
+        return ERROR_SUCCESS;
     }
 
-    LSTATUS WINAPI RegSet(HKEY key, LPCSTR name, DWORD reserved, DWORD type, const BYTE* data, DWORD size)
+    LSTATUS WINAPI RegSet(HKEY key, LPCSTR name, DWORD, DWORD, const BYTE*, DWORD)
     {
-        return RegistryWrapper::RegSetValueExA(key == PortableKey ? nullptr : key, name, reserved, type, data, size);
+        return key == PortableKey() && name && _stricmp(name, "SafeMode") == 0 ? ERROR_SUCCESS : ERROR_ACCESS_DENIED;
     }
 
     LSTATUS WINAPI RegClose(HKEY key)
     {
-        return RegistryWrapper::RegCloseKey(key == PortableKey ? nullptr : key);
+        return key == PortableKey() ? ERROR_SUCCESS : ::RegCloseKey(key);
     }
 
-    // The game only deletes its SafeMode flag (the check is removed below); nothing reaches the registry
-    LSTATUS WINAPI RegDelete(HKEY, LPCSTR)
+    LSTATUS WINAPI RegDelete(HKEY key, LPCSTR name)
     {
-        return ERROR_SUCCESS;
+        return key == PortableKey() && name && _stricmp(name, "SafeMode") == 0 ? ERROR_SUCCESS : ERROR_ACCESS_DENIED;
     }
 
     // Languages: 1 English, 2 French, 3 German, 4 Italian, 5 Spanish (0 Japanese and 6 Korean need other fonts)
@@ -85,20 +113,16 @@ public:
         {
             // Registry: the game only keeps its install paths, the setup language and a safe mode flag there
             {
-                char language[64] = "English";
                 HKEY installed = nullptr;
-                if (::RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Konami\\SILENT HILL 4\\1.00.000", 0, KEY_QUERY_VALUE | KEY_WOW64_32KEY, &installed) == ERROR_SUCCESS)
+                if (::RegOpenKeyExA(HKEY_LOCAL_MACHINE, InstallPath, 0, KEY_QUERY_VALUE | KEY_WOW64_32KEY, &installed) == ERROR_SUCCESS)
                 {
                     char value[64] = {};
                     DWORD size = sizeof(value), type = 0;
                     if (::RegQueryValueExA(installed, "Install Language", nullptr, &type, reinterpret_cast<BYTE*>(value), &size) == ERROR_SUCCESS &&
                         type == REG_SZ && value[0] && size < sizeof(value))
-                        strcpy_s(language, value);
+                        strcpy_s(InstallLanguage, value);
                     ::RegCloseKey(installed);
                 }
-                RegistryWrapper("Konami", GetThisModulePath<std::filesystem::path>() / "SilentHill4.registry.ini");
-                RegistryWrapper::AddPathWriter("Install Path", "Movie Install");
-                RegistryWrapper::AddDefault("Install Language", language);
                 IATHook::Replace(GetModuleHandleW(nullptr), "advapi32.dll",
                     std::forward_as_tuple("RegOpenKeyA", &RegOpen),
                     std::forward_as_tuple("RegQueryValueExA", &RegQuery),
@@ -139,7 +163,7 @@ public:
             auto gamma = hook::pattern("55 8B EC 81 EC 54 06 00 00 A1 ? ? ? ?");
             auto config = hook::pattern("B8 ? ? ? ? C3 90 90 90 90 90 90 90 90 90 90 A1 ? ? ? ? C3 90 90 90 90 90 90 90 90 90 90 8B 54 24 04");
             aOptionsConfig.SetAddress(*config.get_first<uint8_t*>(1));
-            if (FixSettings().Int("MAIN.SkipIntro"))
+            if (FixSettings().Get("MAIN.SkipIntro") == "1")
             {
                 // The boot scene goes to the title as if the logos had played (the flag itself is cleared at startup)
                 injector::WriteMemory<uint8_t>(boot.get_first(7), 0xEB, true);
@@ -165,7 +189,7 @@ public:
             auto clampCopy = hook::pattern("8A 0D ? ? ? ? B0 01 3A C8 5F 5E 7E 05");
             auto languageRow = hook::pattern("53 6A 00 E8 ? ? ? ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? ? ? ? A1 ? ? ? ? ? ? ? ? E8 ? ? ? ? ? ? ? ? A1 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 8A 41 11 84 C0 75 15 68 43 9C 00 00 C6 41 11 01 E8");
             auto optionsExit = hook::pattern("56 57 8B F3 BF 03 00 00 00 8D A4 24 00 00 00 00 56 E8");
-            // Not every build has the language row code
+            // The alternate options layout already cycles the five supported languages.
             if (!languageRow.empty())
             {
                 auto row = languageRow.get_first<uint8_t>();

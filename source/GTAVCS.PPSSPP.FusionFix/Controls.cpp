@@ -70,7 +70,8 @@ int16_t CPad__GetBrakeBovver(CPad* pad) {
 int16_t CPad__GetRightStickX(CPad* pad) { return Held(pad,pad->NewState.RIGHTSTICKX); }
 int16_t CPad__GetRightStickY(CPad* pad) { return Held(pad,pad->NewState.RIGHTSTICKY); }
 int16_t Aim(CPad* pad, int16_t left, int16_t right) {
-    int value=left ? left : right;
+    const auto& controls = pad->NewState;
+    int value = controls.RIGHTSTICKX || controls.RIGHTSTICKY ? right : left;
     if (!pad->NewState.CROSS && !pad->NewState.DPADDOWN) value *= 2;
     return Held(pad,int16_t(value));
 }

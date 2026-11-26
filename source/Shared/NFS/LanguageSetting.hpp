@@ -20,6 +20,8 @@ namespace WFPLanguageSetting
         std::vector<std::string> files;     // files the language needs, relative to the game's folder
     };
 
+    inline bool HaveInstalledLanguage = false;
+
     // Whether all of the language's files are there. A file whose folder isn't there at all doesn't count: the
     // install keeps those files elsewhere (speech streamed from the disc, for example).
     inline bool HasFiles(const Entry& entry)
@@ -31,7 +33,9 @@ namespace WFPLanguageSetting
         for (auto& file : entry.files)
         {
             auto full = folder / file;
-            if (!std::filesystem::exists(full, ec) && std::filesystem::exists(full.parent_path(), ec))
+            if (std::filesystem::is_regular_file(full, ec))
+                continue;
+            if (std::filesystem::exists(full.parent_path(), ec) || ec)
                 return false;
         }
         return true;
@@ -41,8 +45,6 @@ namespace WFPLanguageSetting
     // installer: the installer's language (the registry's value), stored when the .cfg has no language yet.
     inline void Startup(asi_settings::Plugin& settings, std::string_view id, std::vector<Entry> entries, const std::string& installer)
     {
-        // When the file lists match nothing (an install laid out differently), every language counts as installed
-        // rather than none
         static std::vector<std::string> installed;
         installed.clear();
         for (auto& entry : entries)
@@ -50,11 +52,7 @@ namespace WFPLanguageSetting
             if (HasFiles(entry))
                 installed.push_back(entry.name);
         }
-        if (installed.empty())
-        {
-            for (auto& entry : entries)
-                installed.push_back(entry.name);
-        }
+        HaveInstalledLanguage = !installed.empty();
 
         if (!settings.Stored(id) && !installer.empty())
             settings.Set(id, installer, true);
@@ -70,10 +68,18 @@ namespace WFPLanguageSetting
     {
         if (language.empty() || !valueName || _stricmp(valueName, "Language") != 0)
             return false;
+        if (data && !size)
+        {
+            result = ERROR_INVALID_PARAMETER;
+            return true;
+        }
+        if (!HaveInstalledLanguage)
+            return false;
+
         DWORD needed = DWORD(language.size() + 1);
         if (type)
             *type = REG_SZ;
-        if (data && size && *size < needed)
+        if (data && *size < needed)
             result = ERROR_MORE_DATA;
         else
         {

@@ -38,20 +38,6 @@
   ],
   "settings": [
     {
-      "id": "MAIN.RawInputMouse",
-      "type": "bool",
-      "default": true,
-      "label": "@RawInputMouse",
-      "description": "@RawInputMouse.description",
-      "page": "camera",
-      "apply": "live",
-      "presets": {
-        "vanilla": false,
-        "recommended": true,
-        "enhanced": true
-      }
-    },
-    {
       "id": "MAIN.ResX",
       "type": "int",
       "default": 0,
@@ -174,6 +160,11 @@
       "page": "camera",
       "visibility": "menu",
       "apply": "live",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "suggestions": [
         {
           "value": "Auto",
@@ -197,7 +188,7 @@
       "id": "MAIN.FPSLimit",
       "type": "int",
       "default": 60,
-      "min": -1,
+      "min": 30,
       "max": 1000,
       "unit": "fps",
       "special": [

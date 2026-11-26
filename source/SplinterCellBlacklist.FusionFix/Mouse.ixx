@@ -2,6 +2,9 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/BufferedRawMouse.hpp"
+#include <commctrl.h>
+#include <optional>
 
 export module Mouse;
 
@@ -23,21 +26,27 @@ namespace Mouse
     constexpr int IST_Axis = 6;
 
     // raw movement since the last frame
-    LONG rawX = 0;
-    LONG rawY = 0;
+    BufferedRawMouse movement;
+    std::atomic<bool> rawAllowed{ true };
+    std::atomic<HWND> target = nullptr;
+    HWND inputWindow = nullptr;
+    bool installed = false;
+    std::optional<RAWINPUTDEVICE> previous;
+    HWND candidateWindow = nullptr;
+    ULONGLONG nextAttempt = 0;
 
     // the last time the game sent a cursor move as mouse look
     ULONGLONG lookTime = 0;
     bool lookThisFrame = false;
+    bool usedNativeAxes = false;
 
     using CauseInputEventFn = int(__fastcall*)(uintptr_t viewport, void* edx, uintptr_t input, int key, int action, float delta, int controller, int a7);
     CauseInputEventFn CauseInputEvent = nullptr;
 
     bool Enabled()
     {
-        // runs for every raw mouse report, thousands a second with a high polling rate mouse
-        static const int& rawInputMouse = FixSettings().Int("MAIN.RawInputMouse");
-        return rawInputMouse && WindowHandle && GetForegroundWindow() == WindowHandle && !DeveloperOverlay::BlocksInput();
+        const auto window = target.load();
+        return window && window == WindowHandle && GetForegroundWindow() == window && !DeveloperOverlay::BlocksInput();
     }
 
     int __fastcall CauseInputEventHook(uintptr_t viewport, void* edx, uintptr_t input, int key, int action, float delta, int controller, int a7)
@@ -50,7 +59,9 @@ namespace Mouse
         if (Enabled() && action == IST_Axis && (key == IK_MouseX || key == IK_MouseY))
         {
             lookThisFrame = true;
-            return 1;
+            if (!usedNativeAxes && movement.HasRelative())
+                return 1;
+            usedNativeAxes = true;
         }
         return CauseInputEvent(viewport, edx, input, key, action, delta, controller, a7);
     }
@@ -60,34 +71,151 @@ namespace Mouse
         return DeveloperOverlay::BlocksInput() ? TRUE : SetCursorPos(x, y);
     }
 
-    WNDPROC GameWndProc = nullptr;
-    LRESULT CALLBACK WndProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    // The WM_MOUSEMOVE handler puts the cursor back to the window center after every move (sub_1AF55C0), each SetCursorPos makes
+    // Windows queue a new move and costs the game thread time, with a high polling rate mouse that's on every pass of the message loop.
+    // During raw mouse look the cursor's movement isn't used (the game's axis input is dropped, UGameEngine::MouseDelta only reads
+    // the buttons): it only has to stay in the window, so it's put back once it's a quarter of the window away from the center.
+    BOOL WINAPI RecenterCursor(int x, int y)
     {
-        if (message == WM_INPUT && Enabled())
+        if (Enabled() && movement.HasRelative() && lookTime && GetTickCount64() - lookTime <= 250)
         {
-            RAWINPUT input = {};
-            UINT size = sizeof(input);
-            if (GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) != UINT(-1) &&
-                input.header.dwType == RIM_TYPEMOUSE && (input.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == 0)
-            {
-                rawX += input.data.mouse.lLastX;
-                rawY += input.data.mouse.lLastY;
-            }
+            POINT cursor;
+            RECT client;
+            if (GetCursorPos(&cursor) && GetClientRect(WindowHandle, &client) &&
+                std::abs(cursor.x - x) < client.right / 4 && std::abs(cursor.y - y) < client.bottom / 4)
+                return TRUE;
         }
-        return CallWindowProcA(GameWndProc, window, message, wParam, lParam);
+        return SetCursorPosHook(x, y);
     }
 
-    // The raw mouse input is registered for the game window the first time there's one
+    bool Registration(std::optional<RAWINPUTDEVICE>& mouse)
+    {
+        UINT count = 0;
+        if (GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
+            return false;
+        std::vector<RAWINPUTDEVICE> devices(count);
+        if (count)
+        {
+            count = GetRegisteredRawInputDevices(devices.data(), &count, sizeof(RAWINPUTDEVICE));
+            if (count == UINT(-1))
+                return false;
+        }
+        mouse.reset();
+        for (UINT i = 0; i < count; ++i)
+        {
+            if (devices[i].usUsagePage == 1 && devices[i].usUsage == 2)
+            {
+                mouse = devices[i];
+                break;
+            }
+        }
+        return true;
+    }
+
+    bool Owns(const std::optional<RAWINPUTDEVICE>& mouse)
+    {
+        return mouse && mouse->hwndTarget == inputWindow && mouse->dwFlags == RIDEV_INPUTSINK;
+    }
+
+    void Release()
+    {
+        if (target.exchange(nullptr))
+            movement.Clear();
+        if (!installed)
+            return;
+
+        std::optional<RAWINPUTDEVICE> current;
+        if (!Registration(current))
+            return;
+        if (Owns(current))
+        {
+            const auto restore = previous.value_or(RAWINPUTDEVICE{ 1, 2, RIDEV_REMOVE, nullptr });
+            if (!RegisterRawInputDevices(&restore, 1, sizeof(restore)))
+                return;
+        }
+        installed = false;
+        previous.reset();
+    }
+
+    LRESULT CALLBACK InputProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    {
+        if (message == WM_INPUT)
+        {
+            movement.Read(reinterpret_cast<HRAWINPUT>(lParam), []()
+            {
+                const auto game = target.load();
+                return game && GetForegroundWindow() == game;
+            });
+        }
+        return DefWindowProcW(window, message, wParam, lParam);
+    }
+
+    LRESULT CALLBACK GameProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR id, DWORD_PTR)
+    {
+        if (window == candidateWindow)
+        {
+            if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && !wParam))
+                movement.Clear();
+            if (message == WM_NCDESTROY)
+            {
+                Release();
+                candidateWindow = nullptr;
+            }
+        }
+        if (message == WM_NCDESTROY)
+            RemoveWindowSubclass(window, GameProc, id);
+        return DefSubclassProc(window, message, wParam, lParam);
+    }
+
     void Register()
     {
-        static HWND registered = nullptr;
-        if (!WindowHandle || registered == WindowHandle || !IsWindow(WindowHandle))
+        const auto game = rawAllowed.load() && IsWindow(WindowHandle) ? WindowHandle : nullptr;
+        std::optional<RAWINPUTDEVICE> current;
+        const auto now = GetTickCount64();
+        if (candidateWindow != game)
+        {
+            Release();
+            if (candidateWindow)
+                RemoveWindowSubclass(candidateWindow, GameProc, 0);
+            candidateWindow = game;
+            nextAttempt = 0;
+        }
+        // A failed restore must keep the previous registration until it can be retried.
+        if (installed && !target.load())
+        {
+            if (now < nextAttempt)
+                return;
+            nextAttempt = now + 500;
+            Release();
+            if (installed)
+                return;
+        }
+        if (!game)
             return;
-        RAWINPUTDEVICE device = { 0x01, 0x02, 0, WindowHandle }; // generic desktop, mouse; WM_MOUSEMOVE is still sent
-        if (!RegisterRawInputDevices(&device, 1, sizeof(device)))
+        if (target.load())
+        {
+            if (!Registration(current) || Owns(current))
+                return;
+            Release();
+        }
+        if (now < nextAttempt)
             return;
-        GameWndProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(WindowHandle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&WndProc)));
-        registered = WindowHandle;
+        nextAttempt = now + 500;
+        if (!SetWindowSubclass(game, GameProc, 0, 0))
+            return;
+        if (!Registration(current) || (current && (current->hwndTarget || current->dwFlags)))
+            return;
+        if (!inputWindow)
+            inputWindow = CreateRawInputWindow(L"BlacklistRawMouse", InputProc);
+        if (!inputWindow)
+            return;
+        const RAWINPUTDEVICE device{ 1, 2, RIDEV_INPUTSINK, inputWindow };
+        if (RegisterRawInputDevices(&device, 1, sizeof(device)))
+        {
+            previous = current;
+            installed = true;
+            target.store(game);
+        }
     }
 }
 
@@ -131,6 +259,9 @@ namespace ShoulderSwap
     LARGE_INTEGER last = {};
     LARGE_INTEGER frequency = {};
     bool keyDown = false;
+    std::atomic<int> binding{ 0 };
+    int previousKey = 0;
+    HWND previousWindow = nullptr;
 
     // modes on foot that have the camera over the right shoulder (CameraImpl::CameraMode2String, sub_D81F10)
     bool Mirrored(int mode)
@@ -187,27 +318,27 @@ namespace ShoulderSwap
         return 0;
     }
 
-    int Key()
+    void RefreshBinding()
     {
-        static std::string name;
-        static int code = 0;
-        const auto& current = FixSettings().String("MAIN.SwapShoulderKey");
-        if (current != name)
-        {
-            name = current;
-            code = KeyCode(name);
-        }
-        return code;
+        static std::mutex mutex;
+        std::lock_guard lock(mutex);
+        const int key = KeyCode(FixSettings().Get("MAIN.SwapShoulderKey"));
+        if (binding.exchange(key) != key)
+            ResetShoulderKey.store(true);
     }
 
     // once a frame or more: the key toggles the side while the camera is on foot, the side moves to it over SwapTime
     void Update(uintptr_t camera)
     {
-        const auto key = Key();
-        const bool down = key && WindowHandle && GetForegroundWindow() == WindowHandle && (GetAsyncKeyState(key) & 0x8000) != 0;
-        if (down && !keyDown && !NativeMenuOpen && !DeveloperOverlay::BlocksInput() &&
+        const bool reset = ResetShoulderKey.exchange(false);
+        const int key = binding.load();
+        const auto window = GetForegroundWindow() == WindowHandle ? WindowHandle : nullptr;
+        const bool down = key && window && (GetAsyncKeyState(key) & 0x8000) != 0;
+        if (!reset && window == previousWindow && key == previousKey && down && !keyDown && !NativeMenuOpen && !DeveloperOverlay::BlocksInput() &&
             MirroredEntity(*reinterpret_cast<uintptr_t*>(camera + 0x2C)))
             swapped = !swapped;
+        previousWindow = window;
+        previousKey = key;
         keyDown = down;
 
         LARGE_INTEGER now;
@@ -227,7 +358,22 @@ export void InitMouse()
     // The main loop empties the message queue each frame and the viewport recenters the cursor on every WM_MOUSEMOVE: with a high
     // polling rate mouse each pass would get a new one and the frame wouldn't end
     MessagePumpGuard::Install(GetModuleHandleW(nullptr));
+    {
+        auto pattern = hook::pattern("51 52 FF 15 ? ? ? ? 83 BD ? ? ? ? 00 74 5E");
+        injector::MakeCALL(pattern.get_first(2), Mouse::RecenterCursor, true);
+        injector::MakeNOP(pattern.get_first(7), 1, true);
+    }
     auto& settings = FixSettings();
+    auto publishRaw = []()
+    {
+        static std::mutex mutex;
+        std::lock_guard lock(mutex);
+        Mouse::rawAllowed.store(FixSettings().Get("MAIN.RawInputMouse") == "1");
+    };
+    settings.OnChange("MAIN.RawInputMouse", publishRaw);
+    publishRaw();
+    settings.OnChange("MAIN.SwapShoulderKey", ShoulderSwap::RefreshBinding);
+    ShoulderSwap::RefreshBinding();
     TurnSpeed::multiplier = std::clamp(settings.Float("MAIN.TurnSpeed"), 0.5f, 10.0f);
 
     if (TurnSpeed::multiplier != 1.0f)
@@ -271,13 +417,15 @@ export void InitMouse()
         Register();
 
         static bool wasEnabled = false;
-        static LONG lastX = 0, lastY = 0;
+        static int64_t lastX = 0, lastY = 0;
         const bool enabled = Enabled();
         if (!enabled || enabled != wasEnabled)
         {
-            rawX = rawY = lastX = lastY = 0;
+            movement.Clear();
+            lastX = lastY = 0;
             lookTime = 0;
             lookThisFrame = false;
+            usedNativeAxes = false;
             wasEnabled = enabled;
             return;
         }
@@ -287,8 +435,12 @@ export void InitMouse()
         if (std::exchange(lookThisFrame, false))
             lookTime = now;
         // the movement of the frame before mouse look turns on is kept for it
-        auto x = std::exchange(rawX, 0);
-        auto y = std::exchange(rawY, 0);
+        auto [x, y, relative] = movement.Take();
+        if (std::exchange(usedNativeAxes, false) || !relative)
+        {
+            lastX = lastY = 0;
+            return;
+        }
         if (!lookTime || now - lookTime > 250)
         {
             lastX = x;
@@ -313,6 +465,8 @@ export void InitMouse()
     static auto IdealOffset = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         using namespace ShoulderSwap;
+        if (!binding.load(std::memory_order_relaxed) && !swapped && side == 1.0f)
+            return;
         const auto camera = *reinterpret_cast<uintptr_t*>(regs.ebp - 4);
         if (!IsFirstPlayerCamera(camera))
             return;

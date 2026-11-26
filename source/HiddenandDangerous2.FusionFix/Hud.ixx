@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <bit>
 
 export module Hud;
 
@@ -210,5 +211,23 @@ export namespace HD2Hud
         auto worldMatrix = hook::module_pattern(GetModuleHandleW(L"LS3DF.dll"),
             "55 8B EC 83 E4 F0 83 EC 44 53 8B D9 8B 83 E0 00 00 00 A8 10 56 57");
         worldMatrixHook = safetyhook::create_inline(worldMatrix.get_first(), WorldMatrix);
+
+        // The message lines (orders, contacts, "Load done") are drawn in screen pixels between a left and a right
+        // limit inside the 4:3 frame; they move out to the edges of the HUD area like the other side groups
+        auto messages = hook::pattern("8B 45 48 8B 4D 50 D9 45 4C 8B 55 54 D9 85 70 D3 00 00 D8 4D 44");
+        static auto messageHook = safetyhook::create_mid(messages.get_first(12), [](SafetyHookContext& regs)
+        {
+            if (screenWidth <= 0 || screenHeight <= 0)
+                return;
+            const float width = static_cast<float>(screenWidth);
+            const float frameWidth = std::min(width, static_cast<float>(screenHeight) * (4.0f / 3.0f));
+            const auto box = boxAspect.load(std::memory_order_relaxed);
+            const float areaWidth = box > 0.0f ? std::clamp(static_cast<float>(screenHeight) * box, frameWidth, width) : width;
+            const float offset = (areaWidth - frameWidth) * 0.5f;
+            if (offset <= 0.0f)
+                return;
+            regs.eax = std::bit_cast<uint32_t>(std::bit_cast<float>(static_cast<uint32_t>(regs.eax)) - offset);
+            regs.ecx = std::bit_cast<uint32_t>(std::bit_cast<float>(static_cast<uint32_t>(regs.ecx)) + offset);
+        });
     }
 }

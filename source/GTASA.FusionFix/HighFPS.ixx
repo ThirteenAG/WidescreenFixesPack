@@ -38,7 +38,7 @@ namespace
     float WholeMsStepNonClipped = 0.0f;
     float MsCarry = 0.0f, MsCarryNonClipped = 0.0f;
     uint32_t Frames30 = 0;                          // frames of 30 per second
-    uint32_t Frames30Gated = 0;                     // Frames30 on the frame it changed, else all bits set
+    uint32_t Every32Gate = 0;
     uint32_t Frames30Passed = 0;
     float Carry30 = 0.0f;
 
@@ -79,7 +79,7 @@ namespace
         {
             WholeMsStep = step;
             WholeMsStepNonClipped = stepNonClipped;
-            Frames30 = Frames30Gated = *FrameCounter;
+            Frames30 = Every32Gate = *FrameCounter;
             Frames30Passed = 1;
             TurnDamping = TurnDampingBase;
             return;
@@ -91,8 +91,8 @@ namespace
         Carry30 += step * 20.0f;
         Frames30Passed = uint32_t(Carry30 / FrameMs30);
         Carry30 -= Frames30Passed * FrameMs30;
+        Every32Gate = Frames30Passed >= 32 - (Frames30 & 31) ? 0 : UINT32_MAX;
         Frames30 += Frames30Passed;
-        Frames30Gated = Frames30Passed ? Frames30 : UINT32_MAX;
 
         TurnDamping = std::pow(TurnDampingBase, step / FrameStep30);
     }
@@ -244,7 +244,7 @@ public:
             // The steps in milliseconds: fld; fmul 0.02; fmul 1000.0; jmp __ftol2
             auto msGetters = hook::pattern("D9 05 ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? E9").count(2);
             FrameCounter.SetAddress(*upsideDown.get_first<uint32_t*>(2));
-            Frames30 = Frames30Gated = *FrameCounter;
+            Frames30 = Every32Gate = *FrameCounter;
             uintptr_t ftol = 0;
             for (size_t i = 0; i < msGetters.size(); ++i)
             {
@@ -257,7 +257,7 @@ public:
             WholeMsStepNonClipped = *TimeStepNonClipped;
             shTimerUpdate = safetyhook::create_inline(timerUpdate.get_first(), TimerUpdate);
 
-            injector::WriteMemory(upsideDown.get_first(2), &Frames30Gated, true);
+            injector::WriteMemory(upsideDown.get_first(2), &Every32Gate, true);
 
             RedirectMillisecondTimers(CTimer::ms_fTimeStep.get_ptr(), &WholeMsStep, ftol);
             RedirectMillisecondTimers(TimeStepNonClipped.get_ptr(), &WholeMsStepNonClipped, ftol);

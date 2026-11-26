@@ -25,9 +25,7 @@ export namespace NeoText
     inline uintptr_t NativeDraw = 0;
     inline thread_local bool Painting = false;
     inline thread_local Template Current;
-    inline std::wstring Notice;
-    inline ULONGLONG NoticeUntil = 0;
-    inline void (*Tick)() = nullptr;
+    inline std::wstring (*UpdateNotice)() = nullptr;
     inline std::map<std::string, std::string> Startup;
     inline std::mutex LanguageMutex;
     inline std::string Language = "en";
@@ -35,7 +33,8 @@ export namespace NeoText
 
     inline void ReadLanguage()
     {
-        auto language = FixSettings().String("MAIN.TextLanguage");
+        const std::lock_guard lock(LanguageMutex);
+        auto language = FixSettings().Get("MAIN.TextLanguage");
         if (language.empty() || _stricmp(language.c_str(), "auto") == 0)
         {
             switch (PRIMARYLANGID(GetUserDefaultUILanguage()))
@@ -47,7 +46,6 @@ export namespace NeoText
                 default: language = "en"; break;
             }
         }
-        const std::lock_guard lock(LanguageMutex);
         Language = language;
         LanguagePending = true;
     }
@@ -126,14 +124,7 @@ export namespace NeoText
             Current.Ready = false;
             return;
         }
-        if (Tick)
-            Tick();
-        if (NoticeUntil && GetTickCount64() >= NoticeUntil)
-        {
-            Notice.clear();
-            NoticeUntil = 0;
-        }
-        auto message = Notice;
+        auto message = UpdateNotice ? UpdateNotice() : std::wstring{};
         if (message.empty() && RestartRequired())
             message = asi_settings::text::Widen(FixSettings().GetTexts().Resolve("@menu.restartwarning"));
         if (message.empty())
@@ -172,7 +163,6 @@ export namespace NeoText
         auto text = hook::pattern("64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 64 89 25 00 00 00 00 81 EC 8C 01 00 00 53 55 8B E9 8B 45 44");
         NativeDraw = reinterpret_cast<uintptr_t>(text.get_first());
         TextHook = safetyhook::create_mid(text.get_first(), Capture);
-        if (TextHook)
-            NeoHud::BeforeRoot = BeforeRoot;
+        NeoHud::BeforeRoot = BeforeRoot;
     }
 }

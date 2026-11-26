@@ -7,6 +7,7 @@ module;
 #include <array>
 #include <cstring>
 #include <cmath>
+#include <optional>
 #include <set>
 
 
@@ -18,8 +19,14 @@ import ComVars;
 // API callbacks run only after native screen input returns. Unsupported executables fail closed.
 export namespace DPLMenu
 {
-    inline std::function<bool()> blocksInput, padHelp;
-    inline std::function<std::wstring()> helpPrefix;
+    inline std::function<bool()> blocksInput;
+    inline std::function<bool(bool)> padHelp;
+    struct HelpControls
+    {
+        std::wstring toggle;
+        std::wstring scroll;
+    };
+    inline HelpControls (*helpControls)() = [] { return HelpControls{ L"Y", {} }; };
     using Bytes = std::vector<uint8_t>;
     template<class T> T& At(void* p, size_t offset) { return *reinterpret_cast<T*>(static_cast<uint8_t*>(p) + offset); }
     template<class F> F Virtual(void* p, size_t offset) { return reinterpret_cast<F>(At<uintptr_t>(At<void*>(p, 0), offset)); }
@@ -41,6 +48,7 @@ export namespace DPLMenu
         bool fullValue = false;
         bool centered = false;
         bool fitted = false;
+        std::optional<std::pair<float, float>> pagePosition;
         std::wstring cachedValue, formatted;
         std::array<uint32_t, 14> cachedStyle{};
         void* cachedFont = nullptr;
@@ -58,6 +66,11 @@ export namespace DPLMenu
         bool entry = false;
     };
     struct Item { std::string label, value; RWGTAMenu::Row row; int link = -1; bool enabled = true; };
+    struct RestartSetting
+    {
+        std::pair<uintptr_t, std::string> key;
+        const AsiSettingsApi* api;
+    };
     struct Host
     {
         void* root = nullptr;
@@ -76,11 +89,18 @@ export namespace DPLMenu
         std::vector<Bytes> decorations;
         RWGTAMenu::Model model;
         std::vector<Item> items;
+        std::vector<RestartSetting> restartSettings;
         size_t modelPage = 0, rootOffset = 0, rowStart = 0;
         bool pause = false, retired = false, open = false, busy = false;
         int pending = 0;
         int menuId = 0;
         size_t pendingRow = 0;
+    };
+    struct BusyScope
+    {
+        Host& host;
+        explicit BusyScope(Host& value) : host(value) { host.busy = true; }
+        ~BusyScope() { host.busy = false; }
     };
     inline std::unordered_map<void*, std::pair<std::weak_ptr<Host>, Text*>> texts;
     inline std::unordered_map<void*, std::pair<std::weak_ptr<Host>, Button*>> buttons;
@@ -111,7 +131,7 @@ export namespace DPLMenu
     }
     inline std::string Language()
     {
-        const auto& selected = FixSettings().String("MAIN.TextLanguage");
+        const auto selected = FixSettings().Get("MAIN.TextLanguage");
         for (auto tag : { "en", "fr", "de", "it", "es" })
             if (selected == tag) return selected;
         static const char* tags[] = { "en", "fr", "de", "es", "it", "ja", "zh-CN", "zh-TW", "ko", "pt" };
@@ -120,26 +140,6 @@ export namespace DPLMenu
         return index >= 0 && index < static_cast<int>(std::size(tags)) ? tags[index] : "en";
     }
     inline std::map<std::pair<uintptr_t, std::string>, std::string> restartValues;
-    inline void RememberRestartValues(const asi_settings::LoadedPlugin& plugin)
-    {
-        for (const auto& setting : plugin.file.description.settings)
-            if (setting.HasValue() && setting.apply == "restart")
-                restartValues.try_emplace({ reinterpret_cast<uintptr_t>(plugin.module), setting.id }, OtherPlugins::Get(plugin, setting));
-    }
-    inline bool RestartRequired(const RWGTAMenu::Model& model)
-    {
-        for (const auto& page : model.Pages())
-        {
-            if (!page.plugin) continue;
-            for (const auto& setting : page.plugin->file.description.settings)
-            {
-                if (!setting.HasValue() || setting.apply != "restart") continue;
-                auto initial = restartValues.find({ reinterpret_cast<uintptr_t>(page.plugin->module), setting.id });
-                if (initial != restartValues.end() && initial->second != OtherPlugins::Get(*page.plugin, setting)) return true;
-            }
-        }
-        return false;
-    }
     inline bool Current(const std::shared_ptr<Host>& host)
     {
         auto found = hosts.find(host->root);
@@ -151,12 +151,53 @@ export namespace DPLMenu
         auto selected = At<uint32_t>(host->root, 856);
         return selected < At<uint32_t>(host->root, 272) && At<void*>(host->root, 16 + selected * 4) == host->page.data();
     }
+    inline std::string ReadRestartValue(const RestartSetting& setting)
+    {
+        return OtherPlugins::Fetch([&](char* buffer, uint32_t size) { return setting.api->Get(setting.key.second.c_str(), buffer, size); });
+    }
+    inline void CollectRestartSettings(const asi_settings::LoadedPlugin& plugin, std::vector<RestartSetting>& settings)
+    {
+        for (const auto& setting : plugin.file.description.settings)
+            if (setting.HasValue() && setting.apply == "restart")
+                settings.push_back({ { reinterpret_cast<uintptr_t>(plugin.module), setting.id }, plugin.api });
+    }
+    inline void RememberRestartValues(const std::shared_ptr<Host>& host)
+    {
+        std::vector<RestartSetting> settings;
+        for (const auto& page : host->model.Pages())
+            if (page.plugin) CollectRestartSettings(*page.plugin, settings);
+        for (const auto& setting : settings)
+        {
+            if (restartValues.contains(setting.key)) continue;
+            auto value = ReadRestartValue(setting);
+            if (!Current(host) || !host->model.IsOpen()) return;
+            restartValues.try_emplace(setting.key, std::move(value));
+        }
+        host->restartSettings = std::move(settings);
+    }
+    inline bool RestartRequired(const std::shared_ptr<Host>& host)
+    {
+        for (const auto& entry : host->restartSettings)
+        {
+            const auto setting = entry;
+            const auto value = ReadRestartValue(setting);
+            if (!Active(host)) return false;
+            auto initial = restartValues.find(setting.key);
+            if (initial != restartValues.end() && initial->second != value) return true;
+        }
+        return false;
+    }
     inline std::array<uint32_t, 14> Style(Text& text)
     {
         std::array<uint32_t, 14> style{};
         for (size_t i = 0; i < 4; ++i) style[i] = At<uint32_t>(text.bytes.data(), 20 + i * 4);
         style[5] = Virtual<uint32_t(__thiscall*)(void*)>(GuiService.get(), 52)(GuiService.get());
         style[6] = At<uint32_t>(text.bytes.data(), 4); style[7] = At<uint32_t>(text.bytes.data(), 8);
+        if (text.pagePosition)
+        {
+            At<float>(style.data(), 24) = text.pagePosition->first;
+            At<float>(style.data(), 28) = text.pagePosition->second;
+        }
         At<float>(style.data(), 32) = 65536.0f;
         style[9] = At<uint32_t>(text.bytes.data(), 72); style[10] = At<uint32_t>(text.bytes.data(), 76);
         style[11] = At<uint32_t>(text.bytes.data(), 80);
@@ -274,6 +315,13 @@ export namespace DPLMenu
         text->width = width; text->fullValue = full;
         texts[text->bytes.data()] = {host, text.get()}; return text;
     }
+    inline std::unique_ptr<Text> ClonePageText(const std::shared_ptr<Host>& host, void* source, float x, float y, float width, bool full = false)
+    {
+        auto text = CloneText(host, source, x, y, width, full);
+        // Keep page text anchored when the native screen is reopened.
+        text->pagePosition = std::pair{ x, y };
+        return text;
+    }
     inline std::unique_ptr<Button> CloneButton(const std::shared_ptr<Host>& host, void* source, float x, float y, size_t row, bool entry)
     {
         auto button = std::make_unique<Button>(); memcpy(button->bytes.data(), source, button->bytes.size());
@@ -340,6 +388,7 @@ export namespace DPLMenu
     inline void Populate(const std::shared_ptr<Host>& host)
     {
         if (!Active(host)) return;
+        RWGTAMenu::Model::Changed().exchange(false);
         std::vector<Item> items;
         auto& model = host->model;
         std::string title = model.Text("menu.plugins");
@@ -376,6 +425,7 @@ export namespace DPLMenu
         items.push_back({ model.Text("menu.back"), "", {}, -4 });
         host->items = std::move(items);
         host->heading->value = Wide(title);
+        host->description->fullValue = false;
         host->description->value.clear();
         for (size_t i = 0; i < host->items.size(); ++i)
         {
@@ -398,7 +448,6 @@ export namespace DPLMenu
             for (size_t i = 0; i < host->items.size(); ++i) if (host->items[i].enabled) { selected = static_cast<uint32_t>(i); break; }
         At<uint32_t>(host->page.data(), 368) = selected;
         At<uint32_t>(host->buttons[selected]->bytes.data(), 68) = 0;
-        RWGTAMenu::Model::Changed() = false;
     }
     inline void ScrollHelp(const std::shared_ptr<Host>& host, int amount)
     {
@@ -407,6 +456,16 @@ export namespace DPLMenu
         host->helpOffset = static_cast<size_t>(std::clamp(static_cast<int>(host->helpOffset) + amount, 0, last));
         for (size_t i = 0; i < host->helpText.size(); ++i)
             host->helpText[i]->value = host->helpOffset + i < host->helpLines.size() ? host->helpLines[host->helpOffset + i] : L"";
+    }
+    inline std::wstring HelpFooter(RWGTAMenu::Model& model, const HelpControls& controls)
+    {
+        auto text = Wide(model.Text("menu.help.controls"));
+        const auto scroll = controls.scroll.empty() ? Wide(model.Text("menu.help.padScroll")) : controls.scroll;
+        if (const auto position = text.find(L"{toggle}"); position != std::wstring::npos)
+            text.replace(position, std::wstring_view(L"{toggle}").size(), controls.toggle);
+        if (const auto position = text.find(L"{scroll}"); position != std::wstring::npos)
+            text.replace(position, std::wstring_view(L"{scroll}").size(), scroll);
+        return text;
     }
     inline void Help(const std::shared_ptr<Host>& host, const std::string* content, const std::string* title)
     {
@@ -432,7 +491,8 @@ export namespace DPLMenu
         if (!line.empty()) host->helpLines.push_back(line);
         host->help = true; host->helpOffset = 0; host->helpSelection = selected;
         host->heading->value = Wide(title ? *title : host->items[selected].label);
-        host->description->value = Wide(host->model.Text("menu.help.controls"));
+        host->description->fullValue = true;
+        host->description->value = HelpFooter(host->model, helpControls());
         SetText(*host->buttons[6], host->model.Text("menu.back"), "");
         At<uint32_t>(host->buttons[6]->bytes.data(), 68) = 0;
         At<void*>(host->page.data(), 0) = host->buttons[6]->bytes.data();
@@ -466,7 +526,7 @@ export namespace DPLMenu
     inline void Close(const std::shared_ptr<Host>& host, bool nativeBack)
     {
         if (nativeBack && Active(host)) Virtual<int(__thiscall*)(void*, bool)>(host->root, 80)(host->root, true);
-        host->help = false; host->open = false; host->model.Close(); host->items.clear(); host->pending = 0;
+        host->help = false; host->open = false; host->model.Close(); host->items.clear(); host->restartSettings.clear(); host->pending = 0;
     }
     inline void Action(const std::shared_ptr<Host>& host)
     {
@@ -478,14 +538,14 @@ export namespace DPLMenu
             else ScrollHelp(host, action == 5 ? -1 : action == 6 ? 1 : action == 7 ? -6 : 6);
             return;
         }
-        struct BusyScope { Host& host; explicit BusyScope(Host& value) : host(value) { host.busy = true; } ~BusyScope() { host.busy = false; } } busy(*host);
+        BusyScope busy(*host);
         if (!host->open)
         {
             auto selected = At<uint32_t>(host->root, 856);
             if (selected >= host->originalScreens || At<void*>(host->root, 16 + selected * 4) != host->parent) return;
             auto menuId = At<int>(GuiService.get(), 736);
             host->model.OpenPlugins(module, Language(), 4096);
-        for (const auto& page : host->model.Pages()) if (page.plugin) RememberRestartValues(*page.plugin);
+            if (Current(host) && host->model.IsOpen()) RememberRestartValues(host);
             if (Current(host) && host->model.IsOpen() && At<int>(GuiService.get(), 736) == menuId &&
                 At<uint32_t>(host->root, 856) == selected && At<void*>(host->root, 16 + selected * 4) == host->parent)
             {
@@ -503,7 +563,12 @@ export namespace DPLMenu
             auto item = host->items[host->pendingRow];
             if (item.link == -1)
             {
-                host->model.Change(item.row, action == 7 ? -1 : action == 8 ? 1 : 0, host->pause);
+                const auto rows = host->model.VisibleRows(host->modelPage - 1);
+                if (!Active(host)) return;
+                const size_t row = host->rowStart + host->pendingRow;
+                if (row < rows.size() && rows[row]->kind == item.row.kind && rows[row]->plugin == item.row.plugin &&
+                    rows[row]->setting == item.row.setting)
+                    host->model.Change(item.row, action == 7 ? -1 : action == 8 ? 1 : 0, host->pause);
             }
             else if (action == 9)
             {
@@ -595,14 +660,15 @@ export namespace DPLMenu
             host->buttons.push_back(std::move(button));
         }
         auto textTemplate = host->entry->text.front()->bytes.data();
-        host->heading = CloneText(host, textTemplate, 0.075f, 0.12f, 0.84f);
-        host->description = CloneText(host, textTemplate, 0.075f, 0.68f, 0.84f);
+        const float headingY = host->pause ? 0.155f : 0.12f;
+        host->heading = ClonePageText(host, textTemplate, 0.075f, headingY, 0.84f);
+        host->description = ClonePageText(host, textTemplate, 0.075f, 0.68f, 0.84f);
         host->heading->height = host->description->height = 0.06f;
-        host->restart = CloneText(host, textTemplate, 0.075f, 0.74f, 0.84f);
+        host->restart = ClonePageText(host, textTemplate, 0.075f, 0.74f, 0.84f);
         host->restart->height = 0.045f;
         for (size_t i = 0; i < 6; ++i)
         {
-            auto text = CloneText(host, textTemplate, 0.075f, 0.24f + static_cast<float>(i) * 0.055f, 0.84f, true);
+            auto text = ClonePageText(host, textTemplate, 0.075f, 0.24f + static_cast<float>(i) * 0.055f, 0.84f, true);
             text->height = 0.05f;
             host->helpText.push_back(std::move(text));
         }
@@ -684,26 +750,35 @@ export namespace DPLMenu
             host->model.PageShown(host->modelPage - 1); host->modelPage = host->rowStart = 0;
             host->pending = 0;
             state[5] &= ~8u;
+            BusyScope busy(*host);
             if (Active(host)) Populate(host);
             return result;
         }
         else if (active && !Active(host)) Close(host, false);
         Action(host);
+        BusyScope busy(*host);
         if (Active(host) && !host->help && RWGTAMenu::Model::Changed()) Populate(host);
         if (Active(host))
         {
-            host->restart->value = RestartRequired(host->model) ? Wide(host->model.Text("menu.restartwarning")) : L"";
+            const bool restart = RestartRequired(host);
+            if (!Active(host)) return result;
+            host->restart->value = restart ? Wide(host->model.Text("menu.restartwarning")) : L"";
             static bool helpDown = false;
             DWORD foregroundProcess = 0;
             GetWindowThreadProcessId(GetForegroundWindow(), &foregroundProcess);
-            const bool down = foregroundProcess == GetCurrentProcessId() &&
-                ((GetAsyncKeyState(VK_F1) & 0x8000) || (padHelp && padHelp()));
-            if (down && !helpDown && !(blocksInput && blocksInput()))
+            const bool acceptHelp = foregroundProcess == GetCurrentProcessId() && !(blocksInput && blocksInput());
+            const bool down = (GetAsyncKeyState(VK_F1) & 0x8000) != 0;
+            const bool padPressed = padHelp && padHelp(acceptHelp);
+            if (acceptHelp && ((down && !helpDown) || padPressed))
             {
                 if (host->help) EndHelp(host); else Help(host);
             }
             helpDown = down;
-            if (host->help) return result;
+            if (host->help)
+            {
+                host->description->value = HelpFooter(host->model, helpControls());
+                return result;
+            }
             if (!pendingNotice.empty())
             {
                 const auto title = host->model.Text("plugin.name");
@@ -716,7 +791,7 @@ export namespace DPLMenu
             {
                 const auto row = host->items[selected].row;
                 auto description = host->model.Help(row);
-                host->description->value = description.empty() ? L"" : (helpPrefix ? helpPrefix() : L"F1: ") + Wide(description);
+                host->description->value = description.empty() ? L"" : L"F1 / " + helpControls().toggle + L": " + Wide(description);
             }
         }
         return result;
@@ -779,7 +854,10 @@ export namespace DPLMenu
             Log("native menu lifetime pin refused");
             return;
         }
-        for (const auto& plugin : asi_settings::FindLoadedPlugins(module, "en")) RememberRestartValues(plugin);
+        std::vector<RestartSetting> settings;
+        for (const auto& plugin : asi_settings::FindLoadedPlugins(module, "en")) CollectRestartSettings(plugin, settings);
+        for (const auto& setting : settings)
+            if (!restartValues.contains(setting.key)) restartValues.emplace(setting.key, ReadRestartValue(setting));
         releaseHook = safetyhook::create_inline(hook::get_pattern("53 56 57 8B F1 33 FF F6 86 6C 03 00 00 01"), &Release);
         textHook = safetyhook::create_inline(hook::get_pattern("55 8B EC 83 E4 F8 83 EC 54 A1 ? ? ? ? 53 56 33 F6 8B D9 57 8D 4C 24 28 89 44 24 0C"), &DrawText);
         processHook = safetyhook::create_inline(hook::get_pattern("55 8B EC 51 51 53 8B D9 F6 83 6C 03 00 00 02"), &Process);

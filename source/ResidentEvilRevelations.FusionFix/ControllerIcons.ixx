@@ -4,6 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include <d3dx9.h>
 #include <array>
+#include <atomic>
 #include <mutex>
 #include <vector>
 
@@ -24,57 +25,75 @@ export namespace RevIcons
     SafetyHookMid loadedExternal, loadedEmbedded;
     SafetyHookInline cleanup;
     uint8_t* font = nullptr;
+    uint8_t* atlasFont = nullptr;
     IDirect3DTexture9* atlas = nullptr;
     std::vector<uint8_t> original;
     HMODULE module = nullptr;
     int applied = 0;
-    int failedStyle = -1;
-    bool dirty = false;
+    std::atomic<int> iconStyle{};
+    int unsupportedStyles{};
+    bool unsupportedAtlas{};
+    bool dirty{};
+    ULONGLONG retryAt{};
 
     template<typename T> T Read(const void* p, size_t offset)
     {
         return *reinterpret_cast<const T*>(static_cast<const uint8_t*>(p) + offset);
     }
 
-    bool CopyAtlas(IDirect3DTexture9* texture, bool restore)
+    void RetryLater()
     {
-        D3DSURFACE_DESC desc{};
-        if (FAILED(texture->GetLevelDesc(0, &desc)) || desc.Width != 512 || desc.Height != 256 ||
-            desc.Format != D3DFMT_DXT5 || desc.Pool != D3DPOOL_MANAGED || texture->GetLevelCount() != 1)
-            return false;
+        retryAt = GetTickCount64() + 250;
+    }
+
+    bool CopyAtlas(bool restore)
+    {
+        constexpr size_t rowBytes = 2048;
+        constexpr size_t rowCount = 64;
+        if (!restore)
+            original.resize(rowBytes * rowCount);
         D3DLOCKED_RECT lock{};
-        if (FAILED(texture->LockRect(0, &lock, nullptr, restore ? 0 : D3DLOCK_READONLY))) return false;
-        if (!lock.pBits || lock.Pitch < 2048)
+        if (FAILED(atlas->LockRect(0, &lock, nullptr, restore ? 0 : D3DLOCK_READONLY)))
+            return false;
+        const bool usable = lock.pBits && lock.Pitch >= static_cast<INT>(rowBytes);
+        if (usable)
         {
-            texture->UnlockRect(0);
+            for (size_t y = 0; y < rowCount; ++y)
+            {
+                auto row = static_cast<uint8_t*>(lock.pBits) + y * lock.Pitch;
+                if (restore)
+                    std::memcpy(row, original.data() + y * rowBytes, rowBytes);
+                else
+                    std::memcpy(original.data() + y * rowBytes, row, rowBytes);
+            }
+        }
+        return SUCCEEDED(atlas->UnlockRect(0)) && usable;
+    }
+
+    bool Restore()
+    {
+        if (dirty && !CopyAtlas(true))
+        {
+            RetryLater();
             return false;
         }
-        if (!restore) original.resize(131072);
-        for (size_t y = 0; y < 64; ++y)
-        {
-            auto row = static_cast<uint8_t*>(lock.pBits) + y * lock.Pitch;
-            if (restore) std::memcpy(row, original.data() + y * 2048, 2048);
-            else std::memcpy(original.data() + y * 2048, row, 2048);
-        }
-        return SUCCEEDED(texture->UnlockRect(0));
+        dirty = false;
+        applied = 0;
+        return true;
     }
 
     bool DropAtlas()
     {
+        if (!Restore())
+            return false;
         if (atlas)
-        {
-            if (dirty && !original.empty())
-            {
-                applied = 0;
-                if (!CopyAtlas(atlas, true)) return false;
-            }
             atlas->Release();
-        }
         atlas = nullptr;
+        atlasFont = nullptr;
         original.clear();
-        applied = 0;
-        failedStyle = -1;
-        dirty = false;
+        unsupportedStyles = 0;
+        unsupportedAtlas = false;
+        retryAt = 0;
         return true;
     }
 
@@ -97,25 +116,28 @@ export namespace RevIcons
         return false;
     }
 
-    bool Apply(IDirect3DDevice9* device, int style)
+    bool Apply(IDirect3DDevice9* device, int style, const std::array<RECT, icons.size()>& rects)
     {
-        IDirect3DSurface9* destination = nullptr;
-        if (FAILED(atlas->GetSurfaceLevel(0, &destination))) return false;
+        IDirect3DSurface9* destination{};
+        if (FAILED(atlas->GetSurfaceLevel(0, &destination)))
+            return false;
         bool ok = true;
-        for (const auto& icon : icons)
+        for (size_t i = 0; i < icons.size(); ++i)
         {
-            RECT rect{};
-            IDirect3DTexture9* image = nullptr;
-            IDirect3DSurface9* source = nullptr;
-            const int id = style == 2 ? icon.playstation : icon.nintendo;
-            if (!FindGlyph(font, icon.glyph, rect) ||
-                FAILED(D3DXCreateTextureFromResourceW(device, module, MAKEINTRESOURCEW(id), &image)) ||
-                FAILED(image->GetSurfaceLevel(0, &source)) ||
-                FAILED(D3DXLoadSurfaceFromSurface(destination, nullptr, &rect, source, nullptr, nullptr, D3DX_FILTER_LINEAR, 0)))
-                ok = false;
-            if (source) source->Release();
-            if (image) image->Release();
-            if (!ok) break;
+            const int id = style == 2 ? icons[i].playstation : icons[i].nintendo;
+            if (!id)
+                continue;
+            IDirect3DTexture9* image{};
+            IDirect3DSurface9* source{};
+            ok = SUCCEEDED(D3DXCreateTextureFromResourceW(device, module, MAKEINTRESOURCEW(id), &image)) &&
+                SUCCEEDED(image->GetSurfaceLevel(0, &source)) &&
+                SUCCEEDED(D3DXLoadSurfaceFromSurface(destination, nullptr, &rects[i], source, nullptr, nullptr, D3DX_FILTER_LINEAR, 0));
+            if (source)
+                source->Release();
+            if (image)
+                image->Release();
+            if (!ok)
+                break;
         }
         destination->Release();
         return ok;
@@ -123,34 +145,77 @@ export namespace RevIcons
 
     void Frame(IDirect3DDevice9* device)
     {
+        // Xbox icons are the game's own: nothing to do until another style is chosen (the atlas is only
+        // changed on the render thread).
+        if (iconStyle.load(std::memory_order_relaxed) < 2 && !atlas)
+            return;
         const std::lock_guard guard(mutex);
-        const int style = std::clamp(FixSettings().Int("MAIN.GamepadIcons"), 0, 3);
-        if (!font || style < 2) { if (atlas) DropAtlas(); return; }
-        const auto resources = Read<uint8_t**>(font, 0xB4);
-        if (!resources || !resources[0]) { if (atlas) DropAtlas(); return; }
-        const auto wrapper = Read<uint8_t*>(resources[0], 0xD4);
-        if (!wrapper) { if (atlas) DropAtlas(); return; }
-        const auto texture = Read<IDirect3DTexture9*>(wrapper, 0x34);
-        if (!texture) { if (atlas) DropAtlas(); return; }
-        if (atlas != texture)
+        if (retryAt && GetTickCount64() < retryAt)
+            return;
+
+        const int style = iconStyle.load(std::memory_order_relaxed);
+        const auto resources = font && style >= 2 ? Read<uint8_t**>(font, 0xB4) : nullptr;
+        const auto wrapper = resources && resources[0] ? Read<uint8_t*>(resources[0], 0xD4) : nullptr;
+        const auto texture = wrapper ? Read<IDirect3DTexture9*>(wrapper, 0x34) : nullptr;
+        if (atlas != texture || (atlas && atlasFont != font))
         {
-            if (!DropAtlas()) return;
-            texture->AddRef();
-            atlas = texture;
-            if (!CopyAtlas(atlas, false)) { DropAtlas(); return; }
+            if (!DropAtlas())
+                return;
+            if (texture)
+            {
+                texture->AddRef();
+                atlas = texture;
+                atlasFont = font;
+            }
         }
-        if (applied == style) return;
-        if (dirty)
+        if (!atlas || unsupportedAtlas || applied == style || !Restore())
+            return;
+        if (unsupportedStyles & (1 << style))
+            return;
+
+        if (original.empty())
         {
-            applied = 0;
-            if (!CopyAtlas(atlas, true)) return;
+            D3DSURFACE_DESC desc{};
+            if (FAILED(atlas->GetLevelDesc(0, &desc)))
+            {
+                RetryLater();
+                return;
+            }
+            if (desc.Width != 512 || desc.Height != 256 || desc.Format != D3DFMT_DXT5 ||
+                desc.Pool != D3DPOOL_MANAGED || atlas->GetLevelCount() != 1)
+            {
+                unsupportedAtlas = true;
+                return;
+            }
+            if (!CopyAtlas(false))
+            {
+                original.clear();
+                RetryLater();
+                return;
+            }
         }
-        dirty = false;
-        applied = 0;
-        if (failedStyle == style) return;
+
+        std::array<RECT, icons.size()> rects{};
+        for (size_t i = 0; i < icons.size(); ++i)
+        {
+            const int id = style == 2 ? icons[i].playstation : icons[i].nintendo;
+            if (id && !FindGlyph(font, icons[i].glyph, rects[i]))
+            {
+                unsupportedStyles |= 1 << style;
+                return;
+            }
+        }
         dirty = true;
-        if (Apply(device, style)) { applied = style; failedStyle = -1; }
-        else { if (CopyAtlas(atlas, true)) dirty = false; failedStyle = style; }
+        if (Apply(device, style, rects))
+        {
+            applied = style;
+            retryAt = 0;
+        }
+        else
+        {
+            Restore();
+            RetryLater();
+        }
     }
 
     void BeforeReset()
@@ -183,6 +248,12 @@ export namespace RevIcons
         {
             WFP::onInitEvent() += []()
             {
+                const auto updateStyle = []()
+                {
+                    iconStyle.store(std::clamp(FixSettings().Int("MAIN.GamepadIcons"), 0, 3), std::memory_order_relaxed);
+                };
+                updateStyle();
+                FixSettings().OnChange("MAIN.GamepadIcons", updateStyle);
                 GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                     reinterpret_cast<LPCWSTR>(&Capture), &module);
                 cleanup = safetyhook::create_inline(hook::pattern("53 56 8B F1 E8 ? ? ? ? 8B 86 AC 00 00 00 33 DB 3B C3 74 10 8B 16 50 8B 42 44 8B CE FF").get_first(), Cleanup);

@@ -3,7 +3,7 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/WindowCursor.hpp"
-#include "Shared/TonyHawk/Camera.hpp"
+#include "rawinput.hpp"
 #include <random>
 
 export module Core;
@@ -24,14 +24,15 @@ import Misc;
 
 void Install()
 {
-    THAWController::Install(&FixSettings().Float("MAIN.GamepadCameraSpeed"), &FixSettings().Int("MAIN.InvertGamepadY"));
-    WindowCursor::Initialize(FixSettings());
     auto& settings = FixSettings();
-    THAWVibration::Install(&settings.Int("MAIN.Vibration"));
+    THAWController::Install(settings);
+    // The main loop empties the message queue before each frame; a high polling rate mouse must not keep it going
+    MessagePumpGuard::Install(GetModuleHandle(nullptr));
+    WindowCursor::Initialize(FixSettings());
+    THAWVibration::Install(settings);
     asi_settings::LiveLink::Start();
     THAWMenu::Init();
-    THAWRawMouse::Install(&settings.Int("MAIN.RawInputMouse"), &settings.Float("MAIN.MouseSensitivity"),
-                          &settings.Int("MAIN.InvertMouseY"));
+    THAWRawMouse::Install(settings);
     Screen.Width = settings.Int("MAIN.ResX");
     Screen.Height = settings.Int("MAIN.ResY");
 
@@ -45,9 +46,9 @@ void Install()
     if (Screen.Width <= 0 || Screen.Height <= 0)
         std::tie(Screen.Width, Screen.Height) = std::make_tuple(640, 480);
     THAWDisplay::Init(Screen.Width, Screen.Height);
-    THAWMovies::Install(&settings.Int("MAIN.FMVWidescreenMode"));
+    THAWMovies::Install(settings);
     THAWDevice::Install();
-    THAWCinema::Install(&settings.Int("MAIN.CutsceneBorders"), Screen.Width, Screen.Height);
+    THAWCinema::Install(settings, Screen.Width, Screen.Height);
     THAWController::BlockKeys = THAWDevice::BlocksInput;
 
     THAWDisplay::UpdateDimensions(Screen.Width, Screen.Height);
@@ -94,9 +95,7 @@ public:
             THAWDisplay::UpdateMode();
             THAWDisplay::UpdateResize();
             THAWVibration::Frame();
-            const bool gameplayCamera = std::any_of(TonyCamera::Cameras.begin(), TonyCamera::Cameras.end(),
-                [](const auto& entry) { return entry.second.gameplay; });
-            THAWRawMouse::Frame(gameplayCamera);
+            THAWRawMouse::Frame(THAWDevice::BlocksInput());
         };
         WFP::onShutdownEvent() += []() { WindowCursor::Shutdown(); };
     }

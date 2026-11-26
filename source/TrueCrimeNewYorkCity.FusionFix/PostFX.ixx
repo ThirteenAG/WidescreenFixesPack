@@ -11,6 +11,16 @@ export module PostFX;
 import ComVars;
 import ModelSprites;
 
+enum PostEffect : uint32_t
+{
+    DistanceBlurEffect = 1u << 0,
+    BloomEffect = 1u << 1,
+    SMAAEffect = 1u << 2,
+    ConsoleGammaEffect = 1u << 3,
+};
+
+std::atomic<uint32_t> enabledEffects{ 0 };
+
 inline void SAFE_RELEASE(auto*& ptr)
 {
     if (ptr) { ptr->Release(); ptr = nullptr; }
@@ -164,6 +174,13 @@ public:
         if (FAILED(pD3DDevice->QueryInterface(__uuidof(IDirect3DDevice9), (void**)&d3d9device)))
             return;
 
+        D3DVIEWPORT9 viewport{};
+        if (FAILED(d3d9device->GetViewport(&viewport)))
+        {
+            d3d9device->Release();
+            return;
+        }
+
         IDirect3DSurface9* depthSurf = nullptr;
         IDirect3DTexture9* depthTex = nullptr;
         IDirect3DSurface9* rt0 = nullptr;
@@ -203,6 +220,7 @@ public:
 
         d3d9device->SetRenderTarget(0, rt0);
         d3d9device->SetDepthStencilSurface(depthSurf);
+        d3d9device->SetViewport(&viewport);
 
         d3d9device->SetFVF(oldFVF);
         d3d9device->SetVertexDeclaration(oldDecl);
@@ -219,11 +237,9 @@ public:
     class ConsoleGamma
     {
     public:
-        static inline const int* pConsoleGammaEnabled = nullptr; // GRAPHICS.ConsoleGamma, changes apply live
-
-        static inline void Render()
+        static inline void Render(bool enabled)
         {
-            if (*pConsoleGammaEnabled)
+            if (enabled)
             {
                 RenderSafe([](IDirect3DDevice9* device, IDirect3DSurface9* rt0, IDirect3DTexture9* depthTex)
                 {
@@ -249,7 +265,6 @@ public:
     class Bloom
     {
     public:
-        static inline const int* pBloomEnabled = nullptr; // MISC.Bloom, changes apply live
         static inline bool bBloomInitialized = false;
 
         static inline UINT BloomWidth = 0;
@@ -286,9 +301,9 @@ public:
             bBloomInitialized = true;
             return true;
         }
-        static void Render()
+        static void Render(bool enabled)
         {
-            if (*pBloomEnabled)
+            if (enabled)
             {
                 RenderSafe([](IDirect3DDevice9* device, IDirect3DSurface9* rt0, IDirect3DTexture9* depthTex)
                 {
@@ -369,13 +384,11 @@ public:
     class DistanceBlur
     {
     public:
-        static inline const int* pDOFEnabled = nullptr; // MISC.DistantBlur, changes apply live
-
         static inline float fDistBlurStrength = 1.0f;
 
-        static void Render(float nearZ, float farZ)
+        static void Render(bool enabled, float nearZ, float farZ)
         {
-            if (*pDOFEnabled)
+            if (enabled)
             {
                 RenderSafe([=](IDirect3DDevice9* device, IDirect3DSurface9* rt0, IDirect3DTexture9* depthTex)
                 {
@@ -409,7 +422,6 @@ public:
     class SMAA
     {
     public:
-        static inline const int* pAntiAliasing = nullptr; // GRAPHICS.AntiAliasing: 1 is SMAA, changes apply live
         static inline bool bAAInitialized = false;
 
         static inline IDirect3DTexture9* pAreaTex = {};
@@ -450,9 +462,9 @@ public:
             return true;
         }
 
-        static void Render()
+        static void Render(bool enabled)
         {
-            if (*pAntiAliasing == 1)
+            if (enabled)
             {
                 RenderSafe([](IDirect3DDevice9* device, IDirect3DSurface9* rt0, IDirect3DTexture9* depthTex)
                 {
@@ -577,10 +589,11 @@ void sub_533AA0(float* screenData)
 
                 float zn = screenData[7];
                 float zf = screenData[8];
-                CPostFX::DistanceBlur::Render(zn, zf);
-                CPostFX::Bloom::Render();
-                CPostFX::SMAA::Render();
-                CPostFX::ConsoleGamma::Render();
+                const uint32_t effects = enabledEffects.load(std::memory_order_relaxed);
+                CPostFX::DistanceBlur::Render((effects & DistanceBlurEffect) != 0, zn, zf);
+                CPostFX::Bloom::Render((effects & BloomEffect) != 0);
+                CPostFX::SMAA::Render((effects & SMAAEffect) != 0);
+                CPostFX::ConsoleGamma::Render((effects & ConsoleGammaEffect) != 0);
             }
         }
 
@@ -599,10 +612,24 @@ void InitPostFX()
     WFP::onBeforeReset() += []() { CPostFX::Release(); };
     // The effects follow their settings while the game runs, so the pass is hooked even when all of them are off;
     // each effect creates its resources the first time it's drawn. SMAA is a choice of GRAPHICS.AntiAliasing.
-    CPostFX::DistanceBlur::pDOFEnabled = &FixSettings().Int("MISC.DistantBlur");
-    CPostFX::Bloom::pBloomEnabled = &FixSettings().Int("MISC.Bloom");
-    CPostFX::ConsoleGamma::pConsoleGammaEnabled = &FixSettings().Int("GRAPHICS.ConsoleGamma");
-    CPostFX::SMAA::pAntiAliasing = &FixSettings().Int("GRAPHICS.AntiAliasing");
+    const auto bind = [](const char* setting, PostEffect effect)
+    {
+        auto publish = [setting, effect]()
+        {
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            if (FixSettings().Get(setting) == "1")
+                enabledEffects.fetch_or(effect, std::memory_order_relaxed);
+            else
+                enabledEffects.fetch_and(~effect, std::memory_order_relaxed);
+        };
+        FixSettings().OnChange(setting, publish);
+        publish();
+    };
+    bind("MISC.DistantBlur", DistanceBlurEffect);
+    bind("MISC.Bloom", BloomEffect);
+    bind("GRAPHICS.ConsoleGamma", ConsoleGammaEffect);
+    bind("GRAPHICS.AntiAliasing", SMAAEffect);
 
     auto pattern = hook::pattern("A1 ? ? ? ? 56 8B 30 85 F6 57 74 ? 8B 7C 24 ? F3 0F 10 40");
     g_listHead.SetAddress(*pattern.get_first<ListNode**>(1));

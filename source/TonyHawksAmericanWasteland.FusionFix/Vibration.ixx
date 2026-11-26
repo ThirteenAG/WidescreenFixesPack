@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include <atomic>
+#include "FixSettings.hpp"
 
 export module Vibration;
 
@@ -10,7 +11,7 @@ import ComVars;
 export namespace THAWVibration
 {
     inline SafetyHookInline UnmuteHook, StopHook, PulseHook;
-    inline const int32_t* Enabled = nullptr;
+    inline std::atomic<bool> Enabled{ true };
     inline std::array<std::atomic<uintptr_t>, 4> Devices{};
     inline std::array<std::atomic<uintptr_t>, 4> Pending{};
     inline std::array<std::atomic<bool>, 4> Desired{ true, true, true, true };
@@ -53,7 +54,7 @@ export namespace THAWVibration
     inline void __fastcall Unmute(uintptr_t device, void*)
     {
         Remember(Find(device), device, true);
-        if (*Enabled) UnmuteHook.thiscall<void>(device);
+        if (Enabled.load(std::memory_order_relaxed)) UnmuteHook.thiscall<void>(device);
         else StopHook.thiscall<void>(device);
     }
 
@@ -66,7 +67,7 @@ export namespace THAWVibration
     inline void __fastcall Pulse(uintptr_t device, void*)
     {
         const int player = Find(device);
-        if (*Enabled)
+        if (Enabled.load(std::memory_order_relaxed))
         {
             PulseHook.thiscall<void>(device);
             Remember(player, device, !*reinterpret_cast<uint8_t*>(device + 0xc4));
@@ -82,7 +83,7 @@ export namespace THAWVibration
     inline void Frame()
     {
         if (!VibrationManager.is_initialized() || !VibrationManager.get()) return;
-        const bool enabled = *Enabled != 0;
+        const bool enabled = Enabled.load(std::memory_order_relaxed);
         const bool changed = !Initialized || enabled != Applied;
         for (int i = 0; i < 4; ++i)
         {
@@ -116,9 +117,16 @@ export namespace THAWVibration
         Initialized = true;
     }
 
-    inline void Install(const int32_t* enabled)
+    inline void Install(asi_settings::Plugin& settings)
     {
-        Enabled = enabled;
+        auto updateEnabled = [&settings]()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            Enabled.store(settings.Get("MAIN.Vibration") == "1", std::memory_order_relaxed);
+        };
+        settings.OnChange("MAIN.Vibration", updateEnabled);
+        updateEnabled();
         auto manager = hook::pattern("8B 3D ? ? ? ? 33 F6 EB ? 8D A4 24 ? ? ? ? 8B FF 8B 0D ? ? ? ? 8A 44 F1 44 84 C0 74 ? 8B 44 24 08 85 C0 8B CF 56 74 ? E8 ? ? ? ? EB ? E8 ? ? ? ? 46 83 FE 04");
         auto unmute = hook::pattern("C6 81 C4 00 00 00 00 C3 CC CC CC CC CC CC CC CC");
         auto stop = hook::pattern("56 8B F1 8A 86 C4 00 00 00 33 C9 3A C1 75 ? 8B 96 D8 00 00 00");

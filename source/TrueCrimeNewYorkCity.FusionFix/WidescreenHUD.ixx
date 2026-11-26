@@ -64,25 +64,58 @@ Side SideOf(float left, float right)
     return left >= 0.6f ? Side::Right : Side::Center;
 }
 
-// The extent of each group's visible parts seen so far, by its frame position
-std::unordered_map<uint64_t, std::pair<float, float>> groupExtents;
+// The native dispatcher passes a layout frame down the draw tree. A node that builds a new frame owns its
+// placement until it returns, including the children that reuse that frame.
+struct HUDDraw;
+thread_local HUDDraw* currentDraw = nullptr;
+
+struct HUDDraw
+{
+    HUDDraw* parent = currentDraw;
+    const float* frame;
+    std::unordered_map<const float*, Side> sides;
+
+    explicit HUDDraw(const float* frame) : frame(frame)
+    {
+        currentDraw = this;
+    }
+
+    ~HUDDraw()
+    {
+        currentDraw = parent;
+    }
+};
 
 Side GroupSide(const float* frame, float left, float right)
 {
-    const uint64_t key = (uint64_t(std::bit_cast<uint32_t>(frame[1])) << 32) | std::bit_cast<uint32_t>(frame[2]);
-    auto found = groupExtents.find(key);
-    if (found == groupExtents.end())
+    auto* owner = currentDraw;
+    for (auto* draw = currentDraw; draw; draw = draw->parent)
     {
-        if (groupExtents.size() >= 512)
-            groupExtents.clear();
-        found = groupExtents.emplace(key, std::pair{ left, right }).first;
+        if (draw->frame == frame)
+            owner = draw->parent ? draw->parent : draw;
     }
-    else
-    {
-        found->second.first = std::min(found->second.first, left);
-        found->second.second = std::max(found->second.second, right);
-    }
-    return SideOf(found->second.first, found->second.second);
+    const auto side = SideOf(left, right);
+    return owner ? owner->sides.try_emplace(frame, side).first->second : side;
+}
+
+SafetyHookInline drawByName, drawByIndex;
+
+int DrawNode(SafetyHookInline& hook, void* object, int id, int message, float* frame, int argument)
+{
+    if (message != 6)
+        return hook.unsafe_thiscall<int>(object, id, message, frame, argument);
+    HUDDraw draw(frame);
+    return hook.unsafe_thiscall<int>(object, id, message, frame, argument);
+}
+
+int __fastcall DrawByName(void* object, void*, int id, int message, float* frame, int argument)
+{
+    return DrawNode(drawByName, object, id, message, frame, argument);
+}
+
+int __fastcall DrawByIndex(void* object, void*, int id, int message, float* frame, int argument)
+{
+    return DrawNode(drawByIndex, object, id, message, frame, argument);
 }
 
 // The 2D layer manager: layer 1 is the HUD, layers 2 and 5 to 8 are menus over the game (pause, map, shops...), as is
@@ -90,7 +123,7 @@ Side GroupSide(const float* frame, float left, float right)
 const uintptr_t* uiLayers = nullptr;
 const uint32_t* dialogOpen = nullptr;
 
-bool Playing()
+export bool HudPlaying()
 {
     if (!uiLayers || !dialogOpen || !uiLayers[1] || *dialogOpen || bPause || nLoading != 0)
         return false;
@@ -143,7 +176,7 @@ void __cdecl WidescreenHUD(float* frame, float* element, int alignment, float* o
             // Parked outside the screen (the phone between calls) stays outside it
             output[1] -= x + output[3] <= 0.0f ? Screen.fHudOffset : Screen.fWidescreenHudOffset;
         }
-        else if (Playing() && output[3] > 0.0f)
+        else if (HudPlaying() && output[3] > 0.0f)
         {
             const float right = x + output[3];
             const bool hidden = right <= 0.0f || x >= 1.0f;
@@ -238,8 +271,8 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
             FixSettings().OnChange("MAIN.HudAspectRatioConstraint", [] { hudConstraintChanged.store(true); });
+            Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
             WFP::onGameProcessEvent() += []
             {
                 if (!hudConstraintChanged.exchange(false))
@@ -276,6 +309,11 @@ public:
             uiLayers = reinterpret_cast<const uintptr_t*>(*pattern.get_first<uintptr_t>(6) + 0x0C);
             pattern = hook::pattern("83 3D ? ? ? ? 00 0F 95 C0 C3 CC CC CC CC CC 8B 44 24 04 85 C0 74 12 68 FF 00 00 00");
             dialogOpen = *pattern.get_first<const uint32_t*>(2);
+
+            pattern = hook::pattern("8B 44 24 04 83 EC 0C 53 56 8B F1 57 8D 5E 74 50 8B CB E8 ? ? ? ? 8B F8 83 FF FF");
+            drawByName = safetyhook::create_inline(pattern.get_first(), DrawByName);
+            pattern = hook::pattern("83 EC 0C 56 57 8B 7C 24 18 83 FF FF 8B F1 74 ? 8B 46 7C 83 3C B8 00");
+            drawByIndex = safetyhook::create_inline(pattern.get_first(), DrawByIndex);
 
             pattern = hook::pattern("8B 4C 24 ? 85 C9 56");
             //static auto shsub_654D60 = safetyhook::create_inline(pattern.get_first(), sub_654D60);

@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/RWGTA/GameThread.hpp"
 
 export module Camera;
 
@@ -39,7 +40,7 @@ export namespace GTA2Camera
 
     bool Enabled = true, RotateVehicle = true, RotateFoot = false;
     float Smoothing = 0.35f;
-    int ToggleKey = VK_F6;
+    int ToggleKey = 'C';
     bool Active = false;          // rotation applied to the current frame
     float Angle = 0.0f, Sin = 0.0f, Cos = 1.0f;
     float CenterX = 320.0f, CenterY = 240.0f;
@@ -388,11 +389,10 @@ export namespace GTA2Camera
 
     void Read(SettingsReader& ini)
     {
-        Enabled = ini.ReadBoolean("CAMERA", "RotateWithPlayer", true);
         RotateVehicle = ini.ReadBoolean("CAMERA", "RotateInVehicles", true);
         RotateFoot = ini.ReadBoolean("CAMERA", "RotateOnFoot", false);
         Smoothing = std::clamp(ini.ReadFloat("CAMERA", "RotationSmoothing", 0.35f), 0.0f, 2.0f);
-        ToggleKey = ini.ReadInteger("CAMERA", "ToggleRotationKey", VK_F6);
+        ToggleKey = ini.ReadInteger("CAMERA", "ToggleRotationKey", 'C');
         RangeScale = std::clamp(ini.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.0f);
         SmoothFollow = ini.ReadBoolean("CAMERA", "SmoothFollow", true);
         FollowTime = std::clamp(ini.ReadFloat("CAMERA", "FollowTime", 0.25f), 0.0f, 2.0f);
@@ -403,10 +403,13 @@ export namespace GTA2Camera
     void Install(SettingsReader& ini)
     {
         // Changes from FusionFixHub or a preset apply at once, as from the in-game options
+        static auto readEnabled = [] { Enabled = SettingsReader().ReadBoolean("CAMERA", "RotateWithPlayer", true); };
+        readEnabled();
         Read(ini);
-        for (auto id : { "CAMERA.RotateWithPlayer", "CAMERA.RotateInVehicles", "CAMERA.RotateOnFoot", "CAMERA.RotationSmoothing",
+        FixSettings().OnChange("CAMERA.RotateWithPlayer", [] { RWGTA::GameThread::Post(readEnabled); });
+        for (auto id : { "CAMERA.RotateInVehicles", "CAMERA.RotateOnFoot", "CAMERA.RotationSmoothing",
             "CAMERA.ToggleRotationKey", "MAIN.FOVFactor", "CAMERA.SmoothFollow", "CAMERA.FollowTime", "CAMERA.HeightTime", "CAMERA.MaxLookAhead" })
-            FixSettings().OnChange(id, [] { SettingsReader ini(""); Read(ini); });
+            FixSettings().OnChange(id, [] { RWGTA::GameThread::Post([] { SettingsReader values; Read(values); }); });
         LARGE_INTEGER frequency{}; QueryPerformanceFrequency(&frequency); Frequency = double(frequency.QuadPart);
 
         auto projection = hook::pattern("83 EC 10 53 55 56 8B F1 57 8D 44 24 14 8B 4E 68 8D BE A4 00 00 00");

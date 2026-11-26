@@ -26,7 +26,7 @@ export namespace PunisherUpdates
         config.playable = []()
         {
             const auto& state = PunMenu::Get();
-            return state.open && !state.busy && state.notice.empty();
+            return state.open && !state.busy && state.notice.empty() && state.options.bound && PunMenu::Current(PunMenu::Options);
         };
         config.format = [](const std::string&, bool hub)
         {

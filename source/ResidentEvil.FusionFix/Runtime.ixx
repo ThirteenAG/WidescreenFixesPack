@@ -20,29 +20,24 @@ import Updates;
 import IconBindings;
 import ButtonIcons;
 import SkipStart;
+import Video;
 
 export namespace RERuntime
 {
-    IDirect3DDevice9* currentDevice = nullptr;
-    HWND window = nullptr;
-
     void Frame(IDirect3DDevice9* device)
     {
         auto* native = sRender.get();
         if (!native || *reinterpret_cast<IDirect3DDevice9**>(native + 0x98) != device) return;
-        if (currentDevice != device)
-        {
-            D3DDEVICE_CREATION_PARAMETERS parameters{};
-            if (FAILED(device->GetCreationParameters(&parameters))) return;
-            DWORD process = 0;
-            GetWindowThreadProcessId(parameters.hFocusWindow, &process);
-            if (process != GetCurrentProcessId()) return;
-            currentDevice = device;
-            window = parameters.hFocusWindow;
-        }
+        D3DDEVICE_CREATION_PARAMETERS parameters{};
+        if (FAILED(device->GetCreationParameters(&parameters))) return;
+        const auto window = parameters.hFocusWindow;
+        DWORD process = 0;
+        GetWindowThreadProcessId(window, &process);
+        if (process != GetCurrentProcessId()) return;
+        REVideo::Frame();
         REOverlay::AttachWindow(window);
         REOverlay::Keyboard(window);
-        REWindow::Frame(native, window, REOverlay::BlocksInput(), device);
+        REWindow::Frame(native, window, REOverlay::BlocksInput());
         REIcons::Frame(device);
         REFrameRate::Frame(window);
         REOverlay::Draw(device);
@@ -59,6 +54,7 @@ export namespace RERuntime
         REMenu::Install(REOverlay::ThisModule());
         REUpdates::Install();
         REIcons::Install(REOverlay::ThisModule());
+        REVideo::Install();
         auto current = hook::pattern("A1 ? ? ? ? 56 57 FF 71 04 66 0F 6E 88");
         auto original = hook::pattern("A1 ? ? ? ? 56 66 0F 6E 80");
         sRender.SetAddress(current.size() == 1 ? *current.get_first<uint8_t**>(1) : *original.get_first<uint8_t**>(1));
@@ -68,6 +64,7 @@ export namespace RERuntime
             D3D9Options::frame = Frame;
             D3D9Options::beforeReset = [](IDirect3DDevice9* device)
             {
+                REVideo::Frame();
                 REIcons::BeforeReset(device);
                 REOverlay::BeforeReset(device);
             };

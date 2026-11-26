@@ -206,9 +206,14 @@ export namespace SonicHud
         Scale = scale;
         FovFactor = fovFactor;
         ProjectionAdjusted = projectionAdjusted;
-        const auto refresh = []() { Constraint = ParseAspect(FixSettings().String("MAIN.HudAspectRatioConstraint")); };
-        refresh();
+        const auto refresh = []()
+        {
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            Constraint.store(ParseAspect(FixSettings().Get("MAIN.HudAspectRatioConstraint")), std::memory_order_relaxed);
+        };
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", refresh);
+        refresh();
 
         auto load = hook::pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 81 EC A0 00 00 00 53 33 C0 55 56 57 B9 40 00 00 00 BF");
         auto unload = hook::pattern("51 53 57 E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 8B 0D ? ? ? ? 33 DB 51 89 1D");

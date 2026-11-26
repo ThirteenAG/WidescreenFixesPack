@@ -15,20 +15,50 @@ import ComVars;
 export namespace DPLWindow
 {
     inline int mode = 0, lastWindowMode = 1;
-    inline LONG toggleDown = 0, toggleRequested = 0;
-    inline bool changingMode = false, haveFramedRect = false;
+    inline LONG toggleDown = 0;
+    inline std::atomic<HWND> toggleRequested{ nullptr };
+    inline bool haveFramedRect = false;
     inline RECT framedRect{};
     inline int framedWidth = 0, framedHeight = 0;
     inline SafetyHookInline procedureHook;
-    inline std::function<bool(int, int)> onModeChange;
+    struct ModeChange
+    {
+        HWND window{};
+        IDirect3DDevice9* device{};
+        int target{}, width{}, height{};
+        UINT refresh{};
+        bool recovering{};
+    };
+    inline ModeChange pendingMode;
+    inline std::atomic<D3DPRESENT_PARAMETERS*> stagedReset{ nullptr };
+    inline bool stagedRecovery = false;
+    inline std::function<bool(ModeChange&)> queueMode;
+    inline std::function<void(const ModeChange&)> commitMode;
     inline std::function<void()> onCreate;
+    inline std::function<void()> onDeactivate;
     inline std::function<void(int, int)> publishDimensions;
 
     inline HWND Window() { return hWnd.is_initialized() ? hWnd.get() : nullptr; }
 
-    inline bool Dimensions(int& width, int& height)
+    inline void CancelToggle(HWND window)
     {
-        if (mode == 2)
+        toggleRequested.compare_exchange_strong(window, nullptr);
+    }
+
+    inline void CancelPendingMode(HWND window)
+    {
+        if (window && pendingMode.window == window)
+            pendingMode.recovering = true;
+    }
+
+    inline bool ToggleKeysDown()
+    {
+        return (GetAsyncKeyState(VK_MENU) & 0x8000) && (GetAsyncKeyState(VK_RETURN) & 0x8000);
+    }
+
+    inline bool Dimensions(int windowMode, int& width, int& height)
+    {
+        if (windowMode == 2)
         {
             const auto rect = WindowStyle::MonitorRect(Window());
             width = rect.right - rect.left;
@@ -37,6 +67,7 @@ export namespace DPLWindow
         return width > 0 && height > 0 && width <= 16384 && height <= 16384;
     }
 
+    inline bool Dimensions(int& width, int& height) { return Dimensions(mode, width, height); }
 
     inline bool Place(int width, int height)
     {
@@ -57,11 +88,32 @@ export namespace DPLWindow
         return true;
     }
 
+    inline void StageModeReset(D3DPRESENT_PARAMETERS* present)
+    {
+        if (GetForegroundWindow() != pendingMode.window)
+            CancelPendingMode(pendingMode.window);
+        stagedRecovery = pendingMode.recovering;
+        stagedReset.store(present);
+        if (!stagedRecovery)
+        {
+            present->Windowed = pendingMode.target != 0;
+            present->BackBufferWidth = pendingMode.width;
+            present->BackBufferHeight = pendingMode.height;
+            present->FullScreen_RefreshRateInHz = present->Windowed ? 0 : pendingMode.refresh;
+        }
+        else
+        {
+            present->Windowed = mode != 0;
+            if (present->Windowed)
+                present->FullScreen_RefreshRateInHz = 0;
+        }
+    }
+
     // Only the game's own device, not devices other plugins create for their own windows
     inline void Windowed(D3DPRESENT_PARAMETERS* present, HWND focus)
     {
         const auto window = Window();
-        if (!window || (focus && focus != window && present->hDeviceWindow != window))
+        if (present == stagedReset.load() || !window || (focus && focus != window && present->hDeviceWindow != window))
             return;
         if (mode == 0)
         {
@@ -95,70 +147,98 @@ export namespace DPLWindow
         WindowStyle::SquareCorners(window);
     }
 
+    inline void FinishModeReset(HRESULT result)
+    {
+        stagedReset.store(nullptr);
+        if (!pendingMode.window || result == D3DERR_DEVICELOST || result == D3DERR_DEVICENOTRESET)
+            return;
+        if (result != D3D_OK)
+        {
+            if (!pendingMode.recovering)
+                OutputDebugStringA("DriverParallelLines: window mode reset refused; retrying the active mode.\n");
+            pendingMode.recovering = true;
+            return;
+        }
+        const auto applied = std::exchange(pendingMode, {});
+        // A synchronous Reset can dispatch focus messages. Match the parameters that it used.
+        if (stagedRecovery || applied.window != Window())
+            return;
+        if (mode) lastWindowMode = mode;
+        mode = applied.target;
+        if (commitMode) commitMode(applied);
+        if (mode == 0) FullscreenStyle();
+        else Place(applied.width, applied.height);
+    }
+
     inline bool Frame(IDirect3DDevice9* device, bool blocked)
     {
         const auto window = Window();
+        if (pendingMode.window && (pendingMode.window != window || pendingMode.device != device))
+            pendingMode = {};
         if (!window || GetForegroundWindow() != window)
         {
-            InterlockedExchange(&toggleDown, 0);
-            InterlockedExchange(&toggleRequested, 0);
+            InterlockedExchange(&toggleDown, ToggleKeysDown());
+            toggleRequested.store(nullptr);
+            CancelPendingMode(window);
             return false;
         }
-        const bool down = (GetAsyncKeyState(VK_MENU) & 0x8000) && (GetAsyncKeyState(VK_RETURN) & 0x8000);
+        auto requested = toggleRequested.load();
+        if (requested && requested != window)
+            CancelToggle(requested);
+        const bool down = ToggleKeysDown();
         if (down)
         {
             if (!InterlockedCompareExchange(&toggleDown, 1, 0) && !blocked)
-                InterlockedExchange(&toggleRequested, 1);
+                toggleRequested.store(window);
         }
         else InterlockedExchange(&toggleDown, 0);
-        const bool suppressInput = down || toggleRequested;
+        const bool suppressInput = down || toggleRequested.load() == window;
         if (blocked)
         {
-            InterlockedExchange(&toggleRequested, 0);
+            CancelToggle(window);
             return suppressInput;
         }
-        if (!toggleRequested || changingMode || !device || device->TestCooperativeLevel() != D3D_OK || !onModeChange)
+        if (toggleRequested.load() != window || pendingMode.window || !device ||
+            device->TestCooperativeLevel() != D3D_OK || !queueMode)
             return suppressInput;
-        if (!InterlockedExchange(&toggleRequested, 0)) return suppressInput;
-        const int previous = mode;
+        requested = window;
+        if (!toggleRequested.compare_exchange_strong(requested, nullptr) || GetForegroundWindow() != window)
+            return suppressInput;
         RECT client{};
         GetClientRect(window, &client);
-        if (previous == 1)
+        if (mode == 1)
         {
             haveFramedRect = GetWindowRect(window, &framedRect) != FALSE;
             framedWidth = client.right;
             framedHeight = client.bottom;
         }
-        changingMode = true;
-        mode = previous ? 0 : lastWindowMode;
-        FullscreenStyle();
-        const int width = mode == 1 && haveFramedRect ? framedWidth : 0;
-        const int height = mode == 1 && haveFramedRect ? framedHeight : 0;
-        if (onModeChange(width, height))
-        {
-            if (previous) lastWindowMode = previous;
-        }
-        else
-        {
-            mode = previous;
-            FullscreenStyle();
-            if (onModeChange(client.right, client.bottom))
-                OutputDebugStringA("DriverParallelLines: window mode change failed; previous mode restored.\n");
-            else OutputDebugStringA("DriverParallelLines: previous window mode recovery failed.\n");
-        }
-        changingMode = false;
+        const int target = mode ? 0 : lastWindowMode;
+        const bool restoreFrame = target == 1 && haveFramedRect;
+        ModeChange next{ window, device, target, restoreFrame ? framedWidth : 0, restoreFrame ? framedHeight : 0 };
+        if (queueMode(next)) pendingMode = next;
         return suppressInput;
     }
 
     inline LRESULT CALLBACK Procedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
         if (message == WM_NCCREATE && onCreate) onCreate();
+        if (message == WM_KILLFOCUS || message == WM_NCDESTROY ||
+            (message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE))
+        {
+            CancelToggle(window);
+            if (window == Window())
+            {
+                CancelPendingMode(window);
+                InterlockedExchange(&toggleDown, ToggleKeysDown());
+                if (onDeactivate) onDeactivate();
+            }
+        }
         if (window == Window() && wParam == VK_RETURN &&
             (message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) && ((lParam & (1u << 29)) || toggleDown))
         {
             if (message == WM_SYSKEYUP) InterlockedExchange(&toggleDown, 0);
             else if (!(lParam & (1u << 30)) && GetForegroundWindow() == window &&
-                !InterlockedCompareExchange(&toggleDown, 1, 0)) InterlockedExchange(&toggleRequested, 1);
+                !InterlockedCompareExchange(&toggleDown, 1, 0)) toggleRequested.store(window);
             return 0;
         }
         if (mode != 0 && window == Window() && message == WM_CLOSE)

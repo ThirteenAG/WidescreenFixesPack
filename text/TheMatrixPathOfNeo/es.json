@@ -13,7 +13,7 @@
   "HudAspectRatioConstraint": "Proporción del HUD",
   "HudAspectRatioConstraint.description": "Auto coloca el HUD en las esquinas de la pantalla. Una proporción como 4:3 o 16:9 lo mantiene en un recuadro centrado de esa forma. Los menús conservan su diseño 4:3. Se aplica al instante.",
   "CutsceneBorders": "Bandas de las escenas",
-  "CutsceneBorders.description": "Letterbox mantiene las bandas arriba y abajo de las escenas en pantallas más estrechas que 16:9; Pillarbox mantiene la imagen 16:9 entre bandas laterales en pantallas más anchas; Ambas hace las dos cosas y siempre muestra el encuadre original; Desactivado llena la pantalla. Se aplica al instante.",
+  "CutsceneBorders.description": "Letterbox añade bandas arriba y abajo si la pantalla es más estrecha que la imagen original de la escena. Pillarbox añade bandas laterales si la pantalla es más ancha. La opción Ambas conserva el encuadre de cada escena, incluidos 16:9 y aproximadamente 2,35:1. Desactivado llena la pantalla. Se aplica al instante.",
   "CutsceneBorders.off": "Desactivado",
   "CutsceneBorders.letterbox": "Letterbox",
   "CutsceneBorders.pillarbox": "Pillarbox",

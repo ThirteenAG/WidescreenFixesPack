@@ -83,9 +83,9 @@
   "SPLITSCREEN.Enable": "Enable Split Screen",
   "SPLITSCREEN.Enable.description": "Restore local split screen co-op. Player 2 needs a gamepad. Player 2 opens the pause menu with START and controls it with their gamepad.",
   "SPLITSCREEN.GamepadPlayer1": "Player 1 Gamepad",
-  "SPLITSCREEN.GamepadPlayer1.description": "Gamepad of player 1 (1-4, 0 = keyboard and mouse only while player 2 is in, single player is not affected).",
+  "SPLITSCREEN.GamepadPlayer1.description": "Gamepad of player 1, or keyboard and mouse only while player 2 is in; single player is not affected. Restart required.",
   "SPLITSCREEN.GamepadPlayer2": "Player 2 Gamepad",
-  "SPLITSCREEN.GamepadPlayer2.description": "Gamepad of player 2 (1-4).",
+  "SPLITSCREEN.GamepadPlayer2.description": "Gamepad of player 2. Restart required.",
   "FILELOADER.DumpPackedFiles": "Dump Packed Files",
   "FILELOADER.DumpPackedFiles.description": "Unpacks the contents of all .umd archives into an 'unpacked' folder next to the exe (see _dump.log in it), move the files to 'update' to load them from disk instead of the archives.",
   "STARTUP.DedicatedServerExePath": "Dedicated Server Executable",
@@ -145,5 +145,10 @@
   "ui.pillarbox": "Pillarbox",
   "ui.both": "Both",
   "HudAspectRatioConstraint": "HUD Aspect Ratio",
-  "HudAspectRatioConstraint.description": "Auto places side HUD elements at the screen edges. Choose 4:3, 16:9, 21:9 or a custom W:H or decimal ratio to keep them in a centered area, from 4:3 to 32:9. Full-screen effects and world markers are unchanged. Applies immediately."
+  "HudAspectRatioConstraint.description": "Auto places side HUD elements at the screen edges. Choose 4:3, 16:9, 21:9 or a custom W:H or decimal ratio to keep them in a centered area, from 4:3 to 32:9. Full-screen effects and world markers are unchanged. Applies immediately.",
+  "SPLITSCREEN.GamepadPlayer1.0": "Keyboard and mouse",
+  "pad.controller1": "Controller 1",
+  "pad.controller2": "Controller 2",
+  "pad.controller3": "Controller 3",
+  "pad.controller4": "Controller 4"
 }

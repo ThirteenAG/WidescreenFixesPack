@@ -36,7 +36,6 @@ Menus and dialogs remain in an undistorted, centered 16:9 area. The 3D view fill
 - **Pause when unfocused** — Enabled by default in single player. Disable it to keep the world running while the game window is unfocused.
 - **Draw distance** — Adjust the screen cull bias; lower values keep distant objects visible for longer.
 - **Display changes** — The DirectX 9 version waits for the display when another program changes the display mode during startup, instead of crashing.
-- **Developer overlay** — Press Ctrl+F10 to open the settings and diagnostics overlay, including Debug → Info.
 
 ### Gameplay and files
 
@@ -55,7 +54,7 @@ Ultrawide correction, full CPU availability and the mouse speed-cap fix are alwa
 - The grid transition no longer stays over the ending cutscene at high frame rates.
 - The game no longer crashes after about 30 minutes of play because of the shut down online servers (the failed logins used up its pool of network requests).
 
-**Difficulty Tweaks** (on by default, off in the Vanilla preset): **Mark and Execute**, sonar, drop crates and weapon stashes enabled on **Perfectionist**, unlimited pistol ammo disabled on **Rookie**. Turn it off to play with the original difficulty rules.
+**Difficulty Tweaks** (on by default): **Mark and Execute**, sonar, drop crates and weapon stashes enabled on **Perfectionist**, unlimited pistol ammo disabled on **Rookie**. Turn it off to play with the original difficulty rules.
 
 # Extraction Mode
 

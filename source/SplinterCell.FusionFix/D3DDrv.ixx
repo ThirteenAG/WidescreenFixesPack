@@ -188,9 +188,19 @@ constexpr uintptr_t kRenderDevice_VideoMode   = 0x5D58; // 0 = texture playback
 constexpr uintptr_t kRenderDevice_VideoFrame  = 0x5D54;
 
 IDirect3DTexture8* pHiResVideoTexture = nullptr;
+IDirect3DDevice8*  pHiResVideoDevice  = nullptr;
 int                nHiResVideoTexW    = 0;
 int                nHiResVideoTexH    = 0;
 void* pPendingVideoCanvas = nullptr;
+
+void ClearHiResVideoTexture()
+{
+    if (auto texture = std::exchange(pHiResVideoTexture, nullptr))
+        texture->Release();
+    pHiResVideoDevice = nullptr;
+    nHiResVideoTexW = 0;
+    nHiResVideoTexH = 0;
+}
 
 int NextPow2(int v)
 {
@@ -239,19 +249,16 @@ void DrawHiResCutsceneFrame(IDirect3DDevice8* pD3DDevice, void* UCanvas)
     if (videoWidth <= 0 || videoHeight <= 0 || videoWidth > 16384 || videoHeight > 16384)
         return;
 
-    // Recreate texture when video resolution changes
-    if (!pHiResVideoTexture || nHiResVideoTexW != videoWidth || nHiResVideoTexH != videoHeight)
+    if (!pHiResVideoTexture || pHiResVideoDevice != pD3DDevice ||
+        nHiResVideoTexW != videoWidth || nHiResVideoTexH != videoHeight)
     {
-        if (pHiResVideoTexture)
-        {
-            pHiResVideoTexture->Release();
-            pHiResVideoTexture = nullptr;
-        }
+        ClearHiResVideoTexture();
         if (FAILED(pD3DDevice->CreateTexture(videoWidth, videoHeight, 1, 0, D3DFMT_X8R8G8B8, D3DPOOL_MANAGED, &pHiResVideoTexture)))
         {
             pHiResVideoTexture = nullptr;
             return;
         }
+        pHiResVideoDevice = pD3DDevice;
         nHiResVideoTexW = videoWidth;
         nHiResVideoTexH = videoHeight;
     }
@@ -318,15 +325,16 @@ void DrawHiResCutsceneFrame(IDirect3DDevice8* pD3DDevice, void* UCanvas)
     const float targetW = frame.width, targetH = frame.height, targetX = frame.x, targetY = frame.y;
     const float vTop = frame.top, vBottom = frame.bottom;
 
-    pD3DDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-
     pD3DDevice->SetRenderState(D3DRS_LIGHTING, FALSE);
     pD3DDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, FALSE);
     pD3DDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
     pD3DDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
     pD3DDevice->SetTextureStageState(0, D3DTSS_MINFILTER, D3DTEXF_LINEAR);
     pD3DDevice->SetTextureStageState(0, D3DTSS_MAGFILTER, D3DTEXF_LINEAR);
-    pD3DDevice->SetTexture(0, pHiResVideoTexture);
+    if (FAILED(pD3DDevice->SetTexture(0, pHiResVideoTexture)))
+        return;
+
+    pD3DDevice->Clear(0, nullptr, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
 
     struct Vertex { float x, y, z, rhw, u, v; };
     Vertex vertices[4] =
@@ -424,13 +432,7 @@ namespace UD3DRenderDevice
     void __fastcall StopVideo(void* renderDevice, void* edx, void* UCanvas, int a3, int a4)
     {
         pPendingVideoCanvas = nullptr;
-        if (pHiResVideoTexture)
-        {
-            pHiResVideoTexture->Release();
-            pHiResVideoTexture = nullptr;
-            nHiResVideoTexW = 0;
-            nHiResVideoTexH = 0;
-        }
+        ClearHiResVideoTexture();
         shStopVideo.unsafe_fastcall(renderDevice, edx, UCanvas, a3, a4);
     }
 
@@ -459,13 +461,7 @@ namespace UD3DRenderDevice
             IDirect3DDevice8* pDevice = *(IDirect3DDevice8**)((uintptr_t)UD3DRenderDevice + 0x4684);
             if (!pDevice || pDevice->TestCooperativeLevel() != D3D_OK)
             {
-                if (pHiResVideoTexture)
-                {
-                    pHiResVideoTexture->Release();
-                    pHiResVideoTexture = nullptr;
-                    nHiResVideoTexW = 0;
-                    nHiResVideoTexH = 0;
-                }
+                ClearHiResVideoTexture();
                 return;
             }
         }

@@ -4,6 +4,7 @@ module;
 #include <d3d9.h>
 #include <mutex>
 #include <unordered_map>
+#include "FixSettings.hpp"
 
 export module Icons;
 
@@ -166,7 +167,7 @@ namespace THAWIcons
     SafetyHookInline MetaHook;
     SafetyHookMid ButtonBoundary, TextureHook;
     inline int (__cdecl* Number)(const char*) = nullptr;
-    inline const int32_t* Family = nullptr;
+    inline std::atomic<int> Family{ 0 };
     inline thread_local uintptr_t TextElement = 0;
     inline thread_local const char* CurrentString = nullptr;
     inline thread_local int Pending = -1, Active = -1;
@@ -345,7 +346,7 @@ namespace THAWIcons
             AtlasDevice = device;
         }
         else device->Release();
-        const int family = std::clamp(*Family, 0, 3);
+        const int family = Family.load(std::memory_order_relaxed);
         const int index = family == 0 ? 0 : family - 1;
         auto*& result = Atlas[index][icon];
         if (result) return result;
@@ -372,9 +373,17 @@ namespace THAWIcons
         return result = texture;
     }
 
-    export void Install(const int32_t* family)
+    export void Install(asi_settings::Plugin& settings)
     {
-        Family = family;
+        auto updateFamily = [&settings]()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            const auto value = settings.Get("MAIN.GamepadIcons");
+            Family.store(std::clamp(std::atoi(value.c_str()), 0, 3), std::memory_order_relaxed);
+        };
+        settings.OnChange("MAIN.GamepadIcons", updateFamily);
+        updateFamily();
         THAWHud::SetTextContext = SetTextContext;
         auto meta = hook::pattern("8B 44 24 04 50 E8 ? ? ? ? 8A 80 ? ? ? ? 83 C4 04 C3");
         auto widthButton = hook::pattern("46 56 E8 ? ? ? ? 8B 3D ? ? ? ? 0F B6 84 38 0C 01 00 00");

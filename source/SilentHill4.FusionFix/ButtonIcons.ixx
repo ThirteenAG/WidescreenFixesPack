@@ -107,7 +107,7 @@ export namespace SH4Icons
         const float width = float(surface.Width), height = float(surface.Height);
         const float boxWidth = std::min(width, height * (4.0f / 3.0f));
         const float sx = boxWidth / 512.0f, sy = boxWidth * 0.75f / 448.0f;
-        const int chosen = FixSettings().Int("MAIN.GamepadIcons");
+        const int chosen = FixSettingNumber("MAIN.GamepadIcons", 0);
         const int family = chosen == 0 ? 0 : std::clamp(chosen - 1, 0, 2);
         struct Vertex { float x, y, z, w; DWORD colour; float u, v; };
         for (auto icon : icons)

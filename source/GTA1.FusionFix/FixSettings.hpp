@@ -1,4 +1,5 @@
 #pragma once
+#include <charconv>
 #include "Shared/AsiSettings/asi_settings.hpp"
 
 // The fix's settings: described in settings.json (embedded as a resource), stored in the plugin's .cfg. Loaded on first
@@ -16,10 +17,18 @@ inline asi_settings::Plugin& FixSettings()
 class SettingsReader
 {
     static std::string Id(const char* section, const char* key) { return std::string(section) + "." + key; }
+    template<class T>
+    T Number(const char* section, const char* key, T fallback)
+    {
+        const auto text = FixSettings().Get(Id(section, key));
+        T value{};
+        return std::from_chars(text.data(), text.data() + text.size(), value).ec == std::errc{} ? value : fallback;
+    }
+
 public:
     explicit SettingsReader(const char* = "") {}
-    int ReadInteger(const char* section, const char* key, int) { return FixSettings().Int(Id(section, key)); }
-    bool ReadBoolean(const char* section, const char* key, bool) { return FixSettings().Bool(Id(section, key)); }
-    float ReadFloat(const char* section, const char* key, float) { return FixSettings().Float(Id(section, key)); }
+    int ReadInteger(const char* section, const char* key, int fallback) { return Number(section, key, fallback); }
+    bool ReadBoolean(const char* section, const char* key, bool fallback) { return Number(section, key, int(fallback)) != 0; }
+    float ReadFloat(const char* section, const char* key, float fallback) { return Number(section, key, fallback); }
     void WriteString(const char* section, const char* key, const std::string& value) { FixSettings().Set(Id(section, key), value); }
 };

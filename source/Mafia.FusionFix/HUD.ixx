@@ -9,8 +9,39 @@ export module HUD;
 import ComVars;
 import FrameRate;
 
+namespace
+{
+    void (*refreshHud)();
+    void (*refreshMap)();
+    void (__thiscall* buildNativeLayout)(void*);
+    void* nativeHud;
+    bool nativeLayoutReady = false;
+    float textWidth;
+}
+
+export void RefreshHUD()
+{
+    refreshHud();
+    if (nativeLayoutReady)
+        buildNativeLayout(nativeHud);
+}
+
+export void RefreshMapAndText()
+{
+    refreshMap();
+    textWidth = 720.0f / Screen.fBaseWidth;
+}
+
 export void InitHUD()
 {
+    // The native layout builds the scaled gauges and text vertices once when the HUD is created.
+    auto layout = hook::pattern("B9 ? ? ? ? E8 ? ? ? ? 8B CE 89 1D ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 50 8B 08 FF 91");
+    nativeHud = *layout.get_first<void**>(1);
+    buildNativeLayout = reinterpret_cast<decltype(buildNativeLayout)>(injector::GetBranchDestination(layout.get_first(5)).as_int());
+    static auto layoutReadyHook = safetyhook::create_mid(layout.get_first(10), [](SafetyHookContext&)
+    {
+        nativeLayoutReady = true;
+    });
     static const bool legacyHudLayout = []()
     {
         auto legacy = hook::pattern("C7 44 24 30 00 00 3E 44 C7 44 24 34 00 00 BE 43");
@@ -98,153 +129,59 @@ export void InitHUD()
     static auto pHudLiveBarX = find_pattern("D8 0D ? ? ? ? C7 84 24 84 00 00 00 00 00 00 00 C7 84 24 88 00 00 00 00 00 80 3F 89 9C 24 8C 00 00 00 C7 84 24 94 00 00 00 00 00 00 00 C7 84 24 98 00 00 00 00 00 40 3E");
     static auto pHudCreditsText2X6 = find_pattern("68 00 00 C3 43 52 B9 ? ? ? ? E8 ? ? ? ?");
 
+    static float hudSpeedometerX;
+    static float hudTachometerX;
+    static float hudCompasX;
+    static float hudMinimapX;
+    static float hudTransmissionX;
+    static float hudFuelLedX;
+    static float hudActionBarX;
+    static float hudHealthBarX;
+    static float hudHealthBarTextX;
+    static float hudAmmoBarX;
+    static float hudAmmoBarTextX;
+    static float hudSearchBarX;
+    static float hudLiveBarX;
+    static float hudProgressBarX;
+    static float hudProgressBar2X;
+    static float hudLeftPopupTextX;
+    static float hudMoneyRightTextX;
+    static float hudRace321goX;
+    static float hudRaceRightTextX;
+    static float hudMapTextX;
+    static float hudBlackCentredTextX;
+    static float hudCreditsText1X;
+    static float hudCreditsText3X;
+    static float hudCreditsText4X;
+
     injector::WriteMemory(pOnePCurBaseWidth.get_first(0x2), &Screen.fInvBaseWidth, true);
     injector::WriteMemory(pOnePCurBaseWidth2.get_first(0x2), &Screen.fInvBaseWidth, true);
-
-    const auto ratio = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
-    const float hudAspect = ratio ? ClampHudAspectRatio(*ratio, Screen.fAspectRatio) : Screen.fAspectRatio;
-    const float inset = (Screen.fBaseWidth - 600.0f * hudAspect) * 0.5f;
-    static const bool subscribed = []()
-    {
-        FixSettings().OnChange("MAIN.HudAspectRatioConstraint", InitHUD);
-        return true;
-    }();
-    (void)subscribed;
-
-    const float fixHudLeft = inset;
-    const float fixHudCenter = (Screen.fBaseWidth - 800.0f) / 2.0f;
-    const float fixHudRight = Screen.fBaseWidth - 800.0f - inset;
-
-    static float hudSpeedometerX;
-    hudSpeedometerX = 189.0f + fixHudLeft;
     injector::WriteMemory(pHudSpeedometerX.get_first(0x2), &hudSpeedometerX, true);
-    static float hudTachometerX;
-    hudTachometerX = 259.0f + fixHudLeft;
     injector::WriteMemory(pHudTachometerX.get_first(0x2), &hudTachometerX, true);
-    float hudSpeedLimiterX;
-    if (legacyHudLayout)
-    {
-        hudSpeedLimiterX = 760.0f + fixHudRight;
-    }
-    else
-    {
-        hudSpeedLimiterX = -40.0f - fixHudLeft;
-    }
-    injector::WriteMemory(pHudSpeedLimiterX.get_first(0x4), hudSpeedLimiterX, true);
-    float hudTimerX;
-    if (legacyHudLayout)
-    {
-        hudTimerX = 694.0f + fixHudRight;
-    }
-    else
-    {
-        hudTimerX = -106.0f - fixHudLeft;
-    }
-    injector::WriteMemory(pHudTimerX.get_first(0x4), hudTimerX, true);
-    static float hudCompasX;
-    hudCompasX = 0.0f + fixHudLeft;
     injector::WriteMemory(pHudCompasX.get_first(0x2), &hudCompasX, true);
-    static float hudMinimapX;
-    hudMinimapX = 29.0f + fixHudLeft;
     injector::WriteMemory(pHudMinimapX.get_first(0x2), &hudMinimapX, true);
-    static float hudTransmissionX;
-    if (legacyHudLayout)
-    {
-        hudTransmissionX = 758.0f + fixHudRight;
-    }
-    else
-    {
-        hudTransmissionX = 42.0f + fixHudLeft;
-    }
     injector::WriteMemory(pHudTransmissionX.get_first(0x2), &hudTransmissionX, true);
-    static float hudFuelLedX;
-    if (legacyHudLayout)
-    {
-        hudFuelLedX = 668.0f + fixHudRight;
-    }
-    else
-    {
-        hudFuelLedX = 132.0f + fixHudLeft;
-    }
     injector::WriteMemory(pHudFuelLedX.get_first(0x2), &hudFuelLedX, true);
-    static float hudActionBarX;
-    hudActionBarX = 9.0f + fixHudLeft;
     injector::WriteMemory(pHudActionBarX.get_first(0x2), &hudActionBarX, true);
-    static float hudHealthBarX;
-    hudHealthBarX = 7.0f + fixHudLeft;
     injector::WriteMemory(pHudHealthBarX.get_first(0x2), &hudHealthBarX, true);
-    static float hudHealthBarTextX;
-    hudHealthBarTextX = 42.0f + fixHudLeft;
     injector::WriteMemory(pHudHealthBarTextX.get_first(0x2), &hudHealthBarTextX, true);
-    static float hudAmmoBarX;
-    hudAmmoBarX = 62.0f + fixHudLeft;
     injector::WriteMemory(pHudAmmoBarX.get_first(0x2), &hudAmmoBarX, true);
-    static float hudAmmoBarTextX;
-    hudAmmoBarTextX = 112.0f + fixHudLeft;
     injector::WriteMemory(pHudAmmoBarTextX.get_first(0x2), &hudAmmoBarTextX, true);
-    static float hudSearchBarX;
-    hudSearchBarX = 336.0f + fixHudCenter;
     injector::WriteMemory(pHudSearchBarX.get_first(0x2), &hudSearchBarX, true);
-    static float hudLiveBarX;
-    hudLiveBarX = 368.0f + fixHudCenter;
     if (legacyHudLayout)
-    {
         injector::WriteMemory(pHudLiveBarX.get_first(0x2), &hudLiveBarX, true);
-    }
-    static float hudProgressBarX;
-    hudProgressBarX = 250.0f + fixHudCenter;
     injector::WriteMemory(pHudProgressBarX.get_first(0x11), &hudProgressBarX, true);
-    static float hudProgressBar2X;
-    hudProgressBar2X = 350.0f + fixHudCenter;
     injector::WriteMemory(pHudProgressBar2X.get_first(0x18), &hudProgressBar2X, true);
-    static float hudLeftPopupTextX;
-    hudLeftPopupTextX = 9.0f + fixHudLeft;
     injector::WriteMemory(pHudLeftPopupTextX.get_first(0x2), &hudLeftPopupTextX, true);
-    static float hudMoneyRightTextX;
-    hudMoneyRightTextX = 760.0f + fixHudRight;
     injector::WriteMemory(pHudMoneyRightTextX.get_first(0x2), &hudMoneyRightTextX, true);
-
-    static float hudRace321goX;
-    hudRace321goX = 400.0f + fixHudCenter;
     if (legacyHudLayout)
     {
         injector::WriteMemory(pHudRace321GoX.get_first(0x2), &hudRace321goX, true);
         injector::WriteMemory(pHudRace321GoX2.get_first(0x2), &hudRace321goX, true);
     }
-    else
-    {
-        injector::WriteMemory(pHudRace321GoX.get_first(0x1), hudRace321goX, true);
-        injector::WriteMemory(pHudRace321GoX2.get_first(0x1), hudRace321goX, true);
-    }
-    float hudRaceWrongWayX = 272.0f + fixHudCenter;
-    injector::WriteMemory(pHudRaceWrongWayX.get_first(0x1), hudRaceWrongWayX, true);
-    float hudRaceCheckpointX = 390.0f + fixHudCenter;
-    if (legacyHudLayout)
-    {
-        injector::WriteMemory(pHudRaceCheckpointX.get_first(0x4), hudRaceCheckpointX, true);
-    }
-    else
-    {
-        injector::WriteMemory(pHudRaceCheckpointX.get_first(0x1), hudRaceCheckpointX, true);
-    }
-    static float hudRaceRightTextX;
-    hudRaceRightTextX = 780.0f + fixHudRight;
     injector::WriteMemory(pHudRaceRightTextX.get_first(0x2), &hudRaceRightTextX, true);
-
-    static float hudMapTextX;
-    hudMapTextX = 350.0f + fixHudCenter;
     injector::WriteMemory(pHudMapTextX.get_first(0x2), &hudMapTextX, true);
-
-    static float hudBlackCentredTextX;
-    hudBlackCentredTextX = 400.0f + fixHudCenter;
     injector::WriteMemory(pHudBlackCentredTextX.get_first(0x2), &hudBlackCentredTextX, true);
-    static float hudCreditsText1X;
-    hudCreditsText1X = 370.0f + fixHudCenter;
-    fCreditsTextX = 390.0f + fixHudCenter;
-    static float hudCreditsText3X;
-    hudCreditsText3X = 400.0f + fixHudCenter;
-    static float hudCreditsText4X;
-    hudCreditsText4X = 410.0f + fixHudCenter;
     injector::WriteMemory(pHudCreditsText2X.get_first(0x2), &fCreditsTextX, true);
     injector::WriteMemory(pHudCreditsText2X2.get_first(0x2), &fCreditsTextX, true);
     injector::WriteMemory(pHudCreditsText2X3.get_first(0x2), &fCreditsTextX, true);
@@ -252,14 +189,99 @@ export void InitHUD()
     injector::WriteMemory(pHudCreditsText3X.get_first(0x2), &hudCreditsText3X, true);
     injector::WriteMemory(pHudCreditsText3X2.get_first(0x2), &hudCreditsText3X, true);
     injector::WriteMemory(pHudCreditsText2X4.get_first(0x2), &fCreditsTextX, true);
-    injector::WriteMemory(pHudCreditsText2X5.get_first(0x1), fCreditsTextX, true);
-    if (!pHudCreditsText2X6.empty()) // 1.2 credits layout
-    {
-        injector::WriteMemory(pHudCreditsText2X6.get_first(0x1), fCreditsTextX, true);
-    }
     injector::WriteMemory(pHudCreditsText1X2.get_first(0x2), &hudCreditsText1X, true);
     injector::WriteMemory(pHudCreditsText4X.get_first(0x2), &hudCreditsText4X, true);
 
+    refreshHud = []()
+    {
+        const auto ratio = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
+        const float hudAspect = ratio ? ClampHudAspectRatio(*ratio, Screen.fAspectRatio) : Screen.fAspectRatio;
+        const float inset = (Screen.fBaseWidth - 600.0f * hudAspect) * 0.5f;
+        const float fixHudLeft = inset;
+        const float fixHudCenter = (Screen.fBaseWidth - 800.0f) / 2.0f;
+        const float fixHudRight = Screen.fBaseWidth - 800.0f - inset;
+        hudSpeedometerX = 189.0f + fixHudLeft;
+        hudTachometerX = 259.0f + fixHudLeft;
+        float hudSpeedLimiterX;
+        if (legacyHudLayout)
+        {
+            hudSpeedLimiterX = 760.0f + fixHudRight;
+        }
+        else
+        {
+            hudSpeedLimiterX = -40.0f - fixHudLeft;
+        }
+        injector::WriteMemory(pHudSpeedLimiterX.get_first(0x4), hudSpeedLimiterX, true);
+        float hudTimerX;
+        if (legacyHudLayout)
+        {
+            hudTimerX = 694.0f + fixHudRight;
+        }
+        else
+        {
+            hudTimerX = -106.0f - fixHudLeft;
+        }
+        injector::WriteMemory(pHudTimerX.get_first(0x4), hudTimerX, true);
+        hudCompasX = 0.0f + fixHudLeft;
+        hudMinimapX = 29.0f + fixHudLeft;
+        if (legacyHudLayout)
+        {
+            hudTransmissionX = 758.0f + fixHudRight;
+        }
+        else
+        {
+            hudTransmissionX = 42.0f + fixHudLeft;
+        }
+        if (legacyHudLayout)
+        {
+            hudFuelLedX = 668.0f + fixHudRight;
+        }
+        else
+        {
+            hudFuelLedX = 132.0f + fixHudLeft;
+        }
+        hudActionBarX = 9.0f + fixHudLeft;
+        hudHealthBarX = 7.0f + fixHudLeft;
+        hudHealthBarTextX = 42.0f + fixHudLeft;
+        hudAmmoBarX = 62.0f + fixHudLeft;
+        hudAmmoBarTextX = 112.0f + fixHudLeft;
+        hudSearchBarX = 336.0f + fixHudCenter;
+        hudLiveBarX = 368.0f + fixHudCenter;
+        hudProgressBarX = 250.0f + fixHudCenter;
+        hudProgressBar2X = 350.0f + fixHudCenter;
+        hudLeftPopupTextX = 9.0f + fixHudLeft;
+        hudMoneyRightTextX = 760.0f + fixHudRight;
+        hudRace321goX = 400.0f + fixHudCenter;
+        if (!legacyHudLayout)
+        {
+            injector::WriteMemory(pHudRace321GoX.get_first(0x1), hudRace321goX, true);
+            injector::WriteMemory(pHudRace321GoX2.get_first(0x1), hudRace321goX, true);
+        }
+        float hudRaceWrongWayX = 272.0f + fixHudCenter;
+        injector::WriteMemory(pHudRaceWrongWayX.get_first(0x1), hudRaceWrongWayX, true);
+        float hudRaceCheckpointX = 390.0f + fixHudCenter;
+        if (legacyHudLayout)
+        {
+            injector::WriteMemory(pHudRaceCheckpointX.get_first(0x4), hudRaceCheckpointX, true);
+        }
+        else
+        {
+            injector::WriteMemory(pHudRaceCheckpointX.get_first(0x1), hudRaceCheckpointX, true);
+        }
+        hudRaceRightTextX = 780.0f + fixHudRight;
+        hudMapTextX = 350.0f + fixHudCenter;
+        hudBlackCentredTextX = 400.0f + fixHudCenter;
+        hudCreditsText1X = 370.0f + fixHudCenter;
+        fCreditsTextX = 390.0f + fixHudCenter;
+        hudCreditsText3X = 400.0f + fixHudCenter;
+        hudCreditsText4X = 410.0f + fixHudCenter;
+        injector::WriteMemory(pHudCreditsText2X5.get_first(0x1), fCreditsTextX, true);
+        if (!pHudCreditsText2X6.empty()) // 1.2 credits layout
+        {
+            injector::WriteMemory(pHudCreditsText2X6.get_first(0x1), fCreditsTextX, true);
+        }
+    };
+    refreshHud();
 }
 
 export void InitMap()
@@ -292,20 +314,24 @@ export void InitMap()
     auto pMapTargetPosX = find_pattern("D8 0D ? ? ? ? D9 5C 24 4C 8B 44 24 4C D8 0D ? ? ? ?",
         "D8 0D ? ? ? ? D9 5C 24 48 8B 44 24 48 D8 0D ? ? ? ?");
 
-    float fixMapLeft;
-    if (!bWidescreenMap)
+    static float mapLeftX, mapRightX, mapWidth, mapScaleX, mapPosX, mapTargetPosX;
+    static auto scaleComplement = pConstant10FMapScaleX.get_first(0x4);
+    refreshMap = []()
     {
-        fixMapLeft = (Screen.fBaseWidth - 800.0f) / 2.0f;
-    }
-    else
-    {
-        fixMapLeft = 0.0f;
-    }
-    static float mapLeftX = (800.0f * 0.1f + fixMapLeft) / Screen.fBaseWidth;
+        const float inset = bWidescreenMap ? 0.0f : (Screen.fBaseWidth - 800.0f) * 0.5f;
+        mapLeftX = (80.0f + inset) / Screen.fBaseWidth;
+        mapRightX = 1.0f - mapLeftX;
+        mapWidth = mapRightX - mapLeftX;
+        const float aspect = mapWidth * Screen.fBaseWidth / 640.0f;
+        mapScaleX = 0.4f * aspect;
+        mapPosX = 0.2f * aspect;
+        mapTargetPosX = 2.5f / aspect;
+        fMapPlayerWidth = Screen.fHeight * (4.0f / 3.0f);
+        injector::WriteMemory(scaleComplement, 1.0f - mapScaleX, true);
+    };
+    refreshMap();
     injector::WriteMemory(pMapLeftX.get_first(0x2), &mapLeftX, true);
-    static float mapRightX = 1.0f - mapLeftX;
     injector::WriteMemory(pMapRightX.get_first(0x2), &mapRightX, true);
-    fMapPlayerWidth = Screen.fHeight * (4.0f / 3.0f);
     if (legacyMapLayout)
     {
         // Replace FMUL [ebp+HUD.width] with FMUL [fMapPlayerWidth]. Both
@@ -329,19 +355,13 @@ export void InitMap()
             Field<uint32_t>(regs.esp, 0x10) = std::bit_cast<uint32_t>(fMapPlayerWidth);
         });
     }
-    static float mapWidth = mapRightX - mapLeftX;
     injector::WriteMemory(pMapWidth.get_first(0x2), &mapWidth, true);
 
-    float mapAspect = (mapWidth / (((800.0f * 0.9f + fixMapLeft) / Screen.fBaseWidth) - mapLeftX));
-    static float mapScaleX = 0.4f * mapAspect;
     injector::WriteMemory(pMapScaleX.get_first(0x2), &mapScaleX, true);
-    injector::WriteMemory(pConstant10FMapScaleX.get_first(0x4), 1.0f - mapScaleX, true);
     injector::WriteMemory(pMapScaleX2.get_first(0x2), &mapScaleX, true);
-    static float mapPosX = 0.2f * mapAspect;
     injector::WriteMemory(pMapPosX.get_first(0x2), &mapPosX, true);
     injector::WriteMemory(pMapPosX2.get_first(0x2), &mapPosX, true);
     injector::WriteMemory(pMapPosX3.get_first(0x2), &mapPosX, true);
-    static float mapTargetPosX = 2.5f / mapAspect;
     injector::WriteMemory(pMapTargetPosX.get_first(0x2), &mapTargetPosX, true);
 }
 
@@ -360,7 +380,6 @@ export void InitText()
     auto pTextWidth6 = find_pattern("D8 0D ? ? ? ? D9 1C 24 55 E8 ? ? ? ? 8B F0 85 F6 75 ? 8B 93 00 94 00 00",
         "D8 0D ? ? ? ? 6A 00 51 51 8D 6E 01 8B CB D9 1C 24");
 
-    static float textWidth;
     textWidth = (800.0f * 0.9f) / Screen.fBaseWidth;
 
     injector::WriteMemory(pTextWidth.get_first(0x2), &textWidth, true);

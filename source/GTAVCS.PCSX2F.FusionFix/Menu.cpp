@@ -1,11 +1,11 @@
 #include "Controls.hpp"
 #include "ButtonIcons.hpp"
-#include "../Shared/Console/Text.hpp"
+#include "Shared/Console/Text.hpp"
 #include <cstring>
 #include "Settings.hpp"
-#include "../Shared/Console/PS2Settings.hpp"
+#include "Shared/Console/PS2Settings.hpp"
 extern "C" {
-#include "../../external/injector/include/ps2/plugin_settings.h"
+#include "ps2/plugin_settings.h"
 }
 
 namespace vcs {
@@ -43,7 +43,8 @@ static_assert(sizeof(MenuItem) == 220 && sizeof(Widget) == 240 && sizeof(MenuPag
 enum Option { HudSize = 0x100, FastLoading, MouseSensitivity, InvertMouse, FrameRate,
     DisplayOptions, ControlOptions, Bindings, NextBindings, Back, CutsceneBorders,
     PcControls, ResetBindings, Preset, ApplyPreset, VehicleLights, FixPage, FixDefaults,
-    FieldOfView, HudAspect, SkipIntro, ModernControls, GamepadIcons, HoldCamera, OptionEnd, Binding = 0x200 };
+    FieldOfView, HudAspect, SkipIntro, ModernControls, GamepadIcons, HoldCamera,
+    PadCameraSpeed, InvertPad, OptionEnd, Binding = 0x200 };
 constexpr unsigned widgetCount = OptionEnd - HudSize;
 constexpr unsigned maxItems = 32, maxPages = 4;
 constexpr char keys[4][16] = {"WF_HUD_SIZE", "WF_FAST_LOADING", "WF_MOUSE_SPEED", "WF_INVERT_MOUSE"};
@@ -51,11 +52,13 @@ constexpr char16_t english[4][24] = {u"HUD size", u"Fast loading", u"Mouse sensi
 constexpr unsigned extraCount = OptionEnd - FrameRate;
 constexpr char extraKeys[extraCount][20] = {"WF_FRAME_RATE", "WF_DISPLAY_OPTIONS", "WF_CONTROL_OPTIONS", "WF_BINDINGS",
     "WF_NEXT_BINDINGS", "WF_BACK", "WF_CUTSCENE_BORDERS", "WF_PC_CONTROLS", "WF_RESET_BINDINGS", "WF_PRESET", "WF_APPLY_PRESET", "WF_LIGHTS",
-    "WF_FIX_PAGE", "WF_FIX_DEFAULTS", "WF_FOV", "WF_HUD_ASPECT", "WF_SKIP_INTRO", "WF_MODERN", "WF_ICONS", "WF_HOLD_CAMERA"};
+    "WF_FIX_PAGE", "WF_FIX_DEFAULTS", "WF_FOV", "WF_HUD_ASPECT", "WF_SKIP_INTRO", "WF_MODERN", "WF_ICONS", "WF_HOLD_CAMERA",
+    "WF_PAD_CAMERA", "WF_INVERT_PAD"};
 constexpr char16_t extraText[extraCount][24] = {u"Frame rate", u"Plugins", u"Controls", u"Key bindings",
     u"Next page", u"Back", u"Cutscene borders", u"Keyboard and mouse", u"Reset to defaults", u"Preset", u"Apply preset",
     u"Vehicle lights", u"Fusion Fix", u"Restore defaults", u"Field of view", u"HUD aspect ratio",
-    u"Skip intro", u"Modern controls", u"Button icons", u"Hold vehicle camera"};
+    u"Skip intro", u"Modern controls", u"Button icons", u"Hold vehicle camera",
+    u"Pad camera speed", u"Invert pad Y"};
 // One line of help per row, shown under the menu (nullptr: none).
 const char* Help(unsigned option) {
     switch (option) {
@@ -82,10 +85,13 @@ const char* Help(unsigned option) {
     case ModernControls: return "Drive, aim and shoot with the triggers.";
     case GamepadIcons: return "Button pictures in prompts and menus.";
     case HoldCamera: return "The vehicle camera stays where the right stick turned it.";
+    case PadCameraSpeed: return "Speed of the right stick camera.";
+    case InvertPad: return "Inverts the vertical right stick camera.";
     default: return nullptr;
     }
 }
-constexpr char hudAspectKeys[5][16] = {"WF_HUDA_AUTO", "WF_HUDA_4_3", "WF_HUDA_16_9", "WF_HUDA_21_9", "WF_HUDA_32_9"};
+constexpr int customRatio = 5;
+constexpr char hudAspectKeys[6][16] = {"WF_HUDA_AUTO", "WF_HUDA_4_3", "WF_HUDA_16_9", "WF_HUDA_21_9", "WF_HUDA_32_9", "WF_HUDA_CUSTOM"};
 constexpr char16_t hudAspectText[5][8] = {u"Auto", u"4:3", u"16:9", u"21:9", u"32:9"};
 constexpr float hudAspectValues[5] = {0.0f, 4.0f / 3.0f, 16.0f / 9.0f, 21.0f / 9.0f, 32.0f / 9.0f};
 constexpr char iconKeys[4][16] = {"WF_ICONS_AUTO", "WF_ICONS_XBOX", "WF_ICONS_PS2", "WF_ICONS_NIN"};
@@ -128,7 +134,10 @@ bool IsAction(unsigned option) {
     return (option >= DisplayOptions && option <= Back) || option == ResetBindings || option == ApplyPreset ||
         option == FixPage || option == FixDefaults;
 }
-bool IsSlider(unsigned option) { return option == HudSize || option == MouseSensitivity || option == FieldOfView; }
+bool IsSlider(unsigned option)
+{
+    return option == HudSize || option == MouseSensitivity || option == FieldOfView || option == PadCameraSpeed;
+}
 
 // Rebindable actions of this game, in menu order.
 struct ActionList {
@@ -156,7 +165,7 @@ struct PageExtension {
     Widget widgets[widgetCount]{};
     Widget hints[bindingsPerPage]{};
     String hintValues[bindingsPerPage]{}, fpsValues[2]{}, presetValues[4]{}, boolValues[2]{}, bordersValues[4]{};
-    String actionValues[actionWidgets]{}, aspectStrings[5]{}, iconStrings[4]{};
+    String actionValues[actionWidgets]{}, aspectStrings[6]{}, iconStrings[4]{};
     MenuItem* submenuItems[maxItems]{};
     List<MenuItem*> mainItems{};
     MenuItem* mainSelection = nullptr;
@@ -167,36 +176,93 @@ struct PageExtension {
 PageExtension pages[maxPages];
 Widget *sliderPrototype = nullptr, *togglePrototype = nullptr;
 PageExtension* textPage = nullptr;
-bool dirty = false;
+uint32_t dirtyOptions = 0;
+constexpr uint32_t OptionBit(unsigned option) { return 1u << (option - HudSize); }
+static_assert(OptionEnd - HudSize <= 32);
 int selectedPreset = 0;
 bool confirmPreset = false, confirmDefaults = false;
 // The descriptor's presets: 1 vanilla, 2 recommended (the defaults), 3 enhanced (0 = custom).
-// Only the settings whose values differ between them; the others (FOV, HUD, PC controls,
-// sensitivity, bindings) keep the player's choice.
+// The HUD box is Auto in all three presets.
 struct PresetValues { bool unthrottle, skipIntro, vehicleLights, sixtyFPS, modernControls, holdVehicleCamera; int cutsceneBorders, gamepadIcons; };
 constexpr PresetValues presetValues[4] = {{}, {false, false, false, false, false, false, 1, 2},
     {true, true, true, false, true, false, 3, 0}, {true, true, true, true, true, true, 3, 0}};
 constexpr int recommendedPreset = 2;
-bool PresetMatches(int preset) {
-    if (preset < 1 || preset > 3) return false;
-    const auto& p = presetValues[preset];
-    return settings.unthrottle == p.unthrottle && settings.skipIntro == p.skipIntro && settings.vehicleLights == p.vehicleLights &&
-        settings.sixtyFPS == p.sixtyFPS && settings.modernControls == p.modernControls &&
-        settings.holdVehicleCamera == p.holdVehicleCamera && settings.cutsceneBorders == p.cutsceneBorders &&
-        settings.gamepadIcons == p.gamepadIcons;
+bool PageMatches(const PresetValues& preset)
+{
+    return settings.unthrottle == preset.unthrottle && settings.skipIntro == preset.skipIntro &&
+        settings.vehicleLights == preset.vehicleLights && settings.sixtyFPS == preset.sixtyFPS &&
+        settings.cutsceneBorders == preset.cutsceneBorders && settings.gamepadIcons == preset.gamepadIcons;
+}
+bool PresetMatches(int preset)
+{
+    return preset >= 1 && preset <= 3 && PageMatches(presetValues[preset]) &&
+        settings.modernControls == presetValues[preset].modernControls &&
+        settings.holdVehicleCamera == presetValues[preset].holdVehicleCamera;
 }
 int MatchingPreset() { return PresetMatches(2) ? 2 : PresetMatches(1) ? 1 : PresetMatches(3) ? 3 : 0; }
-// Press once to arm, again to apply; nothing happens when the values already match.
-bool ApplyPresetValues(int preset, bool& confirm) {
-    if (preset < 1 || preset > 3 || PresetMatches(preset)) { confirm = false; return false; }
-    if (!confirm) { confirm = true; return false; }
-    const auto& p = presetValues[preset];
-    settings.unthrottle = p.unthrottle; settings.skipIntro = p.skipIntro; settings.vehicleLights = p.vehicleLights;
-    settings.cutsceneBorders = p.cutsceneBorders; settings.gamepadIcons = p.gamepadIcons;
-    settings.holdVehicleCamera = p.holdVehicleCamera;
-    if (settings.sixtyFPS != p.sixtyFPS) { settings.sixtyFPS = p.sixtyFPS; ApplyFrameRate(); }
-    if (settings.modernControls != p.modernControls) { settings.modernControls = p.modernControls; ApplyPcControls(); }
-    dirty = true; confirm = false;
+void TrackChanges(const Settings& previous)
+{
+    if (settings.sixtyFPS != previous.sixtyFPS) dirtyOptions |= OptionBit(FrameRate);
+    if (settings.unthrottle != previous.unthrottle) dirtyOptions |= OptionBit(FastLoading);
+    if (settings.hudScale != previous.hudScale) dirtyOptions |= OptionBit(HudSize);
+    if (settings.cutsceneBorders != previous.cutsceneBorders) dirtyOptions |= OptionBit(CutsceneBorders);
+    if (settings.pcControls != previous.pcControls) dirtyOptions |= OptionBit(PcControls);
+    if (settings.mouseSensitivity != previous.mouseSensitivity) dirtyOptions |= OptionBit(MouseSensitivity);
+    if (settings.invertMouse != previous.invertMouse) dirtyOptions |= OptionBit(InvertMouse);
+    if (settings.fovFactor != previous.fovFactor) dirtyOptions |= OptionBit(FieldOfView);
+    if (settings.hudAspect != previous.hudAspect) dirtyOptions |= OptionBit(HudAspect);
+    if (settings.skipIntro != previous.skipIntro) dirtyOptions |= OptionBit(SkipIntro);
+    if (settings.gamepadIcons != previous.gamepadIcons) dirtyOptions |= OptionBit(GamepadIcons);
+    if (settings.vehicleLights != previous.vehicleLights) dirtyOptions |= OptionBit(VehicleLights);
+    if (settings.holdVehicleCamera != previous.holdVehicleCamera) dirtyOptions |= OptionBit(HoldCamera);
+    if (settings.padCameraSpeed != previous.padCameraSpeed) dirtyOptions |= OptionBit(PadCameraSpeed);
+    if (settings.invertPad != previous.invertPad) dirtyOptions |= OptionBit(InvertPad);
+    if (settings.modernControls != previous.modernControls) dirtyOptions |= OptionBit(ModernControls);
+}
+void SetPageValues(const PresetValues& preset)
+{
+    settings.unthrottle = preset.unthrottle;
+    settings.skipIntro = preset.skipIntro;
+    settings.vehicleLights = preset.vehicleLights;
+    settings.cutsceneBorders = preset.cutsceneBorders;
+    settings.gamepadIcons = preset.gamepadIcons;
+    if (settings.sixtyFPS != preset.sixtyFPS)
+    {
+        settings.sixtyFPS = preset.sixtyFPS;
+        ApplyFrameRate();
+    }
+}
+bool ApplyPresetValues(int preset)
+{
+    if (preset < 1 || preset > 3 || PresetMatches(preset)) { confirmPreset = false; return false; }
+    if (!confirmPreset) { confirmPreset = true; return false; }
+    const Settings previous = settings;
+    const auto& values = presetValues[preset];
+    SetPageValues(values);
+    settings.holdVehicleCamera = values.holdVehicleCamera;
+    settings.modernControls = values.modernControls;
+    TrackChanges(previous);
+    confirmPreset = false;
+    return true;
+}
+bool RestoreDefaults()
+{
+    constexpr Settings defaults{};
+    if (PageMatches(presetValues[recommendedPreset]) && settings.fovFactor == defaults.fovFactor &&
+        settings.hudScale == defaults.hudScale && settings.hudAspect == defaults.hudAspect)
+    {
+        confirmDefaults = false;
+        return false;
+    }
+    if (!confirmDefaults) { confirmDefaults = true; return false; }
+
+    const Settings previous = settings;
+    settings.fovFactor = defaults.fovFactor;
+    settings.hudScale = defaults.hudScale;
+    settings.hudAspect = defaults.hudAspect;
+    SetPageValues(presetValues[recommendedPreset]);
+    TrackChanges(previous);
+    confirmDefaults = false;
     return true;
 }
 unsigned ParentMode(unsigned mode) { return mode == 2 ? 3 : mode == 3 ? 5 : mode == 5 ? 1 : 0; }
@@ -250,20 +316,37 @@ int Value(unsigned option) {
     case VehicleLights: return settings.vehicleLights;
     case FieldOfView: return int(settings.fovFactor * 100.0f + 0.5f);
     case HudAspect: {
-        for (int i = 0; i < 5; ++i) if (std::fabs(settings.hudAspect - hudAspectValues[i]) < 0.001f) return i;
-        return 0;
+        for (int i = 0; i < customRatio; ++i)
+            if (std::fabs(settings.hudAspect - hudAspectValues[i]) < 0.001f) return i;
+        return customRatio;
     }
     case SkipIntro: return settings.skipIntro;
     case ModernControls: return settings.modernControls;
     case GamepadIcons: return settings.gamepadIcons;
     case HoldCamera: return settings.holdVehicleCamera;
+    case PadCameraSpeed: return int(settings.padCameraSpeed * 100.0f + 0.5f);
+    case InvertPad: return settings.invertPad;
     default: return 0;
     }
+}
+void ReadDisplayedHudAspect() {
+    if (dirtyOptions & OptionBit(HudAspect)) return;
+    console::ps2settings::Value option[]{{"MAIN", "HudAspectRatioConstraint", "Auto"}};
+    if (console::ps2settings::read(option))
+        settings.hudAspect = console::parse_hud_aspect(option[0].value);
+}
+void RefreshHudAspect(Widget& widget) {
+    const int value = Value(HudAspect);
+    auto& toggle = widget.toggle;
+    toggle.count = customRatio + (value == customRatio);
+    toggle.strings.end = toggle.strings.begin + toggle.count;
+    toggle.index = toggle.previous = uint8_t(value);
 }
 int GetValue(MenuItem* item, void* text) {
     return item->hook >= HudSize ? Value(item->hook) : getValue.call(item, text);
 }
 void SetValue(MenuItem* item, int value) {
+    const Settings previous = settings;
     switch (item->hook) {
     case Preset: selectedPreset = value; confirmPreset = false; return;
     case HudSize: settings.hudScale = console::bounded(value * 0.01f, 0.5f, 1.5f, 1.0f); break;
@@ -273,25 +356,28 @@ void SetValue(MenuItem* item, int value) {
     case FrameRate: settings.sixtyFPS = value != 0; ApplyFrameRate(); break;
     case CutsceneBorders: settings.cutsceneBorders = value >= 0 && value <= 3 ? value : 3; break;
     case FieldOfView: settings.fovFactor = console::bounded(value * 0.01f, 0.5f, 2.0f, 1.0f); break;
-    case HudAspect: settings.hudAspect = hudAspectValues[value >= 0 && value < 5 ? value : 0]; break;
+    case HudAspect:
+        if (value == customRatio) return;
+        settings.hudAspect = hudAspectValues[value >= 0 && value < customRatio ? value : 0];
+        break;
     case SkipIntro: settings.skipIntro = value != 0; break;
     case VehicleLights: settings.vehicleLights = value != 0; break;
     case ModernControls:
         if (settings.modernControls == (value != 0)) return;
         settings.modernControls = value != 0;
-        ApplyPcControls();
         break;
     case GamepadIcons: settings.gamepadIcons = value; break;
     case HoldCamera: settings.holdVehicleCamera = value != 0; break;
+    case PadCameraSpeed: settings.padCameraSpeed = console::bounded(float((value + 12) / 25 * 25) * 0.01f, 0.25f, 4.0f, 1.0f); break;
+    case InvertPad: settings.invertPad = value != 0; break;
     case PcControls:
         if (settings.pcControls == (value != 0)) return;
         settings.pcControls = value != 0;
-        ApplyPcControls();
         break;
     default: setValue.call(item, value); return;
     }
     selectedPreset = MatchingPreset(); confirmPreset = false; confirmDefaults = false;
-    dirty = true;
+    TrackChanges(previous);
 }
 // Index into the available actions for a binding row of a page, or -1.
 int RowAction(const PageExtension& extension, unsigned row) {
@@ -345,7 +431,17 @@ const uint16_t* GetText(void* text, const char* key) {
         for (unsigned i=0; i<2; ++i) if (!std::strcmp(key, boolKeys[i])) return reinterpret_cast<const uint16_t*>(boolText[i]);
         for (unsigned i=0; i<2; ++i) if (!std::strcmp(key, fpsKeys[i])) return reinterpret_cast<const uint16_t*>(fpsText[i]);
         for (unsigned i=0; i<4; ++i) if (!std::strcmp(key, bordersKeys[i])) return reinterpret_cast<const uint16_t*>(bordersText[i]);
-        for (unsigned i=0; i<5; ++i) if (!std::strcmp(key, hudAspectKeys[i])) return reinterpret_cast<const uint16_t*>(hudAspectText[i]);
+        for (int i = 0; i < customRatio; ++i)
+            if (!std::strcmp(key, hudAspectKeys[i])) return reinterpret_cast<const uint16_t*>(hudAspectText[i]);
+        if (!std::strcmp(key, hudAspectKeys[customRatio])) {
+            static uint16_t out[16];
+            char ratio[16];
+            console::format(ratio, "", settings.hudAspect, 4);
+            unsigned last = 0;
+            for (; ratio[last]; ++last) out[last] = uint16_t(ratio[last]);
+            out[last] = 0;
+            return out;
+        }
         for (unsigned i=0; i<4; ++i) if (!std::strcmp(key, iconKeys[i])) return reinterpret_cast<const uint16_t*>(iconText[i]);
         if (textPage && textPage->mode == 2) for (unsigned i=0; i<bindingsPerPage; ++i) {
             const int action = RowAction(*textPage, i);
@@ -381,9 +477,10 @@ void InitializeWidget(Widget& widget, const Widget& prototype, unsigned option, 
     // input hook below instead of invoking those aliased actions.
     std::memset(widget.item.actions, 0, sizeof(widget.item.actions));
     if (slider) {
-        widget.slider.minimum = option == HudSize || option == FieldOfView ? 50 : 1;
-        widget.slider.maximum = option == HudSize ? 150 : 200;
-        widget.slider.steps = prototype.slider.steps;
+        widget.slider.minimum = option == HudSize || option == FieldOfView ? 50 : option == PadCameraSpeed ? 25 : 1;
+        widget.slider.maximum = option == HudSize ? 150 : option == PadCameraSpeed ? 400 : 200;
+        // Pad camera speed moves in 0.25 steps, so 1.0 stays reachable.
+        widget.slider.steps = option == PadCameraSpeed ? 15 : prototype.slider.steps;
         widget.slider.value = float(Value(option)-widget.slider.minimum) / float(widget.slider.maximum-widget.slider.minimum);
     } else {
         widget.toggle.index = widget.toggle.previous = uint8_t(Value(option));
@@ -395,7 +492,10 @@ void OpenSubmenu(PageExtension& extension, unsigned mode) {
     CancelCapture();
     auto& page = *extension.page;
     if (!extension.mode) extension.mainSelection = page.selected;
-    if (mode == 5) selectedPreset = MatchingPreset();
+    if (mode == 5) {
+        ReadDisplayedHudAspect();
+        selectedPreset = MatchingPreset();
+    }
     confirmPreset = false; confirmDefaults = false;
     extension.mode = mode;
     if (!mode) {
@@ -409,13 +509,14 @@ void OpenSubmenu(PageExtension& extension, unsigned mode) {
         extension.submenuItems[count++] = extension.original.begin[0];
     unsigned row = 0;
     // The fix's 15 rows end above the help line (y 204), which stays above the native footer.
-    const int step = mode == 5 ? 11 : mode == 2 ? 13 : 17;
+    const int step = mode == 5 ? 11 : mode == 2 ? 13 : mode == 3 ? 15 : 17;
     const int top = mode == 5 ? 34 : 46;
     const auto add = [&](MenuItem* item) { item->y = top + int(row++) * step; extension.submenuItems[count++] = item; };
     const auto option = [&](unsigned id) {
         auto& widget = WidgetFor(extension, id);
         if (IsSlider(id)) widget.slider.value = console::bounded(float(Value(id) - widget.slider.minimum) /
             float(widget.slider.maximum - widget.slider.minimum), 0.0f, 1.0f, 0.5f);
+        else if (id == HudAspect) RefreshHudAspect(widget);
         else if (!IsAction(id)) widget.toggle.index = widget.toggle.previous = uint8_t(Value(id));
         add(&widget.item);
     };
@@ -428,7 +529,7 @@ void OpenSubmenu(PageExtension& extension, unsigned mode) {
         if (BindingPages() > 1) option(NextBindings);
         option(ResetBindings);
     } else if (mode == 3) {
-        option(ModernControls); option(HoldCamera); option(PcControls); option(MouseSensitivity); option(InvertMouse); option(Bindings);
+        option(ModernControls); option(PadCameraSpeed); option(InvertPad); option(HoldCamera); option(PcControls); option(MouseSensitivity); option(InvertMouse); option(Bindings);
     } else if (mode == 5) {
         option(Preset); option(ApplyPreset); option(FrameRate); option(FieldOfView); option(HudSize); option(HudAspect);
         option(CutsceneBorders); option(FastLoading); option(SkipIntro); option(VehicleLights);
@@ -479,7 +580,7 @@ void Attach(MenuPage* page) {
     // Own boolean controls must not inherit the game's translated value keys.
     for (unsigned option=HudSize; option<OptionEnd; ++option)
         if (option == FastLoading || option == InvertMouse || option == PcControls || option == SkipIntro || option == ModernControls ||
-            option == VehicleLights || option == HoldCamera) {
+            option == VehicleLights || option == HoldCamera || option == InvertPad) {
             auto& widget = WidgetFor(*extension, option);
             widget.toggle.strings = {extension->boolValues,extension->boolValues+2,0,extension->boolValues+2};
             widget.toggle.count = 2;
@@ -493,10 +594,11 @@ void Attach(MenuPage* page) {
     for (unsigned i=0; i<4; ++i) extension->presetValues[i] = Literal(presetKeys[i]);
     WidgetFor(*extension, Preset).toggle.strings = {extension->presetValues,extension->presetValues+4,0,extension->presetValues+4};
     WidgetFor(*extension, Preset).toggle.count = 4;
-    for (unsigned i=0; i<5; ++i) extension->aspectStrings[i] = Literal(hudAspectKeys[i]);
+    for (int i = 0; i <= customRatio; ++i) extension->aspectStrings[i] = Literal(hudAspectKeys[i]);
     auto& aspect = WidgetFor(*extension, HudAspect);
-    aspect.toggle.strings = {extension->aspectStrings,extension->aspectStrings+5,0,extension->aspectStrings+5};
-    aspect.toggle.count = 5;
+    aspect.toggle.strings = {extension->aspectStrings, extension->aspectStrings + customRatio, 0,
+        extension->aspectStrings + customRatio + 1};
+    aspect.toggle.count = customRatio;
     for (unsigned i=0; i<4; ++i) extension->iconStrings[i] = Literal(iconKeys[i]);
     auto& icons = WidgetFor(*extension, GamepadIcons);
     icons.toggle.strings = {extension->iconStrings,extension->iconStrings+4,0,extension->iconStrings+4};
@@ -627,10 +729,10 @@ void InputTrigger(MenuItem* item, int trigger) {
                 } else if (item->hook == ResetBindings) bindings.Reset();
                 else if (item->hook == ApplyPreset) {
                     // Reopen the page so every widget shows the applied values.
-                    if (ApplyPresetValues(selectedPreset, confirmPreset)) OpenSubmenu(*extension,5);
+                    if (ApplyPresetValues(selectedPreset)) OpenSubmenu(*extension,5);
                 }
                 else if (item->hook == FixDefaults) {
-                    if (ApplyPresetValues(recommendedPreset, confirmDefaults)) OpenSubmenu(*extension,5);
+                    if (RestoreDefaults()) OpenSubmenu(*extension,5);
                 }
                 else if (item->hook == Back) OpenSubmenu(*extension, ParentMode(extension->mode));
                 PlaySound();
@@ -678,30 +780,40 @@ void UpdateBindingsPage(PageExtension& extension) {
 }
 void SaveSettings() {
     const bool bindingsSaved = SaveBindings();
-    if (!dirty && bindingsSaved) return;
-    // The host only accepts requests inside the module image (not a game stack).
+    if (!dirtyOptions && bindingsSaved) return;
     static PCSX2FIniRequest request;
     char number[16];
+    uint32_t batch = 0;
     unsigned status = PCSX2F_SETTINGS_OK;
     request = {};
-    request.size = sizeof(request); request.version = 1; request.operation = PCSX2F_SETTINGS_WRITE;
-    const auto set = [&](const char* section, const char* key, const char* value) {
-        if (request.count == PCSX2F_SETTINGS_MAX_ENTRIES) {
-            const auto result = console::ps2settings::request(request);
-            if (result != PCSX2F_SETTINGS_OK) status = result;
-            request.count = 0;
-        }
-        auto& entry = request.entries[request.count++];
-        std::strcpy(entry.section, section); std::strcpy(entry.key, key); std::strcpy(entry.value, value);
+    const auto flush = [&] {
+        const auto result = console::ps2settings::request(request);
+        if (result == PCSX2F_SETTINGS_OK) dirtyOptions &= ~batch;
+        else status = result;
+        request.count = 0;
+        batch = 0;
     };
-    console::decimal(number, settings.hudScale, 2); set("MAIN", "HudScale", number);
-    set("MAIN", "UnthrottleEmuDuringLoading", settings.unthrottle ? "1" : "0");
-    console::decimal(number, settings.mouseSensitivity / 0.002f, 2); set("MAIN", "MouseSensitivity", number);
-    set("MAIN", "InvertMouseY", settings.invertMouse ? "1" : "0");
-    set("MAIN", "FPSLimit", settings.sixtyFPS ? "60" : "30");
-    number[0] = char('0' + (settings.cutsceneBorders & 3)); number[1] = 0; set("MAIN", "CutsceneBorders", number);
-    set("CONTROLS", "PCControlScheme", settings.pcControls ? "1" : "0");
-    console::decimal(number, settings.fovFactor, 2); set("MAIN", "FOVFactor", number);
+    const auto set = [&](int option, const char* section, const char* key, const char* value) {
+        const auto bit = OptionBit(option);
+        if (!(dirtyOptions & bit)) return;
+        if (request.count == PCSX2F_SETTINGS_MAX_ENTRIES) flush();
+        auto& e = request.entries[request.count++];
+        std::strcpy(e.section, section); std::strcpy(e.key, key); std::strcpy(e.value, value);
+        batch |= bit;
+    };
+    request.size = sizeof(request); request.version = 1; request.operation = PCSX2F_SETTINGS_WRITE;
+    set(FrameRate, "MAIN", "FPSLimit", settings.sixtyFPS ? "60" : "30");
+    set(FastLoading, "MAIN", "UnthrottleEmuDuringLoading", settings.unthrottle ? "1" : "0");
+    console::decimal(number, settings.hudScale, 2);
+    set(HudSize, "MAIN", "HudScale", number);
+    number[0] = char('0' + (settings.cutsceneBorders & 3)); number[1] = 0;
+    set(CutsceneBorders, "MAIN", "CutsceneBorders", number);
+    set(PcControls, "CONTROLS", "PCControlScheme", settings.pcControls ? "1" : "0");
+    console::decimal(number, settings.mouseSensitivity / 0.002f, 2);
+    set(MouseSensitivity, "MAIN", "MouseSensitivity", number);
+    set(InvertMouse, "MAIN", "InvertMouseY", settings.invertMouse ? "1" : "0");
+    console::decimal(number, settings.fovFactor, 2);
+    set(FieldOfView, "MAIN", "FOVFactor", number);
     int aspect = -1;
     for (int i = 0; i < 5; ++i) if (std::fabs(settings.hudAspect - hudAspectValues[i]) < 0.001f) aspect = i;
     if (aspect >= 0) {
@@ -709,17 +821,17 @@ void SaveSettings() {
         for (; hudAspectText[aspect][used]; ++used) number[used] = char(hudAspectText[aspect][used]);
         number[used] = 0;
     }
-    set("MAIN", "HudAspectRatioConstraint", aspect >= 0 ? number : config::values[11].value);
-    set("MAIN", "SkipIntro", settings.skipIntro ? "1" : "0");
-    set("CONTROLS", "ModernControlScheme", settings.modernControls ? "1" : "0");
-    set("CONTROLS", "HoldVehicleCamera", settings.holdVehicleCamera ? "1" : "0");
-    number[0] = char('0' + (settings.gamepadIcons & 3)); number[1] = 0; set("MAIN", "GamepadIcons", number);
-    set("MAIN", "VehicleLights", settings.vehicleLights ? "1" : "0");
-    if (request.count) {
-        const auto result = console::ps2settings::request(request);
-        if (result != PCSX2F_SETTINGS_OK) status = result;
-    }
-    if (status == PCSX2F_SETTINGS_OK && bindingsSaved) { dirty = false; OSDText[1][0] = 0; }
+    if (aspect >= 0) set(HudAspect, "MAIN", "HudAspectRatioConstraint", number);
+    set(SkipIntro, "MAIN", "SkipIntro", settings.skipIntro ? "1" : "0");
+    set(ModernControls, "CONTROLS", "ModernControlScheme", settings.modernControls ? "1" : "0");
+    set(HoldCamera, "CONTROLS", "HoldVehicleCamera", settings.holdVehicleCamera ? "1" : "0");
+    console::decimal(number, settings.padCameraSpeed, 2);
+    set(PadCameraSpeed, "MAIN", "GamepadCameraSpeed", number);
+    set(InvertPad, "MAIN", "InvertGamepadY", settings.invertPad ? "1" : "0");
+    number[0] = char('0' + (settings.gamepadIcons & 3)); number[1] = 0; set(GamepadIcons, "MAIN", "GamepadIcons", number);
+    set(VehicleLights, "MAIN", "VehicleLights", settings.vehicleLights ? "1" : "0");
+    if (request.count) flush();
+    if (status == PCSX2F_SETTINGS_OK && bindingsSaved) { OSDText[1][0] = 0; }
     else std::strcpy(OSDText[1], status == PCSX2F_SETTINGS_UNSUPPORTED
         ? "Menu settings apply this session. Update the fork and injector to save them to the CFG."
         : "Could not save plugin settings to the CFG. Changes still apply this session.");
@@ -773,6 +885,15 @@ uint64_t Draw(void* menu) {
     if (textPage) UpdateBindingsPage(*textPage);
     else if (capture.active()) CancelCapture();
     renderedBindings=0;
+    static unsigned framesUntilAspectRead = 30;
+    for (auto& extension : pages) {
+        if (!extension.page || extension.mode != 5) continue;
+        if (--framesUntilAspectRead == 0) {
+            ReadDisplayedHudAspect();
+            framesUntilAspectRead = 30;
+        }
+        RefreshHudAspect(WidgetFor(extension, HudAspect));
+    }
     const auto result = drawMenu.call(menu);
     if(textPage) for(unsigned i=0;i<bindingsPerPage;++i) if(renderedBindings&(1u<<i)) {
         const int action=RowAction(*textPage,i);

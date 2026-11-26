@@ -5,6 +5,8 @@
   "MAIN_HudAspectRatioConstraint": "HUD aspect ratio constraint",
   "MAIN_HudAspectRatioConstraint.description": "Use Auto for full-screen HUD width, or 4:3, 16:9, 21:9 or a custom ratio up to 32:9. Changes apply at the next game frame.",
   "MAIN_FPSLimit": "Frame rate limit",
+  "MAIN_FPSLimit.monitor": "Monitor",
+  "MAIN_FPSLimit.unlimited": "Unlimited",
   "MAIN_FPSLimit.description": "Target frame rate: 0 unlimited, -1 current monitor refresh rate, or 30–1000 FPS. Default 60. Changes apply while the game runs. Higher rates may affect game behavior.",
   "MAIN_FOVFactor": "Field of view factor",
   "MAIN_FOVFactor.description": "Gameplay field-of-view multiplier, from 0.5 to 2.0. 1.0 preserves the corrected original view. Comic panels, scripted cameras and native zoom views keep their own framing. Applies at the next game frame. Widening stops at 150 degrees horizontally, preserving a neutral view that is already wider.",
@@ -80,6 +82,6 @@
   "MAIN_GamepadCameraSpeed.description": "Multiplies right-stick camera speed after the native response curve. Mouse look, inversion, movement and recenter timing keep their own settings. 1.0 keeps the original speed.",
   "MAIN_CheckForUpdates": "Check for updates",
   "MAIN_CheckForUpdates.description": "Checks for a newer fix once when enabled. A notice appears in Options; FusionFixHub handles updates after the game exits. Off makes no network requests.",
-  "update.availablehub": "A newer Fusion Fix is available. Open FusionFixHub after leaving the game.",
-  "update.availablesite": "A newer Fusion Fix is available at {page}"
+  "update.availablehub": "Fusion Fix {version} is available. Open FusionFixHub after leaving the game.",
+  "update.availablesite": "Fusion Fix {version} is available at {page}."
 }

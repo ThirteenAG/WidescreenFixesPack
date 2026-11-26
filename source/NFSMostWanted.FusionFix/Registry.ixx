@@ -1,8 +1,8 @@
 module;
 
 #include <stdafx.h>
-#include <FunctionHookMinHook.hpp>
 #include "FixSettings.hpp"
+#include "Shared/NFS/CustomUserFiles.hpp"
 #include "Shared/NFS/LanguageSetting.hpp"
 
 export module Registry;
@@ -22,28 +22,7 @@ static std::filesystem::path UserFilesFolder()
     return documents;
 }
 
-static std::unique_ptr<FunctionHookMinHook> mhSHGetFolderPathA;
-static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
-{
-    if (bUseCustomUserDir)
-    {
-        int folder = csidl & ~CSIDL_FLAG_CREATE;
-        if (folder == CSIDL_PERSONAL)
-        {
-            const auto path = CustomUserDir.u8string();
-            if (path.size() >= MAX_PATH)
-            {
-                pszPath[0] = '\0';
-                return HRESULT_FROM_WIN32(ERROR_FILENAME_EXCED_RANGE);
-            }
-            CreateDirectoryW(CustomUserDir.c_str(), NULL);
-            memcpy(pszPath, path.c_str(), path.size() + 1);
-            return S_OK;
-        }
-    }
-
-    return mhSHGetFolderPathA->get_original<decltype(SHGetFolderPathA)>()(hwnd, csidl, hToken, dwFlags, pszPath);
-}
+using GameFolderRedirect = NFSUserFiles::Redirect<CSIDL_PERSONAL>;
 
 // The game's language: the "Language" registry value names it, the game compares it with its table of names
 // ("English US", "German", ...) and takes the language id and region from it; an unknown name is English US. The
@@ -137,12 +116,10 @@ public:
             // A folder of the game's folder for the profiles and saves; "0" keeps them where the game puts them
             if (auto folder = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir"); !folder.empty() && folder != "0")
             {
-                CustomUserDir = GetExeModulePath<std::filesystem::path>() / folder;
+                CustomUserDir = GetExeModulePath<std::filesystem::path>() / std::filesystem::path(std::u8string(folder.begin(), folder.end()));
                 bUseCustomUserDir = true;
+                GameFolderRedirect::Install(CustomUserDir);
             }
-
-            mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
-            mhSHGetFolderPathA->create();
 
             // The installer's language as the redirected registry's default; the game's read of it gets the language
             // setting (an installed language, which may differ from what the key holds)
@@ -266,6 +243,18 @@ public:
                     if (IsCallerFromModule(GetModuleHandleA(NULL))) return sRegEnumKeyA(hKey, dwIndex, lpName, cchName);
                     return shRegEnumKeyA.stdcall<LSTATUS>(hKey, dwIndex, lpName, cchName);
                 }));
+
+                // The fallback's own calls go to the real functions, not back into these hooks
+                RegistryFallback::Real.CloseKey = shRegCloseKey.original<decltype(&RegCloseKey)>();
+                RegistryFallback::Real.CreateKeyA = shRegCreateKeyA.original<decltype(&RegCreateKeyA)>();
+                RegistryFallback::Real.OpenKeyA = shRegOpenKeyA.original<decltype(&RegOpenKeyA)>();
+                RegistryFallback::Real.OpenKeyExA = shRegOpenKeyExA.original<decltype(&RegOpenKeyExA)>();
+                RegistryFallback::Real.CreateKeyExA = shRegCreateKeyExA.original<decltype(&RegCreateKeyExA)>();
+                RegistryFallback::Real.QueryValueExA = shRegQueryValueExA.original<decltype(&RegQueryValueExA)>();
+                RegistryFallback::Real.SetValueExA = shRegSetValueExA.original<decltype(&RegSetValueExA)>();
+                RegistryFallback::Real.QueryValueA = shRegQueryValueA.original<decltype(&RegQueryValueA)>();
+                RegistryFallback::Real.DeleteKeyA = shRegDeleteKeyA.original<decltype(&RegDeleteKeyA)>();
+                RegistryFallback::Real.EnumKeyA = shRegEnumKeyA.original<decltype(&RegEnumKeyA)>();
             };
 
             if (bWriteSettingsToFile)
@@ -342,6 +331,8 @@ public:
                 RegistryFallback::AddDefault("SwapSize", "73400320");
                 RegistryFallback::AddDefault("Language", defaultLanguage.c_str());
                 RegistryFallback::AddDefault("StreamingInstall", "0");
+                // Without it the first start skips these settings and detects its own
+                RegistryFallback::AddDefault("FirstTime", "0");
                 RegistryFallback::AddDefault("VTMode", "0");
                 RegistryFallback::AddDefault("VERSION", "0");
                 RegistryFallback::AddDefault("SIZE", "0");
@@ -366,8 +357,6 @@ public:
                 RegistryFallback::AddDefault("Install Dir", exePath);
                 RegistryFallback::AddDefault("InstallDir", exePath);
                 RegistryFallback::AddDefault("Path", exePath);
-
-                RegistryFallback::EnsureDefaults();
 
                 auto hooks = IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
                     std::forward_as_tuple("RegCloseKey", RegistryFallback::RegCloseKey),

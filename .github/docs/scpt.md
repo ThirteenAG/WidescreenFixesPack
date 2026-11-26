@@ -20,7 +20,7 @@
 
 ## Miscellaneous
 
-* **FPS Limit** - frame rate limit (60 by default; 0 = unlimited, -1 = the monitor's refresh rate), changes apply while playing
+* **FPS Limit** - frame rate limit: 30–1000 FPS, Unlimited or Monitor (60 by default), changes apply while playing
 * **Skip Intro** - added an option to skip intro
 * **Skip Prompt** - added an option to skip "Press Fire to Continue" prompt
 * **Cutscene Borders** - cinematics keep their 16:9 picture: Letterbox bars on screens narrower than 16:9, Pillarbox bars on wider ones, Both, or Off to fill the screen
@@ -56,7 +56,7 @@ Recommended uses the default setup. Vanilla and Enhanced offer alternative prese
 
 ## Installation
 
-Retail and current digital executables are supported. The single-player game is covered; the multiplayer mode (Spies vs. Mercs, a separate executable in the retail release) is not. Buffered-shadow corrections apply to retail; use projector shadows (`ForceShadowMode=0`, or automatic selection) in the current digital release. Forcing buffered shadows there can prevent startup. The native Direct3D 8 renderer is retained; the Direct3D 9/11 developer overlay does not apply.
+Retail and current digital executables are supported. The single-player game is covered; the multiplayer mode (Spies vs. Mercs, a separate executable in the retail release) is not. Buffered-shadow corrections apply to retail; use projector shadows (`ForceShadowMode=0`, or automatic selection) in the current digital release. Forcing buffered shadows there can prevent startup. The native Direct3D 8 renderer is retained.
 
 1. Download `SplinterCellPandoraTomorrow.FusionFix.zip` from this release.
 2. Extract the contents directly into the game folder.

@@ -11,11 +11,12 @@ namespace kr::camera
         return wrapper ? Read<uintptr_t>(wrapper + 8) : 0;
     }
 
-    // The game sets the frustum only when the camera mode changes, so the FOV
-    // factor is kept on top of the last frustum the game wrote. The stored
-    // frustum also feeds culling.
+    // Keep the projection written by the game and the display aspect it used.
+    // The game normally writes it only on a camera mode change.
     inline float base[4], written[4], frustum[6];
-    inline bool known;
+    inline float baseAspect;
+    inline uintptr_t baseCamera;
+    inline pcsx2::GameFunction<void(uintptr_t)> markCameraProjectionDirty;
 
     // 0x3233BC in NiCamera::Click (see hud::CameraData). Returns false for
     // cameras other than the main camera.
@@ -27,10 +28,12 @@ namespace kr::camera
             return false;
         }
         auto stored = reinterpret_cast<float*>(camera + 0x154);
-        if (!known || std::memcmp(stored, written, sizeof(written)))
+        const float aspect = Aspect();
+        if (camera != baseCamera || std::memcmp(stored, written, sizeof(written)))
         {
             std::copy(stored, stored + 4, base);
-            known = true;
+            baseAspect = aspect;
+            baseCamera = camera;
         }
         float zoom = 1;
         const float half = 0.5f * (base[2] - base[3]);
@@ -39,9 +42,19 @@ namespace kr::camera
             const float angle = std::clamp(std::atan(half) * fovFactor, 0.02f, 1.48f);
             zoom = std::tan(angle) / half;
         }
-        for (unsigned i = 0; i < 4; ++i)
+        const float xScale = zoom * (aspect / baseAspect);
+        written[0] = base[0] * xScale;
+        written[1] = base[1] * xScale;
+        written[2] = base[2] * zoom;
+        written[3] = base[3] * zoom;
+        if (std::memcmp(stored, written, sizeof(written)))
         {
-            stored[i] = written[i] = base[i] * zoom;
+            // The renderer and culling both consume the camera's projection.
+            std::copy(written, written + 4, stored);
+            if (markCameraProjectionDirty)
+            {
+                markCameraProjectionDirty(camera);
+            }
         }
         // The cockpit dashboard covers only the 4:3 frame, and scripted scenes
         // with Pillarbox keep their 4:3 framing: draw the world in the 4:3

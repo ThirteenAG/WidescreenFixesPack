@@ -1,5 +1,5 @@
 #pragma once
-#include "../Shared/Console/VehicleLights.hpp"
+#include "Shared/Console/VehicleLights.hpp"
 #include <cstddef>
 #include <cstring>
 

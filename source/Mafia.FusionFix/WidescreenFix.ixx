@@ -3,6 +3,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <atomic>
 
 export module WidescreenFix;
 
@@ -14,13 +15,14 @@ import DrawDistance;
 import UI;
 import Cutscene;
 
+namespace
+{
+    std::atomic<bool> hudChanged{ true };
+    std::atomic<bool> cutsceneChanged{ true };
+}
+
 void SetHooks()
 {
-    Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
-    Screen.fBaseWidth = 600.0f * Screen.fAspectRatio;
-    Screen.fInvBaseWidth = 1.0f / Screen.fBaseWidth;
-    fMenuOffset = (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) * 0.5f;
-    fMovieAspect = Screen.fAspectRatio / (4.0f / 3.0f);
     InitCutscenes();
     InitFOV();
     InitHUD();
@@ -51,27 +53,48 @@ export void InitializePresentation(int width, int height)
         nResolutionWidth = width;
     if (nResolutionHeight != height)
         nResolutionHeight = height;
-    static std::once_flag flag;
-    std::call_once(flag, [=]()
+    static bool installed = false;
+    const bool resized = Screen.fWidth != width || Screen.fHeight != height;
+    const bool refreshHud = hudChanged.exchange(false);
+    const bool refreshCutscene = cutsceneChanged.exchange(false);
+    if (installed && !resized && !refreshHud && !refreshCutscene) return;
+    if (refreshCutscene)
     {
-        Screen.fWidth = static_cast<float>(width);
-        Screen.fHeight = static_cast<float>(height);
+        const auto borders = FixSettings().Get("MAIN.CutsceneBorders");
+        nCutsceneBorders = std::clamp(std::atoi(borders.c_str()), 0, 3);
+        bNoCutsceneBorderAnimation = FixSettings().Get("MAIN.AnimatedCutsceneBorders") == "0";
+    }
+    if (installed && resized)
+        ResizeSceneViewports(static_cast<int>(Screen.fWidth), static_cast<int>(Screen.fHeight), width, height);
+    Screen.fWidth = static_cast<float>(width);
+    Screen.fHeight = static_cast<float>(height);
+    Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
+    Screen.fBaseWidth = 600.0f * Screen.fAspectRatio;
+    Screen.fInvBaseWidth = 1.0f / Screen.fBaseWidth;
+    fMovieAspect = Screen.fAspectRatio / (4.0f / 3.0f);
+    if (!installed)
+    {
         SetHooks();
-    });
+        installed = true;
+        return;
+    }
+    if (resized || refreshHud)
+        RefreshHUD();
+    if (resized)
+    {
+        CameraDisplayResized();
+        RefreshMapAndText();
+        RefreshMenuGeometry();
+    }
 }
 
 // Resolves the game resolution variables and initializes the display
 export void InitWidescreenFix()
 {
     bWidescreenMap = FixSettings().Bool("WIDESCREEN.WidescreenMap") != 0;
-    auto presentation = []()
-    {
-        nCutsceneBorders = std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3);
-        bNoCutsceneBorderAnimation = !FixSettings().Bool("MAIN.AnimatedCutsceneBorders");
-    };
-    presentation();
+    FixSettings().OnChange("MAIN.HudAspectRatioConstraint", []() { hudChanged.store(true); });
     for (const char* id : { "MAIN.CutsceneBorders", "MAIN.AnimatedCutsceneBorders" })
-        FixSettings().OnChange(id, presentation);
+        FixSettings().OnChange(id, []() { cutsceneChanged.store(true); });
     bChangeDrawDistance = FixSettings().Bool("DRAW_DISTANCE.Enable");
     fDrawDistance = FixSettings().Float("GRAPHICS.DrawDistance");
     fDrawDistanceMin = FixSettings().Float("DRAW_DISTANCE.SkipMinDistance");

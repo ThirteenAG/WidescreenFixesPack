@@ -16,7 +16,7 @@
 - **Aspect ratio and field of view** — Gameplay keeps the original vertical view and shows more at the sides (Hor+); at 4:3 it is unchanged.
 - **HUD** — Health, Focus, the weapon and ammunition display and the allies' portraits sit in the top left corner of the screen, the operator's radio and the counters in the top right corner, without being stretched; the aiming reticle, prompts and subtitles stay in the middle.
 - **Menus and 2D screens** — Menus, the copyright screen and the pause screen keep their 4:3 layout in the middle of the screen.
-- **Cutscenes** — The game's realtime cutscenes show their original 16:9 framing at any aspect ratio.
+- **Cutscenes** — Realtime cutscenes can keep their original framing, including the game's 16:9 and approximately 2.35:1 pictures.
 - **Movies** — The full-motion videos keep their proportions.
 - **Stability** — A crash that could happen right at start-up (the loading screen thread starting too early) is avoided.
 - **Display scaling** — The game stays sharp on scaled (high-DPI) desktops.
@@ -25,8 +25,8 @@
 ## Options
 
 - **Window mode** — Fullscreen, Windowed or Borderless, then restart. Windowed gives a centred window whose picture area is exactly the chosen resolution; Borderless covers the monitor. Alt+Enter switches between fullscreen and the window.
-- **HUD aspect ratio** — Auto (default) puts the HUD in the screen corners; a ratio such as 4:3 or 16:9 keeps it in a centred box of that shape. Applies at once.
-- **Cutscene borders** — Letterbox keeps the bars above and below cutscenes on screens narrower than 16:9; Pillarbox keeps the 16:9 picture between side bars on wider screens; Both (default) does both and always shows the original framing; Off fills the screen. Applies at once.
+- **HUD aspect ratio** — Auto puts the HUD in the screen corners. Choosing a ratio keeps it in a centred box of that shape. Auto is the default in all three Hub preset exports. Applies at once.
+- **Cutscene borders** — Letterbox adds top and bottom bars when the screen is narrower than the scene's original picture. Pillarbox adds side bars when the screen is wider. Both (default) preserves each scene's original framing, so a 2.35:1 scene still has top and bottom bars at 16:9. Off fills the screen. Applies at once.
 - **Movie framing** — Original shows them as the game does, whole inside its centred 4:3 frame with black bars around them; Fill fits the whole movie to the screen. Nothing is cut off or stretched (Fill is the default). Applies at once.
 - **Field of view** — A multiplier (0.5–2.0, default 1.0) on the gameplay camera, limited to 150 degrees horizontally; cutscenes and scripted cameras keep their own. Applies at once.
 - **Skip intro** — On by default: the copyright screen at start-up is skipped. Needs a restart.

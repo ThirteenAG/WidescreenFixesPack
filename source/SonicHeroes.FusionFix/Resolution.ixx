@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include <charconv>
 #include "FixSettings.hpp"
 
 export module Resolution;
@@ -68,15 +69,24 @@ export namespace Resolution
     {
         auto& settings = FixSettings();
         Screen.fConditionalAspectRatio = settings.Float("MAIN.MinAspectRatio");
-        Screen.fFovFactor = ClampFov(settings.Float("MAIN.FOVFactor"));
-        GameplayFov::Factor.store(Screen.fFovFactor, std::memory_order_relaxed);
-        settings.OnChange("MAIN.FOVFactor", []()
+        static std::atomic<bool> fovPending{ false };
+        const auto applyFov = []()
         {
-            Screen.fFovFactor = ClampFov(FixSettings().Float("MAIN.FOVFactor"));
+            const auto text = FixSettings().Get("MAIN.FOVFactor");
+            float value = 1.0f;
+            const auto result = std::from_chars(text.data(), text.data() + text.size(), value);
+            Screen.fFovFactor = result.ec == std::errc{} && result.ptr == text.data() + text.size() ? ClampFov(value) : 1.0f;
             GameplayFov::Factor.store(Screen.fFovFactor, std::memory_order_relaxed);
             GameplayFov::RefreshPending.store(true, std::memory_order_relaxed);
             UpdateViewScales();
-        });
+        };
+        settings.OnChange("MAIN.FOVFactor", []() { fovPending.store(true); });
+        applyFov();
+        WFP::onGameProcessEvent() += [applyFov]()
+        {
+            if (fovPending.exchange(false))
+                applyFov();
+        };
 
         int width = settings.Int("MAIN.ResX");
         int height = settings.Int("MAIN.ResY");

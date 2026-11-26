@@ -3,9 +3,11 @@
 #include "../Shared/Console/Ps2PluginConflict.hpp"
 #include <cstdio>
 #include <cstdlib>
+#include <iterator>
 PCSX2F_CFG_SETTINGS()
 PCSX2F_CFG_PEER_SETTINGS()
 PCSX2F_STATE_LOAD_GENERATION()
+PCSX2F_EFFECTIVE_ASPECT()
 
 extern "C"
 {
@@ -20,47 +22,57 @@ using namespace kr;
 SafetyMipsMid cameraDefaults, projectionDefaults, horizontalProjection, separateProjection;
 SafetyMipsMid screenPolygon, screenTexture, polygonEntry, textureEntry, cameraData, objectMatrix, clickEnd;
 SafetyMipsMid endFrame, cinematicAnimation, cinematicStatic;
-console::ps2settings::Value options[] = {
+constexpr console::ps2settings::Value defaults[] = {
     {"MAIN", "ForceAspectRatio", "Auto"}, {"MAIN", "HudAspectRatioConstraint", "Auto"}, {"MAIN", "FOVFactor", "1.0"},
     {"MAIN", "CutsceneBorders", "3"}, {"MAIN", "SkipIntro", "1"}, {"MAIN", "FMVWidescreenMode", "1"}};
 console::ps2settings::StateLoads stateLoads;
-uint32_t refreshFrames, layout;
-
-void ApplySettings()
+uint32_t refreshFrames;
+struct Layout
 {
+    float aspect, hudShift;
+    int borders;
+    bool cinematic;
+} layout;
+
+bool ReadSettings(bool startup)
+{
+    static console::ps2settings::Value options[std::size(defaults)];
+    std::copy(std::begin(defaults), std::end(defaults), std::begin(options));
+    if (!(startup ? console::ps2settings::load(options) : console::ps2settings::read(options)))
+    {
+        return false;
+    }
     forcedAspect = console::parse_forced_aspect(options[0].value);
     hudAspect = console::parse_hud_aspect(options[1].value);
     char* end = nullptr;
     const float factor = std::strtof(options[2].value, &end);
     fovFactor = end != options[2].value && std::isfinite(factor) ? std::clamp(factor, 0.5f, 2.0f) : 1.0f;
     cutsceneBorders = std::clamp(std::atoi(options[3].value), 0, 3);
-    skipIntro = console::ps2settings::boolean(options[4], true);
-    fmvFill = console::ps2settings::boolean(options[5], true);
-}
-void RefreshSettings()
-{
-    if (console::ps2settings::read(options))
+    if (startup)
     {
-        ApplySettings();
+        skipIntro = console::ps2settings::boolean(options[4], true);
     }
+    fmvFill = console::ps2settings::boolean(options[5], true);
+    return true;
 }
 
 // NiPS2Renderer::EndFrame (0x367B80): once per presented frame, menus included.
 void EndFrame(SafetyMipsContext&)
 {
     ++frame;
-    stateLoads.poll(RefreshSettings);
+    stateLoads.poll([] { ReadSettings(false); });
     if (++refreshFrames >= 30)
     {
         refreshFrames = 0;
-        RefreshSettings();
+        ReadSettings(false);
     }
     // Cached 2D packets keep the layout they were built with.
-    const uint32_t current = Bits(Aspect()) ^ (Bits(HudShift()) * 31u) ^ (uint32_t(cutsceneBorders) << 4) ^ Cinematic();
-    if (current != layout)
+    const Layout current{Aspect(), HudShift(), cutsceneBorders, Cinematic()};
+    if (current.aspect != layout.aspect || current.hudShift != layout.hudShift ||
+        current.borders != layout.borders || current.cinematic != layout.cinematic)
     {
         layout = current;
-        hud::rebuild2D = 4000;
+        hud::Invalidate2D();
     }
 }
 
@@ -159,8 +171,8 @@ void Rejected(pcsx2_hook_status status)
 
 extern "C" void init()
 {
-    static constexpr console::ps2conflict::OldPlugin oldPlugins[] = {
-        {"KnightRider.PCSX2F.WidescreenFix.elf", "MAIN", "ForceAspectRatio"},
+    static constexpr const char* oldPlugins[] = {
+        "KnightRider.PCSX2F.WidescreenFix.elf",
     };
     if (console::ps2conflict::Found(oldPlugins, OSDText))
         return;
@@ -168,15 +180,15 @@ extern "C" void init()
     {
         return;
     }
-    if (!console::ps2settings::load(options))
+    if (!ReadSettings(true))
     {
         std::snprintf(OSDText[0], OSDStringSize,
                       "CFG settings unavailable: update the plugin injector for CFG support.");
     }
-    ApplySettings();
     safetymips::Options replace;
     replace.execute_original = false;
     cameraDefaults = safetymips::create_mid<&camera::SetFovDefaults>(0x3E3600, nullptr, replace);
+    camera::markCameraProjectionDirty.bind(0x321D90);
     projectionDefaults = safetymips::create_mid<&camera::ProjectionDefaults>(0x3EB864, nullptr, replace);
     horizontalProjection = safetymips::create_mid<&camera::HorizontalProjection>(0x3EB910);
     separateProjection = safetymips::create_mid<&camera::SeparateProjection>(0x3EBA60);

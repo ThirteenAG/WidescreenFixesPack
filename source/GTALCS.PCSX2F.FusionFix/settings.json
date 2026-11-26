@@ -179,6 +179,21 @@
       "apply": "live"
     },
     {
+      "id": "CONTROLS.HoldVehicleCamera",
+      "type": "bool",
+      "default": 0,
+      "label": "@controls.holdvehiclecamera",
+      "description": "@controls.holdvehiclecamera.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 0,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "CONTROLS.PCControlScheme",
       "type": "bool",
       "default": 0,
@@ -286,6 +301,11 @@
       "page": "graphics",
       "visibility": "menu",
       "apply": "live",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "maxLength": 14
     },
     {

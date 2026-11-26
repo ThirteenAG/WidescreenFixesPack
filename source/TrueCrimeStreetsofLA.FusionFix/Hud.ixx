@@ -116,7 +116,7 @@ export namespace TrueCrimeHud
 
     inline float Setting(const char* id)
     {
-        const float value = FixSettings().Float(id);
+        const float value = ReadNumericSetting(id, 1.0f);
         return std::isfinite(value) ? std::clamp(value, 0.5f, 2.0f) : 1.0f;
     }
 
@@ -325,20 +325,24 @@ export namespace TrueCrimeHud
     {
         auto changed = []()
         {
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
             const auto value = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
             RequestedAspect.store(value && std::isfinite(*value) && *value > 0
                 ? std::clamp(*value, 4.0f / 3.0f, 32.0f / 9.0f) : 0.0f, std::memory_order_relaxed);
         };
-        changed();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", changed);
+        changed();
         auto scales = []()
         {
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
             HudScale.store(Setting("MAIN.HudScale"), std::memory_order_relaxed);
             SubtitleScale.store(Setting("MAIN.SubtitleScale"), std::memory_order_relaxed);
         };
-        scales();
         FixSettings().OnChange("MAIN.HudScale", scales);
         FixSettings().OnChange("MAIN.SubtitleScale", scales);
+        scales();
 
         // HUD bounds, set by the layout code at start: left, top, right, bottom
         auto bounds = hook::pattern("8B 44 24 04 8B 4C 24 08 8B 54 24 0C A3 ? ? ? ? 8B 44 24 10 89 0D ? ? ? ? 89 15 ? ? ? ? A3 ? ? ? ? C3");

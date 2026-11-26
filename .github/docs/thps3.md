@@ -44,7 +44,6 @@ Controllers: the game reads gamepads through DirectInput; the bundled Xidi prese
 ## Known limits
 
 - The window size is set at startup (resolution settings); resizing the window while playing isn't supported.
-- No Ctrl+F10 developer overlay: the game renders through Direct3D 8, which the overlay doesn't support.
 - The game has no letterboxed cutscenes; the level fly-by previews use the same widened camera as gameplay.
 - Prompts use the game's own PlayStation button names; controller icon sets are not available.
 - The in-game pause menu has no Plugins entry; change settings from the main menu's Options, in FusionFixHub or on fusionfix.io.

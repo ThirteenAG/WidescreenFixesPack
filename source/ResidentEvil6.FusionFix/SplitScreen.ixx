@@ -9,13 +9,13 @@ import ComVars;
 
 // Local split-screen co-op. The game gives each player a 20:9 viewport in a staggered layout (player 1 top left,
 // player 2 bottom right) and leaves the rest of the screen black. The fix gives each player one half of the screen:
-// top and bottom, or left and right with MAIN.SplitScreenVertical, which on a 32:9 screen gives each player a 16:9
+// top and bottom, or left and right with MAIN.SplitScreenLayout, which on a 32:9 screen gives each player a 16:9
 // view.
 
 namespace
 {
     const int* pSwapTopBottom = nullptr;
-    const int* pVertical = nullptr;
+    const int* pLayout = nullptr;
 
     void(__fastcall* SetPlayerViewport)(void* viewports, void* edx, int32_t player, int32_t* rect) = nullptr;
 
@@ -30,7 +30,7 @@ namespace
 
         const int32_t w = GetResX(), h = GetResY();
         int32_t r[4];
-        if (*pVertical)
+        if (*pLayout == 2)
         {
             r[0] = half == 0 ? 0 : w / 2;
             r[1] = 0;
@@ -52,7 +52,7 @@ namespace
 
 export bool IsSplitScreenVertical()
 {
-    return pVertical && *pVertical;
+    return pLayout && *pLayout == 2;
 }
 
 class SplitScreenFix
@@ -64,7 +64,7 @@ public:
         {
             auto& settings = FixSettings();
             pSwapTopBottom = &settings.Int("MAIN.SplitScreenSwapTopBottom");
-            pVertical = &settings.Int("MAIN.SplitScreenVertical");
+            pLayout = &settings.Int("MAIN.SplitScreenLayout");
 
             // Both calls of the split layout (game modes 1 and 4) go through SetSplitViewport; the game's other calls
             // of SetPlayerViewport (cutscenes, single view) stay as they are.

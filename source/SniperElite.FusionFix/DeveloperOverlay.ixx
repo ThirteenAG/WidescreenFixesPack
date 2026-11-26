@@ -52,6 +52,8 @@ export namespace SniperOverlay
 
     inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -68,6 +70,8 @@ export namespace SniperOverlay
 
     inline void Keyboard(HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         const bool down = window && GetForegroundWindow() == window &&
             (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
         if (down)
@@ -106,7 +110,8 @@ export namespace SniperOverlay
         }();
         Keyboard(SniperWindow::Window.load(std::memory_order_acquire));
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
         if (Tick)
             Tick();
     }
@@ -153,10 +158,13 @@ export namespace SniperOverlay
 
     inline void Init()
     {
-        auto original = IATHook::Replace(GetModuleHandleW(nullptr), "DINPUT8.dll", std::forward_as_tuple("DirectInput8Create", Create));
-        NativeCreate = reinterpret_cast<decltype(NativeCreate)>(original.at("DirectInput8Create").get());
-        SniperWindow::Message = Message;
-        D3D8Compatibility::BeforeReset = []() { Overlay.BeforeReset(); };
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            auto original = IATHook::Replace(GetModuleHandleW(nullptr), "DINPUT8.dll", std::forward_as_tuple("DirectInput8Create", Create));
+            NativeCreate = reinterpret_cast<decltype(NativeCreate)>(original.at("DirectInput8Create").get());
+            SniperWindow::Message = Message;
+            D3D8Compatibility::BeforeReset = []() { Overlay.BeforeReset(); };
+        }
         D3D8Compatibility::Frame = Frame;
     }
 }

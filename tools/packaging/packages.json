@@ -1875,45 +1875,6 @@
       ]
     },
     {
-      "id": "SilentHill2.FusionFix",
-      "producers": [
-        {
-          "project": "SilentHill2.FusionFix",
-          "solution": "Win32",
-          "source": "data/SilentHill2.FusionFix/scripts/SilentHill2.FusionFix.asi",
-          "destination": "scripts/SilentHill2.FusionFix.asi",
-          "embedPdb": "if-present",
-          "sign": true
-        }
-      ],
-      "files": [
-        {
-          "source": "data/SilentHill2.FusionFix/scripts/SilentHill2.FusionFix.dat",
-          "destination": "scripts/SilentHill2.FusionFix.dat"
-        },
-        {
-          "source": "data/SilentHill2.FusionFix/Xidi.ini",
-          "destination": "Xidi.ini"
-        },
-        {
-          "source": "data/SilentHill2.FusionFix/scripts/SilentHill2.FusionFix/buttons.dds",
-          "destination": "scripts/SilentHill2.FusionFix/buttons.dds"
-        }
-      ],
-      "dependencies": [
-        {
-          "id": "loader-x86",
-          "member": "*.dll",
-          "destination": "dinput8.dll"
-        },
-        {
-          "id": "xidi",
-          "member": "Xidi-*/Win32/Xidi.32.dll",
-          "destination": "Xidi.32.dll"
-        }
-      ]
-    },
-    {
       "id": "SilentHill3.FusionFix",
       "producers": [
         {

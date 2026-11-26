@@ -5,6 +5,7 @@ module;
 #include "overlay/OverlayD3D9.hpp"
 #include "overlay/OverlayD3D11.hpp"
 #include <xinput.h>
+#include "Shared/PadInput.hpp"
 
 #pragma comment(lib, "version.lib")
 #pragma comment(lib, "d3d11.lib")
@@ -112,8 +113,11 @@ namespace
         if (device != Device9)
             return Present9Hook.unsafe_stdcall<HRESULT>(device, source, destination, window, dirty);
         PaceFrame();
-        Info();
-        Overlay9.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            Info();
+            Overlay9.Present(device, ThisModule());
+        }
         return Present9Hook.unsafe_stdcall<HRESULT>(device, source, destination, window, dirty);
     }
 
@@ -130,9 +134,12 @@ namespace
             return Present11Hook.unsafe_stdcall<HRESULT>(chain, interval, flags);
         if (!(flags & DXGI_PRESENT_TEST))
             PaceFrame();
-        Info();
-        if (!(flags & DXGI_PRESENT_TEST))
-            Overlay11.Present(chain, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            Info();
+            if (!(flags & DXGI_PRESENT_TEST))
+                Overlay11.Present(chain, ThisModule());
+        }
         return Present11Hook.unsafe_stdcall<HRESULT>(chain, interval, flags);
     }
 
@@ -163,8 +170,11 @@ namespace
             auto table = *reinterpret_cast<void***>(*device);
             if (!Present9Hook)
                 Present9Hook = safetyhook::create_inline(table[17], Present9);
-            if (!Reset9Hook)
-                Reset9Hook = safetyhook::create_inline(table[16], Reset9);
+            if constexpr (WFP::DeveloperOverlay)
+            {
+                if (!Reset9Hook)
+                    Reset9Hook = safetyhook::create_inline(table[16], Reset9);
+            }
             Device9 = *device;
             WindowHandle = target;
         }
@@ -212,7 +222,7 @@ namespace
             if (user == 0)
             {
                 auto& overlay = Chain11 ? static_cast<asi_overlay::Overlay&>(Overlay11) : static_cast<asi_overlay::Overlay&>(Overlay9);
-                overlay.Gamepad(state->Gamepad.wButtons, int8_t(state->Gamepad.sThumbLX / 256), int8_t(state->Gamepad.sThumbLY / 256));
+                PadInput::ToOverlay(overlay, state->Gamepad);
             }
             if (Overlay9.BlocksInput() || Overlay11.BlocksInput())
                 state->Gamepad = {};
@@ -264,6 +274,8 @@ export namespace DeveloperOverlay
     {
         Import("d3d9.dll", "Direct3DCreate9", Factory9, OriginalFactory9);
         Import("d3d11.dll", "D3D11CreateDeviceAndSwapChain", Create11, OriginalCreate11);
-        Import("xinput1_3.dll", "XInputGetState@3", Pad, OriginalPad);
+        // The overlay's pad and its input block exist only in Debug builds
+        if constexpr (WFP::DeveloperOverlay)
+            Import("xinput1_3.dll", "XInputGetState@2", Pad, OriginalPad);
     }
 }

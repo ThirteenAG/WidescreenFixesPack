@@ -34,6 +34,9 @@ void Init(GTA1Build::Kind kind)
     initialized = true;
     GTA1Build::Set(kind);
 
+    // The main loop empties the message queue each frame; a high polling rate mouse must not keep it going
+    MessagePumpGuard::Install(GetModuleHandle(nullptr));
+
     SettingsReader iniReader("");
     Screen.Width = iniReader.ReadInteger("MAIN", "ResX", 0);
     Screen.Height = iniReader.ReadInteger("MAIN", "ResY", 0);

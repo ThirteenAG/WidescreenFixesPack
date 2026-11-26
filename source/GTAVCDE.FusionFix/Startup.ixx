@@ -28,26 +28,33 @@ namespace
     {
         PWSTR documents = nullptr;
         if (FAILED(SHGetKnownFolderPath(FOLDERID_Documents, 0, nullptr, &documents)))
-            return true;
+            return false;
         const auto root = std::filesystem::path(documents) / L"Rockstar Games" / L"GTA Vice City Definitive Edition";
         CoTaskMemFree(documents);
         const auto hasSave = [](const std::filesystem::path& folder)
         {
             std::error_code error;
-            for (const auto& entry : std::filesystem::directory_iterator(folder, error))
+            for (wchar_t slot = L'1'; slot <= L'9'; ++slot)
             {
-                const auto name = entry.path().filename().wstring();
-                if (name.starts_with(L"GTAVCsf") && entry.path().extension() == L".sav" && entry.is_regular_file(error) && entry.file_size(error) > 0)
-                    return true;
+                const auto path = folder / (std::wstring(L"GTAVCsf") + slot + L".sav");
+                if (std::filesystem::is_regular_file(path, error))
+                {
+                    const auto size = std::filesystem::file_size(path, error);
+                    if (!error && size > 0)
+                        return true;
+                }
             }
             return false;
         };
         if (hasSave(root / L"SaveGames"))
             return true;
         std::error_code error;
-        for (const auto& profile : std::filesystem::directory_iterator(root / L"Profiles", error))
-            if (profile.is_directory(error) && hasSave(profile.path()))
+        for (std::filesystem::directory_iterator profile(root / L"Profiles", error), end; !error && profile != end; profile.increment(error))
+        {
+            std::error_code statusError;
+            if (profile->is_directory(statusError) && hasSave(profile->path()))
                 return true;
+        }
         return false;
     }
 }

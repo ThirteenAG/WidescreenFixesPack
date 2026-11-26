@@ -25,7 +25,16 @@ export void InitUpdateCheck()
     config.fileVersion = rsc_FileVersion;
     config.settings = &FixSettings();
     config.playable = []() { return DAMenu::NoticeReady(); };
-    config.show = [](const std::wstring& text) { DAMenu::ShowNotice(text); };
+    config.format = [](const std::string& latest, bool hub)
+    {
+        auto texts = FixSettings().GetTexts();
+        texts.Select(DAMenu::Language());
+        auto line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
+        line = RWGTA::UpdateCheck::detail::Replace(line, "{name}", texts.Resolve(FixSettings().GetDescription().name));
+        line = RWGTA::UpdateCheck::detail::Replace(line, "{version}", latest);
+        return asi_settings::text::Widen(line);
+    };
+    config.tryShow = DAMenu::ShowNotice;
     RWGTA::UpdateCheck::Init(std::move(config));
     WFP::onGameProcessEvent() += []()
     {

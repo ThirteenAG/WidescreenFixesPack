@@ -16,6 +16,27 @@ alignas(16) inline VideoVertex videoVertices[2];
 inline bool guInitialized, barsDrawn, videoFailed;
 inline injector::hook_back<int(uintptr_t, uintptr_t, uintptr_t)> hudPass;
 inline injector::hook_back<int(uintptr_t)> endFrame;
+inline injector::hook_back<void(uint16_t, uint16_t, uint16_t, uint16_t)> mapScissor;
+inline constexpr char mapScissorPattern[] =
+    "FF FF 84 30 FF FF A5 30 FF FF C6 30 ? ? ? ? FF FF E7 30 ? ? ? ? 02 00 04 34 20 02 CC C7 28 02 CD C7 A5 00 04 92";
+inline void MapScissor(uint16_t left, uint16_t top, uint16_t width, uint16_t height)
+{
+    constexpr float native = 480.0f / 272.0f;
+    const float aspect = Geometry::AspectRatio();
+    const float sx = std::min(native / aspect, 1.0f);
+    const float sy = std::min(aspect / native, 1.0f);
+    // The PSP scissor takes an origin and an extent, both in PSP pixels.
+    const int l = int(std::ceil(240.0f + (left - 240.0f) * sx));
+    const int t = int(std::ceil(136.0f + (top - 136.0f) * sy));
+    const int r = int(std::floor(240.0f + (float(left) + width - 240.0f) * sx));
+    const int b = int(std::floor(136.0f + (float(top) + height - 136.0f) * sy));
+    if (l >= r || t >= b)
+    {
+        mapScissor.fun(left, top, width, height);
+        return;
+    }
+    mapScissor.fun(uint16_t(l), uint16_t(t), uint16_t(r - l), uint16_t(b - t));
+}
 inline int MovieFallback(void* destination, const void* source, unsigned length)
 {
     if (!videoFailed)
@@ -121,6 +142,7 @@ inline int EndFrame(uintptr_t renderer)
 }
 inline void Install()
 {
+    mapScissor.fun = injector::MakeCALL(sites::Required(mapScissorPattern, 12), MapScissor).get();
     callList = decltype(callList)(sites::Required("? ? 06 3C ? ? C6 24 10 00 C5 8C 00 00 C7 8C 23 28 85 00 ? ? 04 3C ? ? 88 24 25 20 E0 00 64 01 07 8D 0B 00 E0 14"));
     const auto movie = sites::Required("25 28 80 00 ? ? 10 3C 04 00 06 3C ? ? 04 8E 14 00 BF AF ? ? ? ? 00 40 C6 24 ? ? 04 8E 00 02 05 34", 20);
     copy.fun = injector::MakeCALL(movie, MovieCopy).get();

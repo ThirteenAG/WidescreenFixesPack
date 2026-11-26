@@ -1,5 +1,5 @@
 #pragma once
-#include "../Shared/Console/PortableVehicleLights.hpp"
+#include "Shared/Console/PortableVehicleLights.hpp"
 namespace vehicle {
 inline constexpr int FirstModel = 130;
 inline constexpr unsigned CacheCount = 53;

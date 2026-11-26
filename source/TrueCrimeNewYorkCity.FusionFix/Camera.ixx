@@ -131,12 +131,14 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            auto& settings = FixSettings();
-            TCCamera::SetFactor(settings.Float("MAIN.FOVFactor"));
-            settings.OnChange("MAIN.FOVFactor", []
+            const auto publish = []()
             {
-                TCCamera::SetFactor(FixSettings().Float("MAIN.FOVFactor"));
-            });
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                TCCamera::SetFactor(ReadNumericSetting("MAIN.FOVFactor", 1.0f));
+            };
+            FixSettings().OnChange("MAIN.FOVFactor", publish);
+            publish();
             TCCamera::Install();
 
             auto pattern = hook::pattern("F3 0F 10 45 08 56 8B F1 8B 46 1C");

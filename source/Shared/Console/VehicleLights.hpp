@@ -4,6 +4,19 @@
 #include <cstring>
 
 namespace console {
+// The common vehicle type is zero for the automobile base class. Other
+// classes have their own tail and headlamp logic and no CDamageManager.
+inline uint32_t AutomobileLampDamage(const void* vehicle, unsigned typeOffset, unsigned damageOffset)
+{
+    const auto* bytes = static_cast<const uint8_t*>(vehicle);
+    uint32_t type;
+    std::memcpy(&type, bytes + typeOffset, sizeof(type));
+    if (type != 0)
+        return 0;
+    uint32_t damage;
+    std::memcpy(&damage, bytes + damageOffset, sizeof(damage));
+    return damage;
+}
 // Both Stories games store each damaged lamp in a two-bit field. Keep the
 // selection independent of platform layouts and texture storage.
 struct VehicleLightState {

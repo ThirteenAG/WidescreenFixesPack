@@ -6,8 +6,8 @@
 namespace console::portable {
 enum class DrawAnchor { None, Center, TopRight, BottomRight, Radar, World, TopLeft };
 struct StoryDrawingSettings {
-    float aspect = 16.0f / 9.0f, hud = 1.0f, radar = 1.0f, radarX = 12.0f, radarY = 196.0f;
-    float multiplayerRadar = 1.0f, multiplayerRadarY = 196.0f;
+    float aspect = 16.0f / 9.0f, hud = 1.0f, radar = 1.0f;
+    float multiplayerRadar = 1.0f;
     // MAIN.HudAspectRatioConstraint; 0 = the whole screen.
     float hudAspect = 0.0f;
 };

@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <d3d9.h>
 #include <optional>
 
 export module Rendering;
@@ -13,9 +14,15 @@ import Resolution;
 
 constexpr float baseAspect = 16.0f / 9.0f;
 std::atomic<float> targetHudAspect{ baseAspect };
+std::atomic<float> gameplayFovFactor{ 1.0f };
 std::atomic<bool> hudSettingChanged{ false };
+std::atomic<int> cutsceneBorders{ 2 };
+std::atomic<void*> scriptedCameraController{ nullptr };
+std::atomic<bool> drewCutscene{ false };
+thread_local bool selectingScriptedCamera = false;
 thread_local bool drawingHud = false;
 SafetyHookInline hudHook, hudTextHook;
+SafetyHookInline scriptCameraHook, cameraOverrideHook;
 SafetyHookMid viewFovHook;
 uintptr_t footFovOutput = 0, vehicleFovOutput = 0;
 std::vector<uintptr_t> drivingFovOutputs;
@@ -41,6 +48,48 @@ std::optional<float> GameplayFovFactor(void* camera, float factor)
     factor = std::isfinite(factor) ? std::clamp(factor, 0.5f, 2.0f) : 1.0f;
     return 1.0f + (factor - 1.0f) * weight;
 }
+
+void __fastcall SelectScriptedCamera(void* node, void*, int event, int context)
+{
+    const bool previous = std::exchange(selectingScriptedCamera, true);
+    scriptCameraHook.unsafe_thiscall<void>(node, event, context);
+    selectingScriptedCamera = previous;
+}
+
+void* __fastcall SetCameraOverride(void* camera, void*, void* controller, int blend)
+{
+    auto* result = cameraOverrideHook.unsafe_thiscall<void*>(camera, controller, blend);
+    scriptedCameraController.store(selectingScriptedCamera ? controller : nullptr, std::memory_order_relaxed);
+    return result;
+}
+
+export void DrawCutsceneBorders(IDirect3DDevice9* device)
+{
+    if (!drewCutscene.exchange(false, std::memory_order_relaxed) ||
+        cutsceneBorders.load(std::memory_order_relaxed) != 2 || pCurrentMovieStatus == 1)
+        return;
+
+    IDirect3DSurface9* backbuffer = nullptr;
+    if (FAILED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backbuffer)))
+        return;
+    D3DSURFACE_DESC desc{};
+    if (SUCCEEDED(backbuffer->GetDesc(&desc)))
+    {
+        const auto width = static_cast<LONG>(desc.Width);
+        const auto height = static_cast<LONG>(desc.Height);
+        const auto pictureWidth = static_cast<LONG>(std::lround(height * baseAspect));
+        if (pictureWidth < width)
+        {
+            const LONG left = (width - pictureWidth) / 2;
+            const RECT sides[]{ { 0, 0, left, height }, { left + pictureWidth, 0, width, height } };
+            for (const auto& side : sides)
+                if (side.left < side.right)
+                    device->ColorFill(backbuffer, &side, D3DCOLOR_XRGB(0, 0, 0));
+        }
+    }
+    backbuffer->Release();
+}
+
 float BoundViewFov(float value)
 {
     return std::isfinite(value) ? std::clamp(value, 0.01f, 2.617993878f) : 1.308f;
@@ -258,11 +307,21 @@ public:
                 drivingFovOutputs.push_back(reinterpret_cast<uintptr_t>(drivingOutput.get(i).get<void>()));
             footFovOutput = reinterpret_cast<uintptr_t>(footOutput.get_first());
             vehicleFovOutput = reinterpret_cast<uintptr_t>(vehicleOutput.get_first());
+            BindLiveSetting("MAIN.FOVFactor", gameplayFovFactor);
+            BindLiveSetting("MAIN.CutsceneBorders", cutsceneBorders);
+            auto scriptCamera = hook::pattern("56 8B F1 8B 06 FF 50 14 84 C0 0F 85 ? ? ? ? 8B 46 20 83 F8 04 75 ? 6A 00 51 8B C4 83 20 00");
+            auto cameraOverride = hook::pattern("55 8B EC 83 E4 F0 81 EC C4 00 00 00 53 56 57 8B D9 6A 10 59 8D BB 80 00 00 00 8D 73 40 F3 A5");
+            scriptCameraHook = safetyhook::create_inline(scriptCamera.get_first(), SelectScriptedCamera);
+            cameraOverrideHook = safetyhook::create_inline(cameraOverride.get_first(), SetCameraOverride);
             viewFovHook = safetyhook::create_mid(viewFov.get_first(15), [](SafetyHookContext& regs)
             {
                 // Every camera keeps its 16:9 vertical view (Hor+); the multiplier only widens gameplay cameras.
                 auto* value = reinterpret_cast<float*>(regs.esp);
-                const auto factor = GameplayFovFactor(reinterpret_cast<void*>(regs.ebx), FixSettings().Float("MAIN.FOVFactor"));
+                auto* camera = reinterpret_cast<const uint8_t*>(regs.ebx);
+                auto* scripted = scriptedCameraController.load(std::memory_order_relaxed);
+                if (scripted && *reinterpret_cast<void* const*>(camera + 200) == scripted)
+                    drewCutscene.store(true, std::memory_order_relaxed);
+                const auto factor = GameplayFovFactor(reinterpret_cast<void*>(regs.ebx), gameplayFovFactor.load(std::memory_order_relaxed));
                 *value = BoundViewFov(HorGameplayFov(*value, fAspectRatio) * factor.value_or(1.0f));
             });
             auto& settings = FixSettings();
@@ -279,6 +338,7 @@ public:
             settings.OnChange("MAIN.HudAspectRatioConstraint", []() { hudSettingChanged.store(true); });
             WFP::onGameProcessEvent() += [updateHud]()
             {
+                drewCutscene.store(false, std::memory_order_relaxed);
                 if (hudSettingChanged.exchange(false))
                     updateHud();
             };

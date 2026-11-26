@@ -4,6 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include <d3d9.h>
 #include <atomic>
+#include <wrl/client.h>
 
 
 export module Device;
@@ -14,11 +15,11 @@ export namespace TrueCrimeDevice
 {
     // The game renders with Direct3D 8; the loader's d3d8to9 bridge turns that into a Direct3D 9 device.
     inline SafetyHookInline Create9Hook, CreateDeviceHook, PresentHook, ResetHook;
-    inline IDirect3DDevice9* Device = nullptr;
+    inline GameRef<IUnknown*> NativeDevice;
+    inline std::atomic<IDirect3DDevice9*> CreatedGameDevice{ nullptr };
     inline int (*FrameLimit)() = nullptr;
     // Optional: called before every Present (overlay)
     inline void (*Frame)(IDirect3DDevice9*) = nullptr;
-    inline std::atomic<uint32_t> Frames{ 0 };
     // The game releases its device and creates a new one on a resolution change: everything made on the old device
     // goes first
     inline std::vector<void (*)()> Releasing;
@@ -30,10 +31,22 @@ export namespace TrueCrimeDevice
     // The back buffer size the game asks for (its resolution choice)
     inline void (*Resolution)(int, int) = nullptr;
 
+    inline Microsoft::WRL::ComPtr<IDirect3DDevice9> RenderDevice()
+    {
+        Microsoft::WRL::ComPtr<IDirect3DDevice9> result;
+        if (const auto device = NativeDevice.get())
+            device->QueryInterface(IID_PPV_ARGS(result.GetAddressOf()));
+        return result;
+    }
+
     inline HRESULT WINAPI Present(IDirect3DDevice9* device, const RECT* source, const RECT* destination,
         HWND window, const RGNDATA* dirty)
     {
-        Frames.fetch_add(1, std::memory_order_relaxed);
+        if (CreatedGameDevice.load() != device)
+            return PresentHook.stdcall<HRESULT>(device, source, destination, window, dirty);
+        const auto game = RenderDevice();
+        if (!game || game.Get() != device)
+            return PresentHook.stdcall<HRESULT>(device, source, destination, window, dirty);
         if (Frame)
             Frame(device);
         const int limit = FrameLimit ? FrameLimit() : 0;
@@ -68,37 +81,56 @@ export namespace TrueCrimeDevice
         return PresentHook.stdcall<HRESULT>(device, source, destination, window, dirty);
     }
 
-    inline void Parameters(D3DPRESENT_PARAMETERS* parameters)
+    inline std::pair<int, int> Parameters(D3DPRESENT_PARAMETERS* parameters)
     {
+        int width = TrueCrimeWindow::Width;
+        int height = TrueCrimeWindow::Height;
         if (!parameters)
-            return;
-        if (Resolution && parameters->BackBufferWidth >= 640 && parameters->BackBufferHeight >= 480)
-            Resolution(int(parameters->BackBufferWidth), int(parameters->BackBufferHeight));
+            return { width, height };
+        if (TrueCrimeWindow::Mode != 2 && parameters->BackBufferWidth >= 640 && parameters->BackBufferHeight >= 480)
+        {
+            width = int(parameters->BackBufferWidth);
+            height = int(parameters->BackBufferHeight);
+        }
         parameters->Windowed = TrueCrimeWindow::Mode != 0;
-        parameters->BackBufferWidth = TrueCrimeWindow::Width;
-        parameters->BackBufferHeight = TrueCrimeWindow::Height;
+        parameters->BackBufferWidth = width;
+        parameters->BackBufferHeight = height;
         if (parameters->Windowed)
         {
             parameters->FullScreen_RefreshRateInHz = 0;
             parameters->BackBufferFormat = D3DFMT_UNKNOWN;
         }
+        return { width, height };
     }
 
     inline HRESULT WINAPI Reset(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* parameters)
     {
+        if (CreatedGameDevice.load() != device)
+            return ResetHook.stdcall<HRESULT>(device, parameters);
+        const auto game = RenderDevice();
+        if (!game || game.Get() != device)
+            return ResetHook.stdcall<HRESULT>(device, parameters);
         WFP::onBeforeReset().executeAll();
-        Parameters(parameters);
-        return ResetHook.stdcall<HRESULT>(device, parameters);
+        const auto [width, height] = Parameters(parameters);
+        const auto result = ResetHook.stdcall<HRESULT>(device, parameters);
+        if (SUCCEEDED(result) && Resolution)
+            Resolution(width, height);
+        return result;
     }
 
     inline HRESULT WINAPI CreateDevice(IDirect3D9* d3d, UINT adapter, D3DDEVTYPE type, HWND window,
         DWORD behavior, D3DPRESENT_PARAMETERS* parameters, IDirect3DDevice9** device)
     {
-        Parameters(parameters);
+        const auto gameWindow = TrueCrimeWindow::Window.load();
+        if (!gameWindow || (window != gameWindow && (!parameters || parameters->hDeviceWindow != gameWindow)))
+            return CreateDeviceHook.stdcall<HRESULT>(d3d, adapter, type, window, behavior, parameters, device);
+        const auto [width, height] = Parameters(parameters);
         const auto result = CreateDeviceHook.stdcall<HRESULT>(d3d, adapter, type, window, behavior, parameters, device);
         if (SUCCEEDED(result) && device && *device)
         {
-            Device = *device;
+            CreatedGameDevice.store(*device);
+            if (Resolution)
+                Resolution(width, height);
             auto table = *reinterpret_cast<void***>(*device);
             if (!PresentHook)
                 PresentHook = safetyhook::create_inline(table[17], Present);
@@ -122,6 +154,9 @@ export namespace TrueCrimeDevice
     inline void Initialize(int (*limit)())
     {
         FrameLimit = limit;
+        // The renderer stores its current Direct3D 8 device just before clearing and presenting it.
+        auto native = hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? 85 C0 A3 ? ? ? ? 0F 84 ? ? ? ? 68 ? ? ? ? 50 6A 01 B9 ? ? ? ? E8");
+        NativeDevice.SetAddress(*native.get_first<IUnknown**>(14));
         ReleaseHook = safetyhook::create_mid(hook::pattern("A0 ? ? ? ? 84 C0 75 ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 6A 00 B9").get_first(),
             [](SafetyHookContext&)
         {

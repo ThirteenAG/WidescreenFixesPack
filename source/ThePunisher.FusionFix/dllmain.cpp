@@ -16,10 +16,7 @@ CEXP void InitializeASI()
             return;
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime([]()
         {
-            D3D8Compatibility::Initialize(false, false, []()
-            {
-                return PunisherFrameLimit.load(std::memory_order_relaxed);
-            });
+            D3D8Compatibility::Initialize(false, false, GetPunisherFrameLimit);
             WindowedModeWrapper::EnableDpiAwareness();
             WFP::onInitEvent().executeAll();
         }, hook::pattern("89 1D ? ? ? ? A3 ? ? ? ? 88 0D"));

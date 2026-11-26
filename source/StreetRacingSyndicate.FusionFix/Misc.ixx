@@ -14,6 +14,73 @@ import Camera;
 import States;
 import Gamepad;
 
+namespace
+{
+    using StreamStop = void(__cdecl*)();
+
+    struct AudioStream
+    {
+        uint8_t** owner;
+        size_t offset;
+        StreamStop stop;
+    };
+
+    std::array<AudioStream, 2> AudioStreams{};
+
+    HANDLE DuplicateAudioWorker(const AudioStream& audio)
+    {
+        const auto owner = *audio.owner;
+        if (!owner)
+            return nullptr;
+
+        const auto stream = owner + audio.offset;
+        const auto lock = reinterpret_cast<CRITICAL_SECTION*>(stream + 0x184);
+        HANDLE copy = nullptr;
+        EnterCriticalSection(lock);
+        const auto worker = *reinterpret_cast<HANDLE*>(stream + 0x178);
+        if (worker)
+        {
+            const auto process = GetCurrentProcess();
+            DuplicateHandle(process, worker, process, &copy, SYNCHRONIZE, FALSE, 0);
+        }
+        LeaveCriticalSection(lock);
+        return copy;
+    }
+
+    void __cdecl StopAudioStreams()
+    {
+        const std::array workers{ DuplicateAudioWorker(AudioStreams[0]), DuplicateAudioWorker(AudioStreams[1]) };
+        for (const auto& stream : AudioStreams)
+            stream.stop();
+
+        // The native stop requests are asynchronous. The sound device must outlive both workers; a worker that never
+        // ends must not keep the game from closing.
+        for (const auto worker : workers)
+        {
+            if (worker)
+            {
+                WaitForSingleObject(worker, 3000);
+                CloseHandle(worker);
+            }
+        }
+    }
+
+    void InitAudioShutdown()
+    {
+        auto calls = hook::pattern("E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? E8 ? ? ? ?");
+        const auto firstStop = calls.get_first<uint8_t>(15);
+        const auto secondStop = firstStop + 5;
+        const auto voice = injector::GetBranchDestination(firstStop).as_int();
+        const auto music = injector::GetBranchDestination(secondStop).as_int();
+        AudioStreams = {{
+            { *reinterpret_cast<uint8_t***>(voice + 27), 0x120, reinterpret_cast<StreamStop>(voice) },
+            { *reinterpret_cast<uint8_t***>(music + 27), 0x88, reinterpret_cast<StreamStop>(music) }
+        }};
+        injector::MakeCALL(firstStop, StopAudioStreams, true);
+        injector::MakeNOP(secondStop, 5, true);
+    }
+}
+
 class Misc
 {
 public:
@@ -23,7 +90,6 @@ public:
         {
             hook::pattern pattern;
             auto& settings = FixSettings();
-            asi_settings::LiveLink::Start();
 
             Screen.Width = settings.Int("MAIN.ResX");
             Screen.Height = settings.Int("MAIN.ResY");
@@ -34,12 +100,14 @@ public:
                 std::tie(Screen.Width, Screen.Height) = std::make_tuple(640, 480);
 
             SRSWindow::Init(Screen.Width, Screen.Height);
+            InitAudioShutdown();
             WFP::onGameProcessEvent() += []()
             {
                 const auto deepest = SRSStates::Deepest();
                 SRSHud::Driving = deepest && std::string_view(SRSStates::Name(deepest)) == "MP2Game";
             };
-            SRSWindow::FrameCallback = []() { WFP::onGameProcessEvent().executeAll(); };
+            SRSWindow::FrameCallback = []() { SRSPad::UpdateDevice(); WFP::onGameProcessEvent().executeAll(); };
+            SRSWindow::InputMessage = SRSPad::InputMessage;
 
             Screen.fWidth = static_cast<float>(Screen.Width);
             Screen.fHeight = static_cast<float>(Screen.Height);
@@ -110,6 +178,7 @@ public:
 
             SRSCamera::Init(Screen.Width, Screen.Height);
             SRSPad::Init();
+            asi_settings::LiveLink::Start();
         };
     }
 } Misc;

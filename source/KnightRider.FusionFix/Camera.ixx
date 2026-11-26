@@ -17,6 +17,7 @@ export namespace KnightRiderCamera
     inline thread_local void* Caller = nullptr;
     inline thread_local void* CallerNext = nullptr;
     inline std::atomic<int> Borders{ 3 };
+    inline std::atomic<float> FOVFactor{ 1.0f };
     inline SafetyHookMid AnimationHook, StaticHook;
     inline SafetyHookInline DrawHook;
     inline void (__thiscall* UpdateWorld)(void*) = nullptr;
@@ -78,7 +79,7 @@ export namespace KnightRiderCamera
         const float aspect = static_cast<float>(KnightRiderWindow::Width) / KnightRiderWindow::Height;
         const float nativeAspect = 4.0f / 3.0f;
         const bool preserve = Cinematic && (Borders.load(std::memory_order_relaxed) & (aspect > nativeAspect ? 2 : 1)) != 0;
-        const float factor = Cinematic ? 1.0f : std::clamp(FixSettings().Float("MAIN.FOVFactor"), 0.5f, 2.0f);
+        const float factor = Cinematic ? 1.0f : FOVFactor.load(std::memory_order_relaxed);
         const float halfHeight = std::tan(std::min(NativeFOV * factor, 170.0f) * 0.0087266462f) / nativeAspect;
         const float projectionAspect = preserve ? nativeAspect : aspect;
         auto frustum = reinterpret_cast<float*>(camera + 340);
@@ -119,10 +120,14 @@ export namespace KnightRiderCamera
     {
         const auto update = []()
         {
-            Borders.store(std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3), std::memory_order_relaxed);
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            Borders.store(std::clamp(ReadFixNumber("MAIN.CutsceneBorders", 3), 0, 3), std::memory_order_relaxed);
+            FOVFactor.store(std::clamp(ReadFixNumber("MAIN.FOVFactor", 1.0f), 0.5f, 2.0f), std::memory_order_relaxed);
         };
-        update();
         FixSettings().OnChange("MAIN.CutsceneBorders", update);
+        FixSettings().OnChange("MAIN.FOVFactor", update);
+        update();
         auto wrapper = hook::pattern("8B 0D ? ? ? ? D8 46 10 D9 1C 24 DD D8 E8 ? ? ? ? 5F 5E C2 04 00");
         Wrapper.SetAddress(*wrapper.get_first<uint8_t**>(2));
         auto animation = hook::pattern("8B 4E 28 53 55 57 E8 ? ? ? ? 83 C0 50 8B 28");

@@ -70,10 +70,9 @@ namespace
 
     void ApplyScreenSettings()
     {
-        auto& settings = FixSettings();
-        const auto factor = settings.Float("MAIN.FOVFactor");
+        const auto factor = ReadNumericSetting("MAIN.FOVFactor", 1.0f);
         Screen.fFOVFactor = std::isfinite(factor) ? std::clamp(factor, 0.5f, 2.0f) : 1.0f;
-        auto constraint = ParseWidescreenHudOffset(settings.String("MAIN.HudAspectRatioConstraint"));
+        auto constraint = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
         if (constraint && (!std::isfinite(*constraint) || *constraint <= 0.0f))
             constraint.reset();
         if (constraint)
@@ -94,7 +93,6 @@ Screen::Screen()
     WFP::onInitEvent() += []
     {
 
-        ApplyScreenSettings();
         for (const auto id : { "MAIN.FOVFactor", "MAIN.HudAspectRatioConstraint" })
         {
             FixSettings().OnChange(id, []()
@@ -102,6 +100,7 @@ Screen::Screen()
                 ScreenSettingsPending.store(true);
             });
         }
+        ApplyScreenSettings();
         WFP::onGameProcessEvent() += ApplyPendingScreenSettings;
 
         auto pattern = hook::pattern("8B 0D ? ? ? ? 8A 81 ? ? ? ? 84 C0 74 ? E8 ? ? ? ? 84 C0 75 ? 6A"); //0x406516 + 2

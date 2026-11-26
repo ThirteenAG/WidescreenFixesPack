@@ -355,11 +355,6 @@ namespace GodfatherIcons
         conversionHook = safetyhook::create_mid(convert.get_first(), PreserveToken);
         labelHook = safetyhook::create_inline(labels.get_first(), Label);
         actionHook = safetyhook::create_inline(action, Action);
-        auto& settings = FixSettings();
-        style.store(settings.Int("MAIN.GamepadIcons"), std::memory_order_relaxed);
-        settings.OnChange("MAIN.GamepadIcons", []()
-        {
-            style.store(FixSettings().Int("MAIN.GamepadIcons"), std::memory_order_relaxed);
-        });
+        BindLiveSetting("MAIN.GamepadIcons", style);
     }
 }

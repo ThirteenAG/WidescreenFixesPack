@@ -9,11 +9,12 @@ export module Gamepad;
 namespace
 {
     std::atomic<uint64_t> LabelsRevision = 1;
+    std::atomic<int> IconFamily{};
     const wchar_t* (__cdecl* NativeLanguage)() = nullptr;
 
     std::string Language()
     {
-        const auto& selected = FixSettings().String("MAIN.TextLanguage");
+        const auto selected = FixSettings().Get("MAIN.TextLanguage");
         if (!selected.empty() && selected != "auto")
             return selected;
         const auto native = NativeLanguage ? NativeLanguage() : nullptr;
@@ -60,8 +61,12 @@ export namespace Gamepad
     void Init(const wchar_t* (__cdecl* nativeLanguage)())
     {
         NativeLanguage = nativeLanguage;
-        for (auto id : { "MAIN.GamepadIcons", "MAIN.TextLanguage" })
-            FixSettings().OnChange(id, []() { LabelsRevision.fetch_add(1, std::memory_order_release); });
+        ObserveFixSetting("MAIN.GamepadIcons", asi_settings::detail::ParseInt, [](int value)
+        {
+            IconFamily.store(value);
+            LabelsRevision.fetch_add(1, std::memory_order_release);
+        });
+        FixSettings().OnChange("MAIN.TextLanguage", []() { LabelsRevision.fetch_add(1, std::memory_order_release); });
         LabelsRevision.fetch_add(1, std::memory_order_release);
     }
 
@@ -109,7 +114,7 @@ export namespace Gamepad
         const auto wanted = LabelsRevision.load(std::memory_order_acquire);
         if (revision != wanted)
         {
-            const auto id = std::make_pair(PadInput::ResolveFamily(FixSettings().Int("MAIN.GamepadIcons")), Language());
+            const auto id = std::make_pair(PadInput::ResolveFamily(IconFamily.load()), Language());
             auto found = labels.find(id);
             if (found == labels.end())
                 found = labels.emplace(id, Labels(id.first, id.second)).first;

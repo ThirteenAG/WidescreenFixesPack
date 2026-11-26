@@ -116,20 +116,35 @@ public:
             static float previousRate = 0.0f;
             static int previousMode = 0;
             static bool timerPeriod = false;
+            static std::atomic<int> requestedRate{ 60 }, limiterMethod{ 2 };
+            const auto updateSettings = []()
+            {
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                requestedRate.store(ReadNumericSetting("MAIN.FPSLimit", 60), std::memory_order_relaxed);
+                limiterMethod.store(ReadNumericSetting("MAIN.FPSLimitMode", 2), std::memory_order_relaxed);
+            };
+            FixSettings().OnChange("MAIN.FPSLimit", updateSettings);
+            FixSettings().OnChange("MAIN.FPSLimitMode", updateSettings);
+            updateSettings();
             static auto fpslimiter = safetyhook::create_mid(frame.get_first(), [](SafetyHookContext&)
             {
-                static const auto& requested = FixSettings().Int("MAIN.FPSLimit");
-                static const auto& method = FixSettings().Int("MAIN.FPSLimitMode");
-                const int mode = method == 2 ? 2 : 1;
+                if (SignatureUpdateTick)
+                    SignatureUpdateTick();
+                const int requested = requestedRate.load(std::memory_order_relaxed);
+                const int mode = limiterMethod.load(std::memory_order_relaxed) == 2 ? 2 : 1;
                 static HMONITOR previousMonitor = nullptr;
+                static ULONGLONG refreshAfter = 0;
                 static float refreshRate = 60.0f;
                 if (requested == -1)
                 {
                     const auto window = WindowedModeWrapper::GameHWND ? WindowedModeWrapper::GameHWND : GetActiveWindow();
                     const auto monitor = MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY);
-                    if (previousMonitor != monitor)
+                    const auto now = GetTickCount64();
+                    if (previousMonitor != monitor || now >= refreshAfter)
                     {
                         previousMonitor = monitor;
+                        refreshAfter = now + 500;
                         MONITORINFOEXW info{};
                         info.cbSize = sizeof(info);
                         DEVMODEW display{};
@@ -138,13 +153,14 @@ public:
                             display.dmDisplayFrequency > 1 ? static_cast<float>(display.dmDisplayFrequency) : 60.0f;
                     }
                 }
-                float rate = requested == -1 ? refreshRate : static_cast<float>(requested);
-                if (!std::isfinite(rate) || rate <= 0.0f)
+                else
+                    refreshAfter = 0;
+                if (requested == 0)
                 {
                     previousRate = 0.0f;
                     return;
                 }
-                rate = std::clamp(rate, 30.0f, 1000.0f);
+                const float rate = requested == -1 ? refreshRate : static_cast<float>(std::clamp(requested, 30, 1000));
                 if (mode == 2 && !timerPeriod)
                 {
                     timeBeginPeriod(1);

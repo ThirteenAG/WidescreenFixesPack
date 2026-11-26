@@ -156,6 +156,29 @@
       }
     },
     {
+      "id": "MAIN.GamepadCameraSpeed",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.25,
+      "max": 4.0,
+      "step": 0.25,
+      "label": "@controls.gamepadcameraspeed",
+      "description": "@controls.gamepadcameraspeed.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
+      "id": "MAIN.InvertGamepadY",
+      "type": "bool",
+      "default": 0,
+      "label": "@controls.invertgamepady",
+      "description": "@controls.invertgamepady.description",
+      "page": "controls",
+      "visibility": "menu",
+      "apply": "live"
+    },
+    {
       "id": "CONTROLS.PCControlScheme",
       "type": "bool",
       "default": 0,
@@ -263,6 +286,11 @@
       "page": "graphics",
       "visibility": "menu",
       "apply": "live",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "maxLength": 14
     },
     {

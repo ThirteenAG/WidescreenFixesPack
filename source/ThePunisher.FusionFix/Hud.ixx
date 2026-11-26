@@ -98,9 +98,8 @@ bool StaticHudCoordinate(const int32_t* destination)
     });
 }
 
-std::pair<int32_t, int32_t> FitHudCoordinate(size_t kind, int32_t x, int32_t y)
+std::pair<int32_t, int32_t> FitHudCoordinate(size_t kind, int32_t x, int32_t y, float requested)
 {
-    const float requested = RequestedHudAspect.load(std::memory_order_acquire);
     const float aspect = requested > 0 ? ClampHudAspectRatio(requested, Screen.fAspectRatio) : Screen.fAspectRatio;
     const float width = std::min(Screen.fWidth, Screen.fHeight * aspect);
     const float left = (Screen.fWidth - width) * 0.5f;
@@ -150,11 +149,11 @@ std::pair<int32_t, int32_t> FitHudCoordinate(size_t kind, int32_t x, int32_t y)
         y = Screen.Height - 70;
         break;
     case LEFT_DAMAGE_INDICATOR_CENTER:
-        x = 0;
+        x = static_cast<int32_t>(std::lround(left));
         y = Screen.Height / 2 - 176;
         break;
     case RIGHT_DAMAGE_INDICATOR_CENTER:
-        x = Screen.Width - 64;
+        x = static_cast<int32_t>(std::lround(Screen.fWidth - left)) - 64;
         y = Screen.Height / 2 - 176;
         break;
     case LOADING_PROGRESS_BAR_NOTE_NOT_A_HUD_ITEM:
@@ -194,14 +193,15 @@ void ApplyPendingHudCoordinates()
 {
     if (!HudCoordinatesPending.load(std::memory_order_relaxed)
         || !HudCoordinatesPending.exchange(false, std::memory_order_acquire)) return;
+    const float aspect = RequestedHudAspect.load(std::memory_order_acquire);
     std::lock_guard lock(HudCoordinatesMutex);
     for (const auto& record : HudCoordinates)
     {
-        const auto [x, y] = FitHudCoordinate(record.kind, record.x, record.y);
+        const auto [x, y] = FitHudCoordinate(record.kind, record.x, record.y, aspect);
         record.destination[0] = x;
         record.destination[1] = y;
     }
-    if (SelectHudLayout && !HudCoordinates.empty())
+    if (!HudCoordinates.empty())
         SelectHudLayout(Screen.PresetWidth);
 }
 
@@ -231,7 +231,6 @@ void InitHud()
     {
         ApplyPendingHudCoordinates();
     });
-    if (!HudLayoutFrame) SelectHudLayout = nullptr;
 
     //Resolution
     pattern = hook::pattern("89 1D ? ? ? ? A3 ? ? ? ? 88 0D");
@@ -266,11 +265,13 @@ void InitHud()
     pattern = hook::pattern("68 ? ? ? ? 8B CF E8 ? ? ? ? 84 C0 ? ? 56 8B 74 24 08"); //0x4632C0
     static auto str_5F5588 = *pattern.get_first<uint32_t>(1);
     static size_t curLine;
+    static float parsedAspect;
     struct iHudHook
     {
         void operator()(injector::reg_pack& regs)
         {
             curLine = 0;
+            parsedAspect = RequestedHudAspect.load(std::memory_order_acquire);
             *(uint32_t*)regs.esp = str_5F5588; //"#End"
             regs.ecx = regs.edi;
         }
@@ -303,7 +304,7 @@ void InitHud()
                 }
                 HudCoordinates.push_back({ destination, curLine, x, y });
             }
-            std::tie(x, y) = FitHudCoordinate(curLine, x, y);
+            std::tie(x, y) = FitHudCoordinate(curLine, x, y, parsedAspect);
 
             *reinterpret_cast<int32_t*>(regs.esi) = x;
             *reinterpret_cast<int32_t*>(regs.esi + 4) = y;

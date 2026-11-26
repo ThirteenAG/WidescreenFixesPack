@@ -406,8 +406,9 @@
       "id": "MAIN.FPSLimit",
       "type": "int",
       "default": -1,
-      "min": -2,
+      "min": 30,
       "max": 1000,
+      "step": 1,
       "unit": "fps",
       "special": [
         {
@@ -423,58 +424,12 @@
           "label": "@WFP_OFF"
         }
       ],
-      "suggestions": [
-        {
-          "value": 30,
-          "label": "@WFP_FPS_30"
-        },
-        {
-          "value": 40,
-          "label": "@WFP_FPS_40"
-        },
-        {
-          "value": 50,
-          "label": "@WFP_FPS_50"
-        },
-        {
-          "value": 60,
-          "label": "@WFP_FPS_60"
-        },
-        {
-          "value": 75,
-          "label": "@WFP_FPS_75"
-        },
-        {
-          "value": 100,
-          "label": "@WFP_FPS_100"
-        },
-        {
-          "value": 120,
-          "label": "@WFP_FPS_120"
-        },
-        {
-          "value": 144,
-          "label": "@WFP_FPS_144"
-        },
-        {
-          "value": 165,
-          "label": "@WFP_FPS_165"
-        },
-        {
-          "value": 200,
-          "label": "@WFP_FPS_200"
-        },
-        {
-          "value": 240,
-          "label": "@WFP_FPS_240"
-        }
-      ],
       "label": "@WFP_FPSLIMIT",
       "description": "@WFP_DESC_FPSLIMIT",
       "page": "graphics",
       "control": [
         "cycler",
-        "dropdown"
+        "stepper"
       ],
       "apply": "live",
       "presets": {
@@ -489,21 +444,16 @@
       "default": 60,
       "min": 30,
       "max": 1000,
+      "step": 1,
       "unit": "fps",
       "special": [
         { "value": -1, "label": "@WFP_FPS_MONITOR" },
         { "value": 0, "label": "@WFP_OFF" }
       ],
-      "suggestions": [
-        { "value": 30, "label": "@WFP_FPS_30" },
-        { "value": 60, "label": "@WFP_FPS_60" },
-        { "value": 120, "label": "@WFP_FPS_120" },
-        { "value": 144, "label": "@WFP_FPS_144" }
-      ],
       "label": "@WFP_FPSLIMITMENUS",
       "description": "@WFP_DESC_FPSLIMITMENUS",
       "page": "other",
-      "control": [ "cycler", "dropdown" ],
+      "control": [ "cycler", "stepper" ],
       "apply": "live"
     },
     {
@@ -693,7 +643,12 @@
       "label": "@WFP_HUDASPECT",
       "description": "@WFP_DESC_HUDASPECT",
       "page": "other",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.PauseOnFocusLoss",

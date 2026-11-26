@@ -8,7 +8,7 @@
   "SkipMenu": "Continuar al iniciar",
   "SkipMenu.description": "Carga la partida elegida en cuanto el menú principal está listo. Requiere reiniciar.",
   "SaveSlot": "Ranura de guardado",
-  "SaveSlot.description": "Ranura (desde 1) usada al continuar al iniciar y en el guardado rápido. Requiere reiniciar.",
+  "SaveSlot.description": "Ranura (1–8) utilizada al guardar con F5. Reinicia el juego para aplicar el cambio.",
   "FOVFactor": "Campo de visión",
   "FOVFactor.description": "Multiplica el campo de visión de la cámara de juego; mayor es más amplio. Las cinemáticas, las cámaras scriptadas y las vistas con zoom mantienen el campo de visión del juego.",
   "HudScale": "Tamaño del HUD",

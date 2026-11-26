@@ -7,8 +7,19 @@ export module Movies;
 
 import ComVars;
 
+std::atomic_bool fillMovies{};
+
+void UpdateMovieLayout()
+{
+    static std::mutex mutex;
+    const std::lock_guard lock(mutex);
+    fillMovies.store(FixSettings().Get("MAIN.FMVWidescreenMode") == "1", std::memory_order_relaxed);
+}
+
 export void InstallMovieLayout()
 {
+    FixSettings().OnChange("MAIN.FMVWidescreenMode", UpdateMovieLayout);
+    UpdateMovieLayout();
     auto movie = hook::pattern("55 8B EC 83 E4 F8 83 EC 6C 53 56 8B F1 8A 46 24 84 C0 57 0F 85 ? ? ? ? 8A 46 25 84 C0 0F 84 ? ? ? ? A1 ? ? ? ? 50 FF 15");
     auto draw = hook::pattern("8B CB F3 0F 11 6C 24 4C F3 0F 11 5C 24 3C F3 0F 11 44 24 78 F3 0F 11 4C 24 7C E8 ? ? ? ? 5F 5E 5B 8B E5 5D C2 04 00");
     movieDecoder.SetAddress(*movie.get_first<uint32_t**>(37));
@@ -17,10 +28,10 @@ export void InstallMovieLayout()
         const auto video = movieDecoder.get();
         if (!video || !video[0] || !video[1] || Screen.Width <= 0 || Screen.Height <= 0)
             return;
-        static const auto& mode = FixSettings().Int("MAIN.FMVWidescreenMode");
+        const bool fill = fillMovies.load(std::memory_order_relaxed);
         // The whole movie in its own aspect: Original fits it into the game's 4:3 frame, Fill into the whole screen
-        const float frameWidth = mode == 1 ? Screen.fWidth : std::min(Screen.fWidth, Screen.fHeight * 4.0f / 3.0f);
-        const float frameHeight = mode == 1 ? Screen.fHeight : std::min(Screen.fHeight, Screen.fWidth * 0.75f);
+        const float frameWidth = fill ? Screen.fWidth : std::min(Screen.fWidth, Screen.fHeight * 4.0f / 3.0f);
+        const float frameHeight = fill ? Screen.fHeight : std::min(Screen.fHeight, Screen.fWidth * 0.75f);
         const float scale = std::min(frameWidth / static_cast<float>(video[0]), frameHeight / static_cast<float>(video[1]));
         const float width = video[0] * scale, height = video[1] * scale;
         const float left = (Screen.fWidth - width) * 0.5f;

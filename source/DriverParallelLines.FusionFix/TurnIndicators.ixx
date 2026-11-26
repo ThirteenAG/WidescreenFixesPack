@@ -2,6 +2,9 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/PadInput.hpp"
+#include <array>
+#include <chrono>
 #include <deque>
 
 export module TurnIndicators;
@@ -24,7 +27,6 @@ export void InitTurnIndicatorsRequiredRefs()
 {
     pLifeSystem.SetAddress(*hook::pattern("8B 0D ? ? ? ? 3B CF 89 3D").get_first<CLifeSystem**>(2));
     pGameTime.SetAddress(*hook::pattern("A1 ? ? ? ? 8B 48 ? ? ? 8B 53").get_first<CGameTime**>(1));
-    pFrontendInputManager.SetAddress(*hook::pattern("8B 0D ? ? ? ? 6A ? E8 ? ? ? ? 8B 0D ? ? ? ? 6A ? E8 ? ? ? ? 8B 0D ? ? ? ? 6A ? E8 ? ? ? ? 8B 0D ? ? ? ? 6A ? E8 ? ? ? ? A1").get_first<FrontendInputManager**>(2));
 }
 
 
@@ -32,7 +34,111 @@ export void InitTurnIndicatorsRequiredRefs()
 constexpr float STEER_THRESHOLD = 0.50f;    // Minimum steering to trigger blinkers
 constexpr float ACTIVATION_DELAY = 400.0f;  // ms delay before activation
 constexpr float BLINK_INTERVAL = 400.0f;    // ms blink interval (on/off cycle)
-constexpr float TAP_THRESHOLD = 300.0f;     // ms threshold for tap detection
+constexpr auto TAP_THRESHOLD = std::chrono::milliseconds(300);
+
+struct IndicatorTaps
+{
+    using Clock = std::chrono::steady_clock;
+    struct Actions { bool left{}, right{}, hazards{}; };
+    Vehicle owner = nullptr;
+    bool waitForNeutral = true;
+    bool leftWasDown = false, rightWasDown = false, chord = false;
+    Clock::time_point leftStart{}, rightStart{};
+    bool shortChord = false;
+
+    Actions Update(Vehicle vehicle, bool active, bool leftDown, bool rightDown, Clock::time_point now)
+    {
+        if (vehicle != owner || !active)
+        {
+            owner = vehicle;
+            waitForNeutral = true;
+            leftWasDown = rightWasDown = chord = false;
+            shortChord = false;
+        }
+        if (!active) return {};
+        if (waitForNeutral)
+        {
+            waitForNeutral = leftDown || rightDown;
+            return {};
+        }
+
+        if (leftDown && !leftWasDown) leftStart = now;
+        if (rightDown && !rightWasDown) rightStart = now;
+        const bool leftShort = now - leftStart <= TAP_THRESHOLD;
+        const bool rightShort = now - rightStart <= TAP_THRESHOLD;
+        const bool leftTap = leftWasDown && !leftDown && leftShort;
+        const bool rightTap = rightWasDown && !rightDown && rightShort;
+        if (leftDown && rightDown && leftShort && rightShort && !chord)
+            chord = shortChord = true;
+        if ((leftWasDown && !leftShort) || (rightWasDown && !rightShort))
+            shortChord = false;
+        leftWasDown = leftDown;
+        rightWasDown = rightDown;
+
+        if (!chord) return { leftTap, rightTap, false };
+        if (leftDown || rightDown) return {};
+        chord = false;
+        return { false, false, shortChord };
+    }
+};
+static IndicatorTaps indicatorTaps;
+
+struct IndicatorPad
+{
+    static constexpr WORD Bumpers = XINPUT_GAMEPAD_LEFT_SHOULDER | XINPUT_GAMEPAD_RIGHT_SHOULDER;
+    DWORD slot = XUSER_MAX_COUNT;
+    std::array<WORD, XUSER_MAX_COUNT> previous{};
+    std::array<bool, XUSER_MAX_COUNT> neutralSeen{};
+
+    struct Sample { WORD buttons{}; bool disconnectedWhileHeld{}; };
+
+    Sample Read(bool active)
+    {
+        const auto getState = PadInput::XInput().getState;
+        std::array<WORD, XUSER_MAX_COUNT> buttons{};
+        DWORD pressed = XUSER_MAX_COUNT;
+        bool disconnectedWhileHeld = false;
+        const bool ownerWasHolding = slot < XUSER_MAX_COUNT && previous[slot] != 0;
+        for (DWORD i = 0; i < XUSER_MAX_COUNT; ++i)
+        {
+            XINPUT_STATE state{};
+            if (!getState || getState(i, &state) != ERROR_SUCCESS)
+            {
+                if (i == slot)
+                {
+                    disconnectedWhileHeld = ownerWasHolding;
+                    slot = XUSER_MAX_COUNT;
+                }
+                neutralSeen[i] = false;
+            }
+            else
+            {
+                const WORD down = state.Gamepad.wButtons & Bumpers;
+                neutralSeen[i] = (active && neutralSeen[i]) || down == 0;
+                if (active && neutralSeen[i])
+                {
+                    buttons[i] = down;
+                    if (pressed == XUSER_MAX_COUNT && (down & ~previous[i]))
+                        pressed = i;
+                }
+            }
+            previous[i] = buttons[i];
+        }
+        if (!active)
+            slot = XUSER_MAX_COUNT;
+        else if (!ownerWasHolding && pressed != XUSER_MAX_COUNT &&
+                 (slot == XUSER_MAX_COUNT || !buttons[slot]))
+            slot = pressed;
+        return { slot < XUSER_MAX_COUNT ? buttons[slot] : WORD{}, disconnectedWhileHeld };
+    }
+};
+static IndicatorPad indicatorPad;
+
+export void CancelIndicatorTaps()
+{
+    indicatorTaps = {};
+    indicatorPad = {};
+}
 
 // Struct to hold all vehicle state data
 struct VehicleState
@@ -94,25 +200,17 @@ namespace Natives
         ActivateLamp(veh, nullptr, LIGHT_REAR_RIGHT, on, on);
     }
 
-    float IsLBPressed()
+    void BlinkHazards(Vehicle vehicle, VehicleState& state)
     {
-        return *(float*)((uintptr_t)*pFrontendInputManager + 0x124);
+        state.blink_timer += 1000.0f * Timestep();
+        if (state.blink_timer >= BLINK_INTERVAL)
+        {
+            state.blink_state = !state.blink_state;
+            state.blink_timer -= BLINK_INTERVAL;
+            SetVehHazardlights(vehicle, state.blink_state);
+        }
     }
 
-    float IsRBPressed()
-    {
-        return *(float*)((uintptr_t)*pFrontendInputManager + 0x118);
-    }
-
-    float IsLeftPressed()
-    {
-        return *(float*)((uintptr_t)*pFrontendInputManager + 0x1C0);
-    }
-
-    float IsRightPressed()
-    {
-        return *(float*)((uintptr_t)*pFrontendInputManager + 0x1B4);
-    }
 };
 
 // Helper function to find vehicle in queue
@@ -152,7 +250,7 @@ VehicleState* addOrUpdateVehicle(Vehicle veh, const VehicleState& state = Vehicl
         // Turn off any active lights on the vehicle being removed
         Vehicle old_veh = recent_vehicles.back().first;
         VehicleState& old_state = recent_vehicles.back().second;
-        if (old_state.blinkers_active || old_state.current_blinker != 0)
+        if (old_state.manual_hazard || old_state.blinkers_active || old_state.current_blinker != 0)
         {
             Natives::SetVehIndicatorlights(old_veh, false);
         }
@@ -174,6 +272,8 @@ public:
             static bool bManualTurnIndicators = settings.Int("TURNINDICATORS.ManualTurnIndicators");
             static uint32_t nLeftIndicatorKey = settings.Int("TURNINDICATORS.LeftIndicatorKey");
             static uint32_t nRightIndicatorKey = settings.Int("TURNINDICATORS.RightIndicatorKey");
+            if (!bTurnIndicators)
+                return;
 
             auto pattern = hook::pattern("55 8B EC 51 8B 51 ? ? ? 83 F8");
             ActivateLamp = (decltype(ActivateLamp))pattern.get_first();
@@ -182,21 +282,15 @@ public:
             static auto CVehicleDtorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 CVehicle* veh = (CVehicle*)regs.esi;
+                if (indicatorTaps.owner == veh)
+                    CancelIndicatorTaps();
                 auto it = std::remove_if(recent_vehicles.begin(), recent_vehicles.end(),
                     [veh](const std::pair<Vehicle, VehicleState>& p) { return p.first == veh; });
                 recent_vehicles.erase(it, recent_vehicles.end());
             });
 
-            static uintptr_t prev_player_car = 0;
-
             WFP::onGameProcessEvent() += [&]()
             {
-                static Vehicle last_player_car = 0;
-                static bool prev_lb_pressed = false;
-                static bool prev_rb_pressed = false;
-                static float lb_press_time = 0.0f;
-                static float rb_press_time = 0.0f;
-
                 // Get current player vehicle
                 CCharacter* PlayerPed = nullptr;
                 Vehicle PlayerCar = nullptr;
@@ -224,6 +318,18 @@ public:
                 // Check if player has fully entered the vehicle (can actually drive)
                 auto pVehicleStruct = PlayerCar;
                 bool player_fully_in_vehicle = (PlayerCar != nullptr && pVehicleStruct != nullptr);
+                IndicatorTaps::Actions manual{};
+                if (bManualTurnIndicators)
+                {
+                    const bool active = player_fully_in_vehicle && !BlockGameInput && Natives::Timestep() > 0.0f;
+                    if (indicatorTaps.owner != PlayerCar)
+                        indicatorPad = {};
+                    const auto pad = indicatorPad.Read(active);
+                    const bool left = active && (IsKeyboardKeyPressed(nLeftIndicatorKey) || (pad.buttons & XINPUT_GAMEPAD_LEFT_SHOULDER));
+                    const bool right = active && (IsKeyboardKeyPressed(nRightIndicatorKey) || (pad.buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER));
+                    manual = indicatorTaps.Update(PlayerCar, active && !pad.disconnectedWhileHeld,
+                        left, right, IndicatorTaps::Clock::now());
+                }
 
                 // If player is in a vehicle, add/update it in our queue
                 if (PlayerCar != nullptr)
@@ -240,12 +346,6 @@ public:
                     bool is_player_vehicle = (veh == PlayerCar);
                     bool player_in_vehicle = is_player_vehicle && player_fully_in_vehicle;
 
-                    // Skip processing if feature is disabled and no active blinkers
-                    if (!bTurnIndicators && state.current_blinker == 0)
-                    {
-                        continue;
-                    }
-
                     // Get vehicle structure (we already have it for player vehicle)
                     auto vehicleStruct = (is_player_vehicle) ? pVehicleStruct : nullptr;
 
@@ -253,50 +353,7 @@ public:
                     {
                         if (bManualTurnIndicators)
                         {
-                            static DoubleTapDetector dtap_left;
-                            static DoubleTapDetector dtap_right;
-
-                            float dt_ms = 1000.0f * Natives::Timestep();
-
-                            float cur_lb = 0.0f;
-                            float cur_rb = 0.0f;
-
-                            if (ReadActionMapsID())
-                            {
-                                cur_lb = Natives::IsLBPressed();
-                                cur_rb = Natives::IsRBPressed();
-                            }
-
-                            bool cur_left = IsKeyboardKeyPressed(nLeftIndicatorKey);
-                            bool cur_right = IsKeyboardKeyPressed(nRightIndicatorKey);
-
-                            bool left_double_tapped = false; //dtap_left.Update(Natives::IsLeftPressed(), dt_ms);
-                            bool right_double_tapped = false; //dtap_right.Update(Natives::IsRightPressed(), dt_ms);
-
-                            bool lb_pressed = (cur_lb != 0.0f) || (cur_left != 0.0f);
-                            bool rb_pressed = (cur_rb != 0.0f) || (cur_right != 0.0f);
-
-                            if (lb_pressed && !prev_lb_pressed)
-                            {
-                                lb_press_time = 0.0f;
-                            }
-                            if (rb_pressed && !prev_rb_pressed)
-                            {
-                                rb_press_time = 0.0f;
-                            }
-                            if (lb_pressed)
-                            {
-                                lb_press_time += 1000.0f * Natives::Timestep();
-                            }
-                            if (rb_pressed)
-                            {
-                                rb_press_time += 1000.0f * Natives::Timestep();
-                            }
-
-                            bool lb_tapped = (!lb_pressed && prev_lb_pressed && lb_press_time <= TAP_THRESHOLD) || left_double_tapped;
-                            bool rb_tapped = (!rb_pressed && prev_rb_pressed && rb_press_time <= TAP_THRESHOLD) || right_double_tapped;
-
-                            if (lb_tapped && rb_tapped)
+                            if (manual.hazards)
                             {
                                 state.manual_hazard = !state.manual_hazard;
                                 Natives::SetVehHazardlights(veh, state.manual_hazard);
@@ -311,7 +368,7 @@ public:
                                     state.pending_blinker = 0;
                                 }
                             }
-                            else if (lb_tapped)
+                            else if (manual.left)
                             {
                                 if (state.manual_hazard)
                                 {
@@ -350,7 +407,7 @@ public:
                                     }
                                 }
                             }
-                            else if (rb_tapped)
+                            else if (manual.right)
                             {
                                 if (state.manual_hazard)
                                 {
@@ -389,8 +446,6 @@ public:
                                     }
                                 }
                             }
-                            prev_lb_pressed = lb_pressed;
-                            prev_rb_pressed = rb_pressed;
                         }
                         else
                         {
@@ -462,13 +517,7 @@ public:
                         // Handle blinking logic
                         if (state.manual_hazard)
                         {
-                            state.blink_timer += 1000.0f * Natives::Timestep();
-                            if (state.blink_timer >= BLINK_INTERVAL)
-                            {
-                                state.blink_state = !state.blink_state;
-                                state.blink_timer = 0.0f;
-                                Natives::SetVehHazardlights(veh, state.blink_state);
-                            }
+                            Natives::BlinkHazards(veh, state);
                         }
                         else if (state.blinkers_active && !state.should_stop_blinking)
                         {
@@ -538,8 +587,11 @@ public:
                     }
                     else
                     {
-                        // Vehicle is not occupied by player - continue processing blinkers
-                        if (state.current_blinker != 0)
+                        if (state.manual_hazard)
+                        {
+                            Natives::BlinkHazards(veh, state);
+                        }
+                        else if (state.current_blinker != 0)
                         {
                             // Continue blinking process
                             if (state.blinkers_active && !state.should_stop_blinking)

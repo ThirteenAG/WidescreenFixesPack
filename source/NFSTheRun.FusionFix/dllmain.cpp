@@ -7,6 +7,7 @@ ASI_SETTINGS_EXPORT(FixSettings())
 
 import ComVars;
 import DevOverlay;
+import FrameRate;
 
 std::once_flag of;
 
@@ -22,6 +23,9 @@ namespace fb
                 WFP::onGameInitEvent().executeAll();
             });
 
+            const bool loading = LoadScreen::IsActive();
+            FramePacing::BeforeFrame(loading);
+            ApplyFrameRateLimit(loading);
             static LARGE_INTEGER frequency = []() { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
             static LARGE_INTEGER last = {};
             LARGE_INTEGER now;
@@ -32,7 +36,6 @@ namespace fb
 
             CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
             CursorConfinement::Frame(hWnd.get());
-            FramePacing::BeforeFrame();
             WFP::onGameProcessEvent().executeAll();
 
             shinternalUpdate.unsafe_fastcall(Main, edx, lowLatencyUpdate);

@@ -126,7 +126,7 @@ namespace
     // translations of the game that replaced one of its languages), or the game's language
     std::string LanguageTag()
     {
-        auto& chosen = FixSettings().String("MAIN.TextLanguage");
+        const auto chosen = FixSettings().Get("MAIN.TextLanguage");
         if (!chosen.empty() && chosen != "auto")
             return chosen;
         static const char* tags[] = { "en", "fr", "de", "it", "es" };
@@ -265,6 +265,15 @@ namespace
         else if (!ours && screen != LastScreen && Model.IsOpen())
         {
             Model.Close();
+        }
+        // The menu's language changed while the pages are open (an editor): their texts follow at once
+        else if (ours && Model.SelectLanguage(LanguageTag()))
+        {
+            ShownRows.clear();
+            HelpRow = nullptr;
+            SetText("WFPT0", Model.Text("menu.plugins"));
+            if (screen == ScreenRoot)
+                FillRoot();
         }
 
         if (screen == ScreenRoot)
@@ -591,6 +600,7 @@ class Options
 public:
     Options()
     {
+        WFP::onInitEvent() += []() { Model.RememberRunningSettings(FixSettings()); };
         WFP::onGameInitEvent() += []()
         {
             // CMenuManager::ProcessOnOffMenuOptions: the screen table, from the current entry's action

@@ -41,6 +41,8 @@
   "ResX.description": "Largeur de sortie en pixels. Zéro utilise la résolution du bureau. Prend effet après un redémarrage.",
   "ResY": "Hauteur de résolution",
   "ResY.description": "Hauteur de sortie en pixels. Zéro utilise la résolution du bureau. Prend effet après un redémarrage.",
+  "GamepadIcons": "Icônes de manette",
+  "GamepadIcons.description": "Images des boutons de la manette dans les indications tant qu'une manette est utilisée. Automatique utilise Xbox ; choisissez PlayStation ou Nintendo pour une autre manette. Le clavier ou la souris rétablissent les touches.",
   "CheckForUpdates": "Rechercher des mises à jour",
   "CheckForUpdates.description": "Recherche une version plus récente du correctif si activé. Un avis apparaît au menu principal. FusionFixHub ouvre la page de mise à jour à la fermeture du jeu, s'il est installé à côté du jeu. Désactivé par défaut.",
   "update.availablehub": "Une nouvelle version de {name} est disponible. Mettez-la à jour dans FusionFixHub après avoir fermé le jeu.",

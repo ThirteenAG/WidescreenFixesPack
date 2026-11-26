@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Controller;
 
@@ -18,8 +19,8 @@ export namespace THAWController
     inline SafetyHookInline Enumeration;
     inline SafetyHookInline PadPoll, KeyboardPoll, MousePoll;
     inline SafetyHookMid CameraSpeedHook, CameraInvertHook, DefaultKeysHook;
-    inline const float* CameraSpeed = nullptr;
-    inline const int32_t* InvertCameraY = nullptr;
+    inline std::atomic<float> CameraSpeed{ 1.0f };
+    inline std::atomic<bool> InvertCameraY{ false };
     inline bool (*BlockKeys)() = nullptr;
     inline std::atomic<bool> UsingPad = false;
     inline std::atomic<int> ActivePlayer = 0;
@@ -32,17 +33,36 @@ export namespace THAWController
     inline uint8_t* __cdecl ReadPad(int player)
     {
         auto* current = PadPoll.ccall<uint8_t*>(player);
-        if (!current || player < 0 || player >= 4 || !Focused())
+        if (!current || player < 0 || player >= 4)
             return current;
+        struct StickActivity
+        {
+            std::array<int32_t, 8> reference{};
+            bool initialized = false;
+        };
+        static std::array<StickActivity, 4> activity;
+        auto& stick = activity[player];
+        const auto* axes = reinterpret_cast<const int32_t*>(current);
+        if (!Focused())
+        {
+            std::copy_n(axes, stick.reference.size(), stick.reference.begin());
+            stick.initialized = true;
+            return current;
+        }
         const auto* previous = PreviousPad.get().data() + 272 * player;
+        const auto* oldAxes = reinterpret_cast<const int32_t*>(previous);
+        if (!stick.initialized)
+        {
+            std::copy_n(oldAxes, stick.reference.size(), stick.reference.begin());
+            stick.initialized = true;
+        }
         bool pressed = false;
         for (int i = 48; i < 176 && !pressed; ++i)
             pressed = (current[i] & 0x80) && !(previous[i] & 0x80);
-        const auto* axes = reinterpret_cast<const int32_t*>(current);
-        const auto* oldAxes = reinterpret_cast<const int32_t*>(previous);
-        for (int i = 0; i < 8 && !pressed; ++i)
+        // Keep the reference while the keyboard owns input so a slow ramp can identify the pad.
+        for (size_t i = 0; i < stick.reference.size() && !pressed; ++i)
             pressed = std::abs(static_cast<int64_t>(axes[i])) > 200 &&
-                      std::abs(static_cast<int64_t>(axes[i]) - oldAxes[i]) > 200;
+                      std::abs(static_cast<int64_t>(axes[i]) - stick.reference[i]) > 200;
         for (int i = 8; i < 12 && !pressed; ++i)
             pressed = axes[i] != -1 && axes[i] != oldAxes[i];
         if (pressed)
@@ -50,6 +70,8 @@ export namespace THAWController
             ActivePlayer.store(player, std::memory_order_relaxed);
             UsingPad.store(true, std::memory_order_relaxed);
         }
+        if (pressed || (UsingPad.load(std::memory_order_relaxed) && ActivePlayer.load(std::memory_order_relaxed) == player))
+            std::copy_n(axes, stick.reference.size(), stick.reference.begin());
         return current;
     }
 
@@ -118,10 +140,26 @@ export namespace THAWController
         return Enumeration.stdcall<BOOL>(device, context);
     }
 
-    inline void Install(const float* cameraSpeed, const int32_t* invertCameraY)
+    inline void Install(asi_settings::Plugin& settings)
     {
-        CameraSpeed = cameraSpeed;
-        InvertCameraY = invertCameraY;
+        auto updateSpeed = [&settings]()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            float speed = 1.0f;
+            asi_settings::detail::ParseFloat(settings.Get("MAIN.GamepadCameraSpeed"), speed);
+            CameraSpeed.store(std::isfinite(speed) ? std::clamp(speed, 0.1f, 5.0f) : 1.0f, std::memory_order_relaxed);
+        };
+        auto updateInversion = [&settings]()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            InvertCameraY.store(settings.Get("MAIN.InvertGamepadY") == "1", std::memory_order_relaxed);
+        };
+        settings.OnChange("MAIN.GamepadCameraSpeed", updateSpeed);
+        settings.OnChange("MAIN.InvertGamepadY", updateInversion);
+        updateSpeed();
+        updateInversion();
         auto callback = hook::pattern("83 EC 50 53 55 8B 6C 24 5C 8B 45 24 56 25 FF 00 00 00 33 F6 83 F8 15");
         auto selected = hook::pattern("83 CB FF 33 D2 B8 ? ? ? ? C7 44 24 10 04 00 00 00");
         GameSelected.SetAddress(*selected.get_first<GUID*>(6));
@@ -159,12 +197,12 @@ export namespace THAWController
         CameraSpeedHook = safetyhook::create_mid(camera.get_first(8), [](SafetyHookContext& regs)
         {
             if (UsingPad.load(std::memory_order_relaxed))
-                regs.xmm3.f32[0] *= std::clamp(*CameraSpeed, 0.1f, 5.0f);
+                regs.xmm3.f32[0] *= CameraSpeed.load(std::memory_order_relaxed);
         });
         auto invert = hook::pattern("84 C0 74 ? F3 0F 59 C5 0F 57 F6 0F 2F F0");
         CameraInvertHook = safetyhook::create_mid(invert.get_first(8), [](SafetyHookContext& regs)
         {
-            if (UsingPad.load(std::memory_order_relaxed) && *InvertCameraY)
+            if (UsingPad.load(std::memory_order_relaxed) && InvertCameraY.load(std::memory_order_relaxed))
                 regs.xmm0.f32[0] = -regs.xmm0.f32[0];
         });
     }

@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include <intrin.h>
+#include <charconv>
 #include <unordered_map>
 
 export module Misc;
@@ -56,22 +57,22 @@ void PreserveSniperBinding()
 }
 
 // Mission programs run one command per frame and drop what a "wait" overshoots, so their loops speed up with the
-// frame rate (Free Ride Extreme monster and bombs). Above 60 FPS, run them on frames 16 ms apart and hand each
+// frame rate (Free Ride Extreme monster and bombs). Above 60 FPS, run them at 60 Hz and hand each
 // program the time of the frames it sat out. Program starts and script events run unchanged.
 namespace ScriptTiming
 {
-    constexpr double step = 0.016;
+    constexpr double step = 1.0 / 60.0;
     SafetyHookInline runHook;
     uintptr_t startReturn = 0, eventReturn = 0;
     uint32_t presented = 0, decided = ~0u;
     void* first = nullptr;
     bool runFrame = true;
-    double credit = 0.0;
+    double credit = step * 0.5;
     LARGE_INTEGER frequency{}, last{};
     std::unordered_map<void*, uint32_t> skipped;
 
     // Once per frame: time left over carries to the next frame, so 60 FPS and below run every frame
-    void Decide(uint32_t elapsed)
+    void Decide()
     {
         if (runFrame)
             skipped.clear();
@@ -79,7 +80,7 @@ namespace ScriptTiming
         QueryPerformanceCounter(&now);
         const double real = last.QuadPart ? static_cast<double>(now.QuadPart - last.QuadPart) / frequency.QuadPart : step;
         last = now;
-        credit = std::min(credit + std::max(real, elapsed / 1000.0), step * 2.0);
+        credit = std::min(credit + real, step * 2.0);
         runFrame = credit >= step;
         if (runFrame)
             credit -= step;
@@ -94,7 +95,7 @@ namespace ScriptTiming
         {
             decided = presented;
             first = program;
-            Decide(elapsed);
+            Decide();
         }
         if (!runFrame)
         {
@@ -123,6 +124,107 @@ namespace ScriptTiming
     }
 }
 
+namespace NativeSettings
+{
+    constexpr char GameKey[] = "Software\\Illusion Softworks\\Mafia";
+    struct Key
+    {
+        HKEY root;
+    };
+    Key currentUser{ HKEY_CURRENT_USER }, localMachine{ HKEY_LOCAL_MACHINE };
+
+    Key* Match(HKEY root, LPCSTR path)
+    {
+        if (!path || _stricmp(path, GameKey)) return nullptr;
+        if (root == HKEY_CURRENT_USER) return &currentUser;
+        return root == HKEY_LOCAL_MACHINE ? &localMachine : nullptr;
+    }
+
+    Key* PortableKey(HKEY handle)
+    {
+        auto* key = reinterpret_cast<Key*>(handle);
+        return key == &currentUser || key == &localMachine ? key : nullptr;
+    }
+
+    LSTATUS WINAPI Open(HKEY root, LPCSTR path, PHKEY out)
+    {
+        const auto key = Match(root, path);
+        if (!key) return RegOpenKeyA(root, path, out);
+        if (!out) return ERROR_INVALID_PARAMETER;
+        *out = reinterpret_cast<HKEY>(key);
+        return ERROR_SUCCESS;
+    }
+
+    LSTATUS WINAPI Create(HKEY root, LPCSTR path, DWORD reserved, LPSTR cls, DWORD options, REGSAM access,
+        SECURITY_ATTRIBUTES* security, PHKEY out, DWORD* disposition)
+    {
+        if (!Match(root, path))
+            return RegCreateKeyExA(root, path, reserved, cls, options, access, security, out, disposition);
+        if (disposition) *disposition = REG_OPENED_EXISTING_KEY;
+        return Open(root, path, out);
+    }
+
+    LSTATUS WINAPI Close(HKEY key)
+    {
+        return PortableKey(key) ? ERROR_SUCCESS : RegCloseKey(key);
+    }
+
+    LSTATUS WINAPI Query(HKEY handle, LPCSTR name, DWORD* reserved, DWORD* type, BYTE* data, DWORD* size)
+    {
+        const auto key = PortableKey(handle);
+        if (!key) return RegQueryValueExA(handle, name, reserved, type, data, size);
+        if (reserved || !name || (data && !size)) return ERROR_INVALID_PARAMETER;
+        std::optional<std::string> hex;
+        if (!FixSettings().EditCfgFile([&](const std::filesystem::path& path)
+        {
+            const auto file = asi_settings::ReadFileText(path);
+            if (!file) return false;
+            const auto cfg = asi_settings::ParseCfg(*file);
+            if (const auto* value = cfg.Find("Mafia", name))
+                hex = *value;
+            return true;
+        })) return ERROR_READ_FAULT;
+        if (!hex)
+        {
+            // Setup.exe supplies the initial engine configuration.
+            return RegGetValueA(key->root, GameKey, name, RRF_RT_ANY, type, data, size);
+        }
+        if (hex->size() % 2 || hex->size() / 2 > MAXDWORD) return ERROR_INVALID_DATA;
+        const DWORD length = static_cast<DWORD>(hex->size() / 2);
+        const DWORD capacity = data ? *size : 0;
+        if (size) *size = length;
+        if (type) *type = REG_BINARY;
+        if (!data) return ERROR_SUCCESS;
+        if (capacity < length) return ERROR_MORE_DATA;
+        for (DWORD i = 0; i < length; ++i)
+        {
+            const auto* digit = hex->data() + size_t(i) * 2;
+            const auto parsed = std::from_chars(digit, digit + 2, data[i], 16);
+            if (parsed.ec != std::errc{} || parsed.ptr != digit + 2) return ERROR_INVALID_DATA;
+        }
+        return ERROR_SUCCESS;
+    }
+
+    LSTATUS WINAPI Write(HKEY key, LPCSTR name, DWORD reserved, DWORD type, const BYTE* data, DWORD size)
+    {
+        if (!PortableKey(key)) return RegSetValueExA(key, name, reserved, type, data, size);
+        if (!name || reserved || (!data && size)) return ERROR_INVALID_PARAMETER;
+        constexpr wchar_t digits[] = L"0123456789abcdef";
+        std::wstring hex;
+        hex.reserve(size_t(size) * 2);
+        for (DWORD i = 0; i < size; ++i)
+        {
+            hex.push_back(digits[data[i] >> 4]);
+            hex.push_back(digits[data[i] & 15]);
+        }
+        return FixSettings().EditCfgFile([&](const std::filesystem::path& file)
+        {
+            const auto wideName = std::filesystem::path(name).wstring();
+            return WritePrivateProfileStringW(L"Mafia", wideName.c_str(), hex.c_str(), file.c_str()) != FALSE;
+        }) ? ERROR_SUCCESS : ERROR_WRITE_FAULT;
+    }
+}
+
 class Misc
 {
 public:
@@ -135,28 +237,12 @@ public:
             RestoreGameOverSound();
             ScriptTiming::Init();
 
-            // Portable settings: the game's registry settings in savegame\settings.bin
-            bool bWriteSettingsToFile = FixSettings().Bool("MAIN.PortableSettings") != 0;
-
-            if (bWriteSettingsToFile)
-            {
-                auto szSettingsSavePath = GetExeModulePath<std::string>() + "savegame\\settings.bin";
-                RegistryWrapper("Illusion Softworks", szSettingsSavePath);
-                RegistryWrapper::OverrideTypeREG_NONE = REG_BINARY;
-
-                IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
-                    std::forward_as_tuple("RegCloseKey", RegistryWrapper::RegCloseKey),
-                    std::forward_as_tuple("RegCreateKeyA", RegistryWrapper::RegCreateKeyA),
-                    std::forward_as_tuple("RegOpenKeyA", RegistryWrapper::RegOpenKeyA),
-                    std::forward_as_tuple("RegOpenKeyExA", RegistryWrapper::RegOpenKeyExA),
-                    std::forward_as_tuple("RegCreateKeyExA", RegistryWrapper::RegCreateKeyExA),
-                    std::forward_as_tuple("RegQueryValueExA", RegistryWrapper::RegQueryValueExA),
-                    std::forward_as_tuple("RegSetValueExA", RegistryWrapper::RegSetValueExA),
-                    std::forward_as_tuple("RegQueryValueA", RegistryWrapper::RegQueryValueA),
-                    std::forward_as_tuple("RegDeleteKeyA", RegistryWrapper::RegDeleteKeyA),
-                    std::forward_as_tuple("RegEnumKeyA", RegistryWrapper::RegEnumKeyA)
-                );
-            }
+            IATHook::Replace(GetModuleHandleW(nullptr), "ADVAPI32.DLL",
+                std::forward_as_tuple("RegCloseKey", NativeSettings::Close),
+                std::forward_as_tuple("RegOpenKeyA", NativeSettings::Open),
+                std::forward_as_tuple("RegCreateKeyExA", NativeSettings::Create),
+                std::forward_as_tuple("RegQueryValueExA", NativeSettings::Query),
+                std::forward_as_tuple("RegSetValueExA", NativeSettings::Write));
         };
     }
 } Misc;

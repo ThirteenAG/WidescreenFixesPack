@@ -1,4 +1,5 @@
 {
+  "includes": ["..", "../../external/injector/include"],
   "sources": [
     "main.cpp",
     "../../external/injector/include/psp/injector.c",

@@ -34,12 +34,7 @@ namespace
 
     GameRef<uintptr_t> Keyboard;
     GameRef<uintptr_t> Pad;
-
-    bool Linked()
-    {
-        static auto& linked = FixSettings().Int("MAIN.ClassicKeyLinks");
-        return linked != 0;
-    }
+    std::atomic<bool> Linked{ false };
 
     uint32_t Key(uintptr_t keyboard, uint32_t offset)
     {
@@ -61,7 +56,7 @@ namespace
     {
         uintptr_t keyboard = Keyboard;
         uintptr_t pad = Pad;
-        if (!Linked() || !keyboard || !pad)
+        if (!Linked.load(std::memory_order_relaxed) || !keyboard || !pad)
             return 0;
         if (Down(keyboard, keys, Key(keyboard, KeyFire)) || Down(keyboard, keys, Key(keyboard, KeyCheck)))
             return *reinterpret_cast<uint32_t*>(pad + PadDecide);
@@ -94,7 +89,7 @@ namespace
     {
         auto bits = Hook->thiscall<uint32_t>(player);
         uintptr_t keyboard = Keyboard;
-        if (!Linked() || !keyboard)
+        if (!Linked.load(std::memory_order_relaxed) || !keyboard)
             return bits;
         const auto fire = Key(keyboard, KeyFire);
         const auto check = Key(keyboard, KeyCheck);
@@ -110,12 +105,25 @@ export namespace REClassicKeys
 {
     void Install()
     {
-        auto held = hook::pattern("56 57 8B 3D ? ? ? ? 8B D1 8B 8F 54 0A 00 00 8B C1 C1 E8 05 83 E1 1F 8B B4 87 80 0A 00 00");
-        auto pressed = hook::pattern("56 57 8B 3D ? ? ? ? 8B D1 8B 8F 54 0A 00 00 8B C1 C1 E8 05 83 E1 1F 8B B4 87 C0 0A 00 00");
-        auto menuHeld = hook::pattern("80 B9 20 04 00 00 01 75 05 33 C0 C2 04 00 53 8B 5C 24 08 55 8B 2D ? ? ? ? 85 DB 75 ? 8B 85 D8 0D 00 00 8D 95 FC 0C 00 00 83 F8 04 73 05 6B C0 2C 03 D0 8B 12");
-        auto menuRepeat = hook::pattern("80 B9 20 04 00 00 01 75 05 33 C0 C2 04 00 53 8B 5C 24 08 55 8B 2D ? ? ? ? 85 DB 75 ? 8B 85 D8 0D 00 00 8D 95 FC 0C 00 00 83 F8 04 73 05 6B C0 2C 03 D0 8B 52 14");
+        BindLiveInt("MAIN.ClassicKeyLinks", [](int value)
+        {
+            Linked.store(value != 0, std::memory_order_relaxed);
+        });
+
+        auto updatedHeld = hook::pattern("56 57 8B 3D ? ? ? ? 8B D1 8B 8F 54 0A 00 00 8B C1 C1 E8 05 83 E1 1F 8B B4 87 80 0A 00 00");
+        const bool updated = !updatedHeld.empty();
+        auto held = updated ? updatedHeld : hook::pattern("56 8B 35 ? ? ? ? 8B D1 8B 86 54 0A 00 00 8B C8 C1 E8 05 83 E1 1F 8B 84 86 80 0A 00 00");
+        auto pressed = hook::pattern(updated ?
+            "56 57 8B 3D ? ? ? ? 8B D1 8B 8F 54 0A 00 00 8B C1 C1 E8 05 83 E1 1F 8B B4 87 C0 0A 00 00" :
+            "56 8B 35 ? ? ? ? 8B D1 8B 86 54 0A 00 00 8B C8 C1 E8 05 83 E1 1F 8B 84 86 C0 0A 00 00");
+        auto menuHeld = hook::pattern(updated ?
+            "80 B9 20 04 00 00 01 75 05 33 C0 C2 04 00 53 8B 5C 24 08 55 8B 2D ? ? ? ? 85 DB 75 ? 8B 85 D8 0D 00 00 8D 95 FC 0C 00 00 83 F8 04 73 05 6B C0 2C 03 D0 8B 12" :
+            "80 B9 20 04 00 00 01 75 05 33 C0 C2 04 00 53 8B 5C 24 08 55 8B 2D ? ? ? ? 56 85 DB 75 1A 8B 85 D8 0D 00 00 8D B5 FC 0C 00 00 83 F8 04 73 05 6B C0 2C 03 F0 8B 36");
+        auto menuRepeat = hook::pattern(updated ?
+            "80 B9 20 04 00 00 01 75 05 33 C0 C2 04 00 53 8B 5C 24 08 55 8B 2D ? ? ? ? 85 DB 75 ? 8B 85 D8 0D 00 00 8D 95 FC 0C 00 00 83 F8 04 73 05 6B C0 2C 03 D0 8B 52 14" :
+            "80 B9 20 04 00 00 01 75 05 33 C0 C2 04 00 53 8B 5C 24 08 55 8B 2D ? ? ? ? 56 85 DB 75 1B 8B 85 D8 0D 00 00 8D B5 FC 0C 00 00 83 F8 04 73 05 6B C0 2C 03 F0 8B 76 14");
         auto menuPressed = hook::pattern("80 B9 20 04 00 00 01 75 0C 80 7C 24 08 00 75 05 33 C0 C2 08 00");
-        Keyboard.SetAddress(*held.get_first<uintptr_t*>(4));
+        Keyboard.SetAddress(*held.get_first<uintptr_t*>(updated ? 4 : 3));
         Pad.SetAddress(*menuHeld.get_first<uintptr_t*>(22));
 
         CommandsHeld = safetyhook::create_inline(held.get_first(), Commands<&CommandsHeld, KeysHeld>);

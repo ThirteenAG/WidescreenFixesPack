@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Hud;
 
@@ -10,12 +11,15 @@ import Layout;
 namespace HudDraw
 {
     SafetyHookInline MainHook, WeaponsHook, TimerHook, WorldHook, SniperHook, BinocularHook;
+    std::atomic<float> Aspect{ 0.0f };
 
     // The gameplay HUD: its elements near a side of the 4:3 frame move to that side of the HUD box. Everything else
     // the game draws in 2D (menus, subtitles, messages) stays in the 4:3 frame.
     template <SafetyHookInline& Hook, typename... Args>
     int __cdecl Anchored(Args... args)
     {
+        if (!Layout::InHud)
+            Layout::UpdateHud(Aspect.load());
         const bool previous = std::exchange(Layout::InHud, true);
         const int result = Hook.ccall<int>(args...);
         Layout::InHud = previous;
@@ -54,6 +58,11 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            WatchMatrixSetting("MAIN.HudAspectRatioConstraint", [](const std::string& value)
+            {
+                HudDraw::Aspect = ParseWidescreenHudOffset(value).value_or(0.0f);
+            });
+
             // HUD: health, Focus, weapon, boss and vehicle displays; the weapon selection; mission timers
             auto pattern = hook::pattern("55 8B EC 83 EC 10 E8 ? ? ? ? A1 ? ? ? ? 83 B8 F8 00 00 00 01 74 0F");
             HudDraw::MainHook = safetyhook::create_inline(pattern.get_first(), HudDraw::Anchored<HudDraw::MainHook, int, int>);

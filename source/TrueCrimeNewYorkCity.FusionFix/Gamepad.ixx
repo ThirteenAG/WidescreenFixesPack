@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include <dinput.h>
 
 export module Gamepad;
 
@@ -22,6 +23,35 @@ namespace TCGamepad
         { 0x28010202, 0xFF014201 },     // cursor up and down: Y axis
         { 0x28008201, 0xFF00C201 },     // cursor left and right: X axis
     };
+
+    bool IsController(const DIDEVICEINSTANCEA& instance)
+    {
+        const auto type = GET_DIDEVICE_TYPE(instance.dwDevType);
+        return type >= DI8DEVTYPE_JOYSTICK && type <= DI8DEVTYPE_1STPERSON;
+    }
+
+    void AcceptMappedController(SafetyHookContext& regs)
+    {
+        if (!IsController(*reinterpret_cast<const DIDEVICEINSTANCEA*>(regs.esi)))
+            return;
+
+        // The game has one player and three device slots. Leave room for the keyboard and mouse.
+        const auto mapper = reinterpret_cast<const uint8_t*>(regs.ebp);
+        const auto devices = *reinterpret_cast<const uint8_t* const*>(mapper + 24);
+        const auto count = *reinterpret_cast<const uint32_t*>(mapper + 28);
+        for (uint32_t i = 0; i < count; ++i)
+        {
+            if (IsController(*reinterpret_cast<const DIDEVICEINSTANCEA*>(devices + 604 * i + 24)))
+            {
+                regs.eax &= ~DIEDBS_MAPPEDPRI1;
+                return;
+            }
+        }
+
+        // Generic controller actions can arrive as secondary semantic mappings.
+        if (regs.eax & DIEDBS_MAPPEDPRI2)
+            regs.eax |= DIEDBS_MAPPEDPRI1;
+    }
 }
 
 class Gamepad
@@ -31,8 +61,11 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            auto mapped = hook::pattern("8B 84 24 44 01 00 00 83 E0 01 89 44 24 08 0F 84 ? ? ? ? 8B 45 1C 3B 45 20");
+            static auto acceptMappedController = safetyhook::create_mid(mapped.get_first(7), TCGamepad::AcceptMappedController);
+
             // The game's three action formats (on foot, driving, menus), set up before the input devices are created
-            aActionFormats.SetAddress(*hook::pattern("68 84 01 00 00 E8 ? ? ? ? 68 85 01 00 00 A3").get_first<DIActionFormat*>(16));
+            aActionFormats.SetAddress(*hook::pattern("8B 86 ? ? ? ? 5F C7 82 ? ? ? ? 28 00 00 00").get_first<DIActionFormat*>(2));
             auto& formats = aActionFormats.get();
             for (int i = 0; i < 3; ++i)
             {

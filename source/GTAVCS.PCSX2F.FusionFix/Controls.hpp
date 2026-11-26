@@ -1,17 +1,17 @@
 #pragma once
 #include "Game.hpp"
-#include "../Shared/Console/Input.hpp"
-#include "../Shared/Console/StoriesMouse.hpp"
-#include "../Shared/Console/StoriesBindings.hpp"
+#include "Shared/Console/Input.hpp"
+#include "Shared/Console/StoriesMouse.hpp"
+#include "Shared/Console/StoriesBindings.hpp"
 extern "C" {
-#include "../../external/injector/include/ps2/pcsx2f_api.h"
+#include "ps2/pcsx2f_api.h"
 }
 
 namespace vcs {
 struct Controller {
     int16_t leftX, leftY, rightX, rightY;
     int16_t l1, l2, r1, r2, up, down, left, right;
-    int16_t unused[4];
+    int16_t alternateDpad[4];
     int16_t start, select, square, triangle, cross, circle, l3, r3;
 };
 struct Pad {
@@ -29,6 +29,7 @@ struct Pad {
     float sensitivityX, sensitivityY;
 };
 static_assert(sizeof(Controller) == 48 && sizeof(Pad) == 212);
+static_assert(offsetof(Controller, alternateDpad) - offsetof(Controller, up) == sizeof(Controller::alternateDpad));
 static_assert(offsetof(Pad, current) == 2 && offsetof(Pad, previous) == 50);
 static_assert(offsetof(Pad, disabled) == 150 && offsetof(Pad, lastTouched) == 180);
 namespace key {
@@ -57,16 +58,14 @@ inline bool PlayerInVehicle() {
 // a pad keeps working next to the keyboard and mouse.
 inline bool keyboardInUse = true;
 inline bool KeyboardActive() { return settings.pcControls && keyboardInUse; }
+inline bool KeyboardFor(const Pad* pad) { return playerPad && pad == playerPad && KeyboardActive(); }
 inline bool MouseControlsActive() {
     return KeyboardActive() && playerPad && !playerPad->disabled && !MenuActive();
 }
 void InstallControls();
-// Switches the PC control scheme at runtime (menu toggle).
-void ApplyPcControls();
 void LoadBindings();
 bool SaveBindings();
 void InstallMouseCamera();
-void ApplyMouseCamera();
 void UpdateCheats();
 // The GXT key whose text names the button an action has in the modern
 // scheme, or nullptr.

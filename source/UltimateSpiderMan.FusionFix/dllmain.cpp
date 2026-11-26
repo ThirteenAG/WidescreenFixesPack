@@ -134,15 +134,14 @@ namespace USMUpdates
         config.fileVersion = rsc_FileVersion;
         config.settings = &FixSettings();
         config.playable = []() { return USMMenu::Manager && !USMMenu::Opened; };
-        config.format = [](const std::string&, bool hub)
+        config.format = [](const std::string& latest, bool hub)
         {
-            return asi_settings::text::Widen(USMMenu::Words(hub ? "update.availablehub" : "update.availablesite"));
+            USMMenu::Notice.emplace(USMMenu::UpdateNotice{ latest, RWGTA::UpdateCheck::Page(), hub });
+            return asi_settings::text::Widen(USMMenu::NoticeText(*USMMenu::Notice));
         };
-        config.show = [](const std::wstring& text)
+        config.show = [](const std::wstring&)
         {
             USMMenu::Click(USMMenu::Tab, 2, 0);
-            USMMenu::Notice = asi_settings::text::Narrow(text);
-            USMMenu::Refresh();
         };
         RWGTA::UpdateCheck::Init(std::move(config));
     }
@@ -175,11 +174,14 @@ void Init()
     USMOverlay::Init();
     USMMenu::Render = USMOverlay::Frame;
     WFP::onShutdownEvent() += []() { USMOverlay::Overlay.ShutdownRenderer(); };
-    PauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"));
-    FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+    const auto refreshPauseOnFocusLoss = []()
     {
-        PauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"));
-    });
+        static std::mutex mutex;
+        const std::lock_guard lock(mutex);
+        PauseOnFocusLoss.store(FixSettings().Get("MAIN.PauseOnFocusLoss") == "1");
+    };
+    FixSettings().OnChange("MAIN.PauseOnFocusLoss", refreshPauseOnFocusLoss);
+    refreshPauseOnFocusLoss();
     auto focus = hook::pattern("A0 ? ? ? ? 84 C0 0F 84 ? ? ? ? A0 ? ? ? ? 84 C0 75 08 6A 01");
     static const auto continueFrame = reinterpret_cast<uintptr_t>(focus.get_first(13));
     static auto FocusPauseHook = safetyhook::create_mid(focus.get_first(5), [](SafetyHookContext& regs)

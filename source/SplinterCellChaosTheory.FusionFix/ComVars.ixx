@@ -26,7 +26,6 @@ export struct Screen
     float fHudOffsetDyn;
     float fTextScaleX;
     int32_t nHudOffsetReal;
-    std::optional<float> fHudAspectRatioConstraint;
     float fWidescreenHudOffset;
     int32_t nScopeScale;
     float fFMVoffsetStartX;

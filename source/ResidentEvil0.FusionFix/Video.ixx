@@ -97,39 +97,49 @@ export namespace RE0Video
 
     inline uint32_t __fastcall Aspect(void* value, void*, uint32_t selected)
     {
-        const std::lock_guard lock(aspectMutex);
-        if (expanded)
         {
-            // A Fill movie owns the whole screen; the game's choice applies when it ends
-            chosen = selected;
-            return 0;
+            const std::lock_guard lock(aspectMutex);
+            if (expanded)
+            {
+                // A Fill movie owns the whole screen until the native scene resumes.
+                chosen = selected;
+                return 0;
+            }
         }
-        return aspectHook.thiscall<uint32_t>(value, selected);
+        return aspectHook.unsafe_thiscall<uint32_t>(value, selected);
     }
 
     inline void Scene()
     {
-        if (!renderer.is_initialized() || !renderer) return;
+        if (!ready || !renderer.is_initialized() || !renderer) return;
         void* value = renderer;
+        if (!RE0Text::Read<void*>(value, 0x98) || RE0Text::Read<uint32_t>(value, 0x433E94)) return;
         const bool active = fullscreenCount.load() != 0 && mode.load() == 1;
+        uint32_t requested = 0;
+        uint32_t previous = 0;
+        {
+            const std::lock_guard lock(aspectMutex);
+            if (active == expanded) return;
+            previous = RE0Text::Read<uint32_t>(value, 228);
+            if (active)
+            {
+                if (previous == 0 || previous > 3 ||
+                    (RE0Text::Read<int>(value, 184) == RE0Text::Read<int>(value, 0x433E50) &&
+                     RE0Text::Read<int>(value, 188) == RE0Text::Read<int>(value, 0x433E54))) return;
+                chosen = previous;
+            }
+            else
+                requested = chosen;
+        }
+        // The native setter can wait for the render thread. Execute on the game thread without a lock.
+        if (aspectHook.unsafe_thiscall<uint32_t>(value, requested) == static_cast<uint32_t>(D3DERR_DEVICELOST))
+        {
+            // The setter stores the new enum before checking the device. Roll it back so the next call retries.
+            RE0Text::Write(value, 228, previous);
+            return;
+        }
         const std::lock_guard lock(aspectMutex);
-        if (active == expanded) return;
-        if (active)
-        {
-            // Fill: the scene uses the whole output while the movie plays, unless the game's frame already does
-            const auto selected = RE0Text::Read<uint32_t>(value, 228);
-            if (selected == 0 || selected > 3 ||
-                (RE0Text::Read<int>(value, 184) == RE0Text::Read<int>(value, 0x433E50) &&
-                 RE0Text::Read<int>(value, 188) == RE0Text::Read<int>(value, 0x433E54))) return;
-            chosen = selected;
-            aspectHook.thiscall<uint32_t>(value, 0u);
-            expanded = true;
-        }
-        else
-        {
-            expanded = false;
-            aspectHook.thiscall<uint32_t>(value, chosen);
-        }
+        expanded = active;
     }
 
     inline int __fastcall Composite(void* unit, void*, void* context)
@@ -194,9 +204,8 @@ export namespace RE0Video
         return result;
     }
 
-    inline void Frame(IDirect3DDevice9* device = nullptr)
+    inline void Frame()
     {
-        if (device && ready && device->TestCooperativeLevel() == D3D_OK) Scene();
         if (!count.load()) return;
         const std::lock_guard lock(mutex);
         count.store(0);
@@ -205,11 +214,7 @@ export namespace RE0Video
     inline void Install()
     {
         ready = false;
-        mode.store(std::clamp(FixSettings().Int("MAIN.FMVWidescreenMode"), 0, 1));
-        FixSettings().OnChange("MAIN.FMVWidescreenMode", []()
-        {
-            mode.store(std::clamp(FixSettings().Int("MAIN.FMVWidescreenMode"), 0, 1));
-        });
+        BindLiveInt("MAIN.FMVWidescreenMode", mode);
         auto draw = hook::pattern("83 EC 18 53 56 57 8B F9 83 7F 50 00 0F 84 ? ? ? ? 8B 74 24 28 6A 00 6A 00 8B CE");
         auto composite = hook::pattern("55 8B EC 83 E4 F0 81 EC 48 05 00 00 56 8B 75 08 57 8B F9 56 89 BC 24 F0 00 00 00 E8");
         auto quad = hook::pattern("83 EC 0C 56 8B 74 24 14 81 BE B8 01 00 00 09 70 C1 D6");

@@ -41,6 +41,8 @@
   "ResX.description": "Ausgabebreite in Pixeln. Null nutzt die Desktop-Auflösung. Wirkt nach einem Neustart.",
   "ResY": "Auflösungshöhe",
   "ResY.description": "Ausgabehöhe in Pixeln. Null nutzt die Desktop-Auflösung. Wirkt nach einem Neustart.",
+  "GamepadIcons": "Controller-Symbole",
+  "GamepadIcons.description": "Tastensymbole des Controllers in Hinweisen, solange ein Controller benutzt wird. Automatisch verwendet Xbox; für andere Controller PlayStation oder Nintendo wählen. Tastatur oder Maus zeigen wieder die Tasten.",
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Sucht nach einer neueren Version des Fixes, wenn aktiviert. Ein Hinweis erscheint im Hauptmenü. FusionFixHub öffnet die Update-Seite nach dem Beenden des Spiels, wenn er neben dem Spiel installiert ist. Standardmäßig aus.",
   "update.availablehub": "Eine neue Version von {name} ist verfügbar. Aktualisiere sie nach dem Schließen des Spiels in FusionFixHub.",

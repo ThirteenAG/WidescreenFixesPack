@@ -45,6 +45,8 @@ export namespace LARushOverlay
         auto pause = hook::pattern("56 89 35 ? ? ? ? E8 ? ? ? ? 83 C4 04 FF 15 ? ? ? ? 85 F6 F3 0F 10 05");
         SetGamePaused = pause.get_first();
         GamePaused.SetAddress(*pause.get_first<int32_t*>(3));
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         auto input = hook::pattern("68 ? ? ? ? 56 89 35 ? ? ? ? E8 ? ? ? ? A0 ? ? ? ? 83 C4 08 3C 28");
         const auto inputCall = input.get_first<uint8_t>(12);
         InputHook = safetyhook::create_inline(inputCall + 5 + *reinterpret_cast<int32_t*>(inputCall + 1), Input);
@@ -76,6 +78,8 @@ export namespace LARushOverlay
 
     inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         // The hotkey itself is read at the frame boundary: the game's DirectInput keyboard can take the key messages
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
@@ -108,6 +112,8 @@ export namespace LARushOverlay
 
     inline void Present(IDirect3DDevice9* device, HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!device)
             return;
         static const bool page = []()
@@ -131,30 +137,13 @@ export namespace LARushOverlay
         }();
         Keyboard(window);
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
         XINPUT_STATE state{};
         DWORD slot = 0;
         const bool present = PadInput::Read(state, slot);
-        uint16_t mapped = 0;
-        if (present)
-        {
-            const auto buttons = state.Gamepad.wButtons;
-            const auto map = [&](WORD source, uint16_t target) { if (buttons & source) mapped |= target; };
-            map(XINPUT_GAMEPAD_BACK, 0x1);
-            map(XINPUT_GAMEPAD_START, 0x8);
-            map(XINPUT_GAMEPAD_DPAD_UP, 0x10);
-            map(XINPUT_GAMEPAD_DPAD_RIGHT, 0x20);
-            map(XINPUT_GAMEPAD_DPAD_DOWN, 0x40);
-            map(XINPUT_GAMEPAD_DPAD_LEFT, 0x80);
-            map(XINPUT_GAMEPAD_LEFT_SHOULDER, 0x400);
-            map(XINPUT_GAMEPAD_RIGHT_SHOULDER, 0x800);
-            map(XINPUT_GAMEPAD_Y, 0x1000);
-            map(XINPUT_GAMEPAD_B, 0x2000);
-            map(XINPUT_GAMEPAD_A, 0x4000);
-            map(XINPUT_GAMEPAD_X, 0x8000);
-        }
-        Overlay.Gamepad(mapped, present ? static_cast<int8_t>(state.Gamepad.sThumbLX / 256) : 0,
-            present ? static_cast<int8_t>(-state.Gamepad.sThumbLY / 256) : 0);
+        Overlay.Gamepad(present ? PadInput::OverlayButtons(state.Gamepad.wButtons) : 0,
+            present ? PadInput::OverlayAxis(state.Gamepad.sThumbLX) : 0, present ? PadInput::OverlayAxis(-int(state.Gamepad.sThumbLY)) : 0);
         const bool blocking = Overlay.BlocksInput();
         if (blocking && !PausedByOverlay && GamePaused.is_initialized() && !GamePaused)
         {

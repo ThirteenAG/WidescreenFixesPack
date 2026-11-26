@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include <intrin.h>
 #include <d3d9.h>
 #include "FixSettings.hpp"
 #include "Shared/CursorConfinement.hpp"
@@ -160,20 +161,14 @@ export void Init()
 {
     auto& settings = FixSettings();
     FarCryMenu::InitRestartValues();
-    asi_settings::LiveLink::Start();
-    FarCryRuntime::Init();
-    FarCryUpdates::Init();
     settings.Availability("MAIN.PauseOnFocusLoss", [](std::string_view value)
     {
         return value == "0" || FarCryFocus::Ready;
     });
-    CursorConfinement::SetEnabled(settings.Bool("MAIN.ConfineCursor"));
-    settings.OnChange("MAIN.ConfineCursor", []()
-    {
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
-    });
-    FarCryMovie::Mode = &settings.Int("MAIN.FMVWidescreenMode");
-    const auto windowMode = std::clamp(settings.Int("MAIN.WindowMode"), 0, 2);
+    FarCryLive::Init();
+    FarCryRuntime::Init();
+    FarCryUpdates::Init();
+    const auto windowMode = std::clamp(FarCryLive::Integer("MAIN.WindowMode", 0), 0, 2);
     FarCryWindow::Mode.store(windowMode);
     FarCryWindow::LastWindowMode = windowMode == 2 ? 2 : 1;
     FarCryWindow::OnModeChanged = [](int mode)
@@ -182,10 +177,11 @@ export void Init()
     };
     settings.OnChange("MAIN.WindowMode", []()
     {
-        const auto requested = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
+        const auto requested = std::clamp(FarCryLive::Integer("MAIN.WindowMode", 0), 0, 2);
         if (requested != FarCryWindow::Mode.load())
             FarCryWindow::Pending.store(requested);
     });
+    asi_settings::LiveLink::Start();
     WFP::onShutdownEvent() += []()
     {
         // Restoring hooks inside CryGame, CrySystem or XRenderD3D9 is only safe on a dynamic unload
@@ -201,20 +197,6 @@ export void Init()
 #endif
         FarCryMovie::Ready = false;
     };
-    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(settings.String("MAIN.HudAspectRatioConstraint"));
-    auto updateView = []()
-    {
-        auto& settings = FixSettings();
-        const float factor = settings.Float("MAIN.FOVFactor");
-        Screen.fIniFOV = std::clamp(factor, 0.5f, 2.0f);
-        Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(settings.String("MAIN.HudAspectRatioConstraint"));
-        if (Screen.nWidth > 0 && Screen.nHeight > 0)
-            Screen.AdjustToRes(Screen.nWidth, Screen.nHeight);
-    };
-    updateView();
-    settings.OnChange("MAIN.FOVFactor", updateView);
-    settings.OnChange("MAIN.HudAspectRatioConstraint", updateView);
-
     WFP::onInitEvent().executeAll();
 }
 
@@ -266,7 +248,7 @@ export void InitXRenderD3D9()
     // Masks are 4:3 art: solid black where the art ends, whatever blend mode the script set for the mask
     static auto DrawMaskSides = [](uint32_t _this)
     {
-        const auto device = FarCryRuntime::Device;
+        const auto device = FarCryRuntime::Device.load();
         DWORD blend = FALSE;
         if (device)
         {
@@ -306,7 +288,7 @@ export void InitXRenderD3D9()
     // Masks are 4:3 art: solid black where the art ends, whatever blend mode the script set for the mask
     static auto DrawMaskSides = [](void* _this)
     {
-        const auto device = FarCryRuntime::Device;
+        const auto device = FarCryRuntime::Device.load();
         DWORD blend = FALSE;
         if (device)
         {
@@ -398,10 +380,10 @@ export void InitXRenderD3D9()
             if (ret == dword_3302ED49 && ret2 == dword_33038051) //fmv
             {
                 Screen.bStretch = false;
-                if (FarCryMovie::Ready && FarCryMovie::Mode)
+                if (FarCryMovie::Ready)
                 {
                     const auto geometry = FarCryMovie::Layout({ x1, y1, x2, y2 }, Screen.fAspectRatio, Screen.fFMVAspectRatio,
-                        std::clamp(*FarCryMovie::Mode, 0, 1), *reinterpret_cast<float*>(regs.esp + 0x44), *reinterpret_cast<float*>(regs.esp + 0x48),
+                        FarCryLive::Read().movieMode, *reinterpret_cast<float*>(regs.esp + 0x44), *reinterpret_cast<float*>(regs.esp + 0x48),
                         *reinterpret_cast<float*>(regs.esp + 0x4C), *reinterpret_cast<float*>(regs.esp + 0x50));
                     FarCryMovie::ClearBars(geometry, [&](const FarCryMovie::Rectangle& bar)
                     {
@@ -516,10 +498,10 @@ export void InitXRenderD3D9()
         if (ret == dword_1005DA88 && ret2 == dword_10068D88) //fmv
         {
             Screen.bStretch = false;
-            if (FarCryMovie::Ready && FarCryMovie::Mode)
+            if (FarCryMovie::Ready)
             {
                 const auto geometry = FarCryMovie::Layout({ x1, y1, x2, y2 }, Screen.fAspectRatio, Screen.fFMVAspectRatio,
-                    std::clamp(*FarCryMovie::Mode, 0, 1), a6, a7, a8, a9);
+                    FarCryLive::Read().movieMode, a6, a7, a8, a9);
                 FarCryMovie::ClearBars(geometry, [&](const FarCryMovie::Rectangle& bar)
                 {
                     DrawImage(_this, bar.x, bar.y, bar.width, bar.height,
@@ -894,11 +876,46 @@ export void InitCry3DEngine()
 
 }
 
+#ifndef _WIN64
+static double __cdecl EstimateCpuClock(double* secondsPerTick)
+{
+    int cpu[4]{};
+    __cpuid(cpu, 0);
+    double ticksPerSecond = 0.0;
+    if (cpu[0] >= 0x15)
+    {
+        __cpuidex(cpu, 0x15, 0);
+        if (cpu[0] > 0 && cpu[1] > 0 && cpu[2] > 0)
+            ticksPerSecond = double(cpu[2]) * double(cpu[1]) / double(cpu[0]);
+    }
+    if (ticksPerSecond == 0.0)
+    {
+        LARGE_INTEGER frequency{}, start{}, end{};
+        QueryPerformanceFrequency(&frequency);
+        QueryPerformanceCounter(&start);
+        __cpuid(cpu, 0);
+        const auto first = __rdtsc();
+        Sleep(50);
+        __cpuid(cpu, 0);
+        const auto last = __rdtsc();
+        QueryPerformanceCounter(&end);
+        ticksPerSecond = double(last - first) * double(frequency.QuadPart) / double(end.QuadPart - start.QuadPart);
+    }
+    *secondsPerTick = 1.0 / ticksPerSecond;
+    return ticksPerSecond / 1000000.0;
+}
+#endif
+
 export void InitCrySystem()
 {
     FarCryCamera::Install(GetModuleHandleW(L"CryGame.dll"), GetModuleHandleW(L"CrySystem.dll"));
 
     #ifndef _WIN64
+    // Keep the native CPU probe from raising the process and its probe threads to realtime priority.
+    auto cpuClock = hook::module_pattern(GetModuleHandleW(L"CrySystem.dll"),
+        "E8 ? ? ? ? 59 E8 ? ? ? ? 8A 4D F5 89 86 F8 00 00 00 8B 45 D0 C1 E8 16");
+    injector::MakeCALL(cpuClock.get_first(), EstimateCpuClock, true);
+
     auto scriptImages = hook::make_module_pattern(GetModuleHandle(L"CrySystem"), "83 7D F8 00 74 10 8B 4F 1C 8B 01 68 00 01 00 00 FF 90 38 02 00 00").count(4);
     for (size_t i = 0; i < ScriptImageReturns.size(); ++i)
         ScriptImageReturns[i] = scriptImages.get(i).get<void>(0);

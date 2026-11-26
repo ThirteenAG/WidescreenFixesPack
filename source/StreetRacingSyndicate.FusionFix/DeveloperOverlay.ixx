@@ -43,6 +43,9 @@ export namespace SRSOverlay
 
     inline void Init()
     {
+        // The overlay's input hooks exist only in Debug builds
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         auto poll = hook::pattern("51 53 56 8B F1 8B 46 08 8B 08 57 50 FF 51 1C 8B 46 1C 8B 10 50 FF 52 1C");
         PollHook = safetyhook::create_inline(poll.get_first(), Poll);
     }
@@ -73,6 +76,8 @@ export namespace SRSOverlay
 
     inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         // The hotkey itself is read at the frame boundary
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
@@ -96,6 +101,8 @@ export namespace SRSOverlay
 
     inline void Present(IDirect3DDevice9* device, HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!device)
             return;
         static const bool page = []()
@@ -123,29 +130,12 @@ export namespace SRSOverlay
             Overlay.SetOpen(!Overlay.IsOpen());
         HotkeyDown = down;
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
         XINPUT_STATE state{};
         DWORD slot = 0;
         const bool present = PadInput::Read(state, slot);
-        uint16_t mapped = 0;
-        if (present)
-        {
-            const auto buttons = state.Gamepad.wButtons;
-            const auto map = [&](WORD source, uint16_t target) { if (buttons & source) mapped |= target; };
-            map(XINPUT_GAMEPAD_BACK, 0x1);
-            map(XINPUT_GAMEPAD_START, 0x8);
-            map(XINPUT_GAMEPAD_DPAD_UP, 0x10);
-            map(XINPUT_GAMEPAD_DPAD_RIGHT, 0x20);
-            map(XINPUT_GAMEPAD_DPAD_DOWN, 0x40);
-            map(XINPUT_GAMEPAD_DPAD_LEFT, 0x80);
-            map(XINPUT_GAMEPAD_LEFT_SHOULDER, 0x400);
-            map(XINPUT_GAMEPAD_RIGHT_SHOULDER, 0x800);
-            map(XINPUT_GAMEPAD_Y, 0x1000);
-            map(XINPUT_GAMEPAD_B, 0x2000);
-            map(XINPUT_GAMEPAD_A, 0x4000);
-            map(XINPUT_GAMEPAD_X, 0x8000);
-        }
-        Overlay.Gamepad(mapped, present ? static_cast<int8_t>(state.Gamepad.sThumbLX / 256) : 0,
-            present ? static_cast<int8_t>(-state.Gamepad.sThumbLY / 256) : 0);
+        Overlay.Gamepad(present ? PadInput::OverlayButtons(state.Gamepad.wButtons) : 0,
+            present ? PadInput::OverlayAxis(state.Gamepad.sThumbLX) : 0, present ? PadInput::OverlayAxis(-int(state.Gamepad.sThumbLY)) : 0);
     }
 }

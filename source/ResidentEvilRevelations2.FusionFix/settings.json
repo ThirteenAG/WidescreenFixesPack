@@ -109,7 +109,7 @@
       ],
       "label": "@cutscene",
       "description": "@cutscene.description",
-      "page": "camera",
+      "page": "display",
       "visibility": "menu",
       "apply": "live",
       "control": [
@@ -151,7 +151,12 @@
           "value": "32:9",
           "label": "32:9"
         }
-      ]
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.FPSLimit",

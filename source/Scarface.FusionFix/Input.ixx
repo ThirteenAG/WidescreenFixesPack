@@ -22,25 +22,13 @@ class OptionManager
 {
 public:
     static inline bool bGamepadUsed = false;
-    static inline const float* GamepadCameraSpeed = nullptr;
-    static inline const float* VehicleCameraRecenterDelay = nullptr;
-    static inline const float* OnFootCameraRecenterDelay = nullptr;
-    static inline const int* WalkKey = nullptr;
+    static inline std::atomic<float> GamepadCameraSpeed{ 1.0f };
+    static inline std::atomic<float> VehicleCameraRecenterDelay{ 3.0f };
+    static inline std::atomic<float> OnFootCameraRecenterDelay{ 0.0f };
+    static inline std::atomic<int> WalkKey{ 0 };
     static inline uint32_t nVehicleCameraAimHoldOffset = 0;
     static inline bool (*pScarfaceHook_GetMenuActive)() = nullptr;
     static inline bool (*NativeMenuActive)() = nullptr;
-
-    static inline float GetVehicleCameraRecenterDelay()
-    {
-        return VehicleCameraRecenterDelay && std::isfinite(*VehicleCameraRecenterDelay)
-            ? std::clamp(*VehicleCameraRecenterDelay, 0.0f, 60.0f) : 3.0f;
-    }
-
-    static inline float GetOnFootCameraRecenterDelay()
-    {
-        return OnFootCameraRecenterDelay && std::isfinite(*OnFootCameraRecenterDelay)
-            ? std::clamp(*OnFootCameraRecenterDelay, 0.0f, 60.0f) : 0.0f;
-    }
 
     static inline void RecordGamepadMotion(float x, float y)
     {
@@ -53,8 +41,7 @@ public:
         _fxsave(state);
         const float horizontal = *x, vertical = *y;
         RecordGamepadMotion(horizontal, vertical);
-        const float speed = GamepadCameraSpeed && std::isfinite(*GamepadCameraSpeed)
-            ? std::clamp(*GamepadCameraSpeed, 0.1f, 5.0f) : 1.0f;
+        const float speed = GamepadCameraSpeed.load();
         if (std::isfinite(horizontal))
             *x = horizontal * speed;
         if (std::isfinite(vertical))
@@ -92,12 +79,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
     ControllerPrompts::OnMessage(hWnd, Msg, wParam, lParam);
     if (Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam))
         ScarfaceRawMouse::Clear();
-    static bool bOnce = false;
-    if (!bOnce)
-    {
-        RawCursorHandler<float>::Initialize(hWnd, 1.0f);
-        bOnce = true;
-    }
+    if (Msg == WM_NCDESTROY || Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam))
+        ScarfaceRawMouse::UnbindCursor(hWnd);
 
     return shWndProc.unsafe_stdcall<LRESULT>(hWnd, Msg, wParam, lParam);
 }
@@ -166,7 +149,7 @@ char __fastcall GenericVehicleCamera_ApplyRightStickMotion(float* mInputs, void*
     // if the vehicle stops before the delay expires.
     if (ret)
         temporaryAimHold = false;
-    const bool active = ret || mouseMoved || timeSinceLook < OptionManager::GetVehicleCameraRecenterDelay();
+    const bool active = ret || mouseMoved || timeSinceLook < OptionManager::VehicleCameraRecenterDelay.load();
     if (active && !ret && !aimHold)
         temporaryAimHold = true;
     if (!active && temporaryAimHold)
@@ -227,7 +210,7 @@ namespace OnFootCamera
     uint8_t* __fastcall Follow(uint8_t* camera, void* edx, uint8_t* output, float deltaTime)
     {
         auto result = hbFollow.fun(camera, edx, output, deltaTime);
-        if (camera == Camera && TimeSinceLook < OptionManager::GetOnFootCameraRecenterDelay())
+        if (camera == Camera && TimeSinceLook < OptionManager::OnFootCameraRecenterDelay.load())
         {
             auto angles = reinterpret_cast<float*>(output + 0x0C);
             const auto last = reinterpret_cast<const float*>(camera + LastAngleXZ);
@@ -250,7 +233,7 @@ namespace WalkInput
     {
         hbUpdate.fun(input, edx, actionMap);
 
-        const int key = OptionManager::WalkKey ? *OptionManager::WalkKey : 0;
+        const int key = OptionManager::WalkKey.load();
         if (key <= 0 || key > 0xFE || !(GetAsyncKeyState(key) & 0x8000))
             return;
         if (ScarfaceOverlayInput::BlocksInput() || !hWndInput.is_initialized() || !hWndInput.get() ||
@@ -269,10 +252,27 @@ void Init()
 {
     auto& settings = FixSettings();
     auto bScrollWeaponsWithMouseWheel = settings.Bool("MAIN.ScrollWeaponsWithMouseWheel");
-    OptionManager::GamepadCameraSpeed = &settings.Float("MAIN.GamepadCameraSpeed");
-    OptionManager::VehicleCameraRecenterDelay = &settings.Float("MAIN.VehicleCameraRecenterDelay");
-    OptionManager::OnFootCameraRecenterDelay = &settings.Float("MAIN.OnFootCameraRecenterDelay");
-    OptionManager::WalkKey = &settings.Int("MAIN.WalkKey");
+    auto publish = []()
+    {
+        static std::mutex mutex;
+        std::lock_guard lock(mutex);
+        auto& settings = FixSettings();
+        auto readFloat = [&](const char* key, float fallback, float minimum, float maximum)
+        {
+            const auto text = settings.Get(key);
+            float value = fallback;
+            std::from_chars(text.data(), text.data() + text.size(), value);
+            return std::isfinite(value) ? std::clamp(value, minimum, maximum) : fallback;
+        };
+        OptionManager::GamepadCameraSpeed.store(readFloat("MAIN.GamepadCameraSpeed", 1.0f, 0.1f, 5.0f));
+        OptionManager::VehicleCameraRecenterDelay.store(readFloat("MAIN.VehicleCameraRecenterDelay", 3.0f, 0.0f, 60.0f));
+        OptionManager::OnFootCameraRecenterDelay.store(readFloat("MAIN.OnFootCameraRecenterDelay", 0.0f, 0.0f, 60.0f));
+        OptionManager::WalkKey.store(std::atoi(settings.Get("MAIN.WalkKey").c_str()));
+    };
+    for (const char* key : { "MAIN.GamepadCameraSpeed", "MAIN.VehicleCameraRecenterDelay", "MAIN.OnFootCameraRecenterDelay", "MAIN.WalkKey" })
+        settings.OnChange(key, publish);
+    publish();
+
     auto menu = hook::pattern("E8 ? ? ? ? 84 C0 75 A4");
     OptionManager::NativeMenuActive = reinterpret_cast<decltype(OptionManager::NativeMenuActive)>(injector::GetBranchDestination(menu.get_first()).as_int());
 
@@ -431,7 +431,7 @@ void Init()
             ScarfaceProfile::Update();
         }
     });
-    ScarfaceRawMouse::Install(settings.Int("MAIN.RawInputMouse"), settings.Float("MAIN.MouseSensitivity"), &hWndInput);
+    ScarfaceRawMouse::Install(&hWndInput);
     WFP::onShutdownEvent() += []()
     {
         ScarfaceProfile::Shutdown();

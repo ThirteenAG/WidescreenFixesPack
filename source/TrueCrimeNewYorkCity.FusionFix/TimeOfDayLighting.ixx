@@ -151,10 +151,10 @@ public:
         {
             using namespace TimeOfDayLighting;
 
-            // The type lookup by name hash
-            auto pattern = hook::pattern("8B 44 24 14 85 C0 56 8B F1 74 16 50 E8 ? ? ? ? 83 C4 04 50 B9 ? ? ? ? E8");
-            HashName = reinterpret_cast<decltype(HashName)>(injector::GetBranchDestination(pattern.get_first(12)).as_int());
-            pObjectTypes.SetAddress(*pattern.get_first<TypeNode**>(22));
+            // A type lookup by name hash: the hash function and the type list
+            auto pattern = hook::pattern("E8 ? ? ? ? 83 C4 04 50 B9 ? ? ? ? E8 ? ? ? ? 89 86 10 01 00 00");
+            HashName = reinterpret_cast<decltype(HashName)>(injector::GetBranchDestination(pattern.get_first()).as_int());
+            pObjectTypes.SetAddress(*pattern.get_first<TypeNode**>(10));
 
             // Per frame: interior flag, the world's time-of-day update
             pattern = hook::pattern("A1 ? ? ? ? 8A 88 ? ? ? ? 3A CB 74 0C 38 98 ? ? ? ? 75 04 32 C0 EB 02 B0 01 50 3A CB 0F 94 C0 B9 ? ? ? ? 50 68");

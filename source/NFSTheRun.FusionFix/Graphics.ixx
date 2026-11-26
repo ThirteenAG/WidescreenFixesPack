@@ -53,7 +53,7 @@ namespace
     void* __fastcall GetContainer(void* manager, void* edx, void* typeInfo)
     {
         void* object = GetContainerHook.unsafe_fastcall<void*>(manager, edx, typeInfo);
-        if (!object || !typeInfo)
+        if (!object || !typeInfo || (!nShadowResolution.load() && !nAnisotropy.load()))
             return object;
 
         auto data = *reinterpret_cast<const fb::Settings::ClassInfoData**>(typeInfo);

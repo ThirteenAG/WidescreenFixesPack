@@ -48,6 +48,8 @@ export namespace GodfatherOverlay
 
     bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -74,6 +76,8 @@ export namespace GodfatherOverlay
 
     void Keyboard(HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         const bool focused = window && GetForegroundWindow() == window;
         if (!focused)
             nativeHotkey.store(0, std::memory_order_relaxed);
@@ -98,6 +102,8 @@ export namespace GodfatherOverlay
 
     void Draw(IDirect3DDevice9* device)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!device)
             return;
         static const bool page = []()
@@ -120,7 +126,8 @@ export namespace GodfatherOverlay
             return true;
         }();
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
     }
 
     SafetyHookMid inputHook, eventsHook;
@@ -207,12 +214,15 @@ export namespace GodfatherOverlay
         auto next = hook::pattern("8B 4B 3C 8B 01 FF 50 18 85 C0 75 A7");
         auto pc = hook::pattern("83 EC 08 53 56 8B F1 66 8B 86 F6 04 00 00 33 DB 66 89 86 F8 04 00 00 38 9E 44 05 00 00");
         nextEvent = next.get_first();
-        inputHook = safetyhook::create_mid(input.get_first(), Filter, SafetyHookMid::StartDisabled);
-        eventsHook = safetyhook::create_mid(events.get_first(), Event, SafetyHookMid::StartDisabled);
-        pcHook = safetyhook::create_inline(pc.get_first(), Poll, SafetyHookInline::StartDisabled);
-        (void)inputHook.enable();
-        (void)eventsHook.enable();
-        (void)pcHook.enable();
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            inputHook = safetyhook::create_mid(input.get_first(), Filter, SafetyHookMid::StartDisabled);
+            eventsHook = safetyhook::create_mid(events.get_first(), Event, SafetyHookMid::StartDisabled);
+            pcHook = safetyhook::create_inline(pc.get_first(), Poll, SafetyHookInline::StartDisabled);
+            (void)inputHook.enable();
+            (void)eventsHook.enable();
+            (void)pcHook.enable();
+        }
         GodfatherInput::blocked = BlocksInput;
         GodfatherWindow::blocksInput = BlocksInput;
         const auto message = GodfatherWindow::message;
@@ -236,7 +246,7 @@ export namespace GodfatherOverlay
                 frame(device);
             Keyboard(GodfatherWindow::window);
             Draw(device);
-            CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !BlocksInput());
+            CursorConfinement::SetEnabled(GodfatherWindow::confineCursor.load(std::memory_order_relaxed) && !BlocksInput());
         };
     }
 }

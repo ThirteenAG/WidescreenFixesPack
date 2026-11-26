@@ -1,20 +1,110 @@
 module;
 
 #include <stdafx.h>
+#include <array>
+#include <mutex>
 #include "FixSettings.hpp"
 #include "LEDEffects.h"
 
 export module LightSync;
 
-// Logitech LIGHTSYNC (MAIN.LightSyncRGB): Rebecca's health on the left side of the keyboard, Billy's on the right, as
-// colours and cardiograms, purple when poisoned.
+import EngineText;
 
 namespace
 {
-    // The characters, taken from the game's health setter (health at +0x1030, character id at +0x100: 3 Rebecca,
-    // 5 Billy)
-    uint32_t* sPlayer1Ptr = nullptr;
-    uint32_t* sPlayer2Ptr = nullptr;
+    struct PlayerStatus
+    {
+        bool present{};
+        int health{};
+        bool poisoned{};
+    };
+
+    GameRef<void*> players;
+    std::mutex stateMutex;
+    std::array<PlayerStatus, 2> playerStatus;
+
+    void SamplePlayers()
+    {
+        if (!LEDEffects::bLogiLedInitialized)
+            return;
+
+        std::array<PlayerStatus, 2> snapshot{};
+        if (const auto manager = players.get())
+        {
+            // The stage owns the player and partner slots. Identify each character after a control swap.
+            for (const auto slot : { 0x2C, 0x3C })
+            {
+                const auto player = RE0Text::Read<void*>(manager, slot);
+                if (!player)
+                    continue;
+                const auto id = RE0Text::Read<uint32_t>(player, 0x100);
+                if (id == 3 || id == 5)
+                {
+                    snapshot[id == 5] = {
+                        true,
+                        RE0Text::Read<int32_t>(player, 0x1030),
+                        RE0Text::Read<int32_t>(player, 0x68C4) == 1
+                    };
+                }
+            }
+        }
+
+        const std::lock_guard lock(stateMutex);
+        playerStatus = snapshot;
+    }
+
+    void UpdateSide(const PlayerStatus& player, bool left)
+    {
+        const bool dead = player.present && player.health <= 1;
+        const bool danger = player.health < 40;
+        const bool caution = player.health < 130;
+        const auto [red, green, blue] = !player.present ? std::array{ 64, 20, 8 } :
+            dead ? std::array{ 26, 4, 4 } :
+            player.poisoned ? std::array{ 51, 4, 53 } :
+            danger ? std::array{ 26, 4, 4 } :
+            caution ? std::array{ 50, 30, 4 } : std::array{ 10, 30, 4 };
+
+        if (left)
+            LEDEffects::SetLightingLeftSide(red, green, blue, player.present && !dead, dead);
+        else
+            LEDEffects::SetLightingRightSide(red, green, blue, player.present && !dead, dead);
+
+        if (player.present)
+        {
+            const auto draw = left ? LEDEffects::DrawCardiogram : LEDEffects::DrawCardiogramNumpad;
+            draw(danger ? 100 : caution ? 67 : 0, caution ? 0 : 100, 0, 0, 0, 0, dead);
+        }
+    }
+
+    void UpdateLighting()
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        std::array<PlayerStatus, 2> snapshot;
+        {
+            const std::lock_guard lock(stateMutex);
+            snapshot = playerStatus;
+        }
+
+        if (snapshot[0].present || snapshot[1].present)
+        {
+            UpdateSide(snapshot[0], true);
+            UpdateSide(snapshot[1], false);
+        }
+        else
+        {
+            LogiLedStopEffects();
+            LEDEffects::SetLighting(64, 20, 8);
+        }
+    }
+}
+
+export namespace RE0LightSync
+{
+    void Sample()
+    {
+        SamplePlayers();
+    }
 }
 
 class LightSync
@@ -27,112 +117,10 @@ public:
             if (!FixSettings().Bool("MAIN.LightSyncRGB"))
                 return;
 
-            auto pattern = hook::pattern("E8 ? ? ? ? 8B CE E8 ? ? ? ? 85 C0 75 09");
-            static SafetyHookMid HealthHook = safetyhook::create_mid(injector::GetBranchDestination(pattern.get_first()).get_raw<void>(), [](SafetyHookContext& regs)
-            {
-                auto character = reinterpret_cast<uint32_t*>(regs.ecx);
-                if (character[0x40] == 3)
-                    sPlayer1Ptr = character;
-                else if (character[0x40] == 5)
-                    sPlayer2Ptr = character;
-            });
+            auto manager = hook::pattern("8B 0D ? ? ? ? 83 EC 08 85 C9 75 1B 68 ? ? ? ? 68 8B 01 00 00 68 ? ? ? ? E8 ? ? ? ? 8B 4C 24 0C 83 C4 0C E8 ? ? ? ? 8B C8 E8 ? ? ? ? 85 C0 7F 06 32 C0 83 C4 08 C3");
+            players.SetAddress(*manager.get_first<void**>(2));
 
-            LEDEffects::Inject([]()
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-                auto Player1ID = PtrWalkthrough<int32_t>(&sPlayer1Ptr, 0x100);
-                auto Player2ID = PtrWalkthrough<int32_t>(&sPlayer2Ptr, 0x100);
-                auto Player1Health = PtrWalkthrough<int32_t>(&sPlayer1Ptr, 0x1030);
-                auto Player2Health = PtrWalkthrough<int32_t>(&sPlayer2Ptr, 0x1030);
-                auto Player1Poisoned = PtrWalkthrough<int32_t>(&sPlayer1Ptr, 0x68C4);
-                auto Player2Poisoned = PtrWalkthrough<int32_t>(&sPlayer2Ptr, 0x68C4);
-
-                if (Player1ID && *Player1ID == 3 && Player1Health && Player1Poisoned)
-                {
-                    auto health1 = *Player1Health;
-                    auto poisoned1 = *Player1Poisoned == 1;
-                    if (health1 > 1)
-                    {
-                        if (health1 < 40)
-                        {
-                            if (!poisoned1)
-                                LEDEffects::SetLightingLeftSide(26, 4, 4, true, false); //red
-                            else
-                                LEDEffects::SetLightingLeftSide(51, 4, 53, true, false); //purple
-                            LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0); //red
-                        }
-                        else if (health1 < 130)
-                        {
-                            if (!poisoned1)
-                                LEDEffects::SetLightingLeftSide(50, 30, 4, true, false); //orange
-                            else
-                                LEDEffects::SetLightingLeftSide(51, 4, 53, true, false); //purple
-                            LEDEffects::DrawCardiogram(67, 0, 0, 0, 0, 0); //orange
-                        }
-                        else
-                        {
-                            if (!poisoned1)
-                                LEDEffects::SetLightingLeftSide(10, 30, 4, true, false);  //green
-                            else
-                                LEDEffects::SetLightingLeftSide(51, 4, 53, true, false);  //purple
-                            LEDEffects::DrawCardiogram(0, 100, 0, 0, 0, 0); //green
-                        }
-                    }
-                    else
-                    {
-                        LEDEffects::SetLightingLeftSide(26, 4, 4, false, true); //red
-                        LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
-                    }
-
-                    if (Player2ID && *Player2ID == 5 && Player2Health && Player2Poisoned)
-                    {
-                        auto health2 = *Player2Health;
-                        auto poisoned2 = *Player2Poisoned == 1;
-                        if (health2 > 1)
-                        {
-                            if (health2 < 40)
-                            {
-                                if (!poisoned2)
-                                    LEDEffects::SetLightingRightSide(26, 4, 4, true, false); //red
-                                else
-                                    LEDEffects::SetLightingRightSide(51, 4, 53, true, false); //purple
-                                LEDEffects::DrawCardiogramNumpad(100, 0, 0, 0, 0, 0); //red
-                            }
-                            else if (health2 < 130)
-                            {
-                                if (!poisoned2)
-                                    LEDEffects::SetLightingRightSide(50, 30, 4, true, false); //orange
-                                else
-                                    LEDEffects::SetLightingRightSide(51, 4, 53, true, false); //purple
-                                LEDEffects::DrawCardiogramNumpad(67, 0, 0, 0, 0, 0); //orange
-                            }
-                            else
-                            {
-                                if (!poisoned2)
-                                    LEDEffects::SetLightingRightSide(10, 30, 4, true, false);  //green
-                                else
-                                    LEDEffects::SetLightingRightSide(51, 4, 53, true, false);  //purple
-                                LEDEffects::DrawCardiogramNumpad(0, 100, 0, 0, 0, 0); //green
-                            }
-                        }
-                        else
-                        {
-                            LEDEffects::SetLightingRightSide(26, 4, 4, false, true); //red
-                            LEDEffects::DrawCardiogramNumpad(100, 0, 0, 0, 0, 0, true);
-                        }
-                    }
-                    else
-                    {
-                        LEDEffects::SetLightingRightSide(64, 20, 8); // rebecca's red cross
-                    }
-                }
-                else
-                {
-                    LogiLedStopEffects();
-                    LEDEffects::SetLighting(64, 20, 8); // rebecca's red cross
-                }
-            });
+            LEDEffects::Inject(UpdateLighting);
         };
     }
 } LightSync;

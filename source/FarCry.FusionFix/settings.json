@@ -126,7 +126,8 @@
       "visibility": "menu",
       "suggestions": [
         {
-          "value": "Auto"
+          "value": "Auto",
+          "label": "@hudaspect.auto"
         },
         {
           "value": "4:3"
@@ -140,7 +141,12 @@
         {
           "value": "32:9"
         }
-      ]
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.FOVFactor",
@@ -293,9 +299,14 @@
       "id": "MAIN.FPSLimit",
       "type": "int",
       "default": 60,
-      "min": -1,
+      "min": 30,
       "max": 1000,
       "step": 1,
+      "unit": "fps",
+      "special": [
+        { "value": 0, "label": "@fps.unlimited" },
+        { "value": -1, "label": "@fps.monitor" }
+      ],
       "label": "@MAIN.FPSLimit",
       "description": "@MAIN.FPSLimit.description",
       "page": "display",

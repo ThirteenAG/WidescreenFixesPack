@@ -8,10 +8,11 @@ export module Hud;
 
 import ComVars;
 import ButtonIcons;
+import Cutscene;
 
 export namespace BullyHud
 {
-    SafetyHookInline ComponentHook, TextHook, FlushHook, PointHook;
+    SafetyHookInline ComponentHook, TextHook, FlushHook, PointHook, TitleHook;
     std::array<SafetyHookMid, 4> VertexHooks;
     int* Width = nullptr;
     int* Height = nullptr;
@@ -26,7 +27,11 @@ export namespace BullyHud
         if (!Anchor || !Width || !Height || *Width <= 0 || *Height <= 0 || !Constraint)
             return 0.0f;
         const float aspect = console::parse_hud_aspect(Constraint->c_str());
-        const float box = aspect > 0.0f ? std::min(float(*Width), *Height * aspect) : float(*Width);
+        float box = aspect > 0.0f ? std::min(float(*Width), *Height * aspect) : float(*Width);
+        // During a pillarboxed cutscene the HUD stays inside the picture
+        const auto cutscene = BullyCutscene::Calculate(BullyCutscene::Aspect ? *BullyCutscene::Aspect : float(*Width) / *Height);
+        if (cutscene.side > 0.0f)
+            box = std::min(box, *Width * (1.0f - cutscene.side / 320.0f));
         return (*Width - box) * 0.5f;
     }
 
@@ -87,6 +92,14 @@ export namespace BullyHud
         const char result = TextHook.ccall<char>(x + offset, y, first, last, spacing);
         --TextDepth;
         return result;
+    }
+
+    // The area title ("Welcome to Bullworth") is drawn outside the HUD components; it sits at the right side
+    void __cdecl Title()
+    {
+        const int previous = std::exchange(Anchor, 1);
+        TitleHook.ccall<void>();
+        Anchor = previous;
     }
 
     void __cdecl Flush()
@@ -179,6 +192,7 @@ export namespace BullyHud
         PointHook.reset();
         TextHook.reset();
         FlushHook.reset();
+        TitleHook.reset();
         for (auto& vertex : VertexHooks)
             vertex.reset();
     }
@@ -195,6 +209,7 @@ export namespace BullyHud
         auto batch = hook::module_pattern(module, "83 C6 01 89 35 ? ? ? ? 81 FE F4 01 00 00 5E 7C 08");
         auto polygon = hook::module_pattern(module, "D9 04 CE 83 C1 01 D8 0D ? ? ? ? 83 C0 18 D9 58 E0 D9 44 CE FC D8 0D");
         auto point = hook::module_pattern(module, "51 83 3D ? ? ? ? 00 74 71 D9 05 ? ? ? ? A1 ? ? ? ? D8 4C 24 08");
+        auto title = hook::module_pattern(module, "D9 EE 83 EC 48 D9 C0 D9 05 ? ? ? ? DD E1 DF E0 DD D9 F6 C4 44 0F 8B ? ? ? ? 80 3D ? ? ? ? 00 75");
         Width = &width;
         Height = &height;
         Constraint = &constraint;
@@ -204,6 +219,7 @@ export namespace BullyHud
         ComponentHook = safetyhook::create_inline(component.get_first(), Draw);
         TextHook = safetyhook::create_inline(text.get_first(), Text);
         FlushHook = safetyhook::create_inline(flush.get_first(), Flush);
+        TitleHook = safetyhook::create_inline(title.get_first(), Title);
         VertexHooks[0] = safetyhook::create_mid(rectangle.get_first(), [](SafetyHookContext& regs)
         {
             regs.edi = BullyIcons::Texture(regs.edi);

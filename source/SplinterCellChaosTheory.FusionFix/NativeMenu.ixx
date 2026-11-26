@@ -75,7 +75,7 @@ export namespace CTMenu
     }
     inline std::string Language()
     {
-        auto language = FixSettings().String("MAIN.TextLanguage");
+        auto language = FixSettings().Get("MAIN.TextLanguage");
         if (!language.empty() && language != "auto") return language;
         auto native = getLanguage ? getLanguage() : nullptr;
         if (!native) return "en";
@@ -586,8 +586,10 @@ inline void BeginDetails()
                     Read<void*>(host.list, offset + 12), offset == 36 ? templates->pages[0] : Read<void*>(host.list, offset + 8));
             }
         }
-        auto sourcePoint = Read<void*>(host.list, 4), targetPoint = Read<void*>(list, 4);
-        Set<uint32_t>(targetPoint, 4, Read<uint32_t>(sourcePoint, 4));
+        auto targetPoint = Read<void*>(list, 4);
+        // The source menu may already have faded out behind Settings.
+        // The private list's parent tint must leave its native row colors intact.
+        Set<uint32_t>(targetPoint, 4, 0xFFFFFFFFu);
         Set<uint32_t>(targetPoint, 8, uint16_t(70) | (uint32_t(110) << 16));
         Set<int8_t>(list, 164, Read<int8_t>(host.list, 164));
         Set<uint8_t>(list, 166, 12);
@@ -785,8 +787,20 @@ inline void BeginDetails()
         if (screen && stack == screen->stack && page != screen->page) Close();
         pushHook.thiscall<void>(stack, page, modal, priority);
     }
+    struct LoadingPrompt
+    {
+        static inline thread_local LoadingPrompt* active = nullptr;
+        LoadingPrompt* previous = active;
+        void* page = nullptr;
+        void* controller = nullptr;
+        LoadingPrompt() { active = this; }
+        ~LoadingPrompt() { active = previous; }
+    };
     inline int __fastcall PageDestroyed(void* page, void*)
     {
+        for (auto prompt = LoadingPrompt::active; prompt; prompt = prompt->previous)
+            if (prompt->page == page)
+                prompt->page = nullptr;
         CTSettings::Forget(page);
         RetireSettings(page);
         // Unlink before the source package frees the prototypes borrowed by our
@@ -819,6 +833,50 @@ inline void BeginDetails()
             DestroyPage(old.page); return true;
         });
         return stackDestructorHook.thiscall<int>(stack);
+    }
+    inline SafetyHookInline loadingMessageHook, gameFlowHook;
+
+    inline int __fastcall LoadingMessage(void* controller, void*, char completed)
+    {
+        auto result = loadingMessageHook.thiscall<int>(controller, completed);
+        if (auto prompt = LoadingPrompt::active)
+        {
+            prompt->page = completed ? Read<void*>(controller, 4) : nullptr;
+            prompt->controller = completed ? controller : nullptr;
+        }
+        return result;
+    }
+    inline void __fastcall GameFlow(void* flow, void*, int event, wchar_t* argument)
+    {
+        constexpr int loadComplete = 26, waitForInput = 15;
+        if (event != loadComplete && (event || Read<int>(flow, 152) != loadComplete))
+        {
+            gameFlowHook.thiscall<void>(flow, event, argument);
+            return;
+        }
+        LoadingPrompt prompt;
+        gameFlowHook.thiscall<void>(flow, event, argument);
+        if (!prompt.page || Read<int>(flow, 152) != waitForInput)
+            return;
+        static const auto catcherID = crc32(0, "B_EventsCatcher", 15);
+        auto catcher = CTSettings::findChild(prompt.page, nullptr, catcherID);
+        if (catcher)
+        {
+            // The loading page's input callback advances game flow and closes
+            // the page together, after the native completion event unwinds.
+            auto callback = static_cast<uint8_t*>(prompt.controller) + 8;
+            auto accept = reinterpret_cast<char (__fastcall*)(void*, void*, void*, void*)>(Read<void**>(callback, 0)[6]);
+            accept(callback, nullptr, catcher, nullptr);
+        }
+    }
+    inline void EnableSkipLoadingPrompt()
+    {
+        auto message = hook::pattern("53 8A 5C 24 08 84 DB 56 6A 01 8B F1 68 ? ? ? ? 74");
+        auto dispatch = hook::pattern("8B 44 24 04 83 EC 0C 85 C0 53 56 57 8B F1 74 06 89 86 98 00 00 00");
+        loadingMessageHook = safetyhook::create_inline(message.get_first(), LoadingMessage);
+        gameFlowHook = safetyhook::create_inline(dispatch.get_first(), GameFlow);
+        if (!loadingMessageHook || !gameFlowHook)
+            throw std::runtime_error("Loading confirmation hook unavailable");
     }
     inline void Tick(void* page)
     {
@@ -856,7 +914,7 @@ export namespace CTMenu
         std::map<std::string, void*> found;
         auto MenuMouseMove = hook::pattern("8B 51 04 85 D2 56 8B 74 24 08 8B 46 04 89 41 16 74 0E 8B 49 08 8B C1 2B C2 C1 F8 03 85 C0 75 06 32 C0 5E C2 04 00 8B 49 F8 56 E8 41 E4 00 00 5E");
         moveMouse = reinterpret_cast<decltype(moveMouse)>(MenuMouseMove.get_first());
-        auto NativeLanguageCaller = hook::pattern("53 55 57 8B BC 24 24 02 00 00 85 FF 75 07 E8 3F AD 00 00 8B F8 8B 9C 24 20 02 00 00 8B AC 24 1C");
+        auto NativeLanguageCaller = hook::pattern("53 55 57 8B BC 24 24 02 00 00 85 FF 75 07 E8 ? ? ? ? 8B F8 8B 9C 24 20 02 00 00 8B AC 24 1C");
         getLanguage = reinterpret_cast<decltype(getLanguage)>(injector::GetBranchDestination(NativeLanguageCaller.get_first(14)).as_int());
         auto StackPush = hook::pattern("83 EC 08 53 56 8B F1 8B 4E 04 85 C9 57 75 04 33 FF EB 20 8B 7E 08 2B F9 C1 FF 03 85 FF 7E 14 8D");
         found["StackPush"] = StackPush.get_first();
@@ -894,15 +952,15 @@ export namespace CTMenu
         found["PageDtor"] = PageDtor.get_first();
         auto ResetFocus = hook::pattern("51 53 55 56 8B 74 24 14 32 DB 33 ED 57 89 6C 24 10 89 6E 24 8B 4E 08 85 C9 75 04 33 C0 EB 08 8B");
         found["ResetFocus"] = ResetFocus.get_first();
-        auto PauseBuilder = hook::pattern("56 6A 01 68 ? ? ? ? 68 ? ? ? ? 8B F1 8B 46 38 68 ? ? ? ? 68 ? ? ? ? 50 E8 1E B3");
-        found["PauseBuilder"] = PauseBuilder.get_first();
-        auto Title72 = hook::pattern("83 EC 0C 53 55 56 57 6A 01 68 ? ? ? ? 68 ? ? ? ? 8B F1 8B 46 38 68 ? ? ? ? 68 ? ? ? ? 50 E8 08 96 01 00 6A 01 6A 00 6A 00 68 ? ? ? ? 68 ? ? ? ? 68 ? ? ? ? E8 FE 38");
-        found["Title72"] = Title72.get_first();
+        auto PauseBuilder = hook::pattern("B0 01 5E C3 32 C0 5E C3 CC CC CC CC 56 6A 01 68 ? ? ? ? 68 ? ? ? ? 8B F1 8B 46 38 68 ? ? ? ? 68 ? ? ? ?");
+        found["PauseBuilder"] = PauseBuilder.get_first(12);
+        auto Title72 = hook::pattern("5F 5E C3 CC CC CC CC 83 EC 0C 53 55 56 57 6A 01 68 ? ? ? ? 68 ? ? ? ? 8B F1 8B 46 38 68 ? ? ? ? 68 ? ? ? ?");
+        found["Title72"] = Title72.get_first(7);
         auto ListCtor = hook::pattern("53 56 8B F1 8D 46 0C 89 46 04 C7 46 08 ? ? ? ? C7 06 ? ? ? ? C7 46 08 ? ? ? ? C7 00 ? ? ? ? 8B 0D ? ? ? ? 89 48 04 C7 00 ? ? ? ? 8B 15 ? ? ? ? 89 50 08 33 DB 8D 4E");
         found["ListCtor"] = ListCtor.get_first();
-        auto ListDtor = hook::pattern("51 53 56 8B F1 8B 46 7C 33 DB 3B C3 57 74 09 50 E8 6B D5 DA FF 83 C4 04 8D 7E 68 89 5E 7C 89 9E 80 00 00 00 89 9E 84 00 00 00 8B 47 04 3B C3 74 1C 8B 4C 24 0C 8B 57 08 51 57 52 50 E8 6F D9 FF");
+        auto ListDtor = hook::pattern("51 53 56 8B F1 8B 46 7C 33 DB 3B C3 57 74 09 50 E8 ? ? ? ? 83 C4 04 8D 7E 68 89 5E 7C 89 9E 80 00 00 00 89 9E 84 00 00 00 8B 47 04 3B C3 74 1C 8B 4C 24 0C 8B 57 08 51 57 52 50 E8 ? ? ?");
         found["ListDtor"] = ListDtor.get_first();
-        auto StyleCtor = hook::pattern("56 8B F1 6A 00 6A 20 C7 06 ? ? ? ? C7 46 08 00 00 00 00 C7 46 0C 00 00 00 00 E8 F0 4D DB FF 83 C4 08 85 C0 74 17 8B C8 E8 72 D0 03 00 6A 00 8B CE 89 46 10 E8 16 C0 00 00 8B C6 5E C3 33 C0");
+        auto StyleCtor = hook::pattern("56 8B F1 6A 00 6A 20 C7 06 ? ? ? ? C7 46 08 00 00 00 00 C7 46 0C 00 00 00 00 E8 ? ? ? ? 83 C4 08 85 C0 74 17 8B C8 E8 ? ? ? ? 6A 00 8B CE 89 46 10 E8 ? ? ? ? 8B C6 5E C3 33 C0");
         found["StyleCtor"] = StyleCtor.get_first();
         auto NativeMemory = hook::pattern("8B 44 24 08 85 C0 75 05 B8 ? ? ? ? 8B 0D ? ? ? ? 8B 11 50 8B 44 24 08 50 FF 12 C3 CC CC 8B 0D ? ? ? ? 8B 54");
         CTLayout::allocate = reinterpret_cast<decltype(CTLayout::allocate)>(NativeMemory.get_first());

@@ -24,7 +24,7 @@ private:
     struct Resources
     {
         IDirect3DSurface8* captureSurf = nullptr; // D3DPOOL_SYSTEMMEM — safe to CopyRects into
-        IDirect3DTexture8* renderTex = nullptr; // D3DPOOL_MANAGED   — safe for SetTexture, no RT state side-effects
+        IDirect3DTexture8* renderTex = nullptr; // D3DPOOL_MANAGED   — safe for SetTexture, no RT state side-effects, survives a reset
         int fbWidth = 0;
         int fbHeight = 0;
         size_t rowBytes = 0;
@@ -51,6 +51,7 @@ private:
 
 public:
     static bool CaptureFrame();
+    static bool RestoreFrame();
     static void RenderBlur();
     static void OnDeviceReset();
 };
@@ -93,6 +94,12 @@ void TransparentMenuDX8::InitResources(IDirect3DDevice8* dev)
     // and does NOT touch any render-target or transform internal state.
     if (FAILED(dev->CreateImageSurface(desc.Width, desc.Height, desc.Format, &s_res.captureSurf)))
         return;
+
+    if (s_res.renderTex)
+    {
+        s_res.renderTex->Release();
+        s_res.renderTex = nullptr;
+    }
 
     // Managed texture — no D3DUSAGE_RENDERTARGET, so the driver never
     // re-points its internal RT / transform matrix pointers on creation.
@@ -160,10 +167,37 @@ bool TransparentMenuDX8::CaptureFrame()
 void TransparentMenuDX8::RenderBlur()
 {
     if (!IsDeviceReady()) return;
-    if (!s_res.captureReady || !s_res.initialised || !s_res.renderTex) return;
+    if (!s_res.captureReady || !s_res.renderTex) return;
 
     auto* dev = GetDevice8();
     if (!dev) return;
+
+    // The captured picture may predate a reset that changed the back buffer size
+    IDirect3DSurface8* backBuffer = nullptr;
+    if (FAILED(dev->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &backBuffer)) || !backBuffer) return;
+    D3DSURFACE_DESC bbDesc{};
+    const HRESULT descResult = backBuffer->GetDesc(&bbDesc);
+    backBuffer->Release();
+    if (FAILED(descResult) || !bbDesc.Width || !bbDesc.Height) return;
+    const float screenW = static_cast<float>(bbDesc.Width);
+    const float screenH = static_cast<float>(bbDesc.Height);
+
+    // Crop the picture to the screen's aspect ratio
+    float u0 = 0.0f, u1 = 1.0f, v0 = 0.0f, v1 = 1.0f;
+    const float texAspect = static_cast<float>(s_res.fbWidth) / static_cast<float>(s_res.fbHeight);
+    const float screenAspect = screenW / screenH;
+    if (texAspect > screenAspect)
+    {
+        const float scale = screenAspect / texAspect;
+        u0 = (1.0f - scale) * 0.5f;
+        u1 = u0 + scale;
+    }
+    else if (texAspect < screenAspect)
+    {
+        const float scale = texAspect / screenAspect;
+        v0 = (1.0f - scale) * 0.5f;
+        v1 = v0 + scale;
+    }
 
     DWORD stateBlock = 0;
     if (FAILED(dev->CreateStateBlock(D3DSBT_ALL, &stateBlock)) || !stateBlock)
@@ -209,10 +243,10 @@ void TransparentMenuDX8::RenderBlur()
 
             ScreenVertex quad[4] =
             {
-                {0.0f,                              0.0f,                               0.0f, 1.0f, sampleColor, 0.0f + shiftU, 0.0f + shiftV},
-                {static_cast<float>(s_res.fbWidth), 0.0f,                               0.0f, 1.0f, sampleColor, 1.0f + shiftU, 0.0f + shiftV},
-                {static_cast<float>(s_res.fbWidth), static_cast<float>(s_res.fbHeight), 0.0f, 1.0f, sampleColor, 1.0f + shiftU, 1.0f + shiftV},
-                {0.0f,                              static_cast<float>(s_res.fbHeight), 0.0f, 1.0f, sampleColor, 0.0f + shiftU, 1.0f + shiftV}
+                {0.0f,    0.0f,    0.0f, 1.0f, sampleColor, u0 + shiftU, v0 + shiftV},
+                {screenW, 0.0f,    0.0f, 1.0f, sampleColor, u1 + shiftU, v0 + shiftV},
+                {screenW, screenH, 0.0f, 1.0f, sampleColor, u1 + shiftU, v1 + shiftV},
+                {0.0f,    screenH, 0.0f, 1.0f, sampleColor, u0 + shiftU, v1 + shiftV}
             };
 
             dev->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, quad, sizeof(ScreenVertex));
@@ -227,10 +261,10 @@ void TransparentMenuDX8::RenderBlur()
 
     ScreenVertex darkQuad[4] =
     {
-        {0.0f,                              0.0f,                               0.0f, 1.0f, darkColor, 0.0f, 0.0f},
-        {static_cast<float>(s_res.fbWidth), 0.0f,                               0.0f, 1.0f, darkColor, 0.0f, 0.0f},
-        {static_cast<float>(s_res.fbWidth), static_cast<float>(s_res.fbHeight), 0.0f, 1.0f, darkColor, 0.0f, 0.0f},
-        {0.0f,                              static_cast<float>(s_res.fbHeight), 0.0f, 1.0f, darkColor, 0.0f, 0.0f}
+        {0.0f,    0.0f,    0.0f, 1.0f, darkColor, 0.0f, 0.0f},
+        {screenW, 0.0f,    0.0f, 1.0f, darkColor, 0.0f, 0.0f},
+        {screenW, screenH, 0.0f, 1.0f, darkColor, 0.0f, 0.0f},
+        {0.0f,    screenH, 0.0f, 1.0f, darkColor, 0.0f, 0.0f}
     };
 
     dev->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, darkQuad, sizeof(ScreenVertex));
@@ -241,22 +275,19 @@ void TransparentMenuDX8::RenderBlur()
 
 void TransparentMenuDX8::OnDeviceReset()
 {
-    s_res.captureReady = false;
+    // The managed texture keeps the captured picture through the reset; only
+    // the copy surface depends on the back buffer size and is created again.
     s_res.initialised = false;
+    s_res.rowBytes = 0;
 
     if (s_res.captureSurf)
     {
         s_res.captureSurf->Release();
         s_res.captureSurf = nullptr;
     }
+}
 
-    if (s_res.renderTex)
-    {
-        s_res.renderTex->Release();
-        s_res.renderTex = nullptr;
-    }
-
-    s_res.fbWidth = 0;
-    s_res.fbHeight = 0;
-    s_res.rowBytes = 0;
+bool TransparentMenuDX8::RestoreFrame()
+{
+    return s_res.captureReady && s_res.renderTex;
 }

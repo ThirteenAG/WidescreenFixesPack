@@ -36,6 +36,7 @@ export GameRef<uint32_t> window_height;
 export GameRef<char*> pVideoDriver;             // the video driver's state (dmavideo)
 export GameRef<uint32_t> nMultiplayer;          // a network game
 export GameRef<void*> pGame;                    // the running game
+export GameRef<uint8_t> bAltKeyDown;             // the keyboard's Alt key is down (Alt+Space/Tab/Enter are ignored)
 export void* Replay = nullptr;                  // the replay recorder
 export bool (__fastcall* IsReplay)(void*, int) = nullptr;
 export char* FrontendMenu = nullptr;            // the frontend, while its input is processed
@@ -62,6 +63,7 @@ export GameRef<void*> gbh_DrawTriangle;
 export ProtectedGameRef<int> fullscreenWidth;
 export ProtectedGameRef<int> fullscreenHeight;
 export void (__cdecl* ReloadVideoMode)() = nullptr;
+export GameRef<uint8_t> bVideoModeChanged;             // the next video mode reload resets the mode
 export std::function<void()> PatchWindowMode;
 
 export template<class T> T& Field(void* object, size_t offset)

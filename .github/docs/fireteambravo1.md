@@ -17,7 +17,7 @@
 - **Cutscene borders** — Choose the sides on which scripted scenes may use borders.
 - **Frame rate** — Choose 30 or 60 FPS.
 - **Controller icons** — Choose Xbox, PlayStation or Nintendo button glyphs. Auto uses Xbox glyphs; PlayStation keeps the PSP originals.
-- **Skip intro** — Skip startup intros and routine one-button notices.
+- **Skip intro** — Automatically acknowledge the opening sequence of routine one-button notices.
 - **Dual analog controls** — Enable right-stick support.
 - **Loading** — Temporarily unthrottle the emulator during loading screens.
 
@@ -34,9 +34,11 @@
 
 Intro skipping, right-stick controls and faster loading are enabled by default. Settings are saved in `SOCOM.FireteamBravo.PPSSPP.FusionFix.cfg` beside the plugin.
 
-During a mission, pause and select **PLUGINS**. Use the shoulder buttons to change pages and Triangle for help. The menu identifies settings that require a restart. Choose rendering resolution and anti-aliasing in PPSSPP.
+During a mission, pause and select **PLUGINS**. Use the shoulder buttons to change pages and Triangle for help. Display, HUD, controller icons, menu language and frame-rate changes apply during gameplay from the menu or the configuration file. Intro skipping, dual analog and fast loading apply after restarting the emulated game. Choose rendering resolution and anti-aliasing in PPSSPP.
 
 Wider screens show more of the scene at the sides, and narrower ones more above and below. Menus and message boxes stay whole and centred at their original shape, scope views get black bars outside the scope picture, and the HUD moves to the screen edges or into the chosen HUD box.
+
+At 1× rendering resolution, PPSSPP's Linear screen scaling can show a one-pixel colored line on the outside of cutscene bars. Select **Nearest** under **Display layout & effects → Screen scaling filter** for fully black edges.
 
 Movies are shown whole at their own aspect ratio, with black bars at the sides on wider screens. The PSP movies match the PSP screen, so there is no separate movie setting.
 

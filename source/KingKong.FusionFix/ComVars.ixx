@@ -17,9 +17,7 @@ export struct Screen
     float fHudScale;
     float fHudOffset;
     float fCutOffArea;
-    float fFMVScale;
     bool bSignatureEdition;
-    float fRawInputMouse;
     float fTextScale;
     float fTextBox;
 } Screen;
@@ -30,6 +28,7 @@ export bool bVSync = true;
 export bool wasUsingLeftStick = false;
 export uint32_t gCurrentLevel = 0;
 export std::atomic<uint32_t> gMenuTick = 0;
+export void (*SignatureUpdateTick)() = nullptr;
 
 // Input
 export GameRef<float> aMouseX;

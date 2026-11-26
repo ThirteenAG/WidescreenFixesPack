@@ -16,10 +16,13 @@ import RawInput;
 namespace TCWindow
 {
     int Mode = 0;
-    HWND Window = nullptr;
+    std::atomic<HWND> Window{ nullptr };
     std::atomic_bool PauseOnFocusLoss{ true };
+    UINT FocusPolicyChanged = 0;
     SafetyHookInline ValidateHook, ProcedureHook;
     void (__cdecl* EnumerateModes)() = nullptr;
+    void (__cdecl* PauseForFocus)() = nullptr;
+    void (__cdecl* ResumeForFocus)() = nullptr;
     decltype(&CreateWindowExA) NativeCreateWindow = nullptr;
 
     RECT Monitor(HWND window)
@@ -99,6 +102,7 @@ namespace TCWindow
             else if (!active && !pause)
             {
                 // The game keeps running (and its sound playing) in the background
+                bAppInactive = false;
                 result = DefWindowProcA(window, message, wParam, lParam);
                 return true;
             }
@@ -159,18 +163,34 @@ namespace TCWindow
         LRESULT result = 0;
         if (TCOverlay::Message(window, message, wParam, lParam, result))
             return result;
-        if (message == WM_DESTROY)
+        if (FocusPolicyChanged && message == FocusPolicyChanged && window == Window.load(std::memory_order_relaxed))
+        {
+            const bool active = GetForegroundWindow() == window && !IsIconic(window);
+            bAppInactive = !active && PauseOnFocusLoss.load(std::memory_order_relaxed);
+            if (Mode != 0)
+            {
+                if (bAppInactive)
+                    PauseForFocus();
+                else
+                    ResumeForFocus();
+            }
+            return 0;
+        }
+        if (message == WM_DESTROY && window == Window.load(std::memory_order_relaxed))
+        {
+            SetRawInputWindow(nullptr);
+            Window.store(nullptr, std::memory_order_relaxed);
             RWGTA::UpdateCheck::OnExit();
+        }
         if (Message(window, message, wParam, lParam, result))
             return result;
-        RawInputWindow(window);
         return ProcedureHook.unsafe_fastcall<LRESULT>(self, edx, window, message, wParam, lParam);
     }
 
     HWND WINAPI CreateGameWindow(DWORD extended, LPCSTR name, LPCSTR title, DWORD style, int x, int y,
         int width, int height, HWND parent, HMENU menu, HINSTANCE instance, LPVOID parameter)
     {
-        const bool game = !Window && !parent;
+        const bool game = !Window.load(std::memory_order_relaxed) && !parent;
         if (game && Mode)
         {
             style = Mode == 2 ? WS_POPUP : WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
@@ -185,7 +205,8 @@ namespace TCWindow
             instance, parameter);
         if (game && result)
         {
-            Window = result;
+            Window.store(result, std::memory_order_relaxed);
+            SetRawInputWindow(result);
             Corners(result);
             WindowCursor::Attach(result);
         }
@@ -213,11 +234,17 @@ namespace TCWindow
     {
         auto& settings = FixSettings();
         Mode = std::clamp(settings.Int("MAIN.WindowMode"), 0, 2);
-        PauseOnFocusLoss.store(settings.Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
-        settings.OnChange("MAIN.PauseOnFocusLoss", []()
+        FocusPolicyChanged = RegisterWindowMessageW(L"TrueCrimeNewYorkCity.FusionFix.FocusPolicyChanged");
+        const auto publishPause = []()
         {
-            PauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
-        });
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            PauseOnFocusLoss.store(FixSettings().Get("MAIN.PauseOnFocusLoss") == "1", std::memory_order_relaxed);
+            if (const auto window = Window.load(std::memory_order_relaxed); window && FocusPolicyChanged)
+                PostMessageW(window, FocusPolicyChanged, 0, 0);
+        };
+        settings.OnChange("MAIN.PauseOnFocusLoss", publishPause);
+        publishPause();
 
         // The settings' defaults: version, size, depth, refresh, dialog, windowed
         auto defaults = hook::pattern("BE 24 01 00 00 89 35 ? ? ? ? C7 05 ? ? ? ? 00 04 00 00 C7 05 ? ? ? ? 00 03 00 00");
@@ -225,7 +252,11 @@ namespace TCWindow
         nResolutionHeight.SetAddress(*defaults.get_first<int*>(23));
         bShowSettingsDialog.SetAddress(*defaults.get_first<int*>(52));
         bWindowed.SetAddress(*defaults.get_first<int*>(58));
-        bAppInactive.SetAddress(*hook::pattern("66 83 BC 24 ? ? ? ? 00 0F 94 C2 88 15").get_first<bool*>(14));
+        bAppInactive.SetAddress(*hook::pattern("00 0F 94 C2 88 15").get_first<bool*>(6));
+        PauseForFocus = reinterpret_cast<decltype(PauseForFocus)>(hook::get_pattern(
+            "80 3D ? ? ? ? 00 0F 85 ? ? ? ? 80 3D ? ? ? ? 00 75 ? 80 3D ? ? ? ? 00 75 ? E8 ? ? ? ? B9"));
+        ResumeForFocus = reinterpret_cast<decltype(ResumeForFocus)>(hook::get_pattern(
+            "80 3D ? ? ? ? 00 0F 85 ? ? ? ? 80 3D ? ? ? ? 00 0F 85 ? ? ? ? 80 3D ? ? ? ? 00 0F 84 ? ? ? ? 80 3D ? ? ? ? 00 C6 05"));
 
         auto validate = hook::pattern("83 EC 0C 53 56 57 E8 ? ? ? ? 6A 11 FF 15");
         EnumerateModes = reinterpret_cast<decltype(EnumerateModes)>(injector::GetBranchDestination(validate.get_first(6)).as_int());

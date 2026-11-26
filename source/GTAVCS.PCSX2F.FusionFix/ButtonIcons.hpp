@@ -1,6 +1,6 @@
 #pragma once
 #include "Game.hpp"
-#include "../Shared/Console/PCButtonArtwork.hpp"
+#include "Shared/Console/PCButtonArtwork.hpp"
 namespace vcs {
 void InstallButtonIcons();
 // PC-scheme text for help entries that name PS2 buttons (CText::Get hook);

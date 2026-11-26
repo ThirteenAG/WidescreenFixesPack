@@ -5,6 +5,7 @@ module;
 #include <windowsx.h>
 #include "FixSettings.hpp"
 #include "Shared/WindowCursor.hpp"
+#include "overlay/Overlay.hpp"
 
 export module DeveloperOverlay;
 import ComVars;
@@ -84,7 +85,7 @@ export namespace ParadiseOverlay
     inline LRESULT CALLBACK Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR)
     {
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP)
-            && wParam == VK_F10)
+            && WFP::DeveloperOverlay && wParam == VK_F10)
             return 0;
         if (message == WM_DESTROY)
             RWGTA::UpdateCheck::OnExit();
@@ -117,13 +118,17 @@ export namespace ParadiseOverlay
         ParadiseCamera::Frame();
         ParadiseHud::Frame();
         RWGTA::UpdateCheck::Tick();
-        Overlay.Present(ParadiseDisplay::Device.get(), window, Module());
-        const bool ctrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) || GameKey(0x1D) || GameKey(0x9D);
-        const bool key = (GetAsyncKeyState(VK_F10) & 0x8000) || GameKey(0x44);
-        const bool down = window && GetForegroundWindow() == window && ctrl && key;
-        if (down && !HotkeyDown && Overlay.Available())
-            Overlay.SetOpen(!Overlay.IsOpen());
-        HotkeyDown = down;
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(ParadiseDisplay::Device.get(), window, Module());
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            const bool ctrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) || GameKey(0x1D) || GameKey(0x9D);
+            const bool key = (GetAsyncKeyState(VK_F10) & 0x8000) || GameKey(0x44);
+            const bool down = window && GetForegroundWindow() == window && ctrl && key;
+            if (down && !HotkeyDown && Overlay.Available())
+                Overlay.SetOpen(!Overlay.IsOpen());
+            HotkeyDown = down;
+        }
         Suspend(Overlay.BlocksInput());
         CursorConfinement::Suspend(Overlay.BlocksInput());
     }

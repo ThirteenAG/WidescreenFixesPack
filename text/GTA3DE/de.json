@@ -8,7 +8,7 @@
   "SkipMenu": "Beim Start fortsetzen",
   "SkipMenu.description": "Lädt den gewählten Spielstand, sobald das Hauptmenü bereit ist. Neustart erforderlich.",
   "SaveSlot": "Speicherplatz",
-  "SaveSlot.description": "Speicherplatz (ab 1) für das Fortsetzen beim Start und das Schnellspeichern. Neustart erforderlich.",
+  "SaveSlot.description": "Speicherplatz (1–8) für die Schnellspeicherung mit F5. Änderungen werden nach einem Spielneustart wirksam.",
   "FOVFactor": "Sichtfeld",
   "FOVFactor.description": "Multipliziert das Sichtfeld der Spielkamera; größer ist weiter. Zwischensequenzen, Skriptkameras und Zoomansichten behalten das Sichtfeld des Spiels.",
   "HudScale": "HUD-Größe",

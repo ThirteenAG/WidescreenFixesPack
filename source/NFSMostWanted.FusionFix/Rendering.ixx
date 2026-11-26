@@ -140,6 +140,22 @@ public:
                 }
             }
 
+            // Motion blur off: the speed blur pass is skipped (jz -> jmp). The game has no menu option for it, only
+            // g_MotionBlurEnable in the registry, which also gates the render targets other effects share.
+            {
+                static const int* pDisableMotionBlur = &FixSettings().Int("GRAPHICS.DisableMotionBlur");
+                static ProtectedGameRef<uint8_t> MotionBlurBranch;
+                MotionBlurBranch.SetAddress(hook::pattern("FF 91 ? ? ? ? 89 1D ? ? ? ? 39 1D ? ? ? ? 74 ? 39 1D").get_first<uint8_t>(18)); //0x6DF1D2
+                auto update = []()
+                {
+                    uint8_t opcode = *pDisableMotionBlur ? 0xEB : 0x74;    // jmp or jz
+                    if (MotionBlurBranch != opcode)
+                        MotionBlurBranch = opcode;
+                };
+                update();
+                WFP::onGameProcessEvent() += update;
+            }
+
             static ProtectedGameRef<float> fAutosculptScaling;
             fAutosculptScaling.SetAddress(*hook::pattern("D8 0D ? ? ? ? DA 74 24 18 E8 ? ? ? ? 89 46 04 EB 03").count(1).get(0).get<float*>(2));
 

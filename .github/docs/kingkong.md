@@ -17,7 +17,7 @@
 - **Aspect ratio** — Correct widescreen aspect ratio scaling with a wider field of view.
 - **HUD and menus** — Text, icons and menus keep their proportions. Menus stay in a centred 16:9 area on wider screens and the HUD can be kept in a centred box.
 - **Field of view** — Adjust the field of view for widescreen.
-- **Videos** — Correct FMV scaling for widescreen.
+- **Videos** — Original fits the whole video inside a centered 4:3 frame. Fill fits the visible picture to the screen at its own aspect ratio and removes the encoded black bars from the story and bonus movies. Subtitles remain visible.
 
 ### Timing and input
 
@@ -43,7 +43,9 @@
 
 ## Settings and rendering
 
-Open **Options → Plugins** for settings and per-plugin presets (Gamer's Edition). In every edition the fix can be configured in FusionFixHub or in `scripts/KingKong.FusionFix.cfg`. Supporters can also press **Ctrl+F10** in the DirectX 9 executables for the settings overlay. Field of view, HUD aspect ratio and the frame rate limit change while the game runs. Restart the game after changing other options.
+Open **Options → Plugins** for settings and per-plugin presets (Gamer's Edition). In every edition the fix can be configured in FusionFixHub or in `scripts/KingKong.FusionFix.cfg`. Restart the game after changing Window Mode, VSync, Skip Intro, or Raw Input Mouse. Text Language takes effect when the settings menu is reopened. The remaining settings take effect while the game runs.
+
+When enabled, update checks run once. Gamer's Edition shows an available update in Plugins. Signature Edition shows a dialog in the game window.
 
 The frame limiter method can only be changed in the settings file; it applies while playing. A limit of 0 is unlimited; -1 follows the monitor refresh rate. The game no longer needs the fix to restrict it to one CPU core. The fix doesn't write the game's video settings to the registry.
 
@@ -56,7 +58,6 @@ Widescreen, HUD, videos, input, timing and existing Direct3D 9 shader replacemen
 - No cutscene-border setting; cutscenes fill the screen with a wider view. The field-of-view multiplier also applies to scripted cameras.
 - The window can't be resized while the game runs (the game draws at the size it started with); choose the size in the settings application.
 - The "Press SPACE to continue" screen after the logos stays; press a key to continue.
-- The Ctrl+F10 overlay is not available in the DirectX 8 executable (kingkong8.exe of the Signature Edition).
 - Long menu entries can continue on another line or page. Changing a value can move nearby entries to a different page.
 - Gamer's Edition: a controller works out of the box with an Xbox 360 layout (Jack: A use/help, B magazines, LT arm, RT fire, RB reload, LS crouch, RS precise aim; Kong: A hit, B grab, X jump, Y rage; left stick moves) while no controller bindings are saved; SettingsApplication.exe changes them. Selectable controller prompt sets are not provided.
 - Some small effects, such as swinging chains, still move faster above 60 FPS.

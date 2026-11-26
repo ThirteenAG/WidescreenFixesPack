@@ -4,7 +4,7 @@
 #include <cstddef>
 namespace console::portable {
 struct VehicleModel { const char* texture; int16_t cache; };
-struct VehicleLayout { unsigned model, flags, accelerator, brake, damage; };
+struct VehicleLayout { unsigned model, flags, accelerator, brake, damage, type; };
 namespace vehicle {
 struct Raster {
     void* displayList; uint8_t* data;
@@ -167,7 +167,7 @@ struct VehicleLights {
         if (!group || group->object[0] == 1) return false;
         const auto flags = field<uint8_t>(car, p.layout.flags);
         const VehicleLightState state{(flags & 0x10) != 0, (flags & 0x40) != 0, (flags & 0x20) != 0,
-            field<float>(car, p.layout.accelerator), field<float>(car, p.layout.brake), field<uint32_t>(car, p.layout.damage)};
+            field<float>(car, p.layout.accelerator), field<float>(car, p.layout.brake), AutomobileLampDamage(car, p.layout.type, p.layout.damage)};
         const unsigned variant = state.texture();
         Texture* sources[CacheCount]{};
         unsigned elements = 0;

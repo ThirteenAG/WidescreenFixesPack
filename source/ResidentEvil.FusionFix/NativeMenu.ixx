@@ -24,7 +24,7 @@ export namespace REMenu
     {
         for (const auto& page : model.Pages())
         {
-            if (!page.plugin) continue;
+            if (!page.plugin || page.plugin->module == module) continue;
             for (const auto& setting : page.plugin->file.description.settings)
                 if (setting.HasValue() && setting.apply == "restart")
                     restartValues.try_emplace({ reinterpret_cast<uintptr_t>(page.plugin->module), setting.id },
@@ -34,9 +34,12 @@ export namespace REMenu
 
     inline bool RestartRequired(const RWGTAMenu::Model& model)
     {
+        for (const auto& [id, value] : AppliedRestartSettings())
+            if (FixSettings().Get(id) != value) return true;
+
         for (const auto& page : model.Pages())
         {
-            if (!page.plugin) continue;
+            if (!page.plugin || page.plugin->module == module) continue;
             for (const auto& setting : page.plugin->file.description.settings)
             {
                 if (!setting.HasValue() || setting.apply != "restart") continue;
@@ -123,7 +126,7 @@ export namespace REMenu
 
     inline std::string Language()
     {
-        auto language = FixSettings().String("MAIN.TextLanguage");
+        auto language = FixSettings().Get("MAIN.TextLanguage");
         if (!language.empty() && language != "auto")
             return language;
         // The language chosen in the game's options (Japanese, English, French, Spanish, German, Italian, ...)
@@ -229,7 +232,10 @@ export namespace REMenu
         REText::Show(host->entry.node, !host->open);
         REText::Show(host->heading.node, host->open);
         REText::Show(host->footer.node, host->open || entrySelected);
-        REText::Show(host->restart.node, host->open && RestartRequired(host->model));
+        const bool restart = host->open && RestartRequired(host->model);
+        if (restart)
+            host->restart.Fit(host->model.Text("menu.restartwarning"), 280, 590, 20, 760, 0xFFFFFFFF);
+        REText::Show(host->restart.node, restart);
         for (size_t i = 0; i < 8; ++i)
         {
             const bool shown = host->open && !host->inHelp && i < host->items.size();
@@ -295,10 +301,9 @@ export namespace REMenu
                 820, 250 + 30.0f * i, 22, 220, color);
         }
         const auto& selected = host->items[host->selection];
-        const auto icons = FixSettings().Int("MAIN.GamepadIcons");
-        const auto helpKey = icons == 2 ? model.Text("menu.pad.triangle") : icons == 3 ? "X" : "Y";
+        const auto icons = FixSettings().Get("MAIN.GamepadIcons");
+        const auto helpKey = icons == "2" ? model.Text("menu.pad.triangle") : icons == "3" ? "X" : "Y";
         host->footer.Set(selected.link == -1 && !model.Help(selected.row).empty() ? "F1 / " + helpKey + ": " + model.Text("menu.help") : "");
-        host->restart.Fit(RestartRequired(model) ? model.Text("menu.restartwarning") : "", 280, 590, 20, 760, 0xFFFFFFFF);
         ShowPage(host);
     }
 
@@ -489,7 +494,10 @@ export namespace REMenu
                 noticeHost = host;
                 RWGTA::UpdateCheck::Tick();
                 noticeHost.reset();
-                ShowPage(host);
+                if (host->open && !host->inHelp && host->model.SelectLanguage(Language()))
+                    Populate(host);
+                else
+                    ShowPage(host);
             }
         }
         return result;

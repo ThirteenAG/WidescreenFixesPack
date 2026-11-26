@@ -49,7 +49,7 @@ export namespace Rev2Menu
     inline std::string updateNotice;
     inline bool renderedNotice{};
 
-    inline bool UpdateVisible() { return !updateNotice.empty() && FixSettings().Bool("MAIN.CheckForUpdates"); }
+    inline bool UpdateVisible() { return !updateNotice.empty() && FixSettings().Get("MAIN.CheckForUpdates") == "1"; }
     inline size_t PluginPageSize() { return UpdateVisible() ? 2 : 5; }
 
     inline int TextId(const std::string& value)
@@ -75,7 +75,7 @@ export namespace Rev2Menu
 
     inline std::string Language()
     {
-        const auto language = FixSettings().String("MAIN.TextLanguage");
+        const auto language = FixSettings().Get("MAIN.TextLanguage");
         if (!language.empty() && language != "auto") return language;
         switch (PRIMARYLANGID(GetUserDefaultUILanguage()))
         {
@@ -139,18 +139,27 @@ export namespace Rev2Menu
         return lines;
     }
 
-    inline void Row(size_t slot, const std::string& label, Kind kind, size_t index = 0, RWGTAMenu::Row row = {})
+    // help: the line the game shows in its footer for the selected row (none keeps the footer empty)
+    inline void Row(size_t slot, const std::string& label, Kind kind, size_t index = 0, RWGTAMenu::Row row = {}, const std::string& help = {})
     {
         rows[slot] = originalRows[0];
         rows[slot].action = ActionBase + static_cast<int>(slot);
         rows[slot].file = CustomFile;
         rows[slot].text = TextId(label);
         rows[slot].value = 0;
-        rows[slot].helpFile = -1;
-        rows[slot].helpText = -1;
+        rows[slot].helpFile = CustomFile;
+        rows[slot].helpText = TextId(help.empty() ? " " : help);
         rows[slot].disabledFile = -1;
         rows[slot].disabledText = -1;
         items[slot] = { kind, index, row };
+    }
+
+    // The row added to the game's Options list, in the menu language
+    inline void PluginsRow()
+    {
+        auto texts = FixSettings().GetTexts();
+        texts.Select(Language());
+        Row(7, texts.Resolve("@menu.plugins"), Kind::Plugin, 0, {}, texts.Resolve("@menu.pluginshelp"));
     }
 
     inline void Publish(void* object, size_t count, const std::string& title, int selection = 0)
@@ -177,7 +186,7 @@ export namespace Rev2Menu
         model.Close();
         for (size_t i = 0; i < 7; ++i) rows[i] = originalRows[i];
         items = {};
-        Row(7, "Plugins", Kind::Plugin);
+        PluginsRow();
         injector::WriteMemory<uint32_t>(typeTable, reinterpret_cast<uint32_t>(rows.data()), true);
         injector::WriteMemory<uint32_t>(typeTable + 1, 8, true);
         injector::WriteMemory<uint32_t>(typeTable + 3, originalType[3], true);
@@ -209,7 +218,7 @@ export namespace Rev2Menu
             const auto& pages = model.Pages();
             pluginFirst = pages.empty() ? 0 : (std::min)(pluginFirst, ((pages.size() - 1) / PluginPageSize()) * PluginPageSize());
             const auto end = (std::min)(pages.size(), pluginFirst + PluginPageSize());
-            for (size_t i = pluginFirst; i < end; ++i) Row(count++, pages[i].title, Kind::Plugin, i);
+            for (size_t i = pluginFirst; i < end; ++i) Row(count++, pages[i].title, Kind::Plugin, i, {}, model.Text("menu.pluginshelp"));
             if (pluginFirst) Row(count++, model.Text("menu.previous"), Kind::Previous);
             if (end < pages.size()) Row(count++, model.Text("menu.next"), Kind::Next);
             renderedNotice = UpdateVisible();
@@ -231,8 +240,9 @@ export namespace Rev2Menu
                 const auto row = *visible[i];
                 auto label = model.Label(row), value = model.Value(row);
                 if (!value.empty()) label += ": " + value;
-                Row(count++, label, Kind::Setting, i, row);
-                Row(count++, model.Text("menu.details"), Kind::Details, i, row);
+                const auto help = Wrap(model.Help(row), 80);
+                Row(count++, label, Kind::Setting, i, row, help.empty() ? std::string{} : help.size() > 1 ? help.front() + "..." : help.front());
+                Row(count++, model.Text("menu.details"), Kind::Details, i, row, help.empty() ? std::string{} : help.front());
             }
             if (first) Row(count++, model.Text("menu.previous"), Kind::Previous);
             if (end < visible.size()) Row(count++, model.Text("menu.next"), Kind::Next);
@@ -373,7 +383,7 @@ export namespace Rev2Menu
         auto oldRows = reinterpret_cast<Definition*>(typeTable[0]);
         for (size_t i = 0; i < 7; ++i) originalRows[i] = oldRows[i];
         for (size_t i = 0; i < 7; ++i) rows[i] = originalRows[i];
-        Row(7, "Plugins", Kind::Plugin);
+        PluginsRow();
         build = reinterpret_cast<decltype(build)>(hook::pattern("83 EC 10 53 8A 5C 24 1C 33 D2 57 8B F9 89 54 24 0C 84 DB").get_first());
         refresh = reinterpret_cast<decltype(refresh)>(hook::pattern("A1 ? ? ? ? 83 EC 10 05 E0 16 00 00 53 55 56 57 50 8B F9").get_first());
         auto visibility = hook::pattern("8D 46 0E 50 E8 ? ? ? ? 6A 00 8B C8 E8 ? ? ? ? 46 83 FE 0A 7C ? 6A 00 6A 22").get_first<uint8_t>();

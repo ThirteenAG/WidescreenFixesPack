@@ -112,35 +112,14 @@
       "page": "display"
     },
     {
-      "id": "MAIN.FMVWidescreenMode",
-      "type": "choice",
-      "default": 1,
-      "choices": [
-        {
-          "value": 0,
-          "label": "@fmvmode.original"
-        },
-        {
-          "value": 1,
-          "label": "@fmvmode.fill"
-        }
-      ],
-      "label": "@MAIN.FMVWidescreenMode",
-      "description": "@MAIN.FMVWidescreenMode.description",
-      "page": "display",
-      "control": [
-        "cycler"
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
-    },
-    {
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "special": [
         {
           "value": "Auto",
@@ -265,7 +244,7 @@
     {
       "id": "MISC.RecoverPlayerKey",
       "type": "int",
-      "default": 119,
+      "default": 82,
       "label": "@MISC.RecoverPlayerKey",
       "description": "@MISC.RecoverPlayerKey.description",
       "page": "controls",
@@ -338,7 +317,7 @@
     {
       "id": "CAMERA.ToggleRotationKey",
       "type": "int",
-      "default": 117,
+      "default": 67,
       "label": "@CAMERA.ToggleRotationKey",
       "description": "@CAMERA.ToggleRotationKey.description",
       "page": "camera",

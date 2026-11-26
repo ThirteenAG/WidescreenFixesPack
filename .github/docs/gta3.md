@@ -44,7 +44,7 @@
 - **Cutscene Borders and Frame Rate Limit** - the Display Setup rows Cutscene Borders (off, letterbox, pillarbox, or both; letterbox and pillarbox by default) and Frame Limiter (unlimited, the monitor's refresh rate, or 30 up to 240 FPS; any value up to 1000 in the settings file, on fusionfix.io and in FusionFixHub) are settings of the fix: presets, the website and FusionFixHub set them too. Above 30 FPS, timers, mission countdowns, HUD flashing, particles, smoke, the handbrake and the wheels' rolling resistance, fading sounds, clouds and script-moved gates and lifts keep the game's original speed
 - **Field of View** - a multiplier (0.5 to 2.0) of the gameplay cameras' field of view, on top of the widescreen correction; cutscenes keep theirs, and the scopes, first-person aims and scripted cameras keep their own zoom.
 - **Skip Intro** - starts with the loading screen and the main menu, without the logo videos (on by default, after restart)
-- **Videos** - the intro videos are never cut off or stretched: **Original Aspect** shows them as the game does, inside its 4:3 picture; **Fill** fits them to the whole screen
+- The intro videos keep their 4:3 shape, centred with black bars at the sides: never cut off or stretched
 - **Animated Cutscene Borders** - the borders slide in and out
 - **Light Squares Up Close** - car headlights and taillights keep their square glow when the car is near the camera, as in the original game (Vanilla preset); off by default, which shows it only on cars further away
 

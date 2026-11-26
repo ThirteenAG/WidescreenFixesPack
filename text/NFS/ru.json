@@ -22,6 +22,8 @@
   "WFP_GAMEPADICONS": "Значки кнопок",
   "WFP_ICONS_AUTO": "Автоматически",
   "WFP_SKIPINTRO": "Пропуск заставок",
+  "WFP_SKIPPRESSSTART": "Пропуск экрана «Нажмите Start»",
+  "WFP_DESC_SKIPPRESSSTART": "Игра автоматически проходит титульный экран без нажатия кнопки Start.",
   "WFP_U2SAVEBONUS": "Бонус за сохранение Underground 2",
   "WFP_FPSLIMIT": "Частота кадров",
   "WFP_FPS_CUSTOM": "Пользовательский",

@@ -14,7 +14,7 @@ export namespace Driv3rWindow
 {
     inline SafetyHookMid modeHook, publicationHook;
     inline void (*onPrepared)(void*) = nullptr;
-    inline std::function<bool(int, int)> onModeChange;
+    inline std::function<bool(int, int)> onModeChange, onResize;
     inline LONG toggleDown = 0, toggleRequested = 0;
     inline bool changingMode = false, haveFramedRect = false;
     inline RECT framedRect{};
@@ -23,6 +23,7 @@ export namespace Driv3rWindow
     inline SafetyHookMid shutdownHook;
     inline GameRef<uint32_t> PresentedFrames;
     inline int mode = 0, requestedIndex = -1;
+    inline int followWidth = 0, followHeight = 0;
 
     inline HWND Window() { return hWnd.is_initialized() ? hWnd.get() : nullptr; }
 
@@ -33,6 +34,12 @@ export namespace Driv3rWindow
             const auto rect = WindowStyle::MonitorRect(Window());
             width = rect.right - rect.left;
             height = rect.bottom - rect.top;
+        }
+        else if (mode == 1 && followWidth > 0 && followHeight > 0)
+        {
+            // A windowed mode change that follows the client size instead of the listed mode
+            width = followWidth;
+            height = followHeight;
         }
         return width > 0 && height > 0 && width <= 16384 && height <= 16384;
     }
@@ -50,7 +57,18 @@ export namespace Driv3rWindow
         style |= mode == 2 ? WS_POPUP : WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
         SetWindowLongW(window, GWL_STYLE, LONG(style));
         SetWindowPos(window, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-        WindowStyle::Place(window, width, height);
+        const auto placement = WindowStyle::Place(window, width, height);
+        if (mode == 1 && WindowStyle::CoversMonitor(WindowStyle::MonitorRect(window), width, height))
+        {
+            RECT actual{};
+            if (GetWindowRect(window, &actual) && !EqualRect(&actual, &placement))
+            {
+                // The fixed-size frame can be clamped to the monitor before its caption is moved off-screen.
+                SetWindowPos(window, nullptr, placement.left, placement.top, placement.right - placement.left,
+                    placement.bottom - placement.top, SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSENDCHANGING);
+            }
+            return true;
+        }
         if (mode == 1 && haveFramedRect && width == framedWidth && height == framedHeight)
             SetWindowPos(window, nullptr, framedRect.left, framedRect.top,
                 framedRect.right - framedRect.left, framedRect.bottom - framedRect.top,
@@ -120,16 +138,72 @@ export namespace Driv3rWindow
         WindowStyle::SquareCorners(window);
     }
 
+    // A window resized from outside gets a back buffer of its new client size through the game's mode change,
+    // so the picture, camera and HUD follow its shape instead of being stretched
+    inline void FollowClientSize(IDirect3DDevice9* device)
+    {
+        static int pendingWidth = 0, pendingHeight = 0;
+        static ULONGLONG nextResize = 0;
+        const auto window = Window();
+        RECT client{};
+        if (mode != 1 || changingMode || !window || !device || !onResize || IsIconic(window) ||
+            !GetClientRect(window, &client) || client.right <= 0 || client.bottom <= 0)
+            return;
+        const auto& present = *reinterpret_cast<const D3DPRESENT_PARAMETERS*>(Renderer.get_ptr() + 0x160);
+        if (!present.Windowed || (present.BackBufferWidth == UINT(client.right) && present.BackBufferHeight == UINT(client.bottom)))
+        {
+            pendingWidth = pendingHeight = 0;
+            return;
+        }
+        // Wait until the size settles, a resize can arrive in steps
+        const auto now = GetTickCount64();
+        if (pendingWidth != client.right || pendingHeight != client.bottom)
+        {
+            pendingWidth = client.right;
+            pendingHeight = client.bottom;
+            nextResize = now + 200;
+            return;
+        }
+        if (now < nextResize || device->TestCooperativeLevel() != D3D_OK)
+            return;
+        // The window keeps the position it was given
+        haveFramedRect = GetWindowRect(window, &framedRect) != FALSE;
+        framedWidth = client.right;
+        framedHeight = client.bottom;
+        changingMode = true;
+        followWidth = client.right;
+        followHeight = client.bottom;
+        const bool resized = onResize(client.right, client.bottom);
+        followWidth = followHeight = 0;
+        changingMode = false;
+        if (!resized)
+        {
+            nextResize = GetTickCount64() + 500;
+            OutputDebugStringA("Driv3r: back buffer resize to the window size failed.\n");
+        }
+    }
+
+    inline bool ToggleChordDown()
+    {
+        return (GetAsyncKeyState(VK_MENU) & 0x8000) && (GetAsyncKeyState(VK_RETURN) & 0x8000);
+    }
+
+    inline void ResetToggle(bool chordDown)
+    {
+        InterlockedExchange(&toggleDown, chordDown);
+        InterlockedExchange(&toggleRequested, 0);
+    }
+
     inline bool Frame(IDirect3DDevice9* device, bool blocked)
     {
+        FollowClientSize(device);
         const auto window = Window();
         if (!window || GetForegroundWindow() != window)
         {
-            InterlockedExchange(&toggleDown, 0);
-            InterlockedExchange(&toggleRequested, 0);
+            ResetToggle(true);
             return false;
         }
-        const bool down = (GetAsyncKeyState(VK_MENU) & 0x8000) && (GetAsyncKeyState(VK_RETURN) & 0x8000);
+        const bool down = ToggleChordDown();
         if (down)
         {
             if (!InterlockedCompareExchange(&toggleDown, 1, 0) && !blocked)
@@ -177,6 +251,16 @@ export namespace Driv3rWindow
 
     inline LRESULT CALLBACK Procedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
+        if (message == WM_ACTIVATE && window == Window())
+        {
+            if (LOWORD(wParam) == WA_INACTIVE)
+            {
+                InputFocusGeneration.fetch_add(1, std::memory_order_relaxed);
+                ResetToggle(true);
+            }
+            else
+                ResetToggle(ToggleChordDown());
+        }
         if (window == Window() && wParam == VK_RETURN &&
             (message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) && ((lParam & (1u << 29)) || toggleDown))
         {

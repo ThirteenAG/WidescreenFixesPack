@@ -41,12 +41,31 @@ export int32_t GetResY()
     return size ? int32_t(uint32_t(size)) : *(int32_t*)(pRender.get() + 0x1E4);
 }
 
-export float GetAspectRatio()
+export struct RenderSize
+{
+    int32_t width{};
+    int32_t height{};
+
+    bool operator==(const RenderSize&) const = default;
+
+    float Aspect() const
+    {
+        return width > 0 && height > 0 ? float(width) / float(height) : defaultAspectRatio;
+    }
+};
+
+export RenderSize GetRenderSize()
 {
     const auto size = nBackBufferSize.load(std::memory_order_relaxed);
-    const auto width = size ? int32_t(size >> 32) : GetResX();
-    const auto height = size ? int32_t(uint32_t(size)) : GetResY();
-    return width > 0 && height > 0 ? (float)width / (float)height : defaultAspectRatio;
+    if (size)
+        return { int32_t(size >> 32), int32_t(uint32_t(size)) };
+    const auto render = pRender.get();
+    return { *reinterpret_cast<const int32_t*>(render + 0x1E0), *reinterpret_cast<const int32_t*>(render + 0x1E4) };
+}
+
+export float GetAspectRatio()
+{
+    return GetRenderSize().Aspect();
 }
 
 // Split screen: the layout in use, the size of a player's viewport, and the game's own split viewport (800x360 at
@@ -60,39 +79,52 @@ export namespace SplitScreen
         SideBySide,     // each player a half of the screen, next to each other
     };
 
-    // The layout installed for the running session, set when the game sets up the players' viewports
-    std::atomic<Layout> nLayout{ Layout::TopBottom };
-    Layout GetLayout() { return nLayout.load(std::memory_order_relaxed); }
-    void SetLayout(Layout layout) { nLayout.store(layout, std::memory_order_relaxed); }
-
-    int32_t GetCurrentResX() { return *(int32_t*)(pRender.get() + 0x50) - *(int32_t*)(pRender.get() + 0x48); }
-    int32_t GetCurrentResY() { return *(int32_t*)(pRender.get() + 0x54) - *(int32_t*)(pRender.get() + 0x4C); }
     constexpr int32_t NativeResX = 936 - 136;
     constexpr int32_t NativeResY = 360;
     constexpr float NativeAspect = float(NativeResX) / float(NativeResY);
 
-    // Whether a viewport of this size is a player's view (the other draws cover the whole screen). The two views
-    // can differ by a pixel of rounding.
-    bool IsPlayerViewport(int32_t width, int32_t height)
+    struct ViewPair
     {
-        if (GetLayout() == Layout::SideBySide)
-            return std::abs(width - GetCurrentResX()) <= 1;
-        return std::abs(height - GetCurrentResY()) <= 1;
-    }
+        Layout layout{ Layout::TopBottom };
+        bool swap{};
+        RenderSize screen{};
+        std::array<RECT, 2> viewports{};
 
-    // The aspect of a player's view
-    float GetViewportAspect()
-    {
-        switch (GetLayout())
+        bool IsPlayerViewport(int32_t width, int32_t height) const
         {
-            case Layout::Original:
-                return NativeAspect;
-            case Layout::SideBySide:
-                return GetAspectRatio() / 2.0f;
-            default:
-                return GetAspectRatio() * 2.0f;
+            // A viewport can differ from the camera rectangle by a pixel of rounding.
+            for (const auto& rect : viewports)
+            {
+                const LONG extent = layout == Layout::SideBySide ? rect.right - rect.left : rect.bottom - rect.top;
+                const auto drawn = layout == Layout::SideBySide ? width : height;
+                if (extent > 0 && std::abs(drawn - extent) <= 1)
+                    return true;
+            }
+            return false;
         }
-    }
+
+        float ViewportAspect() const
+        {
+            switch (layout)
+            {
+                case Layout::Original:
+                    return NativeAspect;
+                case Layout::SideBySide:
+                    return screen.Aspect() / 2.0f;
+                default:
+                    return screen.Aspect() * 2.0f;
+            }
+        }
+
+        float WidthScale() const
+        {
+            return layout == Layout::Original ? 1.0f : 720.0f * screen.Aspect() / float(NativeResX);
+        }
+    };
+
+    std::atomic<ViewPair> installedPair{};
+    ViewPair InstalledPair() { return installedPair.load(std::memory_order_relaxed); }
+    void PublishPair(const ViewPair& pair) { installedPair.store(pair, std::memory_order_relaxed); }
 }
 
 // How much wider than the game's layout the view is: the screen against 16:9, in split screen against the game's
@@ -100,11 +132,7 @@ export namespace SplitScreen
 export float GetDiff()
 {
     if (IsSplitScreenActive())
-    {
-        if (SplitScreen::GetLayout() == SplitScreen::Layout::Original)
-            return 1.0f;
-        return (GetAspectRatio() / defaultAspectRatio) * (1280.0f / (float)SplitScreen::NativeResX);
-    }
+        return SplitScreen::InstalledPair().WidthScale();
     return GetAspectRatio() / defaultAspectRatio;
 }
 

@@ -159,7 +159,10 @@ export namespace GTA1Input
     {
         SettingsReader ini("");
         MouseAim = ini.ReadBoolean("INPUT", "MouseAim", true);
-        FixSettings().OnChange("INPUT.MouseAim", [] { MouseAim = FixSettings().Bool("INPUT.MouseAim"); });
+        FixSettings().OnChange("INPUT.MouseAim", []
+        {
+            RWGTA::GameThread::Post([] { MouseAim = SettingsReader().ReadBoolean("INPUT", "MouseAim", true); });
+        });
         if (GTA1Build::Current == GTA1Build::Kind::Classics)
         {
             // Lives, armour depletion and a car's damage (Classics code, including London).

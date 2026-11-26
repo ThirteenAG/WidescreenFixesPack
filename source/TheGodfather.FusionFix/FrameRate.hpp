@@ -92,13 +92,16 @@ namespace GodfatherFrameRate
         const auto rate = Rate(limit, state.refresh);
         const auto period = Frequency() / rate;
         const auto now = Now();
-        if (!state.next || state.rate != rate || now - state.next > period * 4)
+        if (!state.next || state.rate != rate)
         {
             state.next = now + period;
             state.rate = rate;
             return;
         }
+        // Late wake-ups keep the schedule (no drift); a frame later than a quarter period starts a new one, so a stall
+        // is never followed by a burst of short frames.
         WaitUntil(state, state.next);
-        state.next += period;
+        const auto woke = Now();
+        state.next = woke - state.next > period / 4 ? woke + period : state.next + period;
     }
 }

@@ -13,7 +13,7 @@
   "controls.pccontrolscheme": "Controles de teclado y ratón",
   "controls.pccontrolscheme.description": "Usa el esquema de control de PC; si está desactivado, el mando nativo sigue disponible.",
   "controls.mousesensitivity": "Sensibilidad del ratón",
-  "controls.mousesensitivity.description": "Velocidad de la cámara con el ratón. 1.0 gira la cámara 0.002 radianes por píxel con el zoom predeterminado.",
+  "controls.mousesensitivity.description": "Los valores más altos hacen que la cámara gire más con el mismo movimiento del ratón.",
   "controls.invertmousey": "Invertir eje Y del ratón",
   "controls.invertmousey.description": "Invierte el movimiento vertical de la cámara con el ratón.",
   "hud.hudscale": "Tamaño del HUD",
@@ -102,7 +102,7 @@
   "binding.crouch.description": "Uno o dos nombres de teclas de teclado/ratón, separados por una coma. Un valor vacío borra la acción.",
   "menu.auto": "Auto",
   "MAIN.TextLanguage": "Idioma de los avisos",
-  "MAIN.TextLanguage.description": "Idioma del aviso de error del parche de dirección. El menú Plugins sigue en inglés.",
+  "MAIN.TextLanguage.description": "Idioma del aviso de error del parche de 60 FPS.",
   "fovfactor": "Campo de visión",
   "fovfactor.description": "Multiplica el campo de visión en juego además de la corrección panorámica. 1.0 es el encuadre original; valores mayores amplían la vista. Las cinemáticas no cambian.",
   "auto": "Auto",
@@ -123,5 +123,9 @@
   "lights": "Luces de vehículos",
   "lights.description": "Ilumina los faros y las luces traseras, de freno y de marcha atrás en las texturas de carrocería de coches y motos, generadas a partir de las texturas del juego. Activado por defecto.",
   "controls.holdvehiclecamera": "Mantener cámara del vehículo",
-  "controls.holdvehiclecamera.description": "Cuando giras la cámara con el stick derecho en un vehículo, se queda ahí, para que puedas mirar atrás mientras conduces. Vuelve detrás del vehículo dos segundos después de soltarlo. Desactivado mantiene la cámara original, que vuelve detrás del vehículo mientras conduces."
+  "controls.holdvehiclecamera.description": "Cuando giras la cámara con el stick derecho en un vehículo, se queda ahí, para que puedas mirar atrás mientras conduces. Vuelve detrás del vehículo dos segundos después de soltarlo. Desactivado mantiene la cámara original, que vuelve detrás del vehículo mientras conduces.",
+  "controls.gamepadcameraspeed": "Velocidad de cámara del mando",
+  "controls.gamepadcameraspeed.description": "Velocidad de la cámara con el stick derecho, a pie y en vehículos. 1.0 es la velocidad original.",
+  "controls.invertgamepady": "Invertir mando Y",
+  "controls.invertgamepady.description": "Invierte la dirección vertical de la cámara con el stick derecho."
 }

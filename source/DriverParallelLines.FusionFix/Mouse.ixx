@@ -23,7 +23,10 @@ export namespace DPLMouse
     static_assert(sizeof(State) == 20);
     SafetyHookInline pollHook, cursorHook;
     float remainderX = 0, remainderY = 0;
-    std::atomic<bool> changed{ true };
+    bool previousRaw = true;
+    std::array<bool, 8> blockedButtons{};
+    std::atomic<bool> rawInput{ true }, invertY{ false };
+    std::atomic<float> sensitivitySetting{ 1.0f };
     void (*drainController)(void*) = nullptr;
 
     template<class T> T& At(void* pointer, size_t offset)
@@ -39,22 +42,43 @@ export namespace DPLMouse
         previous = current;
         DIMOUSESTATE2 input{};
         const bool success = SUCCEEDED(device->GetDeviceState(sizeof(input), &input));
-        if (!success) device->Acquire();
-        if (!success || BlockGameInput) input = {};
+        const bool blocked = BlockGameInput;
+        if (!success)
+        {
+            device->Acquire();
+            for (size_t i = 0; i < blockedButtons.size(); ++i)
+                blockedButtons[i] |= (current.buttons[i] & 0x80) != 0;
+        }
+        else if (blocked)
+        {
+            for (size_t i = 0; i < blockedButtons.size(); ++i)
+                blockedButtons[i] = (input.rgbButtons[i] & 0x80) != 0;
+        }
+        else
+        {
+            // A button held outside gameplay must be released before it can press again.
+            for (size_t i = 0; i < blockedButtons.size(); ++i)
+            {
+                blockedButtons[i] &= (input.rgbButtons[i] & 0x80) != 0;
+                if (blockedButtons[i]) input.rgbButtons[i] = 0;
+            }
+        }
+        if (!success || blocked) input = {};
         current = { static_cast<int32_t>(input.lX), static_cast<int32_t>(input.lY), static_cast<int32_t>(input.lZ), {} };
         std::copy(std::begin(input.rgbButtons), std::end(input.rgbButtons), current.buttons);
         auto& totals = *accumulation.get_ptr();
-        if (changed.exchange(false) || !success || BlockGameInput)
+        const bool raw = rawInput.load(std::memory_order_relaxed);
+        if (std::exchange(previousRaw, raw) != raw || !success || blocked)
         {
             totals.velocityX = totals.velocityY = 0;
             remainderX = remainderY = 0;
         }
         totals.totalX += static_cast<uint32_t>(input.lX);
         totals.totalY += static_cast<uint32_t>(input.lY);
-        const float configuredSensitivity = FixSettings().Float("MAIN.MouseSensitivity");
+        const float configuredSensitivity = sensitivitySetting.load(std::memory_order_relaxed);
         const float sensitivity = std::isfinite(configuredSensitivity) ? std::clamp(configuredSensitivity, 0.1f, 5.0f) : 1.0f;
-        const float verticalSensitivity = FixSettings().Bool("MAIN.InvertMouseY") ? -sensitivity : sensitivity;
-        if (FixSettings().Bool("MAIN.RawInputMouse"))
+        const float verticalSensitivity = invertY.load(std::memory_order_relaxed) ? -sensitivity : sensitivity;
+        if (raw)
         {
             totals.x += static_cast<float>(input.lX) * sensitivity;
             totals.y += static_cast<float>(input.lY) * verticalSensitivity;
@@ -69,7 +93,7 @@ export namespace DPLMouse
             totals.y += totals.velocityY * verticalSensitivity;
         }
         for (size_t i = 0; i < 3; ++i) totals.buttons[i] = input.rgbButtons[i] != 0;
-        if (!success || BlockGameInput) previous = {};
+        if (!success || blocked) previous = {};
         return success;
     }
     int32_t Pixels(double movement, float& remainder)
@@ -87,7 +111,7 @@ export namespace DPLMouse
             std::memset(static_cast<uint8_t*>(self) + 544, 0, 40);
             if (drainController) drainController(self);
         }
-        if (!FixSettings().Bool("MAIN.RawInputMouse")) return cursorHook.unsafe_thiscall<char>(self);
+        if (!rawInput.load(std::memory_order_relaxed)) return cursorHook.unsafe_thiscall<char>(self);
         auto& state = At<State>(self, 544);
         const int32_t x = state.x, y = state.y;
         auto& speed = At<float>(self, 1408);
@@ -103,6 +127,9 @@ export namespace DPLMouse
     }
     void Install()
     {
+        BindLiveSetting("MAIN.RawInputMouse", rawInput);
+        BindLiveSetting("MAIN.InvertMouseY", invertY);
+        BindLiveSetting("MAIN.MouseSensitivity", sensitivitySetting);
         auto poll = hook::pattern("55 8B EC 81 EC 84 02 00 00 53 8B D9 8B 43 04 85 C0 56 57 74 50 80 3B 00");
         auto cursor = hook::pattern("55 8B EC 83 EC 0C 56 8B F1 F3 0F 2A 86 20 02 00 00 F3 0F 10 96 80 05 00 00");
         auto globals = hook::pattern("8B 08 01 0E F3 0F 10 05 ? ? ? ? 01 0D ? ? ? ? 0F 28 D1");
@@ -110,6 +137,5 @@ export namespace DPLMouse
         accumulation.SetAddress(*globals.get_first<MouseAccumulation*>(14));
         pollHook = safetyhook::create_inline(poll.get_first(), Poll);
         cursorHook = safetyhook::create_inline(cursor.get_first(), Cursor);
-        FixSettings().OnChange("MAIN.RawInputMouse", []() { changed.store(true); });
     }
 }

@@ -11,6 +11,7 @@ import Window;
 export namespace LARushPadLabels
 {
     inline SafetyHookMid DrawHook, MenuButtonsHook;
+    inline std::atomic<int> IconMode{ 0 };
 
     inline const char* Button(int index, int family)
     {
@@ -25,6 +26,7 @@ export namespace LARushPadLabels
 
     inline void Init()
     {
+        BindLiveSetting("MAIN.GamepadIcons", IconMode);
         // The gamepad menu defaults accept with Button 2 and go back with Button 3, which are B and A on the
         // bundled controller layout: swap the two records so A accepts and B goes back.
         auto menu = hook::pattern("8B 15 ? ? ? ? 6A 09 6A 00 6A 06 6A 02");
@@ -50,7 +52,7 @@ export namespace LARushPadLabels
             const auto record = Bindings.get_ptr() + ((text - first) / 208) * 208;
             const int index = *reinterpret_cast<int32_t*>(record + 128);
             const int kind = *reinterpret_cast<int32_t*>(record + 132);
-            const auto family = PadInput::ResolveFamily(std::clamp(FixSettings().Int("MAIN.GamepadIcons"), 0, 3));
+            const auto family = PadInput::ResolveFamily(std::clamp(IconMode.load(std::memory_order_relaxed), 0, 3));
             const char* label = kind == 2 ? Button(index, static_cast<int>(family) - 1) :
                 kind == 3 ? "[LS LEFT]" : kind == 4 ? "[LS RIGHT]" : nullptr;
             if (label)

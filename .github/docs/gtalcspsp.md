@@ -14,7 +14,7 @@
 
 - **Widescreen** - Matches the display shape selected in PPSSPP. You can also choose an aspect ratio in FusionFixHub.
 - **Field of view** - Widens the gameplay view for your screen. Gameplay FOV ranges from 0.5 to 2.0. The gameplay FOV multiplier does not change cutscenes.
-- **HUD** - Adjust the HUD, radar and multiplayer radar sizes separately. HUD Aspect Ratio Constraint keeps the HUD inside a centered area, or uses the whole screen with Auto. Radar positions can be changed in FusionFixHub.
+- **HUD** - Adjust the HUD, radar and multiplayer radar sizes separately. HUD Aspect Ratio Constraint keeps the HUD inside a centered area, or uses the whole screen with Auto. Both radars keep their native anchor inside that area.
 - **Menu artwork** - Keeps its proportions with black bars at the sides when needed.
 - **Cutscene borders** - Choose Off, Letterbox, Pillarbox or Both. Letterbox adds top and bottom bars on narrower screens; Pillarbox adds side bars on wider screens.
 - **Videos** - The logo and title videos keep their proportions, with black bars at the sides on wider screens and above and below on narrower ones. Loading acceleration stops while videos play.
@@ -39,7 +39,7 @@ The supplied controller diagrams include replacement connectors for On Foot Setu
 2. Extract the archive into the directory containing PPSSPP’s `memstick` folder, preserving the folders in the archive.
 3. After the first launch, change settings on fusionfix.io, in FusionFixHub or in the game's menu.
 4. Launch the game in PPSSPP.
-5. If an older `memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix` or `memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM` folder is still there, delete it. Both are part of this Fusion Fix now; while one of them is installed, the Fusion Fix stays off and its log says why.
+5. If an older `memstick/PSP/PLUGINS/GTALCS.PPSSPP.WidescreenFix` or `memstick/PSP/PLUGINS/GTALCS.PPSSPP.ImVehLM` folder is still there, delete it. Both are part of this Fusion Fix now; while one of them is installed, the Fusion Fix stays off and the PPSSPP diagnostic log identifies the conflicting folder.
 
 # Project2DFX
 
@@ -54,9 +54,9 @@ https://user-images.githubusercontent.com/4904157/218305955-3a8a244f-aae8-456b-a
 
 ## Settings
 
-The settings are stored in `memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.cfg`, created on the first start. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), Display and Camera (HUD, radar and multiplayer radar size, field of view, cutscene borders and hold vehicle camera), Layout (aspect override, HUD constraint and radar positions), Game and Controls (with vehicle lights), and Restore Defaults. Menu changes are saved when the menu closes. Skip intro, modern controls and vehicle lights need a restart. Other changed cfg values are read during gameplay, including after loading a PPSSPP save state. Restart after installing an updated plugin before making new save states: old states contain the older plugin code.
+The settings are stored in `memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.cfg`, created on the first start. Change them in FusionFixHub, on fusionfix.io, or in the game: the Display menu has one **Plugins** entry that opens this fix's page. It has its preset (Vanilla, Recommended, Enhanced), Display and Camera (HUD, radar and multiplayer radar size, field of view, cutscene borders and hold vehicle camera), Layout (aspect override and HUD constraint), Game and Controls (with vehicle lights), and Restore Defaults. Menu changes are saved when the menu closes. Skip intro, modern controls and vehicle lights need a restart. Other changed cfg values are read during gameplay, including after loading a PPSSPP save state. Restart after installing an updated plugin before making new save states: old states contain the older plugin code.
 
-- **Presets** - Vanilla keeps the original look (HUD, radar and multiplayer radar at full size, cutscene letterbox, original controller icons, intros, normal loading and no vehicle lights); the Vanilla preset also uses the original control scheme. Recommended is the default; Enhanced adds 60 FPS and Hold vehicle camera. Applying a preset changes only settings that differ between presets, preserving your other preferences. Restore Defaults resets all settings.
+- **Presets** - Vanilla keeps the original look (HUD, radar and multiplayer radar at full size, cutscene letterbox, original controller icons, intros, normal loading and no vehicle lights); the Vanilla preset also uses the original control scheme. Recommended is the default; Enhanced adds 60 FPS and Hold vehicle camera. The in-game presets keep your HUD box. Restore Defaults resets all settings.
 
 After updating from an older release, reapply your preferences in FusionFixHub.
 
@@ -64,9 +64,9 @@ After updating from an older release, reapply your preferences in FusionFixHub.
 
 - **Resolution, anti-aliasing, window modes and Alt+Tab** - handled by PPSSPP.
 - **Mouse and keyboard prompts** - PPSSPP maps host input to PSP buttons; the plugin cannot read those host bindings. Configure the two sticks and buttons in PPSSPP, then select matching controller artwork.
-- **Failure notifications** - PPSSPP has no guest-to-OSD notification API. Rejected code is reported in the plugin log; when the Plugins menu is available, unsupported PC cheats and controller artwork show UNAVAILABLE. If the menu itself cannot be validated, use the log and sidecar configuration.
+- **Failure notifications** - PPSSPP reports rejected code in its diagnostic log. The Plugins menu shows UNAVAILABLE for unsupported PC cheats or controller artwork. You can edit the CFG in FusionFixHub if the menu itself is unavailable.
 
-If a feature stays original, check `memstick/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.log`. The plugin rejects code or texture layouts it does not recognize. Keep the PRX, its JSON files, the `lights` files and the `icons` folder together when updating.
+To collect diagnostics, set the sceIo logging channel to Info under PPSSPP Developer Tools, then launch PPSSPP with `--log=ppsspplog.txt`. Keep the PRX, its JSON files, the `lights` files and the `icons` folder together when updating.
 
 ## Presets and FusionFixHub
 

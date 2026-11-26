@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/SplinterCell/ViewportMouse.hpp"
 
 export module Settings;
 
@@ -30,7 +31,7 @@ namespace ConfigReads
 
     std::wstring Wide(std::string_view text)
     {
-        return std::wstring(text.begin(), text.end());
+        return asi_settings::text::Widen(text);
     }
 
     void Add(std::wstring_view section, std::wstring_view key, std::wstring value, bool onlyMissing = false)
@@ -77,14 +78,14 @@ namespace ConfigReads
             };
             for (const auto& [id, section, key] : graphics)
             {
-                if (const auto& value = FixSettings().String(id); !value.empty())
+                if (const auto value = FixSettings().Get(id); !value.empty())
                     Add(section, key, Wide(value));
             }
         }
 
         for (auto key : { "Joy1", "Joy2", "Joy3", "Joy4", "Joy5", "Joy6", "Joy7", "Joy8", "Joy9", "Joy10", "Joy11", "Joy12", "Joy13", "Joy14", "Joy15", "Joy16", "JoyX", "JoyY", "JoyZ", "JoyV", "JoyR", "JoyU", "AnalogUp", "AnalogDown", "AnalogLeft", "AnalogRight", "MouseWheelUp", "MouseWheelDown", "Tilde" })
         {
-            if (const auto& value = FixSettings().String(std::string("INPUT.") + key); !value.empty())
+            if (const auto value = FixSettings().Get(std::string("INPUT.") + key); !value.empty())
                 Add(L"Engine.Input", Wide(key), Wide(value), true);
         }
     }
@@ -100,7 +101,8 @@ namespace ConfigReads
         // Default*.ini and DefUser.ini hold the values the game's menus reset to
         if (filename)
         {
-            const auto name = Lower(filename);
+            const std::wstring_view path = filename;
+            const auto name = Lower(path.substr(path.find_last_of(L"/\\") + 1));
             if (name.find(L"default") != std::wstring::npos || name.find(L"defuser") != std::wstring::npos)
                 return nullptr;
         }
@@ -192,12 +194,11 @@ public:
             Screen.Width = FixSettings().Int("MAIN.ResX");
             Screen.Height = FixSettings().Int("MAIN.ResY");
             Screen.bRawInputMouse = FixSettings().Bool("MAIN.RawInputMouse");
-            FixSettings().OnChange("MAIN.MouseSensitivity", []
-            {
-                RawInputHandler<>::SetSensitivity(FixSettings().Float("MAIN.MouseSensitivity") * 0.5f);
-            });
+            ViewportMouse::ReadScaledSensitivity(0.5f);
+            FixSettings().OnChange("MAIN.MouseSensitivity", []() { ViewportMouse::ReadScaledSensitivity(0.5f); });
             Screen.bRawInputMouseRawData = FixSettings().Int("MAIN.RawInputMouseRawData") != 0;
-            Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            ViewportMouse::rawData.store(Screen.bRawInputMouseRawData);
+            Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
             Screen.LoadscreenPicture = std::filesystem::path(FixSettings().CfgPath()).replace_extension(L".png");
             gBlacklistIndicators = FixSettings().Int("BONUS.BlacklistIndicators");
             gColor = FixSettings().Int("BONUS.GogglesLightColor");

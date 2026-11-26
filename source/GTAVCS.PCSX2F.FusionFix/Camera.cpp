@@ -1,6 +1,6 @@
 #include "Game.hpp"
-#include "../Shared/Console/Cutscene.hpp"
-#include "../Shared/Console/ScriptSlotZero.hpp"
+#include "Shared/Console/Cutscene.hpp"
+#include "Shared/Console/ScriptSlotZero.hpp"
 
 namespace vcs {
 namespace {
@@ -65,15 +65,17 @@ void DrawCutsceneBorders(void*) {
 // the vehicle; they are added at 0x2A1108. While held, the swing waits two
 // seconds after the stick was last used.
 SafetyMipsMid followCarSwing;
-bool cameraHeld = false;
-uint32_t cameraHeldUntil = 0;
-void FollowCarSwing(SafetyMipsContext& regs) {
-    if (!settings.holdVehicleCamera) { cameraHeld = false; return; }
+VehicleCameraHold padCameraHold;
+void FollowCarSwing(SafetyMipsContext& regs)
+{
+    if (!settings.holdVehicleCamera)
+    {
+        padCameraHold.Clear();
+        return;
+    }
     const uint32_t now = *reinterpret_cast<const uint32_t*>(0x4CD104); // CTimer::m_snTimeInMilliseconds
-    if (float(regs.f20) != 0.0f) { cameraHeld = true; cameraHeldUntil = now + 2000; }
-    // Also ends after a timer reset (loading a save).
-    else if (cameraHeld && (int32_t(now - cameraHeldUntil) >= 0 || int32_t(cameraHeldUntil - now) > 2000)) cameraHeld = false;
-    if (cameraHeld) regs.f27 = 0.0f;
+    if (padCameraHold.Update(now, float(regs.f20) != 0.0f, 2000))
+        regs.f27 = 0.0f;
 }
 }
 void InstallCamera() {

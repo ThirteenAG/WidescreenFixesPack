@@ -21,18 +21,11 @@ export void RefreshHudConstraint()
         return;
 
     // Only the game thread publishes values consumed by the HUD draw hooks.
-    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(wanted);
-    const float height = Screen.fHeight;
-    float width = Screen.fWidth;
-    const auto constraint = Screen.fHudAspectRatioConstraint;
-    if (constraint && (*constraint < 0.0f || *constraint > 32.0f / 9.0f))
-        Screen.fWidescreenHudOffset = *constraint;
-    else
-    {
-        if (constraint)
-            width = height * ClampHudAspectRatio(*constraint, Screen.fAspectRatio);
-        Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(width, height, 640.0f, 480.0f);
-    }
+    const auto constraint = ParseWidescreenHudOffset(wanted);
+    const float width = constraint && std::isfinite(*constraint)
+        ? Screen.fHeight * ClampHudAspectRatio(*constraint, Screen.fAspectRatio)
+        : Screen.fWidth;
+    Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(width, Screen.fHeight, 640.0f, 480.0f);
     RefreshModernHudPositions(Screen.fWidescreenHudOffset);
     previous = wanted;
     previousWidth = Screen.Width;

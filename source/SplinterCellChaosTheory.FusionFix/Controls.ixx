@@ -558,11 +558,11 @@ export namespace CTControls
     {
         if (ready)
             return true;
-        auto rebuild = hook::pattern(game, "56 8B F1 8B 4E 7C E8 35 BF 1C 00 8B 8E 80 00 00 00 E8 2A BF 1C 00 8B 8E 84 00 00 00 E8 1F BF "
-                                           "1C 00 8B 8E 88 00 00 00 E8 14 BF 1C 00");
+        auto rebuild = hook::pattern(game, "56 8B F1 8B 4E 7C E8 ? ? ? ? 8B 8E 80 00 00 00 E8 ? ? ? ? 8B 8E 84 00 00 00 E8 ? ? ? ? "
+                                           "8B 8E 88 00 00 00 E8 ? ? ? ? 8B 8E 8C 00 00 00 E8 ? ? ? ? 6A 00 6A 01");
         auto defaults = hook::pattern(
             game,
-            "83 EC 10 53 55 56 8B E9 57 89 6C 24 1C 33 F6 E8 4C 2D 17 00 8B F8 39 35 ? ? ? ? 75 17 68 ? ? ? ? E8 68 4B ED FF 83 C4 04 A3");
+            "83 EC 10 53 55 56 8B E9 57 89 6C 24 1C 33 F6 E8 ? ? ? ? 8B F8 39 35 ? ? ? ? 75 17 68 ? ? ? ? E8 ? ? ? ? 83 C4 04 A3");
         if (!module || !language || !wide || !metrics || !select)
             return false;
         rebuildHook = safetyhook::create_inline(rebuild.get_first(), Rebuild);

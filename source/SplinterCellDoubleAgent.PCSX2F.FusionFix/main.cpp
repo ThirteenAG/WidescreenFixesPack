@@ -4,6 +4,7 @@
 #include "LoadingGeometry.hpp"
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <cmath>
 #include <algorithm>
 #include "../Shared/Console/PS2Settings.hpp"
@@ -11,25 +12,29 @@
 PCSX2F_CFG_SETTINGS()
 PCSX2F_CFG_PEER_SETTINGS()
 PCSX2F_STATE_LOAD_GENERATION()
-extern "C" {
+PCSX2F_EFFECTIVE_ASPECT()
+extern "C"
+{
 int CompatibleCRCList[] = {static_cast<int>(0xC0498D24), static_cast<int>(0xABE2FDE9)};
 int CompatibleElfCRCList[] = {static_cast<int>(0xC0498D24), static_cast<int>(0xABE2FDE9), 0x0198F1AD, 0x6BD0E9C2};
 int PCSX2Data[PCSX2Data_Size] = {1};
 char FrameLimitUnthrottle = 0;
 char OSDText[OSDStringNum][OSDStringSize] = {{1}};
 }
-namespace {
-SafetyMipsMid projection, launcherDraw;
+namespace
+{
+SafetyMipsMid projection, viewProjection, launcherDraw;
 safetymips::GameInline<uint64_t(void*, void*)> launcherCopy;
 bool launcherPresenting;
 // Whole-buffer copies (the finished frame, saved backgrounds) keep their size.
-uint64_t CopyLauncherBuffer(void* target, void* source) {
+uint64_t CopyLauncherBuffer(void* target, void* source)
+{
     launcherPresenting = true;
     const auto result = launcherCopy.call(target, source);
     launcherPresenting = false;
     return result;
 }
-console::ps2settings::Value options[] = {{"MAIN", "SkipIntro", "1"}, {"MAIN", "HudScale", "1.0"},
+constexpr console::ps2settings::Value defaults[] = {{"MAIN", "SkipIntro", "1"}, {"MAIN", "HudScale", "1.0"},
     {"MAIN", "ForceAspectRatio", "Auto"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
     {"MAIN", "FOVFactor", "1.0"}, {"MAIN", "FMVWidescreenMode", "1"},
     {"MAIN", "CutsceneBorders", "3"}, {"MAIN", "AnimatedCutsceneBorders", "1"}, {"MAIN", "TextLanguage", "auto"}
@@ -37,9 +42,19 @@ console::ps2settings::Value options[] = {{"MAIN", "SkipIntro", "1"}, {"MAIN", "H
     , {"DEBUG", "TraceDraws", "0"}
 #endif
 };
-console::ps2settings::StateLoads stateLoads;
+console::ps2settings::Value options[sizeof(defaults) / sizeof(*defaults)];
+uint32_t lastAttemptGeneration;
 unsigned projectionCalls, movieCalls;
-void ApplySettings() {
+bool ReadOptions(bool startup)
+{
+    decltype(options) next;
+    std::memcpy(next, defaults, sizeof(next));
+    if (!(startup ? console::ps2settings::load(next) : console::ps2settings::read(next))) return false;
+    std::memcpy(options, next, sizeof(options));
+    return true;
+}
+void ApplySettings()
+{
     using namespace scda;
     forcedAspect = console::parse_forced_aspect(options[2].value);
     long mode = 1;
@@ -66,12 +81,11 @@ void ApplySettings() {
     traceDraws = console::ps2settings::boolean(options[9], false);
 #endif
 }
-void RefreshSettings() {
-    if (console::ps2settings::read(options)) ApplySettings();
-}
-bool AimCamera(uint8_t mode) {
+bool AimCamera(uint8_t mode)
+{
     // First-person, scope, EEV, peek and fixed special-action cameras.
-    switch (mode) {
+    switch (mode)
+    {
     case 1: case 2: case 3: case 5: case 8: case 9: case 10: case 11:
     case 16: case 18: case 19: case 20: case 22: case 24: case 25: case 26:
     case 32: case 33: case 34: case 35:
@@ -80,28 +94,37 @@ bool AimCamera(uint8_t mode) {
         return false;
     }
 }
-// The previous camera's projection: the view scale is set before it each frame.
-float cameraCotangent;
-float ViewZoom(uintptr_t view) {
+float ViewZoom(uintptr_t view)
+{
     using namespace scda;
     float factor = fovFactor, cinema = 1.0f;
     const auto scene = view ? Read<uintptr_t>(view) : 0;
     const auto controller = scene ? Read<uintptr_t>(scene + 52) : 0;
-    // Scripted events set this controller flag while directing the camera.
-    if (controller && (Read<uint32_t>(controller + 988) & 0x200000)) factor = 1.0f;
+    if (controller)
+    {
+        // Scripted cameras and the native orthographic views retain their lens.
+        const auto projectionMode = Read<uint32_t>(controller + 0x3D4);
+        if ((Read<uint32_t>(controller + 988) & 0x200000) || (projectionMode >= 13 && projectionMode <= 15))
+            factor = 1.0f;
+    }
     const auto camera = controller ? Read<uintptr_t>(controller + 0x780) : 0;
     if (camera && AimCamera(Read<uint8_t>(camera + 688))) factor = 1.0f;
-    if (cinemaVisible < .999f) {
+    if (cinemaVisible < .999f)
+    {
         factor = 1.0f;
         cinema = CinemaFit(Aspect(), cinemaAnimated ? cinemaVisible : 254.0f / 448.0f, cinemaMode).zoom;
     }
-    return FovZoom(cameraCotangent, factor) * cinema;
+    // This is the same per-view lens that the native culling code reads.
+    const float degrees = view ? Read<float>(view + 0x48C) : 0.0f;
+    return FovZoom(degrees, factor) * cinema;
 }
-void Rejected(pcsx2_hook_status status) {
+void Rejected(pcsx2_hook_status status)
+{
     std::snprintf(OSDText[0], OSDStringSize, "Double Agent fix disabled: patch validation failed (%u)", unsigned(status));
 }
 enum class LauncherResult { NotLauncher, Installed, Unsupported };
-LauncherResult Launcher(bool skip) {
+LauncherResult Launcher(bool skip)
+{
     const auto branch = pattern.get_first("00 00 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 2D 28 00 00 ? ? ? ? 2D 30 00 00 2D 38 00 00 E8 03 08 24 ? ? 08 0C 2D 48 00 00", -12);
     if (!branch) return LauncherResult::NotLauncher;
     // This reset breaks the LoadExecPS2 handoff in the tested PCSX2 fork.
@@ -123,7 +146,8 @@ LauncherResult Launcher(bool skip) {
         injector::MakeNOP(branch + 48);
     }
     launcherCopy.create(copy, CopyLauncherBuffer);
-    launcherDraw = safetymips::create_mid(writer, [](SafetyMipsContext& regs) {
+    launcherDraw = safetymips::create_mid(writer, [](SafetyMipsContext& regs)
+    {
         static bool textured;
         static int frameHalf;
         if (regs.a1 == 0) textured = regs.a2 & 0x10;                   // PRIM.TME
@@ -137,20 +161,35 @@ LauncherResult Launcher(bool skip) {
     return LauncherResult::Installed;
 }
 }
-void scda::UpdateSettings(bool movie) {
-    stateLoads.poll(RefreshSettings);
-    // About once a second: one camera per frame, or 60 movie uploads.
+void scda::UpdateSettings(bool movie)
+{
+    const uint32_t generation = *reinterpret_cast<volatile uint32_t*>(&PCSX2FStateLoadGeneration);
+    const bool restored = generation != lastAttemptGeneration;
+    // Check after 30 view builds or 60 movie uploads.
     unsigned& calls = movie ? movieCalls : projectionCalls;
-    if (++calls >= (movie ? 60u : 30u)) { calls = 0; RefreshSettings(); }
+    if (!restored && ++calls < (movie ? 60u : 30u)) return;
+    if (restored)
+    {
+        lastAttemptGeneration = generation;
+        // A refused read retries on the next polling interval in either path.
+        projectionCalls = movieCalls = 0;
+    }
+    else
+    {
+        calls = 0;
+    }
+    if (ReadOptions(false)) ApplySettings();
 }
-extern "C" void init() {
+extern "C" void init()
+{
     using namespace scda;
-    static constexpr console::ps2conflict::OldPlugin oldPlugins[] = {
-        {"SplinterCellDoubleAgent.PCSX2F.WidescreenFix.elf", "MAIN", "ForceAspectRatio"},
+    static constexpr const char* oldPlugins[] = {
+        "SplinterCellDoubleAgent.PCSX2F.WidescreenFix.elf",
     };
     if (console::ps2conflict::Found(oldPlugins, OSDText)) return;
     if (injector::InitializeCheckedRuntime(Rejected) != PCSX2_HOOK_OK) return;
-    if (!console::ps2settings::load(options))
+    std::memcpy(options, defaults, sizeof(options));
+    if (!ReadOptions(true))
         std::snprintf(OSDText[0], OSDStringSize, "CFG settings unavailable: update the plugin injector for CFG support.");
     ApplySettings();
     const auto launcher = Launcher(console::ps2settings::boolean(options[0], true));
@@ -164,9 +203,12 @@ extern "C" void init() {
         return;
     }
     const auto us = pattern.get_first("00 60 80 44 80 3F 02 3C 00 70 82 44 B0 06 A4 27 46 63 00 46 40 5C 06 0C C6 63 00 46", 0);
-    if (us) {
+    if (us)
+    {
         game = US;
-    } else {
+    }
+    else
+    {
         const auto eu = pattern.get_first("00 60 80 44 80 3F 02 3C 00 70 82 44 B0 06 A4 27 46 63 00 46 58 5C 06 0C C6 63 00 46", 0);
         if (!eu)
         {
@@ -179,18 +221,29 @@ extern "C" void init() {
 #ifdef WFP_PS2_DEBUG // build-module.ps1 -Defines WFP_PS2_DEBUG
     logger.SetBuffer(OSDText, OSDStringNum, OSDStringSize);
 #endif
-    projection = safetymips::create_mid(game.projection, [](SafetyMipsContext& regs) {
-        // The view is framed by the viewport's x and y scale (the two calls
-        // ending at projectionCaller); the camera's projection rows that follow
-        // only bound culling. Both get the same aspect and zoom.
-        const auto caller = uintptr_t(regs.ra);
-        const bool viewX = caller == game.projectionCaller, viewY = caller == game.projectionCaller - 28;
-        const bool cullX = caller == game.perspectiveCaller, cullY = caller == game.perspectiveCaller + 44;
-        if (!viewX && !viewY && !cullX && !cullY) return;
-        if (cullX) { UpdateSettings(); cameraCotangent = regs.f12; }
-        const float zoom = ViewZoom(uintptr_t(regs.s2));
-        if (viewX || cullX) regs.f12 = regs.f12 * ((4.0f / 3.0f) / Aspect()) * zoom;
-        else regs.f13 = regs.f13 * zoom;
+    // Refresh before any row in this view, so live settings apply to both
+    // the displayed matrix and the culling matrix for the whole view.
+    viewProjection = safetymips::create_mid(game.viewProjection, [](SafetyMipsContext&)
+    {
+        UpdateSettings();
+    });
+    projection = safetymips::create_mid(game.projection, [](SafetyMipsContext& regs)
+    {
+        // Return addresses of the viewport's four matrix paths and the
+        // orthographic and perspective culling rows.
+        switch (uintptr_t(regs.ra) - game.viewProjection)
+        {
+        case 0x538: case 0x678: case 0x798: case 0x8CC:
+        case 0xAA4: case 0xBA8:
+            regs.f12 = regs.f12 * ((4.0f / 3.0f) / Aspect()) * ViewZoom(uintptr_t(regs.s2));
+            break;
+        case 0x51C: case 0x640: case 0x77C: case 0x8B0:
+        case 0xAD0: case 0xBD4:
+            regs.f13 = regs.f13 * ViewZoom(uintptr_t(regs.s2));
+            break;
+        default:
+            break;
+        }
     });
     InstallHud();
     InstallMenuMovie();

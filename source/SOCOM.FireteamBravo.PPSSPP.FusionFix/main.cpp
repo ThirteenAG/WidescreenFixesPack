@@ -2,24 +2,28 @@
 #include <cmath>
 #include <cstring>
 #include <cstdio>
-#include "../../external/injector/include/psp/nanoprintf.h"
+#include "psp/nanoprintf.h"
 extern "C" {
 #include <pspdisplay.h>
 #include <pspgu.h>
 #include <pspge.h>
 #include <psputility_sysparam.h>
 }
-#include "../Shared/Console/PatchNotice.hpp"
-#include "../Shared/Console/SocomInput.hpp"
+#include "Shared/Console/PatchNotice.hpp"
+#include "Shared/Console/SocomInput.hpp"
 #include "Sites.hpp"
-#include "../Shared/Console/PortableCfg.hpp"
-#include "../Shared/Console/Viewport.hpp"
-#include "../Shared/Console/PadButtonArtwork.hpp"
-#include "../Shared/Console/Text.hpp"
+#include "Shared/Console/PortableCfg.hpp"
+#include "Shared/Console/PortableSettings.hpp"
+#include "Shared/Console/PspRightStick.hpp"
+#include "Shared/Console/Viewport.hpp"
+#include "Shared/Console/PadButtonArtwork.hpp"
+#include "Shared/Console/Text.hpp"
 extern "C" { PSP_MODULE_INFO("FireteamBravo.FusionFix", PSP_MODULE_USER, 2, 0); }
 namespace {
 using console::socom::Input;
 using namespace console::portable;
+bool dualAnalog;
+#include "Stick.hpp"
 #include "Geometry.hpp"
 #include "Hud.hpp"
 #include "HudText.hpp"
@@ -27,12 +31,11 @@ using namespace console::portable;
 #include "FrameRate.hpp"
 #include "PadIcons.hpp"
 #include "NativeMenu.hpp"
-#include "Stick.hpp"
 injector::hook_back<int(Input*, float)> update;
 SafetyMipsMid loading, dialogue;
 int* introState;
 uintptr_t introDialogue;
-bool dialogueSkipped, dualAnalog;
+bool dialogueSkipped;
 constexpr char cfgPath[] = "ms0:/PSP/PLUGINS/SOCOM.FireteamBravo.PPSSPP.FusionFix/SOCOM.FireteamBravo.PPSSPP.FusionFix.cfg";
 void SkipIntro() { *introState = 2; }
 // The callbacks below use no VFPU and call no game code. Saving VFPU state
@@ -44,6 +47,7 @@ safetymips::Options Scalar(bool executeOriginal = true) {
 }
 int Update(Input* input, float delta) {
     const int result = update.fun(input, delta);
+    NativeMenu::PollOptions();
     NativeMenu::Input(input);
     if (dualAnalog)
     {
@@ -62,25 +66,13 @@ int Install() {
     // The first game initializes its input/intro objects asynchronously.
     sceKernelDelayThread(120000);
     if (!BeginWithNotice()) return -1;
-    IniValue defaults[] = {{"MAIN", "SkipIntro", "1"}, {"MAIN", "DualAnalogPatch", "1"},
-        {"MAIN", "UnthrottleEmuDuringLoading", "1"}, {"MAIN", "FOVFactor", "1.0"},
-        {"MAIN", "ForceAspectRatio", "Auto"}, {"MAIN", "CutsceneBorders", "3"},
-        {"MAIN", "HudScale", "1.0"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
-        {"MAIN", "FPSLimit", "60"}, {"MAIN", "TextLanguage", "auto"},
-        {"MAIN", "GamepadIcons", "0"}};
-    (void)CompleteCfg(cfgPath, defaults);
-    Geometry::fovFactor = std::clamp(inireader.ReadFloat("MAIN", "FOVFactor", 1.0f), 0.5f, 2.0f);
-    Geometry::borders = std::clamp(inireader.ReadInteger("MAIN", "CutsceneBorders", 3), 0, 3);
-    char aspect[64]{};
-    Geometry::forcedAspect = console::parse_forced_aspect(inireader.ReadString("MAIN", "ForceAspectRatio", "Auto", aspect, sizeof(aspect)));
-    Hud::scale = std::clamp(inireader.ReadFloat("MAIN", "HudScale", 1.0f), 0.5f, 1.5f);
-    char hudAspect[64]{};
-    Hud::constraint = console::parse_hud_aspect(inireader.ReadString("MAIN", "HudAspectRatioConstraint", "Auto", hudAspect, sizeof(hudAspect)));
-    FrameRate::limit = std::clamp(inireader.ReadInteger("MAIN", "FPSLimit", 60), 30, 60);
-    PadIcons::style = std::clamp(inireader.ReadInteger("MAIN", "GamepadIcons", 0), 0, 3);
-    NativeMenu::ReadOptions();
+    (void)CompleteCfg(cfgPath, NativeMenu::values);
+    NativeMenu::InitializeOptions();
     // Validate the game code before installing interdependent hooks.
     constexpr const char* sitesToCheck[] = {
+        Geometry::worldClipPattern,
+        Geometry::worldClipReturnPattern,
+        Graphics::mapScissorPattern,
         "? ? 04 3C 01 00 05 34 ? ? ? ? ? ? 84 24 ? ? 04 3C ? ? 84 8C 00 00 12 34 7C 01 85 8C D8 00 84 8C 03 00 B1 38",
         "F0 FF BD 27 00 3F 06 3C 00 80 86 44 02 63 10 46 00 00 AC E7 00 00 A0 CB 20 00 65 D0",
         "90 FF BD 27 54 00 B0 AF 25 80 80 00 4C 3D 04 3C CD CC 84 34 48 00 B4 E7 00 60 84 44 A8 01 14 C6",
@@ -164,7 +156,7 @@ int Install() {
     NativeMenu::Install();
     logger.WriteF("Display hooks installed; game text %08X, manager %08X, camera %08X.\n",
         unsigned(pattern.text_addr), unsigned(uintptr_t(Geometry::manager)), unsigned(uintptr_t(Geometry::sceneCamera)));
-    if (inireader.ReadBoolean("MAIN", "SkipIntro", true)) {
+    if (NativeMenu::startTicks[0]) {
         const uintptr_t intro[] = {sites::ptr_883BC3C(), sites::ptr_883BB24(), sites::ptr_883BBD0(), sites::Required("2C 00 A7 A3 38 00 B0 AF")};
         introState = reinterpret_cast<int*>(Absolute(intro[0]));
         introDialogue = sites::Required("18 00 B1 AF 25 88 80 00 02 00 04 34", -4);
@@ -176,19 +168,20 @@ int Install() {
                 *reinterpret_cast<const uintptr_t*>(object + 206 * 4) == introDialogue &&
                 *reinterpret_cast<const int*>(object + 544 * 4) == 1;
             if (skip) dialogueSkipped = true;
-            *reinterpret_cast<uint8_t*>(uintptr_t(regs.sp) + 0x2C) = skip;
+            *reinterpret_cast<uint8_t*>(uintptr_t(regs.sp) + 0x2C) = skip ? 1 : uint8_t(regs.a3);
             *reinterpret_cast<uint32_t*>(uintptr_t(regs.sp) + 0x38) = uint32_t(regs.s0);
         }, Scalar(false));
     }
     update.fun = injector::MakeCALL(sites::ptr_8809724(), Update).get();
-    dualAnalog = inireader.ReadBoolean("MAIN", "DualAnalogPatch", true);
+    dualAnalog = NativeMenu::startTicks[1] != 0;
     if (dualAnalog) {
+        Stick::host.Initialize(sceKernelGetSystemTimeLow());
         injector::MakeCALL(sites::ptr_88885DC(), console::socom::Camera);
         injector::MakeCALL(sites::ptr_8888ADC(), console::socom::Camera);
         for (auto site : {sites::ptr_8888674(), sites::ptr_8888508(), sites::ptr_89DDF9C(), sites::ptr_89DDF6C()}) injector::MakeNOP(site);
         injector::WriteMemory<uint32_t>(sites::ptr_89DE278(), 0x1000000B); // Native free-look strafe branch.
     }
-    if (inireader.ReadBoolean("MAIN", "UnthrottleEmuDuringLoading", true)) {
+    if (NativeMenu::startTicks[2]) {
         loading = safetymips::create_mid(sites::ptr_8A9C224(), [](SafetyMipsContext&) { Unthrottle(true); }, Scalar());
         injector::MakeCALL(sites::ptr_8A9C368(), Exit);
         injector::MakeCALL(sites::ptr_8A9C17C(), Terminate);

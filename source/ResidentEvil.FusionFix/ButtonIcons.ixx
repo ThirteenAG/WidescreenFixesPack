@@ -24,12 +24,13 @@ export namespace REIcons
     inline int applied = 0;
     inline bool managedTexture = false;
     inline bool assetsReady = false;
-    inline std::atomic<bool> textureFailed{ false }, hasTexture{ false };
+    inline bool dirty = false;
+    inline ULONGLONG retryAt{};
+    inline std::atomic<bool> hasTexture{ false };
     inline std::mutex mutex;
     inline SafetyHookInline loadHook;
     inline SafetyHookInline releaseHook;
     inline std::unordered_set<void*> fonts;
-    inline void* savedFont = nullptr;
 
     inline bool Copy(IDirect3DTexture9* texture, uint8_t* bytes, bool read)
     {
@@ -49,19 +50,33 @@ export namespace REIcons
         return SUCCEEDED(texture->UnlockRect(0));
     }
 
-    inline bool Restore(bool resetting = false)
+    inline void RetryLater()
     {
-        if (savedTexture)
+        retryAt = GetTickCount64() + 250;
+    }
+
+    inline bool Restore()
+    {
+        if (dirty && !Copy(savedTexture, original.data(), false))
         {
-            applied = 0;
-            if (!Copy(savedTexture, original.data(), false) && (!resetting || managedTexture)) return false;
-            savedTexture->Release();
+            RetryLater();
+            return false;
         }
+        dirty = false;
+        applied = 0;
+        return true;
+    }
+
+    inline bool DropTexture(bool resetting = false)
+    {
+        if (!Restore() && (!resetting || managedTexture)) return false;
+        if (savedTexture) savedTexture->Release();
         savedTexture = nullptr;
         savedDevice = nullptr;
         applied = 0;
+        dirty = false;
+        retryAt = 0;
         hasTexture.store(false);
-        savedFont = nullptr;
         managedTexture = false;
         return true;
     }
@@ -113,52 +128,62 @@ export namespace REIcons
 
     inline void Frame(IDirect3DDevice9* device)
     {
-        const auto selected = family.load();
-        if (!selected && !hasTexture.load()) return;
+        if (!family.load() && !hasTexture.load()) return;
         const std::lock_guard lock(mutex);
-        if (!selected || textureFailed)
+        if (retryAt && GetTickCount64() < retryAt) return;
+        retryAt = 0;
+        const auto selected = family.load();
+        if (!selected)
         {
-            Restore();
+            DropTexture();
             return;
         }
         if (!assetsReady) return;
         IDirect3DTexture9* texture = nullptr;
-        void* font = nullptr;
         for (const auto candidate : fonts)
-            if ((texture = NativeTexture(candidate))) { font = candidate; break; }
+            if ((texture = NativeTexture(candidate))) break;
         if (!texture)
         {
-            if (savedTexture) Restore();
+            if (savedTexture) DropTexture();
             return;
         }
         if (texture != savedTexture || device != savedDevice)
         {
-            if (!Restore()) return;
+            if (!DropTexture()) return;
             D3DSURFACE_DESC desc{};
             IDirect3DDevice9* owner = nullptr;
-            if (FAILED(texture->GetDevice(&owner))) return;
+            if (FAILED(texture->GetDevice(&owner)))
+            {
+                RetryLater();
+                return;
+            }
             const bool own = owner == device;
             owner->Release();
             if (!own || FAILED(texture->GetLevelDesc(0, &desc)) || desc.Width != 256 || desc.Height != 512 ||
-                desc.Format != D3DFMT_DXT5 || !Copy(texture, original.data(), true)) return;
+                desc.Format != D3DFMT_DXT5 || !Copy(texture, original.data(), true))
+            {
+                RetryLater();
+                return;
+            }
             texture->AddRef();
             savedTexture = texture;
             savedDevice = device;
             managedTexture = desc.Pool == D3DPOOL_MANAGED;
             hasTexture.store(true);
-            savedFont = font;
         }
-        savedFont = font;
         if (applied == selected) return;
+        if (dirty && !applied && !Restore()) return;
         std::vector<uint8_t> pixels(original.size());
         Compose(pixels.data(), original.data(), artwork.data() + 128 + (selected - 1) * original.size());
+        // Unlock can fail after the texture has already been written.
+        dirty = true;
+        applied = 0;
         if (Copy(texture, pixels.data(), false))
             applied = selected;
         else
         {
-            textureFailed = true;
             Restore();
-            OutputDebugStringA("Resident Evil: controller artwork update failed.\n");
+            RetryLater();
         }
     }
 
@@ -176,7 +201,6 @@ export namespace REIcons
     inline uintptr_t __fastcall Release(void* font, void*)
     {
         const std::lock_guard lock(mutex);
-        if (font == savedFont) savedFont = nullptr;
         fonts.erase(font);
         return releaseHook.thiscall<uintptr_t>(font);
     }
@@ -184,19 +208,16 @@ export namespace REIcons
     inline void BeforeReset(IDirect3DDevice9* device)
     {
         const std::lock_guard lock(mutex);
-        if (device == savedDevice) Restore(true);
-        textureFailed = false;
+        retryAt = 0;
+        if (device == savedDevice) DropTexture(true);
     }
 
     inline void Install(HMODULE module)
     {
-        const auto update = []()
+        BindLiveInt("MAIN.GamepadIcons", [](int value)
         {
-            const auto value = FixSettings().Int("MAIN.GamepadIcons");
             family.store(value == 2 ? 1 : value == 3 ? 2 : 0);
-        };
-        update();
-        FixSettings().OnChange("MAIN.GamepadIcons", update);
+        });
         wchar_t path[MAX_PATH]{};
         GetModuleFileNameW(module, path, DWORD(std::size(path)));
         std::ifstream file(std::filesystem::path(path).parent_path() / L"ResidentEvil.FusionFix" / L"buttons.dds", std::ios::binary | std::ios::ate);
@@ -218,7 +239,7 @@ export namespace REIcons
         else OutputDebugStringA("Resident Evil: controller artwork file unavailable.\n");
         FixSettings().Availability("MAIN.GamepadIcons", [](std::string_view value)
         {
-            return value == "0" || value == "1" || (assetsReady && !textureFailed);
+            return value == "0" || value == "1" || assetsReady;
         });
     }
 }

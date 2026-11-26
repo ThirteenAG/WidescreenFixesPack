@@ -7,45 +7,40 @@
 // needs PCSX2F_CFG_PEER_SETTINGS().
 namespace console::ps2conflict
 {
-    // A key the old plugin always writes to its CFG.
-    struct OldPlugin
-    {
-        const char* file;
-        const char* section;
-        const char* key;
-    };
-
-    // The injector's peer service reports NOT_FOUND for a module that isn't loaded. A loaded one answers with its
-    // value, or INVALID when it has no CFG (old INI plugins). One that never ran yet has no CFG file and isn't seen
-    // until its first start.
-    inline bool Loaded(const OldPlugin& plugin)
+    inline uint32_t QueryPresence(const char* file)
     {
         static PCSX2FBoolPeerRequest request;
         request = {};
         request.size = sizeof(request);
         request.version = 2;
         request.operation = PCSX2F_SETTINGS_READ;
-        request.count = 1;
-        if (!ps2settings::copy(request.module, plugin.file) || !ps2settings::copy(request.section, plugin.section) ||
-            !ps2settings::copy(request.key, plugin.key))
-            return false;
-        const auto status = PCSX2F_BoolPeerRequest(&request);
-        return status != PCSX2F_SETTINGS_NOT_FOUND && status != PCSX2F_SETTINGS_UNSUPPORTED;
+        // A read with no keys asks only whether the named module is loaded.
+        if (!ps2settings::copy(request.module, file))
+            return PCSX2F_SETTINGS_INVALID;
+        return PCSX2F_BoolPeerRequest(&request);
     }
 
-    // True when one of the old plugins is loaded; the caller then doesn't start. The message takes the first three
-    // OSD lines.
+    // Start only after the injector confirms that every predecessor is absent.
     template<size_t Count, size_t Lines, size_t Size>
-    bool Found(const OldPlugin (&plugins)[Count], char (&osd)[Lines][Size])
+    bool Found(const char* const (&plugins)[Count], char (&osd)[Lines][Size])
     {
         static_assert(Lines >= 3);
-        for (const auto& plugin : plugins)
+        for (const char* file : plugins)
         {
-            if (!Loaded(plugin))
+            const auto status = QueryPresence(file);
+            if (status == PCSX2F_SETTINGS_NOT_FOUND)
                 continue;
-            std::snprintf(osd[0], Size, "Old plugin in PLUGINS: %s", plugin.file);
-            std::snprintf(osd[1], Size, "It is part of the Fusion Fix now and can't run next to it.");
-            std::snprintf(osd[2], Size, "Delete it; the Fusion Fix stays off until then.");
+            if (status == PCSX2F_SETTINGS_OK)
+            {
+                std::snprintf(osd[0], Size, "Old plugin in PLUGINS: %s", file);
+                std::snprintf(osd[1], Size, "It is part of the Fusion Fix now and can't run next to it.");
+                std::snprintf(osd[2], Size, "Delete it; the Fusion Fix stays off until then.");
+            }
+            else
+            {
+                std::snprintf(osd[0], Size, "Update PCSX2 Plugin Injector to start the Fusion Fix.");
+                std::snprintf(osd[1], Size, "The installed injector couldn't check for conflicting plugins.");
+            }
             return true;
         }
         return false;

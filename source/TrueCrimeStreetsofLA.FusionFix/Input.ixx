@@ -3,13 +3,17 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include <dinput.h>
+#include <wrl/client.h>
 
+#pragma comment(lib, "dinput8.lib")
+#pragma comment(lib, "dxguid.lib")
 
 export module Input;
 
 import ComVars;
 import DeveloperOverlay;
 import FreeCamera;
+import Window;
 
 // The game reads keyboard, mouse and pad through DirectInput device states. Its mouse state already carries the raw
 // counts (no pointer acceleration, nothing lost between reads). While the overlay has input nothing reaches the game;
@@ -18,38 +22,103 @@ export namespace TrueCrimeInput
 {
     inline SafetyHookInline CreateDeviceHook, DeviceStateHook, DeviceDataHook;
     inline HRESULT (WINAPI* NativeCreate)(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN) = nullptr;
-    inline void* Mouse = nullptr;
+    inline Microsoft::WRL::ComPtr<IDirectInput8A> CameraInput;
+    inline Microsoft::WRL::ComPtr<IDirectInputDevice8A> CameraMouse;
+    inline HWND CameraMouseWindow = nullptr;
+    inline bool CameraMouseActive = false, CameraMouseAcquired = false;
+
+    inline void ClearCameraCounts()
+    {
+        TrueCrimeFreeCamera::CountsX.store(0, std::memory_order_relaxed);
+        TrueCrimeFreeCamera::CountsY.store(0, std::memory_order_relaxed);
+    }
+
+    inline void CloseCameraMouse()
+    {
+        if (CameraMouse)
+            CameraMouse->Unacquire();
+        CameraMouse.Reset();
+        CameraInput.Reset();
+        CameraMouseWindow = nullptr;
+        CameraMouseActive = CameraMouseAcquired = false;
+        ClearCameraCounts();
+    }
+
+    inline void OpenCameraMouse(HWND window)
+    {
+        CloseCameraMouse();
+        CameraMouseWindow = window;
+        if (!window) return;
+        static const auto module = LoadLibraryExW(L"dinput8.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+        static const auto create = module ? reinterpret_cast<decltype(NativeCreate)>(GetProcAddress(module, "DirectInput8Create")) : nullptr;
+        if (!create || FAILED(create(GetModuleHandleW(nullptr), DIRECTINPUT_VERSION, IID_IDirectInput8A,
+            reinterpret_cast<void**>(CameraInput.GetAddressOf()), nullptr)))
+            return;
+        if (FAILED(CameraInput->CreateDevice(GUID_SysMouse, CameraMouse.GetAddressOf(), nullptr)) ||
+            FAILED(CameraMouse->SetDataFormat(&c_dfDIMouse)) ||
+            FAILED(CameraMouse->SetCooperativeLevel(window, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE)))
+        {
+            CameraMouse.Reset();
+            CameraInput.Reset();
+        }
+    }
+
+    inline void ReadCameraMouse()
+    {
+        const auto window = TrueCrimeWindow::Window.load();
+        if (window != CameraMouseWindow)
+            OpenCameraMouse(window);
+        if (!CameraMouse)
+            return;
+
+        const bool eligible = GetForegroundWindow() == window && TrueCrimeFreeCamera::TakesMouse();
+        DIMOUSESTATE state{};
+        auto result = CameraMouse->GetDeviceState(sizeof(state), &state);
+        const bool continued = CameraMouseAcquired && CameraMouseActive;
+        if (result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED)
+        {
+            CameraMouseActive = false;
+            if (SUCCEEDED(CameraMouse->Acquire()))
+                result = CameraMouse->GetDeviceState(sizeof(state), &state);
+        }
+        CameraMouseAcquired = SUCCEEDED(result);
+        if (continued && CameraMouseActive && CameraMouseAcquired && eligible)
+        {
+            TrueCrimeFreeCamera::CountsX.fetch_add(state.lX, std::memory_order_relaxed);
+            TrueCrimeFreeCamera::CountsY.fetch_add(state.lY, std::memory_order_relaxed);
+        }
+        else if (CameraMouseAcquired || !eligible)
+            ClearCameraCounts();
+        CameraMouseActive = CameraMouseAcquired && eligible;
+    }
 
     inline HRESULT WINAPI DeviceState(void* device, DWORD size, void* data)
     {
         const auto result = DeviceStateHook.stdcall<HRESULT>(device, size, data);
-        if (FAILED(result) || !data)
+        if (FAILED(result) || !data || device == CameraMouse.Get())
             return result;
+        const bool mouse = size == sizeof(DIMOUSESTATE) || size == sizeof(DIMOUSESTATE2);
         if (TrueCrimeOverlay::BlocksInput())
         {
-            if (size == sizeof(DIMOUSESTATE))
-            {
-                TrueCrimeFreeCamera::CountsX.store(0, std::memory_order_relaxed);
-                TrueCrimeFreeCamera::CountsY.store(0, std::memory_order_relaxed);
-            }
+            if (mouse)
+                ClearCameraCounts();
             std::memset(data, 0, size);
             return result;
         }
-        if (size == sizeof(DIMOUSESTATE))
+        if (mouse)
         {
-            Mouse = device;
             if (TrueCrimeFreeCamera::TakesMouse())
             {
                 auto& state = *static_cast<DIMOUSESTATE*>(data);
-                TrueCrimeFreeCamera::CountsX.fetch_add(state.lX, std::memory_order_relaxed);
-                TrueCrimeFreeCamera::CountsY.fetch_add(state.lY, std::memory_order_relaxed);
+                if (!CameraMouseAcquired)
+                {
+                    TrueCrimeFreeCamera::CountsX.fetch_add(state.lX, std::memory_order_relaxed);
+                    TrueCrimeFreeCamera::CountsY.fetch_add(state.lY, std::memory_order_relaxed);
+                }
                 state.lX = state.lY = 0;
             }
             else
-            {
-                TrueCrimeFreeCamera::CountsX.store(0, std::memory_order_relaxed);
-                TrueCrimeFreeCamera::CountsY.store(0, std::memory_order_relaxed);
-            }
+                ClearCameraCounts();
         }
         return result;
     }
@@ -69,7 +138,8 @@ export namespace TrueCrimeInput
         {
             auto table = *reinterpret_cast<void***>(*device);
             DeviceStateHook = safetyhook::create_inline(table[9], DeviceState);
-            DeviceDataHook = safetyhook::create_inline(table[10], DeviceData);
+            if constexpr (WFP::DeveloperOverlay)
+                DeviceDataHook = safetyhook::create_inline(table[10], DeviceData);
         }
         return result;
     }
@@ -85,21 +155,24 @@ export namespace TrueCrimeInput
         return result;
     }
 
-    // The game's message pump removes messages until the queue is empty. Every legacy mouse move it removes makes
-    // Windows process the input that queued up meanwhile, so with thousands of reports a second one pass can take tens
-    // of milliseconds. Windows keeps only the newest mouse move, so the pass ends after one; DirectInput's movement is
-    // separate and stays complete.
-    inline BOOL WINAPI PeekMessageOnePass(LPMSG message, HWND window, UINT first, UINT last, UINT remove)
+    inline HRESULT WINAPI AcquireJoystick(IDirectInputDevice8A* joystick)
     {
-        static thread_local bool moved = false;
-        if (moved)
-        {
-            moved = false;
-            return FALSE;
-        }
-        const BOOL result = PeekMessageA(message, window, first, last, remove);
-        moved = result && (remove & PM_REMOVE) && message->message == WM_MOUSEMOVE;
-        // The pump drops system keys, so Alt+F4 never closed the game; it closes it the way the window's X does
+        const auto result = joystick->Acquire();
+        if (result != DIERR_OTHERAPPHASPRIO)
+            return result;
+
+        const auto window = TrueCrimeWindow::Window.load();
+        if (!window || FAILED(joystick->SetCooperativeLevel(window, DISCL_BACKGROUND | DISCL_NONEXCLUSIVE)))
+            return result;
+        return joystick->Acquire();
+    }
+
+    inline decltype(&PeekMessageA) GuardedPeek = nullptr;
+
+    inline BOOL WINAPI PeekMessageWithClose(LPMSG message, HWND window, UINT first, UINT last, UINT remove)
+    {
+        const BOOL result = GuardedPeek(message, window, first, last, remove);
+        // The pump drops system keys. Close on Alt+F4 as if the window's close button was pressed.
         if (result && (remove & PM_REMOVE) && message->message == WM_SYSKEYDOWN && message->wParam == VK_F4 &&
             !(message->lParam & (1 << 30)))
             SendMessageA(message->hwnd, WM_SYSCOMMAND, SC_CLOSE, 0);
@@ -116,7 +189,7 @@ export namespace TrueCrimeInput
     inline UINT WINAPI ReadIniInt(LPCSTR section, LPCSTR key, INT fallback, LPCSTR file)
     {
         if (SteeringKey(section, key))
-            return FixSettings().Bool("MAIN.MouseSteering") ? 1 : 0;
+            return FixSettings().Get("MAIN.MouseSteering") == "1" ? 1 : 0;
         return GetPrivateProfileIntA(section, key, fallback, file);
     }
 
@@ -125,7 +198,7 @@ export namespace TrueCrimeInput
         if (SteeringKey(section, key))
         {
             const bool on = value && std::atoi(value) == 1;
-            if (on != FixSettings().Bool("MAIN.MouseSteering"))
+            if (on != (FixSettings().Get("MAIN.MouseSteering") == "1"))
                 FixSettings().Set("MAIN.MouseSteering", on ? "1" : "0");
             return TRUE;
         }
@@ -143,22 +216,13 @@ export namespace TrueCrimeInput
     inline float AimRest[2]{};
 
     // Precision aim from the car (drive-by): its turn adds axis^3 x 5e-11 rad an update to two angles, clamped; the mouse
-    // turns them directly instead. The car's turn runs after the input is built, so the input sees it from the last update.
-    inline std::atomic<bool> CarAimSeen{ false };
-    inline bool CarAimActive = false;
+    // turns them directly instead. Both aim paths use the same native precision aim state.
     inline float* CarAimAngles[2]{};        // turn, pitch
     inline uint8_t* GameInvertY = nullptr;
 
-    inline void UpdateCarAim()
+    inline bool PrecisionAimActive()
     {
-        CarAimActive = CarAimSeen.exchange(false, std::memory_order_relaxed);
-    }
-
-    inline bool OnFootAim()
-    {
-        auto player = PlayerObject.get();
-        const bool aiming = player && ((player[9] != 5 && *reinterpret_cast<int*>(player + 0xD68) == 3) ||
-            (player[9] == 5 && CarAimActive));
+        const bool aiming = TrueCrimeFreeCamera::IsPrecisionAiming(PlayerObject.get());
         if (!aiming)
         {
             AimX.store(0, std::memory_order_relaxed);
@@ -178,11 +242,9 @@ export namespace TrueCrimeInput
         const int game = AxisValue(state, edx, axis, deadzone);
         const int32_t counts = (Pitch ? AimY : AimX).exchange(0, std::memory_order_relaxed);
         // 0.002 rad a count, in the game's 1/1024 degree units
-        const float configuredSensitivity = FixSettings().Float("MAIN.MouseSensitivity");
-        const float sensitivity = std::isfinite(configuredSensitivity) ? std::clamp(configuredSensitivity, 0.1f, 5.0f) : 1.0f;
-        const float scale = 0.002f * 57.29578f * 1024.0f * sensitivity;
+        const float scale = TrueCrimeFreeCamera::MouseScale * 57.29578f * 1024.0f;
         float& rest = AimRest[Pitch];
-        const float direction = Pitch && FixSettings().Bool("MAIN.InvertMouseY") ? -1.0f : 1.0f;
+        const float direction = Pitch ? TrueCrimeFreeCamera::MouseVertical : 1.0f;
         const double movement = double(rest) + double(counts) * scale * direction;
         const int part = static_cast<int>(std::clamp(movement, double(INT32_MIN), double(INT32_MAX)));
         rest = movement > INT32_MIN && movement < INT32_MAX ? static_cast<float>(movement - part) : 0.0f;
@@ -192,17 +254,14 @@ export namespace TrueCrimeInput
     template<bool Pitch> int __fastcall CarAimAxis(void* state, void* edx, int axis, int deadzone)
     {
         const int game = AxisValue(state, edx, axis, deadzone);
-        CarAimSeen.store(true, std::memory_order_relaxed);
         const int32_t counts = (Pitch ? AimY : AimX).exchange(0, std::memory_order_relaxed);
         if (!counts)
             return game;
-        const float configuredSensitivity = FixSettings().Float("MAIN.MouseSensitivity");
-        const float sensitivity = std::isfinite(configuredSensitivity) ? std::clamp(configuredSensitivity, 0.1f, 5.0f) : 1.0f;
-        float turn = float(counts) * 0.002f * sensitivity;
+        float turn = float(counts) * TrueCrimeFreeCamera::MouseScale;
         if (Pitch)
         {
             // The game's own vertical axis is the negated mouse, then its invert option
-            turn = -turn * (*GameInvertY ? -1.0f : 1.0f) * (FixSettings().Bool("MAIN.InvertMouseY") ? -1.0f : 1.0f);
+            turn = -turn * (*GameInvertY ? -1.0f : 1.0f) * TrueCrimeFreeCamera::MouseVertical;
         }
         float& angle = *CarAimAngles[Pitch];
         angle = std::clamp(angle + turn, -0.3f, Pitch ? 0.3f : 1.3f);
@@ -239,7 +298,7 @@ export namespace TrueCrimeInput
         WFP::onGameProcessEvent() += []()
         {
             const bool blocked = TrueCrimeOverlay::BlocksInput() || GameMode.get() >= 2;
-            if (blocked || !OnFootAim())
+            if (blocked || !PrecisionAimActive())
             {
                 AimX.store(0, std::memory_order_relaxed);
                 AimY.store(0, std::memory_order_relaxed);
@@ -269,8 +328,7 @@ export namespace TrueCrimeInput
             {
                 AimHooks.push_back(safetyhook::create_mid(match.get<void>(6), [](SafetyHookContext& context)
                 {
-                    UpdateCarAim();
-                    if (!OnFootAim())
+                    if (!PrecisionAimActive())
                         return;
                     TakeAim(*reinterpret_cast<int32_t*>(context.esp + 0x2C), *reinterpret_cast<int32_t*>(context.esp + 0x30));
                     *reinterpret_cast<int32_t*>(context.esp + 0x1C) = 0;
@@ -303,8 +361,7 @@ export namespace TrueCrimeInput
         {
             AimHooks.push_back(safetyhook::create_mid(hook::pattern("F7 D8 89 44 24 2C DD D8").get_first(), [](SafetyHookContext& context)
             {
-                UpdateCarAim();
-                if (!OnFootAim())
+                if (!PrecisionAimActive())
                     return;
                 TakeAim(*reinterpret_cast<int32_t*>(context.esp + 0x38), *reinterpret_cast<int32_t*>(context.esp + 0x3C));
                 *reinterpret_cast<int32_t*>(context.esp + 0x20) = 0;
@@ -362,28 +419,31 @@ export namespace TrueCrimeInput
             auto camera = *reinterpret_cast<uint8_t**>(context.esi + 0xE54);
             auto& yaw = *reinterpret_cast<float*>(camera + 356);
             auto& pitch = *reinterpret_cast<float*>(camera + 352);
-            const float configuredSensitivity = FixSettings().Float("MAIN.MouseSensitivity");
-            const float sensitivity = std::isfinite(configuredSensitivity) ? std::clamp(configuredSensitivity, 0.1f, 5.0f) : 1.0f;
-            const float scale = 0.002f * sensitivity;
+            const float scale = TrueCrimeFreeCamera::MouseScale;
             const float turn = float(x) * scale * ((*ControllerFlags & 4) ? -1.0f : 1.0f);
             yaw = std::remainder(yaw + turn, 6.2831855f);
-            const float vertical = FixSettings().Bool("MAIN.InvertMouseY") ? -1.0f : 1.0f;
+            const float vertical = TrueCrimeFreeCamera::MouseVertical;
             pitch += float(y) * scale * vertical * ((*ControllerFlags & 8) ? -1.0f : 1.0f) * ((context.eax & 0xFF) ? -1.0f : 1.0f);
         });
         IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("GetPrivateProfileIntA", ReadIniInt),
             std::forward_as_tuple("WritePrivateProfileStringA", WriteIniString));
         auto original = IATHook::Replace(GetModuleHandleW(nullptr), "DINPUT8.dll", std::forward_as_tuple("DirectInput8Create", Create));
         NativeCreate = reinterpret_cast<decltype(NativeCreate)>(original.at("DirectInput8Create").get());
-        IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("PeekMessageA", PeekMessageOnePass));
-        // The camera reads the mouse once per drawn frame (immediate data: the movement since the last read)
-        TrueCrimeFreeCamera::ReadMouse = []()
+        // The optional joystick's initial exclusive acquire can fail when another application owns the controller.
+        auto acquireJoystick = hook::pattern("A1 ? ? ? ? 8B 08 50 FF 51 1C 8B F0 85 F6 74 1D 68 ? 03 00 00 68");
+        auto* call = acquireJoystick.count(1).get(0).get<uint8_t>(5);
+        injector::WriteMemory<uint8_t>(call, 0x50, true); // push eax
+        injector::MakeCALL(call + 1, AcquireJoystick, true);
+        const auto module = GetModuleHandleW(nullptr);
+        MessagePumpGuard::Install(module);
+        auto user32 = IATHook::Replace(module, "USER32.dll", std::forward_as_tuple("PeekMessageA", PeekMessageWithClose));
+        GuardedPeek = reinterpret_cast<decltype(GuardedPeek)>(user32.at("PeekMessageA").get());
+        TrueCrimeWindow::ReleaseInput = CloseCameraMouse;
+        TrueCrimeFreeCamera::ReadMouse = ReadCameraMouse;
+        WFP::onGameProcessEvent() += []()
         {
-            DIMOUSESTATE state{};
-            if (Mouse && SUCCEEDED(DeviceStateHook.stdcall<HRESULT>(Mouse, DWORD(sizeof(state)), &state)) && !TrueCrimeOverlay::BlocksInput())
-            {
-                TrueCrimeFreeCamera::CountsX.fetch_add(state.lX, std::memory_order_relaxed);
-                TrueCrimeFreeCamera::CountsY.fetch_add(state.lY, std::memory_order_relaxed);
-            }
+            if (!CameraMouseActive || !TrueCrimeFreeCamera::TakesMouse())
+                ReadCameraMouse();
         };
     }
 }

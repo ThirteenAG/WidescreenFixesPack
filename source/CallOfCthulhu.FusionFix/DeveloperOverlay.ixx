@@ -42,6 +42,8 @@ export namespace CoCOverlay
 
     inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         // The hotkey itself is read at the frame boundary: the game's DirectInput keyboard can take the key messages
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
@@ -74,6 +76,8 @@ export namespace CoCOverlay
 
     inline void Present(IDirect3DDevice9* device, HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!device)
             return;
         static const bool page = []()
@@ -97,6 +101,7 @@ export namespace CoCOverlay
         }();
         Keyboard(window);
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
     }
 }

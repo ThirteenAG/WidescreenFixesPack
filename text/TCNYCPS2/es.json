@@ -8,7 +8,7 @@
   "FOVFactor": "Campo de visión",
   "FOVFactor.description": "Multiplica el campo de visión de la cámara de juego, a pie y en vehículos; 1,0 es el encuadre original. Las escenas mantienen su propio encuadre. Los cambios se aplican durante el juego.",
   "HudAspectRatioConstraint": "Relación de aspecto del HUD",
-  "HudAspectRatioConstraint.description": "Auto coloca la salud, la placa, el arma y la munición, los recuadros de ayuda y el radar en los bordes de la pantalla. Una relación los mantiene en los bordes de un recuadro centrado con esa forma. Los cambios se aplican durante el juego.",
+  "HudAspectRatioConstraint.description": "Auto coloca el HUD en los bordes de la pantalla. Una relación de aspecto lo limita a un área centrada. Las posiciones del HUD se actualizan durante la partida. Si algún elemento permanece en su posición anterior, pausa y reanuda la partida o espera a la siguiente escena.",
   "CutsceneBorders": "Bandas en escenas",
   "CutsceneBorders.description": "Bandas negras en las escenas. Letterbox mantiene las bandas originales arriba y abajo, Pillarbox mantiene la imagen 4:3 original con bandas a los lados, Ambas las combina, Desactivado llena la pantalla. Los menús mantienen su aspecto. Los cambios se aplican durante el juego.",
   "borders.off": "Desactivado",

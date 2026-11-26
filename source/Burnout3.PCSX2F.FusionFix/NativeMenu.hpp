@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iterator>
 
 namespace burnout::menu
 {
@@ -234,13 +235,30 @@ void (*onChange)(bool);
 void (*onError)();
 void (*onReload)();
 int page, preset = -1;
+bool refreshPending;
 SafetyMipsMid listHook, descriptionHook;
 safetymips::GameInline<int(uintptr_t)> updateHook;
 pcsx2::GameFunction<int(uintptr_t, int)> confirm, back, up, down, left, right;
 pcsx2::GameFunction<void(uintptr_t, int, int)> refresh;
 
+constexpr unsigned textLanguageOption = 12;
+constexpr const char* languageCodes[] = {"auto", "en", "fr", "de", "it", "es"};
+constexpr const char* languageNames[] = {"AUTO", "ENGLISH", "FRANCAIS", "DEUTSCH", "ITALIANO", "ESPANOL"};
+constexpr unsigned languageChoices = sizeof(languageCodes) / sizeof(*languageCodes);
+
+unsigned LanguageChoice()
+{
+    for (unsigned choice = 1; choice < languageChoices; ++choice)
+        if (std::strcmp(values[textLanguageOption].value, languageCodes[choice]) == 0)
+            return choice;
+    return 0;
+}
+
 const Language& CurrentLanguage()
 {
+    if (const unsigned choice = LanguageChoice())
+        return languages[choice - 1];
+
     const uint32_t language = *reinterpret_cast<const uint32_t*>(0x4E2918);
     switch (language)
     {
@@ -335,11 +353,16 @@ void Populate()
         descriptions[2] = fpsHelp[&l - languages];
         Label(3, controls.controls);
         descriptions[3] = controls.controlsHelp;
-        Label(4, l.previous);
-        descriptions[4] = l.backHelp;
-        // Five rows here: the sixth stays blank and can't be selected.
-        Label(5, " ");
-        entries[5].disabled = 1;
+        constexpr const char* languageLabels[] = {"LANGUAGE", "LANGUE", "SPRACHE", "LINGUA", "IDIOMA"};
+        constexpr const char16_t* languageHelp[] = {
+            u"AUTO USES THE GAME LANGUAGE FOR THIS MENU.",
+            u"AUTO UTILISE LA LANGUE DU JEU POUR CE MENU.",
+            u"AUTO NUTZT DIE SPIELSPRACHE FUER DIESES MENUE.",
+            u"AUTO USA LA LINGUA DI GIOCO PER QUESTO MENU.",
+            u"AUTO USA EL IDIOMA DEL JUEGO PARA ESTE MENU."};
+        Label(4, languageLabels[&l - languages], languageNames[LanguageChoice()]);
+        descriptions[4] = languageHelp[&l - languages];
+        Label(5, l.previous);
         descriptions[5] = l.backHelp;
     }
     else
@@ -360,8 +383,28 @@ void Populate()
         descriptions[5] = controls.splitHelp;
     }
 }
+void InvalidateDescription()
+{
+    // The native ticker at 0x1E89788 rebuilds its text when the selected row
+    // differs from its cached index. A translated description can change in place.
+    *reinterpret_cast<int8_t*>(0x1E89788 + 0x6D) = -1;
+}
+void Rebuild(unsigned selected)
+{
+    const auto* oldHelp = descriptions[selected];
+    Populate();
+    if (descriptions[selected] != oldHelp)
+        InvalidateDescription();
+    refresh(0x1E89544, 0, 0);
+}
+void OptionsReloaded()
+{
+    refreshPending = true;
+}
 bool WriteValues(const unsigned* indices, const char* const* newValues, unsigned count, bool restart)
 {
+    const bool oldIntro = console::ps2settings::boolean(values[3], true);
+    const bool oldFullRate = std::atoi(values[11].value) > 30;
     static PCSX2FIniRequest request;
     request = {};
     request.size = sizeof(request);
@@ -383,7 +426,8 @@ bool WriteValues(const unsigned* indices, const char* const* newValues, unsigned
     }
     for (unsigned i = 0; i < count; ++i)
         console::ps2settings::copy(values[indices[i]].value, newValues[i]);
-    onChange(restart);
+    onChange(restart && (oldIntro != console::ps2settings::boolean(values[3], true) ||
+                         oldFullRate != (std::atoi(values[11].value) > 30)));
     return true;
 }
 void ChangeOne(unsigned index, const char* value, bool restart = false)
@@ -424,6 +468,11 @@ void Change(unsigned row, int direction)
     }
     else if (page == 2 && row == 1)
         ChangeOne(3, console::ps2settings::boolean(values[3], true) ? "0" : "1", true);
+    else if (page == 2 && row == 4)
+    {
+        const unsigned next = (int(LanguageChoice()) + direction + int(languageChoices)) % languageChoices;
+        ChangeOne(textLanguageOption, languageCodes[next]);
+    }
     else if (page == 3 && row == 0)
     {
         float value = std::strtof(values[6].value, nullptr);
@@ -452,10 +501,9 @@ void Change(unsigned row, int direction)
     {
         const int activePreset = DetectedPreset();
         const int next = activePreset < 0 ? 0 : (activePreset + direction + 3) % 3;
-        // Aspect, HUD size and FOV are personal choices shared by all presets.
         const unsigned indices[] = {3, 5, 11};
         const char* settings[] = {next ? "1" : "0", next ? "1" : "0", next ? "60" : "30"};
-        if (WriteValues(indices, settings, 3, true))
+        if (WriteValues(indices, settings, std::size(indices), true))
             preset = next;
     }
     else if (page == 2 && row == 2)
@@ -465,23 +513,38 @@ void Close(uint16_t* selection)
 {
     std::memcpy(entries, mainEntries, sizeof(entries));
     std::memcpy(descriptions, mainDescriptions, sizeof(descriptions));
+    descriptions[5] = CurrentLanguage().pluginsHelp;
     *selection = 5;
     page = 0;
+    InvalidateDescription();
     refresh(0x1E89544, 0, 0);
 }
 int Update(uintptr_t owner)
 {
     auto* selected = reinterpret_cast<uint16_t*>(owner + 20);
+    if (refreshPending)
+    {
+        refreshPending = false;
+        if (page && *selected < 6)
+            Rebuild(*selected);
+        else if (!page)
+        {
+            const auto* help = CurrentLanguage().pluginsHelp;
+            if (*selected == 5 && descriptions[5] != help)
+                InvalidateDescription();
+            descriptions[5] = help;
+        }
+    }
     if (!page)
     {
         if (*selected != 5 || !confirm(0x4F50C0, 0))
             return updateHook.call(owner);
+        onReload();
         std::memcpy(mainEntries, entries, sizeof(entries));
         std::memcpy(mainDescriptions, descriptions, sizeof(descriptions));
         page = 1;
         *selected = 0;
-        Populate();
-        refresh(0x1E89544, 0, 0);
+        Rebuild(*selected);
         return 1;
     }
     if (back(0x4F50C0, 0))
@@ -491,8 +554,7 @@ int Update(uintptr_t owner)
             const bool controlsPage = page == 3;
             page = controlsPage ? 2 : 1;
             *selected = controlsPage ? 3 : 5;
-            Populate();
-            refresh(0x1E89544, 0, 0);
+            Rebuild(*selected);
         }
         else
             Close(selected);
@@ -500,7 +562,7 @@ int Update(uintptr_t owner)
     }
     if (up(0x4F50C0, 0) && *selected > 0)
         --*selected;
-    else if (down(0x4F50C0, 0) && *selected < (page == 2 ? 4 : 5))
+    else if (down(0x4F50C0, 0) && *selected < 5)
         ++*selected;
     else
     {
@@ -517,7 +579,7 @@ int Update(uintptr_t owner)
             page = 3;
             *selected = 0;
         }
-        else if (select && page >= 2 && *selected == 4)
+        else if (select && ((page == 2 && *selected == 5) || (page == 3 && *selected == 4)))
         {
             *selected = page == 3 ? 3 : 5;
             page = page == 3 ? 2 : 1;
@@ -526,8 +588,7 @@ int Update(uintptr_t owner)
             Change(*selected, decrease ? -1 : 1);
         else
             return 1;
-        Populate();
-        refresh(0x1E89544, 0, 0);
+        Rebuild(*selected);
     }
     return 1;
 }
@@ -553,6 +614,7 @@ void Install(Value* settings, void (*changed)(bool), void (*error)(), void (*rel
         {
             const uintptr_t owner = uintptr_t(r.s0);
             page = 0;
+            refreshPending = false;
             std::memcpy(entries, reinterpret_cast<const void*>(owner + 24), 40);
             std::memcpy(descriptions, reinterpret_cast<const void*>(owner + 64), 20);
             entries[5] = {pluginsLabel, 0, 0, 0};

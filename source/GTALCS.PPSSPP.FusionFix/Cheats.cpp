@@ -19,6 +19,7 @@ constexpr std::array<console::AddressRule, 2> rules = {{
 }};
 console::NativeProfile<rules> profile;
 bool available;
+bool wasActive;
 bool keys[26]{};
 char buffer[24]{};
 
@@ -70,19 +71,29 @@ void InstallCheats()
 }
 bool CheatsAvailable() { return available; }
 
+void ResetCheatInput()
+{
+    if (!wasActive) return;
+    wasActive = false;
+    std::memset(buffer, 0, sizeof(buffer));
+}
+
 void TickCheats()
 {
-    if (!available || !settings.pcCheats) return;
-    const bool active = !*reinterpret_cast<const uint8_t*>(Address<0x8B8EE20>() + 0x131);
-    if (!active) std::memset(buffer, 0, sizeof(buffer));
+    if (!available || !settings.pcCheats || *reinterpret_cast<const uint8_t*>(Address<0x8B8EE20>() + 0x131))
+    {
+        ResetCheatInput();
+        return;
+    }
     for (unsigned i = 0; i < 26; ++i)
     {
         uint8_t pressed = 0;
-        const bool held = sceIoDevctl("kemulator:", 0x34,
-            reinterpret_cast<void*>(i + 29), 0, &pressed, sizeof(pressed)) >= 0 && pressed;
-        const bool edge = held && !keys[i];
+        if (sceIoDevctl("kemulator:", 0x34, reinterpret_cast<void*>(i + 29), 0, &pressed, sizeof(pressed)) < 0)
+            continue;
+        const bool held = pressed != 0;
+        const bool edge = wasActive && held && !keys[i];
         keys[i] = held;
-        if (!active || !edge) continue;
+        if (!edge) continue;
         std::memmove(buffer + 1, buffer, sizeof(buffer) - 1);
         buffer[0] = char('A' + i);
         for (const auto& cheat : cheats)
@@ -97,5 +108,6 @@ void TickCheats()
             break;
         }
     }
+    wasActive = true;
 }
 }

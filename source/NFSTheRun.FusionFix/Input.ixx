@@ -24,13 +24,24 @@ void Init()
     (void)PadInput::XInput();
 }
 
+void ResetMouseSample()
+{
+    g_Mouse.DeltaX = g_Mouse.DeltaY = g_Mouse.Wheel = 0;
+    nWheelAccum = 0;
+    bFirstFrame = true;
+}
+
 void Update()
 {
     g_RightStick.RawX = g_RightStick.RawY = 32768;
     g_RightStick.X = g_RightStick.Y = 0.0f;
     bBothSticksClicked = false;
     if (hWnd != GetForegroundWindow())
+    {
+        ResetMouseSample();
+        RawMouse::Clear();
         return;
+    }
 
     XINPUT_STATE state{};
     DWORD slot{};
@@ -62,43 +73,31 @@ void Update()
         bBothSticksClicked = (state.Gamepad.wButtons & XI_BOTH_THUMBS) == XI_BOTH_THUMBS;
     }
 
-    POINT ptCurrent;
-    GetCursorPos(&ptCurrent);
-
-    // The mouse's raw movement when raw input is on, else the cursor's
     int rawX = 0, rawY = 0;
+    const bool wasRaw = g_Mouse.Raw;
     g_Mouse.Raw = RawMouse::Consume(rawX, rawY);
-    if (g_Mouse.Raw)
-    {
-        g_Mouse.DeltaX = bFirstFrame ? 0 : rawX;
-        g_Mouse.DeltaY = bFirstFrame ? 0 : rawY;
-        bFirstFrame = false;
-    }
-    else if (!bFirstFrame)
-    {
-        g_Mouse.DeltaX = ptCurrent.x - ptLastCursor.x;
-        g_Mouse.DeltaY = ptCurrent.y - ptLastCursor.y;
-    }
-    else
-    {
-        g_Mouse.DeltaX = 0;
-        g_Mouse.DeltaY = 0;
-        bFirstFrame = false;
-    }
 
+    POINT ptCurrent{};
+    if (!GetCursorPos(&ptCurrent))
+        return ResetMouseSample();
+
+    POINT ptNext = ptCurrent;
     if (bHideCursorForMouseLook)
     {
-        RECT rect; GetWindowRect(hWnd, &rect);
-        int cx = (rect.left + rect.right) / 2;
-        int cy = (rect.top + rect.bottom) / 2;
-        SetCursorPos(cx, cy);
-        ptLastCursor = { cx, cy };
-    }
-    else
-    {
-        ptLastCursor = ptCurrent;
+        RECT rect{};
+        if (!GetWindowRect(hWnd, &rect))
+            return ResetMouseSample();
+        ptNext = { rect.left + (rect.right - rect.left) / 2, rect.top + (rect.bottom - rect.top) / 2 };
+        // The OS may constrain the warp to a position other than the requested centre.
+        if (!SetCursorPos(ptNext.x, ptNext.y) || !GetCursorPos(&ptNext))
+            return ResetMouseSample();
     }
 
+    const bool haveBaseline = !bFirstFrame && wasRaw == g_Mouse.Raw;
+    g_Mouse.DeltaX = haveBaseline ? (g_Mouse.Raw ? rawX : ptCurrent.x - ptLastCursor.x) : 0;
+    g_Mouse.DeltaY = haveBaseline ? (g_Mouse.Raw ? rawY : ptCurrent.y - ptLastCursor.y) : 0;
+    ptLastCursor = ptNext;
+    bFirstFrame = false;
     g_Mouse.Wheel = nWheelAccum;
     nWheelAccum = 0;
 }
@@ -117,7 +116,8 @@ public:
             WFP::onGameProcessEvent() += []()
             {
                 fDeadzone = std::clamp(FixSettings().Float("GAMEPAD.RightStickDeadzone"), 0.0f, 50.0f) / 100.0f;
-                RawMouse::Enabled = FixSettings().Bool("MAIN.RawInputMouse") && FixSettings().Bool("CAMERA.Enable");
+                const bool useRawMouse = FixSettings().Bool("MAIN.RawInputMouse") && FixSettings().Bool("CAMERA.FreeLook");
+                RawMouse::Enabled.store(useRawMouse);
                 RawMouse::Update(hWnd.get());
                 Update();
             };

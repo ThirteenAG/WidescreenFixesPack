@@ -7,19 +7,20 @@ inline injector::hook_back<int(uintptr_t, uint8_t)> frame;
 
 inline int Pace(uintptr_t renderer, uint8_t nativeWait)
 {
-    // The native path already waits for a vblank when nativeWait is set.
-    // Do not constrain the dedicated fast-loading path.
+    static uint32_t lastPresent{ UINT32_MAX };
+    if (options.dualAnalog)
+        Stick::host.Poll(sceKernelGetSystemTimeLow());
     if (!fastForward)
     {
-        const int waits = (limit == 30 ? 2 : 1) - (nativeWait ? 1 : 0);
-        for (int i = 0; i < waits; ++i)
+        // Count vblanks already elapsed and the native wait toward the cap.
+        const unsigned waits = (limit == 30 ? 2u : 1u) - (nativeWait ? 1u : 0u);
+        const uint32_t elapsed = lastPresent == UINT32_MAX ? 0u : sceDisplayGetVcount() - lastPresent;
+        for (uint32_t i = elapsed; i < waits; ++i)
             sceDisplayWaitVblankStart();
     }
-    return frame.fun(renderer, nativeWait);
-}
-inline void ReadOptions()
-{
-    limit = std::clamp(inireader.ReadInteger("MAIN", "FPSLimit", 60), 30, 60);
+    const int result = frame.fun(renderer, nativeWait);
+    lastPresent = sceDisplayGetVcount();
+    return result;
 }
 inline void Install()
 {

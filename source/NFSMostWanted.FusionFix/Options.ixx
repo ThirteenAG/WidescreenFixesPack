@@ -110,6 +110,8 @@ namespace
     void* (__fastcall* RowObject)(void* screen, void* edx, const char* prefix) = nullptr;    // the next option's title
     void (__fastcall* ClearOptions)(void* screen, void* edx) = nullptr;                     // deletes the screen's options
     void (__fastcall* FinishOptions)(void* screen, void* edx, int highlight) = nullptr;     // lays them out, highlights one (1-based, 0 = first)
+    void (__fastcall* PlaceRows)(void* screen, void* edx) = nullptr;                        // shows the rows of the visible window around the highlighted one, hides the rest
+    constexpr uint32_t ListFinishedOffset = 285;    // the list was finished: finishing it again only updates the scroll bar
 
     // The screen's layout has a row of objects for each option: OPTION_NAME_1, OPTION_DATA_1, LEFT_ARROW_1 and so on,
     // with the prefixes in the screen. The options screen has ten rows, so the fix makes more by copying the last one.
@@ -312,12 +314,14 @@ namespace
         ScreenKind kind{};
     };
     BuildRequest PendingBuild;
+    void* VisibleRowsScreen = nullptr;     // the screen whose list's own number of visible rows is kept
+    int NativeVisibleRows = 0;
 
 
     // The fix's settings that go next to the game's own video options (the basic list, then the advanced one); the
     // fix's page leaves them out
     const std::vector<std::string> VideoBasic = { "MAIN.WindowMode", "MAIN.FOVFactor", "MAIN.HudAspectRatioConstraint", "GRAPHICS.ConsoleGamma" };
-    const std::vector<std::string> VideoAdvanced = { "GRAPHICS.AntiAliasing", "GRAPHICS.ShadowResolution", "GRAPHICS.SoftShadows" };
+    const std::vector<std::string> VideoAdvanced = { "GRAPHICS.AntiAliasing", "GRAPHICS.ShadowResolution", "GRAPHICS.SoftShadows", "GRAPHICS.DisableMotionBlur" };
     bool VideoAdvancedShown = false;
     constexpr uint32_t InGameOffset = 292;
     bool VideoPauseShown{};
@@ -441,6 +445,7 @@ namespace
     void ConstructScreen(void* screen)
     {
         Leaving = false;
+        VisibleRowsScreen = nullptr;
         PendingBuild = {};
         RetireRows(RowsOwner.Get());
         ScreenOwner.Bind(screen);
@@ -1333,6 +1338,55 @@ namespace
 
     // The video options screen: the fix's video settings after the game's, in the basic and in the advanced list
     constexpr uint32_t AdvancedVideoOffset = 340;   // the screen's "advanced list shown"
+    constexpr uint32_t VisibleRowsOffset = 268;     // how many rows the list shows at once
+    constexpr uint32_t RowStepOffset = 224;         // the distance between rows
+    constexpr uint32_t BrightnessText = 0x545570C6; // the basic list's brightness instructions, above the two logos
+    // The vertical position of an object in the package: its own and its groups'
+    bool ObjectY(FEList* list, uint32_t hash, float offset, float& y)
+    {
+        for (auto node = list->head; node; node = *reinterpret_cast<uint8_t**>(node + 4))
+        {
+            auto data = *reinterpret_cast<float**>(node + 0x2C);
+            auto own = data ? data[8] : 0.0f;
+            if (*reinterpret_cast<uint32_t*>(node + 0x10) == hash)
+            {
+                y = offset + own;
+                return true;
+            }
+            if (*reinterpret_cast<int32_t*>(node + 0x18) == 5 && ObjectY(reinterpret_cast<FEList*>(node + 0x60), hash, offset + own, y))
+                return true;
+        }
+        return false;
+    }
+
+    // The basic video list shows the brightness instructions and logos below its rows: the list scrolls the rows that
+    // fit above them. The advanced list has the whole height.
+    void FitVideoRows(void* screen)
+    {
+        auto bytes = static_cast<uint8_t*>(screen);
+        auto& visible = *reinterpret_cast<int*>(bytes + VisibleRowsOffset);
+        if (VisibleRowsScreen != screen)
+        {
+            VisibleRowsScreen = screen;
+            NativeVisibleRows = visible;
+        }
+        visible = NativeVisibleRows;
+        if (VideoAdvancedShown)
+            return;
+        auto package = ScreenPackage(screen);
+        auto head = *reinterpret_cast<uint8_t**>(bytes + 44);
+        if (!package || !head || head == bytes + 44)
+            return;
+        auto first = reinterpret_cast<Option*>(head - 4);
+        auto title = static_cast<uint8_t*>(first->Title());
+        auto step = *reinterpret_cast<float*>(bytes + RowStepOffset);
+        auto objects = reinterpret_cast<FEList*>(package + 0x48);
+        float rowY{}, textY{};
+        if (!title || step <= 0.0f || !ObjectY(objects, *reinterpret_cast<uint32_t*>(title + 0x10), 0.0f, rowY) ||
+            !ObjectY(objects, BrightnessText, 0.0f, textY))
+            return;
+        visible = std::clamp(int((textY - rowY) / step), 1, NativeVisibleRows);
+    }
 
     bool BuildVideoRowsNow(void* screen)
     {
@@ -1344,6 +1398,7 @@ namespace
         VideoAdvancedShown = *reinterpret_cast<uint8_t*>(reinterpret_cast<uintptr_t>(screen) + AdvancedVideoOffset) != 0;
         if (!FindPlugins(lifetime))
             return false;
+        FitVideoRows(screen);
         return AppendRows(screen);
     }
 
@@ -1520,7 +1575,8 @@ namespace
             text += "\n" + row->help;
         float width{};
         auto captions = HelpCaptions.Prepare(token.screen, package, name,
-            static_cast<uint8_t*>(static_cast<Option*>(selected)->Title()), FindFont, CurrentLanguage ? *CurrentLanguage : 0, width);
+            static_cast<uint8_t*>(static_cast<Option*>(selected)->Title()), FindFont, CurrentLanguage ? *CurrentLanguage : 0, width,
+            VisibleRowsScreen == token.screen ? uint32_t(NativeVisibleRows) : 0);  // below the brightness instructions
         if (!Current(token))
             return;
         if (captions.empty())
@@ -1589,7 +1645,13 @@ namespace
                 built = BuildVideoRowsNow(build.lifetime.screen);
             auto token = RowsOwner.Capture();
             if (built && Current(token) && ScreenOwner.Matches(build.lifetime))
-                FinishOptions(token.screen, nullptr, 0);
+            {
+                // Rows added to a finished list (the video screen's) are placed with the scrolling window like the game's
+                if (*reinterpret_cast<uint8_t*>(static_cast<uint8_t*>(token.screen) + ListFinishedOffset))
+                    PlaceRows(token.screen, nullptr);
+                if (Current(token) && ScreenOwner.Matches(build.lifetime))
+                    FinishOptions(token.screen, nullptr, 0);
+            }
         }
         for (size_t count = 0; count < 32 && !InputCommands.empty(); ++count)
         {
@@ -1828,6 +1890,7 @@ public:
             BindAnimationTracks = reinterpret_cast<decltype(BindAnimationTracks)>(bindTracks.get_first());
             ClearOptions = reinterpret_cast<decltype(ClearOptions)>(injector::GetBranchDestination(rebuild.get_first(8)).as_int());
             FinishOptions = reinterpret_cast<decltype(FinishOptions)>(injector::GetBranchDestination(rebuild.get_first(0x18)).as_int());
+            PlaceRows = reinterpret_cast<decltype(PlaceRows)>(hook::pattern("57 8B F9 8B 4F 2C 8D 47 2C 3B C8 0F 84 ? ? ? ? 55 8B 6F 34 85 ED 75 10 8B 47 4C").get_first());
             Languages = *languages.get_first<LanguageInfo*>(1);
             CurrentLanguage = *languages.get_first<int32_t*>(0x13);
             LanguagesEnd = reinterpret_cast<LanguageInfo*>(CurrentLanguage);

@@ -190,11 +190,27 @@ public:
                 }
             }; injector::MakeInline<HudHook4>(pattern.count(2).get(1).get<uint32_t>(0), pattern.count(2).get(1).get<uint32_t>(6));
 
+            // Options > Controls > Configure Input is a separate UI that places its boxes and icons with its own
+            // screen offset; put that offset on the 4:3 box, and have its text step back by the same amount before
+            // the text path above adds the box offset.
+            pattern = hook::pattern("D9 5E 34 DB 05 ? ? ? ? D9 5E 38 5E 83 C4 10 C2 08 00");
+            static SafetyHookMid ControlsOriginHook = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
+            {
+                *reinterpret_cast<float*>(regs.esi + 0x34) += Screen.fHudOffset;
+            });
+            pattern = hook::pattern("8B 1D ? ? ? ? 2B CB D9 5C 24 10 89 4C 24 20");
+            static SafetyHookMid ControlsTextHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
+            {
+                regs.ebx += static_cast<int32_t>(Screen.fHudOffset);
+            });
+
             pattern = hook::pattern("D8 C2 8B F0 D8 05 ? ? ? ? D8 0D ? ? ? ? D8"); //main menu cursor fix
             injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint8_t>(2), 0xC0, true); //0x4FC837
             injector::WriteMemory<uint8_t>(pattern.count(1).get(0).get<uint8_t>(17), 0xC0, true); //0x4FC847
 
             // The cutscene manager's list of playing cutscenes; gameplay FOV only while it is empty.
+            static std::atomic<float> fovFactor{ 1.0f };
+            BindLiveSetting("MAIN.FOVFactor", fovFactor);
             pattern = hook::pattern("8B 3D ? ? ? ? 0F 94 C1 88 4C 24 0C 68 74 52 15 DA");
             CutsceneOwner.SetAddress(*pattern.get_first<uint8_t**>(2));
             pattern = hook::pattern("D9 9E C4 00 00 00 E8 ? ? ? ? D9 86 C4 00 00 00 5E 59 C3");
@@ -202,7 +218,7 @@ public:
             static auto FovHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
             {
                 auto camera = reinterpret_cast<uint8_t*>(regs.esi);
-                static const auto& factor = FixSettings().Float("MAIN.FOVFactor");
+                const auto factor = fovFactor.load(std::memory_order_relaxed);
                 auto& fov = *reinterpret_cast<float*>(camera + 0xC4);
                 fov = CameraFOV(fov, factor, camera);
             });
@@ -244,6 +260,7 @@ public:
                 dword_6B75A0_Y = height;
                 if (updateHudScale) updateHudScale(width, height);
             });
+            asi_settings::LiveLink::Start();
         };
     }
 } Misc;

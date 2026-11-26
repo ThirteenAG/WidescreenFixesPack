@@ -1,13 +1,22 @@
 #pragma once
+#include <charconv>
 #include "Shared/AsiSettings/asi_settings.hpp"
 
-// The fix's settings: described in settings.json (embedded as a resource), stored in the plugin's .cfg. Loaded on first
-// use, since modules read them while the plugin loads. Read the values through the references of Int, Float and
-// String; change them with Set, so that the .cfg, menus and editors follow.
+// The fix's settings are described in the embedded schema and stored in the plugin's CFG.
 inline asi_settings::Plugin& FixSettings()
 {
     static asi_settings::Plugin plugin;
     static bool loaded = plugin.Load();
     (void)loaded;
     return plugin;
+}
+
+template<typename Number>
+inline Number FixSettingNumber(std::string_view id, Number fallback)
+{
+    const auto value = FixSettings().Get(id);
+    Number number{};
+    const auto end = value.data() + value.size();
+    const auto parsed = std::from_chars(value.data(), end, number);
+    return parsed.ec == std::errc{} && parsed.ptr == end ? number : fallback;
 }

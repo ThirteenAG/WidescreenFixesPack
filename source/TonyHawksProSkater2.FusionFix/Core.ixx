@@ -3,6 +3,7 @@ module;
 #include "stdafx.h"
 #include "FixSettings.hpp"
 #include "Shared/WindowCursor.hpp"
+#include "rawinput.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
 
 
@@ -20,6 +21,8 @@ import Misc;
 
 void Install()
 {
+    // The main loop empties the message queue before each frame; a high polling rate mouse must not keep it going
+    MessagePumpGuard::Install(GetModuleHandle(nullptr));
     WindowCursor::Initialize(FixSettings());
     THPS2Menu::Init();
     THPS2DeferredClose::Install();

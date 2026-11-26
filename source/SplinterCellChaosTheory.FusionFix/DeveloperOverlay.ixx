@@ -70,6 +70,8 @@ export namespace DeveloperOverlay
 
     void Present(IDirect3DDevice9* device)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!device)
             return;
         static const bool page = []()
@@ -99,6 +101,7 @@ export namespace DeveloperOverlay
                 throw std::runtime_error("Developer overlay reset hook unavailable");
         }
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
     }
 }

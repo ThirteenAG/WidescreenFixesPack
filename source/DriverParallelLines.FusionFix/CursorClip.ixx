@@ -16,11 +16,14 @@ public:
         WFP::onInitEvent() += []()
         {
             auto& settings = FixSettings();
-            CursorConfinement::SetEnabled(settings.Bool("MAIN.ConfineCursor"));
-            settings.OnChange("MAIN.ConfineCursor", []()
+            const auto updateCursor = []()
             {
-                CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
-            });
+                static std::mutex mutex;
+                std::lock_guard lock(mutex);
+                CursorConfinement::SetEnabled(FixSettings().Get("MAIN.ConfineCursor") == "1");
+            };
+            settings.OnChange("MAIN.ConfineCursor", updateCursor);
+            updateCursor();
             WFP::onGameProcessEvent() += []()
             {
                 CursorConfinement::Frame(hWnd.get());

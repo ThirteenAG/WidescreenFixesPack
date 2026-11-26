@@ -46,7 +46,6 @@ Vanilla shows the logos and the intro movie, shows the movies in the game's 4:3 
 - **Controllers:** the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox controller to it. When no controller is assigned, the first one found at startup gets the default layout; existing assignments and bindings stay. Button prompts show the chosen icon set while the controller is in use and the keyboard keys again after a key press or mouse use.
 - **Soundtrack:** the random song order works.
 - **Update notice:** with **Check for updates** on, a new version is announced at the top of the Plugins list; FusionFixHub opens after the game exits when it is installed.
-- **Ctrl+F10** opens the in-game settings overlay.
 
 **Frame rate limit** defaults to 60 FPS and can be changed live; the game itself runs at no more than 60 FPS, so the limit can only lower that. 0 removes the limit and -1 follows the monitor refresh rate.
 
@@ -55,8 +54,6 @@ Vanilla shows the logos and the intro movie, shows the movies in the game's 4:3 
 ## Known limits
 
 - The window size is set at startup (resolution settings); resizing the window while playing isn't supported.
-- Turning **Pause in background** off while the game is already paused in the background takes effect when the game window is active again.
-- Mouse-camera behavior, including physical input and controller switching, needs gameplay testing.
 - The fix supports the game's DRM-free executable (the `THUG.exe` of current releases).
 
 ## Installation

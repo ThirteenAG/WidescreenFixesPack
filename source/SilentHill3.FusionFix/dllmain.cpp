@@ -2,12 +2,45 @@
 #include "FixSettings.hpp"
 #include "Shared/SilentHill/Display.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
+#include "rawinput.hpp"
 
 import ComVars;
 import System;
 
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
 ASI_SETTINGS_EXPORT(FixSettings())
+
+namespace
+{
+    decltype(&PeekMessageA) NativePeekMessage = nullptr;
+
+    BOOL WINAPI PeekGameMessage(LPMSG message, HWND filter, UINT first, UINT last, UINT flags)
+    {
+        for (;;)
+        {
+            if (NativePeekMessage(message, filter, first, last, flags))
+                return TRUE;
+
+            const auto window = SHDisplay::Get().window;
+            if (!window || !IsWindow(window) || GetForegroundWindow() == window ||
+                FixSettings().Get("MAIN.PauseOnFocusLoss") != "1")
+                return FALSE;
+
+            // The native dispatcher owns every message, including WM_QUIT and its exit code.
+            MsgWaitForMultipleObjectsEx(0, nullptr, 50, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+        }
+    }
+
+    void InstallGameMessagePump()
+    {
+        // Capture the guarded import so the native loop can present during continuous mouse motion.
+        MessagePumpGuard::Install(GetModuleHandleW(nullptr));
+        auto load = hook::pattern("8B 35 ? ? ? ? 8B 1D ? ? ? ? C6 05 ? ? ? ? 00 6A 01 33 FF 57 57 57 8D 45 E4 50 FF D6");
+        NativePeekMessage = **load.get_first<decltype(&PeekMessageA)*>(2);
+        static const auto replacement = &PeekGameMessage;
+        injector::WriteMemory(load.get_first(2), &replacement, true);
+    }
+}
 
 void Init()
 {
@@ -20,30 +53,19 @@ void Init()
     // Settings described in settings.json and stored in the plugin's .cfg; FusionFixHub changes them while the game
     // runs through the live link, served for all plugins of the game
     FixSettings();
-    asi_settings::LiveLink::Start();
-    CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
-    FixSettings().OnChange("MAIN.ConfineCursor", []()
+    auto updateCursor = []()
     {
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
-    });
+        static std::mutex publication;
+        const std::lock_guard lock(publication);
+        CursorConfinement::SetEnabled(FixSettings().Get("MAIN.ConfineCursor") == "1");
+    };
+    FixSettings().OnChange("MAIN.ConfineCursor", updateCursor);
+    updateCursor();
 
     // Display
     const int mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
     SHDisplay::Install(mode == 0 ? SHDisplay::Mode::Fullscreen : (mode == 1 ? SHDisplay::Mode::Windowed : SHDisplay::Mode::Borderless));
-    SHDisplay::OnPresent().push_back([]()
-    {
-        auto window = SHDisplay::Get().window;
-        while (window && IsWindow(window) && GetForegroundWindow() != window && FixSettings().Bool("MAIN.PauseOnFocusLoss"))
-        {
-            MsgWaitForMultipleObjects(0, nullptr, FALSE, 50, QS_ALLINPUT);
-            MSG message{};
-            while (PeekMessageW(&message, window, 0, 0, PM_REMOVE))
-            {
-                TranslateMessage(&message);
-                DispatchMessageW(&message);
-            }
-        }
-    });
+    InstallGameMessagePump();
 
     auto reset = hook::pattern("A0 ? ? ? ? 83 EC 10 53 33 DB 3A C3 56 57 74 ? 38 1D ? ? ? ? 74 ? E8 ? ? ? ? 38 1D");
     auto force = hook::pattern("38 1D ? ? ? ? 0F 84 ? ? ? ? 3A C3 8B 35 ? ? ? ? 8B 3D");
@@ -78,6 +100,7 @@ void Init()
 
     // System, Widescreen, Quality, Camera, the Advanced Options page (Menu) and Input
     WFP::onInitEvent().executeAll();
+    asi_settings::LiveLink::Start();
 }
 
 CEXP void InitializeASI()

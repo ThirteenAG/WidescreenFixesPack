@@ -38,6 +38,7 @@ inline CTText::Metrics (*metrics)(void*) = nullptr;
 inline int(__fastcall* append)(void*, void*, const wchar_t*, int) = nullptr;
 inline bool(__fastcall* select)(void*, void*, int16_t, char, char) = nullptr;
 inline SafetyHookInline defaultsHook;
+inline SafetyHookInline resolutionIndexHook;
 inline bool ready = false;
 inline uint64_t nextSerial = 0;
 struct Host
@@ -545,6 +546,55 @@ inline int __fastcall Defaults(void* controller, void*)
         host->reset = true;
     return result;
 }
+struct DisplayMode
+{
+    int width, height;
+    int* refreshRates;
+    int rateCount, rateCapacity;
+};
+static_assert(sizeof(DisplayMode) == 20);
+
+inline int __fastcall CurrentResolution(void* controller, void*)
+{
+    auto modes = Read<DisplayMode*>(controller, 116);
+    const int count = Read<int>(controller, 120);
+    const int capacity = Read<int>(controller, 124);
+    auto list = Read<void*>(controller, 96);
+    if (Screen.Width <= 0 || Screen.Height <= 0 || !modes || count <= 0 ||
+        capacity < count || CTControlRows::Count(list) != count)
+        return resolutionIndexHook.thiscall<int>(controller);
+
+    for (int i = 0; i < count; ++i)
+    {
+        if (modes[i].width == Screen.Width && modes[i].height == Screen.Height)
+            return i;
+    }
+
+    // The stock list filters display modes. A window can use a size outside that list.
+    const auto label = std::to_wstring(Screen.Width) + L" X " + std::to_wstring(Screen.Height);
+    std::unique_ptr<DisplayMode, decltype(CTLayout::release)> replacement(nullptr, CTLayout::release);
+    if (count == capacity)
+    {
+        replacement.reset(static_cast<DisplayMode*>(CTLayout::allocate(sizeof(DisplayMode) * (count + 1), L"FArray")));
+        if (!replacement)
+            throw std::bad_alloc{};
+        std::memcpy(replacement.get(), modes, sizeof(DisplayMode) * count);
+    }
+    if (append(list, nullptr, label.c_str(), 0) != count)
+        return resolutionIndexHook.thiscall<int>(controller);
+
+    if (replacement)
+    {
+        CTLayout::release(modes);
+        modes = replacement.release();
+        Set<DisplayMode*>(controller, 116, modes);
+        Set<int>(controller, 124, count + 1);
+    }
+    modes[count] = { Screen.Width, Screen.Height, nullptr, 0, 0 };
+    Set<int>(controller, 120, count + 1);
+    return count;
+}
+
 inline bool Init(HMODULE game = GetModuleHandleW(nullptr))
 {
     if (ready)
@@ -554,7 +604,9 @@ inline bool Init(HMODULE game = GetModuleHandleW(nullptr))
     if (!module || !language || !wide || !metrics || !append || !select)
         return false;
     defaultsHook = safetyhook::create_inline(defaults.get_first(), Defaults);
-    ready = bool(defaultsHook);
+    auto resolutionIndex = hook::pattern(game, "53 56 8B F1 8B 46 14 8B 48 04 57 E8 ? ? ? ? 8B 4E 78 8B D0 33 C0");
+    resolutionIndexHook = safetyhook::create_inline(resolutionIndex.get_first(), CurrentResolution);
+    ready = defaultsHook && resolutionIndexHook;
     return ready;
 }
 } // namespace CTDisplay

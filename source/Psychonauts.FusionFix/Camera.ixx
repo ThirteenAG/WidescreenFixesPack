@@ -2,12 +2,26 @@ module;
 
 #include "stdafx.h"
 #include "FixSettings.hpp"
+#include <charconv>
 
 export module Camera;
 
 import ComVars;
 
 SafetyHookInline CameraUpdateHook, CameraViewHook;
+std::atomic<float> gameplayFovFactor{ 1.0f };
+
+void UpdateGameplayFovFactor()
+{
+    static std::mutex mutex;
+    const std::lock_guard lock(mutex);
+    const auto value = FixSettings().Get("MAIN.FOVFactor");
+    float factor = 1.0f;
+    const auto parsed = std::from_chars(value.data(), value.data() + value.size(), factor);
+    if (parsed.ec != std::errc{} || parsed.ptr != value.data() + value.size() || !std::isfinite(factor))
+        factor = 1.0f;
+    gameplayFovFactor.store(factor, std::memory_order_relaxed);
+}
 
 struct GameplayFovScope
 {
@@ -23,7 +37,7 @@ struct GameplayFovScope
         if ((type != 2 && type != 5) || *reinterpret_cast<float*>(bytes + 944) != 0.0f)
             return;
         auto fov = reinterpret_cast<float*>(bytes + 48);
-        const float factor = FixSettings().Float("MAIN.FOVFactor");
+        const float factor = gameplayFovFactor.load(std::memory_order_relaxed);
         if (*fov != 104.0f || !std::isfinite(factor) || factor == 1.0f)
             return;
         value = fov;
@@ -58,6 +72,8 @@ void __fastcall BuildCameraView(void* camera, void*, int view, int position, int
 
 export void InstallGameplayFov()
 {
+    FixSettings().OnChange("MAIN.FOVFactor", UpdateGameplayFovFactor);
+    UpdateGameplayFovFactor();
     auto update = hook::pattern("55 8B EC 83 E4 F0 81 EC 58 0B 00 00 56 57 89 8C 24 5C 0B 00 00 A1 ? ? ? ? 8B 88 CC 01 00 00");
     auto view = hook::pattern("55 8B EC 83 E4 F0 81 EC B8 0B 00 00 56 57 89 8C 24 BC 0B 00 00 B9 10 00 00 00 BE ? ? ? ? 8D BC 24 70 0B 00 00 F3 A5");
     CameraUpdateHook = safetyhook::create_inline(update.get_first(), UpdateGameplayCamera);

@@ -1,7 +1,10 @@
 module;
 
 #include <stdafx.h>
+#include "FixPad.hpp"
 #include "FixSettings.hpp"
+#include "Shared/NFS/BufferedRawMouse.hpp"
+#include "Shared/SilentHill/Display.hpp"
 #include "Shared/SilentHill/Gamepad.hpp"
 
 export module Camera;
@@ -22,13 +25,8 @@ namespace
 {
     constexpr float Pi = 3.14159265f;
     constexpr float Metre = 500.0f;
-
-    // Settings
-    const int* CameraMode = nullptr;        // 0 classic, 1 modern
-    const float* Sensitivity = nullptr;     // 1..16
-    const int* InvertY = nullptr;
-    const int* Distance = nullptr;          // 0 near, 1 normal, 2 far
-    const float* FieldOfView = nullptr;     // degrees, vertical
+    constexpr wchar_t MouseWindowClass[] = L"SilentHill3.FusionFix.Mouse";
+    using RawMouse = NFSBufferedRawMouse<MouseWindowClass>;
 
     float GameProjection = 0;                   // the game's value while the modern camera zooms
 
@@ -50,6 +48,36 @@ namespace
     float RecentreTime = 0;
     int InactiveFrames = 1000;
     float ForwardX = 0, ForwardZ = 1;   // camera forward on the ground, for aiming
+    ActivePad CameraPad;
+
+    struct CameraPadInput
+    {
+        float x = 0.0f, y = 0.0f;
+        bool recentre = false;
+    };
+
+    CameraPadInput ReadCameraPad()
+    {
+        const auto window = SHDisplay::Get().window;
+        if (!window || GetForegroundWindow() != window)
+        {
+            CameraPad = {};
+            return {};
+        }
+        constexpr float deadzone = 0.18f;
+        const auto sample = CameraPad.Read([](const XINPUT_GAMEPAD& pad)
+        {
+            return (pad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB) || std::hypot(float(pad.sThumbRX), float(pad.sThumbRY)) > deadzone * 32768.0f;
+        });
+        const bool recentre = ((sample.current.wButtons & ~sample.previous.wButtons) & XINPUT_GAMEPAD_RIGHT_THUMB) != 0;
+        const float x = sample.current.sThumbRX / 32768.0f;
+        const float y = -sample.current.sThumbRY / 32768.0f;
+        const float magnitude = std::hypot(x, y);
+        if (magnitude <= deadzone)
+            return { 0.0f, 0.0f, recentre };
+        const float scale = (std::min(magnitude, 1.0f) - deadzone) / ((1.0f - deadzone) * magnitude);
+        return { x * scale, y * scale, recentre };
+    }
 
     float Wrap(float a)
     {
@@ -68,15 +96,10 @@ namespace
         return pPlayer ? reinterpret_cast<float*>(pPlayer.get()) : nullptr;
     }
 
-    bool Enabled()
-    {
-        return CameraMode && *CameraMode == 1;
-    }
-
     // Whether the free camera may run this frame
     bool CanRun()
     {
-        if (!Enabled() || !PlayerTicked)
+        if (!PlayerTicked || FixSettingNumber("CAMERA.Camera", 1) != 1)
             return false;
         auto player = Player();
         if (!player)
@@ -126,8 +149,13 @@ namespace
         if (!run)
         {
             if (Active)
+            {
                 SetProjection(GameProjection);
+                RawMouse::Enabled = false;
+                RawMouse::Update(nullptr);
+            }
             Active = false;
+            CameraPad = {};
             SHPad::HideMouseFromGame(false);
             ++InactiveFrames;
             SHPad::TakeMouse();
@@ -135,7 +163,6 @@ namespace
         }
 
         auto player = Player();
-        auto bytes = reinterpret_cast<uint8_t*>(player);
         float dt = std::clamp(fPlayerDt.get(), 0.0f, 0.1f);
         float playerYaw = player[5];
         bool aiming = bAiming != 0;
@@ -151,20 +178,26 @@ namespace
         InactiveFrames = 0;
 
         // Input
-        auto pad = SHPad::Get();
-        float speed = 0.8f + 0.2f * (*Sensitivity);                // rad/s at full deflection
-        float sx = pad.rx * std::abs(pad.rx), sy = pad.ry * std::abs(pad.ry);
-        auto [mouseX, mouseY] = SHPad::TakeMouse();
-        float mouseScale = 0.0003f * (*Sensitivity);           // rad per count
+        const auto sensitivity = FixSettingNumber("CAMERA.CameraSpeed", 8.0f);
+        const bool invertY = FixSettings().Get("CAMERA.InvertCamera") == "1";
+        const auto pad = ReadCameraPad();
+        float speed = 0.8f + 0.2f * sensitivity;                // rad/s at full deflection
+        float sx = pad.x * std::abs(pad.x), sy = pad.y * std::abs(pad.y);
+        RawMouse::Enabled = true;
+        RawMouse::Update(SHDisplay::Get().window);
+        const auto [nativeX, nativeY] = SHPad::TakeMouse();
+        int mouseX = nativeX, mouseY = nativeY;
+        RawMouse::Consume(mouseX, mouseY);
+        float mouseScale = 0.0003f * sensitivity;              // rad per count
         Yaw += sx * speed * dt + float(mouseX) * mouseScale;
         // Stick or mouse down looks down (pitch is positive looking up)
         float pitchInput = sy * speed * 0.75f * dt + float(mouseY) * mouseScale;
-        Pitch -= (*InvertY ? -pitchInput : pitchInput);
+        Pitch -= (invertY ? -pitchInput : pitchInput);
         Pitch = std::clamp(Pitch, -0.9f, 1.0f);
         Yaw = Wrap(Yaw);
 
         // Right stick click: back behind Heather
-        if (pad.pressed & SHPad::RS)
+        if (pad.recentre)
             RecentreTime = 0.25f;
         if (RecentreTime > 0)
         {
@@ -175,11 +208,12 @@ namespace
 
         // Framing
         static const float Distances[] = { 1.3f, 1.75f, 2.4f };
-        float targetDistance = (aiming ? 1.0f : Distances[std::clamp(*Distance, 0, 2)]) * Metre;
+        const auto distanceSetting = std::clamp(FixSettingNumber("CAMERA.CameraDistance", 1), 0, 2);
+        float targetDistance = (aiming ? 1.0f : Distances[distanceSetting]) * Metre;
         float targetShoulder = (aiming ? 0.48f : 0.38f) * Metre;
         float targetHeight = (aiming ? 1.45f : 1.5f) * Metre;
         // The game's view is 2 atan(224 / 448) = 53.13 degrees high; the setting's angle, a little closer when aiming
-        float vertical = (*FieldOfView - (aiming ? 10.0f : 0.0f)) * Pi / 180.0f;
+        float vertical = (FixSettingNumber("CAMERA.FieldOfView", 60.0f) - (aiming ? 10.0f : 0.0f)) * Pi / 180.0f;
         float targetZoom = 0.5f / std::tan(vertical * 0.5f);
         if (CurrentDistance == 0)
         {
@@ -337,12 +371,11 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CameraMode = &FixSettings().Int("CAMERA.Camera");
-            Sensitivity = &FixSettings().Float("CAMERA.CameraSpeed");
-            InvertY = &FixSettings().Int("CAMERA.InvertCamera");
-            Distance = &FixSettings().Int("CAMERA.CameraDistance");
-            FieldOfView = &FixSettings().Float("CAMERA.FieldOfView");
-
+            SHDisplay::OnWindowMessage().push_back([](HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT&)
+            {
+                RawMouse::Message(window, message, wParam, lParam);
+                return false;
+            });
             // The player, camera mode, event, render mode, pause, aiming and projection variables are bound in Init
             fPlayerDt.SetAddress(Resolve<float*>("56 E8 ? ? ? ? A3 ? ? ? ? E8 ? ? ? ? D9 1D ? ? ? ? 8B 74 24 08 6A 00 56 C7 86 14 01 00 00", 18));
             nLockedTarget.SetAddress(Resolve<int32_t*>("A1 ? ? ? ? 83 EC 08 85 C0 0F 84 ? ? ? ? 8A 0D ? ? ? ? 84 C9 0F 84 ? ? ? ?", 1));

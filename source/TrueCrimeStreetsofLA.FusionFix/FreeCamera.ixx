@@ -40,20 +40,29 @@ export namespace TrueCrimeFreeCamera
     inline GameRef<uint8_t*> CurrentCamera;
     inline Transform* (__fastcall* WorldMatrix)(void*, void*, Transform*) = nullptr;
     inline ProtectedGameRef<uint8_t> MouseSteering;
-    inline std::atomic<int> PendingMouseSteering{ -1 };
+    inline std::atomic_bool MouseSettingsPending{ false }, SteeringPending{ false };
+    inline float MouseScale = 0.002f, MouseVertical = 1.0f, ReturnDelay = 5.0f;
     // The world's ray test: from, to, hit position, hit normal, two objects to ignore, collision mask, closest hit, kind
     inline void* World = nullptr;
     inline void* (__fastcall* CheckRay)(void*, void*, const float*, const float*, float*, float*, void*, void*, int, int, int) = nullptr;
     inline SafetyHookMid RenderHook;
 
-    // Mouse counts gathered by the input hook while the camera has the mouse; the camera also reads the mouse once
-    // per drawn frame, so movement arrives every frame whatever the game's update rate
+    // Immediate mouse counts are read once per drawn frame, independently of the game's update rate
     inline std::atomic<int32_t> CountsX{ 0 }, CountsY{ 0 };
     inline void (*ReadMouse)() = nullptr;
     inline constexpr uint32_t RearView = 0x4000000;
     inline std::atomic_bool StickMoved{ false };
 
     inline constexpr float BlendSeconds = 0.4f;
+
+    inline void UpdateMouseSettings()
+    {
+        const float sensitivity = ReadNumericSetting("MAIN.MouseSensitivity", 1.0f);
+        const float delay = ReadNumericSetting("CAMERA.ReturnDelay", 5.0f);
+        MouseScale = 0.002f * (std::isfinite(sensitivity) ? std::clamp(sensitivity, 0.1f, 5.0f) : 1.0f);
+        MouseVertical = FixSettings().Get("MAIN.InvertMouseY") == "1" ? -1.0f : 1.0f;
+        ReturnDelay = std::isfinite(delay) ? std::clamp(delay, 0.1f, 30.0f) : 5.0f;
+    }
 
     struct State
     {
@@ -78,17 +87,24 @@ export namespace TrueCrimeFreeCamera
         return player ? player[9] : 0;
     }
 
+    inline bool IsPrecisionAiming(const uint8_t* player)
+    {
+        return player && *reinterpret_cast<const int*>(player + 0xD68) == 3;
+    }
+
     // Whether mouse movement goes to the camera instead of the game
     inline bool TakesMouse()
     {
         if (!CurrentCamera.is_initialized() || !CurrentCamera.get() || GameMode.get() >= 2 ||
             TrueCrimeCinema::Active() || TrueCrimeOverlay::BlocksInput())
             return false;
-        const int mode = PlayerMode();
+        const auto player = PlayerObject.get();
+        if (!player || IsPrecisionAiming(player))
+            return false;
+        const int mode = player[9];
         if (mode == 5)
             return !MouseSteering.get();
-        // Not during precision aim (the slow-motion crosshair, state 3 at +0xD68)
-        return (mode == 1 || mode == 3 || mode == 4) && *reinterpret_cast<int*>(PlayerObject.get() + 0xD68) != 3;
+        return mode == 1 || mode == 3 || mode == 4;
     }
 
     inline Vector Direction(float yaw, float pitch)
@@ -115,9 +131,9 @@ export namespace TrueCrimeFreeCamera
         const float dt = previous.QuadPart ? std::clamp(float(now.QuadPart - previous.QuadPart) / float(frequency.QuadPart), 0.0f, 0.25f) : 0.0f;
         previous = now;
 
-        if (ReadMouse && TakesMouse())
+        if (ReadMouse)
             ReadMouse();
-        int32_t dx = CountsX.exchange(0), dy = CountsY.exchange(0);
+        const int32_t dx = CountsX.exchange(0), dy = CountsY.exchange(0);
         const bool stick = StickMoved.exchange(false);
         auto& state = Camera;
         auto& t = *reinterpret_cast<Transform*>(camera + 16);
@@ -127,28 +143,29 @@ export namespace TrueCrimeFreeCamera
         const bool modeChanged = mode != state.mode;
         const bool forced = (mode == 5 && (HeldFlags.get() & RearView)) ||
             ((state.active || state.blend > 0.0f) && camera != state.camera);
-        if (forced)
-            dx = dy = 0;
+        if (modeChanged)
+        {
+            state.active = false;
+            state.mouseActive = false;
+            state.mode = mode;
+        }
         if (!usable || forced || modeChanged)
             state.blend = 0.0f;
-        const float configuredDelay = FixSettings().Float("CAMERA.ReturnDelay");
-        const float delay = std::isfinite(configuredDelay) ? std::clamp(configuredDelay, 0.1f, 30.0f) : 5.0f;
-        if (usable && !stick && (dx || dy))
+        if (usable && !stick && !forced && (dx || dy))
         {
             state.idle = 0.0f;
             state.mouseActive = true;
         }
         else
             state.idle += dt;
-        if (!usable || stick || forced || modeChanged || state.idle >= delay)
+        if (!usable || stick || forced || state.idle >= ReturnDelay)
             state.mouseActive = false;
-        state.mode = mode;
 
         const bool wanted = usable && state.mouseActive;
         if (state.active && !wanted)
         {
             state.active = false;
-            state.blend = usable && !forced && !modeChanged ? 1.0f : 0.0f;
+            state.blend = usable && !forced ? 1.0f : 0.0f;
         }
         if (!usable || forced)
             return;
@@ -191,15 +208,11 @@ export namespace TrueCrimeFreeCamera
 
         if (state.active)
         {
-            const float configuredSensitivity = FixSettings().Float("MAIN.MouseSensitivity");
-            const float sensitivity = std::isfinite(configuredSensitivity) ? std::clamp(configuredSensitivity, 0.1f, 5.0f) : 1.0f;
-            const float scale = 0.002f * sensitivity;
-            state.yaw += float(dx) * scale * state.yawSign;
+            state.yaw += float(dx) * MouseScale * state.yawSign;
             // The world's y axis points down: a positive pitch looks down
             const float highest = mode == 5 ? -0.17f : -0.70f;
             const float lowest = mode == 5 ? 0.70f : 1.20f;
-            const float vertical = FixSettings().Bool("MAIN.InvertMouseY") ? -1.0f : 1.0f;
-            state.pitch = std::clamp(state.pitch + float(dy) * scale * vertical, highest, lowest);
+            state.pitch = std::clamp(state.pitch + float(dy) * MouseScale * MouseVertical, highest, lowest);
             const Vector view = Direction(state.yaw, state.pitch);
             const Vector look{ player.p.x, player.p.y + state.height, player.p.z };
             // Like the game's camera, the camera stays in front of walls, cars and the ground between it and the player
@@ -251,15 +264,18 @@ export namespace TrueCrimeFreeCamera
             MouseSteering.SetAddress(*steering.get_first<uint8_t*>(2));
         else // TrueCrimeMB.exe
             MouseSteering.SetAddress(*hook::pattern("A0 ? ? ? ? 84 C0 0F 84 ? ? ? ? 83 FD 02 0F 8D").get_first<uint8_t*>(1));
-        FixSettings().OnChange("MAIN.MouseSteering", []()
+        for (const auto id : { "MAIN.MouseSensitivity", "MAIN.InvertMouseY", "CAMERA.ReturnDelay" })
         {
-            PendingMouseSteering.store(FixSettings().Bool("MAIN.MouseSteering") ? 1 : 0, std::memory_order_relaxed);
-        });
+            FixSettings().OnChange(id, []() { MouseSettingsPending.store(true); });
+        }
+        FixSettings().OnChange("MAIN.MouseSteering", []() { SteeringPending.store(true); });
+        UpdateMouseSettings();
         WFP::onGameProcessEvent() += []()
         {
-            const int requested = PendingMouseSteering.exchange(-1, std::memory_order_relaxed);
-            if (requested >= 0)
-                MouseSteering = static_cast<uint8_t>(requested);
+            if (MouseSettingsPending.exchange(false))
+                UpdateMouseSettings();
+            if (SteeringPending.exchange(false))
+                MouseSteering = FixSettings().Get("MAIN.MouseSteering") == "1" ? 1 : 0;
         };
         RenderHook = safetyhook::create_mid(render.get_first(), [](SafetyHookContext&)
         {

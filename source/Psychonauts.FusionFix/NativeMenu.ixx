@@ -36,6 +36,7 @@ export namespace PsychonautsMenu
     constexpr size_t TableSize = 21;
     constexpr float PageWidth = 540.0f, PageHeight = 480.0f;
     constexpr size_t WindowRows = 11;
+    constexpr size_t PluginsPerPage = WindowRows - 1;
 
     struct Api
     {
@@ -55,13 +56,19 @@ export namespace PsychonautsMenu
     inline std::string language = "en";
     inline std::string SettingsLanguage()
     {
-        const auto selected = FixSettings().String("MAIN.TextLanguage");
+        const auto selected = FixSettings().Get("MAIN.TextLanguage");
         return selected == "auto" ? language : selected;
     }
     inline std::map<std::string, std::string> strings;     // key (upper case, no slashes) -> game text
     inline std::map<Object, std::string> keys;              // text widget -> its "/KEY/"
     inline std::map<Object, float> widths;                  // rows that take the whole line under the cursor
-    inline std::string notice;                              // an update notice, shown while no row is under the cursor
+    struct UpdateNotice
+    {
+        std::string version, page;
+        bool hub{};
+        std::string language, text;
+    };
+    inline UpdateNotice notice;
 
     struct Line
     {
@@ -77,6 +84,7 @@ export namespace PsychonautsMenu
         std::vector<Object> rows;
         std::vector<Line> lines;
         RWGTAMenu::Model model;
+        size_t firstPlugin{};
         int plugin{ -1 };
         std::string shownHelp;
     };
@@ -98,6 +106,31 @@ export namespace PsychonautsMenu
     inline std::string Text(const std::string& key)
     {
         return RWGTAMenu::PluginText(FixSettings(), SettingsLanguage(), key);
+    }
+
+    inline const std::string& UpdateNoticeText()
+    {
+        if (notice.version.empty())
+            return notice.text;
+        const auto language = SettingsLanguage();
+        if (notice.language != language)
+        {
+            notice.language = language;
+            auto& settings = FixSettings();
+            notice.text = RWGTAMenu::PluginText(settings, language,
+                notice.hub ? "update.availablehub" : "update.availablesite");
+            const auto name = RWGTAMenu::PluginText(settings, language, "plugin.name");
+            const std::pair<std::string_view, std::string_view> replacements[] =
+            {
+                { "{name}", name }, { "{version}", notice.version }, { "{page}", notice.page }
+            };
+            for (auto [key, value] : replacements)
+            {
+                if (const auto at = notice.text.find(key); at != std::string::npos)
+                    notice.text.replace(at, key.size(), value);
+            }
+        }
+        return notice.text;
     }
 
     inline float Width(Object widget)
@@ -136,8 +169,11 @@ export namespace PsychonautsMenu
         if (!widget)
             return nullptr;
         api.text(widget, 0);
-        auto& key = keys[widget];
-        key = "/WSFIX" + std::to_string(keys.size()) + "/";
+        auto [entry, inserted] = keys.try_emplace(widget);
+        auto& key = entry->second;
+        if (inserted)
+            key = "/WSFIX" + std::to_string(keys.size()) + "/";
+        widths.erase(widget);
         strings[key.substr(1, key.size() - 2)] = {};
         Virtual(widget, SlotText, key.c_str());
         Field<float>(widget, 76) = scale;
@@ -209,7 +245,10 @@ export namespace PsychonautsMenu
         if (menu.plugin < 0 || size_t(menu.plugin) >= plugins.size())
         {
             menu.plugin = -1;
-            for (size_t i = 0; i < plugins.size() && menu.lines.size() + 1 < menu.rows.size(); ++i)
+            const auto lastPage = plugins.empty() ? 0 : (plugins.size() - 1) / PluginsPerPage * PluginsPerPage;
+            menu.firstPlugin = std::min(menu.firstPlugin, lastPage);
+            const auto end = std::min(menu.firstPlugin + PluginsPerPage, plugins.size());
+            for (size_t i = menu.firstPlugin; i < end; ++i)
                 menu.lines.push_back({ Line::Kind::Plugin, i });
         }
         else
@@ -259,8 +298,9 @@ export namespace PsychonautsMenu
             SetText(menu.rows[i], text);
         }
         const bool page = menu.plugin >= 0;
-        SetVisible(menu.up, page && menu.model.HiddenAbove(size_t(menu.plugin)));
-        SetVisible(menu.down, page && menu.model.HiddenBelow(size_t(menu.plugin)));
+        SetVisible(menu.up, page ? menu.model.HiddenAbove(size_t(menu.plugin)) : menu.firstPlugin != 0);
+        SetVisible(menu.down, page ? menu.model.HiddenBelow(size_t(menu.plugin)) :
+            menu.firstPlugin + PluginsPerPage < plugins.size());
         SetText(menu.title, page ? plugins[size_t(menu.plugin)].title : Text("menu.plugins"), true);
         menu.shownHelp = "\x01";
     }
@@ -276,8 +316,13 @@ export namespace PsychonautsMenu
     {
         if (child == menu.up || child == menu.down)
         {
+            const bool previous = child == menu.up;
             if (menu.plugin >= 0)
-                menu.model.Scroll(size_t(menu.plugin), child == menu.up ? -1 : 1);
+                menu.model.Scroll(size_t(menu.plugin), previous ? -1 : 1);
+            else if (previous && menu.firstPlugin >= PluginsPerPage)
+                menu.firstPlugin -= PluginsPerPage;
+            else if (!previous && menu.firstPlugin + PluginsPerPage < menu.model.Pages().size())
+                menu.firstPlugin += PluginsPerPage;
             Build(menu);
             return;
         }
@@ -297,8 +342,10 @@ export namespace PsychonautsMenu
                 menu.model.PageShown(line.index);
                 break;
             case Line::Kind::Row:
-                // A click moves forward; on the preset row it only chooses
-                menu.model.Change(line.row, direction ? direction : 1, true);
+                // The preset selector cycles on accept; the separate Apply row confirms it.
+                if (line.row.kind == RWGTAMenu::RowKind::Preset && direction == 0)
+                    direction = 1;
+                menu.model.Change(line.row, direction, true);
                 break;
             case Line::Kind::Apply:
                 menu.model.Change({ RWGTAMenu::RowKind::Preset, line.row.plugin }, direction, true);
@@ -330,6 +377,9 @@ export namespace PsychonautsMenu
         {
             auto& menu = *found->second;
             menu.model.OpenPlugins(host, SettingsLanguage(), WindowRows - 2, {}, true);
+            SetText(menu.up, Text("menu.previous"));
+            SetText(menu.down, Text("menu.next"));
+            menu.firstPlugin = 0;
             menu.plugin = -1;
             Build(menu);
         }
@@ -359,8 +409,6 @@ export namespace PsychonautsMenu
         }
         menu.up = NewText(page, 415.0f, 100.0f, 0.5f, true);
         menu.down = NewText(page, 415.0f, 100.0f + float(WindowRows - 1) * 24.0f, 0.5f, true);
-        SetText(menu.up, Text("menu.previous"));
-        SetText(menu.down, Text("menu.next"));
         menu.help = NewText(page, 70.0f, 372.0f, 0.42f, false);
     }
 
@@ -380,20 +428,20 @@ export namespace PsychonautsMenu
         {
             if (!(Field<uint32_t>(menu.rows[i], 8) & 2))
                 continue;
-            help = Help(menu, menu.lines[i]);
             // Left and Right on the row under the cursor
             for (auto [key, direction] : { std::pair{ 203, -1 }, std::pair{ 205, 1 } })
             {
                 if (api.pressed(key))
                 {
                     Act(menu, menu.rows[i], direction);
-                    help = Help(menu, menu.lines[i]);
+                    return;
                 }
             }
+            help = Help(menu, menu.lines[i]);
             break;
         }
         if (help.empty())
-            help = menu.model.RestartRequired() ? Text("menu.restartwarning") : notice;
+            help = menu.model.RestartRequired() ? Text("menu.restartwarning") : UpdateNoticeText();
         if (help != menu.shownHelp)
         {
             SetText(menu.help, Wrap(help, 78, 3));

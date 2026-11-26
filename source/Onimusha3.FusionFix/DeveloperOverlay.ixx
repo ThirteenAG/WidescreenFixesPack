@@ -128,7 +128,7 @@ export namespace OnimushaOverlay
         const auto result = NativeInput(instance, version, iid, input, outer);
         if (SUCCEEDED(result) && InputCreated)
             InputCreated();
-        if (SUCCEEDED(result) && input && *input && !EnumHook)
+        if (WFP::DeveloperOverlay && SUCCEEDED(result) && input && *input && !EnumHook)
         {
             const auto methods = *reinterpret_cast<void***>(*input);
             EnumHook = safetyhook::create_inline(methods[9], Enum);
@@ -138,6 +138,8 @@ export namespace OnimushaOverlay
 
     inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || Hotkey))
         {
@@ -167,7 +169,8 @@ export namespace OnimushaOverlay
         if (down && !Hotkey)
             Overlay.SetOpen(!Overlay.IsOpen());
         Hotkey = down;
-        Overlay.Present(device, Module());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, Module());
         if (Reopen)
         {
             Overlay.SetOpen(true);
@@ -177,19 +180,26 @@ export namespace OnimushaOverlay
 
     inline void Init()
     {
-        InputHook = safetyhook::create_inline(hook::pattern("81 EC 1C 03 00 00 80 3D ? ? ? ? 01 57 8B F9 89 7C 24 10 75 0E").get_first(), Input);
-        // DXUT requires its final Release to reach zero when it recreates or destroys the device.
-        // The ImGui backend owns a device reference even while its panel is closed.
-        Destroy = safetyhook::create_mid(hook::pattern("51 55 88 4C 24 04 E8 ? ? ? ? 8B E8 85 ED 0F 84").get_first(),
-            [](SafetyHookContext&)
-            {
-                Reopen = Reopen || Overlay.IsOpen();
-                Overlay.ShutdownRenderer();
-                Device = nullptr;
-            });
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            InputHook = safetyhook::create_inline(hook::pattern("81 EC 1C 03 00 00 80 3D ? ? ? ? 01 57 8B F9 89 7C 24 10 75 0E").get_first(), Input);
+            // DXUT requires its final Release to reach zero when it recreates or destroys the device.
+            // The ImGui backend owns a device reference even while its panel is closed.
+            Destroy = safetyhook::create_mid(hook::pattern("51 55 88 4C 24 04 E8 ? ? ? ? 8B E8 85 ED 0F 84").get_first(),
+                [](SafetyHookContext&)
+                {
+                    Reopen = Reopen || Overlay.IsOpen();
+                    Overlay.ShutdownRenderer();
+                    Device = nullptr;
+                });
+        }
+        // DirectInput creation also refreshes the controller names
         auto original = IATHook::Replace(GetModuleHandleW(nullptr), "DINPUT8.dll",
             std::pair{ "DirectInput8Create", reinterpret_cast<void*>(&CreateInput) });
         NativeInput = reinterpret_cast<decltype(NativeInput)>(original.at("DirectInput8Create").get());
+        OnimushaFocus::BlocksInput = BlocksInput;
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         const auto draw = OnimushaWindow::Draw;
         OnimushaWindow::Draw = [draw](IDirect3DDevice9* device)
         {
@@ -198,7 +208,6 @@ export namespace OnimushaOverlay
             Present(device);
         };
         OnimushaWindow::Filter = Message;
-        OnimushaFocus::BlocksInput = BlocksInput;
         OnimushaWindow::SetBeforeReset([](IDirect3DDevice9* device)
         {
             if (device == Device)

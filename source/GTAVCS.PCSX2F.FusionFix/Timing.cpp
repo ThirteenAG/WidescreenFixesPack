@@ -1,10 +1,10 @@
 #include "Game.hpp"
-#include "../../external/injector/include/ps2/patches.hpp"
+#include "Settings.hpp"
+#include "ps2/patches.hpp"
 #include <cstring>
 #include <cstdio>
 extern "C" {
-#include "../../external/injector/include/ps2/pcsx2f_api.h"
-#include "../../external/injector/include/ps2/patterns.h"
+#include "ps2/pcsx2f_api.h"
 }
 
 // 60 FPS and the missions that count frames.
@@ -28,17 +28,64 @@ pcsx2::Patch sixtyFPSPatch;
 pcsx2::GameCallback<uint64_t(uintptr_t)> beginMission;
 pcsx2::GameFunction<uint64_t(uintptr_t)> processScript;
 pcsx2::GameFunction<int(uintptr_t, const char*)> textExists;
-bool concert = false, concertActive = false;
+bool concert = false, concertPhaseRequested = false;
+unsigned concertRetryDelay = 0;
 
 struct MissionPatch { uintptr_t at; uint8_t size, original[4], patched[4]; };
 MissionPatch missionPatches[12];
 unsigned missionPatchCount = 0;
-void RecordPatch(uintptr_t at, const void* patched, uint8_t size) {
-    if (missionPatchCount >= sizeof(missionPatches) / sizeof(missionPatches[0]) || size > 4) return;
+void RecordPatch(uintptr_t at, uint32_t original, uint32_t patched, uint8_t size)
+{
+    if (std::memcmp(reinterpret_cast<const void*>(at), &original, size) != 0)
+        return;
     auto& patch = missionPatches[missionPatchCount++];
-    patch.at = at; patch.size = size;
-    std::memcpy(patch.original, reinterpret_cast<const void*>(at), size);
-    std::memcpy(patch.patched, patched, size);
+    patch.at = at;
+    patch.size = size;
+    std::memcpy(patch.original, &original, size);
+    std::memcpy(patch.patched, &patched, size);
+}
+
+struct ScriptFix
+{
+    const char* name;
+    uint16_t offset;
+    uint8_t size;
+    uint32_t original, patched;
+};
+
+constexpr ScriptFix scriptFixes[] = {
+    {"PHI_A2", 0x202B, 4, 0x3C75C28F, 0x3BF5C28F}, // Boomshine Blowout
+    {"LOU_B1", 0x06E7, 4, 0x3D23D70A, 0x3CA3D70A}, // Hose the Hoes
+    {"LOU_B1", 0x0704, 4, 0x3CF5C28F, 0x3C75C28F},
+    {"LOU_B1", 0x0714, 4, 0x3C23D70A, 0x3BA3D70A},
+    {"DIA_C2", 0x1E44, 4, 0x3D23D70A, 0x3CA3D70A}, // The Exchange
+    {"UMB_B2", 0x24D4, 4, 0x3BA3D70A, 0x3B23D70A}, // Balls
+    {"GON_C4", 0x2968, 4, 0x3BA3D70A, 0x3B23D70A}, // Farewell to Arms
+    {"GON_C4", 0x1763, 2, 7000, 14000},
+    {"GON_C4", 0x1769, 2, 7000, 14000},
+    {"LAN_C10", 0x229C, 1, 11, 44}
+};
+static_assert(sizeof(scriptFixes) / sizeof(*scriptFixes) <= sizeof(missionPatches) / sizeof(*missionPatches));
+
+void RecordMissionPatches(uintptr_t mission, uint32_t capacity)
+{
+    // The first script command names the mission. One script starts with a
+    // single command before the name.
+    const auto* header = reinterpret_cast<const char*>(mission);
+    if (capacity < 14)
+        return;
+    if (!std::memcmp(header, "\xEA\x01", 2))
+        header += 2;
+    if (std::memcmp(header, "\x38\x02\x0A", 3))
+        return;
+    const char* name = header + 3;
+    concert = std::memcmp(name, "RENC7", sizeof("RENC7")) == 0;
+    for (const auto& fix : scriptFixes)
+    {
+        const size_t nameSize = std::strlen(fix.name) + 1;
+        if (fix.offset + fix.size <= capacity && !std::memcmp(name, fix.name, nameSize))
+            RecordPatch(mission + fix.offset, fix.original, fix.patched, fix.size);
+    }
 }
 void ApplyMissionPatches(bool sixty) {
     for (unsigned i = 0; i < missionPatchCount; ++i) {
@@ -55,73 +102,99 @@ bool OnMission() {
     const auto offset = *reinterpret_cast<const uint32_t*>(onAMissionFlag);
     return space && offset && offset < 0x200000 && *reinterpret_cast<const int32_t*>(space + offset) == 1;
 }
-void SetFrameRate() {
-    if (!sixtyFPSPatch) return;
-    const bool sixty = settings.sixtyFPS && !concertActive;
-    if (sixtyFPSPatch.enabled() == sixty) return;
+void FrameRateFailure(pcsx2_hook_status status)
+{
+    static constexpr const char* languages[] = { "en", "fr", "de", "it", "es" };
+    static constexpr const char* messages[] = {
+        "VCS 60 FPS patch failed (%u)", "VCS echec du patch 60 FPS (%u)",
+        "VCS 60-FPS-Patch fehlgeschlagen (%u)", "VCS patch 60 FPS non riuscita (%u)",
+        "VCS fallo del parche de 60 FPS (%u)"
+    };
+    unsigned language = 0;
+    for (unsigned i = 0; i < 5; ++i)
+        if (std::strcmp(config::values[9].value, languages[i]) == 0)
+            language = i;
+    std::snprintf(OSDText[0], OSDStringSize, messages[language], unsigned(status));
+}
+
+bool SetFrameRate(bool sixty)
+{
+    if (sixtyFPSPatch.enabled() == sixty)
+        return true;
+    if (!sixtyFPSPatch)
+        return false;
     const auto status = sixty ? sixtyFPSPatch.enable() : sixtyFPSPatch.disable();
     if (status != PCSX2_HOOK_OK)
-        std::snprintf(OSDText[0], OSDStringSize, "VCS 60 FPS patch failed (%u)", unsigned(status));
+        FrameRateFailure(status);
+    return status == PCSX2_HOOK_OK;
 }
+bool DesiredFrameRate()
+{
+    return settings.sixtyFPS && !concertPhaseRequested;
+}
+
+void ApplyConcertRate()
+{
+    // Retry a failed phase transition on the 60th subsequent game tick.
+    concertRetryDelay = SetFrameRate(DesiredFrameRate()) ? 0 : 59;
+    ApplyMissionPatches(sixtyFPSPatch.enabled());
+}
+
 uint64_t BeginMission(uintptr_t script) {
     const auto space = *reinterpret_cast<const uintptr_t*>(scriptSpace);
     const auto mainSize = *reinterpret_cast<const uint32_t*>(mainScriptSize);
     const auto capacity = *reinterpret_cast<const uint32_t*>(largestMission);
-    struct Fix { const char* pattern; unsigned offset; };
-    // Frame-based additions: opcode, variable, then the float that is halved.
-    static constexpr Fix fixes[] = {
-        {"08 00 ? ? ? 8F C2 75 3C", 5}, // Boomshine Blowout
-        {"0A 00 ? ? ? 0A D7 23 3D", 5}, // Hose the Hoes, The Exchange
-        {"0A 00 ? ? ? 8F C2 F5 3C", 5},
-        {"0A 00 ? ? ? 0A D7 23 3C", 5},
-        {"08 00 ? ? ? 0A D7 A3 3B", 5}, // Balls, Farewell To Arms
-    };
-    concert = concertActive = false;
+    concert = concertPhaseRequested = false;
     missionPatchCount = 0;
-    if (space && mainSize < 0x200000 && capacity > 0 && capacity < 0x200000 && space + mainSize + capacity < 0x2000000) {
-        const uintptr_t mission = space + mainSize;
-        concert = !std::memcmp(reinterpret_cast<const void*>(mission), "\x38\x02\x0ARENC7", 9);
-        for (const auto& fix : fixes) {
-            const uintptr_t at = range_pattern.get_first(mission, capacity, fix.pattern, int(fix.offset));
-            if (!at) continue;
-            float value;
-            std::memcpy(&value, reinterpret_cast<const void*>(at), sizeof(value));
-            value *= 0.5f;
-            RecordPatch(at, &value, sizeof(value));
-        }
-        // A truck timer counted in frames (7000 -> 14000) and a frame-based amount.
-        const uintptr_t truck = range_pattern.get_first(mission, capacity, "2F 04 11 08 58 1B 4C 01 11 08 58 1B", 0);
-        static constexpr uint16_t truckTime = 14000;
-        static constexpr uint8_t lanceValue = 44;
-        if (truck) { RecordPatch(truck + 4, &truckTime, 2); RecordPatch(truck + 10, &truckTime, 2); }
-        const uintptr_t lance = range_pattern.get_first(mission, capacity, "0B 00 ? ? ? 0B", 0);
-        if (lance) RecordPatch(lance + 5, &lanceValue, 1);
-        ApplyMissionPatches(settings.sixtyFPS);
-    }
-    SetFrameRate();
+    if (space && mainSize < 0x200000 && capacity > 0 && capacity < 0x200000 && space + mainSize + capacity < 0x2000000)
+        RecordMissionPatches(space + mainSize, capacity);
+    ApplyConcertRate();
     return processScript(script);
 }
 }
-void ApplyFrameRate() {
-    ApplyMissionPatches(settings.sixtyFPS);
-    SetFrameRate();
+void ApplyFrameRate()
+{
+    if (!sixtyFPSPatch || !SetFrameRate(DesiredFrameRate()))
+        settings.sixtyFPS = sixtyFPSPatch.enabled();
+    ApplyMissionPatches(sixtyFPSPatch.enabled());
 }
-void TickTiming() {
-    if (!concert) return;
-    const auto text = *reinterpret_cast<const uintptr_t*>(theText);
-    concertActive = OnMission() && text && textExists(text, "REN7_O9") != 0;
-    if (!OnMission()) concert = false;
-    SetFrameRate();
+
+void TickTiming()
+{
+    bool requested = false;
+    if (concert)
+    {
+        concert = OnMission();
+        const auto text = *reinterpret_cast<const uintptr_t*>(theText);
+        requested = concert && text && textExists(text, "REN7_O9") != 0;
+    }
+    if (requested != concertPhaseRequested)
+    {
+        concertPhaseRequested = requested;
+        ApplyConcertRate();
+        return;
+    }
+    if (sixtyFPSPatch.enabled() == DesiredFrameRate())
+    {
+        concertRetryDelay = 0;
+        return;
+    }
+    if (concertRetryDelay)
+    {
+        --concertRetryDelay;
+        return;
+    }
+    ApplyConcertRate();
 }
 void InstallTiming() {
     static constexpr uint32_t nop = 0;
     const auto status = sixtyFPSPatch.create(injector::detail::backend, sixtyFPSSite, &nop, 1);
     if (status != PCSX2_HOOK_OK)
-        std::snprintf(OSDText[0], OSDStringSize, "VCS 60 FPS patch failed (%u)", unsigned(status));
+        FrameRateFailure(status);
     processScript.bind(0x255FA8); // CRunningScript::Process
     textExists.bind(0x3FB218);    // CText::Exists
     beginMission.bind(BeginMission);
     injector::MakeCALL(0x3B232C, beginMission.address());
-    SetFrameRate();
+    ApplyFrameRate();
 }
 }

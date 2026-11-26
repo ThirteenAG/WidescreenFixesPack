@@ -68,6 +68,7 @@
   "gamefoldersaves": "Partidas en la carpeta del juego",
   "gamefoldersaves.description": "Guarda las partidas en la carpeta savegames del juego.",
   "settingsfile": "Configuración portátil",
+  "settingsfile.cfg.description": "Guarda las opciones del juego en MaxPayne.FusionFix.cfg. Las secciones que faltan se inicializan a partir del registro. Requiere reiniciar.",
   "settingsfile.description": "Guarda las opciones del juego en settings.ini junto a las partidas en lugar del registro. Activa las partidas en la carpeta del juego para usar su subcarpeta savegames. La configuración del registro se copia al usar esta opción por primera vez. Requiere reiniciar.",
   "savestringformat": "Formato de fecha de las partidas",
   "savestringformat.description": "Cómo muestran la fecha y la hora los nombres de las partidas (strftime).",

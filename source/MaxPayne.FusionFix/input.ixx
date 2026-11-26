@@ -6,6 +6,7 @@ module;
 #include "Shared/MaxPayne/GamepadButtons.hpp"
 #include "Shared/MaxPayne/NativeIcons.hpp"
 #include "Shared/MaxPayne/Pad.hpp"
+#include "Shared/MaxPayne/Vibration.hpp"
 #include <stdexcept>
 
 export module input;
@@ -16,7 +17,8 @@ import xidi;
 void UpdateInput()
 {
     MaxPaynePad::Update();
-    MaxPaynePad::ToOverlay(MaxPayneOverlay::Gamepad);
+    if constexpr (WFP::DeveloperOverlay)
+        MaxPaynePad::ToOverlay(MaxPayneOverlay::Gamepad);
 }
 
 // Stands in for PeekMessageA in the loop of the video player, which stops on a key press message.
@@ -371,59 +373,19 @@ export std::string GetControlIcon(int id)
     }
 }
 
-bool g_VibrationThisFrame = false;
-bool g_VibrationActive = false;
-int g_VibrationCurrentStrength = 0;
-std::chrono::steady_clock::time_point g_VibrationStart = {};
-std::chrono::milliseconds g_VibrationDuration{ 150 };
+MaxPayneVibration Vibration;
 
 void Vibrate(int strength, std::chrono::milliseconds duration = std::chrono::milliseconds{ 150 })
 {
-    const auto sendVibration = XidiSendVibration.load(std::memory_order_acquire);
-    if (!sendVibration || !FixSettings().Bool("MAIN.Vibration"))
-        return;
-
-    if (g_VibrationThisFrame)
-        return;
-
-    if (strength < 0)
-        return;
-
-    if (g_VibrationActive && strength < g_VibrationCurrentStrength)
-        return;
-
-    g_VibrationThisFrame = true;
-    g_VibrationActive = true;
-    g_VibrationCurrentStrength = strength;
-    g_VibrationStart = std::chrono::steady_clock::now();
-    g_VibrationDuration = duration;
-
-    constexpr int RUMBLE_MAX_STRENGTH = 100;
-    constexpr WORD RUMBLE_MAX_VALUE = 0xFFFF;
-
-    const WORD motor = static_cast<WORD>(
-        static_cast<float>(std::clamp(strength, 0, RUMBLE_MAX_STRENGTH))
-        / RUMBLE_MAX_STRENGTH * RUMBLE_MAX_VALUE);
-
-    sendVibration(-1, motor, motor);
+    Vibration.Pulse(XidiSendVibration.load(std::memory_order_acquire), MaxPayneGamepadButtons::selectedSlot.load(),
+        FixSettings().Get("MAIN.Vibration") == "1", strength, duration);
 }
 
-// Stops a vibration once its time is up. Called every tick and from loading screens, which block the game loop.
+// Called during gameplay and from loading screens so pulses can expire in either case.
 export void UpdateVibration()
 {
-    g_VibrationThisFrame = false;
-
-    if (g_VibrationActive)
-    {
-        auto elapsed = std::chrono::steady_clock::now() - g_VibrationStart;
-        if (elapsed >= g_VibrationDuration || !FixSettings().Bool("MAIN.Vibration"))
-        {
-            g_VibrationActive = false;
-            g_VibrationCurrentStrength = 0;
-            if (const auto sendVibration = XidiSendVibration.load(std::memory_order_acquire))
-                sendVibration(-1, 0, 0);
-        }
-    }
+    Vibration.Update(XidiSendVibration.load(std::memory_order_acquire), MaxPayneGamepadButtons::selectedSlot.load(),
+        FixSettings().Get("MAIN.Vibration") == "1");
 }
 
 void InitInput()

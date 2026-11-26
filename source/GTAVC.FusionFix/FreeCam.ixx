@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "common.h"
 #include "FixSettings.hpp"
+#include "Shared/RWGTA/PadOptions.hpp"
 
 export module FreeCam;
 
@@ -233,7 +234,7 @@ namespace
 
     bool FreeCameraOn()
     {
-        static auto& freeCamera = FixSettings().Int("MAIN.FreeCamera");
+        const auto freeCamera = RWGTA::PadOptions::FreeCamera.load(std::memory_order_relaxed);
         return freeCamera && !TheCamera->m_WideScreenOn && TheCamera->WhoIsInControlOfTheCamera == 0;
     }
 
@@ -301,7 +302,7 @@ namespace
         }
         else if (stickX || stickY)
         {
-            static auto& speed = FixSettings().Float("MAIN.GamepadCameraSpeed");
+            const auto speed = RWGTA::PadOptions::CameraSpeed.load(std::memory_order_relaxed);
             // The stick past the game's own dead zone, in its units
             float lookLeftRight = -stickX * 170.0f * speed;
             float lookUpDown = stickY * 170.0f * speed;
@@ -393,10 +394,10 @@ namespace
     // The zoom of the game's three steps in this camera's distances
     float CarZoomValue(int kind, bool reset)
     {
-        if (TheCamera->m_bUseScriptZoomValueCar || TheCamera->m_bPlayerIsInGarage)
-            return TheCamera->CarZoomValueSmooth;
         int step = std::clamp(int(TheCamera->CarZoomIndicator), CAM_ZOOM_1, CAM_ZOOM_3) - CAM_ZOOM_1;
         float target = ZoomDistance[step][kind];
+        if (TheCamera->m_bUseScriptZoomValueCar || TheCamera->m_bPlayerIsInGarage)
+            target = TheCamera->CarZoomValueSmooth;
         if (reset)
             Car.zoom = target;
         else if (Car.zoom < target)
@@ -500,7 +501,7 @@ namespace
             zoomModeAlphaOffset = ZoomTwoAlphaOffset[alphaSet];
         else
         {
-            switch (TheCamera->CarZoomIndicator)
+            switch (int(TheCamera->CarZoomIndicator))
             {
                 case CAM_ZOOM_1: zoomModeAlphaOffset = ZoomOneAlphaOffset[alphaSet]; break;
                 case CAM_ZOOM_2: zoomModeAlphaOffset = ZoomTwoAlphaOffset[alphaSet]; break;
@@ -545,7 +546,7 @@ namespace
         cam->CA_MIN_DISTANCE = 3.5f;
 
         // The field of view: wider with speed when that option is on
-        static auto& speedFov = FixSettings().Int("MISC.CarSpeedDependantFOV");
+        const auto speedFov = RWGTA::PadOptions::SpeedFOV.load(std::memory_order_relaxed);
         if (cam->ResetStatics || !speedFov)
         {
             cam->FOV = DefaultFOV;
@@ -666,7 +667,7 @@ namespace
         float stickX = -rx * 128.0f;
         // Up and down move it in cars only while the stick is used
         float stickY = (Pad::IsPadLastDevice() || isCar) ? ry * 128.0f : 0.0f;
-        static auto& speed = FixSettings().Float("MAIN.GamepadCameraSpeed");
+        const auto speed = RWGTA::PadOptions::CameraSpeed.load(std::memory_order_relaxed);
         float xMovement = std::abs(stickX) * (cam->FOV / 80.0f * 5.0f / 70.0f) * stickX * 0.007f * 0.007f * speed;
         float yMovement = std::abs(stickY) * (cam->FOV / 80.0f * 3.0f / 70.0f) * stickY * 0.007f * 0.007f * speed;
 
@@ -697,7 +698,7 @@ namespace
             Pad::MouseAccel(accelX, accelY);
             if (mouseX || mouseY)
             {
-                yMovement = mouseY * cam->FOV / 80.0f * accelX;
+                yMovement = mouseY * cam->FOV / 80.0f * accelY;
                 xMovement = mouseX * cam->FOV / 80.0f * accelX;
                 cam->BetaSpeed = cam->AlphaSpeed = 0.0f;
                 targetAlpha = cam->Alpha;

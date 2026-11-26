@@ -45,9 +45,9 @@ export namespace NeoCinema
 
     // Height of the visible band in pixels: the screen height, or less where the screen is narrower than the band and
     // a border mode keeps the director's horizontal framing.
-    inline float VisibleHeight(const Band& band)
+    inline float VisibleHeight(const Band& band, int mode)
     {
-        if (Borders.load() != 0 && Screen.fAspectRatio < band.Aspect)
+        if ((mode & 1) && Screen.fAspectRatio < band.Aspect)
             return Screen.fWidth / band.Aspect;
         return Screen.fHeight;
     }
@@ -55,20 +55,20 @@ export namespace NeoCinema
     // Camera height for the lens: the band's vertical field of view spans the visible band.
     inline int CameraHeight(const Band& band)
     {
-        return std::max(1, static_cast<int>(std::lround(VisibleHeight(band) * band.CameraScale)));
+        return std::max(1, static_cast<int>(std::lround(VisibleHeight(band, Borders.load()) * band.CameraScale)));
     }
 
     // Fractions of the screen covered by each top/bottom bar and each side bar
-    inline float LetterboxBar(const Band& band)
+    inline float LetterboxBar(const Band& band, int mode)
     {
-        if (!(Borders.load() & 1) || Screen.fAspectRatio >= band.Aspect || Screen.fHeight <= 0.0f)
+        if (!(mode & 1) || Screen.fAspectRatio >= band.Aspect || Screen.fHeight <= 0.0f)
             return 0.0f;
-        return std::max(0.0f, (1.0f - VisibleHeight(band) / Screen.fHeight) * 0.5f);
+        return std::max(0.0f, (1.0f - VisibleHeight(band, mode) / Screen.fHeight) * 0.5f);
     }
 
-    inline float PillarboxBar(const Band& band)
+    inline float PillarboxBar(const Band& band, int mode)
     {
-        if (!(Borders.load() & 2) || Screen.fAspectRatio <= band.Aspect)
+        if (!(mode & 2) || Screen.fAspectRatio <= band.Aspect)
             return 0.0f;
         return (1.0f - band.Aspect / Screen.fAspectRatio) * 0.5f;
     }
@@ -85,7 +85,7 @@ export namespace NeoCinema
     {
         const auto band = ActiveBand();
         if (band.Active)
-            BarHeight = LetterboxBar(band);
+            BarHeight = LetterboxBar(band, Borders.load());
     }
 
     // The area the post-processing passes copy to the screen in the 16:9 band; the rest stays black
@@ -98,7 +98,8 @@ export namespace NeoCinema
             *reinterpret_cast<uint8_t*>(context.esp + 0x28) || area[2] <= 0.0f || area[1] <= 0.0f)
             return;
         const float width = area[2], height = area[3] + area[1];
-        const float top = LetterboxBar(band), side = PillarboxBar(band);
+        const int mode = Borders.load();
+        const float top = LetterboxBar(band, mode), side = PillarboxBar(band, mode);
         area[0] = width * side;
         area[1] = height * top;
         area[2] = width * (1.0f - side);
@@ -110,9 +111,9 @@ export namespace NeoCinema
         BarsHook.ccall<void>();
         Movie = MovieSeen.exchange(false);
         const auto band = ActiveBand();
-        if (!band.Active || !(Borders.load() & 2) || Screen.fAspectRatio <= band.Aspect || !CinemaRenderer.is_initialized() || !CinemaRenderer.get())
+        const float side = band.Active ? PillarboxBar(band, Borders.load()) : 0.0f;
+        if (side <= 0.0f || !CinemaRenderer.is_initialized() || !CinemaRenderer.get())
             return;
-        const float side = (1.0f - band.Aspect / Screen.fAspectRatio) * 0.5f;
         const float left[2]{ 0.0f, 0.0f }, leftEnd[2]{ side, 1.0f };
         const float right[2]{ 1.0f - side, 0.0f }, rightEnd[2]{ 1.0f, 1.0f };
         Quad(CinemaRenderer.get(), left, leftEnd, BarMaterial, 0.0f, 0.0f, 1.0f, 1.0f);
@@ -121,11 +122,7 @@ export namespace NeoCinema
 
     inline void Install()
     {
-        Borders = std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3);
-        FixSettings().OnChange("MAIN.CutsceneBorders", []()
-        {
-            Borders = std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3);
-        });
+        WatchNeoNumber("MAIN.CutsceneBorders", Borders, 0, 3);
 
         auto bars = hook::pattern("A1 ? ? ? ? D9 05 ? ? ? ? 83 EC 10 85 C0 56 74 26 8B 88 C8 04 00 00 85 C9 74 0A DD D8 D9 05 ? ? ? ? EB 12 8B 88 C4 04 00 00 85 C9 74 08 DD D8 D9 05 ? ? ? ? D9 05 ? ? ? ? 8B 35 ? ? ? ? 8B 06 D8 E1 6A 00 8B CE D8 0D ? ? ? ? D9 1D ? ? ? ? DD D8");
         auto camera = hook::pattern("DB 05 ? ? ? ? D8 0D ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 89 41 4C 8B C6");

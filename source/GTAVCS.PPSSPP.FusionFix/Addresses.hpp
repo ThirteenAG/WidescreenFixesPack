@@ -1,6 +1,6 @@
 #pragma once
-#include "../Shared/Console/NativeProfile.hpp"
-#include "../Shared/Console/PSP.hpp"
+#include "Shared/Console/NativeProfile.hpp"
+#include "Shared/Console/PSP.hpp"
 
 namespace vcsws {
 namespace profile_data {
@@ -144,12 +144,6 @@ inline constexpr uint32_t words67[]={0x0C000000u,0x44856000u,0x8FA50454u,0x34040
 inline constexpr uint8_t masks67[]={2,0,0,0,0,0,0,0,2,0,2,0};
 inline constexpr uint32_t words68[]={0x14C0FFFCu,0x24840002u,0x03E00008u,0x00000000u,0x27BDFFE0u,0x93850000u,0xAFB00000u,0x00808025u,0xAFB10004u,0xAFB20008u,0xAFB3000Cu,0xAFB40010u};
 inline constexpr uint8_t masks68[]={0,0,0,0,0,1,0,0,0,0,0,0};
-inline constexpr uint32_t words69[]={0x8C822BDCu,0x03E00008u,0x90822BD4u,0x93840000u,0x3C054140u,0x10800003u,0x44850000u,0x10000001u,0x00000000u,0x03E00008u,0x00000000u,0x93840000u};
-inline constexpr uint8_t masks69[]={0,0,0,1,0,0,0,0,0,0,0,1};
-inline constexpr uint32_t words70[]={0x00000000u,0x93840000u,0x10800004u,0x00000000u,0x3C04432Au,0x10000003u,0x44840000u,0x3C044344u,0x44840000u,0x03E00008u,0x00000000u,0x93840000u};
-inline constexpr uint8_t masks70[]={0,1,0,0,0,0,0,0,0,0,0,1};
-inline constexpr uint32_t words71[]={0x00000000u,0x3C04432Au,0x10000003u,0x44840000u,0x3C044344u,0x44840000u,0x03E00008u,0x00000000u,0x93840000u,0x10800004u,0x00000000u,0x3C0442B8u};
-inline constexpr uint8_t masks71[]={0,0,0,0,0,0,0,0,1,0,0,0};
 inline constexpr uint32_t words72[]={0x34050064u,0xA0852BD5u,0x03E00008u,0x00000000u,0x27BDFF20u,0x90852430u,0xE7B400C8u,0xAFB000CCu,0xAFB100D0u,0xAFB200D4u,0xAFBF00D8u,0x10A00021u};
 inline constexpr uint8_t masks72[]={0,0,0,0,0,0,0,0,0,0,0,0};
 inline constexpr uint32_t words73[]={0x8FB200D4u,0x8FBF00D8u,0x03E00008u,0x27BD00E0u,0x27BDFFD0u,0x8F840000u,0xE7B40008u,0xE7B6000Cu,0xAFB00010u,0xAFB10014u,0xAFB20018u,0xAFB3001Cu};
@@ -364,7 +358,11 @@ inline constexpr uint32_t pagerWords[]={0x8FB40064u,0x8FBF0068u,0x03E00008u,0x27
 inline constexpr uint8_t pagerMasks[]={0,0,0,0,0,1,1,0,0,0,0,0};
 inline constexpr uint32_t helpWords[]={0x8FB40104u,0x8FBF0108u,0x03E00008u,0x27BD0110u,0x27BDFFD0u,0x9485243Cu,0xAFB00014u,0xAFB10018u,0xAFB2001Cu,0xAFBF0020u,0x10A0019Fu,0x00808025u};
 inline constexpr uint8_t helpMasks[]={0,0,0,0,0,0,0,0,0,0,0,0};
-inline constexpr std::array<console::AddressRule,177> rules={{
+inline constexpr uint32_t textExistsWords[]={0x27BDFFF0u,0xAFB00004u,0xAFB10008u,0x00A08025u,0x00808825u,0xA3A00000u,0xAFBF000Cu,0x0C000000u,0x03A03025u,0x93A40000u,0x1480000Bu,0x00000000u};
+inline constexpr uint8_t textExistsMasks[]={0,0,0,0,0,0,0,2,0,0,0,0};
+inline constexpr uint32_t missionReadWords[]={0x8F850000u,0x8F860000u,0x02202025u,0x00A62821u,0x0C000000u,0x02003025u,0x0C000000u,0x8F840000u,0x0C000000u,0x00408025u,0x34040001u,0xA204020Au};
+inline constexpr uint8_t missionReadMasks[]={1,1,0,0,2,0,2,1,2,0,0,0};
+inline constexpr std::array<console::AddressRule,176> rules={{
     {0x08810484u,0x08810474u,words0,masks0,12,36,16,0,0,console::AddressKind::Code},
     {0x0882DC20u,0x0882DC10u,menuCloseWords,menuCloseMasks,12,30,16,0,0,console::AddressKind::Code},
     {0x0882E470u,0x0882E460u,words1,masks1,12,44,16,0,0,console::AddressKind::Code},
@@ -448,9 +446,6 @@ inline constexpr std::array<console::AddressRule,177> rules={{
     {0x0899F96Cu,0x0899F95Cu,words67,masks67,12,8,16,0,0,console::AddressKind::Code},
     {0x089A0E58u,0x089A0E48u,followCarSwingWords,followCarSwingMasks,12,12,16,0,0,console::AddressKind::Code},
     {0x089BA6ECu,0x089BA6DCu,words68,masks68,12,0,16,0,0,console::AddressKind::Code},
-    {0x089BAA8Cu,0x089BAA7Cu,words69,masks69,12,0,16,0,0,console::AddressKind::Code},
-    {0x089BAAB4u,0x089BAAA4u,words70,masks70,12,17,16,0,0,console::AddressKind::Code},
-    {0x089BAAC0u,0x089BAAB0u,words71,masks71,12,5,16,0,0,console::AddressKind::Code},
     {0x089BB3E0u,0x089BB3D0u,words72,masks72,12,4,16,0,0,console::AddressKind::Code},
     {0x089BB5CCu,0x089BB5BCu,words73,masks73,12,0,16,0,0,console::AddressKind::Code},
     {0x089BB9ECu,0x089BB9DCu,words74,masks74,12,29,16,0,0,console::AddressKind::Code},
@@ -485,6 +480,7 @@ inline constexpr std::array<console::AddressRule,177> rules={{
     {0x089EF2BCu,0x089EF2ACu,words104,masks104,12,32,16,0,0,console::AddressKind::Code},
     {0x089F6390u,0x089F6398u,words105,masks105,21,0,-8,0,0,console::AddressKind::Code},
     {0x08A062F0u,0x08A062E0u,frontEndSoundWords,frontEndSoundMasks,12,42,16,0,0,console::AddressKind::Code},
+    {0x089F64FCu,0x089F64FCu,textExistsWords,textExistsMasks,12,34,0,0,0,console::AddressKind::Code},
     {0x08A070C8u,0x08A070B8u,words106,masks106,12,16,16,0,0,console::AddressKind::Code},
     {0x08A12A94u,0x08A12A84u,words107,masks107,12,13,16,0,0,console::AddressKind::Code},
     {0x08A18294u,0x08A18284u,words108,masks108,12,44,16,0,0,console::AddressKind::Code},
@@ -497,6 +493,7 @@ inline constexpr std::array<console::AddressRule,177> rules={{
     {0x08A3AF60u,0x08A3AF50u,words117,masks117,12,32,16,0,0,console::AddressKind::Code},
     {0x08A3AF64u,0x08A3AF54u,words118,masks118,12,28,16,0,0,console::AddressKind::Code},
     {0x08AA8C8Cu,0x08AA8C8Cu,translucentWords,translucentMasks,12,0,0,0,0,console::AddressKind::Code},
+    {0x08ABC128u,0x08ABC118u,missionReadWords,missionReadMasks,12,46,16,0,0,console::AddressKind::Code},
     {0x08ABC174u,0x08ABC170u,words119,masks119,12,45,4,0,0,console::AddressKind::Code},
     {0x08AC5D44u,0x08AC5D34u,menuInputWords,menuInputMasks,12,42,16,0,0,console::AddressKind::Code},
     {0x08AC61E0u,0x08AC61D0u,menuSetHookWords,menuSetHookMasks,12,40,16,0,0,console::AddressKind::Code},

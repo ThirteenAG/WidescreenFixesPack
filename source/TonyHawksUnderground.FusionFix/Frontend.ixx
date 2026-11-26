@@ -17,6 +17,7 @@ module;
 export module Frontend;
 
 import ComVars;
+import Window;
 
 export
 {
@@ -128,7 +129,7 @@ namespace THUGMenu
     struct Addresses
     {
         uintptr_t unlinkWeak, linkWeak, lookup, run, spawn, launch, symbol, getChecksum, created, task;
-        uint32_t listTable, textTable, containerTable;
+        uint32_t listTable, containerTable;
     };
     inline const Addresses& Game()
     {
@@ -151,7 +152,6 @@ namespace THUGMenu
             NativeSymbols.SetAddress(operand("A1 ? ? ? ? 8D 04 90 83 C4 04 39", 1));
             NativeLanguage.SetAddress(operand("A1 ? ? ? ? 83 C0 FD 83 F8 03 8D", 1));
             a.listTable = operand("C7 06 ? ? ? ? C6 86 74 01 00 00", 2);
-            a.textTable = operand("C7 06 ? ? ? ? 88 9E 84 01 00 00", 2);
             a.containerTable = operand("C7 06 ? ? ? ? 89 86 5C 01 00 00 E8 ? ? ? ? 8B", 2);
             return a;
         }();
@@ -159,13 +159,15 @@ namespace THUGMenu
     }
 }
 
-// The "Plugins" row of the Options page and its pages, built with the game's own themed menu scripts (title
-// Options: themed scrolling menu, pause Options: themed option menu). Choose, left/right and back are taken from
+// The "Plugins" row of the Options page and its pages, built with the game's own themed scrolling menu (as its
+// Cheats page, also in the pause menu), so long pages scroll inside the box. Choose, left/right and back are taken from
 // the controller events while one of our pages (or the Plugins row) has focus; up/down stay the game's. The selected
 // row's help runs line by line in the menu's own description line, as the game's pause menu does.
 namespace THUGMenu
 {
     constexpr auto EntryID = Checksum("wfp_thug_entry");
+    constexpr float MenuWidth = 300.0f;
+    constexpr float TextWidth = MenuWidth - 20.0f;
 
     struct Weak
     {
@@ -212,7 +214,6 @@ namespace THUGMenu
         uint8_t(__thiscall* launch)(void*, uint32_t, uint32_t, uint32_t, Structure*, int) = nullptr;
         uint32_t generation = 1, baseID = 0;
         std::string focusKey;       // the row to select again once a rebuilt page has focus
-        bool fitPending = false;    // title rows are measured after they were drawn once
         bool returnToEntry = false; // select the Plugins row when the stock page is back
         int page = -1;
         bool pause = false, open = false, busy = false, draining = false;
@@ -271,7 +272,7 @@ namespace THUGMenu
     }
     inline std::string Language()
     {
-        auto forced = FixSettings().String("MAIN.TextLanguage");
+        const auto forced = FixSettings().Get("MAIN.TextLanguage");
         if (!forced.empty() && forced != "auto") return forced;
         switch (NativeLanguage.get())
         {
@@ -302,18 +303,21 @@ namespace THUGMenu
         return root && list && Lookup("current_menu_anchor") == root && Lookup("current_menu") == list
             && Read<uint32_t>(list) == Game().listTable && (!requireFocus || Read<uint8_t>(list, 356) == 1) && !Modal();
     }
-    inline bool Fit(uint32_t id, float maximum)
+    inline void FitRowText(const void* element, float& x, float& scaleX)
     {
-        auto* element = Lookup(id);
-        if (!element || Read<uint32_t>(element) != Game().textTable) return false;
-        // Measured text size
-        float width = Read<float>(element, 0x148), height = Read<float>(element, 0x14C);
-        if (!std::isfinite(width) || !std::isfinite(height) || width <= maximum || height <= 0) return true;
-        auto scale = maximum / width;
-        if (!std::isfinite(scale) || scale < 0.1f) return false;
-        Parameters params; params.Name("id", id); params.Pair("scale", scale, 1.0f); params.Integer("time", 0);
-        Run("DoScreenElementMorph", params);
-        return Lookup(id) == element;
+        if (!state.open)
+            return;
+        const float width = Read<float>(element, 0x148);
+        const float drawnWidth = width * scaleX;
+        const auto id = Read<uint32_t>(element, 20);
+        if (drawnWidth > TextWidth && std::isfinite(drawnWidth)
+            && std::ranges::any_of(state.items, [id](const Item& item) { return item.textId == id; }))
+        {
+            // Clamp the drawn width after the theme's focus animation and keep the native text anchor.
+            const auto anchor = (Read<float>(element, 0x140) + 1.0f) * 0.5f;
+            x += (drawnWidth - TextWidth) * anchor;
+            scaleX = TextWidth / width;
+        }
     }
     inline bool Origin(void* script, uint32_t id)
     {
@@ -487,35 +491,25 @@ namespace THUGMenu
         // The title font has capitals only
         auto title = NativeText(state.model.Text("menu.plugins"));
         CharUpperBuffA(title.data(), static_cast<DWORD>(title.size()));
-        Parameters menu; menu.Text("title", title);
-        if (state.pause) Run("make_new_themed_option_menu", menu);
-        else { menu.Pair("dims", 300, 252); Run("make_new_themed_scrolling_menu", menu); }
+        Parameters menu; menu.Text("title", title); menu.Pair("dims", MenuWidth, 252);
+        Run("make_new_themed_scrolling_menu", menu);
         auto* root = Lookup("current_menu_anchor");
         auto* list = Lookup("current_menu");
         if (!root || !list || Read<uint32_t>(root) != Game().containerTable || Read<uint32_t>(list) != Game().listTable || Modal()) return false;
         state.root.Reset(root); state.list.Reset(list);
         state.open = true;
-        const char* helper = state.pause ? "make_theme_menu_item" : "theme_menu_add_item";
         for (const auto& item : items)
         {
             Parameters row; row.Name("id", item.id); row.Name("text_id", item.textId);
             row.Text("text", NativeText(item.text));
-            if (!state.pause) { row.Flag("centered"); row.Flag("no_bg"); }
+            row.Flag("centered"); row.Flag("no_bg");
             if (!item.enabled) row.Flag("not_focusable");
-            // Pause rows have no text id to measure: shrink long ones by the font's widest average advance
-            if (state.pause && item.text.size() * 12.5f > 380.0f) row.Float("scale", 380.0f / (item.text.size() * 12.5f));
-            Run(helper, row);
+            Run("theme_menu_add_item", row);
             if (Lookup("current_menu_anchor") != root) return false;
         }
         state.items = std::move(items);
-        state.fitPending = !state.pause;
-        if (state.pause)
-            Emit(Checksum("focus"), Read<uint32_t>(root, 20));
-        else
-        {
-            Parameters finish;
-            Spawn("finish_themed_scrolling_menu", finish);
-        }
+        Parameters finish;
+        Spawn("finish_themed_scrolling_menu", finish);
         return true;
     }
     // After a value changed: the texts change in place, the page is built again only when its rows changed
@@ -530,14 +524,9 @@ namespace THUGMenu
         for (size_t i = 0; i < items.size(); ++i)
         {
             if (items[i].text == state.items[i].text) continue;
-            // Title rows have their own text id; pause rows are addressed as { row child = 0 }
-            Parameters id; id.Flag(items[i].id); id.Integer("child", 0);
-            Parameters text;
-            if (state.pause) text.Nested("id", &id.value);
-            else text.Name("id", items[i].textId);
+            Parameters text; text.Name("id", items[i].textId);
             text.Text("text", NativeText(items[i].text));
             Run("SetScreenElementProps", text);
-            if (!state.pause) Fit(items[i].textId, 280);
         }
         state.items = std::move(items);
         return true;
@@ -555,7 +544,12 @@ namespace THUGMenu
             for (const auto& item : state.items)
             {
                 if (item.id == selected)
-                    state.helpLines = Wrap(item.help, 46);
+                {
+                    // The description font has no semicolon
+                    auto help = item.help;
+                    std::replace(help.begin(), help.end(), ';', ',');
+                    state.helpLines = Wrap(help, 46);
+                }
             }
             state.helpLine = 0;
             state.helpTime = 0;
@@ -595,8 +589,8 @@ namespace THUGMenu
     }
     inline void Open()
     {
-        if (!Current(false) || !Script("make_new_themed_scrolling_menu") || !Script("make_new_themed_option_menu")
-            || !Script("theme_menu_add_item") || !Script("make_theme_menu_item") || !Script("finish_themed_scrolling_menu")) return;
+        if (!Current(false) || !Script("make_new_themed_scrolling_menu") || !Script("theme_menu_add_item")
+            || !Script("finish_themed_scrolling_menu")) return;
         state.model.OpenPlugins(state.module, Language(), 64);
         state.page = -1;
         if (!Build()) { Close(); return; }
@@ -699,6 +693,8 @@ namespace THUGMenu
         --state.frameDepth;
         if (state.frameDepth || state.draining || state.busy) return result;
         Busy drain(state.draining);
+        if (!THUGDisplay::StartupMoviesFinished.load(std::memory_order_relaxed) && Lookup("current_menu_anchor"))
+            THUGDisplay::StartupMoviesFinished.store(true, std::memory_order_relaxed);
         // Left by other means (a modal can cover the page for a while)
         if (state.open && (!state.root.element || (Lookup("current_menu_anchor") != state.root.element && !Modal()))) StopModel();
         auto pending = std::move(state.pending); state.pending.clear();
@@ -715,12 +711,6 @@ namespace THUGMenu
             if (!Refresh()) Close();
         if (state.open && Current(true))
         {
-            if (state.fitPending)
-            {
-                Busy busy(state.busy);
-                state.fitPending = false;
-                for (const auto& item : state.items) Fit(item.textId, 280);
-            }
             if (state.focusKey.empty())
             {
                 Busy busy(state.busy);

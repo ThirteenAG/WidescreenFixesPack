@@ -30,7 +30,7 @@
   "fps.30": "30 FPS",
   "fps.60": "60 FPS",
   "icons": "Icone del controller",
-  "icons.description": "Sostituisce i simboli dei pulsanti nei testi del gioco. Auto usa le immagini Xbox perché PPSSPP ufficiale non comunica il tipo di controller. PlayStation mantiene i simboli PSP. Configura i comandi in PPSSPP. Le modifiche in Plugins sono immediate; dopo aver modificato il file, riavvia il gioco emulato.",
+  "icons.description": "Sostituisce i simboli dei pulsanti nei testi del gioco. Auto usa le immagini Xbox perché PPSSPP ufficiale non comunica il tipo di controller. PlayStation mantiene i simboli PSP. Configura i comandi in PPSSPP. Le modifiche in Plugins e nel file di configurazione si applicano durante il gioco.",
   "icons.auto": "Auto",
   "icons.xbox": "Xbox",
   "icons.ps": "PlayStation",

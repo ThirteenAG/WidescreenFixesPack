@@ -115,21 +115,19 @@ public:
             ReleaseHook = safetyhook::create_mid(releaseBuffers.get_first(22), USMWindow::GuardBufferRelease);
             DestroyHook = safetyhook::create_mid(destroyBuffer.get_first(9), USMWindow::GuardBufferDestroy);
             TextureHook = safetyhook::create_mid(releaseTextures.get_first(), USMWindow::GuardTextureRelease);
-            USMWindow::Mode = std::clamp(settings.Int("MAIN.WindowMode"), 0, 2);
+            settings.Availability("MAIN.WindowMode", USMWindow::CanPublishMode);
+            settings.OnChange("MAIN.WindowMode", []()
+            {
+                if (!USMWindow::PublishingMode)
+                    USMWindow::Pending.store(USMWindow::RefreshMode);
+            });
+            USMWindow::Mode = USMWindow::WantedMode();
             USMWindow::LastWindowMode = USMWindow::Mode ? USMWindow::Mode : 1;
             USMWindow::RememberDesktop();
             USMWindow::ResolutionChanged = [](int width, int height)
             {
                 Screen.Update(width, height);
             };
-            USMWindow::ModeChanged = [](int mode)
-            {
-                FixSettings().Set("MAIN.WindowMode", std::to_string(mode));
-            };
-            settings.OnChange("MAIN.WindowMode", []()
-            {
-                USMWindow::Pending.store(std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2));
-            });
             static auto resolutionHook = safetyhook::create_mid(height.get_first(), [](SafetyHookContext&)
             {
                 UpdateResolution();

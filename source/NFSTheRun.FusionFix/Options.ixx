@@ -3,7 +3,6 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/NFS/PluginsMenu.hpp"
-#include "Shared/NFS/TextLanguage.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
 #include <unordered_set>
 
@@ -173,10 +172,18 @@ namespace
     template<typename T>
     T* MakeArray(const std::vector<T>& elements)
     {
+        static std::vector<T*> arrays;
+        for (auto array : arrays)
+        {
+            if (Count(array) == elements.size() && std::equal(elements.begin(), elements.end(), array))
+                return array;
+        }
+
         auto memory = (uint8_t*)_aligned_malloc(16 + sizeof(T) * std::max<size_t>(elements.size(), 1), 16);
         *(uint32_t*)(memory + 12) = uint32_t(elements.size());
         auto array = (T*)(memory + 16);
         std::copy(elements.begin(), elements.end(), array);
+        arrays.push_back(array);
         return array;
     }
 
@@ -189,17 +196,26 @@ namespace
         return hash;
     }
 
-    std::string LanguageName(int language)
+    struct MenuLocale
     {
-        static const char* names[] = { "english", "french", "german", "spanish", "italian", "japanese", "russian",
-            "polish", "dutch", "portuguese", "chinese", "korean", "czech", "spanish" };
-        return language >= 0 && language < int(std::size(names)) ? names[language] : "english";
-    }
+        const char* tag;
+        const char* name;
+    };
 
-    std::string LanguageTag(int language)
+    MenuLocale ChooseLocale(int language, std::string_view selected)
     {
-        static const char* tags[] = { "en", "fr", "de", "es", "it", "ja", "ru", "pl", "nl", "pt", "zh-TW", "ko", "cs", "es-MX" };
-        return language >= 0 && language < int(std::size(tags)) ? tags[language] : "en";
+        static constexpr MenuLocale locales[] = {
+            { "en", "english" }, { "fr", "french" }, { "de", "german" }, { "es", "spanish" },
+            { "it", "italian" }, { "ja", "japanese" }, { "ru", "russian" }, { "pl", "polish" },
+            { "nl", "dutch" }, { "pt", "portuguese" }, { "zh-TW", "chinese" }, { "ko", "korean" },
+            { "cs", "czech" }, { "es-MX", "spanish" }
+        };
+        for (const auto& locale : locales)
+        {
+            if (locale.tag == selected)
+                return locale;
+        }
+        return language >= 0 && language < int(std::size(locales)) ? locales[language] : locales[0];
     }
 
     int (__cdecl* GetGameLanguage)() = nullptr;
@@ -220,11 +236,39 @@ namespace
     {
         std::shared_ptr<WFPPlugins::Snapshot> snapshot;
         std::vector<Row> rows;
-        uintptr_t pluginsItem = 0;
     };
 
     Pages Current;
     std::recursive_mutex Mutex;
+    std::map<std::string, std::map<std::string, std::string>> RestartValues;
+    bool RestartPending = false;
+    std::atomic<bool> LocaleChanged{ false };
+    std::atomic<uint32_t> CurrentSubMenuKey{ 0 };
+    std::atomic<bool> NativeRefreshQueued{ false };
+
+    uint32_t RefreshMenuKey()
+    {
+        static const auto key = KeyOf("WFPMenu|Refresh");
+        return key;
+    }
+
+    void UpdateRestartWarning(const WFPPlugins::Snapshot& snapshot)
+    {
+        bool pending = false;
+        for (const auto& plugin : snapshot.plugins)
+        {
+            auto& baseline = RestartValues[plugin.file.id];
+            for (const auto& setting : plugin.file.description.settings)
+            {
+                if (setting.apply != "restart" || !setting.HasValue())
+                    continue;
+                auto current = OtherPlugins::Get(plugin, setting);
+                const auto entry = baseline.try_emplace(setting.id, current).first;
+                pending |= entry->second != current;
+            }
+        }
+        RestartPending = pending;
+    }
 
     // Templates: the Settings menu, one of its submenus and a toggle row
     uintptr_t MenuTemplate = 0, SubMenuTemplate = 0, ToggleTemplate = 0;
@@ -287,8 +331,7 @@ namespace
             if (!UpdateNotice.empty())
                 return HelpText(UpdateNotice);
         }
-        auto warning = WFPPlugins::RestartWarning();
-        return HelpText(warning.empty() ? text : warning);
+        return HelpText(RestartPending ? WFPText::Get("WFP_RESTART_WARNING") : text);
     }
 
     // The values a setting's row steps through: the listed ones, or its range (at most about a hundred steps), and the
@@ -355,6 +398,8 @@ namespace
     {
         const char* label;
         const char* data;
+
+        bool operator==(const Choice&) const = default;
     };
 
     uintptr_t MakeToggle(const std::string& name, const std::string& label, const std::string& help,
@@ -417,7 +462,7 @@ namespace
         }
         for (auto& choice : choices)
             row.data.push_back(choice.second);
-        row.item = MakeToggle(id, label, HelpText(help), choices, row.key);
+        row.item = MakeToggle(id, label, HelpText(RestartPending ? WFPText::Get("WFP_RESTART_WARNING") : help), choices, row.key);
         pages.rows.push_back(std::move(row));
         return pages.rows.back().item;
     }
@@ -431,9 +476,10 @@ namespace
         HMODULE module = nullptr;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&BuildPlugins, &module);
         const int language = GetGameLanguage ? GetGameLanguage() : 0;
-        const auto selected = FixSettings().String("MAIN.TextLanguage");
-        WFPText::SetLanguage(WFPMenu::TextLanguage(FixSettings(), LanguageName(language)));
-        pages.snapshot = WFPPlugins::Find(module, selected == "auto" ? LanguageTag(language) : selected);
+        const auto locale = ChooseLocale(language, FixSettings().Get("MAIN.TextLanguage"));
+        WFPText::SetLanguage(locale.name);
+        pages.snapshot = WFPPlugins::Find(module, locale.tag);
+        UpdateRestartWarning(*pages.snapshot);
         pages.rows.clear();
         pages.rows.reserve(256);
         std::vector<uintptr_t> pluginItems;
@@ -503,7 +549,7 @@ namespace
         for (uint32_t i = 0; i < Count(items); ++i)
         {
             auto label = At<const char*>(items[i], Item::Label);
-            if (!label || items[i] == Current.pluginsItem)
+            if (!label)
                 continue;
             audio |= !strcmp(label, "ID_SETTINGS_AUDIO");
             display |= !strcmp(label, "ID_OPTIONS_DISPLAY");
@@ -511,10 +557,9 @@ namespace
         return audio && display;
     }
 
-    bool FindTemplates(uintptr_t menu)
+    bool FindTemplates(uintptr_t menu, const uintptr_t* items)
     {
         // From the menu being sent: the menus of a level go away with it
-        auto items = At<uintptr_t*>(menu, Menu::Items);
         MenuTemplate = menu;
         SubMenuTemplate = ToggleTemplate = 0;
         for (uint32_t i = 0; i < Count(items); ++i)
@@ -536,18 +581,18 @@ namespace
     // The Settings menu with the Plugins row added
     void AddPluginsRow(uintptr_t menu)
     {
+        std::lock_guard lock(Mutex);
         static std::map<uintptr_t, std::pair<uintptr_t*, uintptr_t*>> menus;   // menu: the game's items, the items with Plugins
         auto items = At<uintptr_t*>(menu, Menu::Items);
         auto& known = menus[menu];
         if (items != known.second)
             known = { items, nullptr };
-        if (!FindTemplates(menu))
+        if (!FindTemplates(menu, known.first))
             return;
 
-        std::lock_guard lock(Mutex);
-        Current.pluginsItem = BuildPlugins(Current);
+        const auto pluginsItem = BuildPlugins(Current);
         std::vector<uintptr_t> list(known.first, known.first + Count(known.first));
-        list.push_back(Current.pluginsItem);
+        list.push_back(pluginsItem);
         known.second = MakeArray(list);
         At<uintptr_t*>(menu, Menu::Items) = known.second;
         WriteValues();
@@ -559,8 +604,8 @@ namespace
         if (row.kind == Row::Kind::Preset)
         {
             int preset = std::atoi(data.c_str());
-            if (preset >= 0 && preset < 3 && preset != OtherPlugins::CurrentPreset(*row.plugin) && OtherPlugins::ApplyPreset(*row.plugin, preset))
-                WFPPlugins::RestartNeeded() = true;
+            if (preset >= 0 && preset < 3 && preset != OtherPlugins::CurrentPreset(*row.plugin))
+                OtherPlugins::ApplyPreset(*row.plugin, preset);
             return;
         }
         WFPPlugins::Set(*row.plugin, *row.setting, data);
@@ -589,6 +634,55 @@ namespace
         return shSerializeMenu.ccall<int>(menu, out);
     }
 
+    SafetyHookInline shSerializeBinding = {};
+    int __cdecl SerializeBinding(uintptr_t binding, void* out, void* dependencies)
+    {
+        constexpr size_t RootMenu = 0x0C;
+        constexpr size_t SubMenuCategory = 0x10;
+        constexpr size_t SubMenuKey = 0x14;
+        constexpr size_t HighlightCategory = 0x18;
+        constexpr size_t RefreshCategory = 0x20;
+        constexpr size_t RefreshKey = 0x24;
+        const auto menu = At<uintptr_t>(binding, RootMenu);
+        auto& refresh = At<uintptr_t>(binding, RefreshCategory);
+        if (menu && !refresh)
+        {
+            auto items = At<uintptr_t*>(menu, Menu::Items);
+            for (uint32_t i = 0; i < Count(items); ++i)
+            {
+                if (!IsType(items[i], "UIMenuItem"))
+                    continue;
+                const auto sub = At<uintptr_t>(items[i], Item::SubMenu);
+                if (!sub || !IsSettingsMenu(sub))
+                    continue;
+                refresh = At<uintptr_t>(binding, SubMenuCategory);
+                if (!refresh)
+                    refresh = At<uintptr_t>(binding, HighlightCategory);
+                if (refresh)
+                    At<uint32_t>(binding, RefreshKey) = RefreshMenuKey();
+                break;
+            }
+        }
+        if (refresh && At<uint32_t>(binding, RefreshKey) == RefreshMenuKey())
+            CurrentSubMenuKey = At<uint32_t>(binding, SubMenuKey);
+        return shSerializeBinding.ccall<int>(binding, out, dependencies);
+    }
+
+    void PrepareRootRefresh(void* movie, const char* method)
+    {
+        constexpr std::string_view suffix = ".instance1.refreshScreen";
+        std::string_view path(method);
+        if (!path.ends_with(suffix) || !NativeRefreshQueued.exchange(false))
+            return;
+
+        // The stock refresh attaches a new root clip and appends it to menuArr.
+        std::string pop(path.substr(0, path.size() - suffix.size()));
+        pop += ".instance1.Widget_main_menu_01.menuArr.pop";
+        using Invoke = bool(__thiscall*)(void*, const char*, const void*, void*, unsigned);
+        auto invoke = reinterpret_cast<Invoke>((*reinterpret_cast<void***>(movie))[0x5C / sizeof(void*)]);
+        invoke(movie, pop.c_str(), nullptr, nullptr, 0);
+    }
+
 }
 
 class Options
@@ -598,8 +692,19 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            auto& settings = FixSettings();
+            auto& baseline = RestartValues[settings.Id()];
+            for (const auto& setting : settings.GetDescription().settings)
+            {
+                if (setting.apply == "restart" && setting.HasValue())
+                    baseline.emplace(setting.id, settings.Get(setting.id));
+            }
+            settings.OnChange("MAIN.TextLanguage", []() { LocaleChanged = true; });
+
             // UITreeMenuAsset to the menu screen, and in it the UI manager, the data store's string value and its end
             auto serialize = hook::pattern("83 EC 60 53 55 8B 6C 24 6C 33 DB 56 57 39 5D 10 74 17 E8");
+            auto binding = hook::pattern("81 EC 8C 00 00 00 0F B6 84 24 84 00 00 00 53 55 8B AC 24 98 00 00 00 8B 55 0C");
+            auto refresh = hook::pattern("8B 16 8B 52 5C 6A 01 8D 44 24 34 50 8B 84 24 D0 00 00 00 8D 4C 24 7C 51 83 E0 FC 50 8B CE FF D2");
             auto rows = hook::pattern("E8 ? ? ? ? 83 C4 08 39 5C 24 38 74 0E 8D 4C 24 20 51 8B 4C 24 7C E8 ? ? ? ? 8D 4C 24 20 E8");
             auto makeString = hook::pattern("55 56 8B F1 C7 46 14 00 00 00 00 8D 4E 08 C7 01 ? ? ? ? C7 41 04 ? ? ? ? C7 41 08");
             auto language = hook::pattern("55 8B EC 83 E4 F0 83 EC 1C 56 8D 44 24 0C 50 8D 4C 24 14 51 6A 00 6A 02 68 ? ? ? ? 68 ? ? ? ? 66 0F EF C0 68 02 00 00 80");
@@ -610,6 +715,11 @@ public:
             UIData::Destroy = (decltype(UIData::Destroy))injector::GetBranchDestination(rows.get_first(32)).as_int();
             GetGameLanguage = (decltype(GetGameLanguage))language.get_first();
             shSerializeMenu = safetyhook::create_inline(serialize.get_first(), SerializeMenu);
+            shSerializeBinding = safetyhook::create_inline(binding.get_first(), SerializeBinding);
+            static auto RefreshRootHook = safetyhook::create_mid(refresh.get_first(28), [](SafetyHookContext& regs)
+            {
+                PrepareRootRefresh(reinterpret_cast<void*>(regs.esi), *reinterpret_cast<const char**>(regs.esp));
+            });
 
             // The update notice is the Plugins row's help; FusionFixHub opens on its page when the game closes
             RWGTA::UpdateCheck::Config config;
@@ -631,6 +741,8 @@ public:
                 std::lock_guard lock(Mutex);
                 if (Current.rows.empty())
                     return;
+                static bool refreshPending = false;
+                refreshPending |= LocaleChanged.exchange(false);
                 bool changed = WFPPlugins::Changed().exchange(false);
                 for (auto& row : Current.rows)
                 {
@@ -643,7 +755,25 @@ public:
                     }
                 }
                 if (changed)
+                {
+                    const bool wasPending = RestartPending;
+                    UpdateRestartWarning(*Current.snapshot);
+                    refreshPending |= wasPending != RestartPending;
                     WriteValues();
+                }
+                if (refreshPending)
+                {
+                    // The widget refresh builds menuList_0_mc. Apply it when the player returns to the root.
+                    std::string subMenu;
+                    const auto key = CurrentSubMenuKey.load();
+                    if (key && UIData::Get(key, subMenu) && subMenu == "Root")
+                    {
+                        static uint32_t revision = 0;
+                        refreshPending = false;
+                        NativeRefreshQueued = true;
+                        UIData::SetString(RefreshMenuKey(), std::to_string(++revision));
+                    }
+                }
             };
         };
     }

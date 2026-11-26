@@ -5,23 +5,14 @@ module;
 
 export module Log;
 
-// The log file next to the game executable (GTA1.FusionFix.log), and what goes into it:
-// messages of the fix, error boxes of the game and, with [DIAGNOSTICS] Enabled,
-// unhandled exceptions.
+// Diagnostic messages are available to the debugger.
 export namespace Log
 {
     bool Enabled = false;                   // [DIAGNOSTICS] Enabled
     void Write(const char* message)
     {
-        wchar_t path[MAX_PATH]{};
-        if (!GetModuleFileNameW(nullptr, path, MAX_PATH)) return;
-        auto file = std::filesystem::path(path).parent_path() / L"GTA1.FusionFix.log";
-        FILE* stream = nullptr;
-        if (_wfopen_s(&stream, file.c_str(), L"a") == 0 && stream)
-        {
-            fprintf(stream, "%lu: %s\n", GetTickCount(), message ? message : "");
-            fclose(stream);
-        }
+        OutputDebugStringA(message ? message : "");
+        OutputDebugStringA("\n");
     }
     // The game's error boxes, with the calls that led to them.
     int WINAPI ErrorMessage(HWND window, LPCSTR message, LPCSTR title, UINT flags)

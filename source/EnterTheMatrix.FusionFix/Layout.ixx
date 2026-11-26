@@ -1,7 +1,6 @@
 module;
 
 #include <stdafx.h>
-#include "FixSettings.hpp"
 
 export module Layout;
 
@@ -75,6 +74,13 @@ export namespace Layout
         return 0.0f;
     }
 
+    void UpdateHud(float aspect)
+    {
+        const float hudWidth = aspect > 0.0f ?
+            std::min(Screen.fWidth, Screen.fHeight * ClampHudAspectRatio(aspect, Screen.fAspectRatio)) : Screen.fWidth;
+        Screen.fHudShift = std::max(0.0f, (hudWidth - Screen.fBoxWidth) / 2.0f);
+    }
+
     void Update()
     {
         Screen.fWidth = static_cast<float>(Screen.nWidth);
@@ -85,9 +91,5 @@ export namespace Layout
         Screen.fBoxLeft = (Screen.fWidth - Screen.fBoxWidth) / 2.0f;
         Screen.fBoxTop = (Screen.fHeight - Screen.fBoxHeight) / 2.0f;
 
-        float hudWidth = Screen.fWidth;
-        if (auto ratio = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint")))
-            hudWidth = std::min(Screen.fWidth, Screen.fHeight * ClampHudAspectRatio(*ratio, Screen.fAspectRatio));
-        Screen.fHudShift = std::max(0.0f, (hudWidth - Screen.fBoxWidth) / 2.0f);
     }
 }

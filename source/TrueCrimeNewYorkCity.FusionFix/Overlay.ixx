@@ -2,11 +2,14 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/ActivePad.hpp"
 #include "overlay/OverlayD3D9.hpp"
+#include "Shared/Overlay/D3D9UpdateNotice.hpp"
 
 export module Overlay;
 
 import ComVars;
+import WidescreenHUD;
 
 // Ctrl+F10 overlay (ImGui)
 namespace TCOverlay
@@ -15,34 +18,70 @@ namespace TCOverlay
     static SafetyHookInline inputHook, resetHook;
     static IDirect3DDevice9* resetDevice = nullptr;
     static HMODULE hostModule = nullptr;
-    static int (__cdecl* gameLanguage)() = nullptr;
     static bool host = false;
+    static std::atomic<uint32_t> inputGeneration{ 0 };
+    static asi_overlay::D3D9UpdateNotice notice;
 
     export bool BlocksInput()
     {
         return overlay.BlocksInput();
     }
 
-    export bool Message(HWND window, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
+    export uint32_t InputGeneration()
     {
-        return overlay.Message(window, message, wparam, lparam, result);
+        return inputGeneration.load(std::memory_order_relaxed);
     }
 
-    static void __cdecl ReadMappedInput()
+    static const char* NativeLanguage()
     {
-        if (!pMappedPad)
-            return;
-        uint8_t* pad = pMappedPad;
-        // This is the single game-owned state consumed by keyboard, mouse, Xidi and gamepad actions.
-        overlay.Gamepad(*reinterpret_cast<uint16_t*>(pad + 4), int8_t(pad[8]), int8_t(pad[9]));
-        if (BlocksInput()) std::memset(pad + 4, 0, 8); // held + edge bits, all four sticks
+        static constexpr const char* languages[] = { "en", "en-GB", "fr", "de", "es", "it", "ru" };
+        constexpr auto key = L"Software\\Aspyr\\True Crime New York City\\Install";
+        for (const auto hive : { HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE })
+        {
+            DWORD language{}, size = sizeof(language);
+            if (RegGetValueW(hive, key, L"language", RRF_RT_REG_DWORD, nullptr, &language, &size) == ERROR_SUCCESS)
+                return language < std::size(languages) ? languages[language] : "en";
+        }
+        return "en";
+    }
+
+    export std::wstring FormatUpdateText(const std::string& latest, bool hub)
+    {
+        return asi_overlay::D3D9UpdateNotice::Format(FixSettings(), NativeLanguage(), latest, hub);
+    }
+
+    export void ShowUpdate(const std::wstring& text)
+    {
+        notice.Show(text);
+    }
+
+    static void UpdateInputGeneration(bool wasBlocking)
+    {
+        if (wasBlocking != BlocksInput())
+            inputGeneration.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    export bool Message(HWND window, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
+    {
+        const bool wasBlocking = BlocksInput();
+        const bool handled = overlay.Message(window, message, wparam, lparam, result);
+        UpdateInputGeneration(wasBlocking);
+        return handled;
     }
 
     // The game's input update: no arguments, it reads its state from globals and keeps the callee-saved registers
     static int __cdecl Input()
     {
-        auto result = inputHook.unsafe_ccall<int>();
-        ReadMappedInput();
+        const bool wasBlocking = BlocksInput();
+        static PadInput::ActivePad controller;
+        XINPUT_STATE state{};
+        const bool connected = controller.Read(state);
+        PadInput::ToOverlay(overlay, connected ? state.Gamepad : XINPUT_GAMEPAD{});
+        UpdateInputGeneration(wasBlocking);
+
+        const auto result = inputHook.unsafe_ccall<int>();
+        if ((wasBlocking || BlocksInput()) && pMappedPad)
+            std::memset(pMappedPad.get() + 4, 0, 8); // held and edge bits, all four sticks
         return result;
     }
 
@@ -50,6 +89,7 @@ namespace TCOverlay
     {
         if (device == resetDevice)
         {
+            notice.BeforeReset();
             overlay.BeforeReset();
             WFP::onBeforeReset().executeAll();
         }
@@ -66,6 +106,7 @@ namespace TCOverlay
         {
             if (resetDevice)
             {
+                notice.BeforeReset();
                 overlay.BeforeReset();
                 WFP::onBeforeReset().executeAll();
             }
@@ -74,12 +115,13 @@ namespace TCOverlay
             resetHook = safetyhook::create_inline(vtable[16], Reset);
             resetDevice = device;
         }
-        overlay.hotkey = FixSettings().Int("MAIN.OverlayHotkey");
-        static const char* languages[] = { "en", "en-GB", "fr", "de", "es", "it", "ru" };
-        int language = gameLanguage ? gameLanguage() : 0;
-        overlay.fallbackLanguage = language >= 0 && language < int(std::size(languages)) ? languages[language] : "en";
-        if (host)
+        notice.Present(device, hostModule, HudPlaying() && !bCutscene && !BlocksInput());
+        if (WFP::DeveloperOverlay && host)
+        {
+            const bool wasBlocking = BlocksInput();
             overlay.Present(device, hostModule);
+            UpdateInputGeneration(wasBlocking);
+        }
         device->Release();
     }
 
@@ -89,16 +131,19 @@ namespace TCOverlay
         host = asi_settings::ClaimHostRole();
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<LPCWSTR>(&Init), &hostModule);
-        auto languagePattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 83 C4 04 C3");
-        gameLanguage = reinterpret_cast<decltype(gameLanguage)>(languagePattern.get(1).get<void>());
+        if (WFP::DeveloperOverlay && host)
+            overlay.fallbackLanguage = NativeLanguage();
         auto pattern = hook::pattern("A1 ? ? ? ? 8B 10 8D 4C 24 ? 51 50");
         pD3DDevice.SetAddress(*pattern.get_first<IUnknown**>(1));
         // Capture locations before installing any hooks
         auto present = hook::pattern("8B 76 ? 8B 16 53 53 53 53 56 FF 52 3C");
-        auto input = hook::pattern("80 3D ? ? ? ? 00 75 21 80 3D ? ? ? ? 00 75 18 8B 0D");
-        pMappedPad.SetAddress(*input.get_first<uint8_t**>(20));
-        if (host)
+        // The overlay's pad and its input block exist only in Debug builds
+        if (WFP::DeveloperOverlay && host)
+        {
+            auto input = hook::pattern("80 3D ? ? ? ? 00 75 21 80 3D ? ? ? ? 00 75 18 8B 0D");
+            pMappedPad.SetAddress(*input.get_first<uint8_t**>(20));
             inputHook = safetyhook::create_inline(input.get_first(), Input);
+        }
         // Immediately before IDirect3DDevice8::Present, after EndScene and the final UI copies
         static auto presentHook = safetyhook::create_mid(present.get_first(10), [](SafetyHookContext&) { Draw(); });
     }

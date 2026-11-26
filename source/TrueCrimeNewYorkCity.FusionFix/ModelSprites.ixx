@@ -163,6 +163,40 @@ namespace ModelSprites
         device->SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
     }
 
+    void ReleaseSavedState()
+    {
+        if (saved.stream)
+            saved.stream->Release();
+        if (saved.indices)
+            saved.indices->Release();
+        saved = {};
+    }
+
+    bool CaptureState(IDirect3DDevice8* device)
+    {
+        if (!stateBlock)
+        {
+            DWORD block = 0;
+            if (FAILED(device->CreateStateBlock(D3DSBT_ALL, &block)) || !block)
+                return false;
+            stateBlock = block;
+        }
+        if (FAILED(device->CaptureStateBlock(stateBlock)))
+        {
+            device->DeleteStateBlock(stateBlock);
+            stateBlock = 0;
+            return false;
+        }
+        if (FAILED(device->GetVertexShader(&saved.vertexShader)) ||
+            FAILED(device->GetStreamSource(0, &saved.stream, &saved.stride)) ||
+            FAILED(device->GetIndices(&saved.indices, &saved.baseVertex)))
+        {
+            ReleaseSavedState();
+            return false;
+        }
+        return true;
+    }
+
     void Render(float* camera)
     {
         uint8_t* world = pWorld.get();
@@ -192,17 +226,13 @@ namespace ModelSprites
         {
             IDirect3DBaseTexture8* texture = GetTexture(model, set->texture);
             if (!texture)
-                return;
+                return true;
 
             if (!begun)
             {
+                if (!CaptureState(device))
+                    return false;
                 begun = true;
-                if (!stateBlock)
-                    device->CreateStateBlock(D3DSBT_ALL, &stateBlock);
-                device->CaptureStateBlock(stateBlock);
-                device->GetVertexShader(&saved.vertexShader);
-                device->GetStreamSource(0, &saved.stream, &saved.stride);
-                device->GetIndices(&saved.indices, &saved.baseVertex);
                 SetStates(device);
             }
 
@@ -273,6 +303,7 @@ namespace ModelSprites
                 vertices.push_back(corner[1]);
                 vertices.push_back(corner[3]);
             }
+            return true;
         };
 
         for (int32_t i = 0; i < instanceCount; i++)
@@ -291,7 +322,8 @@ namespace ModelSprites
                 continue;
             alignas(16) float matrix[16];
             GetInstanceMatrix(instance, nullptr, matrix);
-            add(model, set, matrix, fade);
+            if (!add(model, set, matrix, fade))
+                return;
         }
 
 
@@ -303,11 +335,7 @@ namespace ModelSprites
             device->SetVertexShader(saved.vertexShader);
             device->SetStreamSource(0, saved.stream, saved.stride);
             device->SetIndices(saved.indices, saved.baseVertex);
-            if (saved.stream)
-                saved.stream->Release();
-            if (saved.indices)
-                saved.indices->Release();
-            saved = {};
+            ReleaseSavedState();
         }
     }
 
@@ -353,7 +381,7 @@ public:
             pattern = hook::pattern("8B 54 24 04 8B 42 14 8B 52 08 56 8B F0 C1 EE 10 83 E6 3F");
             GetInstanceFlags = (decltype(GetInstanceFlags))pattern.get_first();
 
-            pattern = hook::pattern("55 8B EC 83 E4 F0 81 EC 9C 00 00 00 56 8B F1 8B 4E 0C");
+            pattern = find_pattern("55 8B EC 83 E4 F0 81 EC 9C 00 00 00 56 8B F1 8B 4E 0C", "55 8B EC 83 E4 F0 FF 25 ? ? ? ? 56 8B F1 8B 4E 0C");
             GetInstanceMatrix = (decltype(GetInstanceMatrix))pattern.get_first();
 
             WFP::onBeforeReset() += []() { Release(); };

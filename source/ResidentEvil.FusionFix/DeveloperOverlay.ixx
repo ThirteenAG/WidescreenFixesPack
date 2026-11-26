@@ -55,6 +55,8 @@ export namespace REOverlay
 
     bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -71,6 +73,8 @@ export namespace REOverlay
 
     void Keyboard(HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         const bool down = window && Active(window) &&
             (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
         if (down)
@@ -96,6 +100,8 @@ export namespace REOverlay
     }
     void AttachWindow(HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!window || GetPropW(window, WindowProperty)) return;
         auto original = GetWindowLongPtrW(window, GWLP_WNDPROC);
         if (!original || !SetPropW(window, WindowProperty, reinterpret_cast<HANDLE>(original))) return;
@@ -111,6 +117,8 @@ export namespace REOverlay
 
     void Draw(IDirect3DDevice9* device)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!device)
             return;
         static const bool page = []()
@@ -134,7 +142,8 @@ export namespace REOverlay
             return true;
         }();
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
     }
 
 }

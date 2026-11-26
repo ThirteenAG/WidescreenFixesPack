@@ -414,10 +414,13 @@ namespace RestoredFeatures
     static RaceLayout race;
     static SafetyHookInline opponentSpeedHook;
     static double(__fastcall* raceGap)(uintptr_t, void*, uintptr_t, uintptr_t);
+    static std::atomic<bool> raceDifficultyChanged{ true };
     static bool originalRaceDifficulty;
 
     uint32_t __fastcall SetOpponentSpeed(uintptr_t manager)
     {
+        if (raceDifficultyChanged.exchange(false))
+            originalRaceDifficulty = FixSettings().Get("GAMEPLAY.OriginalRaceDifficulty") == "1";
         if (!originalRaceDifficulty)
             return opponentSpeedHook.unsafe_thiscall<uint32_t>(manager);
         static constexpr std::pair<float, float> speeds[] = { { 0.9f, 0.9f }, { 0.93f, 0.85f }, { 1.0f, 1.0f },
@@ -453,12 +456,7 @@ namespace RestoredFeatures
         race.player = start[67];
         race.level = *hook::get_pattern<uint8_t>("8B 41 ? 83 F8 04 77 23 FF 24 85", 2);
         raceGap = reinterpret_cast<decltype(raceGap)>(injector::GetBranchDestination(start + 72).as_int());
-        const auto changed = []()
-        {
-            originalRaceDifficulty = FixSettings().Bool("GAMEPLAY.OriginalRaceDifficulty");
-        };
-        changed();
-        FixSettings().OnChange("GAMEPLAY.OriginalRaceDifficulty", changed);
+        FixSettings().OnChange("GAMEPLAY.OriginalRaceDifficulty", []() { raceDifficultyChanged.store(true); });
         opponentSpeedHook = safetyhook::create_inline(start, SetOpponentSpeed);
     }
 }

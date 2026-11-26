@@ -401,8 +401,14 @@ export void InitD3DDrv()
         {
             regs.eax = 1;
 
-            Screen.Width = PresentParams->BackBufferWidth;
-            Screen.Height = PresentParams->BackBufferHeight;
+            const auto window = PresentParams->hDeviceWindow ? PresentParams->hDeviceWindow : hGameWindow;
+            const auto width = static_cast<int>(PresentParams->BackBufferWidth);
+            const auto height = static_cast<int>(PresentParams->BackBufferHeight);
+            if (width <= 0 || height <= 0 || (window && IsIconic(window)))
+                return;
+            const bool resized = Screen.Width > 0 && Screen.Height > 0 && (width != Screen.Width || height != Screen.Height);
+            Screen.Width = width;
+            Screen.Height = height;
             Screen.fWidth = static_cast<float>(Screen.Width);
             Screen.fHeight = static_cast<float>(Screen.Height);
             Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
@@ -412,18 +418,14 @@ export void InitD3DDrv()
             Screen.fHudOffset = ((4.0f / 3.0f) / Screen.fAspectRatio);
             Screen.FilmstripScaleX = static_cast<int32_t>(Screen.fWidth / (1280.0f / (368.0 * ((4.0 / 3.0) / (Screen.fAspectRatio)))));
 
-            RawInputHandler<>::OnResChange();
 
-            auto [DesktopResW, DesktopResH] = GetDesktopRes();
-            if (Screen.Width != DesktopResW || Screen.Height != DesktopResH)
+            static const bool borderless = FixSettings().Int("MAIN.WindowMode") == 2;
+            if (resized && !borderless)
             {
-                FixSettings().Set("MAIN.ResX", std::to_string(Screen.Width));
-                FixSettings().Set("MAIN.ResY", std::to_string(Screen.Height));
-            }
-            else
-            {
-                FixSettings().Set("MAIN.ResX", std::to_string(0));
-                FixSettings().Set("MAIN.ResY", std::to_string(0));
+                const auto [desktopWidth, desktopHeight] = GetGameMonitorSize(window);
+                const bool desktop = width == desktopWidth && height == desktopHeight;
+                FixSettings().Set("MAIN.ResX", std::to_string(desktop ? 0 : width));
+                FixSettings().Set("MAIN.ResY", std::to_string(desktop ? 0 : height));
             }
 
             Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 800.0f, 600.0f);
@@ -442,8 +444,8 @@ export void InitD3DDrv()
                 }
             }
 
-            if (PresentParams->Windowed)
-                PlaceGameWindow(PresentParams->hDeviceWindow, Screen.Width, Screen.Height);
+            if (PresentParams->Windowed && window)
+                PlaceGameWindow(window, width, height);
 
             //Mirrors
             if (!MIRROR_WIDTH.is_initialized())
@@ -452,8 +454,8 @@ export void InitD3DDrv()
                 MIRROR_WIDTH.SetAddress(reinterpret_cast<int*>(GetProcAddress(hEngine, "?MIRROR_WIDTH@@3IA")));
                 MIRROR_HEIGHT.SetAddress(reinterpret_cast<int*>(GetProcAddress(hEngine, "?MIRROR_HEIGHT@@3IA")));
             }
-            MIRROR_WIDTH = std::clamp(640 * nMirrorResolutionMultiplier, 640, (int)Screen.Width);
-            MIRROR_HEIGHT = std::clamp(360 * nMirrorResolutionMultiplier, 360, (int)Screen.Height);
+            MIRROR_WIDTH = std::min(width, 640 * std::max(1, nMirrorResolutionMultiplier));
+            MIRROR_HEIGHT = std::min(height, 360 * std::max(1, nMirrorResolutionMultiplier));
         }
     }; injector::MakeInline<SetResHook>(pattern.get_first(0));
 

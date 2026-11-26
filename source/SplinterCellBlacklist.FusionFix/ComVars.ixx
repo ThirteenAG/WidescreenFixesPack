@@ -9,6 +9,7 @@ export HWND WindowHandle = nullptr;
 export void (*UpdateCameraCullBias)(float) = nullptr;
 export std::atomic<bool> NativeMenuOpen{ false };
 export std::atomic<bool> NativeHelpRequested{ false };
+export std::atomic<bool> ResetShoulderKey{ true };
 
 // UWindowsViewport, set by the viewport's input update every frame
 export uintptr_t GameViewport = 0;

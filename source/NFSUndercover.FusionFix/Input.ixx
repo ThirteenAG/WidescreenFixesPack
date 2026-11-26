@@ -440,7 +440,6 @@ public:
                 RawMouse::Clear();
             });
             WFP::onGameProcessEvent() += []() { RawMouse::Update(hWnd.get()); };
-            WFP::onShutdownEvent() += []() { RawMouse::Release(); };
             onWindowMessage() += RawMouse::Message;
 
             WFP::onGameProcessEvent() += []()

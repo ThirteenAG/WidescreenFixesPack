@@ -62,7 +62,7 @@
       "description": "@MAIN.ForceAspectRatio.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "maxLength": 14,
       "suggestions": [
         "auto",
@@ -80,7 +80,7 @@
       "description": "@MAIN.FPSLimit.description",
       "page": "gameplay",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "choices": [
         { "value": 30, "label": "30 FPS" },
         { "value": 60, "label": "60 FPS" }
@@ -99,7 +99,7 @@
       "description": "@MAIN.UnthrottleEmuDuringLoading.description",
       "page": "gameplay",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 0,
         "recommended": 1,
@@ -144,7 +144,7 @@
       "description": "@CONTROLS.PCCheats.description",
       "page": "compatibility",
       "visibility": "menu",
-      "apply": "restart"
+      "apply": "live"
     },
     {
       "id": "MAIN.HudScale",
@@ -154,7 +154,7 @@
       "description": "@HUD.HudScale.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 1.0,
         "recommended": 0.75,
@@ -192,8 +192,9 @@
       "description": "@hudaspect.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
-      "maxLength": 14
+      "apply": "live",
+      "maxLength": 14,
+      "presets": {"vanilla": "Auto", "recommended": "Auto", "enhanced": "Auto"}
     },
     {
       "id": "RADAR.RadarScale",
@@ -203,7 +204,7 @@
       "description": "@RADAR.RadarScale.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 1.0,
         "recommended": 0.83,
@@ -214,32 +215,6 @@
       "step": 0.05
     },
     {
-      "id": "RADAR.RadarPosX",
-      "type": "float",
-      "default": 12,
-      "label": "@RADAR.RadarPosX",
-      "description": "@RADAR.RadarPosX.description",
-      "page": "advanced",
-      "visibility": "menu",
-      "apply": "restart",
-      "min": -480,
-      "max": 480,
-      "step": 1
-    },
-    {
-      "id": "RADAR.RadarPosY",
-      "type": "float",
-      "default": 196,
-      "label": "@RADAR.RadarPosY",
-      "description": "@RADAR.RadarPosY.description",
-      "page": "advanced",
-      "visibility": "menu",
-      "apply": "restart",
-      "min": -272,
-      "max": 272,
-      "step": 1
-    },
-    {
       "id": "MPRADAR.RadarScale",
       "type": "float",
       "default": 0.63,
@@ -247,7 +222,7 @@
       "description": "@MPRADAR.RadarScale.description",
       "page": "display",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 1.0,
         "recommended": 0.63,
@@ -258,19 +233,6 @@
       "step": 0.05
     },
     {
-      "id": "MPRADAR.RadarPosY",
-      "type": "float",
-      "default": 170,
-      "label": "@MPRADAR.RadarPosY",
-      "description": "@MPRADAR.RadarPosY.description",
-      "page": "advanced",
-      "visibility": "menu",
-      "apply": "restart",
-      "min": -272,
-      "max": 272,
-      "step": 1
-    },
-    {
       "id": "MAIN.FOVFactor",
       "type": "float",
       "default": 1.0,
@@ -278,7 +240,7 @@
       "description": "@FOV.FOVFactor.description",
       "page": "camera",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "min": 0.5,
       "max": 2.0,
       "step": 0.05
@@ -309,7 +271,7 @@
       "description": "@FOV.CutsceneBorders.description",
       "page": "camera",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 1,
         "recommended": 3,
@@ -359,7 +321,7 @@
       "description": "@MAIN.GamepadIcons.description",
       "page": "controls",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "choices": [
         {
           "value": "Auto",

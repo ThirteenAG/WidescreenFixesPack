@@ -1,15 +1,18 @@
 module;
 
 #include "stdafx.h"
+#ifdef DEBUG
 #include "FixSettings.hpp"
 #include "overlay/OverlayD3D9.hpp"
 
 #pragma comment(lib, "version.lib")
+#endif
 
 export module DeveloperOverlay;
 
 export namespace OverdoseOverlay
 {
+#ifdef DEBUG
     inline asi_overlay::D3D9Overlay Overlay;
     inline IDirect3DDevice9* CurrentDevice = nullptr;
     inline bool HotkeyDown = false;
@@ -97,4 +100,10 @@ export namespace OverdoseOverlay
         CurrentDevice = device;
         Overlay.Present(device, ThisModule());
     }
+#else
+    inline bool BlocksInput()
+    {
+        return false;
+    }
+#endif
 }

@@ -155,6 +155,31 @@
       "max": 600000
     },
     {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@FMVWidescreenMode.original"
+        },
+        {
+          "value": 1,
+          "label": "@FMVWidescreenMode.fill"
+        }
+      ],
+      "label": "@FMVWidescreenMode",
+      "description": "@FMVWidescreenMode.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
       "id": "MAIN.DoorSkip",
       "type": "bool",
       "default": 0,
@@ -222,11 +247,11 @@
       }
     },
     {
-      "id": "MAIN.DisableNoise",
+      "id": "MAIN.DisableFilmGrain",
       "type": "bool",
       "default": 0,
-      "label": "@DisableNoise",
-      "description": "@DisableNoise.description",
+      "label": "@DisableFilmGrain",
+      "description": "@DisableFilmGrain.description",
       "page": "graphics",
       "visibility": "menu",
       "apply": "restart"

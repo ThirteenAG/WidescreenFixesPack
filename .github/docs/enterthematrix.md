@@ -18,23 +18,25 @@
 - **Menus and 2D screens** — Menus, pause screens, loading screens, subtitles and messages keep their original 4:3 layout in the middle of the screen; on screens narrower than 4:3 they get black bars above and below instead of being cut off.
 - **Movies** — Every movie is shown whole and undistorted.
 - **Cutscenes** — In-game cutscenes keep their original 16:9 framing with black borders around it, and can be switched to fill the screen.
-- **Window** — Windowed mode gives a window whose inside is exactly the chosen resolution (the game counted a menu bar it doesn't have), centered on the monitor, with square corners on Windows 11. At the monitor's own resolution the window's frame lies outside the screen, so it looks like borderless fullscreen.
+- **Window** — Windowed mode centers the game at the chosen client resolution with square corners on Windows 11. At desktop resolution the client covers the monitor and the frame stays outside the screen after minimize and restore.
 - **Display scaling** — The game is sharp on scaled (high-DPI) desktops; MatrixOptions keeps Windows' own dialog scaling.
 - **Controller** — The package includes Xidi, so an Xbox-style controller shows up as the game's own DirectInput controller.
+- **Mouse input** — Raw mouse reports are collected in batches on a separate thread. The game reads the accumulated movement, buttons and wheel through its usual controls.
 
 ## Options
 
 - **Window mode** (restart) — Fullscreen, Windowed or Borderless. Windowed uses the resolution chosen in MatrixOptions; Borderless covers the monitor at its own resolution.
-- **HUD aspect ratio** — Auto puts the HUD at the screen edges; 4:3, 16:9, 21:9, 32:9 or any ratio keeps it in a centered box of that shape. Applies immediately.
+- **HUD aspect ratio** — Auto puts the HUD at the screen edges. Choosing a ratio keeps it in a centered box of that shape. Auto is the default in all three Hub preset exports. Applies immediately.
 - **Cutscene borders** — Both (default) always shows the original 16:9 cutscene framing with bars where the screen is wider or narrower; Letterbox keeps only the bars above and below (as the original on 4:3 screens); Pillarbox keeps only the side bars; Off fills the screen. Vanilla uses Letterbox. Applies immediately, also during a cutscene.
-- **Frame rate limit** — 60 by default (the Vanilla preset leaves the frame rate unlimited, as the original game); choose another limit, unlimited or the monitor refresh rate. The game or VSync may impose a lower limit. Applies immediately.
+- **Frame rate limit** — Choose 30–1000 FPS, the monitor refresh rate, or Off to leave the game's own pacing in effect. Recommended and Enhanced add a 60 FPS cap. The game or VSync may impose a lower limit. Applies immediately.
 - **Movie framing** — Original aspect shows the movies as the game does, whole inside the centered 4:3 frame (Vanilla). Fill shows each whole movie as large as the screen allows without cutting anything off (Recommended, Enhanced). Applies immediately.
-- **Field of view factor** — 0.5–2.0; 1.0 keeps the intended view. Cutscenes keep their framing. Applies immediately.
+- **Field of view factor** — 0.5–2.0. At 1.0 the ordinary gameplay camera keeps its intended view. Cutscenes, sniper scopes and binoculars keep their original framing. Applies immediately.
 - **Skip intro** (restart) — Skips the logo movies and the copyright notice; the game opens at the title menu. Vanilla off, Recommended and Enhanced on.
 - **Pause in background** — In Windowed and Borderless the game pauses while another window is active, as the original does. Off keeps it running. Applies immediately.
+- **Confine cursor** — Keeps the cursor inside the active game window. Applies immediately.
 - **Check for updates** — Optional update notice on the title screen; off by default.
 
-Settings are changed on fusionfix.io or in FusionFixHub. Defaults are the Recommended preset; Vanilla and Enhanced are the other presets. Supporters can open the developer overlay with Ctrl+F10. Supported executables: `Matrix.exe` (1.0), `Matrix12.exe` and the DVD release's `Matrix.exe` (1.2), `MatrixOptions.exe`, `MatrixOptions12.exe`.
+Settings are changed on fusionfix.io or in FusionFixHub. Defaults are set by the Recommended preset, alongside Vanilla and Enhanced. The fix supports `Matrix.exe` (1.0), `Matrix12.exe` and the DVD release's `Matrix.exe` (1.2), `MatrixOptions.exe` and `MatrixOptions12.exe`.
 
 ## Known limits
 

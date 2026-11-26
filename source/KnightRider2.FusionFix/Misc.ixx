@@ -35,6 +35,7 @@ void RaiseD3DIMRenderTargetLimit()
 
 SafetyHookInline MovieOpenHook;
 std::atomic<bool> LetterboxedMovie{ false };
+std::atomic<bool> FitMovie{ true };
 
 char __fastcall OpenMovie(void* player, void*, const char** filename, void* target)
 {
@@ -65,7 +66,7 @@ IDirectDrawSurface* WINAPI BltMovieFrame(IDirectDrawSurface* destination, RECT* 
         const auto width = static_cast<LONG>(description.dwWidth);
         const auto height = static_cast<LONG>(description.dwHeight);
         DDSURFACEDESC video{ sizeof(video) };
-        const bool original = std::clamp(FixSettings().Int("MAIN.FMVWidescreenMode"), 0, 1) == 0;
+        const bool original = !FitMovie.load(std::memory_order_relaxed);
         RECT visible{};
         if (!original && LetterboxedMovie.load(std::memory_order_relaxed) &&
             SUCCEEDED(source->GetSurfaceDesc(&video)) && video.dwWidth == 640 && video.dwHeight == 480 &&
@@ -101,6 +102,15 @@ IDirectDrawSurface* WINAPI BltMovieFrame(IDirectDrawSurface* destination, RECT* 
 
 void InitializeGame()
 {
+    const auto updateMovieMode = []()
+    {
+        static std::mutex mutex;
+        const std::lock_guard lock(mutex);
+        FitMovie.store(ReadFixNumber("MAIN.FMVWidescreenMode", 1) >= 1, std::memory_order_relaxed);
+    };
+    FixSettings().OnChange("MAIN.FMVWidescreenMode", updateMovieMode);
+    updateMovieMode();
+
     auto movieOpen = hook::pattern("8B 44 24 04 81 EC 94 06 00 00 53 55 8B E9 8B 08 56 83 C1 06 57 51 8D 4C 24 20 E8 ? ? ? ?");
     MovieOpenHook = safetyhook::create_inline(movieOpen.get_first(), OpenMovie);
     auto& settings = FixSettings();

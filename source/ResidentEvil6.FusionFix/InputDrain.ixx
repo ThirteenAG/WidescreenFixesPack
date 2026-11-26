@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "rawinput.hpp"
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -175,6 +176,9 @@ export namespace RE6Input
 
     inline void Install()
     {
+        // A fast mouse (8 kHz) fills the window's queue with moves: the game's message loop takes one per pass
+        MessagePumpGuard::Install(GetModuleHandleW(nullptr));
+
         auto pad = hook::pattern("51 53 55 56 57 8B F9 80 BF C5 2D 00 00 00 74 ? C6 87 C5 2D 00 00 00 8B 0D ? ? ? ?");
         auto keyboard = hook::pattern("83 EC 14 53 55 56 8D A9 28 01 00 00 57 89 4C 24 14 8B C5 BA 08 00 00 00");
         auto mouse = hook::pattern("83 EC 40 53 55 56 57 8B F9 8B 47 48 33 ED 8D 4C 24 3C 51 89 7C 24 18 89 47 4C");

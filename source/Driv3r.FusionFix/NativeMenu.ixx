@@ -107,7 +107,7 @@ export namespace Driv3rMenu
     }
     inline std::string Language()
     {
-        auto chosen = FixSettings().String("MAIN.TextLanguage");
+        auto chosen = FixSettings().Get("MAIN.TextLanguage");
         if (!chosen.empty() && chosen != "auto") return chosen;
         static const char* tags[] = { "en", "fr", "de", "es", "it", "ja", "zh-CN", "zh-TW", "ko", "pt" };
         if (!LanguageService.is_initialized() || !LanguageService.get() || At<uintptr_t>(LanguageService.get(), 0) != languageClass) return "en";

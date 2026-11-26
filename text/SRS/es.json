@@ -41,6 +41,8 @@
   "ResX.description": "Ancho de salida en píxeles. Cero usa la resolución del escritorio. Se aplica tras reiniciar.",
   "ResY": "Alto de resolución",
   "ResY.description": "Alto de salida en píxeles. Cero usa la resolución del escritorio. Se aplica tras reiniciar.",
+  "GamepadIcons": "Iconos del mando",
+  "GamepadIcons.description": "Iconos de los botones del mando en las indicaciones mientras se usa un mando. Automático usa Xbox; elige PlayStation o Nintendo para otro mando. El teclado o el ratón restauran las teclas.",
   "CheckForUpdates": "Buscar actualizaciones",
   "CheckForUpdates.description": "Busca una versión más reciente del arreglo si está activado. Aparece un aviso en el menú principal. FusionFixHub abre la página de actualización al cerrar el juego, si está instalado junto al juego. Desactivado por defecto.",
   "update.availablehub": "Hay una nueva versión de {name}. Actualízala en FusionFixHub después de cerrar el juego.",

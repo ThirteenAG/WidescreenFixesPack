@@ -163,22 +163,33 @@ namespace CFont
     }
 }
 
+namespace
+{
+    struct CameraShakeOptions
+    {
+        bool enabled;
+        float minSpeed, intensity;
+    };
+
+    CameraShakeOptions cameraShake{};
+    bool speedFOV = false;
+}
+
 injector::hook_back<void(__fastcall*)(CCamera*, void*)> hbCalculateDerivedValues;
 void __fastcall CalculateDerivedValues(CCamera* camera, void* edx)
 {
-    static auto& bVCSCamShake = FixSettings().Int("MISC.VCSCamShake");
-    static auto& nVCSCamShakeMinSpeed = FixSettings().Int("MISC.VCSCamShakeMinSpeed");
-    static auto& nVCSCamShakeIntensity = FixSettings().Int("MISC.VCSCamShakeIntensity");
-    // The settings are in km/h and percent; a speed of 1.0 is 180 km/h
-    if (bVCSCamShake)
-        CCamera::UpdatePlayerVehicleSpeedBlur(camera, nVCSCamShakeMinSpeed / 180.0f, nVCSCamShakeIntensity / 100.0f);
+    if (cameraShake.enabled)
+        CCamera::UpdatePlayerVehicleSpeedBlur(camera, cameraShake.minSpeed, cameraShake.intensity);
     return hbCalculateDerivedValues.fun(camera, edx);
 }
 
 static void InstallVCSCamShake()
 {
+    // Convert km/h and percent into the camera's native units.
+    cameraShake = { ReadFixSetting("MISC.VCSCamShake", 0) != 0, ReadFixSetting("MISC.VCSCamShakeMinSpeed", 117) / 180.0f,
+        ReadFixSetting("MISC.VCSCamShakeIntensity", 100) / 100.0f };
     static bool installed = false;
-    if (installed || !FixSettings().Int("MISC.VCSCamShake"))
+    if (installed || !cameraShake.enabled)
         return;
     installed = true;
     auto pattern = hook::pattern("E8 ? ? ? ? FF B4 24 ? ? ? ? E8 ? ? ? ? 80 7B");
@@ -187,9 +198,9 @@ static void InstallVCSCamShake()
 
 static void InstallCarSpeedDependantFOV()
 {
-    static auto& bCarSpeedDependantFOV = FixSettings().Int("MISC.CarSpeedDependantFOV");
+    speedFOV = ReadFixSetting("MISC.CarSpeedDependantFOV", 1) != 0;
     static bool installed = false;
-    if (installed || !bCarSpeedDependantFOV)
+    if (installed || !speedFOV)
         return;
     installed = true;
     auto pattern = hook::pattern("C7 83 ? ? ? ? ? ? ? ? 80 7B ? ? 74");
@@ -200,7 +211,7 @@ static void InstallCarSpeedDependantFOV()
         auto cam = (CCam*)regs.ebx;
 
         // Off: the game's fixed field of view (the instruction this replaces)
-        if (!bCarSpeedDependantFOV || cam->ResetStatics)
+        if (!speedFOV || cam->ResetStatics)
         {
             cam->FOV = DefaultFOV;
         }
@@ -340,7 +351,8 @@ public:
             InstallCarSpeedDependantFOV();
             OnSettingChange("MISC.CarSpeedDependantFOV", []() { InstallCarSpeedDependantFOV(); });
             InstallVCSCamShake();
-            OnSettingChange("MISC.VCSCamShake", []() { InstallVCSCamShake(); });
+            for (const auto id : { "MISC.VCSCamShake", "MISC.VCSCamShakeMinSpeed", "MISC.VCSCamShakeIntensity" })
+                OnSettingChange(id, InstallVCSCamShake);
         };
     }
 } Misc;

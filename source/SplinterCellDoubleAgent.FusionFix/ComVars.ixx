@@ -87,12 +87,13 @@ export namespace UWindowsViewport
 
 export namespace UObject
 {
-    std::unordered_map<std::wstring, std::wstring> objectStates;
-    std::wstring_view GetState(const std::wstring& type)
+    struct ControllerState
     {
-        auto it = objectStates.find(type);
-        return (it != objectStates.end()) ? std::wstring_view(it->second) : std::wstring_view(L"");
-    }
+        void* controller{};
+        uintptr_t node{};
+        int id{};
+        std::wstring name;
+    } controllerState;
 
     wchar_t* (__fastcall* GetFullName)(void*, void*, wchar_t*) = nullptr;
     void* (__fastcall* FindState)(void*, void*, int) = nullptr;

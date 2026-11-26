@@ -1,4 +1,8 @@
 {
+  "MAIN.CutsceneBorders": "Barras en las cinemáticas",
+  "MAIN.CutsceneBorders.description": "Las barras laterales conservan el encuadre 16:9 de las cinemáticas del juego en pantallas más anchas. Sin barras, la vista ocupa todo el ancho.",
+  "MAIN.CutsceneBorders.0": "No",
+  "MAIN.CutsceneBorders.2": "Barras laterales",
   "plugin.name": "Driver Parallel Lines Fusion Fix",
   "page.display": "Pantalla",
   "page.graphics": "Gráficos",
@@ -96,7 +100,8 @@
   "MAIN.GamepadDeadzone.description": "Zona muerta de los sticks del mando. Se aplica una vez al movimiento y a la cámara. Los valores bajos responden antes; auméntala si los sticks se mueven solos.",
   "MAIN.GamepadIcons": "Iconos del mando",
   "MAIN.GamepadIcons.description": "Imágenes de los botones nativos: Xbox, PlayStation o Nintendo. Automático usa Xbox. Los nombres del teclado y ratón no cambian.",
-  "menu.help.controls": "F1 / Esc    Arriba / Abajo",
+  "menu.help.controls": "F1 / Esc / {toggle}    Arriba / Abajo {scroll}",
+  "menu.help.padScroll": "(Cruceta)",
   "MAIN.CheckForUpdates": "Buscar actualizaciones",
   "MAIN.CheckForUpdates.description": "Una vez por inicio pregunta a fusionfix.io si hay una versión más nueva del fix y te lo dice en el juego. Desactivado no hace ninguna petición de red.",
   "update.availablehub": "{name} {version} está disponible. FusionFixHub se abrirá al cerrar el juego.",

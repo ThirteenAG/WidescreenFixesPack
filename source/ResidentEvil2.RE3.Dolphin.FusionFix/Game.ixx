@@ -12,7 +12,7 @@ export module Game;
 // they were found in changes, e.g. after a reset or a disc change).
 // - MAIN.SkipIntro: Resident Evil 2 goes past the violence warning and the title movie, Resident Evil 3 past the
 //   warning, the Nintendo licence notice, the Capcom logo and the title movie, to the title screen.
-// - MAIN.EnableDoorSkip: the door animations end at once.
+// - MAIN.DoorSkip: the door animations end at once.
 // - MAIN.UnthrottleEmuDuringDoorSkip: while the game loads the next room (the door phase), Dolphin runs unthrottled.
 // - The player's health for the LIGHTSYNC module.
 
@@ -117,7 +117,7 @@ namespace
                 auto pattern = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "28 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 54 00 03 9c 28 00 00 00 ? ? ? ? 38 00 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 48 00 ? ? 48 00");
                 if (pattern.size() >= 1)
                 {
-                    injector::WriteMemory<uint16_t>(pattern.get(0).get<uint16_t>(4), 0x0048, true); // bne -> b
+                    injector::WriteMemory<uint16_t>(pattern.get(0).get<uint16_t>(4), 0x0048, true); // beq -> b
                     Dolphin::MenuBarClearCache();
                 }
             }
@@ -165,7 +165,17 @@ namespace
                 return false;
             warning.for_each_result([](hook::pattern_match match)
             {
-                SetImmediate(match.get<uint32_t>(0), 0x38000078, 1);
+                auto w = match.get<uint32_t>(0);
+                SetImmediate(w, 0x38000078, 1);
+                // The screen fades in and out by 0x400 of 0x8000 per frame (li r4 of the fade call): two frames each
+                bool fadeIn = false, fadeOut = false;
+                for (int i = 1; i < 48; ++i)
+                {
+                    if (!fadeIn)
+                        fadeIn = SetImmediate(w + i, 0x3880FC00, -0x4000);
+                    else if (!fadeOut)
+                        fadeOut = SetImmediate(w + i, 0x38800400, 0x4000);
+                }
             });
             pIntroCheck = movie.get_first<uint32_t>(8);
             SetWord(pIntroCheck, 0x60000000);
@@ -219,6 +229,7 @@ namespace
         uint32_t bytes = 0;
         std::array<char, 6> previousDisc{};
         bool introPatched = false;
+        int searchDelay = 0;
     };
 
     void Update(Watch& watch)
@@ -239,6 +250,7 @@ namespace
             watch.data = nullptr;
             watch.memcheck = nullptr;
             watch.introPatched = false;
+            watch.searchDelay = 0;
             Game::sPlayerHealth = nullptr;
             if (!gameVersion)
             {
@@ -256,10 +268,20 @@ namespace
                 watch.introPatched = SkipIntro(gameVersion);
         }
 
+        // Door skip, unthrottled doors and the health lighting need the game's room code, which Resident Evil 2 loads
+        // only when a game starts: until it is there, look for it once a second
+        if (!bEnableDoorSkip && !bUnthrottleEmuDuringDoorSkip && !bLightSyncRGB)
+            return;
         if (watch.data == nullptr || !Dolphin::MemoryAddrValid(watch.data) || !Dolphin::MemoryAddrValid(watch.memcheck) || *watch.memcheck != watch.bytes)
         {
             watch.data = nullptr;
             Game::sPlayerHealth = nullptr;
+            if (watch.searchDelay > 0)
+            {
+                --watch.searchDelay;
+                return;
+            }
+            watch.searchDelay = 9;
             FindGame(gameVersion, watch.data, watch.memcheck, watch.bytes);
         }
         else if (bUnthrottleEmuDuringDoorSkip)
@@ -306,7 +328,7 @@ export namespace Game
     void Init()
     {
         bSkipIntro = FixSettings().Bool("MAIN.SkipIntro");
-        bEnableDoorSkip = FixSettings().Bool("MAIN.EnableDoorSkip");
+        bEnableDoorSkip = FixSettings().Bool("MAIN.DoorSkip");
         bUnthrottleEmuDuringDoorSkip = FixSettings().Bool("MAIN.UnthrottleEmuDuringDoorSkip");
         bLightSyncRGB = FixSettings().Bool("MAIN.LightSyncRGB");
         if (!bSkipIntro && !bEnableDoorSkip && !bUnthrottleEmuDuringDoorSkip && !bLightSyncRGB)

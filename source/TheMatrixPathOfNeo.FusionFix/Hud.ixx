@@ -18,7 +18,14 @@ export namespace NeoHud
 {
     inline SafetyHookInline RootHook;
     inline std::atomic<float> Constraint{ 0.0f };
-    inline thread_local const char* Root = "";
+    inline std::atomic<bool> FillMovies{ true };
+    struct HudRoot
+    {
+        int anchor{};
+        bool gameplay{};
+        bool fade{};
+    };
+    inline thread_local HudRoot Root;
     inline void (*BeforeRoot)(void*) = nullptr;
     inline void (*PrepareRoot)(void*, const char*) = nullptr;
     inline injector::hook_back<void(__cdecl*)(void*, void*, void*, void*, float, float, float, float, void*, float, float, float)> DrawHook;
@@ -28,12 +35,23 @@ export namespace NeoHud
         return text && StrStrIA(text, part);
     }
 
+    inline HudRoot ClassifyRoot(const char* name)
+    {
+        const bool left = Contains(name, "healthbar") || Contains(name, "focusbar") || Contains(name, "weaponselector");
+        const bool right = !left && (Contains(name, "eeg.lou") || Contains(name, "skillcount") || Contains(name, "score_counter"));
+        return { left ? -1 : right ? 1 : 0,
+            left || right || Contains(name, "prompts") || Contains(name, "interact") || Contains(name, "objectives") ||
+                Contains(name, "reticle") || Contains(name, "countdown") || Contains(name, "Rescue"),
+            Contains(name, "FadeToBlack") };
+    }
+
     inline int __cdecl DrawRoot(void* root)
     {
         const auto previous = Root;
-        Root = *reinterpret_cast<const char**>(static_cast<char*>(root) + 632);
+        const auto name = *reinterpret_cast<const char**>(static_cast<char*>(root) + 632);
+        Root = ClassifyRoot(name);
         if (PrepareRoot)
-            PrepareRoot(root, Root);
+            PrepareRoot(root, name);
         if (BeforeRoot)
             BeforeRoot(root);
         const auto result = RootHook.ccall<int>(root);
@@ -47,19 +65,20 @@ export namespace NeoHud
     {
         if (Contains(material, "Reticle_arrow"))
             return 0;
-        if (Contains(Root, "healthbar") || Contains(Root, "focusbar") || Contains(Root, "weaponselector"))
-            return -1;
-        if (Contains(Root, "eeg.lou") || Contains(Root, "skillcount") || Contains(Root, "score_counter"))
-            return 1;
-        return 0;
+        return Root.anchor;
     }
 
-    inline bool Hud()
+    inline bool MovieFrame(const char* name, const std::array<float, 2>& first, const std::array<float, 2>& last)
     {
-        return Contains(Root, "healthbar") || Contains(Root, "focusbar") || Contains(Root, "weaponselector") ||
-            Contains(Root, "eeg.lou") || Contains(Root, "prompts") || Contains(Root, "interact") ||
-            Contains(Root, "objectives") || Contains(Root, "reticle") || Contains(Root, "countdown") ||
-            Contains(Root, "score_counter") || Contains(Root, "skillcount") || Contains(Root, "Rescue");
+        if (!(last[0] - first[0] >= 0.9f && last[1] - first[1] >= 0.4f &&
+            std::abs(first[0] + last[0] - 1.0f) < 0.1f))
+            return false;
+        for (const auto candidate : movies)
+        {
+            if (_strnicmp(name, candidate, std::strlen(candidate)) == 0)
+                return true;
+        }
+        return false;
     }
 
     inline void __cdecl Draw(void* a1, void* a2, void* a3, void* a4, float red, float green, float blue, float alpha,
@@ -74,35 +93,22 @@ export namespace NeoHud
         std::memcpy(uvFirst.data(), a3, sizeof(uvFirst));
         std::memcpy(uvLast.data(), a4, sizeof(uvLast));
         const bool full = first[0] <= 0.001f && last[0] >= 0.999f && first[1] <= 0.001f && last[1] >= 0.999f;
-        bool movie = false;
-        for (const auto candidate : movies)
-        {
-            if (_strnicmp(name, candidate, std::strlen(candidate)) == 0)
-            {
-                movie = true;
-                break;
-            }
-        }
-        const bool effect = Contains(name, "film_scratch") || Contains(name, "oldfilm_noise") ||
-            Contains(name, "damage_glow") || Contains(Root, "FadeToBlack") ||
-            (full && Contains(name, "Black_888"));
-        const bool movieFrame = movie && last[0] - first[0] >= 0.9f && last[1] - first[1] >= 0.4f &&
-            std::abs(first[0] + last[0] - 1.0f) < 0.1f;
-        if (movieFrame)
+        if (MovieFrame(name, first, last))
         {
             NeoCinema::MovieSeen = true;
             const float sourceAspect = NeoLayout::DesignAspect * (last[0] - first[0]) / (last[1] - first[1]);
             // The whole movie at its own aspect: Original inside the game's centred 4:3 area, Fill inside the whole screen
             const float screen = Screen.fAspectRatio;
-            const float area = FixSettings().Int("MAIN.FMVWidescreenMode") == 0 ? NeoLayout::DesignAspect : screen;
+            const float area = FillMovies.load() ? screen : NeoLayout::DesignAspect;
             const float width = std::min(1.0f, area / screen) * std::min(1.0f, sourceAspect / area);
             const float height = std::min(1.0f, screen / area) * std::min(1.0f, area / sourceAspect);
             first = { (1.0f - width) * 0.5f, (1.0f - height) * 0.5f };
             last = { 1.0f - first[0], 1.0f - first[1] };
         }
-        else if (!effect)
+        else if (!Root.fade && !Contains(name, "film_scratch") && !Contains(name, "oldfilm_noise") &&
+            !Contains(name, "damage_glow") && !(full && Contains(name, "Black_888")))
         {
-            const auto transform = NeoLayout::Box(Screen.fAspectRatio, Hud() ? Constraint.load() : NeoLayout::DesignAspect, Anchor(name));
+            const auto transform = NeoLayout::Box(Screen.fAspectRatio, Root.gameplay ? Constraint.load() : NeoLayout::DesignAspect, Anchor(name));
             first = { transform.X(first[0]), transform.Y(first[1]) };
             last = { transform.X(last[0]), transform.Y(last[1]) };
         }
@@ -112,20 +118,20 @@ export namespace NeoHud
 
     inline void Install()
     {
-        Constraint = NeoLayout::ParseAspect(FixSettings().String("MAIN.HudAspectRatioConstraint"));
-        FixSettings().OnChange("MAIN.HudAspectRatioConstraint", []()
+        WatchNeoSetting("MAIN.HudAspectRatioConstraint", [](const std::string& value)
         {
-            Constraint = NeoLayout::ParseAspect(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            Constraint = NeoLayout::ParseAspect(value);
+        });
+        WatchNeoSetting("MAIN.FMVWidescreenMode", [](const std::string& value)
+        {
+            FillMovies = value != "0";
         });
         auto root = hook::pattern("83 EC 08 A1 ? ? ? ? 8B 48 10 85 C9 C7 44 24 00 00 00 80 3F");
         auto draw = hook::pattern("E8 ? ? ? ? 83 C4 30 5F 5E 5B 8B E5 5D C3");
         RootHook = safetyhook::create_inline(root.get_first(), DrawRoot, SafetyHookInline::StartDisabled);
         (void)RootHook.enable();
-        if (RootHook)
-        {
-            // The render thread may already draw: the original target is set before the call is redirected
-            DrawHook.fun = injector::GetBranchDestination(draw.get_first()).get();
-            injector::MakeCALL(draw.get_first(), Draw, true);
-        }
+        // The render thread may already draw: the original target is set before the call is redirected
+        DrawHook.fun = injector::GetBranchDestination(draw.get_first()).get();
+        injector::MakeCALL(draw.get_first(), Draw, true);
     }
 }

@@ -1,13 +1,26 @@
 #pragma once
 #include "Shared/AsiSettings/asi_settings.hpp"
+#include <mutex>
 
-// The fix's settings: described in settings.json (embedded as a resource), stored in the plugin's .cfg. Loaded on first
-// use, since modules read them while the plugin loads. Read the values through the references of Int, Float and
-// String; change them with Set, so that the .cfg, menus and editors follow.
 inline asi_settings::Plugin& FixSettings()
 {
     static asi_settings::Plugin plugin;
     static bool loaded = plugin.Load();
     (void)loaded;
     return plugin;
+}
+
+template<class T, class Apply>
+inline void ObserveFixSetting(const char* id, bool (*parse)(std::string_view, T&), Apply apply)
+{
+    auto refresh = [id, parse, apply]()
+    {
+        static std::mutex mutex;
+        std::lock_guard lock(mutex);
+        T value{};
+        if (parse(FixSettings().Get(id), value))
+            apply(value);
+    };
+    FixSettings().OnChange(id, refresh);
+    refresh();
 }

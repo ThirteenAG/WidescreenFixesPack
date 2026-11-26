@@ -24,7 +24,7 @@ export namespace MafiaUpdates
 
     void Install()
     {
-        const bool available = MafiaMenu::ready;
+        const bool available = MafiaMenu::ready || MafiaMenu::LegacyPage::stack;
         FixSettings().Availability("MAIN.CheckForUpdates", [available](std::string_view value)
         {
             return value == "0" || available;

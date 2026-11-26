@@ -32,9 +32,12 @@ namespace
             return;
         // Unreal lights use physical intensities. Change their chromaticity
         // without replacing exposure, HDR calibration or DE light attenuation.
-        const float scale = newLuminance > 0.000001f ? oldLuminance / newLuminance : 0.0f;
+        // Near black, a few quantization levels in one channel cannot provide a reliable hue.
+        constexpr float shadowLuminance = 0.01f;
+        const float t = std::min(newLuminance / shadowLuminance, 1.0f);
+        const float chromaScale = t * (3.0f - 2.0f * t) / std::max(newLuminance, shadowLuminance);
         for (size_t channel = 0; channel < 3; ++channel)
-            target[channel] = linear[channel] * scale;
+            target[channel] = oldLuminance * (1.0f + (linear[channel] - newLuminance) * chromaScale);
     }
 
     std::array<float, 3> ColourFilter(const WeatherColours& weather)
@@ -92,8 +95,10 @@ namespace
         // Native code rebuilds RGB gain from its baseline on every invocation.
         // Applying to that fresh result avoids accumulating colour each frame.
         const auto result = colourOptionsHook.ccall<uintptr_t>(volume);
+        if (Settings.visualStyle == VisualStyle::DE)
+            return result;
         const auto weather = GetWeatherColours();
-        if (Settings.visualStyle == VisualStyle::DE || !weather.valid || weather.specialEffect)
+        if (!weather.valid || weather.specialEffect)
             return result;
         const auto gain = ColourFilter(weather);
         auto* colourGain = reinterpret_cast<float*>(volume + 608 + 96);
@@ -105,8 +110,11 @@ namespace
 
     uintptr_t ApplyValues(uint8_t* actor)
     {
+        // The DE style leaves the native colours untouched.
+        if (Settings.visualStyle == VisualStyle::DE)
+            return applyValuesHook.ccall<uintptr_t>(actor);
         const auto weather = GetWeatherColours();
-        const bool active = Settings.visualStyle != VisualStyle::DE && weather.valid && !weather.specialEffect;
+        const bool active = weather.valid && !weather.specialEffect;
         if (active)
         {
             if (Settings.restoreWeatherColours)
@@ -131,6 +139,10 @@ namespace
                     const auto bottom = static_cast<int>(std::lround(weather.skyBottom[channel] * 255.0f));
                     fog[channel] = ((top + 2 * bottom) / 3) / 255.0f;
                 }
+                // A blue upper sky should not cool the haze at a warm horizon.
+                const auto& horizon = weather.skyBottom;
+                if (horizon[0] >= horizon[1] && horizon[1] >= horizon[2] && horizon[0] > horizon[2])
+                    fog = Warmed(fog, { 1.0f, horizon[1] / horizon[0], horizon[2] / horizon[0] });
                 SetWeatherHue(actor, 920, fog); // Classic Atmosphere fog colour override.
                 SetWeatherHue(actor, 976, fog);
                 SetWeatherHue(actor, 1040, Warmed(weather.directional, tint));

@@ -15,7 +15,7 @@
 - **Resolution** — More display resolutions in `Config.exe`.
 - **Aspect ratio** — Correct scaling at any aspect ratio.
 - **HUD** — The HUD uses the whole screen, also on screens narrower than 16:9.
-- **Menus** — Menu backgrounds keep their proportions.
+- **Menus** — Menus and their backgrounds keep their proportions; on screens wider than 16:9 they are shown in a centred 16:9 area instead of being stretched.
 - **Frame rate drops** — No drop to roughly 20–30 FPS after several minutes.
 - **Save folder** — Saves and the game's settings are kept in your own Documents folder instead of the public one, so no administrator rights are needed. Saves already in the public folder are copied over the first time.
 - **Gamepad** — XInput controllers use [Xidi](https://github.com/samuelgr/Xidi). New profiles are configured with controller bindings alongside keyboard and mouse controls; profiles without any controller bindings get them added next to their own. If a controller does not respond, configure its bindings in the controls menu. PlayStation and Switch controllers need an XInput mapping through Steam Input or DS4Windows.
@@ -38,7 +38,7 @@
 
 ## Settings and hub
 
-Open **Options → Plugins → Condemned Fusion Fix** (in the main menu or the pause menu) for the fix's settings, presets and help. A line at the bottom tells you when a change needs a restart. Press **Ctrl+F10** for the developer overlay with every setting and a Debug › Info page.
+Open **Options → Plugins → Condemned Fusion Fix** (in the main menu or the pause menu) for the fix's settings, presets and help. A line at the bottom tells you when a change needs a restart.
 
 The fix creates `scripts/Condemned.FusionFix.cfg` on first start; FusionFixHub can change it, also while the game runs. Vanilla shows the intro, the game's own bars, movies in the game's 16:9 frame and its own frame rate; Recommended and Enhanced skip the intro, add pillarbox bars and limit the frame rate to the monitor's. Window, input and compatibility settings aren't changed by presets. Texts are available in English, French, German, Italian and Spanish.
 

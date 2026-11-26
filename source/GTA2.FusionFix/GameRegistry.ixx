@@ -180,12 +180,29 @@ export namespace GameRegistry
             memcpy(data, &value, sizeof(value)); *size = sizeof(DWORD);
             return ERROR_SUCCESS;
         }
+        if (path.empty())
+            return RegQueryValueExA(key, name, reserved, type, data, size);
+        // The two installed hives can supply different values for the same game key.
+        const DWORD capacity = data && size ? *size : 0;
+        for (const auto hive : { HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE })
         {
-            std::lock_guard lock(RegistryLock);
-            if (VirtualKeys.count(key))
-                return ERROR_FILE_NOT_FOUND;
+            HKEY installed{};
+            auto status = RegOpenKeyExA(hive, path.c_str(), 0, KEY_QUERY_VALUE, &installed);
+            if (status == ERROR_SUCCESS)
+            {
+                DWORD bytes = capacity;
+                status = RegQueryValueExA(installed, name, reserved, type, data, size ? &bytes : nullptr);
+                RegCloseKey(installed);
+                if (status != ERROR_FILE_NOT_FOUND)
+                {
+                    if (size) *size = bytes;
+                    return status;
+                }
+            }
+            else if (status != ERROR_FILE_NOT_FOUND && status != ERROR_PATH_NOT_FOUND)
+                return status;
         }
-        return RegQueryValueExA(key, name, reserved, type, data, size);
+        return ERROR_FILE_NOT_FOUND;
     }
     LSTATUS WINAPI CloseKey(HKEY key)
     {

@@ -10,10 +10,11 @@ import ComVars;
 export namespace ScarfaceFocus
 {
     inline SafetyHookInline PumpHook;
-    inline const int* Pause = nullptr;
+    inline std::atomic<bool> Pause{ true };
     inline uint32_t(__cdecl* Clock)() = nullptr;
     inline char(__cdecl* SoundActive)(char) = nullptr;
-    inline bool (*RestoreDisplay)() = nullptr;
+    enum class DisplayRestore { Finished, Retry };
+    inline DisplayRestore (*RestoreDisplay)() = nullptr;
 
     inline bool Background()
     {
@@ -23,14 +24,14 @@ export namespace ScarfaceFocus
     inline HWND __cdecl Pump()
     {
         auto result = PumpHook.unsafe_call<HWND>();
-        if (!hWnd.is_initialized() || !hWnd.get())
+        if (reinterpret_cast<uintptr_t>(result) == WM_QUIT || !hWnd.is_initialized() || !hWnd.get())
             return result;
         bool waited = false;
         bool minimized = false;
         // A minimized D3D9 window loses its resources. Keep pumping messages until
         // restoration completes before allowing another simulation/render frame.
         while (hWnd.is_initialized() && hWnd.get() && IsWindow(hWnd.get()) &&
-            (IsIconic(hWnd.get()) || (Pause && *Pause && Background())))
+            (IsIconic(hWnd.get()) || (Pause.load() && Background())))
         {
             waited = true;
             minimized = minimized || IsIconic(hWnd.get());
@@ -43,13 +44,18 @@ export namespace ScarfaceFocus
                 break;
             }
             result = PumpHook.unsafe_call<HWND>();
+            if (reinterpret_cast<uintptr_t>(result) == WM_QUIT)
+                return result;
         }
         // A restored D3D9 window can still have a lost device. Recreate the
         // native display resources before the next game frame can use them.
-        while (minimized && hWnd.is_initialized() && hWnd.get() && IsWindow(hWnd.get()) && RestoreDisplay && !RestoreDisplay())
+        while (minimized && hWnd.is_initialized() && hWnd.get() && IsWindow(hWnd.get()) && RestoreDisplay && RestoreDisplay() == DisplayRestore::Retry)
         {
-            MsgWaitForMultipleObjectsEx(0, nullptr, 50, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
+            if (MsgWaitForMultipleObjectsEx(0, nullptr, 50, QS_ALLINPUT, MWMO_INPUTAVAILABLE) == WAIT_FAILED)
+                break;
             result = PumpHook.unsafe_call<HWND>();
+            if (reinterpret_cast<uintptr_t>(result) == WM_QUIT)
+                return result;
         }
         if (waited && pFlow.is_initialized() && pFlow.get() && reinterpret_cast<uintptr_t>(pFlow.get()) != 0xDDDDDDDD && Clock)
         {
@@ -58,13 +64,12 @@ export namespace ScarfaceFocus
             *previousTime = Clock();
         }
         if (hWnd.is_initialized() && hWnd.get() && SoundActive)
-            SoundActive(!Background() || (Pause && !*Pause));
+            SoundActive(!Background() || !Pause.load());
         return result;
     }
 
-    inline void Install(const int& pause, HMODULE module = GetModuleHandle(nullptr))
+    inline void Install(HMODULE module = GetModuleHandle(nullptr))
     {
-        Pause = &pause;
         if (PumpHook)
             return;
         const auto base = reinterpret_cast<uintptr_t>(module);

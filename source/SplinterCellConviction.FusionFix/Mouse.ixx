@@ -89,6 +89,8 @@ export void InitMouse()
         auto pattern = hook::pattern("8B 4E 28 8B 01 57 8D 5E 30 53 8D 96 28 04 00 00");
         static auto GamepadCameraSpeedHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
         {
+            if (fGamepadCameraSpeed == 1.0f)
+                return;
             auto controller = *reinterpret_cast<uintptr_t*>(regs.esi + 0x20);
             if (!controller || (*reinterpret_cast<uint32_t*>(controller + 0x604) & 2) == 0)
                 return;
@@ -121,10 +123,16 @@ export void InitMouse()
             RawMouse::cursorY = std::exchange(*reinterpret_cast<int32_t*>(regs.esp + 0x38), 0);
         });
 
-        // the cursor is put back to the center when it moved
+        // The cursor is put back to the center when it moved. Each SetCursorPos makes Windows queue a new move and costs the game
+        // thread time, with a high polling rate mouse on every pass of the message loop. The cursor's movement isn't used for
+        // mouse look here, it only has to stay in the window: it's put back once it's a quarter of the window away from the center.
         pattern = hook::pattern("39 74 24 50 75 41 39 74 24 48 75 06 39 74 24 38");
         static auto RecenterHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
+            RECT client;
+            const auto window = *reinterpret_cast<HWND*>(*reinterpret_cast<uintptr_t*>(regs.ebx + 0x3F4) + 4);
+            if (GetClientRect(window, &client) && std::abs(RawMouse::cursorX) < client.right / 4 && std::abs(RawMouse::cursorY) < client.bottom / 4)
+                return;
             *reinterpret_cast<int32_t*>(regs.esp + 0x48) = RawMouse::cursorX;
             *reinterpret_cast<int32_t*>(regs.esp + 0x38) = RawMouse::cursorY;
         });

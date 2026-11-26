@@ -6,6 +6,7 @@ module;
 export module SaveCommon;
 
 import Build;
+import Controller;
 import Unreal;
 import Window;
 
@@ -38,9 +39,8 @@ namespace
         if (GetAsyncKeyState(VK_F5) & 0x8000)
             return true;
         XINPUT_STATE pad{};
-        DWORD slot = 0;
         constexpr WORD sticks = XINPUT_GAMEPAD_LEFT_THUMB | XINPUT_GAMEPAD_RIGHT_THUMB;
-        return PadInput::Read(pad, slot) && (pad.Gamepad.wButtons & sticks) == sticks;
+        return ReadActiveController(pad) && (pad.Gamepad.wButtons & sticks) == sticks;
     }
 }
 

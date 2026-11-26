@@ -14,6 +14,8 @@ import Draw;
 import Skeleton;
 import Entity;
 import CutsceneMgr;
+import Menu;
+import Pad;
 
 namespace WaterFrustum
 {
@@ -154,8 +156,10 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
+            // The main loop empties the message queue each frame; a high polling rate mouse must not keep it going
+            MessagePumpGuard::Install(GetModuleHandle(nullptr));
             if (!GetModuleHandleW(L"GInputSA.asi"))
-                GtaRawMouse::Install(*reinterpret_cast<HWND*>(RsGlobal->ps));
+                GtaRawMouse::Install([] { return RsGlobal->ps ? *reinterpret_cast<HWND*>(RsGlobal->ps) : nullptr; }, []() { return !FrontendMenuManager->m_bMenuActive; }, Pad::ObserveMouseActivity);
         };
 
         WFP::onInitEvent() += []()

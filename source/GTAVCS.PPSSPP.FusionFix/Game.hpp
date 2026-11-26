@@ -1,6 +1,6 @@
 #pragma once
 #include "Addresses.hpp"
-#include "../Shared/Console/PortableDrawing.hpp"
+#include "Shared/Console/PortableDrawing.hpp"
 namespace vcsws {
 struct Game {};
 using Drawing = console::portable::StoryDrawing<Game>;
@@ -30,20 +30,25 @@ inline Settings settings;
 inline bool autoAspect=true;
 inline constexpr char cfgPath[]="ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.cfg";
 void ReloadTextLanguage();
-void PollSettings();
+void PollSettings(bool displayMenu = false);
 void ApplyFrameRate();
 void InstallControls();
 void InstallCamera();
 void InstallDrawing();
 void InstallTiming();
 void InstallMenu();
+void ReadSettingsPreservingMenuEdits(void (*read)());
+void SelectConfiguredGamepadIcons(unsigned set);
+void SaveMenuSettingsIfDue(unsigned now);
 void InstallAim();
 void InstallVehicleLights();
 void InstallGamepadIcons(const char* set);
 bool GamepadIconsAvailable();
 unsigned GamepadIconSet();
 void SelectGamepadIcons(unsigned set);
+void SetMenuGamepadIcons(unsigned set);
 void TickCheats();
+void ResetCheatInput();
 void InstallCheats();
 void InstallMovies();
 }

@@ -2,12 +2,15 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/PadInput.hpp"
 #include <atomic>
+#include <mutex>
 
 export module Controller;
 
 import ComVars;
 import NativeMenu;
+import Menu;
 
 // Modern controller layout on the game's own pad bindings, pad navigation of the native menus
 export namespace MafiaPad
@@ -64,15 +67,29 @@ export namespace MafiaPad
         bindings[Reload] = { 0, 3, 0x10B, 0 };
         return bindings;
     }();
-    uintptr_t profileBindings = 0, inputObject = 0, cacheGetter = 0, labelUpdate = 0;
+    uintptr_t profileBindings = 0, labelUpdate = 0;
+    struct MenuPad
+    {
+        XINPUT_STATE state{};
+        ULONGLONG nextProbe = 0;
+        bool connected = false;
+        bool active = false;
+    };
+    std::array<MenuPad, XUSER_MAX_COUNT> menuPads{};
+    DWORD menuSlot = XUSER_MAX_COUNT;
+    bool waitForNeutral = true;
     uint32_t previousButtons = 0;
     int previousDirection = 0;
     DWORD repeatTick = 0, pauseTick = 0;
     bool ready = false, pauseRequested = false;
     // The device the player used last: pad, or keyboard/mouse (the mouse only after real movement)
     bool padLastUsed = false;
-    SafetyHookMid pauseHook;
+    SafetyHookMid pauseHook, racePauseHook;
+    SafetyHookInline legacyReadKey;
+    uintptr_t* legacyStack;
     std::atomic<bool> resetRequested{ false };
+    std::atomic<bool> modernLayout{ false }, invertCameraY{ false };
+    std::atomic<float> lookSpeed{ 1.0f };
     void RefreshNames()
     {
         if (!ready || !labelUpdate) return;
@@ -98,7 +115,7 @@ export namespace MafiaPad
 
     bool Enabled()
     {
-        return profileBindings && FixSettings().Int("MAIN.ControllerLayout") == 1;
+        return profileBindings && modernLayout.load(std::memory_order_relaxed);
     }
     const Binding* ForBinding(uintptr_t binding)
     {
@@ -115,85 +132,149 @@ export namespace MafiaPad
         const auto* binding = reinterpret_cast<const Binding*>(profileBindings) + action;
         return binding->type == 3 ? binding : nullptr;
     }
+    bool ConsumePause()
+    {
+        return std::exchange(pauseRequested, false) && ready && GetTickCount() - pauseTick <= 250 &&
+            !(MafiaMenu::blocksInput && MafiaMenu::blocksInput());
+    }
+    int __stdcall LegacyKey(void* driver)
+    {
+        const int nativeKey = legacyReadKey.stdcall<int>(driver);
+        const int padKey = std::exchange(MafiaMenu::padKey, 0);
+        if (nativeKey || !legacyStack)
+            return nativeKey;
+        if (*legacyStack)
+            return padKey;
+        return ConsumePause() ? 1 : 0;
+    }
     void Install()
     {
         auto profile = hook::pattern("8D 0C 40 8D 14 8D ? ? ? ? B9 ? ? ? ? 52 E8 ? ? ? ? 83 C9 FF 85 C0 74 28 8B F8 33 C0 F2 AE F7 D1 2B F9 56 8B F7");
         const auto profileSite = reinterpret_cast<uintptr_t>(profile.get_first());
         profileBindings = Field<uintptr_t>(profileSite, 6);
-        inputObject = Field<uintptr_t>(profileSite, 11);
         auto pause = hook::pattern("80 7C 24 ? 01 0F 85 ? ? ? ? 8B 0D ? ? ? ? 8B 49 24 E8 ? ? ? ? 6A 30");
         if (!pause.empty()) // 1.1/1.2 controller layout
         {
             static uintptr_t resume = reinterpret_cast<uintptr_t>(pause.get_first()) + 11;
-            pauseHook = safetyhook::create_mid(pause.get_first(5), [](SafetyHookContext& context)
+            racePauseHook = safetyhook::create_mid(pause.get_first(5), [](SafetyHookContext& context)
             {
-                const bool requested = std::exchange(pauseRequested, false);
-                const bool blocked = MafiaMenu::blocksInput && MafiaMenu::blocksInput();
-                if (ready && !blocked && requested && GetTickCount() - pauseTick <= 250) context.eip = resume;
+                if (ConsumePause()) context.eip = resume;
+            });
+            auto gameplay = hook::pattern("80 FB 01 0F 85 ? ? ? ? B9 ? ? ? ? E8 ? ? ? ? 84 C0 74 ? A0 ? ? ? ? 84 C0 0F 85");
+            pauseHook = safetyhook::create_mid(gameplay.get_first(), [](SafetyHookContext& context)
+            {
+                if (ConsumePause()) context.ebx = (context.ebx & ~0xFFu) | 1u;
             });
             auto labels = hook::pattern("53 55 8B E9 8B 45 0C 8D 5D 40 8D 4C 40 7E C6 03 00 66 83 3C 8D ? ? ? ? 03");
             labelUpdate = reinterpret_cast<uintptr_t>(labels.get_first());
         }
-        else // 1.0 has no pause or label routine
+        else // 1.0 reads the native scan code directly in its menu and gameplay loops.
         {
-            auto legacy = hook::pattern("F7 85 A4 90 00 00 00 00 00 02 74 ? 39 BD 4C 94 00 00");
-            legacy.get_first();
+            legacyStack = LegacyMenuStack();
+            auto key = hook::module_pattern(GetLS3DF(), "F6 05 ? ? ? ? 02 56 74 ? 8B 0D ? ? ? ? A1 ? ? ? ? C7 05");
+            legacyReadKey = safetyhook::create_inline(key.get_first(), LegacyKey);
         }
-        // Pad menu navigation and Start pause go through the native menu (1.1/1.2)
-        ready = MafiaMenu::ready;
-        FixSettings().OnChange("MAIN.ControllerLayout", []() { resetRequested.store(true); });
+        ready = legacyStack || MafiaMenu::ready;
+        const auto update = []()
+        {
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            auto& settings = FixSettings();
+            const bool useModernLayout = settings.Get("MAIN.ControllerLayout") == "1";
+            if (modernLayout.exchange(useModernLayout) != useModernLayout)
+                resetRequested.store(true);
+            invertCameraY.store(settings.Get("MAIN.InvertGamepadY") == "1");
+            float speed;
+            lookSpeed.store(asi_settings::detail::ParseFloat(settings.Get("MAIN.GamepadCameraSpeed"), speed) && std::isfinite(speed)
+                ? std::clamp(speed, 0.25f, 3.0f) : 1.0f);
+        };
+        for (const char* id : { "MAIN.ControllerLayout", "MAIN.InvertGamepadY", "MAIN.GamepadCameraSpeed" })
+            FixSettings().OnChange(id, update);
+        update();
     }
-    void InitJoy()
+    DWORD ReadMenuPads(decltype(&XInputGetState) getState, ULONGLONG now)
     {
-        auto getter = hook::module_pattern(GetModuleHandleW(L"IJoy.dll"),
-            "57 8B 7C 24 08 85 FF 74 ? 56 8D B1 30 01 00 00 B9 11 00 00 00 B0 01 F3 A5 5E 5F C2 04 00");
-        cacheGetter = reinterpret_cast<uintptr_t>(getter.get_first());
+        DWORD pressed = XUSER_MAX_COUNT, idle = XUSER_MAX_COUNT;
+        for (DWORD i = 0; i < menuPads.size(); ++i)
+        {
+            auto& slot = menuPads[i];
+            if (!slot.connected && now < slot.nextProbe) continue;
+            if (!getState || getState(i, &slot.state) != ERROR_SUCCESS)
+            {
+                slot.connected = slot.active = false;
+                slot.nextProbe = now + 250;
+                continue;
+            }
+            const auto& pad = slot.state.Gamepad;
+            const bool active = pad.wButtons || pad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD ||
+                pad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD ||
+                std::abs(pad.sThumbLX) >= 19660 || std::abs(pad.sThumbLY) >= 19660 ||
+                std::abs(pad.sThumbRX) >= 19660 || std::abs(pad.sThumbRY) >= 19660;
+            // A held control on a newly connected or non-owning pad must be released before handoff.
+            if (active && slot.connected && !slot.active && pressed == XUSER_MAX_COUNT) pressed = i;
+            if (!active && idle == XUSER_MAX_COUNT) idle = i;
+            slot.active = active;
+            slot.connected = true;
+        }
+        if (menuSlot < menuPads.size() && menuPads[menuSlot].connected)
+            return menuPads[menuSlot].active || pressed == XUSER_MAX_COUNT ? menuSlot : pressed;
+        return pressed != XUSER_MAX_COUNT ? pressed : idle;
     }
     void Frame(HWND window)
     {
         ResetPending();
         // Menu navigation and Start pause work with either layout
-        if (!ready || !cacheGetter || !inputObject) return;
-        const auto first = Field<uintptr_t>(inputObject, 8), last = Field<uintptr_t>(inputObject, 12);
-        if (!first || last < first + 140) return;
-        const auto device = Field<uintptr_t>(first, 0);
-        if (!device) return;
-        const auto table = Field<uintptr_t>(device, 0);
-        if (Field<uintptr_t>(table, 80) != cacheGetter) return;
-        const auto state = device + 0x130;
-        const uint32_t buttons = Field<uint32_t>(state, 52);
+        if (!ready) return;
+        const DWORD active = ReadMenuPads(PadInput::XInput().getState, GetTickCount64());
+        if (active != menuSlot)
+        {
+            menuSlot = active;
+            previousButtons = 0;
+            previousDirection = 0;
+            pauseRequested = false;
+            MafiaMenu::padKey = 0;
+        }
+        if (active == XUSER_MAX_COUNT)
+        {
+            waitForNeutral = true;
+            return;
+        }
+        const auto& pad = menuPads[active].state.Gamepad;
+        const uint32_t buttons = pad.wButtons;
+        constexpr int threshold = 19660;
+        int direction = 0;
+        if (buttons & XINPUT_GAMEPAD_DPAD_UP) direction = 200;
+        else if (buttons & XINPUT_GAMEPAD_DPAD_DOWN) direction = 208;
+        else if (buttons & XINPUT_GAMEPAD_DPAD_LEFT) direction = 203;
+        else if (buttons & XINPUT_GAMEPAD_DPAD_RIGHT) direction = 205;
+        else if (std::abs(pad.sThumbLY) >= threshold) direction = pad.sThumbLY > 0 ? 200 : 208;
+        else if (std::abs(pad.sThumbLX) >= threshold) direction = pad.sThumbLX < 0 ? 203 : 205;
         const uint32_t before = std::exchange(previousButtons, buttons);
         const uint32_t pressed = buttons & ~before;
-        if (pressed && before != UINT32_MAX) padLastUsed = true;
         if (!window || GetForegroundWindow() != window || (MafiaMenu::blocksInput && MafiaMenu::blocksInput()))
         {
             previousDirection = 0;
             pauseRequested = false;
             MafiaMenu::padKey = 0;
+            waitForNeutral = true;
             return;
         }
-        auto* page = MafiaMenu::Top();
-        if (!page)
+        if (waitForNeutral)
         {
-            if (pressed & (1u << 9)) { pauseRequested = true; pauseTick = GetTickCount(); }
+            waitForNeutral = direction != 0 || (buttons & (XINPUT_GAMEPAD_A | XINPUT_GAMEPAD_B | XINPUT_GAMEPAD_Y | XINPUT_GAMEPAD_START));
+            return;
+        }
+        if (pressed) padLastUsed = true;
+        if (legacyStack ? !*legacyStack : !MafiaMenu::Top())
+        {
+            if (pressed & XINPUT_GAMEPAD_START) { pauseRequested = true; pauseTick = GetTickCount(); }
             return;
         }
         pauseRequested = false;
         int key = 0;
-        if (pressed & ((1u << 1) | (1u << 9))) key = 1;
-        else if (pressed & 1u) key = 28;
-        else if (pressed & (1u << 3)) key = 59;
-        const float x = Field<float>(state, 0), y = Field<float>(state, 4);
-        int direction = std::abs(y) >= 0.6f ? (y < 0 ? 200 : 208) : std::abs(x) >= 0.6f ? (x < 0 ? 203 : 205) : 0;
-        if (!Field<uint8_t>(state, 48))
-        {
-            const float angle = Field<float>(state, 32);
-            if (std::isfinite(angle))
-            {
-                const int hat = static_cast<int>(std::lround(angle * (4.0 / 3.14159265358979323846))) & 7;
-                direction = hat <= 1 || hat == 7 ? 200 : hat <= 3 ? 205 : hat <= 5 ? 208 : 203;
-            }
-        }
+        if (pressed & (XINPUT_GAMEPAD_B | XINPUT_GAMEPAD_START)) key = 1;
+        else if (pressed & XINPUT_GAMEPAD_A) key = 28;
+        else if (pressed & XINPUT_GAMEPAD_Y) key = 59;
         const auto now = GetTickCount();
         if (direction && (direction != previousDirection || static_cast<int32_t>(now - repeatTick) >= 0))
         {
@@ -275,9 +356,8 @@ export namespace MafiaPad
         };
         bindings = temporary(extra); values = temporary(state); pressed = temporary(events);
         const auto result = read();
-        const float requestedSpeed = FixSettings().Float("MAIN.GamepadCameraSpeed");
-        const float cameraSpeed = std::isfinite(requestedSpeed) ? std::clamp(requestedSpeed, 0.25f, 3.0f) : 1.0f;
-        const bool invertY = FixSettings().Bool("MAIN.InvertGamepadY");
+        const float cameraSpeed = lookSpeed.load(std::memory_order_relaxed);
+        const bool invertY = invertCameraY.load(std::memory_order_relaxed);
         for (size_t index = 0; index < ActionCount; ++index)
         {
             const auto strongest = [](float native, float pad)
@@ -302,7 +382,6 @@ export namespace MafiaPad
 // Stick deadzones in IJoy.dll
 export void InitIJoy()
 {
-    MafiaPad::InitJoy();
     static float fLeftStickDeadzone = FixSettings().Float("MAIN.LeftStickDeadzone") / 100.0f;
     static float fRightStickDeadzone = FixSettings().Float("MAIN.RightStickDeadzone") / 100.0f;
     static constexpr auto pad_max = 10000.0f; //[ -10000 0 10000 ]

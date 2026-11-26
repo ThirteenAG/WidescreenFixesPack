@@ -114,7 +114,7 @@ export namespace GTA1Options
     void SaveInt(const char* section, const char* key, int value, bool nativeApplied = false) { Save(section, key, std::to_string(value), nativeApplied); }
     void SaveFloat(const char* section, const char* key, double value)
     {
-        char text[32]{}; sprintf_s(text, "%.2f", value); Save(section, key, text);
+        Save(section, key, OtherPlugins::FixedText(value, 2));
     }
     void SaveKey(const char* section, const char* key, int value)
     {
@@ -210,7 +210,7 @@ export namespace GTA1Options
     std::string OnOff(bool value) { return value ? "On" : "Off"; }
     std::string Number(double value)
     {
-        char text[16]{}; sprintf_s(text, "%.2f", value); return text;
+        return OtherPlugins::FixedText(value, 2);
     }
 
     // entries ----------------------------------------------------------------
@@ -590,6 +590,7 @@ export namespace GTA1Options
     // Menu input, as frontend direction and action bits.
     void Handle(int input)
     {
+        GTA1Camera::RefreshSettings();
         if (Overlay && (input & ResumeAction)) { ResumeMenu(); return; }
         if (RWGTAMenu::Model::Changed().exchange(false)) RefreshModelRows();
         Selected = std::clamp(Selected, 0, int(Sections[Section].size()) - 1);

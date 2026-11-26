@@ -50,6 +50,8 @@ export namespace BullyOverlay
 
     bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -61,6 +63,8 @@ export namespace BullyOverlay
 
     void Keyboard(HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         const bool down = window && GetForegroundWindow() == window &&
             (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
         if (down && !HotkeyDown)
@@ -97,7 +101,8 @@ export namespace BullyOverlay
             return true;
         }();
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
     }
 
     HRESULT WINAPI Present(IDirect3DDevice9* device, const RECT* source, const RECT* destination, HWND window, const RGNDATA* dirty)
@@ -125,6 +130,8 @@ export namespace BullyOverlay
 
     void Attach(IDirect3DDevice9* device)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!device)
             return;
         if (PresentHook)

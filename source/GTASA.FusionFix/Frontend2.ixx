@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "common.h"
-#include "FixSettings.hpp"
 #include <control.h>
 #include <commctrl.h>
 #pragma comment(lib, "comctl32.lib")
@@ -16,8 +15,7 @@ import Draw;
 namespace VideoPlayer
 {
     constexpr UINT_PTR SubclassId = 0x57465056;
-    constexpr UINT RepositionMessage = WM_APP + 0x57F;  // the movie mode changed while a movie plays
-    static HWND owner = nullptr;
+    static std::atomic<HWND> owner = nullptr;
     static IVideoWindow* currentVideo = nullptr; // Borrowed; checked against the game's pointer.
     static long sourceWidth = 4, sourceHeight = 3;
     static RECT videoRect{};
@@ -47,18 +45,8 @@ namespace VideoPlayer
         if (positioning || !IsPlaying()) return;
         RECT client{};
         if (!GetClientRect(window, &client) || client.right <= 0 || client.bottom <= 0) return;
-        // Videos are never cut off: the whole movie at its own aspect with black bars, fitted into the game's 4:3
-        // picture (Original) or into the whole screen (Fill)
-        static auto& mode = FixSettings().Int("MAIN.FMVWidescreenMode");
-        double frameWidth = client.right, frameHeight = client.bottom;
-        if (mode == 0)
-        {
-            if (frameWidth * 3.0 > frameHeight * 4.0)
-                frameWidth = frameHeight * 4.0 / 3.0;
-            else
-                frameHeight = frameWidth * 3.0 / 4.0;
-        }
-        const double scale = std::min(frameWidth / sourceWidth, frameHeight / sourceHeight);
+        // Videos are never cut off: the whole movie at its own aspect, fitted into the window with black bars
+        const double scale = std::min(double(client.right) / sourceWidth, double(client.bottom) / sourceHeight);
         const long width = std::max(1L, static_cast<long>(sourceWidth * scale));
         const long height = std::max(1L, static_cast<long>(sourceHeight * scale));
         const long left = (client.right - width) / 2;
@@ -85,11 +73,6 @@ namespace VideoPlayer
             const auto result = DefSubclassProc(window, message, wParam, lParam);
             if (wParam != SIZE_MINIMIZED) Position(window);
             return result;
-        }
-        if (message == RepositionMessage)
-        {
-            Position(window);
-            return 0;
         }
         if (message == WM_ERASEBKGND)
         {
@@ -122,10 +105,17 @@ void VideoPlayerShowHook()
     // Cache the source ratio before SetWindowPosition changes the video window.
     if (currentVideo != videoWindow || owner != window)
     {
+        // The movie's own size in pixels: the video window's size still includes its former frame, and the
+        // stock movies carry a pixel aspect that would make their 4:3 picture narrower
         long width = 0, height = 0;
-        const HRESULT widthResult = videoWindow->get_Width(&width);
-        const HRESULT heightResult = videoWindow->get_Height(&height);
-        if (FAILED(widthResult) || FAILED(heightResult) || width <= 0 || height <= 0 || width == height)
+        IBasicVideo* basicVideo = nullptr;
+        if (SUCCEEDED(videoWindow->QueryInterface(__uuidof(IBasicVideo), reinterpret_cast<void**>(&basicVideo))))
+        {
+            if (FAILED(basicVideo->GetVideoSize(&width, &height)))
+                width = height = 0;
+            basicVideo->Release();
+        }
+        if (width <= 0 || height <= 0)
         {
             width = 4;
             height = 3;
@@ -160,11 +150,6 @@ public:
                     RemoveWindowSubclass(VideoPlayer::owner, VideoPlayer::WindowProc, VideoPlayer::SubclassId);
                 VideoPlayer::owner = nullptr;
                 VideoPlayer::currentVideo = nullptr;
-            });
-            FixSettings().OnChange("MAIN.FMVWidescreenMode", []()
-            {
-                if (auto window = VideoPlayer::owner)
-                    PostMessageW(window, VideoPlayer::RepositionMessage, 0, 0);
             });
         };
 

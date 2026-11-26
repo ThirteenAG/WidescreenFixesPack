@@ -13,6 +13,7 @@
 ## Fixes
 
 - **Resolution list** — Every display mode of the monitor; screens narrower than 16:9 get a 16:9 picture.
+- **Display recovery** — If Direct3D temporarily loses the device during a display change, the game retries the reset once the device is ready.
 - **Ultrawide** — The game renders at the screen's own aspect with the same vertical view (Hor+). Menus and other 2D screens keep their 16:9 shape in the middle of the screen.
 - **HUD** — The player panel, objective, timer and messages stay where the game puts them; the minimap and the equipment panels sit at the screen's right edge. Markers on items, enemies and partners stay on their targets. Fades and damage overlays cover the whole screen.
 - **Cutscenes** — On screens wider than 16:9 cutscenes keep their original 16:9 framing with black bars at the sides (can be turned off).
@@ -33,14 +34,14 @@ Open **Options → Plugins → Resident Evil Revelations 2 Fusion Fix** (the las
 | Controller icons | Auto (Xbox), Xbox, PlayStation or Nintendo button symbols; live | Auto |
 | Cutscene borders | Off, Letterbox (the game's cinematic bars), Pillarbox (16:9 framing on wider screens) or Both; live | Both |
 | HUD aspect ratio | Auto for the whole screen width, or 4:3, 16:9, 21:9, 32:9 or another ratio for a centered box; live | Auto |
-| Frame rate limit | Unlimited, the game window's monitor refresh rate or a number; caps the game's VARIABLE option; live | 120 FPS |
+| Frame rate limit | Unlimited, the game window's monitor refresh rate, or 1–1000 FPS for the game's VARIABLE option. Applies live. | 120 FPS |
 | Window mode | Windowed or Borderless when the game's own Full Screen option is off; restart | Borderless |
 | Pause when unfocused | On pauses in the background; off keeps the game running in windowed modes; live | On |
 | Confine cursor | Keeps the cursor inside the game window while it is active; live | On |
 | Skip intro | Skips the logos and the OK-only startup notices; restart | On |
 | Skip title prompt | Continues past the first press-start prompt; restart | On |
-| Split screen layout | Top and bottom or Side by side give each player half of the screen in local co-op; Original keeps the game's two smaller staggered views; applies when split screen starts | Top and bottom |
-| Swap co-op views | Swaps the two players' views; applies when split screen starts | Off |
+| Split screen layout | Top and bottom or Side by side give each player half of the screen in local co-op; Original keeps the game's two smaller staggered views; applies during local co-op | Top and bottom |
+| Swap co-op views | Swaps the two players' views; applies during local co-op | Off |
 | Hide damage overlay | Hides the low-health overlay; live | Off |
 | Hide film grain | Hides the film grain and its vignette; restart | Off |
 | Title logo | The title screen's logo: by language, Biohazard or one of the Resident Evil logos; restart | By language |
@@ -50,8 +51,6 @@ Open **Options → Plugins → Resident Evil Revelations 2 Fusion Fix** (the las
 Vanilla shows the logos, startup notices and title prompt and keeps only the original cinematic bars; Recommended skips the startup screens and adds the cutscene side bars. Texts are available in English, French, German, Italian and Spanish.
 
 With **Check for updates** on, the Plugins list shows a notice when a newer version is available; FusionFixHub opens after the game exits when it is installed in the game folder.
-
-Ctrl+F10 opens the developer overlay with every setting and a Debug › Info page.
 
 The game supports Xbox controllers natively; the fix leaves its controller input as it is. PlayStation and other controllers work through Steam Input or DS4Windows.
 

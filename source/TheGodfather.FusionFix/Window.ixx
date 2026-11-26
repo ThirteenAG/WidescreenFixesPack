@@ -17,6 +17,9 @@ export namespace GodfatherWindow
     SafetyHookInline createWindowHook, createD3DHook, createDeviceHook, resetHook, presentHook;
     SafetyHookInline beginSceneHook, endSceneHook;
     SafetyHookInline swapHook;
+    SafetyHookMid poolAcquireHook, poolReleaseHook;
+    GameRef<uint32_t*> VertexPool;
+    void* poolReleaseSkip{};
     void* createReturn{};
     int mode = 0;
     bool verticalSync = false;
@@ -33,6 +36,7 @@ export namespace GodfatherWindow
     std::function<void()> beforeReset;
     std::function<void()> service;
     std::atomic<bool> sizing{}, toggleRequested{};
+    std::atomic<bool> confineCursor{ true };
     bool altEnterDown{};
     std::function<bool()> blocksInput;
     std::function<bool(HWND, UINT, WPARAM, LPARAM, LRESULT&)> message;
@@ -290,7 +294,7 @@ export namespace GodfatherWindow
                 service();
             MSG pending{};
             PeekMessageW(&pending, window, WM_NULL, WM_NULL, PM_NOREMOVE);
-            CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && (!blocksInput || !blocksInput()));
+            CursorConfinement::SetEnabled(confineCursor.load(std::memory_order_relaxed) && (!blocksInput || !blocksInput()));
             CursorConfinement::Update(window);
             if (frame)
                 frame(target);
@@ -386,10 +390,12 @@ export namespace GodfatherWindow
         }
         width = initialWidth;
         height = initialHeight;
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+        BindLiveSetting("MAIN.ConfineCursor", confineCursor);
+        CursorConfinement::SetEnabled(confineCursor.load(std::memory_order_relaxed));
         IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll",
             std::forward_as_tuple("SystemParametersInfoA", SystemParameters),
             std::forward_as_tuple("SetWindowsHookExA", KeyboardHook));
+        MessagePumpGuard::Install(GetModuleHandleW(nullptr));
         const auto user = GetModuleHandleW(L"user32.dll");
         const auto d3d = LoadLibraryW(L"d3d9.dll");
         auto classSite = hook::pattern("8B 0D ? ? ? ? 52 50 A1 ? ? ? ? 50 51 6A 00 FF 15 ? ? ? ? 8B F0 85 F6");
@@ -397,5 +403,27 @@ export namespace GodfatherWindow
         GodfatherWindowClass.SetAddress(*classSite.get_first<const char**>(2));
         createWindowHook = safetyhook::create_inline(GetProcAddress(user, "CreateWindowExA"), CreateEngineWindow);
         createD3DHook = safetyhook::create_inline(GetProcAddress(d3d, "Direct3DCreate9"), CreateD3D);
+
+        // The renderer's dynamic vertex buffer pool releases every buffer when the device is lost and recreates them
+        // after the reset. A creation that fails while the window is being resized leaves a free entry without a buffer,
+        // and the next request for a new size released that missing buffer (crash). Entries without a buffer are now
+        // never matched by size, and only an existing buffer is released before its entry is reused.
+        auto acquire = hook::pattern("A1 ? ? ? ? 53 8B 5C 24 08 56 33 F6 85 C0 57 74 52 8B 48 04");
+        VertexPool.SetAddress(*acquire.get_first<uint32_t*>(1));
+        poolAcquireHook = safetyhook::create_mid(acquire.get_first(), [](SafetyHookContext&)
+        {
+            for (auto entry = VertexPool.get(); entry; entry = reinterpret_cast<uint32_t*>(entry[4]))
+            {
+                if (!entry[1] && !entry[2])
+                    entry[0] = 0;
+            }
+        });
+        auto release = hook::pattern("8B 46 08 8B 08 50 FF 51 08 C7 46 08 00 00 00 00");
+        poolReleaseSkip = release.get_first(9);
+        poolReleaseHook = safetyhook::create_mid(release.get_first(), [](SafetyHookContext& regs)
+        {
+            if (!reinterpret_cast<uint32_t*>(regs.esi)[2])
+                regs.eip = reinterpret_cast<uintptr_t>(poolReleaseSkip);
+        });
     }
 }

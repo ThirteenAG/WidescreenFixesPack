@@ -1,5 +1,5 @@
 #pragma once
-#include "../Shared/Console/Ps2VehicleLights.hpp"
+#include "Shared/Console/Ps2VehicleLights.hpp"
 
 namespace imvehlm {
 using Model = console::ps2lights::Model;

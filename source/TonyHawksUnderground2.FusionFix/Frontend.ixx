@@ -20,6 +20,7 @@ module;
 export module Frontend;
 
 import ComVars;
+import Window;
 
 export
 {
@@ -336,10 +337,10 @@ namespace THUG2Menu
     }
 
     struct Extent { float width = 0, height = 0; };
-    inline bool Measure(const std::string& literal, Extent& extent)
+    inline bool Measure(const std::string& literal, Extent& extent, uint32_t fontId = Checksum("small"))
     {
         if (literal.size() > 4096) return false;
-        auto* font = reinterpret_cast<void* (__cdecl*)(uint32_t)>(Game().getFont)(Checksum("small"));
+        auto* font = reinterpret_cast<void* (__cdecl*)(uint32_t)>(Game().getFont)(fontId);
         if (!font || Read<uintptr_t>(font) != Game().fontTable) return false;
         auto* platform = Read<void*>(font, 8);
         if (!platform) return false;
@@ -382,7 +383,7 @@ namespace THUG2Menu
     }
     inline std::string Language()
     {
-        auto chosen = FixSettings().String("MAIN.TextLanguage");
+        const auto chosen = FixSettings().Get("MAIN.TextLanguage");
         if (!chosen.empty() && chosen != "auto") return chosen;
         switch (NativeLanguage.get())
         {
@@ -408,11 +409,18 @@ namespace THUG2Menu
         for (auto& c : wide) if (c < 32 && c) c = L' ';
         // The installed fan font uses the same single-byte Russian glyph slots
         // as its original menu strings. A locale9 tag is still unknown above.
-        auto page = NativeLanguage.get() == 9 ? 1251u : 1252u;
-        auto bytes = WideCharToMultiByte(page, WC_NO_BEST_FIT_CHARS, wide.c_str(), -1, nullptr, 0, "?", nullptr);
+        const auto page = NativeLanguage.get() == 9 ? 1251u : 1252u;
+        const DWORD flags = page == 1251u ? 0 : WC_NO_BEST_FIT_CHARS;
+        if (page == 1251u)
+        {
+            // The Cyrillic font can display the plain Latin forms of localized text.
+            for (size_t i = wide.find(L'\u00DF'); i != std::wstring::npos; i = wide.find(L'\u00DF', i + 2))
+                wide.replace(i, 1, L"ss");
+        }
+        auto bytes = WideCharToMultiByte(page, flags, wide.c_str(), -1, nullptr, 0, "?", nullptr);
         if (bytes <= 0 || bytes > 4096) return "?";
         std::string result(size_t(bytes), '\0');
-        if (!WideCharToMultiByte(page, WC_NO_BEST_FIT_CHARS, wide.c_str(), -1, result.data(), bytes, "?", nullptr)) return "?";
+        if (!WideCharToMultiByte(page, flags, wide.c_str(), -1, result.data(), bytes, "?", nullptr)) return "?";
         result.pop_back();
         return result;
     }
@@ -443,7 +451,15 @@ namespace THUG2Menu
         bool pause = false;
     };
     enum class Kind { Link, Previous, Next, Row, Info, Back };
-    struct Item { Kind kind; size_t index = 0; bool enabled = true; std::string label, value, description; uint32_t id = 0; };
+    struct Item
+    {
+        Kind kind;
+        size_t index = 0;
+        bool enabled = true;
+        std::string label, value, description;
+        uint32_t id = 0;
+        const RWGTAMenu::Row* displayedRow = nullptr;
+    };
     struct Context
     {
         RWGTAMenu::Model model;
@@ -457,8 +473,6 @@ namespace THUG2Menu
         std::vector<std::string> helpLines;     // the selected row's help, one line at a time
         size_t helpLine = 0;
         ULONGLONG helpTime = 0;                 // when the next help line is due
-        float titleScale = 0.0f;                // the pause title's scale, set once titleTime has passed
-        ULONGLONG titleTime = 0;
     };
     inline std::unique_ptr<Host> host;
     inline std::shared_ptr<Context> context;
@@ -612,17 +626,22 @@ namespace THUG2Menu
     }
     // Startup values of the restart settings: the restart line shows while one of them differs
     inline std::map<std::pair<HMODULE, std::string>, std::string> restartBaseline;
-    inline bool RestartPending(const RWGTAMenu::Model& model)
+    inline bool RestartPending(const std::shared_ptr<Context>& owner)
     {
         bool pending = false;
-        for (const auto& page : model.Pages())
+        for (const auto& page : owner->model.Pages())
         {
             for (const auto& row : page.rows)
             {
                 if (!row.plugin || !row.setting || row.setting->apply != "restart" || !row.setting->HasValue())
                     continue;
-                auto value = OtherPlugins::Get(*row.plugin, *row.setting);
-                auto baseline = restartBaseline.emplace(std::make_pair(row.plugin->module, row.setting->id), value).first;
+                // The getter can close the native menu and release the model's row storage.
+                const auto plugin = *row.plugin;
+                const auto setting = *row.setting;
+                auto value = OtherPlugins::Get(plugin, setting);
+                if (!Current(owner))
+                    return false;
+                auto baseline = restartBaseline.emplace(std::make_pair(plugin.module, setting.id), value).first;
                 pending |= !asi_settings::text::IEquals(baseline->second, value);
             }
         }
@@ -639,6 +658,7 @@ namespace THUG2Menu
             LogOnce("private page lost native focus");
             return false;
         }
+        RWGTAMenu::Model::Changed().exchange(false);
         std::vector<Item> items;
         std::string heading = owner->model.Text("menu.plugins");
         if (owner->page == SIZE_MAX)
@@ -688,8 +708,9 @@ namespace THUG2Menu
                 }
                 auto description = owner->model.Help(row);
                 items.push_back({ Kind::Row, i, enabled, std::move(label), std::move(value), std::move(description) });
+                items.back().displayedRow = rows[i];
             }
-            if (RestartPending(owner->model))
+            if (RestartPending(owner))
                 items.push_back({ Kind::Info, 0, false, owner->model.Text("menu.restartwarning") });
         }
         items.push_back({ Kind::Back, 0, true, owner->model.Text("menu.back") });
@@ -716,9 +737,8 @@ namespace THUG2Menu
         Parameters root;
         root.Name("menu_id", privateAnchor);
         root.Name("vmenu_id", privateMenu);
-        const auto title = EscapeNativeText(NativeText(heading), true);
-        root.Text("title", title);
-        root.Number("title_scale", std::min(2.0f, 44.0f / std::max(1.0f, static_cast<float>(title.size()))));
+        const auto title = NativeText(heading);
+        const auto escapedTitle = EscapeNativeText(title, true);
         root.Flag("no_helper_text");
         if (owner->pause)
         {
@@ -727,13 +747,11 @@ namespace THUG2Menu
         }
         else
         {
+            root.Text("title", escapedTitle);
+            root.Number("title_scale", std::min(2.0f, 44.0f / std::max(1.0f, static_cast<float>(escapedTitle.size()))));
             root.XY("dims", 300, 252);
         }
         auto issued = Run(owner->pause ? "make_new_roundbar_menu" : "make_new_themed_sub_menu", root);
-        // The pause title (scale 1.9) grows to the left of its right edge: it is shrunk to stay inside the 4:3 frame
-        // once its slide-in morph, which keeps the scale it started with, has ended
-        owner->titleScale = owner->pause ? 1.9f * std::min(1.0f, 23.0f / std::max(1.0f, static_cast<float>(title.size()))) : 0.0f;
-        owner->titleTime = GetTickCount64() + 400;
         // The themed title script owns a parts container outside the menu itself.
         // Its current anchor alias is the lifetime/cleanup root for both styles.
         owner->anchor.Find(Checksum("current_menu_anchor"));
@@ -744,6 +762,24 @@ namespace THUG2Menu
             LogOnce(!issued ? "private page factory unavailable" : !owner->anchor.Get() ? "private page anchor missing" : !owner->menu.Get() ? "private page menu missing" : !Current(owner) ? "private page aliases mismatch" : "private page menu type mismatch");
             return false;
         }
+        if (owner->pause)
+        {
+            // Keep the right-aligned title inside the frame as settings rebuild the page.
+            Extent extent;
+            if (!Measure(title, extent, Checksum("testtitle")))
+                return false;
+            Parameters subtitle;
+            subtitle.Text("title", escapedTitle);
+            subtitle.Number("title_scale", std::min(1.9f, 560.0f / std::max(1.0f, extent.width)));
+            if (!Run("build_theme_sub_title", subtitle) || !Current(owner))
+                return false;
+            Parameters position;
+            position.Name("id", "title_text");
+            position.XY("pos", 600.0f, 40.0f);
+            position.Number("time", 0.0f);
+            if (!Function("DoScreenElementMorph", position) || !Current(owner))
+                return false;
+        }
         owner->items = std::move(items);
         owner->selected = std::min(owner->selected, owner->items.size() - 1);
         for (size_t i = 0; i < owner->items.size(); ++i)
@@ -753,16 +789,16 @@ namespace THUG2Menu
             item.id = Checksum(idText.c_str());
             // Measured in the font's own size; the rows draw it larger, so the text column is kept inside the bar
             const auto width = owner->pause ? 360.0f : 280.0f;
-            // A notice line is shrunk evenly to fit instead of being shortened
-            auto fitted = item.kind == Kind::Info ? NativeText(item.label) : Fit(item.label, item.value, width);
+            auto fitted = NativeText(item.label);
+            if (!item.value.empty())
+                fitted += ": " + NativeText(item.value);
             Extent extent;
             if (!Measure(fitted, extent))
             {
                 LogOnce("private row metrics unavailable");
                 return false;
             }
-            auto xScale = extent.width > width ? width / extent.width : 1.0f;
-            auto yScale = item.kind == Kind::Info ? xScale : 1.0f;
+            const auto rowScale = extent.width > width ? width / extent.width : 1.0f;
             // The stock row keeps its own focus visuals; input is taken in Intercept
             Parameters row;
             row.Name("id", item.id);
@@ -790,7 +826,7 @@ namespace THUG2Menu
             }
             Parameters scale;
             scale.Name("id", item.id);
-            scale.XY("scale", xScale, yScale);
+            scale.XY("scale", rowScale, rowScale);
             if (!Properties(scale))
             {
                 LogOnce("private row scale rejected");
@@ -823,7 +859,6 @@ namespace THUG2Menu
             LogOnce("private initial focus rejected");
             return false;
         }
-        RWGTAMenu::Model::Changed() = false;
         owner->constructing = false;
         return true;
     }
@@ -1020,7 +1055,12 @@ namespace THUG2Menu
         else
         {
             auto rows = owner->model.VisibleRows(owner->page);
-            if (!Current(owner) || item.index >= rows.size()) return;
+            if (!Current(owner)) return;
+            if (item.index >= rows.size() || rows[item.index] != item.displayedRow)
+            {
+                if (!Build(owner)) Cleanup(owner, true);
+                return;
+            }
             auto row = *rows[item.index];
             if (!owner->model.Enabled(row, owner->pause) || !Current(owner)) return;
             if (!accept && row.kind != RWGTAMenu::RowKind::Setting && row.kind != RWGTAMenu::RowKind::Preset) return;
@@ -1040,6 +1080,13 @@ namespace THUG2Menu
         auto result = taskHook.call<int>(task);
         --taskDepth;
         if (!ready || taskDepth || draining) return result;
+        if (registered && !THUG2Display::StartupMoviesFinished.load(std::memory_order_relaxed))
+        {
+            Weak menu;
+            menu.Find(Checksum("current_menu_anchor"));
+            if (menu.Get())
+                THUG2Display::StartupMoviesFinished.store(true, std::memory_order_relaxed);
+        }
         draining = true;
         for (size_t n = 0; !pending.empty() && n < 32; ++n)
         {
@@ -1084,23 +1131,7 @@ namespace THUG2Menu
             }
         }
         if (owner && Current(owner) && !Modal())
-        {
             NextHelpLine(owner);
-            if (owner->titleScale > 0.0f && GetTickCount64() >= owner->titleTime)
-            {
-                Weak title;
-                title.Find(Checksum("title_text"));
-                if (title.Get())
-                {
-                    Parameters scale;
-                    scale.Name("id", "title_text");
-                    scale.Number("scale", owner->titleScale);
-                    scale.Number("time", 0.0f);
-                    Function("DoScreenElementMorph", scale);
-                }
-                owner->titleScale = 0.0f;
-            }
-        }
         if (updateFrame) updateFrame();
         if (owner && owner->returnPending && !Modal()) Cleanup(owner, true);
         else if (owner && !Current(owner) && (!Modal() || !Owned(owner))) Cleanup(owner, false);

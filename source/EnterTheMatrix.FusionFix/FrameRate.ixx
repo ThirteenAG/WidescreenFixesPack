@@ -13,11 +13,7 @@ export namespace MatrixFrameRate
 
     void Init()
     {
-        Requested.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
-        FixSettings().OnChange("MAIN.FPSLimit", []()
-        {
-            Requested.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
-        });
+        WatchMatrixNumber("MAIN.FPSLimit", Requested);
     }
 
     void Frame(HWND window)
@@ -25,7 +21,7 @@ export namespace MatrixFrameRate
         const int requested = Requested.load(std::memory_order_relaxed);
         if (requested >= 0)
         {
-            D3D9Options::frameLimit = requested ? std::clamp(requested, 10, 1000) : 0;
+            D3D9Options::frameLimit = requested ? std::clamp(requested, 30, 1000) : 0;
             return;
         }
         static HMONITOR previous = nullptr;

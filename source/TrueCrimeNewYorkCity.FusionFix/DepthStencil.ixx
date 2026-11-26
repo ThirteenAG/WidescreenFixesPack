@@ -23,8 +23,9 @@ void InitDepthStencil()
     {
         UINT& Width = *(UINT*)(regs.esp + 0x38);
         UINT& Height = *(UINT*)(regs.esp + 0x3C);
-        D3DFORMAT& Format = *(D3DFORMAT*)(regs.esp + 0x10);
-        D3DMULTISAMPLE_TYPE MultiSample = (D3DMULTISAMPLE_TYPE)(regs.eax);
+        const auto multisample = static_cast<D3DMULTISAMPLE_TYPE>(regs.eax);
+        if (multisample != D3DMULTISAMPLE_NONE)
+            return;
 
         // Get render target size to match depth texture size
         IDirect3DSurface8* rt = nullptr;
@@ -33,14 +34,12 @@ void InitDepthStencil()
         D3DSURFACE_DESC rtDesc{};
         const HRESULT result = rt->GetDesc(&rtDesc);
         rt->Release();
-        if (FAILED(result))
+        if (FAILED(result) || rtDesc.MultiSampleType != D3DMULTISAMPLE_NONE)
             return;
 
         // Override Width/Height with render target size
         Width = rtDesc.Width;
         Height = rtDesc.Height;
-
-        //regs.eax = Device()->CreateDepthStencilSurface(Width, Height, Format, MultiSample, (IDirect3DSurface8**)(regs.ecx));
 
         IDirect3D8* pD3D8 = nullptr;
         if (FAILED(Device()->GetDirect3D(&pD3D8)) || !pD3D8)

@@ -159,7 +159,12 @@
         {
           "value": "32:9"
         }
-      ]
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.FOVFactor",
@@ -179,7 +184,7 @@
       "id": "MAIN.FPSLimit",
       "type": "int",
       "default": 60,
-      "min": -1,
+      "min": 30,
       "max": 1000,
       "unit": "fps",
       "special": [

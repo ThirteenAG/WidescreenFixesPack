@@ -18,59 +18,89 @@ export namespace Driv3rPad
 {
     SafetyHookMid initHook, vibrationHook;
     std::atomic<bool> dirty{ true }, stopRequested{ true };
-    std::array<IDirectInputDevice8A*, 8> devices{};
-    std::array<IDirectInputEffect*, 8> effects{};
+    struct ControllerState
+    {
+        IDirectInputDevice8A* device = nullptr;
+        DWORD appliedDeadzone = MAXDWORD;
+        IDirectInputEffect* effect = nullptr;
+        bool pendingStop = false;
+    };
+    std::array<ControllerState, 8> controllers{};
     bool wasBlocked = false;
 
     DWORD Deadzone()
     {
-        const float value = FixSettings().Float("MAIN.GamepadDeadzone");
+        const float value = Driv3rSettings::GamepadDeadzone.load();
         return static_cast<DWORD>(std::lround((std::isfinite(value) ? std::clamp(value, 0.0f, 0.5f) : 0.15f) * 10000));
     }
     bool BlockVibration()
     {
-        return !FixSettings().Bool("MAIN.Vibration") || BlockGameInput;
+        return !Driv3rSettings::Vibration.load() || BlockGameInput;
     }
+    void UpdateEffect(ControllerState& controller, IDirectInputEffect* effect, bool request, bool blocked)
+    {
+        if (controller.effect != effect)
+        {
+            controller.effect = effect;
+            controller.pendingStop = blocked;
+        }
+        controller.pendingStop |= request;
+        if (effect && controller.pendingStop && SUCCEEDED(effect->Stop()))
+            controller.pendingStop = false;
+    }
+
     void StopEffects()
     {
         const uintptr_t manager = InputManager;
-        if (!manager || !*reinterpret_cast<const uint8_t*>(manager + 4)) return;
+        if (!manager || !*reinterpret_cast<const uint8_t*>(manager + 4))
+        {
+            stopRequested.store(true);
+            return;
+        }
         auto* joystick = reinterpret_cast<uint8_t*>(manager + 588);
-        for (size_t index = 0; index < effects.size(); ++index)
+        const bool blocked = BlockVibration();
+        for (size_t index = 0; index < controllers.size(); ++index)
         {
             auto* effect = *reinterpret_cast<IDirectInputEffect**>(joystick + index * 144 + 4);
-            if (effect) effect->Stop();
+            UpdateEffect(controllers[index], effect, true, blocked);
         }
     }
+
     void Frame()
     {
         const uintptr_t manager = InputManager;
-        if (!manager || !*reinterpret_cast<const uint8_t*>(manager + 4)) return;
+        if (!manager || !*reinterpret_cast<const uint8_t*>(manager + 4))
+            return;
         auto* joystick = reinterpret_cast<uint8_t*>(manager + 588);
         const bool update = dirty.exchange(false), blocked = BlockVibration();
         const bool stop = stopRequested.exchange(false) || (blocked && !wasBlocked);
         const DWORD deadzone = Deadzone();
         *reinterpret_cast<DWORD*>(joystick + 1380) = deadzone;
-        for (size_t index = 0; index < devices.size(); ++index)
+        for (size_t index = 0; index < controllers.size(); ++index)
         {
+            auto& controller = controllers[index];
             auto* device = *reinterpret_cast<IDirectInputDevice8A**>(joystick + index * 144);
             auto* effect = *reinterpret_cast<IDirectInputEffect**>(joystick + index * 144 + 4);
-            if (device && (update || devices[index] != device))
+            if (update || controller.device != device)
+            {
+                controller.device = device;
+                controller.appliedDeadzone = MAXDWORD;
+            }
+            if (device && controller.appliedDeadzone != deadzone)
             {
                 DIPROPDWORD property{};
                 property.diph.dwSize = sizeof(property);
                 property.diph.dwHeaderSize = sizeof(property.diph);
                 property.diph.dwHow = DIPH_DEVICE;
                 property.dwData = deadzone;
-                if (FAILED(device->SetProperty(DIPROP_DEADZONE, &property.diph)))
-                    OutputDebugStringA("Driv3r: native controller deadzone update failed.\n");
+                if (SUCCEEDED(device->SetProperty(DIPROP_DEADZONE, &property.diph)))
+                    controller.appliedDeadzone = deadzone;
             }
-            if (effect && blocked && (stop || effects[index] != effect)) effect->Stop();
-            devices[index] = device;
-            effects[index] = effect;
+            UpdateEffect(controller, effect, blocked && stop, blocked);
         }
         wasBlocked = blocked;
     }
+
     void Install()
     {
         auto init = hook::pattern("C7 86 64 05 00 00 C4 09 00 00 8B 0F 57 FF 51 10");

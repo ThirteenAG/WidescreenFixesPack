@@ -1208,7 +1208,7 @@ export namespace FarCryMenu
     {
         if (!Snapshot(owner, "options") || Field<void*>(owner->native.ui, focusOffset) != owner->native.entry) return;
         const auto serial = owner->serial;
-        auto language = FixSettings().String("MAIN.TextLanguage");
+        auto language = FixSettings().Get("MAIN.TextLanguage");
         if (language != "en" && language != "fr" && language != "de" && language != "it" && language != "es")
             language = NativeLanguage(owner->native.script);
         { Depth scope(foreignDepth); owner->model.OpenPlugins(hostModule, language, 5, {}, true); }
@@ -1347,13 +1347,24 @@ export namespace FarCryMenu
         else if (item.kind == ItemKind::Row)
         {
             navigation = false;
-            if (!item.enabled || (!accept && item.row.kind != RWGTAMenu::RowKind::Setting &&
+            if (!owner->page || !item.enabled || (!accept && item.row.kind != RWGTAMenu::RowKind::Setting &&
                 item.row.kind != RWGTAMenu::RowKind::Preset)) return;
+            const auto rowOffset = owner->rowOffset;
+            const auto current = [&]()
+            {
+                return Available(owner) && owner->serial == action.serial && owner->page == oldPage &&
+                    owner->rowOffset == rowOffset && owner->native.Selected(action.index) && Snapshot(owner, "private");
+            };
+            std::vector<const RWGTAMenu::Row*> rows;
+            { Depth scope(foreignDepth); rows = owner->model.VisibleRows(*oldPage); }
+            const auto index = rowOffset + static_cast<size_t>(action.index);
+            if (!current() || index >= rows.size()) return;
+            const auto row = *rows[index];
+            if (row.plugin != item.row.plugin || row.setting != item.row.setting || row.kind != item.row.kind) return;
             bool enabled;
-            { Depth scope(foreignDepth); enabled = owner->model.Enabled(item.row, owner->pause); }
-            if (!enabled || !Available(owner) || owner->serial != action.serial ||
-                !owner->native.Selected(action.index) || !Snapshot(owner, "private")) return;
-            { Depth scope(foreignDepth); owner->model.Change(item.row, direction, owner->pause); }
+            { Depth scope(foreignDepth); enabled = owner->model.Enabled(row, owner->pause); }
+            if (!enabled || !current()) return;
+            { Depth scope(foreignDepth); owner->model.Change(row, direction, owner->pause); }
             if (!Available(owner) || owner->serial != action.serial || !Snapshot(owner, "private")) return;
         }
         else return;
@@ -1459,7 +1470,8 @@ export namespace FarCryMenu
 {
     inline safetyhook::InlineHook updateHook, drawHook, inputHook, brokerHook, releaseHook, destroyHook,
         scriptReleaseHook, fontReleaseHook, switchHook;
-    inline bool ready{}, preparing{}, bridgeReady{};
+    inline std::atomic<bool> ready{};
+    inline bool preparing{}, bridgeReady{};
     inline unsigned releasing{}, scriptClosing{}, fontClosing{};
     inline void* frameUI{};
     inline void* bridgeScript{};
@@ -1776,5 +1788,6 @@ export namespace FarCryMenu
         fontReleaseHook = safetyhook::create_inline(fontRelease, &FontReleased);
         switchHook = safetyhook::create_inline(canSwitch, &CanSwitch);
         ready = true;
+        FixSettings().Refresh("MAIN.CheckForUpdates");
     }
 }

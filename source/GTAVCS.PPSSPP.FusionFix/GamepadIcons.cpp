@@ -1,8 +1,6 @@
 #include "Game.hpp"
-#include "../Shared/Console/PortableCfg.hpp"
 #include <cstdio>
 namespace icons {
-using namespace console::portable;
 namespace {
 struct Raster { void* displayList; uint8_t* data; int16_t stride; uint8_t width, height, depth, levels; uint16_t flags; };
 struct Texture { Raster* raster; void* dictionary; void* links[2]; char name[32], mask[32]; };
@@ -14,7 +12,14 @@ static_assert(sizeof(Raster) == 16 && sizeof(Texture) == 80);
 constexpr const char* sets[] = {"PSP", "360", "XBO", "PS3", "PS4", "PS5", "SWI", "DEK", "Auto"};
 constexpr unsigned SetCount = sizeof(sets) / sizeof(*sets);
 constexpr auto folder = "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/icons/";
-struct Icon { const char* name; Texture* texture; uint8_t* data; uint32_t backup, size, markAt; bool saved; uint8_t mark[16]; };
+struct Icon
+{
+    const char* name;
+    uintptr_t rasterIdentity;
+    uint32_t backup, size, markAt, appliedHash, revision;
+    bool saved;
+    uint8_t mark[16];
+};
 Icon icons[] = {
     {"btn_down_PSP"}, {"btn_up_PSP"}, {"btn_cross_PSP"}, {"btn_circle_PSP"}, {"btn_left_PSP"}, {"btn_right_PSP"},
     {"btn_square_PSP"}, {"btn_triangle_PSP"}, {"fe_controller_new"}, {"fe_arrows_onfoot_layout1"},
@@ -25,9 +30,10 @@ constexpr unsigned BackupBytes = 128 * 1024, SetBytes = 96 * 1024;
 alignas(64) uint8_t backup[BackupBytes];
 uint32_t backupUsed;
 alignas(64) uint8_t setData[SetBytes];
-uint32_t setSize;
-unsigned selected = 8, loaded = ~0u;
-bool installed;
+uint32_t setSize, setHash, setRevision;
+unsigned selected = 8, loaded = ~0u, lastPoll;
+ScePspDateTime loadedTime{};
+bool installed, reported;
 
 // Set file entry: name, raster layout (log2 width/height, depth, levels, stride,
 // flags), raster byte count and runs {offset, length, bytes} that differ from the
@@ -46,31 +52,26 @@ uint32_t Bytes(const Raster& r) {
     else if (format & 0x20) bytes += 256 * 4;
     return bytes;
 }
-bool LoadSet(unsigned set) {
-    if (loaded == set) return setSize != 0;
-    loaded = set; setSize = 0;
-    if (!set) return false;
-    char file[128];
-    std::snprintf(file, sizeof(file), "%s%s.bin", folder, sets[set]);
-    const SceUID handle = sceIoOpen(file, PSP_O_RDONLY, 0777);
-    if (handle < 0) return false;
-    const int count = sceIoRead(handle, setData, sizeof(setData));
-    sceIoClose(handle);
-    if (count > 0) setSize = uint32_t(count);
-#ifndef NDEBUG
-    logger.WriteF("Icon set %s: %d bytes", sets[set], count);
-#endif
-    return setSize != 0;
+uint32_t Hash(const uint8_t* data, uint32_t bytes)
+{
+    uint32_t hash = 2166136261u;
+    for (uint32_t i = 0; i < bytes; ++i) hash = (hash ^ data[i]) * 16777619u;
+    return hash;
 }
+
+void PollSet();
+
 // Walks one entry's runs; returns the entry size or 0 when the file is malformed.
 uint32_t Size(const Entry* entry, uint32_t at) {
     uint32_t size = sizeof(Entry);
+    if (entry->bytes < 16 || entry->bytes > SetBytes || entry->runs > (setSize - at - size) / sizeof(Run)) return 0;
     for (uint32_t i = 0; i < entry->runs; ++i) {
-        if (at + size + sizeof(Run) > setSize) return 0;
+        if (sizeof(Run) > setSize - at - size) return 0;
         const auto run = reinterpret_cast<const Run*>(setData + at + size);
         if (run->offset > entry->bytes || run->length > entry->bytes - run->offset) return 0;
-        size += (sizeof(Run) + run->length + 3) & ~3u;
-        if (at + size > setSize) return 0;
+        const auto advance = (sizeof(Run) + run->length + 3) & ~3u;
+        if (advance > setSize - at - size) return 0;
+        size += advance;
     }
     return size;
 }
@@ -84,94 +85,134 @@ const Entry* Find(const char* name) {
     }
     return nullptr;
 }
-bool SameName(const char* a, const char* b) {
-    for (unsigned i = 0; i < 32; ++i) {
-        char x = a[i], y = b[i];
-        if (x >= 'A' && x <= 'Z') x = char(x - 'A' + 'a');
-        if (y >= 'A' && y <= 'Z') y = char(y - 'A' + 'a');
-        if (x != y) return false;
-        if (!x) return true;
-    }
-    return true;
-}
-void Apply(Icon& icon) {
-    Texture* texture = icon.texture;
-    if (!texture || !texture->raster || !texture->raster->data || !icon.saved) return;
-    // A dictionary can be freed without the display-list callback (menu
-    // unload while I/O is suspended). Only write a texture that still is the
-    // one this icon backed up.
-    if (texture->raster->data != icon.data || !SameName(texture->name, icon.name)) {
-        icon.texture = nullptr;
+void PollSet()
+{
+    const unsigned set = selected == 8 ? 1 : selected;
+    const unsigned now = sceKernelGetSystemTimeLow();
+    const bool changed = loaded != set;
+    if (!changed && (!set || now - lastPoll < 1000000u)) return;
+    lastPoll = now;
+    loaded = set;
+    const bool previouslyValid = setSize != 0;
+    const uint32_t previousSize = setSize;
+    if (!set)
+    {
+        setSize = 0;
+        ++setRevision;
+        reported = false;
         return;
     }
-    Raster& raster = *texture->raster;
-    std::memcpy(raster.data, backup + icon.backup, icon.size);
-    if (selected && LoadSet(selected == 8 ? 1 : selected))
-        if (const Entry* entry = Find(icon.name))
-            if (entry->width == raster.width && entry->height == raster.height && entry->depth == raster.depth &&
-                entry->levels == raster.levels && entry->stride == raster.stride && entry->flags == raster.flags &&
-                entry->bytes == icon.size) {
-                auto at = reinterpret_cast<const uint8_t*>(entry + 1);
-                for (uint32_t i = 0; i < entry->runs; ++i) {
-                    const auto run = reinterpret_cast<const Run*>(at);
-                    std::memcpy(raster.data + run->offset, at + sizeof(Run), run->length);
-                    at += (sizeof(Run) + run->length + 3) & ~3u;
+    char path[128];
+    std::snprintf(path, sizeof(path), "%s%s.bin", folder, sets[set]);
+    SceIoStat stat{};
+    const bool present = sceIoGetstat(path, &stat) >= 0 && stat.st_size > 0 && stat.st_size <= sizeof(setData);
+    if (present && !changed && previouslyValid && stat.st_size == previousSize &&
+        !std::memcmp(&loadedTime, &stat.sce_st_mtime, sizeof(loadedTime))) return;
+    setSize = 0;
+    if (present)
+    {
+        const SceUID file = sceIoOpen(path, PSP_O_RDONLY, 0777);
+        if (file >= 0)
+        {
+            const int bytes = sceIoRead(file, setData, unsigned(stat.st_size));
+            const int closed = sceIoClose(file);
+            if (bytes == stat.st_size && closed >= 0)
+            {
+                setSize = unsigned(bytes);
+                for (uint32_t at = 0; at < setSize;)
+                {
+                    if (setSize - at < sizeof(Entry))
+                    {
+                        setSize = 0;
+                        break;
+                    }
+                    const auto* entry = reinterpret_cast<const Entry*>(setData + at);
+                    const uint32_t length = Size(entry, at);
+                    if (!length)
+                    {
+                        setSize = 0;
+                        break;
+                    }
+                    at += length;
                 }
+                loadedTime = stat.sce_st_mtime;
             }
+        }
+    }
+    const uint32_t hash = setSize ? Hash(setData, setSize) : 0;
+    if (changed || previouslyValid != (setSize != 0) || setHash != hash) ++setRevision;
+    setHash = hash;
+    if (!setSize && !reported)
+        logger.Write("Controller icon pack unavailable. Reinstall the selected pack.\n");
+    reported = !setSize;
+}
+
+void Apply(Icon& icon, Raster& raster)
+{
+    std::memcpy(raster.data, backup + icon.backup, icon.size);
+    if (const Entry* entry = Find(icon.name))
+        if (entry->width == raster.width && entry->height == raster.height && entry->depth == raster.depth &&
+            entry->levels == raster.levels && entry->stride == raster.stride && entry->flags == raster.flags &&
+            entry->bytes == icon.size)
+        {
+            auto at = reinterpret_cast<const uint8_t*>(entry + 1);
+            for (uint32_t i = 0; i < entry->runs; ++i)
+            {
+                const auto* run = reinterpret_cast<const Run*>(at);
+                std::memcpy(raster.data + run->offset, at + sizeof(Run), run->length);
+                at += (sizeof(Run) + run->length + 3) & ~3u;
+            }
+        }
     sceKernelDcacheWritebackRange(raster.data, icon.size);
-    // Remember bytes that differ from the original so a reload at the same address is noticed.
+    icon.appliedHash = Hash(raster.data, icon.size);
     icon.markAt = 0;
     for (uint32_t at = 0; at + sizeof(icon.mark) <= icon.size; at += sizeof(icon.mark))
-        if (std::memcmp(raster.data + at, backup + icon.backup + at, sizeof(icon.mark))) { icon.markAt = at; break; }
+        if (std::memcmp(raster.data + at, backup + icon.backup + at, sizeof(icon.mark)))
+        {
+            icon.markAt = at;
+            break;
+        }
     std::memcpy(icon.mark, raster.data + icon.markAt, sizeof(icon.mark));
+    icon.rasterIdentity = reinterpret_cast<uintptr_t>(raster.data);
+    icon.revision = setRevision;
 }
-void ApplyAll() { for (auto& icon : icons) Apply(icon); }
 
-SafetyMipsInline readTexture, destroyDisplayList;
+SafetyMipsInline readTexture;
 injector::hook_back<void(uintptr_t, uint8_t)> controller;
 injector::game_fn<uint8_t*(int)> getPad;
 injector::game_fn<uint8_t(uint8_t*)> guiLeft;
 injector::game_fn<uint8_t(uint8_t*)> guiRight;
 
-Texture* ReadTexture(const char* name, uintptr_t mask, uintptr_t flags) {
-    auto texture = readTexture.call<Texture*>(name, mask, flags);
+Texture* ReadTexture(const char* name, uintptr_t mask, uintptr_t flags)
+{
+    auto* texture = readTexture.call<Texture*>(name, mask, flags);
     if (!name || !texture || !texture->raster || !texture->raster->data) return texture;
-    for (auto& icon : icons) if (std::strcmp(name, icon.name) == 0) {
-        const Raster& r = *texture->raster;
-        // The game looks textures up every frame: act only on a new or reloaded raster.
-        if (icon.saved && icon.texture == texture && icon.data == r.data && !std::memcmp(r.data + icon.markAt, icon.mark, sizeof(icon.mark))) break;
-        const uint32_t size = Bytes(r);
-#ifndef NDEBUG
-        logger.WriteF("Icon %s raster %ux%u depth %u levels %u stride %d flags %04x bytes %u data %08x",
-                      name, 1u << (r.width & 63), 1u << (r.height & 63), r.depth, r.levels, r.stride, r.flags,
-                      unsigned(size), unsigned(uintptr_t(r.data)));
-#endif
-        if (!size) break;
-        // Keep the original artwork: the first load reserves its bounded backup slot.
-        if (!icon.saved) {
-            if (backupUsed + size > BackupBytes) break;
-            icon.backup = backupUsed; icon.size = size; backupUsed += (size + 63) & ~63u;
-        } else if (icon.size != size) break;
-        std::memcpy(backup + icon.backup, r.data, size);
+    for (auto& icon : icons)
+    {
+        if (std::strcmp(name, icon.name)) continue;
+        PollSet();
+        auto& raster = *texture->raster;
+        const uint32_t size = Bytes(raster);
+        if (size < sizeof(icon.mark)) break;
+        if (icon.saved && icon.size == size && icon.revision == setRevision &&
+            icon.rasterIdentity == reinterpret_cast<uintptr_t>(raster.data) &&
+            !std::memcmp(raster.data + icon.markAt, icon.mark, sizeof(icon.mark))) break;
+        if (!icon.saved)
+        {
+            const auto reserved = (size + 63u) & ~63u;
+            if (reserved > BackupBytes - backupUsed) break;
+            icon.backup = backupUsed;
+            icon.size = size;
+            backupUsed += reserved;
+        }
+        else if (icon.size != size) break;
+        if (!icon.saved || Hash(raster.data, size) != icon.appliedHash)
+            std::memcpy(backup + icon.backup, raster.data, size);
         icon.saved = true;
-        icon.texture = texture;
-        icon.data = r.data;
-        Apply(icon);
+        Apply(icon, raster);
         break;
     }
     return texture;
-}
-Texture* DestroyDisplayList(Texture* texture, void* data) {
-    // Streaming releases a texture dictionary immediately after this callback.
-    // Remove cached pointers while their objects are still alive.
-    for (auto& icon : icons) if (icon.texture == texture) icon.texture = nullptr;
-    return destroyDisplayList.call<Texture*>(texture, data);
-}
-void Save() {
-    IniValue value[] = {{"MAIN", "GamepadIcons", {}}};
-    std::snprintf(value[0].value, sizeof(value[0].value), "%s", sets[selected]);
-    static IniWriter<> writer;
-    writer.update(vcsws::cfgPath, value, 1);
 }
 void SetController(uintptr_t object, uint8_t mode) {
     const auto pad = getPad(0);
@@ -182,9 +223,7 @@ void SetController(uintptr_t object, uint8_t mode) {
     logger.WriteF("Controller mode %u left %u right %u", unsigned(mode), pad ? guiLeft(pad) : 0, pad ? guiRight(pad) : 0);
 #endif
     if (change) {
-        selected = unsigned(int(selected) + int(SetCount) + change) % SetCount;
-        ApplyAll();
-        Save();
+        vcsws::SetMenuGamepadIcons(unsigned(int(selected) + int(SetCount) + change) % SetCount);
     }
     controller.fun(object, mode);
 }
@@ -198,15 +237,12 @@ void Install(const char* name) {
     guiRight = decltype(guiRight)(pattern.get(1, gui, -4));
     const auto read = pattern.get_first("25 28 C0 00 00 00 02 AE", -4);
     const auto set = pattern.get_first("25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00 FF 00 86 30 25 20 A0 00 ? ? ? ? 25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00 FF 00 86 30 25 20 A0 00 ? ? ? ? 25 28 C0 00 ? ? ? ? 00 00 00 00 2B 20 04 00", -4);
-    // The texture reader is the read site's call target; the display list destructor is found by its code.
-    const auto destroy = pattern.get_first("F0 FF BD 27 00 00 B0 AF 25 80 80 00 00 00 04 8E 04 00 BF AF 06 00 80 10 00 00 00 00 00 00 85 8C", 0);
-    if (!getPad || !guiLeft || !guiRight || !read || !set || !destroy)
+    if (!getPad || !guiLeft || !guiRight || !read || !set)
     {
         logger.Write("Controller icons unavailable: unsupported game code.\n");
         return;
     }
     readTexture = safetymips::create_inline(injector::GetBranchDestination(read).as_int(), ReadTexture);
-    destroyDisplayList = safetymips::create_inline(destroy, DestroyDisplayList);
     controller.fun = injector::MakeCALL(set, SetController).get();
     installed = true;
 }
@@ -220,7 +256,5 @@ unsigned GamepadIconSet() { return icons::selected; }
 void SelectGamepadIcons(unsigned set) {
     if (!icons::installed || set >= icons::SetCount || set == icons::selected) return;
     icons::selected = set;
-    icons::ApplyAll();
-    icons::Save();
 }
 }

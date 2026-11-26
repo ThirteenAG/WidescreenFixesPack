@@ -32,7 +32,7 @@ namespace OnFoot
 {
     int32_t PendingMouseX = 0; // since the player controller last turned the player
     int32_t PendingMouseY = 0;
-    int32_t MouseY = 0; // for its aim, after its turn
+    float AimRadians = 0.0f; // for its aim, after its turn
     std::chrono::steady_clock::time_point LastUpdate = {};
 }
 
@@ -133,7 +133,7 @@ void UpdateOrbit(LookAround* owner)
     const float dt = std::clamp(elapsed, 0.0f, 0.1f);
     const float stickX = GetStickAxis(Keymap::FootLookLeftRight);
     const float stickY = GetStickAxis(Keymap::FootLookUpDown);
-    const float invert = FixSettings().Bool("CAMERA.InvertLook") ? -1.0f : 1.0f;
+    const float invert = Driv3rSettings::InvertLook.load() ? -1.0f : 1.0f;
 
     Orbit::HasInput = mouseX != 0 || mouseY != 0 || stickX != 0.0f || stickY != 0.0f;
     if (Orbit::HasInput)
@@ -141,22 +141,24 @@ void UpdateOrbit(LookAround* owner)
         Orbit::IdleTimer = 0.0f;
         Orbit::Returning = false;
 
-        const float yawDelta = mouseX * FixSettings().Float("MAIN.MouseSensitivity") * MouseRadiansPerCount + stickX * FixSettings().Float("MAIN.GamepadCameraSpeed") * StickRadiansPerSecond * dt;
-        const float pitchDelta = mouseY * FixSettings().Float("MAIN.MouseSensitivity") * MouseRadiansPerCount + stickY * FixSettings().Float("MAIN.GamepadCameraSpeed") * StickRadiansPerSecond * dt;
+        const float mouseScale = Driv3rSettings::MouseSensitivity.load() * MouseRadiansPerCount;
+        const float stickScale = Driv3rSettings::GamepadCameraSpeed.load() * StickRadiansPerSecond * dt;
+        const float yawDelta = mouseX * mouseScale + stickX * stickScale;
+        const float pitchDelta = mouseY * mouseScale + stickY * stickScale;
         Orbit::Yaw = std::remainder(Orbit::Yaw - yawDelta, 2.0f * Pi);
         Orbit::Pitch = std::clamp(Orbit::Pitch + pitchDelta * invert, -Pi / 2.0f, Pi / 2.0f);
     }
     else
     {
         Orbit::IdleTimer += dt;
-        if (Orbit::IdleTimer >= FixSettings().Float("CAMERA.CameraReturnTimeout"))
+        if (Orbit::IdleTimer >= Driv3rSettings::CameraReturnTimeout.load())
             Orbit::Returning = true;
     }
 
     if (Orbit::Returning)
     {
         // yaw stays within [-pi, pi], so this takes the short way back
-        const float blend = 1.0f - std::exp(-FixSettings().Float("CAMERA.CameraReturnSpeed") * dt);
+        const float blend = 1.0f - std::exp(-Driv3rSettings::CameraReturnSpeed.load() * dt);
         Orbit::Yaw -= Orbit::Yaw * blend;
         Orbit::Pitch -= Orbit::Pitch * blend;
 
@@ -223,7 +225,7 @@ public:
         WFP::onInitEventAsync() += []()
         {
 
-            Orbit::Enabled = FixSettings().Bool("CAMERA.Enable") != 0;
+            Orbit::Enabled = Driv3rSettings::Read("CAMERA.Enable", true);
 
             //mouse movement, right after the input devices are read (see Mouse.ixx)
             auto pattern = hook::pattern("E8 ? ? ? ? 57 8D 46 14 E8");
@@ -260,9 +262,10 @@ public:
 
                 const int32_t mouseX = std::exchange(OnFoot::PendingMouseX, 0);
                 const int32_t mouseY = std::exchange(OnFoot::PendingMouseY, 0);
-                OnFoot::MouseY = stale ? 0 : mouseY;
+                const float mouseScale = stale ? 0.0f : Driv3rSettings::MouseSensitivity.load() * MouseRadiansPerCount;
+                OnFoot::AimRadians = mouseY * mouseScale;
 
-                *reinterpret_cast<float*>(regs.esi + 0x2C) = stale ? 0.0f : mouseX * FixSettings().Float("MAIN.MouseSensitivity") * MouseRadiansPerCount / TurnPerLook;
+                *reinterpret_cast<float*>(regs.esi + 0x2C) = mouseX * mouseScale / TurnPerLook;
             });
 
             pattern = hook::pattern("8B 4E 14 DD D8 D9 46 30 8B 11 D8 0D ? ? ? ? 51 D9 1C 24 FF 92 64 01 00 00");
@@ -271,7 +274,7 @@ public:
             static auto OnFootAimHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
             {
                 if (!RawMouseEnabled) return;
-                *reinterpret_cast<float*>(regs.esi + 0x30) = OnFoot::MouseY * FixSettings().Float("MAIN.MouseSensitivity") * MouseRadiansPerCount / AimPerLook;
+                *reinterpret_cast<float*>(regs.esi + 0x30) = OnFoot::AimRadians / AimPerLook;
             });
 
             if (!Orbit::Enabled)

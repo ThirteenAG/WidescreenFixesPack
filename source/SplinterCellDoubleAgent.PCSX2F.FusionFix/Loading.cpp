@@ -1,11 +1,14 @@
 #include "Game.hpp"
 #include "LoadingGeometry.hpp"
 
-namespace scda {
-namespace {
+namespace scda
+{
+namespace
+{
 SafetyMipsMid loadingDraw;
 safetymips::GameInline<uint64_t(void*)> loadingEnd;
-uint64_t FinishLoading(void* context) {
+uint64_t FinishLoading(void* context)
+{
     // The native cleanup stops the loading thread. Clear the flag afterwards
     // so its last draw cannot switch unthrottling back on.
     const auto result = loadingEnd.call(context);
@@ -13,8 +16,10 @@ uint64_t FinishLoading(void* context) {
     return result;
 }
 }
-void InstallLoading() {
-    loadingDraw = safetymips::create_mid(game.loadingDraw, [](SafetyMipsContext& regs) {
+void InstallLoading()
+{
+    loadingDraw = safetymips::create_mid(game.loadingDraw, [](SafetyMipsContext& regs)
+    {
         FrameLimitUnthrottle = 1;
         UpdateSettings(true);
         // The loading thread has finished its GIF packet on the stack. The

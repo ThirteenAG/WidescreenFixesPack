@@ -28,7 +28,7 @@
 
 ## Settings
 
-Change the settings on fusionfix.io, in FusionFixHub or in the developer overlay (Ctrl+F10, for supporters). The first launch creates `scripts/JustCause.FusionFix.cfg`.
+Change the settings on fusionfix.io or in FusionFixHub. The first launch creates `scripts/JustCause.FusionFix.cfg`.
 
 | Setting | Values | Default | Applies |
 |---|---|---|---|
@@ -48,7 +48,7 @@ Presets: Vanilla keeps the original cinematic bars, shows the logo videos and le
 
 ## Known limits
 
-- No page in the game's own settings menu: its menu pages come from the game's packed menu data, so the fix's settings are on fusionfix.io, in FusionFixHub and in the overlay.
+- No page in the game's own settings menu: its menu pages come from the game's packed menu data, so the fix's settings are on fusionfix.io and in FusionFixHub.
 - The controller uses the game's own controller bindings; button prompts show keyboard keys.
 
 ## Installation

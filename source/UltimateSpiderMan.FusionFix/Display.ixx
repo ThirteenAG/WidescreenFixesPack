@@ -26,10 +26,12 @@ export namespace USMWindow
     inline uintptr_t FailedResetReturn = 0;
     inline int Mode = 0, LastWindowMode = 1;
     inline bool Changing = false, Attached = false;
+    inline constexpr int RefreshMode = 0, ToggleMode = 3;
     inline std::atomic<int> Pending{ -1 };
+    inline thread_local int ExpectedMode = -1;
+    inline thread_local bool PublishingMode = false;
     inline std::optional<HRESULT> ResetStatus;
     inline std::function<void(int, int)> ResolutionChanged;
-    inline std::function<void(int)> ModeChanged;
     inline std::map<std::wstring, SIZE> DesktopSizes;
     inline RECT FramedRect{};
     inline int FramedWidth = 0, FramedHeight = 0;
@@ -45,6 +47,32 @@ export namespace USMWindow
         RECT rect;
     };
     inline std::optional<Snapshot> Previous;
+
+    inline int WantedMode()
+    {
+        const auto wanted = FixSettings().Wanted("MAIN.WindowMode");
+        return wanted == "2" ? 2 : wanted == "1" ? 1 : 0;
+    }
+
+    inline bool CanPublishMode(std::string_view)
+    {
+        // The SDK calls the pre-write check under its settings lock.
+        const int expected = std::exchange(ExpectedMode, -1);
+        return expected < 0 || (Pending.load() < 0 && WantedMode() == expected);
+    }
+
+    inline void PublishMode(int expected)
+    {
+        if (Mode == expected || Pending.load() >= 0)
+            return;
+        ExpectedMode = expected;
+        PublishingMode = true;
+        const auto result = FixSettings().Set("MAIN.WindowMode", std::to_string(Mode));
+        PublishingMode = false;
+        ExpectedMode = -1;
+        if (result == ASI_SETTINGS_NOT_NOW)
+            Pending.store(RefreshMode);
+    }
 
     inline MONITORINFOEXW Monitor()
     {
@@ -238,7 +266,9 @@ export namespace USMWindow
             Pending.compare_exchange_strong(empty, requested);
             return;
         }
-        const int next = requested == 3 ? (Mode ? 0 : LastWindowMode) : std::clamp(requested, 0, 2);
+        const int wanted = WantedMode();
+        const bool toggle = requested == ToggleMode && wanted == Mode;
+        const int next = toggle ? (Mode ? 0 : LastWindowMode) : wanted;
         if (next == Mode)
             return;
         if (Mode)
@@ -282,7 +312,8 @@ export namespace USMWindow
         Place(width, height);
         ResetStatus.reset();
         NativeReset();
-        if (!ResetStatus || FAILED(*ResetStatus))
+        const bool resetSucceeded = ResetStatus && SUCCEEDED(*ResetStatus);
+        if (!resetSucceeded)
         {
             Restore(*Previous);
             OutputDebugStringA("Ultimate Spider-Man: display change failed; restored the previous mode.\n");
@@ -295,36 +326,49 @@ export namespace USMWindow
         }
         Changing = false;
         Previous.reset();
-        if (ModeChanged && Pending.load() < 0)
-            ModeChanged(Mode);
+        if (toggle || !resetSucceeded)
+            PublishMode(wanted);
     }
 
     inline LRESULT CALLBACK Procedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR)
     {
+        if (message == WM_NCDESTROY)
+        {
+            RemoveWindowSubclass(window, Procedure, 0);
+            if (window == Window)
+            {
+                Attached = false;
+                Window = nullptr;
+                int toggle = ToggleMode;
+                Pending.compare_exchange_strong(toggle, -1);
+            }
+            return DefSubclassProc(window, message, wParam, lParam);
+        }
+        if (window != Window)
+            return DefSubclassProc(window, message, wParam, lParam);
         if ((message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) && wParam == VK_RETURN)
         {
             if (message == WM_SYSKEYDOWN && (lParam & (1u << 29)) && !(lParam & (1u << 30)))
-                Pending.store(3);
+            {
+                int empty = -1;
+                Pending.compare_exchange_strong(empty, ToggleMode);
+            }
             return 0;
         }
         if (Changing && (message == WM_SIZE || message == WM_ACTIVATE || message == WM_ACTIVATEAPP || message == WM_KILLFOCUS || message == WM_SETFOCUS))
             return DefWindowProcW(window, message, wParam, lParam);
-        if (message == WM_NCDESTROY)
-        {
-            RemoveWindowSubclass(window, Procedure, 0);
-            Attached = false;
-            Window = nullptr;
-            Pending.store(-1);
-        }
         return DefSubclassProc(window, message, wParam, lParam);
     }
 
     inline void Attach(HWND window)
     {
-        Window = window;
-        Attached = window && SetWindowSubclass(window, Procedure, 0, 0);
-        if (!Attached)
+        if (!window || !SetWindowSubclass(window, Procedure, 0, 0))
+        {
             OutputDebugStringA("Ultimate Spider-Man: window messages unavailable; live mode changes disabled.\n");
+            return;
+        }
+        Window = window;
+        Attached = true;
         SquareCorners(window);
     }
 

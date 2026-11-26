@@ -117,16 +117,8 @@ export namespace GodfatherCinematics
         auto root = hook::pattern("89 0D ? ? ? ? C7 06 ? ? ? ? C7 46 08 ? ? ? ? 88 46 0C 88 46 14 89 46 18 89 46 1C 88 46 20 88 5E 21 89 46 24 88 46 34 89 46 38 89 46 3C C7 46 10 ? ? ? ?");
         CinematicRoot.SetAddress(*root.get_first<void**>(2));
         rootBound = true;
-        borderMode.store(FixSettings().Int("MAIN.CutsceneBorders"), std::memory_order_relaxed);
-        animated.store(FixSettings().Bool("MAIN.AnimatedCutsceneBorders"), std::memory_order_relaxed);
-        FixSettings().OnChange("MAIN.CutsceneBorders", []()
-        {
-            borderMode.store(FixSettings().Int("MAIN.CutsceneBorders"), std::memory_order_relaxed);
-        });
-        FixSettings().OnChange("MAIN.AnimatedCutsceneBorders", []()
-        {
-            animated.store(FixSettings().Bool("MAIN.AnimatedCutsceneBorders"), std::memory_order_relaxed);
-        });
+        BindLiveSetting("MAIN.CutsceneBorders", borderMode);
+        BindLiveSetting("MAIN.AnimatedCutsceneBorders", animated);
         const auto table = *root.get_first<void**>(52);
         drawHook = safetyhook::create_inline(*table, Draw);
         const auto frame = GodfatherWindow::frame;

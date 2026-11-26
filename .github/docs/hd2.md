@@ -14,7 +14,7 @@
 
 - **Aspect ratio and field of view** — The 3D view widens with the screen and keeps the original vertical view (Hor+), also for scripted cameras.
 - **Menus, briefings and loading screens** — Shown in their 4:3 frame in the middle of the screen with black sides; the mouse cursor and buttons line up, the cursor keeps its shape and the film preview in the Films menu stays in its panel. On screens narrower than 4:3 they fit the width with bars above and below.
-- **HUD** — The soldier panels and the inventory sit at the left edge of the screen and the weapon panel at the right edge, with their names and numbers; the crosshair stays in the middle. The sniper scope keeps its round view with black sides.
+- **HUD** — The soldier panels, the inventory and the message lines (orders, contacts) sit at the left edge of the screen and the weapon panel at the right edge, with their names and numbers; the crosshair stays in the middle. The sniper scope keeps its round view with black sides.
 - **Cutscenes** — The game's scripted cutscenes are framed for 16:9; they keep that framing on every screen (see Cutscene borders).
 - **Movies** — Shown at their own aspect ratio, never cut off.
 - **Display scaling** — The game gets the full resolution on scaled desktops.
@@ -46,10 +46,8 @@ The game reads joysticks through DirectInput. The fix package includes Xidi, so 
 ## Known limits
 
 - The game's option screens are prebuilt scenes with a fixed set of buttons, so the fix has no page in them: change its settings in FusionFixHub or on fusionfix.io.
-- The message lines at the top left (orders, contacts, "Load done") stay where the game puts them, at the same share of the screen width, and don't follow the HUD aspect ratio box.
 - The damage overlay is turned off, as in earlier versions of the fix.
 - The resolution is chosen in the game's setup program; a window size change needs a restart.
-- Ctrl+F10 developer overlay: not available, the game draws with Direct3D 8.
 - Button prompts are the game's own; there are no controller icons.
 
 ## Installation

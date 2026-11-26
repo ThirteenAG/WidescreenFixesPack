@@ -88,7 +88,7 @@ Window Mode offers Fullscreen, a fixed-size centered Windowed mode, and Borderle
 
 The gameplay FOV multiplier can be changed while playing. A value of 1.0 keeps the corrected default view; the horizontal field of view is capped at 150 degrees. Confine Cursor keeps the pointer inside the active game window and releases it when the game loses focus. Modern Controls applies to new profiles and when resetting the game's controls.
 
-Pause When Unfocused stops the game while another window is active. Turning it off lets the game continue in the background. **Ctrl + F10** toggles the developer overlay.
+Pause When Unfocused stops the game while another window is active. Turning it off lets the game continue in the background.
 
 Gamepad Icons offers Xbox, PlayStation and Nintendo artwork; Auto uses Xbox artwork. The bundled Xidi mapper connects XInput controllers to the game's native DirectInput controls. Modern Controls changes defaults for new profiles and Reset; it preserves existing saved bindings. A disconnected controller does not require changing the icon setting.
 

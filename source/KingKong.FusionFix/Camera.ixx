@@ -11,6 +11,7 @@ import Hud;
 void* retAddrFading = nullptr;
 bool bSkipFOVHook = false;
 SafetyHookInline shsub_9B1C80 = {};
+std::atomic<float> FOVFactor{ 1.0f };
 void __cdecl sub_9B1C80(float* a1)
 {
     auto raddr = _ReturnAddress();
@@ -28,8 +29,7 @@ float BoundedProjection(float tangent)
         !std::isfinite(Screen.fFieldOfView) || Screen.fFieldOfView <= 0.0f)
         return 1.0f;
     // Menus keep the original framing
-    static const auto& configuredFactor = FixSettings().Float("MAIN.FOVFactor");
-    const float factor = !KingKongInMenu() && std::isfinite(configuredFactor) ? std::clamp(configuredFactor, 0.5f, 2.0f) : 1.0f;
+    const float factor = KingKongInMenu() ? 1.0f : FOVFactor.load(std::memory_order_relaxed);
     return std::max(minimumScale, Screen.fFieldOfView / (tangent * factor));
 }
 
@@ -40,6 +40,16 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            const auto refresh = []()
+            {
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                const float factor = ReadNumericSetting("MAIN.FOVFactor", 1.0f);
+                FOVFactor.store(std::isfinite(factor) ? std::clamp(factor, 0.5f, 2.0f) : 1.0f, std::memory_order_relaxed);
+            };
+            FixSettings().OnChange("MAIN.FOVFactor", refresh);
+            refresh();
+
             // FOV
             auto pattern = find_pattern("83 EC 1C 53 55 56 8B 74 24 ? 8B 46", "A1 ? ? ? ? 81 EC ? ? ? ? 83 F8 03", "A1 ? ? ? ? 81 EC A4 00 00 00 53");
             shsub_9B1C80 = safetyhook::create_inline(pattern.get_first(), sub_9B1C80);

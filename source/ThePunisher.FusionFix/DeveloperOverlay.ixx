@@ -1,9 +1,7 @@
 module;
 
 #include <stdafx.h>
-#include <atomic>
-#include <limits>
-#include "FixSettings.hpp"
+#include "MouseInput.hpp"
 #include "Shared/CursorConfinement.hpp"
 #include "Shared/D3D8Compatibility.hpp"
 #include "overlay/OverlayD3D9.hpp"
@@ -20,86 +18,6 @@ export namespace PunisherOverlay
     inline IDirect3DDevice9* CurrentDevice = nullptr;
     inline LONG HotkeyDown = 0, HotkeyRequested = 0;
     inline SafetyHookInline CreateDeviceHook, DeviceStateHook, DeviceDataHook;
-    inline SafetyHookMid MouseSampleHook;
-    inline std::atomic<bool> RawEnabled{ true }, RawSeen{ false };
-    inline std::atomic<int64_t> RawX{ 0 }, RawY{ 0 };
-    inline std::atomic<HWND> RawWindow{ nullptr };
-
-    inline void ClearRawMouse()
-    {
-        RawX.exchange(0, std::memory_order_relaxed);
-        RawY.exchange(0, std::memory_order_relaxed);
-        RawSeen.store(false, std::memory_order_release);
-    }
-
-    inline void RawMouseMessage(HWND window, UINT message, LPARAM lParam)
-    {
-        if (message == WM_KILLFOCUS || message == WM_NCDESTROY)
-        {
-            ClearRawMouse();
-            if (message == WM_NCDESTROY)
-                RawWindow.store(nullptr, std::memory_order_relaxed);
-        }
-        if (message != WM_INPUT || window != RawWindow.load(std::memory_order_relaxed) ||
-            GetForegroundWindow() != window || !RawEnabled.load(std::memory_order_relaxed) || Overlay.BlocksInput())
-            return;
-        RAWINPUT input{};
-        UINT size = sizeof(input);
-        if (GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) == UINT(-1) ||
-            input.header.dwType != RIM_TYPEMOUSE || (input.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE))
-            return;
-        RawX.fetch_add(input.data.mouse.lLastX, std::memory_order_relaxed);
-        RawY.fetch_add(input.data.mouse.lLastY, std::memory_order_relaxed);
-        if (input.data.mouse.lLastX || input.data.mouse.lLastY)
-            RawSeen.store(true, std::memory_order_release);
-    }
-
-    inline void AttachRawMouse(HWND window)
-    {
-        if (!window || !RawEnabled.load(std::memory_order_relaxed))
-        {
-            RawWindow.store(nullptr, std::memory_order_relaxed);
-            ClearRawMouse();
-            return;
-        }
-        static ULONGLONG nextCheck = 0;
-        const auto now = GetTickCount64();
-        if (now < nextCheck)
-            return;
-        nextCheck = now + 250;
-        UINT count = 0;
-        if (GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
-        {
-            RawWindow.store(nullptr, std::memory_order_relaxed);
-            ClearRawMouse();
-            return;
-        }
-        std::vector<RAWINPUTDEVICE> devices(count);
-        if (count && GetRegisteredRawInputDevices(devices.data(), &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
-        {
-            RawWindow.store(nullptr, std::memory_order_relaxed);
-            ClearRawMouse();
-            return;
-        }
-        for (UINT i = 0; i < count; ++i)
-        {
-            if (devices[i].usUsagePage == 1 && devices[i].usUsage == 2)
-            {
-                const auto target = devices[i].hwndTarget ? devices[i].hwndTarget : window;
-                if (target != window)
-                {
-                    RawWindow.store(nullptr, std::memory_order_relaxed);
-                    ClearRawMouse();
-                }
-                else if (RawWindow.exchange(window, std::memory_order_relaxed) != window)
-                    ClearRawMouse();
-                return;
-            }
-        }
-        RAWINPUTDEVICE device{ 1, 2, 0, window };
-        RawWindow.store(RegisterRawInputDevices(&device, 1, sizeof(device)) ? window : nullptr, std::memory_order_relaxed);
-        ClearRawMouse();
-    }
     inline HRESULT(WINAPI* NativeCreate)(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN) = nullptr;
 
     inline HMODULE ThisModule()
@@ -128,12 +46,17 @@ export namespace PunisherOverlay
 
     inline bool BlocksInput()
     {
-        return Overlay.BlocksInput();
+        if constexpr (WFP::DeveloperOverlay)
+            return Overlay.BlocksInput();
+        return false;
     }
 
     inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
-        RawMouseMessage(window, message, lParam);
+        if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && !wParam))
+            PunisherMouse::Suspend(true);
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -186,13 +109,10 @@ export namespace PunisherOverlay
             });
             return true;
         }();
-        AttachRawMouse(PunisherWindow::Window);
-        if (!RawEnabled.load(std::memory_order_relaxed) || BlocksInput())
-            ClearRawMouse();
         Keyboard(PunisherWindow::Window);
         CurrentDevice = device;
         Overlay.Present(device, ThisModule());
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !BlocksInput());
+        CursorConfinement::Suspend(BlocksInput());
     }
 
     // The game reads keyboard and mouse through DirectInput; nothing reaches it while the overlay has input.
@@ -237,33 +157,16 @@ export namespace PunisherOverlay
 
     inline void Init()
     {
-        RawEnabled.store(FixSettings().Bool("MAIN.RawInputMouse"), std::memory_order_relaxed);
-        FixSettings().OnChange("MAIN.RawInputMouse", []()
-        {
-            RawEnabled.store(FixSettings().Bool("MAIN.RawInputMouse"), std::memory_order_relaxed);
-        });
-        auto mouse = hook::pattern("8B 84 24 94 02 00 00 8B 8C 24 98 02 00 00 A3 ? ? ? ?");
-        MouseSampleHook = safetyhook::create_mid(mouse.get_first(), [](SafetyHookContext& regs)
-        {
-            const auto window = RawWindow.load(std::memory_order_relaxed);
-            if (!RawEnabled.load(std::memory_order_relaxed) || !window || GetForegroundWindow() != window || BlocksInput())
-            {
-                ClearRawMouse();
-                return;
-            }
-            if (!RawSeen.load(std::memory_order_acquire))
-                return;
-            auto* axes = reinterpret_cast<int32_t*>(regs.esp + 0x294);
-            constexpr auto low = static_cast<int64_t>(std::numeric_limits<int32_t>::min());
-            constexpr auto high = static_cast<int64_t>(std::numeric_limits<int32_t>::max());
-            axes[0] = static_cast<int32_t>(std::clamp(RawX.exchange(0, std::memory_order_relaxed), low, high));
-            axes[1] = static_cast<int32_t>(std::clamp(RawY.exchange(0, std::memory_order_relaxed), low, high));
-        });
-        auto original = IATHook::Replace(GetModuleHandleW(nullptr), "DINPUT8.dll", std::forward_as_tuple("DirectInput8Create", Create));
-        NativeCreate = reinterpret_cast<decltype(NativeCreate)>(original.at("DirectInput8Create").get());
+        PunisherMouse::Install(BlocksInput);
+        PunisherWindow::WindowChanged = PunisherMouse::SetWindow;
         PunisherWindow::Message = Message;
-        D3D8Compatibility::BeforeReset = []() { Overlay.BeforeReset(); };
-        D3D8Compatibility::Frame = Frame;
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            auto original = IATHook::Replace(GetModuleHandleW(nullptr), "DINPUT8.dll", std::forward_as_tuple("DirectInput8Create", Create));
+            NativeCreate = reinterpret_cast<decltype(NativeCreate)>(original.at("DirectInput8Create").get());
+            D3D8Compatibility::BeforeReset = []() { Overlay.BeforeReset(); };
+            D3D8Compatibility::Frame = Frame;
+        }
     }
 }
 

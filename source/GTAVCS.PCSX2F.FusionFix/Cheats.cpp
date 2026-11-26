@@ -1,5 +1,7 @@
 #include "Controls.hpp"
-#include <cstring>
+#include "Shared/Console/Ps2TypedCheats.hpp"
+
+extern "C" console::CheatEvents CheatStringV2;
 
 namespace vcs {
 namespace {
@@ -99,22 +101,21 @@ constexpr char sequences[][9] = {
     "RULDTT12",
     "SSS112LR",
 };
-bool Matches(const char* word) {
-    const size_t length = std::strlen(word);
-    if (length > CheatStringLen) return false;
-    for (size_t i = 0; i < length; ++i)
-        if (CheatString[i] != word[length - 1 - i]) return false;
-    return true;
+console::TypedCheats typedCheats;
 }
-}
-void UpdateCheats() {
-    if (!playerPad || MenuActive()) return;
-    for (const auto& cheat : cheats) {
-        if (!Matches(cheat.word)) continue;
-        auto add = reinterpret_cast<void (*)(Pad*, char)>(0x283C60);
-        for (unsigned i = 0; i < 8; ++i) add(playerPad, sequences[cheat.id][i]);
-        CheatString[0] = 0;
-        break;
-    }
+void UpdateCheats()
+{
+    const bool gameplay = settings.pcControls && playerPad && !playerPad->disabled && !MenuActive();
+    typedCheats.tick(gameplay, CheatString, CheatStringV2, [](const char* history)
+    {
+        for (const auto& cheat : cheats)
+        {
+            if (!console::TypedCheats::matches(history, cheat.word)) continue;
+            const auto add = reinterpret_cast<void (*)(Pad*, char)>(0x283C60);
+            for (unsigned i = 0; i < 8; ++i) add(playerPad, sequences[cheat.id][i]);
+            return true;
+        }
+        return false;
+    });
 }
 }

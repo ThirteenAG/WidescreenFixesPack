@@ -118,7 +118,12 @@
         "cycler",
         "dropdown"
       ],
-      "apply": "live"
+      "apply": "live",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.WindowMode",
@@ -202,11 +207,11 @@
       "step": 0.05
     },
     {
-      "id": "CAMERA.Enable",
+      "id": "CAMERA.FreeLook",
       "type": "bool",
       "default": 1,
-      "label": "@CAMERA.Enable",
-      "description": "@CAMERA.Enable.description",
+      "label": "@CAMERA.FreeLook",
+      "description": "@CAMERA.FreeLook.description",
       "page": "camera",
       "apply": "live",
       "presets": {
@@ -216,11 +221,11 @@
       }
     },
     {
-      "id": "CAMERA.CameraReturnTimeout",
+      "id": "CAMERA.ReturnDelay",
       "type": "float",
       "default": 3,
-      "label": "@CAMERA.CameraReturnTimeout",
-      "description": "@CAMERA.CameraReturnTimeout.description",
+      "label": "@CAMERA.ReturnDelay",
+      "description": "@CAMERA.ReturnDelay.description",
       "page": "camera",
       "apply": "live",
       "min": 0,
@@ -228,23 +233,23 @@
       "step": 0.5,
       "unit": "s",
       "enabledIf": {
-        "setting": "CAMERA.Enable",
+        "setting": "CAMERA.FreeLook",
         "equals": 1
       }
     },
     {
-      "id": "CAMERA.CameraReturnSpeed",
+      "id": "CAMERA.ReturnSpeed",
       "type": "float",
       "default": 2,
-      "label": "@CAMERA.CameraReturnSpeed",
-      "description": "@CAMERA.CameraReturnSpeed.description",
+      "label": "@CAMERA.ReturnSpeed",
+      "description": "@CAMERA.ReturnSpeed.description",
       "page": "camera",
       "apply": "live",
       "min": 0.1,
       "max": 10,
       "step": 0.1,
       "enabledIf": {
-        "setting": "CAMERA.Enable",
+        "setting": "CAMERA.FreeLook",
         "equals": 1
       }
     },
@@ -260,7 +265,7 @@
       "max": 5,
       "step": 0.1,
       "enabledIf": {
-        "setting": "CAMERA.Enable",
+        "setting": "CAMERA.FreeLook",
         "equals": 1
       }
     },
@@ -276,7 +281,7 @@
       "max": 5,
       "step": 0.1,
       "enabledIf": {
-        "setting": "CAMERA.Enable",
+        "setting": "CAMERA.FreeLook",
         "equals": 1
       }
     },
@@ -289,7 +294,7 @@
       "page": "camera",
       "apply": "live",
       "enabledIf": {
-        "setting": "CAMERA.Enable",
+        "setting": "CAMERA.FreeLook",
         "equals": 1
       },
       "presets": {
@@ -307,7 +312,7 @@
       "page": "camera",
       "apply": "live",
       "enabledIf": {
-        "setting": "CAMERA.Enable",
+        "setting": "CAMERA.FreeLook",
         "equals": 1
       }
     },
@@ -320,7 +325,7 @@
       "page": "camera",
       "apply": "live",
       "enabledIf": {
-        "setting": "CAMERA.Enable",
+        "setting": "CAMERA.FreeLook",
         "equals": 1
       }
     },
@@ -338,7 +343,7 @@
       "unit": "m",
       "visibility": "editor",
       "enabledIf": {
-        "setting": "CAMERA.Enable",
+        "setting": "CAMERA.FreeLook",
         "equals": 1
       }
     },
@@ -356,7 +361,7 @@
       "unit": "m",
       "visibility": "editor",
       "enabledIf": {
-        "setting": "CAMERA.Enable",
+        "setting": "CAMERA.FreeLook",
         "equals": 1
       }
     },

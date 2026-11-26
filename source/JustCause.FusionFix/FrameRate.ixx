@@ -17,9 +17,7 @@ export namespace JCFrameRate
     HMONITOR previousMonitor = nullptr;
     DWORD refreshTick = 0;
     int refreshRate = 60;
-    int64_t statisticsStart = 0;
-    uint32_t statisticsFrames = 0;
-    float actualFPS = 0.0f;
+    std::atomic<int> requestedLimit{ 0 };
     int MonitorRate()
     {
         const auto monitor = MonitorFromWindow(Window, MONITOR_DEFAULTTOPRIMARY);
@@ -49,13 +47,13 @@ export namespace JCFrameRate
     void Pace(int limit)
     {
         if (limit == -1) limit = MonitorRate();
-        const auto now = Counter();
         if (limit <= 0)
         {
             deadline = 0.0;
             previousLimit = 0;
             return;
         }
+        const auto now = Counter();
         const double interval = static_cast<double>(frequency.QuadPart) / limit;
         if (limit != previousLimit || deadline <= 0.0 || now > deadline + interval * 4.0)
             deadline = static_cast<double>(now);
@@ -84,6 +82,14 @@ export namespace JCFrameRate
     {
         static const bool initialized = []()
         {
+            const auto refreshLimit = []()
+            {
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                requestedLimit.store(GetFixNumber("MAIN.FPSLimit", 0));
+            };
+            FixSettings().OnChange("MAIN.FPSLimit", refreshLimit);
+            refreshLimit();
             QueryPerformanceFrequency(&frequency);
             timer = CreateWaitableTimerExW(nullptr, nullptr, 0x2, TIMER_ALL_ACCESS);
             if (!timer) timer = CreateWaitableTimerW(nullptr, FALSE, nullptr);
@@ -91,15 +97,7 @@ export namespace JCFrameRate
         }();
         if (!initialized) return;
         Window = window;
-        const int requested = FixSettings().Int("MAIN.FPSLimit");
+        const int requested = requestedLimit.load();
         Pace(requested == -1 || requested == 0 ? requested : std::clamp(requested, 30, 1000));
-        const auto now = Counter();
-        ++statisticsFrames;
-        if (!statisticsStart) { statisticsStart = now; statisticsFrames = 0; }
-        else if (now - statisticsStart >= frequency.QuadPart)
-        {
-            actualFPS = static_cast<float>(statisticsFrames * static_cast<double>(frequency.QuadPart) / (now - statisticsStart));
-            statisticsStart = now; statisticsFrames = 0;
-        }
     }
 }

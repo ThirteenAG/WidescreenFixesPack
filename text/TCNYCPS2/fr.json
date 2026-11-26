@@ -8,7 +8,7 @@
   "FOVFactor": "Champ de vision",
   "FOVFactor.description": "Multiplie le champ de vision de la caméra de jeu, à pied et en véhicule ; 1,0 correspond au cadrage d'origine. Les cinématiques gardent leur cadrage. Les changements s'appliquent en jeu.",
   "HudAspectRatioConstraint": "Format de l'interface",
-  "HudAspectRatioConstraint.description": "Auto place la santé, le badge, l'arme et les munitions, les encadrés d'aide et le radar aux bords de l'écran. Un format les garde aux bords d'un cadre centré de cette forme. Les changements s'appliquent en jeu.",
+  "HudAspectRatioConstraint.description": "Auto place le HUD aux bords de l’écran. Un rapport d’aspect le limite à une zone centrée. Les positions du HUD changent en cours de partie. Si un élément conserve son ancienne position, mettez le jeu en pause puis reprenez, ou attendez la scène suivante.",
   "CutsceneBorders": "Bandes des cinématiques",
   "CutsceneBorders.description": "Bandes noires dans les cinématiques. Letterbox garde les bandes d'origine en haut et en bas, Pillarbox garde l'image 4:3 d'origine avec des bandes sur les côtés, Les deux combine les deux, Désactivé remplit l'écran. Les menus gardent leur aspect. Les changements s'appliquent en jeu.",
   "borders.off": "Désactivé",

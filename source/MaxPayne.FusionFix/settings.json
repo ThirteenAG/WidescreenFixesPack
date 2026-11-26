@@ -46,6 +46,11 @@
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "special": [
         {
           "value": "Auto",
@@ -296,7 +301,7 @@
       "id": "MAIN.FPSLimit",
       "type": "int",
       "default": -1,
-      "min": -1,
+      "min": 30,
       "max": 1000,
       "unit": "fps",
       "special": [
@@ -496,7 +501,7 @@
       "type": "bool",
       "default": 1,
       "label": "@settingsfile",
-      "description": "@settingsfile.description",
+      "description": "@settingsfile.cfg.description",
       "page": "game",
       "group": "@group.saves",
       "apply": "restart"

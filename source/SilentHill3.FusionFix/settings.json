@@ -518,16 +518,39 @@
     },
     {
       "id": "MAIN.FPSLimit",
-      "type": "choice",
-      "default": 0,
-      "choices": [
+      "type": "int",
+      "default": 60,
+      "min": -1,
+      "max": 1000,
+      "unit": "fps",
+      "special": [
         {
           "value": 0,
-          "label": "60 FPS"
+          "label": "@fpslimit.unlimited"
         },
         {
-          "value": 30,
-          "label": "30 FPS"
+          "value": -1,
+          "label": "@fpslimit.monitor"
+        }
+      ],
+      "suggestions": [
+        {
+          "value": 30
+        },
+        {
+          "value": 60
+        },
+        {
+          "value": 120
+        },
+        {
+          "value": 144
+        },
+        {
+          "value": 165
+        },
+        {
+          "value": 240
         }
       ],
       "label": "@fpslimit",
@@ -535,9 +558,14 @@
       "page": "game",
       "control": [
         "cycler",
-        "segmented"
+        "dropdown"
       ],
-      "apply": "live"
+      "apply": "live",
+      "presets": {
+        "vanilla": 60,
+        "recommended": 60,
+        "enhanced": 60
+      }
     },
     {
       "id": "MAIN.SkipIntro",
@@ -656,6 +684,11 @@
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "label": "@hudconstraint",
       "description": "@hudconstraint.description",
       "page": "display",

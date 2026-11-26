@@ -27,7 +27,37 @@ constexpr float ACTIVATION_DELAY = 400.0f;  // ms delay before activation
 constexpr float BLINK_INTERVAL = 400.0f;    // ms blink interval (on/off cycle)
 constexpr float TAP_THRESHOLD = 300.0f;     // ms threshold for tap detection
 
-// Struct to hold all vehicle state data
+struct IndicatorTap
+{
+    bool held = false;
+    bool armed = false;
+    float duration = 0.0f;
+
+    bool Update(bool pressed, float elapsed, bool continuous)
+    {
+        if (!continuous)
+        {
+            held = pressed;
+            armed = false;
+            duration = 0.0f;
+            return false;
+        }
+        if (pressed)
+        {
+            if (!held)
+            {
+                duration = 0.0f;
+                armed = true;
+            }
+            duration += elapsed;
+        }
+        const bool releasedTap = !pressed && held && armed && duration <= TAP_THRESHOLD;
+        held = pressed;
+        return releasedTap;
+    }
+};
+
+// Vehicle indicator and hazard state
 struct VehicleState
 {
     int current_blinker = 0;
@@ -47,6 +77,7 @@ struct VehicleState
 // Queue to store last 5 player vehicles with their states
 static std::deque<std::pair<Vehicle, VehicleState>> recent_vehicles;
 static const size_t MAX_RECENT_VEHICLES = 5;
+static Vehicle tapVehicle = nullptr;
 
 namespace Natives
 {
@@ -109,6 +140,17 @@ namespace Natives
     //}
 };
 
+static void UpdateHazards(Vehicle veh, VehicleState& state)
+{
+    state.blink_timer += 1000.0f * Natives::Timestep();
+    if (state.blink_timer >= BLINK_INTERVAL)
+    {
+        state.blink_state = !state.blink_state;
+        state.blink_timer = 0.0f;
+        Natives::SetVehHazardlights(veh, state.blink_state);
+    }
+}
+
 // Helper function to find vehicle in queue
 VehicleState* findVehicle(Vehicle veh)
 {
@@ -146,7 +188,7 @@ VehicleState* addOrUpdateVehicle(Vehicle veh, const VehicleState& state = Vehicl
         // Turn off any active lights on the vehicle being removed
         Vehicle old_veh = recent_vehicles.back().first;
         VehicleState& old_state = recent_vehicles.back().second;
-        if (old_state.blinkers_active || old_state.current_blinker != 0)
+        if (old_state.manual_hazard || old_state.blinkers_active || old_state.current_blinker != 0)
         {
             Natives::SetVehIndicatorlights(old_veh, false);
         }
@@ -155,6 +197,13 @@ VehicleState* addOrUpdateVehicle(Vehicle veh, const VehicleState& state = Vehicl
 
     return &recent_vehicles.front().second;
 };
+
+static void ForgetVehicle(Vehicle vehicle)
+{
+    if (vehicle == tapVehicle)
+        tapVehicle = nullptr;
+    std::erase_if(recent_vehicles, [vehicle](const auto& entry) { return entry.first == vehicle; });
+}
 
 class TurnIndicators
 {
@@ -189,9 +238,7 @@ public:
                 if (veh == pPlayerCar)
                     pPlayerCar = nullptr;
 
-                auto it = std::remove_if(recent_vehicles.begin(), recent_vehicles.end(),
-                    [veh](const std::pair<Vehicle, VehicleState>& p) { return p.first == veh; });
-                recent_vehicles.erase(it, recent_vehicles.end());
+                ForgetVehicle(veh);
             });
 
             pattern = hook::pattern("C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? C7 45 ? ? ? ? ? 8D B5");
@@ -204,9 +251,7 @@ public:
                     if (veh == pPlayerCar)
                         pPlayerCar = nullptr;
 
-                    auto it = std::remove_if(recent_vehicles.begin(), recent_vehicles.end(),
-                        [veh](const std::pair<Vehicle, VehicleState>& p) { return p.first == veh; });
-                    recent_vehicles.erase(it, recent_vehicles.end());
+                    ForgetVehicle(veh);
                 });
             }
             else
@@ -219,24 +264,24 @@ public:
                     if (veh == pPlayerCar)
                         pPlayerCar = nullptr;
 
-                    auto it = std::remove_if(recent_vehicles.begin(), recent_vehicles.end(),
-                        [veh](const std::pair<Vehicle, VehicleState>& p) { return p.first == veh; });
-                    recent_vehicles.erase(it, recent_vehicles.end());
+                    ForgetVehicle(veh);
                 });
             }
 
-            static uintptr_t prev_player_car = 0;
-
-            WFP::onGameProcessEvent() += [&]()
+            WFP::onGameProcessEvent() += []()
             {
-                static Vehicle last_player_car = 0;
-                static bool prev_lb_pressed = false;
-                static bool prev_rb_pressed = false;
-                static float lb_press_time = 0.0f;
-                static float rb_press_time = 0.0f;
+                static IndicatorTap leftTap, rightTap;
+                static bool inputWasAvailable = false;
+                static uint32_t lastFocusGeneration = 0;
 
-                // Get current player vehicle
                 Vehicle PlayerCar = pPlayerCar;
+                const auto focusGeneration = InputFocusGeneration.load(std::memory_order_relaxed);
+                const bool inputAvailable = PlayerCar && !BlockGameInput;
+                const bool continuousInput = inputAvailable && inputWasAvailable &&
+                    PlayerCar == tapVehicle && focusGeneration == lastFocusGeneration;
+                inputWasAvailable = inputAvailable;
+                lastFocusGeneration = focusGeneration;
+                tapVehicle = PlayerCar;
 
                 // Check if player has fully entered the vehicle (can actually drive)
                 auto pVehicleStruct = PlayerCar;
@@ -259,7 +304,7 @@ public:
                     bool player_in_vehicle = is_player_vehicle && player_fully_in_vehicle;
 
                     // Skip processing if feature is disabled and no active blinkers
-                    if (!bTurnIndicators && state.current_blinker == 0)
+                    if (!bTurnIndicators && state.current_blinker == 0 && !state.manual_hazard)
                     {
                         continue;
                     }
@@ -271,48 +316,20 @@ public:
                     {
                         if (bManualTurnIndicators)
                         {
-                            float dt_ms = 1000.0f * Natives::Timestep();
-
-                            float cur_lb = IsJoyButtonPressed(nLeftIndicatorButton);
-                            float cur_rb = IsJoyButtonPressed(nRightIndicatorButton);
-
-                            bool cur_left = IsKeyboardKeyPressed(nLeftIndicatorKey);
-                            bool cur_right = IsKeyboardKeyPressed(nRightIndicatorKey);
-
-                            bool left_double_tapped = false; //dtap_left.Update(Natives::IsLeftPressed(), dt_ms);
-                            bool right_double_tapped = false; //dtap_right.Update(Natives::IsRightPressed(), dt_ms);
-
-                            bool lb_pressed = (cur_lb != 0.0f) || (cur_left != 0.0f);
-                            bool rb_pressed = (cur_rb != 0.0f) || (cur_right != 0.0f);
-
-                            if (lb_pressed && !prev_lb_pressed)
-                            {
-                                lb_press_time = 0.0f;
-                            }
-                            if (rb_pressed && !prev_rb_pressed)
-                            {
-                                rb_press_time = 0.0f;
-                            }
-                            if (lb_pressed)
-                            {
-                                lb_press_time += 1000.0f * Natives::Timestep();
-                            }
-                            if (rb_pressed)
-                            {
-                                rb_press_time += 1000.0f * Natives::Timestep();
-                            }
-
-                            bool lb_tapped = (!lb_pressed && prev_lb_pressed && lb_press_time <= TAP_THRESHOLD) || left_double_tapped;
-                            bool rb_tapped = (!rb_pressed && prev_rb_pressed && rb_press_time <= TAP_THRESHOLD) || right_double_tapped;
+                            const float dt = 1000.0f * Natives::Timestep();
+                            const bool left = inputAvailable && (IsJoyButtonPressed(nLeftIndicatorButton) || IsKeyboardKeyPressed(nLeftIndicatorKey));
+                            const bool right = inputAvailable && (IsJoyButtonPressed(nRightIndicatorButton) || IsKeyboardKeyPressed(nRightIndicatorKey));
+                            const bool lb_tapped = leftTap.Update(left, dt, continuousInput);
+                            const bool rb_tapped = rightTap.Update(right, dt, continuousInput);
 
                             if (lb_tapped && rb_tapped)
                             {
                                 state.manual_hazard = !state.manual_hazard;
                                 Natives::SetVehHazardlights(veh, state.manual_hazard);
+                                state.blink_state = state.manual_hazard;
+                                state.blink_timer = 0.0f;
                                 if (state.manual_hazard)
                                 {
-                                    state.blink_state = true;
-                                    state.blink_timer = 0.0f;
                                     state.current_blinker = 0;
                                     state.blinkers_active = false;
                                     state.should_stop_blinking = false;
@@ -398,8 +415,6 @@ public:
                                     }
                                 }
                             }
-                            prev_lb_pressed = lb_pressed;
-                            prev_rb_pressed = rb_pressed;
                         }
                         else
                         {
@@ -470,15 +485,7 @@ public:
 
                         // Handle blinking logic
                         if (state.manual_hazard)
-                        {
-                            state.blink_timer += 1000.0f * Natives::Timestep();
-                            if (state.blink_timer >= BLINK_INTERVAL)
-                            {
-                                state.blink_state = !state.blink_state;
-                                state.blink_timer = 0.0f;
-                                Natives::SetVehHazardlights(veh, state.blink_state);
-                            }
-                        }
+                            UpdateHazards(veh, state);
                         else if (state.blinkers_active && !state.should_stop_blinking)
                         {
                             state.blink_timer += 1000.0f * Natives::Timestep();
@@ -548,7 +555,9 @@ public:
                     else
                     {
                         // Vehicle is not occupied by player - continue processing blinkers
-                        if (state.current_blinker != 0)
+                        if (state.manual_hazard)
+                            UpdateHazards(veh, state);
+                        else if (state.current_blinker != 0)
                         {
                             // Continue blinking process
                             if (state.blinkers_active && !state.should_stop_blinking)

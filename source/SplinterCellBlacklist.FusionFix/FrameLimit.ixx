@@ -160,8 +160,17 @@ namespace AiRate
     {
         float pending = 0.0f;
         float selfPaced = 0.0f;
+        uint64_t generation = 0;
     };
-    std::unordered_map<uintptr_t, State> States;
+    std::mutex stateMutex;
+    std::unordered_map<uint8_t*, State> States;
+    uint64_t nextGeneration = 0;
+
+    void Destroy(uint8_t* controller)
+    {
+        std::lock_guard lock(stateMutex);
+        States.erase(controller);
+    }
 
     SafetyHookInline shTick{};
     int __fastcall Tick(uint8_t* controller, void* edx, float dt, int a3)
@@ -170,9 +179,12 @@ namespace AiRate
         if (!(dt > 0.0f) || (body && (body[0x31C] & 0x20)))
             return shTick.thiscall<int>(controller, dt, a3);
 
-        if (States.size() > 4096)
-            States.clear();
-        auto& state = States[reinterpret_cast<uintptr_t>(controller)];
+        std::unique_lock lock(stateMutex);
+        auto [it, created] = States.try_emplace(controller);
+        auto& state = it->second;
+        if (created)
+            state.generation = ++nextGeneration;
+        const auto generation = state.generation;
         auto elapsed = dt;
         if (state.selfPaced > 0.0f)
             state.selfPaced -= dt;
@@ -189,13 +201,16 @@ namespace AiRate
         auto& step = *reinterpret_cast<float*>(controller + 0x5C0);
         const auto previous = step;
         step = -1.0f;
+        state.pending = 0.0f;
+        lock.unlock();
         const auto result = shTick.thiscall<int>(controller, elapsed, a3);
-        if (step == -1.0f)
+        lock.lock();
+        const auto current = States.find(controller);
+        if (current != States.end() && current->second.generation == generation && step == -1.0f)
         {
             step = previous;
-            state.selfPaced = SelfPacedHold;
+            current->second.selfPaced = SelfPacedHold;
         }
-        state.pending = 0.0f;
         return result;
     }
 }
@@ -208,6 +223,13 @@ export void InitFrameLimit()
     {
         auto pattern = hook::pattern("55 8B EC 56 8B F1 F7 86 04 05 00 00 00 02 00 00 74 1B 8B 8E 8C 05 00 00 85 C9 74 11 8B 01 8B 50 74 FF D2 B8 01 00 00 00 5E 5D C2 08 00");
         AiRate::shTick = safetyhook::create_inline(pattern.get_first(), AiRate::Tick);
+
+        // AEAIController destructor, before its members and base classes are destroyed.
+        pattern = hook::pattern("C7 06 ? ? ? ? C7 45 FC 13 00 00 00 E8 ? ? ? ? B0 12 88 45 FC 8D 8E 10 08 00 00");
+        static auto destroy = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        {
+            AiRate::Destroy(reinterpret_cast<uint8_t*>(regs.esi));
+        });
     }
 
     QueryPerformanceFrequency(&frequency);

@@ -32,7 +32,7 @@ export namespace TrueCrimeMovie
             const float width = u1 - u0;
             const float height = v1 - v0;
             // The whole movie at its own aspect: Original inside the game's centred 4:3 frame, Fill inside the whole screen
-            const bool original = FixSettings().Int("MAIN.FMVWidescreenMode") == 0;
+            const bool original = FixSettings().Get("MAIN.FMVWidescreenMode") == "0";
             const float areaWidth = original ? std::min(right, bottom * 4.0f / 3.0f) : right;
             const float areaHeight = original ? std::min(bottom, right * 3.0f / 4.0f) : bottom;
             const float scale = std::min(areaWidth / width, areaHeight / height);
@@ -59,7 +59,7 @@ export namespace TrueCrimeMovie
     // Startup logos: the publisher, developer and studio videos played before the title
     inline void __cdecl Play(const char* name)
     {
-        if (FixSettings().Bool("MAIN.SkipIntro") && name &&
+        if (FixSettings().Get("MAIN.SkipIntro") == "1" && name &&
             (!_stricmp(name, "intro") || !_stricmp(name, "intro2") || !_stricmp(name, "GrayMatr")))
             return;
         // Movies started from the menus play on the real screen

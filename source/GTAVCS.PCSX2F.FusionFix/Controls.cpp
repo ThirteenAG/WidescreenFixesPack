@@ -1,18 +1,23 @@
 #include "Controls.hpp"
 #include <utility>
-#include "../../external/injector/include/ps2/patches.hpp"
 #include <cstring>
+#include <cstdlib>
 #include <cstdio>
 #include "Settings.hpp"
 extern "C" {
-#include "../../external/injector/include/ps2/plugin_settings.h"
+#include "ps2/plugin_settings.h"
 }
+
+extern "C" console::MouseMotion MouseStateV2;
+extern "C" console::MouseTransitions MouseStateV3;
 
 namespace vcs {
 namespace {
 safetymips::GameInline<void(Pad*, int16_t)> updatePad;
 pcsx2::GameCallback<int16_t(Pad*)> rightX, rightY, flyingLeft, flyingRight;
 Controller keyboardController{};
+Controller previousPhysicalController{};
+constexpr uintptr_t directionalSwap = 0x487A5C;
 enum class Action {
     SteeringX, SteeringY, CarGunY, CarGunX, WalkX, WalkY,
     LookLeft, LookRight, LookBackCar, LookBackPed, Horn, HornDown,
@@ -90,7 +95,7 @@ bool Reloading() {
     return true;
 }
 void Reload(Pad* pad) {
-    if (!pad->current.l2 || !Edge(&Controller::square, pad) || Reloading()) return;
+    if (pad->disabled || !pad->current.l2 || !Edge(&Controller::square, pad) || Reloading()) return;
     const auto ped = reinterpret_cast<uintptr_t (*)()>(0x24A430)();
     if (!ped) return;
     const unsigned slot = *reinterpret_cast<const uint8_t*>(ped + 0x789);
@@ -108,6 +113,20 @@ void Reload(Pad* pad) {
     *reinterpret_cast<unsigned*>(weapon + 20) = *reinterpret_cast<const unsigned*>(0x4CD104) + duration;
     reloadWeapon = weapon;
 }
+int16_t AimStick(int16_t value)
+{
+    // The native pad update already removes a 42-unit raw axis dead zone.
+    // Ignore the first quantized step that can slip through at its edge.
+    return std::abs(int(value)) <= 1 ? 0 : value;
+}
+// MAIN.GamepadCameraSpeed and MAIN.InvertGamepadY on a right stick value.
+int16_t CameraStick(int value, bool vertical)
+{
+    if (vertical && settings.invertPad) value = -value;
+    const float scaled = float(value) * settings.padCameraSpeed;
+    return int16_t(scaled > 32767.0f ? 32767.0f : scaled < -32767.0f ? -32767.0f : scaled);
+}
+
 bool ModernQuery(Action action, Pad* pad, int16_t& value) {
     auto& now = pad->current;
     switch (action) {
@@ -128,10 +147,10 @@ bool ModernQuery(Action action, Pad* pad, int16_t& value) {
     case Action::Duck: value = Edge(&Controller::down, pad); break;
     case Action::ZoomIn: value = now.square || now.leftY < -10; break;
     case Action::ZoomOut: value = now.cross || now.leftY > 10; break;
-    case Action::LookX: value = now.rightX; break;
-    case Action::LookY: value = *reinterpret_cast<int*>(0x487A58) ? -now.rightY : now.rightY; break;
+    case Action::LookX: value = AimStick(now.rightX); break;
+    case Action::LookY: value = AimStick(*reinterpret_cast<const int*>(0x487A58) ? -now.rightY : now.rightY); break;
     case Action::Oddjob: value = now.up != 0; break;
-    case Action::FreeAim: value = now.l3 || now.rightX || now.rightY; break;
+    case Action::FreeAim: value = now.l3 || AimStick(now.rightX) || AimStick(now.rightY); break;
     case Action::LeftX: value = now.leftX; break;
     case Action::LeftY: value = now.leftY; break;
     default: return false;
@@ -145,10 +164,33 @@ bool WeaponAction(Action action) {
 template<uintptr_t Address, Action Which> struct Query {
     inline static safetymips::GameInline<int16_t(Pad*)> original;
     static int16_t Read(Pad* pad) {
-        if (KeyboardActive()) return !pad->disabled && (!WeaponAction(Which) || pad->mode < 4) ? PCQuery(Which) : 0;
-        int16_t value;
-        if (settings.modernControls && ModernQuery(Which, pad, value))
-            return !pad->disabled && (!WeaponAction(Which) || pad->mode < 4) ? value : 0;
+        if (KeyboardFor(pad)) return !pad->disabled && (!WeaponAction(Which) || pad->mode < 4) ? PCQuery(Which) : 0;
+        // LookAroundLeftRight/UpDown: the pad camera with either pad scheme.
+        if constexpr (Which == Action::LookX || Which == Action::LookY)
+            return CameraStick(PadRead(pad), Which == Action::LookY);
+        else
+            return PadRead(pad);
+    }
+    static int16_t PadRead(Pad* pad) {
+        if (settings.modernControls)
+        {
+            if constexpr (Which == Action::WalkX || Which == Action::WalkY)
+            {
+                // Keep the native walk query and hide its selected D-pad bank.
+                const bool swapped = *reinterpret_cast<const int32_t*>(directionalSwap) != 0;
+                const auto offset = swapped ? offsetof(Controller, alternateDpad) : offsetof(Controller, up);
+                auto* directions = reinterpret_cast<unsigned char*>(&pad->current) + offset;
+                unsigned char saved[sizeof(Controller::alternateDpad)];
+                std::memcpy(saved, directions, sizeof(saved));
+                std::memset(directions, 0, sizeof(saved));
+                const auto result = original.call(pad);
+                std::memcpy(directions, saved, sizeof(saved));
+                return result;
+            }
+            int16_t value;
+            if (ModernQuery(Which, pad, value))
+                return !pad->disabled && (!WeaponAction(Which) || pad->mode < 4) ? value : 0;
+        }
         return original.call(pad);
     }
     static void Install() { original = safetymips::create_inline_game(Address, Read); }
@@ -160,7 +202,7 @@ template<uintptr_t Address, Action Which> void Bind() { Query<Address, Which>::I
 template<uintptr_t Address, bool Back> struct ShoulderQuery {
     inline static safetymips::GameInline<int16_t(Pad*)> original;
     static int16_t Read(Pad* pad) {
-        if (KeyboardActive()) return pad->disabled ? 0 : PCQuery(Back ? Action::LookBackCar :
+        if (KeyboardFor(pad)) return pad->disabled ? 0 : PCQuery(Back ? Action::LookBackCar :
             (Address == 0x285940 ? Action::LookLeft : Action::LookRight));
         if (!settings.modernControls) return original.call(pad);
         std::swap(pad->current.l1, pad->current.l2); std::swap(pad->previous.l1, pad->previous.l2);
@@ -173,67 +215,36 @@ template<uintptr_t Address, bool Back> struct ShoulderQuery {
     static void Install() { original = safetymips::create_inline_game(Address, Read); }
 };
 constexpr uintptr_t leftStickX = 0x287640, leftStickY = 0x287678;
-bool Remapped() { return settings.modernControls || KeyboardActive(); }
-int16_t RightX(Pad* pad) {
-    if (!Remapped()) return reinterpret_cast<int16_t (*)(Pad*)>(leftStickX)(pad);
-    return pad->disabled || KeyboardActive() ? 0 : pad->current.rightX;
+int16_t RightX(Pad* pad)
+{
+    if (KeyboardFor(pad))
+        return 0;
+    if (!settings.modernControls)
+        return reinterpret_cast<int16_t (*)(Pad*)>(leftStickX)(pad);
+    return pad->disabled ? 0 : CameraStick(AimStick(pad->current.rightX), false);
 }
-int16_t RightY(Pad* pad) {
-    if (!Remapped()) return reinterpret_cast<int16_t (*)(Pad*)>(leftStickY)(pad);
-    return pad->disabled || KeyboardActive() ? 0 : pad->current.rightY;
+
+int16_t RightY(Pad* pad)
+{
+    if (KeyboardFor(pad))
+        return 0;
+    if (!settings.modernControls)
+        return reinterpret_cast<int16_t (*)(Pad*)>(leftStickY)(pad);
+    return pad->disabled ? 0 : CameraStick(AimStick(pad->current.rightY), true);
 }
 // Aircraft rudder: without the PC scheme the native code reads the
 // (hooked) look-left/right queries at these call sites.
 int16_t FlyingLeft(Pad* pad) {
-    if (!KeyboardActive()) return reinterpret_cast<int16_t (*)(Pad*)>(0x285940)(pad);
+    if (!KeyboardFor(pad)) return reinterpret_cast<int16_t (*)(Pad*)>(0x285940)(pad);
     return pad->disabled ? 0 : bindings.held(input, Act::LookLeft) || bindings.held(input, Act::TurretLeft);
 }
 int16_t FlyingRight(Pad* pad) {
-    if (!KeyboardActive()) return reinterpret_cast<int16_t (*)(Pad*)>(0x285AB0)(pad);
+    if (!KeyboardFor(pad)) return reinterpret_cast<int16_t (*)(Pad*)>(0x285AB0)(pad);
     return pad->disabled ? 0 : bindings.held(input, Act::LookRight) || bindings.held(input, Act::TurretRight);
-}
-pcsx2::Patch dpadPatches[4];
-bool dpadReady;
-void DpadFailure(pcsx2_hook_status status)
-{
-    static constexpr const char* languages[] = { "en", "fr", "de", "it", "es" };
-    static constexpr const char* messages[] = {
-        "VCS d-pad patch failed (%u)", "VCS echec du patch directionnel (%u)",
-        "VCS Steuerkreuz-Patch fehlgeschlagen (%u)", "VCS patch direzionale non riuscita (%u)",
-        "VCS fallo del parche de direccion (%u)"
-    };
-    unsigned language = 0;
-    for (unsigned i = 0; i < 5; ++i)
-    {
-        if (std::strcmp(config::values[9].value, languages[i]) == 0) language = i;
-    }
-    std::snprintf(OSDText[0], OSDStringSize, messages[language], unsigned(status));
-}
-void ApplyDpad(bool enabled)
-{
-    if (!dpadReady) return;
-    bool previous[4];
-    for (unsigned i = 0; i < 4; ++i) previous[i] = dpadPatches[i].enabled();
-    for (unsigned i = 0; i < 4; ++i)
-    {
-        const auto status = enabled ? dpadPatches[i].enable() : dpadPatches[i].disable();
-        if (status != PCSX2_HOOK_OK)
-        {
-            auto failure = status;
-            while (i > 0)
-            {
-                --i;
-                const auto rollback = previous[i] ? dpadPatches[i].enable() : dpadPatches[i].disable();
-                if (rollback != PCSX2_HOOK_OK) failure = rollback;
-            }
-            DpadFailure(failure);
-            return;
-        }
-    }
 }
 void Sample() {
     static_assert(sizeof(CMouseControllerState) == sizeof(console::Mouse));
-    input.sample(KeyboardState[0], reinterpret_cast<console::Mouse&>(MouseState[0]));
+    input.sample(KeyboardState[0], reinterpret_cast<console::Mouse&>(MouseState[0]), MouseStateV2, MouseStateV3);
     // The player and camera can both query mouse motion in one frame. Preserve
     // the old raw-input contract: each axis is applied once, by its first user.
     mouseMotion.sample(input.mouse.x, input.mouse.y);
@@ -258,6 +269,8 @@ void KeyboardFrame(Pad* pad) {
         // Esc always leaves the menus, whatever Pause is bound to.
         now.start = b.held(input, Act::Pause) || (menu && input.held(key::escape));
         now.select = b.held(input, Act::Camera);
+        // Preserve consecutive tap edges for native readers of both pad samples.
+        if (b.pressed(input, Act::Camera)) pad->previous.select = 0;
         // Face buttons that scripts and the GUI queries (shops, prompts) read
         // directly also follow the keys their text icons show (ButtonIcons.cpp):
         // cross = sprint/accelerate, square = jump/brake, triangle = enter/exit
@@ -285,14 +298,51 @@ void KeyboardFrame(Pad* pad) {
     buffer[0] = now.leftX; buffer[10] = now.leftY;
     if (pad->frontendFrames) --pad->frontendFrames;
 }
-bool PadTouched(const Controller& state) {
-    const auto moved = [](int16_t value) { return value > 40 || value < -40; };
-    if (moved(state.leftX) || moved(state.leftY) || moved(state.rightX) || moved(state.rightY)) return true;
-    for (int16_t value : {state.l1, state.l2, state.r1, state.r2, state.up, state.down, state.left, state.right,
-                          state.start, state.select, state.square, state.triangle, state.cross, state.circle, state.l3, state.r3})
-        if (value) return true;
+bool PadTouched(const Controller& current, const Controller& previous, bool swapped)
+{
+    static int16_t stickBaseline[4]{};
+    const int16_t axes[] = {current.leftX, current.leftY, current.rightX, current.rightY};
+    bool touched = false;
+    for (unsigned i = 0; i < 4; ++i)
+    {
+        constexpr int deadzone = 40;
+        constexpr int minimumChange = 8;
+        const int value = axes[i];
+        auto& baseline = stickBaseline[i];
+        if (std::abs(value) <= deadzone)
+            baseline = axes[i];
+        else if (std::abs(int(baseline)) <= deadzone || std::abs(value - baseline) >= minimumChange)
+        {
+            baseline = axes[i];
+            touched = true;
+        }
+    }
+    if (touched)
+        return true;
+
+    const int16_t directions[] = {current.up, current.down, current.left, current.right};
+    const int16_t oldDirections[] = {previous.up, previous.down, previous.left, previous.right};
+    const auto* active = swapped ? current.alternateDpad : directions;
+    const auto* oldActive = swapped ? previous.alternateDpad : oldDirections;
+    for (unsigned i = 0; i < 4; ++i)
+    {
+        if (active[i] && !oldActive[i])
+            return true;
+    }
+
+    static constexpr int16_t Controller::* buttons[] = {
+        &Controller::l1, &Controller::l2, &Controller::r1, &Controller::r2,
+        &Controller::start, &Controller::select, &Controller::square, &Controller::triangle,
+        &Controller::cross, &Controller::circle, &Controller::l3, &Controller::r3
+    };
+    for (const auto button : buttons)
+    {
+        if (current.*button && !(previous.*button))
+            return true;
+    }
     return false;
 }
+
 void Update(Pad* pad, int16_t number) {
     if (number == 0 && settings.pcControls) {
         // Read the pad natively to see whether it is in use; while the keyboard
@@ -301,10 +351,12 @@ void Update(Pad* pad, int16_t number) {
         updatePad.call(pad, number);
         playerPad = pad;
         Sample();
-        const bool wasKeyboard = keyboardInUse;
+        UpdateCheats();
+        const bool swapped = *reinterpret_cast<const int32_t*>(directionalSwap) != 0;
+        const bool padTouched = PadTouched(pad->current, previousPhysicalController, swapped);
+        previousPhysicalController = pad->current;
         if (input.touched()) keyboardInUse = true;
-        else if (PadTouched(pad->current)) keyboardInUse = false;
-        if (keyboardInUse != wasKeyboard) ApplyPcControls();
+        else if (padTouched) keyboardInUse = false;
         if (!keyboardInUse && !capture.active()) {
             keyboardController = pad->current;
             return;
@@ -322,8 +374,12 @@ void Update(Pad* pad, int16_t number) {
         updatePad.call(pad, number);
         if (number != 0) return;
         playerPad = pad;
+        const bool swapped = *reinterpret_cast<const int32_t*>(directionalSwap) != 0;
+        PadTouched(pad->current, previousPhysicalController, swapped);
+        previousPhysicalController = pad->current;
         // The keyboard still drives a rebinding capture on the bindings page.
         Sample();
+        UpdateCheats();
         if (capture.active()) { pad->previous = pad->current; pad->current = {}; }
         // The keyboard can always navigate the menus, so switching the PC
         // scheme off with it never strands a keyboard-only player.
@@ -356,11 +412,6 @@ const char* ModernTextKey(const char* key) {
     for (const auto& entry : moved) if (!std::strcmp(key + 2, entry.action)) return entry.text;
     return nullptr;
 }
-void ApplyPcControls() {
-    ApplyDpad(Remapped());
-    ApplyMouseCamera();
-    (void)injector::FlushCaches();
-}
 void InstallControls() {
     updatePad = safetymips::create_inline_game(0x2843D8, Update);
     // Every query is installed; each one reads the current scheme at runtime,
@@ -385,20 +436,6 @@ void InstallControls() {
     Bind<0x286AF0, Action::LookX>(); Bind<0x286B20, Action::LookY>();
     Bind<0x286DC8, Action::Skip>(); Bind<0x286DE8, Action::Oddjob>(); Bind<0x286E30, Action::FreeAim>();
     Bind<0x287640, Action::LeftX>(); Bind<0x287678, Action::LeftY>();
-    // D-pad steering/walking is disabled for both remapped schemes.
-    static constexpr uint32_t nop = 0;
-    const uintptr_t dpadSites[4] = {0x285764, 0x285770, 0x2858BC, 0x2858C8};
-    dpadReady = true;
-    for (unsigned i = 0; i < 4; ++i)
-    {
-        const auto status = dpadPatches[i].create(injector::detail::backend, dpadSites[i], &nop, 1);
-        if (status != PCSX2_HOOK_OK)
-        {
-            dpadReady = false;
-            DpadFailure(status);
-            break;
-        }
-    }
     rightX.bind(RightX); rightY.bind(RightY);
     injector::MakeCALL(0x286938, rightX.address());
     injector::MakeCALL(0x286A40, rightY.address()); injector::MakeCALL(0x286A6C, rightY.address());
@@ -406,10 +443,9 @@ void InstallControls() {
     for (auto site : {0x3ECDC8, 0x3ECEA0, 0x2E71B0, 0x2E71F4}) injector::MakeCALL(site, flyingLeft.address());
     for (auto site : {0x3ECD8C, 0x3ECF08, 0x2E7170, 0x2E7234}) injector::MakeCALL(site, flyingRight.address());
     InstallMouseCamera();
-    ApplyDpad(Remapped());
 }
 namespace {
-console::ps2settings::Value bindingValues[] = {
+constexpr console::ps2settings::Value bindingDefaults[] = {
     {"BINDINGS", "Forward", "W"},
     {"BINDINGS", "Backward", "S"},
     {"BINDINGS", "Left", "A"},
@@ -450,6 +486,7 @@ console::ps2settings::Value bindingValues[] = {
     {"BINDINGS", "TurretDown", "NUM5"},
     {"BINDINGS", "Pause", "ESC, BACKTICK"},
 };
+console::ps2settings::Value bindingValues[sizeof(bindingDefaults) / sizeof(*bindingDefaults)];
 void ParseBindings() {
     for (const auto& value : bindingValues) {
         for (unsigned i = 0; i < console::stories::ActionCount; ++i) {
@@ -461,11 +498,17 @@ void ParseBindings() {
 }
 }
 void LoadBindings() {
+    std::memcpy(bindingValues, bindingDefaults, sizeof(bindingValues));
     (void)console::ps2settings::load(bindingValues);
     ParseBindings();
 }
-void ReloadBindings() {
-    if (console::ps2settings::read(bindingValues)) ParseBindings();
+bool ReloadBindings()
+{
+    std::memcpy(bindingValues, bindingDefaults, sizeof(bindingValues));
+    if (!console::ps2settings::read(bindingValues))
+        return false;
+    ParseBindings();
+    return true;
 }
 bool SaveBindings() {
     if (!bindings.dirty) return true;

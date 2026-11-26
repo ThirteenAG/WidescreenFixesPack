@@ -12,17 +12,27 @@ import ComVars;
 export namespace TrueCrimeWindow
 {
     
-    inline HWND Window{};
+    inline std::atomic<HWND> Window{ nullptr };
     inline SafetyHookInline ConfigHook;
-    inline WNDPROC OriginalProc{};
     inline decltype(&CreateWindowExA) NativeCreateWindow{};
     
     inline int Mode{}, Width{}, Height{};
     inline bool PausedByFix = false, ReleasedByFix = false;
 
     inline std::atomic_bool PauseOnFocusLoss{ true };
+    inline std::mutex CursorOptions;
+    inline bool ConfineCursor = true, CursorOverlayBlocked = false;
     inline bool (*Message)(HWND, UINT, WPARAM, LPARAM, LRESULT&){};
     inline LPARAM (*MapMouse)(LPARAM){};
+    inline void (*ReleaseInput)(){};
+    inline void (*BeforeForcedExit)(){};
+
+    inline void SetCursorOverlayBlocked(bool blocked)
+    {
+        const std::lock_guard lock(CursorOptions);
+        CursorOverlayBlocked = blocked;
+        CursorConfinement::SetEnabled(ConfineCursor && !CursorOverlayBlocked);
+    }
 
     inline RECT Placement(HWND window, DWORD style, DWORD extended)
     {
@@ -63,8 +73,19 @@ export namespace TrueCrimeWindow
             setAttribute(window, 33, &preference, sizeof(preference));
     }
 
-    inline LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    inline LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR id, DWORD_PTR)
     {
+        if (message == WM_NCDESTROY)
+        {
+            RemoveWindowSubclass(window, WindowProc, id);
+            auto active = window;
+            if (Window.compare_exchange_strong(active, nullptr) && ReleaseInput)
+                ReleaseInput();
+            return DefSubclassProc(window, message, wParam, lParam);
+        }
+        if (window != Window.load())
+            return DefSubclassProc(window, message, wParam, lParam);
+
         LRESULT handled{};
         if (Message && Message(window, message, wParam, lParam, handled))
             return handled;
@@ -98,6 +119,8 @@ export namespace TrueCrimeWindow
             if (GameMode.is_initialized() && GameMode.get() < 2)
             {
                 DestroyWindow(window);
+                if (BeforeForcedExit)
+                    BeforeForcedExit();
                 TerminateProcess(GetCurrentProcess(), 0);
             }
             *reinterpret_cast<int*>(Controller.get() + 0x370) = 1;
@@ -105,7 +128,6 @@ export namespace TrueCrimeWindow
         }
         if (message == WM_MOUSEMOVE && MapMouse)
             lParam = MapMouse(lParam);
-        const auto native = OriginalProc;
         if (message == WM_ACTIVATEAPP && EngineState.is_initialized())
         {
             const int state = EngineState.get();
@@ -150,7 +172,7 @@ export namespace TrueCrimeWindow
 
         if (message == WM_GETMINMAXINFO && Mode)
         {
-            const auto result = native ? CallWindowProcA(native, window, message, wParam, lParam) : 0;
+            const auto result = DefSubclassProc(window, message, wParam, lParam);
             const auto rectangle = Placement(window, DWORD(GetWindowLongPtrW(window, GWL_STYLE)),
                 DWORD(GetWindowLongPtrW(window, GWL_EXSTYLE)));
             auto& limits = *reinterpret_cast<MINMAXINFO*>(lParam);
@@ -160,13 +182,7 @@ export namespace TrueCrimeWindow
             limits.ptMaxTrackSize.y = std::max(limits.ptMaxTrackSize.y, rectangle.bottom - rectangle.top);
             return result;
         }
-        if (message == WM_NCDESTROY)
-        {
-            Window = nullptr;
-            OriginalProc = nullptr;
-        }
-        return native ? CallWindowProcA(native, window, message, wParam, lParam)
-            : DefWindowProcA(window, message, wParam, lParam);
+        return DefSubclassProc(window, message, wParam, lParam);
     }
 
     inline HWND WINAPI CreateEngineWindow(DWORD extended, LPCSTR name, LPCSTR title, DWORD style,
@@ -188,14 +204,12 @@ export namespace TrueCrimeWindow
             parent, menu, instance, parameter);
         if (game && result)
         {
-            Window = result;
-            OriginalProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(result, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
-            if (!OriginalProc)
+            if (!SetWindowSubclass(result, WindowProc, 1, 0))
             {
-                Window = nullptr;
                 OutputDebugStringA("True Crime Fusion Fix: window message hook unavailable.\n");
                 return result;
             }
+            Window.store(result);
             Corners(result);
             WindowCursor::Attach(result);
             if (Mode)
@@ -214,10 +228,11 @@ export namespace TrueCrimeWindow
     {
         Width = width;
         Height = height;
-        if (!Window || Mode != 1)
+        const auto window = Window.load();
+        if (!window || Mode != 1)
             return;
-        const auto rectangle = Placement(Window, DWORD(GetWindowLongPtrW(Window, GWL_STYLE)), DWORD(GetWindowLongPtrW(Window, GWL_EXSTYLE)));
-        SetWindowPos(Window, nullptr, rectangle.left, rectangle.top, rectangle.right - rectangle.left,
+        const auto rectangle = Placement(window, DWORD(GetWindowLongPtrW(window, GWL_STYLE)), DWORD(GetWindowLongPtrW(window, GWL_EXSTYLE)));
+        SetWindowPos(window, nullptr, rectangle.left, rectangle.top, rectangle.right - rectangle.left,
             rectangle.bottom - rectangle.top, SWP_NOACTIVATE | SWP_NOZORDER);
     }
 
@@ -232,13 +247,16 @@ export namespace TrueCrimeWindow
     {
         Width = width;
         Height = height;
-        PauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
-        FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+        const auto refreshPause = []()
         {
-            PauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
-            if (Window)
-                PostMessageW(Window, WM_ACTIVATEAPP, GetForegroundWindow() == Window, 0);
-        });
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            PauseOnFocusLoss.store(FixSettings().Get("MAIN.PauseOnFocusLoss") == "1", std::memory_order_relaxed);
+            if (const auto window = Window.load())
+                PostMessageW(window, WM_ACTIVATEAPP, GetForegroundWindow() == window, 0);
+        };
+        FixSettings().OnChange("MAIN.PauseOnFocusLoss", refreshPause);
+        refreshPause();
         auto loop = hook::pattern("55 8B EC 83 E4 F0 83 EC 64 A1 ? ? ? ? 8B 88 70 03 00 00 53 33 DB 3B CB 56 57 0F 85 ? ? ? ? E8 ? ? ? ? A1");
         EngineState.SetAddress(*loop.get_first<int*>(39));
         Controller.SetAddress(*loop.get_first<uintptr_t*>(10));
@@ -246,7 +264,14 @@ export namespace TrueCrimeWindow
         if (config.empty()) // TrueCrimeMB
             config = hook::pattern("81 EC AC 00 00 00 A1 ? ? ? ? 53 8B 9C 24 B4 00 00 00 89 84 24 AC 00 00 00");
         ConfigHook = safetyhook::create_inline(config.get_first(), ReadConfig);
-        WindowCursor::Initialize(FixSettings());
+        const auto refreshCursor = []()
+        {
+            const std::lock_guard lock(CursorOptions);
+            ConfineCursor = FixSettings().Get("MAIN.ConfineCursor") == "1";
+            CursorConfinement::SetEnabled(ConfineCursor && !CursorOverlayBlocked);
+        };
+        FixSettings().OnChange("MAIN.ConfineCursor", refreshCursor);
+        refreshCursor();
         auto imports = IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll",
             std::forward_as_tuple("CreateWindowExA", CreateEngineWindow));
         NativeCreateWindow = reinterpret_cast<decltype(NativeCreateWindow)>(imports.at("CreateWindowExA").get());

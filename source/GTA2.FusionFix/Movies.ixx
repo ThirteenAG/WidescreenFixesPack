@@ -1,7 +1,6 @@
 module;
 
 #include <stdafx.h>
-#include "FixSettings.hpp"
 #include <ddraw.h>
 
 export module Movies;
@@ -22,22 +21,11 @@ export namespace GTA2Movies
     CloseFunction OriginalClose = nullptr;
     uint32_t* WindowBuffer = nullptr;
 
-    // Videos are never cut off: the whole movie at its own aspect with black bars, fitted into the game's 4:3 picture
-    // (MAIN.FMVWidescreenMode Original) or into the whole screen (Fill)
-    bool Original() { return FixSettings().Int("MAIN.FMVWidescreenMode") == 0; }
-    RECT Fit(int width, int height, int movieWidth, int movieHeight, bool original = Original())
+    // Videos are never cut off: the whole movie at its own aspect, fitted into the output with black bars
+    RECT Fit(int width, int height, int movieWidth, int movieHeight)
     {
-        int frameWidth = width, frameHeight = height;
-        if (original && width > 0 && height > 0)
-        {
-            if (int64_t(width) * 3 > int64_t(height) * 4)
-                frameWidth = std::max(1, int(int64_t(height) * 4 / 3));
-            else
-                frameHeight = std::max(1, int(int64_t(width) * 3 / 4));
-        }
-        auto fitted = Desktop::Fit(frameWidth, frameHeight, movieWidth, movieHeight);
-        int x = (width - frameWidth) / 2, y = (height - frameHeight) / 2;
-        return {fitted.left + x, fitted.top + y, fitted.right + x, fitted.bottom + y};
+        auto fitted = Desktop::Fit(width, height, movieWidth, movieHeight);
+        return {fitted.left, fitted.top, fitted.right, fitted.bottom};
     }
     // The part of a rectangle inside the output
     RECT Visible(RECT rect, int width, int height)
@@ -76,7 +64,7 @@ export namespace GTA2Movies
         if (!result) return result;
         memset(destination, 0, size_t(pitch) * outputHeight);
         // A window buffer already has the fitted size
-        auto rect = Fit(width, outputHeight, movie[0], movie[1], !windowBuffer && Original());
+        auto rect = Fit(width, outputHeight, movie[0], movie[1]);
         auto shown = Visible(rect, width, outputHeight);
         int w = rect.right - rect.left, h = rect.bottom - rect.top;
         for (int row = shown.top - rect.top; row < shown.bottom - rect.top; ++row)

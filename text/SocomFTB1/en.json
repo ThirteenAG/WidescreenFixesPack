@@ -30,7 +30,7 @@
   "fps.30": "30 FPS",
   "fps.60": "60 FPS",
   "icons": "Controller icons",
-  "icons.description": "Replace button glyphs in game text. Auto uses Xbox artwork because stock PPSSPP does not report the controller family. PlayStation keeps the original PSP glyphs. Configure controls in PPSSPP. Changes in Plugins apply immediately; file edits require restarting the emulated game.",
+  "icons.description": "Replace button glyphs in game text. Auto uses Xbox artwork because stock PPSSPP does not report the controller family. PlayStation keeps the original PSP glyphs. Configure controls in PPSSPP. Changes in Plugins and the configuration file apply while playing.",
   "icons.auto": "Auto",
   "icons.xbox": "Xbox",
   "icons.ps": "PlayStation",

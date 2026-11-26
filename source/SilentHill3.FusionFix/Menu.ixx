@@ -1,11 +1,11 @@
 module;
 
 #include <stdafx.h>
+#include "FixPad.hpp"
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
 #include "Shared/SilentHill/Display.hpp"
-#include "Shared/SilentHill/Gamepad.hpp"
 
 export module Menu;
 
@@ -55,9 +55,14 @@ namespace
 
     // Our page: the list of pages (View = -1) or one of them
     bool PageActive = false;
-    bool HelpActive = false, HelpRequested = false;
+    bool HelpActive = false, HelpRequested = false, HelpForNotice = false;
     int HelpScroll = 0;
-    std::string HelpText, UpdateNotice;
+    struct Notice
+    {
+        std::string version, page;
+        bool hub;
+    };
+    std::optional<Notice> UpdateNotice;
     bool OptionsSeen = false;
     RWGTAMenu::Model Model;
     int View = -1;
@@ -65,12 +70,103 @@ namespace
     int ListRow = 1;                // the list's row while a page shows
     int Scroll = 0;                 // the list's first row shown, when it has more rows than fit
     std::vector<const RWGTAMenu::Row*> Rows;
+    std::string DisplayLanguage;
     std::map<std::pair<uintptr_t, std::string>, std::string> RestartValues;     // restart settings as the game started
 
     constexpr int PageRows = 9;     // settings per page, as many as the OPTIONS page has
     constexpr int VisibleRows = 10; // rows above the help line
-    constexpr int MsgOn = 39, MsgOff = 40, MsgExit = 104, MsgExitHelp = 105;
     constexpr int SoundMove = 1, SoundAccept = 3, SoundChange = 5, SoundSlider = 7;
+
+    struct MenuPad
+    {
+        static constexpr unsigned Help = 1 << 9;
+        static constexpr unsigned Directions = (1 << 3) | (1 << 4) | (1 << 5) | (1 << 6);
+        ActivePad controller;
+        DWORD slot = XUSER_MAX_COUNT;
+        unsigned held = 0, pressed = 0;
+        ULONGLONG repeat = 0;
+
+        static unsigned MappedButtons(const XINPUT_GAMEPAD& pad)
+        {
+            // The native binding table stores a DirectInput button code followed by its action.
+            struct Binding { uint8_t button, action; };
+            struct Bindings { const Binding* data; int count, capacity; };
+            constexpr WORD buttons[] = { XINPUT_GAMEPAD_Y, XINPUT_GAMEPAD_A, XINPUT_GAMEPAD_B, XINPUT_GAMEPAD_X,
+                XINPUT_GAMEPAD_RIGHT_THUMB, 0, XINPUT_GAMEPAD_LEFT_SHOULDER, XINPUT_GAMEPAD_RIGHT_SHOULDER,
+                XINPUT_GAMEPAD_BACK, XINPUT_GAMEPAD_START, XINPUT_GAMEPAD_LEFT_THUMB, XINPUT_GAMEPAD_X };
+            if (!pPads)
+                return 0;
+            const auto& bindings = *reinterpret_cast<const Bindings*>(pPads.get() + 0x10);
+            if (!bindings.data)
+                return 0;
+            unsigned result = 0;
+            for (int i = 0; i < bindings.count; ++i)
+            {
+                const auto& binding = bindings.data[i];
+                const int index = binding.button - 0x30;
+                if (index < 0 || index >= static_cast<int>(std::size(buttons)))
+                    continue;
+                const bool down = (pad.wButtons & buttons[index]) ||
+                    (index == 1 && pad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD) ||
+                    (index == 5 && pad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+                if (!down)
+                    continue;
+                switch (binding.action)
+                {
+                    case 16: result |= 1 << 1; break; // Enter
+                    case 17: result |= 1 << 2; break; // Cancel
+                    case 3: result |= 1 << 7; break;  // Step right
+                    case 2: result |= 1 << 8; break;  // Step left
+                    case 4: result |= Help; break;    // Map
+                }
+            }
+            return result;
+        }
+
+        static unsigned Actions(const XINPUT_GAMEPAD& pad)
+        {
+            unsigned actions = MappedButtons(pad);
+            if ((pad.wButtons & XINPUT_GAMEPAD_DPAD_UP) || pad.sThumbLY > 16384) actions |= 1 << 3;
+            if ((pad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN) || pad.sThumbLY < -16384) actions |= 1 << 4;
+            if ((pad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) || pad.sThumbLX > 16384) actions |= 1 << 5;
+            if ((pad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT) || pad.sThumbLX < -16384) actions |= 1 << 6;
+            return actions;
+        }
+
+        void Poll()
+        {
+            const auto window = SHDisplay::Get().window;
+            if (!window || GetForegroundWindow() != window)
+            {
+                *this = {};
+                return;
+            }
+            const auto sample = controller.Read(Actions);
+            if (slot != sample.slot)
+                repeat = 0;
+            slot = sample.slot;
+            held = Actions(sample.current);
+            pressed = held & ~Actions(sample.previous);
+            const auto now = GetTickCount64();
+            if (pressed & Directions)
+                repeat = now + 350;
+            else if ((held & Directions) && repeat && now >= repeat)
+            {
+                pressed |= held & Directions;
+                repeat = now + 80;
+            }
+        }
+
+        int Action(int native) const
+        {
+            for (int action = 1; action <= 8; ++action)
+            {
+                if (pressed & (1 << action))
+                    return action;
+            }
+            return native > 0 && native <= 8 && (held & (1 << native)) ? 0 : native;
+        }
+    } Pad;
 
     int RowCount()
     {
@@ -113,12 +209,29 @@ namespace
     // applied yet)
     std::string LanguageTag()
     {
-        auto& chosen = FixSettings().String("MAIN.TextLanguage");
+        auto chosen = FixSettings().Get("MAIN.TextLanguage");
         if (!chosen.empty() && chosen != "auto")
             return chosen;
         static const char* tags[] = { "en", "en", "fr", "de", "it", "es", "en", "en" };
         int language = aOptionsPendingValues.is_initialized() ? (*aOptionsPendingValues)[2] : 1;
         return tags[std::clamp(language, 0, 7)];
+    }
+
+    std::string FormatNotice(const Notice& notice, const std::string& language)
+    {
+        auto texts = FixSettings().GetTexts();
+        texts.Select(language);
+        auto line = texts.Resolve(notice.hub ? "@update.availablehub" : "@update.availablesite");
+        auto replace = [&line](std::string_view token, std::string_view value)
+        {
+            const auto index = line.find(token);
+            if (index != std::string::npos)
+                line.replace(index, token.size(), value);
+        };
+        replace("{name}", texts.Resolve(FixSettings().GetDescription().name));
+        replace("{version}", notice.version);
+        replace("{page}", notice.page);
+        return line;
     }
 
     // UTF-8 to the game's text: Windows-1252, "\h" for the proportional font, no backslash (an escape)
@@ -300,6 +413,35 @@ namespace
         Rows = Model.VisibleRows(size_t(View));
     }
 
+    bool RefreshRows()
+    {
+        const auto language = LanguageTag();
+        if (language != DisplayLanguage && Model.SelectLanguage(language))
+        {
+            DisplayLanguage = language;
+            Rows.clear();
+            if (View >= 0)
+                ShowRows();
+            return true;
+        }
+        if (View < 0)
+            return false;
+
+        auto current = Model.VisibleRows(size_t(View));
+        if (current == Rows)
+            return false;
+        if (Row == static_cast<int>(Rows.size()) + 1)
+            Row = static_cast<int>(current.size()) + 1;
+        else if (Row > 0 && Row <= static_cast<int>(Rows.size()))
+        {
+            const auto selected = std::find(current.begin(), current.end(), Rows[Row - 1]);
+            if (selected != current.end())
+                Row = static_cast<int>(std::distance(current.begin(), selected)) + 1;
+        }
+        Rows = std::move(current);
+        return true;
+    }
+
     void RememberRestartValues(const asi_settings::LoadedPlugin& plugin)
     {
         for (auto& setting : plugin.file.description.settings)
@@ -321,8 +463,19 @@ namespace
                 if (!setting.HasValue() || setting.apply != "restart")
                     continue;
                 auto initial = RestartValues.find({ reinterpret_cast<uintptr_t>(page.plugin->module), setting.id });
-                if (initial != RestartValues.end() && initial->second != OtherPlugins::Get(*page.plugin, setting))
-                    return true;
+                if (initial == RestartValues.end())
+                    continue;
+                const auto value = OtherPlugins::Get(*page.plugin, setting);
+                if (initial->second == value)
+                    continue;
+                if (page.plugin->file.description.id == "SilentHill3.FusionFix")
+                {
+                    const auto& display = SHDisplay::Get();
+                    if ((setting.id == "MAIN.ResX" && value == std::to_string(display.backBufferWidth)) ||
+                        (setting.id == "MAIN.ResY" && value == std::to_string(display.backBufferHeight)))
+                        continue;
+                }
+                return true;
             }
         }
         return false;
@@ -348,7 +501,8 @@ namespace
     {
         HMODULE self = nullptr;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&OpenList), &self);
-        Model.OpenPlugins(self, LanguageTag(), PageRows, {}, true);
+        DisplayLanguage = LanguageTag();
+        Model.OpenPlugins(self, DisplayLanguage, PageRows, {}, true);
         for (auto& page : Model.Pages())
         {
             if (page.plugin)
@@ -358,6 +512,7 @@ namespace
         Row = ListRow = 1;
         Scroll = 0;
         PageActive = true;
+        Pad = {};
         Sound(SoundMove);
     }
 
@@ -378,19 +533,28 @@ namespace
     int __cdecl Frame()
     {
         OptionsSeen = true;
+        if (UpdateNotice && FixSettings().Get("MAIN.CheckForUpdates") == "0")
+            UpdateNotice.reset();
         if (!PageActive || nOptionsMode != 0)
         {
             if (PageActive)
             {
                 PageActive = false;
                 Model.Close();
+                Rows.clear();
             }
             int result = FrameHook.ccall<int>();
-            if (!UpdateNotice.empty() && nOptionsMode == 0)
+            if (UpdateNotice && nOptionsMode == 0)
             {
                 TextLayerFront();
-                SetGlyphSize(18, 18);
-                DrawText(1, FitLine(ToGame(UpdateNotice), 440), 256, 425, true);
+                SetGlyphSize(16, 16);
+                const auto lines = Wrap(FormatNotice(*UpdateNotice, LanguageTag()), 480);
+                int y = 431 - 18 * (static_cast<int>(lines.size()) - 1);
+                for (const auto& line : lines)
+                {
+                    DrawText(1, line, 256, y, true);
+                    y += 18;
+                }
                 ClearGlyphSize();
                 TextLayerBack();
             }
@@ -404,32 +568,32 @@ namespace
         SetTextBg((*aTextBackground)[0], (*aTextBackground)[1], (*aTextBackground)[2]);
         TextLayerFront();
 
-        // Rows that appear or disappear with other values (visibleIf) follow at once
-        if (View >= 0)
-            ShowRows();
+        const bool rowsChanged = RefreshRows();
         int rows = RowCount();
         Row = std::clamp(Row, 1, rows);
         Scroll = std::clamp(Scroll, std::max(0, Row - VisibleRows), Row - 1);
         int shown = std::min(rows - Scroll, VisibleRows);
         const RWGTAMenu::Row* selected = View >= 0 && Row < rows ? Rows[Row - 1] : nullptr;
-        int action = nOptionsAction;
+        Pad.Poll();
+        int action = Pad.Action(nOptionsAction);
+        if (rowsChanged && (action == 1 || action == 5 || action == 6))
+            action = 0;
         bool leave = false;
-        const auto pad = SHPad::Get();
-        static bool helpHeld = false;
-        bool held = (pad.buttons & SHPad::Y) != 0;
-        bool helpPressed = HelpRequested || (held && !helpHeld);
+        bool helpPressed = HelpRequested || (Pad.pressed & MenuPad::Help);
         HelpRequested = false;
-        helpHeld = held;
-        if (helpPressed && !HelpActive && (selected || !UpdateNotice.empty()))
+        if (helpPressed && !HelpActive && (selected || UpdateNotice))
         {
-            HelpText = selected ? Label(*selected) + ": " + Help(*selected) : UpdateNotice;
             HelpActive = true;
+            HelpForNotice = !selected;
             HelpScroll = 0;
             Sound(SoundAccept);
         }
+        if (HelpActive && (HelpForNotice ? !UpdateNotice : !selected))
+            HelpActive = false;
         if (HelpActive)
         {
-            auto lines = Wrap(HelpText, 470);
+            auto text = HelpForNotice ? FormatNotice(*UpdateNotice, DisplayLanguage) : Label(*selected) + ": " + Help(*selected);
+            auto lines = Wrap(text, 470);
             int maximum = std::max(0, int(lines.size()) - 12);
             if (action == 3) --HelpScroll;
             if (action == 4) ++HelpScroll;
@@ -479,25 +643,36 @@ namespace
                 }
                 else
                 {
-                    int w = row == rows && View < 0 ? MsgWidth(MsgExit) : 200;
+                    int w = row == rows && View < 0 ? Width(ToGame(Model.Text("menu.exit"))) : 200;
                     AddRect(256 - w / 2, y, 256 + w / 2, y + 25, slot);
                 }
             }
         }
-        int hit = HitTest();
-        if ((hit == 30 || hit == 31) && MouseClicked())
+        int hit = rowsChanged ? 0 : HitTest();
+        const bool click = MouseClicked() != 0;
+        if (click && hit == 0 && action == 1)
+            action = 0;
+        if ((hit == 30 || hit == 31) && click)
             action = hit == 30 ? 7 : 8;
         else if (sliderSelected && hit > 0 && hit <= SliderTicks && MouseHeld())
         {
-            if (SetSliderTick(*selected, hit - 1))
+            if (!RefreshRows() && SetSliderTick(*selected, hit - 1))
                 Sound(SoundSlider);
         }
-        else if (!sliderSelected && hit > 0 && hit <= shown && MouseMoved() && hit + Scroll != Row)
+        else if (!sliderSelected && hit > 0 && hit <= shown && (MouseMoved() || click))
         {
-            Row = hit + Scroll;
-            Sound(SoundMove);
+            if (hit + Scroll != Row)
+            {
+                Row = hit + Scroll;
+                Sound(SoundMove);
+                selected = View >= 0 && Row < rows ? Rows[Row - 1] : nullptr;
+            }
+            if (click)
+                action = 1;
         }
 
+        if ((action == 1 || action == 5 || action == 6) && RefreshRows())
+            action = 0;
         switch (action)
         {
         case 2:     // Cancel: from a page back to the list, from the list out of Options like the native pages
@@ -559,8 +734,7 @@ namespace
 
         if (PageActive)
         {
-            if (View >= 0)
-                ShowRows();
+            RefreshRows();
             rows = RowCount();
             Row = std::clamp(Row, 1, rows);
             Scroll = std::clamp(Scroll, std::max(0, Row - VisibleRows), Row - 1);
@@ -585,10 +759,7 @@ namespace
                 int y = RowY(slot);
                 if (row == rows)
                 {
-                    if (View < 0)
-                        DrawOptText(colour, slot, 0, MsgExit);
-                    else
-                        DrawText(colour, ToGame(Model.Text("menu.back")), 256, y, true);
+                    DrawText(colour, ToGame(Model.Text(View < 0 ? "menu.exit" : "menu.back")), 256, y, true);
                     continue;
                 }
                 if (View < 0)
@@ -608,8 +779,6 @@ namespace
                     slider.value = uint8_t(SliderTick(entry));
                     QueueDraw(reinterpret_cast<void*>(&DrawSlider), &slider, 1);
                 }
-                else if (entry.kind == RowKind::Setting && entry.setting->type == asi_settings::Type::Bool)
-                    DrawOptText(colour, slot, 4, OtherPlugins::Get(*entry.plugin, *entry.setting) == "1" ? MsgOn : MsgOff);
                 else
                     DrawText(colour, FitLine(ToGame(Model.Value(entry)), 228), 268, y);
             }
@@ -631,7 +800,7 @@ namespace
                     DrawText(1, lines[i], 256, 374 + int(i) * 20, true);
             }
             else if (View < 0 && Row == rows)
-                DrawOptText(1, 0, 5, MsgExitHelp);
+                DrawText(1, FitLine(ToGame(Model.Text("menu.exithelp")), 480), 256, 374, true);
         }
 
         TextLayerBack();
@@ -731,21 +900,11 @@ public:
             updates.fileVersion = rsc_FileVersion;
             updates.settings = &FixSettings();
             updates.playable = []() { return OptionsSeen && nOptionsMode == 0; };
-            updates.show = [](const std::wstring& notice) { UpdateNotice = asi_settings::text::Narrow(notice); };
+            updates.show = [](const std::wstring&) {};
             updates.format = [](const std::string& version, bool hub)
             {
-                auto texts = FixSettings().GetTexts();
-                texts.Select(LanguageTag());
-                auto line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
-                auto replace = [&line](const char* key, const std::string& value)
-                {
-                    const auto at = line.find(key);
-                    if (at != std::string::npos)
-                        line.replace(at, strlen(key), value);
-                };
-                replace("{name}", texts.Resolve(FixSettings().GetDescription().name));
-                replace("{version}", version);
-                return asi_settings::text::Widen(line);
+                UpdateNotice = Notice{ version, RWGTA::UpdateCheck::Page(), hub };
+                return asi_settings::text::Widen(FormatNotice(*UpdateNotice, LanguageTag()));
             };
             RWGTA::UpdateCheck::Init(std::move(updates));
             SHDisplay::OnPresent().push_back([]() { RWGTA::UpdateCheck::Tick(); });
@@ -804,6 +963,7 @@ public:
             {
                 PageActive = HelpActive = false;
                 Model.Close();
+                Rows.clear();
             });
         };
     }

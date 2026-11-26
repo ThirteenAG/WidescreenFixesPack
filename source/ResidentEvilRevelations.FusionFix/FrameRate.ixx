@@ -2,7 +2,10 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/ResidentEvil/SlowFramePacer.hpp"
 #include <atomic>
+#include <cstdlib>
+#include <mutex>
 
 export module FrameRate;
 
@@ -35,7 +38,7 @@ namespace
             limit = GetMonitorInfoW(monitor, &info) && EnumDisplaySettingsW(info.szDevice, ENUM_CURRENT_SETTINGS, &mode) &&
                 mode.dmDisplayFrequency > 1 ? static_cast<int32_t>(mode.dmDisplayFrequency) : 60;
         }
-        return std::clamp(limit, 30, 1000);
+        return std::clamp(limit, 1, 1000);
     }
 
     void Apply(int32_t limit, HWND window)
@@ -72,6 +75,16 @@ export namespace RevFrameRate
             monitor = currentMonitor;
             lastCheck = now;
         }
+
+        // At very low targets the native clock can still present faster than requested.
+        static ResidentEvil::SlowFramePacer pacer;
+        int frameLimit = 0;
+        if (selected > 0 && selected < 30 && frameRateMode.load(std::memory_order_relaxed) == 0)
+        {
+            if (const auto main = pMain.get(); main && *reinterpret_cast<const float*>(main + 0x3C) == selected)
+                frameLimit = selected;
+        }
+        pacer.Limit(frameLimit);
     }
 }
 
@@ -102,13 +115,16 @@ public:
             pattern = hook::pattern("A1 ? ? ? ? 0F 5B C0 F3 0F 11 40 3C");
             pMain.SetAddress(*pattern.get_first<uintptr_t*>(1));
 
-            requestedLimit.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
+            const auto update = []()
+            {
+                static std::mutex writers;
+                const std::lock_guard lock(writers);
+                requestedLimit.store(std::atoi(FixSettings().Get("MAIN.FPSLimit").c_str()), std::memory_order_relaxed);
+            };
+            FixSettings().OnChange("MAIN.FPSLimit", update);
+            update();
             Apply(requestedLimit.load(std::memory_order_relaxed), nullptr);
             ready.store(true, std::memory_order_release);
-            FixSettings().OnChange("MAIN.FPSLimit", []()
-            {
-                requestedLimit.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
-            });
         };
     }
 } FrameRate;

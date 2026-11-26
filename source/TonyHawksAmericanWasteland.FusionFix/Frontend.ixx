@@ -532,7 +532,7 @@ namespace THAWMenu
     }
     inline void Model()
     {
-        auto language = FixSettings().String("MAIN.TextLanguage");
+        auto language = FixSettings().Get("MAIN.TextLanguage");
         if (language.empty() || language == "auto")
         {
             switch (Read<int>(NativeLanguage.get_ptr()))
@@ -648,6 +648,7 @@ namespace THAWMenu
     inline bool Build()
     {
         Model();
+        RWGTAMenu::Model::Changed().exchange(false);
         state.busy = true;
         ++state.generation;
         state.items.clear();
@@ -706,7 +707,6 @@ namespace THAWMenu
         Parameters finish;
         auto result = Spawn("finish_themed_sub_menu", finish);
         state.busy = false;
-        RWGTAMenu::Model::Changed() = false;
         return result;
     }
     inline bool Refresh()
@@ -733,7 +733,6 @@ namespace THAWMenu
                 Properties(text);
             }
         }
-        RWGTAMenu::Model::Changed() = false;
         if (state.selected < state.items.size())
             Help(ItemHelp(state.items[state.selected]));
         return true;

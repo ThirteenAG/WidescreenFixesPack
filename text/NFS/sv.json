@@ -22,6 +22,8 @@
   "WFP_GAMEPADICONS": "Knappikoner",
   "WFP_ICONS_AUTO": "Automatiskt",
   "WFP_SKIPINTRO": "Hoppa över intro",
+  "WFP_SKIPPRESSSTART": "Hoppa över ”Tryck på Start”",
+  "WFP_DESC_SKIPPRESSSTART": "Titelskärmen går vidare automatiskt utan att du behöver trycka på Start.",
   "WFP_U2SAVEBONUS": "Bonus för Underground 2-sparning",
   "WFP_FPSLIMIT": "Bildfrekvens",
   "WFP_FPS_CUSTOM": "Anpassad",

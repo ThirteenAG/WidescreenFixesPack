@@ -29,7 +29,7 @@
   "fmv.original": "Formato originale",
   "fmv.fill": "Riempi",
   "FOVFactor": "Fattore campo visivo",
-  "FOVFactor.description": "Moltiplica il campo visivo in gioco. 1.0 mantiene l'inquadratura prevista; valori più alti allargano la vista. I filmati non cambiano. Effetto immediato.",
+  "FOVFactor.description": "Moltiplica il campo visivo della normale telecamera di gioco. 1.0 mantiene l'inquadratura prevista e valori più alti allargano la vista. I filmati, i mirini di precisione e i binocoli mantengono l'inquadratura originale. Effetto immediato.",
   "SkipIntro": "Salta intro",
   "SkipIntro.description": "Salta i video dei loghi e l'avviso di copyright all'avvio; il gioco si apre sul menu principale. Richiede un riavvio.",
   "PauseOnFocusLoss": "Pausa in background",

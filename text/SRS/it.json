@@ -41,6 +41,8 @@
   "ResX.description": "Larghezza di uscita in pixel. Zero usa la risoluzione del desktop. Ha effetto dopo il riavvio.",
   "ResY": "Altezza risoluzione",
   "ResY.description": "Altezza di uscita in pixel. Zero usa la risoluzione del desktop. Ha effetto dopo il riavvio.",
+  "GamepadIcons": "Icone del controller",
+  "GamepadIcons.description": "Icone dei pulsanti del controller nei suggerimenti mentre si usa un controller. Automatica usa Xbox; scegli PlayStation o Nintendo per un altro controller. Tastiera o mouse ripristinano i tasti.",
   "CheckForUpdates": "Cerca aggiornamenti",
   "CheckForUpdates.description": "Cerca una versione più recente della correzione se attivo. Un avviso appare nel menu principale. FusionFixHub apre la pagina di aggiornamento alla chiusura del gioco, se installato accanto al gioco. Disattivato per impostazione predefinita.",
   "update.availablehub": "È disponibile una nuova versione di {name}. Aggiornala in FusionFixHub dopo aver chiuso il gioco.",

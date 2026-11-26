@@ -64,8 +64,8 @@ namespace tcny
     inline uintptr_t mapCallers[2];
     inline uint32_t frame;
 
-    // Cutscenes: the world (pointer), its cinematic flag, the game camera.
-    inline uintptr_t worldPointer, cinemaOffset, gameCamera;
+    // Cutscenes: the world pointer, its cinematic flag and bars, and the game camera.
+    inline uintptr_t worldPointer, cinemaOffset, cinemaBarsOffset, gameCamera;
     // The 2D manager that lays out and draws the HUD and menus.
     inline uintptr_t hudManager;
     inline bool Cinema()

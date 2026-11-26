@@ -1,10 +1,12 @@
 #include "Controls.hpp"
-#include "../../external/injector/include/ps2/patches.hpp"
 
 namespace vcs {
 namespace {
 SafetyMipsMid firstPerson, followPedX, followPedY, followCarX, followCarY;
 SafetyMipsMid scopedX, scopedY, aimWeapon, playerAim;
+SafetyMipsMid keyboardFollowPed, aimScaleX, aimScaleY, aimPitchLimit, aimYawLimit;
+pcsx2::GameFunction<int16_t(Pad*)> nativeDpadSteer, nativeFlyingUp;
+pcsx2::GameCallback<int16_t(Pad*)> dpadSteer, flyingUp;
 float Delta(uintptr_t camera, bool vertical, bool zoom = false) {
     if (!MouseControlsActive()) return 0.0f;
     float delta = mouseMotion.take(vertical, settings.mouseSensitivity, settings.invertMouse);
@@ -33,19 +35,23 @@ void FollowPedY(SafetyMipsContext& regs) {
 }
 // In vehicles the camera stays where the mouse left it for one second of
 // game time, then the native follow-behind resumes, as in the PC games.
-bool carHold = false;
-uint32_t carHoldUntil = 0;
-void FollowCarX(SafetyMipsContext& regs) {
-    if (!MouseControlsActive()) { carHold = false; return; }
+VehicleCameraHold mouseCameraHold;
+void FollowCarX(SafetyMipsContext& regs)
+{
+    if (!MouseControlsActive())
+    {
+        mouseCameraHold.Clear();
+        return;
+    }
     const uint32_t now = *reinterpret_cast<const uint32_t*>(0x4CD104); // CTimer::m_snTimeInMilliseconds
-    if (mouseMotion.x != 0.0f || mouseMotion.y != 0.0f) { carHold = true; carHoldUntil = now + 1000; }
-    else if (carHold && int32_t(now - carHoldUntil) >= 0) carHold = false;
-    if (!carHold) return;
+    const bool moved = mouseMotion.x != 0.0f || mouseMotion.y != 0.0f;
+    if (!mouseCameraHold.Update(now, moved, 1000))
+        return;
     regs.f0 = Delta(uintptr_t(regs.s2), false);
     *reinterpret_cast<float*>(uintptr_t(regs.s2) + 0x140) = 0.0f;
 }
 void FollowCarY(SafetyMipsContext& regs) {
-    if (!MouseControlsActive() || !carHold) return;
+    if (!MouseControlsActive() || !mouseCameraHold.Active()) return;
     // f3 = Alpha + fTargetDiff (f22); see FollowPedY.
     regs.f3 = regs.f3 - regs.f22 + Delta(uintptr_t(regs.s2), true);
     regs.f1 = 0.0f;
@@ -73,27 +79,37 @@ void PlayerAim(SafetyMipsContext& regs) {
     regs.f22 = mouseMotion.take(false, settings.mouseSensitivity, settings.invertMouse);
     regs.f25 = mouseMotion.take(true, settings.mouseSensitivity, settings.invertMouse);
 }
+void KeepKeyboardFollowPedActive(SafetyMipsContext& regs)
+{
+    // The next two instructions shift the right-stick magnitudes down by 16.
+    // A positive result keeps the native follow camera's recenter gate open.
+    if (KeyboardActive())
+        regs.v1 = 1 << 16;
 }
-// Native code changes of the PC scheme; switched with the menu toggle.
-struct Word { uintptr_t at; uint32_t value; };
-constexpr Word pcWords[] = {
-    // Preserve the original PC mode's always-active mouse camera. Without this
-    // branch patch, zero integer stick input triggers the automatic recenterer.
-    {0x29DC18, 0},
-    {0x2854F0, 0}, // D-pad controls movement, not the camera.
-    {0x286704, 0}, // Flying camera input is supplied separately.
-    // Free-aim look scales (lui/ori $at): -1 and 1 radian per mouse unit.
-    {0x234F74, 0x3C01BF80}, {0x234F78, 0x34210000},
-    {0x234BE4, 0x3C013F80}, {0x234BE8, 0x34210000},
-    // Manual aim follows the player's dummy target through a separate path,
-    // which bypasses AimWeapon above. Match the old mouse mode: use its target
-    // angles immediately rather than catching up by 0.1 * timestep each frame.
-    {0x29CC10, 0}, // Pitch target rate limit.
-    {0x29CCC0, 0}, // Yaw target rate limit.
-};
-pcsx2::Patch pcPatches[sizeof(pcWords) / sizeof(pcWords[0])];
-void ApplyMouseCamera() {
-    for (auto& patch : pcPatches) if (patch) (void)(KeyboardActive() ? patch.enable() : patch.disable());
+void AimScaleX(SafetyMipsContext& regs)
+{
+    if (KeyboardActive())
+        regs.f23 = -1.0f;
+}
+void AimScaleY(SafetyMipsContext& regs)
+{
+    if (KeyboardActive())
+        regs.f0 = 1.0f;
+}
+void FollowAimTarget(SafetyMipsContext& regs)
+{
+    // The native comparison snaps to the aim target below this angular limit.
+    if (KeyboardActive())
+        regs.f3 = 1000.0f;
+}
+int16_t ReadDpadSteer(Pad* pad)
+{
+    return KeyboardFor(pad) ? 0 : nativeDpadSteer(pad);
+}
+int16_t ReadFlyingUp(Pad* pad)
+{
+    return KeyboardFor(pad) ? 0 : nativeFlyingUp(pad);
+}
 }
 void InstallMouseCamera() {
     firstPerson = safetymips::create_mid<&FirstPerson>(0x2956AC);
@@ -105,8 +121,16 @@ void InstallMouseCamera() {
     scopedY = safetymips::create_mid<&ScopedY>(0x298224);
     aimWeapon = safetymips::create_mid<&AimWeapon>(0x29CE04);
     playerAim = safetymips::create_mid<&PlayerAim>(0x234464);
-    for (unsigned i = 0; i < sizeof(pcWords) / sizeof(pcWords[0]); ++i)
-        (void)pcPatches[i].create(injector::detail::backend, pcWords[i].at, &pcWords[i].value, 1);
-    ApplyMouseCamera();
+    keyboardFollowPed = safetymips::create_mid<&KeepKeyboardFollowPedActive>(0x29DC0C);
+    aimScaleX = safetymips::create_mid<&AimScaleX>(0x234F80);
+    aimScaleY = safetymips::create_mid<&AimScaleY>(0x234BF0);
+    aimPitchLimit = safetymips::create_mid<&FollowAimTarget>(0x29CC00);
+    aimYawLimit = safetymips::create_mid<&FollowAimTarget>(0x29CCB0);
+    nativeDpadSteer.bind(0x285858);
+    nativeFlyingUp.bind(0x287430);
+    dpadSteer.bind(ReadDpadSteer);
+    flyingUp.bind(ReadFlyingUp);
+    injector::MakeCALL(0x2854F0, dpadSteer.address());
+    injector::MakeCALL(0x286704, flyingUp.address());
 }
 }

@@ -18,6 +18,12 @@ export void* WindowProcedureAddress()
     static const auto address = hook::pattern("4C 8B DC 55 56 57 49 8D AB 48 FE FF FF 48 81 EC A0 02 00 00 48 8B 05 ?").get_first();
     return address;
 }
+export void* RawInputReadAddress()
+{
+    // FWindowsApplication::ProcessMessage reads into its own buffer.
+    static const auto address = hook::pattern("FF 15 ? ? ? ? 3B 44 24 58 0F 85 ? ? ? ? 41 39 3F 0F 85 ? ? ? ? 41 F6 47 18 01").get_first();
+    return address;
+}
 export void* HudReloadAddress()
 {
     static const auto address = hook::pattern("40 53 48 83 EC 20 45 33 C0 33 D2 33 C9 E8 ? ? ? ? E8 ? ? ? ? 8B D8 E8 ? ? ? ? 8B CB E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? 48 8B 0D ? ? ? ? 48 83 B9 ? ? ? ? 00").get_first();

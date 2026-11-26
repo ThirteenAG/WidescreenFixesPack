@@ -33,11 +33,11 @@ namespace
 
     GameRef<uintptr_t> GamePad;
     GameRef<uintptr_t> Keyboard;
+    std::atomic<int> linked{ 0 };
 
     bool Linked()
     {
-        static auto& linked = FixSettings().Int("MAIN.ClassicKeyLinks");
-        return linked != 0;
+        return linked.load(std::memory_order_relaxed) != 0;
     }
 
     uint32_t MapKey(uintptr_t map, uint32_t key)
@@ -109,6 +109,7 @@ export namespace RE0ClassicKeys
 {
     void Install()
     {
+        BindLiveInt("MAIN.ClassicKeyLinks", linked);
         // The menu readers: keyboard (ecx) and sGamePad (esi) first
         auto held = hook::pattern("8B 0D ? ? ? ? 56 8B 35 ? ? ? ? 8B 91 20 01 00 00 8B 86");
         auto pressed = hook::pattern("8B 0D ? ? ? ? 56 8B 35 ? ? ? ? 8B 91 60 01 00 00 8B 86");

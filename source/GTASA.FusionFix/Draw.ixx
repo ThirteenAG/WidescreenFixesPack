@@ -360,20 +360,20 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
             OnSettingChange("MAIN.HudAspectRatioConstraint", []()
             {
-                fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+                fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
                 CDraw::Refresh();
             });
 
             // Field of View: a multiplier of the gameplay cameras' corrected field of view
-            static auto& fov = FixSettings().Float("MAIN.FOVFactor");
-            FOVManager::g_BaseFOVMultiplier = std::clamp(fov, 0.5f, 2.0f);
-            OnSettingChange("MAIN.FOVFactor", []()
+            const auto applyFOV = []()
             {
-                FOVManager::g_BaseFOVMultiplier = std::clamp(fov, 0.5f, 2.0f);
-            });
+                FOVManager::g_BaseFOVMultiplier = std::clamp(ReadFixSetting("MAIN.FOVFactor", 1.0f), 0.5f, 2.0f);
+            };
+            applyFOV();
+            OnSettingChange("MAIN.FOVFactor", applyFOV);
             lastScreenWidth = 0;
 
             static float fScaledFOV = 0.0f;

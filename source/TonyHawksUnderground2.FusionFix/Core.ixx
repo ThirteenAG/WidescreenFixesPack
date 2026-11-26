@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/WindowCursor.hpp"
+#include "rawinput.hpp"
 #include <random>
 
 export module Core;
@@ -18,6 +19,8 @@ import Misc;
 
 void Install()
 {
+    // The main loop empties the message queue before each frame; a high polling rate mouse must not keep it going
+    MessagePumpGuard::Install(GetModuleHandle(nullptr));
     WindowCursor::Initialize(FixSettings());
     Screen.Width = FixSettings().Int("MAIN.ResX");
     Screen.Height = FixSettings().Int("MAIN.ResY");
@@ -42,7 +45,7 @@ void Install()
     Screen.fHUDScaleX = std::min(Screen.fWidth, Screen.fHeight * (4.0f / 3.0f)) / 640.0f / Screen.fWidth;
     Screen.fHudOffset = ((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f;
     Screen.fHudOffsetReal = std::max(0.0f, (Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
-    THUG2Frame::Install(Screen.fWidth, Screen.fHeight, &FixSettings().Int("MAIN.CutsceneBorders"));
+    THUG2Frame::Install(Screen.fWidth, Screen.fHeight);
     THUG2Device::Install();
 
     InstallMovie();

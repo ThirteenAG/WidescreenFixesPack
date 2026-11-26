@@ -1,8 +1,8 @@
 module;
 
 #include <stdafx.h>
-#include <FunctionHookMinHook.hpp>
 #include "FixSettings.hpp"
+#include "Shared/NFS/CustomUserFiles.hpp"
 #include "Shared/NFS/LanguageSetting.hpp"
 
 export module Registry;
@@ -79,28 +79,7 @@ static std::filesystem::path UserFilesFolder()
     return documents;
 }
 
-static std::unique_ptr<FunctionHookMinHook> mhSHGetFolderPathA;
-static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
-{
-    if (bUseCustomUserDir)
-    {
-        int folder = csidl & ~CSIDL_FLAG_CREATE;
-        if (folder == CSIDL_PERSONAL)
-        {
-            const auto path = CustomUserDir.u8string();
-            if (path.size() >= MAX_PATH)
-            {
-                pszPath[0] = '\0';
-                return HRESULT_FROM_WIN32(ERROR_FILENAME_EXCED_RANGE);
-            }
-            CreateDirectoryW(CustomUserDir.c_str(), NULL);
-            memcpy(pszPath, path.c_str(), path.size() + 1);
-            return S_OK;
-        }
-    }
-
-    return mhSHGetFolderPathA->get_original<decltype(SHGetFolderPathA)>()(hwnd, csidl, hToken, dwFlags, pszPath);
-}
+using GameFolderRedirect = NFSUserFiles::Redirect<CSIDL_PERSONAL>;
 
 // The game's read of its language gets the language setting; the registry itself isn't changed
 static LSTATUS WINAPI WrapperQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
@@ -140,12 +119,10 @@ public:
             // A folder of the game's folder for the profiles and saves; "0" keeps them in the user's Documents
             if (auto folder = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir"); !folder.empty() && folder != "0")
             {
-                CustomUserDir = GetExeModulePath<std::filesystem::path>() / folder;
+                CustomUserDir = GetExeModulePath<std::filesystem::path>() / std::filesystem::path(std::u8string(folder.begin(), folder.end()));
                 bUseCustomUserDir = true;
+                GameFolderRedirect::Install(CustomUserDir);
             }
-
-            mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
-            mhSHGetFolderPathA->create();
 
             static std::string defaultLanguage = "English US";
 
@@ -276,6 +253,18 @@ public:
                     if (IsCallerFromModule(GetModuleHandleA(NULL))) return sRegEnumKeyA(hKey, dwIndex, lpName, cchName);
                     return shRegEnumKeyA.stdcall<LSTATUS>(hKey, dwIndex, lpName, cchName);
                 }));
+
+                // The fallback's own calls go to the real functions, not back into these hooks
+                RegistryFallback::Real.CloseKey = shRegCloseKey.original<decltype(&RegCloseKey)>();
+                RegistryFallback::Real.CreateKeyA = shRegCreateKeyA.original<decltype(&RegCreateKeyA)>();
+                RegistryFallback::Real.OpenKeyA = shRegOpenKeyA.original<decltype(&RegOpenKeyA)>();
+                RegistryFallback::Real.OpenKeyExA = shRegOpenKeyExA.original<decltype(&RegOpenKeyExA)>();
+                RegistryFallback::Real.CreateKeyExA = shRegCreateKeyExA.original<decltype(&RegCreateKeyExA)>();
+                RegistryFallback::Real.QueryValueExA = shRegQueryValueExA.original<decltype(&RegQueryValueExA)>();
+                RegistryFallback::Real.SetValueExA = shRegSetValueExA.original<decltype(&RegSetValueExA)>();
+                RegistryFallback::Real.QueryValueA = shRegQueryValueA.original<decltype(&RegQueryValueA)>();
+                RegistryFallback::Real.DeleteKeyA = shRegDeleteKeyA.original<decltype(&RegDeleteKeyA)>();
+                RegistryFallback::Real.EnumKeyA = shRegEnumKeyA.original<decltype(&RegEnumKeyA)>();
             };
 
             if (bWriteSettingsToFile)
@@ -379,8 +368,6 @@ public:
                 RegistryFallback::AddDefault("Install Dir", exePath);
                 RegistryFallback::AddDefault("InstallDir", exePath);
                 RegistryFallback::AddDefault("Path", exePath);
-
-                RegistryFallback::EnsureDefaults();
 
                 auto hooks = IATHook::Replace(GetModuleHandleA(NULL), "ADVAPI32.DLL",
                     std::forward_as_tuple("RegCloseKey", RegistryFallback::RegCloseKey),

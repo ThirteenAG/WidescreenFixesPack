@@ -4,8 +4,8 @@
 #include <cstring>
 #include <cmath>
 #include <algorithm>
-#include "../Shared/Console/PortableCfg.hpp"
-#include "../Shared/Console/PspPluginConflict.hpp"
+#include "Shared/Console/PortableCfg.hpp"
+#include "Shared/Console/PspPluginConflict.hpp"
 extern "C" {
 #include <pspkernel.h>
 #include <pspiofilemgr.h>
@@ -13,6 +13,24 @@ extern "C" {
 PSP_MODULE_INFO("GTAVCS.PPSSPP.FusionFix",PSP_MODULE_USER,2,0);
 namespace vcsws {
 namespace {
+unsigned lastSettingsPoll;
+
+bool ReloadCfg()
+{
+    SceIoStat stat{};
+    if (sceIoGetstat(cfgPath, &stat) < 0 || stat.st_size <= 0 || uint64_t(stat.st_size) >= console::portable::IniCapacity)
+        return false;
+    inireader.SetIniPath(cfgPath);
+    return inireader.iniBufSize == stat.st_size;
+}
+
+void ReadTextLanguage()
+{
+    char buffer[32]{};
+    const char* value = inireader.ReadString("MAIN", "TextLanguage", "auto", buffer, sizeof(buffer));
+    settings.textLanguage = value && !std::strcmp(value, "en") ? TextLanguage::English : TextLanguage::Auto;
+}
+
 float ReadCfgFloat(const char* section, const char* key, float fallback) {
     char buffer[64];
     const char* text = inireader.ReadString(section, key, "", buffer, sizeof(buffer));
@@ -23,9 +41,19 @@ float ReadCfgFloat(const char* section, const char* key, float fallback) {
     while (*end == ' ' || *end == '\t' || *end == '\r') ++end;
     return *end && !(separated && *end == ';') ? fallback : value;
 }
+void ReadDisplayRatios() {
+    char ratio[64];
+    const float forced = console::parse_aspect(
+        inireader.ReadString("MAIN", "ForceAspectRatio", "Auto", ratio, sizeof(ratio)), 0.5f, 8.0f);
+    autoAspect = forced == 0.0f;
+    Drawing::settings.aspect = autoAspect ? console::portable::Aspect() : forced;
+    char hudAspect[32];
+    Drawing::settings.hudAspect = console::parse_hud_aspect(
+        inireader.ReadString("MAIN", "HudAspectRatioConstraint", "Auto", hudAspect, sizeof(hudAspect)));
+}
 void ReadSettings() {
     using console::bounded;
-    ReloadTextLanguage();
+    ReadTextLanguage();
     settings.skipIntro=inireader.ReadBoolean("MAIN","SkipIntro",1);
     settings.unthrottleMode=inireader.ReadInteger("MAIN","UnthrottleEmuDuringLoading",1);
     if (settings.unthrottleMode < 0 || settings.unthrottleMode > 2) settings.unthrottleMode = 1;
@@ -37,69 +65,44 @@ void ReadSettings() {
     settings.cutsceneBorders=int(bounded(ReadCfgFloat("MAIN","CutsceneBorders",3),0,3,3));
     settings.vehicleLights=inireader.ReadBoolean("MAIN","VehicleLights",1);
     settings.holdVehicleCamera=inireader.ReadBoolean("CONTROLS","HoldVehicleCamera",0);
+    ReadDisplayRatios();
     auto& drawing=Drawing::settings;
-    drawing.aspect=console::portable::Aspect();
-    autoAspect=true;
-    char ratioBuffer[64];const char* ratio=inireader.ReadString("MAIN","ForceAspectRatio","auto",ratioBuffer,sizeof(ratioBuffer));
-    char* separator=nullptr;float numerator=std::strtof(ratio,&separator);
-    if (separator && *separator==':') {
-        char* end=nullptr;float denominator=std::strtof(separator+1,&end);
-        if (end && !*end && std::isfinite(numerator) && std::isfinite(denominator) && numerator>0 && denominator>0) {
-            drawing.aspect=bounded(numerator/denominator,0.5f,8,drawing.aspect);autoAspect=false;
-        }
-    }
-    char hudAspect[32];
-    drawing.hudAspect=console::parse_hud_aspect(inireader.ReadString("MAIN","HudAspectRatioConstraint","Auto",hudAspect,sizeof(hudAspect)));
     float hud=ReadCfgFloat("MAIN","HudScale",0.75f);
     drawing.hud=hud>0 ? bounded(hud,0.1f,2,0.75f) : 0.75f;
     float radar=ReadCfgFloat("RADAR","RadarScale",0.83f);
     drawing.radar=radar>0 ? bounded(radar,0.1f,2,0.83f) : 0.83f;
-    drawing.radarX=bounded(ReadCfgFloat("RADAR","RadarPosX",12),-480,480,12);
-    drawing.radarY=bounded(ReadCfgFloat("RADAR","RadarPosY",196),-272,272,196);
     drawing.multiplayerRadar=bounded(ReadCfgFloat("MPRADAR","RadarScale",0.63f),0.1f,2,0.63f);
-    drawing.multiplayerRadarY=bounded(ReadCfgFloat("MPRADAR","RadarPosY",170.0f),-272,272,170.0f);
 }
 }
-namespace {
-SceIoStat observedCfg{};
-unsigned lastSettingsPoll;
-bool cfgObserved;
-}
-// Changes from FusionFixHub or the website apply during gameplay: the cfg is read again when it changes.
-void PollSettings()
+void PollSettings(bool displayMenu)
 {
     const unsigned now = sceKernelGetSystemTimeLow();
+    const bool menuActive = *reinterpret_cast<const uint8_t*>(Address<0x8BC9100>() + 0x20) != 0;
+    if (menuActive && !displayMenu) return;
+    if (!menuActive) SaveMenuSettingsIfDue(now);
     if (now - lastSettingsPoll < 1000000u) return;
     lastSettingsPoll = now;
-    if (*reinterpret_cast<const uint8_t*>(Address<0x8BC9100>() + 0x20)) return;
-    SceIoStat current{};
-    if (sceIoGetstat(cfgPath, &current) < 0 || current.st_size <= 0) return;
-    if (cfgObserved && current.st_size == observedCfg.st_size &&
-        !std::memcmp(&current.sce_st_mtime, &observedCfg.sce_st_mtime, sizeof(current.sce_st_mtime))) return;
-    const bool first = !cfgObserved;
-    observedCfg = current;
-    cfgObserved = true;
-    if (first) return;
-    ReadSettings();
+    if (!ReloadCfg()) return;
+    if (menuActive) {
+        ReadSettingsPreservingMenuEdits(ReadDisplayRatios);
+        return;
+    }
+    ReadSettingsPreservingMenuEdits(ReadSettings);
     ApplyFrameRate();
     if (!settings.unthrottle) console::portable::Unthrottle(false);
     char icons[16]{};
     const char* selected = inireader.ReadString("MAIN", "GamepadIcons", "Auto", icons, sizeof(icons));
     static constexpr const char* iconSets[] = {"PSP", "360", "XBO", "PS3", "PS4", "PS5", "SWI", "DEK", "Auto"};
     for (unsigned i = 0; i < 9; ++i)
-        if (!std::strcmp(selected, iconSets[i]) && i != GamepadIconSet()) { SelectGamepadIcons(i); break; }
+        if (!std::strcmp(selected, iconSets[i])) { SelectConfiguredGamepadIcons(i); break; }
 }
 void ReloadTextLanguage() {
-    // Refresh the full native CFG buffer only at startup/menu reopening.
-    inireader.SetIniPath(cfgPath);
-    char buffer[32]{};
-    const char* value = inireader.ReadString("MAIN", "TextLanguage", "auto", buffer, sizeof(buffer));
-    settings.textLanguage = value && !std::strcmp(value, "en") ? TextLanguage::English : TextLanguage::Auto;
+    if (ReloadCfg()) ReadTextLanguage();
 }
 }
 extern "C" int module_start(SceSize,void*) {
     using namespace vcsws;
-    if (!console::portable::StartReported("GTA3",cfgPath,"ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/GTAVCS.PPSSPP.FusionFix.log")) return -1;
+    if (!console::portable::StartReported("GTA3",cfgPath)) return -1;
     static constexpr const char* oldPlugins[] = {"GTAVCS.PPSSPP.WidescreenFix", "GTAVCS.PPSSPP.ImVehLM", "GTAVCS.PPSSPP.GamepadIcons"};
     if (console::portable::conflict::Found(oldPlugins)) return -1;
     if (!console::portable::BeginReported()) return -1;
@@ -120,10 +123,7 @@ extern "C" int module_start(SceSize,void*) {
         {"MAIN", "HudScale", "0.75"},
         {"MAIN", "HudAspectRatioConstraint", "Auto"},
         {"RADAR", "RadarScale", "0.83"},
-        {"RADAR", "RadarPosX", "12.0"},
-        {"RADAR", "RadarPosY", "196.0"},
         {"MPRADAR", "RadarScale", "0.63"},
-        {"MPRADAR", "RadarPosY", "170.0"},
         {"MAIN", "FOVFactor", "1.0"},
         {"MAIN", "CutsceneBorders", "3"},
         {"MAIN", "VehicleLights", "1"},

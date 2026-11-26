@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include <d3d9.h>
 #include <map>
+#include "FixSettings.hpp"
 
 export module Resolution;
 
@@ -13,6 +14,9 @@ export namespace RE0Resolution
     inline SafetyHookMid countHook, enumHook;
     inline thread_local std::vector<UINT> indices;
     inline void* catalog = nullptr;
+    constexpr size_t CatalogCapacity = 256;
+    using Size = std::pair<UINT, UINT>;
+    using DisplayModes = std::map<Size, std::pair<UINT, UINT>>;
 
     // The game accepts a saved size only if it appears in its enumerated catalog. Windowed D3D9 can also use
     // dimensions that are not display modes, so add the saved size to the native catalog before it is selected.
@@ -28,7 +32,7 @@ export namespace RE0Resolution
         auto list = reinterpret_cast<uintptr_t*>(base + 0x443448);
         for (uint32_t i = 0; i < unique; ++i)
             if (std::strcmp(reinterpret_cast<const char*>(list[i * 2]), saved) == 0) return;
-        if (!count || count >= 256 || unique >= 256) return;
+        if (!count || count >= CatalogCapacity || unique >= CatalogCapacity) return;
         auto entry = base + 0x43D844 + count * 92;
         auto first = base + 0x43D844;
         sprintf_s(reinterpret_cast<char*>(entry), 64, "%ux%u", width, height);
@@ -43,11 +47,44 @@ export namespace RE0Resolution
         ++count;
     }
 
-    inline void Collect(IDirect3D9* core, UINT adapter, UINT count)
+    inline std::vector<UINT> SelectIndices(const DisplayModes& modes, Size desktop, bool reserveWindowed)
+    {
+        const size_t capacity = CatalogCapacity - (reserveWindowed ? 1 : 0);
+        std::vector<UINT> result;
+        result.reserve(std::min(capacity, modes.size()));
+        if (modes.size() <= capacity)
+        {
+            for (const auto& [size, mode] : modes)
+                result.push_back(mode.second);
+            return result;
+        }
+
+        const auto first = modes.begin(), last = std::prev(modes.end());
+        const auto active = modes.find(desktop);
+        const bool preserveDesktop = active != modes.end() && active != first && active != last;
+        const size_t remaining = capacity - 2 - (preserveDesktop ? 1 : 0);
+        const size_t candidates = modes.size() - 2 - (preserveDesktop ? 1 : 0);
+        size_t seen = 0, selected = 0;
+        result.push_back(first->second.second);
+        for (auto it = std::next(first); it != last; ++it)
+        {
+            if (it == active)
+                result.push_back(it->second.second);
+            else if (selected < remaining && seen++ == selected * candidates / remaining)
+            {
+                result.push_back(it->second.second);
+                ++selected;
+            }
+        }
+        result.push_back(last->second.second);
+        return result;
+    }
+
+    inline void Collect(IDirect3D9* core, UINT adapter, UINT count, bool reserveWindowed)
     {
         indices.clear();
         if (!core || count > 65536) return;
-        std::map<std::pair<UINT, UINT>, std::pair<UINT, UINT>> modes;
+        DisplayModes modes;
         for (UINT i = 0; i < count; ++i)
         {
             D3DDISPLAYMODE mode{};
@@ -58,20 +95,14 @@ export namespace RE0Resolution
             if (found == modes.end() || mode.RefreshRate > found->second.first)
                 modes[key] = { mode.RefreshRate, i };
         }
-        // The native catalog has room for 256 sizes, including their separate refresh labels.
-        for (const auto& [size, value] : modes)
-        {
-            if (indices.size() == 256)
-            {
-                OutputDebugStringA("Resident Evil 0: display modes exceed the native catalog capacity.\n");
-                break;
-            }
-            indices.push_back(value.second);
-        }
+        D3DDISPLAYMODE desktop{};
+        core->GetAdapterDisplayMode(adapter, &desktop);
+        indices = SelectIndices(modes, { desktop.Width, desktop.Height }, reserveWindowed);
     }
 
     inline void Install()
     {
+        static const bool reserveWindowed = FixSettings().Int("MAIN.WindowMode") == 1;
         auto count = hook::pattern("FF 52 18 8B D8 33 FF 85 DB 0F 84");
         auto enumeration = hook::pattern("51 57 6A 16 55 52 FF 50 1C 50 8B CE");
         auto limits = hook::pattern("F6 C2 07 0F 85 ? ? ? ? 81 FA 80 02 00 00 72 ? 8B 44 24 74 3D E0 01 00 00 72 ? 81 FA 00 10 00 00 77 ? 3D 70 08 00 00 77 ?");
@@ -79,7 +110,7 @@ export namespace RE0Resolution
         {
             const auto value = reinterpret_cast<void*>(context.esi);
             catalog = value;
-            Collect(RE0Text::Read<IDirect3D9*>(value, 160), RE0Text::Read<UINT>(value, 0x447DEC), context.eax);
+            Collect(RE0Text::Read<IDirect3D9*>(value, 160), RE0Text::Read<UINT>(value, 0x447DEC), context.eax, reserveWindowed);
             context.eax = static_cast<uint32_t>(indices.size());
         });
         enumHook = safetyhook::create_mid(enumeration.get_first(6), [](SafetyHookContext& context)

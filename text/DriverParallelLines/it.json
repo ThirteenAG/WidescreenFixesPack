@@ -1,4 +1,8 @@
 {
+  "MAIN.CutsceneBorders": "Bande nei filmati in tempo reale",
+  "MAIN.CutsceneBorders.description": "Le bande laterali mantengono l'inquadratura 16:9 dei filmati in tempo reale sugli schermi più larghi. Disattivandole, la visuale occupa tutto lo schermo.",
+  "MAIN.CutsceneBorders.0": "Disattivate",
+  "MAIN.CutsceneBorders.2": "Bande laterali",
   "plugin.name": "Driver Parallel Lines Fusion Fix",
   "page.display": "Schermo",
   "page.graphics": "Grafica",
@@ -96,7 +100,8 @@
   "MAIN.GamepadDeadzone.description": "Zona morta degli stick del controller. Si applica una sola volta al movimento e alla visuale. Valori bassi rispondono prima; aumentarla se gli stick si muovono da soli.",
   "MAIN.GamepadIcons": "Icone controller",
   "MAIN.GamepadIcons.description": "Immagini dei pulsanti nativi: Xbox, PlayStation o Nintendo. Automatico usa Xbox. I nomi di tastiera e mouse restano invariati.",
-  "menu.help.controls": "F1 / Esc    Su / Giù",
+  "menu.help.controls": "F1 / Esc / {toggle}    Su / Giù {scroll}",
+  "menu.help.padScroll": "(Croce)",
   "MAIN.CheckForUpdates": "Cerca aggiornamenti",
   "MAIN.CheckForUpdates.description": "Una volta per avvio chiede a fusionfix.io se è uscita una versione più recente del fix e te lo dice nel gioco. Disattivato non fa nessuna richiesta di rete.",
   "update.availablehub": "{name} {version} è disponibile. FusionFixHub si aprirà quando chiudi il gioco.",

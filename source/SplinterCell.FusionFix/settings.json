@@ -236,6 +236,11 @@
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "label": "@MAIN.HudAspectRatioConstraint",
       "description": "@MAIN.HudAspectRatioConstraint.description",
       "page": "display",
@@ -408,11 +413,12 @@
       "description": "@MISC.FPSLimit.description",
       "page": "gameplay",
       "apply": "live",
-      "min": -1,
+      "min": 30,
       "max": 1000,
-      "step": 1,
-      "control": [
-        "stepper"
+      "unit": "fps",
+      "special": [
+        { "value": 0, "label": "@MISC.FPSLimit.unlimited" },
+        { "value": -1, "label": "@MISC.FPSLimit.monitor" }
       ]
     },
     {

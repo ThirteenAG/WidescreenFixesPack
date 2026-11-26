@@ -222,13 +222,6 @@ inline int Scene(uintptr_t renderer, uintptr_t root, uintptr_t argument)
         std::memcpy(reinterpret_cast<float*>(begin[i] + 16), saved[i], sizeof(saved[i]));
     return result;
 }
-inline void ReadOptions()
-{
-    const float size = inireader.ReadFloat("MAIN", "HudScale", 1.0f);
-    scale = std::clamp(size, 0.5f, 1.5f);
-    char box[64]{};
-    constraint = console::parse_hud_aspect(inireader.ReadString("MAIN", "HudAspectRatioConstraint", "Auto", box, sizeof(box)));
-}
 inline void Install()
 {
     const auto frameSite = sites::Required("C0 FE BD 27 28 01 B7 AF ? ? 17 3C 20 01 B5 AF 25 A8 80 00 ? ? F7 26 04 01 B4 E7 06 65 00 46");

@@ -83,9 +83,9 @@
   "SPLITSCREEN.Enable": "Activer l'écran partagé",
   "SPLITSCREEN.Enable.description": "Rétablit la coop locale en écran partagé. Le joueur 2 doit avoir une manette. Le joueur 2 ouvre le menu pause avec START et le contrôle avec sa manette.",
   "SPLITSCREEN.GamepadPlayer1": "Manette du joueur 1",
-  "SPLITSCREEN.GamepadPlayer1.description": "Manette du joueur 1 (1–4). 0 réserve clavier et souris quand le joueur 2 est présent, sans affecter le solo.",
+  "SPLITSCREEN.GamepadPlayer1.description": "Manette du joueur 1, ou seulement clavier et souris quand le joueur 2 est présent, sans affecter le solo. Redémarrage requis.",
   "SPLITSCREEN.GamepadPlayer2": "Manette du joueur 2",
-  "SPLITSCREEN.GamepadPlayer2.description": "Manette du joueur 2 (1–4).",
+  "SPLITSCREEN.GamepadPlayer2.description": "Manette du joueur 2. Redémarrage requis.",
   "FILELOADER.DumpPackedFiles": "Extraire les fichiers d'archives",
   "FILELOADER.DumpPackedFiles.description": "Extrait les archives .umd dans unpacked près de l'exécutable ; voir _dump.log. Déplacez les fichiers dans update pour charger les versions extraites.",
   "STARTUP.DedicatedServerExePath": "Exécutable du serveur dédié",
@@ -145,5 +145,10 @@
   "ui.pillarbox": "Bandes verticales",
   "ui.both": "Les deux",
   "HudAspectRatioConstraint": "Format du HUD",
-  "HudAspectRatioConstraint.description": "Auto place les éléments latéraux du HUD aux bords de l'écran. Choisissez 4:3, 16:9, 21:9 ou un rapport personnalisé L:H ou décimal, entre 4:3 et 32:9, pour les centrer dans cette zone. Les effets plein écran et les marqueurs du monde restent inchangés. Effet immédiat."
+  "HudAspectRatioConstraint.description": "Auto place les éléments latéraux du HUD aux bords de l'écran. Choisissez 4:3, 16:9, 21:9 ou un rapport personnalisé L:H ou décimal, entre 4:3 et 32:9, pour les centrer dans cette zone. Les effets plein écran et les marqueurs du monde restent inchangés. Effet immédiat.",
+  "SPLITSCREEN.GamepadPlayer1.0": "Clavier et souris",
+  "pad.controller1": "Manette 1",
+  "pad.controller2": "Manette 2",
+  "pad.controller3": "Manette 3",
+  "pad.controller4": "Manette 4"
 }

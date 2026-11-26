@@ -229,12 +229,14 @@ export namespace KnightRider2Hud
     {
         const auto read = []()
         {
-            const auto ratio = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            const auto ratio = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
             Constraint.store(ratio ? std::clamp(*ratio, 4.0f / 3.0f, 32.0f / 9.0f) : 0.0f,
                 std::memory_order_relaxed);
         };
-        read();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", read);
+        read();
         auto event = hook::pattern("51 56 8B F1 8B 46 10 85 C0 75 33 68 ? ? ? ? 8D 4C 24 08 E8 ? ? ? ? 8D 44 24 04 50 68 AA 00 00 00");
         EventHook = safetyhook::create_inline(event.get_first(), Event);
         auto map = hook::pattern("8B 44 24 08 56 83 F8 01 8B F1 75 4C 8B 46 44 85 C0 75 33 68 ? ? ? ?");

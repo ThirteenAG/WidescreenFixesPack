@@ -123,7 +123,7 @@ export namespace MHIcons
     const wchar_t* __fastcall Lookup(void* self, void*, const char* key)
     {
         const auto text = lookupHook.unsafe_thiscall<const wchar_t*>(self, key);
-        if (controlsDrawing && text && key && MHPad::lastPad && MHPad::modern && *MHPad::modern && hints.size() < 64)
+        if (controlsDrawing && text && key && MHPad::lastPad && MHPad::settings.load().modern && hints.size() < 64)
         {
             const uint32_t button = std::strcmp(key, "CRMOK") == 0 ? MHPad::A : std::strcmp(key, "CRMCANC") == 0 ? MHPad::B : 0;
             if (button)
@@ -243,7 +243,7 @@ export namespace MHIcons
         set(1, raster);
         auto target = GetCurrentRaster();
         const float w = float(RwRasterGetWidth(target)), h = float(RwRasterGetHeight(target));
-        const int selected = MHPad::family ? *MHPad::family : 0;
+        const int selected = MHPad::settings.load().family;
         const int row = selected == 2 ? 1 : selected == 3 ? 2 : 0;
         const float u = float(cell % 8) / 8.0f, v = float(row * 4 + cell / 8) / 16.0f;
         const float x = print->get().x * w, y = print->get().y * h;
@@ -295,7 +295,7 @@ export namespace MHIcons
 
     int __cdecl Command(const wchar_t* text, int* position, int length, int measure)
     {
-        if (MHPad::lastPad && MHPad::modern && *MHPad::modern)
+        if (MHPad::lastPad && MHPad::settings.load().modern)
         {
             const std::wstring_view remaining(text + *position, std::max(0, length - *position));
             for (const auto& [tag, button] : std::array<std::pair<std::wstring_view, uint32_t>, 4>{
@@ -317,7 +317,7 @@ export namespace MHIcons
     {
         std::array<const wchar_t*, 4> arguments{ first, second, third, fourth };
         std::array<std::wstring, 4> labels;
-        if (MHPad::lastPad && MHPad::modern && *MHPad::modern)
+        if (MHPad::lastPad && MHPad::settings.load().modern)
         {
             for (size_t i = 0; i < arguments.size(); ++i)
             {
@@ -355,7 +355,7 @@ export namespace MHIcons
         auto footer = hook::pattern("8B 0D ? ? ? ? 53 56 55 83 EC 18 8B 74 24 28 8B 6C 24 30 8B 5C 24 34 89 0D");
         auto controls = hook::pattern("D9 05 ? ? ? ? D8 35 ? ? ? ? 53 56 55 83 EC 14 B9 ? ? ? ? BD ? ? ? ? 8B 1D");
         auto wrap = hook::pattern("53 56 57 55 8B 5C 24 14 81 EC 40 01 00 00 85 DB 89 CD 74 06 66 83 3B 00 75 16");
-        if (!MHPad::modern) // the controller layout is not installed
+        if (!MHPad::inputEnabledRef)
             return;
         print = BindGameRef(printState, *state.get_first<PrintState*>(13));
         font = BindGameRef(printFont, *character.get_first<int*>(10));

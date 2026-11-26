@@ -9,6 +9,7 @@ module;
 export module NativeMenu;
 
 import ComVars;
+import Gamepad;
 
 // Builds the Plugins page from the game's own UWindow controls, found through
 // reflection on the installed script package.
@@ -25,6 +26,7 @@ export namespace SCMenu
     inline void (__fastcall* textSize)(void*, void*, const wchar_t*, float*, float*) = nullptr;
     inline bool busy = false;
     inline std::unordered_map<void*, std::wstring> functionNames;
+    inline void* automaticPadBindingEvent = nullptr;
 
     template<class T> T Read(void* p, size_t offset)
     {
@@ -1329,8 +1331,19 @@ export namespace SCMenu
         if (busy) { internalHook.thiscall<void>(object, frame, result); return; }
         auto function = Read<void*>(frame, 4);
         auto [cached, inserted] = functionNames.try_emplace(function);
-        if (inserted) cached->second = Leaf(function);
+        if (inserted)
+        {
+            cached->second = Leaf(function);
+            if (cached->second == L"KeyEvent" && Name(function) == L"Function Echelon.EGameInteraction.KeyEvent")
+                automaticPadBindingEvent = function;
+        }
         const auto& leaf = cached->second;
+        if (automaticPadBindingEvent && automaticPadBindingEvent == function)
+        {
+            const Gamepad::AutomaticBindingScope scope;
+            internalHook.thiscall<void>(object, frame, result);
+            return;
+        }
         if (active && active->open && leaf == L"KeyEvent" && Type(object, L"EPCConsole") && result)
         {
             uint8_t key = 0, action = 0;
@@ -1637,6 +1650,8 @@ export namespace SCMenu
         }
         captions.erase(object);
         functionNames.erase(object);
+        if (automaticPadBindingEvent == object)
+            automaticPadBindingEvent = nullptr;
         return destroyHook.thiscall<int>(object);
     }
     inline void Init()

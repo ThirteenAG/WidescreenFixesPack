@@ -1,4 +1,5 @@
 #pragma once
+#include <charconv>
 #include "Shared/AsiSettings/asi_settings.hpp"
 #include "Shared/RWGTA/GameThread.hpp"
 
@@ -11,6 +12,14 @@ inline asi_settings::Plugin& FixSettings()
     static bool loaded = plugin.Load();
     (void)loaded;
     return plugin;
+}
+
+template<class T>
+T ReadFixSetting(std::string_view id, T fallback)
+{
+    const auto value = FixSettings().Get(id);
+    T number{};
+    return std::from_chars(value.data(), value.data() + value.size(), number).ec == std::errc{} ? number : fallback;
 }
 
 // Applies a changed setting on the game's main thread, whoever changed it (the menu, a preset, an editor)

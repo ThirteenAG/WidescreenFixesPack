@@ -3,6 +3,7 @@
 #include "Shared/WidescreenFixConflict.hpp"
 
 import Misc;
+import Mouse;
 
 void Init()
 {

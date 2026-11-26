@@ -8,7 +8,7 @@
   "FOVFactor": "Field of view",
   "FOVFactor.description": "Multiplies the gameplay camera's field of view, on foot and in vehicles; 1.0 is the original framing. Cutscenes keep their own framing. Changes apply during play.",
   "HudAspectRatioConstraint": "HUD aspect ratio",
-  "HudAspectRatioConstraint.description": "Auto places the health, badge, weapon and ammunition, the help boxes and the radar at the screen edges. A ratio keeps them at the edges of a centered box of that shape. Changes apply during play.",
+  "HudAspectRatioConstraint.description": "Auto places the HUD at the screen edges. A ratio fits it into a centered box. HUD positions update during play. If an element stays in its previous place, pause and resume or wait for the next scene.",
   "CutsceneBorders": "Cutscene borders",
   "CutsceneBorders.description": "Black bars in cutscenes. Letterbox keeps the original bars above and below, Pillarbox keeps the original 4:3 picture with bars at the sides, Both combines them, Off fills the screen. Menus keep their own look. Changes apply during play.",
   "borders.off": "Off",

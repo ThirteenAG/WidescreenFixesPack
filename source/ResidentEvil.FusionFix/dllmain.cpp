@@ -19,7 +19,7 @@ void Init()
     if (started.exchange(true)) return;
     // Settings described in settings.json and stored in the plugin's .cfg; FusionFixHub changes them while the game
     // runs through the live link
-    FixSettings();
+    AppliedRestartSettings();
     asi_settings::LiveLink::Start();
 
     WFP::onInitEvent().executeAll();

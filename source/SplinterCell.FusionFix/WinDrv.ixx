@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/SplinterCell/ViewportMouse.hpp"
 #include <functional>
 #include <unordered_set>
 
@@ -19,12 +20,16 @@ appRequestExit_t appRequestExit = nullptr;
 namespace UWindowsViewport
 {
     bool bCalledFromWndProc = false;
+    HWND feedWindow = nullptr;
+    void* feedViewport = nullptr;
 
     SafetyHookInline shCauseInputEvent = {};
     SafetyHookInline shViewportWndProc = {};
     int32_t __fastcall ViewportWndProc(void* UWindowsViewport, void* edx, UINT Msg, WPARAM wParam, LPARAM lParam)
     {
-        hGameWindow = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x180) + 4);
+        const HWND window = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x180) + 4);
+        if (!hGameWindow || window == GetForegroundWindow())
+            hGameWindow = window;
 
         // Use the engine's shutdown path instead of letting DefWindowProc destroy
         // the window/device mid-frame, which can cause rendering on a dead device
@@ -43,43 +48,24 @@ namespace UWindowsViewport
 
         if (Screen.bRawInputMouse)
         {
-            if (Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam) || Msg == WM_DESTROY)
+            const bool inactive = Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam) ||
+                Msg == WM_DESTROY || Msg == WM_NCDESTROY;
+            if (inactive && window == feedWindow)
             {
-                RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0);
-                RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0);
                 RawMouseFeed = nullptr;
+                feedViewport = nullptr;
+                feedWindow = nullptr;
+                deferredCauseInputEvent = {};
+                ViewportMouse::Bind(nullptr);
             }
-            static bool bOnce = false;
-            if (!bOnce)
+            else if (!inactive && window && window == GetForegroundWindow())
             {
-                RawInputHandler<int32_t>::RegisterRawInput(hGameWindow, FixSettings().Float("MAIN.MouseSensitivity"), Screen.bRawInputMouseRawData);
-                bOnce = true;
-            }
-            const bool menuMouse = (Msg == WM_MOUSEMOVE || Msg == WM_RAWINPUTMOUSE) &&
-                WindowsMenuMouseActive && WindowsMenuMouseActive(UWindowsViewport);
-            if (Msg == WM_MOUSEMOVE && !menuMouse)
-            {
-                return 0;
-            }
-            else if (Msg == WM_RAWINPUTMOUSE)
-            {
-                if (hGameWindow != GetForegroundWindow())
-                    return 0;
-
-                if (menuMouse)
+                if (feedWindow != window || feedViewport != UWindowsViewport)
                 {
-                    // Native Windows coordinates drive UWindow picking. Do
-                    // not recenter the menu cursor or carry deltas into play.
-                    RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0);
-                    RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0);
-                    RawMouseFeed = nullptr;
-                    return 0;
-                }
-
-                // The engine tick hands all movement since the last tick to the viewport at once and recenters the
-                // cursor once, so the work per message stays small however often the mouse reports
-                if (!RawMouseFeed)
-                {
+                    deferredCauseInputEvent = {};
+                    ViewportMouse::Bind(nullptr);
+                    feedWindow = window;
+                    feedViewport = UWindowsViewport;
                     RawMouseFeed = [UWindowsViewport](int dx, int dy)
                     {
                         if (hGameWindow != GetForegroundWindow() ||
@@ -106,7 +92,13 @@ namespace UWindowsViewport
                         }
                     };
                 }
-                return 0;
+                ViewportMouse::Bind(window);
+                if (Msg == WM_MOUSEMOVE && !(WindowsMenuMouseActive && WindowsMenuMouseActive(UWindowsViewport)))
+                {
+                    if (ViewportMouse::target.load() == window && ViewportMouse::movement.HasRelative() &&
+                        !ViewportMouse::nativeFrame)
+                        return 0;
+                }
             }
         }
 
@@ -145,6 +137,8 @@ namespace UWindowsViewport
         Gamepad::OnInput(inputID, a3, value);
         if (bCalledFromWndProc && (inputID == 228 || inputID == 229))
         {
+            if (Screen.bRawInputMouse)
+                ViewportMouse::nativeFrame = true;
             deferredCauseInputEvent.emplace([UWindowsViewport, edx, inputID, a3, value]()
             {
                 shCauseInputEvent.unsafe_fastcall(UWindowsViewport, edx, inputID, a3, value);

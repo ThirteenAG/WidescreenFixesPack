@@ -39,9 +39,10 @@
 
 Open **Plugins** in the main menu. The first page has Display Aspect, HUD Box, HUD Size, Field of View and Movies; **More** has Skip Intro, Preset, FPS and **Controls** (mouse and gamepad camera, side-by-side split screen). Left and right change a value. The same settings are in FusionFixHub, on fusionfix.io and in `PLUGINS/Burnout3.PCSX2F.FusionFix.cfg`, which the fix creates on the first start. Display settings apply during play within about a second and after loading a save state; Skip Intro and Frame Rate apply the next time the game starts, and the game says so when you change them.
 
-- **Presets** - Vanilla shows the startup videos, plays videos as the game does and keeps the original frame rate; Recommended (the default) and Enhanced skip the startup videos, use Fill for videos and 60 FPS. Aspect ratio, HUD, field of view and controls keep your choice.
+- **Presets** - Vanilla shows the startup videos, plays videos as the game does and keeps the original frame rate; Recommended (the default) and Enhanced skip the startup videos, use Fill for videos and 60 FPS. The in-game presets keep your HUD box.
 - **Side-by-side split screen** - places the two players' views side by side in the next split-screen race instead of above each other.
 - **Mouse camera** - Mouse Sensitivity and Invert Mouse Y adjust looking around with the mouse while driving.
+- **Menu language** - Find Language under More in the Plugins menu. Auto follows the game's language. Choose English, French, German, Italian or Spanish to set the Fusion Fix menu language directly.
 
 ## Known limits
 

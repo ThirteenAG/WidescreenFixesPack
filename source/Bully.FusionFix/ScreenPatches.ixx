@@ -132,6 +132,24 @@ export namespace ScreenPatches
         };
         injector::MakeCALL(pattern.get_first(13), static_cast<bool(__cdecl*)()>(FlushReady), true);
 
+        // The scene texture can outlive its renderer data across a lost device.
+        // The blur shader and the final scene copy both require that data.
+        struct SceneTexture
+        {
+            std::byte fields[0x24];
+            void* rendererData;
+        };
+        static auto sceneTexture = *hook::pattern("8B 35 ? ? ? ? 3B F5 5B 74 ? 8D 7E 04 57 FF 15").get_first<SceneTexture**>(2);
+        auto postEffectsCall = hook::pattern("E8 ? ? ? ? 6A 04 E8 ? ? ? ? 8B 0D ? ? ? ? 83 C4 04 E8").get_first();
+        static auto drawPostEffects = reinterpret_cast<void(__cdecl*)()>(injector::GetBranchDestination(postEffectsCall).as_int());
+        const auto drawReadyPostEffects = []()
+        {
+            const auto texture = *sceneTexture;
+            if (texture && texture->rendererData)
+                drawPostEffects();
+        };
+        injector::MakeCALL(postEffectsCall, static_cast<void(__cdecl*)()>(drawReadyPostEffects), true);
+
         //In widescreen mode the game loads 16:9 loadscreens from TXD\lsw instead of 4:3 ones from TXD\ls
         pattern = hook::pattern("80 3D ? ? ? ? 00 57 75 0C 68");
         (void)*pattern.get_first<bool*>(2); //0x43BFBC

@@ -14,7 +14,7 @@
 
 Open **Options → Plugins → Tony Hawk Pro Skater 2 Fusion Fix** for the fix's settings and presets. Plugins is the last row of the Options menu on the main menu and of the in-game pause menu. `scripts/TonyHawksProSkater2.FusionFix.cfg` is created on first start; fusionfix.io and FusionFixHub change the same settings.
 
-Left and Right change a value, Enter steps it forward. **Details** below a setting shows its full description; **More pages** and **Previous pages** move through the list and **Back** returns. Presets apply only to this plugin. A restart notice appears when a changed option needs the game to restart, and disappears when the value is set back.
+Left and Right change a value, and Enter steps it forward. **Details** below a setting shows its full description. **More pages** and **Previous pages** move through the list. In pause Plugins, Escape, controller B, and the **Back** row each return one level. Presets apply only to this plugin. A restart notice appears when a changed option needs the game to restart, and disappears when the value is set back.
 
 | Setting | Values | Default |
 |---|---|---|
@@ -22,6 +22,7 @@ Left and Right change a value, Enter steps it forward. **Details** below a setti
 | Window mode | Fullscreen, Windowed or Borderless; restart | Fullscreen |
 | Field of view | 0.5–2.0; larger values widen the skating camera; live | 1.0 |
 | HUD aspect ratio | Auto for the whole screen width, or 4:3, 16:9, 21:9, 32:9 or a custom ratio; live | Auto |
+| Video aspect | Original aspect or Fill; live | Fill |
 | Skip intro | Skip the publisher and studio logos and the intro movie at startup; restart | On |
 | Confine cursor | On keeps the cursor inside the active game window; Hub/settings file; live | On |
 | Check for updates | Off makes no network request; live | Off |
@@ -33,21 +34,19 @@ Vanilla shows the logos and the intro movie; Recommended and Enhanced skip them.
 - **Any resolution and aspect ratio** from 5:4 to 32:9, with square pixels. The 3D view keeps the original vertical view and shows more at the sides (Hor+).
 - **HUD:** with **HUD aspect ratio** on Auto, the score and special meter sit at the left edge of the screen and the stance icon at the right edge; the timer stays centered. A ratio keeps them in a centered box of that shape. In HORSE the shared score stays centered. Nothing is stretched.
 - **Menus and 2D screens** (main menu, options, skater and level select, loading screens) keep their 4:3 layout in the middle of the screen. On screens narrower than 4:3, such as 5:4, they fit the width with black bars above and below. The level-select globe and the level preview video sit inside their frames.
-- **Movies** are never cut off or stretched. All of the game's movies are 4:3, shown at full height with black bars at the sides.
+- **Movies** keep their picture proportions. **Original aspect** fits the entire frame inside the centered 4:3 area. **Fill** fits the picture to the full screen and removes the black bars built into the opening movie and Neversoft logo.
 - **Window modes** at any Windows display scaling, without rounded corners: Windowed opens a centered window with exactly the chosen client size, also for sizes the monitor doesn't list. In windowed modes the window is not minimized when another window becomes active; the game keeps running in the background and takes keyboard input again when you return.
 - **Closing the game** with the window's close button works on the title screen, during loading, while skating and in the pause menu.
 
 Controllers: the game reads gamepads through DirectInput and uses the first one by itself; the bundled Xidi presents an Xbox controller to it with the game's default layout (A jump, B grab, X flip, Y grind, LB and RB spin, LT nollie, RT switch, Start pause). **Options → Player Controls** changes the bindings. PlayStation and Switch pads work through Steam Input or DS4Windows set to Xbox controller mode.
 
-**Frame rate limit** is 30–60 fps (default 60) and can be changed live. The game's physics, animation and timers are made for 60 fps, so higher rates are not offered.
+**Frame rate limit** is 30–60 fps and can be changed live. Vanilla keeps the game's original 30 fps cap. Recommended and Enhanced use 60 fps.
 
 ## Known limits
 
 - The window size is set at startup (resolution settings); resizing the window while playing isn't supported.
-- No Ctrl+F10 developer overlay: the game renders through Direct3D 7, which the overlay doesn't support.
 - The game has no letterboxed cutscenes, so there is no cutscene border setting; replays keep the game's own cameras.
 - Prompts show the game's own button names; controller icon sets are not available.
-- In the pause menu's Plugins page, leave with the **Back** row.
 
 ## Installation
 

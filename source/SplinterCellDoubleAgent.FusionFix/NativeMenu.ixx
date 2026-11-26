@@ -24,7 +24,7 @@ export namespace DAMenu
     inline void* (__fastcall* createNode)(void*, void*, int) = nullptr;
     inline void* (__stdcall* createFrame)(int) = nullptr;
     inline void (__fastcall* addNode)(void*, void*, void*) = nullptr;
-    inline void (__fastcall* addFrame)(void*, void*, void*) = nullptr;
+    inline void* (__fastcall* addFrame)(void*, void*, void*) = nullptr;
     inline void (__cdecl* linkNeighbors)(void*) = nullptr;
     inline void (__fastcall* areaTime)(void*, void*, unsigned int, int) = nullptr;
     inline void* (__stdcall* createHandler)(int) = nullptr;
@@ -192,14 +192,14 @@ export namespace DAMenu
     }
     inline std::string Language()
     {
-        const auto& chosen = FixSettings().String("MAIN.TextLanguage");
-        if (chosen != "auto") return chosen;
+        const auto chosen = FixSettings().Get("MAIN.TextLanguage");
+        if (!chosen.empty() && chosen != "auto") return chosen;
         auto value = gameLanguage ? gameLanguage() : nullptr;
         if (!value) return "en";
-        if (_wcsicmp(value, L"fra") == 0) return "fr";
+        if (!_wcsicmp(value, L"fra") || !_wcsicmp(value, L"fre")) return "fr";
         if (_wcsicmp(value, L"deu") == 0) return "de";
         if (_wcsicmp(value, L"ita") == 0) return "it";
-        if (_wcsicmp(value, L"esp") == 0) return "es";
+        if (!_wcsicmp(value, L"esp") || !_wcsicmp(value, L"spa")) return "es";
         if (_wcsicmp(value, L"rus") == 0) return "ru";
         return "en";
     }
@@ -724,40 +724,36 @@ export namespace DAMenu
     {
         return bool(NoticeHost());
     }
-    inline void ShowNotice(const std::wstring& text)
+    inline bool ShowNotice(const std::wstring& text)
     {
         const auto host = NoticeHost();
         if (!host)
-            return;
-        Open(*host);
-        if (!Interactive(*host))
-            return;
+            return false;
         Snapshot snapshot(*host);
         auto metrics = TextMetrics(host->rows.front().label.node);
         metrics.width = Read<int16_t>(host->rows.front().value.frame, 10) - Read<int16_t>(host->rows.front().label.frame, 8) - 4.0;
         if (!metrics.font || !std::isfinite(metrics.width) || metrics.width <= 0)
-        {
-            Close(*host);
-            return;
-        }
+            return false;
         const auto styled = DAText::Style(text, metrics, Wide(Language()).c_str());
         auto lines = DAText::Wrap(styled, metrics.width, [&](const auto& part)
         {
             const auto width = metrics.Measure(part);
             return std::isfinite(width) && (part.empty() || width > 0) ? width : INFINITY;
         });
-        if (!snapshot.Current())
-            return;
-        if (lines.empty())
-        {
-            Close(*host);
-            return;
-        }
+        if (lines.empty() || !snapshot.Current())
+            return false;
+        Open(*host);
+        if (!Interactive(*host))
+            return false;
+        snapshot.Advance();
         host->details = host->notice = true; host->detailsPage = 0;
         host->detailsLines = std::move(lines);
         ++host->generation; snapshot.Advance();
         Populate(*host);
-        if (snapshot.Current()) First(*host);
+        if (!snapshot.Current())
+            return false;
+        First(*host);
+        return snapshot.Current() && host->notice && Interactive(*host);
     }
     inline void Activate(Host& host, size_t selected, int direction)
     {

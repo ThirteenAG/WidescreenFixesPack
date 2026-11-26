@@ -47,6 +47,7 @@ In FusionFixHub, Text Language follows the game when set to Auto, or you can cho
 | Controller buttons | Auto (Xbox), Xbox, PlayStation, Nintendo | Auto |
 | Controller camera speed | 0.1-5.0 with Modern | 1.0 |
 | Vibration | On or off; native attack feedback through Xidi | On |
+| Raw mouse input | On or off; raw relative mouse movement, the game's sensitivity and Invert Y stay | On |
 | Pause when unfocused | On or off; Off requires Windowed or Borderless | On |
 | Check for updates | On or off | Off |
 
@@ -60,13 +61,9 @@ Use the Ultimate ASI Loader included with the fix as `dinput8.dll` so the fix lo
 
 ## Known limits
 
-- Resolution and window mode are chosen at startup; there is no live resize or Alt+Enter reset. The startup video-mode dialog uses Windows controls.
-- Windowed startup and high-DPI placement after the video-mode dialog need further testing.
-- The native engine's 200 fps ceiling is retained. Windowed presentation can impose a lower ceiling; high-frame-rate mission behavior still needs broader testing.
-- Raw mouse input replaces relative movement while preserving the game’s button, wheel, sensitivity and inversion handling. Physical mouse behavior needs broader testing.
-- Controller-only mission progression, hotplug, stick feel and physical vibration need broader compatibility testing. Modified tutorial catalogs retain their original text when they do not match a supported prompt.
-- Ordinary tutorial boxes rewrap when the input device changes. Scrolling and typewriter overlays retain their native layout until the next message.
-- The developer overlay is unavailable with the native Direct3D 8 renderer.
+- Resolution and window mode are chosen in the startup dialog; Alt+Enter doesn't switch modes.
+- The engine's own 200 fps ceiling stays.
+- Tutorial boxes rewrap when the input device changes; scrolling and typewriter overlays keep their layout until the next message. Modified tutorial texts keep their original wording.
 
 ---
 

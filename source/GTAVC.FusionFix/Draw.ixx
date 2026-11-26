@@ -402,20 +402,20 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
-            fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
             OnSettingChange("MAIN.HudAspectRatioConstraint", []()
             {
-                fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+                fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
                 CDraw::Refresh();
             });
 
             // Field of View: a multiplier of the gameplay cameras' corrected field of view
-            static auto& fov = FixSettings().Float("MAIN.FOVFactor");
-            FOVManager::g_BaseFOVMultiplier = std::clamp(fov, 0.5f, 2.0f);
-            OnSettingChange("MAIN.FOVFactor", []()
+            const auto applyFOV = []()
             {
-                FOVManager::g_BaseFOVMultiplier = std::clamp(fov, 0.5f, 2.0f);
-            });
+                FOVManager::g_BaseFOVMultiplier = std::clamp(ReadFixSetting("MAIN.FOVFactor", 1.0f), 0.5f, 2.0f);
+            };
+            applyFOV();
+            OnSettingChange("MAIN.FOVFactor", applyFOV);
 
             static float fScaledFOV = 0.0f;
             auto pattern = hook::pattern("D9 05 ? ? ? ? D8 0D ? ? ? ? D8 0D ? ? ? ? DD DC D9 C3");
@@ -428,10 +428,9 @@ public:
 
             // CBrightLights::Render: the alpha of car light squares close to the camera; 0 draws them only far away
             static auto pNearLightSquareAlpha = hook::pattern("C6 44 24 ? ? EB ? ? ? ? ? ? ? DF E0").get_first<uint8_t>(4);
-            static auto& nearLightSquares = FixSettings().Int("GRAPHICS.NearLightSquares");
             static auto applyNearLightSquares = []()
             {
-                injector::WriteMemory<uint8_t>(pNearLightSquareAlpha, nearLightSquares ? 31 : 0, true);
+                injector::WriteMemory<uint8_t>(pNearLightSquareAlpha, ReadFixSetting("GRAPHICS.NearLightSquares", 0) ? 31 : 0, true);
             };
             applyNearLightSquares();
             OnSettingChange("GRAPHICS.NearLightSquares", applyNearLightSquares);

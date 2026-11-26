@@ -68,6 +68,7 @@
   "gamefoldersaves": "Sauvegardes dans le dossier du jeu",
   "gamefoldersaves.description": "Garde les sauvegardes dans le dossier savegames du jeu.",
   "settingsfile": "Paramètres portables",
+  "settingsfile.cfg.description": "Enregistre les options du jeu dans MaxPayne.FusionFix.cfg. Les sections manquantes sont initialisées à partir du registre. Un redémarrage est nécessaire.",
   "settingsfile.description": "Enregistre les options du jeu dans settings.ini à côté des sauvegardes plutôt que dans le registre. Activez les sauvegardes dans le dossier du jeu pour le placer dans son dossier savegames. Les paramètres du registre sont copiés à la première utilisation. Nécessite un redémarrage.",
   "savestringformat": "Format de date des sauvegardes",
   "savestringformat.description": "Comment les noms des sauvegardes affichent la date et l'heure (strftime).",

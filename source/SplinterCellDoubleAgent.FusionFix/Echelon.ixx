@@ -11,42 +11,57 @@ import Cinematics;
 namespace AEPlayerController
 {
     SafetyHookInline shTick = {};
-    void __fastcall Tick(void* playerController, void* edx, float a2, int a3)
+    void UpdateState(void* controller, void* edx)
     {
-        if (playerController)
+        if (!controller)
+            return;
+
+        wchar_t buffer[256];
+        auto& state = UObject::controllerState;
+        if (state.controller != controller)
         {
-            auto ptr = *((uintptr_t*)playerController + 3);
-            if (ptr)
-            {
-                auto ptr2 = *(uintptr_t*)(ptr + 0x1C);
-                if (ptr2)
-                {
-                    auto StateID = *(int*)(ptr2 + 0x20);
-                    auto Label = *(uint8_t*)(ptr + 0xC);
-
-                    wchar_t buffer[256];
-                    auto objName = std::wstring_view(UObject::GetFullName(playerController, edx, buffer));
-
-                    size_t spacePos = objName.find(L' ');
-                    std::wstring type = (spacePos != std::wstring::npos) ? std::wstring(objName.substr(0, spacePos)) : std::wstring(objName);
-
-                    auto svStateName = std::wstring_view(UObject::GetFullName(UObject::FindState(playerController, edx, StateID), edx, buffer));
-                    size_t lastDot = svStateName.rfind(L'.');
-                    std::wstring stateName = (lastDot != std::wstring::npos) ? std::wstring(svStateName.substr(lastDot + 1)) : std::wstring(svStateName);
-                    UObject::objectStates[type] = stateName;
-                    UObject::objectStates[type + L"WithLabel"] = stateName + std::to_wstring(Label);
-                }
-            }
+            const std::wstring_view fullName = UObject::GetFullName(controller, edx, buffer);
+            const auto type = fullName.substr(0, fullName.find(L' '));
+            if (type != L"EPlayerController" && type != L"ECoopPlayerController")
+                return;
         }
 
-        return shTick.unsafe_fastcall(playerController, edx, a2, a3);
+        const auto frame = reinterpret_cast<uintptr_t*>(controller)[3];
+        const auto node = frame ? *reinterpret_cast<const uintptr_t*>(frame + 0x1C) : 0;
+        if (!node)
+        {
+            UObject::controllerState = {};
+            return;
+        }
+
+        const auto id = *reinterpret_cast<const int*>(node + 0x20);
+        if (state.controller != controller || state.node != node || state.id != id)
+        {
+            const auto object = UObject::FindState(controller, edx, id);
+            if (!object)
+            {
+                state = {};
+                return;
+            }
+            const std::wstring_view name = UObject::GetFullName(object, edx, buffer);
+            state.name = name.substr(name.rfind(L'.') + 1);
+            state.controller = controller;
+            state.node = node;
+            state.id = id;
+        }
+    }
+
+    int __fastcall Tick(void* playerController, void* edx, float delta, int tickType)
+    {
+        UpdateState(playerController, edx);
+        return shTick.unsafe_fastcall<int>(playerController, edx, delta, tickType);
     }
 }
 
 namespace AEPattern
 {
     SafetyHookInline shTick = {};
-    void __fastcall Tick(void* AEPattern, void* edx, float a2, int a3)
+    int __fastcall Tick(void* AEPattern, void* edx, float a2, int a3)
     {
         std::wstring CameraShot = L"";
         void* shot = nullptr;
@@ -68,7 +83,7 @@ namespace AEPattern
         Cinematics::Shot(shot, CameraShot == L"Take_01_EnterSWAT" ? 4.0f / 3.0f : 16.0f / 9.0f);
         gCurrentCameraShotName = CameraShot;
 
-        return shTick.unsafe_fastcall(AEPattern, edx, a2, a3);
+        return shTick.unsafe_fastcall<int>(AEPattern, edx, a2, a3);
     }
 }
 

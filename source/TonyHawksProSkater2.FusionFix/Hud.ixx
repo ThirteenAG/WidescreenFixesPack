@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include "Shared/Console/Viewport.hpp"
 
 export module Hud;
@@ -10,18 +11,15 @@ import ComVars;
 export namespace THPS2Hud
 {
     inline SafetyHookInline FrameHook, ScoreHook, StanceHook, GoalsHook, GradientHook, RectangleHook;
-    inline const std::string* Constraint = nullptr;
+    inline std::atomic<float> Constraint{ 0.0f };
     inline float Width = 640.0f, Height = 480.0f, FrameWidth = 640.0f, FrameHeight = 480.0f;
     inline bool Drawing = false;
     inline int Anchor = 0;
+    inline float HorizontalInset = 0.0f;
 
     inline float Offset()
     {
-        if (!Drawing)
-            return 0.0f;
-        const float aspect = Constraint ? console::parse_hud_aspect(Constraint->c_str()) : 0.0f;
-        const float boxWidth = aspect > 0.0f ? std::min(Width, Height * aspect) : Width;
-        return Anchor * (boxWidth - FrameWidth) * 0.5f;
+        return Drawing ? Anchor * HorizontalInset : 0.0f;
     }
 
     inline void CorrectRectangle(uint8_t* packet, size_t size, uint8_t command, const std::array<int, 4>& vertices)
@@ -46,7 +44,11 @@ export namespace THPS2Hud
         const auto previous = std::exchange(Drawing, HudPlayers.is_initialized() && HudViewMode.is_initialized() && HudViewMode == 0 &&
             (HudPlayers == 1 || (HudPlayers == 2 && HudGameMode.is_initialized() && HudGameMode == 7)));
         const auto anchor = std::exchange(Anchor, 0);
+        const float aspect = Constraint.load(std::memory_order_relaxed);
+        const float boxWidth = aspect > 0.0f ? std::min(Width, Height * aspect) : Width;
+        const auto inset = std::exchange(HorizontalInset, (boxWidth - FrameWidth) * 0.5f);
         const auto result = FrameHook.ccall<int>();
+        HorizontalInset = inset;
         Anchor = anchor;
         Drawing = previous;
         return result;
@@ -95,13 +97,16 @@ export namespace THPS2Hud
         return result;
     }
 
-    inline void Install(float width, float height, float frameWidth, float frameHeight, const std::string* constraint, HMODULE module = GetModuleHandleW(nullptr))
+    inline void Install(float width, float height, float frameWidth, float frameHeight, HMODULE module = GetModuleHandleW(nullptr))
     {
         Width = width;
         Height = height;
         FrameWidth = frameWidth;
         FrameHeight = frameHeight;
-        Constraint = constraint;
+        ObserveFixSetting("MAIN.HudAspectRatioConstraint", Constraint, [](const std::string& value)
+        {
+            return console::parse_hud_aspect(value.c_str());
+        });
         auto frame = hook::module_pattern(module, "A1 ? ? ? ? 53 55 56 85 C0 57 0F 84 ? ? ? ? 8B 1D ? ? ? ? E8");
         auto score = hook::module_pattern(module, "83 EC 18 55 56 57 E8 ? ? ? ? F6 D8 1B C0 6A 06 40 8B F0 89 74 24 14");
         auto stance = hook::module_pattern(module, "53 56 57 E8 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8B 5C 24 10 8B 83 B8 30 00 00");

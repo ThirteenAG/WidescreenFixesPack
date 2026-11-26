@@ -2,7 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "Shared/PadInput.hpp"
+#include "Shared/ActivePad.hpp"
 #include <cmath>
 
 export module Gamepad;
@@ -41,36 +41,56 @@ export namespace TrueCrimeGamepad
     }
 
     inline SafetyHookInline UpdateHook;
+    inline PadInput::ActivePad Controller;
+    inline std::atomic_bool PadSettingsPending{ false };
+    inline float LeftDeadZone = 0.24f, RightDeadZone = 0.27f, CameraSpeed = 1.0f;
+    inline bool InvertCameraY = false;
+
+    inline void UpdatePadSettings()
+    {
+        const auto deadzone = [](std::string_view id, float fallback)
+        {
+            const auto value = ReadNumericSetting(id, fallback);
+            return std::isfinite(value) ? std::clamp(value, 0.0f, 0.5f) : fallback;
+        };
+        LeftDeadZone = deadzone("GAMEPAD.LeftStickDeadzone", 0.24f);
+        RightDeadZone = deadzone("GAMEPAD.RightStickDeadzone", 0.27f);
+        const auto speed = ReadNumericSetting("MAIN.GamepadCameraSpeed", 1.0f);
+        CameraSpeed = std::isfinite(speed) ? std::clamp(speed, 0.1f, 3.0f) : 1.0f;
+        InvertCameraY = FixSettings().Get("MAIN.InvertGamepadY") == "1";
+    }
 
     // Stick to the game's range with a radial dead zone
     inline std::pair<int, int> Stick(SHORT x, SHORT y, float deadZone, int range)
     {
         const float fx = float(x) / 32767.0f, fy = float(y) / 32767.0f;
         const float length = std::sqrt(fx * fx + fy * fy);
-        const float zone = std::isfinite(deadZone) ? std::clamp(deadZone, 0.0f, 0.5f) : 0.25f;
-        if (length <= zone)
+        if (length <= deadZone)
             return { 0, 0 };
-        const float scale = std::min(1.0f, (length - zone) / (1.0f - zone)) / length;
+        const float scale = std::min(1.0f, (length - deadZone) / (1.0f - deadZone)) / length;
         return { int(std::lround(fx * scale * range)), int(std::lround(fy * scale * range)) };
     }
 
     inline void Merge(State& state, uint32_t previous)
     {
+        const auto window = TrueCrimeWindow::Window.load();
+        if (TrueCrimeOverlay::BlocksInput() || (window && GetForegroundWindow() != window))
+        {
+            Controller.Reset();
+            return;
+        }
         XINPUT_STATE pad{};
-        DWORD slot = 0;
-        if (TrueCrimeOverlay::BlocksInput() || (TrueCrimeWindow::Window && GetForegroundWindow() != TrueCrimeWindow::Window) || !PadInput::Read(pad, slot))
+        if (!Controller.Read(pad, int(LeftDeadZone * 32767.0f), int(RightDeadZone * 32767.0f)))
             return;
         const auto& g = pad.Gamepad;
         const auto down = [&](WORD button) { return (g.wButtons & button) != 0; };
         const bool lt = g.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
         const bool rt = g.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
-        auto [moveX, moveY] = Stick(g.sThumbLX, g.sThumbLY, FixSettings().Float("GAMEPAD.LeftStickDeadzone"), 125);
-        auto [cameraX, cameraY] = Stick(g.sThumbRX, g.sThumbRY, FixSettings().Float("GAMEPAD.RightStickDeadzone"), 170);
-        const float requestedSpeed = FixSettings().Float("MAIN.GamepadCameraSpeed");
-        const float cameraSpeed = std::isfinite(requestedSpeed) ? std::clamp(requestedSpeed, 0.1f, 3.0f) : 1.0f;
-        cameraX = std::clamp(int(std::lround(cameraX * cameraSpeed)), -170, 170);
-        cameraY = std::clamp(int(std::lround(cameraY * cameraSpeed)), -170, 170);
-        if (FixSettings().Bool("MAIN.InvertGamepadY"))
+        auto [moveX, moveY] = Stick(g.sThumbLX, g.sThumbLY, LeftDeadZone, 125);
+        auto [cameraX, cameraY] = Stick(g.sThumbRX, g.sThumbRY, RightDeadZone, 170);
+        cameraX = std::clamp(int(std::lround(cameraX * CameraSpeed)), -170, 170);
+        cameraY = std::clamp(int(std::lround(cameraY * CameraSpeed)), -170, 170);
+        if (InvertCameraY)
             cameraY = -cameraY;
         uint32_t held = 0, menu = 0;
         if (GameMode >= 2)
@@ -154,6 +174,14 @@ export namespace TrueCrimeGamepad
 
     inline void Init()
     {
+        for (const auto id : { "GAMEPAD.LeftStickDeadzone", "GAMEPAD.RightStickDeadzone", "MAIN.GamepadCameraSpeed", "MAIN.InvertGamepadY" })
+            FixSettings().OnChange(id, []() { PadSettingsPending.store(true); });
+        UpdatePadSettings();
+        WFP::onGameProcessEvent() += []()
+        {
+            if (PadSettingsPending.exchange(false))
+                UpdatePadSettings();
+        };
         auto input = hook::pattern("8B 0D ? ? ? ? 8B ? ? ? ? ? 32 DB");
         PlayerObject.SetAddress(*input.get_first<uint8_t**>(2));
         GameMode.SetAddress(*input.get_first<int*>(8));

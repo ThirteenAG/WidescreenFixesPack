@@ -9,6 +9,7 @@ import ComVars;
 
 export namespace KnightRiderWindow
 {
+    inline GameRef<uint8_t*> Application;
     inline int Mode = 0;
     inline int Width = 640;
     inline int Height = 480;
@@ -106,6 +107,7 @@ export namespace KnightRiderWindow
         auto create = hook::pattern("8B 2D ? ? ? ? 50 68 ? ? ? ? 57 FF D5");
         injector::WriteMemory<decltype(&Create)>(*create.get_first<decltype(&Create)*>(2), Create, true);
         auto adjust = hook::pattern("FF 15 ? ? ? ? A1 ? ? ? ? BB 00 00 00 40 8A 48 24 84 C9");
+        Application.SetAddress(*adjust.get_first<uint8_t**>(7));
         injector::WriteMemory<decltype(&Adjust)>(*adjust.get_first<decltype(&Adjust)*>(2), Adjust, true);
         auto move = hook::pattern("FF 15 ? ? ? ? 8B 4C 24 0C 8B 56 14 8B 41 08");
         injector::WriteMemory<decltype(&Move)>(*move.get_first<decltype(&Move)*>(2), Move, true);

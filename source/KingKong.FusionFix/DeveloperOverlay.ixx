@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include <d3d9.h>
 #include "FixSettings.hpp"
+#include "Shared/ActivePad.hpp"
 #include "overlay/OverlayD3D9.hpp"
 
 #pragma comment(lib, "version.lib")
@@ -42,6 +43,8 @@ export namespace KongOverlay
 
     bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         // The hotkey itself is read at the frame boundary: the game's DirectInput keyboard can take the key messages
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
@@ -54,7 +57,7 @@ export namespace KongOverlay
 
     bool BlocksInput()
     {
-        return Overlay.BlocksInput();
+        return WFP::DeveloperOverlay && Overlay.BlocksInput();
     }
 
     void Keyboard(HWND window)
@@ -68,12 +71,14 @@ export namespace KongOverlay
 
     void BeforeReset(IDirect3DDevice9* device)
     {
-        if (device == CurrentDevice)
+        if (WFP::DeveloperOverlay && device == CurrentDevice)
             Overlay.BeforeReset();
     }
 
     void Present(IDirect3DDevice9* device, HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!device)
             return;
         static const bool page = []()
@@ -96,6 +101,13 @@ export namespace KongOverlay
             return true;
         }();
         Keyboard(window);
+        static PadInput::ActivePad controller;
+        XINPUT_STATE pad{};
+        if (window && GetForegroundWindow() == window)
+            controller.Read(pad);
+        else
+            controller.Reset();
+        PadInput::ToOverlay(Overlay, pad.Gamepad);
         CurrentDevice = device;
         Overlay.Present(device, ThisModule());
     }
@@ -144,6 +156,8 @@ export namespace KongOverlay
 
     void InitInput()
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         NativeInputCreate = reinterpret_cast<decltype(NativeInputCreate)>(GetProcAddress(GetModuleHandleW(L"dinput8.dll"), "DirectInput8Create"));
         if (NativeInputCreate)
             IATHook::Replace(GetModuleHandleW(nullptr), "DINPUT8.DLL", std::forward_as_tuple("DirectInput8Create", InputCreate));

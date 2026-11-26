@@ -26,7 +26,7 @@
 - **Resolution width / height** — 0 uses the desktop resolution; restart required.
 - **Window mode** — Fullscreen, Windowed or Borderless; restart required. Borderless uses the desktop resolution.
 - **HUD aspect ratio constraint** — Auto uses the screen edges; 4:3, 16:9, 21:9 or 32:9 places the HUD inside a centered box. Applies live.
-- **Frame rate limit** — 0 is unlimited, −1 follows the display refresh rate, and a positive value selects the cap. Default 60; applies live.
+- **Frame rate limit** — Choose Monitor, Unlimited or a cap from 30 to 1000 FPS. Default 60 FPS. Applies live.
 - **Cutscene borders** — Off or Both; applies live. Both keeps the original 4:3 story framing with black bars at the sides (above and below on screens narrower than 4:3).
 - **Pause when unfocused** — Pauses gameplay while another window is active; applies live.
 - **Video framing** — Original or Fill, as described above.
@@ -36,7 +36,7 @@
 - **Text language** — Auto, English, French, German, Italian or Spanish for the fix's settings and help.
 - **Check for updates** — Optional update notice at the main menu; disabled by default.
 
-Settings can be changed on fusionfix.io or in FusionFixHub. Recommended is the default preset; Vanilla and Enhanced are also available. No preset changes the resolution. Supporters can open the developer overlay with Ctrl+F10, or Start and View together on a controller. The game's fixed options scenes do not support an additional Plugins page.
+Change settings on fusionfix.io or in FusionFixHub. Recommended is the default preset. Vanilla and Enhanced are also available. No preset changes the resolution.
 
 ## Controller
 

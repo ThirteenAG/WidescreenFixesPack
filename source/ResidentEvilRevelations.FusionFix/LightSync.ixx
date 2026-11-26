@@ -1,12 +1,79 @@
 module;
 
 #include <stdafx.h>
+#include <mutex>
+#include <optional>
 #include "FixSettings.hpp"
-#include <LEDEffects.h>
+#include "LEDEffects.h"
 
 export module LightSync;
 
-// Logitech LIGHTSYNC: the keyboard lights show the player's health (MAIN.LightSyncRGB)
+namespace
+{
+    using PlayerGetter = const uint8_t* (__thiscall*)(void*, int);
+
+    GameRef<void*> players;
+    GameRef<void*> gameState;
+    PlayerGetter getPlayer = nullptr;
+    std::mutex healthMutex;
+    std::optional<float> health;
+
+    void SampleHealth()
+    {
+        if (!LEDEffects::bLogiLedInitialized)
+            return;
+
+        std::optional<float> snapshot;
+        const auto manager = players.get();
+        if (manager && gameState.get())
+        {
+            if (const auto player = getPlayer(manager, 0))
+                snapshot = *reinterpret_cast<const float*>(player + 0xE38);
+        }
+
+        const std::lock_guard lock(healthMutex);
+        health = snapshot;
+    }
+
+    void UpdateLighting()
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        std::optional<float> snapshot;
+        {
+            const std::lock_guard lock(healthMutex);
+            snapshot = health;
+        }
+
+        if (!snapshot)
+        {
+            LogiLedStopEffects();
+            LEDEffects::SetLighting(90, 36, 3);
+            return;
+        }
+
+        if (*snapshot <= 0)
+        {
+            LEDEffects::SetLighting(26, 4, 4, false, true);
+            LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
+        }
+        else if (*snapshot <= 400)
+        {
+            LEDEffects::SetLighting(26, 4, 4, true);
+            LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0);
+        }
+        else if (*snapshot <= 600)
+        {
+            LEDEffects::SetLighting(50, 30, 4, true);
+            LEDEffects::DrawCardiogram(67, 0, 0, 0, 0, 0);
+        }
+        else
+        {
+            LEDEffects::SetLighting(10, 30, 4, true);
+            LEDEffects::DrawCardiogram(0, 100, 0, 0, 0, 0);
+        }
+    }
+}
 
 class LightSync
 {
@@ -18,93 +85,19 @@ public:
             if (!FixSettings().Bool("MAIN.LightSyncRGB"))
                 return;
 
-            auto playerPattern = hook::pattern("8B 0D ? ? ? ? 85 C9 75 14 68 ? ? ? ? 6A 3E 68 ? ? ? ? E8 ? ? ? ? 83 C4 0C 8B 0D ? ? ? ? 8D 54 24 0A");
-            auto valuePattern = hook::pattern("A1 ? ? ? ? 81 C6");
-            static auto sPlayerPtr = *playerPattern.get_first<void*>(2);
-            static auto dword_116F398 = *valuePattern.get_first<void*>(1);
+            auto player = hook::pattern("8B 0D ? ? ? ? 85 C9 75 14 68 ? ? ? ? 6A 3E 68 ? ? ? ? E8 ? ? ? ? 83 C4 0C 8B 0D ? ? ? ? 8D 54 24 0A 52 E8 ? ? ? ? 8B F8 A1");
+            const auto getter = injector::GetBranchDestination(player.get_first(41)).get_raw<uint8_t>();
+            players.SetAddress(*player.get_first<void**>(2));
+            gameState.SetAddress(injector::ReadMemory<void*>(getter + 17));
+            getPlayer = reinterpret_cast<PlayerGetter>(getter);
 
-            LEDEffects::Inject([]()
+            auto update = hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? 8B 06 8B 50 18 8B CE FF D2 A1 ? ? ? ? 80 B8 ? 26 00 00 00");
+            static auto sample = safetyhook::create_mid(update.get_first(20), [](SafetyHookContext&)
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            
-                if (sPlayerPtr)
-                {
-                    static auto sub_40EEE0 = [](int* _this) -> void*
-                    {
-                        auto sub_87F4E0 = [](uint32_t* _this) -> int
-                        {
-                            if ((_this[61] - 1) > 1)
-                                return 0;
-                            else
-                                return _this[62];
-                        };
-            
-                        if (!_this)
-                            return nullptr;
-            
-                        uint32_t* v3; // esi
-                        auto v2 = _this[12];
-                        if (v2 == _this[13])
-                            return 0;
-                        while (true)
-                        {
-                            v3 = *(uint32_t**)(v2 + 16);
-                            if (sub_87F4E0((uint32_t*)dword_116F398) == v3[907])
-                            {
-                                auto v5 = v3[3] & 7;
-                                if (v5 == 2 || v5 == 1)
-                                    break;
-                            }
-                            v2 = *(uint32_t*)(v2 + 8);
-                            if (v2 == _this[13])
-                                return 0;
-                        }
-                        return v3;
-            
-                    };
-                    auto pPlayerPtr = sub_40EEE0(*(int**)sPlayerPtr);
-            
-                    if (pPlayerPtr)
-                    {
-                        auto PlayerHealth = PtrWalkthrough<float>(&pPlayerPtr, 0xE38);
-            
-                        if (PlayerHealth)
-                        {
-                            auto Health = *PlayerHealth;
-                            if (Health > 0)
-                            {
-                                if (Health <= 400) {
-                                    LEDEffects::SetLighting(26, 4, 4, true); //red
-                                    LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0); //red
-                                }
-                                else if (Health <= 600) {
-                                    LEDEffects::SetLighting(50, 30, 4, true); //orange
-                                    LEDEffects::DrawCardiogram(67, 0, 0, 0, 0, 0); //orange
-                                }
-                                else {
-                                    LEDEffects::SetLighting(10, 30, 4, true);  //green
-                                    LEDEffects::DrawCardiogram(0, 100, 0, 0, 0, 0); //green
-                                }
-                            }
-                            else
-                            {
-                                LEDEffects::SetLighting(26, 4, 4, false, true); //red
-                                LEDEffects::DrawCardiogram(100, 0, 0, 0, 0, 0, true);
-                            }
-                        }
-                        else
-                        {
-                            LogiLedStopEffects();
-                            LEDEffects::SetLighting(76, 12, 18); //logo red
-                        }
-                    }
-                    else
-                    {
-                        LogiLedStopEffects();
-                        LEDEffects::SetLighting(90, 36, 3);
-                    }
-                }
+                SampleHealth();
             });
+
+            LEDEffects::Inject(UpdateLighting);
         };
     }
 } LightSync;

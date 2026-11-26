@@ -47,7 +47,6 @@ Vanilla shows the logos and the intro movie, shows the movies in the game's 4:3 
 - **Controllers:** the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox controller to it. When no controller is assigned, the first one found at startup gets the default layout; existing assignments and bindings stay. Button prompts switch between keyboard keys and the chosen icon set as you use each device.
 - **Soundtrack:** the random song order works.
 - **Update notice:** with **Check for updates** on, a new version is announced in the help bar of the Plugins list; FusionFixHub opens after the game exits when it is installed.
-- **Ctrl+F10** opens the in-game settings overlay.
 
 **Frame rate limit** defaults to 60 FPS and can be changed live; the game itself runs at no more than 60 FPS, so the limit can only lower that. 0 removes the limit and -1 follows the monitor refresh rate.
 

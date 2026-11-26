@@ -8,13 +8,15 @@ extern "C"
 #include <pspdisplay.h>
 #include <psputility_sysparam.h>
 }
-#include "../Shared/Console/PatchNotice.hpp"
-#include "../Shared/Console/SocomInput.hpp"
+#include "Shared/Console/PadButtonArtwork.hpp"
+#include "Shared/Console/PatchNotice.hpp"
+#include "Shared/Console/PortableCfg.hpp"
+#include "Shared/Console/PortableSettings.hpp"
+#include "Shared/Console/PspRightStick.hpp"
+#include "Shared/Console/SocomInput.hpp"
+#include "Shared/Console/Text.hpp"
+#include "Shared/Console/Viewport.hpp"
 #include "Sites.hpp"
-#include "../Shared/Console/PortableCfg.hpp"
-#include "../Shared/Console/Viewport.hpp"
-#include "../Shared/Console/Text.hpp"
-#include "../Shared/Console/PadButtonArtwork.hpp"
 extern "C" { PSP_MODULE_INFO("FireteamBravo2.FusionFix", PSP_MODULE_USER, 2, 0); }
 // The European loader (ULES00557 BOOT.BIN) overwrites the first words of the
 // module loaded directly after it. Keep that range free of code.
@@ -27,9 +29,9 @@ using namespace console::portable;
 #include "Graphics.hpp"
 struct Options { bool skipIntro, dualAnalog, unthrottle; } options;
 #include "PadIcons.hpp"
+#include "Stick.hpp"
 #include "FrameRate.hpp"
 #include "NativeMenu.hpp"
-#include "Stick.hpp"
 #include "Startup.hpp"
 injector::hook_back<int(Input*, float)> update[2];
 SafetyMipsMid loading;
@@ -39,8 +41,10 @@ void MovieComplete(uint32_t hash, uintptr_t movie)
     PadIcons::After(hash, movie);
     Startup::Movie(hash, movie);
 }
-template<unsigned Index> int Update(Input* input, float delta) {
+template<unsigned Index> int Update(Input* input, float delta)
+{
     const int result = update[Index].fun(input, delta);
+    NativeMenu::PollOptions();
     NativeMenu::Input(input);
     if (!options.dualAnalog)
         return result;
@@ -49,7 +53,8 @@ template<unsigned Index> int Update(Input* input, float delta) {
     else
         Stick::Sample(input);
     const auto right = console::socom::Right(input, false);
-    if (right.x || right.y) {
+    if (right.x || right.y)
+    {
         *reinterpret_cast<uint8_t*>(uintptr_t(input) + 172) = 1;
         console::socom::KeepAwake(input);
     }
@@ -59,25 +64,11 @@ int Exit(int status) { Unthrottle(false); return sceKernelExitDeleteThread(statu
 int Terminate(SceUID thread) { Unthrottle(false); return sceKernelTerminateDeleteThread(thread); }
 // Read on the plugin's own thread, before Install (which can also run inside the
 // loader's sceKernelStartModule call).
-void ReadOptions() {
-    IniValue defaults[] = {{"MAIN", "SkipIntro", "1"}, {"MAIN", "DualAnalogPatch", "1"},
-                           {"MAIN", "UnthrottleEmuDuringLoading", "1"},
-                           {"MAIN", "FOVFactor", "1.0"}, {"MAIN", "ForceAspectRatio", "Auto"},
-                           {"MAIN", "HudScale", "1.0"}, {"MAIN", "HudAspectRatioConstraint", "Auto"},
-                           {"MAIN", "CutsceneBorders", "3"}, {"MAIN", "TextLanguage", "auto"},
-                           {"MAIN", "GamepadIcons", "0"}, {"MAIN", "FPSLimit", "60"}};
-    CompleteCfg("ms0:/PSP/PLUGINS/SOCOM.FireteamBravo2.PPSSPP.FusionFix/SOCOM.FireteamBravo2.PPSSPP.FusionFix.cfg", defaults);
-    options = {inireader.ReadBoolean("MAIN", "SkipIntro", true), inireader.ReadBoolean("MAIN", "DualAnalogPatch", true),
-               inireader.ReadBoolean("MAIN", "UnthrottleEmuDuringLoading", true)};
-    const float fov = inireader.ReadFloat("MAIN", "FOVFactor", 1.0f);
-    Geometry::fovFactor = std::clamp(fov, 0.5f, 2.0f);
-    char aspect[64]{};
-    Geometry::forcedAspect = console::parse_forced_aspect(inireader.ReadString("MAIN", "ForceAspectRatio", "Auto", aspect, sizeof(aspect)));
-    Hud::ReadOptions();
-    Geometry::borders = std::clamp(inireader.ReadInteger("MAIN", "CutsceneBorders", 3), 0, 3);
-    PadIcons::ReadOptions();
-    FrameRate::ReadOptions();
-    NativeMenu::ReadOptions();
+void ReadOptions()
+{
+    NativeMenu::InitializeOptions();
+    if (options.dualAnalog)
+        Stick::host.Initialize(sceKernelGetSystemTimeLow());
 }
 int Install() {
     if (installed || !BeginWithNotice()) return installed ? 0 : -1;

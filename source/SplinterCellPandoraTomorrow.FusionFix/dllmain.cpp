@@ -48,7 +48,7 @@ CEXP void InitializeASI()
             CursorConfinement::SetEnabled(FixSettings().Int("MAIN.ConfineCursor") != 0);
         });
         CallbackHandler::RegisterCallback(Init);
-        CallbackHandler::RegisterCallback(L"Core.dll", [] { InitCore(); PTMenu::Init(); InitUpdateCheck(); });
+        CallbackHandler::RegisterCallback(L"Core.dll", [] { InitConfigReads(); InitCore(); PTMenu::Init(); InitUpdateCheck(); });
         CallbackHandler::RegisterCallback(L"Engine.dll", InitEngine);
         CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
         CallbackHandler::RegisterCallback(L"Echelon.dll", [] { InitEchelon(); Gamepad::InitEchelonHUD(); });

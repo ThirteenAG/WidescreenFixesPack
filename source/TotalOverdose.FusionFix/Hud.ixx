@@ -37,12 +37,20 @@ export namespace Hud
     }
 
     float hudAspect = 0.0f;
-    std::atomic<uint32_t> frame = 1, layout = 1;
+    uint32_t frame = 1, layout = 1;
+    std::atomic_bool aspectChanged{};
     void UpdateHudAspect()
     {
-        const auto parsed = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+        const auto parsed = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
         hudAspect = parsed ? std::clamp(*parsed, 4.0f / 3.0f, 32.0f / 9.0f) : 0.0f;
         ++layout;
+    }
+
+    void AdvanceFrame()
+    {
+        ++frame;
+        if (aspectChanged.exchange(false, std::memory_order_relaxed))
+            UpdateHudAspect();
     }
 
     // The 2D element being drawn (sprite or text node). An element is classified by the area its parent's elements
@@ -102,8 +110,7 @@ export namespace Hud
         const uint32_t now = frame;
         if (group.frame != now)
         {
-            if (group.current.Valid())
-                group.last = group.current;
+            group.last = now - group.frame == 1 ? group.current : Area{};
             group.current = {};
             group.frame = now;
         }
@@ -114,9 +121,15 @@ export namespace Hud
     {
         if (const auto parent = Parent(node))
         {
-            auto found = groups.find(parent);
-            if (found != groups.end() && found->second.last.Valid())
-                return found->second.last;
+            const auto found = groups.find(parent);
+            if (found != groups.end())
+            {
+                const auto& group = found->second;
+                if (group.frame == frame && group.last.Valid())
+                    return group.last;
+                if (frame - group.frame == 1 && group.current.Valid())
+                    return group.current;
+            }
         }
         return Bounds(node);
     }
@@ -234,7 +247,10 @@ export void InstallHud()
     injector::WriteMemory<float*>(textHeight.get_first<float*>(4), &Hud::textHeight, true); //0x41AA51
 
     Hud::UpdateHudAspect();
-    FixSettings().OnChange("MAIN.HudAspectRatioConstraint", Hud::UpdateHudAspect);
+    FixSettings().OnChange("MAIN.HudAspectRatioConstraint", []()
+    {
+        Hud::aspectChanged.store(true, std::memory_order_relaxed);
+    });
     auto toScreen = hook::pattern("F3 0F 10 51 2C F3 0F 10 44 24 08 F3 0F 5C 41 24 F3 0F 10 4C 24 0C F3 0F");
     auto sprite = hook::pattern("81 EC 04 01 00 00 56 8B F1 8B 86 9C 00 00 00 8B 8E 94 00 00 00 C1 E8 11");
     auto spriteNode = hook::pattern("81 EC 08 01 00 00 55 56 8B F1 8B AE 88 00 00 00 85 ED 0F 84");

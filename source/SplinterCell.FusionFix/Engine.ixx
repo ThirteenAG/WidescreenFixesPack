@@ -2,6 +2,8 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/SplinterCell/ViewportMouse.hpp"
+#include "Shared/SplinterCell/AxisCommands.hpp"
 #include <queue>
 #include <functional>
 #include <stdexcept>
@@ -19,6 +21,12 @@ import Gamepad;
 import CutsceneFrame;
 import GameplayCamera;
 
+namespace
+{
+    std::atomic<float> GameplayFovFactor{ 1.0f };
+    std::atomic<bool> WidescreenScope{ false };
+}
+
 // Forward declaration for the softbody fixed timestep update
 // Implemented later in the AESoftBodyActor namespace
 namespace AESoftBodyActor { void AdvanceFixedTimestep(float deltaTime); }
@@ -27,49 +35,59 @@ namespace UInput
 {
     uint8_t(__fastcall* GetKey)(void* uInput, void* edx, const wchar_t* a2, int a3) = nullptr;
     void* gUInput = nullptr;
-    void(__fastcall* SetKey)(void* uInput, void* edx, const wchar_t* keyAndBinding, const wchar_t* keyName) = nullptr;
+    int(__fastcall* FindKeyName)(void*, void*, const wchar_t*, int*) = nullptr;
+    int joyZ = -1, joyV = -1;
+    thread_local float lookSpeed = 1.0f;
 
-    bool initialBindingsPending = false;
-    bool initialBindingsApplied = false;
-
-    void RefreshPadBindings()
+    struct LookAxisScope
     {
-        if (!gUInput || !SetKey)
-            return;
-        const bool initial = std::exchange(initialBindingsPending, false);
-        const bool changed = Gamepad::TakeBindingsChanged();
-        if (!initial && !changed)
-            return;
-        auto apply = [](const std::wstring& key, const std::string& binding)
+        explicit LookAxisScope(int key)
+            : previous(std::exchange(lookSpeed, 1.0f))
         {
-            if (binding.size() > 254 || binding.find('"') != std::string::npos)
-                return;
-            using FindKeyName = int(__thiscall*)(void*, const wchar_t*, int*);
-            const auto table = *reinterpret_cast<uintptr_t**>(gUInput);
-            const auto findKeyName = reinterpret_cast<FindKeyName>(table[0x78 / sizeof(uintptr_t)]);
-            int index = 0;
-            if (!findKeyName(gUInput, key.c_str(), &index))
-                throw std::runtime_error("Required gamepad key name not found");
-            const int length = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, binding.data(), static_cast<int>(binding.size()), nullptr, 0);
-            if (!binding.empty() && !length)
-                return;
-            std::wstring wide(length, L'\0');
-            if (length)
-                MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, binding.data(), static_cast<int>(binding.size()), wide.data(), length);
-            const auto command = key + L" \"" + wide + L"\"";
-            SetKey(gUInput, nullptr, command.c_str(), key.c_str());
-        };
-        if (initial)
-        {
-            initialBindingsApplied = true;
-            // The bindings of the user ini, so the pad also works when the engine read it before the fix filled it
-            for (int button = 1; button <= 16; ++button)
-                apply(L"Joy" + std::to_wstring(button), Gamepad::Binding(button));
-            apply(L"JoyX", Gamepad::Binding(17));
-            apply(L"JoyY", Gamepad::Binding(18));
+            if (key >= 0 && (key == joyZ || key == joyV))
+            {
+                lookSpeed = std::clamp(FixSettings().Float("MAIN.GamepadCameraSpeed"), 0.25f, 3.0f);
+                if (key == joyV && FixSettings().Bool("MAIN.InvertGamepadY"))
+                    lookSpeed = -lookSpeed;
+            }
         }
-        apply(L"JoyZ", Gamepad::TurnBinding());
-        apply(L"JoyV", Gamepad::LookUpBinding());
+
+        ~LookAxisScope()
+        {
+            lookSpeed = previous;
+        }
+
+        float previous;
+    };
+
+    SafetyHookInline shProcess, shDirectAxis, shExecInputCommands, shSetKey;
+
+    void __fastcall SetKey(void* input, void* edx, const wchar_t* command, const wchar_t* oldKey)
+    {
+        if (!Gamepad::KeepCustomBinding(command))
+            shSetKey.unsafe_fastcall(input, edx, command, oldKey);
+    }
+
+    int __fastcall Process(void* input, void* edx, void* output, int key, int action, int flags, float value)
+    {
+        constexpr int axisAction = 4;
+        const LookAxisScope scope(action == axisAction ? key : -1);
+        return shProcess.unsafe_fastcall<int>(input, edx, output, key, action, flags, value);
+    }
+
+    void __fastcall DirectAxis(void* input, void* edx, int key, float value, float deltaTime)
+    {
+        const LookAxisScope scope(key);
+        shDirectAxis.unsafe_fastcall(input, edx, key, value, deltaTime);
+    }
+
+    void __fastcall ExecInputCommands(void* input, void* edx, const wchar_t* commands, void* output)
+    {
+        if (!commands || lookSpeed == 1.0f)
+            return shExecInputCommands.unsafe_fastcall(input, edx, commands, output);
+        // The engine applies Speed after its deadzone. Scale the command without changing the saved binding.
+        const auto scaled = SCPadAxis::ScaleCommands(commands, lookSpeed);
+        shExecInputCommands.unsafe_fastcall(input, edx, scaled.c_str(), output);
     }
 
     SafetyHookInline shInit = {};
@@ -78,8 +96,8 @@ namespace UInput
         gUInput = uInput;
         gViewport = uViewport;
         shInit.unsafe_fastcall(uInput, edx, uViewport);
-        if (!initialBindingsApplied)
-            initialBindingsPending = true;
+        FindKeyName(uInput, nullptr, L"JoyZ", &joyZ);
+        FindKeyName(uInput, nullptr, L"JoyV", &joyV);
     }
 }
 
@@ -102,8 +120,7 @@ void __fastcall FCanvasUtilDrawTileHook(void* _this, uint32_t EDX, float X, floa
         const float fOpticMic = (Screen.fHeight * (4.0f / 3.0f)) / (640.0f / 163.0f);
 
         // Widescreen Scope: the sniper scope's corner pieces go to the screen edges instead of the 4:3 edges
-        static const int& scopeWidescreenMode = FixSettings().Int("MAIN.ScopeWidescreenMode");
-        if (scopeWidescreenMode)
+        if (WidescreenScope.load())
         {
             const float width43 = Screen.fHeight * (4.0f / 3.0f);
             if (X == 0.0f && FloatEqual(SizeX, fZoomScopeBorders))
@@ -175,7 +192,6 @@ namespace UGameEngine
     void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
     {
         RefreshHudConstraint();
-        UInput::RefreshPadBindings();
         WFP::onGameProcessEvent().executeAll();
         if (hGameWindow)
             CursorConfinement::Frame(hGameWindow);
@@ -190,13 +206,15 @@ namespace UGameEngine
             UWindowsViewport::deferredCauseInputEvent.pop();
         }
 
-        // All raw mouse movement since the last tick, once per tick
-        if (Screen.bRawInputMouse && UWindowsViewport::RawMouseFeed)
+        if (Screen.bRawInputMouse)
         {
-            const auto dx = RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0);
-            const auto dy = RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0);
-            if (dx || dy)
-                UWindowsViewport::RawMouseFeed(dx, dy);
+            const HWND active = UWindowsViewport::RawMouseFeed && GetForegroundWindow() == hGameWindow ? hGameWindow : nullptr;
+            ViewportMouse::Bind(active);
+            const auto move = ViewportMouse::movement.Take();
+            if (active && !ViewportMouse::nativeFrame && (move.x || move.y))
+                UWindowsViewport::RawMouseFeed(static_cast<int>(std::clamp<int64_t>(move.x, INT_MIN, INT_MAX)),
+                    static_cast<int>(std::clamp<int64_t>(move.y, INT_MIN, INT_MAX)));
+            ViewportMouse::nativeFrame = false;
         }
 
         return shTick.unsafe_fastcall(UGameEngine, edx, deltaTime);
@@ -723,6 +741,21 @@ namespace SuitLights
 
 export void InitEngine()
 {
+    auto publish = []()
+    {
+        static std::mutex mutex;
+        std::lock_guard lock(mutex);
+        auto& settings = FixSettings();
+        const auto text = settings.Get("MAIN.FOVFactor");
+        float factor = 1.0f;
+        std::from_chars(text.data(), text.data() + text.size(), factor);
+        GameplayFovFactor.store(std::isfinite(factor) ? factor : 1.0f);
+        WidescreenScope.store(settings.Get("MAIN.ScopeWidescreenMode") == "1");
+    };
+    for (const char* key : { "MAIN.FOVFactor", "MAIN.ScopeWidescreenMode" })
+        FixSettings().OnChange(key, publish);
+    publish();
+
     auto pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "68 ? ? ? ? 50 8D 8C 24 ? ? ? ? FF 15 ? ? ? ? 8B C8 FF 15 ? ? ? ? 50 8D 4C 24 ? FF 15 ? ? ? ? 6A 00");
     a_sav = *pattern.get_first<const wchar_t*>(1);
 
@@ -777,8 +810,7 @@ export void InitEngine()
             fov = SCCutscene::FOV(fov, Screen.fAspectRatio);
             return;
         }
-        static const auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
-        float factor = SCGameplayCamera::Factor(reinterpret_cast<void*>(regs.ebx), *reinterpret_cast<uintptr_t*>(regs.esp + 0x16C), fFOVFactor);
+        float factor = SCGameplayCamera::Factor(reinterpret_cast<void*>(regs.ebx), *reinterpret_cast<uintptr_t*>(regs.esp + 0x16C), GameplayFovFactor.load());
         // The factor widens up to 150 degrees across: on very wide screens anything wider breaks the picture up
         constexpr float kMaxFactorFOV = 150.0f;
         const float base = std::clamp(AdjustFOV(fov, Screen.fAspectRatio), 1.0f, 179.0f);
@@ -966,7 +998,15 @@ export void InitEngine()
     }
 
     UInput::GetKey = (decltype(UInput::GetKey))GetProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPBGH@Z");
-    UInput::SetKey = (decltype(UInput::SetKey))GetProcAddress(GetModuleHandle(L"Engine"), "?SetKey@UInput@@UAEXPBG0@Z");
+    const auto engine = GetModuleHandleW(L"Engine.dll");
+    UInput::FindKeyName = reinterpret_cast<decltype(UInput::FindKeyName)>(GetProcAddress(engine, "?FindKeyName@UInput@@UBEHPBGAAW4EInputKey@@@Z"));
+    UInput::shSetKey = safetyhook::create_inline(GetProcAddress(engine, "?SetKey@UInput@@UAEXPBG0@Z"), UInput::SetKey);
+    UInput::shProcess = safetyhook::create_inline(GetProcAddress(engine,
+        "?Process@UInput@@UAEHAAVFOutputDevice@@W4EInputKey@@W4EInputAction@@HM@Z"), UInput::Process);
+    UInput::shDirectAxis = safetyhook::create_inline(GetProcAddress(engine,
+        "?DirectAxis@UInput@@UAEXW4EInputKey@@MM@Z"), UInput::DirectAxis);
+    UInput::shExecInputCommands = safetyhook::create_inline(GetProcAddress(engine,
+        "?ExecInputCommands@UInput@@MAEXPBGAAVFOutputDevice@@@Z"), UInput::ExecInputCommands);
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
 
     UGameEngine::shDisplaySplash = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?DisplaySplash@UGameEngine@@UAEXH@Z"), UGameEngine::DisplaySplash);

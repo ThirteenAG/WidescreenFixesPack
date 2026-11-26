@@ -1,21 +1,26 @@
 #include "Game.hpp"
 #include "Controls.hpp"
 #include "Settings.hpp"
-#include "../Shared/Console/Ps2PluginConflict.hpp"
+#include "Shared/Console/Ps2PluginConflict.hpp"
+#include "Shared/Console/PS2Display.hpp"
+#include "Shared/Console/Ps2TypedCheats.hpp"
 PCSX2F_CFG_SETTINGS();
 PCSX2F_CFG_PEER_SETTINGS();
 PCSX2F_STATE_LOAD_GENERATION();
-#include "../../external/injector/include/ps2/patches.hpp"
+PCSX2F_EFFECTIVE_ASPECT()
+#include "ps2/patches.hpp"
 extern "C" {
-#include "../../external/injector/include/ps2/pcsx2f_api.h"
-#include "../../external/injector/include/ps2/patterns.h"
+#include "ps2/pcsx2f_api.h"
 #include <cstdio>
 
 int CompatibleCRCList[] = {0x4F32A11F};
 int PCSX2Data[PCSX2Data_Size] = {1};
 char KeyboardState[StateNum][StateSize] = {{1}};
 CMouseControllerState MouseState[StateNum] = {{1}};
+console::MouseMotion MouseStateV2{};
+console::MouseTransitions MouseStateV3{};
 char CheatString[CheatStringLen] = {1};
+console::CheatEvents CheatStringV2{};
 char OSDText[OSDStringNum][OSDStringSize] = {{1}};
 char FrameLimitUnthrottle;
 }
@@ -24,24 +29,8 @@ namespace vcs {
 namespace {
 safetymips::GameInline<uint64_t()> gameTick;
 SafetyMipsMid littleWillie;
-float DisplayAspect() {
-    switch (PCSX2Data[PCSX2Data_AspectRatioSetting]) {
-    case RAuto4_3_3_2: case R4_3: return 4.0f / 3.0f;
-    case R16_9: return 16.0f / 9.0f;
-    default: break;
-    }
-    int width = PCSX2Data[PCSX2Data_WindowSizeX];
-    int height = PCSX2Data[PCSX2Data_WindowSizeY];
-    if (PCSX2Data[PCSX2Data_IsFullscreen] || width <= 0 || height <= 0) {
-        width = PCSX2Data[PCSX2Data_DesktopSizeX];
-        height = PCSX2Data[PCSX2Data_DesktopSizeY];
-    }
-    return width > 0 && height > 0
-        ? console::bounded(float(width) / float(height), 0.5f, 8.0f, 4.0f / 3.0f)
-        : 4.0f / 3.0f;
-}
 void UpdateViewport() {
-    settings.aspect = settings.forcedAspect > 0.0f ? settings.forcedAspect : DisplayAspect();
+    settings.aspect = settings.forcedAspect > 0.0f ? settings.forcedAspect : console::ps2Aspect(PCSX2Data);
     settings.baseAspect = settings.aspect >= 16.0f / 9.0f ? 16.0f / 9.0f : 4.0f / 3.0f;
 }
 void ReadSettings() {
@@ -60,23 +49,55 @@ void ReadSettings() {
     settings.gamepadIcons = int(config::Number(13, 0.0f, 0.0f, 3.0f));
     settings.vehicleLights = config::Boolean(14, true);
     settings.holdVehicleCamera = config::Boolean(15, false);
+    settings.padCameraSpeed = config::Number(16, 1.0f, 0.25f, 4.0f);
+    settings.invertPad = config::Boolean(17, false);
 }
-console::ps2settings::StateLoads stateLoads;
-void RefreshSettings() {
-    // After loading a save state: the CFG wins over the restored values. Skip
-    // Intro keeps the value the game started with.
-    if (!config::Read()) return;
+bool RefreshSettings()
+{
+    if (!config::Read() || !ReloadBindings())
+        return false;
+
     ReadSettings();
-    ReloadBindings();
     ReloadMenuLanguage();
     ApplyFrameRate();
-    ApplyPcControls();
+    return true;
 }
+struct SettingsRefresh
+{
+    uint32_t appliedGeneration = 0;
+    uint32_t attemptedGeneration = 0;
+    unsigned retryDelay = 0;
+
+    void Poll()
+    {
+        const auto generation = *reinterpret_cast<const volatile uint32_t*>(&PCSX2FStateLoadGeneration);
+        if (generation == appliedGeneration)
+            return;
+        if (generation == attemptedGeneration && retryDelay)
+        {
+            --retryDelay;
+            return;
+        }
+
+        attemptedGeneration = generation;
+        if (RefreshSettings())
+        {
+            appliedGeneration = generation;
+            retryDelay = 0;
+        }
+        else
+        {
+            // Retry on the 60th subsequent game tick without waiting for another load.
+            retryDelay = 59;
+        }
+    }
+};
+SettingsRefresh stateLoads;
+
 uint64_t GameTick() {
-    stateLoads.poll(RefreshSettings);
+    stateLoads.Poll();
     UpdateViewport();
     TickTiming();
-    if (KeyboardActive()) UpdateCheats();
     FrameLimitUnthrottle = false;
     if (settings.unthrottle) {
         auto menu = reinterpret_cast<void* (*)()>(0x471400)();
@@ -94,6 +115,31 @@ void LittleWillieCamera(SafetyMipsContext& regs) {
         regs.f1 = 2.0f;
     }
 }
+pcsx2::Patch introPatch;
+pcsx2_hook_status InstallSkipIntro(const pcsx2_hook_backend& backend)
+{
+    settings.startedSkipIntro = false;
+    if (!settings.skipIntro)
+        return PCSX2_HOOK_OK;
+
+    // The startup call plays the logo and intro movies before opening the game.
+    constexpr uintptr_t site = 0x21C8F0;
+    constexpr uint32_t originalCall = 0x0C08729C;
+    constexpr uint32_t nop = 0;
+    uint32_t original = 0;
+    if (!backend.read(backend.user, site, &original, sizeof(original)))
+        return PCSX2_HOOK_READ_FAILED;
+    if (original != originalCall)
+        return PCSX2_HOOK_CONFLICT;
+
+    const auto created = introPatch.create(backend, site, &nop, 1);
+    if (created != PCSX2_HOOK_OK)
+        return created;
+    const auto enabled = introPatch.enable();
+    settings.startedSkipIntro = introPatch.enabled();
+    return enabled;
+}
+
 void Rejected(pcsx2_hook_status status) {
     std::snprintf(OSDText[0], OSDStringSize, "VCS fix disabled: patch validation failed (%u)", unsigned(status));
 }
@@ -102,29 +148,20 @@ void Rejected(pcsx2_hook_status status) {
 
 extern "C" void init() {
     using namespace vcs;
-    static constexpr console::ps2conflict::OldPlugin oldPlugins[] = {
-        {"GTAVCS.PCSX2F.WidescreenFix.elf", "MAIN", "ForceAspectRatio"},
-        {"GTAVCS.PCSX2F.ImVehLM.elf", "MAIN", "VehicleLights"},
+    static constexpr const char* oldPlugins[] = {
+        "GTAVCS.PCSX2F.WidescreenFix.elf",
+        "GTAVCS.PCSX2F.ImVehLM.elf",
     };
     if (console::ps2conflict::Found(oldPlugins, OSDText)) return;
     if (injector::InitializeCheckedRuntime(Rejected) != PCSX2_HOOK_OK) return;
     config::Load();
     ReadSettings();
-    settings.startedSkipIntro = settings.skipIntro;
     LoadBindings();
     UpdateViewport();
 
-    if (settings.skipIntro) {
-        auto site = pattern.get_first("00 00 00 00 ? ? ? ? 2D 20 00 00 ? ? ? ? 00 00 00 00 ? ? ? ? 00 00 00 00 2D 10 00", -4);
-        if (site)
-        {
-            injector::MakeNOP(site);
-        }
-        else
-        {
-            std::snprintf(OSDText[0], OSDStringSize, "VCS Skip Intro patch not found");
-        }
-    }
+    const auto introStatus = InstallSkipIntro(injector::detail::backend);
+    if (introStatus != PCSX2_HOOK_OK)
+        std::snprintf(OSDText[0], OSDStringSize, "VCS Skip Intro patch failed (%u)", unsigned(introStatus));
     InstallCamera();
     InstallDrawing();
     InstallHud();

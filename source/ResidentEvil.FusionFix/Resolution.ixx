@@ -1,14 +1,13 @@
 module;
 
 #include <stdafx.h>
-#include "FixSettings.hpp"
-
+#include <d3d9.h>
 export module Resolution;
 
-// The game's resolution list: every display mode instead of the predefined list that stopped at 2560x1600. The game
-// prints the display modes with sprintf; the fix collects them, sorts and de-duplicates them and points the game's
-// list tables, counts and lookups at its own list. The 2026 update was rebuilt with a newer compiler, so most sites
-// have a second pattern.
+import ComVars;
+import EngineText;
+
+// Replace the predefined resolution list with the adapter's display modes.
 
 namespace
 {
@@ -42,7 +41,57 @@ namespace
     }; std::vector<NumRes> resListNum;
 
     bool ResolutionListReady = false;
+    using Mode = std::pair<int, int>;
+    constexpr size_t MaxModes = 127; // The native menu compares indices against signed immediate bytes.
+    std::vector<Mode> gatheredModes;
     std::vector<std::string> resList;
+
+    std::vector<Mode> SelectModes(std::vector<Mode> available, Mode current, Mode desktop)
+    {
+        std::sort(available.begin(), available.end());
+        available.erase(std::unique(available.begin(), available.end()), available.end());
+        if (available.size() <= MaxModes)
+            return available;
+
+        std::vector<Mode> modes{ available.front(), available.back() };
+        for (const auto mode : { current, desktop })
+        {
+            if (std::binary_search(available.begin(), available.end(), mode) &&
+                std::find(modes.begin(), modes.end(), mode) == modes.end())
+                modes.push_back(mode);
+        }
+        std::erase_if(available, [&](Mode mode) { return std::find(modes.begin(), modes.end(), mode) != modes.end(); });
+        const auto remaining = MaxModes - modes.size();
+        for (size_t i = 0; i < remaining; ++i)
+            modes.push_back(available[i * available.size() / remaining]);
+        std::sort(modes.begin(), modes.end());
+        return modes;
+    }
+
+    void BuildResolutionList(void* renderer)
+    {
+        const auto d3d = REText::Read<IDirect3D9*>(renderer, 0xA0);
+        const auto adapter = REText::Read<UINT>(renderer, bUpdatedRelease ? 0x4421EC : 0x447DDC);
+        D3DDISPLAYMODE desktop{};
+        d3d->GetAdapterDisplayMode(adapter, &desktop);
+        const Mode current{ REText::Read<int>(renderer, 0x433E50), REText::Read<int>(renderer, 0x433E54) };
+        auto modes = SelectModes(std::move(gatheredModes), current,
+            { static_cast<int>(desktop.Width), static_cast<int>(desktop.Height) });
+
+        // Keep a valid backing entry for the native pointers when the adapter reports no usable mode.
+        if (modes.empty())
+            modes.emplace_back(640, 480);
+
+        resList.reserve(modes.size());
+        for (const auto& [x, y] : modes)
+        {
+            const auto id = static_cast<uint32_t>(resList.size());
+            resList.push_back(std::to_string(x) + "x" + std::to_string(y));
+            resListString.emplace_back(resList.back().c_str(), id);
+            resListNum.emplace_back(x, y, id);
+        }
+    }
+
     const char* __fastcall GetResString(void* _this, int edx, unsigned int id)
     {
         if (resList.empty()) return "1024x768";
@@ -55,7 +104,7 @@ namespace
         #pragma warning(suppress: 4996)
         auto result = sprintf(str, format, x, y);
         if (!ResolutionListReady && x >= 640 && y >= 480)
-            resList.push_back(str);
+            gatheredModes.emplace_back(x, y);
         return result;
     }
 
@@ -103,29 +152,7 @@ public:
                     if (ResolutionListReady)
                         return;
 
-                    resListString.clear();
-                    resListNum.clear();
-                    if (resList.empty()) resList.emplace_back("1024x768");
-
-                    std::sort(resList.begin(), resList.end(), [](const std::string& lhs, const std::string& rhs)
-                    {
-                        int32_t x1 = 0, y1 = 0, x2 = 0, y2 = 0;
-                        sscanf_s(lhs.c_str(), "%dx%d", &x1, &y1);
-                        sscanf_s(rhs.c_str(), "%dx%d", &x2, &y2);
-                        return (x1 != x2) ? (x1 < x2) : (x1 * y1 < x2 * y2);
-                    });
-                    resList.erase(std::unique(std::begin(resList), std::end(resList)), resList.end());
-
-                    if (resList.size() > 127) resList.resize(127); //native signed-byte comparisons
-
-                    for (size_t idx = 0; idx < resList.size(); idx++)
-                    {
-                        int x = 0, y = 0;
-                        auto str = resList[idx].c_str();
-                        sscanf_s(str, "%dx%d", &x, &y);
-                        resListString.emplace_back(str, idx);
-                        resListNum.emplace_back(x, y, idx);
-                    }
+                    BuildResolutionList(reinterpret_cast<void*>(bUpdatedRelease ? regs.ebx : regs.esi));
 
                     if (!bUpdatedRelease)
                     {

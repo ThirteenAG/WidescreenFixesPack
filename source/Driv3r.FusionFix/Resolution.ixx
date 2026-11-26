@@ -22,71 +22,38 @@ int32_t nMinResY = 0;
 int32_t nMaxResX = 0;
 int32_t nMaxResY = 0;
 
-std::filesystem::path GetResolutionConfigPath()
-{
-    return GetExeModulePath() / "Saves" / "RES.cfg";
-}
-
 struct ResolutionConfig
 {
     uint32_t width = 0;
     uint32_t height = 0;
-    uint32_t refreshrate = 0;
+    uint32_t refreshRate = 0;
 };
 
 ResolutionConfig GetSavedResolution()
 {
-    ResolutionConfig cfg;
-    auto path = GetResolutionConfigPath();
-
-    std::ifstream file(path);
-    if (!file.is_open())
-        return cfg;
-
-    std::string line;
-    while (std::getline(file, line))
+    const auto value = FixSettings().Get("MAIN.DisplayMode");
+    const char* first = value.data();
+    const char* last = first + value.size();
+    ResolutionConfig config;
+    for (auto field : { &config.width, &config.height, &config.refreshRate })
     {
-        auto parse = [&](const char* key, uint32_t& out)
-        {
-            if (line.rfind(key, 0) == 0)
-            {
-                auto pos = line.find('=');
-                if (pos != std::string::npos)
-                {
-                    const auto value = line.find_first_not_of(" \t", pos + 1);
-                    if (value != std::string::npos)
-                    {
-                        uint32_t parsed = 0;
-                        auto result = std::from_chars(line.data() + value, line.data() + line.size(), parsed);
-                        if (result.ec == std::errc{})
-                            out = parsed;
-                    }
-                }
-            }
-        };
-
-        parse("width", cfg.width);
-        parse("height", cfg.height);
-        parse("refreshrate", cfg.refreshrate);
+        const auto result = std::from_chars(first, last, *field);
+        if (result.ec != std::errc{})
+            return {};
+        if (field == &config.refreshRate)
+            return result.ptr == last ? config : ResolutionConfig{};
+        if (result.ptr == last || *result.ptr != 'x')
+            return {};
+        first = result.ptr + 1;
     }
-
-    return cfg;
+    return {};
 }
 
-void SaveResolution(uint32_t width, uint32_t height, uint32_t refreshrate)
+void SaveResolution(uint32_t width, uint32_t height, uint32_t refreshRate)
 {
-    auto path = GetResolutionConfigPath();
-
-    std::error_code ec;
-    std::filesystem::create_directories(path.parent_path(), ec);
-
-    std::ofstream file(path, std::ios::trunc);
-    if (!file.is_open())
-        return;
-
-    file << "width = " << width << '\n'
-        << "height = " << height << '\n'
-        << "refreshrate = " << refreshrate << '\n';
+    auto value = std::to_string(width) + 'x' + std::to_string(height) + 'x' + std::to_string(refreshRate);
+    if (value != FixSettings().Get("MAIN.DisplayMode"))
+        FixSettings().Set("MAIN.DisplayMode", value);
 }
 
 bool IsSameResolution(const D3DDISPLAYMODE& a, const D3DDISPLAYMODE& b)
@@ -128,17 +95,44 @@ std::vector<D3DDISPLAYMODE> BuildModeList(IDirect3D9* d3d, UINT adapter)
     if (bForceMaxRefreshRate)
         modes.erase(std::unique(modes.begin(), modes.end(), IsSameResolution), modes.end());
 
-    std::vector<D3DDISPLAYMODE> result;
-    for (auto it = modes.begin(); it != modes.end();)
+    if (modes.size() <= MaxListModes)
     {
-        auto next = std::find_if_not(it, modes.end(), [&](const D3DDISPLAYMODE& mode) { return IsSameResolution(mode, *it); });
-        if (result.size() + std::distance(it, next) > MaxListModes)
-            break;
-
-        result.insert(result.end(), it, next);
-        it = next;
+        std::reverse(modes.begin(), modes.end());
+        return modes;
     }
 
+    const auto saved = GetSavedResolution();
+    D3DDISPLAYMODE desktop{};
+    d3d->GetAdapterDisplayMode(adapter, &desktop);
+
+    // The list is sorted from highest to lowest refresh within each resolution.
+    const auto preferred = [&](uint32_t width, uint32_t height, uint32_t refreshRate)
+    {
+        const auto exact = std::find_if(modes.begin(), modes.end(), [&](const auto& mode)
+        {
+            return mode.Width == width && mode.Height == height && mode.RefreshRate == refreshRate;
+        });
+        return exact != modes.end() ? exact : std::find_if(modes.begin(), modes.end(), [&](const auto& mode)
+        {
+            return mode.Width == width && mode.Height == height;
+        });
+    };
+    const auto selected = preferred(saved.width, saved.height, saved.refreshRate);
+    const auto desktopMode = preferred(desktop.Width, desktop.Height, 0);
+    size_t available = MaxListModes - (selected != modes.end()) - (desktopMode != modes.end() && desktopMode != selected);
+
+    std::vector<D3DDISPLAYMODE> result;
+    result.reserve(MaxListModes);
+    for (auto it = modes.begin(); it != modes.end(); ++it)
+    {
+        if (it == selected || it == desktopMode)
+            result.push_back(*it);
+        else if (available)
+        {
+            result.push_back(*it);
+            --available;
+        }
+    }
     std::reverse(result.begin(), result.end());
     return result;
 }
@@ -212,7 +206,7 @@ D3DDISPLAYMODE GetDefaultMode()
         return best;
     };
 
-    if (auto mode = find(config.width, config.height, config.refreshrate))
+    if (auto mode = find(config.width, config.height, config.refreshRate))
         return *mode;
     if (auto mode = find(DesktopResW, DesktopResH, 0))
         return *mode;
@@ -294,6 +288,21 @@ bool ChangeWindowMode(int width, int height)
     return ModeBuilt && (present->Windowed != FALSE) == (Driv3rWindow::mode != 0);
 }
 
+// The listed mode stays selected; the renderer skips a rebuild for its own current mode, so that is forgotten first
+bool ResizeWindowed(int width, int height)
+{
+    auto* manager = static_cast<uint8_t*>(GraphicsManager.get());
+    if (!manager || (*reinterpret_cast<void***>(manager))[34] != SetModeTarget) return false;
+    const auto* present = reinterpret_cast<const D3DPRESENT_PARAMETERS*>(Renderer.get_ptr() + 0x160);
+    const int index = RendererModeIndex;
+    *reinterpret_cast<int32_t*>(manager + 0x1098) = -1;
+    RendererModeIndex = -1;
+    SetMode(manager, nullptr, width, height, index);
+    if (RendererModeIndex == -1)
+        RendererModeIndex = index;
+    return ModeBuilt && present->Windowed && present->BackBufferWidth == UINT(width) && present->BackBufferHeight == UINT(height);
+}
+
 class Resolution
 {
 public:
@@ -336,6 +345,10 @@ public:
             injector::WriteMemory<int32_t>(pattern.get_first<int32_t>(1 + 10), 0, true);
             injector::WriteMemory<int32_t>(pattern.get_first<int32_t>(1 + 15), 0, true);
 
+            //no bit depth after the menu's resolution label: every listed mode is 32 bit, and the suffix wraps under long labels
+            pattern = hook::pattern("8B 76 0C 8D 46 EA 83 C4 14 83 F8 0D 77"); //54A8CE
+            injector::WriteMemory<uint8_t>(pattern.get_first(12), 0xEB, true);
+
             //default to desktop res
             auto [DesktopResW, DesktopResH] = GetDesktopRes();
             pattern = hook::pattern("56 57 56 56 68 ? ? ? ? 68 ? ? ? ? 56 56"); //576C6B
@@ -362,11 +375,35 @@ public:
                 }
             }; injector::MakeInline<MenuDefaultResHook>(pattern.get_first(0), pattern.get_first(16));
 
+            // Use the current list entry when a profile selects a matching mode.
+            // Its stored index and display label may have come from a different list.
+            pattern = hook::pattern("85 C0 7D ? E8 ? ? ? ? B9 15 00 00 00 8B F0 8B FB F3 A5 8D 73 44");
+            static auto profileMode = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                struct MenuMode
+                {
+                    int32_t index;
+                    wchar_t label[32];
+                    D3DDISPLAYMODE mode;
+                };
+                static_assert(sizeof(MenuMode) == 0x54);
+                struct MenuModes
+                {
+                    int32_t count;
+                    const MenuMode* entries;
+                };
+                const auto index = static_cast<int32_t>(regs.eax);
+                const auto& modes = *reinterpret_cast<const MenuModes*>(regs.edi);
+                if (index >= 0 && index < modes.count)
+                    *reinterpret_cast<MenuMode*>(regs.ebx) = modes.entries[index];
+            });
+
             //stale mode indices
             pattern = hook::pattern("56 57 8B 7C 24 14 8B F1 39 BE 98 10 00 00");
             SetModeTarget = pattern.get_first();
             shSetMode = safetyhook::create_inline(SetModeTarget, SetMode);
             Driv3rWindow::onModeChange = ChangeWindowMode;
+            Driv3rWindow::onResize = ResizeWindowed;
 
             //resolution switch
             pattern = hook::pattern("89 8B 80 01 00 00"); //0x5C938F, 0x5C947E

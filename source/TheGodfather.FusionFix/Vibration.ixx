@@ -4,6 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include <d3d9.h>
 #include <dinput.h>
+#include <algorithm>
 #include <mutex>
 #include <unordered_map>
 #include <stdexcept>
@@ -24,6 +25,16 @@ export namespace GodfatherVibration
     std::unordered_map<const void*, GUID> devices;
     Sender sender{};
     short target = -1;
+    std::array<bool, 4> pendingStops{};
+    std::array<ULONGLONG, 4> nextStop{};
+    // A motor runs or a stop waits for a retry; the per-frame check does nothing otherwise
+    std::atomic<bool> busy{ false };
+
+    void UpdateBusy()
+    {
+        busy.store(target >= 0 || std::ranges::any_of(pendingStops, [](bool pending) { return pending; }),
+            std::memory_order_relaxed);
+    }
 
     short Controller(const GUID& guid)
     {
@@ -59,24 +70,48 @@ export namespace GodfatherVibration
             && !GodfatherPauseReasons.get();
     }
 
-    void StopLocked()
+    void QueueStop()
     {
-        if (target >= 0 && sender)
-            sender(target, 0, 0);
-        target = -1;
+        if (target >= 0)
+        {
+            pendingStops[target] = true;
+            nextStop[target] = 0;
+            target = -1;
+        }
+    }
+
+    void RetryStops()
+    {
+        if (!sender)
+            return;
+        const auto now = GetTickCount64();
+        for (short slot = 0; slot < static_cast<short>(pendingStops.size()); ++slot)
+        {
+            if (pendingStops[slot] && now >= nextStop[slot])
+            {
+                pendingStops[slot] = !sender(slot, 0, 0);
+                nextStop[slot] = now + 125;
+            }
+        }
     }
 
     void Stop()
     {
         std::scoped_lock lock(guard);
-        StopLocked();
+        QueueStop();
+        RetryStops();
+        UpdateBusy();
     }
 
     void Service()
     {
+        if (!busy.load(std::memory_order_relaxed))
+            return;
         std::scoped_lock lock(guard);
         if (!Allowed() || target != Selected())
-            StopLocked();
+            QueueStop();
+        RetryStops();
+        UpdateBusy();
     }
 
     void __stdcall Output(unsigned slot, unsigned low, unsigned high)
@@ -87,20 +122,24 @@ export namespace GodfatherVibration
         std::scoped_lock lock(guard);
         const auto selected = Allowed() ? Selected() : short(-1);
         if (target != selected)
-            StopLocked();
-        if (selected < 0)
-            return;
-        if (!sender)
+            QueueStop();
+        if (selected >= 0)
         {
-            if (const auto module = GetModuleHandleW(L"Xidi.32.dll"))
-                sender = reinterpret_cast<Sender>(GetProcAddress(module, "XidiSendVibration"));
+            if (!sender)
+                if (const auto module = GetModuleHandleW(L"Xidi.32.dll"))
+                    sender = reinterpret_cast<Sender>(GetProcAddress(module, "XidiSendVibration"));
+            const auto left = static_cast<unsigned short>((low & 0xFF) * 257);
+            const auto right = static_cast<unsigned short>((high & 0xFF) * 257);
+            if (sender && sender(selected, left, right))
+            {
+                pendingStops[selected] = false;
+                target = left || right ? selected : short(-1);
+            }
+            else if (target == selected && !left && !right)
+                QueueStop();
         }
-        if (sender)
-        {
-            target = selected;
-            sender(target, static_cast<unsigned short>((low & 0xFF) * 257),
-                static_cast<unsigned short>((high & 0xFF) * 257));
-        }
+        RetryStops();
+        UpdateBusy();
     }
 
     int __fastcall Device(void* self, void*, const DIDEVICEINSTANCEA* instance, const DIDATAFORMAT* format)
@@ -134,13 +173,7 @@ export namespace GodfatherVibration
         (void)deviceHook.enable();
         (void)outputHook.enable();
         (void)destroyHook.enable();
-        const auto refresh = []()
-        {
-            enabled.store(FixSettings().Bool("MAIN.Vibration"), std::memory_order_relaxed);
-            Service();
-        };
-        refresh();
-        FixSettings().OnChange("MAIN.Vibration", refresh);
+        BindLiveSetting("MAIN.Vibration", enabled);
         const auto frame = GodfatherWindow::frame;
         GodfatherWindow::frame = [frame](IDirect3DDevice9* device)
         {

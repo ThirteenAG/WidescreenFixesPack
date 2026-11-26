@@ -21,13 +21,20 @@ namespace GodfatherCinematics
         return value * 0.125f > 0.001f ? value : 0.0f;
     }
 
+    // The original cutscenes show a 16:9 picture: the 4:3 view with the top and bottom eighths covered.
+    constexpr float PictureAspect = 16.0f / 9.0f;
+
+    // The aspect the camera uses (4:3 = the authored horizontal angle across the screen). With both borders the
+    // original 16:9 picture fills the screen's height (or width below 16:9), so its horizontal angle spans the
+    // picture's width: 4:3 at 16:9 and narrower, three quarters of the screen's aspect above it.
     inline float ProjectionAspect(float aspect, int mode, float progress)
     {
         if (!std::isfinite(aspect) || aspect <= 0.0f)
             return 4.0f / 3.0f;
-        if (!(mode & 2) || !std::isfinite(progress))
+        if (mode != 3 || !std::isfinite(progress))
             return aspect;
-        return aspect + (std::max(aspect, 4.0f / 3.0f) - aspect) * std::clamp(progress, 0.0f, 1.0f);
+        const float framed = std::max(4.0f / 3.0f, aspect * 0.75f);
+        return aspect + (framed - aspect) * std::clamp(progress, 0.0f, 1.0f);
     }
 
     inline std::array<Rectangle, 4> Borders(int width, int height, int mode, float progress)
@@ -35,6 +42,15 @@ namespace GodfatherCinematics
         if (width <= 0 || height <= 0 || !std::isfinite(progress) || mode < 0 || mode > 3)
             return {};
         progress = std::clamp(progress, 0.0f, 1.0f);
+        if (mode == 3)
+        {
+            const double pictureWidth = std::min(double(width), height * double(PictureAspect));
+            const double pictureHeight = std::min(double(height), width / double(PictureAspect));
+            const int x = std::clamp(int(std::lround((width - pictureWidth) * 0.5 * progress)), 0, width / 2);
+            const int y = std::clamp(int(std::lround((height - pictureHeight) * 0.5 * progress)), 0, height / 2);
+            return { Rectangle{ 0, 0, width, y }, Rectangle{ 0, height - y, width, height },
+                Rectangle{ 0, y, x, height - y }, Rectangle{ width - x, y, width, height - y } };
+        }
         const double frameWidth = std::min(double(width), height * (4.0 / 3.0));
         const double frameHeight = std::min(double(height), width / (4.0 / 3.0));
         const double side = mode & 2 ? (width - frameWidth) * 0.5 * progress : 0.0;

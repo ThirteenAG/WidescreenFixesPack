@@ -356,14 +356,6 @@ jobs:
         tag: sh3
         artifacts: data/Archives/SilentHill3.FusionFix.zip
 
-    - name: Silent Hill 2 Fusion Fix
-      uses: ./.github/workflows/release_tag
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_list: ${{ steps.selection.outputs.tags }}
-        tag: sh2
-        artifacts: data/Archives/SilentHill2.FusionFix.zip
-
     - name: Cold Fear Fusion Fix
       uses: ./.github/workflows/release_tag
       with:

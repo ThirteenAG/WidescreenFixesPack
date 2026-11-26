@@ -1,5 +1,6 @@
 #pragma once
 #include "Shared/PadInput.hpp"
+#include "Shared/RWGTA/GameThread.hpp"
 #include <atomic>
 #include <algorithm>
 #include <cmath>
@@ -36,35 +37,49 @@ namespace InputDevices
     inline DWORD LastPoll = 0;
     inline bool PadConnected = false;
     inline DWORD PadSlot = 0;
-    inline bool PadLast = false;                    // the pad was used last: prompts show its buttons
+    inline std::atomic_bool PadLast{ false };                    // the pad was used last: prompts show its buttons
     inline void UsePad(bool pad)
     {
         PadLast = pad;
     }
     inline std::atomic<uint32_t> PendingKeys[8]{};
     inline std::atomic<uint32_t> FrameKeys[8]{};
-    inline void KeyboardMessage(UINT message, WPARAM value)
+    inline void KeyboardMessage(UINT message, WPARAM value, LPARAM flags = 0)
     {
         int key = 0;
-        if (message == WM_KEYDOWN) key = int(value);
+        if (message == WM_KEYDOWN || message == WM_SYSKEYDOWN) key = int(value);
         else if (message == WM_LBUTTONDOWN) key = VK_LBUTTON;
         else if (message == WM_RBUTTONDOWN) key = VK_RBUTTON;
+        else if (message == WM_MBUTTONDOWN) key = VK_MBUTTON;
+        else if (message == WM_XBUTTONDOWN) key = GET_XBUTTON_WPARAM(value) == XBUTTON1 ? VK_XBUTTON1 : VK_XBUTTON2;
         if (key > 0 && key < 256) PendingKeys[key / 32].fetch_or(1u << (key % 32));
-        if (key > 0 || message == WM_MBUTTONDOWN || message == WM_XBUTTONDOWN || message == WM_SYSKEYDOWN) UsePad(false);
+        const bool repeat = (message == WM_KEYDOWN || message == WM_SYSKEYDOWN) && (flags & (1u << 30));
+        if ((key > 0 && !repeat) || message == WM_MOUSEWHEEL || message == WM_MOUSEHWHEEL)
+            UsePad(false);
+        static POINT origin{};
+        static bool haveOrigin = false;
         if (message == WM_MOUSEMOVE)
         {
-            // A resting hand moves the mouse a little: the pad stays the last device until the mouse really moves
-            static POINT last{ -1, -1 };
             POINT now{};
-            GetCursorPos(&now);
-            if (last.x >= 0 && std::abs(now.x - last.x) + std::abs(now.y - last.y) > 24) UsePad(false);
-            last = now;
+            if (GetCursorPos(&now))
+            {
+                const bool moved = haveOrigin && std::abs(now.x - origin.x) + std::abs(now.y - origin.y) > 24;
+                if (!haveOrigin || moved)
+                    origin = now;
+                haveOrigin = true;
+                if (moved)
+                    UsePad(false);
+            }
         }
         if (message == WM_KILLFOCUS)
+        {
+            haveOrigin = false;
             for (int i = 0; i < 8; ++i) { PendingKeys[i] = 0; FrameKeys[i] = 0; }
+        }
     }
     inline void BeginInputFrame()
     {
+        RWGTA::GameThread::Run();
         for (int i = 0; i < 8; ++i) FrameKeys[i] = PendingKeys[i].exchange(0);
     }
     inline bool Focused()
@@ -90,7 +105,8 @@ namespace InputDevices
     // Rumble: a pulse of a strength 0..1 that fades out over its length
     inline float RumbleStrength = 0.0f;
     inline ULONGLONG RumbleStart = 0, RumbleLength = 0;
-    inline bool Rumbling = false;
+    inline DWORD PulseSlot = XUSER_MAX_COUNT;
+    inline bool MotorRunning[XUSER_MAX_COUNT]{};
     inline float RumbleNow(ULONGLONG now)
     {
         if (!RumbleLength || now - RumbleStart >= RumbleLength)
@@ -102,9 +118,10 @@ namespace InputDevices
         if (!FixSettings().Bool("MAIN.Vibration") || !PadConnected || !PadLast)
             return;
         auto now = GetTickCount64();
-        if (strength < RumbleNow(now))
+        if (PadSlot == PulseSlot && strength < RumbleNow(now))
             return;
         RumbleStrength = std::clamp(strength, 0.0f, 1.0f);
+        PulseSlot = PadSlot;
         RumbleStart = now;
         RumbleLength = milliseconds;
     }
@@ -114,14 +131,19 @@ namespace InputDevices
         auto setState = XInput().setState;
         if (!setState)
             return;
-        float strength = stop || !FixSettings().Bool("MAIN.Vibration") ? 0.0f : RumbleNow(GetTickCount64());
-        if (strength <= 0.0f && !Rumbling)
-            return;
-        XINPUT_VIBRATION vibration{ WORD(strength * 65535.0f), WORD(strength * 0.6f * 65535.0f) };
-        setState(PadSlot, &vibration);
-        Rumbling = strength > 0.0f;
-        if (!Rumbling)
+        if (stop || !PadConnected || PadSlot != PulseSlot || !FixSettings().Bool("MAIN.Vibration"))
             RumbleLength = 0;
+        const float strength = RumbleNow(GetTickCount64());
+        for (DWORD slot = 0; slot < XUSER_MAX_COUNT; ++slot)
+        {
+            const float level = slot == PulseSlot ? strength : 0.0f;
+            if (level == 0.0f && !MotorRunning[slot])
+                continue;
+            XINPUT_VIBRATION vibration{ WORD(level * 65535.0f), WORD(level * 0.6f * 65535.0f) };
+            const auto result = setState(slot, &vibration);
+            if (result == ERROR_SUCCESS || result == ERROR_DEVICE_NOT_CONNECTED)
+                MotorRunning[slot] = result == ERROR_SUCCESS && level > 0.0f;
+        }
     }
 
     inline void Read(SettingsReader& ini)
@@ -149,14 +171,46 @@ namespace InputDevices
         for (auto id : { "INPUT.ModernControls", "INPUT.Gamepad", "INPUT.StickThrottle", "INPUT.StickDeadzone", "INPUT.MoveUpKey",
             "INPUT.MoveDownKey", "INPUT.MoveLeftKey", "INPUT.MoveRightKey", "INPUT.FireKey", "INPUT.EnterVehicleKey", "INPUT.JumpKey",
             "INPUT.SpecialKey", "INPUT.PreviousWeaponKey", "INPUT.NextWeaponKey", "INPUT.PauseKey" })
-            FixSettings().OnChange(id, [] { SettingsReader ini(""); Read(ini); });
+            FixSettings().OnChange(id, [] { RWGTA::GameThread::Post([] { SettingsReader ini(""); Read(ini); }); });
+    }
+
+    inline float Axis(SHORT value) { return value / (value < 0 ? 32768.0f : 32767.0f); }
+
+    inline bool NewPadActivity(const XINPUT_GAMEPAD& pad, XINPUT_GAMEPAD& previous)
+    {
+        const auto stickMoved = [](SHORT x, SHORT y, SHORT& lastX, SHORT& lastY)
+        {
+            const auto outside = [](SHORT a, SHORT b) { return std::hypot(Axis(a), Axis(b)) > Deadzone; };
+            if (!outside(x, y))
+            {
+                lastX = lastY = 0;
+                return false;
+            }
+            if (outside(lastX, lastY) && std::hypot(Axis(x) - Axis(lastX), Axis(y) - Axis(lastY)) < 0.05f)
+                return false;
+            lastX = x;
+            lastY = y;
+            return true;
+        };
+        const bool left = stickMoved(pad.sThumbLX, pad.sThumbLY, previous.sThumbLX, previous.sThumbLY);
+        const bool right = stickMoved(pad.sThumbRX, pad.sThumbRY, previous.sThumbRX, previous.sThumbRY);
+        const bool pressed = (pad.wButtons & ~previous.wButtons) ||
+            (pad.bLeftTrigger > 30 && previous.bLeftTrigger <= 30) || (pad.bRightTrigger > 30 && previous.bRightTrigger <= 30);
+        previous.wButtons = pad.wButtons;
+        previous.bLeftTrigger = pad.bLeftTrigger;
+        previous.bRightTrigger = pad.bRightTrigger;
+        return left || right || pressed;
     }
 
     inline void Poll()
     {
+        static XINPUT_GAMEPAD previous{};
         if (!Gamepad || !Focused())
         {
+            if (!Gamepad)
+                UsePad(false);
             Pad = {};
+            previous = {};
             PadConnected = false;
             return;
         }
@@ -164,17 +218,17 @@ namespace InputDevices
         if (now == LastPoll) return;
         LastPoll = now;
         Pad = {};
-        PadConnected = false;
+        const auto previousSlot = PadSlot;
         PadConnected = PadInput::Read(Pad, PadSlot);
         if (!PadConnected)
         {
+            previous = {};
             UsePad(false);
             return;
         }
-        auto& pad = Pad.Gamepad;
-        auto deflected = [](SHORT value) { return std::abs(int(value)) > 16000; };
-        if (pad.wButtons || pad.bLeftTrigger > 60 || pad.bRightTrigger > 60 || deflected(pad.sThumbLX) ||
-            deflected(pad.sThumbLY) || deflected(pad.sThumbRX) || deflected(pad.sThumbRY))
+        if (previousSlot != PadSlot)
+            previous = {};
+        if (NewPadActivity(Pad.Gamepad, previous))
             UsePad(true);
     }
 
@@ -184,7 +238,7 @@ namespace InputDevices
             ((GetAsyncKeyState(key) & 0x8000) || (FrameKeys[key / 32].load() & (1u << (key % 32))));
     }
     inline bool Button(WORD button) { return PadConnected && (Pad.Gamepad.wButtons & button); }
-    inline float Axis(SHORT value) { return value / (value < 0 ? 32768.0f : 32767.0f); }
+
     inline std::pair<float, float> Stick(bool right = false)
     {
         if (!PadConnected) return {};

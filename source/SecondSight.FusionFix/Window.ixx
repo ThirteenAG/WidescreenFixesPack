@@ -95,6 +95,7 @@ export namespace SecondSightWindow
                         y = (std::max)(y, int(monitor.top));
                     }
                 }
+                WindowStyle::detail::AllowSize(window, width, height);
                 Placed = { x, y };
                 HasPlacement = true;
                 flags &= ~SWP_NOMOVE;

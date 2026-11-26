@@ -148,7 +148,6 @@ void SetScreenVars(int width, int height)
     Screen.fTextBox = 1.0f;
     Screen.fFieldOfView = 1.0f * (((4.0f / 3.0f)) / (Screen.fAspectRatio));
     Screen.fCutOffArea = 0.5f / Screen.fFieldOfView;
-    Screen.fFMVScale = 1.0f / (((4.0f / 3.0f)) / (Screen.fAspectRatio));
 }
 
 class Window

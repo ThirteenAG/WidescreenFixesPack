@@ -160,9 +160,9 @@ void InitializeGame()
             float t = 0.0087266462f;
             float f = 0.0f;
             _asm {fstp[f]}
-            static const auto& factor = FixSettings().Float("MAIN.FOVFactor");
+            const auto factor = KnightRiderCamera::FOVFactor.load(std::memory_order_relaxed);
             KnightRiderCamera::NativeFOV = f;
-            f = AdjustFOV(std::min(f * std::clamp(factor, 0.5f, 2.0f), 170.0f), Screen.fAspectRatio);
+            f = AdjustFOV(std::min(f * factor, 170.0f), Screen.fAspectRatio);
             _asm {fld[f]}
             _asm {fmul[t]}
         }

@@ -18,12 +18,8 @@ export namespace Cutscene
     uint32_t AnimatedOffset = 0;
 
     enum Borders { Off, Letterbox, Pillarbox, Both };
-
-    int Mode()
-    {
-        static const auto& mode = FixSettings().Int("MAIN.CutsceneBorders");
-        return std::clamp(mode, 0, 3);
-    }
+    std::atomic<int> BorderMode{ Both };
+    std::atomic_bool Animated{ true };
 
     // 0 outside cutscenes, 1 while the cutscene frame is fully shown, in between while the bars slide.
     float Amount()
@@ -34,25 +30,25 @@ export namespace Cutscene
         if (!data || !*reinterpret_cast<uint8_t*>(data + AnimatedOffset))
             return 1.0f;
         const float slide = std::isfinite(Slide.get()) ? std::clamp(Slide.get(), 0.0f, 1.0f) : 0.0f;
-        static const auto& animated = FixSettings().Int("MAIN.AnimatedCutsceneBorders");
-        return animated ? slide : (slide > 0.0f ? 1.0f : 0.0f);
+        return Animated.load(std::memory_order_relaxed) ? slide : (slide > 0.0f ? 1.0f : 0.0f);
     }
 
-    bool LetterboxShown(float aspect)
+    bool LetterboxShown(float aspect, int mode)
     {
-        return aspect < Aspect && (Mode() & Letterbox);
+        return aspect < Aspect && (mode & Letterbox);
     }
 
-    bool PillarboxShown(float aspect)
+    bool PillarboxShown(float aspect, int mode)
     {
-        return aspect > Aspect && (Mode() & Pillarbox);
+        return aspect > Aspect && (mode & Pillarbox);
     }
 
     float FieldOfView(float fov, float aspect)
     {
-        if (LetterboxShown(aspect))
+        const int mode = BorderMode.load(std::memory_order_relaxed);
+        if (LetterboxShown(aspect, mode))
             return fov;
-        if (PillarboxShown(aspect))
+        if (PillarboxShown(aspect, mode))
             return AdjustFOV(fov, aspect, Aspect);
         return AdjustFOV(fov, aspect);
     }
@@ -63,7 +59,8 @@ export namespace Cutscene
         if (amount <= 0.0f || Screen.Width <= 0 || Screen.Height <= 0)
             return;
         Colour(0, 0, 0, 255);
-        if (LetterboxShown(Screen.fAspectRatio))
+        const int mode = BorderMode.load(std::memory_order_relaxed);
+        if (LetterboxShown(Screen.fAspectRatio, mode))
         {
             const auto bar = static_cast<int>((Screen.fHeight - Screen.fWidth / Aspect) * 0.5f * amount);
             if (bar > 0)
@@ -72,7 +69,7 @@ export namespace Cutscene
                 Fill(0, Screen.Height - bar, Screen.Width, bar, FillMode.get(), FillFlags.get());
             }
         }
-        else if (PillarboxShown(Screen.fAspectRatio))
+        else if (PillarboxShown(Screen.fAspectRatio, mode))
         {
             const auto bar = static_cast<int>((Screen.fWidth - Screen.fHeight * Aspect) * 0.5f * amount);
             if (bar > 0)
@@ -85,6 +82,14 @@ export namespace Cutscene
 
     void Init()
     {
+        ObservePunisherSetting("MAIN.CutsceneBorders", []()
+        {
+            BorderMode.store(std::clamp(PunisherNumericSetting("MAIN.CutsceneBorders", static_cast<int>(Both)), 0, 3), std::memory_order_relaxed);
+        });
+        ObservePunisherSetting("MAIN.AnimatedCutsceneBorders", []()
+        {
+            Animated.store(FixSettings().Get("MAIN.AnimatedCutsceneBorders") != "0", std::memory_order_relaxed);
+        });
         auto block = hook::pattern("E8 ? ? ? ? 84 C0 0F 84 BD 00 00 00 E8 ? ? ? ? 84 C0 0F 84 ? ? ? ? E8 ? ? ? ? 89 44 24 20 DB 44 24 20 D8 0D ? ? ? ? E8 ? ? ? ? 68 FF 00 00 00 6A 00 6A 00 6A 00 8B F0 E8 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 8B 0D ? ? ? ? 8A 81 ? ? ? ? ? ? ? ? ? ? ? ? D8 0D ? ? ? ? ? ? ? ? ? ? ? 8B 15 ? ? ? ? A1 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? E8").get_first<uint8_t>();
         const auto end = block + 0xCA;
         Bars = reinterpret_cast<decltype(Bars)>(injector::GetBranchDestination(block + 0x0D, true).get<void>());

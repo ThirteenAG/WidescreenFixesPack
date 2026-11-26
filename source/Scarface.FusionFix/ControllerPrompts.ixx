@@ -79,7 +79,7 @@ namespace
     const wchar_t* (__cdecl* lookupText)(const char*) = nullptr;
     bool enabled = false;
     unsigned gamepadIcons = 0;
-    const int* iconChoice = nullptr;
+    std::atomic<int> iconChoice{ 0 };
     std::atomic<bool> gamepad{false};
     std::atomic<uint64_t> lastKeyboardActivity{0};
     unsigned controller = 0;
@@ -432,27 +432,25 @@ export namespace ControllerPrompts
     bool IsEnabled(){return enabled;}
     void OnMessage(HWND window,UINT message,WPARAM,LPARAM param)
     {
-        if(!enabled)return;
-        static bool registered=false;
-        if(!registered)
+        if (!enabled || GetForegroundWindow() != window)
+            return;
+        bool activity = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
+        if (message == WM_INPUT)
         {
-            RAWINPUTDEVICE keyboard{1,6,0,window};
-            registered=RegisterRawInputDevices(&keyboard,1,sizeof(keyboard))!=FALSE;
+            RAWINPUT raw{};
+            UINT size = sizeof(raw);
+            if (GetRawInputData(reinterpret_cast<HRAWINPUT>(param), RID_INPUT, &raw, &size, sizeof(RAWINPUTHEADER)) != UINT(-1) &&
+                raw.header.hDevice && raw.header.dwType == RIM_TYPEMOUSE)
+                activity = raw.data.mouse.lLastX || raw.data.mouse.lLastY || raw.data.mouse.usButtonFlags;
         }
-        if(message!=WM_INPUT || GetForegroundWindow()!=window)return;
-        RAWINPUT raw{};UINT size=sizeof(raw);
-        if(GetRawInputData(reinterpret_cast<HRAWINPUT>(param),RID_INPUT,&raw,&size,sizeof(RAWINPUTHEADER))==UINT(-1) || !raw.header.hDevice)return;
-        bool activity=false;
-        if(raw.header.dwType==RIM_TYPEKEYBOARD)activity=!(raw.data.keyboard.Flags&RI_KEY_BREAK);
-        if(raw.header.dwType==RIM_TYPEMOUSE)
-            activity=raw.data.mouse.lLastX||raw.data.mouse.lLastY||raw.data.mouse.usButtonFlags;
-        if(activity)lastKeyboardActivity.store(GetTickCount64(),std::memory_order_relaxed);
+        if (activity)
+            lastKeyboardActivity.store(GetTickCount64(), std::memory_order_relaxed);
     }
 
     void Update(IDirect3DDevice9* d)
     {
         if(!enabled||!d)return;
-        const auto style = ScarfaceButtons::Style(iconChoice ? *iconChoice : 0);
+        const auto style = ScarfaceButtons::Style(iconChoice.load());
         if (gamepadIcons != style)
         {
             gamepadIcons = style;
@@ -519,8 +517,15 @@ export namespace ControllerPrompts
     void Initialize()
     {
         auto& settings = FixSettings();
-        iconChoice = &settings.Int("MAIN.GamepadIcons");
-        gamepadIcons = ScarfaceButtons::Style(*iconChoice);
+        auto publish = []()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            iconChoice.store(std::atoi(FixSettings().Get("MAIN.GamepadIcons").c_str()));
+        };
+        settings.OnChange("MAIN.GamepadIcons", publish);
+        publish();
+        gamepadIcons = ScarfaceButtons::Style(iconChoice.load());
         modernControls=settings.Bool("MAIN.ModernControlScheme");
         auto font=ScarfaceRTTI::FindVtable(".?AVTextureFont@pure3d@@");
         auto pattern=hook::pattern("8B 44 24 04 83 F8 FF 74 11 8B 51 1C 8B 04 82 8B 49 20 D1 E8 8D 04 41 C2 04 00"); // 0x6A41E0
@@ -575,6 +580,6 @@ export namespace ControllerPrompts
         lookTutorialUpdateHook.reset();evaluateScript=nullptr;boundTutorialMap=nullptr;
         savedTexture.Reset();for(auto& icon:icons)icon.Reset();device=nullptr;
         queryActivity=nullptr;queryButton=nullptr;queryProfileButton=nullptr;enabled=false;
-        iconChoice = nullptr;
+        iconChoice.store(0);
     }
 }

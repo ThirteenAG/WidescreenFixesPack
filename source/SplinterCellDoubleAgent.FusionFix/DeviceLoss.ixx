@@ -5,21 +5,36 @@ module;
 
 export module DeviceLoss;
 
-// A windowed device is lost while another program changes the display mode or holds it in fullscreen, and Windows
-// resizes the game window then. SetRes for that resize fails its Reset, releases the device, and can't create the
-// new one yet; the game went on with no device and crashed. SetRes now waits for the device, as the game's frame
-// already does for a lost one: as long as the device is lost or unavailable, and a few seconds for other errors.
 namespace
 {
     using CreateDeviceFn = void(__fastcall*)(void*, void*, D3DPRESENT_PARAMETERS*, HWND);
     CreateDeviceFn CreateDevice = nullptr;
     ptrdiff_t DeviceOffset = 0;
-    D3DPRESENT_PARAMETERS* Parameters = nullptr;
-    HRESULT CreateResult = D3D_OK;
+    thread_local HRESULT CreateResult = D3D_OK;
+    int** IsEditorImport = nullptr;
+    CRITICAL_SECTION** LoadingLockImport = nullptr;
+    uintptr_t FailureReturn = 0;
 
     IDirect3DDevice9* Device(uintptr_t renderDevice)
     {
         return *reinterpret_cast<IDirect3DDevice9**>(renderDevice + DeviceOffset);
+    }
+
+    void __fastcall CreateForWindow(void* renderer, void*, D3DPRESENT_PARAMETERS* parameters, HWND window)
+    {
+        const auto requested = *parameters;
+        const auto start = GetTickCount64();
+        for (;;)
+        {
+            CreateDevice(renderer, nullptr, parameters, window);
+            if (Device(reinterpret_cast<uintptr_t>(renderer)) ||
+                (CreateResult != D3DERR_DEVICELOST && CreateResult != D3DERR_NOTAVAILABLE) ||
+                GetTickCount64() - start >= 5000 || !IsWindow(window))
+                return;
+
+            Sleep(100);
+            *parameters = requested;
+        }
     }
 }
 
@@ -38,17 +53,25 @@ export void InitDeviceLoss()
         CreateResult = HRESULT(regs.eax);
     });
 
-    // Right after SetRes created the device
-    pattern = hook::module_pattern(d3dDrv, "50 68 ? ? ? ? 8B CE E8 ? ? ? ? 68 00 00 03 00 68 00 00 01 00 FF 15");
-    Parameters = *pattern.get_first<D3DPRESENT_PARAMETERS*>(2);
-    static SafetyHookMid setResHook = safetyhook::create_mid(pattern.get_first(13), [](SafetyHookContext& regs)
+    // SetRes holds the engine loading lock outside the editor.
+    pattern = hook::module_pattern(d3dDrv, "8B 15 ? ? ? ? 83 3A 00 75 ? A1 ? ? ? ? 50 FF 15 ? ? ? ? 8B 4D ? 5F 5E");
+    IsEditorImport = *pattern.get_first<int**>(2);
+    LoadingLockImport = *pattern.get_first<CRITICAL_SECTION**>(12);
+    pattern = hook::module_pattern(d3dDrv, "53 68 ? ? ? ? 8B CE E8 ? ? ? ? 8B 4D ? 64 89 0D 00 00 00 00 5F 5E 5B 8B E5 5D C2 10 00");
+    FailureReturn = reinterpret_cast<uintptr_t>(pattern.get_first(13));
+
+    // Check after the native floating-point control word has been restored.
+    pattern = hook::module_pattern(d3dDrv, "50 68 ? ? ? ? 8B CE E8 ? ? ? ? 68 00 00 03 00 68 00 00 01 00 FF 15 ? ? ? ? 83 C4 08");
+    injector::MakeCALL(pattern.get_first(8), CreateForWindow, true);
+    static SafetyHookMid setResHook = safetyhook::create_mid(pattern.get_first(32), [](SafetyHookContext& regs)
     {
         const auto renderDevice = uintptr_t(regs.esi);
-        const auto start = GetTickCount64();
-        while (!Device(renderDevice) && (CreateResult == D3DERR_DEVICELOST || CreateResult == D3DERR_NOTAVAILABLE || GetTickCount64() - start < 5000))
+        if (!Device(renderDevice))
         {
-            Sleep(100);
-            CreateDevice(reinterpret_cast<void*>(renderDevice), nullptr, Parameters, Parameters->hDeviceWindow);
+            if (!**IsEditorImport)
+                LeaveCriticalSection(*LoadingLockImport);
+            regs.eax = 0;
+            regs.eip = FailureReturn;
         }
     });
 }

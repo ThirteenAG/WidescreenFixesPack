@@ -24,6 +24,8 @@ namespace MaxPaynePad
     {
         XINPUT_STATE current{};
         XINPUT_STATE previous{};
+        POINT leftActivity{};
+        POINT rightActivity{};
         DWORD slot = 0;
         bool connected = false;
         bool enabled = false;
@@ -117,26 +119,42 @@ namespace MaxPaynePad
         bool read = s.connected && getState && getState(s.slot, &s.current) == ERROR_SUCCESS;
         if (!read)
         {
+            s.leftActivity = {};
+            s.rightActivity = {};
+            const bool wasConnected = s.connected;
             bool probe = s.connected || GetTickCount64() >= s.nextProbe;
             s.connected = probe && PadInput::Read(s.current, s.slot);
             if (!s.connected)
             {
+                if (wasConnected)
+                    MaxPayneGamepadButtons::SelectController(XUSER_MAX_COUNT);
                 s.current = {};
                 if (probe)
                     s.nextProbe = GetTickCount64() + 1000;
                 return;
             }
+            s.previous = {};
+            MaxPayneGamepadButtons::SelectController(s.slot);
         }
 
         // Held input must not take the device back from a newer keyboard or mouse action
         auto& now = s.current.Gamepad;
-        auto& before = s.previous.Gamepad;
-        auto changed = [](SHORT value, SHORT previous)
+        auto changed = [](SHORT x, SHORT y, POINT& lastActivity)
         {
-            return std::abs(value) > 4915 && std::abs(value - previous) > 128;
+            const auto stick = ReadStick(x, y);
+            if (stick.x == 0.0f && stick.y == 0.0f)
+            {
+                lastActivity = {};
+                return false;
+            }
+            if (std::abs(x - lastActivity.x) <= 128 && std::abs(y - lastActivity.y) <= 128)
+                return false;
+            lastActivity = { x, y };
+            return true;
         };
-        bool active = changed(now.sThumbLX, before.sThumbLX) || changed(now.sThumbLY, before.sThumbLY) ||
-            changed(now.sThumbRX, before.sThumbRX) || changed(now.sThumbRY, before.sThumbRY);
+        const bool leftChanged = changed(now.sThumbLX, now.sThumbLY, s.leftActivity);
+        const bool rightChanged = changed(now.sThumbRX, now.sThumbRY, s.rightActivity);
+        bool active = leftChanged || rightChanged;
         for (int i = 0; i < Button::Count && !active; ++i)
             active = JustPressed(i);
         if (active)
@@ -151,6 +169,7 @@ namespace MaxPaynePad
         s.nextProbe = 0;
         if (!enable)
         {
+            MaxPayneGamepadButtons::SelectController(XUSER_MAX_COUNT);
             s.connected = false;
             s.current = {};
             s.previous = {};

@@ -9,12 +9,17 @@ inline float forcedAspect{}, fovFactor{ 1.0f };
 inline int borders{ 3 };
 inline bool worldSeen;
 inline uintptr_t projectionReturns[7];
+inline uintptr_t worldClipReturn;
 inline uintptr_t* sceneCamera;
 inline uintptr_t* manager;
 inline uintptr_t* player;
 inline uintptr_t* scriptHudState;
 inline SafetyMipsInline prepareHook;
-inline SafetyMipsMid projectionHook;
+inline SafetyMipsMid projectionHook, worldClipHook;
+inline constexpr char worldClipPattern[] =
+    "C4 05 2C C6 00 68 84 44 43 6B 0C 46 A0 00 B4 27 25 20 80 02 25 28 60 02 07 A3 00 46 ? ? ? ? 82 A5 0D 46";
+inline constexpr char worldClipReturnPattern[] =
+    "? ? 91 24 25 20 20 02 ? ? ? ? 25 28 00 02 ? ? 25 26 ? ? ? ? 25 20 20 02 5C 00 B0 8F 60 00 B1 8F 64 00 BF 8F";
 inline injector::hook_back<int(uintptr_t, int)> prepare;
 inline injector::game_fn<void(uintptr_t, int, float)> setHorizontal;
 inline injector::game_fn<void(uintptr_t, int)> setVertical;
@@ -100,6 +105,35 @@ inline int Prepare(uintptr_t camera, int flags)
     std::memcpy(derived, originalDerived, sizeof(originalDerived));
     return result;
 }
+inline float ProjectedHalfAngle(float fullAngle, float aspect, float factor)
+{
+    constexpr float native = 480.0f / 272.0f;
+    const float half = std::clamp(fullAngle * factor * 0.5f, 0.001f, 1.55f);
+    return std::atan(std::tan(half) * std::max(aspect / native, 1.0f));
+}
+inline void WorldClip(SafetyMipsContext& regs)
+{
+    if (regs.ra != worldClipReturn)
+        return;
+
+    // The terrain renderer builds its own clip planes from a capped full angle.
+    // Keep at least the native angles, widening to cover the projected view.
+    constexpr float margin = 0.034906585f;
+    constexpr float maxHalfAngle = 1.5707f;
+    const float nativeHorizontal = regs.f20;
+    const float nativeVertical = nativeHorizontal * float(regs.f13);
+    const float aspect = AspectRatio();
+    const float fullAngle = *reinterpret_cast<const float*>(uintptr_t(regs.s1) + 0x5C0);
+    const float horizontal = ProjectedHalfAngle(fullAngle, aspect, Factor());
+    const float vertical = std::atan(std::tan(horizontal) / aspect);
+    const float clipHorizontal = std::clamp(horizontal + margin, nativeHorizontal, maxHalfAngle);
+    const float clipVertical = std::clamp(vertical + margin, nativeVertical, maxHalfAngle);
+    if (clipHorizontal > nativeHorizontal || clipVertical > nativeVertical)
+    {
+        regs.f20 = clipHorizontal;
+        regs.f13 = clipVertical / clipHorizontal;
+    }
+}
 inline void Projection(SafetyMipsContext& regs)
 {
     // The game passes the horizontal angle and derives the vertical one from
@@ -108,12 +142,10 @@ inline void Projection(SafetyMipsContext& regs)
     if (!WorldReturn(regs.ra))
         return;
     worldSeen = true;
-    constexpr float native = 480.0f / 272.0f;
     const float aspect = AspectRatio();
     // The HUD plane uses the camera angle too; keep it independent of FOVFactor.
     const float factor = regs.ra == projectionReturns[3] ? 1.0f : Factor();
-    const float half = std::clamp(regs.f12 * factor * 0.5f, 0.001f, 1.55f);
-    regs.f12 = 2.0f * std::atan(std::tan(half) * std::max(aspect / native, 1.0f));
+    regs.f12 = 2.0f * ProjectedHalfAngle(regs.f12, aspect, factor);
     regs.f13 = aspect;
 }
 inline void Install()
@@ -138,6 +170,7 @@ inline void Install()
     constexpr int returnOffsets[] {32, 32, 32, 32, 20, 40, 24};
     for (unsigned i = 0; i < 7; ++i)
         projectionReturns[i] = sites::Required(callers[i], returnOffsets[i]);
+    worldClipReturn = sites::Required(worldClipReturnPattern, 28);
     manager = reinterpret_cast<uintptr_t*>(Absolute(managerSite + 8, 0, 12));
     player = reinterpret_cast<uintptr_t*>(Absolute(playerSite + 8, 0, 8));
     scriptHudState = reinterpret_cast<uintptr_t*>(Absolute(scriptHudSite + 8, 0, 4));
@@ -151,6 +184,10 @@ inline void Install()
     projectionHook = safetymips::create_mid(projectionSite, [](SafetyMipsContext& regs)
     {
         Projection(regs);
+    }, scalar);
+    worldClipHook = safetymips::create_mid(sites::Required(worldClipPattern, 12), [](SafetyMipsContext& regs)
+    {
+        WorldClip(regs);
     }, scalar);
 }
 }

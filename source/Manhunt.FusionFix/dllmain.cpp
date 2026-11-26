@@ -4,6 +4,7 @@
 
 import Skeleton;
 import Misc;
+import NativeMenuABI;
 
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
 ASI_SETTINGS_EXPORT(FixSettings())
@@ -17,6 +18,7 @@ void Init()
     asi_settings::LiveLink::Start();
 
     InitMiscAtLoad();
+    MHMenu::ABI::Address::ResolveAll();
 
     static auto WinMainHook = safetyhook::create_mid(pattern.get_first(17), [](SafetyHookContext& regs)
     {

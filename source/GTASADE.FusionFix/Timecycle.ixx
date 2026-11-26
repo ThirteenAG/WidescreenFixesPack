@@ -336,7 +336,7 @@ public:
             // CGame's remaining initialization can adjust individual colours.
             // Reapply after it finishes, also covering restarts and save loads.
             WFP::onGameInitEvent() += ApplyColours;
-            onSettingsChanged() += ApplyColours;
+            onWeatherPaletteChanged() += ApplyColours;
         };
     }
 } TimecycleModuleInstance;

@@ -92,10 +92,8 @@ export void InitPadCamera()
     const auto module = GetModuleHandleW(L"Engine.dll");
     PadAxisExecHook = safetyhook::create_inline(GetProcAddress(module, "?Exec@UInput@@UAEHPBGAAVFOutputDevice@@@Z"), PadAxisExec);
     PadDirectAxisHook = safetyhook::create_inline(GetProcAddress(module, "?DirectAxis@UInput@@UAEXW4EInputKey@@MM@Z"), PadDirectAxis);
-    const auto refresh = []()
+    ObserveFixSetting("MAIN.GamepadCameraSpeed", asi_settings::detail::ParseFloat, [](float value)
     {
-        PadCameraSpeed.store(std::clamp(FixSettings().Float("MAIN.GamepadCameraSpeed"), 0.25f, 3.0f), std::memory_order_relaxed);
-    };
-    refresh();
-    FixSettings().OnChange("MAIN.GamepadCameraSpeed", refresh);
+        PadCameraSpeed.store(std::clamp(value, 0.25f, 3.0f), std::memory_order_relaxed);
+    });
 }

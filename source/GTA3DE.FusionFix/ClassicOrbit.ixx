@@ -7,6 +7,8 @@ export module ClassicOrbit;
 import Settings;
 import Input;
 import Controller;
+import Window;
+import Build;
 
 export struct ClassicOrbitSites
 {
@@ -30,11 +32,17 @@ namespace
     // Original SA filters stick motion; raw mouse orbit bypasses this filter.
     std::optional<float> ControllerTurn(uintptr_t camera, float native, bool horizontal, bool vehicle)
     {
-        if (*sites.forceBehind)
+        if (*sites.forceBehind || !Settings.restoreOriginalCamera || IsMouseCameraActive() || !IsGameFocused())
+        {
+            controllerSpeeds.clear();
             return std::nullopt;
+        }
         const auto speed = OriginalControllerOrbit(native, horizontal, *reinterpret_cast<const float*>(camera + 8));
         if (!speed)
+        {
+            controllerSpeeds.erase(camera);
             return std::nullopt;
+        }
         auto& filtered = controllerSpeeds[camera];
         if (*reinterpret_cast<const bool*>(camera + 37))
             filtered = {};
@@ -131,5 +139,13 @@ export void InstallClassicOrbit(const ClassicOrbitSites& verified)
         if (const auto turn = ControllerTurn(c.rsi, c.xmm6.f32[0], false, true))
             c.xmm6.f32[0] = *turn;
     });
+    WFP::onGameProcessEvent() += []()
+    {
+        static int previousSlot = -1;
+        const int slot = *static_cast<const int*>(ControllerSlotAddress());
+        if (slot != previousSlot || !Settings.restoreOriginalCamera || IsMouseCameraActive() || !IsGameFocused() || *sites.forceBehind)
+            controllerSpeeds.clear();
+        previousSlot = slot;
+    };
     WFP::onGameInitEvent() += []() { controllerSpeeds.clear(); };
 }

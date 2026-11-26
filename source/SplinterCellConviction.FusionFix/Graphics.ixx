@@ -78,6 +78,8 @@ export void InitLODDistance()
     static auto LODSizeHook = safetyhook::create_mid(pattern.get_first(21), [](SafetyHookContext& regs)
     {
         const float factor = Detail::Factor(lodDistance);
+        if (factor == 1.0f)
+            return;
         const float scale = 1.0f / (factor * factor);
         regs.xmm0.f32[0] *= scale;
         *reinterpret_cast<float*>(regs.ebp + 8) *= scale;
@@ -114,7 +116,8 @@ export void InitGraphics()
         Detail::shSetLKPVisible = safetyhook::create_inline(pattern.get_first(), Detail::SetLKPVisible);
     }
 
-    //if (bDisableBlackAndWhiteFilter) //light and shadow
+    // The player's visibility (light and shadow) is needed by the filter, the indicators and the RGB lighting
+    if (bDisableBlackAndWhiteFilter || FixSettings().Bool("GRAPHICS.BlacklistIndicators") || FixSettings().Bool("MAIN.LightSyncRGB"))
     {
         auto pattern = hook::pattern("E8 ? ? ? ? D9 05 ? ? ? ? 83 C4 0C 33 F6 56 51");
         hb_8330DB.fun = injector::MakeCALL(pattern.get_first(), sub_8330DB, true).get();

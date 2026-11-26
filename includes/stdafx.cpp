@@ -383,10 +383,6 @@ std::map<std::string, std::string> RegistryWrapper::DefaultStrings;
 std::set<std::string> RegistryWrapper::PathStrings;
 thread_local std::string RegistryWrapper::section;
 
-std::string RegistryFallback::s_MainPath;
-std::string RegistryFallback::s_FallbackPath;
-std::map<std::string, std::string> RegistryFallback::s_Defaults;
-
 BOOL CreateProcessInJob(
     HANDLE hJob,
     LPCTSTR lpApplicationName,

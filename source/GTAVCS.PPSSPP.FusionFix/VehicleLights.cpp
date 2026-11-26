@@ -2,7 +2,7 @@
 #include "LightRects.hpp"
 #include "Game.hpp"
 #include "Shared/Console/PatchNotice.hpp"
-#include "../Shared/Console/PortableCfg.hpp"
+#include "Shared/Console/PortableCfg.hpp"
 namespace vehicle {
 namespace {
 using namespace console::portable;
@@ -10,12 +10,28 @@ using namespace console::portable;
 // resolution (256x256 8-bit, 5.6 MB), 20 more at native size (1.8 MB).
 VehicleLights<CacheCount, 20, 11296, 8, 88576> lights;
 const decltype(lights)::Profile profile{models, sizeof(models) / sizeof(*models), FirstModel, lightRects, lightSets,
-                                        {86, 613, 604, 608, 960}, false};
+                                        {0x56, 0x265, 0x25C, 0x260, 0x3C0, 0x358}, false};
 // Converted hand-painted variants (tools/vehicle-lights/pack.py), read per texture.
 // Native size (when the HD pool is full) and full resolution 8-bit.
+// Opened on first use: opening them in module_start kept the fix from taking
+// effect next to the CLEO plugin.
 LightPackFile packFile, hdFile;
-const uint8_t* Pack(unsigned cache, uint32_t* size) { return packFile.load(cache, size); }
-const uint8_t* PackHd(unsigned cache, uint32_t* size) { return hdFile.load(cache, size); }
+const uint8_t* Load(LightPackFile& file, int& state, const char* path, unsigned cache, uint32_t* size)
+{
+    if (!state)
+        state = file.open(path) ? 1 : -1;
+    return state > 0 ? file.load(cache, size) : nullptr;
+}
+const uint8_t* Pack(unsigned cache, uint32_t* size)
+{
+    static int state;
+    return Load(packFile, state, "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/lights.bin", cache, size);
+}
+const uint8_t* PackHd(unsigned cache, uint32_t* size)
+{
+    static int state;
+    return Load(hdFile, state, "ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/lights-hd.bin", cache, size);
+}
 SafetyMipsInline render;
 SafetyMipsMid renderOneNonRoad;
 injector::hook_back<void (*)()> renderSorted;
@@ -37,8 +53,8 @@ uintptr_t UniqueSite(const char* signature, int offset)
 }
 }
 void Install() {
-    if (packFile.open("ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/lights.bin")) lights.textures.pack = Pack;
-    if (hdFile.open("ms0:/PSP/PLUGINS/GTAVCS.PPSSPP.FusionFix/lights-hd.bin")) lights.hd.pack = PackHd;
+    lights.textures.pack = Pack;
+    lights.hd.pack = PackHd;
     const uintptr_t site = UniqueSite("00 00 BF AF 50 00 85 8C ? ? ? ? 00 00 00 00 4C 00 84 8C", -4);
     // CRenderer::RenderOneNonRoad (US 0x08A7A664) draws the vehicle's alpha
     // elements (body, doors, glass) from a sorted list after CVehicle::Render

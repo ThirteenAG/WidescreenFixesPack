@@ -141,26 +141,29 @@ SafetyHookInline shsub_106EE220 = {};
 
 void* __fastcall DestroyAreaWidget(void* widget, void* edx, unsigned int flags)
 {
-    // Keyframes own these values; retire the coordinate before native destruction/free.
+    // Both keyframes and the active pose use this widget destructor.
     trackedPositions.Remove(widget);
     return areaWidgetDtorHook.unsafe_fastcall<void*>(widget, edx, flags);
 }
 
-void __fastcall sub_106EE220(uint32_t* magma, void* edx, void** frame)
+void* __fastcall sub_106EE220(uint32_t* magma, void* edx, void** frame)
 {
-    shsub_106EE220.unsafe_fastcall(magma, edx, frame);
+    auto* result = shsub_106EE220.unsafe_fastcall<void*>(magma, edx, frame);
     if (!magma || !frame || !frame[1])
-        return;
+        return result;
     const auto id = magma[1];
     const int direction = HudNeedsToMoveLeft(id) ? -1 : HudNeedsToMoveRight(id) ? 1 : 0;
     auto& element = *reinterpret_cast<HudElement*>(frame[1]);
     if (!direction || !element.pDtor || *element.pDtor != pHudAreaWidgetDtor)
-        return;
-    if (areaWidgetDtorHook)
-        trackedPositions.Add(&element, element.AsAreaWidget.Position.X, direction);
-    else
-        element.AsAreaWidget.Position.X = int16_t(std::clamp(int(element.AsAreaWidget.Position.X) +
-            direction * DAHud::Positions::Offset(Screen.fWidescreenHudOffset), int(INT16_MIN), int(INT16_MAX)));
+        return result;
+    trackedPositions.Add(&element, element.AsAreaWidget.Position.X, direction);
+    if (magma[2])
+    {
+        auto* current = reinterpret_cast<HudElement**>(magma[2])[1];
+        if (current && current != &element && current->pDtor && *current->pDtor == pHudAreaWidgetDtor)
+            trackedPositions.Add(current, current->AsAreaWidget.Position.X, direction);
+    }
+    return result;
 }
 
 export void RefreshHudConstraint()
@@ -172,8 +175,6 @@ export void RefreshHudConstraint()
     static int previousWidth = 0, previousHeight = 0;
     const auto wanted = FixSettings().Wanted("MAIN.HudAspectRatioConstraint");
     if (wanted == previous && Screen.Width == previousWidth && Screen.Height == previousHeight)
-        return;
-    if (!areaWidgetDtorHook)
         return;
 
     Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(wanted);
@@ -207,8 +208,6 @@ export void InitWidescreenHUD()
     trackedPositions.SetOffset(Screen.fWidescreenHudOffset);
     areaWidgetDtorHook = safetyhook::create_inline(reinterpret_cast<void*>(pHudAreaWidgetDtor), DestroyAreaWidget);
     shsub_106EE220 = safetyhook::create_inline(pattern.get_first(0), sub_106EE220);
-    const bool live = bool(areaWidgetDtorHook) && bool(shsub_106EE220);
-    FixSettings().Availability("MAIN.HudAspectRatioConstraint", [live](std::string_view) { return live; });
 }
 // The native menu takes the function address from this detour when it exists.
 export const SafetyHookInline* NativeMenuAddFrameHook()

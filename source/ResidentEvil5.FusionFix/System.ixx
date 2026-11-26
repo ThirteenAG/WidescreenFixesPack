@@ -7,7 +7,7 @@ export module System;
 
 import Overlay;
 
-// Start-up and window: no logos, OK-only notices or PRESS ANY KEY at start (MAIN.SkipIntro) and the window of the game's windowed mode (MAIN.WindowMode).
+// Start-up and window: no logos or OK-only notices (MAIN.SkipIntro) and no PRESS ANY KEY (MAIN.SkipPressStart) at start and the window of the game's windowed mode (MAIN.WindowMode).
 
 namespace
 {
@@ -56,7 +56,7 @@ namespace
         return InputBlockedHook.unsafe_thiscall<bool>(input);
     }
 
-    // MAIN.SkipIntro: the title's PRESS ANY KEY screen takes the first check for a key as pressed, as a key of
+    // MAIN.SkipPressStart: the title's PRESS ANY KEY screen takes the first check for a key as pressed, as a key of
     // the keyboard (a connected pad is still found as the player's device)
     using AnyKeyFn = bool(__fastcall*)(uintptr_t, void*, int, int, int);
     AnyKeyFn AnyKey = nullptr;

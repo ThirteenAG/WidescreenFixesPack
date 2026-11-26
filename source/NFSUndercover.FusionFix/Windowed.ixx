@@ -1,11 +1,82 @@
 module;
 
 #include <stdafx.h>
+#include <d3d9.h>
 #include "FixSettings.hpp"
 
 export module Windowed;
 
 import ComVars;
+
+// The game's device creation tries hardware and then software vertex processing once and goes on without a device
+// when both fail, which crashed it. Creation fails while another program changes the display mode, and a full
+// screen device made while the window isn't in front starts out lost: the game crashed on a missing texture when
+// the window came back. The full screen device waits until the window is in front, and a failed creation is tried
+// again.
+namespace DeviceCreation
+{
+    // Handles the window's messages for a while; a window closed meanwhile ends the game
+    void PumpMessages(DWORD ms)
+    {
+        MsgWaitForMultipleObjects(0, nullptr, FALSE, ms, QS_ALLINPUT);
+        MSG msg{};
+        while (PeekMessageA(&msg, nullptr, 0, 0, PM_REMOVE))
+        {
+            if (msg.message == WM_QUIT)
+                ExitProcess(0);
+            TranslateMessage(&msg);
+            DispatchMessageA(&msg);
+        }
+    }
+
+    void WaitForForeground(const D3DPRESENT_PARAMETERS* pp, HWND window)
+    {
+        if (pp->Windowed || !window)
+            return;
+        while (GetForegroundWindow() != window || IsIconic(window))
+            PumpMessages(100);
+    }
+
+    void Install()
+    {
+        // After the present parameters are filled in: esi = the renderer, the parameters at esi + disp
+        auto before = hook::pattern("E8 ? ? ? ? 8B 4C 24 18 8B 54 24 1C 8B 45 00 68 ? ? ? ? 8D BE ? ? ? ?");
+        static auto ppOffset = *before.get_first<int32_t>(23);
+        static auto BeforeCreateHook = safetyhook::create_mid(before.get_first(5), [](SafetyHookContext& regs)
+        {
+            auto pp = reinterpret_cast<const D3DPRESENT_PARAMETERS*>(regs.esi + ppOffset);
+            WaitForForeground(pp, *reinterpret_cast<HWND*>(regs.esp + 0x18));
+        });
+
+        // After both attempts: ebx = the result, ebp = IDirect3D9, edi = the present parameters; the first attempt's
+        // adapter, device type and focus window at esp+0x10, +0x1C, +0x18, the second's adapter at esp+0x478
+        auto after = hook::pattern("81 FB 6C 08 76 88 7E ? 85 DB 75 ? A1");
+        static auto ppDevice = *after.get_first<IDirect3DDevice9**>(13);
+        static auto AfterCreateHook = safetyhook::create_mid(after.get_first(), [](SafetyHookContext& regs)
+        {
+            auto d3d = reinterpret_cast<IDirect3D9*>(regs.ebp);
+            auto pp = reinterpret_cast<D3DPRESENT_PARAMETERS*>(regs.edi);
+            auto adapter = *reinterpret_cast<UINT*>(regs.esp + 0x10);
+            auto deviceType = *reinterpret_cast<D3DDEVTYPE*>(regs.esp + 0x1C);
+            auto window = *reinterpret_cast<HWND*>(regs.esp + 0x18);
+            auto fallbackAdapter = *reinterpret_cast<UINT*>(regs.esp + 0x478);
+
+            // A lost device waits for its display; other failures get a few seconds, then the game's own fallback
+            // (it tries once more without antialiasing) takes over
+            HRESULT hr = static_cast<HRESULT>(regs.ebx);
+            auto giveUp = GetTickCount64() + 3000;
+            while (FAILED(hr) && (hr == D3DERR_DEVICELOST || GetTickCount64() < giveUp))
+            {
+                PumpMessages(250);
+                WaitForForeground(pp, window);
+                hr = d3d->CreateDevice(adapter, deviceType, window, D3DCREATE_HARDWARE_VERTEXPROCESSING, pp, ppDevice);
+                if (FAILED(hr))
+                    hr = d3d->CreateDevice(fallbackAdapter, D3DDEVTYPE_HAL, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, pp, ppDevice);
+            }
+            regs.ebx = static_cast<uintptr_t>(hr);
+        });
+    }
+}
 
 class Windowed
 {
@@ -14,6 +85,8 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            DeviceCreation::Install();
+
             // 0 full screen, 1 windowed, 2 borderless at the monitor's size, 3 resizable window, 4 borderless
             const auto mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 4);
 

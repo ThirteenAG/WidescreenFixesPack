@@ -214,7 +214,7 @@ namespace CMenusManager
         // Camera/optic HUD pages share the old menu/HUD classification but
         // can be aiming tools; an empty transition page proves no pointer UI.
         if (hash == uint32_t(Page::P_Camera) || hash == uint32_t(Page::P_opticcable) || hash == uint32_t(Page::P_Empty)) return false;
-        return IsMenuPage(hash);
+        return hash == uint32_t(Page::P_Controls_joystick) || IsMenuPage(hash);
     }
 
     export bool IsOpsatDisplayed()
@@ -269,17 +269,7 @@ namespace CMenusManager
     }
 
     // Helper to convert game coordinates back to raw input space
-    inline int16_t GameToRawInputX(int16_t gameX, int16_t vmin, int16_t vmax)
-    {
-        float normalized = static_cast<float>(gameX - vmin) / static_cast<float>(vmax - vmin);
-        return static_cast<int16_t>(normalized * Screen.Width);
-    }
 
-    inline int16_t GameToRawInputY(int16_t gameY, int16_t minGame, int16_t maxGame)
-    {
-        float normalized = static_cast<float>(gameY) / static_cast<float>(maxGame);
-        return static_cast<int16_t>(normalized * Screen.Height);
-    }
 }
 
 int16_t __cdecl ClampXAxisState(int16_t value, int16_t min, int16_t max)
@@ -376,11 +366,6 @@ export void InitGUI()
                 int16_t clampedGameX = std::clamp(*(int16_t*)(regs.edx + 0), int16_t(0 - delta), int16_t(640 + delta));
                 int16_t clampedGameY = std::clamp(*(int16_t*)(regs.edx + 2), int16_t(0), int16_t(480));
 
-                if (Screen.bRawInputMouse)
-                {
-                    RawInputHandler<>::RawMouseCursorX = CMenusManager::GameToRawInputX(clampedGameX, vmin, vmax);
-                    RawInputHandler<>::RawMouseCursorY = CMenusManager::GameToRawInputY(clampedGameY, 0, 480);
-                }
 
                 *(int16_t*)&regs.eax = clampedGameX;
                 *(int16_t*)&regs.ecx = clampedGameY;

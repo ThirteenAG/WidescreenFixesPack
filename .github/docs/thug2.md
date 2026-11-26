@@ -40,13 +40,12 @@ Vanilla shows the logos and the intro movie, shows the movies in the game's 4:3 
 - **HUD:** with **HUD aspect ratio** on Automatic, the score panel with its special meter and stance, the goal points panel, the phone icon and the chat lines sit at the left edge of the screen, and the current goal with its key combo and points at the right edge; trick text, the clock, the balance meter and messages stay centered. A ratio keeps them in a centered box of that shape. Panels that slide out of view stay hidden beside a narrower box, as on a 4:3 screen. Nothing is stretched.
 - **Menus and 2D screens** (main menu, options, level select, skater select, pause menu) keep their 4:3 layout in the middle of the screen; the pause menu's sign stays at the left of that layout. The button help bar at the bottom spans the whole width. On screens narrower than 4:3, such as 5:4, menus and HUD fit the width with the 3D scene above and below.
 - **Story cutscenes and goal scenes** show a wide picture between black bars, as in the original. **Both** keeps exactly that picture in the middle of the screen; **Top/bottom** spans the screen width between the bars; **Sides** fills the screen height up to the picture's shape; **None** fills the whole screen. Every mode shows the scene undistorted and can be changed while a cutscene plays. Subtitles stay readable in every mode.
-- **Movies** are never cut off or stretched: Original shows them inside the game's centered 4:3 frame, Fill fits them to the screen. The game's movies are 4:3 pictures, so on wide screens both show them at full height with black bars at the sides.
+- **Movies** keep their picture shape. Original fits each clip inside the centered 4:3 frame. Fill uses the full screen as the fitting area, giving wider clips more room.
 - **Window modes** at any Windows display scaling, without rounded corners: Windowed opens a centered window with exactly the chosen client size, also for sizes the monitor doesn't list. The window is not minimized when another window becomes active.
 - **Keyboard without the launcher:** when the launcher never saved controls, or left an action without a key, the launcher's default key is used for it.
 - **Controllers:** the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox controller to it. When no controller is assigned, the first one found at startup gets the default layout; existing assignments and bindings stay. Button prompts show the chosen icon set while the controller is in use and the keyboard keys again after a key press or mouse use.
 - **Soundtrack:** the random song order works.
 - **Update notice:** with **Check for updates** on, a new version is announced in the help bar of the Plugins list; FusionFixHub opens after the game exits when it is installed.
-- **Ctrl+F10** opens the in-game settings overlay.
 
 **Raw mouse input** enables a gameplay mouse camera. Mouse sensitivity and vertical inversion can be changed live; menus retain the game's controls.
 
@@ -56,9 +55,7 @@ Vanilla shows the logos and the intro movie, shows the movies in the game's 4:3 
 
 - Mouse-camera behavior, including physical mouse and controller switching, needs broader gameplay testing.
 - The window size is set at startup (resolution settings); resizing the window while playing isn't supported.
-- Turning **Pause in background** off while the game is already paused in the background takes effect when the game window is active again.
 - On very wide screens the level select's 3D backdrop ends at the left side, which stays black there.
-- The pause menu darkens the screen up to the right edge of its 4:3 layout; the area to the right of it stays bright.
 
 ## Installation
 

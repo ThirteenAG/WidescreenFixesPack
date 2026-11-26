@@ -725,18 +725,6 @@
       "unmanagedAssets": []
     },
     {
-      "tag": "sh2",
-      "name": "Silent Hill 2 Fusion Fix",
-      "packages": [
-        "SilentHill2.FusionFix"
-      ],
-      "platforms": [
-        "Win32"
-      ],
-      "available": true,
-      "unmanagedAssets": []
-    },
-    {
       "tag": "sh3",
       "name": "Silent Hill 3 Fusion Fix",
       "packages": [

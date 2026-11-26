@@ -143,8 +143,18 @@ public:
             int blur = FixSettings().Int("GRAPHICS.DOFRes");
             int pause = FixSettings().Int("GRAPHICS.StatusScreenRes");
 
-            SHDisplay::SetAnisotropy(FixSettings().Int("GRAPHICS.AnisotropicFiltering"));
-            FixSettings().OnChange("GRAPHICS.AnisotropicFiltering", []() { SHDisplay::SetAnisotropy(FixSettings().Int("GRAPHICS.AnisotropicFiltering")); });
+            auto updateAnisotropy = []()
+            {
+                const int level = FixSettingNumber("GRAPHICS.AnisotropicFiltering", 16);
+                static int applied = -1;
+                if (level != applied)
+                {
+                    SHDisplay::SetAnisotropy(level);
+                    applied = level;
+                }
+            };
+            updateAnisotropy();
+            SHDisplay::OnPresent().push_back(updateAnisotropy);
             SHDisplay::OnDeviceReady().push_back(&HookTextureUploads);
 
             // Post effect render target sizes: slot 0 = pause background, slots 2 and 3 = blur and depth of field
@@ -208,11 +218,11 @@ public:
             static float Fog = Native;
             auto update = []()
             {
-                int value = FixSettings().Int("GRAPHICS.FogComplexity");
+                int value = FixSettingNumber("GRAPHICS.FogComplexity", 75);
                 Fog = value > 0 ? float(value) : Native;
             };
             update();
-            FixSettings().OnChange("GRAPHICS.FogComplexity", update);
+            SHDisplay::OnPresent().push_back(update);
             injector::WriteMemory(fogScale.get_first(2), &Fog, true);
         };
     }

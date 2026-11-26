@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <atomic>
 #include <cmath>
 #include <numbers>
 #include <stdexcept>
@@ -19,15 +20,69 @@ struct FovSite
     float multiplier = 0.5f;
 };
 std::array<FovSite, 16> fovSites;
+namespace
+{
+    std::atomic<bool> fovFactorChanged{ true };
+    float gameplayFovFactor = 1.0f;
+    bool displayResized = false;
+    std::vector<uintptr_t> liveScenes;
+    std::mutex sceneMutex;
+    int (__stdcall* setSceneViewport)(uintptr_t, int, int, int, int);
+}
+
+export void InitSceneViewports()
+{
+    auto module = GetLS3DF();
+    auto setter = find_module_pattern(module, "83 EC 08 8B 44 24 0C 8B 54 24 18 8B 4C 24 14 56 8B 74 24 14 89 90 44 02 00 00");
+    setSceneViewport = reinterpret_cast<decltype(setSceneViewport)>(setter.get_first());
+    auto created = find_module_pattern(module, "FF 51 04 B9 ? ? ? ? E8 ? ? ? ? 8B 4C 24 28 5F 8B C6 5E 5B 64 89 0D");
+    static auto createHook = safetyhook::create_mid(created.get_first(13), [](SafetyHookContext& regs)
+    {
+        std::lock_guard guard(sceneMutex);
+        liveScenes.push_back(regs.esi);
+    });
+    auto destroyed = find_module_pattern(module, "C7 06 ? ? ? ? 56 C7 44 24 20 07 00 00 00 E8 ? ? ? ? 8B 86 7C 01 00 00 33 FF");
+    static auto destroyHook = safetyhook::create_mid(destroyed.get_first(), [](SafetyHookContext& regs)
+    {
+        std::lock_guard guard(sceneMutex);
+        std::erase(liveScenes, regs.esi);
+    });
+}
+
+export void SetSceneViewport(uintptr_t scene, const RECT& rect)
+{
+    setSceneViewport(scene, rect.left, rect.top, rect.right, rect.bottom);
+}
+
+export void ResizeSceneViewports(int oldWidth, int oldHeight, int width, int height)
+{
+    // Each scene keeps its own rectangle and projection centre after a device reset.
+    std::lock_guard guard(sceneMutex);
+    for (auto scene : liveScenes)
+    {
+        const auto& rect = Field<RECT>(scene, 0x23C);
+        if (!rect.left && !rect.top && rect.right == oldWidth && rect.bottom == oldHeight)
+            SetSceneViewport(scene, { 0, 0, width, height });
+    }
+}
+
+export void CameraDisplayResized()
+{
+    displayResized = true;
+}
 
 double CameraHalfAngle(uintptr_t camera, double angle)
 {
     double corrected = std::atan(std::tan(angle * 0.5) * GetCameraFovScale());
     if (GameplayFovEnabled && camera == GameplayCamera && !IsCutsceneCamera())
     {
-        const float value = FixSettings().Float("MAIN.FOVFactor");
-        const float factor = std::isfinite(value) ? std::clamp(value, 0.5f, 2.0f) : 1.0f;
-        corrected = std::clamp(corrected * factor, 0.005, std::numbers::pi * (75.0 / 180.0));
+        if (fovFactorChanged.exchange(false))
+        {
+            float value;
+            gameplayFovFactor = asi_settings::detail::ParseFloat(FixSettings().Get("MAIN.FOVFactor"), value) && std::isfinite(value)
+                ? std::clamp(value, 0.5f, 2.0f) : 1.0f;
+        }
+        corrected = std::clamp(corrected * gameplayFovFactor, 0.005, std::numbers::pi * (75.0 / 180.0));
     }
     return corrected;
 }
@@ -53,6 +108,17 @@ void RefreshCameraFov(SafetyHookContext& regs)
     auto camera = regs.ecx;
     if (Field<uint8_t>(camera, 0x15C)) return; // orthographic camera
     if (camera == ReflectionCamera) return; // the water's mirrored copy keeps the projection it was given
+    // The native perspective camera copies the display aspect only in its constructor.
+    auto table = *reinterpret_cast<uintptr_t**>(camera);
+    using Update = void(__thiscall*)(void*);
+    if (displayResized && (camera == GameplayCamera || IsCutsceneCamera()) &&
+        std::abs(Field<float>(camera, 0x158) - Screen.fAspectRatio) > 0.00001f)
+    {
+        using SetAspectRatio = void(__stdcall*)(void*, float);
+        reinterpret_cast<SetAspectRatio>(table[0x68 / sizeof(uintptr_t)])(
+            reinterpret_cast<void*>(camera), Screen.fAspectRatio);
+        reinterpret_cast<Update>(table[0x44 / sizeof(uintptr_t)])(reinterpret_cast<void*>(camera));
+    }
     for (auto [field, projection] : { std::pair{0x140u, 0x1A4u}, std::pair{0x14Cu, 0x364u} })
     {
         double angle = Field<float>(camera, field);
@@ -66,11 +132,9 @@ void RefreshCameraFov(SafetyHookContext& regs)
         // before Render can use caches prepared earlier in the same frame.
         // A gameplay camera prepared during the intro must not retain that
         // cutscene projection after the bars are disabled (or vice versa).
-        auto table = *reinterpret_cast<uintptr_t**>(camera);
         using SetFOV = void(__stdcall*)(void*, float);
         reinterpret_cast<SetFOV>(table[0x50 / sizeof(uintptr_t)])(
             reinterpret_cast<void*>(camera), Field<float>(camera, 0x140));
-        using Update = void(__thiscall*)(void*);
         reinterpret_cast<Update>(table[0x44 / sizeof(uintptr_t)])(reinterpret_cast<void*>(camera));
         return;
     }
@@ -78,6 +142,7 @@ void RefreshCameraFov(SafetyHookContext& regs)
 
 export void InitFOV()
 {
+    FixSettings().OnChange("MAIN.FOVFactor", []() { fovFactorChanged.store(true); });
     auto module = GetLS3DF();
     struct FovMatch
     {
@@ -136,6 +201,11 @@ export void InitFOV()
 
 export void InitMovie()
 {
+    static std::atomic<bool> modeChanged{ true };
+    static uintptr_t activeMovie;
+    static float movieAspect, lastWidth, lastHeight;
+    static bool fill, repositioning;
+    FixSettings().OnChange("MAIN.FMVWidescreenMode", []() { modeChanged.store(true); });
     auto module = GetLS3DF();
     auto pattern = find_module_pattern(module,
         "8B 4C 24 14 8B 54 24 00 8D 41 28 89 10 8B 54 24 04",
@@ -144,14 +214,19 @@ export void InitMovie()
     {
         // The game letterboxes each movie inside a 4:3 screen from its nominal size (x, y, width, height)
         auto& rect = Field<RECT>(regs.esp, 0);
-        float movieAspect = 4.0f / 3.0f;
-        if (rect.bottom > 0 && rect.right > 0)
+        activeMovie = Field<uintptr_t>(regs.esp, 0x14);
+        if (!repositioning)
         {
-            const float rows = static_cast<float>(rect.bottom) / Screen.fHeight;
-            if (rows > 0.1f && rows < 1.0f) movieAspect = (4.0f / 3.0f) / rows;
+            movieAspect = 4.0f / 3.0f;
+            if (rect.bottom > 0 && rect.right > 0)
+                movieAspect *= Screen.fHeight / static_cast<float>(rect.bottom);
         }
+        if (modeChanged.exchange(false))
+            fill = FixSettings().Get("MAIN.FMVWidescreenMode") == "1";
+        lastWidth = Screen.fWidth;
+        lastHeight = Screen.fHeight;
         float width, height;
-        if (FixSettings().Int("MAIN.FMVWidescreenMode") == 1)
+        if (fill)
         {
             width = std::min(Screen.fWidth, Screen.fHeight * movieAspect);
             height = width / movieAspect;
@@ -159,12 +234,26 @@ export void InitMovie()
         else
         {
             const float frame = std::min(Screen.fWidth, Screen.fHeight * (4.0f / 3.0f));
-            width = frame;
+            width = std::min(frame, Screen.fHeight * movieAspect);
             height = frame / movieAspect;
         }
         rect.left = static_cast<LONG>(std::nearbyint((Screen.fWidth - width) * 0.5f));
         rect.top = static_cast<LONG>(std::nearbyint((Screen.fHeight - height) * 0.5f));
         rect.right = static_cast<LONG>(std::nearbyint(width));
         rect.bottom = static_cast<LONG>(std::nearbyint(height));
+    });
+    // Playback draws the same native vertices until its position setter runs again.
+    auto draw = find_module_pattern(module, "57 8B 7C 24 08 8A 47 ? 84 C0 75 09 B8 09 00 00 80 5F C2 04 00");
+    static auto MovieDrawHook = safetyhook::create_mid(draw.get_first(), [](SafetyHookContext& regs)
+    {
+        auto movie = Field<uintptr_t>(regs.esp, 4);
+        if (movie != activeMovie || (!modeChanged.load() && lastWidth == Screen.fWidth && lastHeight == Screen.fHeight))
+            return;
+        repositioning = true;
+        auto table = *reinterpret_cast<uintptr_t**>(movie);
+        using SetPosition = int(__stdcall*)(uintptr_t, RECT*);
+        RECT rect{};
+        reinterpret_cast<SetPosition>(table[0x20 / sizeof(uintptr_t)])(movie, &rect);
+        repositioning = false;
     });
 }

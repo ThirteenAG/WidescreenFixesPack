@@ -62,6 +62,14 @@ export GameRef<std::array<uint32_t, 29>> aPadBindings;      // [21] digital, the
 export GameRef<int32_t> nMouseX;
 export GameRef<int32_t> nMouseY;
 export GameRef<std::array<int32_t, 45>> aPadMessageIds;     // message id of each pad element of the configuration screen
+export struct GameplayPadState
+{
+    float lx{}, ly{}, rx{}, ry{};
+    bool connected{}, recentre{}, mapPressed{};
+    int slot{ -1 };
+};
+export GameplayPadState GameplayPad;
+export std::array<int32_t, 2> LookMouse{};
 
 // System
 export GameRef<std::array<uint8_t, 36>> aOptionsConfig;     // the options block

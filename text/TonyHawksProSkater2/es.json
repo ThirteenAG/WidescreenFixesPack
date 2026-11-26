@@ -2,7 +2,7 @@
   "plugin.name": "Tony Hawk Pro Skater 2 Fusion Fix",
   "page.display": "Pantalla",
   "FPSLimit": "Límite de fotogramas",
-  "FPSLimit.description": "Limita la tasa de fotogramas (30–60 FPS). La física, las animaciones y los temporizadores del juego están hechos para 60 FPS, por eso no se ofrecen valores mayores. Los cambios se aplican al instante.",
+  "FPSLimit.description": "Limita la tasa de fotogramas a 30–60 FPS. El preajuste Original usa el límite original de 30 FPS. Se aplica al instante.",
   "page.advanced": "Avanzado",
   "MAIN.ResX": "Ancho de resolución",
   "MAIN.ResX.description": "Anchura de la imagen en píxeles. 0 usa la resolución del escritorio. Sirve cualquier tamaño, también los que el monitor no ofrece. Se aplica al reiniciar.",
@@ -35,6 +35,10 @@
   "menu.previous": "Páginas anteriores",
   "menu.gamepreset": "Ajuste para todo el juego",
   "menu.auto": "Automático",
+  "MAIN.FMVWidescreenMode": "Formato de vídeo",
+  "MAIN.FMVWidescreenMode.description": "Formato original muestra el vídeo completo en el marco central de 4:3. Rellenar ajusta la imagen a la pantalla y elimina las franjas negras del vídeo inicial y del logotipo de Neversoft. Se aplica al instante.",
+  "MAIN.FMVWidescreenMode.0": "Formato original",
+  "MAIN.FMVWidescreenMode.1": "Rellenar",
   "SkipIntro": "Omitir vídeos de inicio",
   "SkipIntro.description": "Omite al inicio los logotipos de la editora y del estudio y el vídeo de apertura. Todos los vídeos siguen disponibles en Opciones, Vídeos. Se aplica al reiniciar.",
   "page.gameplay": "Juego",
@@ -56,7 +60,7 @@
   "MAIN.WindowMode.2": "Sin bordes",
   "menu.details": "Detalles",
   "checkupdates": "Buscar actualizaciones",
-  "checkupdates.description": "Comprueba una vez al inicio si hay una versión nueva del arreglo. Aparece un aviso en Plugins, y FusionFixHub se abre al salir del juego si está instalado. Desactivado no hace ninguna petición de red.",
+  "checkupdates.description": "Busca una versión nueva al iniciar o al activar esta opción en el juego. Si hay una actualización, aparece un aviso en Plugins y FusionFixHub se abre al salir si está instalado. Desactivado no hace ninguna petición de red.",
   "update.availablehub": "Hay una actualización de Tony Hawk Pro Skater 2 Fusion Fix. FusionFixHub se abrirá al salir del juego.",
   "update.availablesite": "Hay una actualización de Tony Hawk Pro Skater 2 Fusion Fix en {page}"
 }

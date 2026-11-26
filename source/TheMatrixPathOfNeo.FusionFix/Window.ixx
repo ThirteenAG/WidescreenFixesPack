@@ -4,9 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include "Shared/D3D9Options.hpp"
 #include "Shared/CursorConfinement.hpp"
-#include <dwmapi.h>
-
-#pragma comment(lib, "dwmapi.lib")
+#include "include/WindowStyle.hpp"
 
 
 export module Window;
@@ -17,11 +15,13 @@ import Renderer;
 
 export namespace NeoWindow
 {
-    inline HWND Window = nullptr;
     inline SafetyHookInline ProcedureHook;
-    inline int Mode = 0;
+    inline WNDPROC NativeProcedure = nullptr;
+    inline std::atomic<int> Mode{ 0 };
+    inline std::atomic<int> AppliedMode{ 0 };
     inline int LastWindowMode = 1;
-    inline bool Placing = false, Placed = false;
+    inline std::atomic<HWND> PlacedWindow{ nullptr };
+    inline thread_local bool Placing = false;
 
     inline UINT WINAPI ProfileInt(LPCSTR section, LPCSTR key, INT fallback, LPCSTR file)
     {
@@ -44,48 +44,67 @@ export namespace NeoWindow
         Screen.nAspectRatioDiff = static_cast<int>(Screen.fWidth * Screen.fHudScale);
     }
 
-    inline void Place()
+    inline void Place(HWND window, bool force)
     {
-        if (!Window || Mode == 0 || Placing)
+        const int mode = AppliedMode.load();
+        if (!window || mode == 0 || Placing || IsIconic(window) ||
+            GetWindowThreadProcessId(window, nullptr) != GetCurrentThreadId())
             return;
-        Placing = true;
+
         // The game can't resize its device, so the frame has no sizing border
-        const DWORD style = Mode == 1 ? WS_OVERLAPPEDWINDOW & ~(WS_THICKFRAME | WS_MAXIMIZEBOX) : WS_POPUP;
+        const DWORD style = mode == 1 ? WS_OVERLAPPEDWINDOW & ~(WS_THICKFRAME | WS_MAXIMIZEBOX) : WS_POPUP;
         const DWORD extended = WS_EX_APPWINDOW;
-        MONITORINFO monitor{ sizeof(monitor) };
-        GetMonitorInfoW(MonitorFromWindow(Window, MONITOR_DEFAULTTONEAREST), &monitor);
-        RECT rectangle{ 0, 0, Screen.nWidth, Screen.nHeight };
-        WindowedModeWrapper::GameHWND = Window;
-        WindowedModeWrapper::AdjustFrame(&rectangle, style, FALSE, extended);
-        const auto& bounds = Screen.nWidth >= monitor.rcMonitor.right - monitor.rcMonitor.left ||
-            Screen.nHeight >= monitor.rcMonitor.bottom - monitor.rcMonitor.top ? monitor.rcMonitor : monitor.rcWork;
-        const int x = bounds.left + (bounds.right - bounds.left - Screen.nWidth) / 2;
-        const int y = bounds.top + (bounds.bottom - bounds.top - Screen.nHeight) / 2;
-        SetWindowLongW(Window, GWL_STYLE, style | WS_VISIBLE);
-        SetWindowLongW(Window, GWL_EXSTYLE, extended);
-        SetWindowPos(Window, nullptr, x + rectangle.left, y + rectangle.top, rectangle.right - rectangle.left,
-            rectangle.bottom - rectangle.top, SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE);
-        const DWORD preference = DWMWCP_DONOTROUND;
-        DwmSetWindowAttribute(Window, DWMWA_WINDOW_CORNER_PREFERENCE, &preference, sizeof(preference));
+        const auto monitor = WindowStyle::MonitorRect(window);
+        RECT client{};
+        POINT origin{};
+        GetClientRect(window, &client);
+        ClientToScreen(window, &origin);
+        const bool aligned = !WindowStyle::CoversMonitor(monitor, Screen.nWidth, Screen.nHeight) ||
+            (origin.x == monitor.left && origin.y == monitor.top);
+        const DWORD current = static_cast<DWORD>(GetWindowLongW(window, GWL_STYLE)) & ~(WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+        if (!force && current == style && client.right == Screen.nWidth && client.bottom == Screen.nHeight && aligned)
+            return;
+
+        Placing = true;
+        SetWindowLongW(window, GWL_STYLE, style | WS_VISIBLE);
+        SetWindowLongW(window, GWL_EXSTYLE, extended);
+        SetWindowPos(window, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOACTIVATE);
+        WindowStyle::Place(window, Screen.nWidth, Screen.nHeight);
+        PlacedWindow = window;
         Placing = false;
+    }
+
+    inline BOOL WINAPI Position(HWND window, HWND insertAfter, int x, int y, int width, int height, UINT flags)
+    {
+        // The engine reapplies its saved outer rectangle after creating or resetting the device.
+        if (window && window == NeoRenderer::Window.load() && AppliedMode != 0 && !(flags & SWP_NOSIZE) &&
+            Screen.nWidth > 0 && Screen.nHeight > 0)
+        {
+            const auto bounds = WindowStyle::WindowRect(WindowStyle::MonitorRect(window), Screen.nWidth, Screen.nHeight,
+                WindowStyle::FrameOf(window));
+            x = bounds.left;
+            y = bounds.top;
+            width = bounds.right - bounds.left;
+            height = bounds.bottom - bounds.top;
+        }
+        return SetWindowPos(window, insertAfter, x, y, width, height, flags);
     }
 
     inline LRESULT Toggle(HWND window, LPARAM lParam)
     {
-        Mode = Mode == 0 ? LastWindowMode : 0;
-        Placed = false;
+        Mode = AppliedMode == 0 ? LastWindowMode : 0;
         return ProcedureHook.stdcall<LRESULT>(window, WM_COMMAND, 40003, lParam);
     }
 
     inline LRESULT CALLBACK Procedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
-        Window = window;
         LRESULT handled = 0;
         if (NeoRenderer::Message(window, message, wParam, lParam, handled))
             return handled;
-        if (message == 0x02E0 && Mode)
+        constexpr UINT dpiChanged = 0x02E0; // WM_DPICHANGED is hidden when targeting Windows XP.
+        if (message == dpiChanged && AppliedMode != 0)
         {
-            Place();
+            Place(window, true);
             return 0;
         }
         if (message == WM_ACTIVATEAPP && !wParam)
@@ -102,46 +121,84 @@ export namespace NeoWindow
             return 0;
         if (message == WM_NCDESTROY)
         {
-            CursorConfinement::Release();
-            Window = nullptr;
-            Placed = false;
+            auto current = window;
+            if (NeoRenderer::Window.compare_exchange_strong(current, nullptr))
+                CursorConfinement::Release();
+            current = window;
+            PlacedWindow.compare_exchange_strong(current, nullptr);
         }
         return ProcedureHook.stdcall<LRESULT>(window, message, wParam, lParam);
     }
 
+    inline bool IsGameWindow(HWND window)
+    {
+        return window && reinterpret_cast<WNDPROC>(GetClassLongPtrA(window, GCLP_WNDPROC)) == NativeProcedure;
+    }
+
     inline void Parameters(D3DPRESENT_PARAMETERS* parameters, HWND window)
     {
-        if (window)
-            NeoRenderer::Window = window;
+        const HWND target = window ? window : std::exchange(NeoRenderer::ResetWindow, nullptr);
+        if (!IsGameWindow(target))
+            return;
         parameters->Windowed = Mode != 0;
         if (parameters->Windowed)
         {
             parameters->FullScreen_RefreshRateInHz = 0;
             parameters->PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
         }
-        UpdateSize(parameters->BackBufferWidth, parameters->BackBufferHeight);
+    }
+
+    inline void DeviceReady(IDirect3DDevice9* device)
+    {
+        const HWND window = NeoRenderer::DeviceWindow(device);
+        if (!IsGameWindow(window))
+            return;
+
+        IDirect3DSurface9* backBuffer = nullptr;
+        if (FAILED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backBuffer)))
+            return;
+        D3DSURFACE_DESC description{};
+        const HRESULT result = backBuffer->GetDesc(&description);
+        backBuffer->Release();
+        if (FAILED(result) || !description.Width || !description.Height)
+            return;
+
+        UpdateSize(description.Width, description.Height);
+        AppliedMode = Mode.load();
+        NeoRenderer::Window = window;
+        if (AppliedMode != 0)
+            Place(window, true);
+        else
+            WindowStyle::SquareCorners(window);
+    }
+
+    inline void AfterReset(IDirect3DDevice9* device)
+    {
+        if (NeoRenderer::OwnsDeviceWindow(device, NeoRenderer::Window.load()))
+            DeviceReady(device);
     }
 
     inline void Frame()
     {
         const auto window = NeoRenderer::Window.load();
-        if (window && (!Placed || window != Window))
-        {
-            Window = window;
-            Placed = true;
-            Place();
-        }
+        Place(window, window != PlacedWindow.load());
     }
 
     inline void Install()
     {
         Mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
-        LastWindowMode = Mode == 0 ? 1 : Mode;
+        const int startupMode = Mode.load();
+        LastWindowMode = startupMode == 0 ? 1 : startupMode;
         auto procedure = hook::pattern("8B 0D ? ? ? ? 8B 01 FF 60 28 90 90 90 90 90");
-        ProcedureHook = safetyhook::create_inline(procedure.get_first(), Procedure, SafetyHookInline::StartDisabled);
+        auto* target = procedure.get_first();
+        NativeProcedure = reinterpret_cast<WNDPROC>(target);
+        ProcedureHook = safetyhook::create_inline(target, Procedure, SafetyHookInline::StartDisabled);
         (void)ProcedureHook.enable();
         IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("GetPrivateProfileIntA", ProfileInt));
+        IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("SetWindowPos", Position));
         D3D9Options::presentParameters = Parameters;
+        D3D9Options::afterReset = AfterReset;
+        NeoRenderer::DeviceCreated = DeviceReady;
         WFP::onGameProcessEvent() += Frame;
     }
 }

@@ -30,7 +30,7 @@ Open **Options → Plugins → Resident Evil Revelations Fusion Fix** (the last 
 |---|---|---|
 | Field of view | 0.5–2.0 for the ordinary third-person camera; aiming, scripted views and cutscenes keep theirs; live | 1.0 |
 | Cutscene borders | Off or Pillarbox; live | Pillarbox |
-| Frame rate limit | Unlimited, the game window's monitor refresh rate or a number; caps the game's VARIABLE option; live | 120 FPS |
+| Frame rate limit | Unlimited, the game window's monitor refresh rate, or 1–1000 FPS for the game's VARIABLE option. Applies live. | 120 FPS |
 | Window mode | Windowed or Borderless when the game's own Full Screen option is off; restart | Borderless |
 | Confine cursor | Keeps the mouse inside the active game window; live | On |
 | Controller icons | Auto, Xbox, PlayStation or Nintendo; live | Auto (Xbox) |
@@ -47,8 +47,6 @@ Open **Options → Plugins → Resident Evil Revelations Fusion Fix** (the last 
 Vanilla shows the logos, startup notices and title prompt and cutscenes without side bars; Recommended skips the startup screens and adds the cutscene side bars; Enhanced keeps those choices. Modern controls and Knife parry are set separately. Texts are available in English, French, German, Italian and Spanish.
 
 With **Check for updates** on, the Plugins list shows a notice when a newer version is available; FusionFixHub opens after the game exits when it is installed in the game folder.
-
-Ctrl+F10 opens the developer overlay with every setting and a Debug › Info page.
 
 The game supports Xbox controllers natively and shows their buttons.
 

@@ -21,9 +21,47 @@ export namespace PsychonautsDisplay
     inline int(__thiscall* refreshScreen)(void*) = nullptr;
     inline std::atomic<HWND> window{ nullptr };
     inline std::atomic_bool changing{ false };
+    inline std::atomic_bool pendingMode{ false };
+    inline thread_local bool publishingMode{};
+    inline thread_local int expectedMode{ -1 };
     inline int mode = 0, lastWindowMode = 1;
     inline int normalWidth = 640, normalHeight = 480;
     inline constexpr UINT ChangeMessage = WM_APP + 0x507;
+    inline constexpr WPARAM PendingMode = 0, ToggleMode = 1;
+
+    inline int ReadWindowMode()
+    {
+        const auto setting = FixSettings().Wanted("MAIN.WindowMode");
+        return setting == "2" ? 2 : setting == "1" ? 1 : 0;
+    }
+
+    inline void PostPendingMode()
+    {
+        if (pendingMode.load(std::memory_order_acquire))
+            if (const auto hwnd = window.load(std::memory_order_acquire))
+                PostMessageW(hwnd, ChangeMessage, PendingMode, 0);
+    }
+
+    inline bool CanWriteMode(std::string_view)
+    {
+        // The SDK calls this check under the same lock that protects the value write.
+        // Only the pre-write check is conditional, so effective values and menu choices stay available.
+        const auto expected = std::exchange(expectedMode, -1);
+        return expected < 0 || (!pendingMode.load(std::memory_order_acquire) && ReadWindowMode() == expected);
+    }
+
+    inline void PublishMode(int expected)
+    {
+        if (mode == expected || pendingMode.load(std::memory_order_acquire))
+            return;
+        expectedMode = expected;
+        publishingMode = true;
+        const auto result = FixSettings().Set("MAIN.WindowMode", std::to_string(mode));
+        publishingMode = false;
+        expectedMode = -1;
+        if (result == ASI_SETTINGS_NOT_NOW)
+            pendingMode.store(true, std::memory_order_release);
+    }
 
     template<class T> T& Field(void* object, size_t offset)
     {
@@ -72,33 +110,41 @@ export namespace PsychonautsDisplay
         return result;
     }
 
-    inline void Change(int wanted);
+    inline void Change(HWND hwnd, int wanted, bool external);
 
     inline LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam,
         LPARAM lParam, UINT_PTR id, DWORD_PTR)
     {
+        if (message == WM_NCDESTROY)
+        {
+            RemoveWindowSubclass(hwnd, WindowProc, id);
+            auto active = hwnd;
+            if (window.compare_exchange_strong(active, nullptr, std::memory_order_acq_rel))
+                PsychonautsRenderer::ClearWindow(hwnd);
+            return DefSubclassProc(hwnd, message, wParam, lParam);
+        }
+        if (hwnd != window.load(std::memory_order_acquire))
+            return message == ChangeMessage ? 0 : DefSubclassProc(hwnd, message, wParam, lParam);
+
         LRESULT handled = 0;
         if (PsychonautsRenderer::Message(hwnd, message, wParam, lParam, handled))
             return handled;
         if (message == ChangeMessage)
         {
-            if (!changing && wParam <= 2)
-                Change(static_cast<int>(wParam));
+            if (wParam == PendingMode && pendingMode.load(std::memory_order_acquire) && !changing)
+                Change(hwnd, 0, true);
+            else if (wParam == ToggleMode && GetForegroundWindow() == hwnd)
+                Change(hwnd, mode == 0 ? lastWindowMode : 0, false);
             return 0;
         }
         if (message == WM_SYSKEYDOWN && wParam == VK_RETURN)
         {
-            if (!(lParam & (1u << 30)))
-                PostMessageW(hwnd, ChangeMessage, mode == 0 ? lastWindowMode : 0, 0);
+            if (!(lParam & (1u << 30)) && GetForegroundWindow() == hwnd)
+                PostMessageW(hwnd, ChangeMessage, ToggleMode, 0);
             return 0;
         }
         if ((message == WM_SYSKEYUP || message == WM_SYSCHAR) && wParam == VK_RETURN)
             return 0;
-        if (message == WM_NCDESTROY)
-        {
-            RemoveWindowSubclass(hwnd, WindowProc, id);
-            window.store(nullptr, std::memory_order_release);
-        }
         return DefSubclassProc(hwnd, message, wParam, lParam);
     }
 
@@ -136,6 +182,7 @@ export namespace PsychonautsDisplay
             const DWORD square = 1;
             setAttribute(hwnd, 33, &square, sizeof(square));
         }
+        WindowStyle::detail::AllowSize(hwnd, frame.right - frame.left, frame.bottom - frame.top);
         return SetWindowPos(hwnd, nullptr, left + frame.left, top + frame.top,
             frame.right - frame.left, frame.bottom - frame.top,
             SWP_NOACTIVATE | SWP_NOZORDER | SWP_FRAMECHANGED);
@@ -158,7 +205,7 @@ export namespace PsychonautsDisplay
             Field<int>(object, 708) = normalWidth;
             Field<int>(object, 712) = normalHeight;
         }
-        mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
+        mode = ReadWindowMode();
         if (mode) lastWindowMode = mode;
         Field<uint8_t>(object, 720) = mode == 0;
         if (mode == 2) MonitorSize(object);
@@ -172,13 +219,16 @@ export namespace PsychonautsDisplay
             }
             SetWindowSubclass(hwnd, WindowProc, 0x507, 0);
             Place(object, nullptr, 0);
+            PostPendingMode();
         }
         return result;
     }
 
     inline int __fastcall Reset(void* object, void*, int flags)
     {
-        if (!changing)
+        const bool outer = !changing.exchange(true, std::memory_order_acq_rel);
+        const auto previous = mode;
+        if (outer)
         {
             // Native Display options remain authoritative when used directly.
             if (Field<uint8_t>(object, 720)) mode = 0;
@@ -190,20 +240,36 @@ export namespace PsychonautsDisplay
             }
         }
         const auto result = resetHook.thiscall<int>(object, flags);
-        if (SUCCEEDED(result) && !changing)
+        if (outer)
         {
-            if (mode) lastWindowMode = mode;
-            changing = true;
-            FixSettings().Set("MAIN.WindowMode", std::to_string(mode));
+            if (SUCCEEDED(result))
+            {
+                if (mode) lastWindowMode = mode;
+                PublishMode(previous);
+            }
             changing = false;
+            PostPendingMode();
         }
         return result;
     }
 
-    inline void Change(int wanted)
+    inline void Change(HWND hwnd, int wanted, bool external)
     {
-        if (!renderer || wanted == mode || changing.exchange(true)) return;
+        if (!renderer || Field<HWND>(renderer, 5700) != hwnd || changing.exchange(true))
+            return;
+        if (external)
+        {
+            pendingMode.store(false, std::memory_order_release);
+            wanted = ReadWindowMode();
+        }
         const auto previous = mode;
+        const auto expected = external ? wanted : previous;
+        if (wanted == mode)
+        {
+            changing = false;
+            PostPendingMode();
+            return;
+        }
         const auto width = Field<int>(renderer, 708), height = Field<int>(renderer, 712);
         const auto fullscreen = Field<uint8_t>(renderer, 720);
         const auto refreshRate = Field<int>(renderer, 716);
@@ -215,7 +281,8 @@ export namespace PsychonautsDisplay
         if (mode == 0) validateMode(renderer);
         const auto flags = Field<int>(renderer, 1436);
         auto result = resetHook.thiscall<int>(renderer, flags);
-        if (FAILED(result))
+        const bool failed = FAILED(result);
+        if (failed)
         {
             mode = previous;
             Field<int>(renderer, 708) = width;
@@ -230,8 +297,10 @@ export namespace PsychonautsDisplay
             refreshScreen(engine);
         }
         if (mode) lastWindowMode = mode;
-        FixSettings().Set("MAIN.WindowMode", std::to_string(mode));
+        if (!external || failed)
+            PublishMode(expected);
         changing = false;
+        PostPendingMode();
     }
 
     inline void Init()
@@ -254,10 +323,13 @@ export namespace PsychonautsDisplay
         parametersHook = safetyhook::create_inline(parameters.get_first(), Parameters);
         placeHook = safetyhook::create_inline(place.get_first(), Place);
         resetHook = safetyhook::create_inline(reset.get_first(), Reset);
+        FixSettings().Availability("MAIN.WindowMode", CanWriteMode);
         FixSettings().OnChange("MAIN.WindowMode", []()
         {
-            if (const auto hwnd = window.load(std::memory_order_acquire); hwnd && !changing)
-                PostMessageW(hwnd, ChangeMessage, std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2), 0);
+            if (publishingMode)
+                return;
+            pendingMode.store(true, std::memory_order_release);
+            PostPendingMode();
         });
     }
 }

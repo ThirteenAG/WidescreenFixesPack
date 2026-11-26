@@ -8,6 +8,7 @@ module;
 export module Borders;
 
 import ComVars;
+import Camera;
 
 namespace HudLayout
 {
@@ -88,7 +89,7 @@ namespace HudLayout
         if (!pending || now - InitializedAt.load() < 500 || now - lastAttempt < 250)
             return result;
         lastAttempt = now;
-        auto constraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+        auto constraint = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
         Constraint = constraint && std::isfinite(*constraint) ? *constraint : 0.0f;
         auto available = reinterpret_cast<bool(__thiscall*)(void*, const char*)>(table[0x0A]);
         auto invoke = reinterpret_cast<bool(__cdecl*)(void*, const char*, void*, const char*, ...)>(table[0x16]);
@@ -311,9 +312,7 @@ public:
                 if (camera != lastCamera)
                 {
                     lastCamera = camera;
-                    auto typeInfo = camera ? (*(uintptr_t(__thiscall**)(uintptr_t))(*(uintptr_t*)camera))(camera) : 0;
-                    auto name = typeInfo ? **(const char***)typeInfo : nullptr;
-                    bCinebotCamera = name && !strcmp(name, "CinebotCamera");
+                    bCinebotCamera = IsCinebotCamera(camera);
                 }
                 static float lastTick[16] = {};
                 if (memcmp(lastTick, (void*)(manager + 0xEF0), sizeof(lastTick)) != 0)

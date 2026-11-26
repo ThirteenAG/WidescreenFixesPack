@@ -13,7 +13,7 @@
   "HudAspectRatioConstraint": "Format de l'interface",
   "HudAspectRatioConstraint.description": "Auto place l'interface dans les coins de l'écran. Un format comme 4:3 ou 16:9 la garde dans un cadre centré de cette forme. Les menus gardent leur mise en page 4:3. Effet immédiat.",
   "CutsceneBorders": "Bandes des cinématiques",
-  "CutsceneBorders.description": "Letterbox garde les bandes en haut et en bas des cinématiques sur les écrans plus étroits que 16:9 ; Pillarbox garde l'image 16:9 entre des bandes latérales sur les écrans plus larges ; Les deux fait les deux et montre toujours le cadrage d'origine ; Désactivé remplit l'écran. Effet immédiat.",
+  "CutsceneBorders.description": "Letterbox ajoute des bandes en haut et en bas si l'écran est plus étroit que l'image d'origine de la scène. Pillarbox ajoute des bandes latérales si l'écran est plus large. Le mode Les deux conserve le cadrage de chaque scène, notamment en 16:9 et en 2,35:1 environ. Désactivé remplit l'écran. Effet immédiat.",
   "CutsceneBorders.off": "Désactivé",
   "CutsceneBorders.letterbox": "Letterbox",
   "CutsceneBorders.pillarbox": "Pillarbox",

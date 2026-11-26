@@ -785,8 +785,11 @@ namespace
             if (pov >= 13500 && pov <= 22500) overlayButtons |= 0x40;
             if (pov >= 22500 && pov <= 31500) overlayButtons |= 0x80;
         }
-        LastOverlayPadUpdate = SteadyClock::now();
-        OverlayPadActive = true;
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            LastOverlayPadUpdate = SteadyClock::now();
+            OverlayPadActive = true;
+        }
         DeveloperOverlay::Gamepad(overlayButtons, int8_t(std::clamp(state->lX / 79, -127L, 127L)),
             int8_t(std::clamp(state->lY / 79, -127L, 127L)));
         if (DeveloperOverlay::BlocksInput())
@@ -826,13 +829,12 @@ public:
             {
                 ProcessQuitRequest();
                 RawMouse::Update(hWnd.get());
-                if (OverlayPadActive && SteadyClock::now() - LastOverlayPadUpdate > std::chrono::milliseconds(100))
+                if (WFP::DeveloperOverlay && OverlayPadActive && SteadyClock::now() - LastOverlayPadUpdate > std::chrono::milliseconds(100))
                 {
                     DeveloperOverlay::Gamepad(0, 0, 0);
                     OverlayPadActive = false;
                 }
             };
-            WFP::onShutdownEvent() += []() { RawMouse::Release(); };
             onWindowMessage() += RawMouse::Message;
             pGamepadIcons = &FixSettings().Int("MAIN.GamepadIcons");
             FixSettings().OnChange("MAIN.GamepadIcons", [] { Input::RefreshIconStyle(); });

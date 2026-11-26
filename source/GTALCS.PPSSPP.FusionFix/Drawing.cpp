@@ -83,10 +83,6 @@ uint64_t TranslucentSprite(uint8_t red, uint8_t green, uint8_t blue, int16_t int
     }
     return spriteHook.call<uint64_t>(red, green, blue, intensity, alpha, x, y, z, halfWidth, halfHeight, recipZ);
 }
-float RadarX() { return Drawing::settings.radarX; }
-float RadarY() {
-    return *reinterpret_cast<uint8_t*>(Address<0x8B56C7C>()) ? Drawing::settings.multiplayerRadarY : Drawing::settings.radarY;
-}
 }
 void InstallDrawing() {
     menu_font::Initialize();
@@ -143,7 +139,5 @@ void InstallDrawing() {
         console::portable::PatchRejected(PSP_HOOK_UNSUPPORTED_INSTRUCTION);
     }
     menuSprite=safetymips::create_inline(Address<0x8AD39E0>(),MenuSprite);
-    injector::MakeJMP(Address<0x8986FE4>(),RadarX);
-    injector::MakeJMP(Address<0x8987008>(),RadarY);
 }
 }

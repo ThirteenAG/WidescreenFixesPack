@@ -1,6 +1,7 @@
 module;
 #include <stdafx.h>
 #include <atomic>
+#include <unordered_map>
 #include "FixSettings.hpp"
 
 export module Video;
@@ -14,22 +15,80 @@ export namespace JCVideo
         uint8_t flipX, flipY, scaleX, padding;
     };
     static_assert(sizeof(Quad) == 40);
-    inline std::atomic<int> width{ 0 }, height{ 0 };
-    inline std::atomic<void*> activeSprite{ nullptr }, handle{ nullptr };
-    inline thread_local void* sprite = nullptr;
+    struct Decoder
+    {
+        uint32_t width, height;
+        uint64_t generation;
+        bool skipLogo;
+        bool decoded = false;
+    };
+
+    inline std::mutex decodersMutex;
+    inline std::unordered_map<void*, Decoder> decoders;
+    inline uint64_t nextGeneration = 0;
+
+    inline void Opened(void* handle, uint32_t width, uint32_t height, bool skipLogo)
+    {
+        const std::lock_guard lock(decodersMutex);
+        decoders.insert_or_assign(handle, Decoder{ width, height, ++nextGeneration, skipLogo });
+    }
+
+    inline void Closed(void* handle)
+    {
+        const std::lock_guard lock(decodersMutex);
+        decoders.erase(handle);
+    }
+
+    // A skipped logo still decodes and draws its first frame, so the player ends it the way it ends a finished movie
+    inline bool EndLogo(void* handle)
+    {
+        const std::lock_guard lock(decodersMutex);
+        const auto found = decoders.find(handle);
+        if (found == decoders.end() || !found->second.skipLogo)
+            return false;
+        return std::exchange(found->second.decoded, true);
+    }
+
+    inline std::optional<Decoder> FindDecoder(void* handle)
+    {
+        const std::lock_guard lock(decodersMutex);
+        if (const auto found = decoders.find(handle); found != decoders.end())
+            return found->second;
+        return std::nullopt;
+    }
+
+    struct DrawState
+    {
+        Decoder decoder;
+        int mode;
+    };
+
+    inline void** nativeDecoder = nullptr;
+    // The player that decoded a frame last: its global can outlive it, so only a player that is playing counts
+    inline std::atomic<void*> activePlayer{ nullptr };
+    inline std::atomic<ULONGLONG> activeTick{ 0 };
+
+    inline void Playing(void* player)
+    {
+        activePlayer.store(player);
+        activeTick.store(GetTickCount64());
+    }
+    inline thread_local const DrawState* drawState = nullptr;
+    inline std::atomic<int> requestedMode{ 0 };
     inline SafetyHookInline spriteHook, constructHook;
-    inline injector::hook_back<void(__fastcall*)(void*, void*)> nativeDraw;
-    inline bool ready = false, seen = false, decoderReady = false;
+    inline bool seen = false, decoderReady = false;
     inline RECT picture{};
     inline std::atomic<uint32_t> outputSize{ 0 };
     struct Key
     {
         void* sprite;
-        void* movie;
+        uint64_t generation;
         uint32_t size;
         int mode;
+        bool operator==(const Key&) const = default;
     };
-    inline Key applied{};
+    inline thread_local Key applied{};
+    inline thread_local bool geometryReady = false;
 
     inline bool Transform(Quad& quad, int sourceWidth, int sourceHeight, int outputWidth, int outputHeight, int mode)
     {
@@ -53,29 +112,24 @@ export namespace JCVideo
 
     inline bool Apply(void* unit, Quad& quad, int outputWidth, int outputHeight)
     {
-        if (!ready || !unit || !sprite || activeSprite.load() != sprite) return false;
-        if (!Transform(quad, width.load(), height.load(), outputWidth, outputHeight, FixSettings().Int("MAIN.FMVWidescreenMode"))) return false;
+        if (!unit || !drawState)
+            return false;
+        const auto& decoder = drawState->decoder;
+        if (!Transform(quad, decoder.width, decoder.height, outputWidth, outputHeight, drawState->mode))
+            return false;
         picture = { static_cast<LONG>(quad.x - quad.halfWidth), static_cast<LONG>(quad.y - quad.halfHeight),
             static_cast<LONG>(quad.x + quad.halfWidth), static_cast<LONG>(quad.y + quad.halfHeight) };
+        geometryReady = true;
         return true;
     }
 
-    // The native sprite rebuilds its quad only when marked dirty, so a new movie, framing or screen size marks it
-    inline void __fastcall Draw(void* self, void* edx)
+    // The full-screen player owns this sprite and uses its own decoder. Other movies draw through their own paths.
+    inline std::optional<Decoder> DecoderForSprite(void* self)
     {
-        const auto current = *reinterpret_cast<uint8_t**>(static_cast<uint8_t*>(self) + 164);
-        activeSprite.store(current);
-        if (current)
-        {
-            const Key key{ current, handle.load(), outputSize.load(), FixSettings().Int("MAIN.FMVWidescreenMode") };
-            if (std::memcmp(&key, &applied, sizeof(key)))
-            {
-                applied = key;
-                current[44] |= 4;
-            }
-        }
-        nativeDraw.fun(self, edx);
-        seen = current != nullptr;
+        const auto player = static_cast<const uint8_t*>(activePlayer.load());
+        if (!player || GetTickCount64() - activeTick.load() > 250 || *reinterpret_cast<void* const*>(player + 164) != self)
+            return std::nullopt;
+        return FindDecoder(*nativeDecoder);
     }
 
     inline bool (*filter)(void*) = nullptr;
@@ -84,32 +138,56 @@ export namespace JCVideo
     {
         if (filter && !filter(self))
             return;
-        const auto previous = sprite;
-        sprite = self;
+        const auto decoder = DecoderForSprite(self);
+        const DrawState state{ decoder.value_or(Decoder{}), requestedMode.load() };
+        if (decoder)
+        {
+            const Key key{ self, decoder->generation, outputSize.load(), state.mode };
+            if (key != applied)
+            {
+                applied = key;
+                geometryReady = false;
+                static_cast<uint8_t*>(self)[44] |= 4;
+            }
+        }
+        else if (applied.sprite == self)
+        {
+            // The movie is gone but the sprite still holds its framing: let the game rebuild its own quad
+            applied = {};
+            static_cast<uint8_t*>(self)[44] |= 4;
+        }
+        const auto previous = std::exchange(drawState, decoder ? &state : nullptr);
         spriteHook.thiscall<void>(self);
-        sprite = previous;
+        drawState = previous;
+        if (decoder && geometryReady)
+            seen = true;
     }
 
     inline void* __fastcall Construct(void* self, void*)
     {
-        if (activeSprite.load() == self) activeSprite.store(nullptr);
+        if (applied.sprite == self)
+            applied = {};
         return constructHook.thiscall<void*>(self);
     }
 
     inline void Install()
     {
-        auto pattern = hook::pattern("C7 40 28 05 00 00 00 EB 0B 8B 8D 54 FF FF FF E8 ? ? ? ? 8B 4D F4");
+        const auto refreshMode = []()
+        {
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            requestedMode.store(GetFixNumber("MAIN.FMVWidescreenMode", 0));
+        };
+        FixSettings().OnChange("MAIN.FMVWidescreenMode", refreshMode);
+        refreshMode();
         auto spriteDraw = hook::pattern("64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 64 89 25 00 00 00 00 83 EC 44 53 56 8B F1 8A 5E 2C C0 EB 02 80 E3 01");
         auto construct = hook::pattern("6A FF ? ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 53 56 8B F1 57 89 74 24 0C E8 ? ? ? ? 33 DB C7 06 ? ? ? ? C7 86 84 00 00 00 0F 00 00 00");
         auto constructSite = construct.get_first();
         auto spriteSite = spriteDraw.get_first();
-        auto drawSite = pattern.get_first(15);
         if (decoderReady)
         {
             constructHook = safetyhook::create_inline(constructSite, Construct);
             spriteHook = safetyhook::create_inline(spriteSite, Sprite);
-            nativeDraw.fun = injector::MakeCALL(drawSite, Draw).get();
-            ready = true;
         }
     }
 }

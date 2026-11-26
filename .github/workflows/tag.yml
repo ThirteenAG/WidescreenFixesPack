@@ -79,7 +79,6 @@ on:
         - sce
         - scpt
         - secondsight
-        - sh2
         - sh3
         - sh4
         - sniperelite
@@ -173,7 +172,6 @@ env:
   sce: msbuild -m build/PPSSPP.WidescreenFixesPack.slnx /t:SplinterCellEssentials_PPSSPP_FusionFix /p:Configuration=Release
   scpt: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SplinterCell\\SplinterCellPandoraTomorrow_FusionFix /p:Configuration=Release
   secondsight: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SecondSight_FusionFix /p:Configuration=Release
-  sh2: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SilentHill\\SilentHill2_FusionFix /p:Configuration=Release
   sh3: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SilentHill\\SilentHill3_FusionFix /p:Configuration=Release
   sh4: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SilentHill\\SilentHill4_FusionFix /p:Configuration=Release
   sniperelite: msbuild -m build/Win32.WidescreenFixesPack.slnx /t:SniperElite_FusionFix /p:Configuration=Release

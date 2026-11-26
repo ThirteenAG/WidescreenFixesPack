@@ -8,7 +8,7 @@
   "SkipMenu": "Resume on startup",
   "SkipMenu.description": "Resume the selected save once the frontend is ready. Restart required.",
   "SaveSlot": "Save slot",
-  "SaveSlot.description": "One-based slot used by startup resume and quicksave. Restart required.",
+  "SaveSlot.description": "Slot (1–8) used by F5 quicksave. Restart the game to apply a new slot.",
   "FOVFactor": "Field of view",
   "FOVFactor.description": "Multiply the gameplay camera field of view; larger is wider. Cutscenes, scripted cameras and zoom views keep the game's own field of view.",
   "HudScale": "HUD scale",

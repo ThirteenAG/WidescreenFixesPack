@@ -5,6 +5,7 @@ module;
 #include <format>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
+#include "rawinput.hpp"
 
 export module Misc;
 
@@ -55,6 +56,14 @@ void InstallInit()
 {
     hook::pattern pattern;
     InstallProcessExit();
+    // The game's loop drains the queue each frame: a fast mouse keeps adding moves and holds the frame
+    MessagePumpGuard::Install(GetModuleHandleW(nullptr));
+    // Room for a slow frame's events from a fast mouse: the game's 256 overflow at 8000 Hz and 30 fps
+    pattern = hook::pattern("A1 ? ? ? ? 8D 54 24 04 52 89 44 24 18 8B 06 6A 01 C7 44 24 10 10 00 00 00");
+    static auto InputBufferSize = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
+    {
+        regs.eax = std::max<uintptr_t>(regs.eax, 1024);
+    });
     //DI8DEVCLASS_DEVICE (tanks framerate)
     static constexpr uint8_t DI8DEVCLASS_GAMECTRL = 4;
     pattern = hook::pattern("6A 01 57 FF 51 10 85 C0");
@@ -96,6 +105,7 @@ void InstallInit()
 
             auto w = *(uint32_t*)(regs.esp + 0x08);
             auto h = *(uint32_t*)(regs.esp + 0x0C);
+            CondemnedHud::MenuTransform(float(w), float(h), *(float*)(regs.esp + 0x10), *(float*)(regs.esp + 0x1C));
 
             // Return addresses into the executable or GameClient; looked up once, not for every quad
             const auto imageSize = [](size_t base) -> size_t
@@ -215,33 +225,6 @@ void InstallGameClient()
 
     // Interface rectangle (HUD): the whole screen or a centred box instead of the 16:9 design box
     CondemnedHud::Init(gameClient);
-
-    //pattern = hook::pattern(GetModuleHandle(L"GameClient"), "D8 0D ? ? ? ? 8B 8C 24 ? ? ? ? 85 C9");
-    //struct HudHook2
-    //{
-    //    void operator()(injector::reg_pack& regs)
-    //    {
-    //        auto ret = *(uint32_t*)(regs.esp + 0x9C);
-    //        auto x = *(int32_t*)(regs.esp + 0x90 - 4);
-    //        auto y = *(int32_t*)(regs.esp + 0x94 - 4);
-    //
-    //        x = (float)x / ((16.0f / 9.0f) / (4.0f / 3.0f));
-    //
-    //        //auto v5 = (double)*(int32_t*)(regs.esp + 0x94);
-    //        //if (*(int32_t*)(regs.esp + 0x90))
-    //        //    v5 = v5 + 4294967300.0;
-    //
-    //        *(float*)(regs.esi + 0x10) = (double)x * 0.0015625f;
-    //        *(float*)(regs.esi + 0x14) = (double)y * 0.0020833334f;
-    //        *(int32_t*)(regs.esi + 0x18) = x;
-    //        *(int32_t*)(regs.esi + 0x1C) = y;
-    //
-    //    }
-    //}; //injector::MakeInline<HudHook2>(pattern.get_first(0), pattern.get_first(48));
-
-    //pos
-    //auto x = -1.0f / ((16.0f / 9.0f) / (4.0f / 3.0f));
-    //injector::WriteMemory<float>(0x504C28 + 4, x, true);
 
     pattern = hook::pattern(GetModuleHandle(L"GameClient"), "57 50 E8 ? ? ? ? 8B F8 68");
     static auto KeyAssignHook1 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)

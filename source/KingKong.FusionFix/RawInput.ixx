@@ -11,6 +11,7 @@ import ComVars;
 import DeveloperOverlay;
 
 bool bNeedsRawInput = false;
+std::atomic<float> RawMouseScale{ 0.0f };
 SafetyHookInline shsub_45B1B0 = {};
 int sub_45B1B0()
 {
@@ -29,7 +30,7 @@ void __cdecl CameraRotationX(void* a1, float a2)
         uintptr_t Settings = pSettings;
         if (Settings)
             fMouseSensitivity = *(float*)(Settings + 0x4DBC);
-        auto deltaX = -aMouseX.get() * Screen.fRawInputMouse * fMouseSensitivity;
+        auto deltaX = -aMouseX.get() * RawMouseScale.load(std::memory_order_relaxed) * fMouseSensitivity;
         return shCameraRotationX.unsafe_ccall(a1, deltaX);
     }
     return shCameraRotationX.unsafe_ccall(a1, a2);
@@ -48,22 +49,36 @@ void __cdecl CameraRotationY(void* a1, float a2)
             bMouseInverted = *(int*)(pSettings + 0x4DB8);
             fMouseSensitivity = *(float*)(pSettings + 0x4DBC);
         }
-        auto deltaY = -aMouseY.get() * Screen.fRawInputMouse * (bMouseInverted ? -fMouseSensitivity : fMouseSensitivity);
+        auto deltaY = -aMouseY.get() * RawMouseScale.load(std::memory_order_relaxed) * (bMouseInverted ? -fMouseSensitivity : fMouseSensitivity);
         return shCameraRotationY.unsafe_ccall(a1, deltaY);
     }
     return shCameraRotationY.unsafe_ccall(a1, a2);
 }
 
 SafetyHookInline shWndProc = {};
-HWND inputWindow = nullptr;
+std::atomic<HWND> inputWindow{ nullptr };
+std::atomic<bool> pauseOnFocusLoss{ true };
+UINT pausePolicyMessage = 0;
 LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
-    if (Screen.Width > 0) inputWindow = hWnd;
+    if (pausePolicyMessage && Msg == pausePolicyMessage)
+    {
+        if (bAppInactive.is_initialized())
+            bAppInactive = pauseOnFocusLoss.load(std::memory_order_relaxed) && GetForegroundWindow() != hWnd ? 1u : 0u;
+        return 0;
+    }
+    if (Msg == WM_NCDESTROY)
+    {
+        auto destroyed = hWnd;
+        inputWindow.compare_exchange_strong(destroyed, nullptr, std::memory_order_relaxed);
+    }
+    else if (Screen.Width > 0)
+        inputWindow.store(hWnd, std::memory_order_relaxed);
     LRESULT overlayResult = 0;
     if (KongOverlay::Message(hWnd, Msg, wParam, lParam, overlayResult))
         return overlayResult;
     const auto result = shWndProc.unsafe_stdcall<LRESULT>(hWnd, Msg, wParam, lParam);
-    if (Msg == WM_ACTIVATEAPP && bAppInactive.is_initialized() && !FixSettings().Bool("MAIN.PauseOnFocusLoss"))
+    if (Msg == WM_ACTIVATEAPP && bAppInactive.is_initialized() && !pauseOnFocusLoss.load(std::memory_order_relaxed))
         bAppInactive = 0;
     // Mouse moves, hit tests and raw input come thousands of times a second with a high polling rate mouse; the
     // confinement doesn't change with them
@@ -98,7 +113,7 @@ void SetMenuCursor(float* pMouseX, float* pMouseY)
         wasUsingLeftStick = false;
 
     RECT clientRect{};
-    const auto window = inputWindow;
+    const auto window = inputWindow.load(std::memory_order_relaxed);
     POINT cursor{};
     CursorConfinement::Frame(window);
     if (!window || GetForegroundWindow() != window || !GetClientRect(window, &clientRect) ||
@@ -118,38 +133,49 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            auto updateMouseSensitivity = []()
+            const bool rawInput = FixSettings().Get("MAIN.RawInputMouse") == "1";
+            const auto updateMouseSensitivity = [rawInput]()
             {
-                const float value = FixSettings().Float("MAIN.MouseSensitivity");
-                Screen.fRawInputMouse = FixSettings().Bool("MAIN.RawInputMouse")
-                    ? (std::isfinite(value) ? std::clamp(value, 0.1f, 5.0f) : 1.0f) : 0.0f;
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                const float value = ReadNumericSetting("MAIN.MouseSensitivity", 1.0f);
+                RawMouseScale.store(rawInput ? (std::isfinite(value) ? std::clamp(value, 0.1f, 5.0f) : 1.0f) : 0.0f,
+                    std::memory_order_relaxed);
             };
-            updateMouseSensitivity();
             FixSettings().OnChange("MAIN.MouseSensitivity", updateMouseSensitivity);
+            updateMouseSensitivity();
 
-            KongOverlay::InitInput();
+            if constexpr (WFP::DeveloperOverlay)
+                KongOverlay::InitInput();
             auto procedure = hook::pattern("53 8B 5C 24 ? 55 8B 6C 24 ? 56 8B 74 24 ? 57 8B 7C 24 ? 8D 44 24 ? 50 56 57 53 55");
-            shWndProc = safetyhook::create_inline(procedure.get_first(), WndProc);
             auto inactive = hook::pattern("C7 05 ? ? ? ? 01 00 00 00 E8 ? ? ? ? EB ? C7 05 ? ? ? ? 00 00 00 00 E8");
             bAppInactive.SetAddress(*inactive.get_first<uint32_t*>(2));
-            auto updateConfinement = []()
+            pausePolicyMessage = RegisterWindowMessageW(L"KingKong.FusionFix.PauseOnFocusLoss");
+            shWndProc = safetyhook::create_inline(procedure.get_first(), WndProc);
+            const auto updateConfinement = []()
             {
-                CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                CursorConfinement::SetEnabled(FixSettings().Get("MAIN.ConfineCursor") == "1");
             };
-            updateConfinement();
             FixSettings().OnChange("MAIN.ConfineCursor", updateConfinement);
-            FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+            updateConfinement();
+            const auto updatePause = []()
             {
-                const auto window = inputWindow;
-                if (bAppInactive.is_initialized() && window)
-                    bAppInactive = FixSettings().Bool("MAIN.PauseOnFocusLoss") && GetForegroundWindow() != window ? 1u : 0u;
-            });
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                pauseOnFocusLoss.store(FixSettings().Get("MAIN.PauseOnFocusLoss") == "1", std::memory_order_relaxed);
+                if (const auto window = inputWindow.load(std::memory_order_relaxed); window && pausePolicyMessage)
+                    PostMessageW(window, pausePolicyMessage, 0, 0);
+            };
+            FixSettings().OnChange("MAIN.PauseOnFocusLoss", updatePause);
+            updatePause();
 
             auto pattern = hook::pattern("8B 55 ? 8B 82 ? ? ? ? 89 45 ? D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 4D ? 89 4D ? 8B 55 ? 8B 45 ? 89 82 ? ? ? ? 8B 4D");
             static auto MouseCursorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 gMenuTick = GetTickCount();
-                if (Screen.fRawInputMouse > 0.0f)
+                if (RawMouseScale.load(std::memory_order_relaxed) > 0.0f)
                     SetMenuCursor((float*)(regs.eax + 0x1D4), (float*)(regs.eax + 0x1D8));
             });
 
@@ -158,14 +184,11 @@ public:
             static auto MouseCursorHook2 = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 gMenuTick = GetTickCount();
-                if (Screen.fRawInputMouse > 0.0f)
+                if (RawMouseScale.load(std::memory_order_relaxed) > 0.0f)
                     SetMenuCursor((float*)(regs.eax + offset - 4), (float*)(regs.eax + offset));
             });
 
-            if (Screen.fRawInputMouse <= 0.0f)
-                return;
-
-            if (Screen.fRawInputMouse > 0.0f)
+            if (rawInput)
             {
                 pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? EB 21 D8 15 ? ? ? ? DF E0 F6 C4 41 75 ? DD D8");
                 aMouseX.SetAddress(*pattern.get_first<float*>(2));

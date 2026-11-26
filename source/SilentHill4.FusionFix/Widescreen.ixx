@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include <intrin.h>
-#include <atomic>
 #include <minidx8/d3d8.h>
 #include "FixSettings.hpp"
 #include "Shared/SilentHill/Display.hpp"
@@ -35,19 +34,29 @@ namespace
         float Scale = 1.0f;     // aspect / (4:3)
     } Screen;
 
-    const int* CinematicBars = nullptr;
-    const float* FOVFactor = nullptr;
+    int CinematicBars = 3;
+    float FOVFactor = 1.0f;
+    float HudAspectRatioConstraint = 0.0f;
     bool FramingCleared = false;
     float InterfaceX() { return 1.0f / std::max(1.0f, Screen.Scale); }
     float InterfaceY() { return std::min(1.0f, Screen.Scale); }
-    std::atomic<float> HudAspectRatioConstraint{ 0.0f };
     std::array<void*, 4> HudSprites{};
     SafetyHookInline HudSpriteHook;
     SafetyHookMid HudCircleHook;
+    SafetyHookMid ItemSlotBegin, ItemSlotEnd, ItemCursorHooks[2];
+    float ItemSlotX = 0.0f;
+
+    void ReadFramingSettings()
+    {
+        CinematicBars = std::clamp(FixSettingNumber("MAIN.CutsceneBorders", 3), 0, 3);
+        FOVFactor = FixSettingNumber("MAIN.FOVFactor", 1.0f);
+        const auto aspect = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
+        HudAspectRatioConstraint = aspect && std::isfinite(*aspect) && *aspect > 0.0f ? *aspect : 0.0f;
+    }
 
     float HudOffset()
     {
-        const float requested = HudAspectRatioConstraint.load(std::memory_order_relaxed);
+        const float requested = HudAspectRatioConstraint;
         const float ratio = requested > 0.0f ? ClampHudAspectRatio(requested, Screen.Aspect) : Screen.Aspect;
         return 256.0f * (std::max(1.0f, ratio / (4.0f / 3.0f)) - 1.0f);
     }
@@ -277,9 +286,7 @@ namespace
     {
         if (FramingCleared || !(nSceneFlags & 1) || !CinematicBars)
             return;
-        const int mode = std::clamp(*CinematicBars, 0, 3);
-        if (!mode)
-            return;
+        const int mode = CinematicBars;
         const auto& display = SHDisplay::Get();
         const float width = float(display.backBufferWidth), height = float(display.backBufferHeight);
         const float boxWidth = std::min(width, height * (4.0f / 3.0f));
@@ -300,7 +307,7 @@ namespace
 
     float BaseZoom()
     {
-        const bool contained = (nSceneFlags & 1) && CinematicBars && *CinematicBars;
+        const bool contained = (nSceneFlags & 1) && CinematicBars;
         return contained ? 1.0f / std::max(1.0f, Screen.Scale) : 1.0f / Screen.Scale;
     }
 
@@ -312,7 +319,7 @@ namespace
         const int state = *reinterpret_cast<int32_t*>(aPlayerStatus->data() + 0xC4);
         if (state == 3 || state == 4 || state == 5 || (*aMoveIntent)[0x50 / 4] != 0.0f)
             return base;
-        const float factor = std::isfinite(*FOVFactor) ? std::clamp(*FOVFactor, 0.5f, 2.0f) : 1.0f;
+        const float factor = std::isfinite(FOVFactor) ? std::clamp(FOVFactor, 0.5f, 2.0f) : 1.0f;
         if (factor == 1.0f)
             return base;
         const float angle = RenderCamera->fAngle;
@@ -340,7 +347,7 @@ namespace
         const float height = (y1 - y0) * float(Screen.Height) / 480.0f * InterfaceY();
         if (width > 0.0f && height > 0.0f && std::isfinite(width) && std::isfinite(height))
         {
-            static const auto& mode = FixSettings().Int("MAIN.FMVWidescreenMode");
+            const auto mode = FixSettingNumber("MAIN.FMVWidescreenMode", 1);
             const float areaWidth = mode == 0 ? std::min(float(Screen.Width), float(Screen.Height) * 4.0f / 3.0f) : float(Screen.Width);
             const float areaHeight = mode == 0 ? std::min(float(Screen.Height), float(Screen.Width) * 3.0f / 4.0f) : float(Screen.Height);
             float scaleX = areaWidth / width, scaleY = areaHeight / height;
@@ -430,11 +437,15 @@ namespace
 
     // The Resolution row of the options lists the monitor's resolutions (only the desktop's in a borderless window).
     // A choice applies when the options are accepted, through the game's own resolution change.
+    constexpr int MaxModes = 100;
+    constexpr int CustomModeSlots = 3;
     std::vector<std::pair<int32_t, int32_t>> Modes;
-    std::vector<int32_t> ModeMessages;
+    std::array<int32_t, MaxModes> ModeMessages{};
+    std::array<std::array<uint16_t, 24>, MaxModes> ModeText{};
+    int FirstCustomMode = 0;
     int CurrentMode = 0;
     bool RowChanged = false;
-    bool StoringSize = false;
+    std::pair<int32_t, int32_t> LastResolutionSettings;
     uint8_t* SavedResolution = nullptr;     // the options block's Resolution byte
     constexpr int32_t ResolutionMessage = 0x7F00;
     SafetyHookInline MessageHook, ApplyChoiceHook;
@@ -442,28 +453,27 @@ namespace
     int(__cdecl* NativeRow)(uint8_t*) = nullptr;
     int32_t* ChoiceGate[2] = {};
 
+    void SetModeLabel(int index)
+    {
+        auto [width, height] = Modes[index];
+        const auto label = std::format("{}x{}", width, height);
+        auto text = ModeText[index].begin();
+        for (size_t i = 0; i < label.size(); ++i)
+        {
+            // Tighten longer labels to leave room for the native arrows.
+            if (i && label.size() > 7)
+                *text++ = 0xFC02;
+            *text++ = uint16_t(256 - uint8_t(label[i]));
+        }
+        *text++ = 0xFFFF;
+        *text = 0x8000;
+        ModeMessages[index] = ResolutionMessage + index;
+    }
+
     const uint16_t* __cdecl Message(int bank, int id)
     {
         if (bank == 0 && id >= ResolutionMessage && id < ResolutionMessage + int(Modes.size()))
-        {
-            static std::map<int, std::vector<uint16_t>> texts;
-            auto& text = texts[id];
-            if (text.empty())
-            {
-                // Longer than the native "640x480": tighten the letters (0xFCnn moves back n units) to stay clear of the arrow
-                auto [width, height] = Modes[id - ResolutionMessage];
-                auto value = std::format("{}x{}", width, height);
-                for (size_t i = 0; i < value.size(); ++i)
-                {
-                    if (i && value.size() > 7)
-                        text.push_back(0xFC02);
-                    text.push_back(uint16_t(256 - uint8_t(value[i])));
-                }
-                text.push_back(0xFFFF);
-                text.push_back(0x8000);
-            }
-            return text.data();
-        }
+            return ModeText[id - ResolutionMessage].data();
         return MessageHook.ccall<const uint16_t*>(bank, id);
     }
 
@@ -497,9 +507,31 @@ namespace
         return it == Modes.end() ? -1 : int(it - Modes.begin());
     }
 
+    int AddCustomMode(int32_t width, int32_t height)
+    {
+        int index = int(Modes.size());
+        if (index < FirstCustomMode + CustomModeSlots)
+            Modes.emplace_back(width, height);
+        else
+        {
+            index = FirstCustomMode;
+            while (index == CurrentMode || (RowChanged && index == *SavedResolution))
+                ++index;
+            Modes[index] = { width, height };
+        }
+        SetModeLabel(index);
+        return index;
+    }
+
+    std::pair<int32_t, int32_t> ReadResolutionSettings()
+    {
+        return { FixSettingNumber("MAIN.ResX", 0), FixSettingNumber("MAIN.ResY", 0) };
+    }
+
     void SetupResolutions()
     {
-        if (FixSettings().Int("MAIN.WindowMode") == 2)
+        LastResolutionSettings = ReadResolutionSettings();
+        if (SHDisplay::Get().mode == SHDisplay::Mode::Borderless)
             Modes = { { Screen.Width, Screen.Height } };
         else
         {
@@ -508,21 +540,20 @@ namespace
             for (auto& entry : list)
             {
                 int32_t width = 0, height = 0;
-                if (sscanf_s(entry.c_str(), "%dx%d", &width, &height) == 2 && ModeIndex(width, height) < 0)
+                if (sscanf_s(entry.c_str(), "%dx%d", &width, &height) == 2 && width > 0 && height > 0 &&
+                    width <= 16384 && height <= 16384 && ModeIndex(width, height) < 0)
                     Modes.emplace_back(width, height);
             }
-            if (ModeIndex(Screen.Width, Screen.Height) < 0)
-            {
-                Modes.emplace_back(Screen.Width, Screen.Height);
-                std::sort(Modes.begin(), Modes.end());
-            }
-            // The options keep the choice in a signed byte
-            while (Modes.size() > 100)
+            // The options keep the choice in a signed byte.
+            while (Modes.size() > MaxModes - CustomModeSlots)
                 Modes.erase(Modes.begin() + (Modes.front() == std::pair{ Screen.Width, Screen.Height } ? 1 : 0));
         }
-        CurrentMode = std::max(0, ModeIndex(Screen.Width, Screen.Height));
-        for (size_t i = 0; i < Modes.size(); ++i)
-            ModeMessages.push_back(ResolutionMessage + int32_t(i));
+        FirstCustomMode = int(Modes.size());
+        for (int index = 0; index < FirstCustomMode; ++index)
+            SetModeLabel(index);
+        CurrentMode = ModeIndex(Screen.Width, Screen.Height);
+        if (CurrentMode < 0)
+            CurrentMode = AddCustomMode(Screen.Width, Screen.Height);
 
         auto lookup = hook::pattern("56 8B 74 24 08 85 F6 7D 06 8B 44 24 0C");
         auto resolutionRow = hook::pattern("89 BF A8 00 00 00 C7 87 AC 00 00 00 ? ? ? ? 89 9F F8 00 00 00");
@@ -570,6 +601,24 @@ namespace
         {
             if (!RowChanged)
                 *SavedResolution = uint8_t(CurrentMode);
+
+            const auto requested = ReadResolutionSettings();
+            if (requested == LastResolutionSettings)
+                return;
+            LastResolutionSettings = requested;
+            if (SHDisplay::Get().mode == SHDisplay::Mode::Borderless)
+                return;
+            auto [width, height] = requested;
+            if (width <= 0 || height <= 0)
+                std::tie(width, height) = GetDesktopRes();
+            if (width <= 0 || height <= 0 || width > 16384 || height > 16384)
+                return;
+            int index = ModeIndex(width, height);
+            if (index < 0 && SHDisplay::Get().mode == SHDisplay::Mode::Windowed)
+                index = AddCustomMode(width, height);
+            // Selecting the applied size also cancels a queued resize.
+            if (index >= 0)
+                nResolutionRequest = index;
         });
 
         // A new size takes effect once the device has it, and is kept in the settings
@@ -582,32 +631,26 @@ namespace
             SetScreen(width, height);
             *reinterpret_cast<float*>(reinterpret_cast<uint8_t*>(RenderCamera.get_ptr()) + 0x48) = 0.78125f / Screen.Scale;
             RenderCamera->nFlags |= 1;
-            CurrentMode = std::max(0, ModeIndex(width, height));
-            if (FixSettings().Int("MAIN.WindowMode") != 2)
+            const auto index = ModeIndex(width, height);
+            if (index >= 0)
+                CurrentMode = index;
+            else if (display.mode == SHDisplay::Mode::Borderless && Modes.size() == 1)
+            {
+                Modes.front() = { width, height };
+                SetModeLabel(0);
+                CurrentMode = 0;
+            }
+            else
+                CurrentMode = AddCustomMode(width, height);
+            if (SHDisplay::Get().mode != SHDisplay::Mode::Borderless && ReadResolutionSettings() == LastResolutionSettings)
             {
                 auto [desktopWidth, desktopHeight] = GetDesktopRes();
                 const bool desktop = width == desktopWidth && height == desktopHeight;
-                StoringSize = true;
-                FixSettings().Set("MAIN.ResX", std::to_string(desktop ? 0 : width));
-                FixSettings().Set("MAIN.ResY", std::to_string(desktop ? 0 : height));
-                StoringSize = false;
+                LastResolutionSettings = { desktop ? 0 : width, desktop ? 0 : height };
+                FixSettings().Set("MAIN.ResX", std::to_string(LastResolutionSettings.first));
+                FixSettings().Set("MAIN.ResY", std::to_string(LastResolutionSettings.second));
             }
         });
-
-        // A resolution set from outside the game applies when it is one of the list's
-        auto changed = []()
-        {
-            if (StoringSize)
-                return;
-            int32_t width = FixSettings().Int("MAIN.ResX"), height = FixSettings().Int("MAIN.ResY");
-            if (width <= 0 || height <= 0)
-                std::tie(width, height) = GetDesktopRes();
-            const int index = ModeIndex(width, height);
-            if (index >= 0 && index != CurrentMode)
-                nResolutionRequest = index;
-        };
-        FixSettings().OnChange("MAIN.ResX", changed);
-        FixSettings().OnChange("MAIN.ResY", changed);
     }
 }
 
@@ -618,15 +661,7 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CinematicBars = &FixSettings().Int("MAIN.CutsceneBorders");
-            FOVFactor = &FixSettings().Float("MAIN.FOVFactor");
-            auto updateHUD = []()
-            {
-                const auto aspect = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
-                HudAspectRatioConstraint.store(aspect && std::isfinite(*aspect) && *aspect > 0.0f ? *aspect : 0.0f, std::memory_order_relaxed);
-            };
-            updateHUD();
-            FixSettings().OnChange("MAIN.HudAspectRatioConstraint", updateHUD);
+            ReadFramingSettings();
             auto indicator = hook::pattern("57 33 C0 B9 26 00 00 00 BF ? ? ? ? F3 AB 6A 02 68 ? ? ? ? A3 ? ? ? ? A2");
             auto gauge = hook::pattern("A0 ? ? ? ? 83 EC 08 A8 04 0F 84 ? ? ? ? A1 ? ? ? ? 85 C0 0F 84");
             auto drawSprite = hook::pattern("8B 44 24 08 83 F8 03 77 ? 56 FF 24 85 ? ? ? ? 53 8B 5C 24 0C");
@@ -642,15 +677,42 @@ public:
                 auto x = reinterpret_cast<float*>(regs.esp);
                 *x -= HudOffset();
             });
-            if (!HudSpriteHook || !HudCircleHook)
+            // The quick item bar: each slot (its item and the selection frame) is drawn from the slot's position,
+            // moved to the side for the draw only
+            auto slots = hook::pattern("BE ? ? ? ? BF 0A 00 00 00 8D A4 24 00 00 00 00 56 E8 ? ? ? ? 83 C4 04 81 C6 B0 00 00 00 4F");
+            ItemSlotBegin = safetyhook::create_mid(slots.get_first(17), [](SafetyHookContext& regs)
+            {
+                auto x = reinterpret_cast<float*>(regs.esi + 0x30);
+                ItemSlotX = *x;
+                *x = ItemSlotX - HudOffset();
+            });
+            ItemSlotEnd = safetyhook::create_mid(slots.get_first(23), [](SafetyHookContext& regs)
+            {
+                *reinterpret_cast<float*>(regs.esi + 0x30) = ItemSlotX;
+            });
+            // The selection frame takes the selected slot's place (48 * slot + 41) when the bar opens or the item is used
+            auto cursorOpen = hook::pattern("8D 04 76 C1 E0 04 83 C0 29 89 44 24 08");
+            auto cursorUse = hook::pattern("8D 0C 40 C1 E1 04 83 C1 29 89 4C 24 00");
+            ItemCursorHooks[0] = safetyhook::create_mid(cursorOpen.get_first(6), [](SafetyHookContext& regs)
+            {
+                regs.eax -= uintptr_t(std::lround(HudOffset()));
+            });
+            ItemCursorHooks[1] = safetyhook::create_mid(cursorUse.get_first(6), [](SafetyHookContext& regs)
+            {
+                regs.ecx -= uintptr_t(std::lround(HudOffset()));
+            });
+            if (!HudSpriteHook || !HudCircleHook || !ItemSlotBegin || !ItemSlotEnd || !ItemCursorHooks[0] || !ItemCursorHooks[1])
                 std::terminate();
 
             // The move intent, player status and game mode are bound in Init
-            SHDisplay::OnPresent().push_back([]() { FramingCleared = false; });
+            SHDisplay::OnPresent().push_back([]()
+            {
+                FramingCleared = false;
+                ReadFramingSettings();
+            });
 
-            Screen.Width = FixSettings().Int("MAIN.ResX");
-            Screen.Height = FixSettings().Int("MAIN.ResY");
-            if (FixSettings().Int("MAIN.WindowMode") == 2 || Screen.Width <= 0 || Screen.Height <= 0 || Screen.Width > 16384 || Screen.Height > 16384)
+            std::tie(Screen.Width, Screen.Height) = ReadResolutionSettings();
+            if (SHDisplay::Get().mode == SHDisplay::Mode::Borderless || Screen.Width <= 0 || Screen.Height <= 0 || Screen.Width > 16384 || Screen.Height > 16384)
                 std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
             if (Screen.Width <= 0 || Screen.Height <= 0)
                 std::tie(Screen.Width, Screen.Height) = std::make_tuple(640, 480);
@@ -707,7 +769,7 @@ public:
             SHDisplay::OnPresent().push_back([]()
             {
                 for (int i = 0; i < 2; ++i)
-                    Gates[i] = (*CinematicBars & 1) ? aCinemaBarFlags[i].get() : 0;
+                    Gates[i] = (CinematicBars & 1) ? aCinemaBarFlags[i].get() : 0;
             });
             auto bars = hook::pattern("E8 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00 E8 ? ? ? ? E8 ? ? ? ? 6A 01 E8");
             DrawCinemaBars = reinterpret_cast<decltype(DrawCinemaBars)>(injector::GetBranchDestination(bars.get_first()).as_int());

@@ -10,20 +10,31 @@ namespace TonyModeSwitch
     inline void (__cdecl* Recover)() = nullptr;
     inline uint8_t* Lost = nullptr;
     inline D3DPRESENT_PARAMETERS* Parameters = nullptr;
-    inline std::atomic<bool> Pending{ false };
+    inline std::atomic<HWND> PendingWindow{ nullptr };
     inline int LastWindowMode = 1;
     inline int Width = 0, Height = 0;
     inline RECT FramedRect{};
     inline bool HaveFramedRect = false;
     inline UINT FullscreenRefresh = 0;
 
-    // The game's window procedure: true when the message was Alt+Enter
-    inline bool Message(UINT message, WPARAM wParam, LPARAM lParam)
+    inline void Cancel(HWND window)
     {
+        PendingWindow.compare_exchange_strong(window, nullptr, std::memory_order_relaxed);
+    }
+
+    // The game's window procedure: true when the message was Alt+Enter
+    inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    {
+        if (message == WM_KILLFOCUS || message == WM_NCDESTROY ||
+            (message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE))
+        {
+            Cancel(window);
+            return false;
+        }
         if (wParam != VK_RETURN || (message != WM_SYSKEYDOWN && message != WM_SYSKEYUP))
             return false;
-        if (message == WM_SYSKEYDOWN && (lParam & (1u << 29)) && !(lParam & (1u << 30)))
-            Pending.store(true, std::memory_order_relaxed);
+        if (message == WM_SYSKEYDOWN && (lParam & (1u << 29)) && !(lParam & (1u << 30)) && GetForegroundWindow() == window)
+            PendingWindow.store(window, std::memory_order_relaxed);
         return true;
     }
 
@@ -67,13 +78,25 @@ namespace TonyModeSwitch
             *Lost = 1;
     }
 
+    inline bool TakePending(IDirect3DDevice9* device, HWND window)
+    {
+        auto pending = PendingWindow.load(std::memory_order_relaxed);
+        if (!pending)
+            return false;
+        if (pending != window || GetForegroundWindow() != window)
+        {
+            Cancel(pending);
+            return false;
+        }
+        return device && !*Lost && device->TestCooperativeLevel() == D3D_OK &&
+            PendingWindow.compare_exchange_strong(pending, nullptr, std::memory_order_relaxed) && GetForegroundWindow() == window;
+    }
+
     // After a presented frame
     inline void Update(IDirect3DDevice9* device, HWND window)
     {
-        if (!Pending.load(std::memory_order_relaxed) || !device || !window || GetForegroundWindow() != window ||
-            *Lost || device->TestCooperativeLevel() != D3D_OK)
+        if (!TakePending(device, window))
             return;
-        Pending.store(false, std::memory_order_relaxed);
         const auto saved = *Parameters;
         const int previousMode = TonyDisplay::Mode;
         const int nextMode = previousMode ? 0 : LastWindowMode;

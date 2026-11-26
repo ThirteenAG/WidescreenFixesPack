@@ -2,9 +2,12 @@
 #include "CinemaGeometry.hpp"
 #include <cstring>
 
-namespace scda {
-namespace {
-struct alignas(16) DrawRect {
+namespace scda
+{
+namespace
+{
+struct alignas(16) DrawRect
+{
     float left, top, right, bottom, u1, v1, u2, v2;
     uint32_t color, texture;
 };
@@ -35,18 +38,21 @@ struct Scope { Scope() { ++magmaDepth; } ~Scope() { --magmaDepth; } };
 // filled at run time) use the extent they drew in the previous frame.
 struct Box { float left = 1e9f, right = -1e9f, top = 1e9f, bottom = -1e9f; };
 bool Empty(const Box& b) { return b.left > b.right || b.top > b.bottom; }
-void Add(Box& b, float l, float r, float t, float u) {
+void Add(Box& b, float l, float r, float t, float u)
+{
     if (l < b.left) b.left = l;
     if (r > b.right) b.right = r;
     if (t < b.top) b.top = t;
     if (u > b.bottom) b.bottom = u;
 }
 float Area(const Box& b) { return (b.right - b.left) * (b.bottom - b.top); }
-bool Inside(const Box& a, const Box& b) {
+bool Inside(const Box& a, const Box& b)
+{
     constexpr float slack = 4;
     return a.left >= b.left - slack && a.right <= b.right + slack && a.top >= b.top - slack && a.bottom <= b.bottom + slack;
 }
-struct Group {
+struct Group
+{
     uintptr_t item;
     Box box;             // base units
     float center, half;  // frame centre and half width, in viewport widths
@@ -75,18 +81,44 @@ Drawn* drawing;           // its drawn-extent record when it has no layout
 constexpr uint32_t CinematicGroup = 0x467fe0a7;
 constexpr uint32_t TopCinemaBar = 0xDFD2DFBF, BottomCinemaBar = 0x874DD618;
 
+struct CinemaBarDraw
+{
+    void* renderer;
+    DrawRect area;
+    float height, scaleY, offsetY;
+    bool top, valid;
+};
+CinemaBarDraw pendingBar;
+
+uint64_t DrawNativeBar(CinemaBarDraw bar, bool fixedHeight)
+{
+    auto& copy = bar.area;
+    if (fixedHeight)
+    {
+        copy.top = (bar.top ? -2.0f : 350.0f) * bar.height / 448.0f;
+        copy.bottom = (bar.top ? 96.0f : 455.0f) * bar.height / 448.0f;
+    }
+    copy.top = copy.top * bar.scaleY + bar.offsetY;
+    copy.bottom = copy.bottom * bar.scaleY + bar.offsetY;
+    return rect.call(bar.renderer, &copy);
+}
+
 bool Valid(uintptr_t address) { return address != 0; }
 // Magma strings: {flags | length << 1, inline chars} or {flags | 1, length, chars*}.
 // Returns 1 for "hud", 2 for the coop "hud_split" and "hud_split2".
-int HudName(uintptr_t string) {
+int HudName(uintptr_t string)
+{
     const uint32_t head = Read<uint32_t>(string);
     uint32_t length; const char* chars;
-    if (head & 1) {
+    if (head & 1)
+    {
         length = Read<uint32_t>(string + 4);
         const auto data = Read<uintptr_t>(string + 8);
         if (!data) return 0;
         chars = reinterpret_cast<const char*>(data);
-    } else {
+    }
+    else
+    {
         length = (head & 0xFF) >> 1;
         chars = reinterpret_cast<const char*>(string + 1);
     }
@@ -97,11 +129,13 @@ int HudName(uintptr_t string) {
 }
 // A root node {vtbl, capacity, count, children} belongs to the hud package when
 // its area children {vtbl, &element, element, ..., +32 package} point to it.
-int HudRoot(uintptr_t node) {
+int HudRoot(uintptr_t node)
+{
     const auto count = Read<uint32_t>(node + 8);
     const auto children = Read<uintptr_t>(node + 12);
     if (!count || count > 256 || !Valid(children)) return 0;
-    for (uint32_t i = 0; i < count && i < 8; ++i) {
+    for (uint32_t i = 0; i < count && i < 8; ++i)
+    {
         const auto item = Read<uintptr_t>(children + 4 * i);
         if (!Valid(item)) return 0;
         const auto object = Read<uintptr_t>(item + 8);
@@ -112,13 +146,15 @@ int HudRoot(uintptr_t node) {
     return 0;
 }
 // Extent of an object's elements in base units; x, y is its area origin.
-void Measure(uintptr_t object, int x, int y, unsigned depth, Box& box, unsigned& budget) {
+void Measure(uintptr_t object, int x, int y, unsigned depth, Box& box, unsigned& budget)
+{
     if (depth > 8 || !budget || !Valid(object)) return;
     --budget;
     const auto element = Read<uintptr_t>(object + 4);
     if (!Valid(element)) return;
     const auto type = Read<uint32_t>(element);
-    if (type == game.areaElement) {
+    if (type == game.areaElement)
+    {
         // Area and list objects keep their children {vtbl, capacity, count, items} at +28.
         x += Read<int16_t>(element + 8); y += Read<int16_t>(element + 10);
         const auto list = Read<uintptr_t>(object + 28);
@@ -126,24 +162,29 @@ void Measure(uintptr_t object, int x, int y, unsigned depth, Box& box, unsigned&
         const auto count = Read<uint32_t>(list + 8);
         const auto items = Read<uintptr_t>(list + 12);
         if (!count || count > 64 || !Valid(items)) return;
-        for (uint32_t i = 0; i < count; ++i) {
+        for (uint32_t i = 0; i < count; ++i)
+        {
             const auto item = Read<uintptr_t>(items + 4 * i);
             if (Valid(item)) Measure(Read<uintptr_t>(item + 8), x, y, depth + 1, box, budget);
         }
-    } else if (type == game.imageElement || type == game.textElement || type == game.rectElement) {
+    }
+    else if (type == game.imageElement || type == game.textElement || type == game.rectElement)
+    {
         const int l = x + Read<int16_t>(element + 8), r = x + Read<int16_t>(element + 10);
         const int t = y + Read<int16_t>(element + 12), b = y + Read<int16_t>(element + 14);
         if (l <= r && t <= b) Add(box, float(l), float(r), float(t), float(b));
     }
 }
-Drawn* FindDrawn(uintptr_t item, bool create) {
+Drawn* FindDrawn(uintptr_t item, bool create)
+{
     for (auto& d : drawn) if (d.item == item) return &d;
     if (!create) return nullptr;
     Drawn& d = drawn[drawnNext++ % MaxDrawn];
     d = {item, hudRoot, {}, {}};
     return &d;
 }
-void Classify(uintptr_t root, bool split) {
+void Classify(uintptr_t root, bool split)
+{
     groupCount = 0;
     const auto count = Read<uint32_t>(root + 8);
     const auto children = Read<uintptr_t>(root + 12);
@@ -151,7 +192,8 @@ void Classify(uintptr_t root, bool split) {
     const int baseW = Valid(context) ? Read<int16_t>(context + 132) : 0;
     const int baseH = Valid(context) ? Read<int16_t>(context + 134) : 0;
     if (baseW <= 0 || baseH <= 0 || !Valid(children)) return;
-    for (uint32_t i = 0; i < count && groupCount < MaxGroups; ++i) {
+    for (uint32_t i = 0; i < count && groupCount < MaxGroups; ++i)
+    {
         const auto item = Read<uintptr_t>(children + 4 * i);
         if (!Valid(item)) continue;
         Group& g = groups[groupCount++];
@@ -161,7 +203,8 @@ void Classify(uintptr_t root, bool split) {
         unsigned budget = 256;
         Measure(Read<uintptr_t>(item + 8), 0, 0, 0, g.box, budget);
         g.layout = !Empty(g.box);
-        if (!g.layout) {
+        if (!g.layout)
+        {
             const Drawn* d = FindDrawn(item, false);
             if (!d || Empty(d->box)) continue;
             g.box = d->box;
@@ -179,11 +222,13 @@ void Classify(uintptr_t root, bool split) {
         g.vertical = gapTop - gapBottom < -0.25f ? -1 : gapTop - gapBottom > 0.25f ? 1 : 0;
     }
     // Parts drawn inside a sided group (stealth meter lights, weapon icon) follow it.
-    for (unsigned i = 0; i < groupCount; ++i) {
+    for (unsigned i = 0; i < groupCount; ++i)
+    {
         Group& g = groups[i];
         if (!g.valid) continue;
         const Group* owner = nullptr;
-        for (unsigned j = 0; j < groupCount; ++j) {
+        for (unsigned j = 0; j < groupCount; ++j)
+        {
             const Group& o = groups[j];
             if (j == i || !o.valid || !o.side || !Inside(g.box, o.box) || Area(o.box) <= Area(g.box)) continue;
             if (!owner || Area(o.box) > Area(owner->box)) owner = &o;
@@ -191,7 +236,8 @@ void Classify(uintptr_t root, bool split) {
         if (owner) { g.center = owner->center; g.half = owner->half; g.side = owner->side; g.vertical = owner->vertical; }
     }
 }
-uint64_t NodeRender(void* node) {
+uint64_t NodeRender(void* node)
+{
     if (hudRoot) return nodeRender.call(node);
     const int kind = HudRoot(uintptr_t(node));
     if (!kind) return nodeRender.call(node);
@@ -207,11 +253,14 @@ uint64_t NodeRender(void* node) {
     hudKind = 0;
     return result;
 }
-uint64_t ChildRender(void* child) {
+uint64_t ChildRender(void* child)
+{
     const bool top = hudRoot && childDepth == hudChildDepth;
-    if (top) {
+    if (top)
+    {
         group = nullptr; drawing = nullptr;
-        for (unsigned i = 0; i < groupCount; ++i) {
+        for (unsigned i = 0; i < groupCount; ++i)
+        {
             const Group& g = groups[i];
             if (g.item != uintptr_t(child)) continue;
             if (!g.layout) drawing = FindDrawn(g.item, true);
@@ -220,23 +269,34 @@ uint64_t ChildRender(void* child) {
         }
     }
     const uint32_t previousBar = activeCinemaBar;
-    if (group && Read<uint32_t>(group->item + 4) == CinematicGroup) {
+    if (group && Read<uint32_t>(group->item + 4) == CinematicGroup)
+    {
         const uint32_t id = Read<uint32_t>(uintptr_t(child) + 4);
         if (id == TopCinemaBar || id == BottomCinemaBar) activeCinemaBar = id;
     }
     ++childDepth; const auto result = childRender.call(child); --childDepth;
     activeCinemaBar = previousBar;
-    if (top) { group = nullptr; drawing = nullptr; }
+    if (top)
+    {
+        if (pendingBar.valid)
+        {
+            DrawNativeBar(pendingBar, false);
+            pendingBar.valid = false;
+        }
+        group = nullptr; drawing = nullptr;
+    }
     return result;
 }
 
-bool Viewport(float& width, float& height, console::Transform& transform) {
+bool Viewport(float& width, float& height, console::Transform& transform)
+{
     const auto engine = Read<uintptr_t>(game.engine), context = Read<uintptr_t>(game.context);
     if (!engine || !context) return false;
     const auto device = Read<uintptr_t>(engine + 48);
     if (!device) return false;
     auto canvas = Read<uintptr_t>(engine + 52);
-    if (!canvas) {
+    if (!canvas)
+    {
         const auto owner = Read<uintptr_t>(device + 72);
         if (!owner) return false;
         const auto slot = Read<uintptr_t>(owner + 48);
@@ -264,8 +324,10 @@ bool Viewport(float& width, float& height, console::Transform& transform) {
     return std::isfinite(scale) && scale > 0;
 }
 // The horizontal offset of the drawing group's transform (x' = x * scaleX + offset).
-float GroupOffset(float left, float top, float right, float bottom, float width, float height, const console::Transform& transform) {
-    if (drawing) {
+float GroupOffset(float left, float top, float right, float bottom, float width, float height, const console::Transform& transform)
+{
+    if (drawing)
+    {
         const auto context = Read<uintptr_t>(game.context);
         const float sx = float(Read<int16_t>(context + 132)) / width, sy = float(Read<int16_t>(context + 134)) / height;
         Add(drawing->next, left * sx, right * sx, top * sy, bottom * sy);
@@ -280,7 +342,8 @@ float GroupOffset(float left, float top, float right, float bottom, float width,
     const float target = frameLeft + console::hud_edge(anchor - frameLeft, frameWidth, frameAspect, hudConstraint);
     return target - transform.scaleX * anchor;
 }
-float GroupOffsetY(float height, const console::Transform& transform) {
+float GroupOffsetY(float height, const console::Transform& transform)
+{
     if (!group || !group->vertical) return transform.offsetY;
     const float size = Read<uint32_t>(group->item + 4) == CinematicGroup ? 1.0f : hudSize;
     const float anchor = group->vertical < 0 ? 0.0f : height;
@@ -290,10 +353,12 @@ float GroupOffsetY(float height, const console::Transform& transform) {
 #ifdef WFP_PS2_DEBUG
 // PINE-readable: magic 'MGDR', count, then {kind, l, r, t, b, texture, color, width} (floats as bits).
 uint32_t drawTrace[2 + 8 * 256] = {0x5244474D};
-void Trace(uint32_t kind, float l, float r, float t, float b, uint32_t texture, uint32_t color, float width) {
+void Trace(uint32_t kind, float l, float r, float t, float b, uint32_t texture, uint32_t color, float width)
+{
     if (!traceDraws || drawTrace[1] >= 256) return;
     float v[] = {l, r, t, b, width}; uint32_t bits[5]; std::memcpy(bits, v, sizeof(v));
-    for (unsigned i = 0; i < drawTrace[1]; ++i) {
+    for (unsigned i = 0; i < drawTrace[1]; ++i)
+    {
         const uint32_t* e = drawTrace + 2 + 8 * i;
         if (e[0] == kind && e[1] == bits[0] && e[2] == bits[1] && e[3] == bits[2] && e[4] == bits[3]) return;
     }
@@ -305,48 +370,61 @@ void Trace(uint32_t kind, float l, float r, float t, float b, uint32_t texture, 
 volatile uint32_t groupTrace[4] = {0x50555247, 0, 0, sizeof(Group)};
 void TraceGroups() { groupTrace[1] = uint32_t(uintptr_t(groups)); groupTrace[2] = groupCount; }
 #endif
-bool Overlay(uint32_t color) {
+bool Overlay(uint32_t color)
+{
     return color == 0x96DAFAEC || color == 0x96C3B081 || color == 0x00C3B081;
 }
 bool Black(uint32_t color) { return !(color & 0x00FFFFFF); }
 bool SpansWidth(float left, float right, float width) { return left <= 1 && right >= width - 1; }
-bool Full(float left, float top, float right, float bottom, float width, float height) {
+bool Full(float left, float top, float right, float bottom, float width, float height)
+{
     return SpansWidth(left, right, width) && top <= 1 && bottom >= height - 1;
 }
-uint64_t Draw(void* renderer, DrawRect* source) {
+uint64_t Draw(void* renderer, DrawRect* source)
+{
     float width, height; console::Transform transform;
     if (!magmaDepth || !source || !Viewport(width, height, transform) || Overlay(source->color)) return rect.call(renderer, source);
     DrawRect copy = *source;
     if (hudKind == 1 && activeCinemaBar && group && Read<uint32_t>(group->item + 4) == CinematicGroup &&
-        Black(copy.color) && SpansWidth(copy.left, copy.right, width)) {
+        Black(copy.color) && SpansWidth(copy.left, copy.right, width))
+        {
         const bool topBar = activeCinemaBar == TopCinemaBar;
         // A communication panel can also contain a single full-width black
         // rectangle. Only the observed paired top and bottom bars define a
         // cinematic frame; a lone panel must not change the camera.
         const bool paired = cinemaBars.observe(topBar, topBar ? copy.bottom : height - copy.top, height);
+        const CinemaBarDraw current{renderer, copy, height, transform.scaleY, GroupOffsetY(height, transform), topBar, true};
+        if (!paired)
+        {
+            if (pendingBar.valid) DrawNativeBar(pendingBar, false);
+            pendingBar = current;
+            return 0;
+        }
         cinemaVisible = cinemaBars.visible;
         const float visible = cinemaAnimated ? cinemaVisible : (cinemaVisible < .999f ? 254.0f / 448.0f : 1.0f);
         const auto fit = CinemaFit(Aspect(), visible, cinemaMode);
-        if (paired && topBar && cinemaMode != 0 && cinemaVisible < .999f) {
+        const bool fixedHeight = !cinemaAnimated && cinemaVisible < .999f;
+        if (pendingBar.valid && cinemaMode != 0 && cinemaVisible < .999f)
+        {
             // Masks keep the bar's solid-fill texture; untextured rects are not drawn here.
             DrawRect mask = copy; mask.color = 0xFF000000;
-            auto fill = [&](float l, float t, float r, float b) {
-                if (r - l > .001f && b - t > .001f) {
+            auto fill = [&](float l, float t, float r, float b)
+            {
+                if (r - l > .001f && b - t > .001f)
+                {
                     mask.left = l; mask.top = t; mask.right = r; mask.bottom = b;
                     rect.call(renderer, &mask);
                 }
             };
-            if (cinemaMode >= 2) {
+            if (cinemaMode >= 2)
+            {
                 fill(0, 0, fit.left * width, height); fill(fit.right * width, 0, width, height);
             }
-            if (cinemaMode == 2) { fill(0, 0, width, fit.top * height); fill(0, fit.bottom * height, width, height); }
-            if (cinemaMode == 1 || cinemaMode == 3) { fill(0, 0, width, fit.framePad * height); fill(0, (1 - fit.framePad) * height, width, height); }
+            if (fit.nativeBars) { fill(0, 0, width, fit.framePad * height); fill(0, (1 - fit.framePad) * height, width, height); }
         }
-        if (paired && !fit.nativeBars) return 0;
-        if (paired && !cinemaAnimated && cinemaVisible < .999f) {
-            if (topBar) { copy.top = -2.0f * height / 448.0f; copy.bottom = 96.0f * height / 448.0f; }
-            else { copy.top = 350.0f * height / 448.0f; copy.bottom = 455.0f * height / 448.0f; }
-        }
+        if (pendingBar.valid && fit.nativeBars) DrawNativeBar(pendingBar, fixedHeight);
+        pendingBar.valid = false;
+        return fit.nativeBars ? DrawNativeBar(current, fixedHeight) : 0;
     }
 #ifdef WFP_PS2_DEBUG
     Trace(0x43524746, copy.left, copy.right, copy.top, copy.bottom, copy.texture, copy.color, width);
@@ -355,7 +433,8 @@ uint64_t Draw(void* renderer, DrawRect* source) {
     const bool full = Full(copy.left, copy.top, copy.right, copy.bottom, width, height);
     // Screen fades remain full viewport; artwork is fitted without stretching.
     if (full && !copy.texture) return rect.call(renderer, source);
-    if (full) {
+    if (full)
+    {
         DrawRect background = copy;
         background.color = 0xFF000000; background.texture = 0;
         rect.call(renderer, &background);
@@ -363,7 +442,8 @@ uint64_t Draw(void* renderer, DrawRect* source) {
     // Black bars across the whole viewport (cinematic borders) keep their width;
     // only artwork and HUD elements are contained. Magma binds a default white
     // texture to solid fills, so the colour identifies them.
-    if (!Black(copy.color) || !SpansWidth(copy.left, copy.right, width)) {
+    if (!Black(copy.color) || !SpansWidth(copy.left, copy.right, width))
+    {
         const float offset = GroupOffset(copy.left, copy.top, copy.right, copy.bottom, width, height, transform);
         copy.left = copy.left * transform.scaleX + offset; copy.right = copy.right * transform.scaleX + offset;
     }
@@ -373,16 +453,19 @@ uint64_t Draw(void* renderer, DrawRect* source) {
 }
 uint64_t Image(void* object) { Scope scope; return image.call(object); }
 uint64_t Border(void* object) { Scope scope; return border.call(object); }
-uint64_t Text(void* object, void* string, int32_t x, int32_t y, void* style, int32_t length, float scale) {
+uint64_t Text(void* object, void* string, int32_t x, int32_t y, void* style, int32_t length, float scale)
+{
     Scope scope; return text.call(object, string, x, y, style, length, scale);
 }
 }
-void InstallHud() {
+void InstallHud()
+{
     image.create(game.image, Image); text.create(game.text, Text); border.create(game.border, Border);
     rect.create(game.rect, Draw);
     nodeRender.create(game.nodeRender, NodeRender);
     childRender.create(game.childRender, ChildRender);
-    quad = safetymips::create_mid(game.quad, [](SafetyMipsContext& regs) {
+    quad = safetymips::create_mid(game.quad, [](SafetyMipsContext& regs)
+    {
         float width, height;
         transformQuad = magmaDepth && !Overlay(uint32_t(regs.a1)) && Viewport(width, height, quadTransform);
         if (!transformQuad) return;
@@ -392,7 +475,8 @@ void InstallHud() {
         const float x[] = {regs.f12, regs.f16, Read<float>(stack), Read<float>(stack + 32)};
         const float y[] = {regs.f13, regs.f17, Read<float>(stack + 8), Read<float>(stack + 40)};
         float left = x[0], right = x[0], top = y[0], bottom = y[0];
-        for (unsigned i = 1; i < 4; ++i) {
+        for (unsigned i = 1; i < 4; ++i)
+        {
             if (x[i] < left) left = x[i];
             if (x[i] > right) right = x[i];
             if (y[i] < top) top = y[i];
@@ -406,8 +490,10 @@ void InstallHud() {
         else quadTransform.offsetX = GroupOffset(left, top, right, bottom, width, height, quadTransform);
         if (transformQuad) quadTransform.offsetY = GroupOffsetY(height, quadTransform);
     });
-    vertex = safetymips::create_mid(game.vertex, [](SafetyMipsContext& regs) {
-        if (transformQuad && magmaDepth && uintptr_t(regs.ra) >= game.quad && uintptr_t(regs.ra) < game.vertex) {
+    vertex = safetymips::create_mid(game.vertex, [](SafetyMipsContext& regs)
+    {
+        if (transformQuad && magmaDepth && uintptr_t(regs.ra) >= game.quad && uintptr_t(regs.ra) < game.vertex)
+        {
             regs.f12 = quadTransform.x(regs.f12); regs.f13 = quadTransform.y(regs.f13);
         }
     });

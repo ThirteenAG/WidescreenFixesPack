@@ -22,6 +22,7 @@ export namespace GodfatherWindowModes
     void(__thiscall* updateRasters)(void*){};
     int(__stdcall* resizeFrontend)(int, int){};
     int framedWidth{}, framedHeight{};
+    void** frontendHeightSource{};
 
     template <typename T> T Read(T* pointer)
     {
@@ -141,7 +142,13 @@ export namespace GodfatherWindowModes
         }
         // Once the device has the new size, update the game's display state, frontend and camera rasters to match.
         const auto width = GodfatherWindow::width, height = GodfatherWindow::height;
-        if (Read(reinterpret_cast<int*>(manager + 4)) == width && Read(reinterpret_cast<int*>(manager + 8)) == height)
+        // The game also sets the display size itself (its Video Resolution when it returns to the main menu) without
+        // resizing the frontend, so the frontend's own size is checked too.
+        const auto frontendWidth = Read(reinterpret_cast<int*>(static_cast<unsigned char*>(Read(frontend)) + 0x18));
+        const auto frontendHeight = frontendHeightSource && *frontendHeightSource
+            ? Read(reinterpret_cast<int*>(static_cast<unsigned char*>(*frontendHeightSource) + 0x1C)) : height;
+        if (Read(reinterpret_cast<int*>(manager + 4)) == width && Read(reinterpret_cast<int*>(manager + 8)) == height
+            && frontendWidth == width && frontendHeight == height)
             return;
         const auto index = Prepare(width, height);
         if (index < 0)
@@ -179,6 +186,7 @@ export namespace GodfatherWindowModes
         updateRasters = reinterpret_cast<decltype(updateRasters)>(injector::GetBranchDestination(change.get_first(0x6A)).as_int());
         display.SetAddress(*manager.get_first<void**>(1));
         frontend.SetAddress(*frontendSize.get_first<void**>(1));
+        frontendHeightSource = *frontendSize.get_first<void**>(14);
         resizeFrontend = reinterpret_cast<decltype(resizeFrontend)>(frontendSize.get_first());
         selected.SetAddress(*selection.get_first<int*>(48));
         GodfatherWindow::service = Service;

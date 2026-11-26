@@ -46,7 +46,7 @@ export namespace Driv3rVideo
             const int screenWidth = BackbufferWidth, screenHeight = BackbufferHeight;
             if (!std::isfinite(width) || !std::isfinite(height) || width <= 0 || height <= 0 || screenWidth <= 0 || screenHeight <= 0)
                 return;
-            const auto frame = Fit(width / height, static_cast<float>(screenWidth) / screenHeight, FixSettings().Int("MAIN.FMVWidescreenMode"));
+            const auto frame = Fit(width / height, static_cast<float>(screenWidth) / screenHeight, Driv3rSettings::MovieMode.load());
             auto* quad = *reinterpret_cast<float**>(regs.eax + 8);
             const float u = quad[10], v = quad[11];
             quad[4] = frame.x;

@@ -22,7 +22,7 @@ export namespace KnightRiderFrame
         if (InputFrame)
             InputFrame();
         CursorConfinement::Frame(WindowedModeWrapper::GameHWND);
-        MaxPayneFrameRate::Limit(Limit.load(std::memory_order_relaxed));
+        MaxPayneFrameRate::Limit(Limit.load(std::memory_order_relaxed), 1000, WindowedModeWrapper::GameHWND);
         // The native interval is replaced by the precise limiter, before the game samples its clock.
         *reinterpret_cast<float*>(application + 108) = 0.0f;
         const float elapsed = *reinterpret_cast<float*>(application + 88);
@@ -49,10 +49,12 @@ export namespace KnightRiderFrame
     {
         const auto update = []()
         {
-            Limit.store(std::clamp(FixSettings().Int("MAIN.FPSLimit"), -1, 1000), std::memory_order_relaxed);
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            Limit.store(std::clamp(ReadFixNumber("MAIN.FPSLimit", 60), -1, 1000), std::memory_order_relaxed);
         };
-        update();
         FixSettings().OnChange("MAIN.FPSLimit", update);
+        update();
         // A 2 ms minimum advances game time faster than real time above 500 Hz, including idle polls.
         auto minimum = hook::pattern("C7 46 54 6F 12 03 3B D9 5E 50 D9 46 58 D8 46 54");
         injector::MakeNOP(minimum.get_first(), 7);

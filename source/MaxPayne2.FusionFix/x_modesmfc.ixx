@@ -101,6 +101,7 @@ namespace X_ModeSwitch
     // Max Payne 2 has no corrections for its physics at high frame rates: the frame rate limit, the refresh rate
     // included, stays at or below this
     constexpr int32_t MaxFPS = 240;
+    std::atomic<int32_t> fpsLimit{ -1 };
 
     // Before the last X_VideoInterface::endScene of the frame, after the overlaid modes (HUD) are
     // drawn. The bars the Fusion Fix adds are drawn here with P_Driver::clearScreen, the same
@@ -133,7 +134,6 @@ namespace X_ModeSwitch
         WFP::onGameProcessEvent().executeAll();
 
         // Frame rate limit, before the frame is shown
-        static auto& nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
         auto window = WindowedModeWrapper::GameHWND;
         if (!window || !IsWindow(window))
         {
@@ -149,12 +149,19 @@ namespace X_ModeSwitch
         CursorConfinement::Suspend(MaxPayneOverlay::BlocksInput());
         CursorConfinement::Frame(window);
         UpdateRawMouseWindow(window);
-        MaxPayneFrameRate::Limit(nFPSLimit, MaxFPS);
+        MaxPayneFrameRate::Limit(fpsLimit.load(std::memory_order_relaxed), MaxFPS, window);
     }
 }
 
 export void InitX_ModesMFC()
 {
+    auto& settings = FixSettings();
+    X_ModeSwitch::fpsLimit.store(settings.Int("MAIN.FPSLimit"), std::memory_order_relaxed);
+    settings.OnChange("MAIN.FPSLimit", []()
+    {
+        X_ModeSwitch::fpsLimit.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
+    });
+
     auto pattern = hook::module_pattern(GetModuleHandle(L"X_ModesMFC"), "8B 46 0D 83 F8 03 75 ? D9 46 11");
     static auto X_ModeSwitchUpdateHook = safetyhook::create_mid(pattern.get_first(), X_ModeSwitch::update); //0x10001914
 

@@ -1,18 +1,18 @@
 #pragma once
 #include "Game.hpp"
-#include "../Shared/Console/Input.hpp"
-#include "../Shared/Console/StoriesMouse.hpp"
-#include "../Shared/Console/StoriesBindings.hpp"
+#include "Shared/Console/Input.hpp"
+#include "Shared/Console/StoriesMouse.hpp"
+#include "Shared/Console/StoriesBindings.hpp"
 extern "C" {
-#include "../../external/injector/include/ps2/pcsx2f_api.h"
+#include "ps2/pcsx2f_api.h"
 }
 
 namespace lcs {
-// CControllerState, identical to the VCS layout (48 bytes).
+// CControllerState (48 bytes).
 struct Controller {
     int16_t leftX, leftY, rightX, rightY;
     int16_t l1, l2, r1, r2, up, down, left, right;
-    int16_t unused[4];
+    int16_t alternateDpad[4];
     int16_t start, select, square, triangle, cross, circle, l3, r3;
 };
 // LCS PS2 CPad (188 bytes, CPad::GetPad(n) = 0x408C60 + 188 * n).
@@ -31,6 +31,7 @@ struct Pad {
     uint8_t pad164[24];
 };
 static_assert(sizeof(Controller) == 48 && sizeof(Pad) == 188);
+static_assert(offsetof(Controller, alternateDpad) - offsetof(Controller, up) == sizeof(Controller::alternateDpad));
 static_assert(offsetof(Pad, current) == 2 && offsetof(Pad, previous) == 50);
 static_assert(offsetof(Pad, steeringBuffer) == 98 && offsetof(Pad, drunkIndex) == 120);
 static_assert(offsetof(Pad, mode) == 126 && offsetof(Pad, disabled) == 130);
@@ -71,8 +72,6 @@ void InstallButtonIcons();
 void InstallMenu();
 void LoadBindings();
 bool SaveBindings();
-// Applies the scheme-dependent code patches (menu toggles, device switch).
-void ApplyControls();
 // Typed cheats of the PC scheme.
 void UpdateCheats();
 // The GXT key whose text names the button an action has in the modern

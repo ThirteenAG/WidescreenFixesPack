@@ -13,9 +13,9 @@
 ## Features
 
 - **Skip intro** — the game starts at the title screen: Resident Evil 2 skips the warning screen and the title movie (also when it would play again on the idle title screen), Resident Evil 3 the warning screen, the licence notice, the Capcom logo and the title movie. The opening movie of a new game still plays.
-- **Skip doors** — the door animation between rooms is skipped; the next room appears as soon as it has loaded.
+- **Skip door animations** — the door animation between rooms is skipped; the next room appears as soon as it has loaded.
 - **Faster door transitions** — while the next room loads, Dolphin runs at full speed, so room changes finish sooner. Gameplay itself runs at normal speed.
-- **RGB lighting** — [Logitech G LIGHTSYNC](https://www.logitechg.com/innovation/lightsync-rgb.html) keyboards show your condition: green for Fine, orange for Caution, red for Danger, purple when poisoned, with a heartbeat effect. Needs Logitech G HUB.
+- **Logitech RGB lighting** — [Logitech G LIGHTSYNC](https://www.logitechg.com/innovation/lightsync-rgb.html) keyboards show your condition: green for Fine, orange for Caution, red for Danger, purple when poisoned, with a heartbeat effect. Needs Logitech G HUB.
 
 The fix recognises the USA, European and Japanese discs of Resident Evil 2 and Resident Evil 3: Nemesis; it was tested with the USA discs. RGB lighting is not available in the Japanese Resident Evil 2.
 
@@ -32,9 +32,9 @@ Change the settings in FusionFixHub, on fusionfix.io or in the `.cfg` file with 
 | Setting | Vanilla | Recommended (default) | Enhanced |
 |---|---|---|---|
 | Skip intro | Off | On | On |
-| Skip doors | Off | Off | On |
+| Skip door animations | Off | Off | On |
 | Faster door transitions | Off | Off | On |
-| RGB lighting | Off | On | On |
+| Logitech RGB lighting | Off | On | On |
 
 Setting texts are available in English, French, German, Italian and Spanish.
 

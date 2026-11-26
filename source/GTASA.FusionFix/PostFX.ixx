@@ -68,20 +68,20 @@ static IDirect3DDevice9* GetDevice9()
     return device;
 }
 
-static const int* pConsoleGamma = nullptr;
-static const int* pAntiAliasing = nullptr;
+static std::atomic_bool consoleGammaEnabled = false;
+static std::atomic_bool smaaEnabled = true;
 
 static void InstallConsoleGamma()
 {
     static bool installed = false;
-    if (installed || !*pConsoleGamma)
+    if (installed || !consoleGammaEnabled.load())
         return;
     installed = true;
 
     auto pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 51 E8 ? ? ? ? 8B 15 ? ? ? ? 52 E8 ? ? ? ? 83 C4 ? 83 C4");
     static auto ConsoleGammaHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        CPostFX::bConsoleGammaEnabled = *pConsoleGamma != 0;
+        CPostFX::bConsoleGammaEnabled = consoleGammaEnabled.load();
         CPostFX::RenderGamma(GetDevice9());
     });
 }
@@ -93,11 +93,12 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            pConsoleGamma = &FixSettings().Int("GRAPHICS.ConsoleGamma");
-            pAntiAliasing = &FixSettings().Int("GRAPHICS.AntiAliasing");
-            // All of them can be switched in the game's menu: SMAA is the Anti-Aliasing setting's SMAA choice
-            CPostFX::bConsoleGammaEnabled = *pConsoleGamma != 0;
-            CPostFX::bSmaaEnabled = *pAntiAliasing == 1;
+            consoleGammaEnabled = ReadFixSetting("GRAPHICS.ConsoleGamma", 0) != 0;
+            const auto updateSmaa = []() { smaaEnabled = ReadFixSetting("GRAPHICS.AntiAliasing", 1) == 1; };
+            updateSmaa();
+            CPostFX::bConsoleGammaEnabled = consoleGammaEnabled.load();
+            CPostFX::bSmaaEnabled = smaaEnabled.load();
+            OnSettingChange("GRAPHICS.AntiAliasing", updateSmaa);
 
             // Resolve the buffer initializer from CPostEffects::Update; the
             // initial setup call itself can be redirected by SilentPatch.
@@ -121,7 +122,11 @@ public:
             // The gamma hook sits on code that other mods (Project2DFX) look for: install it only once Console Gamma is
             // turned on
             InstallConsoleGamma();
-            OnSettingChange("GRAPHICS.ConsoleGamma", []() { InstallConsoleGamma(); });
+            OnSettingChange("GRAPHICS.ConsoleGamma", []()
+            {
+                consoleGammaEnabled = ReadFixSetting("GRAPHICS.ConsoleGamma", 0) != 0;
+                InstallConsoleGamma();
+            });
 
             WFP::onBeforeReset() += []()
             {
@@ -135,11 +140,12 @@ public:
 // After the 3D scene and its effects, before the HUD: SMAA
 void __fastcall RenderMotionBlur(void* camera, void* edx)
 {
-    if (CPostFX::bSmaaEnabled != (*pAntiAliasing == 1))
+    const bool enableSmaa = smaaEnabled.load();
+    if (CPostFX::bSmaaEnabled != enableSmaa)
     {
         // The SMAA textures are made when it's on: start over
         CPostFX::Shutdown();
-        CPostFX::bSmaaEnabled = *pAntiAliasing == 1;
+        CPostFX::bSmaaEnabled = enableSmaa;
     }
     auto device = GetDevice9();
     CPostFX::RenderSMAA(device);

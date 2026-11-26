@@ -39,8 +39,6 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            auto& settings = FixSettings();
-            asi_settings::LiveLink::Start();
             GodfatherVideoModes::Init();
             GodfatherPaths::Init();
             GodfatherMenu::Init();
@@ -63,6 +61,7 @@ public:
             GodfatherVibration::Init();
 
             GodfatherHudPatches::Install();
+            asi_settings::LiveLink::Start();
         };
     }
 } Main;

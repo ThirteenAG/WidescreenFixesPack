@@ -42,7 +42,7 @@ The page has one Preset row: Vanilla, Recommended or Enhanced. Vanilla keeps the
 | Frame limit | 60 FPS | Live |
 | Check for updates | Off | Live |
 
-Resolution and language can also be configured through fusionfix.io or FusionFixHub. A resolution value of 0 uses the desktop. The developer overlay opens with Ctrl+F10 where available.
+Resolution and language can also be configured through fusionfix.io or FusionFixHub. A resolution value of 0 uses the desktop.
 
 ## Known limits
 

@@ -4,7 +4,11 @@ module;
 #include <xmmintrin.h>
 #include <cmath>
 #include <dinput.h>
+#include <wrl/client.h>
 #include "FixSettings.hpp"
+
+#pragma comment(lib, "dinput8.lib")
+#pragma comment(lib, "dxguid.lib")
 
 export module RawInput;
 
@@ -60,142 +64,115 @@ int __fastcall sub_41D3C0(int8_t* _this, void* edx, int a2, void* a3)
     return shsub_41D3C0.unsafe_fastcall<int>(_this, edx, a2, a3);
 }
 
-HWND hGameWindow = NULL;
-// Called by the game's window procedure
-export void RawInputWindow(HWND hWnd)
-{
-    if (!hGameWindow && bRawInputMouse)
-        hGameWindow = hWnd;
-}
+HWND hGameWindow = nullptr;
 
-// The game's DirectInput mouse carries the raw counts: no pointer acceleration or speed, nothing lost between reads.
-// Every read of its state (the game's and the fix's own) adds to the counts, which the camera takes once per frame.
 namespace TCDirectInputMouse
 {
-    // The vtable slots are replaced rather than the functions: wrappers like Xidi share one function between methods
-    HRESULT(WINAPI* nativeCreate)(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN) = nullptr;
-    HRESULT(WINAPI* nativeCreateDevice)(void*, REFGUID, void**, void*) = nullptr;
-    HRESULT(WINAPI* nativeDeviceState)(void*, DWORD, void*) = nullptr;
-    std::atomic<void*> mouse{ nullptr };
-    std::atomic<int32_t> countsX{ 0 }, countsY{ 0 };
+    Microsoft::WRL::ComPtr<IDirectInput8A> input;
+    Microsoft::WRL::ComPtr<IDirectInputDevice8A> mouse;
+    bool acceptMovement = false;
+    uint32_t overlayGeneration = 0;
 
-    HRESULT WINAPI DeviceState(void* device, DWORD size, void* data)
+    void Open(HWND window)
     {
-        const auto result = nativeDeviceState(device, size, data);
-        if (SUCCEEDED(result) && data && device == mouse.load(std::memory_order_relaxed) &&
-            (size == sizeof(DIMOUSESTATE) || size == sizeof(DIMOUSESTATE2)))
+        static const auto module = LoadLibraryExW(L"dinput8.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+        using Create = HRESULT(WINAPI*)(HINSTANCE, DWORD, REFIID, LPVOID*, LPUNKNOWN);
+        static const auto create = reinterpret_cast<Create>(module ? GetProcAddress(module, "DirectInput8Create") : nullptr);
+        Microsoft::WRL::ComPtr<IDirectInput8A> directInput;
+        Microsoft::WRL::ComPtr<IDirectInputDevice8A> device;
+        if (!create || FAILED(create(GetModuleHandleW(nullptr), DIRECTINPUT_VERSION, IID_IDirectInput8A,
+            reinterpret_cast<void**>(directInput.GetAddressOf()), nullptr)) ||
+            FAILED(directInput->CreateDevice(GUID_SysMouse, device.GetAddressOf(), nullptr)) ||
+            FAILED(device->SetDataFormat(&c_dfDIMouse2)) ||
+            FAILED(device->SetCooperativeLevel(window, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND)))
         {
-            const auto state = static_cast<const DIMOUSESTATE*>(data);
-            countsX.fetch_add(state->lX, std::memory_order_relaxed);
-            countsY.fetch_add(state->lY, std::memory_order_relaxed);
-        }
-        return result;
-    }
-
-    bool IsMouse(REFGUID guid)
-    {
-        // GUID_SysMouse, GUID_SysMouseEm and GUID_SysMouseEm2
-        constexpr GUID mouse{ 0x6F1D2B60, 0xD5A0, 0x11CF, { 0xBF, 0xC7, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00 } };
-        GUID base = guid;
-        if (base.Data1 == 0x6F1D2B80 || base.Data1 == 0x6F1D2B81)
-            base.Data1 = mouse.Data1;
-        return base == mouse;
-    }
-
-    template<class Function> void ReplaceSlot(void* object, size_t slot, Function replacement, Function& original)
-    {
-        auto entry = *reinterpret_cast<void***>(object) + slot;
-        if (*entry == reinterpret_cast<void*>(replacement))
             return;
-        original = reinterpret_cast<Function>(*entry);
-        injector::WriteMemory(entry, reinterpret_cast<void*>(replacement), true);
-    }
-
-    HRESULT WINAPI CreateDevice(void* input, REFGUID guid, void** device, void* outer)
-    {
-        const auto result = nativeCreateDevice(input, guid, device, outer);
-        if (SUCCEEDED(result) && device && *device && IsMouse(guid))
-        {
-            ReplaceSlot(*device, 9, &DeviceState, nativeDeviceState);
-            mouse.store(*device, std::memory_order_relaxed);
         }
-        return result;
+        input = std::move(directInput);
+        mouse = std::move(device);
     }
 
-    HRESULT WINAPI Create(HINSTANCE instance, DWORD version, REFIID iid, LPVOID* output, LPUNKNOWN outer)
+    void Reset()
     {
-        const auto result = nativeCreate(instance, version, iid, output, outer);
-        if (SUCCEEDED(result) && output && *output)
-            ReplaceSlot(*output, 3, &CreateDevice, nativeCreateDevice);
-        return result;
+        if (mouse)
+            mouse->Unacquire();
+        mouse.Reset();
+        input.Reset();
+        acceptMovement = false;
     }
 
-    void Install()
+    std::optional<DIMOUSESTATE2> Sample(bool enabled, uint32_t generation)
     {
-        auto original = IATHook::Replace(GetModuleHandleW(nullptr), "dinput8.dll", std::forward_as_tuple("DirectInput8Create", Create));
-        nativeCreate = reinterpret_cast<decltype(nativeCreate)>(original.at("DirectInput8Create").get());
-    }
+        // The camera owns this immediate-mode device. The game keeps its button bindings and action maps.
+        const bool keep = enabled && acceptMovement && generation == overlayGeneration;
+        overlayGeneration = generation;
+        acceptMovement = enabled;
+        if (!mouse && enabled && !keep)
+            Open(hGameWindow);
+        if (!mouse)
+            return std::nullopt;
 
-    void Poll()
-    {
-        if (auto device = mouse.load(std::memory_order_relaxed); device && nativeDeviceState)
+        // Consume the device's pending movement even when the overlay owns the mouse.
+        DIMOUSESTATE2 state{};
+        auto result = mouse->GetDeviceState(sizeof(state), &state);
+        if (enabled && (result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED))
         {
-            DIMOUSESTATE2 state{};
-            DeviceState(device, sizeof(state), &state);
+            if (SUCCEEDED(mouse->Acquire()))
+                mouse->GetDeviceState(sizeof(state), &state);
+            return std::nullopt;
         }
+        return keep && SUCCEEDED(result) ? std::optional{ state } : std::nullopt;
     }
 }
 
-// Mouse movement since the last read
-void ReadMouse()
+export void SetRawInputWindow(HWND window)
 {
-    TCDirectInputMouse::Poll();
-    const int32_t x = TCDirectInputMouse::countsX.exchange(0, std::memory_order_relaxed);
-    const int32_t y = TCDirectInputMouse::countsY.exchange(0, std::memory_order_relaxed);
-    if (!hGameWindow || hGameWindow != GetForegroundWindow() || TCOverlay::BlocksInput() || (!x && !y))
-        return;
-    auto delta = TCRawMouse::FromCounts(x, y, fMouseSens.is_initialized() ? fMouseSens.get() : 0.0f);
-    MouseDeltaX += delta.x;
-    MouseDeltaY += delta.y;
+    if (bRawInputMouse && hGameWindow != window)
+    {
+        TCDirectInputMouse::Reset();
+        hGameWindow = window;
+    }
+}
+constexpr ULONGLONG MouseCameraTimeoutMs = 5000;
+static ULONGLONG mouseCameraUntil = 0;
+static bool mouseCameraActive = false;
+
+// Mouse movement since the last read
+bool ReadMouse()
+{
+    const bool enabled = hGameWindow && hGameWindow == GetForegroundWindow() && !TCOverlay::BlocksInput();
+    const auto sample = TCDirectInputMouse::Sample(enabled, TCOverlay::InputGeneration());
+    if (!sample)
+    {
+        MouseDeltaX = MouseDeltaY = 0.0f;
+        mouseCameraUntil = 0;
+        mouseCameraActive = false;
+        return false;
+    }
+    if (sample->lX || sample->lY)
+    {
+        const auto delta = TCRawMouse::FromCounts(sample->lX, sample->lY, fMouseSens.get());
+        MouseDeltaX += delta.x;
+        MouseDeltaY += delta.y;
+    }
+    return true;
 }
 
 // Look Behind in a vehicle (the game's action flags)
 GameRef<uint32_t> nActionFlags;
 constexpr uint32_t LookBehind = 0x800;
 
-// The game's message pump removes messages until the queue is empty. Every legacy mouse move it removes makes Windows
-// process the input that queued up meanwhile, so with thousands of mouse reports a second one pass can take tens of
-// milliseconds. Windows keeps only the newest mouse move, so the pass ends after one.
-BOOL WINAPI PeekMessageOnePass(LPMSG message, HWND window, UINT first, UINT last, UINT remove)
-{
-    static thread_local bool moved = false;
-    if (moved)
-    {
-        moved = false;
-        return FALSE;
-    }
-    const BOOL result = PeekMessageA(message, window, first, last, remove);
-    moved = result && (remove & PM_REMOVE) && message->message == WM_MOUSEMOVE;
-    return result;
-}
-
-static float idle_timer = 0.0f;
-
 SafetyHookInline shsub_40D990 = {};
 void __stdcall sub_40D990(float a1)
 {
+    // Keep draining while another window or the overlay owns the mouse.
+    ReadMouse();
     if (TCOverlay::BlocksInput())
-    {
-        MouseDeltaX = MouseDeltaY = 0;
         return;
-    }
-    static float prev_idle_timer = 0.0f;
     static float accumulated_yaw = 0.0f;
     static float accumulated_pitch = 0.0f;
     static int8_t prev_camera_mode_local = -1;
 
-    // The camera reads the mouse every drawn frame, so movement arrives evenly whatever the game's update rate
-    ReadMouse();
     float delta_x = MouseDeltaX;
     float delta_y = MouseDeltaY;
 
@@ -213,174 +190,81 @@ void __stdcall sub_40D990(float a1)
 
     bool mouse_moved = (std::fabs(delta_x) > 1e-6f || std::fabs(delta_y) > 1e-6f);
 
-    // Looking behind always shows the game's view and ends the mouse view; the mouse is ignored meanwhile
-    if (nActionFlags.is_initialized() && (nActionFlags.get() & LookBehind))
+    if (nLoading != 0 || bCutscene || bPause || bNonMouseCameraMovement || (nActionFlags.get() & LookBehind))
     {
-        delta_x = delta_y = 0.0f;
-        mouse_moved = false;
-        idle_timer = 10.0f;
+        mouseCameraUntil = 0;
+        mouseCameraActive = false;
+        prev_camera_mode_local = CurrentCameraMode;
+        shsub_40D990.unsafe_stdcall(a1);
+        return;
     }
 
-    // Reset idle_timer if camera mode changed
+    // Keep the current deadline through the aiming transition.
     if (CurrentCameraMode != prev_camera_mode_local)
     {
-        idle_timer = 10.0f;  // Set to a value >= 5.0f to force use of original code
-        mouse_moved = false;
-
-        if (bIsAimingModeSwitch)
-            idle_timer = 0.0f;
-
+        if (!bIsAimingModeSwitch)
+        {
+            mouseCameraUntil = 0;
+            mouseCameraActive = false;
+        }
         prev_camera_mode_local = CurrentCameraMode;
     }
 
-    if (mouse_moved || CurrentCameraMode == CameraPrecisionAim)
-    {
-        idle_timer = 0.0f;
-    }
-    else
-    {
-        idle_timer += a1;
-    }
+    const auto now = GetTickCount64();
+    if (mouse_moved)
+        mouseCameraUntil = now + MouseCameraTimeoutMs;
 
-    bool use_new_code = (idle_timer < 5.0f || mouse_moved);
-    bool switching_to_new = (prev_idle_timer >= 5.0f && idle_timer < 5.0f);
-    prev_idle_timer = idle_timer;
-
-    if (nLoading != 0 || bCutscene || bPause || bNonMouseCameraMovement)
+    if (now >= mouseCameraUntil)
     {
+        mouseCameraActive = false;
         shsub_40D990.unsafe_stdcall(a1);
+        return;
     }
-    else
+
+    constexpr float RadiansPerDegree = 3.1415926536f / 180.0f;
+    if (!mouseCameraActive)
     {
-        if (use_new_code)
-        {
-            if (switching_to_new)
-            {
-                // Extract current quaternion from memory (assumed to be the normalized quaternion at this address)
-                __m128 current_quat = xmmword_778BF0;
-                float x_f = current_quat.m128_f32[0];
-                float y_f = current_quat.m128_f32[1];
-                float z_f = current_quat.m128_f32[2];
-                float w_f = current_quat.m128_f32[3];
-
-                // Undo the 180° roll to get original quaternion
-                float qx_o = z_f;
-                float qy_o = -y_f;
-                float qz_o = -x_f;
-                float qw_o = w_f;
-
-                // Extract yaw
-                float sin_y = -qy_o;
-                float cos_y = qw_o;
-                float yaw = std::atan2(sin_y, cos_y);
-
-                // Extract pitch
-                float cos_p = std::sqrt(qw_o * qw_o + qy_o * qy_o);
-                cos_y = (cos_p > 0.0f) ? qw_o / cos_p : 0.0f;
-                sin_y = (cos_p > 0.0f) ? -qy_o / cos_p : 0.0f;
-
-                float sin_p;
-                if (std::fabs(cos_y) >= std::fabs(sin_y))
-                {
-                    sin_p = (cos_y != 0.0f) ? -qx_o / cos_y : 0.0f;
-                }
-                else
-                {
-                    sin_p = (sin_y != 0.0f) ? qz_o / sin_y : 0.0f;
-                }
-
-                float pitch = std::atan2(sin_p, cos_p);
-
-                // Back-calculate accumulated angles
-                float angle_factor = 0.5f;
-                accumulated_yaw = yaw / angle_factor;
-                accumulated_pitch = pitch / angle_factor;
-            }
-
-            // Raw input accumulation for direct, responsive camera movement
-            float max_pitch = 60.0f * (3.1415926535f / 180.0f);  // Clamp to prevent gimbal lock
-            float min_pitch = -89.0f * (3.1415926535f / 180.0f);
-
-            if (CurrentCameraMode == CameraInVehicle)
-                max_pitch = 10.0f * (3.1415926535f / 180.0f);
-
-            // Accumulate raw mouse deltas
-            accumulated_yaw += -delta_x;
-            accumulated_pitch += delta_y;
-
-            // Clamp pitch
-            accumulated_pitch = std::max(min_pitch, std::min(max_pitch, accumulated_pitch));
-
-            // Compute angles
-            float angle_factor = 0.5f;
-            float yaw = accumulated_yaw * angle_factor;
-            float pitch = accumulated_pitch * angle_factor;
-
-            // Compute quaternion using SSE for consistency with original code
-            __m128 cos_sin_y = _mm_set_ps(std::cos(yaw), std::sin(yaw), std::cos(yaw), std::sin(yaw));  // cos_y, sin_y, cos_y, sin_y
-            __m128 cos_sin_p = _mm_set_ps(std::cos(pitch), std::sin(pitch), std::cos(pitch), std::sin(pitch));  // cos_p, sin_p, cos_p, sin_p
-
-            __m128 qx = _mm_mul_ps(_mm_set_ps1(-1.0f), _mm_mul_ps(_mm_shuffle_ps(cos_sin_p, cos_sin_p, 1), _mm_shuffle_ps(cos_sin_y, cos_sin_y, 0)));  // -sin_p * cos_y
-            __m128 qy = _mm_mul_ps(_mm_set_ps1(-1.0f), _mm_mul_ps(_mm_shuffle_ps(cos_sin_p, cos_sin_p, 0), _mm_shuffle_ps(cos_sin_y, cos_sin_y, 1)));  // -cos_p * sin_y
-            __m128 qz = _mm_mul_ps(_mm_shuffle_ps(cos_sin_p, cos_sin_p, 1), _mm_shuffle_ps(cos_sin_y, cos_sin_y, 1));  // sin_p * sin_y
-            __m128 qw = _mm_mul_ps(_mm_shuffle_ps(cos_sin_p, cos_sin_p, 0), _mm_shuffle_ps(cos_sin_y, cos_sin_y, 0));  // cos_p * cos_y
-
-            // Combine into quaternion vector (x,y,z,w)
-            __m128 quat = _mm_set_ps(qw.m128_f32[0], qz.m128_f32[0], qy.m128_f32[0], qx.m128_f32[0]);
-
-            // Normalize quaternion (using original-style dot product and inverse sqrt)
-            __m128 dot = _mm_mul_ps(quat, quat);
-            dot.m128_f32[0] = dot.m128_f32[0] + _mm_shuffle_ps(dot, dot, 85).m128_f32[0] + _mm_shuffle_ps(dot, dot, 170).m128_f32[0] + _mm_shuffle_ps(dot, dot, 255).m128_f32[0];
-            __m128 inv_sqrt = _mm_set_ps1(1.0f / std::sqrt(dot.m128_f32[0]));
-            quat = _mm_mul_ps(quat, inv_sqrt);
-
-            // --- APPLY 180° ROLL TO FLIP CAMERA (fix upside-down startup) ---
-            // roll quaternion r = (0,0,1,0); multiply r * quat (scalar implementation)
-            {
-                float qx_f = quat.m128_f32[0];
-                float qy_f = quat.m128_f32[1];
-                float qz_f = quat.m128_f32[2];
-                float qw_f = quat.m128_f32[3];
-
-                float nx = -qy_f;
-                float ny = qx_f;
-                float nz = qw_f;
-                float nw = -qz_f;
-
-                quat = _mm_set_ps(nw, nz, ny, nx); // (w,z,y,x) -> stored as (x,y,z,w) in m128_f32[]
-            }
-
-            // Set normalized quaternion directly as v1 (replacing interpolation)
-            __m128 v1 = quat;
-
-            // Proceed with original normalization and computations (adapted for direct quaternion)
-            __m128 v2 = _mm_mul_ps(v1, v1);
-            v2.m128_f32[0] = (float)((float)(v2.m128_f32[0] + _mm_shuffle_ps(v2, v2, 85).m128_f32[0]) + _mm_shuffle_ps(v2, v2, 170).m128_f32[0]) + _mm_shuffle_ps(v2, v2, 255).m128_f32[0];
-            __m128 v9 = v2;
-            v9.m128_f32[0] = 1.0f / std::sqrt(v2.m128_f32[0]);
-            __m128 v3 = _mm_mul_ps(v1, _mm_shuffle_ps(v9, v9, 0));
-            v9.m128_u64[1] = *reinterpret_cast<unsigned int*>(float_70F390.get_ptr());
-            v9.m128_u64[0] = 0;
-            __m128 v4 = v9;
-            v9.m128_u64[0] = _mm_shuffle_ps(v3, v3, 255).m128_u32[0];
-            __m128 v5 = _mm_shuffle_ps(v3, v3, 201);
-            __m128 v6 = _mm_sub_ps(_mm_mul_ps(v3, _mm_shuffle_ps(v4, v4, 201)), _mm_mul_ps(v5, v4));
-            __m128 v7 = _mm_sub_ps(_mm_shuffle_ps(v6, v6, 201), _mm_mul_ps(v4, _mm_set_ps1(*(float*)&v9.m128_u32[0])));
-            xmmword_778BF0 = v3;
-            __m128 v8 = _mm_sub_ps(_mm_mul_ps(v7, v5), _mm_mul_ps(_mm_shuffle_ps(v7, v7, 201), v3));
-            xmmword_778BD0 = _mm_sub_ps(xmmword_778BA0, _mm_sub_ps(v4, _mm_mul_ps(_mm_shuffle_ps(v8, v8, 201), _mm_set_ps1(2.0f))));
-        }
-        else
-        {
-            shsub_40D990.unsafe_stdcall(a1);
-        }
+        // Recover yaw and pitch from the current view, including the camera's fixed roll.
+        const __m128 orientation = xmmword_778BF0;
+        const float sinYaw = -orientation.m128_f32[1];
+        const float cosYaw = -orientation.m128_f32[3];
+        const float cosPitch = std::hypot(sinYaw, cosYaw);
+        const float sinPitch = cosPitch > 0.0f
+            ? (orientation.m128_f32[0] * cosYaw + orientation.m128_f32[2] * sinYaw) / cosPitch
+            : 0.0f;
+        accumulated_yaw = 2.0f * std::atan2(sinYaw, cosYaw);
+        accumulated_pitch = 2.0f * std::atan2(sinPitch, cosPitch);
+        mouseCameraActive = true;
     }
+
+    const float maxPitch = (CurrentCameraMode == CameraInVehicle ? 10.0f : 60.0f) * RadiansPerDegree;
+    accumulated_yaw = std::remainder(accumulated_yaw - delta_x, 360.0f * RadiansPerDegree);
+    accumulated_pitch = std::clamp(accumulated_pitch + delta_y, -89.0f * RadiansPerDegree, maxPitch);
+
+    const float sinYaw = std::sin(accumulated_yaw * 0.5f);
+    const float cosYaw = std::cos(accumulated_yaw * 0.5f);
+    const float sinPitch = std::sin(accumulated_pitch * 0.5f);
+    const float cosPitch = std::cos(accumulated_pitch * 0.5f);
+    const __m128 orientation = _mm_set_ps(-cosPitch * cosYaw, sinPitch * sinYaw,
+        -cosPitch * sinYaw, sinPitch * cosYaw);
+
+    // Apply the same orbit offset as the native camera update.
+    const __m128 offset = _mm_set_ps(0.0f, float_70F390, 0.0f, 0.0f);
+    const __m128 rotated = _mm_shuffle_ps(orientation, orientation, 201);
+    const __m128 cross = _mm_sub_ps(_mm_mul_ps(orientation, _mm_shuffle_ps(offset, offset, 201)),
+        _mm_mul_ps(rotated, offset));
+    const __m128 first = _mm_sub_ps(_mm_shuffle_ps(cross, cross, 201),
+        _mm_mul_ps(offset, _mm_shuffle_ps(orientation, orientation, 255)));
+    const __m128 second = _mm_sub_ps(_mm_mul_ps(first, rotated),
+        _mm_mul_ps(_mm_shuffle_ps(first, first, 201), orientation));
+
+    xmmword_778BF0 = orientation;
+    xmmword_778BD0 = _mm_sub_ps(xmmword_778BA0,
+        _mm_sub_ps(offset, _mm_mul_ps(_mm_shuffle_ps(second, second, 201), _mm_set1_ps(2.0f))));
 }
 
 void InitRawInput()
 {
-    TCDirectInputMouse::Install();
-    IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("PeekMessageA", PeekMessageOnePass));
     nActionFlags.SetAddress(*hook::pattern("80 0D ? ? ? ? 08 EB ? 80 25 ? ? ? ? F7").get_first<uintptr_t>(2) - 1);
 
     auto pattern = hook::pattern("D8 0D ? ? ? ? 6A 00 68 3F 8F F7 79");
@@ -404,9 +288,6 @@ void InitRawInput()
     pattern = hook::pattern("A1 ? ? ? ? 80 BC 28 ? ? ? ? ? 8D B4 28 ? ? ? ? C7 03 00 00 00 00 0F 8C ? ? ? ? 8B CE E8 ? ? ? ? 84 C0 0F 84");
     dword_79430C.SetAddress(*pattern.get_first<uint8_t**>(1));
 
-    pattern = hook::pattern("64 A1 ? ? ? ? 6A FF 68 ? ? ? ? 50 8B 44 24 ? 83 F8 51 64 89 25 ? ? ? ? 56 8B F1 77");
-    shsub_41D3C0 = safetyhook::create_inline(pattern.get_first(0), sub_41D3C0);
-
     pattern = hook::pattern("55 8B EC 83 E4 F0 83 EC 20 F3 0F 10 05 ? ? ? ? F3 0F 59 45");
     shsub_40D990 = safetyhook::create_inline(pattern.get_first(0), sub_40D990);
 
@@ -416,14 +297,11 @@ void InitRawInput()
     pattern = hook::pattern("C6 44 24 ? ? E8 ? ? ? ? 8B 4C 24 ? 3B CD");
     static auto UpdateInputHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        if (hGameWindow != GetForegroundWindow() || TCOverlay::BlocksInput())
+        if (!ReadMouse())
         {
-            // Nothing reaches the game while it's in the background or the developer overlay owns the input
-            MouseDeltaX = MouseDeltaY = menuDeltaX = menuDeltaY = 0.0f;
+            menuDeltaX = menuDeltaY = 0.0f;
             return;
         }
-
-        ReadMouse();
 
         if (byte_850D8A)
             bNonMouseCameraMovement = true;
@@ -434,7 +312,7 @@ void InitRawInput()
         {
             menuDeltaX = MouseDeltaX;
             menuDeltaY = MouseDeltaY;
-            idle_timer = 10.0f;
+            mouseCameraUntil = 0;
             MouseDeltaX = 0.0f;
             MouseDeltaY = 0.0f;
         }
@@ -496,22 +374,14 @@ public:
         WFP::onInitEvent() += []()
         {
             auto& settings = FixSettings();
+            MessagePumpGuard::Install(GetModuleHandleW(nullptr));
+            auto cameraMode = hook::pattern("64 A1 ? ? ? ? 6A FF 68 ? ? ? ? 50 8B 44 24 ? 83 F8 51 64 89 25 ? ? ? ? 56 8B F1 77");
+            shsub_41D3C0 = safetyhook::create_inline(cameraMode.get_first(), sub_41D3C0);
             bRawInputMouse = settings.Bool("MAIN.RawInputMouse");
-            TCRawMouse::SetSensitivity(settings.Float("MAIN.MouseSensitivity"));
-            TCRawMouse::invertY.store(settings.Bool("MAIN.InvertMouseY"), std::memory_order_relaxed);
-            settings.OnChange("MAIN.InvertMouseY", []
-            {
-                TCRawMouse::invertY.store(FixSettings().Bool("MAIN.InvertMouseY"), std::memory_order_relaxed);
-            });
-            settings.OnChange("MAIN.MouseSensitivity", []
-            {
-                TCRawMouse::SetSensitivity(FixSettings().Float("MAIN.MouseSensitivity"));
-            });
-
+            static float nativeSensitivity[2]{}, scaledSensitivity[2]{};
             if (!bRawInputMouse)
             {
                 // Without the fix's camera the setting scales the game's own mouse sensitivity
-                static float nativeSensitivity[2]{}, scaledSensitivity[2]{};
                 const char* sites[] = { "D8 0D ? ? ? ? DD 1C 24", "F3 0F 59 05 ? ? ? ? 83 C2 FF" };
                 const int offsets[] = { 2, 4 };
                 for (size_t i = 0; i < std::size(sites); ++i)
@@ -520,16 +390,29 @@ public:
                     nativeSensitivity[i] = **operand;
                     injector::WriteMemory(operand, &scaledSensitivity[i], true);
                 }
-                static auto update = []
+            }
+
+            static std::atomic<bool> mouseSettingsPending{ false };
+            const auto update = []()
+            {
+                const float value = ReadNumericSetting("MAIN.MouseSensitivity", 1.0f);
+                TCRawMouse::SetSensitivity(value);
+                TCRawMouse::invertY.store(FixSettings().Get("MAIN.InvertMouseY") == "1", std::memory_order_relaxed);
+                if (!bRawInputMouse)
                 {
-                    const float value = FixSettings().Float("MAIN.MouseSensitivity");
                     const float factor = std::isfinite(value) ? std::clamp(value, 0.1f, 5.0f) : 1.0f;
                     for (size_t i = 0; i < std::size(scaledSensitivity); ++i)
                         scaledSensitivity[i] = nativeSensitivity[i] * factor;
-                };
-                update();
-                settings.OnChange("MAIN.MouseSensitivity", [] { update(); });
-            }
+                }
+            };
+            for (const auto setting : { "MAIN.MouseSensitivity", "MAIN.InvertMouseY" })
+                settings.OnChange(setting, []() { mouseSettingsPending.store(true); });
+            update();
+            WFP::onGameProcessEvent() += [update]()
+            {
+                if (mouseSettingsPending.exchange(false))
+                    update();
+            };
 
             if (bRawInputMouse)
                 InitRawInput();

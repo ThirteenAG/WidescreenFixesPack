@@ -13,8 +13,6 @@
   "CAMERA.CameraReturnTimeout.description": "Sekunden ohne Eingabe, bevor die Kamera hinter das Fahrzeug zurückkehrt.",
   "CAMERA.CameraReturnSpeed": "Kamera-Rückkehrgeschwindigkeit",
   "CAMERA.CameraReturnSpeed.description": "Rückkehrgeschwindigkeit hinter das Fahrzeug. 0: keine Rückkehr.",
-  "MAIN.PortableSettings": "Einstellungen speichern",
-  "MAIN.PortableSettings.description": "Speichert Registry-Einstellungen in savegame\\settings.bin.",
   "MAIN.LeftStickDeadzone": "Linke Stick-Totzone",
   "MAIN.LeftStickDeadzone.description": "Totzone des linken Sticks in Prozent.",
   "MAIN.RightStickDeadzone": "Rechte Stick-Totzone",

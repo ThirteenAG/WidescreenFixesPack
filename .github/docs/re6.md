@@ -33,12 +33,12 @@ The fix's settings are in the game's **Options › Plugins** page (F1 or Y shows
 - **Video framing** — Original shows the videos inside the game's centred 16:9 frame. On screens wider than 16:9, Fill (default) enlarges the two story videos, which have black bars in the file, until their picture fits the screen. No picture is cut off or stretched.
 - **Frame rate limit** — What the game's VARIABLE frame rate option is capped at: 120 FPS (default), Unlimited, the refresh rate or a number. Applies at once.
 - **Window mode** — Windowed or borderless when the game's own Full Screen option is off. A window as big as the screen has its frame outside the screen.
-- **Pause in background** — On by default; off keeps the game running while its window isn't active.
+- **Pause when unfocused** — On by default; off keeps the game running while its window isn't active.
 - **Confine cursor** — Keeps the mouse cursor inside the game window while the game is active.
 - **Skip intro** — Skips the Capcom and engine logos and the startup notices that only need OK ("Load successful." and the auto-save notice); the game starts at the main menu. Needs a restart.
-- **Skip first title prompt** — Continues past the first Press Start prompt.
+- **Skip title prompt** — Continues past the first Press Start prompt.
 - **Controller icons** — Xbox (Auto), PlayStation or Nintendo button icons.
-- **Split screen** — Vertical (left/right) layout and swapped views.
+- **Split screen layout** — Top and bottom (default) or side by side, which on a 32:9 screen gives each player a 16:9 view; the two views can be swapped.
 - **Low health / dying effects, objective marker** — Can be hidden.
 - **RGB lighting** — Support for [Logitech G LIGHTSYNC RGB Lighting](https://www.logitechg.com/innovation/lightsync-rgb.html).
 - **Check for updates** — Off by default. When on, the fix asks fusionfix.io once per start whether a newer version is out and tells you in the Plugins page.

@@ -43,17 +43,21 @@ namespace WidescreenFixConflict
         for (auto fileName : otherFiles)
             fileNames.emplace_back(fileName);
         std::wstring paths;
+        size_t found = 0;
         for (const auto& fileName : fileNames)
         {
             if (auto path = Find(fileName); !path.empty())
+            {
                 paths += L"\n" + path.wstring();
+                ++found;
+            }
         }
-        if (paths.empty())
+        if (!found)
             return false;
         const auto title = GetThisModuleName<std::wstring>();
-        const auto text = L"The Widescreen Fix for this game is now part of its Fusion Fix, and both can't work together.\n\n"
-            L"Please delete the old Widescreen Fix:" + paths +
-            L"\n\nThe Fusion Fix stays off until then.";
+        auto text = std::wstring(L"The old Widescreen Fix is still installed. It is now part of the Fusion Fix, and both can't run together.\n\n");
+        text += found > 1 ? L"Delete these files, then start the game again:" : L"Delete this file, then start the game again:";
+        text += paths + L"\n\nClick OK to play now without the Fusion Fix.";
         MessageBoxW(nullptr, text.c_str(), title.c_str(), MB_OK | MB_ICONWARNING | MB_TOPMOST | MB_SETFOREGROUND);
         return true;
     }

@@ -52,7 +52,7 @@ export namespace KnightRiderUpdates
         config.format = [](const std::string& latest, bool hub)
         {
             auto texts = FixSettings().GetTexts();
-            std::string language = FixSettings().String("MAIN.TextLanguage");
+            std::string language = FixSettings().Get("MAIN.TextLanguage");
             if (language.empty() || language == "auto")
             {
                 wchar_t locale[LOCALE_NAME_MAX_LENGTH]{};

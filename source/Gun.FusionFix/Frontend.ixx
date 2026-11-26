@@ -442,7 +442,8 @@ export namespace GunMenu
         text.List("internal_just", &justify.value);
         if (!Properties(child, text)) return false;
         Parameters container;
-        container.XY("dims", 256.0f, 48.0f);
+        // Rows joined to a native page keep the native row height, so the page's layout spaces them like its own rows.
+        container.XY("dims", 256.0f, privatePage ? 48.0f : 24.0f);
         container.List("just", &justify.value);
         container.List("internal_just", &justify.value);
         Properties(id, container);
@@ -467,15 +468,17 @@ export namespace GunMenu
         if (text.empty()) text = Get().model.Text("menu.presethelp");
         while (!text.empty())
         {
-            size_t count = std::min<size_t>(180, text.size());
+            // Five lines of the small font fit the text block; longer text would push its start out of view.
+            size_t count = std::min<size_t>(90, text.size());
             if (count < text.size())
             {
                 auto space = text.rfind(' ', count);
-                if (space != std::string::npos && space > 80) count = space;
+                if (space != std::string::npos && space > 40) count = space;
                 else while (count && (static_cast<unsigned char>(text[count]) & 0xC0) == 0x80) --count;
             }
             parts.push_back(text.substr(0, count));
             text.erase(0, count);
+            text.erase(0, text.find_first_not_of(' ') == std::string::npos ? text.size() : text.find_first_not_of(' '));
         }
         return parts;
     }

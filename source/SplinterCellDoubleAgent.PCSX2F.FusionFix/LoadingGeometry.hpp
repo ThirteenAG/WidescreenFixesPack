@@ -2,9 +2,11 @@
 #include <algorithm>
 #include <cstdint>
 
-namespace scda {
+namespace scda
+{
 // GS XYZ coordinates use 12.4 fixed point around the display centre 0x8000.
-inline uint64_t FitLoadingVertex(uint64_t vertex, float aspect) {
+inline uint64_t FitLoadingVertex(uint64_t vertex, float aspect)
+{
     constexpr float nativeAspect = 4.0f / 3.0f;
     const float scaleX = std::min(1.0f, nativeAspect / aspect);
     const float scaleY = std::min(1.0f, aspect / nativeAspect);

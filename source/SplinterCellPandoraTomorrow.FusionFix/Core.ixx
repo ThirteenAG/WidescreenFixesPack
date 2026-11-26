@@ -200,11 +200,8 @@ namespace UObject
 export void InitCore()
 {
     auto pattern = hook::module_pattern(GetModuleHandle(L"Core"), "81 BD ? ? ? ? 80 02 00 00 75 10 81 BD ? ? ? ? E0 01 00 00 0F 84");
-    injector::WriteMemory<uint16_t>(pattern.get_first(), 0x7EEB, true);
-    pattern = hook::module_pattern(GetModuleHandle(L"Core"), "6A 00 68 80 02 00 00 68 ? ? ? ? 68 ? ? ? ?");
-    injector::WriteMemory(pattern.get_first(3), Screen.Width, true);
-    pattern = hook::module_pattern(GetModuleHandle(L"Core"), "6A 00 68 E0 01 00 00 68 ? ? ? ? 68 ? ? ? ?");
-    injector::WriteMemory(pattern.get_first(3), Screen.Height, true);
+    // Continue through the same path as a recognized mode without writing a fallback size to the engine INI.
+    injector::MakeJMP(pattern.get_first(), injector::ReadRelativeOffset(pattern.get_first(24), 4, true), true);
 
     shappFromAnsi = safetyhook::create_inline(FindProcAddress(GetModuleHandle(L"Core"), "?appFromAnsi@@YAPBGPBD@Z", "?appFromAnsi@@YAPB_WPBD@Z"), appFromAnsi);
 

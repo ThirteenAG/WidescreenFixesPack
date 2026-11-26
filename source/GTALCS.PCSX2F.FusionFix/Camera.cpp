@@ -1,6 +1,7 @@
 #include "Game.hpp"
-#include "../Shared/Console/Cutscene.hpp"
-#include "../Shared/Console/ScriptSlotZero.hpp"
+#include "Shared/Console/Cutscene.hpp"
+#include "Shared/Console/ScriptSlotZero.hpp"
+#include "Shared/Console/VehicleCameraHold.hpp"
 
 namespace lcs {
 namespace {
@@ -68,6 +69,23 @@ void DrawCutsceneBorders(void*) {
     borders.draw(cinematic.window(settings.aspect, 480, 272), 480, 272,
         [&](const Rect& rect) { drawRect(&rect, &black, true); }, settings.cutsceneBorders);
 }
+// CONTROLS.HoldVehicleCamera. In CCam::Process_FollowCar_SA, f21 is this
+// frame's right stick turn and f27 the turn that swings the camera back behind
+// the vehicle; they are added at 0x285364. While held, the swing waits two
+// seconds after the stick was last used.
+SafetyMipsMid followCarSwing;
+console::VehicleCameraHold padCameraHold;
+void FollowCarSwing(SafetyMipsContext& regs)
+{
+    if (!settings.holdVehicleCamera)
+    {
+        padCameraHold.Clear();
+        return;
+    }
+    const auto now = *reinterpret_cast<const uint32_t*>(timeInMilliseconds);
+    if (padCameraHold.Update(now, float(regs.f21) != 0.0f, 2000))
+        regs.f27 = 0.0f;
+}
 }
 void InstallCamera() {
     // Script handles in slot 0 are valid (DOES_VEHICLE_EXIST).
@@ -82,5 +100,6 @@ void InstallCamera() {
     // Drop the condition (BEQZ, its delay slot is a NOP) and call our pass instead.
     injector::MakeNOP(0x1F63B8);
     injector::MakeCALL(0x1F63C0, borderCallback.address());
+    followCarSwing = safetymips::create_mid<&FollowCarSwing>(0x285364);
 }
 }

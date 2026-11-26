@@ -32,7 +32,7 @@
 
 During gameplay, press Start and choose **Plugins**. Left and Right change values, Cross selects a row, Triangle opens its help and Circle goes back. Help and preset descriptions use the game’s scrolling list. The language can follow the PSP system language or use English, French, German, Italian or Spanish.
 
-Camera, aspect, HUD, borders, icons, frame rate and language changes apply immediately from Plugins. Intro skipping, dual analog controls and faster loading show a restart notice when changed. Restart the emulated game after editing the `.cfg` file or applying settings through the Hub or website. Failed saves remain pending and can be retried from the menu.
+Camera, aspect, HUD, borders, icons, frame rate and language changes apply during gameplay from Plugins or the `.cfg` file. Restart the emulated game to apply intro skipping, dual analog controls and faster loading. If a save fails, the menu shows an error. Repeat the adjustment to apply it to the current file.
 
 If the title data is not recognized, a notice appears and startup skipping is left to the game.
 

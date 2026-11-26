@@ -97,21 +97,37 @@ namespace
         return dti ? *(const char**)(dti + 4) : nullptr;
     }
 
-    bool IsGameplayCamera(void* camera)
+    // The camera controller (uCameraCtrl) projects the view of its active camera, which it keeps at this offset
+    uint32_t activeCameraOffset = 0;
+
+    std::string_view ClassOf(void* camera)
     {
         static std::unordered_map<uintptr_t, std::string_view> known;
-        if (!camera)
-            return false;
         auto vtable = *(uintptr_t*)camera;
         auto it = known.find(vtable);
         if (it == known.end())
         {
             const auto name = GetClassName(camera);
-            if (!name) return false;
+            if (!name) return {};
             it = known.emplace(vtable, name).first;
         }
-        if (!CameraFOV::IsGameplayType(it->second)) return false;
-        if (it->second == "uCameraVeh") return true;
+        return it->second;
+    }
+
+    bool IsGameplayCamera(void* camera)
+    {
+        if (!camera)
+            return false;
+        auto name = ClassOf(camera);
+        if (name == "uCameraCtrl")
+        {
+            camera = *reinterpret_cast<void**>(static_cast<uint8_t*>(camera) + activeCameraOffset);
+            if (!camera)
+                return false;
+            name = ClassOf(camera);
+        }
+        if (!CameraFOV::IsGameplayType(name)) return false;
+        if (name == "uCameraVeh") return true;
         if (!gameplayLayoutReady) return false;
         const auto bytes = static_cast<const uint8_t*>(camera);
         return CameraFOV::IsNormalState(*reinterpret_cast<const int*>(bytes + 732), bytes[740] != 0,
@@ -129,6 +145,7 @@ public:
         {
             pFOVFactor = &FixSettings().Float("MAIN.FOVFactor");
             gameplayLayoutReady = BindGameplayLayout();
+            activeCameraOffset = *hook::pattern("8B 8E ? ? ? ? 8B 01 8B 50 10 FF D2 8B 40 1C 3B 05").get_first<uint32_t>(2);
             if (!gameplayLayoutReady)
                 OutputDebugStringA("ResidentEvil6.FusionFix: gameplay camera state layout unavailable or ambiguous.\n");
 

@@ -309,6 +309,7 @@ export namespace GTA1Window
             Placement = area;
         else
             Placement = WindowStyle::WindowRect(area, std::min(ModeWidth, mw), std::min(ModeHeight, mh), WindowStyle::FrameOf(Window));
+        WindowStyle::detail::AllowSize(Window, Placement.right - Placement.left, Placement.bottom - Placement.top);
         SetWindowPos(Window, HWND_NOTOPMOST, Placement.left, Placement.top, Placement.right - Placement.left, Placement.bottom - Placement.top,
             SWP_FRAMECHANGED | SWP_SHOWWINDOW);
         WindowStyle::SquareCorners(Window);

@@ -8,6 +8,12 @@ export module Draw;
 import ComVars;
 import Layout;
 
+namespace Draw
+{
+    GameRef<float> NativeScaleX;
+    GameRef<float> NativeScaleY;
+}
+
 export namespace Draw
 {
     using GlyphFn = void* (__cdecl*)(int u, int v, int tw, int th, int x, int w, int h);
@@ -21,6 +27,13 @@ export namespace Draw
     QuadFn QuadOriginal = nullptr;
     TextFn TextOriginal = nullptr;
     BarFn BarOriginal = nullptr;
+
+    void DisplayResized()
+    {
+        // Device creation derives these blitter scales from the original 640x480 canvas.
+        NativeScaleX = Screen.fWidth / 640.0f;
+        NativeScaleY = Screen.fHeight / 480.0f;
+    }
 
     void* __cdecl Sprite(int u, int v, int tw, int th, int x, int y, int z, int w, int h)
     {
@@ -186,9 +199,10 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            FixSettings().OnChange("MAIN.HudAspectRatioConstraint", []() { if (Screen.nWidth > 0) Layout::Update(); });
-
             // 2D commands
+            auto scales = hook::pattern("DB 45 14 D8 0D ? ? ? ? 51 D9 1C 24 DB 45 10 D8 0D ? ? ? ? 51 D9 1C 24 8D 8D");
+            Draw::NativeScaleX.SetAddress(*scales.get_first<float*>(18));
+            Draw::NativeScaleY.SetAddress(*scales.get_first<float*>(5));
             auto pattern = hook::pattern("6A 02 FF 15 ? ? ? ? 83 C4 04 C7 05"); //0x40766C
             pfnDrawSprite.SetAddress(*pattern.get_first<SpriteFn*>(153));
             pfnDrawText.SetAddress(*pattern.get_first<TextFn*>(173));

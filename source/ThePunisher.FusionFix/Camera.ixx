@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module Camera;
 
@@ -9,11 +10,15 @@ import Cutscene;
 
 export namespace Camera
 {
-    const float* FOVFactor;
+    std::atomic<float> FOVFactor{ 1.0f };
 
-    void Init(const float& factor)
+    void Init()
     {
-        FOVFactor = &factor;
+        ObservePunisherSetting("MAIN.FOVFactor", []()
+        {
+            const float factor = PunisherNumericSetting("MAIN.FOVFactor", 1.0f);
+            FOVFactor.store(std::isfinite(factor) ? std::clamp(factor, 0.5f, 2.0f) : 1.0f, std::memory_order_relaxed);
+        });
         // The world projection builder also serves portrait, frontend and debug views; only the player camera's
         // frame setup and the restore after the shadow passes are widened. Another function shares the builder's
         // prologue, so the builder is taken from those calls.
@@ -37,7 +42,7 @@ export namespace Camera
                     if (std::isfinite(fov) && fov > 0.0f && fov < 180.0f)
                     {
                         const bool unframedCutscene = Cutscene::Active && Cutscene::Active() && !Cutscene::Bars();
-                        const float factor = !unframedCutscene && std::isfinite(*FOVFactor) ? std::clamp(*FOVFactor, 0.5f, 2.0f) : 1.0f;
+                        const float factor = unframedCutscene ? 1.0f : FOVFactor.load(std::memory_order_relaxed);
                         float corrected = std::min(AdjustFOV(fov, Screen.fAspectRatio) * factor, 150.0f);
                         // Cutscenes keep their own framing; the multiplier fades out while the bars slide in.
                         const float cutscene = Cutscene::Amount();

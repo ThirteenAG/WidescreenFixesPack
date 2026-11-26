@@ -29,6 +29,8 @@ using namespace RWGTA::ButtonIcons;
 
 namespace
 {
+    bool keyboardIcons = true;
+
     // Token characters: the pad's pictures, then the keys' pictures by their cell in the atlas (without the two
     // Windows keys, so that every cell fits up to 0xFF)
     constexpr uint8_t PadFirst = 0x80;
@@ -283,8 +285,7 @@ namespace
             }
             else
             {
-                static auto& keyIcons = FixSettings().Int("MAIN.KeyboardIcons");
-                if (keyIcons)
+                if (keyboardIcons)
                 {
                     int token = KeyTokenOf(static_cast<uint8_t*>(manager), action);
                     if (token >= 0)
@@ -484,8 +485,7 @@ namespace
     {
         if (Pad::IsPadLastDevice())
             return 1 + (Pad::IsModernLayout() ? 2 : 0) + int(CurrentSeat()) * 4 + int(Pad::Style()) * 16;
-        static auto& keyIcons = FixSettings().Int("MAIN.KeyboardIcons");
-        return keyIcons ? 128 : 0;
+        return keyboardIcons ? 128 : 0;
     }
 
     SafetyHookInline shSetHelpMessage;
@@ -594,6 +594,10 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
+            const auto updateKeyboardIcons = []() { keyboardIcons = ReadFixSetting("MAIN.KeyboardIcons", 1) != 0; };
+            updateKeyboardIcons();
+            OnSettingChange("MAIN.KeyboardIcons", updateKeyboardIcons);
+
             if (GetModuleHandleW(L"GInputSA.asi") || !Pad::IsInstalled() && !FixSettings().Int("MAIN.KeyboardIcons"))
                 return;
 

@@ -74,7 +74,7 @@
 
 
 
-**Frame Rate Limit** caps the frame rate at the monitor's refresh rate or at a number of your choice, up to the game's own limit of 120 fps. **Pause in Background** pauses the game while another window is active and resumes it when you return; a pause you started yourself stays. **Check for Updates** shows a notice in the main menu when a newer version is out. **Ctrl+F10** opens the settings overlay.
+**Frame Rate Limit** caps the frame rate at the monitor's refresh rate or at a number of your choice, up to the game's own limit of 120 fps. **Pause in Background** pauses the game while another window is active and resumes it when you return; a pause you started yourself stays. **Check for Updates** shows a notice in the main menu when a newer version is out.
 
 
 

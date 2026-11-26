@@ -30,9 +30,9 @@
       "section": "gameplay"
     },
     {
-      "id": "advanced",
-      "title": "@page.advanced",
-      "section": "advanced"
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
     }
   ],
   "settings": [
@@ -81,7 +81,12 @@
       "description": "@HudAspectRatioConstraint.description",
       "page": "display",
       "apply": "live",
-      "visibility": "menu"
+      "visibility": "menu",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.WindowMode",
@@ -119,7 +124,7 @@
       "id": "MAIN.FPSLimit",
       "type": "int",
       "default": 60,
-      "min": -1,
+      "min": 30,
       "max": 1000,
       "unit": "fps",
       "special": [
@@ -263,7 +268,7 @@
       ],
       "label": "@MAIN.TextLanguage",
       "description": "@MAIN.TextLanguage.description",
-      "page": "advanced",
+      "page": "compatibility",
       "apply": "live",
       "visibility": "editor",
       "maxLength": 32

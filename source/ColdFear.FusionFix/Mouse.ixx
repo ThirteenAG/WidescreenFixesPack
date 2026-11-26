@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include <d3d9.h>
 #include "FixSettings.hpp"
+#include "rawinput.hpp"
 
 export module Mouse;
 
@@ -31,5 +32,8 @@ export namespace ColdFearMouse
         // ScreenToClient has already removed the frame; the native branch subtracts it again.
         auto cursor = hook::pattern("A9 00 00 C0 00 74 ? 8B 3D ? ? ? ? 6A 05 FF D7 8B 4D F4");
         injector::WriteMemory<uint8_t>(cursor.get_first<uint8_t>(5), 0xEB, true);
+
+        // The game's loop drains the queue each frame: a fast mouse keeps adding moves and holds the frame
+        MessagePumpGuard::Install(GetModuleHandleW(nullptr));
     }
 }

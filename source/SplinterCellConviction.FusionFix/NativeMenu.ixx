@@ -105,13 +105,13 @@ export namespace SCCMenu
         wideDtor(result + 0x20, nullptr); stringDtor(result + 0x0C, nullptr); stringDtor(path, nullptr);
         return result[0] == 4 && (result[4] & 1) && MovieValid(movie);
     }
-    // movie virtual +6Ch: sets a variable to a number
+    // FlashMovie virtual +7Ch (sub_87081B): sets a variable to a number; +6Ch reads a variable as a string
     inline void SetNumber(void* movie, const std::string& name, float value)
     {
         if (!MovieValid(movie)) return;
         uint8_t path[20] = {};
         stringCtor(path, nullptr, name.c_str());
-        reinterpret_cast<void(__thiscall*)(void*, void*, float)>((*reinterpret_cast<uintptr_t**>(movie))[0x6C / 4])(movie, path, value);
+        reinterpret_cast<void(__thiscall*)(void*, void*, float)>((*reinterpret_cast<uintptr_t**>(movie))[0x7C / 4])(movie, path, value);
         stringDtor(path, nullptr);
     }
 

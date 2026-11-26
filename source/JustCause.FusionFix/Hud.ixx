@@ -44,7 +44,8 @@ export namespace JCHud
 
     inline void Refresh()
     {
-        const auto value = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+        const std::lock_guard lock(mutex);
+        const auto value = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
         requestedAspect.store(value && std::isfinite(*value) ? *value : 0.0f);
     }
 

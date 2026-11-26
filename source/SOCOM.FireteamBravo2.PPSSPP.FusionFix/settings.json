@@ -71,7 +71,7 @@
       "description": "@fov.description",
       "page": "options",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "min": 0.5,
       "max": 2.0,
       "step": 0.05
@@ -84,7 +84,7 @@
       "description": "@aspect.description",
       "page": "options",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "special": [
         {
           "value": "Auto",
@@ -136,7 +136,12 @@
       "description": "@hudaspect.description",
       "page": "options",
       "visibility": "menu",
-      "apply": "restart"
+      "apply": "live",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.HudScale",
@@ -149,7 +154,7 @@
       "description": "@hudscale.description",
       "page": "options",
       "visibility": "menu",
-      "apply": "restart"
+      "apply": "live"
     },
     {
       "id": "MAIN.CutsceneBorders",
@@ -177,7 +182,7 @@
       "description": "@borders.description",
       "page": "options",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "presets": {
         "vanilla": 1,
         "recommended": 3,
@@ -218,7 +223,7 @@
       "description": "@language.description",
       "page": "compatibility",
       "visibility": "editor",
-      "apply": "restart"
+      "apply": "live"
     },
     {
       "id": "MAIN.GamepadIcons",
@@ -228,7 +233,7 @@
       "description": "@icons.description",
       "page": "options",
       "visibility": "menu",
-      "apply": "restart",
+      "apply": "live",
       "choices": [
         {
           "value": 0,

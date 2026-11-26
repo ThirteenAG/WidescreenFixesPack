@@ -2,6 +2,7 @@
 #include <minidx8/d3d8.h>
 #include "Shared/CursorConfinement.hpp"
 #include <functional>
+#include <atomic>
 #include <mutex>
 #include <chrono>
 #include <thread>
@@ -35,7 +36,7 @@ namespace SHDisplay
         IDirect3DDevice8* device = nullptr;
         UINT backBufferWidth = 0;
         UINT backBufferHeight = 0;
-        double frameLimit = 0.0;            // frames per second, 0 = off
+        std::atomic<double> frameLimit{ 0.0 }; // frames per second, 0 = off, -1 = monitor
         int anisotropy = 0;                 // world textures, 0 = the game's filtering
         int requestedAnisotropy = 0;        // the setting, before the device's limit
         int maxAnisotropy = -1;             // the device's limit, -1 until a device exists
@@ -167,6 +168,7 @@ namespace SHDisplay
             UINT flags = SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOACTIVATE;
             if (state.backBufferWidth >= UINT(monitor.right - monitor.left) || state.backBufferHeight >= UINT(monitor.bottom - monitor.top))
                 flags |= SWP_NOSENDCHANGING;
+            WindowStyle::detail::AllowSize(state.window, rect.right - rect.left, rect.bottom - rect.top);
             OriginalSetWindowPos(state.window, HWND_NOTOPMOST, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, flags);
             state.managingWindow = true;
         }
@@ -598,18 +600,46 @@ namespace SHDisplay
             return result;
         }
 
-        // Frame pacing: a high resolution waitable timer for the bulk of the wait, then a short spin
-        inline void LimitFrameRate()
+        inline double MonitorRefreshRate(HWND window)
         {
-            auto& state = Get();
+            static HMONITOR previousMonitor = nullptr;
+            static ULONGLONG lastQuery = 0;
+            static double refresh = 60.0;
+            const auto monitor = MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY);
+            const auto now = GetTickCount64();
+            if (monitor != previousMonitor || now - lastQuery >= 1000)
+            {
+                previousMonitor = monitor;
+                lastQuery = now;
+                MONITORINFOEXW info{};
+                info.cbSize = sizeof(info);
+                DEVMODEW mode{};
+                mode.dmSize = sizeof(mode);
+                refresh = GetMonitorInfoW(monitor, &info) && EnumDisplaySettingsW(info.szDevice, ENUM_CURRENT_SETTINGS, &mode) &&
+                    mode.dmDisplayFrequency > 1 ? static_cast<double>(mode.dmDisplayFrequency) : 60.0;
+            }
+            return refresh;
+        }
+
+        // Frame pacing: a high resolution waitable timer for the bulk of the wait, then a short spin
+        inline void LimitFrameRate(HWND window)
+        {
             using Clock = std::chrono::steady_clock;
             static Clock::time_point next = {};
-            if (state.frameLimit <= 0.0)
+            static double previousLimit = 0.0;
+            const auto requested = Get().frameLimit.load(std::memory_order_relaxed);
+            const auto limit = requested < 0.0 ? MonitorRefreshRate(window) : requested;
+            if (limit != previousLimit)
+            {
+                next = {};
+                previousLimit = limit;
+            }
+            if (limit <= 0.0)
             {
                 next = {};
                 return;
             }
-            auto period = std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1.0 / state.frameLimit));
+            auto period = std::chrono::duration_cast<Clock::duration>(std::chrono::duration<double>(1.0 / limit));
             auto now = Clock::now();
             if (next == Clock::time_point{} || now - next > period * 4)
                 next = now;     // first frame or after a long stall: don't try to catch up
@@ -673,7 +703,7 @@ namespace SHDisplay
             ApplyGamma(device);
             for (auto& handler : OnPresent())
                 handler();
-            LimitFrameRate();
+            LimitFrameRate(window ? window : Get().window);
             return OriginalPresent(device, source, dest, window, dirty);
         }
 
@@ -809,6 +839,6 @@ namespace SHDisplay
 
     inline void SetFrameLimit(double fps)
     {
-        Get().frameLimit = fps;
+        Get().frameLimit.store(fps, std::memory_order_relaxed);
     }
 }

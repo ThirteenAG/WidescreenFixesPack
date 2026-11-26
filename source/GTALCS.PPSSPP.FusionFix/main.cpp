@@ -1,8 +1,8 @@
 #include "Game.hpp"
 #include "Addresses.hpp"
 #include "AspectRatio.hpp"
-#include "../Shared/Console/PortableCfg.hpp"
-#include "../Shared/Console/PspPluginConflict.hpp"
+#include "Shared/Console/PortableCfg.hpp"
+#include "Shared/Console/PspPluginConflict.hpp"
 #include <cstdlib>
 #include <cstring>
 extern "C" {
@@ -12,12 +12,27 @@ extern "C" {
 PSP_MODULE_INFO("GTALCS.PPSSPP.FusionFix",PSP_MODULE_USER,2,0);
 namespace lcsws {
 namespace {
-SceIoStat observedCfg{};
 unsigned lastSettingsPoll;
-bool cfgObserved;
-void ReadSettings() {
+void ReadTextLanguage()
+{
+    char buffer[32]{};
+    const char* value = inireader.ReadString("MAIN", "TextLanguage", "auto", buffer, sizeof(buffer));
+    settings.textLanguage = value && !std::strcmp(value, "en") ? TextLanguage::English : TextLanguage::Auto;
+}
+
+bool ReloadCfg()
+{
+    SceIoStat stat{};
+    if (sceIoGetstat(iniPath, &stat) < 0 || stat.st_size <= 0 || uint64_t(stat.st_size) >= console::portable::IniCapacity)
+        return false;
+    inireader.SetIniPath(iniPath);
+    return inireader.iniBufSize == stat.st_size;
+}
+
+void ReadSettings()
+{
     using console::bounded;
-    ReloadTextLanguage();
+    ReadTextLanguage();
     settings.skipIntro=inireader.ReadBoolean("MAIN","SkipIntro",1);
     settings.unthrottle=inireader.ReadBoolean("MAIN","UnthrottleEmuDuringLoading",1);
     settings.fps=inireader.ReadInteger("MAIN","FPSLimit",30)==60;
@@ -49,10 +64,7 @@ void ReadSettings() {
     drawing.hud=hud>0 ? bounded(hud,0.1f,2,0.75f) : 0.75f;
     float radar=inireader.ReadFloat("RADAR","RadarScale",0.83f);
     drawing.radar=radar>0 ? bounded(radar,0.1f,2,0.83f) : 0.83f;
-    drawing.radarX=bounded(inireader.ReadFloat("RADAR","RadarPosX",12),-480,480,12);
-    drawing.radarY=bounded(inireader.ReadFloat("RADAR","RadarPosY",196),-272,272,196); // -45 puts the radar on top
     drawing.multiplayerRadar=bounded(inireader.ReadFloat("MPRADAR","RadarScale",0.63f),0.1f,2,0.63f);
-    drawing.multiplayerRadarY=bounded(inireader.ReadFloat("MPRADAR","RadarPosY",170.0f),-272,272,170.0f);
 }
 }
 void PollSettings()
@@ -62,27 +74,23 @@ void PollSettings()
     if (now - lastSettingsPoll < 1000000u) return;
     lastSettingsPoll = now;
     if (*reinterpret_cast<const uint8_t*>(Address<0x8B8EE20>() + 0x131)) return;
-    SceIoStat current{};
-    if (sceIoGetstat(iniPath, &current) < 0 || current.st_size <= 0) return;
-    if (cfgObserved && current.st_size == observedCfg.st_size &&
-        !std::memcmp(&current.sce_st_mtime, &observedCfg.sce_st_mtime, sizeof(current.sce_st_mtime))) return;
-    ReadSettings();
+    // File timestamps can stay the same between edits on the memory stick.
+    // After loading a state, the live file must also win over restored values.
+    if (!ReloadCfg())
+        return;
+    ReadSettingsPreservingMenuEdits(ReadSettings);
     ApplyFrameRate();
     if (!settings.unthrottle) console::portable::Unthrottle(false);
-    observedCfg = current;
-    cfgObserved = true;
 }
-void ReloadTextLanguage() {
-    // Refresh the full native CFG buffer only at startup/menu reopening.
-    inireader.SetIniPath(iniPath);
-    char buffer[32]{};
-    const char* value = inireader.ReadString("MAIN", "TextLanguage", "auto", buffer, sizeof(buffer));
-    settings.textLanguage = value && !std::strcmp(value, "en") ? TextLanguage::English : TextLanguage::Auto;
+void ReloadTextLanguage()
+{
+    if (ReloadCfg())
+        ReadSettingsPreservingMenuEdits(ReadTextLanguage);
 }
 }
 extern "C" int module_start(SceSize,void*) {
     using namespace lcsws;
-    if (!console::portable::StartReported("GTA3",iniPath,"ms0:/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/GTALCS.PPSSPP.FusionFix.log")) return -1;
+    if (!console::portable::StartReported("GTA3",iniPath)) return -1;
     static constexpr const char* oldPlugins[] = {"GTALCS.PPSSPP.WidescreenFix", "GTALCS.PPSSPP.ImVehLM"};
     if (console::portable::conflict::Found(oldPlugins)) return -1;
     if (!console::portable::BeginReported()) return -1;
@@ -103,10 +111,7 @@ extern "C" int module_start(SceSize,void*) {
         {"MAIN", "HudScale", "0.75"},
         {"MAIN", "HudAspectRatioConstraint", "Auto"},
         {"RADAR", "RadarScale", "0.83"},
-        {"RADAR", "RadarPosX", "12.0"},
-        {"RADAR", "RadarPosY", "196.0"},
         {"MPRADAR", "RadarScale", "0.63"},
-        {"MPRADAR", "RadarPosY", "170.0"},
         {"MAIN", "FOVFactor", "1.0"},
         {"MAIN", "CutsceneBorders", "3"},
         {"MAIN", "GamepadIcons", "Auto"},

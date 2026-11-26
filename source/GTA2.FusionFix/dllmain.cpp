@@ -26,45 +26,43 @@ ASI_SETTINGS_EXPORT(FixSettings())
 
 void Init()
 {
-    Log::Write("GTA2 patches initializing.");
     // Per-monitor DPI awareness: the window and the resolution are in real pixels at any scaling
     using SetContext = BOOL(WINAPI*)(HANDLE);
     auto setContext = reinterpret_cast<SetContext>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetProcessDpiAwarenessContext"));
     if (!setContext || !setContext(reinterpret_cast<HANDLE>(-4)))
         SetProcessDPIAware();
 
+    // The main loop empties the message queue each frame; a high polling rate mouse must not keep it going
+    MessagePumpGuard::Install(GetModuleHandle(nullptr));
+
     FixSettings().Availability("SETUP.Option.Language", [](std::string_view value)
     {
         return value == "auto" || std::filesystem::exists(std::filesystem::path("data") / (std::string(value) + ".gxt"));
     }, [] { return "Only installed game languages are available."; });
     SettingsReader iniReader("");
+    Log::Read(iniReader);
+    Log::Write("GTA2 patches initializing.");
     nResX = iniReader.ReadInteger("MAIN", "ResX", 0);
     nResY = iniReader.ReadInteger("MAIN", "ResY", 0);
     // Changes from FusionFixHub or a preset apply at once where the in-game options apply them at once too
     static auto readLive = []
     {
-        fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
-        bSkipCredits = FixSettings().Bool("MISC.SkipCredits");
-        bFillBackground = FixSettings().Bool("MAIN.FillFrontendBackground");
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
-        nQuicksaveKey = FixSettings().Int("MISC.QuicksaveKey");
-        nZoomIncreaseKey = FixSettings().Int("MISC.ZoomIncreaseKey");
-        nZoomDecreaseKey = FixSettings().Int("MISC.ZoomDecreaseKey");
+        SettingsReader values;
+        fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
+        bSkipCredits = values.ReadBoolean("MISC", "SkipCredits", true);
+        bFillBackground = values.ReadBoolean("MAIN", "FillFrontendBackground", false);
+        CursorConfinement::SetEnabled(values.ReadBoolean("MAIN", "ConfineCursor", true));
+        nQuicksaveKey = values.ReadInteger("MISC", "QuicksaveKey", VK_F5);
+        nZoomIncreaseKey = values.ReadInteger("MISC", "ZoomIncreaseKey", VK_OEM_PLUS);
+        nZoomDecreaseKey = values.ReadInteger("MISC", "ZoomDecreaseKey", VK_OEM_MINUS);
     };
     for (auto id : { "MAIN.HudAspectRatioConstraint", "MISC.SkipCredits", "MAIN.FillFrontendBackground", "MAIN.ConfineCursor", "MISC.QuicksaveKey",
         "MISC.ZoomIncreaseKey", "MISC.ZoomDecreaseKey" })
-        FixSettings().OnChange(id, readLive);
+        FixSettings().OnChange(id, [] { RWGTA::GameThread::Post(readLive); });
 
     bSkipMovie = iniReader.ReadBoolean("MAIN", "SkipIntro", true);
-    bSkipCredits = iniReader.ReadBoolean("MISC", "SkipCredits", true);
-    bFillBackground = iniReader.ReadBoolean("MAIN", "FillFrontendBackground", false);
-
-    nQuicksaveKey = iniReader.ReadInteger("MISC", "QuicksaveKey", VK_F5);
-    nZoomIncreaseKey = iniReader.ReadInteger("MISC", "ZoomIncreaseKey", VK_OEM_PLUS);
-    nZoomDecreaseKey = iniReader.ReadInteger("MISC", "ZoomDecreaseKey", VK_OEM_MINUS);
     readLive();
 
-    Log::Read(iniReader);
     InputDevices::Read(iniReader);
     InputDevices::Watch();
     Desktop::Resolution(nResX, nResY);
@@ -101,7 +99,6 @@ CEXP void InitializeASI()
         asi_settings::LiveLink::Start();
         SetGameDirectory();
         GameRegistry::Install();
-        Log::Install();
         // The manager uses this ASI through the same local DirectDraw loader.
         // Keep its 16-bit format and minimum-size checks; remove only 4:3 filtering.
         auto managerCount = hook::pattern("DF E0 F6 C4 44 7A 01 43 8B 49 38");

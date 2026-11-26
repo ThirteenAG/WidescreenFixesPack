@@ -1,9 +1,9 @@
 #include "Models.hpp"
 #include "LightRects.hpp"
 #include "LightPack.hpp"
-#include "../../external/injector/include/ps2/runtime.hpp"
-#include "../../external/injector/include/ps2/game_abi.hpp"
-#include "../../external/injector/include/ps2/safetymips.hpp"
+#include "ps2/runtime.hpp"
+#include "ps2/game_abi.hpp"
+#include "ps2/safetymips.hpp"
 #include "Game.hpp"
 
 namespace imvehlm {
@@ -11,8 +11,8 @@ namespace {
 // CVehicle on LCS PS2 matches the PSP layout: model index 0x58, flags byte 0x255
 // (engine 0x10, handbrake 0x20, lights 0x40), gas/brake pedals 0x24C/0x250 and the
 // damage manager at 0x350 with the lamp status word at +0x10.
-struct Layout { unsigned model, flags, accelerator, brake, damage; };
-constexpr Layout layout{0x58, 0x255, 0x24C, 0x250, 0x360};
+struct Layout { unsigned model, flags, accelerator, brake, damage, type; };
+constexpr Layout layout{0x58, 0x255, 0x24C, 0x250, 0x360, 0x344};
 // The BF Injection also draws a Freeway body material.
 constexpr int BuggyModel = 155, FreewayModel = 207;
 
@@ -42,7 +42,7 @@ template<unsigned CacheCount, unsigned Slots, unsigned TextureBytes, unsigned Hd
         const console::VehicleLightState state{
             (flags & 0x10) != 0, (flags & 0x40) != 0, (flags & 0x20) != 0,
             field<float>(vehicle, layout.accelerator), field<float>(vehicle, layout.brake),
-            field<uint32_t>(vehicle, layout.damage)
+            console::AutomobileLampDamage(vehicle, layout.type, layout.damage)
         };
         const unsigned variant = state.texture();
         Texture* sources[CacheCount]{};

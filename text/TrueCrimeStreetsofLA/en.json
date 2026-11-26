@@ -23,6 +23,8 @@
   "ConfineCursor": "Confine cursor",
   "ConfineCursor.description": "Keep the cursor inside the active game client area. Releases on focus loss, window dragging, system menus or when disabled. Independent of mouse input.",
   "FPSLimit": "Frame rate limit",
+  "FPSLimit.monitor": "Monitor",
+  "FPSLimit.unlimited": "Unlimited",
   "FPSLimit.description": "Target frame rate: 0 unlimited, -1 current monitor refresh rate, or 30–1000 FPS. Default 60. Changes apply while the game runs. Higher rates may affect game behavior.",
   "SkipIntro": "Skip startup logos",
   "SkipIntro.description": "Skip the startup studio-logo videos. Story videos remain available. Restart after changing this value.",

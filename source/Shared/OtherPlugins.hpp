@@ -190,6 +190,38 @@ namespace OtherPlugins
         auto current = Get(plugin, setting);
         bool numeric = !setting.StringValued();
         auto values = ListedValues(plugin, setting);
+
+        // A number with special values besides its range (e.g. Unlimited, Refresh rate): the range is stepped through
+        // too, from its maximum on into the special values and from them back into the range at its minimum
+        const bool ranged = (setting.type == asi_settings::Type::Int || setting.type == asi_settings::Type::Float) &&
+            setting.min && setting.max && setting.choices.empty() && setting.suggestions.empty() &&
+            values.size() == setting.special.size();
+        if (ranged && !values.empty())
+        {
+            const double step = setting.step ? *setting.step : (setting.type == asi_settings::Type::Int ? 1.0 : 0.1);
+            const double value = std::atof(current.c_str());
+            int special = -1;
+            for (size_t i = 0; i < setting.special.size(); ++i)
+            {
+                if (asi_settings::detail::JsonEquals(setting.special[i].value, current, true))
+                    special = int(i);
+            }
+            const int count = int(values.size());
+            if (special >= 0)
+            {
+                const int next = special + direction;
+                if (next >= 0 && next < count)
+                    return values[next];
+                return asi_settings::text::FormatNumber(direction > 0 ? *setting.min : *setting.max);
+            }
+            const double next = std::round((value + direction * step) / step) * step;
+            if (next > *setting.max + step / 2)
+                return values.front();
+            if (next < *setting.min - step / 2)
+                return values.back();
+            return asi_settings::text::FormatNumber(std::clamp(next, *setting.min, *setting.max));
+        }
+
         if (!values.empty())
         {
             auto it = std::find_if(values.begin(), values.end(), [&](const std::string& v)
@@ -225,6 +257,25 @@ namespace OtherPlugins
         return current;
     }
 
+    // A number with a fixed count of decimals, rounded to nearest whatever the FPU rounding mode: printf follows the
+    // current mode, and games running with truncation (GTA2) would show 0.35 as 0.34
+    inline std::string FixedText(double value, int decimals)
+    {
+        decimals = std::clamp(decimals, 0, 9);
+        long long scale = 1;
+        for (int i = 0; i < decimals; ++i)
+            scale *= 10;
+        const long long scaled = std::llround(value * double(scale));
+        const unsigned long long magnitude = scaled < 0 ? 0ull - (unsigned long long)scaled : (unsigned long long)scaled;
+        std::string text = (scaled < 0 ? "-" : "") + std::to_string(magnitude / scale);
+        if (decimals)
+        {
+            auto fraction = std::to_string(magnitude % scale);
+            text += "." + std::string(size_t(decimals) - fraction.size(), '0') + fraction;
+        }
+        return text;
+    }
+
     // A value as the menu shows it (UTF-8); on and off are the host's own words
     inline std::string ValueText(const LoadedPlugin& plugin, const Setting& setting, std::string value, const std::string& on, const std::string& off)
     {
@@ -247,9 +298,7 @@ namespace OtherPlugins
             if (setting.type == asi_settings::Type::Float)
             {
                 int decimals = setting.decimals >= 0 ? setting.decimals : (setting.step && *setting.step < 1.0 ? 2 : 0);
-                char text[32];
-                snprintf(text, sizeof(text), "%.*f", decimals, std::atof(value.c_str()));
-                value = text;
+                value = FixedText(std::atof(value.c_str()), decimals);
             }
             if (!setting.unit.empty())
                 value += setting.unit == "%" || setting.unit == "\xC2\xB0" ? setting.unit : " " + setting.unit;

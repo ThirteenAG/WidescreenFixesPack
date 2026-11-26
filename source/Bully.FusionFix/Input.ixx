@@ -14,8 +14,8 @@ export namespace BullyInput
 {
     SafetyHookInline PollHook, LookXHook, LookYHook;
     SafetyHookMid StateHook, RumbleHook;
-    const float* CameraSpeed = nullptr;
-    const float* Deadzone = nullptr;
+    std::atomic<float> CameraSpeed{ 1.0f };
+    std::atomic<float> Deadzone{ 0.15f };
     DWORD(WINAPI* GetState)(DWORD, XINPUT_STATE*) = nullptr;
     int(__thiscall* Initialize)(void*, void*, bool) = nullptr;
     void(__thiscall* StopVibration)(void*) = nullptr;
@@ -23,6 +23,7 @@ export namespace BullyInput
     std::array<bool, 4> PolledConnected{};
     std::array<ULONGLONG, 4> Activity{};
     std::array<XINPUT_STATE, 4> States{};
+    std::array<std::array<float, 4>, 4> activityAxes{};
     ULONGLONG NextProbe = 0;
     float DeadzoneSquared = 0.0225f;
     double DeadzoneRadius = 0.15, DeadzoneRange = 0.85;
@@ -91,6 +92,7 @@ export namespace BullyInput
 
     void Assign(int slot, DWORD index)
     {
+        activityAxes[slot] = {};
         auto context = InputContexts.get().data() + slot * 2324;
         if (*context && *reinterpret_cast<uint16_t*>(context + 2236) && StopVibration)
             StopVibration(context);
@@ -158,20 +160,24 @@ export namespace BullyInput
         }
     }
 
-    bool Changed(uint8_t* context)
+    bool Changed(uint8_t* context, int slot)
     {
         if (*context)
         {
-            if (*reinterpret_cast<uint16_t*>(context + 488) != *reinterpret_cast<uint16_t*>(context + 1436))
-                return true;
+            bool changed = *reinterpret_cast<uint16_t*>(context + 488) != *reinterpret_cast<uint16_t*>(context + 1436);
             for (int i = 0; i < 4; ++i)
             {
                 const float value = *reinterpret_cast<float*>(context + 388 + i * 4);
-                const float old = *reinterpret_cast<float*>(context + 1336 + i * 4);
-                if (std::isfinite(value) && std::abs(value) > 0.1f && std::abs(value - old) > 0.01f)
-                    return true;
+                auto& baseline = activityAxes[slot][i];
+                if (!std::isfinite(value) || std::abs(value) <= 0.1f)
+                    baseline = 0.0f;
+                else if (std::abs(value - baseline) > 0.01f)
+                {
+                    baseline = value;
+                    changed = true;
+                }
             }
-            return false;
+            return changed;
         }
         return std::memcmp(context + 516, context + 1464, 256) != 0 ||
             std::memcmp(context + 512, context + 1460, 4) != 0 ||
@@ -210,7 +216,8 @@ export namespace BullyInput
         }
         if (slot == 0)
             Refresh();
-        const float deadzone = Deadzone && std::isfinite(*Deadzone) ? std::clamp(*Deadzone, 0.0f, 0.5f) : 0.15f;
+        const float value = Deadzone.load(std::memory_order_relaxed);
+        const float deadzone = std::isfinite(value) ? std::clamp(value, 0.0f, 0.5f) : 0.15f;
         DeadzoneSquared = deadzone * deadzone;
         DeadzoneRadius = deadzone;
         DeadzoneRange = 1.0 - DeadzoneRadius;
@@ -229,7 +236,7 @@ export namespace BullyInput
                 PrimaryController = 0;
             result = 1;
         }
-        if (slot >= 0 && result && Focused() && (!pad || PolledConnected[slot]) && Changed(context))
+        if (slot >= 0 && result && Focused() && (!pad || PolledConnected[slot]) && Changed(context, slot))
         {
             Activity[slot] = GetTickCount64();
             PrimaryController = slot;
@@ -264,7 +271,8 @@ export namespace BullyInput
     {
         if (!PrimaryController.is_initialized() || !InputContexts.is_initialized() || PrimaryController < 0 || PrimaryController >= 4 || InputContexts.get()[PrimaryController * 2324] == 0)
             return 1.0;
-        const double speed = CameraSpeed && std::isfinite(*CameraSpeed) ? std::clamp(*CameraSpeed, 0.1f, 5.0f) : 1.0f;
+        const float value = CameraSpeed.load(std::memory_order_relaxed);
+        const double speed = std::isfinite(value) ? std::clamp(value, 0.1f, 5.0f) : 1.0f;
         const float native = CutsceneTimeStep.is_initialized() ? CutsceneTimeStep.get() : 1.0f;
         const float actual = BullyCutscene::HaveStep ? BullyCutscene::UnclampedStep : native;
         if (!std::isfinite(native) || !std::isfinite(actual) || native <= 0.0f || actual <= 0.0f)
@@ -295,7 +303,7 @@ export namespace BullyInput
         DeadzoneOperands.clear();
     }
 
-    void Install(const float& speed, const float& deadzone, HMODULE module = GetModuleHandle(nullptr), bool resolveApi = true)
+    void Install(HMODULE module = GetModuleHandle(nullptr), bool resolveApi = true)
     {
         auto poll = hook::module_pattern(module, "83 EC 24 53 55 8B E9 56 33 DB 38 5D 00 57 8D B5 44 01 00 00 8D BD F8 04 00 00 B9 ED 00 00 00");
         auto end = hook::module_pattern(module, "5F 5E C6 85 B4 08 00 00 00 5D 8A C3 5B 83 C4 24 C3");
@@ -317,8 +325,6 @@ export namespace BullyInput
             hook::range_pattern(begin, finish, "D9 05 ? ? ? ? D8 D9 DF E0 F6 C4 41 75 18").get_first<uint8_t>(),
             hook::range_pattern(begin, finish, "D9 05 ? ? ? ? D8 DB").get_first<uint8_t>()
         };
-        CameraSpeed = &speed;
-        Deadzone = &deadzone;
         InputContexts.SetAddress(*contexts.get_first<uint8_t*>(12));
         InputClaims.SetAddress(*initialize.get_first<uint8_t*>(25));
         PrimaryController.SetAddress(*primary.get_first<int*>(1));

@@ -84,6 +84,7 @@ namespace NativeWindow
         }
         SetWindowLong(window, GWL_STYLE, style);
         SetWindowLong(window, GWL_EXSTYLE, exStyle);
+        WindowStyle::detail::AllowSize(window, rect.right - rect.left, rect.bottom - rect.top);
         SetWindowPos(window, HWND_NOTOPMOST, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_FRAMECHANGED | SWP_SHOWWINDOW | SWP_NOACTIVATE);
         SquareCorners(window);
     }

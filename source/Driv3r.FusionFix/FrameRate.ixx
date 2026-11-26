@@ -95,7 +95,7 @@ export namespace Driv3rFrameRate
         }();
         if (!initialized) return;
         Window = window;
-        const int requested = FixSettings().Int("MAIN.FPSLimit");
+        const int requested = Driv3rSettings::FPSLimit.load();
         Pace(requested == -1 || requested == 0 ? requested : std::clamp(requested, 30, 1000));
         const auto now = Counter();
         ++statisticsFrames;

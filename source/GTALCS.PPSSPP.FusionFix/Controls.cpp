@@ -1,4 +1,5 @@
 #include "Game.hpp"
+#include "Weapon.hpp"
 #include <cstddef>
 #include <cstdint>
 using namespace mips_asm;
@@ -21,37 +22,30 @@ struct CPad {
 static_assert(sizeof(CControllerState) == 48 && offsetof(CPad, OldState) == 52);
 injector::game_fn<uintptr_t()> FindPlayerPed;
 injector::game_fn<uintptr_t()> FindPlayerVehicle;
-injector::game_fn<uintptr_t(int)> WeaponInfo;
-uintptr_t reloadWeapon;
+injector::game_fn<const WeaponInfo*(int)> GetWeaponInfo;
+Weapon* reloadWeapon;
 SafetyMipsInline accelerateHook, brakeHook, weaponHook, weaponEdgeHook;
 bool Reloading() {
-    auto ped = FindPlayerPed();
-    if (!ped) { reloadWeapon = 0; return false; }
-    uintptr_t current = ped + 0x590 + uint8_t(*reinterpret_cast<uint8_t*>(ped + 0x6B8)) * 28;
-    if (reloadWeapon != current || *reinterpret_cast<int*>(current + 4) != 2) {
-        reloadWeapon = 0; return false;
+    const auto ped = FindPlayerPed();
+    const auto* current = CurrentWeapon(ped, CurrentWeaponSlot(ped));
+    if (!current || reloadWeapon != current || current->state != WeaponState::Reloading) {
+        reloadWeapon = nullptr; return false;
     }
     return true;
 }
 void Reload(CPad* pad) {
     if (!pad->NewState.LEFTSHOULDER1 || !pad->NewState.SQUARE || pad->OldState.SQUARE || Reloading()) return;
-    auto ped = FindPlayerPed();
-    if (!ped) return;
-    unsigned slot = *reinterpret_cast<uint8_t*>(ped + 0x6B8);
+    const auto ped = FindPlayerPed();
+    const int slot = CurrentWeaponSlot(ped);
     if (slot < 3 || slot > 8) return;
-    uintptr_t weapon = ped + 0x590 + slot * 28;
-    auto* state = reinterpret_cast<int*>(weapon + 4);
-    auto* clip = reinterpret_cast<int*>(weapon + 8);
-    auto* total = reinterpret_cast<int*>(weapon + 12);
-    if (*total <= 0 || *clip >= *total || *state == 2) return;
-    uintptr_t info = WeaponInfo(*reinterpret_cast<int*>(weapon + 0));
-    if (!info || *clip >= *reinterpret_cast<int*>(info + 16)) return;
-    unsigned duration = *reinterpret_cast<unsigned*>(info + 12);
-    if (duration < 100 || duration > 10000) duration = 1000;
+    auto* weapon = CurrentWeapon(ped, slot);
+    if (!weapon || weapon->total <= 0 || weapon->clip >= weapon->total || weapon->state == WeaponState::Reloading) return;
+    const auto* info = GetWeaponInfo(weapon->type);
+    if (!info || weapon->clip >= info->clipSize) return;
     // Enter the native reload state. CWeapon::Update owns animation completion,
     // clip refilling and reload audio; no code or controller state is rewritten.
-    *state = 2;
-    *reinterpret_cast<unsigned*>(weapon + 16) = *reinterpret_cast<unsigned*>(Address<0x8B5E144>()) + duration;
+    weapon->state = WeaponState::Reloading;
+    weapon->timer = *reinterpret_cast<unsigned*>(Address<0x8B5E144>()) + info->reloadDuration;
     reloadWeapon = weapon;
 }
 int16_t Held(CPad* pad, int16_t value) { return pad->DisablePlayerControls ? 0 : value; }
@@ -62,7 +56,8 @@ int16_t CPad__GetBrake(CPad* pad) { return Held(pad,pad->NewState.LEFTSHOULDER1)
 int16_t CPad__GetRightStickX(CPad* pad) { return Held(pad,pad->NewState.RIGHTSTICKX); }
 int16_t CPad__GetRightStickY(CPad* pad) { return Held(pad,pad->NewState.RIGHTSTICKY); }
 int16_t Aim(CPad* pad, int16_t left, int16_t right) {
-    int value=left ? left : right;
+    const auto& controls = pad->NewState;
+    int value = controls.RIGHTSTICKX || controls.RIGHTSTICKY ? right : left;
     if (!pad->NewState.CROSS && !pad->NewState.DPADDOWN) value *= 2;
     return Held(pad,int16_t(value));
 }
@@ -84,7 +79,7 @@ int16_t CPad__EnterFreeAim(CPad* pad) { return Held(pad,pad->NewState.LEFTSHOULD
 void InstallControls() {
     FindPlayerPed = reinterpret_cast<uintptr_t (*)()>(Address<0x89d58b0>());
     FindPlayerVehicle = reinterpret_cast<uintptr_t (*)()>(Address<0x89d57b4>());
-    WeaponInfo = reinterpret_cast<uintptr_t (*)(int)>(Address<0x894d97c>());
+    GetWeaponInfo = reinterpret_cast<const WeaponInfo* (*)(int)>(Address<0x894d97c>());
     bool ModernControlScheme=settings.modernControls;
     {
         injector::WriteInstr(Address<0x0886AD18>(),

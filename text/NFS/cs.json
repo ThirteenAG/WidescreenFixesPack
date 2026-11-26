@@ -22,6 +22,8 @@
   "WFP_GAMEPADICONS": "Ikony tlačítek",
   "WFP_ICONS_AUTO": "Automaticky",
   "WFP_SKIPINTRO": "Přeskočit úvod",
+  "WFP_SKIPPRESSSTART": "Přeskočit „Stiskněte Start“",
+  "WFP_DESC_SKIPPRESSSTART": "Titulní obrazovka pokračuje automaticky, aniž by čekala na stisknutí tlačítka Start.",
   "WFP_U2SAVEBONUS": "Bonus za uloženou hru Underground 2",
   "WFP_FPSLIMIT": "Snímková frekvence",
   "WFP_FPS_CUSTOM": "Vlastní",

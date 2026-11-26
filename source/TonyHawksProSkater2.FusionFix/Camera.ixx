@@ -13,10 +13,19 @@ export namespace THPS2Camera
     inline SafetyHookMid CopyHook, ProjectionHook, DestroyHook;
     inline SafetyHookInline WorldHook;
     inline std::array<bool, 2> Gameplay{};
-    inline const float* Factor = nullptr;
+    inline std::atomic<float> Factor{ 1.0f };
     inline const int32_t* AspectFov = nullptr;
     inline int DrawingPlayer = -1;
     inline bool Inset = false;
+
+    constexpr int32_t ProjectionDivisor(int32_t width, int32_t height)
+    {
+        return std::max(1, static_cast<int32_t>(16384LL * height / (3LL * width)));
+    }
+
+    static_assert(ProjectionDivisor(16384, 1) == 1);
+    static_assert(ProjectionDivisor(640, 480) == 4096);
+    static_assert(ProjectionDivisor(1536, 432) == 1536);
 
     inline uint32_t Numerator(uint32_t original, float factor, int32_t aspectFov)
     {
@@ -37,9 +46,14 @@ export namespace THPS2Camera
         return result;
     }
 
-    inline void Install(const float* factor, const int32_t* aspectFov, HMODULE module = GetModuleHandleW(nullptr))
+    inline void Install(const int32_t* aspectFov, HMODULE module = GetModuleHandleW(nullptr))
     {
-        Factor = factor;
+        ObserveFixSetting("MAIN.FOVFactor", Factor, [](const std::string& value)
+        {
+            float factor{ 1.0f };
+            asi_settings::detail::ParseFloat(value, factor);
+            return factor;
+        });
         AspectFov = aspectFov;
         auto copy = hook::module_pattern(module, "8B 81 A4 03 00 00 56 85 C0 57 0F 84 ? ? ? ? 83 B8 B8 30 00 00 05 75 ? A1");
         auto world = hook::module_pattern(module, "83 EC 54 53 55 6A 09 E8 ? ? ? ? 83 C4 04 BD 01 00 00 00 84 C0");
@@ -69,9 +83,9 @@ export namespace THPS2Camera
                 regs.edx = 0;
             }
             else if (DrawingPlayer >= 0 && DrawingPlayer < static_cast<int>(Gameplay.size()) && Gameplay[DrawingPlayer] &&
-                ReplayPlayers <= 0 && !Demo && Factor && AspectFov)
+                ReplayPlayers <= 0 && !Demo && AspectFov)
             {
-                regs.eax = Numerator(regs.eax, *Factor, *AspectFov);
+                regs.eax = Numerator(regs.eax, Factor.load(std::memory_order_relaxed), *AspectFov);
                 regs.edx = 0;
             }
         });
@@ -89,8 +103,8 @@ export namespace THPS2Frame
     inline SafetyHookInline ViewportHook, PreviewHook, AreaHook;
     inline SafetyHookMid CenterHook;
     inline float Width = 640.0f, Height = 480.0f, FrameWidth = 640.0f, FrameHeight = 480.0f;
-    inline std::unordered_map<uint16_t*, std::array<uint16_t, 2>> Fitted;
-    inline std::unordered_map<int16_t*, std::array<int16_t, 2>> FittedAreas;
+    // The renderer retains the active viewport through the subsequent scene draws.
+    inline std::array<uint16_t, 10> MenuViewport{};
 
     inline uint16_t Fit(uint16_t value, float size, float frame)
     {
@@ -101,57 +115,56 @@ export namespace THPS2Frame
     // Horizontally here; vertically (screens narrower than 4:3) through the clip area and the view centre.
     inline int __cdecl Viewport(int scene, uint16_t* rect, int list)
     {
-        bool inset = false;
-        if (rect && THPS2Camera::DrawingPlayer < 0 && !(rect[2] == 0 && rect[0] >= Width))
+        const bool inset = rect && THPS2Camera::DrawingPlayer < 0 && !(rect[2] == 0 && rect[0] >= Width);
+        auto* activeViewport = rect;
+        if (inset)
         {
-            // Some callers keep the rectangle and pass it again every frame
-            auto fitted = Fitted.find(rect);
-            if (fitted == Fitted.end() || fitted->second != std::array{ rect[0], rect[2] })
-            {
-                rect[0] = Fit(rect[0], Width, FrameWidth);
-                rect[2] = Fit(rect[2], Width, FrameWidth);
-                Fitted[rect] = { rect[0], rect[2] };
-            }
-            inset = true;
+            std::copy_n(rect, MenuViewport.size(), MenuViewport.begin());
+            MenuViewport[0] = Fit(MenuViewport[0], Width, FrameWidth);
+            MenuViewport[2] = Fit(MenuViewport[2], Width, FrameWidth);
+            activeViewport = MenuViewport.data();
         }
         const auto previous = std::exchange(THPS2Camera::Inset, inset);
-        const auto result = ViewportHook.ccall<int>(scene, rect, list);
+        const auto result = ViewportHook.ccall<int>(scene, activeViewport, list);
         THPS2Camera::Inset = previous;
+        if (inset)
+        {
+            rect[5] = MenuViewport[5];
+            std::copy_n(MenuViewport.begin() + 7, 3, rect + 7);
+        }
         return result;
     }
 
     // The level-select preview movie quad
     inline uintptr_t __cdecl Preview(int16_t* quad)
     {
-        if (quad)
+        if (!quad)
+            return PreviewHook.ccall<uintptr_t>(quad);
+        std::array<int16_t, 18> fitted;
+        std::copy_n(quad, fitted.size(), fitted.begin());
+        for (auto x : { 4, 8, 12, 16 })
         {
-            for (auto x : { 4, 8, 12, 16 })
-            {
-                quad[x] = static_cast<int16_t>(std::lround(quad[x] + (Width - FrameWidth) * 0.5f));
-                quad[x + 1] = static_cast<int16_t>(std::lround(quad[x + 1] + (Height - FrameHeight) * 0.5f));
-            }
+            fitted[x] = static_cast<int16_t>(std::lround(fitted[x] + (Width - FrameWidth) * 0.5f));
+            fitted[x + 1] = static_cast<int16_t>(std::lround(fitted[x + 1] + (Height - FrameHeight) * 0.5f));
         }
-        return PreviewHook.ccall<uintptr_t>(quad);
+        return PreviewHook.ccall<uintptr_t>(fitted.data());
     }
 
     // Clip areas in 512x240 units, on screens narrower than 4:3 (bars above and below the 2D frame)
     inline int __cdecl Area(int16_t* area)
     {
-        if (area)
-        {
-            // Some areas are kept and passed again every frame
-            auto fitted = FittedAreas.find(area);
-            const bool done = fitted != FittedAreas.end() && fitted->second == std::array{ area[5], area[7] };
-            const int y = area[5] < 0 ? static_cast<int8_t>(area[5]) : static_cast<uint8_t>(area[5]);
-            if (!done && !(y <= 0 && y + area[7] >= 240))
-            {
-                const float scale = FrameHeight / Height;
-                area[5] = static_cast<int16_t>(std::lround(y * scale + (Height - FrameHeight) * 0.5f * 240.0f / Height));
-                area[7] = static_cast<int16_t>(std::lround(area[7] * scale));
-                FittedAreas[area] = { area[5], area[7] };
-            }
-        }
-        return AreaHook.ccall<int>(area);
+        if (!area)
+            return AreaHook.ccall<int>(area);
+        const int lowY = static_cast<uint8_t>(area[5]);
+        const int y = area[5] < 0 && lowY ? lowY - 256 : lowY;
+        if (y <= 0 && y + area[7] >= 240)
+            return AreaHook.ccall<int>(area);
+        std::array<int16_t, 8> fitted;
+        std::copy_n(area, fitted.size(), fitted.begin());
+        const float scale = FrameHeight / Height;
+        fitted[5] = static_cast<int16_t>(std::lround(y * scale + (Height - FrameHeight) * 0.5f * 240.0f / Height));
+        fitted[7] = static_cast<int16_t>(std::lround(area[7] * scale));
+        return AreaHook.ccall<int>(fitted.data());
     }
 
     inline void Install(float width, float height, float frameWidth, float frameHeight, int32_t* frameWidthValue, int32_t* frameHeightValue)
@@ -207,11 +220,11 @@ export void InstallCameraAndMovies()
 {
     hook::pattern pattern("");
     //FOV
-    Screen.FOV = static_cast<int32_t>(4096.0f / (Screen.fAspectRatio / (4.0f / 3.0f)));
+    Screen.FOV = THPS2Camera::ProjectionDivisor(Screen.Width, Screen.Height);
     pattern = hook::pattern("F7 3D ? ? ? ? 33 C9 66 8B 4E"); //45E9E9
     injector::WriteMemory<int32_t*>(pattern.get_first<int32_t*>(2), &Screen.FOV, true);
 
-    THPS2Camera::Install(&FixSettings().Float("MAIN.FOVFactor"), &Screen.FOV);
+    THPS2Camera::Install(&Screen.FOV);
 
     THPS2Video::Install(Screen.fWidth, Screen.fHeight);
 }

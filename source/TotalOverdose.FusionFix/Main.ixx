@@ -16,11 +16,11 @@ import Updates;
 void InitializeFix()
 {
     auto& settings = FixSettings();
-    asi_settings::LiveLink::Start();
+    const auto windowMode = std::clamp(settings.Int("MAIN.WindowMode"), 0, 2);
     Screen.Width = settings.Int("MAIN.ResX");
     Screen.Height = settings.Int("MAIN.ResY");
 
-    if (Screen.Width <= 0 || Screen.Height <= 0 || Screen.Width > 16384 || Screen.Height > 16384)
+    if (windowMode == 2 || Screen.Width <= 0 || Screen.Height <= 0 || Screen.Width > 16384 || Screen.Height > 16384)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
     if (Screen.Width <= 0 || Screen.Height <= 0 || Screen.Width > 32767 || Screen.Height > 32767)
     {
@@ -38,7 +38,7 @@ void InitializeFix()
     InstallScreenSpace();
     InstallFullScreenPictures();
     InstallMovieLayout();
-    InstallWindowMode();
+    InstallWindowMode(windowMode);
     InstallFieldOfView();
     InstallFrame();
     Updates::Install();
@@ -88,6 +88,7 @@ void InitializeFix()
     // The camera's view area, for the widescreen mode and for 4:3 and narrower
     injector::WriteMemory<float>(*cameraAspect.get_first<float*>(6), Screen.fAspectRatio, true);
     injector::WriteMemory<float>(*cameraAspect.get_first<float*>(16), Screen.fAspectRatio, true);
+    asi_settings::LiveLink::Start();
 }
 
 

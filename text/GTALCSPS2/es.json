@@ -15,7 +15,7 @@
   "controls.pccontrolscheme": "Controles de teclado y ratón",
   "controls.pccontrolscheme.description": "Usa el esquema de control de PC; si está desactivado, el mando nativo sigue disponible.",
   "controls.mousesensitivity": "Sensibilidad del ratón",
-  "controls.mousesensitivity.description": "Velocidad de la cámara con el ratón. 1.0 gira la cámara 0.002 radianes por píxel con el zoom predeterminado.",
+  "controls.mousesensitivity.description": "Los valores más altos hacen que la cámara gire más con el mismo movimiento del ratón.",
   "controls.invertmousey": "Invertir eje Y del ratón",
   "controls.invertmousey.description": "Invierte el movimiento vertical de la cámara con el ratón.",
   "hud.hudscale": "Tamaño del HUD",
@@ -124,5 +124,7 @@
   "controls.gamepadcameraspeed": "Velocidad de cámara del mando",
   "controls.gamepadcameraspeed.description": "Velocidad de la cámara con el stick derecho, a pie y en vehículos. 1.0 es la velocidad original.",
   "controls.invertgamepady": "Invertir mando Y",
-  "controls.invertgamepady.description": "Invierte la dirección vertical de la cámara con el stick derecho."
+  "controls.invertgamepady.description": "Invierte la dirección vertical de la cámara con el stick derecho.",
+  "controls.holdvehiclecamera": "Mantener cámara del vehículo",
+  "controls.holdvehiclecamera.description": "Cuando giras la cámara con el stick derecho en un vehículo, se queda ahí, para que puedas mirar atrás mientras conduces. Vuelve detrás del vehículo dos segundos después de soltarlo. Desactivado mantiene la cámara original, que vuelve detrás del vehículo mientras conduces."
 }

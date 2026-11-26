@@ -281,11 +281,11 @@
       }
     },
     {
-      "id": "MAIN.DisableNoise",
+      "id": "MAIN.DisableFilmGrain",
       "type": "bool",
       "default": 0,
-      "label": "@DisableNoise",
-      "description": "@DisableNoise.description",
+      "label": "@DisableFilmGrain",
+      "description": "@DisableFilmGrain.description",
       "page": "graphics",
       "visibility": "menu",
       "apply": "restart"
@@ -362,7 +362,7 @@
       "default": false,
       "label": "@MAIN.CheckForUpdates",
       "description": "@MAIN.CheckForUpdates.description",
-      "page": "display",
+      "page": "compatibility",
       "apply": "live"
     }
   ]

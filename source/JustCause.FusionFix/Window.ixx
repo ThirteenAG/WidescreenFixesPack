@@ -1,6 +1,7 @@
 module;
 #include <stdafx.h>
 #include <d3d9.h>
+#include <atomic>
 #include "Shared/WindowCursor.hpp"
 #include "FixSettings.hpp"
 
@@ -36,11 +37,13 @@ void DrawFrameBorders(IDirect3DDevice9* device)
 export namespace JCWindow
 {
     inline HWND window = nullptr;
+    inline HWND* nativeGameWindow = nullptr;
     inline IDirect3DDevice9* currentDevice = nullptr;
     inline SafetyHookInline resetHook, presentHook, swapChainHook;
     inline thread_local bool presenting = false;
     inline bool awake = false;
     inline int appliedMode = 0;
+    inline std::atomic<bool> pauseOnFocusLoss{ true }, confineCursor{ false };
     inline decltype(&CreateWindowExA) originalWindow = CreateWindowExA;
     inline void Frame();
 
@@ -74,12 +77,23 @@ export namespace JCWindow
         if (target == window && appliedMode == 1 && message == WM_WINDOWPOSCHANGING)
         {
             const auto position = reinterpret_cast<WINDOWPOS*>(lParam);
-            if (position && !(position->flags & SWP_NOSIZE) && Screen.nWidth > 0 && Screen.nHeight > 0)
+            if (position && Screen.nWidth > 0 && Screen.nHeight > 0)
             {
                 RECT frame{ 0, 0, Screen.nWidth, Screen.nHeight };
                 WindowedModeWrapper::AdjustFrame(&frame, Style(), FALSE, static_cast<DWORD>(GetWindowLongPtrW(target, GWL_EXSTYLE)));
-                position->cx = frame.right - frame.left;
-                position->cy = frame.bottom - frame.top;
+                if (!(position->flags & SWP_NOSIZE))
+                {
+                    position->cx = frame.right - frame.left;
+                    position->cy = frame.bottom - frame.top;
+                }
+                // At desktop size the client area stays on the monitor, the frame outside it
+                MONITORINFO monitor{ sizeof(monitor) };
+                if (!(position->flags & SWP_NOMOVE) && GetMonitorInfoW(MonitorFromWindow(target, MONITOR_DEFAULTTONEAREST), &monitor) &&
+                    WindowStyle::CoversMonitor(monitor.rcMonitor, Screen.nWidth, Screen.nHeight))
+                {
+                    position->x = monitor.rcMonitor.left + frame.left;
+                    position->y = monitor.rcMonitor.top + frame.top;
+                }
             }
         }
         if (message == WM_NCDESTROY)
@@ -89,13 +103,16 @@ export namespace JCWindow
 
     inline bool Focused()
     {
-        return window && GetForegroundWindow() == window && !IsIconic(window);
+        const auto gameWindow = *nativeGameWindow;
+        return gameWindow && GetForegroundWindow() == gameWindow && !IsIconic(gameWindow);
     }
 
     inline HWND WINAPI ActiveWindow()
     {
-        const auto actual = GetActiveWindow();
-        return window && !FixSettings().Bool("MAIN.PauseOnFocusLoss") ? window : actual;
+        const auto gameWindow = *nativeGameWindow;
+        if (gameWindow && !pauseOnFocusLoss.load())
+            return gameWindow;
+        return GetActiveWindow();
     }
 
     inline BOOL WINAPI CursorPosition(int x, int y)
@@ -140,6 +157,7 @@ export namespace JCWindow
         WindowedModeWrapper::AdjustFrame(&frame, style, FALSE, static_cast<DWORD>(GetWindowLongPtrW(window, GWL_EXSTYLE)));
         const auto x = monitor.rcMonitor.left + (monitor.rcMonitor.right - monitor.rcMonitor.left - width) / 2 + frame.left;
         const auto y = monitor.rcMonitor.top + (monitor.rcMonitor.bottom - monitor.rcMonitor.top - height) / 2 + frame.top;
+        WindowStyle::detail::AllowSize(window, frame.right - frame.left, frame.bottom - frame.top);
         SetWindowPos(window, nullptr, x, y, frame.right - frame.left, frame.bottom - frame.top,
             SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOZORDER);
         const DWORD corners = 1;
@@ -229,7 +247,7 @@ export namespace JCWindow
         SetWindowSubclass(window, Procedure, 0, 0);
         Place(Screen.nWidth, Screen.nHeight);
         WindowCursor::Attach(window);
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+        CursorConfinement::SetEnabled(confineCursor.load());
         if (!resetHook)
             resetHook = safetyhook::create_inline((*reinterpret_cast<void***>(device))[16], Reset);
         if (!presentHook)
@@ -247,7 +265,7 @@ export namespace JCWindow
 
     inline void ProcessFrame()
     {
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !JCOverlay::BlocksInput());
+        CursorConfinement::SetEnabled(confineCursor.load() && !JCOverlay::BlocksInput());
         CursorConfinement::Frame(window);
         const auto active = Focused();
         if (active != awake)
@@ -287,7 +305,21 @@ export namespace JCWindow
 
     inline void Install()
     {
-        appliedMode = FixSettings().Int("MAIN.WindowMode");
+        // The main loop compares GetActiveWindow with its own HWND, which may differ from the D3D device window.
+        auto activeWindowCheck = hook::pattern("FF 15 ? ? ? ? 39 05 ? ? ? ? 8A 44 24 7C 0F 85 ? ? ? ? 84 C0 74 25");
+        nativeGameWindow = *activeWindowCheck.get_first<HWND*>(8);
+
+        const auto refreshFocus = []()
+        {
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            pauseOnFocusLoss.store(GetFixNumber("MAIN.PauseOnFocusLoss", 1) != 0);
+            confineCursor.store(GetFixNumber("MAIN.ConfineCursor", 0) != 0);
+        };
+        FixSettings().OnChange("MAIN.PauseOnFocusLoss", refreshFocus);
+        FixSettings().OnChange("MAIN.ConfineCursor", refreshFocus);
+        refreshFocus();
+        appliedMode = GetFixNumber("MAIN.WindowMode", 0);
         if (const auto original = JCImports::Replace("USER32.dll", "CreateWindowExA", &CreateNativeWindow))
             originalWindow = original;
         JCImports::Replace("USER32.dll", "GetActiveWindow", &ActiveWindow);
@@ -295,6 +327,7 @@ export namespace JCWindow
         JCImports::Replace("USER32.dll", "ShowCursor", &CursorVisibility);
         JCImports::Replace("USER32.dll", "SetCursor", &Cursor);
         JCImports::Replace("USER32.dll", "SystemParametersInfoA", &SystemParameters);
+        MessagePumpGuard::Install(GetModuleHandleW(nullptr));
     }
 }
 

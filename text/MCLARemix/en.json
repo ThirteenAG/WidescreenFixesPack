@@ -8,7 +8,7 @@
   "FOVFactor": "FOV factor",
   "FOVFactor.description": "Scales the field of view of the 3D view from 0.5 to 2.0; 1.0 keeps the original angle. The race opening fly-by keeps its own framing. Changes apply while playing.",
   "HudAspectRatioConstraint": "HUD aspect ratio",
-  "HudAspectRatioConstraint.description": "Auto places the race HUD at the screen edges. A ratio keeps it in a centered box (4:3 to 32:9). Changes apply while playing.",
+  "HudAspectRatioConstraint.description": "Auto places the race HUD at the screen edges. A ratio keeps it in a centered box (4:3 to 32:9). Changes apply while playing. Auto is the default. Presets keep your chosen ratio.",
   "HUDScale": "HUD scale",
   "HUDScale.description": "Resizes the race HUD around its screen-edge anchors (0.5 to 1.5). Menus and loading screens keep their original size. Changes apply while playing.",
   "CutsceneBorders": "Cutscene borders",
@@ -24,7 +24,7 @@
   "GamepadCameraSpeed": "Camera speed",
   "GamepadCameraSpeed.description": "How fast the right stick turns the chase camera around the car, from 0.5 to 2.0. The camera returns behind the car shortly after the stick is released. Changes apply while playing.",
   "TextLanguage": "Plugin text language",
-  "TextLanguage.description": "Language of the Fusion Fix pages in the pause menu. Auto follows the PSP system language. Changes in the Plugins menu apply immediately.",
+  "TextLanguage.description": "Language of the Fusion Fix pages in the pause menu. Auto follows the PSP system language. Restart the emulated game after changing this setting.",
   "auto": "Auto",
   "menu.plugins": "Plugins",
   "menu.preset": "Preset",
@@ -36,7 +36,7 @@
   "menu.custom": "Custom",
   "menu.back": "Back",
   "menu.help": "Help",
-  "menu.restart": "Restart the emulated game to apply all changes.",
+  "menu.restart": "Restart the game to apply changes.",
   "menu.save.error": "Settings could not be saved.",
-  "menu.preset.help": "Vanilla keeps the original intro and D-pad-only camera. Recommended and Enhanced skip the intro and turn on the right-stick camera. Other settings keep your values."
+  "menu.preset.help": "Vanilla keeps the original intro and D-pad-only camera. Recommended and Enhanced skip the intro and turn on the right-stick camera. Auto is the default. Presets keep your chosen ratio. Other settings keep your values."
 }

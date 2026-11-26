@@ -203,11 +203,17 @@ export namespace FramePacing
         SetEvent(hPresented);
     }
 
-    void BeforeFrame()
+    void BeforeFrame(bool loading)
     {
         static uint32_t frame = 0;
         if (!bEnabled)
             return;
+        if (loading)
+        {
+            // Loading intentionally skips presents, so those frames cannot release the wait.
+            frame = nPresented.load();
+            return;
+        }
         ++frame;
         while (nPresented.load() + 1 < frame)
         {
@@ -226,12 +232,19 @@ export namespace LoadScreen
 {
     bool bEnabled = false;
 
+    bool IsActive()
+    {
+        if (!bEnabled)
+            return false;
+        auto inLoadScreen = fb::Settings::Field<bool>("ClientSettings", "InLoadScreen");
+        return inLoadScreen && *inLoadScreen;
+    }
+
     bool SkipPresent()
     {
         static LARGE_INTEGER frequency = []() { LARGE_INTEGER f; QueryPerformanceFrequency(&f); return f; }();
         static LONGLONG lastShown = 0;
-        auto inLoadScreen = fb::Settings::Field<bool>("ClientSettings", "InLoadScreen");
-        if (!bEnabled || !inLoadScreen || !*inLoadScreen)
+        if (!IsActive())
             return false;
         LARGE_INTEGER now;
         QueryPerformanceCounter(&now);

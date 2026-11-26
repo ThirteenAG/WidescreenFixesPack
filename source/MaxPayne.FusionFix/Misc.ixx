@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <charconv>
 #include <stdexcept>
 
 export module Misc;
@@ -9,6 +10,15 @@ export module Misc;
 import ComVars;
 import e2mfc;
 import input;
+
+void SetStartupSave(std::string_view path)
+{
+    if (path.empty() || path.size() >= MAX_PATH)
+        return;
+    auto destination = szLoadGameAtStartup.get_ptr();
+    std::memcpy(destination, path.data(), path.size());
+    destination[path.size()] = '\0';
+}
 
 // Fugitive's adaptive difficulty rates each level by the player's deaths, average health and play
 // time in it, counted on the player character, and moves the difficulty a step up or down when the
@@ -65,8 +75,10 @@ export namespace AdaptiveDifficulty
 void(__fastcall* KillProgramFocus)(void* pApp, void* edx) = nullptr;
 void(__fastcall* SetProgramFocus)(void* pApp, void* edx) = nullptr;
 bool bSkipFocusGain = false;
+export bool waitForNovelKeyRelease = true;
 void __fastcall KillProgramFocusHook(void* pApp, void* edx)
 {
+    waitForNovelKeyRelease = true;
     static auto& nPauseOnFocusLoss = FixSettings().Int("MAIN.PauseOnFocusLoss");
     bSkipFocusGain = !nPauseOnFocusLoss;
     if (nPauseOnFocusLoss)
@@ -129,9 +141,8 @@ public:
                                 void* pStr = nullptr;
                                 auto _this = injector::stdcall<void* ()>::call(AfxGetModuleState);
                                 injector::thiscall<void(void* _this, void* out, char const* a1, char const* a2, char const* a3)>::call(GetProfileStringA, *(void**)((uint32_t)_this + 4), &pStr, (char const*)aSaveGame, (char const*)aLastSavedGameF, "");
-                                std::string_view LastSavedGameFilename{ (char*)pStr };
-                                if (!LastSavedGameFilename.empty())
-                                    injector::WriteMemoryRaw(szLoadGameAtStartup.get_ptr(), (void*)LastSavedGameFilename.data(), LastSavedGameFilename.size(), true);
+                                if (pStr)
+                                    SetStartupSave(static_cast<const char*>(pStr));
                             }
                             else
                             {
@@ -152,58 +163,30 @@ public:
                                     strcat_s(buffer, "\\");
                                 }
 
-                                auto nSaveNum = -1;
-                                std::string SFPath(buffer);
+                                const std::string directory(buffer);
+                                const auto filter = nLoadSaveSlot >= 0 ? std::format("savegame{:03}.mps", nLoadSaveSlot) : "*.mps";
+                                WIN32_FIND_DATAA entry{};
+                                HANDLE search = FindFirstFileA((directory + filter).c_str(), &entry);
+                                if (search == INVALID_HANDLE_VALUE)
+                                    return;
 
-                                WIN32_FIND_DATAA fd;
-                                HANDLE File = FindFirstFileA(std::string(SFPath + "*.mps").c_str(), &fd);
-                                FILETIME LastWriteTime = fd.ftLastWriteTime;
-
-                                if (File != INVALID_HANDLE_VALUE)
+                                FILETIME newest{};
+                                std::string selected;
+                                do
                                 {
-                                    do
+                                    if (entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                                        continue;
+
+                                    if (selected.empty() || CompareFileTime(&entry.ftLastWriteTime, &newest) > 0)
                                     {
-                                        std::string str(fd.cFileName);
-                                        auto n = str.find_first_of("0123456789");
+                                        newest = entry.ftLastWriteTime;
+                                        selected = entry.cFileName;
+                                    }
+                                } while (FindNextFileA(search, &entry));
+                                FindClose(search);
 
-                                        if (nLoadSaveSlot >= 0)
-                                        {
-                                            if (n != std::string::npos)
-                                            {
-                                                nSaveNum = std::atoi(&str[n]);
-                                                if (nSaveNum == nLoadSaveSlot)
-                                                {
-                                                    SFPath += str;
-                                                    injector::WriteMemoryRaw(szLoadGameAtStartup.get_ptr(), SFPath.data(), SFPath.size(), true);
-                                                    return;
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            if (CompareFileTime(&fd.ftLastWriteTime, &LastWriteTime) >= 0)
-                                            {
-                                                LastWriteTime = fd.ftLastWriteTime;
-                                                std::string str(fd.cFileName);
-                                                if (n != std::string::npos)
-                                                {
-                                                    nSaveNum = std::atoi(&str[n]);
-                                                }
-                                            }
-                                        }
-                                    } while (FindNextFileA(File, &fd));
-                                    FindClose(File);
-                                }
-
-                                if (nSaveNum >= 0 && nLoadSaveSlot < 0)
-                                {
-                                    char buffer[12];
-                                    sprintf_s(buffer, "%03d", nSaveNum);
-                                    SFPath += fd.cFileName;
-                                    auto offset = SFPath.end() - std::strlen("000.mps");
-                                    SFPath.replace(offset, offset + 3, buffer);
-                                    injector::WriteMemoryRaw(szLoadGameAtStartup.get_ptr(), SFPath.data(), SFPath.size(), true);
-                                }
+                                if (!selected.empty())
+                                    SetStartupSave(directory + selected);
                             }
                         }
                     }; injector::MakeInline<SaveGameHook>(pattern.get_first(0), pattern.get_first(6)); //0x415EBD
@@ -223,20 +206,19 @@ public:
                 UpdateVibration();
             }); //582A18
 
-            //screenshots aspect ratio
-            static float fScreenShotHeight = 0.0f;
+            // Save thumbnails use the aspect ratio at the time the screenshot is taken.
             pattern = hook::pattern("89 93 ? ? ? ? D9 05 ? ? ? ? D9 05 ? ? ? ? D9 9B");
-            static auto off_6301B6 = pattern.get_first(32);
+            auto heightOperand = pattern.get_first<float*>(32);
+            static const float* nativeHeight = *heightOperand;
+            static float screenshotHeight = *nativeHeight;
+            injector::WriteMemory(heightOperand, &screenshotHeight, true);
             struct SaveScrHook
             {
                 void operator()(injector::reg_pack& regs)
                 {
                     *(uint32_t*)(regs.ebx + 0x10E) = regs.edx;
-                    if (!fScreenShotHeight && Screen.fAspectRatio)
-                    {
-                        fScreenShotHeight = **(float**)off_6301B6 * ((4.0f / 3.0f) / Screen.fAspectRatio);
-                        injector::WriteMemory(off_6301B6, &fScreenShotHeight, true);
-                    }
+                    screenshotHeight = Screen.fAspectRatio > 0.0f ?
+                        *nativeHeight * ((4.0f / 3.0f) / Screen.fAspectRatio) : *nativeHeight;
                 }
             }; injector::MakeInline<SaveScrHook>(pattern.get_first(0), pattern.get_first(6)); //630196
 

@@ -48,7 +48,7 @@ Skip Intro removes startup logos and the optional startup logo movie. Skip Press
 
 
 
-FOV Factor changes the normal gameplay camera’s field of view. The default is 1.0. Pause on Focus Loss and Confine Cursor apply to windowed play and can be changed while the game is running. Ctrl+F10 opens the developer overlay, with the shared Supporter panel when access has not been activated.
+FOV Factor changes the normal gameplay camera’s field of view. The default is 1.0. Pause on Focus Loss and Confine Cursor apply to windowed play and can be changed while the game is running.
 
 
 

@@ -29,6 +29,62 @@ CEXP int __cdecl AsiAutomation_SetFrameCallback(int stage, void(__cdecl* callbac
     return RegisterAutomationFrameCallback(stage, callback, context);
 }
 
+// The picture keeps the size of the video mode and Windows doesn't stretch it to a window of another size: a window
+// resized from outside (snapped, by another program) gets the client size of the picture back
+void KeepPictureSize(HWND window)
+{
+    struct Placement
+    {
+        HWND window{};
+        LONG clientWidth{}, clientHeight{};
+        int pictureWidth{}, pictureHeight{};
+        bool operator==(const Placement&) const = default;
+    };
+    static Placement pendingPlacement{};
+    static ULONGLONG nextPlacementAttempt = 0;
+    constexpr ULONGLONG placementRetryDelay = 100;
+
+    int width = 0, height = 0;
+    if (!window || IsIconic(window) || !GetWindowedPictureSize(width, height))
+    {
+        pendingPlacement = {};
+        return;
+    }
+    RECT client{};
+    if (!GetClientRect(window, &client))
+    {
+        pendingPlacement = {};
+        return;
+    }
+    if (client.right == width && client.bottom == height)
+    {
+        pendingPlacement = {};
+        return;
+    }
+    const Placement placement{ window, client.right, client.bottom, width, height };
+    if (placement == pendingPlacement && GetTickCount64() < nextPlacementAttempt)
+        return;
+    if (IsZoomed(window))
+        ShowWindow(window, SW_RESTORE);
+    RECT frame{ 0, 0, width, height };
+    WindowedModeWrapper::AdjustFrame(&frame, GetWindowLong(window, GWL_STYLE), FALSE, GetWindowLong(window, GWL_EXSTYLE));
+    // NOSENDCHANGING: a window as big as the monitor keeps its frame past the screen edges
+    SetWindowPos(window, nullptr, 0, 0, frame.right - frame.left, frame.bottom - frame.top,
+        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
+    pendingPlacement = placement;
+    if (GetClientRect(window, &client))
+    {
+        if (client.right == width && client.bottom == height)
+        {
+            pendingPlacement = {};
+            return;
+        }
+        pendingPlacement.clientWidth = client.right;
+        pendingPlacement.clientHeight = client.bottom;
+    }
+    nextPlacementAttempt = GetTickCount64() + placementRetryDelay;
+}
+
 void Init()
 {
     auto& settings = FixSettings();
@@ -37,6 +93,12 @@ void Init()
         settings.GetTexts().Select(language);
 
     WFP::onInitEvent().executeAll();
+
+    static std::atomic<int32_t> fpsLimit{ settings.Int("MAIN.FPSLimit") };
+    settings.OnChange("MAIN.FPSLimit", []()
+    {
+        fpsLimit.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
+    });
 
     // End of the frame, before P_Driver::endScene: the bars the Fusion Fix adds are drawn here with
     // P_Driver::clearScreen, the same way the game draws its letterbox bars
@@ -49,7 +111,6 @@ void Init()
         WFP::onGameProcessEvent().executeAll();
 
         // Frame rate limit, before the frame is shown
-        static auto& nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
         auto window = WindowedModeWrapper::GameHWND;
         if (!window || !IsWindow(window))
         {
@@ -64,8 +125,9 @@ void Init()
         }
         CursorConfinement::Suspend(MaxPayneOverlay::BlocksInput());
         CursorConfinement::Frame(window);
+        KeepPictureSize(window);
         UpdateRawMouseWindow(window);
-        MaxPayneFrameRate::Limit(nFPSLimit);
+        MaxPayneFrameRate::Limit(fpsLimit.load(std::memory_order_relaxed), 1000, window);
     });
 }
 

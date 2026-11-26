@@ -1,8 +1,8 @@
 module;
 
 #include <stdafx.h>
-#include <FunctionHookMinHook.hpp>
 #include "FixSettings.hpp"
+#include "Shared/NFS/CustomUserFiles.hpp"
 
 export module Registry;
 
@@ -114,29 +114,12 @@ namespace Language
 }
 
 static std::filesystem::path CustomUserDir;
-static bool bUseCustomUserDir = false;
+using GameFolderRedirect = NFSUserFiles::Redirect<CSIDL_COMMON_APPDATA>;
 
-static std::unique_ptr<FunctionHookMinHook> mhSHGetFolderPathA;
-static HRESULT WINAPI SHGetFolderPathAHook(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath)
+// SHGetFolderPathA as the game sees it, for the plugin's own files next to the game's profiles
+export HRESULT GameFolderPath(int csidl, LPSTR path)
 {
-    if (bUseCustomUserDir)
-    {
-        int folder = csidl & ~CSIDL_FLAG_CREATE;
-        if (folder == CSIDL_COMMON_APPDATA)
-        {
-            const auto path = CustomUserDir.u8string();
-            if (path.size() >= MAX_PATH)
-            {
-                pszPath[0] = '\0';
-                return HRESULT_FROM_WIN32(ERROR_FILENAME_EXCED_RANGE);
-            }
-            CreateDirectoryW(CustomUserDir.c_str(), NULL);
-            memcpy(pszPath, path.c_str(), path.size() + 1);
-            return S_OK;
-        }
-    }
-
-    return mhSHGetFolderPathA->get_original<decltype(SHGetFolderPathA)>()(hwnd, csidl, hToken, dwFlags, pszPath);
+    return GameFolderRedirect::Get(csidl, path);
 }
 
 class Registry
@@ -147,12 +130,9 @@ public:
         // A folder of the game's folder for the profiles and saves; "0" keeps them where the game puts them
         if (auto folder = FixSettings().String("MAIN.CustomUserFilesDirectoryInGameDir"); !folder.empty() && folder != "0")
         {
-            CustomUserDir = GetExeModulePath<std::filesystem::path>() / folder;
-            bUseCustomUserDir = true;
+            CustomUserDir = GetExeModulePath<std::filesystem::path>() / std::filesystem::path(std::u8string(folder.begin(), folder.end()));
+            GameFolderRedirect::Install(CustomUserDir);
         }
-
-        mhSHGetFolderPathA = std::make_unique<FunctionHookMinHook>((uintptr_t)SHGetFolderPathA, (uintptr_t)SHGetFolderPathAHook);
-        mhSHGetFolderPathA->create();
 
         // Here, when the plugin is loaded, so that the options menu, set up later, has the languages
         Language::Startup();

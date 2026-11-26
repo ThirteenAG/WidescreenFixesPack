@@ -19,6 +19,7 @@ import Rendering;
 import TurnIndicators;
 
 #include "Shared/WidescreenFixConflict.hpp"
+#include "Shared/PadInput.hpp"
 
 void Init()
 {
@@ -35,11 +36,16 @@ void Init()
     DPLIcons::Install();
     DPLMenu::padHelp = DPLPad::HelpPressed;
     DPLMenu::blocksInput = []() { return DPLOverlay::BlocksInput(); };
-    DPLMenu::helpPrefix = []()
+    DPLMenu::helpControls = []() -> DPLMenu::HelpControls
     {
-        return DPLIcons::ready && DPLIcons::textureHook && !DPLIcons::textureFailed && !DPLIcons::fonts.empty() && !DPLIcons::fontTextures.empty() ? L"F1 / \u2463: " : L"F1: ";
+        if (DPLIcons::ready && DPLIcons::textureHook && !DPLIcons::textureFailed &&
+            !DPLIcons::fonts.empty() && !DPLIcons::fontTextures.empty())
+            return { L"\u2463", L"\u246C/\u246D" };
+        const auto family = PadInput::ResolveFamily(DPLIcons::iconFamily.load(std::memory_order_relaxed));
+        return { PadInput::ButtonName(XINPUT_GAMEPAD_Y, family), {} };
     };
-    DPLFocus::onDeactivate = []() { DPLPad::StopEffects(); };
+    DPLWindow::onDeactivate = CancelIndicatorTaps;
+    DPLFocus::afterPump = DPLPad::TickVibration;
     DPLMouse::drainController = DPLPad::Drain;
     WFP::onGameProcessEvent() += []()
     {

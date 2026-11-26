@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "Shared/SilentHill/Gamepad.hpp"
 
 export module Camera;
 
@@ -22,14 +21,6 @@ namespace
 {
     constexpr float Pi = 3.14159265f;
     constexpr float Metre = 200.0f;
-
-    const int* CameraMode = nullptr;
-    const float* Sensitivity = nullptr;
-    const int* InvertY = nullptr;
-    const int* Distance = nullptr;
-    const float* FieldOfView = nullptr;     // degrees, vertical
-
-
 
     int(__cdecl* OutdoorTask)() = nullptr;
     int(__cdecl* SegmentHit)(float* segment, float* plane) = nullptr;
@@ -75,7 +66,7 @@ namespace
 
     bool CanRun()
     {
-        return CameraMode && *CameraMode == 1 && bThirdPerson.is_initialized() && bThirdPerson && GameplayView();
+        return FixSettingNumber("CAMERA.Camera", 1) == 1 && bThirdPerson.is_initialized() && bThirdPerson && GameplayView();
     }
 
     // Free fraction of the segment from -> to
@@ -107,8 +98,7 @@ namespace
             }
             Active = false;
             CurrentDistance = 0;
-            SHPad::HideMouseFromGame(false);
-            SHPad::TakeMouse();
+            LookMouse = {};
             return;
         }
 
@@ -134,17 +124,19 @@ namespace
         }
         LastFrame = Frame;
 
-        auto pad = SHPad::Get();
-        float speed = 0.6f + 0.25f * (*Sensitivity);         // rad/s at full deflection
+        const auto pad = GameplayPad;
+        const auto sensitivity = FixSettingNumber("CAMERA.CameraSpeed", 7.0f);
+        const bool invertY = FixSettings().Get("CAMERA.InvertCamera") == "1";
+        float speed = 0.6f + 0.25f * sensitivity;             // rad/s at full deflection
         float sx = pad.rx * std::abs(pad.rx), sy = pad.ry * std::abs(pad.ry);
-        auto [mouseX, mouseY] = SHPad::TakeMouse();
-        float mouseScale = 0.0004f * (*Sensitivity);        // rad per count
+        auto [mouseX, mouseY] = std::exchange(LookMouse, std::array<int32_t, 2>{});
+        float mouseScale = 0.0004f * sensitivity;            // rad per count
         Yaw = Wrap(Yaw + sx * speed * dt + float(mouseX) * mouseScale);
         float pitchInput = sy * speed * 0.75f * dt + float(mouseY) * mouseScale;
-        Pitch = std::clamp(Pitch - (*InvertY ? -pitchInput : pitchInput), -0.9f, 1.0f);
+        Pitch = std::clamp(Pitch - (invertY ? -pitchInput : pitchInput), -0.9f, 1.0f);
 
         // The "camera behind" button recentres
-        if (pad.pressed & (SHPad::LT | SHPad::RS))
+        if (pad.recentre)
             RecentreTime = 0.25f;
         if (RecentreTime > 0)
         {
@@ -155,10 +147,11 @@ namespace
         }
 
         static const float Distances[] = { 1.5f, 2.0f, 2.6f };
-        float targetDistance = (aiming ? 1.3f : Distances[std::clamp(*Distance, 0, 2)]) * Metre;
+        const auto selectedDistance = std::clamp(FixSettingNumber("CAMERA.CameraDistance", 1), 0, 2);
+        float targetDistance = (aiming ? 1.3f : Distances[selectedDistance]) * Metre;
         float targetShoulder = (aiming ? 0.55f : 0.45f) * Metre;
         // The setting is the vertical angle; the game's angle is the horizontal one of its 4:3 frame
-        float vertical = (*FieldOfView - (aiming ? 10.0f : 0.0f)) * Pi / 180.0f;
+        float vertical = (FixSettingNumber("CAMERA.FieldOfView", 60.0f) - (aiming ? 10.0f : 0.0f)) * Pi / 180.0f;
         float targetFov = 2.0f * std::atan(std::tan(vertical * 0.5f) / 0.78125f);
         if (CurrentDistance == 0)
         {
@@ -240,7 +233,6 @@ namespace
         fMoveBasisYaw = Yaw;
 
         Active = true;
-        SHPad::HideMouseFromGame(true);
     }
 
     int __cdecl ModernOutdoorTask()
@@ -258,8 +250,7 @@ namespace
         {
             bool ready = (*aMoveIntent)[0x50 / 4] != 0.0f;
             bool target = At<int32_t>(pCharacter, 0x23C) != 0;
-            auto pad = SHPad::Get();
-            bool moving = pad.lx != 0.0f || pad.ly != 0.0f;
+            bool moving = GameplayPad.lx != 0.0f || GameplayPad.ly != 0.0f;
             if (ready && !target && !moving)
                 (*aMoveIntent)[0x08 / 4] = Yaw;
         }
@@ -297,12 +288,6 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CameraMode = &FixSettings().Int("CAMERA.Camera");
-            Sensitivity = &FixSettings().Float("CAMERA.CameraSpeed");
-            InvertY = &FixSettings().Int("CAMERA.InvertCamera");
-            Distance = &FixSettings().Int("CAMERA.CameraDistance");
-            FieldOfView = &FixSettings().Float("CAMERA.FieldOfView");
-
             // The player status, move intent, camera matrix/field of view, ApplyCamera, game mode and scene flags are bound
             // in Init, before the widescreen code hooks the code they are read from
             pCharacter.SetAddress(Resolve<uint8_t**>("8B 45 08 83 F8 02 7C 02 33 C0 69 C0 20 04 00 00 05", 0x16));

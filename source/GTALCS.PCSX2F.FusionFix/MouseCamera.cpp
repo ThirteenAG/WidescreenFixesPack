@@ -96,7 +96,7 @@ void AimFollow(SafetyMipsContext& regs) {
 // turns by f23 * 0.0003 rad), f22 = SniperModeLookUpDown (the target rises by
 // f22 * 0.000333 * distance). Supply the mouse as the equivalent stick values.
 void FreeAim(SafetyMipsContext& regs) {
-    if (!MouseControlsActive()) { regs.f22 = regs.f23 = 0.0f; return; }
+    if (!MouseControlsActive()) return;
     regs.f23 = -Take(false) / 0.0003f;
     regs.f22 = Take(true) / 0.00033333333f;
 }

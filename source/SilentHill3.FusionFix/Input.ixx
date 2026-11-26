@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "Shared/SilentHill/Display.hpp"
 #include "Shared/SilentHill/Gamepad.hpp"
 #include "FixSettings.hpp"
 #pragma warning(disable: 4996)   // sprintf into the game's buffer
@@ -141,9 +142,9 @@ public:
             std::copy(std::begin(buttons), std::end(buttons), layout.button);
             SHPad::Install(layout);
             SH3Icons::Init();
-            auto updateIcons = []() { SHPad::SetIconFamily(FixSettings().Int("MAIN.GamepadIcons")); };
+            auto updateIcons = []() { SHPad::SetIconFamily(FixSettingNumber("MAIN.GamepadIcons", 0)); };
             updateIcons();
-            FixSettings().OnChange("MAIN.GamepadIcons", updateIcons);
+            SHDisplay::OnPresent().push_back(updateIcons);
 
             // The input library's own 25 % square dead zone goes; the fix applies a radial one
             auto axisNormalise = hook::pattern("8B 44 24 04 2D 00 80 00 00 89 44 24 04 99 33 C2 2B C2 3D 00 20 00 00 7D 07");

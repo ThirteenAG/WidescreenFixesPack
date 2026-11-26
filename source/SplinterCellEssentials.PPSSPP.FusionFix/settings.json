@@ -143,6 +143,11 @@
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "label": "@HudAspectRatioConstraint",
       "description": "@HudAspectRatioConstraint.description",
       "page": "display",

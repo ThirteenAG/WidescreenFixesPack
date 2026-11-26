@@ -33,19 +33,17 @@ std::atomic<size_t> currentGogglesColor{ 0 };
 int __cdecl appStricmpHook(const char* String1, const char* String2)
 {
     auto ret = _stricmp(String1, String2);
-    size_t color = 0;
     if (!ret)
     {
         for (size_t i = 0; i < gogglesColors.size(); ++i)
         {
-            if (gogglesColors[i].name == String1)
+            if (_stricmp(gogglesColors[i].name.data(), String1) == 0)
             {
-                color = i;
+                currentGogglesColor.store(i, std::memory_order_relaxed);
                 break;
             }
         }
     }
-    currentGogglesColor.store(color, std::memory_order_relaxed);
     return ret;
 }
 

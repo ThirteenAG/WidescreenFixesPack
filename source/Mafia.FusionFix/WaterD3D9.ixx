@@ -53,29 +53,25 @@ namespace WaterD3D9
         return supported > 0;
     }
 
-    // The device is gone with everything made on it
-    export void Forget()
-    {
-        reflection = nullptr;
-        reflectionSurface = reflectionDepth = savedTarget = savedDepth = nullptr;
-        waves = nullptr;
-        vertexShader = nullptr;
-        pixelShader = nullptr;
-        declarations.clear();
-        supported = -1;
-    }
-
     export void Release()
     {
-        for (auto** surface : { &reflectionSurface, &reflectionDepth })
-        {
-            if (*surface)
-                (*surface)->Release();
-            *surface = nullptr;
-        }
-        if (reflection)
-            reflection->Release();
-        reflection = nullptr;
+        ReleaseWaterObject(savedTarget);
+        ReleaseWaterObject(savedDepth);
+        ReleaseWaterObject(reflectionSurface);
+        ReleaseWaterObject(reflectionDepth);
+        ReleaseWaterObject(reflection);
+    }
+
+    export void ReleaseDevice()
+    {
+        Release();
+        ReleaseWaterObject(waves);
+        ReleaseWaterObject(vertexShader);
+        ReleaseWaterObject(pixelShader);
+        for (auto& entry : declarations)
+            ReleaseWaterObject(entry.second);
+        declarations.clear();
+        supported = -1;
     }
 
     bool Target(IDirect3DDevice9* device, UINT width, UINT height)
@@ -93,7 +89,11 @@ namespace WaterD3D9
             reflection = nullptr;
             return false;
         }
-        reflection->GetSurfaceLevel(0, &reflectionSurface);
+        if (FAILED(reflection->GetSurfaceLevel(0, &reflectionSurface)))
+        {
+            Release();
+            return false;
+        }
         if (FAILED(device->CreateDepthStencilSurface(width, height, D3DFMT_D24S8, D3DMULTISAMPLE_NONE, 0, TRUE, &reflectionDepth, nullptr)))
         {
             reflectionDepth = nullptr;
@@ -103,16 +103,29 @@ namespace WaterD3D9
         return true;
     }
 
-    export bool BeginReflection(void* device, UINT width, UINT height, DWORD clear)
+    export bool BeginReflection(void* device, UINT width, UINT height, DWORD clear, const void* viewport)
     {
         auto d = static_cast<IDirect3DDevice9*>(device);
         if (!Target(d, width, height))
             return false;
-        d->GetRenderTarget(0, &savedTarget);
-        d->GetDepthStencilSurface(&savedDepth);
-        d->SetRenderTarget(0, reflectionSurface);
-        d->SetDepthStencilSurface(reflectionDepth);
-        d->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, clear, 1.0f, 0);
+        if (FAILED(d->GetRenderTarget(0, &savedTarget)))
+            return false;
+        const auto depthResult = d->GetDepthStencilSurface(&savedDepth);
+        if (FAILED(depthResult) && depthResult != D3DERR_NOTFOUND)
+        {
+            ReleaseWaterObject(savedTarget);
+            return false;
+        }
+        if (FAILED(d->SetRenderTarget(0, reflectionSurface)) || FAILED(d->SetDepthStencilSurface(reflectionDepth)) ||
+            FAILED(d->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, clear, 1.0f, 0)))
+        {
+            d->SetRenderTarget(0, savedTarget);
+            d->SetDepthStencilSurface(savedDepth);
+            d->SetViewport(static_cast<const D3DVIEWPORT9*>(viewport));
+            ReleaseWaterObject(savedDepth);
+            ReleaseWaterObject(savedTarget);
+            return false;
+        }
         return true;
     }
 
@@ -135,22 +148,28 @@ namespace WaterD3D9
     {
         if (waves)
             return true;
-        if (FAILED(device->CreateTexture(WaveNormalSize, WaveNormalSize, 0, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &waves, nullptr)))
-        {
-            waves = nullptr;
+        IDirect3DTexture9* texture = nullptr;
+        if (FAILED(device->CreateTexture(WaveNormalSize, WaveNormalSize, 0, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &texture, nullptr)))
             return false;
-        }
-        for (UINT level = 0; level < waves->GetLevelCount(); ++level)
+        for (UINT level = 0; level < texture->GetLevelCount(); ++level)
         {
             const auto texels = WaveNormals(WaveNormalSize, level);
             const UINT size = std::max(1u, WaveNormalSize >> level);
             D3DLOCKED_RECT locked{};
-            if (FAILED(waves->LockRect(level, &locked, nullptr, 0)))
-                continue;
+            if (FAILED(texture->LockRect(level, &locked, nullptr, 0)))
+            {
+                texture->Release();
+                return false;
+            }
             for (UINT y = 0; y < size; ++y)
                 memcpy(static_cast<BYTE*>(locked.pBits) + y * locked.Pitch, &texels[y * size], size * sizeof(uint32_t));
-            waves->UnlockRect(level);
+            if (FAILED(texture->UnlockRect(level)))
+            {
+                texture->Release();
+                return false;
+            }
         }
+        waves = texture;
         return true;
     }
 
@@ -168,7 +187,7 @@ namespace WaterD3D9
         };
         IDirect3DVertexDeclaration9* declaration = nullptr;
         if (FAILED(device->CreateVertexDeclaration(elements, &declaration)))
-            declaration = nullptr;
+            return nullptr;
         declarations.emplace_back(layout, declaration);
         return declaration;
     }

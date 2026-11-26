@@ -63,7 +63,7 @@ export namespace GTA1Presentation
         if (GTA1Window::SettingMessage(message, key)) return 0;
         GTA1Window::Activate(message, key);
         if (GTA1Options::OverlayMessage(message, key)) return 0;
-        InputDevices::KeyboardMessage(message, key);
+        InputDevices::KeyboardMessage(message, key, flags);
         if (message == WM_KEYDOWN && !(flags & (1u << 30)) && !InputDevices::Frontend) GTA1Rotation::KeyDown(key);
         if (message == WM_KEYDOWN && !(flags & (1u << 30)) && !InputDevices::Frontend &&
             InputDevices::ModernControls && key == InputDevices::PauseKey) PendingKey = 64;
@@ -180,9 +180,33 @@ export namespace GTA1Presentation
         return PresentHook.call<int>();
     }
 
+    // The event reader pumps one message per step and keeps stepping while events come, and a mouse move becomes an
+    // event too: a fast mouse queues moves as quickly as one read takes them. One move per read; the rest stays queued.
+    namespace MovePerRead
+    {
+        SafetyHookInline PumpHook;
+        bool Reading = false;
+        bool Moved = false;
+
+        void __cdecl Pump()
+        {
+            MSG msg{};
+            if (Reading && PeekMessageA(&msg, nullptr, 0, 0, PM_NOREMOVE) && (msg.message == WM_MOUSEMOVE || msg.message == WM_NCMOUSEMOVE))
+            {
+                if (Moved)
+                    return;
+                Moved = true;
+            }
+            PumpHook.ccall<void>();
+        }
+    }
+
     int __cdecl ReadKey()
     {
+        MovePerRead::Reading = true;
+        MovePerRead::Moved = false;
         int key = OriginalReadKey();
+        MovePerRead::Reading = false;
         if (GTA1Options::OverlayActive()) { PendingKey = 0; return 0; }   // the options have the keyboard
         using namespace InputDevices;
         Poll();
@@ -271,6 +295,8 @@ export namespace GTA1Presentation
         PresentHook = safetyhook::create_inline(PresentPage, Present);
         Log::Write("GTA1 presentation hook installed.");
         OriginalReadKey = reinterpret_cast<decltype(OriginalReadKey)>(key.get_first());
+        auto pump = hook::pattern("83 EC 5C 53 56 8D 44 24 2C 57 55 8B 35 ? ? ? ? 6A 01 6A 00 6A 00 6A 00 50 FF D6");
+        MovePerRead::PumpHook = safetyhook::create_inline(pump.get_first(), MovePerRead::Pump);
         // The event reader loops back into its first few instructions. Patch its
         // callers so those internal jumps continue to target the original code.
         auto calls = hook::pattern("E8 ? ? ? ?");

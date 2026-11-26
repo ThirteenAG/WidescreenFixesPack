@@ -34,11 +34,11 @@
       }
     },
     {
-      "id": "MAIN.EnableDoorSkip",
+      "id": "MAIN.DoorSkip",
       "type": "bool",
       "default": 0,
-      "label": "@EnableDoorSkip",
-      "description": "@EnableDoorSkip.description",
+      "label": "@DoorSkip",
+      "description": "@DoorSkip.description",
       "page": "gameplay",
       "visibility": "menu",
       "apply": "restart",

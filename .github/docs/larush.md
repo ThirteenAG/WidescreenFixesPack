@@ -35,7 +35,7 @@
 - **Confine cursor** — Keeps the cursor inside the focused window during gameplay and releases it when the game shows a menu cursor; applies live.
 - **Check for updates** — Optional update notice at the main menu; disabled by default.
 
-Settings are changed on fusionfix.io or in FusionFixHub. Defaults are the Recommended preset; Vanilla and Enhanced are the other presets. No preset changes the resolution. The fix has no in-game menu. Supporters can open the developer overlay with Ctrl+F10 or Start and View together on a controller.
+Settings are changed on fusionfix.io or in FusionFixHub. Defaults are the Recommended preset; Vanilla and Enhanced are the other presets. No preset changes the resolution. The fix has no in-game menu.
 
 ## Known limits
 

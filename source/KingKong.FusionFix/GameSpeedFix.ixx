@@ -83,26 +83,52 @@ void InitPhysicsStep()
 
 // After a world reload the game waits 30 frames (half a second at 60 fps) before its scheduled pause; it now counts
 // 1/60 s ticks of real time, so the wait is the same at any frame rate
+struct ReloadPauseClock
+{
+    double last = 0.0;
+    double fractionalTicks = 0.0;
+    int remaining = 0;
+
+    int BeforeDecrement(int counter, double seconds)
+    {
+        if (counter <= 0)
+        {
+            *this = {};
+            return counter;
+        }
+        if (counter != remaining)
+            *this = {};
+
+        fractionalTicks = std::min(fractionalTicks + (last ? std::max(0.0, seconds - last) * 60.0 : 1.0), 64.0);
+        last = seconds;
+        const int whole = int(fractionalTicks);
+        fractionalTicks -= whole;
+        remaining = std::max(0, counter - whole);
+        const int adjusted = remaining + 1;
+        if (remaining == 0)
+            *this = {};
+        return adjusted;
+    }
+};
+
 void InitReloadPauseDelay()
 {
     if (Screen.bSignatureEdition)
         return;
     auto pattern = hook::pattern("83 3D ? ? ? ? 00 7E ? 8B 15 ? ? ? ? 83 EA 01 89 15 ? ? ? ? 83 3D ? ? ? ? 00 74 ? 83 3D");
     nReloadPauseCounter.SetAddress(*pattern.get_first<int32_t*>(11)); //0xB0DA28
-    static auto Countdown = safetyhook::create_mid(pattern.get_first(9), [](SafetyHookContext&)
+    static auto Countdown = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&)
     {
-        static LARGE_INTEGER last{};
-        static double ticks = 0.0;
-        LARGE_INTEGER now, frequency;
+        static ReloadPauseClock clock;
+        if (nReloadPauseCounter <= 0)
+        {
+            clock = {};
+            return;
+        }
+        static const auto frequency = []() { LARGE_INTEGER value{}; QueryPerformanceFrequency(&value); return value.QuadPart; }();
+        LARGE_INTEGER now{};
         QueryPerformanceCounter(&now);
-        QueryPerformanceFrequency(&frequency);
-        const double elapsed = last.QuadPart ? double(now.QuadPart - last.QuadPart) / double(frequency.QuadPart) : 1.0 / 60.0;
-        last = now;
-        ticks = std::min(ticks + elapsed * 60.0, 64.0);
-        // The game subtracts 1 right after this; subtract the remaining whole ticks first, keeping at least 1
-        const int whole = int(ticks);
-        ticks -= whole;
-        nReloadPauseCounter = std::max(nReloadPauseCounter - std::max(whole - 1, 0), whole > 0 ? 1 : nReloadPauseCounter + 1);
+        nReloadPauseCounter = clock.BeforeDecrement(nReloadPauseCounter, double(now.QuadPart) / double(frequency));
     }); //0x8FF0DE
 }
 

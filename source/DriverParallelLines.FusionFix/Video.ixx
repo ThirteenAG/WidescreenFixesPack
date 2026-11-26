@@ -33,9 +33,11 @@ export namespace DPLVideo
 
     SafetyHookMid drawHook, endHook;
     thread_local bool drawing = false;
+    std::atomic<int> movieMode{ 1 };
 
     void Install()
     {
+        BindLiveSetting("MAIN.FMVWidescreenMode", movieMode);
         auto site = hook::pattern("F3 0F 11 45 DC C7 45 E0 01 00 00 00 FF 50 40 8B 4B 0C 85 C9 74 06");
         drawHook = safetyhook::create_mid(site.get_first(12), [](SafetyHookContext& regs)
         {
@@ -46,7 +48,7 @@ export namespace DPLVideo
                 return;
             // Native movie geometry includes the authored non-square pixel aspect.
             const float aspect = (16.0f / 9.0f) * quad[6] / quad[7];
-            const auto frame = Fit(aspect, static_cast<float>(width) / height, FixSettings().Int("MAIN.FMVWidescreenMode"));
+            const auto frame = Fit(aspect, static_cast<float>(width) / height, movieMode.load(std::memory_order_relaxed));
             const float u = quad[10], v = quad[11];
             quad[4] = frame.x; quad[5] = frame.y;
             quad[6] = frame.width; quad[7] = frame.height;

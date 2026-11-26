@@ -6,9 +6,12 @@
 extern "C" {
 #include "../../../external/injector/include/ps2/plugin_settings.h"
 }
+#include "PS2SettingsBatch.hpp"
+
+extern "C" uint32_t PCSX2FSettingsBatchVersion;
 
 // On older hosts (INI only) settings stay at their defaults.
-#define PCSX2F_CFG_SETTINGS() extern "C" { uint32_t PCSX2FSettingsVersion = 0; uint32_t PCSX2FSettingsFormat = 1; }
+#define PCSX2F_CFG_SETTINGS() extern "C" { uint32_t PCSX2FSettingsVersion = 0; uint32_t PCSX2FSettingsFormat = 1; uint32_t PCSX2FSettingsBatchVersion = 0; }
 
 #define PCSX2F_CFG_PEER_SETTINGS() extern "C" { uint32_t PCSX2FSettingsPeerVersion = 0; }
 
@@ -30,46 +33,124 @@ inline uint32_t request(PCSX2FIniRequest& data) {
     if (PCSX2FSettingsVersion != 2) return PCSX2F_SETTINGS_UNSUPPORTED;
     return PCSX2F_IniRequest(&data);
 }
-// Startup only: read individual keys, then persist every described default or
-// loaded value in bounded batches. Host writes preserve unrelated file contents.
-template<size_t Count> bool load(Value (&values)[Count]) {
-    bool saved = PCSX2FSettingsVersion == 2;
-    if (!saved) return false;
-    // The host accepts request storage in the module image, excluding the game
-    // stack and heap. Startup calls are synchronous on the emulation thread.
-    static PCSX2FIniRequest data;
-    for (auto& value : values) {
-        data = {};
-        data.size = sizeof(data); data.version = 1; data.operation = PCSX2F_SETTINGS_READ; data.count = 1;
-        if (!copy(data.entries[0].section, value.section) || !copy(data.entries[0].key, value.key)) return false;
-        auto status = request(data);
-        if (status == PCSX2F_SETTINGS_OK) { copy(value.value, data.entries[0].value); continue; }
-        if (status != PCSX2F_SETTINGS_NOT_FOUND) return false;
-    }
-    for (size_t first = 0; first < Count; first += PCSX2F_SETTINGS_MAX_ENTRIES) {
-        data = {};
-        data.size = sizeof(data); data.version = 1; data.operation = PCSX2F_SETTINGS_WRITE;
-        for (size_t i = first; i < Count && data.count < PCSX2F_SETTINGS_MAX_ENTRIES; ++i) {
-            auto& entry = data.entries[data.count++];
-            if (!copy(entry.section, values[i].section) || !copy(entry.key, values[i].key) || !copy(entry.value, values[i].value)) return false;
-        }
-        saved = request(data) == PCSX2F_SETTINGS_OK && saved;
-    }
-    return saved;
+inline bool supportsBatch()
+{
+    return PCSX2FSettingsBatchVersion == PCSX2FSettingsBatch::Capability;
 }
-// Reads the current values without writing anything back (refresh after a
-// state load, periodic checks). Missing keys keep their current value.
-template<size_t Count> bool read(Value (&values)[Count]) {
-    if (PCSX2FSettingsVersion != 2) return false;
+
+inline PCSX2FSettingsBatch::Request& batchRequest(uint32_t operation)
+{
+    // The host only accepts storage inside the module image. Calls are synchronous.
+    static PCSX2FSettingsBatch::Request data;
+    data.size = sizeof(data);
+    data.version = PCSX2FSettingsBatch::Version;
+    data.operation = operation;
+    data.count = 0;
+    data.present[0] = data.present[1] = 0;
+    return data;
+}
+
+inline bool batchEntry(PCSX2FSettingsBatch::Request& data, const Value& value, bool seed)
+{
+    auto& entry = data.entries[data.count++];
+    return copy(entry.section, value.section) && copy(entry.key, value.key) &&
+           (!seed || copy(entry.value, value.value));
+}
+
+inline uint32_t requestBatch(PCSX2FSettingsBatch::Request& data)
+{
+    return PCSX2F_IniRequest(reinterpret_cast<PCSX2FIniRequest*>(&data));
+}
+
+inline bool readLegacy(PCSX2FSettingsBatch::Request& batch)
+{
     static PCSX2FIniRequest data;
-    for (auto& value : values) {
-        data = {};
-        data.size = sizeof(data); data.version = 1; data.operation = PCSX2F_SETTINGS_READ; data.count = 1;
-        if (!copy(data.entries[0].section, value.section) || !copy(data.entries[0].key, value.key)) return false;
+    data.size = sizeof(data);
+    data.version = 1;
+    data.operation = PCSX2F_SETTINGS_READ;
+    data.count = 1;
+    for (uint32_t i = 0; i < batch.count; ++i)
+    {
+        auto& entry = batch.entries[i];
+        data.entries[0] = entry;
         const auto status = request(data);
-        if (status == PCSX2F_SETTINGS_OK) { data.entries[0].value[sizeof(data.entries[0].value) - 1] = 0; copy(value.value, data.entries[0].value); }
-        else if (status != PCSX2F_SETTINGS_NOT_FOUND) return false;
+        if (status == PCSX2F_SETTINGS_OK)
+        {
+            std::memcpy(entry.value, data.entries[0].value, sizeof(entry.value));
+            entry.value[sizeof(entry.value) - 1] = 0;
+            batch.mark(i);
+        }
+        else if (status != PCSX2F_SETTINGS_NOT_FOUND)
+            return false;
     }
+    return true;
+}
+
+inline bool readBatch(PCSX2FSettingsBatch::Request& data)
+{
+    if (!supportsBatch())
+        return readLegacy(data);
+
+    const auto status = requestBatch(data);
+    if (status == PCSX2F_SETTINGS_OK)
+        return true;
+    if (status != PCSX2F_SETTINGS_INVALID && status != PCSX2F_SETTINGS_UNSUPPORTED)
+        return false;
+
+    // A save state made on a newer injector can restore a capability word
+    // that an older injector does not know to reset. Probe the request ABI
+    // before falling back, without mistaking a malformed CFG for an old host.
+    const auto count = data.count;
+    data.count = 0;
+    const auto probe = requestBatch(data);
+    data.count = count;
+    if (probe != PCSX2F_SETTINGS_INVALID && probe != PCSX2F_SETTINGS_UNSUPPORTED)
+        return false;
+    PCSX2FSettingsBatchVersion = 0;
+    return readLegacy(data);
+}
+
+// Missing keys retain their supplied defaults. Apply the complete read only
+// after the host returns successfully.
+template<size_t Count> bool read(Value (&values)[Count], bool* missing = nullptr)
+{
+    static_assert(Count <= PCSX2FSettingsBatch::MaxEntries);
+    if (PCSX2FSettingsVersion != 2)
+        return false;
+
+    auto& data = batchRequest(PCSX2FSettingsBatch::Read);
+    for (const auto& value : values)
+        if (!batchEntry(data, value, false))
+            return false;
+    if (!readBatch(data))
+        return false;
+    for (size_t i = 0; i < Count; ++i)
+    {
+        if (data.has(i))
+            std::memcpy(values[i].value, data.entries[i].value, sizeof(values[i].value));
+        if (missing)
+            missing[i] = !data.has(i);
+    }
+    return true;
+}
+// Startup creates a missing CFG when supported. Omitted values in an existing CFG stay at their applied defaults.
+template<size_t Count> bool load(Value (&values)[Count], bool* defaultsSaved = nullptr)
+{
+    if (defaultsSaved)
+        *defaultsSaved = false;
+    bool missing[Count];
+    if (!read(values, missing))
+        return false;
+    auto& data = batchRequest(PCSX2FSettingsBatch::Seed);
+    for (size_t i = 0; i < Count; ++i)
+    {
+        if (missing[i] && (!supportsBatch() || !batchEntry(data, values[i], true)))
+            return true;
+    }
+    const bool saved = !data.count ||
+        requestBatch(data) == PCSX2F_SETTINGS_OK;
+    if (defaultsSaved)
+        *defaultsSaved = saved;
     return true;
 }
 // Call once per game frame: runs `refresh` when a save state was loaded since

@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/RWGTA/GameThread.hpp"
 #include <execution>
 
 export module Rotation;
@@ -221,18 +222,20 @@ export namespace GTA1Rotation
     void Install()
     {
         // Changes from FusionFixHub or a preset apply at once, as from the in-game options
+        static auto readEnabled = [] { Enabled = SettingsReader().ReadBoolean("CAMERA", "RotateWithPlayer", true); };
         static auto read = []
         {
             SettingsReader ini("");
-            Enabled = ini.ReadBoolean("CAMERA", "RotateWithPlayer", true);
             RotateVehicle = ini.ReadBoolean("CAMERA", "RotateInVehicles", true);
             RotateFoot = ini.ReadBoolean("CAMERA", "RotateOnFoot", false);
             Smoothing = std::clamp(ini.ReadFloat("CAMERA", "RotationSmoothing", 0.35f), 0.0f, 2.0f);
             ToggleKey = ini.ReadInteger("CAMERA", "ToggleRotationKey", 'C');
         };
+        readEnabled();
         read();
-        for (auto id : { "CAMERA.RotateWithPlayer", "CAMERA.RotateInVehicles", "CAMERA.RotateOnFoot", "CAMERA.RotationSmoothing", "CAMERA.ToggleRotationKey" })
-            FixSettings().OnChange(id, read);
+        FixSettings().OnChange("CAMERA.RotateWithPlayer", [] { RWGTA::GameThread::Post(readEnabled); });
+        for (auto id : { "CAMERA.RotateInVehicles", "CAMERA.RotateOnFoot", "CAMERA.RotationSmoothing", "CAMERA.ToggleRotationKey" })
+            FixSettings().OnChange(id, [] { RWGTA::GameThread::Post(read); });
         using GTA1Build::Find, GTA1Build::Kind;
         auto world = Find("83 EC 0C 53 55 56 57 6A 01 6A 06 E8", "83 EC 0C 53 56 57 55 6A 01 BE 05 00 00 00 6A 06 E8",
             "53 55 56 57 6A 01 6A 06 E8 ? ? ? ? 83 C4 08 B8 01 00 00 00");

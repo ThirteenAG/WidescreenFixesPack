@@ -5,8 +5,8 @@ module;
 
 export module Frontend;
 
-// Menus, the title and other screen-space 2D: an 800x600 space stretched over the whole screen. It gets a centered 4:3
-// box; pieces as wide as the whole space (backdrops, fades) keep covering the screen.
+// Menus, the title and other screen-space 2D: an 800x600 space with a centered 4:3 layout. Banners span the screen
+// horizontally while keeping their vertical alignment with the labels. Outer masks extend to the screen edges.
 namespace ScreenSpace
 {
     struct Scale
@@ -17,23 +17,49 @@ namespace ScreenSpace
         float OffsetY() const { return 300.0f * (y - Square()); }
     };
 
-    bool Boxed(const uint8_t* object)
+    struct SpriteLayout
     {
-        return *reinterpret_cast<const float*>(object + 128) < 799.0f;
+        Scale scale;
+        float offsetX{}, offsetY{};
+    };
+
+    SpriteLayout Layout(Scale scale, const uint8_t* object, float centerY)
+    {
+        const auto width = *reinterpret_cast<const float*>(object + 128);
+        const auto height = *reinterpret_cast<const float*>(object + 132);
+        const auto square = scale.Square();
+        const auto offsetY = scale.OffsetY();
+        if (width < 799.0f)
+            return { { square, square }, scale.OffsetX(), offsetY };
+        if (height <= 0.0f || height >= 599.0f)
+            return { scale };
+
+        const auto top = centerY - height * 0.5f;
+        const auto bottom = centerY + height * 0.5f;
+        // Extend the outer edge of each mask while keeping its inner edge aligned with the layout.
+        if (offsetY > 0.0f && top <= 1.0f && bottom > 0.0f && bottom < 600.0f)
+        {
+            const auto y = (offsetY + bottom * square) / height;
+            return { { scale.x, y }, 0.0f, -top * y };
+        }
+        if (offsetY > 0.0f && bottom >= 599.0f && top > 0.0f && top < 600.0f)
+        {
+            const auto innerEdge = offsetY + top * square;
+            const auto y = (600.0f * scale.y - innerEdge) / height;
+            return { { scale.x, y }, 0.0f, innerEdge - top * y };
+        }
+        return { { scale.x, square }, 0.0f, offsetY };
     }
 
-    // Sprites: the scale matrix gets the square scale and the box's offset
-    Scale sprite;
-    bool spriteBoxed = false;
+    // Sprites: the scale matrix lays each piece out against the centered box or the whole screen.
+    SpriteLayout spriteLayout;
     using ScaleMatrixFn = int(__thiscall*)(float* matrix, float x, float y, float z);
     ScaleMatrixFn ScaleMatrix = nullptr;
-    int __fastcall BoxedScaleMatrix(float* matrix, void*, float x, float y, float z)
+    int __fastcall LayoutScaleMatrix(float* matrix, void*, float, float, float z)
     {
-        if (!spriteBoxed)
-            return ScaleMatrix(matrix, x, y, z);
-        const int result = ScaleMatrix(matrix, sprite.Square(), sprite.Square(), z);
-        matrix[12] += sprite.OffsetX();
-        matrix[13] += sprite.OffsetY();
+        const int result = ScaleMatrix(matrix, spriteLayout.scale.x, spriteLayout.scale.y, z);
+        matrix[12] += spriteLayout.offsetX;
+        matrix[13] += spriteLayout.offsetY;
         return result;
     }
 
@@ -72,23 +98,20 @@ export void InstallScreenSpace()
     // Sprite (0x8F4C40): xmm0/xmm1 hold the 800x600 scale
     static auto spriteScaleA = safetyhook::create_mid(spriteA.get_first(0x16), [](SafetyHookContext& context)
     {
-        ScreenSpace::sprite = { context.xmm0.f32[0], context.xmm1.f32[0] };
-        ScreenSpace::spriteBoxed = ScreenSpace::Boxed(reinterpret_cast<const uint8_t*>(context.esi));
+        const auto centerY = *reinterpret_cast<const float*>(context.esp + 0x78);
+        ScreenSpace::spriteLayout = ScreenSpace::Layout({ context.xmm0.f32[0], context.xmm1.f32[0] },
+            reinterpret_cast<const uint8_t*>(context.esi), centerY);
     });
-    injector::MakeCALL(spriteA.get_first(0x33), ScreenSpace::BoxedScaleMatrix, true); //0x8F4D20
+    injector::MakeCALL(spriteA.get_first(0x33), ScreenSpace::LayoutScaleMatrix, true); //0x8F4D20
 
-    // Sprite (0x8F6CC0): the scale comes from the text scale function, the original one is kept for the stretched case
+    // Sprite (0x8F6CC0): use the original screen scale saved by the text scale hook.
     static auto spriteScaleB = safetyhook::create_mid(spriteB.get_first(0x15), [](SafetyHookContext& context)
     {
-        ScreenSpace::sprite = ScreenSpace::text;
-        ScreenSpace::spriteBoxed = ScreenSpace::Boxed(reinterpret_cast<const uint8_t*>(context.esi));
-        if (!ScreenSpace::spriteBoxed)
-        {
-            context.edx = std::bit_cast<uint32_t>(ScreenSpace::text.x);
-            context.ecx = std::bit_cast<uint32_t>(ScreenSpace::text.y);
-        }
+        const auto centerY = *reinterpret_cast<const float*>(context.esp + 0x64);
+        ScreenSpace::spriteLayout = ScreenSpace::Layout(ScreenSpace::text,
+            reinterpret_cast<const uint8_t*>(context.esi), centerY);
     });
-    injector::MakeCALL(spriteB.get_first(0x23), ScreenSpace::BoxedScaleMatrix, true); //0x8F6EED
+    injector::MakeCALL(spriteB.get_first(0x23), ScreenSpace::LayoutScaleMatrix, true); //0x8F6EED
 
     static auto textMoveA = safetyhook::create_mid(textA.get_first(0x20), ScreenSpace::MoveText); //0x8FE881
     static auto textMoveB = safetyhook::create_mid(textB.get_first(0x30), ScreenSpace::MoveText); //0x8FF0B1

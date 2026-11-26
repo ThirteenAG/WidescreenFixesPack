@@ -254,6 +254,33 @@ export namespace RE6Menu
         drawText(pTextManager.get(), owner, value.c_str(), x, y, style.data(), Read<int>(owner, 104), 0);
     }
 
+    // The game's menu captions are capitals with wide letter spacing: the same look for the texts the fix draws next
+    // to them (accented Latin-1 letters included).
+    inline std::string Caption(const std::string& text, bool spaced = true)
+    {
+        std::string result;
+        for (size_t i = 0; i < text.size();)
+        {
+            const auto first = static_cast<uint8_t>(text[i]);
+            const size_t length = (std::min)(first < 0x80 ? size_t{ 1 } : first < 0xE0 ? size_t{ 2 } : first < 0xF0 ? size_t{ 3 } : size_t{ 4 }, text.size() - i);
+            std::string character = text.substr(i, length);
+            if (length == 1 && first >= 'a' && first <= 'z')
+                character[0] = static_cast<char>(first - 32);
+            else if (length == 2 && first == 0xC3)
+            {
+                const auto second = static_cast<uint8_t>(text[i + 1]);
+                if (second >= 0xA0 && second <= 0xBE && second != 0xB7)
+                    character[1] = static_cast<char>(second - 0x20);
+            }
+            if (spaced && !result.empty())
+                result += ' ';
+            result += character;
+            i += length;
+        }
+        return result;
+    }
+
+
     inline int __fastcall RenderLabel(void* object, void*, int row, unsigned part, float* position, int transform, int color)
     {
         if (row >= 0 && row < 13)
@@ -261,12 +288,23 @@ export namespace RE6Menu
             const auto id = Read<int>(object, 612 + row * 24);
             if (id >= MessageBase && id < MessageBase + static_cast<int>(messages.size()))
             {
-                Text(object, messages[id - MessageBase], 207, 187 + row * 40, 20,
-                    Read<int>(object, 556) == row ? 0xFFFFFFFF : 0xFFAAAAAA);
+                // The Plugins row of the Options list reads like its neighbours (capitals, their grey); the fix's own
+                // pages keep plain text
+                const bool caption = id == MessageBase + 12;
+                Text(object, caption ? Caption(messages[12], false) : messages[id - MessageBase], 207, 187 + row * 40,
+                    caption ? 19 : 20, Read<int>(object, 556) == row ? 0xFFFFFFFF : caption ? 0xFF757575 : 0xFFAAAAAA);
                 return 0;
             }
         }
         return renderLabelHook.unsafe_thiscall<int>(object, row, part, position, transform, color);
+    }
+
+    // The page title, after the screen's OPTIONS caption: OPTIONS / PLUGINS, in the caption's blue (ABGR; the text
+    // shader brightens it: about 255 * (value / 255) ^ 0.45)
+    constexpr uint32_t TitleColor = 0xFFED7623;
+    inline void Title(void* owner, const std::string& title)
+    {
+        Text(owner, Caption("/ " + title), 322, 136, 16, TitleColor);
     }
 
     inline int __fastcall Hover(void* object, void*)
@@ -471,7 +509,7 @@ export namespace RE6Menu
                 const auto pages = (host.help.size() + 8) / 9;
                 host.helpFirst = navigate(static_cast<unsigned>(host.helpFirst / 9), static_cast<int>(pages), -1, 0, 0, 0) * 9;
                 Count(0);
-                Text(object, host.items[host.selected].label, 207, 100, 24);
+                Title(object, host.items[host.selected].label);
                 for (size_t i = host.helpFirst; i < host.help.size() && i < host.helpFirst + 9; ++i)
                     Text(object, host.help[i], 104, 180 + static_cast<int>(i - host.helpFirst) * 40, 16);
                 Text(object, host.model.Text("menu.back"), 104, 650, 16);
@@ -502,7 +540,7 @@ export namespace RE6Menu
             {
                 Populate(host);
                 const auto title = host.page ? host.model.Pages()[host.page - 1].title : host.model.Text("menu.plugins");
-                Text(object, title, 207, 100, 24);
+                Title(object, title);
                 const auto& item = host.items[host.selected];
                 if (item.link == -1)
                 {
@@ -518,13 +556,16 @@ export namespace RE6Menu
             return 0;
         }
         // The last native ID slot shares storage with reset confirmation. Borrow it only during active navigation.
+        // ID 9 is no native option and has no help line, so the game's footer shows none for the Plugins row.
         const size_t offset = 352 + host.count * sizeof(int);
         const auto saved = Read<int>(object, offset);
-        Write(object, offset, 0);
+        Write(object, offset, 9);
         Write(object, 76, host.count + 1);
         const auto result = executeHook.unsafe_thiscall<int>(object);
         Write(object, 76, host.count);
         Write(object, offset, saved);
+        if (Read<uint8_t>(object, 56) == 2 && Read<int>(object, 72) == host.count)
+            Text(object, host.model.Text("menu.pluginshelp"), 104, 652, 16, 0xFFCCCCCC);
         if (!updateNotice.empty() && FixSettings().Bool("MAIN.CheckForUpdates"))
             Text(object, host.model.Text("update.short"), 104, 585, 16);
         return result;
@@ -745,7 +786,7 @@ export namespace RE6CameraMenu
         if (!row) return;
         if (host.details)
         {
-            RE6Menu::Text(object, host.model.Label(*row), 207, 100, 24);
+            RE6Menu::Title(object, host.model.Label(*row));
             for (size_t i = host.helpFirst; i < host.help.size() && i < host.helpFirst + 9; ++i)
                 RE6Menu::Text(object, host.help[i], 104, 180 + static_cast<int>(i - host.helpFirst) * 40, 16);
             RE6Menu::Text(object, host.model.Text("menu.back"), 104, 650, 16);

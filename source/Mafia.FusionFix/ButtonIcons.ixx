@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include <d3d9.h>
 #include "FixSettings.hpp"
+#include <atomic>
 #include <fstream>
 
 export module ButtonIcons;
@@ -14,23 +15,36 @@ import PostFX;
 // Pad button icons in the controls menu, drawn from Mafia.FusionFix/buttons.dds
 export namespace MafiaIcons
 {
+    std::atomic<bool> iconFamilyChanged{ true };
     SafetyHookInline nameHook, measureHook, drawHook;
     IDirect3DDevice9* textureDevice = nullptr;
     IDirect3DTexture9* texture = nullptr;
     DWORD lastAttempt = 0;
     constexpr unsigned char marker = 0x1F;
 
-    bool Ready()
+    std::atomic<bool> atlasAvailable{ false };
+
+    void ReleaseAtlas()
     {
-        auto device = GetDevice9();
-        if (!device) return false;
-        if (texture && textureDevice == device) return true;
-        const auto now = GetTickCount();
-        if (lastAttempt && now - lastAttempt < 1000) return false;
-        lastAttempt = now;
+        atlasAvailable.store(false);
         if (texture) texture->Release();
         texture = nullptr;
         textureDevice = nullptr;
+        lastAttempt = 0;
+    }
+
+    void UpdateAtlas()
+    {
+        auto device = GetDevice9();
+        if (device != textureDevice)
+        {
+            ReleaseAtlas();
+            textureDevice = device;
+        }
+        if (!device || texture) return;
+        const auto now = GetTickCount();
+        if (lastAttempt && now - lastAttempt < 1000) return;
+        lastAttempt = now;
         auto path = GetThisModulePath() / L"Mafia.FusionFix" / L"buttons.dds";
         std::ifstream file(path, std::ios::binary);
         std::vector<uint8_t> data((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -38,19 +52,23 @@ export namespace MafiaIcons
         if (data.size() != 128 + width * height || std::memcmp(data.data(), "DDS ", 4) ||
             *reinterpret_cast<const uint32_t*>(data.data() + 12) != height ||
             *reinterpret_cast<const uint32_t*>(data.data() + 16) != width ||
-            std::memcmp(data.data() + 84, "DXT5", 4)) return false;
-        if (FAILED(device->CreateTexture(width, height, 1, 0, D3DFMT_DXT5, D3DPOOL_MANAGED, &texture, nullptr))) return false;
+            std::memcmp(data.data() + 84, "DXT5", 4)) return;
+        if (FAILED(device->CreateTexture(width, height, 1, 0, D3DFMT_DXT5, D3DPOOL_MANAGED, &texture, nullptr))) return;
         D3DLOCKED_RECT lock{};
         if (FAILED(texture->LockRect(0, &lock, nullptr, 0)))
         {
             texture->Release(); texture = nullptr;
-            return false;
+            return;
         }
         for (uint32_t row = 0; row < height / 4; ++row)
             std::memcpy(static_cast<uint8_t*>(lock.pBits) + row * lock.Pitch, data.data() + 128 + row * width * 4, width * 4);
-        texture->UnlockRect(0);
-        textureDevice = device;
-        return true;
+        if (FAILED(texture->UnlockRect(0)))
+        {
+            texture->Release();
+            texture = nullptr;
+            return;
+        }
+        atlasAvailable.store(true);
     }
 
     struct Label
@@ -127,7 +145,7 @@ export namespace MafiaIcons
 
     const char* __fastcall Name(uintptr_t object, void*, uintptr_t binding)
     {
-        if (!binding || !Ready()) return nameHook.unsafe_thiscall<const char*>(object, binding);
+        if (!binding || !atlasAvailable.load()) return nameHook.unsafe_thiscall<const char*>(object, binding);
         const auto original = binding;
         const auto mapped = MafiaPad::ForBinding(binding);
         if (mapped) binding = reinterpret_cast<uintptr_t>(mapped);
@@ -163,7 +181,7 @@ export namespace MafiaIcons
 
     void DrawIcons(const std::vector<Vertex>& vertices)
     {
-        if (vertices.empty() || !Ready()) return;
+        if (vertices.empty() || !texture) return;
         IDirect3DStateBlock9* state = nullptr;
         auto device = textureDevice;
         if (FAILED(device->CreateStateBlock(D3DSBT_ALL, &state))) return;
@@ -221,7 +239,9 @@ export namespace MafiaIcons
             if ((flags & 0x10) && total > 0)
                 scale = std::min(1.0f, std::max(0.0f, width - ((flags & 8) ? height : 0.0f)) / total);
         }
-        const int family = std::clamp(FixSettings().Int("MAIN.GamepadIcons"), 1, 3) - 1;
+        static int family = 0;
+        if (iconFamilyChanged.exchange(false))
+            family = std::clamp(std::atoi(FixSettings().Get("MAIN.GamepadIcons").c_str()), 1, 3) - 1;
         std::vector<Vertex> vertices;
         for (auto [position, icon] : label.icons)
         {
@@ -267,29 +287,35 @@ export namespace MafiaIcons
     };
     struct HintText
     {
-        const char* original = nullptr;
+        std::string original;
+        std::array<unsigned int, 2> icons{ 27, 27 };
         std::array<char, 1024> text{};
     };
     std::array<HintText, std::size(hints)> hintTexts;
     SafetyHookInline textHook, optionalTextHook;
-    bool hintsPad = false;
-
-    void BuildHint(size_t index)
+    void RefreshHint(size_t index, bool textChanged = false)
     {
         auto& entry = hintTexts[index];
-        std::string text = entry.original ? entry.original : "";
-        std::string icons;
-        if (hintsPad && Ready())
+        std::array<unsigned int, 2> current{ 27, 27 };
+        if (MafiaPad::padLastUsed && atlasAvailable.load())
         {
-            for (size_t i = 0; i < hints[index].actions.size(); ++i)
+            for (size_t i = 0; i < current.size(); ++i)
             {
-                if (i && hints[index].actions[i] == hints[index].actions[i - 1]) continue;
-                const auto* binding = MafiaPad::PadBinding(hints[index].actions[i]);
-                const unsigned int icon = binding ? Icon(*binding) : 27;
-                if (icon >= 27) continue;
-                if (!icons.empty()) icons += " / ";
-                icons += Labels()[icon].data();
+                const auto action = hints[index].actions[i];
+                if (i && action == hints[index].actions[i - 1]) continue;
+                if (const auto* binding = MafiaPad::PadBinding(action))
+                    current[i] = Icon(*binding);
             }
+        }
+        if (!textChanged && current == entry.icons) return;
+        entry.icons = current;
+        std::string text = entry.original;
+        std::string icons;
+        for (auto icon : current)
+        {
+            if (icon >= 27) continue;
+            if (!icons.empty()) icons += " / ";
+            icons += Labels()[icon].data();
         }
         if (!icons.empty())
         {
@@ -318,23 +344,20 @@ export namespace MafiaIcons
         {
             if (hints[index].id != id) continue;
             auto& entry = hintTexts[index];
-            if (entry.original != text)
-            {
-                entry.original = text;
-                BuildHint(index);
-            }
+            const bool changed = entry.original != text;
+            if (changed) entry.original = text;
+            RefreshHint(index, changed);
             return entry.text.data();
         }
         return text;
     }
 
-    // Shown hints keep their text pointer, so they follow the device without being looked up again
+    // A visible hint retains its buffer across device and binding changes.
     void Tick()
     {
-        if (hintsPad == MafiaPad::padLastUsed) return;
-        hintsPad = MafiaPad::padLastUsed;
+        UpdateAtlas();
         for (size_t index = 0; index < hintTexts.size(); ++index)
-            if (hintTexts[index].original) BuildHint(index);
+            if (!hintTexts[index].original.empty()) RefreshHint(index);
     }
 
     void Install()
@@ -352,9 +375,11 @@ export namespace MafiaIcons
         auto optionalText = hook::pattern("8B 51 04 B8 00 10 00 00 3B C2 76 09 D1 E8 75 F8 33 C0 C2 04 00");
         textHook = safetyhook::create_inline(text.get_first(), Text<textHook>);
         optionalTextHook = safetyhook::create_inline(optionalText.get_first(), Text<optionalTextHook>);
+        WFP::onBeforeReset() += &ReleaseAtlas;
+        FixSettings().OnChange("MAIN.GamepadIcons", []() { iconFamilyChanged.store(true); });
         FixSettings().Availability("MAIN.GamepadIcons", [](std::string_view value)
         {
-            return value == "0" || Ready();
+            return value == "0" || atlasAvailable.load();
         });
     }
 }

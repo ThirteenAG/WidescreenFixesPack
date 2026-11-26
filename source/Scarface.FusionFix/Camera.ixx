@@ -14,7 +14,7 @@ import Cutscene;
 export namespace ScarfaceCamera
 {
     SafetyHookMid ProjectionHook, SniperHook, LockHook, AimHook;
-    const float* Factor = nullptr;
+    std::atomic<float> Factor{ 1.0f };
     const uint8_t* Character = nullptr;
     bool displayBound = false;
     bool Aiming = false;
@@ -59,7 +59,7 @@ export namespace ScarfaceCamera
         {
             return fov;
         }
-        const float factor = Factor && std::isfinite(*Factor) ? std::clamp(*Factor, 0.5f, 2.0f) : 1.0f;
+        const float factor = Factor.load();
         const float correction = Correction(manager);
         if (!std::isfinite(correction) || correction <= 0.0f)
             return fov;
@@ -89,14 +89,13 @@ export namespace ScarfaceCamera
         _fxrstor(state);
     }
 
-    void Install(const float& factor, HMODULE module = GetModuleHandle(nullptr))
+    void Install(HMODULE module = GetModuleHandle(nullptr))
     {
         auto projection = hook::module_pattern(module, "8B 47 10 8B 8E B0 00 00 00 D9 41 10 89 44 24 10 D9 44 24 10 DA E9 DF E0 F6 C4 44 7B 0F 8B 44 24 10 8B 11 68 00 00 80 3F 50 FF 52 1C");
         auto sniper = hook::module_pattern(module, "57 8B 7C 24 18 8B CF E8 ? ? ? ? 84 C0 74 0B 8B 45 38 89 44 24 10 B3 01");
         auto locked = hook::module_pattern(module, "8B CF E8 ? ? ? ? 84 C0 74 1D 80 BE 34 02 00 00 00 74 08 8B 8E 78 01 00 00 EB 32");
         auto aim = hook::module_pattern(module, "8B CF E8 ? ? ? ? 84 C0 74 1F 80 BE 34 02 00 00 00 74 0C 8B 86 74 01 00 00");
         auto correction = hook::module_pattern(module, "83 EC 10 56 8B F1 8B 0D ? ? ? ? 8B 01 FF 50 5C 80 BE CD 00 00 00 00");
-        Factor = &factor;
         cameraDisplay.SetAddress(*correction.get_first<void**>(8));
         displayBound = true;
         SniperHook = safetyhook::create_mid(sniper.get_first(12), [](SafetyHookContext& regs)

@@ -146,7 +146,7 @@ CEXP void InitializeASI()
     {
         if (WidescreenFixConflict::Found())
             return;
-        FixSettings();
+        Driv3rSettings::Install();
         asi_settings::LiveLink::Start();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("55 8B EC 83 EC 60 53 56 57"));
     });

@@ -10,6 +10,7 @@ export module Window;
 
 import ComVars;
 import PostFX;
+import x_inputmfc;
 
 // Window mode (MAIN.WindowMode). The game opens its video mode with sub_404B20(windowed), windowed for -window, and the
 // window as large as the resolution plus the frame sizes kept at CWnd[27] and CWnd[28], at CWnd[29], CWnd[30]. A window
@@ -86,6 +87,8 @@ export namespace WindowMode
 
     LRESULT CALLBACK DpiWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR data)
     {
+        if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && !wParam) || message == WM_NCDESTROY)
+            DiscardMouseButtons();
         if (message == WM_NCDESTROY)
             RemoveWindowSubclass(window, DpiWindowProc, DpiSubclassId);
         if (message != DpiChanged || nWindowMode != Windowed || changingMode || !data)

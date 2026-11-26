@@ -2,6 +2,7 @@ module;
 
 #include "stdafx.h"
 #include "FixSettings.hpp"
+#include <charconv>
 
 export module Misc;
 
@@ -31,14 +32,26 @@ export void SkipPressStart()
 // MAIN.FOVFactor: the main view's vertical field of view (degrees) widened by the factor on its tangent, so 1.0 is
 // the game's own camera; bounded to 150 degrees across. The other views (fixed 60 degrees) stay as they are.
 SafetyHookInline SetProjectionHook;
+std::atomic<float> projectionFactor{ 1.0f };
+
+void UpdateProjectionFactor()
+{
+    static std::mutex mutex;
+    const std::lock_guard lock(mutex);
+    const auto text = FixSettings().Get("MAIN.FOVFactor");
+    float factor = 1.0f;
+    if (std::from_chars(text.data(), text.data() + text.size(), factor).ec == std::errc{} && std::isfinite(factor))
+        projectionFactor.store(std::clamp(factor, 0.5f, 2.0f), std::memory_order_relaxed);
+}
+
 int __fastcall SetProjection(void* renderer, void*, float fov, float aspect, float nearPlane, float farPlane, int view)
 {
-    static const auto& factor = FixSettings().Float("MAIN.FOVFactor");
-    if (view == -1 && std::isfinite(factor) && factor != 1.0f && std::isfinite(fov) && std::isfinite(aspect) && fov > 0.0f && fov < 180.0f && aspect > 0.0f)
+    const auto factor = projectionFactor.load(std::memory_order_relaxed);
+    if (view == -1 && factor != 1.0f && std::isfinite(fov) && std::isfinite(aspect) && fov > 0.0f && fov < 180.0f && aspect > 0.0f)
     {
         constexpr float toRadians = 3.14159265f / 180.0f;
         const float maxVertical = 2.0f * std::atan(std::tan(75.0f * toRadians) / aspect);
-        float vertical = 2.0f * std::atan(std::tan(fov * 0.5f * toRadians) * std::clamp(factor, 0.5f, 2.0f));
+        float vertical = 2.0f * std::atan(std::tan(fov * 0.5f * toRadians) * factor);
         vertical = std::min(vertical, std::max(maxVertical, fov * toRadians));
         fov = vertical / toRadians;
     }
@@ -47,6 +60,8 @@ int __fastcall SetProjection(void* renderer, void*, float fov, float aspect, flo
 
 export void InstallFieldOfView()
 {
+    FixSettings().OnChange("MAIN.FOVFactor", UpdateProjectionFactor);
+    UpdateProjectionFactor();
     auto pattern = hook::pattern("8B 44 24 14 83 F8 FF 75 69 8B 41 1C 33 D2 85 C0 0F 8E");
     SetProjectionHook = safetyhook::create_inline(pattern.get_first(), SetProjection); //0x41FB20
 }

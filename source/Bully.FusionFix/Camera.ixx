@@ -52,9 +52,10 @@ export namespace GameplayCamera
         return std::clamp(scaled, 1.0f, std::max(base, 150.0f));
     }
 
-    void Install(const float& factor)
+    std::atomic<float> FOVFactor{ 1.0f };
+
+    void Install()
     {
-        static auto& fFOVFactor = factor;
         //FOV
         auto primary = hook::pattern("D9 05 ? ? ? ? EB 06 D9 05 ? ? ? ? D9 1C 24 D9 04 24 DC 0D ? ? ? ? D9 1C 24 D9 04 24 E8 ? ? ? ? D9 1C 24 80 7C 24 34 00").get_first<uint8_t>();
         auto secondary = hook::pattern("D9 05 ? ? ? ? EB 06 D9 05 ? ? ? ? D9 1C 24 D9 04 24 DC 0D ? ? ? ? D9 1C 24 D9 04 24 E8 ? ? ? ? D9 1C 24 80 3D ? ? ? ? 00").get_first<uint8_t>();
@@ -72,7 +73,7 @@ export namespace GameplayCamera
         {
             auto value = reinterpret_cast<float*>(regs.esp);
             const bool overridden = CameraManager->overridden != 0;
-            Screen.fFieldOfView = GameplayCamera::Adjust(*value, Screen.fAspectRatio, fFOVFactor, true, overridden);
+            Screen.fFieldOfView = GameplayCamera::Adjust(*value, Screen.fAspectRatio, FOVFactor.load(std::memory_order_relaxed), true, overridden);
             *value = Screen.fFieldOfView;
         };
         projectionHooks[0] = safetyhook::create_mid(primary + 17, [](SafetyHookContext& regs)
@@ -93,7 +94,7 @@ export namespace GameplayCamera
                 const bool primary = reinterpret_cast<void*>(regs.esi) == CameraManager.get_ptr();
                 const bool overridden = primary && CameraManager->overridden != 0;
                 const float value = overridden ? CameraManager->overrideFov : original;
-                Screen.fFieldOfView = GameplayCamera::Adjust(value, Screen.fAspectRatio, fFOVFactor, primary, overridden);
+                Screen.fFieldOfView = GameplayCamera::Adjust(value, Screen.fAspectRatio, FOVFactor.load(std::memory_order_relaxed), primary, overridden);
                 _asm fld[Screen.fFieldOfView]
             }
         };

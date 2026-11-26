@@ -43,17 +43,13 @@ export namespace NeoCamera
             *reinterpret_cast<int*>(camera + 76) = NeoCinema::CameraHeight(band);
             return LensHook.ccall<int>(halfVertical, camera, pixelAspect);
         }
-        const float factor = Gameplay(camera) ? Factor.load() : 1.0f;
-        return LensHook.ccall<int>(NeoLayout::HalfVertical(halfVertical, Screen.fAspectRatio, factor), camera, pixelAspect);
+        const float angle = Gameplay(camera) ? NeoLayout::HalfVertical(halfVertical, Screen.fAspectRatio, Factor.load()) : halfVertical;
+        return LensHook.ccall<int>(angle, camera, pixelAspect);
     }
 
     inline void Install()
     {
-        Factor = std::clamp(FixSettings().Float("MAIN.FOVFactor"), 0.5f, 2.0f);
-        FixSettings().OnChange("MAIN.FOVFactor", []()
-        {
-            Factor = std::clamp(FixSettings().Float("MAIN.FOVFactor"), 0.5f, 2.0f);
-        });
+        WatchNeoNumber("MAIN.FOVFactor", Factor, 0.5f, 2.0f);
         auto lens = hook::pattern("D9 05 ? ? ? ? 8B 44 24 08 D8 64 24 04 8B 4C 24 04 89 88 88 00 00 00");
         LensHook = safetyhook::create_inline(lens.get_first(), Lens, SafetyHookInline::StartDisabled);
         (void)LensHook.enable();

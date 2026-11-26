@@ -13,7 +13,7 @@ bool bFreeHeading = false;  // the free look has its own direction instead of th
 float WorldYaw = 0.0f;      // degrees, direction from the car to the camera in the world
 float PitchOffset = 0.0f;   // degrees, relative to the game's camera
 
-bool bCameraEnabled = true;    // CAMERA.Enable
+bool bCameraEnabled = true;    // CAMERA.FreeLook
 bool InvertLook = false;
 bool OnlyAllowHorizontalStickMovement = false;
 float StickLookSensitivity = 1.0f;
@@ -41,41 +41,6 @@ float WrapDegrees(float angle)
     return (angle < 0.0f ? angle + 360.0f : angle) - 180.0f;
 }
 
-// The mouse is read as the cursor's distance from the window centre, where it's put back every frame. When it
-// can't be put back exactly (display scaling, Proton/Gamescope), the same offset comes every frame and the
-// camera turns on its own. A hand never moves a mouse by exactly the same amount for this many frames in a row.
-class MouseSanity
-{
-    int lastX = 0, lastY = 0, repeats = 0;
-    bool broken = false;
-
-public:
-    bool Accept(int dx, int dy)
-    {
-        if (dx == 0 && dy == 0)
-        {
-            repeats = 0;
-            broken = false;
-            return true;
-        }
-
-        if (dx == lastX && dy == lastY)
-        {
-            if (++repeats >= 30)
-                broken = true;
-        }
-        else
-        {
-            repeats = 0;
-            broken = false;
-        }
-
-        lastX = dx;
-        lastY = dy;
-        return !broken;
-    }
-} MouseFilter;
-
 void ResetLook()
 {
     bFreeHeading = false;
@@ -94,6 +59,25 @@ uint8_t  bLookBehind = 0;
 uint8_t  bFreeLook = 0;
 uint32_t nCameraMode = 0;
 std::vector<std::string> vCameraStack;
+
+export bool IsCinebotCamera(uintptr_t camera)
+{
+    if (!camera)
+        return false;
+    const auto vtable = *reinterpret_cast<const uintptr_t**>(camera);
+    const auto getType = reinterpret_cast<uintptr_t(__thiscall*)(uintptr_t)>(vtable[0]);
+    const auto type = getType(camera);
+    const auto name = type ? **reinterpret_cast<const char***>(type) : nullptr;
+    return name && std::string_view(name) == "CinebotCamera";
+}
+
+export bool IsCinebotDrivingView()
+{
+    if (vCameraStack.empty())
+        return true;
+    const auto& mode = vCameraStack.back();
+    return mode.ends_with("chaseMode") || mode.ends_with("lookBackMode");
+}
 
 struct alignas(16) RayCastHit
 {
@@ -203,13 +187,8 @@ namespace fb
             float gameYaw = atan2f(dx, dz) / DEG2RAD;
             float gamePitch = atan2f(dy, distXZ) / DEG2RAD;
 
-            float mouseDeltaX = 0.0f;
-            float mouseDeltaY = 0.0f;
-            if (g_Mouse.Raw || MouseFilter.Accept(g_Mouse.DeltaX, g_Mouse.DeltaY))
-            {
-                mouseDeltaX = (float)g_Mouse.DeltaX;
-                mouseDeltaY = (float)g_Mouse.DeltaY;
-            }
+            const auto mouseDeltaX = static_cast<float>(g_Mouse.DeltaX);
+            const auto mouseDeltaY = static_cast<float>(g_Mouse.DeltaY);
             g_Mouse.DeltaX = 0;
             g_Mouse.DeltaY = 0;
 
@@ -379,10 +358,10 @@ public:
                 }
             });
 
-            // The free look's hooks are always in place; CAMERA.Enable turns it on and off at once
-            bCameraEnabled = FixSettings().Bool("CAMERA.Enable");
-            IdleTimeoutSeconds = FixSettings().Float("CAMERA.CameraReturnTimeout");
-            ReturnSpeed = FixSettings().Float("CAMERA.CameraReturnSpeed");
+            // The free look's hooks are always in place; CAMERA.FreeLook turns it on and off at once
+            bCameraEnabled = FixSettings().Bool("CAMERA.FreeLook");
+            IdleTimeoutSeconds = FixSettings().Float("CAMERA.ReturnDelay");
+            ReturnSpeed = FixSettings().Float("CAMERA.ReturnSpeed");
             StickLookSensitivity = FixSettings().Float("MAIN.GamepadCameraSpeed");
             MouseLookSensitivity = FixSettings().Float("MAIN.MouseSensitivity") * 0.15f;
             InvertLook = FixSettings().Int("CAMERA.InvertLook") != 0;
@@ -440,9 +419,9 @@ public:
 
             WFP::onGameProcessEvent() += []()
             {
-                bCameraEnabled = FixSettings().Bool("CAMERA.Enable");
-                IdleTimeoutSeconds = FixSettings().Float("CAMERA.CameraReturnTimeout");
-                ReturnSpeed = FixSettings().Float("CAMERA.CameraReturnSpeed");
+                bCameraEnabled = FixSettings().Bool("CAMERA.FreeLook");
+                IdleTimeoutSeconds = FixSettings().Float("CAMERA.ReturnDelay");
+                ReturnSpeed = FixSettings().Float("CAMERA.ReturnSpeed");
                 StickLookSensitivity = FixSettings().Float("MAIN.GamepadCameraSpeed");
                 MouseLookSensitivity = FixSettings().Float("MAIN.MouseSensitivity") * 0.15f;
                 InvertLook = FixSettings().Bool("CAMERA.InvertLook");

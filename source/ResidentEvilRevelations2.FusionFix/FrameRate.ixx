@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/ResidentEvil/SlowFramePacer.hpp"
 #include <atomic>
 
 export module FrameRate;
@@ -48,7 +49,7 @@ namespace
             limit = GetMonitorInfoW(monitor, &info) && EnumDisplaySettingsW(info.szDevice, ENUM_CURRENT_SETTINGS, &mode) &&
                 mode.dmDisplayFrequency > 1 ? static_cast<int32_t>(mode.dmDisplayFrequency) : 60;
         }
-        return std::clamp(limit, 30, 1000);
+        return std::clamp(limit, 1, 1000);
     }
 
     void Apply(int32_t limit, HWND window)
@@ -85,6 +86,16 @@ export namespace Rev2FrameRate
             monitor = currentMonitor;
             lastCheck = now;
         }
+
+        // At very low targets the native clock can still present faster than requested.
+        static ResidentEvil::SlowFramePacer pacer;
+        int frameLimit = 0;
+        if (selected > 0 && selected < 30 && nFrameRateMode.load(std::memory_order_relaxed) == 2)
+        {
+            if (const auto main = pMain.get(); main && *reinterpret_cast<const float*>(main + 0x3C) == selected)
+                frameLimit = selected;
+        }
+        pacer.Limit(frameLimit);
     }
 }
 
@@ -110,13 +121,12 @@ public:
             pattern = hook::pattern("83 EC 0C 8B 44 24 10 89 81 ? ? ? ? C7 04 24 1E 00 00 00");
             shSetMode = safetyhook::create_inline(pattern.get_first(), SetMode);
 
-            requestedLimit.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
+            BindLiveInt("MAIN.FPSLimit", [](int value)
+            {
+                requestedLimit.store(value, std::memory_order_relaxed);
+            });
             Apply(requestedLimit.load(std::memory_order_relaxed), nullptr);
             ready.store(true, std::memory_order_release);
-            FixSettings().OnChange("MAIN.FPSLimit", []()
-            {
-                requestedLimit.store(FixSettings().Int("MAIN.FPSLimit"), std::memory_order_relaxed);
-            });
         };
     }
 } FrameRate;

@@ -17,6 +17,16 @@ namespace
 {
     asi_overlay::D3D9Overlay Overlay;
 
+    void ApplySMAA(bool enabled)
+    {
+        if (CPostFX::bSmaaEnabled != enabled)
+        {
+            // Recreate the render targets for the new SMAA mode.
+            CPostFX::Shutdown();
+            CPostFX::bSmaaEnabled = enabled;
+        }
+    }
+
     HMODULE ThisModule()
     {
         HMODULE module = nullptr;
@@ -88,7 +98,6 @@ public:
                 }
             });
 
-            // Both can be switched in the game's options
             static const int* pConsoleGamma = &FixSettings().Int("GRAPHICS.ConsoleGamma");
             CPostFX::bConsoleGammaEnabled = *pConsoleGamma != 0;
             CPostFX::bSmaaEnabled = AntiAliasing::IsSMAA();
@@ -96,22 +105,21 @@ public:
 
             static auto SMAAHook = safetyhook::create_mid(SMAAHookSite, +[](SafetyHookContext& regs)
             {
+                ApplySMAA(AntiAliasing::IsSMAA());
                 CPostFX::RenderSMAA(Direct3DDevice);
             });
 
             WFP::onEndScene() += []()
             {
-                CPostFX::bConsoleGammaEnabled = *pConsoleGamma != 0;
-                if (CPostFX::bSmaaEnabled != (AntiAliasing::IsSMAA()))
-                {
-                    // The SMAA textures are made when it's on: start over
-                    CPostFX::Shutdown();
-                    CPostFX::bSmaaEnabled = AntiAliasing::IsSMAA();
-                }
+                const auto gamma = *pConsoleGamma;
+                const auto smaa = AntiAliasing::IsSMAA();
+                CPostFX::bConsoleGammaEnabled = gamma != 0;
+                ApplySMAA(smaa);
 
                 // MW's own fx defines the MWGamma technique (X360 preset, cfg mode 2)
-                CPostFX::RenderGamma(Direct3DDevice, *pConsoleGamma == 2 ? "MWGamma" : nullptr);
-                Overlay.Present(Direct3DDevice.get(), ThisModule());
+                CPostFX::RenderGamma(Direct3DDevice, gamma == 2 ? "MWGamma" : nullptr);
+                if constexpr (WFP::DeveloperOverlay)
+                    Overlay.Present(Direct3DDevice.get(), ThisModule());
             };
 
             WFP::onShutdownEvent() += []() { Overlay.ShutdownRenderer(); };

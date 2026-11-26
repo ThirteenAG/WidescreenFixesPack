@@ -10,7 +10,7 @@
   "HudAspectRatioConstraint": "HUD aspect ratio",
   "HudAspectRatioConstraint.description": "Auto places the side HUD panels at the screen edges. A ratio keeps them at the edges of a centered box of that shape. The cockpit view always keeps its HUD on the 4:3 dashboard. Changes apply during play.",
   "FMVWidescreenMode": "Video display",
-  "FMVWidescreenMode.description": "Original shows the videos as the game does, a 4:3 picture with black bars. Fill shows the whole widescreen picture as large as the screen allows. Changes apply during play.",
+  "FMVWidescreenMode.description": "Original fits the complete 4:3 video frame. Fill enlarges the picture in letterboxed videos. Full-frame videos retain the complete picture. Changes apply during play.",
   "fmv.original": "Original",
   "fmv.fill": "Fill",
   "CutsceneBorders": "Cutscene borders",

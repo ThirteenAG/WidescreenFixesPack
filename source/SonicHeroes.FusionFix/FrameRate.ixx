@@ -38,12 +38,20 @@ export namespace FrameRate
             const int64_t left = deadline - now;
             if (Timer && left > margin * 2)
             {
-                LARGE_INTEGER due;
-                due.QuadPart = -std::max<int64_t>(1, (left - margin) * 10'000'000 / Frequency);
+                const auto units = std::max<int64_t>(1, (left - margin) * 10'000'000 / Frequency);
+                LARGE_INTEGER due{};
+                due.QuadPart = -units;
                 if (SetWaitableTimer(Timer, &due, 0, nullptr, nullptr, FALSE))
-                    WaitForSingleObject(Timer, INFINITE);
+                {
+                    const auto milliseconds = DWORD((units + 9999) / 10000);
+                    if (WaitForSingleObject(Timer, milliseconds + 2) == WAIT_OBJECT_0)
+                        continue;
+                }
+                CloseHandle(Timer);
+                Timer = nullptr;
+                timeBeginPeriod(1);
             }
-            else if (!Timer && left > margin * 3)
+            if (left > margin * 3)
                 Sleep(1);
             else if (left > margin)
                 Sleep(0);

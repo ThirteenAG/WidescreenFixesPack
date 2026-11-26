@@ -1,6 +1,9 @@
 {
   "plugin.name": "Burnout 3 PCSX2F Fusion Fix",
+  "TextLanguage": "Menu language",
+  "TextLanguage.description": "Choose the language of the Fusion Fix menu. Auto follows the game's language.",
   "page.display": "Display",
+  "page.compatibility": "Compatibility",
   "auto": "Automatic",
   "FOVFactor": "Gameplay field of view",
   "FOVFactor.description": "Adjusts the driving camera's horizontal field of view. Higher values show more of the road. Changes apply during play.",

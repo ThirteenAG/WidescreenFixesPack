@@ -45,7 +45,7 @@ export namespace Driv3rIcons
     }
     int Family()
     {
-        const int family = FixSettings().Int("MAIN.GamepadIcons");
+        const int family = Driv3rSettings::GamepadIcons.load();
         return family == 2 ? 1 : family == 3 ? 2 : 0;
     }
     bool PatchFont(void* pointer)

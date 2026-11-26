@@ -10,7 +10,7 @@
 
 ---
 
-The included ASI loader provides Direct3D 8 to 9 conversion. Keep `d3d8.dll` and `d3d8.ini` together beside the game executable. If an existing `global.ini` in the game, `scripts`, `plugins`, or `update` folder sets `UseD3D8to9=0`, it overrides `d3d8.ini`; change that existing value to `1` to use the D3D9 post-effects and developer overlay.
+The included ASI loader provides Direct3D 8 to 9 conversion. Keep `d3d8.dll` and `d3d8.ini` together beside the game executable. If an existing `global.ini` in the game, `scripts`, `plugins`, or `update` folder sets `UseD3D8to9=0`, it overrides `d3d8.ini`; change that existing value to `1` to use the D3D9 post-effects.
 
 ## Fixes
 

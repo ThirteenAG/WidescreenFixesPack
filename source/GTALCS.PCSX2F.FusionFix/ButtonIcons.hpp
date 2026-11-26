@@ -1,10 +1,9 @@
 #pragma once
 #include "Game.hpp"
-#include "../Shared/Console/PCButtonArtwork.hpp"
+#include "Shared/Console/PCButtonArtwork.hpp"
 namespace lcs {
-// PC-scheme text for help entries that name PS2 buttons in plain words
-// (CText::Get hook); nullptr keeps the game's text.
-const uint16_t* ButtonText(const char* key);
+// Substitute the bound key in localized help that names a PS2 button.
+const uint16_t* ButtonText(const char* key, const uint16_t* nativeText);
 // Key artwork for a binding code (Windows virtual key / mouse code), in the
 // frontend's 480x272 units. Returns the drawn width, or 0 without artwork.
 // A positive width overrides the artwork's proportions.

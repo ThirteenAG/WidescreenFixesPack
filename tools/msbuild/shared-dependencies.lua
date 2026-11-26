@@ -10,10 +10,7 @@ local sources = {
    "external/injector/utility/FunctionHookMinHook.cpp",
    "external/injector/zydis/**.c"
 }
--- The overlay's ImGui (premake5.lua overlay_imgui_files): linked only by the fixes that call add_overlay_imgui
-local imguiSources = overlay_imgui_files or {}
 local objects = {}
-local imguiObjects = {}
 local objectNames = {}
 local function addObjects(patterns, list)
    local found = {}
@@ -32,7 +29,6 @@ local function addObjects(patterns, list)
    end
 end
 addObjects(sources, objects)
-addObjects(imguiSources, imguiObjects)
 
 for wks in premake.global.eachWorkspace() do
    local platform = ({ Win32 = "Win32", Win64 = "x64", Dolphin = "x64" })[wks.name:match("^(.-)%.")]
@@ -45,18 +41,11 @@ for wks in premake.global.eachWorkspace() do
       workspace(wks.name)
       for _, prj in ipairs(consumers) do
          project(prj.name)
-         local overlay = overlay_imgui_projects and overlay_imgui_projects[prj.name]
-         imports[prj.name] = { dependency = dependency, overlay = overlay }
+         imports[prj.name] = { dependency = dependency }
          dependson { dependency }
          for _, source in ipairs(sources) do
             filter { "configurations:Release", "files:**/" .. source }
                excludefrombuild "On"
-         end
-         if overlay then
-            for _, source in ipairs(imguiSources) do
-               filter { "configurations:Release", "files:**/" .. source }
-                  excludefrombuild "On"
-            end
          end
          filter {}
       end
@@ -69,9 +58,6 @@ for wks in premake.global.eachWorkspace() do
          objdir(path.join(root, "build/obj/shared/%{cfg.platform}/%{cfg.buildcfg}"))
          targetdir(path.join(root, "build/obj/shared/%{cfg.platform}/%{cfg.buildcfg}"))
          removefiles { path.join(root, "includes/stdafx.cpp"), path.join(root, "Resources/*.rc") }
-         for _, source in ipairs(imguiSources) do
-            files { path.join(root, source) }
-         end
          imports[dependency] = { producer = true }
       filter {}
       group ""
@@ -87,11 +73,7 @@ premake.override(premake.vstudio.vc2010.elements, "project", function(base, prj)
          if settings.producer then
             premake.w('<WFPSharedDependencyProducer>true</WFPSharedDependencyProducer>')
          else
-            local linked = table.concat(objects, ";")
-            if settings.overlay and #imguiObjects > 0 then
-               linked = linked .. ";" .. table.concat(imguiObjects, ";")
-            end
-            premake.w('<WFPSharedDependencyObjects>%s</WFPSharedDependencyObjects>', linked)
+            premake.w('<WFPSharedDependencyObjects>%s</WFPSharedDependencyObjects>', table.concat(objects, ";"))
          end
          premake.pop('</PropertyGroup>')
          if settings.dependency then

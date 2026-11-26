@@ -3,13 +3,16 @@ module;
 #include <stdafx.h>
 #include <commctrl.h>
 #include "FixSettings.hpp"
+#include "Shared/BufferedRawMouse.hpp"
 #include "DeveloperOverlay.hpp"
+#include "rawinput.hpp"
 #include "Shared/MaxPayne/GamepadButtons.hpp"
 #include "Shared/MaxPayne/NativeIcons.hpp"
 #define DIRECTINPUT_VERSION 0x0700
 #include <dinput.h>
 #include <stdexcept>
 #include "Shared/MaxPayne/Pad.hpp"
+#include "Shared/MaxPayne/Vibration.hpp"
 
 export module x_inputmfc;
 
@@ -19,7 +22,8 @@ import xidi;
 void UpdateInput()
 {
     MaxPaynePad::Update();
-    MaxPaynePad::ToOverlay(MaxPayneOverlay::Gamepad);
+    if constexpr (WFP::DeveloperOverlay)
+        MaxPaynePad::ToOverlay(MaxPayneOverlay::Gamepad);
 }
 
 // Stands in for PeekMessageA in the loop of the video player, which stops on a key press message.
@@ -396,71 +400,33 @@ export std::string GetControlIcon(std::string_view action)
     return {};
 }
 
-bool g_VibrationThisFrame = false;
-bool g_VibrationActive = false;
-int g_VibrationCurrentStrength = 0;
-std::chrono::steady_clock::time_point g_VibrationStart = {};
-std::chrono::milliseconds g_VibrationDuration{ 150 };
+MaxPayneVibration Vibration;
 
 void Vibrate(int strength, std::chrono::milliseconds duration = std::chrono::milliseconds{ 150 })
 {
-    const auto sendVibration = XidiSendVibration.load(std::memory_order_acquire);
-    if (!sendVibration || !FixSettings().Bool("MAIN.Vibration"))
-        return;
-
-    if (g_VibrationThisFrame)
-        return;
-
-    if (strength < 0)
-        return;
-
-    if (g_VibrationActive && strength < g_VibrationCurrentStrength)
-        return;
-
-    g_VibrationThisFrame = true;
-    g_VibrationActive = true;
-    g_VibrationCurrentStrength = strength;
-    g_VibrationStart = std::chrono::steady_clock::now();
-    g_VibrationDuration = duration;
-
-    constexpr int RUMBLE_MAX_STRENGTH = 100;
-    constexpr WORD RUMBLE_MAX_VALUE = 0xFFFF;
-
-    const WORD motor = static_cast<WORD>(
-        static_cast<float>(std::clamp(strength, 0, RUMBLE_MAX_STRENGTH))
-        / RUMBLE_MAX_STRENGTH * RUMBLE_MAX_VALUE);
-
-    sendVibration(-1, motor, motor);
+    Vibration.Pulse(XidiSendVibration.load(std::memory_order_acquire), MaxPayneGamepadButtons::selectedSlot.load(),
+        FixSettings().Get("MAIN.Vibration") == "1", strength, duration);
 }
 
-// Stops a vibration once its time is up. Called every tick and from loading screens, which block the game loop.
+// Called during gameplay and from loading screens so pulses can expire in either case.
 export void UpdateVibration()
 {
-    g_VibrationThisFrame = false;
-
-    if (g_VibrationActive)
-    {
-        auto elapsed = std::chrono::steady_clock::now() - g_VibrationStart;
-        if (elapsed >= g_VibrationDuration || !FixSettings().Bool("MAIN.Vibration"))
-        {
-            g_VibrationActive = false;
-            g_VibrationCurrentStrength = 0;
-            if (const auto sendVibration = XidiSendVibration.load(std::memory_order_acquire))
-                sendVibration(-1, 0, 0);
-        }
-    }
+    Vibration.Update(XidiSendVibration.load(std::memory_order_acquire), MaxPayneGamepadButtons::selectedSlot.load(),
+        FixSettings().Get("MAIN.Vibration") == "1");
 }
 
 namespace
 {
     std::atomic<bool> Enabled{ false };
-    std::atomic<bool> Relative{ false };
-    std::atomic<int64_t> DeltaX{ 0 }, DeltaY{ 0 };
-    HWND Window = nullptr;
+    BufferedRawMouse Movement;
+    std::atomic<HWND> Window = nullptr;
+    std::atomic<bool> Reading{ false };
+    HWND InputWindow = nullptr;
     bool Registered = false;
     bool OwnRegistration = false;
     HWND CandidateWindow = nullptr;
     bool WasEnabled = false;
+    ULONGLONG nextRegistrationCheck = 0;
     bool HavePrevious = false;
     RAWINPUTDEVICE Previous{};
     SafetyHookMid MouseHook;
@@ -470,9 +436,7 @@ namespace
 
     void ClearMovement()
     {
-        Relative.store(false);
-        DeltaX.store(0);
-        DeltaY.store(0);
+        Movement.Clear();
     }
 
     template<typename T>
@@ -509,8 +473,77 @@ namespace
         }
     }
 
+    // The game reads the mouse's buffered data only for its buttons, 32 events at a time from a 32 event buffer. A high
+    // polling rate mouse fills that buffer with movement before each frame and button presses are dropped: the buffer
+    // gets room for a few frames of an 8000 Hz mouse and the game gets only the button events.
+    injector::scoped_basic<6> MouseDataCall;
+    injector::scoped_write<1> EmptyButtonRetry;
+    injector::scoped_write<1> ClearedButtonRetry;
+    IDirectInputDeviceA* MouseDevice = nullptr;
+    std::vector<DIDEVICEOBJECTDATA_DX3> ButtonEvents;
+    std::atomic<bool> discardButtons{ false };
+    bool bufferConfigured = false;
+    ULONGLONG nextBufferAttempt = 0;
+    constexpr DWORD MouseBufferSize = 4096;
+
+    HRESULT WINAPI MouseGetDeviceData(IDirectInputDeviceA* device, DWORD size, DIDEVICEOBJECTDATA_DX3* data, DWORD* count, DWORD flags)
+    {
+        if (discardButtons.exchange(false))
+            ButtonEvents.clear();
+        for (;;)
+        {
+            DIDEVICEOBJECTDATA_DX3 events[256];
+            DWORD read = DWORD(std::size(events));
+            const HRESULT result = device->GetDeviceData(size, reinterpret_cast<DIDEVICEOBJECTDATA*>(events), &read, flags);
+            if (FAILED(result))
+            {
+                ButtonEvents.clear();
+                *count = 0;
+                return result;
+            }
+            for (DWORD i = 0; i < read; ++i)
+            {
+                if (events[i].dwOfs >= DIMOFS_BUTTON0)
+                    ButtonEvents.push_back(events[i]);
+            }
+            if (read < std::size(events))
+                break;
+        }
+        if (discardButtons.load())
+            ButtonEvents.clear();
+        const DWORD given = std::min<DWORD>(*count, DWORD(ButtonEvents.size()));
+        std::copy_n(ButtonEvents.begin(), given, data);
+        ButtonEvents.erase(ButtonEvents.begin(), ButtonEvents.begin() + given);
+        *count = given;
+        return DI_OK;
+    }
+
+    void WatchMouseDevice(IDirectInputDeviceA* device)
+    {
+        if (device != MouseDevice)
+        {
+            MouseDevice = device;
+            ButtonEvents.clear();
+            bufferConfigured = false;
+            nextBufferAttempt = 0;
+        }
+        if (!device || bufferConfigured)
+            return;
+        const auto now = GetTickCount64();
+        if (now < nextBufferAttempt)
+            return;
+        nextBufferAttempt = now + 500;
+        // The native update immediately following this one reacquires the mouse.
+        if (FAILED(device->Unacquire()))
+            return;
+        ButtonEvents.clear();
+        DIPROPDWORD buffer{ { sizeof(DIPROPDWORD), sizeof(DIPROPHEADER), 0, DIPH_DEVICE }, MouseBufferSize };
+        bufferConfigured = SUCCEEDED(device->SetProperty(DIPROP_BUFFERSIZE, &buffer.diph));
+    }
+
     void __fastcall UpdateMouse(uint8_t* self, void* edx, float delta)
     {
+        WatchMouseDevice(ReadMouse<IDirectInputDeviceA*>(self + 5));
         if (MaxPayneOverlay::BlocksInput())
         {
             if (SuspendedMouse != self)
@@ -518,6 +551,7 @@ namespace
                 auto device = ReadMouse<IDirectInputDeviceA*>(self + 5);
                 if (device)
                     device->Unacquire();
+                ButtonEvents.clear();
                 SuspendedMouse = self;
             }
             ClearMovement();
@@ -535,57 +569,60 @@ namespace
     bool MouseRegistration(RAWINPUTDEVICE& mouse)
     {
         UINT count = 0;
-        if (GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) == UINT(-1) || !count)
+        if (GetRegisteredRawInputDevices(nullptr, &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
             return false;
         std::vector<RAWINPUTDEVICE> devices(count);
-        if (GetRegisteredRawInputDevices(devices.data(), &count, sizeof(RAWINPUTDEVICE)) == UINT(-1))
+        const auto found = count ? GetRegisteredRawInputDevices(devices.data(), &count, sizeof(RAWINPUTDEVICE)) : 0;
+        if (found == UINT(-1))
             return false;
-        for (auto& device : devices)
+        mouse = {};
+        for (UINT i = 0; i < found; ++i)
         {
-            if (device.usUsagePage == 1 && device.usUsage == 2)
+            if (devices[i].usUsagePage == 1 && devices[i].usUsage == 2)
             {
-                mouse = device;
-                return true;
+                mouse = devices[i];
+                break;
             }
         }
-        return false;
+        return true;
     }
 
     void RestoreRegistration()
     {
-        RAWINPUTDEVICE current{};
-        if (OwnRegistration && MouseRegistration(current) && current.hwndTarget == Window && current.dwFlags == 0)
-        {
-            RAWINPUTDEVICE device = HavePrevious ? Previous : RAWINPUTDEVICE{ 1, 2, RIDEV_REMOVE, nullptr };
-            RegisterRawInputDevices(&device, 1, sizeof(device));
-        }
         Registered = false;
-        OwnRegistration = false;
+        Reading.store(false);
         ClearMovement();
+        if (!OwnRegistration)
+            return;
+
+        RAWINPUTDEVICE current{};
+        if (!MouseRegistration(current))
+            return;
+        if (current.hwndTarget == InputWindow && current.dwFlags == RIDEV_INPUTSINK)
+        {
+            const auto device = HavePrevious ? Previous : RAWINPUTDEVICE{ 1, 2, RIDEV_REMOVE, nullptr };
+            if (!RegisterRawInputDevices(&device, 1, sizeof(device)))
+                return;
+        }
+        OwnRegistration = false;
+    }
+
+    LRESULT CALLBACK InputWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    {
+        if (message == WM_INPUT)
+        {
+            Movement.Read(reinterpret_cast<HRAWINPUT>(lParam), []()
+            {
+                const auto target = Window.load();
+                return Reading.load() && Enabled.load() && target && GetForegroundWindow() == target;
+            });
+        }
+        return DefWindowProcW(window, message, wParam, lParam);
     }
 
     LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR)
     {
-        if (MaxPayneOverlay::BlocksInput())
-            ClearMovement();
-        else if (message == WM_INPUT && Registered && Enabled.load() && GetForegroundWindow() == window)
-        {
-            RAWINPUT input{};
-            UINT size = sizeof(input);
-            if (GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) != UINT(-1) &&
-                input.header.dwType == RIM_TYPEMOUSE)
-            {
-                if (input.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)
-                    ClearMovement();
-                else
-                {
-                    DeltaX.fetch_add(input.data.mouse.lLastX);
-                    DeltaY.fetch_add(input.data.mouse.lLastY);
-                    Relative.store(true);
-                }
-            }
-        }
-        else if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && !wParam))
+        if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && !wParam))
             ClearMovement();
         else if (message == WM_NCDESTROY)
         {
@@ -598,58 +635,78 @@ namespace
     }
 }
 
+export void DiscardMouseButtons()
+{
+    discardButtons.store(true);
+}
+
 export void UpdateRawMouseWindow(HWND window)
 {
     if (!MouseHook)
         return;
     bool enabled = Enabled.load();
+    const auto now = GetTickCount64();
+    if (OwnRegistration && !Registered)
+    {
+        if (now < nextRegistrationCheck)
+            return;
+        nextRegistrationCheck = now + 500;
+        RestoreRegistration();
+        if (OwnRegistration)
+            return;
+    }
     if (CandidateWindow == window && WasEnabled == enabled)
     {
+        if (!enabled || !window || (!Registered && now < nextRegistrationCheck))
+            return;
+        nextRegistrationCheck = now + 500;
         RAWINPUTDEVICE current{};
-        if (Registered && (!MouseRegistration(current) || current.hwndTarget != Window || (OwnRegistration && current.dwFlags != 0)))
+        if (Registered && !MouseRegistration(current))
+            return;
+        if (Registered && (current.hwndTarget != InputWindow || current.dwFlags != RIDEV_INPUTSINK))
         {
             // A later registration belongs to its caller; keep it and return to DirectInput.
             OwnRegistration = false;
             RestoreRegistration();
-            if (Window)
-                RemoveWindowSubclass(Window, WindowProc, SubclassId);
+            if (Window.load())
+                RemoveWindowSubclass(Window.load(), WindowProc, SubclassId);
             Window = nullptr;
             OutputDebugStringA("Max Payne 2: raw mouse ownership changed; using DirectInput.\n");
         }
-        return;
+        if (Registered)
+            return;
     }
+    nextRegistrationCheck = now + 500;
     CandidateWindow = window;
     WasEnabled = enabled;
     RestoreRegistration();
-    if (Window)
-        RemoveWindowSubclass(Window, WindowProc, SubclassId);
+    if (Window.load())
+        RemoveWindowSubclass(Window.load(), WindowProc, SubclassId);
     Window = nullptr;
-    if (!enabled || !window || !IsWindow(window))
+    if (OwnRegistration || !enabled || !window || !IsWindow(window))
+        return;
+    if (!InputWindow)
+        InputWindow = CreateRawInputWindow(L"MaxPayne2RawMouse", InputWindowProc);
+    if (!InputWindow)
         return;
 
     RAWINPUTDEVICE current{};
-    HavePrevious = MouseRegistration(current);
+    if (!MouseRegistration(current))
+        return;
+    HavePrevious = current.usUsage != 0;
     // Another plugin's explicit target keeps ownership of its input.
-    if (HavePrevious && current.hwndTarget && current.hwndTarget != window)
+    if (HavePrevious && (current.hwndTarget || current.dwFlags))
     {
-        OutputDebugStringA("Max Payne 2: another window owns raw mouse input; using DirectInput.\n");
         return;
     }
     Previous = current;
-    Window = window;
     if (!SetWindowSubclass(window, WindowProc, SubclassId, 0))
-    {
-        Window = nullptr;
         return;
-    }
-    if (HavePrevious && current.hwndTarget == window)
-        Registered = true;
-    else
-    {
-        RAWINPUTDEVICE mouse{ 1, 2, 0, window };
-        OwnRegistration = RegisterRawInputDevices(&mouse, 1, sizeof(mouse)) != FALSE;
-        Registered = OwnRegistration;
-    }
+    Window = window;
+    RAWINPUTDEVICE mouse{ 1, 2, RIDEV_INPUTSINK, InputWindow };
+    OwnRegistration = RegisterRawInputDevices(&mouse, 1, sizeof(mouse)) != FALSE;
+    Registered = OwnRegistration;
+    Reading.store(Registered);
     if (!Registered)
     {
         RemoveWindowSubclass(window, WindowProc, SubclassId);
@@ -661,19 +718,37 @@ export void UpdateRawMouseWindow(HWND window)
 void InitRawMouse()
 {
     auto module = GetModuleHandleW(L"X_Inputmfc.dll");
+    auto readButtons = hook::module_pattern(module, "89 5C 24 20 8B 10 50 FF 52 28 33 F6 85 C0 8B 47 2D").get_first<uint8_t>(4);
+    MouseDataCall.save(readButtons, 6, true);
+    injector::WriteMemory<uint8_t>(readButtons, 0x50, true); // push eax (device)
+    injector::MakeCALL(readButtons + 1, MouseGetDeviceData, true);
+    // Finish the frame after the native button reset if the device stays unacquired.
+    auto emptyRetry = hook::module_pattern(module, "85 C0 7E ? 33 ED 8D 9B 00 00 00 00 85 ED").get_first<uint8_t>(3);
+    auto clearedRetry = hook::module_pattern(module, "83 C5 0F 3B F0 7C ? EB ? 85 C0").get_first<uint8_t>(8);
+    auto eventCount = hook::module_pattern(module, "8B 44 24 10 33 DB 85 C0 76 ? BE").get_first<uint8_t>();
+    EmptyButtonRetry.write(emptyRetry, static_cast<int8_t>(eventCount - (emptyRetry + 1)), true);
+    ClearedButtonRetry.write(clearedRetry, static_cast<int8_t>(eventCount - (clearedRetry + 1)), true);
     auto update = hook::module_pattern(module, "64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 8B 44 24 10 64 89 25 00 00 00 00 83 EC 1C 57 8B F9 89 47 4D 8B 47 05");
     MouseUpdateHook = safetyhook::create_inline(update.get_first(), UpdateMouse);
     auto pattern = hook::module_pattern(module, "D9 47 53 8B 4F 5F D8 0D ? ? ? ? 8B 97 87 00 00 00 8B 47 5B");
     MouseHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& context)
     {
-        if (!Enabled.load() || !Registered || !Relative.load() || GetForegroundWindow() != Window)
+        if (MaxPayneOverlay::BlocksInput())
+        {
+            ClearMovement();
             return;
+        }
         auto mouse = reinterpret_cast<uint8_t*>(context.edi);
         MaxPayneOverlay::Mouse(mouse + 9);
+        if (!Enabled.load() || !Registered || GetForegroundWindow() != Window)
+            return;
+        const auto movement = Movement.Take();
+        if (!movement.relative)
+            return;
         constexpr int64_t minimum = std::numeric_limits<LONG>::min();
         constexpr int64_t maximum = std::numeric_limits<LONG>::max();
-        WriteMouse(mouse + 9, static_cast<LONG>(std::clamp(DeltaX.exchange(0), minimum, maximum)));
-        WriteMouse(mouse + 13, static_cast<LONG>(std::clamp(DeltaY.exchange(0), minimum, maximum)));
+        WriteMouse(mouse + 9, static_cast<LONG>(std::clamp(movement.x, minimum, maximum)));
+        WriteMouse(mouse + 13, static_cast<LONG>(std::clamp(movement.y, minimum, maximum)));
     });
     Enabled.store(FixSettings().Bool("MAIN.RawInputMouse"));
     FixSettings().OnChange("MAIN.RawInputMouse", []() { Enabled.store(FixSettings().Bool("MAIN.RawInputMouse")); ClearMovement(); });
@@ -683,12 +758,17 @@ void ShutdownRawMouse()
 {
     Enabled.store(false);
     RestoreRegistration();
-    if (Window)
-        RemoveWindowSubclass(Window, WindowProc, SubclassId);
+    if (Window.load())
+        RemoveWindowSubclass(Window.load(), WindowProc, SubclassId);
     Window = nullptr;
     CandidateWindow = nullptr;
     MouseHook.reset();
     MouseUpdateHook.reset();
+    ClearedButtonRetry.restore();
+    EmptyButtonRetry.restore();
+    MouseDataCall.restore();
+    MouseDevice = nullptr;
+    ButtonEvents.clear();
     SuspendedMouse = nullptr;
 }
 

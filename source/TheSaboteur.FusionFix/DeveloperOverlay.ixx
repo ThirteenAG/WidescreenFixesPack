@@ -27,6 +27,7 @@ export namespace SaboteurOverlay
 
     void NativeInput(uintptr_t player)
     {
+#ifdef ASI_OVERLAY
         if (!Overlay.context || !Overlay.IsOpen() || !Window || GetForegroundWindow() != Window)
         {
             PreviousKeys.fill(false);
@@ -67,6 +68,7 @@ export namespace SaboteurOverlay
             io.AddKeyEvent(ImGuiMod_Shift, (keys[0x2A] | keys[0x36]) & 0x80);
             io.AddKeyEvent(ImGuiMod_Alt, (keys[0x38] | keys[0xB8]) & 0x80);
         }
+#endif
     }
 
     std::string BuildTime()
@@ -93,7 +95,7 @@ export namespace SaboteurOverlay
         LRESULT result = 0;
         if (Overlay.Message(window, message, wParam, lParam, result))
             return result;
-        if ((message == WM_KEYDOWN || message == WM_KEYUP || message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) &&
+        if (WFP::DeveloperOverlay && (message == WM_KEYDOWN || message == WM_KEYUP || message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || Hotkey))
             return 0;
         return ProcedureHook.unsafe_stdcall<LRESULT>(window, message, wParam, lParam);
@@ -101,6 +103,8 @@ export namespace SaboteurOverlay
 
     void Frame(IDirect3DDevice9* device)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!device)
             return;
         if (Device != device)
@@ -118,7 +122,8 @@ export namespace SaboteurOverlay
             Overlay.SetOpen(!Overlay.IsOpen());
         Hotkey = down;
         CursorConfinement::Suspend(Overlay.BlocksInput());
-        Overlay.Present(device, Module);
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, Module);
     }
 
     void BeforeReset()
@@ -133,6 +138,8 @@ export namespace SaboteurOverlay
 
     void Install()
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         auto pattern = hook::pattern("A1 ? ? ? ? D9 44 24 0C 51 8D 0C 06 D9 1C 24 E8 ? ? ? ? 83 C7 01 81 C6 60 30 00 00");
         Players = SaboteurBindings::Players();
         InputHook = safetyhook::create_mid(pattern.get_first(21), [](SafetyHookContext& context)

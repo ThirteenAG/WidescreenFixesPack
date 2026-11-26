@@ -74,6 +74,11 @@ namespace
 
 export namespace Cinematics
 {
+    std::atomic<int> borderMode{};
+    void Init()
+    {
+        ObserveFixSetting("MAIN.CutsceneBorders", asi_settings::detail::ParseInt, [](int value) { borderMode.store(value); });
+    }
     void Shot(void* shot, float reference)
     {
         const bool authored = shot && Bind(shot) &&
@@ -88,7 +93,7 @@ export namespace Cinematics
     }
     float ProjectionAspect(float reference)
     {
-        return DACinematicFrame::Fit(Screen.fWidth, Screen.fHeight, reference, FixSettings().Int("MAIN.CutsceneBorders")).projectionAspect;
+        return DACinematicFrame::Fit(Screen.fWidth, Screen.fHeight, reference, borderMode.load()).projectionAspect;
     }
     void Present(IDirect3DDevice9* device)
     {
@@ -101,7 +106,7 @@ export namespace Cinematics
         D3DSURFACE_DESC desc{};
         if (SUCCEEDED(surface->GetDesc(&desc)))
         {
-            const auto frame = DACinematicFrame::Fit(float(desc.Width), float(desc.Height), reference, FixSettings().Int("MAIN.CutsceneBorders"));
+            const auto frame = DACinematicFrame::Fit(float(desc.Width), float(desc.Height), reference, borderMode.load());
             const LONG width = LONG(desc.Width), height = LONG(desc.Height);
             const LONG x = std::clamp(LONG(std::lround(frame.left)), 0L, width / 2);
             const LONG y = std::clamp(LONG(std::lround(frame.top)), 0L, height / 2);

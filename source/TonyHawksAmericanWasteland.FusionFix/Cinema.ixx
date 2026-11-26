@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include <d3d9.h>
+#include "FixSettings.hpp"
 
 export module Cinema;
 
@@ -22,7 +23,8 @@ export namespace THAWCinema
     };
 
     inline SafetyHookMid PresentHook, OverlayHook;
-    inline const int32_t* Mode = nullptr;
+    inline std::atomic<int> ConfiguredBorders{ 3 };
+    inline int FrameBorders = 3;
     inline int Width = 0, Height = 0;
     inline bool Active = false;
     inline float Strip = 0.0f;              // the picture's share of the 4:3 frame height, 0 without bars
@@ -40,7 +42,7 @@ export namespace THAWCinema
 
     inline int Borders()
     {
-        return Mode ? std::clamp(*Mode, 0, 3) : 3;
+        return FrameBorders;
     }
 
     inline Rect Picture()
@@ -50,12 +52,12 @@ export namespace THAWCinema
         float w = width, h = height;
         if (Strip > 0.0f)
         {
-            if (Borders() & 1)
+            if (FrameBorders & 1)
                 h = frameHeight * Strip;
-            if (Borders() & 2)
+            if (FrameBorders & 2)
                 w = std::min(width, h * (4.0f / 3.0f) / Strip);
         }
-        const LONG pictureWidth = std::lround(w), pictureHeight = std::lround(h);
+        const LONG pictureWidth = std::max(1L, std::lround(w)), pictureHeight = std::max(1L, std::lround(h));
         return { (Width - pictureWidth) / 2, (Height - pictureHeight) / 2, pictureWidth, pictureHeight };
     }
 
@@ -113,9 +115,18 @@ export namespace THAWCinema
         device->SetViewport(&saved);
     }
 
-    inline void Install(const int32_t* mode, int width, int height)
+    inline void Install(asi_settings::Plugin& settings, int width, int height)
     {
-        Mode = mode;
+        auto updateBorders = [&settings]()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            const auto value = settings.Get("MAIN.CutsceneBorders");
+            ConfiguredBorders.store(std::clamp(std::atoi(value.c_str()), 0, 3), std::memory_order_relaxed);
+        };
+        settings.OnChange("MAIN.CutsceneBorders", updateBorders);
+        updateBorders();
+        FrameBorders = ConfiguredBorders.load(std::memory_order_relaxed);
         Width = width;
         Height = height;
         auto present = hook::pattern("A1 ? ? ? ? 8B 08 6A 00 6A 00 6A 00 6A 00 50 FF 51 44");
@@ -125,6 +136,7 @@ export namespace THAWCinema
             ClearBars(GameDevice.get(), true);
             if (BeforePresent)
                 BeforePresent();
+            FrameBorders = ConfiguredBorders.load(std::memory_order_relaxed);
             Active = InScene();
             Strip = Active && THAWMenu::Lookup("letterbox_anchor") ? 336.0f / 480.0f : 0.0f;
         });

@@ -30,17 +30,18 @@ The settings are in the game under **Options › Plugins**, in FusionFixHub and 
 - **HUD aspect ratio** — Auto or a centred box (4:3, 16:9, 21:9, 32:9); applies live.
 - **Movie display** — Original (Vanilla) or Fill (Recommended, Enhanced); applies live.
 - **Cutscene borders** — Off, Letterbox (Vanilla), Pillarbox or Both (Recommended, Enhanced); applies live. In events whose whole race uses the 16:9 framing, Pillarbox and Both also frame the race, and the HUD stays on the picture.
-- **Animated cutscene borders** — The borders slide like in the original; off shows them at once.
+- **Animated borders** — The cutscene borders slide as in the original game. Turn this off to show them at once.
 - **Skip intro** (restart) — Skips the Namco logo and the studio logo movie. The legal screens shown while the game loads stay, and the opening movie still plays (Enter skips it). Vanilla off, Recommended and Enhanced on.
 - **Skip title screen** (restart) — Continues past "Please press ENTER to begin" once at startup. Vanilla off, Recommended and Enhanced on.
 - **Text language** — Auto, English, French, German, Italian or Spanish for the fix’s settings; change it in FusionFixHub or the settings file, then reopen Plugins.
 - **Pause when inactive** — In Windowed and Borderless modes the game stops while another window is active; turn it off to keep it running. Fullscreen always minimizes and pauses as before.
 - **Field of view** — 0.5–2.0 while driving; 1.0 keeps the intended framing. Scripted camera moments keep theirs. Applies live.
 - **Confine cursor** — Keeps the pointer inside the active game window; applies live.
+- **Gamepad icons** — While a controller is in use, the Enter, Esc, Space, Backspace and arrow key pictures in prompts show the controller's buttons: Automatic (Xbox), Xbox, PlayStation or Nintendo; applies live. Keyboard or mouse input brings back the keys.
 - **Check for updates** — Optional notice at the main menu, off by default.
 - **Resolution width/height** are in FusionFixHub and the settings file.
 
-Defaults are the Recommended preset. No preset changes the resolution or the display mode. Supporters can open the developer overlay with Ctrl+F10.
+Defaults are the Recommended preset. No preset changes the resolution or the display mode.
 
 ## Controller
 
@@ -61,7 +62,6 @@ Both triggers are analog and can be held together. Choosing the controller under
 
 - The game's own Resolution option has no effect; the resolution comes from the fix's options.
 - The window size follows the resolution chosen at startup; resizing the window needs a restart.
-- Button prompts always show the keyboard keys.
 - In two-player split screen the HUD keeps its original layout.
 
 ## Installation

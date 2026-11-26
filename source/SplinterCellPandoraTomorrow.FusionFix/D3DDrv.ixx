@@ -217,7 +217,8 @@ int __fastcall UD3DRenderDeviceSetRes(void* UD3DRenderDevice, void* edx, void* U
 
     bIsWindowed = PresentParams->Windowed ? true : false;
 
-    if (bIsWindowed)
+    // Minimizing also sends a SetRes; placing the window then would restore it right away
+    if (bIsWindowed && !IsIconic(PresentParams->hDeviceWindow))
     {
         SCWindow::Place(PresentParams->hDeviceWindow, Screen.Width, Screen.Height, mode == 2);
         SetForegroundWindow(PresentParams->hDeviceWindow);

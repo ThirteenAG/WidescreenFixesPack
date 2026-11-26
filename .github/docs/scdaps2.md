@@ -41,7 +41,7 @@
 
 The settings are stored in `PLUGINS/SplinterCellDoubleAgent.PCSX2F.FusionFix.cfg`, which the fix creates on the first start. Change them in FusionFixHub or on fusionfix.io. The game's menus are built from its data files, so the fix adds no settings page inside the game. Display settings apply during play within about a second, and after loading a save state; Skip Intro applies the next time the emulated game starts.
 
-- **Presets** - Vanilla shows the startup logos, original letterbox bars and the original video composition; Recommended (the default) and Enhanced skip the logos, use Both for cutscene borders and fit the whole video. Field of view, HUD, display aspect ratio and bar animation keep your choice.
+- **Presets** - Vanilla shows the startup logos, original letterbox bars and the original video composition; Recommended (the default) and Enhanced skip the logos, use Both for cutscene borders and fit the whole video. Every preset puts the HUD at the screen edges (Auto); field of view, HUD scale, display aspect ratio and bar animation keep your choice.
 - **Text language** - Choose the language of unsupported-game notices; Auto uses English.
 
 ## Known limits

@@ -5,6 +5,7 @@ module;
 #include "FixSettings.hpp"
 #include "overlay/OverlayD3D9.hpp"
 #include "Shared/TonyHawk/Display.hpp"
+#include "Shared/TonyHawk/ModeSwitch.hpp"
 
 #pragma comment(lib, "version.lib")
 
@@ -13,29 +14,39 @@ export module Window;
 import ComVars;
 import Hud;
 import Cinema;
+import RawMouse;
+import Frontend;
 
 // The developer overlay on the game's Direct3D 9 device, and the game's window procedure (overlay input, focus)
 export namespace THAWDevice
 {
     inline asi_overlay::D3D9Overlay Overlay;
     inline SafetyHookInline PresentHook, ResetHook, WindowHook;
-    inline HWND Window = nullptr;
+    inline std::atomic<HWND> Window{ nullptr };
+    inline UINT PauseSettingChanged = 0;
     inline bool HotkeyDown = false;
     inline std::atomic<int> FrameLimit{ 60 };
-    inline std::atomic<bool> ModeSwitch{ false };
+    inline std::mutex FrameLimitMutex;
+    inline std::atomic<bool> StartupMoviesFinished{ false };
 
-    inline void UpdateFrameLimit()
+    inline void UpdateFrameLimit(HWND window)
     {
-        int limit = FixSettings().Int("MAIN.FPSLimit");
+        std::lock_guard lock(FrameLimitMutex);
+        int limit = std::atoi(FixSettings().Get("MAIN.FPSLimit").c_str());
         if (limit == -1)
         {
+            MONITORINFOEXW monitor{};
+            monitor.cbSize = sizeof(monitor);
+            const auto display = MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY);
             DEVMODEW mode{};
             mode.dmSize = sizeof(mode);
-            limit = EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1
-                ? static_cast<int>(mode.dmDisplayFrequency) : 60;
+            const bool knownMonitor = GetMonitorInfoW(display, &monitor) != FALSE;
+            limit = EnumDisplaySettingsW(knownMonitor ? monitor.szDevice : nullptr, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1
+                ? static_cast<int>(std::min<DWORD>(mode.dmDisplayFrequency, 60)) : 60;
         }
-        // The game's main loop runs at no more than 60 frames per second
-        FrameLimit.store(limit > 0 ? std::clamp(limit, 30, 60) : 0, std::memory_order_relaxed);
+        else
+            limit = limit > 0 ? std::clamp(limit, 30, 60) : 0;
+        FrameLimit.store(limit, std::memory_order_relaxed);
     }
 
     inline void LimitFrameRate()
@@ -64,7 +75,7 @@ export namespace THAWDevice
         }
         const double period = pacer.frequency / limit;
         const double now = pacer.Now();
-        if (pacer.next == 0.0 || now > pacer.next + period)
+        if (pacer.next == 0.0 || std::abs(now - pacer.next) > period)
             pacer.next = now + period;
         const double seconds = (pacer.next - now) / pacer.frequency;
         constexpr double spinTime = 0.0015;
@@ -73,7 +84,7 @@ export namespace THAWDevice
             LARGE_INTEGER due{};
             due.QuadPart = -static_cast<LONGLONG>((seconds - spinTime) * 10000000.0);
             if (pacer.timer && SetWaitableTimer(pacer.timer, &due, 0, nullptr, nullptr, FALSE))
-                WaitForSingleObject(pacer.timer, INFINITE);
+                WaitForSingleObject(pacer.timer, static_cast<DWORD>(std::ceil(seconds * 1000.0)) + 10);
             else
                 Sleep(static_cast<DWORD>((seconds - spinTime) * 1000.0));
         }
@@ -111,6 +122,8 @@ export namespace THAWDevice
     {
         if (GameDevice.is_initialized() && device == GameDevice.get())
         {
+            if (!StartupMoviesFinished.load(std::memory_order_relaxed) && THAWMenu::Lookup("current_menu_anchor"))
+                StartupMoviesFinished.store(true, std::memory_order_relaxed);
             static const bool page = []()
             {
                 asi_overlay::Overlay::AddPage("Debug", "Info", [](asi_overlay::OverlayUI& ui)
@@ -130,13 +143,16 @@ export namespace THAWDevice
                 });
                 return true;
             }();
-            // The hotkey is read here too: the game's DirectInput keyboard can take the key messages
-            const bool down = Window && GetForegroundWindow() == Window &&
-                (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
-            if (down && !HotkeyDown)
-                Overlay.SetOpen(!Overlay.IsOpen());
-            HotkeyDown = down;
-            Overlay.Present(device, ThisModule());
+            if constexpr (WFP::DeveloperOverlay)
+            {
+                // The hotkey is read here too: the game's DirectInput keyboard can take the key messages
+                const bool down = Window && GetForegroundWindow() == Window &&
+                    (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
+                if (down && !HotkeyDown)
+                    Overlay.SetOpen(!Overlay.IsOpen());
+                HotkeyDown = down;
+                Overlay.Present(device, ThisModule());
+            }
             LimitFrameRate();
         }
         return PresentHook.unsafe_stdcall<HRESULT>(device, source, destination, window, dirty);
@@ -156,13 +172,17 @@ export namespace THAWDevice
             return;
         D3DDEVICE_CREATION_PARAMETERS parameters{};
         if (SUCCEEDED((GameDevice.get())->GetCreationParameters(&parameters)))
+        {
             Window = parameters.hFocusWindow;
+            UpdateFrameLimit(parameters.hFocusWindow);
+        }
         // In fullscreen the window wrapper never saw the game's window; input focus checks and Alt+Enter need it
         if (!WindowedModeWrapper::GameHWND)
             WindowedModeWrapper::GameHWND = Window;
         auto table = *reinterpret_cast<void***>(GameDevice.get());
         PresentHook = safetyhook::create_inline(table[17], Present);
-        ResetHook = safetyhook::create_inline(table[16], Reset);
+        if constexpr (WFP::DeveloperOverlay)
+            ResetHook = safetyhook::create_inline(table[16], Reset);
     }
 
     inline bool BlocksInput()
@@ -172,44 +192,47 @@ export namespace THAWDevice
 
     inline LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
+        THAWRawMouse::Message(window, message, lParam);
+        if (window == Window && (message == WM_WINDOWPOSCHANGED || message == WM_DISPLAYCHANGE))
+            UpdateFrameLimit(window);
         LRESULT result = 0;
-        if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
+        if (WFP::DeveloperOverlay && (message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
             return 0;
-        // Alt+Enter switches between fullscreen and the window, on the next frame
-        if (wParam == VK_RETURN && (message == WM_SYSKEYDOWN || message == WM_SYSKEYUP))
-        {
-            if (message == WM_SYSKEYDOWN && (lParam & (1u << 29)) && !(lParam & (1u << 30)))
-                ModeSwitch.store(true, std::memory_order_relaxed);
+        if (TonyModeSwitch::Message(window, message, wParam, lParam))
             return 0;
-        }
         if (Overlay.Message(window, message, wParam, lParam, result))
             return result;
-        // The game stops while its window is inactive; in a window mode it can keep running
-        static const int& pauseOnFocusLoss = FixSettings().Int("MAIN.PauseOnFocusLoss");
-        if (message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE && TonyDisplay::Mode != 0 && !pauseOnFocusLoss)
-            return DefWindowProcA(window, message, wParam, lParam);
+        const bool pauseSettingMessage = PauseSettingChanged && message == PauseSettingChanged;
+        const bool deactivating = message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE;
+        if (pauseSettingMessage && (TonyDisplay::Mode == 0 || GetForegroundWindow() == window))
+            return 0;
+        if (TonyDisplay::Mode != 0 && (deactivating || pauseSettingMessage))
+        {
+            if (FixSettings().Get("MAIN.PauseOnFocusLoss") == "0")
+            {
+                if (pauseSettingMessage)
+                {
+                    AppActive = 1;
+                    return 0;
+                }
+                return DefWindowProcA(window, message, wParam, lParam);
+            }
+            if (pauseSettingMessage)
+                return WindowHook.unsafe_stdcall<LRESULT>(window, WM_ACTIVATE, WA_INACTIVE, 0);
+        }
         return WindowHook.unsafe_stdcall<LRESULT>(window, message, wParam, lParam);
     }
 
     inline void Install()
     {
-        UpdateFrameLimit();
-        FixSettings().OnChange("MAIN.FPSLimit", UpdateFrameLimit);
-        // Changed while another window is active (from FusionFixHub): the game stops or continues at once. Its own
-        // activation would also bring the window to the front, so continuing sets the flag only
+        UpdateFrameLimit(Window);
+        FixSettings().OnChange("MAIN.FPSLimit", []() { UpdateFrameLimit(Window); });
+        PauseSettingChanged = RegisterWindowMessageW(L"THAW.FusionFix.PauseSettingChanged");
         FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
         {
-            if (!Window || TonyDisplay::Mode == 0 || GetForegroundWindow() == Window)
-                return;
-            if (FixSettings().Int("MAIN.PauseOnFocusLoss"))
-                PostMessageA(Window, WM_ACTIVATE, WA_INACTIVE, 0);
-            else
-            {
-                // The stopped game waits for window messages
-                AppActive = 1;
-                PostMessageA(Window, WM_NULL, 0, 0);
-            }
+            if (const auto window = Window.load(); window && PauseSettingChanged)
+                PostMessageA(window, PauseSettingChanged, 0, 0);
         });
         auto present = hook::pattern("A1 ? ? ? ? 8B 08 6A 00 6A 00 6A 00 6A 00 50 FF 51 44");
         auto window = hook::pattern("8B 44 24 08 3D 00 01 00 00 0F 87 ? ? ? ? 74");
@@ -350,12 +373,13 @@ export namespace THAWDisplay
     // the game's device reset recreates its resources
     void UpdateMode()
     {
-        if (!THAWDevice::ModeSwitch.load(std::memory_order_relaxed) || !Reset || !GameDevice.is_initialized() || !GameDevice.get())
+        if (!TonyModeSwitch::PendingWindow.load(std::memory_order_relaxed) || !Reset || !DeviceLost.is_initialized() ||
+            !GameDevice.is_initialized())
             return;
         const HWND window = WindowedModeWrapper::GameHWND;
-        if (!window || GetForegroundWindow() != window || (GameDevice.get())->TestCooperativeLevel() != D3D_OK)
+        TonyModeSwitch::Lost = DeviceLost.get_ptr();
+        if (!TonyModeSwitch::TakePending(GameDevice.get(), window))
             return;
-        THAWDevice::ModeSwitch.store(false, std::memory_order_relaxed);
         const auto saved = Presentation.get();
         const int previousMode = TonyDisplay::Mode;
         const int nextMode = previousMode ? 0 : LastWindowMode;
@@ -421,22 +445,19 @@ export namespace THAWDisplay
             static const uintptr_t resume = reinterpret_cast<uintptr_t>(pattern.get_first(32));
             static auto movieHook = safetyhook::create_mid(pattern.get_first(27), [](SafetyHookContext& regs)
             {
-                static std::array<std::pair<const char*, bool>, 3> startup{ { { "New_Aspyr_firelogo", false }, { "ATVI", false },
-                    { "intro", false } } };
+                if (THAWDevice::StartupMoviesFinished.load(std::memory_order_relaxed))
+                    return;
+                constexpr const char* startup[]{ "New_Aspyr_firelogo", "ATVI", "intro" };
                 std::string_view name(*reinterpret_cast<const char**>(regs.esp));
                 if (auto slash = name.find_last_of("/\\"); slash != std::string_view::npos)
                     name.remove_prefix(slash + 1);
                 if (name.size() > 4 && _strnicmp(name.data() + name.size() - 4, ".bik", 4) == 0)
                     name.remove_suffix(4);
-                for (auto& [movie, skipped] : startup)
+                if (std::ranges::any_of(startup, [name](const char* movie)
                 {
-                    if (!skipped && name.size() == std::strlen(movie) && _strnicmp(name.data(), movie, name.size()) == 0)
-                    {
-                        skipped = true;
-                        regs.eip = resume;
-                        return;
-                    }
-                }
+                    return name.size() == std::strlen(movie) && _strnicmp(name.data(), movie, name.size()) == 0;
+                }))
+                    regs.eip = resume;
             });
         }
     }

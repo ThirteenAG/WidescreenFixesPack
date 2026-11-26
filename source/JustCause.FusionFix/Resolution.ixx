@@ -156,7 +156,7 @@ export namespace JCResolution
         auto pattern = hook::pattern("8B 0D ? ? ? ? 6A 0E E8");
         Settings = *pattern.get_first<uint8_t**>(2);
 
-        ValidHook = safetyhook::create_inline(hook::pattern("55 8B EC 83 EC 28 89 4D E0 8B 45 08 C1 E0 04 8B 4D E0 FF 25").get_first(), CheckValue);
+        ValidHook = safetyhook::create_inline(hook::pattern("55 8B EC 83 EC 28 89 4D E0 8B 45 08 C1 E0 04 8B 4D E0").get_first(), CheckValue);
         LoadHook = safetyhook::create_inline(hook::pattern("55 8B EC 83 EC 10 89 4D F8 8B 45 0C 50 8B 4D 08 51 8B 4D F8 E8").get_first(), LoadValue);
 
         // settings.txt reading: the first resolution comparison takes every "WxH" value

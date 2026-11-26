@@ -24,6 +24,7 @@ module;
 export module Frontend;
 
 import ComVars;
+import Hud;
 
 // Disconnected native foundation for installed GameClient0ac9798c... .
 // No Init, hooks, registration, module pin or static native side effect.
@@ -1017,7 +1018,7 @@ export namespace CondemnedMenuNative
                     !api.calls.FontSize(node, font) || !current() || !api.calls.BuildString(node) || !current()) return {};
                 const auto bounds = api.calls.Bounds(node);
                 if (!bounds || !current()) return {};
-                return bounds->right - bounds->left <= width * ready.scaleX &&
+                return bounds->right - bounds->left <= width * ready.scaleX * CondemnedHud::MenuBoxScale() &&
                     bounds->bottom - bounds->top <= height * ready.scaleY;
             };
             const auto lines = WrapHelp(*text, Pool::helpLines, fits);
@@ -1033,7 +1034,7 @@ export namespace CondemnedMenuNative
                     {
                         if (!api.calls.BuildString(node) || !current()) return false;
                         const auto bounds = api.calls.Bounds(node);
-                        if (!bounds || !current() || bounds->right - bounds->left > width * ready.scaleX ||
+                        if (!bounds || !current() || bounds->right - bounds->left > width * ready.scaleX * CondemnedHud::MenuBoxScale() ||
                             bounds->bottom - bounds->top > height * ready.scaleY) return false;
                     }
                     const auto copied = api.calls.Text(node);

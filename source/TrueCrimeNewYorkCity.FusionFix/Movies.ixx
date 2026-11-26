@@ -14,6 +14,7 @@ namespace TCMovie
     SafetyHookInline PlayHook;
     using Quad = int(__thiscall*)(void*, float, float, float, float, float, float, float, float, float);
     Quad DrawQuad = nullptr;
+    std::atomic<bool> OriginalFraming{ false };
 
     // Black over the whole back buffer: the game clears only its current viewport
     void Clear(float width, float height)
@@ -57,9 +58,13 @@ namespace TCMovie
         if (width > 0.0f && height > 0.0f && movieWidth > 0.0f && movieHeight > 0.0f)
         {
             Clear(right, bottom);
-            const float aspect = FixSettings().Int("MAIN.FMVWidescreenMode") == 1 ? movieWidth / movieHeight : 4.0f / 3.0f;
-            const float fittedWidth = std::min(width, height * aspect);
-            const float fittedHeight = std::min(height, width / aspect);
+            const float aspect = movieWidth / movieHeight;
+            const bool original = OriginalFraming.load(std::memory_order_relaxed);
+            constexpr float NativeAspect = 4.0f / 3.0f;
+            const float frameWidth = original ? std::min(width, height * NativeAspect) : width;
+            const float frameHeight = original ? std::min(height, width / NativeAspect) : height;
+            const float fittedWidth = std::min(frameWidth, frameHeight * aspect);
+            const float fittedHeight = std::min(frameHeight, frameWidth / aspect);
             left += (width - fittedWidth) * 0.5f;
             top += (height - fittedHeight) * 0.5f;
             right = left + fittedWidth;
@@ -70,7 +75,15 @@ namespace TCMovie
 
     void Install()
     {
-        auto play = hook::pattern("6A FF 64 A1 00 00 00 00 68 ? ? ? ? 50 B8 08 3A 00 00 64 89 25");
+        const auto publish = []()
+        {
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            OriginalFraming.store(FixSettings().Get("MAIN.FMVWidescreenMode") == "0", std::memory_order_relaxed);
+        };
+        FixSettings().OnChange("MAIN.FMVWidescreenMode", publish);
+        publish();
+        auto play = find_pattern("6A FF 64 A1 00 00 00 00 68 ? ? ? ? 50 B8 08 3A 00 00 64 89 25", "6A FF FF 25 ? ? ? ? 68 ? ? ? ? 50 B8 08 3A 00 00 64 89 25");
         pMovieDevice.SetAddress(*play.get_first<void**>(32));
         PlayHook = safetyhook::create_inline(play.get_first(), Play);
         auto draw = hook::pattern("8D 8C 24 ? ? ? ? E8 ? ? ? ? 6A 02 E8 ? ? ? ? 83 C4 04 8D 8C 24");

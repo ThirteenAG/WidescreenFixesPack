@@ -21,11 +21,14 @@ export namespace SRSCamera
     inline char (__cdecl* DrawRect)(const int*, uint32_t, uint32_t) = nullptr;
     inline float View[6]{};                             // the band as the fix places it
     inline SafetyHookInline ProjectionHook, ViewHook, BarsHook, ProjectHook, ProjectClippedHook;
+    inline std::atomic<bool> AnimatedBorders{ true };
+    inline std::atomic<int> BorderMode{ 3 };
+    inline std::atomic<float> DrivingFovFactor{ 1.0f };
 
     // The band's progress (0 = full view, 1 = band) and its rectangle in pixels
     inline float Progress()
     {
-        if (!FixSettings().Bool("MAIN.AnimatedCutsceneBorders"))
+        if (!AnimatedBorders.load(std::memory_order_relaxed))
             return BandDirection.get() == -1 ? 0.0f : 1.0f;
         return BandTarget.get()[1] > 0.0f ? std::clamp(BandRect.get()[1] / BandTarget.get()[1], 0.0f, 1.0f) : 1.0f;
     }
@@ -35,7 +38,7 @@ export namespace SRSCamera
         const float screenWidth = static_cast<float>(Width), screenHeight = static_cast<float>(Height);
         constexpr float band = 16.0f / 9.0f;
         float bandWidth = screenWidth, bandHeight = screenHeight;
-        switch (std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3))
+        switch (std::clamp(BorderMode.load(std::memory_order_relaxed), 0, 3))
         {
             case 1: // bars above and below where the screen is narrower than the band
                 bandHeight = std::min(screenHeight, screenWidth / band);
@@ -79,7 +82,7 @@ export namespace SRSCamera
         }
         else if (viewWidth == Width && viewHeight == Height)
         {
-            const float factor = SRSHud::Driving ? std::clamp(FixSettings().Float("MAIN.FOVFactor"), 0.5f, 2.0f) : 1.0f;
+            const float factor = SRSHud::Driving ? std::clamp(DrivingFovFactor.load(std::memory_order_relaxed), 0.5f, 2.0f) : 1.0f;
             vertical = std::tan(std::min(fov * factor * 0.5f, 1.45f)) * 0.75f;
             horizontal = vertical * aspect;
         }
@@ -170,6 +173,9 @@ export namespace SRSCamera
     {
         Width = width;
         Height = height;
+        BindLiveSetting("MAIN.AnimatedCutsceneBorders", AnimatedBorders);
+        BindLiveSetting("MAIN.CutsceneBorders", BorderMode);
+        BindLiveSetting("MAIN.FOVFactor", DrivingFovFactor);
         auto projection = hook::pattern("51 8B D1 D9 42 40 56 D9 42 1C 57 D8 0D ? ? ? ? 8D B2");
         ProjectionHook = safetyhook::create_inline(projection.get_first(), Projection);
         auto view = hook::pattern("81 EC 88 00 00 00 53 8B D9 D9 43 40 56 D8 83 24 01 00 00 57");

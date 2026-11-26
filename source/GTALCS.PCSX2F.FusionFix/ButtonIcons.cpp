@@ -1,7 +1,6 @@
 #include "Controls.hpp"
 #include "ButtonIcons.hpp"
-#include "../Shared/Console/StoriesButtonText.hpp"
-#include "../Shared/Console/PadButtonArtwork.hpp"
+#include "Shared/Console/PadButtonArtwork.hpp"
 #include <cstring>
 
 // PC key artwork for GTA LCS PS2 (help text, menu footers, bindings page).
@@ -104,15 +103,6 @@ struct Writer {
     }
     void finish() { out[used] = 0; }
 };
-// Gameplay entries that name buttons in plain words (R1 = Aim on this
-// scheme). The rest (BV_*, CVHELP, DBGHELP, LOADCAR, LS2_H1, WTC_INS, MC_04)
-// belong to debug menus that retail builds never show.
-constexpr TextRewrite entries[] = {
-    {"TUP_AD", "~w~You have 3 adrenaline pills, Press {Aim} to use one."},
-    {"GA_7", "~w~Arm with ~h~ ~k~ ~PED_FIREWEAPON~~w~. Bomb will go off when engine is started."},
-};
-// Callers may keep the pointer (brief messages), so every entry owns its text.
-uint16_t entryText[sizeof(entries) / sizeof(*entries)][320];
 int Substitute(const uint16_t* source, uint16_t* output) {
     if (!KeyboardActive() || !source || !output) return substitute.call(source, output);
     // Same parse as the native routine: skip to the action's opening '~',
@@ -252,15 +242,30 @@ uint64_t DrawButton(Sprite* sprite, const Color* color, float left, float top, f
     return 0;
 }
 }
-const uint16_t* ButtonText(const char* key) {
-    if (!KeyboardActive() || !key) return nullptr;
-    const auto* rewrite = FindRewrite(entries, key);
-    if (!rewrite) return nullptr;
-    auto& buffer = entryText[rewrite - entries];
-    Writer writer{buffer, 0, sizeof(buffer) / sizeof(*buffer)};
-    FormatText(rewrite->text, bindings, writer);
-    writer.finish();
-    return buffer;
+const uint16_t* ButtonText(const char* key, const uint16_t* nativeText)
+{
+    // This message names R1 literally. Other gameplay messages can use the
+    // native substitution tokens, including the fire prompt for car bombs.
+    if (!KeyboardActive() || !key || std::strcmp(key, "TUP_AD") != 0 || !nativeText)
+        return nativeText;
+
+    for (auto* p = nativeText; *p; ++p)
+    {
+        if (p[0] != u'R' || p[1] != u'1')
+            continue;
+
+        static uint16_t text[320];
+        Writer writer{text, 0, sizeof(text) / sizeof(*text)};
+        for (auto* prefix = nativeText; prefix != p; ++prefix)
+            writer.put(*prefix);
+        const uint8_t aim = bindings.primary(Act::Aim);
+        if (aim) writer.key(aim); else writer.put(u'-');
+        for (p += 2; *p; ++p)
+            writer.put(*p);
+        writer.finish();
+        return text;
+    }
+    return nativeText;
 }
 float KeyIconWidth(uint8_t key, float height) {
     const auto* image = art::Find(key);

@@ -267,7 +267,7 @@ namespace MaxPayneMenu
         return std::to_string(uintptr_t(plugin.module)) + ":" + setting.id;
     }
 
-    // The longest slider name with its value that stays inside the menu (about "Horizontal Aiming Speed")
+    // The longest slider name (with its value and the two spaces before the slider) that stays inside the narrowest menu
     constexpr size_t MaxSliderName = 23;
 
     // The line's name: the setting's label and, for sliders and items, its value.
@@ -285,7 +285,7 @@ namespace MaxPayneMenu
         auto text = label + ": " + OtherPlugins::ValueText(*plugin, *row.setting, HostText("WFP_ON"), HostText("WFP_OFF"));
         // A slider's name is right-aligned to the slider: a long one would run past the menu's left side, so it shows
         // only the label then, the slider shows the value
-        if (row.widget == Widget::Slider && text.size() > MaxSliderName)
+        if (row.widget == Widget::Slider && text.size() + 2 > MaxSliderName)
             text = label;
         if (row.widget == Widget::Slider) text += "  ";
         return text;
@@ -568,7 +568,17 @@ namespace MaxPayneMenu
         if (setting.type == asi_settings::Type::Action)
             row.kind = Row::Kind::Action;
         else
+        {
             row.widget = WidgetOf(setting, row.ticks);
+            // A slider's name runs left from the slider: a label too long for that steps as an item, centred
+            auto label = OtherPlugins::Text(Get().plugins[pluginIndex], setting.label);
+            auto letters = std::count_if(label.begin(), label.end(), [](char c) { return (static_cast<uint8_t>(c) & 0xC0) != 0x80; });
+            if (row.widget == Widget::Slider && size_t(letters) + 2 > MaxSliderName - 2)
+            {
+                row.widget = Widget::Item;
+                row.ticks = 0;
+            }
+        }
         return RowLine(std::move(row), OtherPlugins::Text(Get().plugins[pluginIndex], setting.description));
     }
 

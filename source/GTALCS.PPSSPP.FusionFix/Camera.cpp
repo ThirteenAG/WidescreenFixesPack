@@ -1,7 +1,8 @@
 #include "Game.hpp"
+#include "Shared/Console/VehicleCameraHold.hpp"
 #include "Cinematic.hpp"
-#include "../Shared/Console/Cutscene.hpp"
-#include "../Shared/Console/ScriptSlotZero.hpp"
+#include "Shared/Console/Cutscene.hpp"
+#include "Shared/Console/ScriptSlotZero.hpp"
 namespace lcsws {
 namespace {
 injector::hook_back<void(void*,int,float,float)> cameraSize;
@@ -41,8 +42,7 @@ void DrawCutsceneBorders(void*) {
         [&](const console::Rect& rect) { Drawing::solidHook.call<void>(&rect, &black, true); }, settings.cutsceneBorders);
 }
 SafetyMipsMid followCarSwing;
-bool cameraHeld = false;
-uint32_t cameraHeldUntil = 0;
+console::VehicleCameraHold cameraHold;
 }
 void InstallCamera() {
     console::slot_zero::PatchPortable<4>(pattern.text_addr, pattern.text_size); // Script handles in slot 0 are valid.
@@ -55,11 +55,14 @@ void InstallCamera() {
     // CCam::Process_FollowCar_SA: f12 is this frame's right stick turn, f13 the turn that swings
     // the camera back behind the vehicle. While held, the stick's direction stays.
     followCarSwing=safetymips::create_mid(Address<0x88F496C>(),[](SafetyMipsContext& regs) {
-        if (!settings.holdVehicleCamera) { cameraHeld=false; return; }
-        const uint32_t now=*reinterpret_cast<const uint32_t*>(Address<0x8B5E144>()); // CTimer::m_snTimeInMilliseconds
-        if (float(regs.f12)!=0.0f) { cameraHeld=true; cameraHeldUntil=now+2000; }
-        else if (cameraHeld && (int32_t(now-cameraHeldUntil)>=0 || int32_t(cameraHeldUntil-now)>2000)) cameraHeld=false; // also after a timer reset
-        if (cameraHeld) regs.f13=0.0f;
+        if (!settings.holdVehicleCamera)
+        {
+            cameraHold.Clear();
+            return;
+        }
+        const uint32_t now = *reinterpret_cast<const uint32_t*>(Address<0x8B5E144>());
+        if (cameraHold.Update(now, float(regs.f12) != 0.0f, 2000))
+            regs.f13 = 0.0f;
     });
 }
 }

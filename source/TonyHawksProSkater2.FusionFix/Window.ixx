@@ -9,6 +9,7 @@ module;
 export module Window;
 
 import ComVars;
+import Frontend;
 
 /**
 * Copyright (C) 2025 Elisha Riedlinger
@@ -76,13 +77,6 @@ export namespace THPS2Display
 {
     inline std::atomic<int> FrameLimit{ 60 };
 
-    inline void UpdateFrameLimit()
-    {
-        // The game is made for 60 fps: its physics, animation and timers are not fixed for more
-        const int limit = FixSettings().Int("MAIN.FPSLimit");
-        FrameLimit.store(limit > 0 ? std::clamp(limit, 30, 60) : 60, std::memory_order_relaxed);
-    }
-
     inline void LimitFrameRate()
     {
         struct Pacer
@@ -129,10 +123,16 @@ export namespace THPS2Display
 
     inline void SetWindow(int mode, int width, int height)
     {
-        UpdateFrameLimit();
-        FixSettings().OnChange("MAIN.FPSLimit", UpdateFrameLimit);
-        auto flip = hook::pattern("A1 ? ? ? ? 6A 01 6A 00 50 8B 08 FF 51 2C 8B F0 81 FE C2 01 76 88");
-        static auto flipHook = safetyhook::create_mid(flip.get_first(12), [](SafetyHookContext&)
+        ObserveFixSetting("MAIN.FPSLimit", FrameLimit, [](const std::string& value)
+        {
+            const int limit = std::atoi(value.c_str());
+            return limit > 0 ? std::clamp(limit, 30, 60) : 60;
+        });
+        auto frameStart = hook::pattern("A1 ? ? ? ? 83 C0 02 8B 0D ? ? ? ? 3B C8 73 ? 6A 00 E8 ? ? ? ? 8B 0D ? ? ? ? 83 C4 04 83 C1 02");
+        // Menus and gameplay wait here. Preserve the native tick gate, but allow one tick per frame.
+        injector::WriteMemory<uint8_t>(frameStart.get_first(7), 1, true);
+        injector::WriteMemory<uint8_t>(frameStart.get_first(36), 1, true);
+        static auto frameHook = safetyhook::create_mid(frameStart.get_first(), [](SafetyHookContext&)
         {
             LimitFrameRate();
         });
@@ -228,10 +228,15 @@ export namespace THPS2Display
         auto result = surface.primary->Blt(&destination, surface.object, nullptr, DDBLT_WAIT, nullptr);
         if (result == DDERR_SURFACELOST)
         {
-            surface.primary->Restore();
-            surface.object->Restore();
-            surface.back->Restore();
-            return DD_OK;
+            for (auto* lost : { surface.primary, surface.object, surface.back })
+            {
+                const auto restored = lost->Restore();
+                if (FAILED(restored))
+                    return restored;
+            }
+            result = surface.primary->Blt(&destination, surface.object, nullptr, DDBLT_WAIT, nullptr);
+            if (result == DDERR_SURFACELOST)
+                return result;
         }
         if (FAILED(result))
         {
@@ -323,12 +328,12 @@ export namespace THPS2Display
             while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
             {
                 if (message.message == WM_QUIT)
-                    ExitProcess(0);
+                    THPS2Updates::Exit(0);
                 TranslateMessage(&message);
                 DispatchMessageW(&message);
             }
             if (CloseRequested || !IsWindow(draw.window))
-                ExitProcess(0);
+                THPS2Updates::Exit(0);
             Sleep(100);
         }
     }
@@ -537,8 +542,9 @@ export namespace THPS2Display
     {
         if (!mode)
             return true;
-        auto library = GetModuleHandleW(L"ddraw.dll");
-        Create = reinterpret_cast<decltype(Create)>(GetProcAddress(library, "DirectDrawCreateEx"));
+        auto create = hook::pattern("6A 00 68 ? ? ? ? 8D 44 24 ? 68 ? ? ? ? 50 E8 ? ? ? ? 8B F0 85 F6 74");
+        auto createCall = create.get_first(17);
+        Create = reinterpret_cast<decltype(Create)>(injector::GetBranchDestination(createCall).as_int());
         auto initial = hook::pattern("68 ? ? ? ? 89 44 24 14 52 89 44 24 1C A1 ? ? ? ? 50 8B 08 FF 51 30");
         auto recreate = hook::pattern("68 ? ? ? ? 89 54 24 18 89 54 24 1C 8B 08 8D 54 24 10 52 50 FF 51 30");
         CachedBack.SetAddress(*initial.get_first<IDirectDrawSurface7**>(1));
@@ -550,7 +556,7 @@ export namespace THPS2Display
         };
         CacheHooks[0] = safetyhook::create_mid(initial.get_first(25), borrowed);
         CacheHooks[1] = safetyhook::create_mid(recreate.get_first(24), borrowed);
-        IATHook::Replace(GetModuleHandleW(nullptr), "DDRAW.dll", std::forward_as_tuple("DirectDrawCreateEx", CreateDraw));
+        injector::MakeCALL(createCall, CreateDraw, true);
         TonyDisplay::Window(mode, width, height);
         return true;
     }

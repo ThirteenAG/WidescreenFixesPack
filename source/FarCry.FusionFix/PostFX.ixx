@@ -90,9 +90,8 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            auto& settings = FixSettings();
-            CPostFX::bConsoleGammaEnabled = settings.Bool("GRAPHICS.ConsoleGamma");
-            CPostFX::bSmaaEnabled = settings.Int("GRAPHICS.AntiAliasing");
+    CPostFX::bConsoleGammaEnabled = FarCryLive::Boolean("GRAPHICS.ConsoleGamma");
+    CPostFX::bSmaaEnabled = FarCryLive::Boolean("GRAPHICS.AntiAliasing");
 
             if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
                 return;

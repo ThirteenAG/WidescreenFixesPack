@@ -18,6 +18,7 @@ module;
 #include "FixSettings.hpp"
 #include <deque>
 #include <intrin.h>
+#include "Shared/PadInput.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
 
 export module Frontend;
@@ -192,7 +193,7 @@ namespace THPS2Menu
 {
     struct Addresses
     {
-        uintptr_t direction, optionsCommand, pauseSelect, titleConstruct, titleDelete, titleInput, titleUpdate, pauseCenter,
+        uintptr_t direction, keyDown, optionsCommand, pauseSelect, titleConstruct, titleDelete, titleInput, titleUpdate, pauseCenter,
             pauseDelete, pauseInput, pauseDraw, pauseRead, fontDraw, pauseDispatch, textConstruct, listAdd, listSelect, pauseAdd,
             fontWidth, fontHeight, modal, present, world, allocate, free, listDelete, textDelete, listConstruct, textSet,
             listLayout, listInput, listRefresh, listUpdate, pauseConstruct;
@@ -219,6 +220,7 @@ namespace THPS2Menu
             a.pauseInput = at("53 56 57 8B F1 E8 ? ? ? ? 33 C0");
             a.pauseDraw = at("53 55 57 8B F9 8A 47 04 50 E8 ? ? ? ? 8A");
             a.pauseRead = at("A1 ? ? ? ? 33 C9 3B C1 74 10 39");
+            a.keyDown = at("8B 44 24 04 25 FF 00 00 00 8A 80 ? ? ? ? C0 E8 07 C3");
             a.fontDraw = at("81 EC 14 04 00 00 53 55 8B E9 56 57");
             a.pauseDispatch = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 50 A0");
             a.textConstruct = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 56 57 8B");
@@ -299,9 +301,8 @@ namespace THPS2Menu
 
 namespace THPS2Menu
 {
-    // THPS2 does not have THUG's unsigned glyph lookup. Never send raw UTF-8
-    // or another game's encoding to its signed-byte map. Fold western letters
-    // and punctuation to ASCII; unsupported codepoints get one visible '?'.
+    // The native glyph lookup indexes by signed byte. Fold western letters and
+    // punctuation to ASCII, and use '?' for the remaining codepoints.
     inline std::string PlainText(std::string_view utf8)
     {
         if (utf8.size() > 16384) return "?";
@@ -372,24 +373,34 @@ namespace THPS2Menu
         return true;
     }
 
-    inline std::string FitText(const std::string& text, size_t maximum)
+    // A native row holds at most 31 bytes; a menu can also limit a row's drawn width
+    inline constexpr size_t LineBytes = 31;
+    using LineFits = std::function<bool(const std::string&)>;
+
+    inline std::string FitText(const std::string& text, const LineFits& fits = {})
     {
-        if (text.size() <= maximum) return text;
-        if (maximum < 3) return text.substr(0, maximum);
-        return text.substr(0, maximum - 3) + "...";
+        if (text.size() <= LineBytes && (!fits || fits(text)))
+            return text;
+        for (size_t count = std::min(text.size(), LineBytes - 3); count > 0; --count)
+        {
+            auto shortened = text.substr(0, count) + "...";
+            if (!fits || fits(shortened))
+                return shortened;
+        }
+        return "...";
     }
 
     // Preserve all converted text in continuation rows. Callers must bound the
     // resulting native layout and fail closed if the complete text cannot fit;
     // a 31-byte native button buffer is not permission to silently truncate.
-    inline std::vector<std::string> TextLines(const std::string& text, size_t maximum)
+    inline std::vector<std::string> TextLines(const std::string& text, const LineFits& fits = {})
     {
         std::vector<std::string> lines;
-        if (!maximum)
-            return lines;
         for (size_t offset = 0; offset < text.size();)
         {
-            size_t count = std::min(maximum, text.size() - offset);
+            size_t count = std::min(LineBytes, text.size() - offset);
+            while (fits && count > 1 && !fits(text.substr(offset, count)))
+                --count;
             if (count < text.size() - offset)
             {
                 auto space = text.rfind(' ', offset + count - 1);
@@ -413,6 +424,7 @@ namespace THPS2Menu
     // title/pause context and complete input/draw unwind. This layer never installs a
     // callback or transfers native row ownership to an unrelated container.
     inline bool nativeReady = false;
+    inline std::atomic<bool> nativeStorageRetired{ false };
 
     template<typename Function>
     Function FunctionAt(uintptr_t address)
@@ -443,7 +455,7 @@ namespace THPS2Menu
         template<typename T>
         void operator()(T* value) const
         {
-            if (value && nativeReady)
+            if (value && nativeReady && !nativeStorageRetired.load(std::memory_order_relaxed))
                 FunctionAt<void* (__thiscall*)(void*, unsigned)>(Game().*Destructor)(value, 1);
         }
     };
@@ -779,6 +791,7 @@ namespace THPS2Menu
         std::vector<size_t> starts;
         bool restart = false;
         size_t contentLines = TitleLines;
+        LineFits fits; // the menu's width limit for a row, none when empty
 
         void Reset()
         {
@@ -869,11 +882,11 @@ namespace THPS2Menu
             restart = pending;
             contentLines = pause ? PauseLines : TitleLines;
             std::vector<DisplayLine> nextText;
-            for (const auto& line : TextLines(PlainText(heading), 31))
+            for (const auto& line : TextLines(PlainText(heading), fits))
                 nextText.push_back({ line, -1, false, false, true });
             for (size_t i = 0; i < next.size(); ++i)
             {
-                auto lines = TextLines(PlainText(next[i].label), 31);
+                auto lines = TextLines(PlainText(next[i].label), fits);
                 for (size_t k = 0; k < lines.size(); ++k)
                     nextText.push_back({ lines[k], k == 0 ? static_cast<int>(i) : -1, k == 0 && next[i].enabled, k != 0, false });
             }
@@ -905,15 +918,15 @@ namespace THPS2Menu
             std::string help;
             if (!details && selected >= 0 && static_cast<size_t>(selected) < items.size() && items[selected].kind == ItemKind::Row)
                 help = PlainText(model.Help(items[selected].row));
-            if (restart) result.push_back({ FitText(PlainText(model.Text("menu.restartwarning")), 31), -1, false });
+            if (restart) result.push_back({ FitText(PlainText(model.Text("menu.restartwarning")), fits), -1, false });
             if (!help.empty())
             {
-                auto lines = TextLines(help, 31);
+                auto lines = TextLines(help, fits);
                 auto maximum = restart ? size_t(1) : size_t(2);
                 for (size_t i = 0; i < std::min(maximum, lines.size()); ++i)
                 {
                     auto line = lines[i];
-                    if (i + 1 == maximum && lines.size() > maximum) line = FitText(line + "...", 31);
+                    if (i + 1 == maximum && lines.size() > maximum) line = FitText(line + "...", fits);
                     result.push_back({ std::move(line), -1, false });
                 }
             }
@@ -936,15 +949,17 @@ namespace THPS2Menu
     {
         Native::Font measured{};
         std::array<uint8_t, 256> sourceMap{};
+        bool measuring = false;
         bool ready = false;
 
     public:
-        void Clear() { measured = {}; sourceMap = {}; ready = false; }
+        void Clear() { measured = {}; sourceMap = {}; measuring = ready = false; }
 
-        bool Prepare(const Native::Font& source, const std::vector<DisplayLine>& lines, int scale = 4096, int maximumHeight = 16)
+        // The literal copy of the game's pause font that private rows are measured and drawn with
+        bool Measure(const Native::Font& source, int scale = 4096)
         {
             Clear();
-            if (!nativeReady || source.vtable != reinterpret_cast<void*>(Game().fontTable) || !FontUsable(source) || lines.empty() || lines.size() > 12 || scale < 4096 || scale > 8192 || maximumHeight < 8 || maximumHeight > 24)
+            if (!nativeReady || source.vtable != reinterpret_cast<void*>(Game().fontTable) || !FontUsable(source) || scale < 4096 || scale > 8192)
                 return false;
             measured = source;
             sourceMap = source.glyphMap;
@@ -956,19 +971,42 @@ namespace THPS2Menu
             measured.verticalAlignment = 1;
             measured.shadowX = measured.shadowY = 0;
             measured.blue = 255; // Byte33 shadow switch is zero for RGB0..255.
-            if (!LiteralFont(measured))
-                return false;
+            measuring = LiteralFont(measured);
+            return measuring;
+        }
 
+        // Centered at256 in the native512x240 plane, with margins.
+        // Space measurement is conservative versus the native drawer.
+        static constexpr int MaximumWidth = 420;
+
+        int Width(const std::string& text)
+        {
+            return measuring ? FunctionAt<Native::FontWidth>(Game().fontWidth)(&measured, text.c_str()) : 0;
+        }
+
+        bool Fits(const std::string& text, int maximumHeight = 16)
+        {
+            if (!measuring || text.empty() || text.size() > LineBytes || std::any_of(text.begin(), text.end(), [](char code) { return static_cast<uint8_t>(code) >= 0x80 || code == 0; }))
+                return false;
+            const int width = Width(text);
+            const int height = FunctionAt<Native::FontHeight>(Game().fontHeight)(&measured, text.c_str());
+            return width > 0 && width <= MaximumWidth && height >= 8 && height <= maximumHeight;
+        }
+
+        bool Prepare(const Native::Font& source, const std::vector<DisplayLine>& lines, int scale = 4096, int maximumHeight = 16)
+        {
+            if (lines.empty() || lines.size() > 12 || maximumHeight < 8 || maximumHeight > 24 || !Measure(source, scale))
+            {
+                Clear();
+                return false;
+            }
             for (const auto& line : lines)
             {
-                if (line.text.empty() || line.text.size() > 31 || std::any_of(line.text.begin(), line.text.end(), [](char code) { return static_cast<uint8_t>(code) >= 0x80 || code == 0; }))
+                if (!Fits(line.text, maximumHeight))
+                {
+                    Clear();
                     return false;
-                const int width = FunctionAt<Native::FontWidth>(Game().fontWidth)(&measured, line.text.c_str());
-                const int height = FunctionAt<Native::FontHeight>(Game().fontHeight)(&measured, line.text.c_str());
-                // Centered at256 in the native512x240 plane, with margins.
-                // Space measurement is conservative versus the native drawer.
-                if (width <= 0 || width > 420 || height < 8 || height > maximumHeight)
-                    return false;
+                }
             }
             ready = true;
             return true;
@@ -1092,6 +1130,18 @@ namespace THPS2Menu
                 return false;
             Busy scope(*this);
             auto nextView = view;
+            // The pause font is wider than the title menu's: its rows are wrapped by the drawn width
+            PauseFont measure;
+            nextView.fits = {};
+            if (backend == Backend::Pause && pauseSource && measure.Measure(*pauseSource))
+            {
+                nextView.fits = [&measure](const std::string& text)
+                {
+                    if (std::any_of(text.begin(), text.end(), [](char code) { return static_cast<uint8_t>(code) >= 0x80; }))
+                        return true; // refused as a whole below
+                    return measure.Width(text) <= PauseFont::MaximumWidth;
+                };
+            }
             if (!nextView.Prepare(model, backend == Backend::Pause, [&snapshot] { return snapshot.Current(); }))
                 return false;
             if (selected < 0 && !nextView.starts.empty())
@@ -1154,6 +1204,7 @@ namespace THPS2Menu
             }
             if (!snapshot.Current())
                 return false;
+            nextView.fits = {}; // it measures with the font borrowed for this call
             view = std::move(nextView);
             helpSelected = Selected();
             return snapshot.Current();
@@ -1640,6 +1691,7 @@ namespace THPS2Menu
     {
         PauseContext context;
         std::shared_ptr<Host> host;
+        bool escapeHeld = false, padCancelHeld = false;
         bool deletionRequested = false;
         unsigned deleteFlags = 0;
     };
@@ -1904,10 +1956,20 @@ namespace THPS2Menu
         bool consumed = false;
         if (host->open)
         {
-            if (*choose)
-                consumed = Queue(host, host->Selected(), 0);
-            else if (*back)
+            constexpr uint8_t EscapeScanCode = 1;
+            const bool escape = FunctionAt<uint8_t (__cdecl*)(uint8_t)>(Game().keyDown)(EscapeScanCode) != 0;
+            DWORD foregroundProcess = 0;
+            GetWindowThreadProcessId(GetForegroundWindow(), &foregroundProcess);
+            DWORD slot{};
+            XINPUT_STATE pad{};
+            const bool padCancel = foregroundProcess == GetCurrentProcessId() && PadInput::Read(pad, slot)
+                && (pad.Gamepad.wButtons & XINPUT_GAMEPAD_B);
+            const bool escapePressed = !std::exchange(record->escapeHeld, escape) && escape;
+            const bool padCancelPressed = !std::exchange(record->padCancelHeld, padCancel) && padCancel;
+            if (*back || escapePressed || padCancelPressed)
                 consumed = Queue(host, View::PhysicalBack, 0);
+            else if (*choose)
+                consumed = Queue(host, host->Selected(), 0);
         }
         else if (*choose && root->selected == record->context.entry)
             consumed = Queue(host, CategoryCommand, 0, true);
@@ -2062,6 +2124,10 @@ namespace THPS2Menu
         attach(fontDrawHook, Game().fontDraw, reinterpret_cast<void*>(&FontDraw));
         attach(pauseDispatchHook, Game().pauseDispatch, reinterpret_cast<void*>(&DispatchPause));
         Unwind::Install();
+        WFP::onShutdownEvent() += []()
+        {
+            nativeStorageRetired.store(true, std::memory_order_relaxed);
+        };
         nativeReady = true;
         return true;
     }
@@ -2086,9 +2152,15 @@ namespace THPS2Updates
         return nullptr;
     }
 
-    inline void WINAPI Exit(UINT code)
+    export [[noreturn]] inline void WINAPI Exit(UINT code)
     {
-        RWGTA::UpdateCheck::OnExit();
+        static std::once_flag exiting;
+        std::call_once(exiting, []()
+        {
+            // The game tears down its allocator before DLL static destructors run.
+            THPS2Menu::nativeStorageRetired.store(true, std::memory_order_relaxed);
+            RWGTA::UpdateCheck::OnExit();
+        });
         ExitProcess(code);
     }
 
@@ -2147,7 +2219,7 @@ namespace THPS2DeferredClose
         const auto result = wndProcHook.stdcall<LRESULT>(hwnd, msg, wp, lp);
         // Native shutdown destroys the window and stops the frame timer while
         // its modal loop is still on the stack. Do not resume that dead loop.
-        if (msg == WM_CLOSE) ExitProcess(0);
+        if (msg == WM_CLOSE) THPS2Updates::Exit(0);
         return result;
     }
     inline int __cdecl Launch(int level, int mode)
@@ -2346,6 +2418,6 @@ for (size_t i = 0; i < menuSites.size(); ++i)
         });
     }
 }
-THPS2Hud::Install(Screen.fWidth, Screen.fHeight, static_cast<float>(Screen.Width43), static_cast<float>(Screen.Height43), &FixSettings().String("MAIN.HudAspectRatioConstraint"));
+THPS2Hud::Install(Screen.fWidth, Screen.fHeight, static_cast<float>(Screen.Width43), static_cast<float>(Screen.Height43));
 THPS2Frame::Install(Screen.fWidth, Screen.fHeight, static_cast<float>(Screen.Width43), static_cast<float>(Screen.Height43), &Screen.Width43, &Screen.Height43);
 }

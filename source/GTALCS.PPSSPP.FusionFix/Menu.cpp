@@ -2,8 +2,8 @@
 #include "MenuFont.hpp"
 #include "MenuBack.hpp"
 #include "ModernControlText.hpp"
-#include "../Shared/Console/PortableIni.hpp"
-#include "../Shared/Console/Text.hpp"
+#include "Shared/Console/PortableIni.hpp"
+#include "Shared/Console/Text.hpp"
 #include <cstddef>
 #include <cstring>
 #include <cmath>
@@ -32,19 +32,18 @@ constexpr uintptr_t screenOffset = 0x564, optionOffset = 0x568, editOffset = 0x5
 enum Option : int16_t { FrameRate = 0x60, MoreOptions, HudSize, RadarSize, FieldOfView, CutsceneBorders,
     HoldCamera, FastLoading, SkipIntro, ModernControls, MultiplayerRadar, DisplayOptions, GameOptions,
     FixOptions, Preset, ApplyPreset, Back, VehicleLights, FixDefaults,
-    LayoutOptions, AspectRatio, HudConstraint, RadarX, RadarY, MultiplayerY, PcCheats, IconSet, OptionEnd };
+    LayoutOptions, AspectRatio, HudConstraint, PcCheats, IconSet, OptionEnd };
 constexpr unsigned optionCount = OptionEnd - FrameRate;
 constexpr char keys[optionCount][8] = {"WF_FPS", "WF_MORE", "WF_HUD", "WF_RAD", "WF_FOV", "WF_CBOR",
     "WF_HOLD", "WF_LOAD", "WF_INTR", "WF_CTRL", "WF_MRAD", "WF_DISP", "WF_GAME", "WF_FIX",
     "WF_PRE", "WF_APLY", "WF_BACK", "WF_VLIT", "WF_FDEF",
-    "WF_LAY", "WF_ASP", "WF_HASP", "WF_RADX", "WF_RADY", "WF_MRY", "WF_PCC", "WF_ICON"};
+    "WF_LAY", "WF_ASP", "WF_HASP", "WF_PCC", "WF_ICON"};
 constexpr char16_t captions[optionCount][28] = {u"FRAME RATE:", u"PLUGINS", u"HUD SIZE:",
     u"RADAR SIZE:", u"FIELD OF VIEW:", u"CUTSCENE BORDERS:", u"HOLD VEHICLE CAMERA:", u"FAST LOADING:",
     u"SKIP INTRO:", u"MODERN CONTROLS:", u"MULTIPLAYER RADAR SIZE:", u"DISPLAY AND CAMERA",
     u"GAME AND CONTROLS", u"FUSION FIX", u"PRESET:", u"APPLY PRESET", u"",
     u"VEHICLE LIGHTS:", u"RESTORE DEFAULTS", u"LAYOUT",
-    u"ASPECT RATIO:", u"HUD ASPECT RATIO:", u"RADAR HORIZONTAL POSITION:", u"RADAR VERTICAL POSITION:",
-    u"MULTIPLAYER RADAR POSITION:", u"PC CHEATS:", u"CONTROLLER ICONS:"};
+    u"ASPECT RATIO:", u"HUD ASPECT RATIO:", u"PC CHEATS:", u"CONTROLLER ICONS:"};
 bool Slider(int option) { return option == HudSize || option == RadarSize || option == MultiplayerRadar || option == FieldOfView; }
 bool Ours(int action) { return action >= FrameRate && action < OptionEnd; }
 bool Link(int action) { return action == MoreOptions || action == DisplayOptions || action == GameOptions || action == FixOptions || action == LayoutOptions || action == Back; }
@@ -53,7 +52,55 @@ bool Command(int action) { return action == ApplyPreset || action == FixDefaults
 
 Entry original[15];
 char originalName[8];
-bool attached, submenu, dirty, menuWasActive;
+bool attached, submenu, menuWasActive;
+uint32_t dirtySettings;
+uint32_t lastSaveAttempt;
+
+enum Setting : unsigned
+{
+    SaveRate, SaveLoading, SaveHud, SaveRadar, SaveFov, SaveBorders, SaveIntro,
+    SaveModern, SaveMultiplayerRadar, SaveAspect, SaveHudAspect,
+    SaveCheats, SaveIcons, SaveLanguage, SaveLights,
+    SaveHold, SettingCount
+};
+
+struct CurrentSettings
+{
+    Settings game = settings;
+    decltype(Drawing::settings) drawing = Drawing::settings;
+    bool automaticAspect = autoAspect;
+};
+
+template<class Visitor> void VisitSavedSettings(const CurrentSettings& previous, Visitor visit)
+{
+    auto& drawing = Drawing::settings;
+    visit(SaveRate, settings.fps, previous.game.fps);
+    visit(SaveLoading, settings.unthrottle, previous.game.unthrottle);
+    visit(SaveHud, drawing.hud, previous.drawing.hud);
+    visit(SaveRadar, drawing.radar, previous.drawing.radar);
+    visit(SaveFov, settings.fov, previous.game.fov);
+    visit(SaveBorders, settings.cutsceneBorders, previous.game.cutsceneBorders);
+    visit(SaveIntro, settings.skipIntro, previous.game.skipIntro);
+    visit(SaveModern, settings.modernControls, previous.game.modernControls);
+    visit(SaveMultiplayerRadar, drawing.multiplayerRadar, previous.drawing.multiplayerRadar);
+    visit(SaveHudAspect, drawing.hudAspect, previous.drawing.hudAspect);
+    visit(SaveCheats, settings.pcCheats, previous.game.pcCheats);
+    visit(SaveIcons, settings.icons, previous.game.icons);
+    visit(SaveLanguage, settings.textLanguage, previous.game.textLanguage);
+    visit(SaveLights, settings.vehicleLights, previous.game.vehicleLights);
+    visit(SaveHold, settings.holdVehicleCamera, previous.game.holdVehicleCamera);
+}
+
+void TrackChanges(const CurrentSettings& previous)
+{
+    VisitSavedSettings(previous, [](Setting setting, const auto& value, const auto& old)
+    {
+        if (value != old)
+            dirtySettings |= 1u << setting;
+    });
+    if (autoAspect != previous.automaticAspect || (!autoAspect && Drawing::settings.aspect != previous.drawing.aspect))
+        dirtySettings |= 1u << SaveAspect;
+}
 enum class Page { Native, Plugins, Fix, Display, Game, Layout };
 Page page = Page::Native;
 int shownPreset = 1;
@@ -99,7 +146,7 @@ void Write(bool sub) {
         case Page::Fix: add(Preset); add(ApplyPreset); add(DisplayOptions); add(LayoutOptions); add(GameOptions); add(FixDefaults); break;
         case Page::Display: add(HudSize); add(RadarSize); add(MultiplayerRadar); add(FieldOfView); add(CutsceneBorders); add(HoldCamera); break;
         case Page::Game: add(FrameRate); add(FastLoading); add(SkipIntro); add(ModernControls); add(PcCheats); add(IconSet); add(VehicleLights); break;
-        case Page::Layout: add(AspectRatio); add(HudConstraint); add(RadarX); add(RadarY); add(MultiplayerY); break;
+        case Page::Layout: add(AspectRatio); add(HudConstraint); break;
         default: break;
         }
         add(Back);
@@ -198,7 +245,7 @@ unsigned AspectIndex(float value)
 void ApplyPresetValues(int preset, bool& confirm) {
     if (preset < 0 || preset > 2 || PresetMatches(preset)) { confirm = false; return; }
     if (!confirm) { confirm = true; return; }
-    // Only settings that differ between presets are applied.
+    const CurrentSettings previous;
     const auto& p = presetValues[preset];
     settings.unthrottle = p.unthrottle; settings.skipIntro = p.skipIntro;
     if (!settings.unthrottle) console::portable::Unthrottle(false);
@@ -209,21 +256,22 @@ void ApplyPresetValues(int preset, bool& confirm) {
     settings.fps = p.fps;
     settings.modernControls = p.modernControls;
     settings.holdVehicleCamera = p.holdCamera;
-    ApplyFrameRate(); dirty = true; confirm = false;
+    ApplyFrameRate();
+    TrackChanges(previous);
+    confirm = false;
     shownPreset = preset;
 }
 bool DefaultsMatch()
 {
     return PresetMatches(recommendedPreset) && settings.fps == 0 && settings.fov == 1.0f &&
         settings.modernControls && !settings.holdVehicleCamera && !settings.pcCheats && settings.icons == 8 &&
-        settings.textLanguage == TextLanguage::Auto && autoAspect && Drawing::settings.hudAspect == 0.0f &&
-        Drawing::settings.radarX == 12.0f && Drawing::settings.radarY == 196.0f &&
-        Drawing::settings.multiplayerRadarY == 170.0f;
+        settings.textLanguage == TextLanguage::Auto && autoAspect && Drawing::settings.hudAspect == 0.0f;
 }
 void RestoreDefaults()
 {
     if (DefaultsMatch()) { confirmDefaults = false; return; }
     if (!confirmDefaults) { confirmDefaults = true; return; }
+    const CurrentSettings previous;
     settings = Settings{};
     autoAspect = true;
     Drawing::settings = {};
@@ -231,15 +279,15 @@ void RestoreDefaults()
     Drawing::settings.hud = 0.75f;
     Drawing::settings.radar = 0.83f;
     Drawing::settings.multiplayerRadar = 0.63f;
-    Drawing::settings.multiplayerRadarY = 170.0f;
     ApplyFrameRate();
-    dirty = true;
+    TrackChanges(previous);
     confirmDefaults = false;
     shownPreset = recommendedPreset;
 }
 void Adjust(int option, int direction) {
     confirmPreset = false;
     confirmDefaults = false;
+    const CurrentSettings previous;
     const auto step = [&](float value, float minimum, float maximum)
     {
         const int percent = Percent(value);
@@ -271,9 +319,6 @@ void Adjust(int option, int direction) {
     case HudConstraint:
         Drawing::settings.hudAspect = aspects[(AspectIndex(Drawing::settings.hudAspect) + (direction < 0 ? 4 : 1)) % 5];
         break;
-    case RadarX: Drawing::settings.radarX = console::bounded(Drawing::settings.radarX + direction, -480.0f, 480.0f, 12.0f); break;
-    case RadarY: Drawing::settings.radarY = console::bounded(Drawing::settings.radarY + direction, -272.0f, 272.0f, 196.0f); break;
-    case MultiplayerY: Drawing::settings.multiplayerRadarY = console::bounded(Drawing::settings.multiplayerRadarY + direction, -272.0f, 272.0f, 170.0f); break;
     case VehicleLights: settings.vehicleLights = !settings.vehicleLights; break;
     case Preset: shownPreset = shownPreset < 0 ? (direction < 0 ? 2 : 0) : (shownPreset + (direction < 0 ? 2 : 1)) % 3; return;
     case FastLoading:
@@ -282,7 +327,7 @@ void Adjust(int option, int direction) {
         break;
     default: return;
     }
-    dirty = true;
+    TrackChanges(previous);
 }
 const Entry& Current() { return Display().entries[unsigned(Field<int>(optionOffset)) % 15]; }
 
@@ -342,11 +387,6 @@ const uint16_t* ValueText(uintptr_t, int option) {
         if (index || value == 0.0f) std::strcpy(ascii, aspectNames[index]);
         else console::format(ascii, "", value, 2);
     }
-    else if (option == RadarX || option == RadarY || option == MultiplayerY)
-    {
-        const float value = option == RadarX ? Drawing::settings.radarX : option == RadarY ? Drawing::settings.radarY : Drawing::settings.multiplayerRadarY;
-        console::format(ascii, "", value, 0);
-    }
     else if (option == FrameRate) std::strcpy(ascii, settings.fps ? "60" : "30");
     else if (option == Preset) {
         static const uint16_t names[][12] = {{'V','A','N','I','L','L','A',0}, {'R','E','C','O','M','M','E','N','D','E','D',0}, {'E','N','H','A','N','C','E','D',0}, {'C','U','S','T','O','M',0}};
@@ -374,24 +414,6 @@ const uint16_t* ValueText(uintptr_t, int option) {
     out[i] = 0;
     return out;
 }
-// Native frontend slider: 8 segments at (x, y), value 0..1 passed in $f17.
-void DrawBars(uintptr_t menu, float x, float y, float value) {
-    register uintptr_t a0 asm("a0") = menu;
-    register float f12 asm("$f12") = x;
-    register float f13 asm("$f13") = y;
-    register float f17 asm("$f17") = value;
-    const uintptr_t function = Address<0x8AD6FB0>();
-    const uint32_t restore = psp::enter_game();
-    asm volatile("jalr %[fn]; nop"
-        : "+r"(a0), "+f"(f12), "+f"(f13), "+f"(f17)
-        : [fn] "r"(function)
-        : "at", "v0", "v1", "a1", "a2", "a3", "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7",
-          "t8", "t9", "ra", "hi", "lo", "memory",
-          "$f0", "$f1", "$f2", "$f3", "$f4", "$f5", "$f6", "$f7", "$f8", "$f9", "$f10", "$f11",
-          "$f14", "$f15", "$f16", "$f18", "$f19", "$f20", "$f21", "$f22", "$f23", "$f24",
-          "$f25", "$f26", "$f27", "$f28", "$f29", "$f30", "$f31");
-    psp::leave_game(restore);
-}
 void DrawValue(SafetyMipsContext& regs) {
     // a0: row action; s6: row index; s4: value text; s2/fp: value position;
     // s7: value alignment. Unknown actions skip the native value switch.
@@ -400,18 +422,6 @@ void DrawValue(SafetyMipsContext& regs) {
     const auto& entry = Display().entries[unsigned(regs.s6) % 15];
     const uintptr_t text = *reinterpret_cast<uint32_t*>(Address<0x8B3607C>());
     if (!text) return;
-    if (Slider(action)) {
-        // Bars like the native Brightness row; drawn once, in the text pass.
-        static const uint16_t empty[1] = {0};
-        regs.s4 = uint32_t(reinterpret_cast<uintptr_t>(empty));
-        if (*reinterpret_cast<const int8_t*>(regs.sp + 0x68) == 1)
-        {
-            const float minimum = action == FieldOfView ? 50.0f : 10.0f;
-            DrawBars(Menu(), float(entry.x + 12), float(entry.y - 2),
-                     console::bounded((Value(action) - minimum) / (200.0f - minimum), 0.0f, 1.0f, 0.5f));
-        }
-        return;
-    }
     regs.s4 = uint32_t(reinterpret_cast<uintptr_t>(ValueText(text, action)));
     regs.s2 = uint32_t(int32_t(entry.x + 12));
     regs.fp = uint32_t(int32_t(entry.y));
@@ -452,6 +462,7 @@ void AdjustOption(uintptr_t menu, int direction) {
     adjustHook.call<void>(menu, direction);
 }
 void DrawMenus(uintptr_t menu, int argument) {
+    if (*reinterpret_cast<const uint8_t*>(menu + 0x131)) ResetCheatInput();
     Drawing::Scope scope(Anchor::Center);
     if (autoAspect) Drawing::settings.aspect = console::portable::Aspect();
     Drawing::containUi = true;
@@ -486,7 +497,7 @@ void DrawMenus(uintptr_t menu, int argument) {
         break;
     case PcCheats:
         help = u"Type PC cheat words in gameplay. See the hub.";
-        if (!CheatsAvailable()) second = u"Unsupported game code. Check the plugin log.";
+        if (!CheatsAvailable()) second = u"Unavailable on this game version. See the PPSSPP log.";
         break;
     case IconSet:
         help = u"Match the artwork to your PPSSPP bindings.";
@@ -494,9 +505,6 @@ void DrawMenus(uintptr_t menu, int argument) {
         break;
     case AspectRatio: help = u"Auto follows PPSSPP. Choose a ratio to override it."; break;
     case HudConstraint: help = u"Keep the HUD in a centered box. Auto fills."; break;
-    case RadarX: help = u"Move the single-player radar horizontally."; break;
-    case RadarY: help = u"Move the radar vertically. -45 puts it on top."; break;
-    case MultiplayerY: help = u"Move the multiplayer radar vertically."; break;
     case VehicleLights: help = u"Lit headlights, tail, brake and reverse lights after a restart."; break;
     case Preset: help = u"Choose Vanilla, Recommended or Enhanced, then Apply Preset."; break;
     case ApplyPreset: help = u"Press twice to apply the selected preset."; break;
@@ -511,54 +519,74 @@ void DrawMenus(uintptr_t menu, int argument) {
         menu_font::Text(u"Restart the emulated game to apply settings.", 16.0f, 216.0f);
 }
 void Save() {
-    if (!dirty) return;
+    if (!dirtySettings) return;
     using console::portable::IniValue;
-    IniValue values[19] = {
+    IniValue values[SettingCount] = {
         {"MAIN", "FPSLimit", {}}, {"MAIN", "UnthrottleEmuDuringLoading", {}},
         {"MAIN", "HudScale", {}}, {"RADAR", "RadarScale", {}}, {"MAIN", "FOVFactor", {}},
         {"MAIN", "CutsceneBorders", {}},
         {"MAIN", "SkipIntro", {}}, {"CONTROLS", "ModernControlScheme", {}}, {"MPRADAR", "RadarScale", {}},
-        {"MAIN", "ForceAspectRatio", {}}, {"MAIN", "HudAspectRatioConstraint", {}}, {"RADAR", "RadarPosX", {}},
-        {"RADAR", "RadarPosY", {}}, {"MPRADAR", "RadarPosY", {}}, {"CONTROLS", "PCCheats", {}}, {"MAIN", "GamepadIcons", {}}, {"MAIN", "TextLanguage", {}},
+        {"MAIN", "ForceAspectRatio", {}}, {"MAIN", "HudAspectRatioConstraint", {}},
+        {"CONTROLS", "PCCheats", {}}, {"MAIN", "GamepadIcons", {}}, {"MAIN", "TextLanguage", {}},
         {"MAIN", "VehicleLights", {}}, {"CONTROLS", "HoldVehicleCamera", {}}};
-    std::strcpy(values[0].value, settings.fps ? "60" : "30");
-    std::strcpy(values[1].value, settings.unthrottle ? "1" : "0");
-    console::decimal(values[2].value, Drawing::settings.hud, 2);
-    console::decimal(values[3].value, Drawing::settings.radar, 2);
-    console::decimal(values[4].value, settings.fov, 2);
-    values[5].value[0] = char('0' + (settings.cutsceneBorders & 3)); values[5].value[1] = 0;
-    std::strcpy(values[6].value, settings.skipIntro ? "1" : "0");
-    std::strcpy(values[7].value, settings.modernControls ? "1" : "0");
-    console::decimal(values[8].value, Drawing::settings.multiplayerRadar, 2);
-    if (autoAspect) std::strcpy(values[9].value, "auto");
-    else if (const auto index = AspectIndex(Drawing::settings.aspect)) std::strcpy(values[9].value, aspectNames[index]);
-    else console::format(values[9].value, "", Drawing::settings.aspect, 4);
-    if (Drawing::settings.hudAspect == 0.0f) std::strcpy(values[10].value, "Auto");
-    else if (const auto index = AspectIndex(Drawing::settings.hudAspect)) std::strcpy(values[10].value, aspectNames[index]);
-    else console::format(values[10].value, "", Drawing::settings.hudAspect, 4);
-    console::decimal(values[11].value, Drawing::settings.radarX, 2);
-    console::decimal(values[12].value, Drawing::settings.radarY, 2);
-    console::decimal(values[13].value, Drawing::settings.multiplayerRadarY, 2);
-    std::strcpy(values[14].value, settings.pcCheats ? "1" : "0");
-    std::strcpy(values[15].value, iconSets[settings.icons]);
-    std::strcpy(values[16].value, settings.textLanguage == TextLanguage::Auto ? "auto" : "en");
-    std::strcpy(values[17].value, settings.vehicleLights ? "1" : "0");
-    std::strcpy(values[18].value, settings.holdVehicleCamera ? "1" : "0");
+    std::strcpy(values[SaveRate].value, settings.fps ? "60" : "30");
+    std::strcpy(values[SaveLoading].value, settings.unthrottle ? "1" : "0");
+    console::decimal(values[SaveHud].value, Drawing::settings.hud, 2);
+    console::decimal(values[SaveRadar].value, Drawing::settings.radar, 2);
+    console::decimal(values[SaveFov].value, settings.fov, 2);
+    values[SaveBorders].value[0] = char('0' + (settings.cutsceneBorders & 3)); values[SaveBorders].value[1] = 0;
+    std::strcpy(values[SaveIntro].value, settings.skipIntro ? "1" : "0");
+    std::strcpy(values[SaveModern].value, settings.modernControls ? "1" : "0");
+    console::decimal(values[SaveMultiplayerRadar].value, Drawing::settings.multiplayerRadar, 2);
+    if (autoAspect) std::strcpy(values[SaveAspect].value, "auto");
+    else if (const auto index = AspectIndex(Drawing::settings.aspect)) std::strcpy(values[SaveAspect].value, aspectNames[index]);
+    else console::format(values[SaveAspect].value, "", Drawing::settings.aspect, 4);
+    if (Drawing::settings.hudAspect == 0.0f) std::strcpy(values[SaveHudAspect].value, "Auto");
+    else if (const auto index = AspectIndex(Drawing::settings.hudAspect)) std::strcpy(values[SaveHudAspect].value, aspectNames[index]);
+    else console::format(values[SaveHudAspect].value, "", Drawing::settings.hudAspect, 4);
+    std::strcpy(values[SaveCheats].value, settings.pcCheats ? "1" : "0");
+    std::strcpy(values[SaveIcons].value, iconSets[settings.icons]);
+    std::strcpy(values[SaveLanguage].value, settings.textLanguage == TextLanguage::Auto ? "auto" : "en");
+    std::strcpy(values[SaveLights].value, settings.vehicleLights ? "1" : "0");
+    std::strcpy(values[SaveHold].value, settings.holdVehicleCamera ? "1" : "0");
     static console::portable::IniWriter<> writer;
-    const bool saved = writer.update(iniPath, values, 19);
-#ifndef NDEBUG
-    logger.WriteF("Menu settings %s", saved ? "saved" : "could not be saved");
-#endif
-    if (saved) dirty = false;
+    unsigned count = 0;
+    for (unsigned i = 0; i < SettingCount; ++i)
+        if (dirtySettings & (1u << i))
+            values[count++] = values[i];
+
+    if (writer.update(iniPath, values, count))
+        dirtySettings = 0;
 }
 }
 void TickMenu() {
     const bool active = Field<uint8_t>(activeOffset) != 0;
-    if (menuWasActive && !active) {
-        if (submenu) Show(false);
+    if (menuWasActive && !active && submenu)
+        Show(false);
+
+    const uint32_t now = sceKernelGetSystemTimeLow();
+    if (!active && dirtySettings && (menuWasActive || now - lastSaveAttempt >= 1000000u))
+    {
+        lastSaveAttempt = now;
         Save();
     }
     menuWasActive = active;
+}
+
+void ReadSettingsPreservingMenuEdits(void (*read)())
+{
+    const CurrentSettings previous;
+    read();
+    VisitSavedSettings(previous, [](Setting setting, auto& value, const auto& old)
+    {
+        if (dirtySettings & (1u << setting))
+            value = old;
+    });
+    if (dirtySettings & (1u << SaveAspect))
+    {
+        autoAspect = previous.automaticAspect;
+        Drawing::settings.aspect = previous.drawing.aspect;
+    }
 }
 void InstallMenu() {
     if (!menu_back::profile.initialize({pattern.text_addr,

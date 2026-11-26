@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 
 export module ComVars;
 
@@ -26,12 +27,17 @@ export struct Screen
     std::optional<float> fHudAspectRatioConstraint;
     float fWidescreenHudOffset;
     float fFOV;
-    float fIniFOV;
+    float fIniFOV = 1.0f;
     bool bUnstretchedText = true;
     bool bBinocularsActive = false;     // set by the binoculars HUD draw, consumed by SetCamera
 
     void AdjustToRes(uint32_t x, uint32_t y)
     {
+        if (!x || !y)
+            return;
+        const auto options = FarCryLive::Read();
+        fIniFOV = options.fov;
+        fHudAspectRatioConstraint = options.hudAspect;
         nWidth = x;
         nHeight = y;
         fWidth = static_cast<float>(nWidth);
@@ -50,6 +56,13 @@ export struct Screen
             fWidescreenHudOffset = -CalculateWidescreenOffset(fHeight * value, fHeight, 800.0f, 600.0f, 3.5f);
         }
         fWidescreenHudOffset /= fHudScale;
+    }
+
+    void RefreshLayout()
+    {
+        const auto options = FarCryLive::Read();
+        if (nWidth > 0 && nHeight > 0 && (fIniFOV != options.fov || fHudAspectRatioConstraint != options.hudAspect))
+            AdjustToRes(nWidth, nHeight);
     }
 
     void AdjustFMVRes(uint32_t w, uint32_t h)

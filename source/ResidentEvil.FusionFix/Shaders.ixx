@@ -262,9 +262,9 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            bDisableNoise = FixSettings().Bool("MAIN.DisableNoise") != 0;
-            bDisableColorCorrection = FixSettings().Bool("MAIN.DisableColorCorrection") != 0;
-            bDisableFog = FixSettings().Bool("MAIN.DisableFog") != 0;
+            bDisableNoise = StartupOption("MAIN.DisableFilmGrain");
+            bDisableColorCorrection = StartupOption("MAIN.DisableColorCorrection");
+            bDisableFog = StartupOption("MAIN.DisableFog");
 
             if (bDisableNoise || bDisableColorCorrection || bDisableFog)
             {

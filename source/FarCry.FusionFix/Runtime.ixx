@@ -9,12 +9,14 @@ module;
 #include <cstring>
 #include <dinput.h>
 #include "Shared/D3D9Options.hpp"
+#include "Shared/PadInput.hpp"
 #include "overlay/OverlayD3D9.hpp"
 
 export module Runtime;
 
 import Window;
 import Gamepad;
+import ComVars;
 
 export namespace FarCryOverlayMouse
 {
@@ -56,24 +58,34 @@ export namespace FarCryOverlayMouse
 export namespace FarCryRuntime
 {
     inline asi_overlay::D3D9Overlay Overlay;
-    inline IDirect3DDevice9* Device = nullptr;
+    inline std::atomic<IDirect3DDevice9*> Device{ nullptr };
     inline bool HotkeyDown = false;
     inline std::atomic<void*> MouseDevice{ nullptr }, KeyboardDevice{ nullptr };
     inline SafetyHookInline InputCreateHook, InputEnumHook, InputStateHook, InputDataHook;
     inline HRESULT(WINAPI* NativeInput)(HINSTANCE, DWORD, REFIID, void**, IUnknown*) = nullptr;
 
+    inline bool BlocksInput()
+    {
+        if constexpr (WFP::DeveloperOverlay)
+            return Overlay.BlocksInput();
+        return false;
+    }
+
     inline HRESULT WINAPI InputState(void* device, DWORD size, void* data)
     {
         const auto result = InputStateHook.stdcall<HRESULT>(device, size, data);
-        if (SUCCEEDED(result) && device == MouseDevice.load() && Overlay.BlocksInput())
+        const auto mouse = device == MouseDevice.load();
+        const auto keyboard = device == KeyboardDevice.load();
+        const auto blocked = BlocksInput();
+        if (SUCCEEDED(result) && mouse && blocked)
             FarCryOverlayMouse::State(data, size,
                 [](int button, bool down) { Overlay.MouseButton(button, down); },
                 [](float steps) { Overlay.MouseWheel(steps); });
-        if (SUCCEEDED(result) && data && Overlay.BlocksInput())
+        if (SUCCEEDED(result) && data && (mouse || keyboard) && blocked)
             std::memset(data, 0, size);
-        else if (SUCCEEDED(result) && device == MouseDevice.load())
+        else if (SUCCEEDED(result) && mouse)
             FarCryPad::MouseState(data, size);
-        else if (SUCCEEDED(result) && device == KeyboardDevice.load())
+        else if (SUCCEEDED(result) && keyboard)
             FarCryPad::KeyboardState(data, size);
         return result;
     }
@@ -82,15 +94,18 @@ export namespace FarCryRuntime
     {
         const auto capacity = count ? *count : 0;
         const auto result = InputDataHook.stdcall<HRESULT>(device, size, data, count, flags);
-        if (SUCCEEDED(result) && count && *count <= capacity && device == MouseDevice.load() && Overlay.BlocksInput())
+        const auto mouse = device == MouseDevice.load();
+        const auto keyboard = device == KeyboardDevice.load();
+        const auto blocked = BlocksInput();
+        if (SUCCEEDED(result) && count && *count <= capacity && mouse && blocked)
             FarCryOverlayMouse::Buffered(data, size, *count, (flags & DIGDD_PEEK) != 0,
                 [](int button, bool down) { Overlay.MouseButton(button, down); },
                 [](float steps) { Overlay.MouseWheel(steps); });
-        if (SUCCEEDED(result) && count && Overlay.BlocksInput())
+        if (SUCCEEDED(result) && count && (mouse || keyboard) && blocked)
             *count = 0;
-        else if (SUCCEEDED(result) && count && *count <= capacity && device == MouseDevice.load())
+        else if (SUCCEEDED(result) && count && *count <= capacity && mouse)
             FarCryPad::MouseData(data, size, count, capacity, (flags & DIGDD_PEEK) != 0);
-        else if (SUCCEEDED(result) && count && *count <= capacity && device == KeyboardDevice.load())
+        else if (SUCCEEDED(result) && count && *count <= capacity && keyboard)
             FarCryPad::KeyboardData(data, size, count, capacity, (flags & DIGDD_PEEK) != 0);
         return result;
     }
@@ -180,66 +195,88 @@ export namespace FarCryRuntime
 
     inline void Frame(IDirect3DDevice9* device)
     {
+        if (device != Device.load())
+            return;
         static std::once_flag once;
         std::call_once(once, []() { WFP::onGameInitEvent().executeAll(); });
         WFP::onGameProcessEvent().executeAll();
-        Device = device;
-        const auto window = FarCryWindow::Window;
-        const bool down = window && GetForegroundWindow() == window &&
-            (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
-        if (down && !HotkeyDown)
-            Overlay.SetOpen(!Overlay.IsOpen());
-        HotkeyDown = down;
-        Overlay.Present(device, Module());
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !Overlay.BlocksInput());
-        auto limit = FixSettings().Int("MAIN.FPSLimit");
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            const auto window = FarCryWindow::Window;
+            const bool down = window && GetForegroundWindow() == window &&
+                (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
+            if (down && !HotkeyDown)
+                Overlay.SetOpen(!Overlay.IsOpen());
+            HotkeyDown = down;
+            Overlay.Present(device, Module());
+        }
+        auto limit = FarCryLive::Read().fps;
         if (limit == -1)
         {
             const auto monitor = FarCryWindow::Monitor(FarCryWindow::CurrentMonitor());
             DEVMODEW mode{};
             mode.dmSize = sizeof(mode);
-            limit = EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode) ? int(mode.dmDisplayFrequency) : 60;
+            limit = EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode) &&
+                mode.dmDisplayFrequency > 1 ? int(mode.dmDisplayFrequency) : 60;
         }
-        D3D9Options::frameLimit = limit == 0 ? 0 : std::clamp(limit, 30, 1000);
+        else if (limit != 0)
+            limit = std::clamp(limit, 30, 1000);
+        D3D9Options::frameLimit = limit;
     }
 
     inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
+            wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
+        {
+            result = 0;
+            return true;
+        }
         return Overlay.Message(window, message, wParam, lParam, result);
     }
 
     inline void Bind(IDirect3DDevice9* device)
     {
+        Screen.RefreshLayout();
+        CursorConfinement::SetEnabled(FarCryLive::Read().confine && !BlocksInput());
+        Device.store(device);
         if (device)
             D3D9Options::HookDevice(device);
     }
 
     inline void Init()
     {
-        asi_overlay::Overlay::AddPage("Debug", "Info", [](asi_overlay::OverlayUI& ui)
-        {
-            static const auto build = BuildTime();
-            ui.Value("Version", rsc_ProductVersion);
-            ui.Value("BuildTimeUtc", build.c_str());
-            ui.Value("Graphics API", "Direct3D 9");
-            if (Device)
-            {
-                IDirect3DSurface9* surface = nullptr;
-                if (SUCCEEDED(Device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &surface)))
-                {
-                    D3DSURFACE_DESC desc{};
-                    surface->GetDesc(&desc);
-                    surface->Release();
-                    ui.Value("Resolution", std::to_string(desc.Width) + " x " + std::to_string(desc.Height));
-                }
-            }
-        });
         D3D9Options::frame = Frame;
-        D3D9Options::beforeReset = [](IDirect3DDevice9*) { Overlay.BeforeReset(); };
+        D3D9Options::limitDevice = [](IDirect3DDevice9* device) { return device == Device.load(); };
         FarCryWindow::OnFrame = Bind;
-        FarCryWindow::OnMessage = Message;
-        FarCryPad::SetBlocked([]() { return Overlay.BlocksInput(); });
-
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            asi_overlay::Overlay::AddPage("Debug", "Info", [](asi_overlay::OverlayUI& ui)
+            {
+                static const auto build = BuildTime();
+                ui.Value("Version", rsc_ProductVersion);
+                ui.Value("BuildTimeUtc", build.c_str());
+                ui.Value("Graphics API", "Direct3D 9");
+                if (const auto device = Device.load())
+                {
+                    IDirect3DSurface9* surface = nullptr;
+                    if (SUCCEEDED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &surface)))
+                    {
+                        D3DSURFACE_DESC desc{};
+                        surface->GetDesc(&desc);
+                        surface->Release();
+                        ui.Value("Resolution", std::to_string(desc.Width) + " x " + std::to_string(desc.Height));
+                    }
+                }
+            });
+            D3D9Options::beforeReset = [](IDirect3DDevice9* device)
+            {
+                if (device == Device.load())
+                    Overlay.BeforeReset();
+            };
+            FarCryWindow::OnMessage = Message;
+            FarCryPad::SetOverlayInput(BlocksInput, [](const XINPUT_GAMEPAD& pad) { PadInput::ToOverlay(Overlay, pad); });
+        }
     }
 }
 

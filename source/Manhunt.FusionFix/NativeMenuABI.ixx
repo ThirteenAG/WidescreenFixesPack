@@ -241,6 +241,57 @@ export namespace MHMenu::ABI
         inline uintptr_t RowText() { static auto a = Code("53 56 57 55 83 EC 0C 8B 3D ? ? ? ?"); return a; }
         inline uintptr_t RowHit() { static auto a = Code("53 31 DB E8 ? ? ? ? 83 F8 02 75 05"); return a; }
         inline uintptr_t Footer() { static auto a = Code("8B 0D ? ? ? ? 53 56 55 83 EC 18"); return a; }
+        // Every address at load time: other plugins loaded later may patch these functions in memory (Manhunt's
+        // PluginMH hooks the menu's input functions), and a pattern looked up then would no longer match
+        inline void ResolveAll()
+        {
+            CurrentMenu();
+            SettingsSelection();
+            SettingsRows();
+            SettingsPaused();
+            VideoSelection();
+            X();
+            Y();
+            ScaleX();
+            ScaleY();
+            Spacing();
+            FooterBack();
+            FooterAccept();
+            MainRow();
+            Language();
+            TextTable();
+            DetailRows();
+            ResolutionCount();
+            DetailCount();
+            VideoValues();
+            SettingsPage();
+            VideoPage();
+            SettingsInput();
+            SettingsDraw();
+            VideoInput();
+            VideoDraw();
+            VideoApply();
+            VideoRestore();
+            DefaultsConfirmed();
+            PauseState();
+            Up();
+            Down();
+            Left();
+            Right();
+            Enter();
+            Escape();
+            MouseMode();
+            HoverActive();
+            Hovered();
+            MouseValue();
+            Switch();
+            Text();
+            Width();
+            Header();
+            RowText();
+            RowHit();
+            Footer();
+        }
     }
 
     inline int CurrentMenu() { return Address::CurrentMenu().get(); }

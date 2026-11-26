@@ -104,11 +104,41 @@
       "default": 60,
       "min": 30,
       "max": 60,
+      "step": 1,
       "unit": "fps",
       "label": "@FPSLimit",
       "description": "@FPSLimit.description",
       "page": "display",
-      "apply": "live"
+      "apply": "live",
+      "presets": {
+        "vanilla": 30,
+        "recommended": 60,
+        "enhanced": 60
+      }
+    },
+    {
+      "id": "MAIN.FMVWidescreenMode",
+      "type": "choice",
+      "default": 1,
+      "label": "@MAIN.FMVWidescreenMode",
+      "description": "@MAIN.FMVWidescreenMode.description",
+      "page": "display",
+      "apply": "live",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      },
+      "choices": [
+        {
+          "value": 0,
+          "label": "@MAIN.FMVWidescreenMode.0"
+        },
+        {
+          "value": 1,
+          "label": "@MAIN.FMVWidescreenMode.1"
+        }
+      ]
     },
     {
       "id": "MAIN.SkipIntro",

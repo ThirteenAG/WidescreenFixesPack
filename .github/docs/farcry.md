@@ -61,7 +61,7 @@
 
 Open **Options → Plugins → Far Cry Fusion Fix** from the title or pause menu. More pages and Previous pages move through the settings; F1 opens full help for the selected option. Vanilla, Recommended and Enhanced presets are available. Changes that need a restart show a notice until their original value is restored or the game is restarted.
 
-The native Plugins menu supports English, French, German, Italian and Spanish. Select the text language in FusionFixHub or the CFG and reopen Plugins. Ctrl+F10 opens the optional Supporter overlay; Debug → Info shows the build and graphics information.
+The native Plugins menu supports English, French, German, Italian and Spanish. Select the text language in FusionFixHub or the CFG and reopen Plugins.
 
 Choose the settings language on fusionfix.io or in FusionFixHub. The first launch writes the settings file next to the fix. FOV factor, HUD aspect constraint, movie framing, cutscene borders, frame rate limit, focus pause, update checks, window mode and cursor confinement apply while the game runs. Intro skipping, SMAA and console gamma require a restart.
 

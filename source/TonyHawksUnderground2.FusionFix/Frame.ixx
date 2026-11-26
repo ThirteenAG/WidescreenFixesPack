@@ -2,6 +2,8 @@ module;
 
 #include <stdafx.h>
 #include <d3d9.h>
+#include <atomic>
+#include "FixSettings.hpp"
 
 export module Frame;
 
@@ -23,12 +25,18 @@ export namespace THUG2Frame
     inline float ScreenAspect = 4.0f / 3.0f;
     inline float ProjectionAspect = 4.0f / 3.0f;   // read by the game's projection through its aspect getter
     inline float Strip = 0.0f;                      // the picture's share of the 4:3 frame height, 0 without bars
-    inline const int32_t* Borders = nullptr;
+    inline std::atomic<int> Borders{ 3 };
     inline int32_t LetterboxShift = 0;
     inline SafetyHookMid ScaleHook, ViewportHook, OverlayViewportHook;
     inline SafetyHookInline LetterboxHook;
 
     constexpr uint32_t BarsId = THUG2Menu::Checksum("letterbox_anchor");
+
+    inline void UpdateBorders()
+    {
+        const auto value = FixSettings().Get("MAIN.CutsceneBorders");
+        Borders.store(std::clamp(std::atoi(value.c_str()), 0, 3), std::memory_order_relaxed);
+    }
 
     // The bars in use: the native letterbox screen keeps 360 of 480 lines, the story cutscene sprites 336, the
     // chapter intro sprites 280 (in the 448-line 2D layer below its 16-line top offset)
@@ -49,13 +57,14 @@ export namespace THUG2Frame
     inline Rect Picture()
     {
         const float width = static_cast<float>(FrameTargetWidth.get()), height = static_cast<float>(FrameTargetHeight.get());
-        const int mode = Borders ? std::clamp(*Borders, 0, 3) : 3;
+        const int mode = Borders.load(std::memory_order_relaxed);
         float w = width, h = height;
         if (mode & 1)
             h = std::min(height, width * 0.75f) * Strip;
         if (mode & 2)
             w = std::min(width, h * (4.0f / 3.0f) / Strip);
-        const int pictureWidth = static_cast<int>(std::lround(w)), pictureHeight = static_cast<int>(std::lround(h));
+        const int pictureWidth = std::max(1, static_cast<int>(std::lround(w)));
+        const int pictureHeight = std::max(1, static_cast<int>(std::lround(h)));
         return { (FrameTargetWidth.get() - pictureWidth) / 2, (FrameTargetHeight.get() - pictureHeight) / 2, pictureWidth, pictureHeight };
     }
 
@@ -119,10 +128,15 @@ export namespace THUG2Frame
     {
         if (!overlay)
             Strip = FindStrip();
-        ProjectionAspect = Aspect();
-        if (Strip <= 0.0f || (overlay && !FrameLetterboxed) || FrameViewport.get()[0] != 0 || FrameViewport.get()[2] != FrameTargetWidth.get())
+        if (Strip <= 0.0f || FrameTargetWidth.get() <= 0 || FrameTargetHeight.get() <= 0)
+        {
+            ProjectionAspect = ScreenAspect;
             return;
+        }
         const auto picture = Picture();
+        ProjectionAspect = static_cast<float>(picture.width) / static_cast<float>(picture.height);
+        if ((overlay && !FrameLetterboxed) || FrameViewport.get()[0] != 0 || FrameViewport.get()[2] != FrameTargetWidth.get())
+            return;
         if (!overlay)
             ClearBars(picture);
         FrameViewport.get()[0] = picture.x;
@@ -131,9 +145,10 @@ export namespace THUG2Frame
         FrameViewport.get()[3] = picture.height;
     }
 
-    inline void Install(float width, float height, const int32_t* borders)
+    inline void Install(float width, float height)
     {
-        Borders = borders;
+        FixSettings().OnChange("MAIN.CutsceneBorders", UpdateBorders);
+        UpdateBorders();
         FrameWidth = std::min(width, height * (4.0f / 3.0f));
         FrameHeight = std::min(height, width * 0.75f);
         OffsetY = (height - FrameHeight) * 0.5f;

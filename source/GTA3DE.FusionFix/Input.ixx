@@ -15,14 +15,23 @@ namespace
     SafetyHookMid mouseSampleHook;
     MouseDelta frameDelta;
     bool mousePathActive = false;
+    bool rawMouseRegistered = false;
 
     uintptr_t BaseUpdatePad(void* pad, float time, float deltaTime, bool enableMouse)
     {
         // Drain on every pad update, including menus and controller frames.
         // An inactive frame must never replay its movement after resuming.
         if (Settings.rawMouseInput)
+        {
             RefreshRawMouseRegistration();
-        frameDelta = ConsumeRawMouse();
+            rawMouseRegistered = true;
+            frameDelta = ConsumeRawMouse();
+        }
+        else if (std::exchange(rawMouseRegistered, false))
+        {
+            ReleaseRawMouseRegistration();
+            frameDelta = ConsumeRawMouse();
+        }
         mousePathActive = false;
         const auto result = baseUpdatePadHook.ccall<uintptr_t>(pad, time, deltaTime, enableMouse);
         SetCursorCapture(mousePathActive);
@@ -50,7 +59,7 @@ public:
             mouseSampleHook = safetyhook::create_mid(sample, [](SafetyHookContext& context)
             {
                 mousePathActive = true;
-                if (Settings.rawMouseInput && IsRawMouseReady())
+                if (Settings.rawMouseInput && IsRawMouseReady(frameDelta))
                 {
                     context.xmm0.f32[0] = frameDelta.x;
                     context.xmm0.f32[1] = frameDelta.y;

@@ -14,6 +14,8 @@ export namespace LARushCamera
     inline SafetyHookInline FovHook;
     inline std::atomic<bool> Refresh{ false };
     inline std::atomic<bool> LowriderActive{ false };
+    inline std::atomic<float> FovFactor{ 1.0f };
+    inline std::atomic<int> BorderMode{ 3 };
     inline int Width = 0, Height = 0;
     inline uint8_t* BorderedCamera = nullptr;
     inline int32_t SavedViewport[4]{};
@@ -23,25 +25,23 @@ export namespace LARushCamera
     // Called before Present: the game may still have its own scene target bound, so clear the back buffer itself.
     inline void ClearOutside(IDirect3DDevice9* device, int left, int top, int boxWidth, int boxHeight)
     {
-        D3DRECT bars[4]{}; DWORD count = 0;
+        RECT bars[4]{};
+        size_t count = 0;
         if (left > 0) { bars[count++] = { 0, 0, left, Height }; bars[count++] = { left + boxWidth, 0, Width, Height }; }
         if (top > 0) { bars[count++] = { left, 0, left + boxWidth, top }; bars[count++] = { left, top + boxHeight, left + boxWidth, Height }; }
         if (!count)
             return;
-        D3DVIEWPORT9 viewport{};
-        IDirect3DSurface9* target = nullptr;
         IDirect3DSurface9* back = nullptr;
-        if (FAILED(device->GetViewport(&viewport)) || FAILED(device->GetRenderTarget(0, &target)))
+        if (FAILED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &back)))
             return;
-        if (SUCCEEDED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &back)))
+        D3DSURFACE_DESC desc{};
+        if (SUCCEEDED(back->GetDesc(&desc)) && desc.Width == static_cast<UINT>(Width) && desc.Height == static_cast<UINT>(Height))
         {
-            if (SUCCEEDED(device->SetRenderTarget(0, back)))
-                device->Clear(count, bars, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
-            back->Release();
+            for (size_t i = 0; i < count; ++i)
+                if (FAILED(device->ColorFill(back, &bars[i], 0xFF000000)))
+                    break;
         }
-        device->SetRenderTarget(0, target);
-        device->SetViewport(&viewport);
-        target->Release();
+        back->Release();
     }
 
     inline double __fastcall Fov(uint8_t* camera, void*)
@@ -54,7 +54,7 @@ export namespace LARushCamera
             camera != Cameras.get_ptr() + index * 832 || !player || player[1704] ||
             (player[1712] && !LowriderActive.load(std::memory_order_relaxed)) || player[1722])
             return original;
-        return std::clamp(original * std::clamp(FixSettings().Float("MAIN.FOVFactor"), 0.5f, 2.0f), 0.05, 2.2);
+        return std::clamp(original * std::clamp(FovFactor.load(std::memory_order_relaxed), 0.5f, 2.0f), 0.05, 2.2);
     }
 
     inline void Frame()
@@ -74,7 +74,7 @@ export namespace LARushCamera
         const auto player = Player.get();
         // Cutscene borders: 1 letterbox (bars above and below on screens narrower than 4:3), 2 pillarbox (side bars on
         // wider screens), 3 both. The story cameras then keep their 4:3 framing inside the box.
-        const int borderMode = std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3);
+        const int borderMode = std::clamp(BorderMode.load(std::memory_order_relaxed), 0, 3);
         const int sceneWidth = (borderMode & 2) ? boxWidth : Width;
         const int sceneHeight = (borderMode & 1) ? boxHeight : Height;
         const int sceneLeft = (Width - sceneWidth) / 2;
@@ -108,7 +108,7 @@ export namespace LARushCamera
             if (LARushWindow::Device.get())
                 ClearOutside(LARushWindow::Device.get(), sceneLeft, sceneTop, sceneWidth, sceneHeight);
         }
-        if (Refresh.exchange(false, std::memory_order_relaxed) && index >= 0 && index < 26)
+        if (Refresh.exchange(false, std::memory_order_acquire) && index >= 0 && index < 26)
         {
             const auto current = Cameras.get_ptr() + index * 832;
             *reinterpret_cast<int32_t*>(current + 808) = 1;
@@ -127,6 +127,7 @@ export namespace LARushCamera
         auto fov = hook::pattern("51 56 8B F1 D9 86 BC 01 00 00 83 EC 08 D8 35 ? ? ? ? D9 5C 24 0C");
         FovHook = safetyhook::create_inline(fov.get_first(), Fov);
         LARushWindow::CameraFrame = Frame;
-        FixSettings().OnChange("MAIN.FOVFactor", []() { Refresh.store(true, std::memory_order_relaxed); });
+        BindLiveSetting("MAIN.FOVFactor", FovFactor, []() { Refresh.store(true, std::memory_order_release); });
+        BindLiveSetting("MAIN.CutsceneBorders", BorderMode);
     }
 }

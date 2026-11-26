@@ -20,6 +20,18 @@ namespace
     // The Joy1-16, JoyX and JoyY commands the game really uses (its user ini), filled in at startup
     std::mutex BindingsMutex;
     std::array<std::string, 18> Bindings;
+    std::atomic<uint32_t> CustomBindings{ 0 };
+    thread_local unsigned AutomaticBindingDepth = 0;
+
+    constexpr std::pair<const wchar_t*, const char*> DefaultBindings[] =
+    {
+        { L"Joy1", "Interaction" }, { L"Joy2", "Duck" }, { L"Joy3", "Scope" }, { L"Joy4", "Jump" },
+        { L"Joy5", "BackToWall" }, { L"Joy6", "QuickInventory" }, { L"Joy7", "AltFire" }, { L"Joy8", "Fire" },
+        { L"Joy9", "" }, { L"Joy10", "" }, { L"Joy11", "SwitchROF" }, { L"Joy12", "ResetCamera" },
+        { L"Joy13", "DPadUp" }, { L"Joy14", "DPadDown" }, { L"Joy15", "DPadLeft" }, { L"Joy16", "DPadRight" },
+        { L"JoyX", "Axis aStrafe DeadZone=0.3" }, { L"JoyY", "Axis aForward DeadZone=0.3" },
+        { L"JoyZ", "Axis aTurn DeadZone=0.3" }, { L"JoyV", "Axis aLookUp DeadZone=0.3" }
+    };
 
     using Family = PadInput::Family;
 
@@ -275,34 +287,6 @@ namespace
         WrappedPrintScaleHook.unsafe_ccall(canvas, style, width, height, font, prompt.empty() ? text : prompt.c_str(), scaleX, scaleY, flags);
     }
 
-    // "Axis aTurn DeadZone=0.3" with its speed multiplied
-    std::string ScaledAxis(const std::string& binding, float factor)
-    {
-        if (binding.rfind("Axis ", 0) != 0)
-            return binding;
-        auto result = binding;
-        float speed = 1.0f;
-        auto at = result.find("Speed=");
-        if (at != std::string::npos)
-        {
-            size_t end = at + 6;
-            while (end < result.size() && result[end] != ' ')
-                ++end;
-            speed = static_cast<float>(atof(result.substr(at + 6, end - at - 6).c_str()));
-            result.erase(at, end - at);
-            while (at < result.size() && result[at] == ' ')
-                result.erase(at, 1);
-            if (!result.empty() && result.back() == ' ')
-                result.pop_back();
-        }
-        auto name = result.find(' ', 5);
-        if (name == std::string::npos)
-            name = result.size();
-        result.insert(name, std::format(" Speed={:.3f}", speed * factor));
-        return result;
-    }
-
-    std::atomic<bool> BindingsChanged = false;
 }
 
 export namespace Gamepad
@@ -346,49 +330,53 @@ export namespace Gamepad
         return PadIsLastDevice;
     }
 
-    // The command of pad button 1-16 (17 = JoyX, 18 = JoyY) as the game's user ini binds it
     void SetBinding(int button, const std::string& command)
     {
-        if (button < 1 || button > 18)
+        if (button < 1 || button > static_cast<int>(std::size(DefaultBindings)))
             return;
+        const auto index = static_cast<size_t>(button - 1);
+        const auto bit = uint32_t{ 1 } << index;
+        if (!command.empty() && _stricmp(command.c_str(), DefaultBindings[index].second))
+            CustomBindings.fetch_or(bit);
+        else
+            CustomBindings.fetch_and(~bit);
+
+        if (index < Bindings.size())
         {
             std::lock_guard lock(BindingsMutex);
-            Bindings[button - 1] = command;
+            Bindings[index] = command;
         }
         PromptRevision.fetch_add(1, std::memory_order_release);
     }
 
-    std::string Binding(int button)
+    struct AutomaticBindingScope
     {
-        std::lock_guard lock(BindingsMutex);
-        return button >= 1 && button <= 18 ? Bindings[button - 1] : std::string{};
-    }
+        AutomaticBindingScope() { ++AutomaticBindingDepth; }
+        ~AutomaticBindingScope() { --AutomaticBindingDepth; }
+        AutomaticBindingScope(const AutomaticBindingScope&) = delete;
+        AutomaticBindingScope& operator=(const AutomaticBindingScope&) = delete;
+    };
 
-    // The pad's look bindings with MAIN.GamepadCameraSpeed and MAIN.InvertGamepadY
-    std::string TurnBinding()
+    bool KeepCustomBinding(const wchar_t* command)
     {
-        return ScaledAxis(FixSettings().String("INPUT.JoyZ"), std::clamp(FixSettings().Float("MAIN.GamepadCameraSpeed"), 0.25f, 3.0f));
-    }
-
-    std::string LookUpBinding()
-    {
-        const float invert = FixSettings().Bool("MAIN.InvertGamepadY") ? -1.0f : 1.0f;
-        return ScaledAxis(FixSettings().String("INPUT.JoyV"), invert * std::clamp(FixSettings().Float("MAIN.GamepadCameraSpeed"), 0.25f, 3.0f));
-    }
-
-    // True once after the look settings changed
-    bool TakeBindingsChanged()
-    {
-        return BindingsChanged.exchange(false);
+        if (!AutomaticBindingDepth || !command)
+            return false;
+        const auto mask = CustomBindings.load();
+        const std::wstring_view text(command);
+        const auto name = text.substr(0, text.find_first_of(L" \t"));
+        for (size_t i = 0; i < std::size(DefaultBindings); ++i)
+        {
+            const std::wstring_view key(DefaultBindings[i].first);
+            if ((mask & (uint32_t{ 1 } << i)) && name.size() == key.size() && !_wcsnicmp(name.data(), key.data(), key.size()))
+                return true;
+        }
+        return false;
     }
 
     void Init()
     {
         for (const auto id : { "MAIN.GamepadIcons", "MAIN.TextLanguage" })
             FixSettings().OnChange(id, []() { PromptRevision.fetch_add(1, std::memory_order_release); });
-
-        for (auto id : { "MAIN.GamepadCameraSpeed", "MAIN.InvertGamepadY", "INPUT.JoyZ", "INPUT.JoyV" })
-            FixSettings().OnChange(id, []() { BindingsChanged = true; });
     }
 
     // The canvas text drawing (training prompts)

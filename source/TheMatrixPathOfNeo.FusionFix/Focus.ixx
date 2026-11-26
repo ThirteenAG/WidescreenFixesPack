@@ -31,7 +31,7 @@ export namespace NeoFocus
         const bool pause = window && Enabled && (GetForegroundWindow() != window || IsIconic(window));
         if (pause)
         {
-            if (!NativePaused && ClockHook)
+            if (!NativePaused)
             {
                 ClockHook.stdcall<double>(2);
                 NativePaused = true;
@@ -51,19 +51,15 @@ export namespace NeoFocus
 
     inline void Install()
     {
-        Enabled = FixSettings().Bool("MAIN.PauseOnFocusLoss");
-        FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+        WatchNeoSetting("MAIN.PauseOnFocusLoss", [](const std::string& value)
         {
-            Enabled = FixSettings().Bool("MAIN.PauseOnFocusLoss");
+            Enabled = value == "1";
         });
         auto tick = hook::pattern("A0 ? ? ? ? 84 C0 74 0F A1 ? ? ? ? C7 80 E0 02 00 00 00 00 00 00 A1");
         auto clock = hook::pattern("A1 ? ? ? ? 83 EC 08 53 55 33 ED 3B C5 56 57 75 38 8D 44 24 10");
         ClockHook = safetyhook::create_inline(clock.get_first(), Clock, SafetyHookInline::StartDisabled);
         (void)ClockHook.enable();
-        if (ClockHook)
-        {
-            TickHook = safetyhook::create_inline(tick.get_first(), Tick, SafetyHookInline::StartDisabled);
-            (void)TickHook.enable();
-        }
+        TickHook = safetyhook::create_inline(tick.get_first(), Tick, SafetyHookInline::StartDisabled);
+        (void)TickHook.enable();
     }
 }

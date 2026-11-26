@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include <mutex>
+#include <unordered_map>
 
 export module Echelon;
 
@@ -8,33 +10,49 @@ import ComVars;
 
 namespace AEPlayerController
 {
+    void* lastController = nullptr;
+    void* lastState = nullptr;
+    std::wstring lastType;
+
+    void Reset()
+    {
+        if (lastController)
+            UObject::objectStates.erase(lastType);
+        lastController = nullptr;
+        lastState = nullptr;
+        lastType.clear();
+    }
+
     SafetyHookInline shTick = {};
     void __fastcall Tick(void* playerController, void* edx, int a2, int a3)
     {
         if (playerController)
         {
-            auto ptr = *((uintptr_t*)playerController + 3);
-            if (ptr)
+            const auto object = static_cast<void**>(playerController);
+            const auto frame = static_cast<void**>(object[3]);
+            // An inactive state frame points at the object's class.
+            void* state = frame && frame[7] != object[9] ? frame[7] : nullptr;
+            if (playerController != lastController || state != lastState)
             {
-                auto ptr2 = *(uintptr_t*)(ptr + 0x1C);
-                if (ptr2)
+                wchar_t buffer[256];
+                if (playerController != lastController)
                 {
-                    auto StateID = *(int*)(ptr2 + 0x20);
-
-                    wchar_t buffer[256];
-                    auto objName = std::wstring_view(UObject::GetFullName(playerController, edx, buffer));
-
-                    size_t spacePos = objName.find(L' ');
-                    std::wstring type = (spacePos != std::wstring::npos) ? std::wstring(objName.substr(0, spacePos)) : std::wstring(objName);
-
-                    auto svStateName = std::wstring_view(UObject::GetFullName(UObject::FindState(playerController, edx, StateID), edx, buffer));
-                    size_t lastDot = svStateName.rfind(L'.');
-                    std::wstring stateName = (lastDot != std::wstring::npos) ? std::wstring(svStateName.substr(lastDot + 1)) : std::wstring(svStateName);
-                    UObject::objectStates[type] = stateName;
+                    Reset();
+                    const std::wstring_view name(UObject::GetFullName(playerController, edx, buffer));
+                    lastType = name.substr(0, name.find(L' '));
+                    lastController = playerController;
                 }
+                lastState = state;
+                if (state)
+                {
+                    const std::wstring_view name(UObject::GetFullName(state, edx, buffer));
+                    const auto dot = name.rfind(L'.');
+                    UObject::objectStates[lastType] = dot == name.npos ? name : name.substr(dot + 1);
+                }
+                else
+                    UObject::objectStates.erase(lastType);
             }
         }
-
         return shTick.unsafe_fastcall(playerController, edx, a2, a3);
     }
 
@@ -86,7 +104,26 @@ namespace AEPlayerCam
     constexpr uintptr_t kLevelOff = 0x78;
     constexpr uintptr_t kDeltaTimeOff = 0x75C;
 
-    float accumulator = 0.0f;
+    std::mutex clockMutex;
+    std::unordered_map<void*, float> elapsed;
+
+    int EffectSteps(void* camera, float delta)
+    {
+        std::lock_guard lock(clockMutex);
+        auto& accumulator = elapsed[camera];
+        accumulator += delta;
+        int steps = 0;
+        while (accumulator >= kStep)
+        {
+            accumulator -= kStep;
+            if (++steps == kMaxSteps)
+            {
+                accumulator = 0.0f;
+                break;
+            }
+        }
+        return steps;
+    }
 
     SafetyHookInline shUpdateView = {};
     void __fastcall UpdateView(void* cam, void* edx, int pitch, int yaw, int roll, int bAdd)
@@ -104,9 +141,8 @@ namespace AEPlayerCam
         if (!(realDt > 0.0f))
             return shUpdateView.unsafe_fastcall(cam, edx, pitch, yaw, roll, bAdd);
 
-        accumulator += realDt;
-
-        if (accumulator < kStep)
+        const int steps = EffectSteps(cam, realDt);
+        if (!steps)
         {
             // Apply the view without advancing the effects
             constexpr uintptr_t kEffects[] = { kHitRoll, kHitFadeOut, kTiltPitch, kTiltTarget, kTiltSpeed, kTiltFadeOut, kShakeRoll, kShakeTarget, kShakeSpeed, kShakeFadeOut };
@@ -127,22 +163,17 @@ namespace AEPlayerCam
             return;
         }
 
-        int steps = 0;
-        while (accumulator >= kStep)
-        {
-            accumulator -= kStep;
-            if (++steps >= kMaxSteps)
-            {
-                accumulator = 0.0f;
-                break;
-            }
-        }
-
         levelDt = kStep;
         for (int i = 0; i < steps; ++i)
             shUpdateView.unsafe_fastcall(cam, edx, pitch, yaw, roll, bAdd);
         levelDt = realDt;
     }
+}
+
+export void ResetPlayerControllerState(void* object = nullptr)
+{
+    if (!object || object == AEPlayerController::lastController || object == AEPlayerController::lastState)
+        AEPlayerController::Reset();
 }
 
 export void InitEchelon()
@@ -158,6 +189,15 @@ export void InitEchelon()
     // Camera hit, tilt and shake at high frame rates
     pattern = hook::pattern("81 EC 64 01 00 00 53 55 8B D9 8B 83 4C 12 00 00");
     AEPlayerCam::shUpdateView = safetyhook::create_inline(pattern.get_first(), AEPlayerCam::UpdateView);
+
+    // ConditionalDestroy sets the destroyed flag before dispatching the native virtual destructor path.
+    pattern = hook::pattern("0D 00 00 80 00 89 41 1C 8B 01 FF 50 24 B8 01 00 00 00");
+    static auto destroyHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+    {
+        ResetPlayerControllerState(reinterpret_cast<void*>(regs.ecx));
+        std::lock_guard lock(AEPlayerCam::clockMutex);
+        AEPlayerCam::elapsed.erase(reinterpret_cast<void*>(regs.ecx));
+    });
 
     // Aiming camera smoothing
     pattern = hook::pattern("6B D2 ? 8B 8C 32");

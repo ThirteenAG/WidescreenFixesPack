@@ -227,9 +227,13 @@ namespace MenuConstraintHooks
         if (centre) hooks.push_back(&CentreMouse);
         if (transition) hooks.push_back(&Transition);
         if (preview) hooks.push_back(&Preview);
-        for (auto hook : hooks)
-            hook->enable();
-        Mouse.enable();
+        if (!Mouse || !std::ranges::all_of(hooks, [](auto hook) { return bool(*hook) && hook->enable().has_value(); }) || !Mouse.enable())
+        {
+            Mouse.reset();
+            for (auto hook : hooks)
+                hook->reset();
+            return false;
+        }
         return true;
     }
 }
@@ -254,17 +258,19 @@ public:
                 MenuCanvas::Constraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.MenuAspectRatioConstraint"));
                 if (MenuCanvas::Constraint && !std::isfinite(*MenuCanvas::Constraint))
                     MenuCanvas::Constraint.reset();
-                static bool installed = false;
-                if (MenuCanvas::Constraint && !installed)
-                {
-                    installed = true;
-                    MenuCanvas::Enabled = MenuConstraintHooks::Install();
-                }
                 if (MenuCanvas::Enabled)
                     onResChange().executeAll(RsGlobal->width, RsGlobal->height);
             };
             Apply();
             OnSettingChange("MAIN.MenuAspectRatioConstraint", []() { Apply(); });
+            WFP::onGameProcessEvent() += []()
+            {
+                if (MenuCanvas::Constraint && !MenuCanvas::Enabled && MenuConstraintHooks::Install())
+                {
+                    MenuCanvas::Enabled = true;
+                    onResChange().executeAll(RsGlobal->width, RsGlobal->height);
+                }
+            };
         };
     }
 } MenuConstraint;

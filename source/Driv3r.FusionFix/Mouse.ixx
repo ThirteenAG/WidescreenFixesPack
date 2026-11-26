@@ -88,13 +88,12 @@ public:
         WFP::onInitEvent() += []()
         {
 
-            RawMouseEnabled = FixSettings().Bool("MAIN.RawInputMouse");
-            Cursor::RawSetting.store(RawMouseEnabled);
-            FixSettings().OnChange("MAIN.RawInputMouse", []()
+            Driv3rSettings::Bind("MAIN.RawInputMouse", true, [](bool enabled)
             {
-                Cursor::RawSetting.store(FixSettings().Bool("MAIN.RawInputMouse"));
+                Cursor::RawSetting.store(enabled);
                 Cursor::ResetRequested.store(true);
             });
+            RawMouseEnabled = Cursor::RawSetting.load();
 
             // The game reads buffered mouse data every 8 ms by GetTickCount, so about every 16 ms, and only 32 events at a time, which delays
             // and drops fast movement. It keeps that movement until the next read, and whatever reads the controls in between gets it again or misses it.
@@ -178,7 +177,7 @@ public:
                 auto speed = reinterpret_cast<float*>(regs.esi + 0x7C4);
                 Cursor::SavedSpeed = *speed;
 
-                const float configuredSensitivity = FixSettings().Float("MAIN.CursorSensitivity");
+                const float configuredSensitivity = Driv3rSettings::CursorSensitivity.load();
                 const float sensitivity = std::isfinite(configuredSensitivity) ? std::clamp(configuredSensitivity, 0.0f, 10.0f) : 1.0f;
                 state->x = Cursor::Pixels(static_cast<double>(MouseRead::X) * *speed * sensitivity + Cursor::RemainderX, Cursor::RemainderX);
                 state->y = Cursor::Pixels(static_cast<double>(MouseRead::Y) * *speed * sensitivity + Cursor::RemainderY, Cursor::RemainderY);

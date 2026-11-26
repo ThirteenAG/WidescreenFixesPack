@@ -3,7 +3,9 @@ module;
 #include <stdafx.h>
 #include "common.h"
 #include "FixSettings.hpp"
+#include "Shared/RWGTA/RefreshRatePicker.hpp"
 #include <mmsystem.h>
+#include <commctrl.h>
 #pragma comment(lib, "winmm.lib") // needed for timeBeginPeriod()/timeEndPeriod()
 
 export module Menu;
@@ -270,11 +272,8 @@ export GameRef<CMenuManager> FrontendMenuManager([]() -> CMenuManager*
 });
 
 // The gameplay frame rate limit (MAIN.FPSLimit, 0: none)
-static int FrameLimit()
-{
-    static auto& fps = FixSettings().Int("MAIN.FPSLimit");
-    return std::max(0, fps);
-}
+static int frameLimit = 60;
+static int FrameLimit() { return frameLimit; }
 
 namespace CText
 {
@@ -332,13 +331,14 @@ namespace NativeRows
 
     void ApplyBorders()
     {
-        static auto& borders = FixSettings().Int("MAIN.CutsceneBorders");
+        const int borders = ReadFixSetting("MAIN.CutsceneBorders", 3);
         FrontendMenuManager->m_bWidescreenOn = int8_t(std::clamp(borders, 0, int(CutsceneBordersMode::Both)));
         SyncedBorders = FrontendMenuManager->m_bWidescreenOn;
     }
 
     void ApplyLimiter()
     {
+        frameLimit = std::max(0, ReadFixSetting("MAIN.FPSLimit", 60));
         FrontendMenuManager->m_bPrefsFrameLimiter = StepOfFrameLimit(FrameLimit());
         SyncedLimiter = FrontendMenuManager->m_bPrefsFrameLimiter;
     }
@@ -354,7 +354,8 @@ namespace NativeRows
         if (FrontendMenuManager->m_bPrefsFrameLimiter != SyncedLimiter)
         {
             SyncedLimiter = FrontendMenuManager->m_bPrefsFrameLimiter;
-            FixSettings().Set("MAIN.FPSLimit", std::to_string(FrameLimitOfStep(SyncedLimiter)));
+            frameLimit = FrameLimitOfStep(SyncedLimiter);
+            FixSettings().Set("MAIN.FPSLimit", std::to_string(frameLimit));
         }
     }
 }
@@ -584,6 +585,44 @@ static void __fastcall DrawMenuWithIndicators(uint8_t* manager, void*)
     FixOptions::DrawScrollIndicators();
 }
 
+// MAIN.PauseOnFocusLoss: the game pauses through its own activation messages, which a window wrapper can take
+// away. The game's menu opens on the first game tick after the window lost the foreground.
+namespace PauseOnFocusLoss
+{
+    int32_t* GameState = nullptr;               // gGameState: 9 = playing
+    bool Requested = false;
+
+    LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR subclass, DWORD_PTR)
+    {
+        if ((message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE) || (message == WM_ACTIVATEAPP && !wParam))
+            Requested = true;
+        else if (message == WM_NCDESTROY)
+        {
+            Requested = false;
+            RemoveWindowSubclass(window, WindowProc, subclass);
+        }
+        return DefSubclassProc(window, message, wParam, lParam);
+    }
+
+    void Install()
+    {
+        // The first member of RenderWare's Windows platform data is the game window
+        const auto window = *static_cast<const HWND*>(RsGlobal->ps);
+        if (!SetWindowSubclass(window, WindowProc, 0, 0))
+            return;
+
+        WFP::onGameProcessEvent() += [window]()
+        {
+            if (!std::exchange(Requested, false) || GetForegroundWindow() == GetAncestor(window, GA_ROOT) ||
+                *GameState != 9 || FrontendMenuManager->m_bMenuActive || FrontendMenuManager->m_bActivateMenuNextFrame)
+                return;
+
+            FrontendMenuManager->m_bDontDrawFrontEnd = false;
+            FrontendMenuManager->m_bActivateMenuNextFrame = true;
+        };
+    }
+}
+
 class Menu
 {
 public:
@@ -591,14 +630,21 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            // Full screen used the lowest refresh rate of 60 Hz or more for the resolution, which holds the frame rate
-            // at 60 wherever the picture is synced to the display: take the highest one instead
-            auto pattern = hook::pattern("BD FF FF FF 7F 75 ? BB 16 00 00 00");
-            injector::WriteMemory<uint32_t>(pattern.get_first(1), 0, true);
-            pattern = hook::pattern("3B C5 73 ? 83 F8 3C");
-            injector::WriteMemory<uint8_t>(pattern.get_first(2), 0x76, true); // jnb -> jbe
-            pattern = hook::pattern("81 FD FF FF FF 7F 75 ? 5F");
-            injector::WriteMemory<uint32_t>(pattern.get_first(2), 0, true);
+            RWGTA::InstallRefreshRatePicker<true>("3B C5 73 07 83 F8 3C 72 02 8B E8");
+            PauseOnFocusLoss::GameState = *hook::pattern("A1 ? ? ? ? 83 F8 09 0F 87 ? ? ? ? FF 24 85 ? ? ? ? ? ? E8").get_first<int32_t*>(1);
+
+            static auto fading = *hook::pattern("A0 ? ? ? ? 83 C4 08 84 C0 75 ? A0 ? ? ? ? 84 C0 0F 85 ? ? ? ? 8D 44 24 00").get_first<bool*>(1);
+            auto renderSplash = hook::pattern("83 EC 18 E8 ? ? ? ? A1 ? ? ? ? 8B 0D ? ? ? ? 83 C0 05");
+            static auto paceSplash = safetyhook::create_mid(renderSplash.get_first(), [](SafetyHookContext&)
+            {
+                if (*fading)
+                {
+                    static FrameLimiter limiter;
+                    static std::once_flag initialized;
+                    std::call_once(initialized, []() { limiter.Init(FrameLimiter::FPS_ACCURATE, 60.0f); });
+                    limiter.Sync();
+                }
+            });
         };
 
         WFP::onGameInitEvent() += []()
@@ -609,11 +655,13 @@ public:
             OnSettingChange("MAIN.CutsceneBorders", NativeRows::ApplyBorders);
             OnSettingChange("MAIN.FPSLimit", NativeRows::ApplyLimiter);
             WFP::onGameProcessEvent() += NativeRows::Update;
+            if (FixSettings().Bool("MAIN.PauseOnFocusLoss"))
+                PauseOnFocusLoss::Install();
 
-            menuFrameLimit = static_cast<float>(std::max(0, FixSettings().Int("MAIN.FPSLimitMenus")));
+            menuFrameLimit = static_cast<float>(std::max(0, ReadFixSetting("MAIN.FPSLimitMenus", 60)));
             OnSettingChange("MAIN.FPSLimitMenus", []()
             {
-                menuFrameLimit = static_cast<float>(std::max(0, FixSettings().Int("MAIN.FPSLimitMenus")));
+                menuFrameLimit = static_cast<float>(std::max(0, ReadFixSetting("MAIN.FPSLimitMenus", 60)));
                 menuFrameLimitChanged = true;
             });
 
@@ -700,6 +748,39 @@ public:
                 if (*(int8_t*)(regs.esp + 0x8) == -1)
                     menuDirection = -1;
                 pref = NextFrameLimiter(pref, menuDirection);
+            });
+
+            // A new screen resolution (CMenuManager::ProcessPCMenuOptions) centred the cursor and selected the sixth
+            // row of Advanced Display Setup (Mip Mapping). The selection stays on Resolution, and the menu doesn't
+            // take the centred cursor or the resized window for a mouse movement until the cursor really moves.
+            static POINT resolutionCursor{};
+            static bool resolutionCursorHeld = false;
+            pattern = hook::pattern("88 9E B8 00 00 00 C7 46 54 05 00 00 00 E8");
+            injector::MakeNOP(pattern.get_first(6), 7, true);
+            static auto ResolutionAppliedHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext&)
+            {
+                resolutionCursorHeld = GetCursorPos(&resolutionCursor) != FALSE;
+            });
+
+            // CMenuManager::UserInput's mouse movement checks (previous mouse position at +1AF8h/+1AFCh, current
+            // at +BCh/+C0h, the window's mouse position at +E0h/+E4h)
+            pattern = hook::pattern("8A 86 B8 00 00 00 84 C0 C6 44 24 0C 00 C6 44 24 08 00");
+            static auto MouseMovedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                if (!resolutionCursorHeld)
+                    return;
+                POINT cursor{};
+                if (!GetCursorPos(&cursor) || cursor.x != resolutionCursor.x || cursor.y != resolutionCursor.y)
+                {
+                    resolutionCursorHeld = false;
+                    return;
+                }
+                auto manager = reinterpret_cast<uint8_t*>(regs.esi);
+                auto field = [manager](size_t offset) -> int32_t& { return *reinterpret_cast<int32_t*>(manager + offset); };
+                const int32_t x = std::clamp(field(0xE0), 0, std::max(0, RsGlobal->width));
+                const int32_t y = std::clamp(field(0xE4), 0, std::max(0, RsGlobal->height));
+                field(0xBC) = field(0x1AF8) = x;
+                field(0xC0) = field(0x1AFC) = y;
             });
 
             pattern = hook::pattern("75 ? 80 3D ? ? ? ? ? 74 ? B9");

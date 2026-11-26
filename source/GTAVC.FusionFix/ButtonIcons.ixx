@@ -27,6 +27,8 @@ using namespace RWGTA::ButtonIcons;
 
 namespace
 {
+    bool keyboardIcons = true;
+
     constexpr wchar_t PadFirst = 0xE000;
     constexpr wchar_t KeyFirst = 0xE100;
     constexpr int KeyCount = int(std::size(KeyPictures));
@@ -262,8 +264,7 @@ namespace
             }
             else
             {
-                static auto& keyIcons = FixSettings().Int("MAIN.KeyboardIcons");
-                if (keyIcons)
+                if (keyboardIcons)
                 {
                     int picture = KeyPictureOf(static_cast<uint8_t*>(manager), action);
                     if (picture >= 0)
@@ -529,8 +530,7 @@ namespace
     {
         if (Pad::IsPadLastDevice())
             return 1 + (Pad::IsModernLayout() ? 2 : 0) + int(Pad::PlayerSeat()) * 4;
-        static auto& keyIcons = FixSettings().Int("MAIN.KeyboardIcons");
-        return keyIcons ? 16 : 0;
+        return keyboardIcons ? 16 : 0;
     }
 
     SafetyHookInline shSetHelpMessage;
@@ -581,6 +581,10 @@ public:
 
         WFP::onGameInitEvent() += []()
         {
+            const auto updateKeyboardIcons = []() { keyboardIcons = ReadFixSetting("MAIN.KeyboardIcons", 1) != 0; };
+            updateKeyboardIcons();
+            OnSettingChange("MAIN.KeyboardIcons", updateKeyboardIcons);
+
             if (GetModuleHandleW(L"GInputVC.asi"))
                 return;
 

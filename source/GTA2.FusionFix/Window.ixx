@@ -36,11 +36,19 @@ export namespace GTA2Window
     {
         if (windowMode == 2)
         {
-            MONITORINFO monitor{ sizeof(monitor) };
+            MONITORINFOEXW monitor{};
+            monitor.cbSize = sizeof(monitor);
             const auto display = InputDevices::Window ? MonitorFromWindow(InputDevices::Window, MONITOR_DEFAULTTONEAREST) :
                 MonitorFromPoint(POINT{}, MONITOR_DEFAULTTOPRIMARY);
             if (GetMonitorInfoW(display, &monitor))
+            {
+                // The desktop's mode: leaving the exclusive fullscreen, the monitor still has the game's mode here.
+                DEVMODEW mode{};
+                mode.dmSize = sizeof(mode);
+                if (EnumDisplaySettingsW(monitor.szDevice, ENUM_REGISTRY_SETTINGS, &mode) && mode.dmPelsWidth && mode.dmPelsHeight)
+                    return { int(mode.dmPelsWidth), int(mode.dmPelsHeight) };
                 return { monitor.rcMonitor.right - monitor.rcMonitor.left, monitor.rcMonitor.bottom - monitor.rcMonitor.top };
+            }
         }
         return { nResX, nResY };
     }
@@ -57,6 +65,8 @@ export namespace GTA2Window
         (void)window;
         if (fullscreenWidth.is_initialized()) fullscreenWidth = nResX;
         if (fullscreenHeight.is_initialized()) fullscreenHeight = nResY;
+        // Windowed and borderless can have the same size, which alone wouldn't reset the video mode.
+        bVideoModeChanged = 1;
         ReloadVideoMode();
     }
 
@@ -116,6 +126,13 @@ export namespace GTA2Window
                 static SafetyHookInline windowHook;
                 windowHook = safetyhook::create_inline(static_cast<uint8_t*>(call) - 3, static_cast<char(__cdecl*)()>([]() -> char
                 {
+                    if (windowedMode && hWnd)
+                    {
+                        // The game sizes the window and then makes its picture the client area's size: a window larger
+                        // than the screen must not be shrunk by Windows in between.
+                        const auto frame = WindowStyle::FrameOf(windowStyle.get(), DWORD(GetWindowLongW(hWnd, GWL_EXSTYLE)), WindowStyle::DpiOf(hWnd));
+                        WindowStyle::detail::AllowSize(hWnd, nClientWidth + frame.Width(), nClientHeight + frame.Height());
+                    }
                     auto result = windowHook.ccall<char>();
                     if (result && hWnd)
                     {

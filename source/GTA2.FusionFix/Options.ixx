@@ -86,7 +86,7 @@ export namespace GTA2Options
     void SaveInt(const char* section, const char* key, int value, bool nativeApplied = false) { Save(section, key, std::to_string(value), nativeApplied); }
     void SaveFloat(const char* section, const char* key, float value)
     {
-        char text[32]{}; sprintf_s(text, "%.2f", value); Save(section, key, text);
+        Save(section, key, OtherPlugins::FixedText(value, 2));
     }
     void SaveKey(const char* section, const char* key, int value)
     {
@@ -125,7 +125,8 @@ export namespace GTA2Options
     std::wstring OnOff(bool value) { return value ? L"ON" : L"OFF"; }
     std::wstring Number(float value)
     {
-        wchar_t text[16]{}; swprintf_s(text, L"%.2f", value); return text;
+        auto text = OtherPlugins::FixedText(value, 2);
+        return std::wstring(text.begin(), text.end());
     }
 
     // entries ----------------------------------------------------------------

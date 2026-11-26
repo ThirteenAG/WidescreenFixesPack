@@ -22,6 +22,8 @@
   "WFP_GAMEPADICONS": "Ikony przycisków",
   "WFP_ICONS_AUTO": "Automatycznie",
   "WFP_SKIPINTRO": "Pomiń intro",
+  "WFP_SKIPPRESSSTART": "Pomiń „Naciśnij Start”",
+  "WFP_DESC_SKIPPRESSSTART": "Ekran tytułowy przejdzie dalej automatycznie, bez naciskania przycisku Start.",
   "WFP_U2SAVEBONUS": "Bonus za zapis Underground 2",
   "WFP_FPSLIMIT": "Liczba klatek",
   "WFP_FPS_CUSTOM": "Własne",

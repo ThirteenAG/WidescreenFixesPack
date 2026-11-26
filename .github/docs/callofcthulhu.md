@@ -46,7 +46,7 @@ Cutscene borders: Both keeps the 16:9 cutscene picture at every screen shape; Le
 
 Presets: Vanilla shows the intro, uses Letterbox for cutscenes, plays videos at their original aspect and leaves the frame rate unlimited; Recommended and Enhanced skip the intro, keep the 16:9 cutscene picture, fit videos to the screen and limit the game to 60 FPS. The field of view factor is 1.0 in every preset.
 
-With Check for updates on, a newer version of the fix is shown in the help line of the fix's page. Ctrl+F10 opens the developer overlay for supporters.
+With Check for updates on, a newer version of the fix is shown in the help line of the fix's page.
 
 The settings text is available in English, French, German, Italian and Spanish; Automatic uses English, and Text Language in FusionFixHub picks another.
 

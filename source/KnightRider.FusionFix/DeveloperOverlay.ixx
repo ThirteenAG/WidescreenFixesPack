@@ -2,6 +2,7 @@ module;
 #include <stdafx.h>
 #include "Shared/CursorConfinement.hpp"
 #include "FixSettings.hpp"
+#include "overlay/Overlay.hpp"
 
 export module DeveloperOverlay;
 import OverlayD3D7;
@@ -28,13 +29,16 @@ export namespace KnightRiderOverlay
     {
         MouseDevice = device;
         const auto state = device + 0x88;
-        for (int button = 0; button < 3; ++button)
-            Overlay.MouseButton(button, (state[12 + button] & 0x80) != 0);
-        Overlay.MouseWheel(static_cast<float>(*reinterpret_cast<int32_t*>(state + 8)) / WHEEL_DELTA);
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            for (int button = 0; button < 3; ++button)
+                Overlay.MouseButton(button, (state[12 + button] & 0x80) != 0);
+            Overlay.MouseWheel(static_cast<float>(*reinterpret_cast<int32_t*>(state + 8)) / WHEEL_DELTA);
+        }
         if ((state[12] || state[13] || *reinterpret_cast<int32_t*>(state) || *reinterpret_cast<int32_t*>(state + 4))
             && KnightRiderFrame::KeyboardInput)
             KnightRiderFrame::KeyboardInput();
-        if (Overlay.BlocksInput())
+        if (WFP::DeveloperOverlay && Overlay.BlocksInput())
             std::memset(state, 0, 16);
     }
 
@@ -42,17 +46,20 @@ export namespace KnightRiderOverlay
     {
         KeyboardDevice = device;
         const auto keys = device + 0x84;
-        NativeChord = (keys[0x1D] || keys[0x9D]) && keys[0x44];
-        Overlay.Keyboard(keys, PreviousKeys.data());
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            NativeChord = (keys[0x1D] || keys[0x9D]) && keys[0x44];
+            Overlay.Keyboard(keys, PreviousKeys.data());
+        }
         for (size_t i = 0; i < PreviousKeys.size(); ++i)
         {
             if ((keys[i] & 0x80) && !(PreviousKeys[i] & 0x80) && KnightRiderFrame::KeyboardInput)
                 KnightRiderFrame::KeyboardInput();
             PreviousKeys[i] = keys[i];
         }
-        if (Overlay.BlocksInput())
+        if (WFP::DeveloperOverlay && Overlay.BlocksInput())
             std::memset(keys, 0, PreviousKeys.size());
-        else if (NativeChord)
+        else if (WFP::DeveloperOverlay && NativeChord)
             keys[0x1D] = keys[0x9D] = keys[0x44] = 0;
     }
 
@@ -92,7 +99,7 @@ export namespace KnightRiderOverlay
         else if (message == WM_EXITSIZEMOVE || message == WM_EXITMENULOOP)
             SystemInteraction = false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP)
-            && wParam == VK_F10)
+            && WFP::DeveloperOverlay && wParam == VK_F10)
             return 0;
         if (message == WM_DESTROY)
             KnightRiderUpdates::OnExit();
@@ -112,28 +119,31 @@ export namespace KnightRiderOverlay
     {
         const auto window = WindowedModeWrapper::GameHWND;
         const auto device = *reinterpret_cast<IDirect3DDevice7**>(renderer + 40);
-        // The game suspends its normal input update while the overlay is open.
-        if (Overlay.BlocksInput() && KeyboardDevice)
-        {
-            ReadKeyboard(KeyboardDevice);
-            ReadKeys(KeyboardDevice);
-        }
-        if (Overlay.BlocksInput() && MouseDevice)
-        {
-            ReadMouse(MouseDevice);
-            ReadMouseState(MouseDevice);
-        }
-        Overlay.Present(device, window, Module());
         if (window && window != AttachedWindow && SetWindowSubclass(window, Message, 0x4B52, 0))
             AttachedWindow = window;
-        const bool down = window && GetForegroundWindow() == window
-            && (NativeChord || ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000)));
-        if (down && !HotkeyDown && Overlay.Available())
+        if constexpr (WFP::DeveloperOverlay)
         {
-            Overlay.SetOpen(!Overlay.IsOpen());
+            // The game suspends its normal input update while the overlay is open.
+            if (Overlay.BlocksInput() && KeyboardDevice)
+            {
+                ReadKeyboard(KeyboardDevice);
+                ReadKeys(KeyboardDevice);
+            }
+            if (Overlay.BlocksInput() && MouseDevice)
+            {
+                ReadMouse(MouseDevice);
+                ReadMouseState(MouseDevice);
+            }
+            Overlay.Present(device, window, Module());
+            const bool down = window && GetForegroundWindow() == window
+                && (NativeChord || ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000)));
+            if (down && !HotkeyDown && Overlay.Available())
+            {
+                Overlay.SetOpen(!Overlay.IsOpen());
+            }
+            HotkeyDown = down;
         }
-        HotkeyDown = down;
-        CursorConfinement::Suspend(Overlay.BlocksInput() || SystemInteraction);
+        CursorConfinement::Suspend((WFP::DeveloperOverlay && Overlay.BlocksInput()) || SystemInteraction);
     }
 
     inline void Init()
@@ -152,19 +162,20 @@ export namespace KnightRiderOverlay
         {
             ReadMouseState(reinterpret_cast<uint8_t*>(context.esi));
         });
-        asi_overlay::Overlay::AddPage("Debug", "Info", [](asi_overlay::OverlayUI& ui)
-        {
-            static const auto build = BuildTime();
-            ui.Value("Version", rsc_ProductVersion);
-            ui.Value("BuildTimeUtc", build.c_str());
-            ui.Value("Graphics API", "Direct3D 7");
-            ui.Value("Resolution", std::format("{} x {}", KnightRiderWindow::Width, KnightRiderWindow::Height).c_str());
-        });
+        if constexpr (WFP::DeveloperOverlay)
+            asi_overlay::Overlay::AddPage("Debug", "Info", [](asi_overlay::OverlayUI& ui)
+            {
+                static const auto build = BuildTime();
+                ui.Value("Version", rsc_ProductVersion);
+                ui.Value("BuildTimeUtc", build.c_str());
+                ui.Value("Graphics API", "Direct3D 7");
+                ui.Value("Resolution", std::format("{} x {}", KnightRiderWindow::Width, KnightRiderWindow::Height).c_str());
+            });
         KnightRiderFrame::OverlayFrame = Frame;
         KnightRiderFrame::InputBlocked = []()
         {
             const auto window = WindowedModeWrapper::GameHWND;
-            return Overlay.BlocksInput() || (window && GetForegroundWindow() != window && FixSettings().Bool("MAIN.PauseOnFocusLoss"));
+            return (WFP::DeveloperOverlay && Overlay.BlocksInput()) || (window && GetForegroundWindow() != window && FixSettings().Bool("MAIN.PauseOnFocusLoss"));
         };
     }
 }

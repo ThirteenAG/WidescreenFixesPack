@@ -517,6 +517,27 @@ public:
                     regs.edi = 0;
             });
 
+            // The lost device's Reset: the game quits with exit() when it fails, also when the device was only lost
+            // again in the meantime (another program taking the screen). It waits until the device can be reset and
+            // tries again then. When the Reset still fails, the game quits without its static destructors: they expect
+            // the world to be unloaded and crashed freeing the texture references of the loaded language textures.
+            pattern = hook::pattern("57 50 FF D2 85 C0 74 08 6A 00 FF 15");
+            static auto ResetRetryHook = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& regs)
+            {
+                auto device = **Direct3DDevice;
+                auto params = reinterpret_cast<D3DPRESENT_PARAMETERS*>(regs.edi);
+                auto result = static_cast<HRESULT>(regs.eax);
+                for (int i = 0; i < 300 && result == D3DERR_DEVICELOST; ++i)
+                {
+                    Sleep(100);
+                    if (device->TestCooperativeLevel() != D3DERR_DEVICELOST)
+                        result = device->Reset(params);
+                }
+                if (FAILED(result))
+                    TerminateProcess(GetCurrentProcess(), 0);
+                regs.eax = static_cast<uintptr_t>(result);
+            });
+
             // FE::Object::SetScript
             pattern = hook::pattern("57 8B 7C 24 08 85 FF 74 2C 8B 44 24 0C 56");
             FEScriptFix::shSetScript = safetyhook::create_inline(pattern.get_first(), FEScriptFix::SetScript);
@@ -710,7 +731,7 @@ public:
                     Cutscene::LetterboxCamera = nullptr;
                     return;
                 }
-                if (FEPackageLoaded("HUD_NISFlashers.fng") && *Direct3DDevice && **Direct3DDevice)
+                if (*Cutscene::pBorders != 0 && FEPackageLoaded("HUD_NISFlashers.fng") && *Direct3DDevice && **Direct3DDevice)
                     Cutscene::Draw(**Direct3DDevice);
             };
 

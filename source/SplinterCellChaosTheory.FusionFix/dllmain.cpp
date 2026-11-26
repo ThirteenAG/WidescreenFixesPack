@@ -1,5 +1,7 @@
 #include "stdafx.h"
 #include "FixSettings.hpp"
+#include "Shared/SplinterCell/FrameLimit.hpp"
+#include "Shared/SplinterCell/ViewportMouse.hpp"
 #include <TlHelp32.h>
 #include "Shared/RWGTA/UpdateCheck.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
@@ -22,120 +24,30 @@ import Gamepad;
 import NativeMenu;
 import Updates;
 
-float FrameInterval = 0.0f;
-HMONITOR FrameLimitMonitor = nullptr;
-void UpdateFrameLimit()
-{
-    auto limit = FixSettings().Int("MAIN.FPSLimit");
-    FrameLimitMonitor = MonitorFromWindow(hGameWindow, MONITOR_DEFAULTTOPRIMARY);
-    if (limit == -1)
-    {
-        MONITORINFOEXW monitor{ sizeof(monitor) };
-        DEVMODEW mode{ .dmSize = sizeof(mode) };
-        limit = GetMonitorInfoW(FrameLimitMonitor, &monitor) && EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1 ? int(mode.dmDisplayFrequency) : 60;
-    }
-    // The high frame rate fixes are checked up to this rate; 0 (unlimited) runs at it too
-    constexpr int MaxFrameRate = 144;
-    if (limit <= 0 || limit > MaxFrameRate)
-        limit = MaxFrameRate;
-    FrameInterval = 1.0f / float(std::max(limit, 30));
-}
-
-const wchar_t* aJoysticks = nullptr;
-SafetyHookInline shsub_10CC8580;
-void* __fastcall sub_10CC8580(void* _this, void* edx)
-{
-    auto ret = shsub_10CC8580.unsafe_fastcall<void*>(_this, edx);
-
-    if (aJoysticks)
-    {
-        std::filesystem::path aJoysticksDefaultPath = GetExeModulePath() / "JoysticksDefault.ini";
-        std::filesystem::path aJoysticksPath = std::wstring(aJoysticks) + L".ini";
-        for (auto it : { aJoysticksDefaultPath, aJoysticksPath })
-        {
-            // Read the existing joysticks INI file into a structure, leave it alone if that fails
-            mINI::INIStructure joysticksIni;
-            mINI::INIFile joysticksIniFile(it);
-            if (!joysticksIniFile.read(joysticksIni) || joysticksIni.size() == 0)
-                continue;
-
-            // Xidi virtual controllers 1-4; sections already present keep the player's bindings
-            static constexpr std::pair<const char*, const char*> XidiControllerKeys[] =
-            {
-                { "AxisStrafe", "Axis_X" },
-                { "AxisForwardBackward", "Axis_Y" },
-                { "AxisTurnHead", "Axis_Z" },
-                { "AxisLookUpDown", "Axis_Rotation_Z" },
-                { "Joy1", "Interaction" },
-                { "Joy2", "Duck" },
-                { "Joy3", "Scope" },
-                { "Joy4", "Jump" },
-                { "Joy5", "QuickInventory" },
-                { "Joy6", "CoopActionWhistle" },
-                { "Joy7", "AltFire" },
-                { "Joy8", "Fire" },
-                { "Joy9", "OpsatMenu" },
-                { "Joy10", "PauseMenu" },
-                { "Joy11", "SwitchHandZoom" },
-                { "Joy12", "ZoomToggle" },
-                { "Joy13", "EEVMode" },
-                { "Joy14", "StickyCamMode" },
-                { "Joy15", "NightVision" },
-                { "Joy16", "ThermalVision" },
-                { "DPadUp", "" },
-                { "DPadDown", "" },
-                { "DPadLeft", "" },
-                { "DPadRight", "" },
-            };
-
-            bool bChanged = false;
-            for (int controller = 1; controller <= 4; ++controller)
-            {
-                const auto section = "Joystick" + std::to_string(18 + controller);
-                if (joysticksIni.has(section))
-                    continue;
-                auto& keys = joysticksIni[section];
-                keys.set("ProductName", "Xidi Virtual Controller " + std::to_string(controller));
-                keys.set("VendorID", "65535");
-                keys.set("ProductID", std::to_string(controller));
-                for (const auto& [key, value] : XidiControllerKeys)
-                    keys.set(key, value);
-                bChanged = true;
-            }
-
-            if (bChanged)
-                joysticksIniFile.generate(joysticksIni);
-        }
-    }
-
-    return ret;
-}
-
 void Init()
 {
     auto& settings = FixSettings();
     asi_settings::LiveLink::Start();
     InitWindowedMode(); // DPI awareness before the desktop resolution is read
-    Screen.Width = settings.Int("MAIN.ResX");
-    Screen.Height = settings.Int("MAIN.ResY");
-    Screen.bRawInputMouse = settings.Int("MAIN.RawInputMouse") != 0;
-    settings.OnChange("MAIN.MouseSensitivity", []
-    {
-        RawInputHandler<>::SetSensitivity(FixSettings().Float("MAIN.MouseSensitivity"));
-    });
-    Screen.bRawInputMouseRawData = settings.Int("MAIN.RawInputMouseRawData") != 0;
-    Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(settings.Get("MAIN.HudAspectRatioConstraint"));
-    nShadowMapResolution = settings.Int("GRAPHICS.ShadowMapResolution");
-    bHardShadows = settings.Int("GRAPHICS.HardShadows") != 0;
-    UpdateFrameLimit();
-    settings.OnChange("MAIN.FPSLimit", UpdateFrameLimit);
-    const auto gogglesColor = settings.Int("BONUS.GogglesLightColor");
+    Screen.Width = ReadFixInt("MAIN.ResX");
+    Screen.Height = ReadFixInt("MAIN.ResY");
+    Screen.bRawInputMouse = ReadFixInt("MAIN.RawInputMouse") != 0;
+    settings.OnChange("MAIN.MouseSensitivity", ViewportMouse::ReadSensitivity);
+    ViewportMouse::ReadSensitivity();
+    Screen.bRawInputMouseRawData = ReadFixInt("MAIN.RawInputMouseRawData") != 0;
+    ViewportMouse::rawData.store(Screen.bRawInputMouseRawData);
+    nShadowMapResolution = ReadFixInt("GRAPHICS.ShadowMapResolution");
+    bHardShadows = ReadFixInt("GRAPHICS.HardShadows") != 0;
+    settings.OnChange("MAIN.FPSLimit", SplinterCellFrameLimit::ReadSetting);
+    SplinterCellFrameLimit::ReadSetting();
+    SplinterCellFrameLimit::Update(hGameWindow);
+    const auto gogglesColor = ReadFixInt("BONUS.GogglesLightColor");
     if (gogglesColor > 0 && gogglesColor <= static_cast<int32_t>(SuitLightColors.size()))
         gColor = SuitLightColors[gogglesColor - 1];
-    gBlacklistIndicators = settings.Int("BONUS.BlacklistIndicators");
-    bLightSyncRGB = settings.Int("MAIN.LightSyncRGB");
-    auto bSkipIntro = settings.Int("MAIN.SkipIntro") != 0;
-    auto bSkipPressStart = settings.Int("MAIN.SkipPressStart") != 0;
+    gBlacklistIndicators = ReadFixInt("BONUS.BlacklistIndicators");
+    bLightSyncRGB = ReadFixInt("MAIN.LightSyncRGB");
+    auto bSkipIntro = ReadFixInt("MAIN.SkipIntro") != 0;
+    auto bSkipPressStart = ReadFixInt("MAIN.SkipPressStart") != 0;
 
     if (Screen.Width <= 0 || Screen.Height <= 0 || Screen.Width > 16384 || Screen.Height > 16384)
         std::tie(Screen.Width, Screen.Height) = GetDesktopRes();
@@ -146,19 +58,15 @@ void Init()
     Screen.fHeight = static_cast<float>(Screen.Height);
     Screen.fAspectRatio = (Screen.fWidth / Screen.fHeight);
 
-    auto pattern = hook::pattern("68 ? ? ? ? E8 ? ? ? ? 8B 8C 24 20 02 00 00");
-    aJoysticks = *pattern.get_first<const wchar_t*>(1);
-
-    pattern = hook::pattern("55 8B EC 83 E4 F8 81 EC 08 02 00 00");
-    shsub_10CC8580 = safetyhook::create_inline(pattern.get_first(), sub_10CC8580);
+    InitControllerDefaults();
 
     // Disable safe mode
-    pattern = hook::pattern("E8 ? ? ? ? 68 ? ? ? ? 53 68");
+    auto pattern = hook::pattern("E8 ? ? ? ? 68 ? ? ? ? 53 68");
     injector::MakeNOP(pattern.get_first(0), 5, true);
 
     // MAIN.SaveLocation: the profiles folder (saves inside) in Documents or the game folder instead of ProgramData
     static std::filesystem::path ProfilesFolder;
-    switch (settings.Int("MAIN.SaveLocation"))
+    switch (ReadFixInt("MAIN.SaveLocation"))
     {
         case 1:
             ProfilesFolder = SCSaveLocation::Documents(L"Splinter Cell Chaos Theory");
@@ -190,38 +98,6 @@ void Init()
     pattern = hook::pattern("E8 ? ? ? ? D8 4C 24 20 83 C4 04");
     injector::MakeCALL(pattern.get_first(0), static_cast<float(__cdecl*)(float)>([](float a1) -> float { return 1.0f; }), true);
 
-    pattern = hook::pattern("8D 84 24 34 04 00 00 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 14"); //0x10CD09C5
-    struct SetResHook
-    {
-        void operator()(injector::reg_pack& regs)
-        {
-            regs.eax = (regs.esp + 0x434); // lea eax, [esp+434h]
-
-            if (Screen.Width < 640 || Screen.Height < 480)
-                return;
-
-            auto pszPath = (const wchar_t*)regs.edi;
-            auto ResX = std::to_wstring(Screen.Width);
-            auto ResY = std::to_wstring(Screen.Height);
-            WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"WindowedViewportX", ResX.c_str(), pszPath);
-            WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"WindowedViewportY", ResY.c_str(), pszPath);
-
-            // Fullscreen needs a display mode (a window resized by the player can have any size)
-            bool bDisplayMode = false;
-            DEVMODEW mode = { .dmSize = sizeof(DEVMODEW) };
-            for (DWORD i = 0; !bDisplayMode && EnumDisplaySettingsW(NULL, i, &mode); ++i)
-                bDisplayMode = int(mode.dmPelsWidth) == Screen.Width && int(mode.dmPelsHeight) == Screen.Height;
-            if (!bDisplayMode)
-            {
-                auto [DesktopResW, DesktopResH] = GetDesktopRes();
-                ResX = std::to_wstring(DesktopResW);
-                ResY = std::to_wstring(DesktopResH);
-            }
-            WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"FullscreenViewportX", ResX.c_str(), pszPath);
-            WritePrivateProfileStringW(L"WinDrv.WindowsClient", L"FullscreenViewportY", ResY.c_str(), pszPath);
-        }
-    }; injector::MakeInline<SetResHook>(pattern.get_first(0), pattern.get_first(7));
-
     Focus::Init();
     InitD3DDrv();
     InitEngine();
@@ -233,30 +109,15 @@ void Init()
     InitUpdateCheck();
     WFP::onGameProcessEvent() += []()
     {
-        if (FixSettings().Int("MAIN.FPSLimit") == -1 && MonitorFromWindow(hGameWindow, MONITOR_DEFAULTTOPRIMARY) != FrameLimitMonitor)
-            UpdateFrameLimit();
+        SplinterCellFrameLimit::Update(hGameWindow);
         RWGTA::UpdateCheck::Tick();
     };
     InitEchelon();
     InitWidescreenHUD2();
 
-    #ifdef _DEBUG
-    //pattern = hook::pattern("8B 88 80 00 00 00 6A 01");
-    //static auto SkipMenuHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-    //{
-    //    static char bOnce = 0;
-    //    if (bOnce < 2)
-    //    {
-    //        keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
-    //        keybd_event(VK_RETURN, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-    //        bOnce++;
-    //    }
-    //});
-    #endif
-
-    // The native pacing loop reads this minimum frame time every frame, including unlimited (zero).
+    // The native pacing loop reads the minimum frame time every frame.
     pattern = hook::pattern("8B 15 ? ? ? ? A1 ? ? ? ? 89 54 24 10 89 44 24 18");
-    injector::WriteMemory<float*>(pattern.get_first(2), &FrameInterval, true);
+    injector::WriteMemory<float*>(pattern.get_first(2), &SplinterCellFrameLimit::minFrameTime, true);
 
     //Bink high res
     pattern = hook::pattern("68 E0 01 00 00 68 80 02 00 00 50 FF 52 ? EB 18");
@@ -300,13 +161,7 @@ void Init()
     }
 
     if (bSkipPressStart)
-    {
-        auto pattern = hook::pattern("6A 0A FF 50 ? 8B 0D");
-        injector::WriteMemory<uint8_t>(pattern.get_first(1), 1, true);
-
-        pattern = hook::pattern("6A 08 FF 52 ? 8B 0D ? ? ? ? 3B FE");
-        injector::WriteMemory<uint8_t>(pattern.get_first(1), 1, true);
-    }
+        CTMenu::EnableSkipLoadingPrompt();
 }
 
 DWORD FindProcessId(const std::wstring& processName)
@@ -340,7 +195,7 @@ void InitGameOverlayRenderer()
 {
     // Steam injects its overlay renderer but never starts the overlay for this game. Started by the fix,
     // the overlay costs frame rate on some PCs (streaming from another graphics card), so it is opt-in
-    if (!FixSettings().Bool("MAIN.SteamOverlay"))
+    if (!ReadFixInt("MAIN.SteamOverlay"))
         return;
 
     auto steamPid = FindProcessId(L"steam.exe");
@@ -354,7 +209,6 @@ void InitGameOverlayRenderer()
         sei.lpFile = exePath.c_str();
         sei.lpParameters = args.c_str();
         sei.nShow = SW_HIDE;
-        sei.fMask = SEE_MASK_NOCLOSEPROCESS;
         ShellExecuteEx(&sei);
     }
 }

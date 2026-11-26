@@ -8,16 +8,18 @@
 #include <chrono>
 #include <vector>
 #include <algorithm>
+#include <atomic>
+#include <mutex>
 
 class LEDEffects
 {
 public:
-    static inline bool bLogiLedInitialized;
+    static inline std::atomic<bool> bLogiLedInitialized{ false };
 private:
-    static inline std::vector<HWND> AppWindows;
-    static inline WNDPROC DefaultWndProc = nullptr;
+    static inline SafetyHookInline ExitHook;
     static inline std::vector<std::function<void()>> Callbacks;
     static inline std::future<void> Future;
+    static inline std::mutex ShutdownMutex;
 
     static void Init()
     {
@@ -25,46 +27,29 @@ private:
             bLogiLedInitialized = LogiLedInit();
     }
 
+public:
     static void Shutdown()
     {
-        if (bLogiLedInitialized) {
-            bLogiLedInitialized = false;
-            if (Future.valid())
-                Future.wait();
-            LogiLedShutdown();
-        }
+        const std::lock_guard lock(ShutdownMutex);
+        if (!bLogiLedInitialized.exchange(false))
+            return;
+        if (Future.valid())
+            Future.wait();
+        LogiLedShutdown();
     }
 
-    static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam)
+private:
+    static void WINAPI StopAtProcessExit(UINT code)
     {
-        DWORD lpdwProcessId;
-        GetWindowThreadProcessId(hwnd, &lpdwProcessId);
-        if (lpdwProcessId == lParam)
-        {
-            if (IsWindowVisible(hwnd))
-                AppWindows.push_back(hwnd);
-        }
-        return TRUE;
-    }
-
-    static LRESULT WINAPI WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-    {
-        switch (uMsg)
-        {
-        case WM_QUIT:
-        case WM_DESTROY:
-            Shutdown();
-            break;
-        default:
-            break;
-        }
-
-        return CallWindowProcW(DefaultWndProc, hWnd, uMsg, wParam, lParam);
+        Shutdown();
+        // The original does not return. Do not hold the trampoline's mutex during DLL detach.
+        ExitHook.unsafe_stdcall<void>(code);
     }
 
 public:
-    static void Inject(std::function<void()> callback)
+    static void Inject(std::function<void()> callback, bool hookProcessExit = true)
     {
+        const std::lock_guard lock(ShutdownMutex);
         Init();
 
         Callbacks.push_back(callback);
@@ -72,8 +57,14 @@ public:
         if (bLogiLedInitialized)
         {
             static std::once_flag flag;
-            std::call_once(flag, []()
+            std::call_once(flag, [hookProcessExit]()
             {
+                if (hookProcessExit)
+                {
+                    const auto exit = GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "ExitProcess");
+                    ExitHook = safetyhook::create_inline(exit, StopAtProcessExit);
+                }
+
                 Future = std::async(std::launch::async, []() 
                 {
                     while (true)
@@ -88,25 +79,6 @@ public:
                     }
                 });
 
-                if (AppWindows.empty())
-                {
-                    std::thread([]()
-                    {
-                        while (AppWindows.empty())
-                        {
-                            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-                            EnumWindows(EnumWindowsProc, GetCurrentProcessId());
-                        }
-                        DefaultWndProc = (WNDPROC)SetWindowLongPtrW(AppWindows.back(), GWLP_WNDPROC, (LONG_PTR)WndProc);
-                    }).detach();
-                }
-
-                IATHook::Replace(GetModuleHandleA(NULL), "KERNEL32.DLL",
-                    std::forward_as_tuple("ExitProcess", static_cast<void(__stdcall*)(UINT)>([](UINT uExitCode) {
-                        Shutdown();
-                        ExitProcess(uExitCode);
-                    }))
-                );
             });
         }
     }

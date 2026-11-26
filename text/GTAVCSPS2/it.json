@@ -13,7 +13,7 @@
   "controls.pccontrolscheme": "Comandi tastiera e mouse",
   "controls.pccontrolscheme.description": "Usa lo schema di comandi PC; se disattivato, il controller nativo resta disponibile.",
   "controls.mousesensitivity": "Sensibilità mouse",
-  "controls.mousesensitivity.description": "Velocità della telecamera con il mouse. 1.0 ruota la telecamera di 0.002 radianti per pixel con lo zoom predefinito.",
+  "controls.mousesensitivity.description": "Con valori più alti la telecamera ruota di più a parità di movimento del mouse.",
   "controls.invertmousey": "Inverti asse Y mouse",
   "controls.invertmousey.description": "Inverte il movimento verticale della telecamera con il mouse.",
   "hud.hudscale": "Dimensione HUD",
@@ -102,7 +102,7 @@
   "binding.crouch.description": "Uno o due nomi di tasti di tastiera/mouse, separati da una virgola. Un valore vuoto cancella l'azione.",
   "menu.auto": "Auto",
   "MAIN.TextLanguage": "Lingua degli avvisi",
-  "MAIN.TextLanguage.description": "Lingua dell'avviso di errore del patch direzionale. Il menu Plugin resta in inglese.",
+  "MAIN.TextLanguage.description": "Lingua dell’avviso di errore della patch a 60 FPS.",
   "fovfactor": "Campo visivo",
   "fovfactor.description": "Moltiplica il campo visivo in gioco oltre alla correzione widescreen. 1.0 è l'inquadratura originale; valori più alti allargano la vista. I filmati non cambiano.",
   "auto": "Auto",
@@ -123,5 +123,9 @@
   "lights": "Luci dei veicoli",
   "lights.description": "Accende fari, luci posteriori, di stop e di retromarcia sulle texture della carrozzeria di auto e moto, generate dalle texture del gioco. Attivo per impostazione predefinita.",
   "controls.holdvehiclecamera": "Mantieni telecamera del veicolo",
-  "controls.holdvehiclecamera.description": "Quando ruoti la telecamera con lo stick destro in un veicolo, resta in quella posizione, così puoi guardare indietro mentre guidi. Torna dietro al veicolo due secondi dopo aver rilasciato lo stick. Off mantiene la telecamera originale, che torna dietro al veicolo mentre guidi."
+  "controls.holdvehiclecamera.description": "Quando ruoti la telecamera con lo stick destro in un veicolo, resta in quella posizione, così puoi guardare indietro mentre guidi. Torna dietro al veicolo due secondi dopo aver rilasciato lo stick. Off mantiene la telecamera originale, che torna dietro al veicolo mentre guidi.",
+  "controls.gamepadcameraspeed": "Velocità telecamera gamepad",
+  "controls.gamepadcameraspeed.description": "Velocità della telecamera con la levetta destra, a piedi e nei veicoli. 1.0 è la velocità originale.",
+  "controls.invertgamepady": "Inverti gamepad Y",
+  "controls.invertgamepady.description": "Inverte la direzione verticale della visuale con la levetta destra."
 }

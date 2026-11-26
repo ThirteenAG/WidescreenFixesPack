@@ -104,16 +104,6 @@
       }
     },
     {
-      "id": "MAIN.PortableSettings",
-      "type": "bool",
-      "default": true,
-      "label": "@MAIN.PortableSettings",
-      "description": "@MAIN.PortableSettings.description",
-      "page": "compatibility",
-      "apply": "restart",
-      "visibility": "editor"
-    },
-    {
       "id": "MAIN.WindowMode",
       "type": "choice",
       "default": 0,
@@ -506,6 +496,11 @@
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "label": "@hudconstraint",
       "description": "@hudconstraint.description",
       "page": "display",

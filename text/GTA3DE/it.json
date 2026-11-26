@@ -8,7 +8,7 @@
   "SkipMenu": "Riprendi all'avvio",
   "SkipMenu.description": "Carica il salvataggio scelto appena il menu principale è pronto. Richiede il riavvio.",
   "SaveSlot": "Slot di salvataggio",
-  "SaveSlot.description": "Slot (da 1) usato per la ripresa all'avvio e il salvataggio rapido. Richiede il riavvio.",
+  "SaveSlot.description": "Slot (1–8) per il salvataggio rapido con F5. Riavvia il gioco per applicare la modifica.",
   "FOVFactor": "Campo visivo",
   "FOVFactor.description": "Moltiplica il campo visivo della telecamera di gioco; più grande è più ampio. Filmati, telecamere scriptate e visuali con zoom mantengono il campo visivo del gioco.",
   "HudScale": "Dimensione HUD",

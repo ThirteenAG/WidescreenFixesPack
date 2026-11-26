@@ -11,29 +11,36 @@ module;
 export module Window;
 
 import EngineText;
+import LightSync;
 import WindowBindings;
+import Video;
 
 export namespace REWindow
 {
-    inline SafetyHookMid startupHook;
-    inline SafetyHookInline resolutionHook;
+    inline SafetyHookMid startupHook, resetResultHook;
+    inline SafetyHookInline resolutionHook, resetDisplayHook;
     inline std::atomic<int> mode{ 2 };
     inline int windowedMode = 1;
     inline std::atomic<HWND> window{ nullptr };
-    inline constexpr wchar_t procedureProperty[] = L"ResidentEvil.FusionFix.Window.Procedure";
-    inline std::atomic<int> placeWidth{ 0 }, placeHeight{ 0 };
+    inline std::mutex windowMutex;
+    inline HHOOK attachHook{};
+    inline HWND attaching{};
+    inline bool attached{};
+    inline uint32_t windowGeneration{};
+    inline int placeWidth{}, placeHeight{};
     inline std::atomic<bool> toggleHeld{ false }, toggleRequested{ false };
     inline std::atomic<int> requestedMode{ -1 };
+    inline std::atomic<int> resettingMode{ -1 };
     inline std::atomic<bool> changingMode{ false };
-    inline std::atomic<bool> placementPending{ false };
+    inline bool placementPending{};
     inline std::atomic<uint32_t> modeVersion{ 0 };
-    inline std::recursive_mutex modeMutex;
     inline int framedWidth = 0, framedHeight = 0;
     inline int lastWidth = 0, lastHeight = 0, lastMode = -1;
     inline bool initialized = false;
     inline constexpr UINT placeMessage = WM_APP + 0x4F1;
+    inline constexpr UINT ownerMessage = WM_APP + 0x4F2;
 
-    inline bool BlocksInput() { return toggleHeld.load() || toggleRequested.load() || requestedMode.load() >= 0 || changingMode.load(); }
+    inline bool BlocksInput() { return toggleHeld.load() || toggleRequested.load() || requestedMode.load() >= 0 || resettingMode.load() >= 0 || changingMode.load(); }
 
     inline BOOL WINAPI NativeClip(const RECT* rect)
     {
@@ -58,12 +65,12 @@ export namespace REWindow
         return width > 0 && height > 0 && width <= 16384 && height <= 16384;
     }
 
-    inline void Dimensions(int& width, int& height)
+    inline void Dimensions(int selected, int* size)
     {
-        if (mode.load() != 2) return;
+        if (selected != 2) return;
         const auto monitor = WindowStyle::MonitorRect(window.load());
-        width = monitor.right - monitor.left;
-        height = monitor.bottom - monitor.top;
+        size[0] = monitor.right - monitor.left;
+        size[1] = monitor.bottom - monitor.top;
     }
 
     inline bool FullscreenSize(IDirect3DDevice9* device, int* size)
@@ -94,29 +101,66 @@ export namespace REWindow
         return ValidSize(size[0], size[1]);
     }
 
-    inline LRESULT CALLBACK Procedure(HWND handle, UINT message, WPARAM wParam, LPARAM lParam)
+    inline void CancelWindowInput()
     {
-        const auto previous = reinterpret_cast<WNDPROC>(GetPropW(handle, procedureProperty));
-        if (!previous) return DefWindowProcW(handle, message, wParam, lParam);
-        if (handle == window.load() && wParam == VK_RETURN &&
-            (message == WM_SYSKEYDOWN || message == WM_SYSKEYUP || message == WM_KEYUP) && ((lParam & (1u << 29)) || toggleHeld.load()))
+        toggleHeld.store(false);
+        toggleRequested.store(false);
+        placementPending = false;
+    }
+
+    inline LRESULT CALLBACK Procedure(HWND handle, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR)
+    {
+        if (message == WM_NCDESTROY || message == ownerMessage)
         {
-            if (message == WM_SYSKEYUP || message == WM_KEYUP) toggleHeld.store(false);
-            else if (!(lParam & (1u << 30)) && GetForegroundWindow() == handle)
+            const std::lock_guard lock(windowMutex);
+            const bool active = handle == window.load();
+            if (message == WM_NCDESTROY || (!active && wParam == 0))
+                RemoveWindowSubclass(handle, Procedure, 0);
+            if (message == ownerMessage)
+                return 0;
+            if (active)
             {
-                toggleHeld.store(true);
-                toggleRequested.store(true);
+                CancelWindowInput();
+                window.store(nullptr);
+                attached = false;
+                ++windowGeneration;
             }
-            return 0;
         }
-        if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && !wParam))
+        else if (message == WM_KILLFOCUS || message == WM_ACTIVATEAPP ||
+            message == WM_SYSKEYDOWN || message == WM_SYSKEYUP || message == WM_KEYUP)
         {
-            toggleHeld.store(false);
-            toggleRequested.store(false);
+            const std::lock_guard lock(windowMutex);
+            if (handle == window.load())
+            {
+                if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && !wParam))
+                {
+                    toggleHeld.store(false);
+                    toggleRequested.store(false);
+                }
+                else if (message != WM_ACTIVATEAPP && wParam == VK_RETURN && ((lParam & (1u << 29)) || toggleHeld.load()))
+                {
+                    if (message != WM_SYSKEYDOWN)
+                        toggleHeld.store(false);
+                    else if (!(lParam & (1u << 30)) && GetForegroundWindow() == handle)
+                    {
+                        toggleHeld.store(true);
+                        toggleRequested.store(true);
+                    }
+                    return 0;
+                }
+            }
         }
-        if (message == placeMessage && handle == window.load())
+        else if (message == placeMessage)
         {
-            const int width = placeWidth.load(), height = placeHeight.load();
+            int width, height;
+            const auto generation = static_cast<uint32_t>(lParam);
+            {
+                const std::lock_guard lock(windowMutex);
+                if (handle != window.load() || generation != windowGeneration)
+                    return 0;
+                width = placeWidth;
+                height = placeHeight;
+            }
             const int selected = mode.load();
             WindowStyle::SquareCorners(handle);
             if (selected && ValidSize(width, height))
@@ -130,141 +174,219 @@ export namespace REWindow
                 WindowStyle::Place(handle, width, height);
             }
             else WindowStyle::Unplace(handle);
-            WindowCursor::Attach(handle);
-            if (static_cast<uint32_t>(wParam) == modeVersion.load()) changingMode.store(false);
-            placementPending.store(false);
+            {
+                const std::lock_guard lock(windowMutex);
+                if (handle == window.load() && generation == windowGeneration)
+                {
+                    if (static_cast<uint32_t>(wParam) == modeVersion.load())
+                        changingMode.store(false);
+                    placementPending = false;
+                }
+            }
             return 0;
         }
-        CursorConfinement::Message(message, wParam);
-        if (message == WM_NCDESTROY) RemovePropW(handle, procedureProperty);
-        return CallWindowProcW(previous, handle, message, wParam, lParam);
+        return DefSubclassProc(handle, message, wParam, lParam);
     }
 
-    inline int ApplyResolution(void* renderer, bool fullscreen, const int* size, bool force, int preferred = -1)
+    inline void CancelAttach()
     {
-        const std::lock_guard lock(modeMutex);
-        const int previous = mode.load();
-        const int selected = fullscreen ? 0 : preferred > 0 ? preferred : (previous ? previous : windowedMode);
-        if (previous) windowedMode = previous;
-        mode.store(selected);
+        if (attachHook)
+            UnhookWindowsHookEx(attachHook);
+        attachHook = nullptr;
+        attaching = nullptr;
+    }
+
+    inline LRESULT CALLBACK AttachOnOwner(int code, WPARAM remove, LPARAM data)
+    {
+        const auto message = reinterpret_cast<const MSG*>(data);
+        if (code == HC_ACTION && remove == PM_REMOVE && message->message == ownerMessage && message->wParam == 1)
+        {
+            const std::lock_guard lock(windowMutex);
+            if (message->hwnd == attaching)
+            {
+                CancelAttach();
+                if (message->hwnd == window.load())
+                    attached = SetWindowSubclass(message->hwnd, Procedure, 0, 0) != FALSE;
+            }
+        }
+        return CallNextHookEx(nullptr, code, remove, data);
+    }
+
+    inline bool Follow(HWND handle)
+    {
+        const std::lock_guard lock(windowMutex);
+        if (window.load() != handle)
+        {
+            const auto previous = window.exchange(handle);
+            CancelAttach();
+            CancelWindowInput();
+            ++windowGeneration;
+            attached = false;
+            lastWidth = lastHeight = 0;
+            lastMode = -1;
+            if (previous)
+                PostMessageW(previous, ownerMessage, 0, 0);
+        }
+        if (!attached && attaching != handle)
+        {
+            const auto owner = GetWindowThreadProcessId(handle, nullptr);
+            if (owner == GetCurrentThreadId())
+                attached = SetWindowSubclass(handle, Procedure, 0, 0) != FALSE;
+            else if (owner)
+            {
+                attachHook = SetWindowsHookExW(WH_GETMESSAGE, AttachOnOwner, nullptr, owner);
+                if (attachHook && PostMessageW(handle, ownerMessage, 1, 0))
+                    attaching = handle;
+                else
+                    CancelAttach();
+            }
+        }
+        return attached;
+    }
+
+    inline void PublishMode(int selected)
+    {
+        const auto value = std::to_string(selected);
+        if (requestedMode.load() < 0 && FixSettings().Get("MAIN.WindowMode") != value)
+            FixSettings().Set("MAIN.WindowMode", value);
+    }
+
+    inline int ApplyResolution(void* renderer, int selected, const int* size, bool force)
+    {
         int dimensions[2]{ size[0], size[1] };
-        Dimensions(dimensions[0], dimensions[1]);
-        if (!ValidSize(dimensions[0], dimensions[1]))
+        Dimensions(selected, dimensions);
+        if (selected == 0 && !FullscreenSize(REText::Read<IDirect3DDevice9*>(renderer, 0x98), dimensions))
         {
-            mode.store(previous);
-            return resolutionHook.thiscall<int>(renderer, fullscreen, size, force);
+            PublishMode(mode.load());
+            return D3DERR_INVALIDCALL;
         }
-        const auto wasChanging = changingMode.exchange(true);
-        modeVersion.fetch_add(1);
-        const int result = resolutionHook.thiscall<int>(renderer, fullscreen, dimensions, force);
-        if (result < 0)
-        {
-            mode.store(previous);
-            changingMode.store(wasChanging);
-        }
-        else if (FixSettings().Int("MAIN.WindowMode") != selected)
-            FixSettings().Set("MAIN.WindowMode", std::to_string(selected));
+        const int result = resolutionHook.thiscall<int>(renderer, selected == 0,
+            ValidSize(dimensions[0], dimensions[1]) ? dimensions : size, force);
+        if (result >= 0)
+            resettingMode.store(selected);
+        else
+            PublishMode(mode.load());
         return result;
     }
 
     inline int __fastcall ChangeResolution(void* renderer, void*, bool fullscreen, const int* size, bool force)
     {
-        return ApplyResolution(renderer, fullscreen, size, force);
+        const int previous = mode.load();
+        return ApplyResolution(renderer, fullscreen ? 0 : previous ? previous : windowedMode, size, force);
     }
 
-    inline void Frame(void* renderer, HWND handle, bool overlay, IDirect3DDevice9* device)
+    inline int __fastcall ResetDisplay(void* renderer, void*)
     {
-        const std::lock_guard lock(modeMutex);
-        if (!renderer || !handle) return;
-        if (window.load() != handle)
+        // The native setter waits for the window thread. Run it on the game's update thread, never from Present.
+        RELightSync::Sample();
+        REVideo::Scene();
+        if (window.load() && resettingMode.load() < 0 && !(REText::Read<uint32_t>(renderer, 0x433E84) & 5))
         {
-            const auto original = GetWindowLongPtrW(handle, GWLP_WNDPROC);
-            if (!original || !SetPropW(handle, procedureProperty, reinterpret_cast<HANDLE>(original))) return;
-            const auto previous = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(handle, GWLP_WNDPROC,
-                reinterpret_cast<LONG_PTR>(Procedure)));
-            if (!previous)
+            const int previous = mode.load();
+            int size[2]{ REText::Read<int>(renderer, 0x433E50), REText::Read<int>(renderer, 0x433E54) };
+            if (ValidSize(size[0], size[1]))
             {
-                RemovePropW(handle, procedureProperty);
-                return;
+                if (previous == 1 || !initialized)
+                {
+                    framedWidth = size[0];
+                    framedHeight = size[1];
+                }
+                const int setting = requestedMode.exchange(-1);
+                const bool toggle = []()
+                {
+                    const std::lock_guard lock(windowMutex);
+                    return toggleRequested.exchange(false);
+                }();
+                const int selected = setting >= 0 ? setting : toggle ? (previous ? 0 : windowedMode) : previous;
+                int target[2]{ size[0], size[1] };
+                if (selected == 1 && ValidSize(framedWidth, framedHeight))
+                {
+                    target[0] = framedWidth;
+                    target[1] = framedHeight;
+                }
+                Dimensions(selected, target);
+                if (selected != previous || (!initialized && selected == 2 && (target[0] != size[0] || target[1] != size[1])))
+                {
+                    if (ValidSize(target[0], target[1]))
+                        ApplyResolution(renderer, selected, target, false);
+                    else
+                        PublishMode(previous);
+                }
+                initialized = true;
             }
-            window.store(handle);
-            lastWidth = lastHeight = 0;
-            lastMode = -1;
-            initialized = false;
-            placementPending.store(false);
         }
+        const int result = resetDisplayHook.thiscall<int>(renderer);
+        if (resettingMode.load() >= 0 && !(REText::Read<uint32_t>(renderer, 0x433E84) & 5))
+        {
+            const int selected = resettingMode.exchange(-1);
+            if ((selected == 0) == REText::Read<bool>(renderer, 0x22))
+            {
+                const int previous = mode.exchange(selected);
+                if (selected) windowedMode = selected;
+                else if (previous) windowedMode = previous;
+                modeVersion.fetch_add(1);
+                changingMode.store(true);
+            }
+            PublishMode(mode.load());
+        }
+        return result;
+    }
+
+    inline void Frame(void* renderer, HWND handle, bool overlay)
+    {
+        if (!renderer || !handle) return;
+        const bool ready = Follow(handle);
+        WindowCursor::Follow(handle);
         CursorConfinement::Suspend(overlay);
+        if (!ready) return;
         int width = REText::Read<int>(renderer, 0x433E50);
         int height = REText::Read<int>(renderer, 0x433E54);
         if (!ValidSize(width, height)) return;
+        const std::lock_guard lock(windowMutex);
+        if (handle != window.load()) return;
         if (overlay) toggleRequested.store(false);
-        if ((toggleRequested.load() || requestedMode.load() >= 0) && !(REText::Read<uint32_t>(renderer, 0x433E84) & 5) &&
-            device && device->TestCooperativeLevel() == D3D_OK)
-        {
-            const auto previous = mode.load();
-            const auto fromSetting = requestedMode.exchange(-1);
-            const auto toggle = toggleRequested.exchange(false);
-            const auto selected = fromSetting >= 0 ? fromSetting : previous ? 0 : windowedMode;
-            if ((toggle || fromSetting >= 0) && selected != previous)
-            {
-                if (previous == 1) { framedWidth = width; framedHeight = height; }
-                if (previous) windowedMode = previous;
-                int requested[2]{ width, height };
-                if (selected == 1 && ValidSize(framedWidth, framedHeight))
-                {
-                    requested[0] = framedWidth;
-                    requested[1] = framedHeight;
-                }
-                if (!selected && !FullscreenSize(device, requested)) return;
-                ApplyResolution(renderer, selected == 0, requested, true, selected);
-                return;
-            }
-        }
-        if (!initialized)
-        {
-            initialized = true;
-            if (!ValidSize(framedWidth, framedHeight)) { framedWidth = width; framedHeight = height; }
-            int requested[2]{ width, height };
-            Dimensions(requested[0], requested[1]);
-            if (ValidSize(requested[0], requested[1]) && (requested[0] != width || requested[1] != height))
-            {
-                ChangeResolution(renderer, nullptr, mode.load() == 0, requested, true);
-                return;
-            }
-        }
-        // A mode request is only published after the native UI thread has reset its device.
-        if (REText::Read<uint32_t>(renderer, 0x433E84) & 5) return;
+        if (resettingMode.load() >= 0 || (REText::Read<uint32_t>(renderer, 0x433E84) & 5)) return;
         const int selected = mode.load();
         RECT client{};
         const bool clientMatches = !selected || (GetClientRect(handle, &client) &&
             client.right - client.left == width && client.bottom - client.top == height);
         if (width == lastWidth && height == lastHeight && selected == lastMode && clientMatches && !changingMode.load()) return;
-        placeWidth.store(width);
-        placeHeight.store(height);
-        if (placementPending.exchange(true)) return;
-        if (PostMessageW(handle, placeMessage, modeVersion.load(), 0))
+        placeWidth = width;
+        placeHeight = height;
+        if (placementPending) return;
+        if (PostMessageW(handle, placeMessage, modeVersion.load(), windowGeneration))
         {
+            placementPending = true;
             lastWidth = width;
             lastHeight = height;
             lastMode = selected;
         }
-        else placementPending.store(false);
     }
 
     inline void Install()
     {
-        mode.store(std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2));
-        windowedMode = mode.load() ? mode.load() : 1;
-        WindowCursor::Initialize(FixSettings());
+        BindLiveInt("MAIN.WindowMode", [](int value)
+        {
+            requestedMode.store(std::clamp(value, 0, 2));
+        });
+        const int initialMode = requestedMode.exchange(-1);
+        mode.store(initialMode);
+        windowedMode = initialMode ? initialMode : 1;
+        BindLiveInt("MAIN.ConfineCursor", [](int value)
+        {
+            CursorConfinement::SetEnabled(value != 0);
+        });
         Bind();
         resolutionHook = safetyhook::create_inline(changeResolution, ChangeResolution);
+        resetDisplayHook = safetyhook::create_inline(resetDisplay, ResetDisplay);
+        resetResultHook = safetyhook::create_mid(resetResult, [](SafetyHookContext& context)
+        {
+            if (FAILED(static_cast<HRESULT>(context.eax)) && resettingMode.exchange(-1) >= 0)
+                PublishMode(mode.load());
+        });
         startupHook = safetyhook::create_mid(fullscreenInstruction, [](SafetyHookContext& context)
         {
             context.eax = (context.eax & ~0xFFu) | (mode.load() == 0 ? 1u : 0u);
-        });
-        FixSettings().OnChange("MAIN.WindowMode", []()
-        {
-            requestedMode.store(std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2));
         });
         IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("ClipCursor", NativeClip));
     }

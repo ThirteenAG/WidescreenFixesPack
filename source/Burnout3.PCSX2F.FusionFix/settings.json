@@ -10,6 +10,11 @@
       "id": "display",
       "title": "@page.display",
       "section": "display"
+    },
+    {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
     }
   ],
   "settings": [
@@ -76,6 +81,11 @@
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "special": [
         {
           "value": "Auto",
@@ -221,6 +231,24 @@
         "recommended": 60,
         "enhanced": 60
       }
+    },
+    {
+      "id": "MAIN.TextLanguage",
+      "type": "choice",
+      "default": "auto",
+      "label": "@TextLanguage",
+      "description": "@TextLanguage.description",
+      "page": "compatibility",
+      "visibility": "editor",
+      "apply": "menu",
+      "choices": [
+        { "value": "auto", "label": "@auto" },
+        { "value": "en", "label": "English" },
+        { "value": "fr", "label": "Français" },
+        { "value": "de", "label": "Deutsch" },
+        { "value": "it", "label": "Italiano" },
+        { "value": "es", "label": "Español" }
+      ]
     }
   ]
 }

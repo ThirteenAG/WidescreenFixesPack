@@ -13,9 +13,11 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 PCSX2F_CFG_SETTINGS()
 PCSX2F_CFG_PEER_SETTINGS()
 PCSX2F_STATE_LOAD_GENERATION()
+PCSX2F_EFFECTIVE_ASPECT()
 extern "C"
 {
     int CompatibleCRCList[] = {static_cast<int>(0xBEBF8793)};
@@ -24,25 +26,29 @@ extern "C"
     char OSDText[OSDStringNum][OSDStringSize] = {{1}};
     char FrameLimitUnthrottle = 0;
     CMouseControllerState MouseState[StateNum] = {{1}};
+    console::MouseMotion MouseStateV2{};
 }
 
 namespace
 {
-console::ps2settings::Value options[] = {
+constexpr console::ps2settings::Value defaults[] = {
     {"MAIN", "ForceAspectRatio", "Auto"}, {"MAIN", "HudAspectRatioConstraint", "Auto"}, {"MAIN", "FOVFactor", "1.0"},
     {"MAIN", "SkipIntro", "1"}, {"MAIN", "HudScale", "1.0"},
     {"MAIN", "FMVWidescreenMode", "1"}, {"MAIN", "MouseSensitivity", "1.0"},
     {"MAIN", "InvertMouseY", "0"}, {"MAIN", "GamepadCameraSpeed", "1.0"},
     {"MAIN", "InvertGamepadY", "0"}, {"MAIN", "SplitScreenSideBySide", "0"},
-    {"MAIN", "FPSLimit", "60"}};
+    {"MAIN", "FPSLimit", "60"}, {"MAIN", "TextLanguage", "auto"}};
+console::ps2settings::Value options[std::size(defaults)]{};
 uint32_t lastStateLoad;
+uint32_t observedStateLoad;
 bool fps60Applied;
 uint32_t nativeFrameInterval = 1;
 pcsx2::GameFunction<void(int)> setFrameInterval;
 pcsx2::GameFunction<void(uintptr_t)> updateTimer;
-bool skipIntro;
+bool skipIntro, startupSkipIntro;
 uint32_t refreshFrames;
 uint32_t menuNoticeFrames;
+bool restartNotice;
 float forcedAspect, hudConstraint, fovFactor, hudScaleFactor, mouseSensitivity, gamepadCameraSpeed;
 bool invertMouseY, invertGamepadY, sideBySide;
 burnout::PadOrbit padOrbit[2];
@@ -52,6 +58,19 @@ char noKeyboard[StateSize]{};
 float mouseYaw, mousePitch;
 float mouseHold;
 int movieMode;
+bool ReadOptions(bool seed = false, bool* changed = nullptr)
+{
+    decltype(options) next;
+    std::memcpy(next, defaults, sizeof(next));
+    if (!(seed ? console::ps2settings::load(next) : console::ps2settings::read(next)))
+        return false;
+    if (changed)
+        *changed = !std::equal(std::begin(options), std::end(options), std::begin(next),
+            [](const auto& before, const auto& after) { return std::strcmp(before.value, after.value) == 0; });
+    std::memcpy(options, next, sizeof(options));
+    return true;
+}
+
 void ReadSettings()
 {
     forcedAspect = console::parse_forced_aspect(options[0].value);
@@ -335,14 +354,11 @@ uint64_t RenderHudTree(uintptr_t tree)
 
 void UpdateLayout()
 {
-    // Recent PCSX2 builds also expose a fixed 10:7 display mode.
-    const int displayMode = PCSX2Data[PCSX2Data_AspectRatioSetting];
     // PCSX2 presents 480p at 3:2 in Auto 4:3/3:2. This is the native
     // active video mode, including the temporary 480p preview and fallback.
     const bool progressive = *reinterpret_cast<const uint32_t*>(0x665EC0 + 952) == 1;
     float aspect = forcedAspect > 0 ? forcedAspect :
-        (displayMode == 4 ? 10.0f / 7.0f :
-         displayMode == RAuto4_3_3_2 && progressive ? 3.0f / 2.0f : console::ps2Aspect(PCSX2Data));
+        console::ps2Aspect(PCSX2Data, progressive ? 3.0f / 2.0f : 4.0f / 3.0f);
     const int players = *reinterpret_cast<const int*>(hudManager + 368) == 2 ? 2 : 1;
     const bool sideSplit = players == 2 && *reinterpret_cast<const uint8_t*>(0x665ECF) != 0;
     if (layout.aspect == aspect && layout.players == players && layout.sideSplit == sideSplit)
@@ -382,7 +398,7 @@ bool IsDrivingCamera(uintptr_t camera)
 void PollMouse(uintptr_t game)
 {
     static_assert(sizeof(CMouseControllerState) == sizeof(console::Mouse));
-    mouseInput.sample(noKeyboard, reinterpret_cast<console::Mouse&>(MouseState[0]));
+    mouseInput.sample(noKeyboard, reinterpret_cast<console::Mouse&>(MouseState[0]), MouseStateV2);
     for (int player = 0; player < 2; ++player)
         if (game != 0x4EE040 || *reinterpret_cast<const uint32_t*>(game + 187024) != 5 ||
             *reinterpret_cast<const uint32_t*>(0x1E90430) != 0 || !IsDrivingCamera(player ? 0x665FF0 : 0x665F50))
@@ -423,20 +439,32 @@ void RateError(uint32_t generation)
     lastStateLoad = generation;
     std::snprintf(OSDText[0], OSDStringSize, "Could not restore the selected frame rate. Restart the game.");
     menuNoticeFrames = 180;
+    restartNotice = false;
 }
 void PollSettings()
 {
     if (menuNoticeFrames && !--menuNoticeFrames)
+    {
         OSDText[0][0] = 0;
+        restartNotice = false;
+    }
     const uint32_t generation = *reinterpret_cast<volatile uint32_t*>(&PCSX2FStateLoadGeneration);
     const bool loaded = generation != lastStateLoad;
-    if (generation != lastStateLoad || ++refreshFrames >= 60)
+    if (generation != observedStateLoad)
+    {
+        observedStateLoad = generation;
+        refreshFrames = 59;
+    }
+    if (++refreshFrames >= 60)
     {
         refreshFrames = 0;
-        if (console::ps2settings::read(options))
+        bool changed = false;
+        if (ReadOptions(false, &changed))
         {
             ReadSettings();
             layout.aspect = 0;
+            if (changed || loaded)
+                burnout::menu::OptionsReloaded();
             const bool wanted60 = std::clamp(std::atoi(options[11].value), 30, 60) > 30;
             if (loaded && wanted60 != fps60Applied)
             {
@@ -449,6 +477,19 @@ void PollSettings()
                 const int newRate = nativeRate / (halfMode && !wanted60 ? 2 : 1);
                 const float oldStep = *reinterpret_cast<const float*>(0x4E2740);
                 if (!std::isfinite(oldStep) || std::fabs(oldStep - 1.0f / oldRate) > 0.00001f) { RateError(generation); return; }
+                constexpr uint32_t sites[] = {0x1D3F2C, 0x1321FC, 0x132F58, 0x132F60};
+                constexpr uint32_t original[] = {0x10A0000A, 0x24040002, 0x24050002, 0x24060008};
+                constexpr uint32_t full[] = {0x1000000A, 0x24040001, 0x24050001, 0x24060004};
+                const uint32_t* before = fps60Applied ? full : original;
+                const uint32_t* after = wanted60 ? full : original;
+                for (unsigned i = 0; i < std::size(sites); ++i)
+                {
+                    if (injector::ReadMemory<uint32_t>(sites[i]) != before[i])
+                    {
+                        RateError(generation);
+                        return;
+                    }
+                }
                 constexpr uintptr_t timers[] = {0x4F5080, 0x522660, 0x1EBE360};
                 if (oldRate != newRate) for (uintptr_t address : timers)
                 {
@@ -463,11 +504,6 @@ void PollSettings()
                     if (updatedDivisor <= 0 || updatedDivisor > 1024 || whole < 0 ||
                         remainder < 0 || remainder > updatedDivisor || whole > 0x10000000) { RateError(generation); return; }
                 }
-                constexpr uint32_t sites[] = {0x1D3F2C, 0x1321FC, 0x132F58, 0x132F60};
-                constexpr uint32_t original[] = {0x10A0000A, 0x24040002, 0x24050002, 0x24060008};
-                constexpr uint32_t full[] = {0x1000000A, 0x24040001, 0x24050001, 0x24060004};
-                const uint32_t* before = fps60Applied ? full : original;
-                const uint32_t* after = wanted60 ? full : original;
                 unsigned written = 0;
                 while (written < 4 && pcsx2_memory_write(&injector::detail::backend, sites[written], &after[written], 4) == PCSX2_HOOK_OK)
                     ++written;
@@ -504,7 +540,6 @@ void PollSettings()
             }
             lastStateLoad = generation;
         }
-        else if (loaded) RateError(generation);
     }
 }
 void SkipStartupMovies()
@@ -521,25 +556,44 @@ void SkipStartupMovies()
         skipIntro = false;
     state = 4;
 }
-void MenuChanged(bool restart)
+void MenuChanged(bool startupEdited)
 {
     ReadSettings();
     layout.aspect = 0;
-    if (restart)
+    if (!startupEdited)
+        return;
+
+    const bool pending = console::ps2settings::boolean(options[3], true) != startupSkipIntro ||
+                         (std::atoi(options[11].value) > 30) != fps60Applied;
+    if (pending)
     {
         std::snprintf(OSDText[0], OSDStringSize, "Restart the game to apply startup settings.");
         menuNoticeFrames = 180;
+        restartNotice = true;
+    }
+    else if (restartNotice)
+    {
+        OSDText[0][0] = 0;
+        menuNoticeFrames = 0;
+        restartNotice = false;
     }
 }
 void MenuError()
 {
     std::snprintf(OSDText[0], OSDStringSize, "Could not save plugin settings.");
     menuNoticeFrames = 180;
+    restartNotice = false;
 }
 void MenuReload()
 {
-    if (console::ps2settings::read(options)) MenuChanged(false);
-    else MenuError();
+    if (ReadOptions())
+    {
+        MenuChanged(false);
+        return;
+    }
+    std::snprintf(OSDText[0], OSDStringSize, "Could not read plugin settings.");
+    menuNoticeFrames = 180;
+    restartNotice = false;
 }
 void ApplyHud()
 {
@@ -599,8 +653,8 @@ template <class Callback> void Mid(uintptr_t address, Callback callback, bool ex
 
 extern "C" void init()
 {
-    static constexpr console::ps2conflict::OldPlugin oldPlugins[] = {
-        {"Burnout3.PCSX2F.WidescreenFix.elf", "MAIN", "ForceAspectRatio"},
+    static constexpr const char* oldPlugins[] = {
+        "Burnout3.PCSX2F.WidescreenFix.elf",
     };
     if (console::ps2conflict::Found(oldPlugins, OSDText))
         return;
@@ -608,7 +662,8 @@ extern "C" void init()
     {
         return;
     }
-    if (!console::ps2settings::load(options))
+    std::memcpy(options, defaults, sizeof(options));
+    if (!ReadOptions(true))
     {
         std::snprintf(OSDText[0], OSDStringSize,
                       "CFG settings unavailable: update the plugin injector for CFG support.");
@@ -658,7 +713,8 @@ extern "C" void init()
         if (fps60Applied && (mode == 2 || mode == 3)) regs.f1 *= 0.5f;
     });
     // Read once: the startup videos play before the first settings refresh.
-    skipIntro = console::ps2settings::boolean(options[3], true);
+    startupSkipIntro = console::ps2settings::boolean(options[3], true);
+    skipIntro = startupSkipIntro;
     hudReset1.bind(HudReset1);
     hudReset2.bind(HudReset2);
     injector::WriteMemory<uint32_t>(0x4DD840, hudReset1.address());

@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "DeveloperOverlay.hpp"
 #include "Shared/MaxPayne/Pad.hpp"
 
 export module ModeSwitch;
@@ -9,6 +10,7 @@ export module ModeSwitch;
 import ComVars;
 import GraphicNovel;
 import Settings;
+import Misc;
 
 namespace X_ModeSwitch
 {
@@ -118,15 +120,23 @@ public:
                         Screen.bDrawBordersForCameraOverlay = false;
 
                     static bool bWasPressed = false;
-                    if (CurrentGameMode != "graphicnovel")
+                    auto window = WindowedModeWrapper::GameHWND;
+                    if (CurrentGameMode != "graphicnovel" || !window || GetForegroundWindow() != window || MaxPayneOverlay::BlocksInput())
                     {
                         bWasPressed = false;
+                        waitForNovelKeyRelease = true;
                         return;
                     }
 
                     // the key, or Y on a controller
                     bool bPressed = (nGraphicNovelModeKey && (GetAsyncKeyState(nGraphicNovelModeKey) & 0x8000) != 0) ||
                         MaxPaynePad::Pressed(MaxPaynePad::Button::Y);
+                    if (waitForNovelKeyRelease)
+                    {
+                        bWasPressed = false;
+                        waitForNovelKeyRelease = bPressed;
+                        return;
+                    }
                     if (!bPressed && bWasPressed)
                     {
                         // Applied through the setting, which the menu and the settings file follow

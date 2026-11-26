@@ -22,6 +22,8 @@
   "WFP_GAMEPADICONS": "Gombikonok",
   "WFP_ICONS_AUTO": "Automatikus",
   "WFP_SKIPINTRO": "Bevezető kihagyása",
+  "WFP_SKIPPRESSSTART": "A „Nyomd meg a Start gombot” kihagyása",
+  "WFP_DESC_SKIPPRESSSTART": "A címképernyő automatikusan továbblép a Start gomb megnyomása nélkül.",
   "WFP_U2SAVEBONUS": "Underground 2 mentés bónusz",
   "WFP_FPSLIMIT": "Képkockasebesség",
   "WFP_FPS_CUSTOM": "Egyéni",

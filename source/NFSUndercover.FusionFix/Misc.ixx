@@ -4,6 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include "Shared/NFS/FieldOfView.hpp"
 #include <d3d9.h>
+#include <rawinput.hpp>
 
 export module Misc;
 
@@ -413,6 +414,10 @@ namespace Focus
         if (!Paused() && ((msg == WM_ACTIVATEAPP && !wParam) || (msg == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE)))
             return DefWindowProcA(window, msg, wParam, lParam);
 
+        // Alt pressed alone opens the window menu's keyboard mode, which stopped the game until the next key
+        if (msg == WM_SYSCOMMAND && (wParam & 0xFFF0) == SC_KEYMENU && lParam == 0)
+            return 0;
+
         return GameWndProc(window, msg, wParam, lParam);
     }
 
@@ -428,6 +433,9 @@ namespace Focus
         auto vtable = *device.get_first<uintptr_t>(0x11);
         ptrGameDevicePoll = *reinterpret_cast<uintptr_t*>(vtable + 0x10);
         injector::WriteMemory(vtable + 0x10, &GameDevicePoll, true);
+
+        // The game empties its message queue every frame: with a fast mouse that took hundreds of mouse moves (200 ms)
+        MessagePumpGuard::Install(GetModuleHandleW(nullptr));
 
         // Switched at once: the game gets the focus change it skipped (or missed) while the window is in the background
         pPauseOnFocusLoss = &FixSettings().Int("MAIN.PauseOnFocusLoss");
@@ -622,8 +630,10 @@ void Init2()
         auto padStart = hook::pattern("56 8B F1 8B 46 04 83 E8 12 0F 84 ? ? ? ? 83 E8 02 74");
         auto screenTick = hook::pattern("56 8B F1 83 7E 04 14 74 ? 8B 4E 58 8B 01 8B 50 08 FF D2");
         auto realTimer = hook::range_pattern(reinterpret_cast<uintptr_t>(padStart.get_first()), reinterpret_cast<uintptr_t>(padStart.get_first(0x100)), "A1 ? ? ? ? 2B 46 4C");
+        auto carLoader = hook::range_pattern(reinterpret_cast<uintptr_t>(padStart.get_first()), reinterpret_cast<uintptr_t>(padStart.get_first(0x40)), "83 3D ? ? ? ? 00");
         static auto HandlePadStart = reinterpret_cast<void(__thiscall*)(uint8_t*)>(padStart.get_first());
         static auto RealTimer = *realTimer.get_first<int32_t*>(1);
+        static auto CarLoader = *carLoader.get_first<void**>(2);
         static SafetyHookInline shScreenTick = {};
 
         struct BootFlow
@@ -632,7 +642,8 @@ void Init2()
             {
                 constexpr int32_t SplashScreenState = 20;
                 static bool bDone = false;
-                if (!bDone && *reinterpret_cast<int32_t*>(self + 4) == SplashScreenState)
+                // Start is ignored while the car loader still runs, so it's pressed once the loader has finished
+                if (!bDone && *reinterpret_cast<int32_t*>(self + 4) == SplashScreenState && !*CarLoader)
                 {
                     bDone = true;
                     *reinterpret_cast<int32_t*>(self + 0x4C) = *RealTimer - 4000 * 5;     // timer ticks, 4000 per second

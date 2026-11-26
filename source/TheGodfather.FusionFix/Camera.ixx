@@ -76,11 +76,7 @@ export namespace GodfatherCamera
         auto initialize = hook::pattern("E8 ? ? ? ? D9 9E E8 01 00 00 5F 5E 5D 5B C2 04 00");
         chaseTable = *chase.get_first<void**>(5);
         initializationReturn = initialize.get_first(5);
-        multiplier.store(FixSettings().Float("MAIN.FOVFactor"), std::memory_order_relaxed);
-        FixSettings().OnChange("MAIN.FOVFactor", []()
-        {
-            multiplier.store(FixSettings().Float("MAIN.FOVFactor"), std::memory_order_relaxed);
-        });
+        BindLiveSetting("MAIN.FOVFactor", multiplier);
         angleHook = safetyhook::create_inline(angle.get_first(), Angle, safetyhook::InlineHook::StartDisabled);
         setupHook = safetyhook::create_inline(setup.get_first(), Setup, safetyhook::InlineHook::StartDisabled);
         (void)angleHook.enable();

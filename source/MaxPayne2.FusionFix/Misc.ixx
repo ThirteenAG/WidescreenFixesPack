@@ -8,6 +8,15 @@ export module Misc;
 import ComVars;
 import x_helpersmfc;
 
+void SetStartupSave(std::string_view path)
+{
+    if (path.empty() || path.size() >= MAX_PATH)
+        return;
+    auto destination = szLoadGameAtStartup.get_ptr();
+    std::memcpy(destination, path.data(), path.size());
+    destination[path.size()] = '\0';
+}
+
 class Misc
 {
 public:
@@ -70,74 +79,55 @@ public:
                                 void* pStr = nullptr;
                                 auto _this = injector::stdcall<void* ()>::call(AfxGetModuleState);
                                 injector::thiscall<void(void* _this, void* out, char const* a1, char const* a2, char const* a3)>::call(GetProfileStringA, *(void**)((uint32_t)_this + 4), &pStr, (char const*)aSaveGame, (char const*)aLastSavedGameF, "");
-                                std::string_view LastSavedGameFilename{ (char*)pStr };
-                                if (!LastSavedGameFilename.empty())
-                                    injector::WriteMemoryRaw(szLoadGameAtStartup.get_ptr(), (void*)LastSavedGameFilename.data(), LastSavedGameFilename.size(), true);
+                                if (pStr)
+                                    SetStartupSave(static_cast<const char*>(pStr));
                             }
                             else
                             {
-                                char buffer[MAX_PATH];
+                                std::filesystem::path directory;
                                 if (bUseGameFolderForSavegames)
-                                {
-                                    GetModuleFileNameA(NULL, buffer, MAX_PATH);
-                                    *strrchr(buffer, '\\') = '\0';
-                                    strcat_s(buffer, "\\");
-                                    strcat_s(buffer, aSavegames);
-                                    strcat_s(buffer, "\\");
-                                }
+                                    directory = GetExeModulePath() / aSavegames;
                                 else
                                 {
-                                    SHGetSpecialFolderPathA(0, buffer, 5, false);
-                                    strcat_s(buffer, "\\");
-                                    strcat_s(buffer, MaxPayne2Saveg);
-                                    strcat_s(buffer, "\\");
+                                    char documents[MAX_PATH]{};
+                                    if (!SHGetSpecialFolderPathA(nullptr, documents, CSIDL_PERSONAL, FALSE))
+                                        return;
+                                    directory = std::filesystem::path(documents) / MaxPayne2Saveg;
                                 }
 
-                                auto nSaveNum = -1;
-                                std::string SFPath(buffer);
+                                WIN32_FIND_DATAA entry{};
+                                const auto search = FindFirstFileA((directory / "*.mp2s").string().c_str(), &entry);
+                                if (search == INVALID_HANDLE_VALUE)
+                                    return;
 
-                                WIN32_FIND_DATAA fd{};
-                                HANDLE File = FindFirstFileA(std::string(SFPath + "*.mp2s").c_str(), &fd);
-                                FILETIME LastWriteTime{};
-                                std::string LastSavedFilename;
-
-                                if (File != INVALID_HANDLE_VALUE)
+                                std::string selected;
+                                FILETIME newest{};
+                                do
                                 {
-                                    do
+                                    if (entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                                        continue;
+                                    if (nLoadSaveSlot >= 0)
                                     {
-                                        std::string str(fd.cFileName);
-                                        auto n = str.find_first_of("0123456789");
-
-                                        if (nLoadSaveSlot >= 0)
-                                        {
-                                            if (n != std::string::npos)
-                                            {
-                                                nSaveNum = std::atoi(&str[n]);
-                                                if (nSaveNum == nLoadSaveSlot)
-                                                {
-                                                    SFPath += str;
-                                                    injector::WriteMemoryRaw(szLoadGameAtStartup.get_ptr(), SFPath.data(), SFPath.size(), true);
-                                                    return;
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            if (n != std::string::npos && (LastSavedFilename.empty() || CompareFileTime(&fd.ftLastWriteTime, &LastWriteTime) >= 0))
-                                            {
-                                                LastWriteTime = fd.ftLastWriteTime;
-                                                LastSavedFilename = str;
-                                            }
-                                        }
-                                    } while (FindNextFileA(File, &fd));
-                                    FindClose(File);
-                                }
-
-                                if (!LastSavedFilename.empty() && nLoadSaveSlot < 0)
-                                {
-                                    SFPath += LastSavedFilename;
-                                    injector::WriteMemoryRaw(szLoadGameAtStartup.get_ptr(), SFPath.data(), SFPath.size(), true);
-                                }
+                                        const auto stem = std::filesystem::path(entry.cFileName).stem().string();
+                                        if (stem.size() != 11 || _strnicmp(stem.c_str(), "savegame", 8) != 0)
+                                            continue;
+                                        int slot = -1;
+                                        const auto end = stem.data() + stem.size();
+                                        const auto parsed = std::from_chars(stem.data() + 8, end, slot);
+                                        if (parsed.ec != std::errc{} || parsed.ptr != end || slot != nLoadSaveSlot)
+                                            continue;
+                                        selected = entry.cFileName;
+                                        break;
+                                    }
+                                    if (selected.empty() || CompareFileTime(&entry.ftLastWriteTime, &newest) > 0)
+                                    {
+                                        selected = entry.cFileName;
+                                        newest = entry.ftLastWriteTime;
+                                    }
+                                } while (FindNextFileA(search, &entry));
+                                FindClose(search);
+                                if (!selected.empty())
+                                    SetStartupSave((directory / selected).string());
                             }
                         }
                     }; injector::MakeInline<SaveGameHook>(pattern.get_first(0), pattern.get_first(6)); //0x4187C3

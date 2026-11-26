@@ -17,7 +17,6 @@ CEXP void InitializeASI()
             return;
         WindowedModeWrapper::EnableDpiAwareness();
         FixSettings();
-        asi_settings::LiveLink::Start();
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime(Init, hook::pattern("6A 60 68 ? ? ? ? E8 ? ? ? ? BF 94 00 00 00"));
     });
 }

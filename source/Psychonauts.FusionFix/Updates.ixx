@@ -11,6 +11,15 @@ import NativeMenu;
 
 export namespace PsychonautsUpdates
 {
+    inline std::atomic_bool dismissNotice{};
+
+    void Tick()
+    {
+        if (dismissNotice.load(std::memory_order_relaxed) && dismissNotice.exchange(false, std::memory_order_relaxed))
+            PsychonautsMenu::notice = {};
+        RWGTA::UpdateCheck::Tick();
+    }
+
     inline void WINAPI Exit(UINT code)
     {
         RWGTA::UpdateCheck::OnExit();
@@ -27,19 +36,16 @@ export namespace PsychonautsUpdates
         config.playable = []() { return true; };
         config.format = [](const std::string& latest, bool hub)
         {
-            auto line = PsychonautsMenu::Text(hub ? "update.availablehub" : "update.availablesite");
-            for (auto [key, value] : { std::pair<std::string, std::string>{ "{name}", PsychonautsMenu::Text("plugin.name") },
-                std::pair<std::string, std::string>{ "{version}", latest } })
-            {
-                if (auto at = line.find(key); at != std::string::npos)
-                    line.replace(at, key.size(), value);
-            }
-            return asi_settings::text::Widen(line);
+            // The journal formats the result using the current settings language.
+            PsychonautsMenu::notice = { latest, RWGTA::UpdateCheck::Page(), hub };
+            return std::wstring{};
         };
-        config.show = [](const std::wstring& line)
+        config.show = [](const std::wstring&) {};
+        FixSettings().OnChange("MAIN.CheckForUpdates", []()
         {
-            PsychonautsMenu::notice = asi_settings::text::Narrow(line);
-        };
+            if (FixSettings().Get("MAIN.CheckForUpdates") == "0")
+                dismissNotice.store(true, std::memory_order_relaxed);
+        });
         RWGTA::UpdateCheck::Init(std::move(config));
     }
 }

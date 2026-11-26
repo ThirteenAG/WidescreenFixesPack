@@ -4,6 +4,7 @@ module;
 #include "common.h"
 #include "FixSettings.hpp"
 #include <atomic>
+#include <charconv>
 
 export module Controller;
 
@@ -34,9 +35,25 @@ export namespace MHPad
     inline uint64_t frame = 0, commandFrame = UINT64_MAX;
     inline std::array<bool, 6> commands{}, held{};
     inline std::array<ULONGLONG, 6> repeat{};
-    inline const int* modern = nullptr;
-    inline const int* family = nullptr;
-    inline const float* cameraSpeed = nullptr;
+    struct ControllerSettings
+    {
+        bool modern;
+        uint8_t family;
+        float cameraSpeed;
+    };
+    inline std::atomic<ControllerSettings> settings{ ControllerSettings{ false, 0, 1.0f } };
+
+    inline void ReadSettings()
+    {
+        const auto number = [](const char* id, auto fallback)
+        {
+            const auto text = FixSettings().Get(id);
+            auto value = fallback;
+            return std::from_chars(text.data(), text.data() + text.size(), value).ec == std::errc{} ? value : fallback;
+        };
+        settings.store({ number("MAIN.ControllerLayout", 1) != 0, number("MAIN.GamepadIcons", uint8_t{ 0 }),
+            std::clamp(number("MAIN.GamepadCameraSpeed", 1.0f), 0.1f, 5.0f) });
+    }
     inline GameRef<int32_t>* inputEnabledRef = nullptr;
     inline GameRef<int32_t>* mouseModeRef = nullptr;
     inline GameRef<uint32_t>* nativePadRef = nullptr;
@@ -80,25 +97,25 @@ export namespace MHPad
     // The pad button of an action in the selected layout
     inline uint32_t PadButton(int action)
     {
-        if (modern && *modern)
+        if (settings.load().modern)
             return ActionButton(action);
         if (const uint32_t button = NativeButton(action, 0))
             return button;
         return NativeButton(action, 1);
     }
 
-    inline bool Active()
+    inline bool Active(bool modern = settings.load().modern)
     {
         DWORD process = 0;
         GetWindowThreadProcessId(GetForegroundWindow(), &process);
-        return process == GetCurrentProcessId() && inputEnabledRef && inputEnabledRef->get() && modern && *modern;
+        return process == GetCurrentProcessId() && inputEnabledRef && inputEnabledRef->get() && modern;
     }
 
-    inline void UpdateNativeMode()
+    inline void UpdateNativeMode(bool modern)
     {
-        if (!modern || !*modern)
+        if (!modern)
             return;
-        if (nativePadRef && (!lastPad || !Active()))
+        if (nativePadRef && (!lastPad || !Active(modern)))
             injector::WriteMemory<uint32_t>(nativePadRef->get_ptr(), nativePadRef->get() & ~0xCFF00000u, true);
         if (lastPad && mouseModeRef)
             injector::WriteMemory<int32_t>(mouseModeRef->get_ptr(), 0, true);
@@ -106,6 +123,7 @@ export namespace MHPad
 
     inline void __cdecl Input(int event, void* data)
     {
+        const auto current = settings.load();
         if (event == 18)
         {
             previous = buttons;
@@ -129,17 +147,17 @@ export namespace MHPad
                 if (std::fabs(axes[0]) > 0.2f || std::fabs(axes[1]) > 0.2f)
                     lastPad = true;
                 // A centered native joystick must not hide the keyboard or mouse path.
-                if (modern && *modern && (!lastPad || !Active()))
+                if (current.modern && (!lastPad || !Active(current.modern)))
                 {
-                    UpdateNativeMode();
+                    UpdateNativeMode(current.modern);
                     return;
                 }
-                if (event == 1 && cameraSpeed && Active())
+                if (event == 1 && Active(current.modern))
                 {
-                    const float speed = std::clamp(*cameraSpeed, 0.1f, 5.0f);
+                    const float speed = current.cameraSpeed;
                     const float scaled[] = { axes[0] * speed, axes[1] * speed };
                     inputHook.unsafe_ccall(event, scaled);
-                    UpdateNativeMode();
+                    UpdateNativeMode(current.modern);
                     return;
                 }
             }
@@ -153,7 +171,7 @@ export namespace MHPad
                 lastPad = false;
         }
         inputHook.unsafe_ccall(event, data);
-        UpdateNativeMode();
+        UpdateNativeMode(current.modern);
     }
 
     inline int __cdecl Action(int action, int continuous)
@@ -222,7 +240,7 @@ export namespace MHPad
 
     inline const wchar_t* Label(uint32_t button)
     {
-        const int selected = family ? *family : 0;
+        const int selected = settings.load().family;
         switch (button)
         {
             case A: return selected == 2 ? L"[CROSS]" : selected == 3 ? L"[B]" : L"[A]";
@@ -245,7 +263,7 @@ export namespace MHPad
 
     inline const wchar_t* __cdecl BindingName(int action, int slot)
     {
-        if (modern && *modern && lastPad && slot == 1)
+        if (settings.load().modern && lastPad && slot == 1)
         {
             if (action >= 14 && action <= 17)
             {
@@ -262,7 +280,7 @@ export namespace MHPad
             if (auto name = Label(ActionButton(action)))
                 return name;
         }
-        else if (!(modern && *modern) && lastPad)
+        else if (!settings.load().modern && lastPad)
         {
             // Original: the saved native assignment of this column
             if (const uint32_t button = NativeButton(action, slot))
@@ -296,13 +314,13 @@ export namespace MHPad
         nativePadRef = BindGameRef(nativePad, *analog.get_first<uint32_t*>(2));
         menuBlocked = reinterpret_cast<int(__cdecl*)()>(blocked.get_first());
         nativeBindings = *bindings.get_first<const uint32_t*>(3);
-        modern = &FixSettings().Int("MAIN.ControllerLayout");
-        family = &FixSettings().Int("MAIN.GamepadIcons");
-        cameraSpeed = &FixSettings().Float("MAIN.GamepadCameraSpeed");
+        for (const auto id : { "MAIN.ControllerLayout", "MAIN.GamepadIcons", "MAIN.GamepadCameraSpeed" })
+            OnSettingChange(id, ReadSettings);
+        ReadSettings();
         nativeBindingsHook = safetyhook::create_mid(bindings.get_first(7), [](SafetyHookContext& regs)
         {
             // Modern replaces only controller assignments in the native action lookup.
-            if (modern && *modern)
+            if (settings.load().modern)
                 regs.esi = 0;
         });
         inputHook = safetyhook::create_inline(input.get_first(), Input);

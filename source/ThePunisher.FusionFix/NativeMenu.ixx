@@ -143,6 +143,17 @@ export namespace PunMenu
         size_t page{ SIZE_MAX };
         std::string text;
         bool next{}, previous{}, back{}, details{}, selectable{ true };
+
+        bool MatchesRow(const RWGTAMenu::Row& candidate) const
+        {
+            return row.kind == candidate.kind && row.plugin == candidate.plugin && row.setting == candidate.setting;
+        }
+
+        bool SameAction(const Item& other) const
+        {
+            return selectable && other.selectable && page == other.page && next == other.next &&
+                previous == other.previous && back == other.back && details == other.details && MatchesRow(other.row);
+        }
     };
     struct State
     {
@@ -252,12 +263,13 @@ export namespace PunMenu
         auto& state = Get();
         state.open = state.details = false;
         state.notice.clear();
+        if (Tick) Tick();
         state.items.clear();
         RestoreTitle();
         Entry();
         Select(OptionsList, 3);
     }
-    inline bool Build()
+    inline bool Build(const Item* selection = nullptr)
     {
         auto& state = Get();
         if (!Current(Options) || !state.options.bound) return false;
@@ -347,8 +359,11 @@ export namespace PunMenu
         Write<int>(OptionsList, 52, 520);
         Write<int>(OptionsBackground, 52, 580);
         Write<int>(OptionsBackground, 56, 30 + static_cast<int>(state.items.size()) * Read<int>(OptionsList, 92));
-        auto first = std::find_if(state.items.begin(), state.items.end(), [](const auto& item) { return item.selectable; });
-        Select(OptionsList, static_cast<int>(first - state.items.begin()));
+        auto selected = selection ? std::find_if(state.items.begin(), state.items.end(),
+            [&](const auto& item) { return item.SameAction(*selection); }) : state.items.end();
+        if (selected == state.items.end())
+            selected = std::find_if(state.items.begin(), state.items.end(), [](const auto& item) { return item.selectable; });
+        Select(OptionsList, static_cast<int>(selected - state.items.begin()));
         state.busy = false;
         return true;
     }
@@ -429,12 +444,19 @@ export namespace PunMenu
             state.slice = 0;
             state.model.PageShown(state.page);
         }
-        else if (!state.details && item.selectable && state.model.Enabled(item.row, state.pause))
+        else if (!state.details && item.selectable)
         {
-            state.model.Change(item.row, event.left ? -1 : event.right ? 1 : 0, state.pause);
+            const auto visible = state.model.VisibleRows(state.page);
+            const auto row = std::find_if(visible.begin(), visible.end(), [&](const RWGTAMenu::Row* candidate)
+            {
+                return item.MatchesRow(*candidate);
+            });
+            if (row != visible.end() && state.model.Enabled(**row, state.pause))
+                state.model.Change(**row, event.left ? -1 : event.right ? 1 : 0, state.pause);
+            if (state.open && Current(Options) && !Build(&item)) Close();
+            return 0;
         }
         if (!Build()) Close();
-        RWGTAMenu::Model::Changed() = false;
         return 0;
     }
     inline uintptr_t __cdecl GameInput(int input, void* origin)
@@ -450,7 +472,6 @@ export namespace PunMenu
         {
             state.model.Change(state.model.JoinedRows()[row], event.left ? -1 : event.right ? 1 : 0, state.pause);
             Joined();
-            RWGTAMenu::Model::Changed() = false;
         }
         return 0;
     }
@@ -460,6 +481,8 @@ export namespace PunMenu
         state.options.Restore();
         RestoreTitle();
         state.open = state.details = false;
+        state.notice.clear();
+        if (Tick) Tick();
         auto result = state.optionsInit.ccall<uintptr_t>(previous);
         state.activeRoot = Options;
         state.pause = previous && *previous == 55;
@@ -494,6 +517,7 @@ export namespace PunMenu
             state.options.Restore();
             RestoreTitle();
             state.open = state.details = false;
+            state.notice.clear();
         }
         else if (!state.options.bound)
         {
@@ -523,7 +547,10 @@ export namespace PunMenu
         {
             if (state.open)
             {
-                if (!Build()) Close();
+                const auto index = Selected(OptionsList);
+                const auto selection = index >= 0 && static_cast<size_t>(index) < state.items.size()
+                    ? std::optional(state.items[index]) : std::nullopt;
+                if (!Build(selection ? &*selection : nullptr)) Close();
             }
             else if (root == GameSettings)
             {
@@ -533,9 +560,20 @@ export namespace PunMenu
     }
     inline uintptr_t __fastcall Draw(void* root, void*)
     {
-        UpdateDraw(reinterpret_cast<uintptr_t>(root));
-        PunMenuLayout::Scope layout(reinterpret_cast<uintptr_t>(root));
-        return Get().draw.fastcall<uintptr_t>(root, nullptr);
+        const auto address = reinterpret_cast<uintptr_t>(root);
+        UpdateDraw(address);
+        PunMenuLayout::Scope layout(address);
+        auto& state = Get();
+        if (address != Options || state.open || !state.options.bound)
+            return state.draw.fastcall<uintptr_t>(root, nullptr);
+
+        // The pause menu clips the list at the bottom of its paper background.
+        const int addedHeight = Read<int>(OptionsList, 56) - state.options.rectangle[3];
+        const int backgroundHeight = Read<int>(OptionsBackground, 56);
+        Write<int>(OptionsBackground, 56, backgroundHeight + addedHeight);
+        const auto result = state.draw.fastcall<uintptr_t>(root, nullptr);
+        Write<int>(OptionsBackground, 56, backgroundHeight);
+        return result;
     }
     inline void Init()
     {

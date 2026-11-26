@@ -30,7 +30,7 @@
   "fps.30": "30 FPS",
   "fps.60": "60 FPS",
   "icons": "Controllersymbole",
-  "icons.description": "Ersetzt Tastensymbole in Spieltexten. Auto nutzt Xbox-Symbole, da das offizielle PPSSPP den Controllertyp nicht meldet. PlayStation behält die PSP-Symbole. Die Steuerung wird in PPSSPP eingerichtet. Änderungen unter Plugins gelten sofort; nach Dateiänderungen das emulierte Spiel neu starten.",
+  "icons.description": "Ersetzt Tastensymbole in Spieltexten. Auto nutzt Xbox-Symbole, da das offizielle PPSSPP den Controllertyp nicht meldet. PlayStation behält die PSP-Symbole. Die Steuerung wird in PPSSPP eingerichtet. Änderungen unter Plugins und in der Konfigurationsdatei gelten während des Spiels.",
   "icons.auto": "Automatisch",
   "icons.xbox": "Xbox",
   "icons.ps": "PlayStation",

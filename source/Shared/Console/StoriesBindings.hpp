@@ -178,6 +178,19 @@ inline bool CodeHeld(const Input& input, uint8_t value, bool previous = false) {
 }
 inline bool Wheel(uint8_t value) { return value == code::wheelUp || value == code::wheelDown; }
 
+inline bool MousePressed(const Input& input, uint8_t value)
+{
+    switch (value)
+    {
+    case code::lmb: return (input.mousePresses & 1u) != 0;
+    case code::rmb: return (input.mousePresses & 2u) != 0;
+    case code::mmb: return (input.mousePresses & 4u) != 0;
+    case code::x1: return (input.mousePresses & 8u) != 0;
+    case code::x2: return (input.mousePresses & 16u) != 0;
+    default: return false;
+    }
+}
+
 struct Bindings {
     uint8_t keys[ActionCount][2]{};
     uint64_t dirty = 0;
@@ -199,6 +212,7 @@ struct Bindings {
         bool now = false, before = false;
         for (auto value : keys[action]) {
             if (!value) continue;
+            if (MousePressed(input, value)) return true;
             if (Wheel(value)) { if (CodeHeld(input, value)) return true; continue; }
             now |= CodeHeld(input, value); before |= CodeHeld(input, value, true);
         }
@@ -279,7 +293,8 @@ struct Capture {
                 const auto value = uint8_t(i);
                 // Raw left/right modifiers are folded into the generic codes.
                 if (value == code::mouseMove || (value >= 160 && value <= 165)) continue;
-                if (!CodeHeld(input, value) || (!Wheel(value) && CodeHeld(input, value, true))) continue;
+                if (!MousePressed(input, value) &&
+                    (!CodeHeld(input, value) || (!Wheel(value) && CodeHeld(input, value, true)))) continue;
                 if (value == code::escape) cancelled = true;
                 else if (value == code::del) cleared = true;
                 else result = value;

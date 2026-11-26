@@ -8,7 +8,7 @@
   "SkipMenu": "Reprendre au démarrage",
   "SkipMenu.description": "Charge la sauvegarde choisie dès que le menu principal est prêt. Redémarrage nécessaire.",
   "SaveSlot": "Emplacement de sauvegarde",
-  "SaveSlot.description": "Emplacement (à partir de 1) utilisé pour la reprise au démarrage et la sauvegarde rapide. Redémarrage nécessaire.",
+  "SaveSlot.description": "Emplacement (1 à 8) utilisé pour la sauvegarde rapide avec F5. Redémarrez le jeu pour changer d’emplacement.",
   "FOVFactor": "Champ de vision",
   "FOVFactor.description": "Multiplie le champ de vision de la caméra de jeu ; plus grand est plus large. Les cinématiques, les caméras scriptées et les vues zoomées gardent le champ de vision du jeu.",
   "HudScale": "Taille du HUD",

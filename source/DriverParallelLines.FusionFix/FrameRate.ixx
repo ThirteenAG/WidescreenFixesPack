@@ -24,6 +24,7 @@ export namespace DPLFrameRate
     int64_t statisticsStart = 0;
     uint32_t statisticsFrames = 0;
     float actualFPS = 0.0f;
+    std::atomic<int> requestedLimit{ 60 };
     int MonitorRate()
     {
         const auto monitor = MonitorFromWindow(Window, MONITOR_DEFAULTTOPRIMARY);
@@ -61,7 +62,7 @@ export namespace DPLFrameRate
             return;
         }
         const double interval = static_cast<double>(frequency.QuadPart) / limit;
-        if (limit != previousLimit || deadline <= 0.0 || now > deadline + interval * 4.0)
+        if (limit != previousLimit || deadline <= 0.0)
             deadline = static_cast<double>(now);
         previousLimit = limit;
         for (;;)
@@ -73,14 +74,14 @@ export namespace DPLFrameRate
                 LARGE_INTEGER due{};
                 due.QuadPart = -std::max<int64_t>(1, static_cast<int64_t>((remaining - 0.0003) * 10000000.0));
                 if (timer && SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
-                    WaitForSingleObject(timer, INFINITE);
+                    WaitForSingleObject(timer, static_cast<DWORD>(std::ceil(remaining * 1000.0)) + 10);
                 else
                     Sleep(static_cast<DWORD>(std::max(1.0, remaining * 1000.0 - 1.0)));
             }
             else
                 YieldProcessor();
         }
-        deadline = std::max(deadline + interval, static_cast<double>(Counter()) + interval);
+        deadline = static_cast<double>(Counter()) + interval;
     }
 
 
@@ -91,11 +92,12 @@ export namespace DPLFrameRate
             QueryPerformanceFrequency(&frequency);
             timer = CreateWaitableTimerExW(nullptr, nullptr, 0x2, TIMER_ALL_ACCESS);
             if (!timer) timer = CreateWaitableTimerW(nullptr, FALSE, nullptr);
+            BindLiveSetting("MAIN.FPSLimit", requestedLimit);
             return frequency.QuadPart > 0;
         }();
         if (!initialized) return;
         Window = window;
-        const int requested = FixSettings().Int("MAIN.FPSLimit");
+        const int requested = requestedLimit.load(std::memory_order_relaxed);
         Pace(requested == -1 || requested == 0 ? requested : std::clamp(requested, 30, 1000));
         const auto now = Counter();
         ++statisticsFrames;

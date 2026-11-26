@@ -159,13 +159,16 @@ export namespace GodfatherHud
         (void)treeHook.enable();
         const auto refresh = []()
         {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
             Godfather::FloatingPointScope floatingPoint;
-            const auto value = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            const auto text = FixSettings().Get("MAIN.HudAspectRatioConstraint");
+            const auto value = ParseWidescreenHudOffset(text);
             constraint.store(value && std::isfinite(*value) && *value > 0.0f
                 ? std::clamp(*value, 4.0f / 3.0f, 32.0f / 9.0f) : 0.0f, std::memory_order_relaxed);
         };
-        refresh();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", refresh);
+        refresh();
         postTransform = Translate;
     }
 }

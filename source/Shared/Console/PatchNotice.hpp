@@ -7,8 +7,7 @@ namespace console::portable
 {
     inline void PatchNotice(const char* message)
     {
-        logger.Write(message);
-        sceIoDevctl("kemulator:", 2, const_cast<char*>(message), std::strlen(message), nullptr, 0);
+        EmulatorDiagnostic(message);
     }
 
     inline void PatchRejected(psp_hook_status status)

@@ -52,8 +52,8 @@ export namespace TrueCrimeOverlay
 
     inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
-        if (message == WM_DESTROY)
-            RWGTA::UpdateCheck::OnExit();
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -87,38 +87,44 @@ export namespace TrueCrimeOverlay
     {
         if (!device)
             return;
-        static const bool page = []()
-        {
-            asi_overlay::Overlay::AddPage("Debug", "Info", [](asi_overlay::OverlayUI& ui)
-            {
-                static const auto buildTime = BuildTime();
-                ui.Value("Version", rsc_ProductVersion);
-                ui.Value("BuildTimeUtc", buildTime.c_str());
-                ui.Value("Graphics API", "Direct3D 8 (through Direct3D 9)");
-                IDirect3DSurface9* surface = nullptr;
-                if (CurrentDevice && SUCCEEDED(CurrentDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &surface)))
-                {
-                    D3DSURFACE_DESC desc{};
-                    surface->GetDesc(&desc);
-                    surface->Release();
-                    ui.Value("Resolution", std::to_string(desc.Width) + " x " + std::to_string(desc.Height));
-                }
-            });
-            return true;
-        }();
+        static const auto module = ThisModule();
         WFP::onGameProcessEvent().executeAll();
-        Keyboard(TrueCrimeWindow::Window);
-        CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !BlocksInput());
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            static const bool page = []()
+            {
+                asi_overlay::Overlay::AddPage("Debug", "Info", [](asi_overlay::OverlayUI& ui)
+                {
+                    static const auto buildTime = BuildTime();
+                    ui.Value("Version", rsc_ProductVersion);
+                    ui.Value("BuildTimeUtc", buildTime.c_str());
+                    ui.Value("Graphics API", "Direct3D 8 (through Direct3D 9)");
+                    IDirect3DSurface9* surface = nullptr;
+                    if (CurrentDevice && SUCCEEDED(CurrentDevice->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &surface)))
+                    {
+                        D3DSURFACE_DESC desc{};
+                        surface->GetDesc(&desc);
+                        surface->Release();
+                        ui.Value("Resolution", std::to_string(desc.Width) + " x " + std::to_string(desc.Height));
+                    }
+                });
+                return true;
+            }();
+            Keyboard(TrueCrimeWindow::Window);
+            CurrentDevice = device;
+            Overlay.Present(device, module);
+        }
+        TrueCrimeUpdates::Draw(device, module);
+        TrueCrimeWindow::SetCursorOverlayBlocked(BlocksInput());
     }
 
     inline void Init()
     {
         WFP::onGameProcessEvent() += []() { RWGTA::UpdateCheck::Tick(); };
         TrueCrimeWindow::Message = Message;
-        WFP::onBeforeReset() += []() { Overlay.BeforeReset(); };
-        TrueCrimeDevice::Releasing.push_back([]() { Overlay.ShutdownRenderer(); });
+        TrueCrimeUpdates::BlocksInput = BlocksInput;
+        WFP::onBeforeReset() += []() { TrueCrimeUpdates::BeforeReset(); Overlay.BeforeReset(); };
+        TrueCrimeDevice::Releasing.push_back([]() { TrueCrimeUpdates::BeforeReset(); Overlay.ShutdownRenderer(); });
         TrueCrimeDevice::Frame = Frame;
     }
 }

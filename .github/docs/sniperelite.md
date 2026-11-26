@@ -26,7 +26,7 @@
 
 ## Settings
 
-Change the settings on fusionfix.io, in FusionFixHub or in the developer overlay (Ctrl+F10, for supporters). The first launch creates `scripts/SniperElite.FusionFix.cfg`.
+Change the settings on fusionfix.io or in FusionFixHub. The first launch creates `scripts/SniperElite.FusionFix.cfg`.
 
 | Setting | Values | Default | Applies |
 |---|---|---|---|
@@ -47,7 +47,7 @@ Presets: Vanilla keeps the original letterbox bars, shows the intro screens, pla
 
 ## Known limits
 
-- No page in the game's own settings menu: its menu pages come from the game's packed menu data, so the fix's settings are on fusionfix.io, in FusionFixHub and in the overlay.
+- No page in the game's own settings menu: its menu pages come from the game's packed menu data, so the fix's settings are on fusionfix.io and in FusionFixHub.
 - The title screen still waits for "Start Game".
 - No controller support: the game polls a DirectInput pad but never maps it to anything, so play with keyboard and mouse.
 

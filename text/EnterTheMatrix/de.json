@@ -29,7 +29,7 @@
   "fmv.original": "Originalformat",
   "fmv.fill": "Füllen",
   "FOVFactor": "Sichtfeld-Faktor",
-  "FOVFactor.description": "Vervielfacht das Sichtfeld im Spiel. 1.0 behält den vorgesehenen Bildausschnitt; größere Werte erweitern die Sicht. Zwischensequenzen bleiben unverändert. Wirkt sofort.",
+  "FOVFactor.description": "Multipliziert das Sichtfeld der normalen Spielkamera. 1.0 behält den vorgesehenen Bildausschnitt, größere Werte erweitern die Sicht. Zwischensequenzen, Zielfernrohre und Ferngläser behalten ihren ursprünglichen Bildausschnitt. Wirkt sofort.",
   "SkipIntro": "Intro überspringen",
   "SkipIntro.description": "Überspringt die Logo-Videos und den Copyright-Hinweis beim Start; das Spiel öffnet im Hauptmenü. Erfordert einen Neustart.",
   "PauseOnFocusLoss": "Pause im Hintergrund",

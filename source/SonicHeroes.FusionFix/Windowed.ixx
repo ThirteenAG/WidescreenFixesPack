@@ -43,6 +43,10 @@ export namespace Windowed
                 break;
             case WM_NCDESTROY:
                 RemoveWindowSubclass(window, Procedure, 1);
+                if (Window == window)
+                    Window = nullptr;
+                if (WindowedModeWrapper::GameHWND == window)
+                    WindowedModeWrapper::GameHWND = nullptr;
                 break;
         }
         return DefSubclassProc(window, message, wParam, lParam);
@@ -54,11 +58,8 @@ export namespace Windowed
         const HWND created = WindowMode == Mode::Fullscreen ?
             CreateWindowExA(exStyle, className, windowName, style, x, y, width, height, parent, menu, instance, param) :
             WindowedModeWrapper::CreateWindowExA_Hook(exStyle, className, windowName, style, x, y, width, height, parent, menu, instance, param);
-        if (created && !parent && !Window)
-        {
+        if (created && !parent && !Window && SetWindowSubclass(created, Procedure, 1, 0))
             Window = created;
-            SetWindowSubclass(created, Procedure, 1, 0);
-        }
         return created;
     }
 

@@ -2,8 +2,11 @@ module;
 
 #include <stdafx.h>
 #include <d3d9.h>
+#include <atomic>
+#include <mutex>
 #include "FixSettings.hpp"
 #include "Shared/CursorConfinement.hpp"
+#include "Shared/DirectInputRawMouse.hpp"
 
 export module Window;
 
@@ -17,7 +20,7 @@ namespace MafiaWindow
 {
     int(__fastcall* resetDevice)(char) = nullptr;
     void(__fastcall* restartRenderer)(uint32_t) = nullptr;
-    LONG toggleRequested = 0;
+    std::mutex windowLifetime;
     bool changing = false;
     bool enabled = false;
     int lastWindowMode = 1;
@@ -29,9 +32,20 @@ namespace MafiaWindow
     bool haveWindowRect = false;
     constexpr wchar_t WindowProperty[] = L"Mafia.FusionFix.WindowMode";
 
+    UINT focusSettingMessage;
+    std::atomic<HWND> focusWindow{ nullptr };
+
+    void ApplyFocusSetting()
+    {
+        const bool pause = FixSettings().Get("MAIN.PauseOnFocusLoss") == "1";
+        nEngineFlags = pause ? nEngineFlags | 0x20u : nEngineFlags & ~0x20u;
+    }
     struct WindowState
     {
         WNDPROC original;
+        bool maximized = false;
+        LONG toggleRequested = 0;
+        LONG resizeRequested = 0;
     };
 
     LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
@@ -39,15 +53,34 @@ namespace MafiaWindow
         auto state = reinterpret_cast<WindowState*>(GetPropW(window, WindowProperty));
         if (!state)
             return DefWindowProcW(window, message, wParam, lParam);
+        if (message != WM_NCDESTROY && focusWindow.load() != window)
+            return CallWindowProcW(state->original, window, message, wParam, lParam);
+        if (focusSettingMessage && message == focusSettingMessage)
+        {
+            ApplyFocusSetting();
+            if (GetForegroundWindow() != window)
+                return CallWindowProcW(state->original, window, WM_ACTIVATE, WA_INACTIVE, 0);
+            return 0;
+        }
+        if (message == WM_SETFOCUS || message == WM_KILLFOCUS || message == WM_ACTIVATEAPP)
+            DirectInputRawMouse::Clear();
         LRESULT overlayResult = 0;
         if (MafiaOverlay::Message(window, message, wParam, lParam, overlayResult))
             return overlayResult;
         if (window == WindowedModeWrapper::GameHWND)
             CursorConfinement::Message(message, wParam);
+        if (nWindowMode == 1 && !changing)
+        {
+            if (message == WM_EXITSIZEMOVE ||
+                (message == WM_SIZE && (wParam == SIZE_MAXIMIZED || (state->maximized && wParam == SIZE_RESTORED))))
+                InterlockedExchange(&state->resizeRequested, 1);
+            if (message == WM_SIZE && wParam != SIZE_MINIMIZED)
+                state->maximized = wParam == SIZE_MAXIMIZED;
+        }
         if (enabled && wParam == VK_RETURN && (message == WM_SYSKEYDOWN || message == WM_SYSKEYUP))
         {
             if (message == WM_SYSKEYDOWN && (lParam & (1u << 29)) && !(lParam & (1u << 30)))
-                InterlockedExchange(&toggleRequested, 1);
+                InterlockedExchange(&state->toggleRequested, 1);
             return 0;
         }
         // Reset may synchronously activate the window while rebuilding the device.
@@ -56,10 +89,12 @@ namespace MafiaWindow
         auto original = state->original;
         if (message == WM_NCDESTROY)
         {
+            const std::lock_guard guard(windowLifetime);
+            HWND attached = window;
+            focusWindow.compare_exchange_strong(attached, nullptr);
             if (window == WindowedModeWrapper::GameHWND)
                 WindowedModeWrapper::GameHWND = nullptr;
             RemovePropW(window, WindowProperty);
-            InterlockedExchange(&toggleRequested, 0);
             delete state;
         }
         return CallWindowProcW(original, window, message, wParam, lParam);
@@ -80,6 +115,11 @@ namespace MafiaWindow
         {
             RemovePropW(window, WindowProperty);
             delete state;
+        }
+        else
+        {
+            focusWindow.store(window);
+            ApplyFocusSetting();
         }
     }
 
@@ -119,10 +159,18 @@ namespace MafiaWindow
 
     void Toggle(SafetyHookContext&)
     {
-        if (!InterlockedExchange(&toggleRequested, 0))
+        const auto window = focusWindow.load();
+        bool toggle, resize;
+        {
+            const std::lock_guard guard(windowLifetime);
+            auto* state = window ? reinterpret_cast<WindowState*>(GetPropW(window, WindowProperty)) : nullptr;
+            if (!state || window != focusWindow.load()) return;
+            toggle = InterlockedExchange(&state->toggleRequested, 0) != 0;
+            resize = InterlockedExchange(&state->resizeRequested, 0) != 0 && nWindowMode == 1;
+        }
+        if (!toggle && !resize)
             return;
-        auto window = WindowedModeWrapper::GameHWND;
-        if (!window || !pEngineDevice || changing || GetForegroundWindow() != window)
+        if (!window || !pEngineDevice || changing || IsIconic(window) || (toggle && GetForegroundWindow() != window))
             return;
         void* device = pEngineDevice;
         auto table = *reinterpret_cast<uintptr_t**>(device);
@@ -133,7 +181,18 @@ namespace MafiaWindow
         const PresentParameters saved = EnginePresentParameters;
         const uint32_t flags = nEngineFlags;
         const int previousMode = nWindowMode;
-        const int nextMode = previousMode ? 0 : lastWindowMode;
+        const int nextMode = toggle ? (previousMode ? 0 : lastWindowMode) : previousMode;
+        const int previousWidth = nWindowWidth, previousHeight = nWindowHeight;
+        if (resize && !toggle)
+        {
+            RECT client{};
+            if (!GetClientRect(window, &client) || client.right <= 0 || client.bottom <= 0 ||
+                (client.right == previousWidth && client.bottom == previousHeight)) return;
+            nEngineWidth = nWindowWidth = client.right;
+            nEngineHeight = nWindowHeight = client.bottom;
+            WindowedModeWrapper::desiredClientWidth = nWindowWidth;
+            WindowedModeWrapper::desiredClientHeight = nWindowHeight;
+        }
         const auto style = GetWindowLongW(window, GWL_STYLE);
         const auto exStyle = GetWindowLongW(window, GWL_EXSTYLE);
         RECT previousRect{};
@@ -161,7 +220,8 @@ namespace MafiaWindow
         changing = true;
         nWindowMode = nextMode;
         nEngineFlags = nextMode ? flags & ~2u : flags | 2u;
-        ApplyWindow(window, nextMode);
+        if (toggle)
+            ApplyWindow(window, nextMode);
         StoreParameters(requested);
         if (resetDevice(1) >= 0)
         {
@@ -172,7 +232,11 @@ namespace MafiaWindow
         }
         else
         {
-            OutputDebugStringA("Mafia: window mode reset failed; restoring the previous mode.\n");
+            OutputDebugStringA("Mafia: device reset failed; restoring the previous presentation.\n");
+            nEngineWidth = nWindowWidth = previousWidth;
+            nEngineHeight = nWindowHeight = previousHeight;
+            WindowedModeWrapper::desiredClientWidth = previousWidth;
+            WindowedModeWrapper::desiredClientHeight = previousHeight;
             nWindowMode = previousMode;
             nEngineFlags = flags;
             SetWindowLongW(window, GWL_STYLE, style);
@@ -182,6 +246,8 @@ namespace MafiaWindow
                 previousRect.bottom - previousRect.top, SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
             WindowedModeWrapper::bBorderlessWindowed = previousMode == 2;
             WindowedModeWrapper::bScaleWindow = previousMode == 2;
+            if (!toggle)
+                WindowedModeWrapper::afterCreateWindow();
             StoreParameters(saved);
             if (resetDevice(1) >= 0)
             {
@@ -222,14 +288,20 @@ namespace MafiaWindow
         }
         else
             InitializePresentation(nWindowWidth, nWindowHeight);
-        MafiaOverlay::Attach(graphics);
-        MafiaOverlay::Keyboard(WindowedModeWrapper::GameHWND);
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            MafiaOverlay::Attach(graphics);
+            MafiaOverlay::Keyboard(WindowedModeWrapper::GameHWND);
+        }
         WFP::onGameProcessEvent().executeAll();
-        const bool overlay = MafiaOverlay::BlocksInput();
-        static bool previousOverlay = false;
-        if (overlay != previousOverlay)
-            CursorConfinement::Suspend(overlay);
-        previousOverlay = overlay;
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            const bool overlay = MafiaOverlay::BlocksInput();
+            static bool previousOverlay = false;
+            if (overlay != previousOverlay)
+                CursorConfinement::Suspend(overlay);
+            previousOverlay = overlay;
+        }
         Toggle(regs);
         CursorConfinement::Update(WindowedModeWrapper::GameHWND);
         CursorConfinement::Bind();
@@ -237,6 +309,7 @@ namespace MafiaWindow
 
     void Init(HMODULE engine)
     {
+        focusSettingMessage = RegisterWindowMessageW(L"Mafia.FusionFix.PauseOnFocusLoss");
         auto present = hook::module_pattern(engine, "83 EC 34 53 56 E8 ? ? ? ? A0 ? ? ? ? 84 C0 0F 84 ? ? ? ? FF 05");
         auto reset = hook::module_pattern(engine, "83 EC 3C 85 C0 53 56 8A D9 74 ? 8B 0D");
         auto parameters = hook::module_pattern(engine, "A1 ? ? ? ? 8B 08 68 ? ? ? ? 50 FF 51 38 85 C0 7D");
@@ -259,6 +332,14 @@ namespace MafiaWindow
         resetDevice = reinterpret_cast<decltype(resetDevice)>(reset.get_first(-5));
         if (!originalEngine)
             restartRenderer = reinterpret_cast<decltype(restartRenderer)>(injector::GetBranchDestination(restart.get_first(32)).as_int());
+        // Reset drops the device vertex format while native draws retain their last format index.
+        auto movieFormat = hook::module_pattern(engine, "68 C4 01 00 00 89 0D ? ? ? ? 8B 08 50 FF 91 30 01 00 00 B9 20 00 00 00 EB 2D");
+        static auto* formatIndex = *movieFormat.get_first<int*>(7);
+        auto resetComplete = hook::module_pattern(engine, "50 FF 91 D4 00 00 00 5E");
+        static auto invalidateFormat = safetyhook::create_mid(resetComplete.get_first(7), [](SafetyHookContext&)
+        {
+            *formatIndex = -1;
+        });
         lastWindowMode = nWindowMode ? nWindowMode : 1;
         static auto presentHook = safetyhook::create_mid(present.get_first(), Frame);
         enabled = true;
@@ -283,6 +364,7 @@ HWND WINAPI CreateWindowExAHook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpWi
 {
     if (nWindowMode && !(dwStyle & WS_CHILD))
     {
+        WindowedModeWrapper::bEnableWindowResize = true;
         WindowedModeWrapper::bBorderlessWindowed = nWindowMode == 2;
         // Borderless renders at the desktop size; scaling keeps the render aspect on a monitor of another shape
         WindowedModeWrapper::bScaleWindow = nWindowMode == 2;
@@ -347,11 +429,8 @@ export void InitWindowMode()
     });
     FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
     {
-        const bool pause = FixSettings().Bool("MAIN.PauseOnFocusLoss");
-        nEngineFlags = pause ? nEngineFlags | 0x20u : nEngineFlags & ~0x20u;
-        auto window = WindowedModeWrapper::GameHWND;
-        if (!pause && window && GetForegroundWindow() != window)
-            SendMessageW(window, WM_ACTIVATE, WA_INACTIVE, 0);
+        if (const auto window = MafiaWindow::focusWindow.load(); window && MafiaWindow::focusSettingMessage)
+            PostMessageW(window, MafiaWindow::focusSettingMessage, 0, 0);
     });
     injector::WriteMemory<decltype(&CreateWindowExAHook)>(*create.get_first<uint32_t*>(2), CreateWindowExAHook, true);
     IATHook::Replace(engine, "USER32.dll", std::forward_as_tuple("SetWindowPos", SetWindowPosHook));

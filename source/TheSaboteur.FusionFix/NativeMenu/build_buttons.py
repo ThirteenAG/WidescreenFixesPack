@@ -1,4 +1,6 @@
-"""Build native prompt textures from the repository's existing pad atlases."""
+"""Build native prompt textures from the repository's existing pad atlases.
+
+The game's loose DDS loader reads only DXT1-5 data, so the textures are saved as DXT5."""
 from pathlib import Path
 from PIL import Image
 
@@ -19,4 +21,4 @@ for family, name in [(1, "xbox"), (2, "playstation"), (3, "nintendo")]:
     folder.mkdir(parents=True, exist_ok=True)
     for native, cell in cells.items():
         x, y = cell % 8 * 64, cell // 8 * 64
-        atlas.crop((x, y, x + 64, y + 64)).save(folder / ("FF_Saboteur_" + str(family) + "_" + native + ".dds"))
+        atlas.crop((x, y, x + 64, y + 64)).save(folder / ("FF_Saboteur_" + str(family) + "_" + native + ".dds"), pixel_format="DXT5")

@@ -89,10 +89,20 @@ export namespace CondemnedWindow
         auto windowStyle = hook::pattern("68 ? ? ? ? 52 68 ? ? ? ? 53");
         auto positionSlot = *sizing.get_first<decltype(&SetWindowPos)*>(24);
         Mode = std::clamp(mode, 0, 2);
-        // Override the renderer's native Windowed decision after configuration is read.
+        // Override the renderer's native Windowed decision after configuration is read. Borderless renders at the
+        // monitor's resolution instead of the configured one, which the covering window would stretch.
         SelectionHook = safetyhook::create_mid(selection.get_first(6), [](SafetyHookContext& context)
         {
             context.ecx = Mode != 0;
+            if (Mode != 2)
+                return;
+            MONITORINFO monitor{ sizeof(monitor) };
+            const auto window = *reinterpret_cast<HWND*>(context.edi + 0x94);
+            if (GetMonitorInfoW(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY), &monitor))
+            {
+                *reinterpret_cast<uint32_t*>(context.edi + 0x84) = monitor.rcMonitor.right - monitor.rcMonitor.left;
+                *reinterpret_cast<uint32_t*>(context.edi + 0x88) = monitor.rcMonitor.bottom - monitor.rcMonitor.top;
+            }
         });
         OriginalPosition = *positionSlot;
         injector::WriteMemory<decltype(&SetWindowPos)>(positionSlot, Position, true);

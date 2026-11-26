@@ -60,7 +60,10 @@ export namespace GunHud
 
     inline void Update()
     {
-        const auto parsed = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+        static std::mutex mutex;
+        std::lock_guard lock(mutex);
+        const auto value = FixSettings().Get("MAIN.HudAspectRatioConstraint");
+        const auto parsed = ParseWidescreenHudOffset(value);
         Aspect.store(parsed && std::isfinite(*parsed) && *parsed > 0.0f ? std::clamp(*parsed, 4.0f / 3.0f, 32.0f / 9.0f) : 0.0f,
             std::memory_order_relaxed);
     }
@@ -74,8 +77,8 @@ export namespace GunHud
     inline void Init(int width, int height)
     {
         Resize(width, height);
-        Update();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", Update);
+        Update();
         // Radar dots and waypoint blips are sprites placed in screen units from the map mask's local position,
         // so they follow the radar group's shift here instead of through the element tree.
         auto blips = hook::pattern("8B 4F 18 83 EC 08 D9 5C 24 04 D9 44 24 ? D8 44 24 ? D9 1C 24 E8 ? ? ? ? 38 5F 1F").count(2);

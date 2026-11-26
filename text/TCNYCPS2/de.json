@@ -8,7 +8,7 @@
   "FOVFactor": "Sichtfeld",
   "FOVFactor.description": "Multipliziert das Sichtfeld der Spielkamera, zu Fuß und im Fahrzeug; 1,0 ist der originale Bildausschnitt. Zwischensequenzen behalten ihren Bildausschnitt. Änderungen gelten während des Spiels.",
   "HudAspectRatioConstraint": "Seitenverhältnis des HUD",
-  "HudAspectRatioConstraint.description": "Auto setzt Gesundheit, Abzeichen, Waffe und Munition, die Hilfeboxen und das Radar an die Bildschirmränder. Ein Verhältnis hält sie an den Rändern eines zentrierten Bereichs dieser Form. Änderungen gelten während des Spiels.",
+  "HudAspectRatioConstraint.description": "Auto platziert das HUD an den Bildschirmrändern. Ein Seitenverhältnis begrenzt es auf einen zentrierten Bereich. Die HUD-Positionen ändern sich während des Spiels. Falls ein Element an seiner alten Position bleibt, öffne und schließe das Pausenmenü oder warte bis zur nächsten Szene.",
   "CutsceneBorders": "Balken in Zwischensequenzen",
   "CutsceneBorders.description": "Schwarze Balken in Zwischensequenzen. Letterbox behält die originalen Balken oben und unten, Pillarbox behält das originale 4:3-Bild mit Balken an den Seiten, Beides kombiniert sie, Aus füllt den Bildschirm. Menüs behalten ihr Aussehen. Änderungen gelten während des Spiels.",
   "borders.off": "Aus",

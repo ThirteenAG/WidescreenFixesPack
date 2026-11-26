@@ -10,7 +10,7 @@ export namespace BullyFocus
 {
     SafetyHookInline ActivationHook, ActiveHook;
     SafetyHookMid PumpHook;
-    const int* PauseOnFocusLoss = nullptr;
+    std::atomic<int> PauseOnFocusLoss{ 1 };
     int(__thiscall* PauseAudio)(void*) = nullptr;
     int(__thiscall* ResumeAudio)(void*) = nullptr;
     uintptr_t PumpReturn = 0;
@@ -20,7 +20,7 @@ export namespace BullyFocus
     // in the background must count as running from the start too.
     bool BackgroundRunning()
     {
-        return FocusActive.is_initialized() && !FocusActive && PauseOnFocusLoss && !*PauseOnFocusLoss;
+        return FocusActive.is_initialized() && !FocusActive && !PauseOnFocusLoss.load(std::memory_order_relaxed);
     }
 
     void Update()
@@ -87,7 +87,7 @@ export namespace BullyFocus
         HaveFocusEvent = false;
     }
 
-    void Install(const int& pause, HMODULE module = GetModuleHandle(nullptr))
+    void Install(HMODULE module = GetModuleHandle(nullptr))
     {
         auto activation = hook::module_pattern(module, "83 EC 08 53 8A 5C 24 10 84 DB 74 18 80 3D ? ? ? ? 00 75 0F 68 ? ? ? ? E8");
         auto active = hook::module_pattern(module, "A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC A0 ? ? ? ? C3");
@@ -95,7 +95,6 @@ export namespace BullyFocus
         auto state = hook::module_pattern(module, "80 3D ? ? ? ? 00 A1 ? ? ? ? 88 1D ? ? ? ? A3 ? ? ? ? 74 19 80 3D ? ? ? ? 00 75 10 B9 ? ? ? ? E8 ? ? ? ? 88 1D ? ? ? ?");
         auto mutex = hook::module_pattern(module, "80 3D ? ? ? ? 00 C6 05 ? ? ? ? 00 74 13 A1 ? ? ? ? 50 FF 15 ? ? ? ? C6 05 ? ? ? ? 00");
         auto resume = hook::module_pattern(module, "80 3D ? ? ? ? 00 74 1A 80 3D ? ? ? ? 00 74 11 B9 ? ? ? ? E8 ? ? ? ? C6 05 ? ? ? ? 00");
-        PauseOnFocusLoss = &pause;
         FocusActive.SetAddress(*pump.get_first<uint8_t*>(2));
         FocusAudioReady.SetAddress(*state.get_first<uint8_t*>(2));
         FocusTimerPaused.SetAddress(*state.get_first<uint8_t*>(14));

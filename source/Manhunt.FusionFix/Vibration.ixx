@@ -5,6 +5,7 @@ module;
 #include "FixSettings.hpp"
 #include <atomic>
 #include <thread>
+#include <mutex>
 
 export module Vibration;
 
@@ -13,7 +14,8 @@ export namespace MHRumble
 {
     using SendFn = bool(*)(short, unsigned short, unsigned short);
     inline std::array<std::atomic<uint64_t>, 2> motors{};
-    inline std::atomic<uint32_t> lastSent{ 0 };
+    inline std::mutex outputMutex;
+    inline uint32_t lastSent = 0;
     inline std::atomic<bool> enabled{ false }, running{ false }, closing{ false };
     inline SafetyHookInline largeHook, smallHook, stopHook;
     inline bool (*inputActive)() = nullptr;
@@ -36,13 +38,17 @@ export namespace MHRumble
         if (!enabled || closing || !Focused())
             low = high = 0;
         const uint32_t value = uint32_t(low) | (uint32_t(high) << 16);
-        if (lastSent.exchange(value) != value)
-            if (auto send = Sender())
-                send(0, low, high);
+        if (value != lastSent)
+        {
+            const auto send = Sender();
+            if (send && send(0, low, high))
+                lastSent = value;
+        }
     }
 
     inline void Stop()
     {
+        const std::lock_guard lock(outputMutex);
         for (auto& motor : motors)
             motor = 0;
         Send(0, 0);
@@ -52,6 +58,7 @@ export namespace MHRumble
     {
         for (;;)
         {
+            std::unique_lock lock(outputMutex);
             const DWORD now = GetTickCount();
             const bool allowed = enabled && !closing && Focused() && (!inputActive || inputActive());
             std::array<uint16_t, 2> strength{};
@@ -68,14 +75,17 @@ export namespace MHRumble
                     strength[i] = uint16_t(state);
             }
             Send(strength[0], strength[1]);
-            if (!motors[0] && !motors[1])
+            const bool idle = !motors[0] && !motors[1];
+            if (idle && (lastSent == 0 || closing))
             {
                 running = false;
                 if ((motors[0] || motors[1]) && !running.exchange(true))
                     continue;
                 return;
             }
-            Sleep(8);
+            lock.unlock();
+            // Xidi may temporarily reject the final zero. Keep trying until it accepts the stop.
+            Sleep(idle ? 50 : 8);
         }
     }
 
@@ -142,10 +152,10 @@ export namespace MHRumble
         {
             return value == "0" || Sender();
         });
-        enabled = FixSettings().Bool("MAIN.Vibration");
+        enabled = FixSettings().Get("MAIN.Vibration") != "0";
         FixSettings().OnChange("MAIN.Vibration", []()
         {
-            enabled = FixSettings().Bool("MAIN.Vibration");
+            enabled = FixSettings().Get("MAIN.Vibration") != "0";
             if (!enabled)
                 Stop();
         });

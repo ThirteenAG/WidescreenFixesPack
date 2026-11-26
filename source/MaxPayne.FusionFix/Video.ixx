@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include <dshow.h>
 #include "FixSettings.hpp"
+#include "Shared/StartupImport.hpp"
 
 #pragma comment(lib, "strmiids.lib")
 
@@ -10,7 +11,6 @@ export module Video;
 
 import ComVars;
 import input;
-import SettingsFile;
 import Window;
 
 // Movies (intro.mpg and the others played through DirectShow) and the startup window: whole movie at its own aspect,
@@ -35,9 +35,9 @@ namespace MaxPayneVideo
 
     int SavedSize(const char* name, int fallback)
     {
-        if (FixSettings().Bool("MAIN.PortableSettings") && !CWinApp::SettingsPath.empty())
+        if (FixSettings().Bool("MAIN.PortableSettings"))
             return static_cast<int>(
-                GetPrivateProfileIntA("Video Settings", name, fallback, CWinApp::SettingsPath.string().c_str()));
+                GetPrivateProfileIntA("Video Settings", name, fallback, FixSettings().CfgPath().string().c_str()));
         DWORD value = fallback;
         DWORD size = sizeof(value);
         RegGetValueA(HKEY_CURRENT_USER, "Software\\Remedy Entertainment\\Max Payne\\Video Settings", name,
@@ -172,37 +172,6 @@ namespace MaxPayneVideo
         return NativeSetWindowPos(window, after, x, y, width, height, flags);
     }
 
-    template<typename T>
-    void ReplaceStartupImport(HMODULE module, const char* name, T replacement, T& original)
-    {
-        auto base = reinterpret_cast<uintptr_t>(module);
-        auto dos = reinterpret_cast<IMAGE_DOS_HEADER*>(base);
-        auto nt = reinterpret_cast<IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
-        auto imports = reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR*>(base + nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress);
-        for (; imports->Name; ++imports)
-        {
-            if (_stricmp(reinterpret_cast<const char*>(base + imports->Name), "USER32.dll") != 0)
-                continue;
-            auto names = reinterpret_cast<IMAGE_THUNK_DATA*>(base + imports->OriginalFirstThunk);
-            auto addresses = reinterpret_cast<IMAGE_THUNK_DATA*>(base + imports->FirstThunk);
-            for (size_t i = 0; names[i].u1.AddressOfData; ++i)
-            {
-                if (IMAGE_SNAP_BY_ORDINAL(names[i].u1.Ordinal))
-                    continue;
-                auto import = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(base + names[i].u1.AddressOfData);
-                if (strcmp(reinterpret_cast<const char*>(import->Name), name) != 0)
-                    continue;
-                auto slot = reinterpret_cast<T*>(&addresses[i].u1.Function);
-                DWORD protect;
-                VirtualProtect(slot, sizeof(*slot), PAGE_READWRITE, &protect);
-                original = *slot;
-                *slot = replacement;
-                VirtualProtect(slot, sizeof(*slot), protect, &protect);
-                return;
-            }
-        }
-        std::terminate();
-    }
 
     export void InitStartupWindow()
     {
@@ -210,9 +179,9 @@ namespace MaxPayneVideo
         if (!StartupSizing)
             return;
         auto mfc = GetModuleHandleW(L"MFC42.dll");
-        ReplaceStartupImport(mfc, "CreateWindowExA", &CreateStartupWindow, NativeCreateWindow);
-        ReplaceStartupImport(mfc, "ShowWindow", &MfcShowWindow, NativeMfcShowWindow);
-        ReplaceStartupImport(mfc, "SetWindowPos", &SetStartupWindowPos, NativeSetWindowPos);
+        ReplaceStartupImport(mfc, "USER32.dll", "CreateWindowExA", &CreateStartupWindow, NativeCreateWindow);
+        ReplaceStartupImport(mfc, "USER32.dll", "ShowWindow", &MfcShowWindow, NativeMfcShowWindow);
+        ReplaceStartupImport(mfc, "USER32.dll", "SetWindowPos", &SetStartupWindowPos, NativeSetWindowPos);
     }
 
     void PrepareMovie(SafetyHookContext&)
@@ -225,9 +194,9 @@ namespace MaxPayneVideo
         auto quartz = GetModuleHandleW(L"quartz.dll");
         if (!quartz)
             std::terminate();
-        ReplaceStartupImport(quartz, "CreateWindowExW", &CreateMovieWindow, NativeMovieCreateWindow);
-        ReplaceStartupImport(quartz, "ShowWindow", &ShowMovieWindow, NativeMovieShowWindow);
-        ReplaceStartupImport(quartz, "SetWindowPos", &SetMovieWindowPos, NativeMovieSetWindowPos);
+        ReplaceStartupImport(quartz, "USER32.dll", "CreateWindowExW", &CreateMovieWindow, NativeMovieCreateWindow);
+        ReplaceStartupImport(quartz, "USER32.dll", "ShowWindow", &ShowMovieWindow, NativeMovieShowWindow);
+        ReplaceStartupImport(quartz, "USER32.dll", "SetWindowPos", &SetMovieWindowPos, NativeMovieSetWindowPos);
         installed = true;
     }
 

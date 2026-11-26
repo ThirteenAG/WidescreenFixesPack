@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/CursorConfinement.hpp"
+#include "Shared/SplinterCell/ViewportMouse.hpp"
 
 export module Focus;
 
@@ -13,10 +14,11 @@ namespace
 {
     SafetyHookInline PauseHook;
     void* PausedEngine = nullptr;
+    std::atomic<bool> pauseOnFocusLoss{ true };
 
     int __fastcall Pause(void* engine, void* edx, int paused)
     {
-        if (paused && nViewportWndProcMsg == WM_ACTIVATEAPP && !FixSettings().Bool("MAIN.PauseOnFocusLoss") &&
+        if (paused && nViewportWndProcMsg == WM_ACTIVATEAPP && !pauseOnFocusLoss.load() &&
             hGameWindow && !IsIconic(hGameWindow))
             return 0;
         return PauseHook.unsafe_fastcall<int>(engine, edx, paused);
@@ -46,8 +48,7 @@ namespace
         // Mouse movement during a movie doesn't turn the camera afterwards
         UWindowsViewport::deferredCauseInputEvent = {};
         UWindowsViewport::RawMouseFeed = nullptr;
-        RawInputHandler<>::RawMouseDeltaX.exchange(0);
-        RawInputHandler<>::RawMouseDeltaY.exchange(0);
+        ViewportMouse::movement.Clear();
 
         if (hGameWindow && GetForegroundWindow() != hGameWindow)
             return 0;
@@ -64,7 +65,7 @@ export namespace Focus
         if (!PauseHook || !hGameWindow)
             return;
         const bool inactive = GetForegroundWindow() != hGameWindow;
-        const bool wanted = IsIconic(hGameWindow) || (inactive && FixSettings().Bool("MAIN.PauseOnFocusLoss"));
+        const bool wanted = IsIconic(hGameWindow) || (inactive && pauseOnFocusLoss.load());
         if (wanted)
         {
             // The native focus pause remembers an existing player pause and pauses sound.
@@ -82,11 +83,8 @@ export namespace Focus
 
     void Init()
     {
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
-        FixSettings().OnChange("MAIN.ConfineCursor", []()
-        {
-            CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
-        });
+        ObserveFixSetting("MAIN.PauseOnFocusLoss", asi_settings::detail::ParseBool, [](int value) { pauseOnFocusLoss.store(value != 0); });
+        ObserveFixSetting("MAIN.ConfineCursor", asi_settings::detail::ParseBool, [](int value) { CursorConfinement::SetEnabled(value != 0); });
         auto pattern = hook::pattern("81 EC B4 00 00 00 A1 ? ? ? ? 56 8B F1 89 84 24 B4 00 00 00 8B 86 A8 00 00 00 85 C0 74 30");
         PauseHook = safetyhook::create_inline(pattern.get_first(), Pause);
 

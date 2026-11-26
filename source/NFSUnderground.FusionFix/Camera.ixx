@@ -14,9 +14,8 @@ import Resolution;
 
 using namespace usercall;
 
-// Free look for the chase cameras: the right stick or the mouse orbits the camera around the car. Like the
-// car camera of GTA San Andreas, the look direction stays put in the world when the car turns. Once the
-// camera is let go, it eases back to the game's own camera while the car moves.
+// The right stick or mouse orbits the chase cameras. The heading stays fixed in world space as the car
+// turns. When the player stops looking, the camera eases back behind the moving car.
 
 namespace
 {
@@ -58,41 +57,6 @@ namespace
         return (angle < 0.0f ? angle + 360.0f : angle) - 180.0f;
     }
 
-    // Under Proton/Gamescope (Steam Deck) the mouse cursor can't be warped back to the window centre,
-    // so DirectInput keeps reporting the same offset every frame and the camera spins on its own.
-    // A hand never moves a mouse by exactly the same amount for this many frames in a row.
-    class MouseSanity
-    {
-        int lastX = 0, lastY = 0, repeats = 0;
-        bool broken = false;
-
-    public:
-        bool Accept(int dx, int dy)
-        {
-            if (dx == 0 && dy == 0)
-            {
-                repeats = 0;
-                broken = false;
-                return true;
-            }
-
-            if (dx == lastX && dy == lastY)
-            {
-                if (++repeats >= 30)
-                    broken = true;
-            }
-            else
-            {
-                repeats = 0;
-                broken = false;
-            }
-
-            lastX = dx;
-            lastY = dy;
-            return !broken;
-        }
-    } MouseFilter;
-
     void ResetLook()
     {
         bFreeHeading = false;
@@ -120,6 +84,12 @@ namespace
 
     void __cdecl eCreateLookAtMatrix(bVector3* to, bVector3* from, bMatrix4* out, bVector3* up)
     {
+        if (!*pFreeLook)
+        {
+            ResetLook();
+            return CreateLookAtMatrix(to, from, out, up);
+        }
+
         auto look = Input::ConsumeLook();
 
         // A new race, or the chase camera back after another view: the look starts behind the car, and
@@ -168,17 +138,12 @@ namespace
         float yawInput = -look.stickX * StickDegreesPerSecond * (*pStickSensitivity) * dt;
         float pitchInput = (*pOnlyHorizontalStick != 0) ? 0.0f : look.stickY * StickDegreesPerSecond * (*pStickSensitivity) * dt;
 
-        if (look.rawMouse || MouseFilter.Accept(look.mouseX, look.mouseY))
-        {
-            yawInput -= look.mouseX * MouseDegreesPerCount * (*pMouseSensitivity);
-            pitchInput += look.mouseY * MouseDegreesPerCount * (*pMouseSensitivity);
-        }
+        yawInput -= look.mouseX * MouseDegreesPerCount * (*pMouseSensitivity);
+        pitchInput += look.mouseY * MouseDegreesPerCount * (*pMouseSensitivity);
 
         if ((*pInvertLook != 0))
             pitchInput = -pitchInput;
 
-        // Like San Andreas: the look direction is a direction in the world, so turning the car doesn't
-        // turn it. After the return delay without looking, the camera eases back behind the car.
         if (std::fabs(yawInput) > 0.001f || std::fabs(pitchInput) > 0.001f)
         {
             if (!bFreeHeading)
@@ -287,6 +252,8 @@ public:
             // While paused the camera keeps its look direction, and the mouse moves the cursor, not the camera
             WFP::onMenuDrawingEvent() += []()
             {
+                if (!*pFreeLook)
+                    return;
                 LastLookUpdate = SteadyClock::now();
                 Input::ConsumeLook();
             };

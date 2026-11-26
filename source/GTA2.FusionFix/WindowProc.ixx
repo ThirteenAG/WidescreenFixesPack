@@ -21,7 +21,7 @@ export namespace GTA2WindowProc
 
     LRESULT APIENTRY WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
-        InputDevices::KeyboardMessage(uMsg, wParam);
+        InputDevices::KeyboardMessage(uMsg, wParam, lParam);
         // Rebinding a key in the options page.
         int pressed = uMsg == WM_KEYDOWN || uMsg == WM_SYSKEYDOWN ? int(wParam) : uMsg == WM_LBUTTONDOWN ? VK_LBUTTON :
             uMsg == WM_RBUTTONDOWN ? VK_RBUTTON : uMsg == WM_MBUTTONDOWN ? VK_MBUTTON :
@@ -55,9 +55,10 @@ export namespace GTA2WindowProc
             case WM_KEYUP:
                 break;
             case WM_ACTIVATEAPP:
-                if (!wParam) GTA2Input::FocusLost = true;
+                if (!wParam) GTA2Input::OnFocusLost();
                 break;
             case WM_KILLFOCUS:
+                GTA2Input::OnFocusLost();
                 GTA2Input::MenuKeys = 0;
                 GTA2Input::TextKey = 0;
                 InputDevices::UpdateRumble(true);

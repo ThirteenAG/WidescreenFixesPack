@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "common.h"
 #include "FixSettings.hpp"
+#include "Shared/RWGTA/PadOptions.hpp"
 
 export module FreeCam;
 
@@ -218,7 +219,7 @@ namespace
 
     bool FreeCameraOn()
     {
-        static auto& freeCamera = FixSettings().Int("MAIN.FreeCamera");
+        const auto freeCamera = RWGTA::PadOptions::FreeCamera.load(std::memory_order_relaxed);
         return freeCamera && !TheCamera->m_WideScreenOn && TheCamera->WhoIsInControlOfTheCamera == 0;
     }
 
@@ -286,7 +287,7 @@ namespace
         }
         else if (stickX || stickY)
         {
-            static auto& speed = FixSettings().Float("MAIN.GamepadCameraSpeed");
+            const auto speed = RWGTA::PadOptions::CameraSpeed.load(std::memory_order_relaxed);
             // The stick past the game's own dead zone, in its units
             float lookLeftRight = -stickX * 170.0f * speed;
             float lookUpDown = stickY * 170.0f * speed;
@@ -374,10 +375,10 @@ namespace
     // The zoom of the game's three steps in this camera's distances
     float CarZoomValue(bool boat, bool reset)
     {
-        if (TheCamera->m_bUseScriptZoomValueCar || TheCamera->m_bPlayerIsInGarage)
-            return TheCamera->CarZoomValueSmooth;
-        int step = std::clamp(TheCamera->CarZoomIndicator, CAM_ZOOM_1, CAM_ZOOM_3) - CAM_ZOOM_1;
+        int step = std::clamp(int(std::lround(TheCamera->CarZoomIndicator)), CAM_ZOOM_1, CAM_ZOOM_3) - CAM_ZOOM_1;
         float target = boat ? BoatZoom[step] : CarZoom[step];
+        if (TheCamera->m_bUseScriptZoomValueCar || TheCamera->m_bPlayerIsInGarage)
+            target = TheCamera->CarZoomValueSmooth;
         if (reset)
             Car.zoom = target;
         else if (Car.zoom < target)
@@ -467,7 +468,8 @@ namespace
 
         int alphaSet = set > 4 ? (isPlane ? 3 : 0) : set;
         float zoomModeAlphaOffset = 0.0f;
-        switch (TheCamera->CarZoomIndicator)
+        const int zoomIndicator = int(std::lround(TheCamera->CarZoomIndicator));
+        switch (zoomIndicator)
         {
             case CAM_ZOOM_1: zoomModeAlphaOffset = ZoomOneAlphaOffset[alphaSet]; break;
             case CAM_ZOOM_2: zoomModeAlphaOffset = ZoomTwoAlphaOffset[alphaSet]; break;
@@ -475,21 +477,30 @@ namespace
             default: break;
         }
 
-        float colMaxZ = boxMax.z;
-        float approxCarLength = 2.0f * std::abs(boxMin.y);
-        float newDistance = CarZoomValue(car->IsBoat(), cam->ResetStatics) + params[1] + approxCarLength;
-        float minDistForThisCar = approxCarLength * params[3];
-
-        float radiusToStayOutside = colMaxZ * params[0] - params[2];
-        if (radiusToStayOutside > 0.0f)
+        const float approxCarLength = 2.0f * std::abs(boxMin.y);
+        const float minDistForThisCar = approxCarLength * params[3];
+        float newDistance;
+        if (set == 0)
         {
-            targetCoors.z += radiusToStayOutside;
-            newDistance += radiusToStayOutside;
-            zoomModeAlphaOffset += 0.3f / newDistance * radiusToStayOutside;
+            const CVector dimensions = boxMax - boxMin;
+            targetCoors.z += dimensions.z - 0.1f;
+            newDistance = dimensions.Magnitude2D() + 0.1f + TheCamera->CarZoomValueSmooth;
+            zoomModeAlphaOffset += 0.3f * dimensions.z / std::max(newDistance, 1.0f);
+        }
+        else
+        {
+            newDistance = CarZoomValue(car->IsBoat(), cam->ResetStatics) + params[1] + approxCarLength;
+            const float radiusToStayOutside = boxMax.z * params[0] - params[2];
+            if (radiusToStayOutside > 0.0f)
+            {
+                targetCoors.z += radiusToStayOutside;
+                newDistance += radiusToStayOutside;
+                zoomModeAlphaOffset += 0.3f / newDistance * radiusToStayOutside;
+            }
         }
 
         float minDistForVehType = params[4];
-        if (TheCamera->CarZoomIndicator == CAM_ZOOM_1 && (set < 2 || set == 7))
+        if (zoomIndicator == CAM_ZOOM_1 && (set < 2 || set == 7))
             minDistForVehType *= 0.65f;
         float nextDistance = std::max(newDistance, minDistForVehType);
 
@@ -497,7 +508,7 @@ namespace
         cam->CA_MIN_DISTANCE = 3.5f;
 
         // The field of view: wider with speed when that option is on
-        static auto& speedFov = FixSettings().Int("MISC.CarSpeedDependantFOV");
+        const auto speedFov = RWGTA::PadOptions::SpeedFOV.load(std::memory_order_relaxed);
         if (cam->ResetStatics || !speedFov)
         {
             cam->FOV = DefaultFOV;
@@ -613,7 +624,7 @@ namespace
         Pad::RightStick(rx, ry);
         float stickX = -rx * 128.0f;
         float stickY = ry * 128.0f;
-        static auto& speed = FixSettings().Float("MAIN.GamepadCameraSpeed");
+        const auto speed = RWGTA::PadOptions::CameraSpeed.load(std::memory_order_relaxed);
         float xMovement = std::abs(stickX) * (cam->FOV / 80.0f * 5.0f / 70.0f) * stickX * 0.007f * 0.007f * speed;
         float yMovement = std::abs(stickY) * (cam->FOV / 80.0f * 3.0f / 70.0f) * stickY * 0.007f * 0.007f * speed;
 
@@ -644,7 +655,7 @@ namespace
             Pad::MouseAccel(accelX, accelY);
             if (mouseX || mouseY)
             {
-                yMovement = mouseY * cam->FOV / 80.0f * accelX;
+                yMovement = mouseY * cam->FOV / 80.0f * accelY;
                 xMovement = mouseX * cam->FOV / 80.0f * accelX;
                 cam->BetaSpeed = cam->AlphaSpeed = 0.0f;
                 targetAlpha = cam->Alpha;

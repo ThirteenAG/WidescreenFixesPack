@@ -1,9 +1,11 @@
 #pragma once
 #include <d3d9.h>
 #include <atomic>
+#include <cstdlib>
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include "Shared/AsiSettings/asi_settings.hpp"
 #include "Shared/TonyHawk/PadIconArt.hpp"
 
 // Gamepad support shared by THUG and THUG2 (DirectInput through the bundled Xidi): the last device used, the pad
@@ -60,10 +62,9 @@ namespace TonyPad
     inline Bindings Native{};
     inline std::atomic<bool> UsingPad{ false };
     inline std::atomic<int> ActivePlayer{ 0 };
-    inline const int32_t* VibrationEnabled = nullptr;
-    inline const float* CameraSpeed = nullptr;
-    inline const int32_t* InvertCameraY = nullptr;
-    inline const int32_t* IconFamily = nullptr;
+    inline std::atomic<bool> VibrationEnabled{ true }, InvertCameraY{ false };
+    inline std::atomic<float> CameraSpeed{ 1.0f };
+    inline std::atomic<int> IconFamily{ 0 };
 
     inline GUID* Selected = nullptr;
     inline uint8_t* PreviousPad = nullptr;
@@ -83,19 +84,51 @@ namespace TonyPad
 
     // Last device used
 
+    struct StickActivity
+    {
+        std::array<int32_t, 8> reference{};
+        bool initialized = false;
+
+        void Remember(const int32_t* axes)
+        {
+            std::copy_n(axes, reference.size(), reference.begin());
+            initialized = true;
+        }
+
+        bool Moved(const int32_t* axes) const
+        {
+            for (size_t i = 0; i < reference.size(); ++i)
+            {
+                const int64_t value = axes[i];
+                if (std::abs(value) > 200 && std::abs(value - reference[i]) > 200)
+                    return true;
+            }
+            return false;
+        }
+    };
+
     inline uint8_t* __cdecl ReadPad(int player)
     {
         auto* current = PadHook.ccall<uint8_t*>(player);
-        if (!current || player < 0 || player >= 2 || !Focused())
+        if (!current || player < 0 || player >= 2)
             return current;
+        static std::array<StickActivity, 2> stickActivity;
+        auto& activity = stickActivity[player];
+        const auto* axes = reinterpret_cast<const int32_t*>(current);
+        if (!Focused())
+        {
+            activity.Remember(axes);
+            return current;
+        }
         const auto* previous = PreviousPad + 272 * player;
-        bool pressed = false;
+        const auto* oldAxes = reinterpret_cast<const int32_t*>(previous);
+        if (!activity.initialized)
+            activity.Remember(oldAxes);
+
+        // Accumulate motion until it can identify this pad. While it is active, keep the reference at its last sample.
+        bool pressed = activity.Moved(axes);
         for (int i = 48; i < 176 && !pressed; ++i)
             pressed = (current[i] & 0x80) && !(previous[i] & 0x80);
-        const auto* axes = reinterpret_cast<const int32_t*>(current);
-        const auto* oldAxes = reinterpret_cast<const int32_t*>(previous);
-        for (int i = 0; i < 8 && !pressed; ++i)
-            pressed = std::abs(static_cast<int64_t>(axes[i])) > 200 && std::abs(static_cast<int64_t>(axes[i]) - oldAxes[i]) > 200;
         for (int i = 8; i < 12 && !pressed; ++i)
             pressed = axes[i] != -1 && axes[i] != oldAxes[i];
         if (pressed)
@@ -103,6 +136,8 @@ namespace TonyPad
             ActivePlayer.store(player, std::memory_order_relaxed);
             UsingPad.store(true, std::memory_order_relaxed);
         }
+        if (pressed || (UsingPad.load(std::memory_order_relaxed) && ActivePlayer.load(std::memory_order_relaxed) == player))
+            activity.Remember(axes);
         return current;
     }
 
@@ -168,7 +203,7 @@ namespace TonyPad
 
     inline void __cdecl Vibrate(int player, uint32_t strong, uint32_t weak)
     {
-        if (!*VibrationEnabled)
+        if (!VibrationEnabled.load(std::memory_order_relaxed))
             strong = weak = 0;
         VibrateHook.ccall<void>(player, strong, weak);
     }
@@ -179,7 +214,7 @@ namespace TonyPad
         static bool applied = true;
         if (!VibrateHook)
             return;
-        const bool enabled = *VibrationEnabled != 0;
+        const bool enabled = VibrationEnabled.load(std::memory_order_relaxed);
         if (applied && !enabled)
         {
             for (int i = 0; i < 2; ++i)
@@ -193,9 +228,10 @@ namespace TonyPad
     inline float __cdecl LookTime()
     {
         const float time = FrameTime();
-        if (!UsingPad.load(std::memory_order_relaxed) || !std::isfinite(*CameraSpeed))
+        const float speed = CameraSpeed.load(std::memory_order_relaxed);
+        if (!UsingPad.load(std::memory_order_relaxed) || !std::isfinite(speed))
             return time;
-        return time * std::clamp(*CameraSpeed, 0.1f, 5.0f);
+        return time * std::clamp(speed, 0.1f, 5.0f);
     }
 
     // Controller icons
@@ -397,7 +433,7 @@ namespace TonyPad
             }
             else
                 device->Release();
-            const int family = std::clamp(*IconFamily, 0, 3);
+            const int family = std::clamp(IconFamily.load(std::memory_order_relaxed), 0, 3);
             const int index = family == 0 ? 0 : family - 1;
             auto*& result = Atlas[index][icon];
             if (result)
@@ -459,14 +495,24 @@ namespace TonyPad
         }
     }
 
-    inline void Install(const Bindings& bindings, const int32_t* vibration, const float* cameraSpeed,
-                        const int32_t* invertCameraY, const int32_t* iconFamily)
+    inline void Install(const Bindings& bindings, asi_settings::Plugin& settings)
     {
         Native = bindings;
-        VibrationEnabled = vibration;
-        CameraSpeed = cameraSpeed;
-        InvertCameraY = invertCameraY;
-        IconFamily = iconFamily;
+        const auto refresh = [&settings]()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            VibrationEnabled.store(settings.Get("MAIN.Vibration") != "0", std::memory_order_relaxed);
+            InvertCameraY.store(settings.Get("MAIN.InvertGamepadY") == "1", std::memory_order_relaxed);
+            const auto speed = settings.Get("MAIN.GamepadCameraSpeed");
+            CameraSpeed.store(std::strtof(speed.c_str(), nullptr), std::memory_order_relaxed);
+            IconFamily.store(std::atoi(settings.Get("MAIN.GamepadIcons").c_str()), std::memory_order_relaxed);
+        };
+        settings.OnChange("MAIN.Vibration", refresh);
+        settings.OnChange("MAIN.InvertGamepadY", refresh);
+        settings.OnChange("MAIN.GamepadCameraSpeed", refresh);
+        settings.OnChange("MAIN.GamepadIcons", refresh);
+        refresh();
 
         auto enumerate = hook::pattern(Native.enumerate);
         auto selected = hook::pattern(Native.selected);
@@ -508,7 +554,7 @@ namespace TonyPad
         // The stick value is negated for the load only (edi = the pad's look input)
         StickHook = safetyhook::create_mid(lookStick.get_first(), [](SafetyHookContext& regs)
         {
-            StickInverted = UsingPad.load(std::memory_order_relaxed) && *InvertCameraY;
+            StickInverted = UsingPad.load(std::memory_order_relaxed) && InvertCameraY.load(std::memory_order_relaxed);
             if (StickInverted)
                 *reinterpret_cast<float*>(regs.edi + 0x214) = -*reinterpret_cast<float*>(regs.edi + 0x214);
         });

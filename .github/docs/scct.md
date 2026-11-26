@@ -29,10 +29,10 @@
 
 ## Options
 
-- **Frame rate limit** — Up to 144 FPS; the default is 60 FPS.
+- **Frame rate limit** — Choose 30–1000 FPS, Unlimited or Monitor. The default is 60 FPS.
 - **Steam overlay** — Off by default. Turn it on to start the Steam overlay when the game runs from Steam; on some PCs it lowers the frame rate.
 - **Skip intro** — Skip startup intros.
-- **Startup prompt** — Skip the “Press Any Key to Continue” screen (on by default).
+- **Loading prompt** — Continue automatically when a mission finishes loading (on by default).
 - **Save location** — Keep profiles and saves in Documents\My Games\Splinter Cell Chaos Theory or in the Save folder of the game instead of the hidden ProgramData folder. Profiles already made are not moved; copy them from ProgramData\Ubisoft\Tom Clancy's Splinter Cell Chaos Theory\Profiles to keep playing them.
 
 ### Graphics and lighting
@@ -58,13 +58,11 @@ Some videos contain black bars in the video itself; they stay visible.
 
 Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets.
 
-The frame rate limit applies immediately and goes up to 144 FPS, the highest rate the frame rate fixes were checked at: 0 uses 144, -1 follows the current monitor refresh rate up to 144, and the default is 60 FPS.
+The frame rate limit applies immediately. In the CFG, use a number from 30 to 1000 for a fixed limit, 0 for Unlimited, or -1 to follow the refresh rate of the monitor displaying the game.
 
 Pause When Unfocused pauses through the game’s own pause and sound handling. Turn it off to keep a windowed game running in the background. Confine Cursor can be changed independently of raw input.
 
 Check for Updates is off by default. When enabled, a newer release is announced in a native menu page; Back returns to the previous menu.
-
-Press **Ctrl+F10** to open the developer overlay when supporter access is available. Debug → Info shows the fix version, build time, graphics API and render resolution.
 
 The added settings menu is for single-player. Co-op and multiplayer use their own menus. Versus runs from its own executable (Versus\System\SCCT_Versus.exe), which the fix does not cover.
 

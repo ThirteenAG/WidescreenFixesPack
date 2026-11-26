@@ -48,6 +48,8 @@ export namespace JCOverlay
 
     inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -86,6 +88,8 @@ export namespace JCOverlay
 
     inline void Present(IDirect3DDevice9* device, HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!device)
             return;
         static const bool page = []()
@@ -109,7 +113,8 @@ export namespace JCOverlay
         }();
         Keyboard(window);
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
     }
 
     // Nothing reaches the game's DirectInput devices while the overlay has input
@@ -154,6 +159,8 @@ export namespace JCOverlay
 
     inline void Install()
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         NativeCreate = JCImports::Replace("DINPUT8.dll", "DirectInput8Create", &Create);
     }
 }

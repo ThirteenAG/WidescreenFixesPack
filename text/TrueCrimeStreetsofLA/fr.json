@@ -23,6 +23,8 @@
   "ConfineCursor": "Confiner le curseur",
   "ConfineCursor.description": "Garde le curseur dans la zone de la fenêtre du jeu active. Libéré à la perte du focus, en déplaçant la fenêtre, dans les menus système ou une fois désactivé. Indépendant de l'entrée souris.",
   "FPSLimit": "Limite d'images par seconde",
+  "FPSLimit.monitor": "Fréquence de l’écran",
+  "FPSLimit.unlimited": "Illimité",
   "FPSLimit.description": "Limite : 0 illimité, -1 fréquence du moniteur actuel ou 30–1000 FPS. Par défaut 60. Modifiable pendant le jeu. Les fréquences élevées peuvent affecter son comportement.",
   "SkipIntro": "Passer les logos de démarrage",
   "SkipIntro.description": "Ignore les vidéos des logos des studios au démarrage. Les vidéos de l’histoire restent disponibles. Redémarrez après modification.",

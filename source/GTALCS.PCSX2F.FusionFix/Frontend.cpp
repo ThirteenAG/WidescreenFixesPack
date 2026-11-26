@@ -1,6 +1,6 @@
 #include "Game.hpp"
 extern "C" {
-#include "../../external/injector/include/ps2/pcsx2f_api.h"
+#include "ps2/pcsx2f_api.h"
 }
 
 namespace lcs {

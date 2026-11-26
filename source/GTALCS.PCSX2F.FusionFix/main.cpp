@@ -1,28 +1,33 @@
 #include "Game.hpp"
 #include "Controls.hpp"
-#include "../Shared/Console/PS2Display.hpp"
-#include "../Shared/Console/Ps2PluginConflict.hpp"
-#include "../../external/injector/include/ps2/patches.hpp"
+#include "Shared/Console/PS2Display.hpp"
+#include "Shared/Console/Ps2TypedCheats.hpp"
+#include "Shared/Console/Ps2PluginConflict.hpp"
+#include "ps2/patches.hpp"
 #include <cstdio>
 #include "Settings.hpp"
 PCSX2F_CFG_SETTINGS();
 PCSX2F_CFG_PEER_SETTINGS();
 PCSX2F_STATE_LOAD_GENERATION();
+PCSX2F_EFFECTIVE_ASPECT()
 extern "C" {
 int CompatibleCRCList[] = {static_cast<int>(0x7EA439F5)};
 int PCSX2Data[PCSX2Data_Size] = {1};
 char OSDText[OSDStringNum][OSDStringSize] = {{1}};
 char KeyboardState[StateNum][StateSize] = {{1}};
 CMouseControllerState MouseState[StateNum] = {{1}};
+console::MouseMotion MouseStateV2{};
+console::MouseTransitions MouseStateV3{};
 char CheatString[CheatStringLen] = {1};
+console::CheatEvents CheatStringV2{};
 char FrameLimitUnthrottle;
 }
 namespace lcs {
 namespace {
 pcsx2::Patch blurPatch;
 // 60 FPS: the VBlank interrupt handler (sub_2D92B0) only runs its phase-2 frame
-// work when a0 == 2 ("bne a0, v0" at 0x2D92C4). NOP-ing that branch (HEAD's
-// patch) runs it on every notification. The word is switched from the game
+// work when a0 == 2 ("bne a0, v0" at 0x2D92C4). NOP-ing that branch runs
+// the work on every notification. The word is switched from the game
 // thread (init / menu), so no plugin code runs inside the interrupt handler.
 constexpr uintptr_t sixtyFPSSite = 0x2D92C4;
 pcsx2::Patch sixtyFPSPatch;
@@ -32,9 +37,15 @@ pcsx2::Patch sixtyFPSPatch;
 pcsx2::GameCallback<void(uintptr_t)> audioService;
 pcsx2::GameFunction<void(uintptr_t)> serviceAudio;
 bool audioFrame = false;
-void AudioService(uintptr_t manager) {
-    audioFrame = !audioFrame;
-    if (audioFrame || !settings.sixtyFPS) serviceAudio(manager);
+void AudioService(uintptr_t manager)
+{
+    if (sixtyFPSPatch.enabled())
+    {
+        audioFrame = !audioFrame;
+        if (!audioFrame)
+            return;
+    }
+    serviceAudio(manager);
 }
 void BlurFailure(pcsx2_hook_status status)
 {
@@ -52,22 +63,30 @@ void BlurFailure(pcsx2_hook_status status)
     std::snprintf(OSDText[0], OSDStringSize, messages[language], unsigned(status));
 }
 }
-void ApplyBlur() {
+void ApplyBlur()
+{
     if (blurPatch)
     {
         const auto status = settings.disableBlur ? blurPatch.enable() : blurPatch.disable();
-        if (status != PCSX2_HOOK_OK) BlurFailure(status);
+        if (status != PCSX2_HOOK_OK)
+            BlurFailure(status);
     }
+    settings.disableBlur = blurPatch.enabled();
 }
-void ApplyFrameRate() {
+void ApplyFrameRate()
+{
     if (sixtyFPSPatch)
     {
+        const bool wasEnabled = sixtyFPSPatch.enabled();
         const auto status = settings.sixtyFPS ? sixtyFPSPatch.enable() : sixtyFPSPatch.disable();
         if (status != PCSX2_HOOK_OK)
         {
             std::snprintf(OSDText[0], OSDStringSize, "LCS 60 FPS patch failed (%u)", unsigned(status));
         }
+        if (sixtyFPSPatch.enabled() != wasEnabled)
+            audioFrame = false;
     }
+    settings.sixtyFPS = sixtyFPSPatch.enabled();
 }
 void UpdateViewport() {
     settings.aspect = settings.forcedAspect > 0.0f ? settings.forcedAspect : console::ps2Aspect(PCSX2Data);
@@ -91,18 +110,20 @@ void ReadSettings() {
     settings.modernControls = config::Boolean(15, true);
     settings.padCameraSpeed = config::Number(16, 1.0f, 0.25f, 4.0f);
     settings.invertPad = config::Boolean(17, false);
+    settings.holdVehicleCamera = config::Boolean(18, false);
 }
-void RefreshSettings() {
-    // Everything the menu changes applies live; Skip Intro keeps the value the
-    // game started with.
-    if (!config::Read()) return;
+bool RefreshSettings()
+{
+    // Skip Intro keeps the value from startup. The other settings follow the CFG.
+    if (!config::Read() || !ReloadBindings())
+        return false;
+
     ReadSettings();
-    ReloadBindings();
     ReloadMenuLanguage();
     UpdateViewport();
     ApplyBlur();
     ApplyFrameRate();
-    ApplyControls();
+    return true;
 }
 namespace {
 void Rejected(pcsx2_hook_status status) {
@@ -112,9 +133,9 @@ void Rejected(pcsx2_hook_status status) {
 }
 extern "C" void init() {
     using namespace lcs;
-    static constexpr console::ps2conflict::OldPlugin oldPlugins[] = {
-        {"GTALCS.PCSX2F.WidescreenFix.elf", "MAIN", "ForceAspectRatio"},
-        {"GTALCS.PCSX2F.ImVehLM.elf", "MAIN", "VehicleLights"},
+    static constexpr const char* oldPlugins[] = {
+        "GTALCS.PCSX2F.WidescreenFix.elf",
+        "GTALCS.PCSX2F.ImVehLM.elf",
     };
     if (console::ps2conflict::Found(oldPlugins, OSDText)) return;
     if (injector::InitializeCheckedRuntime(Rejected) != PCSX2_HOOK_OK) return;
@@ -136,27 +157,21 @@ extern "C" void init() {
     audioService.bind(AudioService);
     injector::MakeCALL(0x2A1E04, audioService.address());
     // The blur pass (sub_194178) calls its renderer at 0x1941A0 when the gate
-    // gp-0x6094 is set; dropping the call (the delay slot only copies f12 to
-    // f13) removes the blur. HEAD's NOPs at 0x194194 / 0x3D0E64 left it drawn.
+    // gp-0x6094 is set. The delay slot only copies f12 to f13, so the call
+    // can be removed to skip the blur draw.
     static constexpr uint32_t nop = 0;
     const auto blurStatus = blurPatch.create(injector::detail::backend, 0x1941A0, &nop, 1);
     if (blurStatus != PCSX2_HOOK_OK)
     {
         BlurFailure(blurStatus);
     }
-    else
-    {
-        ApplyBlur();
-    }
+    ApplyBlur();
     const auto status = sixtyFPSPatch.create(injector::detail::backend, sixtyFPSSite, &nop, 1);
     if (status != PCSX2_HOOK_OK)
     {
         std::snprintf(OSDText[0], OSDStringSize, "LCS 60 FPS patch failed (%u)", unsigned(status));
     }
-    else
-    {
-        ApplyFrameRate();
-    }
+    ApplyFrameRate();
     injector::FlushCaches();
 }
 extern "C" int main() { return 0; }

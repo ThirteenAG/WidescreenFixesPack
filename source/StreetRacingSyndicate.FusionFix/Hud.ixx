@@ -19,6 +19,7 @@ export namespace SRSHud
     inline float Width = 640.0f, Height = 480.0f;
     inline float Scale = 1.0f;                          // screen aspect / 4:3
     inline std::atomic<float> Constraint{ 0.0f };       // HUD box aspect, 0 = the whole screen
+    inline std::atomic<int> MovieMode{ 1 };
     inline float PictureWidth = 640.0f;                 // the 3D picture's width (narrower inside cutscene borders)
     inline int Depth = 0;                               // inside the race HUD
     inline bool Driving = false;                        // the race view is the active screen (no menu over it)
@@ -140,7 +141,7 @@ export namespace SRSHud
     // the aspect the game gives it (the story movies are 16:9 pictures stored anamorphic in 4:3 frames)
     inline char __cdecl Movie(float* rectangle)
     {
-        if (std::clamp(FixSettings().Int("MAIN.FMVWidescreenMode"), 0, 1) == 0)
+        if (MovieMode.load(std::memory_order_relaxed) == 0)
             return MovieHook.ccall<char>(rectangle);
         const float aspect = (rectangle[6] - rectangle[0]) / std::max(1.0f, rectangle[7] - rectangle[1]);
         const float height = std::min(Height, Width / aspect);
@@ -165,13 +166,17 @@ export namespace SRSHud
         Scale = (Width / Height) / (4.0f / 3.0f);
         Group.reserve(4096);
 
+        BindLiveSetting("MAIN.FMVWidescreenMode", MovieMode);
         const auto update = []()
         {
-            const auto ratio = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            const auto value = FixSettings().Get("MAIN.HudAspectRatioConstraint");
+            const auto ratio = ParseWidescreenHudOffset(value);
             Constraint.store(ratio ? std::clamp(*ratio, 4.0f / 3.0f, 32.0f / 9.0f) : 0.0f, std::memory_order_relaxed);
         };
-        update();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", update);
+        update();
 
         auto vertex = hook::pattern("8B 81 ? ? ? ? D8 40 6C 5E D9 58 6C");
         struct VertexHook

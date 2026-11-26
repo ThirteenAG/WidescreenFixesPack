@@ -95,6 +95,20 @@ export HWND GetRenderWindow()
     return nullptr;
 }
 
+// The size of the picture the game presents, when it presents to a window
+export bool GetWindowedPictureSize(int& width, int& height)
+{
+    IDirect3DSwapChain9* swapChain = nullptr;
+    if (!P_D3D::pDevice || FAILED(P_D3D::pDevice->GetSwapChain(0, &swapChain)) || !swapChain)
+        return false;
+    D3DPRESENT_PARAMETERS parameters{};
+    const bool ok = SUCCEEDED(swapChain->GetPresentParameters(&parameters)) && parameters.Windowed;
+    swapChain->Release();
+    width = int(parameters.BackBufferWidth);
+    height = int(parameters.BackBufferHeight);
+    return ok && width > 0 && height > 0;
+}
+
 export void RenderAutomationFrame(int stage)
 {
     if (asi_automation_frames::Wanted(stage) && P_D3D::pDevice)

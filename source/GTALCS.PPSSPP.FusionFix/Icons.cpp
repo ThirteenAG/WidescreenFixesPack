@@ -30,7 +30,7 @@ static_assert(sizeof(Raster) == 16 && sizeof(Texture) == 80);
 constexpr size_t AssetCount = sizeof(icon_assets::assets) / sizeof(icon_assets::assets[0]);
 struct Original
 {
-    uint32_t offset, appliedHash, markAt;
+    uint32_t offset, appliedHash, packHash, markAt;
     uintptr_t data;
     unsigned set;
     bool saved;
@@ -39,7 +39,8 @@ struct Original
 Original originals[AssetCount]{};
 alignas(64) uint8_t backup[96 * 1024];
 alignas(64) uint8_t setData[96 * 1024];
-uint32_t setSize;
+uint32_t setSize, setHash;
+ScePspDateTime loadedTime{};
 unsigned loadedSet, requestedSet, lastPoll;
 bool available, dataValid = true, reported;
 
@@ -83,15 +84,20 @@ const Entry* FindEntry(const char* name)
 {
     return icon_pack::View{setData, setSize}.Find(name);
 }
-bool LoadSet(unsigned selected)
+bool LoadSet(unsigned selected, bool retry)
 {
-    if (loadedSet == selected && setSize) return true;
-    setSize = 0;
-    loadedSet = selected;
     char path[160]{};
     std::snprintf(path, sizeof(path), "ms0:/PSP/PLUGINS/GTALCS.PPSSPP.FusionFix/icons/%s.bin", iconSets[selected]);
     SceIoStat info{};
-    if (sceIoGetstat(path, &info) < 0 || info.st_size <= 0 || info.st_size > sizeof(setData)) return false;
+    if (sceIoGetstat(path, &info) < 0 || info.st_size <= 0 || info.st_size > sizeof(setData))
+    {
+        setSize = 0;
+        return false;
+    }
+    if (!retry && loadedSet == selected && setSize == info.st_size &&
+        !std::memcmp(&loadedTime, &info.sce_st_mtime, sizeof(loadedTime)))
+        return true;
+    setSize = 0;
     const auto file = sceIoOpen(path, PSP_O_RDONLY, 0777);
     if (file < 0) return false;
     unsigned count = 0;
@@ -101,8 +107,8 @@ bool LoadSet(unsigned selected)
         if (bytes <= 0) break;
         count += unsigned(bytes);
     }
-    sceIoClose(file);
-    if (count != unsigned(info.st_size)) return false;
+    const int closed = sceIoClose(file);
+    if (count != unsigned(info.st_size) || closed < 0) return false;
     setSize = count;
     for (uint32_t at = 0; at < setSize;)
     {
@@ -110,6 +116,9 @@ bool LoadSet(unsigned selected)
         if (!bytes) { setSize = 0; return false; }
         at += bytes;
     }
+    loadedSet = selected;
+    loadedTime = info.sce_st_mtime;
+    setHash = Hash(setData, setSize);
     return true;
 }
 bool Apply(Texture* texture, size_t index, unsigned selected)
@@ -119,13 +128,20 @@ bool Apply(Texture* texture, size_t index, unsigned selected)
     const auto& asset = icon_assets::assets[index];
     auto& original = originals[index];
     if (!Valid(raster.data, asset.bytes)) return false;
-    if (!original.saved && !selected) return true;
-    if (original.saved && original.set == selected && original.data == reinterpret_cast<uintptr_t>(raster.data) &&
-        !std::memcmp(raster.data + original.markAt, original.mark, sizeof(original.mark))) return true;
     const Entry* entry = selected ? FindEntry(asset.name) : nullptr;
-    if (selected && (!entry || entry->bytes != asset.bytes || entry->stride != raster.stride ||
-        entry->width != (raster.width & 63) || entry->height != (raster.height & 63) ||
-        entry->depth != raster.depth || entry->levels != raster.levels || entry->flags != raster.flags)) return false;
+    const bool compatible = !selected || (entry && entry->bytes == asset.bytes && entry->stride == raster.stride &&
+        entry->width == (raster.width & 63) && entry->height == (raster.height & 63) &&
+        entry->depth == raster.depth && entry->levels == raster.levels && entry->flags == raster.flags);
+    if (!compatible)
+    {
+        entry = nullptr;
+        selected = 0;
+    }
+    const uint32_t packHash = selected ? setHash : 0;
+    if (!original.saved && !selected) return compatible;
+    if (original.saved && original.set == selected && original.packHash == packHash &&
+        original.data == reinterpret_cast<uintptr_t>(raster.data) &&
+        !std::memcmp(raster.data + original.markAt, original.mark, sizeof(original.mark))) return compatible;
     const uint32_t current = Hash(raster.data, asset.bytes);
     if (!original.saved)
     {
@@ -158,8 +174,9 @@ bool Apply(Texture* texture, size_t index, unsigned selected)
     std::memcpy(original.mark, raster.data + original.markAt, sizeof(original.mark));
     original.data = reinterpret_cast<uintptr_t>(raster.data);
     original.set = selected;
+    original.packHash = packHash;
     sceKernelDcacheWritebackRange(raster.data, asset.bytes);
-    return true;
+    return compatible;
 }
 }
 
@@ -184,7 +201,7 @@ void TickIcons(unsigned now)
     if (now - lastPoll < 1000000u && requestedSet == desiredSet) return;
     lastPoll = now;
     requestedSet = desiredSet;
-    dataValid = !requestedSet || LoadSet(requestedSet);
+    dataValid = !requestedSet || LoadSet(requestedSet, !dataValid);
     const unsigned selected = dataValid ? requestedSet : 0;
     for (size_t i = 0; i < AssetCount; ++i)
         if (auto texture = FindTexture(icon_assets::assets[i].name))

@@ -3,6 +3,8 @@ module;
 #include <stdafx.h>
 #include "common.h"
 #include "FixSettings.hpp"
+#include "Shared/RWGTA/RefreshRatePicker.hpp"
+#include "Shared/RWGTA/WindowRefreshRate.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib") // needed for timeBeginPeriod()/timeEndPeriod()
@@ -105,26 +107,17 @@ static int NextFrameLimit(int current, int direction)
     return FrameLimitSteps[count - 1];
 }
 
-static int CutsceneBordersSetting()
+static int cutsceneBorders = 3;
+static int frameLimit = -1;
+
+static void ReadGameplayPreferences()
 {
-    static auto& borders = FixSettings().Int("MAIN.CutsceneBorders");
-    return std::clamp(borders, 0, 3);
+    cutsceneBorders = std::clamp(ReadFixSetting("MAIN.CutsceneBorders", 3), 0, 3);
+    frameLimit = ReadFixSetting("MAIN.FPSLimit", -1);
 }
 
-static int FrameLimitSetting()
-{
-    static auto& limit = FixSettings().Int("MAIN.FPSLimit");
-    return limit;
-}
-
-static int MonitorRefreshRate()
-{
-    DEVMODEW mode{};
-    mode.dmSize = sizeof(mode);
-    if (EnumDisplaySettingsW(nullptr, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency >= 30)
-        return int(mode.dmDisplayFrequency);
-    return 60;
-}
+static int CutsceneBordersSetting() { return cutsceneBorders; }
+static int FrameLimitSetting() { return frameLimit; }
 
 struct tSkinInfo
 {
@@ -515,7 +508,10 @@ static float GetFrameLimiterValue()
 {
     int limit = FrameLimitSetting();
     if (limit < 0)
-        return float(MonitorRefreshRate());
+    {
+        const auto window = RsGlobal->ps ? *reinterpret_cast<HWND*>(RsGlobal->ps) : nullptr;
+        return float(RWGTA::WindowRefreshRate(window));
+    }
     return float(limit);
 }
 
@@ -596,26 +592,23 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            // Full screen used the lowest refresh rate of 60 Hz or more for the resolution, which holds the frame rate
-            // at 60 wherever the picture is synced to the display: take the highest one instead
-            auto pattern = hook::pattern("BD FF FF FF 7F 75 ? C7 04 24");
-            injector::WriteMemory<uint32_t>(pattern.get_first(1), 0, true);
-            pattern = hook::pattern("39 E8 73 ? 83 F8 3C");
-            injector::WriteMemory<uint8_t>(pattern.get_first(2), 0x76, true); // jnb -> jbe
-            pattern = hook::pattern("81 FD FF FF FF 7F 75");
-            injector::WriteMemory<uint32_t>(pattern.get_first(2), 0, true);
+            RWGTA::InstallRefreshRatePicker<false>("39 E8 73 07 83 F8 3C 72 02 89 C5");
         };
 
         WFP::onGameInitEvent() += []()
         {
             // The cutscene borders and the frame limit are the fix's settings, whatever the game's settings file had
+            ReadGameplayPreferences();
             MirrorPreferences();
+            OnSettingChange("MAIN.CutsceneBorders", ReadGameplayPreferences);
+            OnSettingChange("MAIN.FPSLimit", ReadGameplayPreferences);
 
             // CMenuManager::SetDefaultPreferences of Display Setup (Restore Defaults): the two rows' settings too
             auto restore = hook::pattern("C7 45 18 00 01 00 00 C7 45 1C 9A 99 99 3F");
             static auto RestoreDisplayDefaultsHook = safetyhook::create_mid(restore.get_first(), [](SafetyHookContext&)
             {
                 RWGTAMenu::RestoreDefaults(FixSettings(), { "MAIN.CutsceneBorders", "MAIN.FPSLimit" });
+                ReadGameplayPreferences();
                 MirrorPreferences();
             });
             WFP::onGameProcessEvent() += []()
@@ -623,10 +616,10 @@ public:
                 MirrorPreferences();
             };
 
-            menuFrameLimit = static_cast<float>(std::max(0, FixSettings().Int("MAIN.FPSLimitMenus")));
+            menuFrameLimit = static_cast<float>(std::max(0, ReadFixSetting("MAIN.FPSLimitMenus", 60)));
             OnSettingChange("MAIN.FPSLimitMenus", []()
             {
-                menuFrameLimit = static_cast<float>(std::max(0, FixSettings().Int("MAIN.FPSLimitMenus")));
+                menuFrameLimit = static_cast<float>(std::max(0, ReadFixSetting("MAIN.FPSLimitMenus", 60)));
                 menuFrameLimitChanged = true;
             });
 
@@ -688,6 +681,7 @@ public:
                 int direction = *(int8_t*)(regs.esp + 0x8C) == -1 ? -1 : 1;
                 int borders = (CutsceneBordersSetting() + direction + 4) % 4;
                 FixSettings().Set("MAIN.CutsceneBorders", std::to_string(borders));
+                ReadGameplayPreferences();
                 MirrorPreferences();
             });
 
@@ -697,7 +691,43 @@ public:
             {
                 int direction = *(int8_t*)(regs.esp + 0x8C) == -1 ? -1 : 1;
                 FixSettings().Set("MAIN.FPSLimit", std::to_string(NextFrameLimit(FrameLimitSetting(), direction)));
+                ReadGameplayPreferences();
                 MirrorPreferences();
+            });
+
+            // A new screen resolution (CMenuManager::ProcessButtonPresses) centred the cursor and selected the sixth
+            // row of Display Setup, the one under the centre, and the same accept then toggled that row (Map Legend,
+            // or Cutscene Borders below an added Trails row). The selection stays on Screen Resolution, whose accept
+            // changes nothing else, and the menu doesn't take the centred cursor or the resized window for a mouse
+            // movement until the cursor really moves.
+            static POINT resolutionCursor{};
+            static bool resolutionCursorHeld = false;
+            pattern = hook::pattern("C6 85 40 01 00 00 01 C7 45 30 05 00 00 00");
+            injector::MakeNOP(pattern.get_first(7), 7, true);
+            static auto ResolutionAppliedHook = safetyhook::create_mid(pattern.get_first(7), [](SafetyHookContext&)
+            {
+                resolutionCursorHeld = GetCursorPos(&resolutionCursor) != FALSE;
+            });
+
+            // CMenuManager::UserInput's mouse movement check (previous mouse position at +134h/+138h, current at
+            // +12Ch/+130h, the window's mouse position at +64h/+68h)
+            pattern = hook::pattern("80 BD 40 01 00 00 00 75 ? 83 BD F8 00 00 00 06 74");
+            static auto MouseMovedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+            {
+                if (!resolutionCursorHeld)
+                    return;
+                POINT cursor{};
+                if (!GetCursorPos(&cursor) || cursor.x != resolutionCursor.x || cursor.y != resolutionCursor.y)
+                {
+                    resolutionCursorHeld = false;
+                    return;
+                }
+                auto manager = reinterpret_cast<uint8_t*>(regs.ebp);
+                auto field = [manager](size_t offset) -> int32_t& { return *reinterpret_cast<int32_t*>(manager + offset); };
+                const int32_t x = std::clamp(field(0x64), 0, std::max(0, RsGlobal->width));
+                const int32_t y = std::clamp(field(0x68), 0, std::max(0, RsGlobal->height));
+                field(0x12C) = field(0x134) = x;
+                field(0x130) = field(0x138) = y;
             });
 
             pattern = hook::pattern("74 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0 80 E4 ? 80 FC ? 0F 85 ? ? ? ? 6A");

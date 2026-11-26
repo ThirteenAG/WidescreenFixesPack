@@ -1,5 +1,5 @@
 {
-  "includes": [".."],
+  "includes": ["..", "../../external/injector/include"],
   "sources": [
     "main.cpp",
     "Input.cpp",

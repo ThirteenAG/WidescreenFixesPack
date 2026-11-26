@@ -103,6 +103,8 @@ namespace
             PostMessageW(window, WM_NULL, 0, 0);
         CursorConfinement::Suspend(Instance.BlocksInput());
 
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         static LARGE_INTEGER frequency{}, start{};
         static uint32_t frames = 0;
         LARGE_INTEGER now{};
@@ -139,7 +141,8 @@ namespace
             return true;
         }();
         CurrentDevice = device;
-        Instance.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Instance.Present(device, ThisModule());
     }
 
     // The game's "window has focus" test (minimized, foreground, active); the input reads nothing without it
@@ -177,6 +180,7 @@ export namespace Overlay
         D3D9Options::HookCreation();
         WindowCursor::Initialize(FixSettings());
         IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("ClipCursor", NativeClip));
-        HasFocusHook = safetyhook::create_inline(focus.get_first(), ::HasFocus);
+        if constexpr (WFP::DeveloperOverlay)
+            HasFocusHook = safetyhook::create_inline(focus.get_first(), ::HasFocus);
     }
 }

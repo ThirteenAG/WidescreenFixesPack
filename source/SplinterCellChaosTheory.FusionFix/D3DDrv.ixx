@@ -17,6 +17,68 @@ import Xidi;
 import DeveloperOverlay;
 import Movie;
 
+namespace DeviceRecovery
+{
+    thread_local bool active = false;
+
+    bool WaitForRetry(HWND window, ULONGLONG until)
+    {
+        while (IsWindow(window))
+        {
+            const auto now = GetTickCount64();
+            if (now >= until)
+                return true;
+            MSG msg;
+            if (!PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE))
+            {
+                if (MsgWaitForMultipleObjectsEx(0, nullptr, static_cast<DWORD>(until - now), QS_ALLINPUT, MWMO_INPUTAVAILABLE) == WAIT_FAILED)
+                    return false;
+                continue;
+            }
+            if (msg.message == WM_QUIT)
+            {
+                PostQuitMessage(static_cast<int>(msg.wParam));
+                return false;
+            }
+            if (msg.hwnd == window && (msg.message == WM_CLOSE ||
+                (msg.message == WM_SYSCOMMAND && (msg.wParam & 0xFFF0) == SC_CLOSE)))
+            {
+                PostMessageW(window, msg.message, msg.wParam, msg.lParam);
+                return false;
+            }
+            // There is no render device yet. The first successful Present will draw the client.
+            if (msg.hwnd == window && msg.message == WM_PAINT)
+                ValidateRect(window, nullptr);
+            else
+            {
+                TranslateMessage(&msg);
+                DispatchMessageW(&msg);
+            }
+        }
+        return false;
+    }
+
+    template <typename Create>
+    void Retry(HWND window, HRESULT status, Create create)
+    {
+        const auto deadline = GetTickCount64() + 2000;
+        active = true;
+        while (status == D3DERR_DEVICELOST || status == D3DERR_DEVICENOTRESET)
+        {
+            const auto now = GetTickCount64();
+            if (now >= deadline || !WaitForRetry(window, std::min(deadline, now + 50)))
+                break;
+            status = create();
+        }
+        active = false;
+    }
+}
+
+export bool RecoveringDisplayDevice()
+{
+    return DeviceRecovery::active;
+}
+
 std::atomic<float> gVisibility{ 1.0f };
 export int32_t gBlacklistIndicators = 0;
 export FLTColor gColor = { 0 };
@@ -239,6 +301,10 @@ int __fastcall sub_10C86280(int _this, void* edx, void* a2, int a3)
 // UWindowsViewport::ResizeViewport set the resolution, in fullscreen or in a window
 void OnResolutionChange(int32_t width, int32_t height, bool bFullscreen)
 {
+    if (width <= 0 || height <= 0 || (hGameWindow && IsIconic(hGameWindow)))
+        return;
+
+    const bool sizeChanged = width != Screen.Width || height != Screen.Height;
     bIsWindowed = !bFullscreen;
     Screen.Width = width;
     Screen.Height = height;
@@ -253,10 +319,9 @@ void OnResolutionChange(int32_t width, int32_t height, bool bFullscreen)
     Screen.nHudOffsetReal = static_cast<int32_t>(((480.0f * Screen.fAspectRatio) - 640.0f) / 2.0f);
     Screen.nScopeScale = static_cast<int32_t>(Screen.fWidth * (Screen.fAspectRatio / (4.0f / 3.0f)));
 
-    RawInputHandler<>::OnResChange();
 
-    // The resolution is kept for the next start, a borderless window always has the monitor's
-    if (bFullscreen || !bBorderless)
+    // A repeated viewport notification must preserve the editor's size for the next start.
+    if (sizeChanged && (bFullscreen || !bBorderless))
     {
         auto& settings = FixSettings();
         auto [DesktopResW, DesktopResH] = GetDesktopRes();
@@ -274,18 +339,7 @@ void OnResolutionChange(int32_t width, int32_t height, bool bFullscreen)
         settings.Save();
     }
 
-    Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fWidth, Screen.fHeight, 640.0f, 480.0f);
-    if (Screen.fHudAspectRatioConstraint.has_value())
-    {
-        float value = Screen.fHudAspectRatioConstraint.value();
-        if (value < 0.0f || value > (32.0f / 9.0f))
-            Screen.fWidescreenHudOffset = value;
-        else
-        {
-            value = ClampHudAspectRatio(value, Screen.fAspectRatio);
-            Screen.fWidescreenHudOffset = -CalculateWidescreenOffset(Screen.fHeight * value, Screen.fHeight, 640.0f, 480.0f);
-        }
-    }
+    RefreshHudConstraint();
 }
 
 void BeforePresent(SafetyHookContext& regs)
@@ -376,6 +430,8 @@ void BeforePresent(SafetyHookContext& regs)
 
 export void InitD3DDrv()
 {
+    static std::atomic<int> movieMode{ 0 };
+    ObserveFixSetting("MAIN.FMVWidescreenMode", asi_settings::detail::ParseInt, [](int value) { movieMode.store(value); });
     SCPreferredAdapter::Init(9);
 
     dword_1120B6BC.SetAddress(*hook::pattern("D9 1D ? ? ? ? 0F BF").count(1).get(0).get<float*>(2));
@@ -410,9 +466,8 @@ export void InitD3DDrv()
         auto renderer = reinterpret_cast<const uint8_t*>(regs.edi);
         auto args = reinterpret_cast<float*>(regs.esp + sizeof(uint32_t));
         CTMovie::Rectangle rectangle{ args[0], args[1], args[2], args[3], args[4], args[5], args[6], args[7] };
-        static const auto& mode = FixSettings().Int("MAIN.FMVWidescreenMode");
         if (!CTMovie::Frame(rectangle, float(*reinterpret_cast<const int*>(renderer + 0x4898)),
-            float(*reinterpret_cast<const int*>(renderer + 0x489C)), float(movie[0]), float(movie[1]), mode))
+            float(*reinterpret_cast<const int*>(renderer + 0x489C)), float(movie[0]), float(movie[1]), movieMode.load()))
             return;
 
         if (rectangle.left > 0.0f || rectangle.top > 0.0f)
@@ -434,9 +489,9 @@ export void InitD3DDrv()
     pattern = hook::pattern("8B 44 24 04 81 EC 84 00 00 00 56");
     shsub_10C86280 = safetyhook::create_inline(pattern.get_first(0), sub_10C86280);
 
-    // SetRes releases the device and creates a new one, which the game uses without checking it. While another program
-    // changes the display mode (a fullscreen game starting or closing), CreateDevice fails with D3DERR_DEVICELOST
-    // until that program is done, and the game crashed; the device is created again once the display is free.
+    // Both native SetRes paths assume creation succeeded. Return through their own failure epilogues.
+    pattern = hook::pattern("FF 50 24 5F 5E 5D 5B C2 08 00");
+    static const auto creationReturn = reinterpret_cast<uintptr_t>(pattern.get_first(3));
     pattern = hook::pattern("FF 51 40 8B 86 44 4D 00 00 33 DB 83 F8 02");
     static auto CreateDeviceHook = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
     {
@@ -448,12 +503,33 @@ export void InitD3DDrv()
         auto adapter = *reinterpret_cast<UINT*>(regs.esi + 0x46AC);
         auto window = reinterpret_cast<HWND>(regs.ebp);
         auto parameters = *reinterpret_cast<D3DPRESENT_PARAMETERS**>(regs.esp + 0x14);
-        for (int attempt = 0; attempt < 240 && !*device; attempt++)
+        DeviceRecovery::Retry(window, static_cast<HRESULT>(regs.eax), [&]()
         {
-            Sleep(250);
-            if (FAILED(d3d->CreateDevice(adapter, D3DDEVTYPE_HAL, window, D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_PUREDEVICE, parameters, device)))
-                d3d->CreateDevice(adapter, D3DDEVTYPE_HAL, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, parameters, device);
-        }
+            auto result = d3d->CreateDevice(adapter, D3DDEVTYPE_HAL, window,
+                D3DCREATE_HARDWARE_VERTEXPROCESSING | D3DCREATE_PUREDEVICE, parameters, device);
+            if (FAILED(result))
+                result = d3d->CreateDevice(adapter, D3DDEVTYPE_HAL, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, parameters, device);
+            return result;
+        });
+        if (!*device)
+            regs.eip = creationReturn;
+    });
+
+    pattern = hook::pattern("5F 5D 5B 33 C0 5E 81 C4 80 00 00 00 C2 14 00");
+    static const auto setResFailure = reinterpret_cast<uintptr_t>(pattern.get_first());
+    pattern = hook::pattern("50 68 ? ? ? ? 8B CE E8 ? ? ? ? 68 00 00 03 00");
+    static auto setResResult = safetyhook::create_mid(pattern.get_first(13), [](SafetyHookContext& regs)
+    {
+        if (!*reinterpret_cast<IDirect3DDevice9**>(regs.esi + 0x4D3C))
+            regs.eip = setResFailure;
+    });
+    pattern = hook::pattern("5F 5D 5E 33 C0 5B 83 C4 68 C2 14 00 83 F8 FF");
+    static const auto alternateFailure = reinterpret_cast<uintptr_t>(pattern.get_first());
+    pattern = hook::pattern("50 8D 86 FC 4C 00 00 50 8B CE E8 ? ? ? ? 68 00 00 03 00");
+    static auto alternateResult = safetyhook::create_mid(pattern.get_first(15), [](SafetyHookContext& regs)
+    {
+        if (!*reinterpret_cast<IDirect3DDevice9**>(regs.esi + 0x4D3C))
+            regs.eip = alternateFailure;
     });
 
     // Every place the game releases its device (SetRes, a failed Reset, exit). References held here would keep the old
@@ -534,19 +610,17 @@ export void InitD3DDrv()
         if (!shGlowMaterialDraw || !projectedHook || !surfaceHook || !glowHook)
             throw std::runtime_error("Light color hooks unavailable");
 
-        pattern = hook::pattern("66 89 44 24 ? 8B 17");
-        struct BlacklistIndicatorsHook
+        // Sample the native visibility before the HUD converts it to a pixel position.
+        pattern = hook::pattern("D9 44 24 24 D8 15 ? ? ? ? DF E0 F6 C4 01 75 0A DD D8 D9 05");
+        static const float maxVisibility = **pattern.get_first<const float*>(6);
+        static auto VisibilityHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
         {
-            void operator()(injector::reg_pack& regs)
-            {
-                auto ax = *reinterpret_cast<int16_t*>(&regs.eax);
-                *reinterpret_cast<int16_t*>(regs.esp + 0xC) = ax;
-                auto v = ax - 446;
-                if (v <= 10) v = 10;
-                const float visibility = static_cast<float>(v) / 134.0f;
-                gVisibility.store(gBlacklistIndicators == 2 ? visibility : 1.0f - visibility, std::memory_order_relaxed);
-            }
-        }; injector::MakeInline<BlacklistIndicatorsHook>(pattern.get_first()); //0x10B66B97
+            const auto nativeVisibility = *reinterpret_cast<const float*>(regs.esp + 0x24);
+            const auto visibility = std::clamp(nativeVisibility / maxVisibility, 0.0f, 1.0f);
+            gVisibility.store(gBlacklistIndicators == 2 ? visibility : 1.0f - visibility, std::memory_order_relaxed);
+        });
+        if (!VisibilityHook)
+            throw std::runtime_error("Visibility hook unavailable");
 
         if (bLightSyncRGB)
         {

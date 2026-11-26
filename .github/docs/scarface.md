@@ -16,7 +16,7 @@ Use the bundled `vorbisfile.dll` ASI loader together with Xidi's `dinput8.dll`, 
 
 Open **Options → Plugins → Scarface Fusion Fix**. Other plugins with settings appear beside it. Left and Right change a value; Enter selects a page or confirms a preset. Move from an option to **Details** to read its help, with **More pages** for longer descriptions. Back returns through the pages. A separate restart line appears when a startup setting changes.
 
-The fix creates `scripts/Scarface.FusionFix.cfg` on first launch. FusionFixHub uses the same settings. FusionFixHub or the developer overlay can override the fix's text language; Auto follows the game's language when it is supported. Vanilla, Recommended and Enhanced presets apply the settings that list preset values; controller artwork and window mode remain personal choices.
+The fix creates `scripts/Scarface.FusionFix.cfg` on first launch. FusionFixHub uses the same settings. FusionFixHub can override the fix's text language. Auto follows the game's language when it is supported. Vanilla, Recommended and Enhanced presets apply settings whose values differ across presets. Controller artwork, HUD placement and window mode are independent choices.
 
 ## Display and camera
 
@@ -35,11 +35,11 @@ Controllers use the game's DirectInput support through bundled Xidi, with its XI
 
 Keyboard keys can be changed in the game's own Controls menu. **Walk Key** adds a key (Alt, Mouse 4 or Mouse 5) that makes Tony walk instead of run while you hold it; it is off by default.
 
-Raw mouse input uses mouse movement directly, with a separate multiplier for the native mouse slider. Vehicle recenter delay defaults to three seconds. **On-Foot Camera Recenter Delay** keeps the camera where you aimed it for the chosen number of seconds while Tony moves, before it swings back behind him; 0 keeps the original behavior. Cursor confinement releases on focus loss, window moves, system menus and while the developer overlay owns input. **Pause in Background** pauses and mutes the game; turn it off to keep the game running in the background. The game pauses while minimized and restores its display when reopened.
+Raw mouse input uses mouse movement directly, with a separate multiplier for the native mouse slider. Vehicle recenter delay defaults to three seconds. **On-Foot Camera Recenter Delay** keeps the camera where you aimed it for the chosen number of seconds while Tony moves, before it swings back behind him; 0 keeps the original behavior. Cursor confinement releases on focus loss, window moves and system menus. **Pause in Background** pauses and mutes the game; turn it off to keep the game running in the background. The game pauses while minimized and restores its display when reopened.
 
 ## Other features
 
-Optional SMAA, console-style gamma, PS2 character blood and the console cracked glass on damaged car windows use the native Direct3D 9 renderer. Skip Intro skips startup legal screens, logos and the single-button load-success notice. Skip Press Start separately bypasses the start screen. Weapons use their real maximum recoil. Ctrl+F10 opens the Supporter developer overlay; Debug → Info shows the version, build time, graphics API and resolution.
+Optional SMAA, console-style gamma, PS2 character blood and the console cracked glass on damaged car windows use the native Direct3D 9 renderer. Skip Intro skips startup legal screens, logos and the single-button load-success notice. Skip Press Start separately bypasses the start screen. Weapons use their real maximum recoil.
 
 Check for Updates defaults to Off and makes no request while disabled. When enabled, a newer fix version produces a notice in Options. FusionFixHub opens on the update after the game exits when it is installed.
 

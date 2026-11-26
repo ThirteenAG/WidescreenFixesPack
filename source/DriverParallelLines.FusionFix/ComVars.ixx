@@ -56,7 +56,6 @@ export struct CGameTime
 export GameRef<CGameTime*> pGameTime;
 
 export class FrontendInputManager;
-export GameRef<FrontendInputManager*> pFrontendInputManager;
 
 
 export float fTimeStep = 1.0f / 60.0f;

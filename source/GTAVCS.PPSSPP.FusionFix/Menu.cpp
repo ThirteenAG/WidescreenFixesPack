@@ -1,7 +1,8 @@
 #include "Game.hpp"
 #include "ModernControlText.hpp"
-#include "../Shared/Console/PortableIni.hpp"
-#include "../Shared/Console/Text.hpp"
+#include "Shared/Console/PortableIni.hpp"
+#include "Shared/Console/Text.hpp"
+#include <algorithm>
 #include <cstddef>
 #include <cstring>
 #include <cmath>
@@ -50,20 +51,20 @@ static_assert(sizeof(Widget) == 0xC8 && sizeof(MenuPage) == 0x38 && offsetof(Men
 enum Option : int { FrameRate = 0x100, MoreOptions, HudSize, RadarSize, MultiplayerRadar,
     FieldOfView, CutsceneBorders, FastLoading, Preset, ApplyPreset,
     DisplayPage, GamePage, VehicleLights, IconSet,
-    FixPage, FixDefaults, SkipIntro, HudBox, HoldCamera, ModernControls, PcCheats, AspectRatio, RadarPosition,
+    FixPage, FixDefaults, SkipIntro, HudBox, HoldCamera, ModernControls, PcCheats, AspectRatio,
     Back, OptionEnd };
 constexpr unsigned optionCount = OptionEnd - FrameRate;
 constexpr char keys[optionCount][20] = {"WF_FRAME_RATE", "WF_MORE_OPTIONS", "WF_HUD_SIZE", "WF_RADAR_SIZE",
     "WF_MP_RADAR", "WF_FOV", "WF_CUT_BORDERS", "WF_FAST_LOADING", "WF_PRESET",
     "WF_APPLY_PRESET", "WF_DISPLAY", "WF_GAME", "WF_LIGHTS",
     "WF_ICONS", "WF_FIX_PAGE", "WF_FIX_DEFAULTS", "WF_SKIP_INTRO", "WF_HUD_BOX", "WF_HOLD_CAMERA",
-    "WF_MODERN_CONTROLS", "WF_PC_CHEATS", "WF_ASPECT", "WF_RADAR_POSITION", "WF_BACK"};
+    "WF_MODERN_CONTROLS", "WF_PC_CHEATS", "WF_ASPECT", "WF_BACK"};
 constexpr char16_t captions[optionCount][28] = {u"FRAME RATE:", u"PLUGINS", u"HUD SIZE:",
     u"RADAR SIZE:", u"MULTIPLAYER RADAR SIZE:", u"FIELD OF VIEW:", u"CUTSCENE BORDERS:",
     u"FAST LOADING:", u"PRESET:", u"APPLY PRESET", u"DISPLAY AND CAMERA",
     u"GAME", u"VEHICLE LIGHTS (RESTART):",
     u"CONTROLLER ICONS:", u"FUSION FIX", u"RESTORE DEFAULTS", u"SKIP INTRO (RESTART):", u"HUD ASPECT RATIO:",
-    u"HOLD VEHICLE CAMERA:", u"MODERN LAYOUT (RESTART):", u"PC CHEATS:", u"ASPECT RATIO:", u"RADAR POSITION (RESTART):", u""};
+    u"HOLD VEHICLE CAMERA:", u"MODERN LAYOUT (RESTART):", u"PC CHEATS:", u"ASPECT RATIO:", u""};
 constexpr char fpsKeys[2][12] = {"WF_FPS_30", "WF_FPS_60"};
 constexpr char16_t fpsText[2][4] = {u"30", u"60"};
 constexpr char onOff[2][16] = {"WF_BOOL_OFF", "WF_BOOL_ON"};
@@ -77,19 +78,17 @@ constexpr char16_t loadingText[2][20] = {u"LOADING", u"LOADING AND FADES"};
 constexpr char iconTokens[9][5] = {"PSP", "360", "XBO", "PS3", "PS4", "PS5", "SWI", "DEK", "Auto"};
 constexpr char iconKeys[9][16] = {"WF_ICON_PSP", "WF_ICON_360", "WF_ICON_XBO", "WF_ICON_PS3", "WF_ICON_PS4", "WF_ICON_PS5", "WF_ICON_SWI", "WF_ICON_DEK", "WF_ICON_AUTO"};
 constexpr char16_t iconText[9][16] = {u"ORIGINAL PSP", u"XBOX 360", u"XBOX ONE", u"PLAYSTATION 3", u"PLAYSTATION 4", u"PLAYSTATION 5", u"NINTENDO SWITCH", u"STEAM DECK", u"AUTO"};
-constexpr char hudBoxKeys[5][12] = {"WF_HB_AUTO", "WF_HB_43", "WF_HB_169", "WF_HB_219", "WF_HB_329"};
+constexpr int customRatio = 5;
+constexpr char hudBoxKeys[6][16] = {"WF_HB_AUTO", "WF_HB_43", "WF_HB_169", "WF_HB_219", "WF_HB_329", "WF_HB_CUSTOM"};
 constexpr char16_t hudBoxText[5][8] = {u"AUTO", u"4:3", u"16:9", u"21:9", u"32:9"};
-constexpr char aspectKeys[5][12] = {"WF_AR_AUTO", "WF_AR_43", "WF_AR_169", "WF_AR_219", "WF_AR_329"};
-constexpr char radarKeys[2][16] = {"WF_RADAR_BOTTOM", "WF_RADAR_TOP"};
-constexpr char16_t radarText[2][8] = {u"BOTTOM", u"TOP"};
-// RADAR.RadarPosY: the original bottom left corner, or the top left corner
-constexpr float radarY[2] = {196.0f, -45.0f};
+constexpr char aspectKeys[6][16] = {"WF_AR_AUTO", "WF_AR_43", "WF_AR_169", "WF_AR_219", "WF_AR_329", "WF_AR_CUSTOM"};
 constexpr char hudBoxNames[5][8] = {"Auto", "4:3", "16:9", "21:9", "32:9"};
 constexpr float hudBoxAspects[5] = {0.0f, 4.0f / 3.0f, 16.0f / 9.0f, 21.0f / 9.0f, 32.0f / 9.0f};
-// A custom CFG ratio shows as Auto until a choice is picked; it is saved unchanged.
 int HudBoxIndex(float aspect) {
-    for (int i = 1; i < 5; ++i) if (std::fabs(aspect - hudBoxAspects[i]) < 0.001f) return i;
-    return 0;
+    if (aspect == 0.0f) return 0;
+    for (int i = 1; i < customRatio; ++i)
+        if (std::fabs(aspect - hudBoxAspects[i]) < 0.001f) return i;
+    return customRatio;
 }
 constexpr unsigned maxItems = 24;
 bool Slider(int option) { return option == HudSize || option == RadarSize || option == MultiplayerRadar || option == FieldOfView; }
@@ -115,7 +114,51 @@ struct Extension {
     unsigned mode = 0;
 };
 Extension extension;
-bool dirty = false;
+uint32_t dirtySettings;
+unsigned lastSaveAttempt;
+enum Setting : unsigned
+{
+    SaveRate, SaveLoading, SaveMultiplayerRadar, SaveHud, SaveRadar, SaveFov,
+    SaveBorders, SaveIntro, SaveHudBox, SaveLights, SaveHold, SaveModern,
+    SaveCheats, SaveAspect, SaveIcons, SettingCount
+};
+struct CurrentSettings
+{
+    Settings game = settings;
+    console::portable::StoryDrawingSettings drawing = Drawing::settings;
+    bool automaticAspect = autoAspect;
+    unsigned icons = GamepadIconSet();
+};
+template<class Visitor> void VisitSavedSettings(const CurrentSettings& previous, Visitor visit)
+{
+    auto& drawing = Drawing::settings;
+    visit(SaveRate, settings.fps, previous.game.fps);
+    visit(SaveLoading, settings.unthrottle, previous.game.unthrottle);
+    visit(SaveLoading, settings.unthrottleMode, previous.game.unthrottleMode);
+    visit(SaveMultiplayerRadar, drawing.multiplayerRadar, previous.drawing.multiplayerRadar);
+    visit(SaveHud, drawing.hud, previous.drawing.hud);
+    visit(SaveRadar, drawing.radar, previous.drawing.radar);
+    visit(SaveFov, settings.fov, previous.game.fov);
+    visit(SaveBorders, settings.cutsceneBorders, previous.game.cutsceneBorders);
+    visit(SaveIntro, settings.skipIntro, previous.game.skipIntro);
+    visit(SaveHudBox, drawing.hudAspect, previous.drawing.hudAspect);
+    visit(SaveLights, settings.vehicleLights, previous.game.vehicleLights);
+    visit(SaveHold, settings.holdVehicleCamera, previous.game.holdVehicleCamera);
+    visit(SaveModern, settings.modernControls, previous.game.modernControls);
+    visit(SaveCheats, settings.pcCheats, previous.game.pcCheats);
+}
+
+void TrackChanges(const CurrentSettings& previous)
+{
+    VisitSavedSettings(previous, [](Setting key, const auto& value, const auto& old)
+    {
+        if (value != old) dirtySettings |= 1u << key;
+    });
+    if (autoAspect != previous.automaticAspect || (!autoAspect && Drawing::settings.aspect != previous.drawing.aspect))
+        dirtySettings |= 1u << SaveAspect;
+    if (GamepadIconSet() != previous.icons)
+        dirtySettings |= 1u << SaveIcons;
+}
 bool startupModernControls = false;
 int selectedPreset = 0;
 bool confirmPreset = false, confirmDefaults = false;
@@ -183,12 +226,12 @@ int Value(int option) {
     case ModernControls: return settings.modernControls;
     case PcCheats: return settings.pcCheats;
     case AspectRatio: return autoAspect ? 0 : HudBoxIndex(Drawing::settings.aspect);
-    case RadarPosition: return Drawing::settings.radarY < 0.0f ? 1 : 0;
     case IconSet: return int(GamepadIconSet());
     default: return 0;
     }
 }
 void SetOption(int option, int value) {
+    const CurrentSettings previous;
     const float scale = console::bounded(value * 0.01f, 0.1f, 2.0f, 1.0f);
     switch (option) {
     case FrameRate: settings.fps = value != 0; ApplyFrameRate(); break;
@@ -198,7 +241,10 @@ void SetOption(int option, int value) {
     case FieldOfView: settings.SetFovRequest(value * 0.01f); break;
     case CutsceneBorders: settings.cutsceneBorders = value >= 0 && value <= 3 ? value : 3; break;
     case SkipIntro: settings.skipIntro = value != 0; break;
-    case HudBox: Drawing::settings.hudAspect = hudBoxAspects[value >= 0 && value < 5 ? value : 0]; break;
+    case HudBox:
+        if (value == customRatio) return;
+        Drawing::settings.hudAspect = hudBoxAspects[value >= 0 && value < customRatio ? value : 0];
+        break;
     case FastLoading: settings.unthrottleMode = value; settings.unthrottle = value != 0; if (!settings.unthrottle) console::portable::Unthrottle(false); break;
     case Preset: selectedPreset = value; confirmPreset = false; return;
     case VehicleLights: settings.vehicleLights = value != 0; break;
@@ -206,17 +252,16 @@ void SetOption(int option, int value) {
     case ModernControls: settings.modernControls = value != 0; break;
     case PcCheats: settings.pcCheats = value != 0; break;
     case AspectRatio:
-        autoAspect = value <= 0 || value >= 5;
+        if (value == customRatio) return;
+        autoAspect = value <= 0 || value >= customRatio;
         Drawing::settings.aspect = autoAspect ? console::portable::Aspect() : hudBoxAspects[value];
         break;
-    case RadarPosition: Drawing::settings.radarY = radarY[value == 1 ? 1 : 0]; break;
-    // Applied and saved at once, like the game's own controller menu does.
-    case IconSet: if (value >= 0) SelectGamepadIcons(unsigned(value)); return;
+    case IconSet: if (value >= 0) SelectGamepadIcons(unsigned(value)); break;
     default: return;
     }
     selectedPreset = MatchingPreset();
     confirmPreset = false; confirmDefaults = false;
-    dirty = true;
+    TrackChanges(previous);
 }
 int GetHookData(MenuItem* item, void* text) {
     if (item->hook >= FrameRate && item->hook < OptionEnd) return Value(item->hook);
@@ -253,10 +298,20 @@ const uint16_t* GetText(void* text, const char* key) {
             if (!std::strcmp(key, presetKeys[i])) return reinterpret_cast<const uint16_t*>(presetText[i]);
         for (unsigned i = 0; i < 9; ++i)
             if (!std::strcmp(key, iconKeys[i])) return reinterpret_cast<const uint16_t*>(GamepadIconsAvailable() ? iconText[i] : u"UNAVAILABLE");
-        for (unsigned i = 0; i < 5; ++i)
-            if (!std::strcmp(key, hudBoxKeys[i]) || !std::strcmp(key, aspectKeys[i])) return reinterpret_cast<const uint16_t*>(hudBoxText[i]);
-        for (unsigned i = 0; i < 2; ++i)
-            if (!std::strcmp(key, radarKeys[i])) return reinterpret_cast<const uint16_t*>(radarText[i]);
+        for (int i = 0; i < customRatio; ++i)
+            if (!std::strcmp(key, hudBoxKeys[i]) || !std::strcmp(key, aspectKeys[i]))
+                return reinterpret_cast<const uint16_t*>(hudBoxText[i]);
+        const bool customHud = !std::strcmp(key, hudBoxKeys[customRatio]);
+        if (customHud || !std::strcmp(key, aspectKeys[customRatio])) {
+            static uint16_t ratioText[2][16];
+            auto& out = ratioText[customHud ? 0 : 1];
+            char ratio[16];
+            console::format(ratio, "", customHud ? Drawing::settings.hudAspect : Drawing::settings.aspect, 4);
+            unsigned last = 0;
+            for (; ratio[last]; ++last) out[last] = uint16_t(ratio[last]);
+            out[last] = 0;
+            return out;
+        }
         for (unsigned i = 1; i < 3; ++i)
             if (!std::strcmp(key, loadingKeys[i])) return reinterpret_cast<const uint16_t*>(loadingText[i - 1]);
         if (!std::strcmp(key, "WF_BACK")) return reinterpret_cast<const uint16_t*>(u"BACK");
@@ -269,7 +324,13 @@ void Refresh(Widget& widget) {
         const float range = float(widget.slider.maximum - widget.slider.minimum);
         widget.slider.value = console::bounded((Value(option) - widget.slider.minimum) / range, 0.0f, 1.0f, 0.5f);
     } else if (!Action(option)) {
-        widget.toggle.index = widget.toggle.previous = uint8_t(Value(option));
+        const int value = Value(option);
+        if (option == HudBox || option == AspectRatio) {
+            auto& toggle = widget.toggle;
+            toggle.count = customRatio + (value == customRatio);
+            toggle.strings.end = toggle.strings.begin + toggle.count;
+        }
+        widget.toggle.index = widget.toggle.previous = uint8_t(value);
     }
 }
 void Initialize(Extension& e, const Widget& slider, const Widget& toggle, const MenuItem& row) {
@@ -295,13 +356,13 @@ void Initialize(Extension& e, const Widget& slider, const Widget& toggle, const 
             // Match native centred actions: one caption without a label.
             widget.item.render = 0; widget.item.x = 0; widget.item.width = 480; widget.item.horizontal = 1;
         } else {
-            const unsigned count = option == IconSet ? 9 : option == HudBox || option == AspectRatio ? 5 :
+            const unsigned count = option == IconSet ? 9 : option == HudBox || option == AspectRatio ? customRatio + 1 :
                 option == Preset || option == CutsceneBorders ? 4 : option == FastLoading ? 3 : 2;
             for (unsigned j = 0; j < count; ++j)
                 e.values[i][j] = Literal(option == Preset ? presetKeys[j] : option == IconSet ? iconKeys[j] :
                     option == FastLoading ? loadingKeys[j] :
                     option == FrameRate ? fpsKeys[j] : option == CutsceneBorders ? bordersKeys[j] : option == HudBox ? hudBoxKeys[j] :
-                    option == AspectRatio ? aspectKeys[j] : option == RadarPosition ? radarKeys[j] : onOff[j]);
+                    option == AspectRatio ? aspectKeys[j] : onOff[j]);
             widget.toggle.strings = {e.values[i], e.values[i] + count, e.values[i] + count};
             widget.toggle.count = uint8_t(count);
         }
@@ -321,7 +382,7 @@ void Show(unsigned mode) {
         if (*p && (*p)->hook == 0) e.subItems[count++] = *p;
     constexpr int plugins[] = {FixPage, Back};
     constexpr int fix[] = {Preset, ApplyPreset, DisplayPage, GamePage, FixDefaults, Back};
-    constexpr int display[] = {AspectRatio, HudSize, HudBox, RadarSize, RadarPosition, MultiplayerRadar, FieldOfView, CutsceneBorders, Back};
+    constexpr int display[] = {AspectRatio, HudSize, HudBox, RadarSize, MultiplayerRadar, FieldOfView, CutsceneBorders, Back};
     constexpr int game[] = {FrameRate, FastLoading, SkipIntro, ModernControls, PcCheats, VehicleLights, HoldCamera, IconSet, Back};
     const int* options = game;
     unsigned rows = 9;
@@ -345,6 +406,7 @@ void Show(unsigned mode) {
 void ApplyPresetValues(int preset, bool& confirm) {
     if (preset < 1 || preset > 3 || PresetMatches(preset)) { confirm = false; return; }
     if (!confirm) { confirm = true; return; }
+    const CurrentSettings previous;
     const auto& p = presetValues[preset];
     settings.fps = p.fps; ApplyFrameRate();
     settings.unthrottleMode = p.unthrottleMode; settings.unthrottle = p.unthrottleMode != 0;
@@ -356,7 +418,8 @@ void ApplyPresetValues(int preset, bool& confirm) {
     settings.modernControls = p.modernControls;
     SelectGamepadIcons(p.icons);
     selectedPreset = preset;
-    dirty = true; confirm = false;
+    TrackChanges(previous);
+    confirm = false;
     for (auto& widget : extension.widgets) Refresh(widget);
 }
 void Attach(MenuPage* page) {
@@ -459,9 +522,11 @@ void InputTrigger(MenuItem* item, int trigger) {
                 }
                 else
                 {
+                    const CurrentSettings previous;
                     settings.SetFovRequest(1.0f);
+                    Drawing::settings.hudAspect = 0.0f;
                     ApplyPresetValues(recommendedPreset, confirmDefaults);
-                    dirty = true;
+                    TrackChanges(previous);
                     confirmDefaults = false;
                     for (auto& widget : extension.widgets) Refresh(widget);
                 }
@@ -477,54 +542,67 @@ void InputTrigger(MenuItem* item, int trigger) {
         return;
     }
     if (trigger == 0 || trigger == 1 || (trigger == 4 && !Slider(option))) {
-        // Native OnPrevMenuState/OnNextMenuState update the widget and call SetHookData.
-        Virtual(item, trigger == 0 ? 12 : 11);
+        if (Slider(option))
+        {
+            const int percent = Value(option);
+            const int next = trigger == 0 ? (percent - 1) / 5 * 5 : (percent / 5 + 1) * 5;
+            SetOption(option, std::clamp(next, option == FieldOfView ? 50 : 10, 200));
+            Refresh(e.widgets[option - FrameRate]);
+        }
+        else
+        {
+            Virtual(item, trigger == 0 ? 12 : 11);
+        }
         // The icon set stays as it was when it can't change.
-        if (option == IconSet) Refresh(e.widgets[option - FrameRate]);
+        if (option == IconSet || option == HudBox || option == AspectRatio) Refresh(e.widgets[option - FrameRate]);
         playSound(reinterpret_cast<void*>(dmAudio), 0xC5, 0);
     }
 }
 void Save() {
-    if (!dirty) return;
+    if (!dirtySettings) return;
     using console::portable::IniValue;
-    IniValue values[15] = {
+    IniValue values[SettingCount] = {
         {"MAIN", "FPSLimit", {}}, {"MAIN", "UnthrottleEmuDuringLoading", {}}, {"MPRADAR", "RadarScale", {}},
         {"MAIN", "HudScale", {}}, {"RADAR", "RadarScale", {}}, {"MAIN", "FOVFactor", {}},
         {"MAIN", "CutsceneBorders", {}}, {"MAIN", "SkipIntro", {}},
         {"MAIN", "HudAspectRatioConstraint", {}}, {"MAIN", "VehicleLights", {}},
         {"CONTROLS", "HoldVehicleCamera", {}}, {"CONTROLS", "ModernControlScheme", {}}, {"CONTROLS", "PCCheats", {}},
-        {"MAIN", "ForceAspectRatio", {}}, {"RADAR", "RadarPosY", {}}};
-    std::strcpy(values[0].value, settings.fps ? "60" : "30");
+        {"MAIN", "ForceAspectRatio", {}}, {"MAIN", "GamepadIcons", {}}};
+    std::strcpy(values[SaveRate].value, settings.fps ? "60" : "30");
     // A configured value of 2 (also fast-forward fades) is kept while enabled.
-    std::strcpy(values[1].value, !settings.unthrottle ? "0" : settings.unthrottleMode == 2 ? "2" : "1");
-    console::decimal(values[2].value, Drawing::settings.multiplayerRadar, 2);
-    console::decimal(values[3].value, Drawing::settings.hud, 2);
-    console::decimal(values[4].value, Drawing::settings.radar, 2);
-    console::decimal(values[5].value, settings.fov, 2);
-    values[6].value[0] = char('0' + (settings.cutsceneBorders & 3)); values[6].value[1] = 0;
-    std::strcpy(values[7].value, settings.skipIntro ? "1" : "0");
+    std::strcpy(values[SaveLoading].value, !settings.unthrottle ? "0" : settings.unthrottleMode == 2 ? "2" : "1");
+    console::decimal(values[SaveMultiplayerRadar].value, Drawing::settings.multiplayerRadar, 2);
+    console::decimal(values[SaveHud].value, Drawing::settings.hud, 2);
+    console::decimal(values[SaveRadar].value, Drawing::settings.radar, 2);
+    console::decimal(values[SaveFov].value, settings.fov, 2);
+    values[SaveBorders].value[0] = char('0' + (settings.cutsceneBorders & 3)); values[SaveBorders].value[1] = 0;
+    std::strcpy(values[SaveIntro].value, settings.skipIntro ? "1" : "0");
     const float hudAspect = Drawing::settings.hudAspect;
-    if (hudAspect == 0.0f) std::strcpy(values[8].value, "Auto");
-    else if (const int index = HudBoxIndex(hudAspect)) std::strcpy(values[8].value, hudBoxNames[index]);
-    else console::format(values[8].value, "", hudAspect, 4);
-    std::strcpy(values[9].value, settings.vehicleLights ? "1" : "0");
-    std::strcpy(values[10].value, settings.holdVehicleCamera ? "1" : "0");
-    std::strcpy(values[11].value, settings.modernControls ? "1" : "0");
-    std::strcpy(values[12].value, settings.pcCheats ? "1" : "0");
-    if (autoAspect) std::strcpy(values[13].value, "auto");
-    else if (const int index = HudBoxIndex(Drawing::settings.aspect)) std::strcpy(values[13].value, hudBoxNames[index]);
-    else console::format(values[13].value, "", Drawing::settings.aspect, 4);
-    console::decimal(values[14].value, Drawing::settings.radarY, 2);
+    if (hudAspect == 0.0f) std::strcpy(values[SaveHudBox].value, "Auto");
+    else if (const int index = HudBoxIndex(hudAspect); index < customRatio) std::strcpy(values[SaveHudBox].value, hudBoxNames[index]);
+    else console::format(values[SaveHudBox].value, "", hudAspect, 4);
+    std::strcpy(values[SaveLights].value, settings.vehicleLights ? "1" : "0");
+    std::strcpy(values[SaveHold].value, settings.holdVehicleCamera ? "1" : "0");
+    std::strcpy(values[SaveModern].value, settings.modernControls ? "1" : "0");
+    std::strcpy(values[SaveCheats].value, settings.pcCheats ? "1" : "0");
+    if (autoAspect) std::strcpy(values[SaveAspect].value, "auto");
+    else if (const int index = HudBoxIndex(Drawing::settings.aspect); index < customRatio) std::strcpy(values[SaveAspect].value, hudBoxNames[index]);
+    else console::format(values[SaveAspect].value, "", Drawing::settings.aspect, 4);
+    std::strcpy(values[SaveIcons].value, iconTokens[GamepadIconSet()]);
+    unsigned count = 0;
+    for (unsigned i = 0; i < SettingCount; ++i)
+        if (dirtySettings & (1u << i)) values[count++] = values[i];
     static console::portable::IniWriter<> writer;
-    const bool saved = writer.update(cfgPath, values, 15);
+    const bool saved = writer.update(cfgPath, values, count);
 #ifndef NDEBUG
     logger.WriteF("Menu settings %s", saved ? "saved" : "could not be saved");
 #endif
-    if (saved) dirty = false;
+    if (saved) dirtySettings = 0;
 }
 void Close(void* menu, bool immediate) {
     if (extension.page && extension.mode) Show(Native);
     closeHook.call<void>(menu, immediate);
+    lastSaveAttempt = sceKernelGetSystemTimeLow();
     Save();
 }
 // cMenuItems::SetCurrentItemByNameTrigger looks the page's XML default item up
@@ -541,6 +619,7 @@ void DestroyPage(MenuPage* page, int flags) {
     destroyHook.call<void>(page, flags);
 }
 void Draw(void* menu) {
+    if (*reinterpret_cast<const uint8_t*>(reinterpret_cast<uintptr_t>(menu) + 0x20)) ResetCheatInput();
     if (autoAspect) Drawing::settings.aspect = console::portable::Aspect();
     const auto manager = reinterpret_cast<uintptr_t>(menu);
     const auto begin = *reinterpret_cast<MenuPage***>(manager + 4);
@@ -553,10 +632,51 @@ void Draw(void* menu) {
         const bool tabs = *reinterpret_cast<uint8_t*>(manager + 0x1E) != 0;
         if (tabs || screen < 0 || screen >= end - begin || begin[screen] != extension.page) Show(Native);
     }
+    if (extension.page && extension.mode == DisplayMode) {
+        PollSettings(true);
+        Refresh(extension.widgets[HudBox - FrameRate]);
+        Refresh(extension.widgets[AspectRatio - FrameRate]);
+    }
     Drawing::Scope scope(Anchor::Center);
     drawHook.call<void>(menu);
 }
 }
+void ReadSettingsPreservingMenuEdits(void (*read)())
+{
+    const CurrentSettings previous;
+    read();
+    VisitSavedSettings(previous, [](Setting key, auto& value, const auto& old)
+    {
+        if (dirtySettings & (1u << key))
+            value = old;
+    });
+    if (dirtySettings & (1u << SaveAspect))
+    {
+        autoAspect = previous.automaticAspect;
+        Drawing::settings.aspect = previous.drawing.aspect;
+    }
+}
+
+void SelectConfiguredGamepadIcons(unsigned set)
+{
+    if (!(dirtySettings & (1u << SaveIcons)) && set != GamepadIconSet())
+        SelectGamepadIcons(set);
+}
+
+void SaveMenuSettingsIfDue(unsigned now)
+{
+    if (!dirtySettings || now - lastSaveAttempt < 1000000u) return;
+    lastSaveAttempt = now;
+    Save();
+}
+
+void SetMenuGamepadIcons(unsigned set)
+{
+    const CurrentSettings previous;
+    SelectGamepadIcons(set);
+    TrackChanges(previous);
+}
+
 void InstallMenu() {
     startupModernControls = settings.modernControls;
     playSound = reinterpret_cast<void (*)(void*, uint16_t, uint32_t)>(Address<0x8A062F0>());

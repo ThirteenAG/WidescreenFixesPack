@@ -19,7 +19,7 @@
 - **Window mode** — Fullscreen (the default) is the game's exclusive mode. Windowed uses the selected resolution in a centred framed window; Borderless uses the monitor's resolution and covers it without a frame. Mode changes apply at once through the game's video reset. Alt+Enter switches between Windowed and Borderless. At the desktop's size, a windowed frame lies outside the screen. Window modes have square corners on Windows 11 and keep running on focus loss unless **Pause on Focus Loss** is on (off by default), which pauses gameplay when the window loses focus. **Confine cursor** keeps the mouse inside the active window. DPI awareness keeps Windows scaling from blurring or cropping the picture.
 - **Startup** — Missing renderer and control settings are filled in from the installed values or the defaults. Options are saved to the fix's settings file; the fix doesn't write the registry.
 - **Frontend colours** — Menu artwork keeps its expected colours.
-- **Movies** — Never cut off or stretched, also in windowed mode: **Original Aspect** shows each movie as the game does, inside its 4:3 picture; **Fill** fits it to the whole screen. **Skip intro** skips the intro movie.
+- **Movies** — The intro movie keeps its 4:3 shape, centred with black bars at the sides, also in windowed mode: never cut off or stretched. **Skip intro** skips it.
 - **Target arrows** — Arrows next to a nearby target stay at the right distance when the camera is higher than default.
 - **Exit** — With **Skip credits**, quitting skips the credits, both from the Quit item and with Escape.
 - **Updates** — **Check for updates** (off by default) asks fusionfix.io once per start whether a newer version is out and tells you on the main menu; with FusionFixHub in the game's folder, the hub opens on the update when you close the game. Off makes no network request.
@@ -27,14 +27,14 @@
 
 ## Camera
 
-- **Rotating camera** — Like Chinatown Wars, the view turns so the player's vehicle faces the top of the screen. On foot the view keeps its last orientation by default. Movement controls follow the turned view, and the HUD stays upright. **Rotation smoothing** sets how quickly the view catches up; F6 toggles the rotation (the key can be changed).
+- **Rotating camera** — Like Chinatown Wars, the view turns so the player's vehicle faces the top of the screen. On foot the view keeps its last orientation by default. Movement controls follow the turned view, and the HUD stays upright. **Rotation smoothing** sets how quickly the view catches up; C toggles the rotation (the key can be changed).
 - **Smooth follow** — Like GTA3's top-down camera, the view stays on the player while the game's look-ahead and speed-dependent height are smoothed in real time.
 
 ## Options
 
 - **Quicksave** — Save with a configurable hotkey, or Back + Start on a controller.
 - **Manual zoom** — Use the configured plus/minus keys, or Back + D-pad up/down on a controller.
-- **Recovery** — F8, or Back + Y on a controller, returns a stuck player to ground level at the current position.
+- **Recovery** — R, or Back + Y on a controller, returns a stuck player to ground level at the current position.
 - **Frontend background** — Shows the complete artwork with side bars by default, or fills the screen by cropping the art.
 
 ## Controls

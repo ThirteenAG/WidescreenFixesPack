@@ -30,7 +30,7 @@
   "fps.30": "30 FPS",
   "fps.60": "60 FPS",
   "icons": "Icônes de manette",
-  "icons.description": "Remplace les symboles de boutons dans les textes du jeu. Auto utilise les images Xbox car PPSSPP officiel ne communique pas le type de manette. PlayStation conserve les symboles PSP. Configurez les commandes dans PPSSPP. Les changements dans Plugins sont immédiats ; après modification du fichier, redémarrez le jeu émulé.",
+  "icons.description": "Remplace les symboles de boutons dans les textes du jeu. Auto utilise les images Xbox car PPSSPP officiel ne communique pas le type de manette. PlayStation conserve les symboles PSP. Configurez les commandes dans PPSSPP. Les changements dans Plugins et dans le fichier de configuration s’appliquent pendant le jeu.",
   "icons.auto": "Auto",
   "icons.xbox": "Xbox",
   "icons.ps": "PlayStation",

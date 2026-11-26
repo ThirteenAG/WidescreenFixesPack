@@ -1,7 +1,7 @@
 #pragma once
-#include "../../external/injector/include/ps2/runtime.hpp"
-#include "../../external/injector/include/ps2/game_abi.hpp"
-#include "../Shared/Console/Viewport.hpp"
+#include "ps2/runtime.hpp"
+#include "ps2/game_abi.hpp"
+#include "Shared/Console/Viewport.hpp"
 #include <cstdint>
 
 namespace lcs {
@@ -38,6 +38,8 @@ struct Settings {
     // MAIN.GamepadCameraSpeed and MAIN.InvertGamepadY: the right stick camera.
     float padCameraSpeed = 1.0f;
     bool invertPad = false;
+    // CONTROLS.HoldVehicleCamera: the vehicle camera stays where the right stick left it.
+    bool holdVehicleCamera = false;
 };
 inline Settings settings;
 namespace address {
@@ -52,8 +54,8 @@ void InstallAim();
 void InstallVehicleLights();
 void UpdateViewport();
 // Reads the CFG again after a save state was loaded and applies it.
-void RefreshSettings();
-void ReloadBindings();
+bool RefreshSettings();
+bool ReloadBindings();
 void ReloadMenuLanguage();
 // Applies settings.disableBlur (menu toggle).
 void ApplyBlur();

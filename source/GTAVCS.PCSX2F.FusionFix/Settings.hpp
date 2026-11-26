@@ -1,14 +1,14 @@
 #pragma once
-#include "../Shared/Console/PS2Settings.hpp"
-#include "../Shared/Console/Viewport.hpp"
-#include "../Shared/Console/Text.hpp"
+#include "Shared/Console/PS2Settings.hpp"
+#include "Shared/Console/Viewport.hpp"
+#include "Shared/Console/Text.hpp"
 #include <cstring>
 #include <cstdlib>
 #include <cmath>
 
 namespace vcs {
 namespace config {
-inline console::ps2settings::Value values[] = {
+inline constexpr console::ps2settings::Value defaults[] = {
     {"MAIN", "SkipIntro", "1"},
     {"MAIN", "FPSLimit", "30"},
     {"MAIN", "UnthrottleEmuDuringLoading", "1"},
@@ -25,7 +25,10 @@ inline console::ps2settings::Value values[] = {
     {"MAIN", "GamepadIcons", "0"},
     {"MAIN", "VehicleLights", "1"},
     {"CONTROLS", "HoldVehicleCamera", "0"},
+    {"MAIN", "GamepadCameraSpeed", "1.0"},
+    {"MAIN", "InvertGamepadY", "0"},
 };
+inline console::ps2settings::Value values[sizeof(defaults) / sizeof(*defaults)];
 inline float Number(unsigned index, float fallback, float minimum, float maximum) {
     char* end = nullptr;
     const char* start = values[index].value;
@@ -36,8 +39,20 @@ inline float Number(unsigned index, float fallback, float minimum, float maximum
     if (*end && !(separated && *end == ';')) return fallback;
     return console::bounded(value, minimum, maximum, fallback);
 }
-inline void Load() { (void)console::ps2settings::load(values); }
-inline bool Read() { return console::ps2settings::read(values); }
+inline void Load()
+{
+    std::memcpy(values, defaults, sizeof(values));
+    (void)console::ps2settings::load(values);
+}
+inline bool Read()
+{
+    console::ps2settings::Value loaded[sizeof(defaults) / sizeof(*defaults)];
+    std::memcpy(loaded, defaults, sizeof(loaded));
+    if (!console::ps2settings::read(loaded))
+        return false;
+    std::memcpy(values, loaded, sizeof(values));
+    return true;
+}
 inline bool Boolean(unsigned index, bool fallback) {
     return console::ps2settings::boolean(values[index], fallback);
 }

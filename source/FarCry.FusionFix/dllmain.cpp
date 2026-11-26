@@ -26,7 +26,7 @@ CEXP void InitializeASI()
             Init();
             CallbackHandler::RegisterModuleLoadCallback(L"CryScriptSystem.dll", []()
             {
-                FarCryStartup::Install(FixSettings().Bool("MAIN.SkipIntro"), GetModuleHandleW(L"CryScriptSystem.dll"));
+                FarCryStartup::Install(FarCryLive::Boolean("MAIN.SkipIntro"), GetModuleHandleW(L"CryScriptSystem.dll"));
                 FarCryMenu::Init();
             });
             CallbackHandler::RegisterModuleLoadCallback(L"XRenderD3D9.dll", InitXRenderD3D9);

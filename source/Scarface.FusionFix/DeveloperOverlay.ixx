@@ -51,6 +51,8 @@ export namespace ScarfaceOverlay
 
     bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -109,7 +111,8 @@ export namespace ScarfaceOverlay
             return true;
         }();
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
     }
 
     HRESULT WINAPI Present(IDirect3DDevice9* device, const RECT* source, const RECT* destination, HWND window, const RGNDATA* dirty)
@@ -165,6 +168,8 @@ export namespace ScarfaceOverlay
 
     void Install()
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         auto pattern = hook::pattern("8B 4C 24 04 51 8B CE E8 ? ? ? ? 84 C0 74 27 80 7E 29 00 75 09 80 3D");
         const auto call = pattern.get_first<uint8_t>(7);
         const auto target = call + 5 + *reinterpret_cast<const int32_t*>(call + 1);

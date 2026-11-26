@@ -20,8 +20,10 @@ export namespace JCCamera
 
     inline void Refresh()
     {
-        factor.store(std::clamp(FixSettings().Float("MAIN.FOVFactor"), 0.5f, 2.0f));
-        borders.store(std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3));
+        static std::mutex mutex;
+        const std::lock_guard lock(mutex);
+        factor.store(std::clamp(GetFixNumber("MAIN.FOVFactor", 1.0f), 0.5f, 2.0f));
+        borders.store(std::clamp(GetFixNumber("MAIN.CutsceneBorders", 3), 0, 3));
     }
 
     inline float Scaled(float vertical, float aspect, float multiplier)

@@ -1,4 +1,8 @@
 {
+  "MAIN.CutsceneBorders": "Bandes des cinématiques",
+  "MAIN.CutsceneBorders.description": "Les bandes latérales préservent le cadrage 16:9 des cinématiques rendues sur les écrans plus larges. Sans bandes, la vue occupe toute la largeur.",
+  "MAIN.CutsceneBorders.0": "Sans bandes",
+  "MAIN.CutsceneBorders.2": "Bandes latérales",
   "plugin.name": "Driver Parallel Lines Fusion Fix",
   "page.display": "Affichage",
   "page.graphics": "Graphismes",
@@ -96,7 +100,8 @@
   "MAIN.GamepadDeadzone.description": "Zone morte des sticks de la manette. Appliquée une seule fois aux déplacements et à la caméra. Diminuez-la pour réagir plus tôt, augmentez-la en cas de dérive.",
   "MAIN.GamepadIcons": "Icônes de manette",
   "MAIN.GamepadIcons.description": "Images des boutons natifs : Xbox, PlayStation ou Nintendo. Automatique utilise Xbox. Les noms du clavier et de la souris restent inchangés.",
-  "menu.help.controls": "F1 / Esc    Haut / Bas",
+  "menu.help.controls": "F1 / Esc / {toggle}    Haut / Bas {scroll}",
+  "menu.help.padScroll": "(Croix)",
   "MAIN.CheckForUpdates": "Rechercher les mises à jour",
   "MAIN.CheckForUpdates.description": "Une fois par lancement, demande à fusionfix.io si une version plus récente du fix est sortie et vous le dit dans le jeu. Désactivé n'envoie aucune requête réseau.",
   "update.availablehub": "{name} {version} est disponible. FusionFixHub s'ouvrira quand vous quitterez le jeu.",

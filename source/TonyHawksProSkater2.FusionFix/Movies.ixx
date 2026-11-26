@@ -1,12 +1,83 @@
 module;
 
 #include <stdafx.h>
+#include <atomic>
 #include <ddraw.h>
+#include "FixSettings.hpp"
 #include "Shared/TonyHawk/Video.hpp"
 
 export module Movies;
 
 import ComVars;
+
+namespace THPS2MovieLayout
+{
+    struct Picture
+    {
+        unsigned firstRow;
+        unsigned height;
+        TonyVideo::Box box;
+    };
+
+    using OpenFn = void* (__stdcall*)(const char*, unsigned);
+    inline OpenFn OpenMovie = nullptr;
+    inline unsigned BakedBars = 0;
+    inline std::atomic<int> Mode{ 1 };
+
+    inline bool IsStockMovieSize(unsigned width, unsigned height)
+    {
+        return (width == 320 && height == 240) || (width == 640 && height == 480);
+    }
+
+    inline void* __stdcall Open(const char* path, unsigned flags)
+    {
+        auto movie = OpenMovie(path, flags);
+        BakedBars = 0;
+        if (!movie)
+            return movie;
+
+        struct BinkInfo
+        {
+            unsigned width;
+            unsigned height;
+            unsigned frames;
+        };
+        BinkInfo info{};
+        std::memcpy(&info, movie, sizeof(info));
+        if (!IsStockMovieSize(info.width, info.height))
+            return movie;
+
+        std::string_view name(path);
+        name.remove_prefix(name.find_last_of("\\/") + 1);
+        // Only these stock movies have sustained black rows at both edges.
+        if (info.frames == 1503 && asi_settings::text::IEquals(name, "Intro.dat"))
+            BakedBars = 12;
+        else if (info.frames == 266 && asi_settings::text::IEquals(name, "NSlogo.dat"))
+            BakedBars = 38;
+        return movie;
+    }
+
+    inline Picture Layout(float width, float height, unsigned sourceWidth, unsigned sourceHeight)
+    {
+        const auto mode = Mode.load(std::memory_order_relaxed);
+        const unsigned firstRow = mode == 1 && IsStockMovieSize(sourceWidth, sourceHeight) ? BakedBars * sourceHeight / 240 : 0;
+        const unsigned pictureHeight = sourceHeight - 2 * firstRow;
+        return { firstRow, pictureHeight, TonyVideo::Layout(width, height, float(sourceWidth), float(pictureHeight), mode) };
+    }
+
+    inline void Install(HMODULE module)
+    {
+        ObserveFixSetting("MAIN.FMVWidescreenMode", Mode, [](const std::string& value)
+        {
+            return std::atoi(value.c_str());
+        });
+        auto open = hook::module_pattern(module, "FF 15 ? ? ? ? 85 C0 A3 ? ? ? ? 75 ? 8D 54 24 10 52 FF 15");
+        OpenMovie = **open.get_first<OpenFn*>(2);
+        auto site = open.get_first<uint8_t>();
+        injector::MakeCALL(site, Open, true);
+        injector::WriteMemory<uint8_t>(site + 5, 0x90, true);
+    }
+}
 
 namespace THPS2DirectVideo
 {
@@ -23,14 +94,13 @@ namespace THPS2DirectVideo
     inline FrameCache Frame;
 
     inline void Fit(uint8_t* pixels, int pitch, unsigned width, unsigned height, unsigned bytes,
-        unsigned sourceWidth, unsigned sourceHeight)
+        unsigned sourceWidth, unsigned sourceHeight, size_t sourcePitch)
     {
-        // The whole movie at its own aspect, centred
-        const float factor = std::min(float(width) / sourceWidth, float(height) / sourceHeight);
-        const unsigned outWidth = std::clamp(unsigned(std::lround(sourceWidth * factor)), 1u, width);
-        const unsigned outHeight = std::clamp(unsigned(std::lround(sourceHeight * factor)), 1u, height);
+        const auto picture = THPS2MovieLayout::Layout(float(width), float(height), sourceWidth, sourceHeight);
+        const unsigned outWidth = std::clamp(unsigned(std::lround(picture.box.width)), 1u, width);
+        const unsigned outHeight = std::clamp(unsigned(std::lround(picture.box.height)), 1u, height);
         const unsigned left = (width - outWidth) / 2, top = (height - outHeight) / 2;
-        const size_t sourcePitch = size_t(sourceWidth) * bytes, lineBytes = size_t(outWidth) * bytes;
+        const size_t lineBytes = size_t(outWidth) * bytes;
         Frame.line.resize(lineBytes);
         Frame.columns.resize(outWidth);
         for (unsigned col = 0; col < outWidth; ++col)
@@ -41,7 +111,7 @@ namespace THPS2DirectVideo
         unsigned previous = ~0u;
         for (unsigned row = 0; row < outHeight; ++row)
         {
-            const unsigned sourceRow = unsigned(uint64_t(row) * sourceHeight / outHeight);
+            const unsigned sourceRow = picture.firstRow + unsigned(uint64_t(row) * picture.height / outHeight);
             if (sourceRow != previous)
             {
                 const auto* input = Frame.source.data() + size_t(sourceRow) * sourcePitch;
@@ -69,36 +139,36 @@ namespace THPS2DirectVideo
         const unsigned width = MovieSurface.get().dwWidth, surfaceHeight = MovieSurface.get().dwHeight;
         const bool valid = MovieRenderMode != 0 && !TextureMovie && movie && pixels && pitch && pitch != INT32_MIN &&
             (bytes == 2 || bytes == 3 || bytes == 4) && sourceWidth >= 320 && sourceHeight >= 200 &&
-            width <= 16384 && surfaceHeight <= 16384 && x < width && y < surfaceHeight &&
-            sourceWidth <= width - x && sourceHeight <= surfaceHeight - y &&
+            sourceWidth <= 16384 && sourceHeight <= 16384 && width && width <= 16384 && surfaceHeight && surfaceHeight <= 16384 &&
             size_t(std::abs(pitch)) >= size_t(width) * bytes && uint64_t(std::abs(pitch)) * surfaceHeight <= INT32_MAX;
-        unsigned frame = 0;
-        if (valid) std::memcpy(&frame, static_cast<uint8_t*>(movie) + 12, sizeof(frame));
-        const size_t sourcePitch = size_t(sourceWidth) * bytes;
-        const bool same = valid && Frame.movie == movie && Frame.width == sourceWidth && Frame.height == sourceHeight &&
-            Frame.bytes == bytes && Frame.flags == flags && frame >= Frame.frame && Frame.source.size() == sourcePitch * sourceHeight;
-        if (same)
-            for (unsigned row = 0; row < sourceHeight; ++row)
-                std::memcpy(static_cast<uint8_t*>(pixels) + ptrdiff_t(y + row) * pitch + size_t(x) * bytes,
-                    Frame.source.data() + size_t(row) * sourcePitch, sourcePitch);
+        if (!valid)
+        {
+            Frame.movie = nullptr;
+            return Copy(movie, pixels, pitch, height, x, y, flags);
+        }
 
-        const int result = Copy(movie, pixels, pitch, height, x, y, flags);
-        if (!valid || result != 0)
+        unsigned frame = 0;
+        std::memcpy(&frame, static_cast<uint8_t*>(movie) + 12, sizeof(frame));
+        const size_t sourcePitch = (size_t(sourceWidth) * bytes + 3u) & ~size_t(3);
+        const bool same = Frame.movie == movie && Frame.width == sourceWidth && Frame.height == sourceHeight &&
+            Frame.bytes == bytes && Frame.flags == flags && frame >= Frame.frame;
+        if (!same)
+            Frame.source.assign(sourcePitch * sourceHeight, 0);
+
+        // Keep Bink's previous decoded pixels available for dirty rectangles, independent of the display surface.
+        const int result = Copy(movie, Frame.source.data(), static_cast<int>(sourcePitch), sourceHeight, 0, 0, flags);
+        if (result != 0)
         {
             Frame.movie = nullptr;
             return result;
         }
-        Frame.source.resize(sourcePitch * sourceHeight);
-        for (unsigned row = 0; row < sourceHeight; ++row)
-            std::memcpy(Frame.source.data() + size_t(row) * sourcePitch,
-                static_cast<uint8_t*>(pixels) + ptrdiff_t(y + row) * pitch + size_t(x) * bytes, sourcePitch);
         Frame.movie = movie;
         Frame.width = sourceWidth;
         Frame.height = sourceHeight;
         Frame.bytes = bytes;
         Frame.frame = frame;
         Frame.flags = flags;
-        Fit(static_cast<uint8_t*>(pixels), pitch, width, surfaceHeight, bytes, sourceWidth, sourceHeight);
+        Fit(static_cast<uint8_t*>(pixels), pitch, width, surfaceHeight, bytes, sourceWidth, sourceHeight, sourcePitch);
         return result;
     }
 
@@ -122,10 +192,9 @@ export namespace THPS2Video
 {
     using Vertex = THPS2MovieVertex;
 
-    using TonyVideo::Box;
-    using TonyVideo::Layout;
-
     inline SafetyHookInline SetupHook, DrawHook;
+    inline SafetyHookMid SplitCopyHook;
+    inline uintptr_t SplitCopyEnd = 0;
     inline float Width = 640.0f, Height = 480.0f;
     inline std::array<Vertex, 8> Native{};
     inline bool Ready = false;
@@ -143,7 +212,9 @@ export namespace THPS2Video
     {
         if (!Ready)
             return DrawHook.ccall<int>();
-        const auto box = Layout(Width, Height, static_cast<float>(MovieWidth.get()), static_cast<float>(MovieHeight.get()), 1);
+        const auto sourceWidth = MovieWidth.get(), sourceHeight = MovieHeight.get();
+        const auto picture = THPS2MovieLayout::Layout(Width, Height, sourceWidth, sourceHeight);
+        const auto& box = picture.box;
         const bool split = MovieSplit.get() != 0;
         const float edge = split ? std::clamp(static_cast<float>(MovieTextureWidth.get()) / MovieWidth.get(), 0.0f, 1.0f) : 1.0f;
         const auto count = split ? 8u : 4u;
@@ -155,6 +226,12 @@ export namespace THPS2Video
             const float x = i < 4 ? (right ? edge : 0.0f) : (right ? 1.0f : edge);
             vertex.x = box.x + x * box.width;
             vertex.y = box.y + (bottom ? box.height : 0.0f);
+            if (picture.firstRow)
+            {
+                const auto quad = i - i % 4;
+                const float inset = (Native[quad + 2].v - Native[quad].v) * float(picture.firstRow) / sourceHeight;
+                vertex.v += bottom ? -inset : inset;
+            }
             MovieVertices.get()[i] = vertex;
         }
         const auto result = DrawHook.ccall<int>();
@@ -171,6 +248,7 @@ export namespace THPS2Video
         auto draw = hook::module_pattern(module, "A1 ? ? ? ? 83 EC 14 85 C0 56 0F 84 ? ? ? ? 8D 44 24 08 8D 4C 24 0C");
         auto summary = hook::module_pattern(module, "A1 ? ? ? ? 68 ? ? ? ? 50 FF 15 ? ? ? ? 8B 15 ? ? ? ? 8B 0D ? ? ? ? A1");
         auto textureWidth = hook::module_pattern(module, "3B 2D ? ? ? ? 77 ? 3B 1D ? ? ? ? 0F 86");
+        auto splitCopy = hook::module_pattern(module, "85 D2 8D 0C 4B 89 4D FC 74 ? 0F 6F 3D ? ? ? ? 90 8B 75 FC 8B 7D F0 8B 4D E8");
         const auto start = reinterpret_cast<uintptr_t>(draw.get_first());
         auto quad = hook::range_pattern(start, start + 0x400, "6A 00 6A 04 68 ? ? ? ? 8B 10 68 44 01 00 00 6A 06 50 FF 52 64");
         MovieSplit.SetAddress(*setup.get_first<uint8_t*>(1));
@@ -181,6 +259,19 @@ export namespace THPS2Video
         MovieVertices.SetAddress(*quad.get_first<Vertex*>(5));
         SetupHook = safetyhook::create_inline(setup.get_first(), Setup);
         DrawHook = safetyhook::create_inline(draw.get_first(), Draw);
+        const auto copyRow = splitCopy.get_first<uint8_t>(10);
+        SplitCopyEnd = reinterpret_cast<uintptr_t>(copyRow + static_cast<int8_t>(copyRow[-1]));
+        SplitCopyHook = safetyhook::create_mid(copyRow, [](SafetyHookContext& regs)
+        {
+            // Each row's second texture can be narrower than the first.
+            const auto& surface = *reinterpret_cast<const DDSURFACEDESC2*>(regs.ebp - 0x114);
+            const auto* input = *reinterpret_cast<const uint16_t**>(regs.ebp - 4);
+            auto* output = *reinterpret_cast<uint16_t**>(regs.ebp - 0x10);
+            for (DWORD x = 0; x < surface.dwWidth; ++x)
+                output[x] = input[x] | 0x8000;
+            regs.eip = SplitCopyEnd;
+        });
+        THPS2MovieLayout::Install(module);
         THPS2DirectVideo::Install(module);
     }
 }

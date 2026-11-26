@@ -54,14 +54,15 @@ export namespace FarCryUpdates
             }
             return asi_settings::text::Widen(text);
         };
-        config.show = [](const std::wstring& text)
+        config.tryShow = [](const std::wstring& text)
         {
             const auto owner = FarCryMenu::context;
-            if (!FarCryMenu::Available(owner) || !owner->open)
-                return;
-            owner->helpLines = FarCryMenu::Wrap(FarCryMenu::FontService(owner), FarCryMenu::fontModule, asi_settings::text::Narrow(text));
-            if (owner->helpLines.empty())
-                return;
+            if (!FarCryMenu::Available(owner) || !owner->open || !FarCryMenu::Snapshot(owner, "private"))
+                return false;
+            auto lines = FarCryMenu::Wrap(FarCryMenu::FontService(owner), FarCryMenu::fontModule, asi_settings::text::Narrow(text));
+            if (lines.empty() || !FarCryMenu::Available(owner) || !FarCryMenu::Snapshot(owner, "private"))
+                return false;
+            owner->helpLines = std::move(lines);
             owner->helpTitle = owner->model.Text("update.title");
             owner->helpSelected = owner->selected;
             owner->helpPage = owner->selected = 0;
@@ -70,7 +71,9 @@ export namespace FarCryUpdates
             {
                 owner->returnPending = true;
                 FarCryMenu::Retire(owner);
+                return false;
             }
+            return FarCryMenu::Available(owner) && FarCryMenu::Snapshot(owner, "private");
         };
         RWGTA::UpdateCheck::Init(std::move(config));
         FarCryMenu::Tick = []() { RWGTA::UpdateCheck::Tick(); };

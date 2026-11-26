@@ -92,14 +92,28 @@ namespace WaterD3D8
 
     // The vertex layout of the current draw, from its FVF or its declaration. The engine's own declarations of
     // position, color and one or two texture coordinates are given, d3d8to9 does not return declarations.
-    export bool Layout(void* device, WaterLayout& layout, uintptr_t& identity, DWORD textured, DWORD textured2)
+    export bool Layout(void* device, WaterLayout& layout, uint64_t& identity, DWORD textured, DWORD textured2)
     {
         IDirect3DVertexBuffer8* buffer = nullptr;
         UINT stride = 0;
         if (FAILED(Device(device)->GetStreamSource(0, &buffer, &stride)) || !buffer)
             return false;
+        // Private data belongs to this resource even when a later allocation reuses its address.
+        static constexpr GUID meshId{ 0x8647dd94, 0x7722, 0x47fb, { 0xaf, 0x79, 0xf1, 0xe9, 0x75, 0x54, 0x69, 0xb3 } };
+        static uint64_t nextId = 0;
+        D3DVERTEXBUFFER_DESC desc{};
+        identity = 0;
+        if (SUCCEEDED(buffer->GetDesc(&desc)) && !(desc.Usage & D3DUSAGE_DYNAMIC))
+        {
+            DWORD size = sizeof(identity);
+            if (FAILED(buffer->GetPrivateData(meshId, &identity, &size)))
+            {
+                identity = ++nextId;
+                if (FAILED(buffer->SetPrivateData(meshId, &identity, sizeof(identity), 0)))
+                    identity = 0;
+            }
+        }
         buffer->Release();
-        identity = reinterpret_cast<uintptr_t>(buffer);
         layout = { stride, -1, -1 };
         DWORD shader = 0;
         Device(device)->GetVertexShader(&shader);
@@ -170,19 +184,28 @@ namespace WaterD3D8
 
     // The positions of the current draw's vertices in their object space, every one up to 4096 and evenly spread
     // beyond that
-    export bool Positions(void* device, UINT minIndex, UINT count, std::vector<float>& positions)
+    export bool VertexBase(void* device, UINT& base)
+    {
+        IDirect3DIndexBuffer8* indices = nullptr;
+        const auto result = Device(device)->GetIndices(&indices, &base);
+        if (indices) indices->Release();
+        return SUCCEEDED(result);
+    }
+
+    export bool Positions(void* device, UINT first, UINT count, std::vector<float>& positions)
     {
         IDirect3DVertexBuffer8* buffer = nullptr;
         UINT stride = 0;
-        if (FAILED(Device(device)->GetStreamSource(0, &buffer, &stride)) || !buffer || !stride || !count)
+        if (FAILED(Device(device)->GetStreamSource(0, &buffer, &stride)) || !buffer)
             return false;
-        IDirect3DIndexBuffer8* indices = nullptr;
-        UINT base = 0;
-        if (SUCCEEDED(Device(device)->GetIndices(&indices, &base)) && indices)
-            indices->Release();
+        if (stride < 3 * sizeof(float) || !count || uint64_t(first) + count > UINT_MAX / stride)
+        {
+            buffer->Release();
+            return false;
+        }
         BYTE* data = nullptr;
         bool done = false;
-        if (SUCCEEDED(buffer->Lock((base + minIndex) * stride, count * stride, &data, D3DLOCK_READONLY)) && data)
+        if (SUCCEEDED(buffer->Lock(first * stride, count * stride, &data, D3DLOCK_READONLY)) && data)
         {
             const UINT step = std::max(1u, count / 4096);
             positions.clear();
@@ -241,28 +264,38 @@ namespace WaterD3D8
     }
 
     // The device is gone with everything made on it
-    export void Forget()
+    export void Release()
     {
-        reflection = nullptr;
-        reflectionSurface = reflectionDepth = savedTarget = savedDepth = nullptr;
-        waves = nullptr;
-        normalizer = nullptr;
+        ReleaseWaterObject(savedTarget);
+        ReleaseWaterObject(savedDepth);
+        ReleaseWaterObject(reflectionSurface);
+        ReleaseWaterObject(reflectionDepth);
+        ReleaseWaterObject(reflection);
+    }
+
+    export void ReleaseDevice()
+    {
+        Release();
+        // Shaders are created only after the managed wave texture, which still owns the native device.
+        IDirect3DDevice8* owner = nullptr;
+        if (waves && SUCCEEDED(waves->GetDevice(&owner)))
+        {
+            if (pixelShader)
+                owner->DeletePixelShader(pixelShader);
+            for (const auto& entry : vertexShaders)
+                owner->DeleteVertexShader(entry.second);
+            owner->Release();
+        }
         pixelShader = 0;
         vertexShaders.clear();
+        ReleaseWaterObject(waves);
+        ReleaseWaterObject(normalizer);
         supported = -1;
     }
 
-    export void Release()
+    export bool CurrentViewport(void* device, void* viewport)
     {
-        for (auto** surface : { &reflectionSurface, &reflectionDepth })
-        {
-            if (*surface)
-                (*surface)->Release();
-            *surface = nullptr;
-        }
-        if (reflection)
-            reflection->Release();
-        reflection = nullptr;
+        return SUCCEEDED(Device(device)->GetViewport(static_cast<D3DVIEWPORT8*>(viewport)));
     }
 
     bool Target(IDirect3DDevice8* device, UINT width, UINT height)
@@ -289,7 +322,11 @@ namespace WaterD3D8
             reflection = nullptr;
             return false;
         }
-        reflection->GetSurfaceLevel(0, &reflectionSurface);
+        if (FAILED(reflection->GetSurfaceLevel(0, &reflectionSurface)))
+        {
+            Release();
+            return false;
+        }
         if (FAILED(device->CreateDepthStencilSurface(width, height, depthFormat, D3DMULTISAMPLE_NONE, &reflectionDepth)))
         {
             reflectionDepth = nullptr;
@@ -300,18 +337,31 @@ namespace WaterD3D8
     }
 
     // Renders the following draws into the reflection target, cleared to the given color
-    export bool BeginReflection(void* device, UINT width, UINT height, DWORD clear)
+    export bool BeginReflection(void* device, UINT width, UINT height, DWORD clear, const void* viewport)
     {
         auto d = Device(device);
         if (!Target(d, width, height))
             return false;
-        d->GetRenderTarget(&savedTarget);
-        d->GetDepthStencilSurface(&savedDepth);
-        d->SetRenderTarget(reflectionSurface, reflectionDepth);
+        if (FAILED(d->GetRenderTarget(&savedTarget)))
+            return false;
+        const auto depthResult = d->GetDepthStencilSurface(&savedDepth);
+        if (FAILED(depthResult) && depthResult != D3DERR_NOTFOUND)
+        {
+            ReleaseWaterObject(savedTarget);
+            return false;
+        }
         D3DSURFACE_DESC description{};
         reflectionDepth->GetDesc(&description);
         const bool stencil = description.Format == D3DFMT_D24S8 || description.Format == D3DFMT_D15S1 || description.Format == D3DFMT_D24X4S4;
-        d->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | (stencil ? D3DCLEAR_STENCIL : 0), clear, 1.0f, 0);
+        if (FAILED(d->SetRenderTarget(reflectionSurface, reflectionDepth)) ||
+            FAILED(d->Clear(0, nullptr, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | (stencil ? D3DCLEAR_STENCIL : 0), clear, 1.0f, 0)))
+        {
+            d->SetRenderTarget(savedTarget, savedDepth);
+            d->SetViewport(static_cast<const D3DVIEWPORT8*>(viewport));
+            ReleaseWaterObject(savedDepth);
+            ReleaseWaterObject(savedTarget);
+            return false;
+        }
         return true;
     }
 
@@ -332,22 +382,28 @@ namespace WaterD3D8
     {
         if (waves)
             return true;
-        if (FAILED(device->CreateTexture(WaveNormalSize, WaveNormalSize, 0, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &waves)))
-        {
-            waves = nullptr;
+        IDirect3DTexture8* texture = nullptr;
+        if (FAILED(device->CreateTexture(WaveNormalSize, WaveNormalSize, 0, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &texture)))
             return false;
-        }
-        for (UINT level = 0; level < waves->GetLevelCount(); ++level)
+        for (UINT level = 0; level < texture->GetLevelCount(); ++level)
         {
             const auto texels = WaveNormals(WaveNormalSize, level);
             const UINT size = std::max(1u, WaveNormalSize >> level);
             D3DLOCKED_RECT locked{};
-            if (FAILED(waves->LockRect(level, &locked, nullptr, 0)))
-                continue;
+            if (FAILED(texture->LockRect(level, &locked, nullptr, 0)))
+            {
+                texture->Release();
+                return false;
+            }
             for (UINT y = 0; y < size; ++y)
                 memcpy(static_cast<BYTE*>(locked.pBits) + y * locked.Pitch, &texels[y * size], size * sizeof(uint32_t));
-            waves->UnlockRect(level);
+            if (FAILED(texture->UnlockRect(level)))
+            {
+                texture->Release();
+                return false;
+            }
         }
+        waves = texture;
         return true;
     }
 
@@ -357,16 +413,17 @@ namespace WaterD3D8
         if (normalizer)
             return true;
         constexpr UINT size = 64;
-        if (FAILED(device->CreateCubeTexture(size, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &normalizer)))
-        {
-            normalizer = nullptr;
+        IDirect3DCubeTexture8* texture = nullptr;
+        if (FAILED(device->CreateCubeTexture(size, 1, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &texture)))
             return false;
-        }
         for (UINT face = 0; face < 6; ++face)
         {
             D3DLOCKED_RECT locked{};
-            if (FAILED(normalizer->LockRect(static_cast<D3DCUBEMAP_FACES>(face), 0, &locked, nullptr, 0)))
-                continue;
+            if (FAILED(texture->LockRect(static_cast<D3DCUBEMAP_FACES>(face), 0, &locked, nullptr, 0)))
+            {
+                texture->Release();
+                return false;
+            }
             for (UINT y = 0; y < size; ++y)
             {
                 auto* row = reinterpret_cast<uint32_t*>(static_cast<BYTE*>(locked.pBits) + y * locked.Pitch);
@@ -391,8 +448,13 @@ namespace WaterD3D8
                     row[x] = 0xFF000000u | (encode(v[0]) << 16) | (encode(v[1]) << 8) | encode(v[2]);
                 }
             }
-            normalizer->UnlockRect(static_cast<D3DCUBEMAP_FACES>(face), 0);
+            if (FAILED(texture->UnlockRect(static_cast<D3DCUBEMAP_FACES>(face), 0)))
+            {
+                texture->Release();
+                return false;
+            }
         }
+        normalizer = texture;
         return true;
     }
 
@@ -425,7 +487,7 @@ namespace WaterD3D8
         const auto code = WithoutDeclarations(Resource(IDR_WATER_VS8));
         DWORD handle = 0;
         if (FAILED(device->CreateVertexShader(declaration.data(), code.data(), &handle, softwareShaders ? D3DUSAGE_SOFTWAREPROCESSING : 0)))
-            handle = 0;
+            return 0;
         vertexShaders.emplace_back(layout, handle);
         return handle;
     }

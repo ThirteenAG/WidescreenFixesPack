@@ -144,7 +144,6 @@ void InitializeGame()
 {
     hook::pattern pattern;
     auto& settings = FixSettings();
-    asi_settings::LiveLink::Start();
     Screen.nWidth = settings.Int("MAIN.ResX");
     Screen.nHeight = settings.Int("MAIN.ResY");
 
@@ -356,6 +355,8 @@ void InitializeGame()
     // Fit the entire decoded picture inside either the original 4:3 box or the output.
     static int movieHeight = 0;
     static int movieTop = 0;
+    static std::atomic<int> movieMode{ 1 };
+    BindLiveSetting("MAIN.FMVWidescreenMode", movieMode);
     pattern = hook::pattern("E8 ? ? ? ? 89 44 24 60 E8 ? ? ? ? F3 0F 10 05");
     struct FMVHook
     {
@@ -364,7 +365,7 @@ void InitializeGame()
             const auto movie = reinterpret_cast<const uint32_t*>(regs.esi);
             const float sourceWidth = static_cast<float>(movie[4]);
             float sourceHeight = static_cast<float>(movie[5]);
-            const bool original = std::clamp(FixSettings().Int("MAIN.FMVWidescreenMode"), 0, 1) == 0;
+            const bool original = std::clamp(movieMode.load(std::memory_order_relaxed), 0, 1) == 0;
             const auto intro = IntroSkip::introHandle.load(std::memory_order_relaxed);
             const bool wantCrop = !original && intro && movie[0] == reinterpret_cast<uintptr_t>(intro) && movie[4] == 640 && movie[5] == 480;
             if (VideoCrop::SetVerticalRange(wantCrop)) sourceHeight = 384.0f;
@@ -406,6 +407,7 @@ void InitializeGame()
     LARushHud::InstallSpeedometer();
 
     IntroSkip::Install();
+    asi_settings::LiveLink::Start();
 }
 
 

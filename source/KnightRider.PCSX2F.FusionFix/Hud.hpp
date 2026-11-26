@@ -20,10 +20,6 @@ namespace kr::hud
 #ifdef WFP_PS2_DEBUG
     inline void (*trace2D)(uint32_t, uint32_t, float, float, float, float);
 #endif
-    // Screen textures and polygons keep their GS packets until their content
-    // changes; after a layout change they are rebuilt for a short while.
-    inline uint32_t rebuild2D;
-
     inline int Classify(float center)
     {
         return center < 0.35f ? -1 : center > 0.65f ? 1 : 0;
@@ -53,9 +49,13 @@ namespace kr::hud
         subtitles = false;
     }
     // The bands above and below scripted scenes, without Letterbox.
+    inline bool HideLetterbox()
+    {
+        return subtitles && Cinematic() && !(cutsceneBorders & 1);
+    }
     inline bool HiddenBand(float left, float right, float top, float bottom)
     {
-        return subtitles && Cinematic() && !(cutsceneBorders & 1) && left <= 0.01f && right >= 0.99f &&
+        return HideLetterbox() && left <= 0.01f && right >= 0.99f &&
                bottom - top < 0.3f && (top <= 0.01f || bottom >= 0.99f);
     }
 
@@ -242,8 +242,8 @@ namespace kr::hud
         wide.active = true;
     }
 
-    // Backgrounds, fades and bands that cover the whole 4:3 frustum are stretched
-    // along the camera's right axis so they still cover the widened frustum.
+    // Solid fades and bands that cover the whole 4:3 frustum extend to the
+    // edges of the widened view. Textured artwork keeps its original shape.
     // 0x35F810 loads the object's model-to-world matrix (rows X, Y, Z, T as used
     // by VU0) from a1; called from the NiPS2Renderer geometry dispatchers with the
     // geometry data (model bound center at +0x10, radius at +0x1C) in s3.
@@ -293,6 +293,16 @@ namespace kr::hud
         }
         return left && right;
     }
+    inline bool HasBaseTexture(uintptr_t renderer)
+    {
+        // At 0x3643B8 the renderer reads this base map to determine GS texture
+        // enable for the draw. The cached enable byte is set after ObjectMatrix.
+        const auto state = Read<uintptr_t>(renderer + 0xC);
+        const auto property = state ? Read<uintptr_t>(state + 0x28) : 0;
+        const auto maps = property ? Read<uintptr_t>(property + 0x20) : 0;
+        const auto baseMap = maps ? Read<uintptr_t>(maps) : 0;
+        return baseMap && Read<uintptr_t>(baseMap + 4);
+    }
     inline void ObjectMatrix(SafetyMipsContext& regs)
     {
         if (!wide.active)
@@ -305,8 +315,9 @@ namespace kr::hud
             return;
         }
         const auto data = uintptr_t(regs.s3);
+        const auto renderer = uintptr_t(regs.s4);
         const auto m = reinterpret_cast<const float*>(uintptr_t(regs.a1));
-        if (!data || !m)
+        if (!data || !m || !renderer || HasBaseTexture(renderer))
         {
             return;
         }
@@ -353,12 +364,38 @@ namespace kr::hud
     // NiScreenPolygon (normalized vertices) and NiScreenTexture (pixel
     // rectangles) are converted to GS packets by NiPS2Renderer and kept until
     // their dirty count (+0x1C / +0x18) is set again.
+    struct PacketLayout
+    {
+        uintptr_t object;
+        unsigned dirtyOffset;
+    };
+    constexpr unsigned PacketCacheSize = 1024;
+    inline PacketLayout packets2D[PacketCacheSize];
+    inline void Invalidate2D()
+    {
+        for (auto& entry : packets2D)
+        {
+            entry = {};
+        }
+    }
     inline void Rebuild(SafetyMipsContext& regs, unsigned dirty)
     {
-        if (rebuild2D && regs.a1)
+        const auto object = uintptr_t(regs.a1);
+        if (!object)
         {
-            --rebuild2D;
-            Write<uint16_t>(regs.a1 + dirty, 1);
+            return;
+        }
+        auto& entry = packets2D[((object >> 4) ^ (object >> 14)) & (PacketCacheSize - 1)];
+        if (entry.object == object && entry.dirtyOffset == dirty)
+        {
+            return;
+        }
+        // A cached object may first draw long after the layout changed. An
+        // index collision only causes another rebuild on the next draw.
+        entry = {object, dirty};
+        if (!Read<uint16_t>(object + dirty))
+        {
+            Write<uint16_t>(object + dirty, 1);
         }
     }
 
@@ -370,7 +407,8 @@ namespace kr::hud
         const auto polygon = uintptr_t(regs.s7);
         const unsigned count = Read<uint16_t>(polygon + 12);
         const auto vertices = Read<uintptr_t>(polygon + 16);
-        if ((k == 1 && ky == 1) || !count || !vertices)
+        const bool identity = k == 1 && ky == 1;
+        if (!count || !vertices || (identity && !HideLetterbox()))
         {
             return;
         }
@@ -391,7 +429,7 @@ namespace kr::hud
             regs.f23 = regs.f24 = 0;
             return;
         }
-        if (left <= 0.01f && right >= 0.99f)
+        if (identity || (left <= 0.01f && right >= 0.99f))
         {
             return; // fades and backgrounds
         }
@@ -418,7 +456,8 @@ namespace kr::hud
         const auto renderer = uintptr_t(regs.s6), packet = uintptr_t(regs.fp);
         const unsigned count = regs.s1;
         const int width = Read<int32_t>(renderer + 0x828), origin = Read<int32_t>(renderer + 0x9A4) * 16;
-        if ((k == 1 && ky == 1) || !count || !packet || width <= 0)
+        const bool identity = k == 1 && ky == 1;
+        if (!count || !packet || width <= 0 || (identity && !HideLetterbox()))
         {
             return;
         }
@@ -449,7 +488,7 @@ namespace kr::hud
             }
             return;
         }
-        if (l <= 0.01f && r >= 0.99f)
+        if (identity || (l <= 0.01f && r >= 0.99f))
         {
             return; // fades and backgrounds
         }

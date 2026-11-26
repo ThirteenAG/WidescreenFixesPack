@@ -204,7 +204,7 @@ export namespace NFSMWHelp
             return frame.parentX > 0.0f && frame.parentY > 0.0f;
         }
 
-        bool Place(void* screen, uint8_t* package, uint8_t* selected, FontLookup lookup, int language, Layout& layout, uint8_t*& style)
+        bool Place(void* screen, uint8_t* package, uint8_t* selected, FontLookup lookup, int language, uint32_t rows, Layout& layout, uint8_t*& style)
         {
             Frame selectedFrame;
             if (!GetFrame(selected, lookup, language, selectedFrame))
@@ -215,7 +215,7 @@ export namespace NFSMWHelp
             auto pitch = *reinterpret_cast<float*>(bytes + 0xE0);
             auto dataX = *reinterpret_cast<float*>(bytes + 0xF4);
             auto dataWidth = *reinterpret_cast<float*>(bytes + 0xEC);
-            auto visible = *reinterpret_cast<uint32_t*>(bytes + 0x10C);
+            auto visible = rows ? rows : *reinterpret_cast<uint32_t*>(bytes + 0x10C);
             if (!std::isfinite(startX) || !std::isfinite(startY) || !std::isfinite(pitch) || pitch <= 0.0f ||
                 !std::isfinite(dataX) || !std::isfinite(dataWidth) || dataWidth <= 0.0f || !visible || visible > 64)
                 return false;
@@ -309,12 +309,13 @@ export namespace NFSMWHelp
             bounds.clear();
         }
 
+        // rows: the height of the list's area in rows when it differs from the rows it shows at once (0: the same)
         std::vector<uint8_t*> Prepare(void* screen, uint8_t* package, const std::string& name,
-            uint8_t* selected, FontLookup lookup, int language, float& width)
+            uint8_t* selected, FontLookup lookup, int language, float& width, uint32_t rows = 0)
         {
             Layout layout;
             uint8_t* style{};
-            if (!package || !Place(screen, package, selected, lookup, language, layout, style))
+            if (!package || !Place(screen, package, selected, lookup, language, rows, layout, style))
                 return {};
             auto list = reinterpret_cast<List*>(package + 0x48);
             auto& entry = packages[name];

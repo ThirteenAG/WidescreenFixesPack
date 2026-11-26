@@ -93,7 +93,11 @@ private:
         Unposted = false;
         LastPost = now;
         Pending = true;
-        PostMessage(GameWindow, WM_RAWINPUTMOUSE, 0, 0);
+        if (!PostMessage(GameWindow, WM_RAWINPUTMOUSE, 0, 0))
+        {
+            Pending = false;
+            Unposted = true;
+        }
     }
 
     static void InputThread()
@@ -209,10 +213,40 @@ private:
     }
 };
 
-// A game that empties its message queue each frame with a PeekMessage loop gets a new WM_MOUSEMOVE on every pass while the
-// mouse moves, and with a high polling rate mouse the loop can go on for many milliseconds: the frame stalls. Install() replaces
-// a module's PeekMessage imports: after one WM_MOUSEMOVE the rest of the same loop leaves mouse moves in the queue (Windows
-// merges them, the next frame gets the latest position; mouse buttons come with it). Keys and all other messages still come.
+// A message-only window on its own thread to register raw mouse input for: a high polling rate mouse sends thousands of
+// WM_INPUT a second, on the game's thread they would take a large part of every frame. The procedure runs on that thread.
+inline HWND CreateRawInputWindow(const wchar_t* className, WNDPROC procedure)
+{
+    HWND created = nullptr;
+    HANDLE ready = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    if (!ready)
+        return nullptr;
+    std::thread([&created, ready, className, procedure]()
+    {
+        WNDCLASSEXW wc = { sizeof(wc) };
+        wc.lpfnWndProc = procedure;
+        wc.hInstance = GetModuleHandleW(nullptr);
+        wc.lpszClassName = className;
+        RegisterClassExW(&wc);
+        HWND window = CreateWindowExW(0, className, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, wc.hInstance, nullptr);
+        created = window;
+        SetEvent(ready);
+        if (!window)
+            return;
+        MSG msg;
+        while (GetMessageW(&msg, nullptr, 0, 0) > 0)
+            DispatchMessageW(&msg);
+    }).detach();
+    WaitForSingleObject(ready, INFINITE);
+    CloseHandle(ready);
+    return created;
+}
+
+// A game that empties its message queue each frame in a loop gets a new WM_MOUSEMOVE on every pass while the mouse moves,
+// and with a high polling rate mouse the loop can go on for many milliseconds: the frame stalls. Install() replaces a module's
+// PeekMessage and GetMessage imports: after one mouse move the loop ends (the next peek says the queue is empty), the frame
+// runs and the next pass takes the rest of the queue. Windows merges the moves in between, the latest position comes with the
+// next one. Loops that peek without removing and then take the message with GetMessage end the same way.
 class MessagePumpGuard
 {
 public:
@@ -223,74 +257,128 @@ public:
         const auto& dir = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
         if (!dir.VirtualAddress)
             return;
+        const struct
+        {
+            const char* name;
+            void* hook;
+            void** original;
+        } hooks[] =
+        {
+            { "PeekMessageA", reinterpret_cast<void*>(&PeekA), reinterpret_cast<void**>(&OriginalPeekA) },
+            { "PeekMessageW", reinterpret_cast<void*>(&PeekW), reinterpret_cast<void**>(&OriginalPeekW) },
+            { "GetMessageA", reinterpret_cast<void*>(&GetA), reinterpret_cast<void**>(&OriginalGetA) },
+            { "GetMessageW", reinterpret_cast<void*>(&GetW), reinterpret_cast<void**>(&OriginalGetW) },
+        };
+        const auto user32 = GetModuleHandleW(L"user32.dll");
         for (auto imp = reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR*>(base + dir.VirtualAddress); imp->Name; ++imp)
         {
-            if (_stricmp(reinterpret_cast<const char*>(base + imp->Name), "user32.dll") || !imp->OriginalFirstThunk)
+            if (_stricmp(reinterpret_cast<const char*>(base + imp->Name), "user32.dll"))
                 continue;
-            auto names = reinterpret_cast<IMAGE_THUNK_DATA*>(base + imp->OriginalFirstThunk);
+            // Some executables have no name table (only the bound addresses), those are matched by address
+            auto names = imp->OriginalFirstThunk ? reinterpret_cast<IMAGE_THUNK_DATA*>(base + imp->OriginalFirstThunk) : nullptr;
             auto slots = reinterpret_cast<void**>(base + imp->FirstThunk);
-            for (size_t i = 0; names[i].u1.AddressOfData; ++i)
+            for (size_t i = 0; names ? names[i].u1.AddressOfData != 0 : slots[i] != nullptr; ++i)
             {
-                if (IMAGE_SNAP_BY_ORDINAL(names[i].u1.Ordinal))
+                if (names && IMAGE_SNAP_BY_ORDINAL(names[i].u1.Ordinal))
                     continue;
-                auto name = reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(base + names[i].u1.AddressOfData)->Name;
-                const bool wide = !strcmp(name, "PeekMessageW");
-                if (!wide && strcmp(name, "PeekMessageA"))
-                    continue;
-                void* hook = wide ? reinterpret_cast<void*>(&PeekW) : reinterpret_cast<void*>(&PeekA);
-                if (slots[i] == hook)
-                    continue;
-                (wide ? OriginalW : OriginalA) = reinterpret_cast<Peek>(slots[i]);
-                DWORD protect;
-                VirtualProtect(&slots[i], sizeof(void*), PAGE_READWRITE, &protect);
-                slots[i] = hook;
-                VirtualProtect(&slots[i], sizeof(void*), protect, &protect);
+                auto name = names ? reinterpret_cast<IMAGE_IMPORT_BY_NAME*>(base + names[i].u1.AddressOfData)->Name : nullptr;
+                for (const auto& hook : hooks)
+                {
+                    if (slots[i] == hook.hook)
+                        continue;
+                    if (name ? strcmp(name, hook.name) != 0 : slots[i] != reinterpret_cast<void*>(GetProcAddress(user32, hook.name)))
+                        continue;
+                    *hook.original = slots[i];
+                    DWORD protect;
+                    VirtualProtect(&slots[i], sizeof(void*), PAGE_READWRITE, &protect);
+                    slots[i] = hook.hook;
+                    VirtualProtect(&slots[i], sizeof(void*), protect, &protect);
+                    break;
+                }
             }
         }
     }
 
 private:
     using Peek = BOOL(WINAPI*)(LPMSG, HWND, UINT, UINT, UINT);
-    static inline Peek OriginalW = nullptr;
-    static inline Peek OriginalA = nullptr;
+    using Get = BOOL(WINAPI*)(LPMSG, HWND, UINT, UINT);
+    static inline Peek OriginalPeekA = nullptr;
+    static inline Peek OriginalPeekW = nullptr;
+    static inline Get OriginalGetA = nullptr;
+    static inline Get OriginalGetW = nullptr;
     static inline thread_local bool MovedThisPass = false;
 
-    static BOOL Call(Peek original, LPMSG msg, HWND hWnd, UINT min, UINT max, UINT remove)
+    static bool IsMove(const MSG* msg)
     {
+        return msg->message == WM_MOUSEMOVE || msg->message == WM_NCMOUSEMOVE;
+    }
+
+public:
+    // For a window procedure that reads every queued raw report on one WM_INPUT (GetRawInputBuffer): a fast mouse queues
+    // a new WM_INPUT while each one is handled, so the pass ends before the next WM_INPUT. Other messages still go through.
+    static void EndPassAtRawInput()
+    {
+        RawInputThisPass = true;
+    }
+
+private:
+    static inline thread_local bool RawInputThisPass = false;
+
+    static BOOL OnPeek(Peek original, LPMSG msg, HWND hWnd, UINT min, UINT max, UINT remove)
+    {
+        if (RawInputThisPass && !min && !max && !(remove & ~(PM_REMOVE | PM_NOYIELD)))
+        {
+            if (!original(msg, hWnd, 0, 0, PM_NOREMOVE | (remove & PM_NOYIELD)) || msg->message == WM_INPUT)
+            {
+                RawInputThisPass = false;
+                return FALSE;
+            }
+        }
         // Only the loop's plain peeks for any message are limited, and a window procedure's loop that gathers the queued
         // mouse moves (a peek for WM_MOUSEMOVE alone): it gets the one this pass already took. Other filtered peeks stay as
-        // the game made them.
+        // the game made them. The pass ends without asking Windows: a peek for a range that leaves WM_MOUSEMOVE out makes
+        // Windows hit-test every queued mouse report again (a WM_NCHITTEST each), which costs more than the moves themselves.
         const bool plain = !min && !max && !(remove & ~(PM_REMOVE | PM_NOYIELD));
-        if (MovedThisPass && min == WM_MOUSEMOVE && max == WM_MOUSEMOVE && (remove & PM_REMOVE))
+        if (MovedThisPass && (plain || (min == WM_MOUSEMOVE && max == WM_MOUSEMOVE && (remove & PM_REMOVE))))
+        {
+            if (plain)
+                MovedThisPass = false; // the next pass takes the rest of the queue and a mouse move again
             return FALSE;
-        BOOL result;
-        if (plain && MovedThisPass)
-        {
-            // Every message but WM_MOUSEMOVE: a range that leaves it out doesn't make Windows generate it
-            result = original(msg, hWnd, 0, WM_MOUSEMOVE - 1, remove);
-            if (!result)
-                result = original(msg, hWnd, WM_MOUSEMOVE + 1, UINT(-1), remove);
         }
-        else
-            result = original(msg, hWnd, min, max, remove);
-        if (plain && (remove & PM_REMOVE))
-        {
-            if (!result)
-                MovedThisPass = false; // the loop ends here, the next frame takes a mouse move again
-            else if (msg->message == WM_MOUSEMOVE)
-                MovedThisPass = true;
-        }
+        const BOOL result = original(msg, hWnd, min, max, remove);
+        if (plain && !result)
+            MovedThisPass = false;
+        else if (plain && (remove & PM_REMOVE) && IsMove(msg))
+            MovedThisPass = true;
         return result;
     }
 
-    static BOOL WINAPI PeekW(LPMSG msg, HWND hWnd, UINT min, UINT max, UINT remove)
+    static BOOL OnGet(Get original, LPMSG msg, HWND hWnd, UINT min, UINT max)
     {
-        return Call(OriginalW, msg, hWnd, min, max, remove);
+        const BOOL result = original(msg, hWnd, min, max);
+        if (result > 0 && !min && !max && IsMove(msg))
+            MovedThisPass = true;
+        return result;
     }
 
     static BOOL WINAPI PeekA(LPMSG msg, HWND hWnd, UINT min, UINT max, UINT remove)
     {
-        return Call(OriginalA, msg, hWnd, min, max, remove);
+        return OnPeek(OriginalPeekA, msg, hWnd, min, max, remove);
+    }
+
+    static BOOL WINAPI PeekW(LPMSG msg, HWND hWnd, UINT min, UINT max, UINT remove)
+    {
+        return OnPeek(OriginalPeekW, msg, hWnd, min, max, remove);
+    }
+
+    static BOOL WINAPI GetA(LPMSG msg, HWND hWnd, UINT min, UINT max)
+    {
+        return OnGet(OriginalGetA, msg, hWnd, min, max);
+    }
+
+    static BOOL WINAPI GetW(LPMSG msg, HWND hWnd, UINT min, UINT max)
+    {
+        return OnGet(OriginalGetW, msg, hWnd, min, max);
     }
 };
 

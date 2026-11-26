@@ -12,12 +12,10 @@ export struct Screen
     float fHeight;
     float fFieldOfView;
     float fAspectRatio;
-    int32_t nWidth43;
-    float fWidth43;
-    float fHudScale;
-    float fHudScale2;
-    float fHudOffset;
-    float fHudOffsetReal;
+    float fHudCanvasWidth;
+    float fHudCanvasHeight;
+    float fHudOffsetX;
+    float fHudOffsetY;
     float fHudOffsetWide;
 } Screen;
 

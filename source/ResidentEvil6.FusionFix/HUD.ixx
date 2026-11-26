@@ -218,41 +218,47 @@ namespace
 
 namespace
 {
-    // The health and ammo gauges are 3D models placed in front of the HUD camera at a fixed distance from the screen's
-    // center. They move sideways by as much as the box is wider than 16:9 at their depth: view units per half screen
-    // height at depth 1 = fCockpitTanHalfFov. The parts placed inside a gauge (digits, icons) use their own scale.
-    constexpr float fCockpitTanHalfFov = 0.2f;
-    constexpr float fCockpitPartTanHalfFov = 0.275f;
+    // The health and ammo gauges are 3D models drawn by the cockpit screens (uIdScreen, three slots of the cockpit
+    // manager) with a perspective camera at a fixed distance from the screen's center. Moving the models sideways
+    // would show them from the side; the fix shifts the screens' projection instead, so the gauges keep their look
+    // and move by as much as the box is wider than 16:9: right-side gauges to the box's right edge, left-side ones
+    // to its left edge. The objective markers share the screen and are moved back (ObjectiveMarker). The front end
+    // draws its menus on these screens too: the shift applies only while the game places the gauges.
+    uintptr_t* pCockpitManager = nullptr;
+    std::atomic<bool> bCockpitLeft{ false };
+    std::atomic<uint64_t> nCockpitPlaced{ 0 };   // GetTickCount64 of the last gauge placement
 
-    // How far a gauge at view position x and depth moves: right-side gauges (the camera's x axis points to the
-    // screen's right) to the box's right edge, left-side ones to its left edge
-    float GetCockpitOffset(float x, float depth, float tanHalfFov = fCockpitTanHalfFov)
+    bool IsCockpitScreen(uintptr_t screen)
     {
-        if (IsSplitScreenActive() || GetDiff() < 0.999f || depth <= 0.0f)
+        const auto manager = *pCockpitManager;
+        if (!manager)
+            return false;
+        for (int i = 0; i < 3; ++i)
+            if (*reinterpret_cast<uintptr_t*>(manager + 0x20 + i * 4) == screen)
+                return true;
+        return false;
+    }
+
+    // The projection's x shift in clip space
+    float GetCockpitShift()
+    {
+        if (IsSplitScreenActive() || GetDiff() < 0.999f || GetTickCount64() - nCockpitPlaced.load(std::memory_order_relaxed) > 250)
             return 0.0f;
         const float screen = GetAspectRatio();
         const float aspect = GetHudAspectSetting();
         const float box = aspect > 0.0f ? (std::min)(screen, aspect) : screen;
-        const float offset = depth * tanHalfFov * (box - defaultAspectRatio);
-        return x < -1.0f ? -offset : offset;
+        const float shift = (box - defaultAspectRatio) / screen;
+        return bCockpitLeft.load(std::memory_order_relaxed) ? -shift : shift;
     }
 
-    // The health gauges' position (x, y, z), after the game's sway with the camera
+    // The gauges' position (x, y, z), after the game's sway with the camera: the side they are on
     SafetyHookInline shCockpitPosition = {};
     float* __fastcall CockpitPosition(void* unit, void* edx, float* position)
     {
         auto result = shCockpitPosition.unsafe_thiscall<float*>(unit, position);
         fCockpitAspectRef = (std::max)(GetAspectRatio(), defaultAspectRatio);
-        position[0] += GetCockpitOffset(position[0], -position[2]);
-        return result;
-    }
-
-    // The ammo counter's digits: position (x, y, z) of digit n
-    SafetyHookInline shAmmoDigitPosition = {};
-    void* __fastcall AmmoDigitPosition(void* unit, void* edx, float* position, int digit)
-    {
-        auto result = shAmmoDigitPosition.unsafe_thiscall<void*>(unit, position, digit);
-        position[0] += GetCockpitOffset(position[0], -position[2], fCockpitPartTanHalfFov);
+        bCockpitLeft.store(position[0] < -1.0f, std::memory_order_relaxed);
+        nCockpitPlaced.store(GetTickCount64(), std::memory_order_relaxed);
         return result;
     }
 }
@@ -269,6 +275,12 @@ public:
 export void SetSubtitlesNow()
 {
     bSubtitlesNow = true;
+}
+
+// The cockpit screens' x shift in clip space (the objective markers drawn there move back by it)
+export float GetCockpitProjectionShift()
+{
+    return GetCockpitShift();
 }
 
 export float GetHudAspectRatioInv()
@@ -357,9 +369,26 @@ public:
                 injector::MakeCALL(pattern.get_first(), call.func, true);
             }
 
-            // The gauge's position, after the game's sway with the camera
+            // The gauges' position, after the game's sway with the camera
             pattern = hook::pattern("8B 81 0C 02 00 00 8B 80 24 33 00 00 85 C0 0F 84");
             shCockpitPosition = safetyhook::create_inline(pattern.get_first(), CockpitPosition);
+
+            // The cockpit screens' projection, right after it is built: edi = the screen, the matrix at esp+0x50
+            // (row vectors, w = -z): x' = x + shift * w
+            pattern = hook::pattern("51 8B 0D ? ? ? ? F3 0F 11 04 24 56 E8 ? ? ? ? 46 83 FE 03");
+            pCockpitManager = *pattern.get_first<uintptr_t*>(3);
+            pattern = hook::pattern("E8 ? ? ? ? 85 DB 74 1E 83 7D 10 00 74 18");
+            static auto CockpitProjectionHook = safetyhook::create_mid(pattern.get_first(5), [](SafetyHookContext& regs)
+            {
+                if (!IsCockpitScreen(regs.edi))
+                    return;
+                const float shift = GetCockpitShift();
+                if (shift == 0.0f)
+                    return;
+                auto matrix = reinterpret_cast<float*>(regs.esp + 0x50);
+                for (int row = 0; row < 4; ++row)
+                    matrix[row * 4] += shift * matrix[row * 4 + 3];
+            });
 
             // The gauges' vertical aspect compensation (16:9 / aspect): health and ammo of each character, their
             // digits and icons, and the radio messages
@@ -382,29 +411,6 @@ public:
                         injector::WriteMemory(match.get<void>(4), &fCockpitAspectRef, true);
                 });
             }
-
-            pattern = hook::pattern("66 0F 6E 44 24 08 8B 44 24 04 83 EC 08 80 B9 F1 01 00 00 00");
-            shAmmoDigitPosition = safetyhook::create_inline(pattern.get_first(), AmmoDigitPosition);
-
-            // The weapon icon and grenade count: each part's position (x, y, z) is passed on the stack
-            pattern = hook::pattern("F3 0F 11 44 24 30 E8 ? ? ? ? 53 8D 4C 24 34 51 8B CE E8");
-            static auto WeaponPartsHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext& regs)
-            {
-                auto position = *(float**)regs.esp;
-                position[0] += GetCockpitOffset(position[0], -position[2], fCockpitPartTanHalfFov);
-            });
-
-            // The other gauges of this kind: their position (x, y, z) is on the stack at esp+0x10
-            pattern = hook::pattern("F3 0F 10 15 ? ? ? ? F3 0F 5E D0 F3 0F 10 44 24 14 F3 0F 5C D1 F3 0F 59 15");
-            static std::vector<SafetyHookMid> AmmoPositionHooks;
-            pattern.count(4).for_each_result([](hook::pattern_match match)
-            {
-                AmmoPositionHooks.push_back(safetyhook::create_mid(match.get<void>(0), [](SafetyHookContext& regs)
-                {
-                    auto position = (float*)(regs.esp + 0x10);
-                    position[0] += GetCockpitOffset(position[0], -position[2]);
-                }));
-            });
         };
     }
 } HUD;

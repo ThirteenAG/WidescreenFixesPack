@@ -25,7 +25,7 @@ export namespace GTA2Input
     void (__fastcall* TeleportPed)(void*, int, int, int) = nullptr;
     bool MouseAim = true;
     bool PauseOnFocusLoss = false;
-    int RecoveryKey = VK_F8;
+    int RecoveryKey = 'R';
     std::atomic<uint32_t> MenuKeys = 0;
     std::atomic<unsigned> TextKey = 0;
     std::atomic<bool> FocusLost = false;        // Pause on Focus Loss: pause at the next gameplay tick
@@ -65,6 +65,55 @@ export namespace GTA2Input
         damage = nowDamage;
     }
 
+    struct PadShortcuts
+    {
+        struct Edges
+        {
+            WORD pressed, chordPressed;
+            bool backReleased;
+        };
+
+        Edges Update(WORD buttons, bool active, bool focusLost, bool quitPrompt)
+        {
+            if (!active || focusLost || !ready)
+            {
+                ignored = buttons;
+                previous = 0;
+                backHeld = chordUsed = false;
+                ready = active;
+                return {};
+            }
+
+            ignored &= buttons;
+            const WORD current = buttons & ~ignored;
+            const bool back = (current & XINPUT_GAMEPAD_BACK) && !quitPrompt;
+            constexpr WORD chordMask = XINPUT_GAMEPAD_DPAD_UP | XINPUT_GAMEPAD_DPAD_DOWN |
+                XINPUT_GAMEPAD_Y | XINPUT_GAMEPAD_RIGHT_THUMB | XINPUT_GAMEPAD_START;
+            const WORD chord = back ? WORD(current & chordMask) : 0;
+            const Edges result{ WORD(current & ~previous), WORD(chord & ~(backHeld ? previous : 0)),
+                !quitPrompt && backHeld && !back && !chordUsed };
+            chordUsed = back && (chord || (backHeld && chordUsed));
+            backHeld = back;
+            previous = current;
+            return result;
+        }
+
+    private:
+        WORD ignored = 0, previous = 0;
+        bool ready = false, backHeld = false, chordUsed = false;
+    };
+
+    void OnFocusLost()
+    {
+        FocusLost = true;
+        GTA2Quicksave::PadRequest = false;
+        // The key releases (Alt of Alt+Tab included) go to the other window: drop the held keys, or they stay down
+        // and a stuck Alt makes the game ignore Enter and Space
+        if (Replay) Field<uint32_t>(Replay, 4) &= ~0xFFFu;
+        CachedNativeButtons = 0;
+        if (bAltKeyDown.is_initialized()) bAltKeyDown = 0;
+    }
+
     int __fastcall PlayerInput(void* player, int)
     {
         using namespace InputDevices;
@@ -81,38 +130,30 @@ export namespace GTA2Input
         auto ped = GetPed(player, 0);
         bool replay = IsReplay(Replay, 0) || Field<int>(Replay, 0x38) == 2;
         bool quitPrompt = Field<uint8_t>(player, 1930) != 0;
-        // Keyboard Escape/Enter already reach the native quit prompt; inject only controller buttons.
-        static bool confirmHeld = false;
-        bool confirm = Button(XINPUT_GAMEPAD_A);
-        if (Focused() && !replay && quitPrompt && confirm && !confirmHeld) ProcessKey(player, 0, 28);
-        confirmHeld = confirm;
-        // Back is the modifier for the fix's pad chords; alone, its release is Escape.
-        // Back + d-pad up/down zoom, + Y recovers the player, + R3 toggles rotation, + Start quicksaves.
-        static WORD chordHeld = 0;
-        static bool backHeld = false, chordUsed = false;
+        const bool focused = Focused();
+        const bool focusLost = FocusLost.exchange(false);
+        static PadShortcuts shortcuts;
+        const auto edges = shortcuts.Update(Pad.Gamepad.wButtons, focused && !replay && PadConnected, focusLost, quitPrompt);
+        if (quitPrompt && (edges.pressed & XINPUT_GAMEPAD_A))
+            ProcessKey(player, 0, 28);
+
+        // Back alone opens the quit prompt on release. With another button it is a shortcut modifier.
         const bool back = Button(XINPUT_GAMEPAD_BACK) && !quitPrompt;
-        if (back && !backHeld) chordUsed = false;
-        const WORD chordButtons = back ? WORD(Pad.Gamepad.wButtons & (XINPUT_GAMEPAD_DPAD_UP | XINPUT_GAMEPAD_DPAD_DOWN |
-            XINPUT_GAMEPAD_Y | XINPUT_GAMEPAD_RIGHT_THUMB | XINPUT_GAMEPAD_START)) : WORD(0);
-        const WORD chordPressed = Focused() && !replay ? WORD(chordButtons & ~chordHeld) : WORD(0);
-        chordHeld = chordButtons;
-        if (chordButtons) chordUsed = true;
+        const WORD chordPressed = edges.chordPressed;
         if (chordPressed & XINPUT_GAMEPAD_DPAD_UP) fZoom = std::min(fZoom + 1.0f, 10.0f);
         if (chordPressed & XINPUT_GAMEPAD_DPAD_DOWN) fZoom = std::max(fZoom - 1.0f, 0.0f);
         if (chordPressed & XINPUT_GAMEPAD_RIGHT_THUMB) GTA2Camera::Enabled = !GTA2Camera::Enabled;
         if (chordPressed & XINPUT_GAMEPAD_START) GTA2Quicksave::PadRequest = true;
-        const bool backReleased = backHeld && !back && !chordUsed;
-        backHeld = back;
-        static bool escapeHeld = false;
-        bool escape = backReleased || (quitPrompt && (Button(XINPUT_GAMEPAD_B) || Button(XINPUT_GAMEPAD_BACK)));
-        if (Focused() && !replay && escape && !escapeHeld) ProcessKey(player, 0, 1);
-        escapeHeld = escape;
-        static bool pauseHeld = false;
-        bool pause = (Button(XINPUT_GAMEPAD_START) && !back) || (ModernControls && Key(PauseKey));
-        if (Focused() && !replay && !quitPrompt && pause && !pauseHeld) ProcessKey(player, 0, 0x40);
-        pauseHeld = pause;
+        const bool escape = edges.backReleased || (quitPrompt && (edges.pressed & (XINPUT_GAMEPAD_B | XINPUT_GAMEPAD_BACK)));
+        if (escape) ProcessKey(player, 0, 1);
+        static bool pauseKeyHeld = false;
+        const bool pauseKeyDown = ModernControls && Key(PauseKey);
+        if (focused && !focusLost && !replay && !quitPrompt &&
+            (((edges.pressed & XINPUT_GAMEPAD_START) && !back) || (pauseKeyDown && !pauseKeyHeld)))
+            ProcessKey(player, 0, 0x40);
+        pauseKeyHeld = pauseKeyDown;
         bool paused = pGame && Field<int>(pGame, 0) == 2;
-        if (FocusLost.exchange(false) && PauseOnFocusLoss && ped && !nMultiplayer && !replay &&
+        if (focusLost && PauseOnFocusLoss && ped && !nMultiplayer && !replay &&
             !quitPrompt && !paused)
             ProcessKey(player, 0, 0x40);
         static unsigned inputSamples = 0;
@@ -195,19 +236,18 @@ export namespace GTA2Input
             if (Button(XINPUT_GAMEPAD_LEFT_THUMB)) buttons |= 1024;    // Special 2: held, the stick looks around
             Field<uint32_t>(player, 4) |= buttons;
 
-            static bool messageHeld = false, recoveryHeld = false;
-            bool message = Button(XINPUT_GAMEPAD_RIGHT_THUMB) && !back;
-            if (message && !messageHeld) ProcessKey(player, 0, 0x41);
-            messageHeld = message;
-            bool recovery = Key(RecoveryKey) || (chordHeld & XINPUT_GAMEPAD_Y);
-            if (recovery && !recoveryHeld && (car || object))
+            if ((edges.pressed & XINPUT_GAMEPAD_RIGHT_THUMB) && !back)
+                ProcessKey(player, 0, 0x41);
+            static bool recoveryKeyHeld = false;
+            const bool recoveryKey = Key(RecoveryKey);
+            if (((chordPressed & XINPUT_GAMEPAD_Y) || (recoveryKey && !recoveryKeyHeld && !focusLost)) && (car || object))
             {
                 // Ask the engine for ground height and teleport through its native
                 // object/vehicle path, without enabling unrelated debug cheats.
                 auto physics = car ? car : Field<void*>(object, 0x80);
                 if (physics) TeleportPed(ped, 0, Field<int>(physics, 0x14), Field<int>(physics, 0x18));
             }
-            recoveryHeld = recovery;
+            recoveryKeyHeld = recoveryKey;
         }
         // The engine retains its input packet between key transitions. Inject
         // only while decoding it, so a released modern key cannot remain latched.
@@ -297,12 +337,15 @@ export namespace GTA2Input
 
     void Install(SettingsReader& ini)
     {
-        MouseAim = ini.ReadBoolean("INPUT", "MouseAim", true);
-        RecoveryKey = ini.ReadInteger("MISC", "RecoverPlayerKey", VK_F8);
-        PauseOnFocusLoss = ini.ReadBoolean("MAIN", "PauseOnFocusLoss", false);
-        FixSettings().OnChange("MAIN.PauseOnFocusLoss", [] { PauseOnFocusLoss = FixSettings().Bool("MAIN.PauseOnFocusLoss"); });
-        FixSettings().OnChange("INPUT.MouseAim", [] { MouseAim = FixSettings().Bool("INPUT.MouseAim"); });
-        FixSettings().OnChange("MISC.RecoverPlayerKey", [] { RecoveryKey = FixSettings().Int("MISC.RecoverPlayerKey"); });
+        static auto readOptions = [](SettingsReader& values)
+        {
+            MouseAim = values.ReadBoolean("INPUT", "MouseAim", true);
+            RecoveryKey = values.ReadInteger("MISC", "RecoverPlayerKey", 'R');
+            PauseOnFocusLoss = values.ReadBoolean("MAIN", "PauseOnFocusLoss", false);
+        };
+        readOptions(ini);
+        for (auto id : { "MAIN.PauseOnFocusLoss", "INPUT.MouseAim", "MISC.RecoverPlayerKey" })
+            FixSettings().OnChange(id, [] { RWGTA::GameThread::Post([] { SettingsReader values; readOptions(values); }); });
         auto requiredLookup0 = hook::pattern("8B 41 68 83 F8 02 74 0C 83 F8 03 74 07 8B 81 C4 02 00 00 C3");
         GetPed = reinterpret_cast<decltype(GetPed)>(requiredLookup0.get_first());
         auto requiredLookup1 = hook::pattern("53 8B 5C 24 08 56 57 8B FB 8B F1 8B 0D ? ? ? ? 81 E7 FF FF 00 00");
@@ -328,6 +371,8 @@ export namespace GTA2Input
             if ((ModernControls || Gamepad) && !nMultiplayer && !IsReplay(Replay, 0) && Field<int>(Replay, 0x38) != 2)
                 context.eax = (context.eax & ~255u) | 1u;
         });
+        auto requiredPattern3 = hook::pattern("8A 44 24 04 C0 E8 07 A2 ? ? ? ? C2 04 00");
+        bAltKeyDown.SetAddress(*requiredPattern3.get_first<uint8_t*>(8));
         auto requiredLookup6 = hook::pattern("53 56 8B F1 32 DB 38 9E 0D 01 00 00 0F 84");
         MenuInputHook = safetyhook::create_inline(requiredLookup6.get_first(), MenuInput);
     }

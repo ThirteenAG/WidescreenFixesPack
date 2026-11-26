@@ -55,7 +55,7 @@ public:
                     injector::WriteMemory<float>(value.address, Settings.restoreOriginalCamera ? value.classic : value.original, true);
             };
             apply();
-            onSettingsChanged() += apply;
+            onOriginalCameraChanged() += apply;
         };
     }
 } CameraProfilesModuleInstance;

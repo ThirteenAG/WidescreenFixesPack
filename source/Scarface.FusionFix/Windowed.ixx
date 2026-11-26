@@ -5,6 +5,7 @@ module;
 #include "Frame.hpp"
 #include "OverlayInput.hpp"
 #include "Shared/CursorConfinement.hpp"
+#include "Shared/D3D9Options.hpp"
 #include <d3d9.h>
 #include <stdexcept>
 
@@ -19,12 +20,14 @@ namespace
     SafetyHookInline settingsHook;
     SafetyHookInline displayHook;
     SafetyHookMid resetHook;
+    decltype(&Direct3DCreate9) originalCreate9 = nullptr;
     HWND boundWindow = nullptr;
     WNDPROC originalProc = nullptr;
     void* currentDisplay = nullptr;
-    void* applyingDisplay = nullptr;
-    std::optional<HRESULT> resetResult;
+    thread_local void* applyingDisplay = nullptr;
+    thread_local std::optional<HRESULT> resetResult;
     uintptr_t resetResume = 0;
+    constexpr int ToggleMode = 3;
     std::atomic<int> pendingMode{ -1 };
     int lastWindowMode = 1;
     bool changing = false;
@@ -38,11 +41,23 @@ namespace
     LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
         if (window == boundWindow)
+        {
             CursorConfinement::Message(message, wParam);
+            if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && !wParam) ||
+                (message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE))
+            {
+                int toggle = ToggleMode;
+                pendingMode.compare_exchange_strong(toggle, -1);
+            }
+        }
         if ((message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) && wParam == VK_RETURN)
         {
-            if (message == WM_SYSKEYDOWN && (lParam & (1u << 29)) && !(lParam & (1u << 30)))
-                pendingMode.exchange(3);
+            if (message == WM_SYSKEYDOWN && (lParam & (1u << 29)) && !(lParam & (1u << 30)) &&
+                window == boundWindow && GetForegroundWindow() == window)
+            {
+                int empty = -1;
+                pendingMode.compare_exchange_strong(empty, ToggleMode);
+            }
             return 0;
         }
         if (changing && (message == WM_SIZE || message == WM_ACTIVATE || message == WM_ACTIVATEAPP || message == WM_KILLFOCUS || message == WM_SETFOCUS))
@@ -58,6 +73,69 @@ namespace
         return original ? CallWindowProcW(original, window, message, wParam, lParam) : DefWindowProcW(window, message, wParam, lParam);
     }
 
+    [[noreturn]] void DisplayStartupError(HRESULT error)
+    {
+        wchar_t message[160]{};
+        swprintf_s(message, L"Scarface could not initialize the Direct3D 9 display (0x%08X).", static_cast<unsigned>(error));
+        MessageBoxW(boundWindow, message, L"Scarface", MB_OK | MB_ICONERROR);
+        ExitProcess(static_cast<UINT>(error));
+    }
+
+    IDirect3D9* WINAPI CreateGraphics(UINT sdkVersion)
+    {
+        // The engine indexes the first adapter record even when enumeration produced no records.
+        HRESULT result = D3DERR_NOTAVAILABLE;
+        for (int attempt = 0; attempt < 21; ++attempt)
+        {
+            if (attempt)
+                Sleep(100);
+            if (auto api = originalCreate9(sdkVersion))
+            {
+                D3DCAPS9 caps{};
+                const auto adapters = api->GetAdapterCount();
+                for (UINT adapter = 0; adapter < adapters; ++adapter)
+                {
+                    result = api->GetDeviceCaps(adapter, D3DDEVTYPE_HAL, &caps);
+                    if (SUCCEEDED(result))
+                        return api;
+                }
+                api->Release();
+            }
+        }
+        DisplayStartupError(result);
+    }
+
+    HRESULT WINAPI CreateDisplayDevice(IDirect3D9* api, UINT adapter, D3DDEVTYPE type, HWND window, DWORD flags,
+        D3DPRESENT_PARAMETERS* parameters, IDirect3DDevice9** device)
+    {
+        auto requested = *parameters;
+        // The presentation limiter owns pacing, including rates above the monitor refresh rate.
+        requested.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+        HRESULT result{};
+        for (int attempt = 0; attempt < 21; ++attempt)
+        {
+            if (attempt)
+                Sleep(100);
+            *parameters = requested;
+            result = api->CreateDevice(adapter, type, window, flags, parameters, device);
+            if (SUCCEEDED(result))
+            {
+                D3D9Options::HookDevice(*device);
+                return result;
+            }
+            if (result != D3DERR_DEVICELOST && result != D3DERR_NOTAVAILABLE)
+                break;
+        }
+        // Native resource setup unconditionally calls AddRef on the returned device.
+        DisplayStartupError(result);
+    }
+
+    void PrepareDisplayReset(IDirect3DDevice9* device)
+    {
+        if (applyingDisplay && Game::Field<IDirect3DDevice9*>(applyingDisplay, 16) == device)
+            Game::Field<D3DPRESENT_PARAMETERS>(applyingDisplay, 20).PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+    }
+
     void CaptureReset(SafetyHookContext& regs)
     {
         if (!applyingDisplay || reinterpret_cast<void*>(regs.ebp) != applyingDisplay)
@@ -69,13 +147,15 @@ namespace
             auto device = Game::Field<IDirect3DDevice9*>(applyingDisplay, 16);
             auto parameters = &Game::Field<D3DPRESENT_PARAMETERS>(applyingDisplay, 20);
             auto result = static_cast<HRESULT>(regs.eax);
-            for (int attempts = 0; FAILED(result) && attempts < 20;)
+            for (int attempt = 0; attempt < 20 && (result == D3DERR_DEVICELOST || result == D3DERR_DEVICENOTRESET); ++attempt)
             {
+                MSG message{};
+                if (PeekMessageW(&message, nullptr, WM_QUIT, WM_QUIT, PM_NOREMOVE))
+                    break;
                 Sleep(100);
-                if (device->TestCooperativeLevel() == D3DERR_DEVICELOST)
-                    continue;
-                result = device->Reset(parameters);
-                ++attempts;
+                result = device->TestCooperativeLevel();
+                if (SUCCEEDED(result) || result == D3DERR_DEVICENOTRESET)
+                    result = device->Reset(parameters);
             }
             regs.eax = static_cast<uintptr_t>(result);
         }
@@ -88,7 +168,7 @@ namespace
         }
     }
 
-    BOOL NativeDisplay(void* display, const std::array<uint32_t, 8>& settings)
+    BOOL NativeDisplay(void* display, const std::array<uint32_t, 8>& settings, HRESULT* status)
     {
         const auto previousDisplay = applyingDisplay;
         const auto previousResult = resetResult;
@@ -96,6 +176,8 @@ namespace
         resetResult.reset();
         const auto result = displayHook.unsafe_fastcall<BOOL>(display, nullptr, settings.data());
         const bool success = result && (!resetResult || SUCCEEDED(*resetResult));
+        if (status)
+            *status = resetResult && FAILED(*resetResult) ? *resetResult : (success ? S_OK : E_FAIL);
         applyingDisplay = previousDisplay;
         resetResult = previousResult;
         if (success)
@@ -148,7 +230,7 @@ namespace
             setAttribute(window, 33, &preference, sizeof(preference));
     }
 
-    BOOL __fastcall ApplyDisplay(void* display, void*, const void* requested)
+    BOOL ApplyDisplaySettings(void* display, const void* requested, HRESULT* status)
     {
         std::array<uint32_t, 8> settings;
         memcpy(settings.data(), requested, sizeof(settings));
@@ -162,7 +244,7 @@ namespace
             originalProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
         }
         if (!mode)
-            return NativeDisplay(display, settings);
+            return NativeDisplay(display, settings, status);
         if (mode == 2)
         {
             settings[0] = info.rcMonitor.right - info.rcMonitor.left;
@@ -204,11 +286,16 @@ namespace
         changingMode = previousGuard;
 
         // The native windowed branch selects desktop format and zero fullscreen refresh.
-        const auto result = NativeDisplay(display, settings);
+        const auto result = NativeDisplay(display, settings, status);
         changingMode = 1;
         SetWindowPos(window, HWND_NOTOPMOST, x, y, width, height, SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOSENDCHANGING);
         changingMode = previousGuard;
         return result;
+    }
+
+    BOOL __fastcall ApplyDisplay(void* display, void*, const void* requested)
+    {
+        return ApplyDisplaySettings(display, requested, nullptr);
     }
 
     void ApplyPending()
@@ -224,7 +311,7 @@ namespace
         if (requested < 0)
             return;
         const int previous = mode;
-        const int next = requested == 3 ? (mode ? 0 : lastWindowMode) : std::clamp<int>(requested, 0, 2);
+        const int next = requested == ToggleMode ? (mode ? 0 : lastWindowMode) : std::clamp<int>(requested, 0, 2);
         if (next == previous)
             return;
         auto settings = lastSettings;
@@ -317,6 +404,17 @@ public:
             // d3dDisplay's display-settings method occupies vtable slot 10.
             const auto displaySlot = displayVtable + 10 * sizeof(void*);
             const auto displayMethod = *reinterpret_cast<uintptr_t*>(displaySlot);
+            auto factory = hook::pattern("6A 1F E8 ? ? ? ? 50 8B CE E8 ? ? ? ? EB 02");
+            auto factoryCall = factory.get_first(2);
+            originalCreate9 = reinterpret_cast<decltype(originalCreate9)>(injector::GetBranchDestination(factoryCall).as_int());
+            injector::MakeCALL(factoryCall, CreateGraphics, true);
+
+            auto creation = hook::range_pattern(displayMethod, displayMethod + 4096, "FF 52 40 50 E8 ? ? ? ? 8B ? ? E8 ? ? ? ? 8B 06 83 C4 08");
+            // Replace the virtual call and its empty diagnostic call. The caller later pops the saved HRESULT.
+            D3D9Options::beforeReset = PrepareDisplayReset;
+            injector::MakeCALL(creation.get_first(), CreateDisplayDevice, true);
+            injector::WriteMemory<uint8_t>(creation.get_first(5), 0x50, true);
+            injector::MakeNOP(creation.get_first(6), 3);
             auto reset = hook::range_pattern(displayMethod, displayMethod + 4096, "FF 51 40 8B D8 53 E8 ? ? ? ? 83 C4 04 3B DF 75 ? E8");
             resetResume = reinterpret_cast<uintptr_t>(reset.get_first(14));
             resetHook = safetyhook::create_mid(reset.get_first(3), CaptureReset);
@@ -325,11 +423,13 @@ public:
             ScarfaceFocus::RestoreDisplay = []()
             {
                 if (!currentDisplay || !haveSettings)
-                    return false;
+                    return ScarfaceFocus::DisplayRestore::Finished;
+                HRESULT status = E_FAIL;
                 changing = true;
-                const auto restored = ApplyDisplay(currentDisplay, nullptr, lastSettings.data());
+                ApplyDisplaySettings(currentDisplay, lastSettings.data(), &status);
                 changing = false;
-                return restored != FALSE;
+                return status == D3DERR_DEVICELOST || status == D3DERR_DEVICENOTRESET ?
+                    ScarfaceFocus::DisplayRestore::Retry : ScarfaceFocus::DisplayRestore::Finished;
             };
             onModeChanged = [](int value)
             {

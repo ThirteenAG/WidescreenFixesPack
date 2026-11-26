@@ -15,9 +15,8 @@ export void InstallHud()
     auto& settings = FixSettings();
     hook::pattern pattern("");
     //HUD
-    THAWHud::Install(Screen.fWidth, Screen.fHeight, &settings.String("MAIN.HudAspectRatioConstraint"),
-                     &settings.Int("MAIN.CutsceneBorders"));
-    THAWIcons::Install(&settings.Int("MAIN.GamepadIcons"));
+    THAWHud::Install(Screen.fWidth, Screen.fHeight, settings);
+    THAWIcons::Install(settings);
     struct SetOffsetHook
     {
         void operator()(injector::reg_pack& regs)

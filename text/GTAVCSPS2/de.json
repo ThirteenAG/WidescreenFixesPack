@@ -13,7 +13,7 @@
   "controls.pccontrolscheme": "Tastatur- und Maussteuerung",
   "controls.pccontrolscheme.description": "Nutzt die PC-Steuerung; ist sie aus, bleibt die native Controller-Eingabe verfügbar.",
   "controls.mousesensitivity": "Mausempfindlichkeit",
-  "controls.mousesensitivity.description": "Geschwindigkeit der Mauskamera. 1.0 dreht die Kamera beim Standardzoom um 0.002 Radiant pro Pixel.",
+  "controls.mousesensitivity.description": "Höhere Werte drehen die Kamera bei gleicher Mausbewegung weiter.",
   "controls.invertmousey": "Maus-Y umkehren",
   "controls.invertmousey.description": "Kehrt die vertikale Kamerabewegung mit der Maus um.",
   "hud.hudscale": "HUD-Größe",
@@ -102,7 +102,7 @@
   "binding.crouch.description": "Ein oder zwei Namen von Tastatur- oder Maustasten, durch Komma getrennt. Ein leerer Wert entfernt die Belegung.",
   "menu.auto": "Auto",
   "MAIN.TextLanguage": "Hinweissprache",
-  "MAIN.TextLanguage.description": "Sprache des Hinweises bei einem Fehler des Steuerkreuz-Patches. Das Plugins-Menü bleibt auf Englisch.",
+  "MAIN.TextLanguage.description": "Sprache des Hinweises bei einem Fehler des 60-FPS-Patches.",
   "fovfactor": "Sichtfeld",
   "fovfactor.description": "Multipliziert das Sichtfeld im Spiel zusätzlich zur Breitbildkorrektur. 1.0 ist der Originalausschnitt; höher ist weiter. Zwischensequenzen bleiben unverändert.",
   "auto": "Auto",
@@ -123,5 +123,9 @@
   "lights": "Fahrzeuglichter",
   "lights.description": "Lässt Scheinwerfer, Rück-, Brems- und Rückfahrlichter auf den Karosserietexturen von Autos und Motorrädern leuchten, erzeugt aus den Spieltexturen. Standardmäßig aktiv.",
   "controls.holdvehiclecamera": "Fahrzeugkamera halten",
-  "controls.holdvehiclecamera.description": "Wenn du die Kamera in einem Fahrzeug mit dem rechten Stick drehst, bleibt sie dort, sodass du während der Fahrt nach hinten schauen kannst. Zwei Sekunden nach dem Loslassen schwenkt sie wieder hinter das Fahrzeug. Aus behält die Originalkamera, die beim Fahren wieder hinter das Fahrzeug schwenkt."
+  "controls.holdvehiclecamera.description": "Wenn du die Kamera in einem Fahrzeug mit dem rechten Stick drehst, bleibt sie dort, sodass du während der Fahrt nach hinten schauen kannst. Zwei Sekunden nach dem Loslassen schwenkt sie wieder hinter das Fahrzeug. Aus behält die Originalkamera, die beim Fahren wieder hinter das Fahrzeug schwenkt.",
+  "controls.gamepadcameraspeed": "Gamepad-Kameratempo",
+  "controls.gamepadcameraspeed.description": "Tempo der Kamera mit dem rechten Stick, zu Fuß und in Fahrzeugen. 1.0 ist das Originaltempo.",
+  "controls.invertgamepady": "Gamepad Y umkehren",
+  "controls.invertgamepady.description": "Kehrt die vertikale Kamerarichtung des rechten Sticks um."
 }

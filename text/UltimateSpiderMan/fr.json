@@ -5,6 +5,8 @@
   "MAIN_HudAspectRatioConstraint": "Format du HUD",
   "MAIN_HudAspectRatioConstraint.description": "Auto donne toute la largeur au HUD, sinon 4:3, 16:9, 21:9 ou un format personnalisé jusqu'à 32:9. S'applique à l'image suivante.",
   "MAIN_FPSLimit": "Limite d'images par seconde",
+  "MAIN_FPSLimit.monitor": "Fréquence de l’écran",
+  "MAIN_FPSLimit.unlimited": "Illimité",
   "MAIN_FPSLimit.description": "Limite : 0 illimité, -1 fréquence du moniteur actuel ou 30–1000 FPS. Par défaut 60. Modifiable pendant le jeu. Les fréquences élevées peuvent affecter son comportement.",
   "MAIN_FOVFactor": "Facteur de champ de vision",
   "MAIN_FOVFactor.description": "Multiplicateur du champ de vision en jeu, de 0.5 à 2.0. 1.0 garde la vue d'origine corrigée. Les cases de BD, caméras scriptées et vues zoomées gardent leur cadrage. S'applique à l'image suivante. L’élargissement s’arrête à 150 degrés horizontalement, sans réduire une vue neutre déjà plus large.",
@@ -80,6 +82,6 @@
   "MAIN_GamepadCameraSpeed.description": "Multiplie la vitesse de la caméra au stick droit après la courbe native. La souris, l’inversion, les déplacements et le recentrage conservent leurs réglages. 1.0 conserve la vitesse d’origine.",
   "MAIN_CheckForUpdates": "Rechercher les mises à jour",
   "MAIN_CheckForUpdates.description": "Recherche une nouvelle version une fois activée. Un avis apparaît dans Options ; FusionFixHub gère les mises à jour après la fermeture du jeu. Désactivé : aucune requête réseau.",
-  "update.availablehub": "Une nouvelle version du correctif est disponible. Ouvrez FusionFixHub après avoir quitté le jeu.",
-  "update.availablesite": "Une nouvelle version du correctif est disponible sur {page}"
+  "update.availablehub": "Fusion Fix {version} est disponible. Ouvrez FusionFixHub après avoir quitté le jeu.",
+  "update.availablesite": "Fusion Fix {version} est disponible sur {page}."
 }

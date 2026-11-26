@@ -17,6 +17,7 @@
     "../../external/injector/include/ps2/injector.c",
     "../../external/injector/include/ps2/mips.c"
   ],
+  "includes": ["..", "../../external/injector/include"],
   "output": "../../data/GTAVCS.PCSX2F.FusionFix/PLUGINS/GTAVCS.PCSX2F.FusionFix.elf",
   "cxx_flags": [
     "-std=gnu++17",

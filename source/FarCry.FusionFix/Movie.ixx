@@ -9,7 +9,6 @@ export module Movie;
 
 export namespace FarCryMovie
 {
-    inline const int* Mode = nullptr;
     inline bool Ready = false;
 #ifndef _WIN64
     inline SafetyHookMid AspectHook;

@@ -94,15 +94,20 @@ void InitDeveloperOverlay()
     KeyBufferIndex.SetAddress(*keyboard.get_first<int32_t*>(1));
     KeyBuffer.SetAddress(*keyboard.get_first<uint8_t*>(29));
     KeyboardHook = safetyhook::create_inline(keyboard.get_first(), ReadKeyboard);
-    CallbackHandler::RegisterCallback(L"d3d9.dll", []()
+    if constexpr (WFP::DeveloperOverlay)
     {
-        if (auto create = GetProcAddress(GetModuleHandleW(L"d3d9.dll"), "Direct3DCreate9"))
-            Create9Hook = safetyhook::create_inline(create, Create9);
-    });
+        CallbackHandler::RegisterCallback(L"d3d9.dll", []()
+        {
+            if (auto create = GetProcAddress(GetModuleHandleW(L"d3d9.dll"), "Direct3DCreate9"))
+                Create9Hook = safetyhook::create_inline(create, Create9);
+        });
+    }
 }
 
 void DrawDeveloperOverlay(HWND window)
 {
+    if constexpr (!WFP::DeveloperOverlay)
+        return;
     if (!CurrentDevice)
         return;
     static const bool page = []()
@@ -130,11 +135,14 @@ void DrawDeveloperOverlay(HWND window)
     if (down && !HotkeyDown)
         Overlay.SetOpen(!Overlay.IsOpen());
     HotkeyDown = down;
-    Overlay.Present(CurrentDevice, ThisModule());
+    if constexpr (WFP::DeveloperOverlay)
+        Overlay.Present(CurrentDevice, ThisModule());
 }
 
 bool DeveloperOverlayMessage(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
 {
+    if constexpr (!WFP::DeveloperOverlay)
+        return false;
     if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
         wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
     {

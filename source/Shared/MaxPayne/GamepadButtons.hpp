@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
-#include <vector>
+#include "Shared/PadInput.hpp"
 
 // Controller button names for the tips of both Max Payne games (MAIN.GamepadIcons). The tips name the key of an action
 // by a token ("Press #USE# to ..."), which the game replaces with the key's name; while a controller is the device
@@ -39,55 +39,48 @@ namespace MaxPayneGamepadButtons
         return Names[std::clamp(family, int(Xbox), int(Nintendo)) - 1][button];
     }
 
-    // The family of the controller connected, by its maker: Sony or Nintendo, else Xbox names. Read from the raw input
-    // device list (no registration, only the list of devices), looked up again now and then for controllers plugged
-    // in later.
-    inline int DetectFamily()
+    inline std::atomic<DWORD> selectedSlot{ XUSER_MAX_COUNT };
+    inline std::atomic<int> selectedFamily{ Xbox };
+    inline std::atomic<ULONGLONG> connectedAt{ 0 };
+    inline std::atomic<ULONGLONG> nPadActivity{ 0 };
+
+    inline int ControllerFamily(DWORD slot)
     {
-        static int family = Xbox;
-        static ULONGLONG lastCheck = 0;
-        if (lastCheck && GetTickCount64() - lastCheck < 3000)
-            return family;
-        lastCheck = GetTickCount64();
-
-        UINT nDevices = 0;
-        if (GetRawInputDeviceList(nullptr, &nDevices, sizeof(RAWINPUTDEVICELIST)) != 0 || nDevices == 0)
-            return family;
-        std::vector<RAWINPUTDEVICELIST> devices(nDevices);
-        nDevices = GetRawInputDeviceList(devices.data(), &nDevices, sizeof(RAWINPUTDEVICELIST));
-        if (nDevices == UINT(-1))
-            return family;
-
-        family = Xbox;
-        for (UINT i = 0; i < nDevices; ++i)
+        // XInput 1.4 ordinal 108 includes the vendor ID for the requested user index.
+        struct Capabilities
         {
-            if (devices[i].dwType != RIM_TYPEHID)
-                continue;
-            RID_DEVICE_INFO info = { sizeof(RID_DEVICE_INFO) };
-            UINT size = sizeof(info);
-            if (GetRawInputDeviceInfoW(devices[i].hDevice, RIDI_DEVICEINFO, &info, &size) == UINT(-1))
-                continue;
-            // joysticks and gamepads
-            if (info.hid.usUsagePage != 1 || (info.hid.usUsage != 4 && info.hid.usUsage != 5))
-                continue;
-            if (info.hid.dwVendorId == 0x054C)
-            {
-                family = PlayStation;
-                break;
-            }
-            if (info.hid.dwVendorId == 0x057E)
-            {
-                family = Nintendo;
-                break;
-            }
+            XINPUT_CAPABILITIES standard;
+            WORD vendor, product, revision, reserved;
+            DWORD extra;
+        };
+        using Query = DWORD (WINAPI*)(DWORD, DWORD, DWORD, Capabilities*);
+        const auto module = GetModuleHandleW(L"xinput1_4.dll");
+        if (!module || GetProcAddress(module, "XInputGetState") != reinterpret_cast<FARPROC>(PadInput::XInput().getState))
+            return Xbox;
+        const auto query = reinterpret_cast<Query>(GetProcAddress(module, MAKEINTRESOURCEA(108)));
+        Capabilities caps{};
+        if (query && query(1, slot, 0, &caps) == ERROR_SUCCESS)
+        {
+            if (caps.vendor == 0x054C)
+                return PlayStation;
+            if (caps.vendor == 0x057E)
+                return Nintendo;
         }
-        return family;
+        return Xbox;
     }
 
-    // Last device: the controller when it was used after the keyboard and mouse. Xidi turns some controller buttons
-    // into key presses, and those count as keyboard input for Windows: keyboard input up to a moment after controller
-    // input is taken as coming from the controller.
-    inline std::atomic<ULONGLONG> nPadActivity = 0;
+    inline void SelectController(DWORD slot)
+    {
+        nPadActivity.store(0);
+        connectedAt.store(GetTickCount64());
+        selectedFamily.store(slot < XUSER_MAX_COUNT ? ControllerFamily(slot) : Xbox);
+        selectedSlot.store(slot);
+    }
+
+    inline int DetectFamily()
+    {
+        return selectedFamily.load();
+    }
 
     // From the fix's controller reading, whenever a button or a stick moved
     inline void OnPadActivity()
@@ -104,9 +97,16 @@ namespace MaxPayneGamepadButtons
             return xidi ? reinterpret_cast<GetActivity>(GetProcAddress(xidi, "XidiGetLastControllerActivity")) : nullptr;
         }();
 
+        const auto slot = selectedSlot.load();
+        if (slot >= XUSER_MAX_COUNT)
+            return false;
         ULONGLONG nPad = nPadActivity.load(std::memory_order_relaxed);
-        for (unsigned i = 0; getActivity && i < 4; ++i)
-            nPad = std::max<ULONGLONG>(nPad, getActivity(i));
+        if (getActivity)
+        {
+            const auto tick = getActivity(slot);
+            if (tick >= connectedAt.load())
+                nPad = std::max(nPad, tick);
+        }
         if (nPad == 0)
             return false;
 

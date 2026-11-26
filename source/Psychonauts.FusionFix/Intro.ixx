@@ -6,6 +6,7 @@ module;
 export module Intro;
 
 SafetyHookInline StartupMovieHook;
+std::atomic_bool skipPressStart{};
 char __fastcall PlayStartupMovie(void* self, void*, const char* name, uint8_t(*skip)(), uint8_t flags, float volume, int track, char update)
 {
     std::string_view file{ name ? name : "" };
@@ -18,7 +19,7 @@ char __fastcall PlayStartupMovie(void* self, void*, const char* name, uint8_t(*s
 
 export void InstallLogoSkip()
 {
-    if (!FixSettings().Bool("MAIN.SkipIntro"))
+    if (FixSettings().Get("MAIN.SkipIntro") != "1")
         return;
     auto movie = hook::pattern("55 8B EC 81 EC 34 01 00 00 89 8D EC FE FF FF 68 ? ? ? ? FF 15 ? ? ? ? 8B 85 EC FE FF FF 0F B6 88 E5 00 00 00");
     StartupMovieHook = safetyhook::create_inline(movie.get_first(), PlayStartupMovie);
@@ -33,13 +34,19 @@ char __cdecl TitleStartButton(int button)
     if (now - last > 1000)
         shown = now;
     last = now;
-    if (FixSettings().Bool("MAIN.SkipPressStart") && now - shown >= 500)
+    if (skipPressStart.load(std::memory_order_relaxed) && now - shown >= 500)
         return 1;
     return pressed(button);
 }
 
 export void InstallPressStartSkip()
 {
+    const auto apply = []()
+    {
+        skipPressStart.store(FixSettings().Get("MAIN.SkipPressStart") == "1", std::memory_order_relaxed);
+    };
+    FixSettings().OnChange("MAIN.SkipPressStart", apply);
+    apply();
     auto pattern = hook::pattern("C6 45 EF 00 6A 04 E8 ? ? ? ? 83 C4 04 0F B6 C0 85 C0 0F 84");
     injector::MakeCALL(pattern.get_first(6), TitleStartButton, true);
 }

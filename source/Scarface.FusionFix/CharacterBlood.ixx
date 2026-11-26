@@ -16,9 +16,14 @@ namespace
     bool enabled = false;
     ComPtr<IDirect3DPixelShader9> bloodPixelShader;
     IDirect3DDevice9* shaderDevice = nullptr;
+    bool unsupportedDevice = false;
+    ULONGLONG nextPixelAttempt = 0;
+    constexpr ULONGLONG shaderRetryMs = 500;
     struct VertexReplacement
     {
         ComPtr<IDirect3DVertexShader9> original, blood;
+        bool unsupported = false;
+        ULONGLONG nextAttempt = 0;
     };
     std::vector<VertexReplacement> replacements;
     constexpr UINT damageRegister = 128, damageRegisters = 32 * 3;
@@ -173,28 +178,46 @@ namespace
 
     IDirect3DVertexShader9* GetBloodVertex(IDirect3DDevice9* device, IDirect3DVertexShader9* shader)
     {
-        for (auto& entry : replacements)
-            if (entry.original.Get() == shader) return entry.blood.Get();
-        // Only the two verified skin programs. Retain their COM identities to avoid pointer reuse.
-        if (!shader || replacements.size() >= 16) return nullptr;
-        VertexReplacement entry;
-        entry.original = shader;
+        if (!shader)
+            return nullptr;
+        auto entry = std::find_if(replacements.begin(), replacements.end(),
+            [shader](const VertexReplacement& item) { return item.original.Get() == shader; });
+        if (entry == replacements.end())
+        {
+            // Bound retained COM references without excluding shaders seen later.
+            if (replacements.size() >= 16)
+                replacements.erase(replacements.begin());
+            replacements.emplace_back();
+            entry = std::prev(replacements.end());
+            entry->original = shader;
+        }
+        if (entry->blood || entry->unsupported)
+            return entry->blood.Get();
+        const auto now = GetTickCount64();
+        if (now < entry->nextAttempt)
+            return nullptr;
+        entry->nextAttempt = now + shaderRetryMs;
         UINT size = 0;
-        if (SUCCEEDED(shader->GetFunction(nullptr, &size)) && size && size <= 65536)
+        if (FAILED(shader->GetFunction(nullptr, &size)))
+            return nullptr;
+        if (size && size <= 65536)
         {
             std::vector<DWORD> bytes((size + 3) / 4);
-            if (SUCCEEDED(shader->GetFunction(bytes.data(), &size)))
+            if (FAILED(shader->GetFunction(bytes.data(), &size)))
+                return nullptr;
+            const auto hash = crc32(0, bytes.data(), size);
+            if (hash == 0xD41E262E || hash == 0xDF075E41)
             {
-                auto hash = crc32(0, bytes.data(), size);
-                if (hash == 0xD41E262E || hash == 0xDF075E41)
+                const auto code = BloodVertexCode(bytes.data(), size / sizeof(DWORD));
+                if (!code.empty())
                 {
-                    const auto code = BloodVertexCode(bytes.data(), size / sizeof(DWORD));
-                    if (!code.empty()) device->CreateVertexShader(code.data(), entry.blood.GetAddressOf());
+                    device->CreateVertexShader(code.data(), entry->blood.GetAddressOf());
+                    return entry->blood.Get();
                 }
             }
         }
-        replacements.push_back(std::move(entry));
-        return replacements.back().blood.Get();
+        entry->unsupported = true;
+        return nullptr;
     }
 
     struct SavedState
@@ -254,6 +277,34 @@ export namespace CharacterBlood
         return true;
     }
 
+    bool EnsureBloodPixelShader(IDirect3DDevice9* device)
+    {
+        if (shaderDevice != device)
+        {
+            replacements.clear();
+            bloodPixelShader.Reset();
+            shaderDevice = device;
+            unsupportedDevice = false;
+            nextPixelAttempt = 0;
+        }
+        if (!bloodPixelShader)
+        {
+            const auto now = GetTickCount64();
+            if (unsupportedDevice || now < nextPixelAttempt)
+                return false;
+            nextPixelAttempt = now + shaderRetryMs;
+            D3DCAPS9 caps{};
+            if (FAILED(device->GetDeviceCaps(&caps)))
+                return false;
+            unsupportedDevice = caps.VertexShaderVersion < D3DVS_VERSION(2, 0) ||
+                caps.PixelShaderVersion < D3DPS_VERSION(1, 1) ||
+                caps.MaxVertexShaderConst < damageRegister + damageRegisters;
+            if (unsupportedDevice || FAILED(device->CreatePixelShader(bloodPixelCode, bloodPixelShader.GetAddressOf())))
+                return false;
+        }
+        return true;
+    }
+
     void Render(IDirect3DDevice9* device, const std::function<void()>& draw)
     {
         if (!enabled || rendering || !currentPalette || !currentPalette->damaged || !currentMaterial) return;
@@ -265,15 +316,8 @@ export namespace CharacterBlood
         if (!bloodTexture) bloodTexture = Field<IDirect3DBaseTexture9*>(texture, 24);
         if (!bloodTexture) bloodTexture = Field<IDirect3DBaseTexture9*>(texture, 16);
         if (!bloodTexture) return;
-        if (shaderDevice != device)
-        {
-            replacements.clear(); bloodPixelShader.Reset(); shaderDevice = device;
-            D3DCAPS9 caps{};
-            if (FAILED(device->GetDeviceCaps(&caps)) || caps.VertexShaderVersion < D3DVS_VERSION(2, 0) ||
-                caps.MaxVertexShaderConst < damageRegister + damageRegisters) return;
-            device->CreatePixelShader(bloodPixelCode, bloodPixelShader.GetAddressOf());
-        }
-        if (!bloodPixelShader) return;
+        if (!EnsureBloodPixelShader(device))
+            return;
         SavedState saved(device);
         if (!saved.valid) return;
         auto vertex = GetBloodVertex(device, saved.vertex.Get());

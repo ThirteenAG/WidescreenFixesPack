@@ -29,7 +29,7 @@
   "fmv.original": "Original aspect",
   "fmv.fill": "Fill",
   "FOVFactor": "Field of view factor",
-  "FOVFactor.description": "Multiplies the gameplay field of view. 1.0 keeps the intended framing; larger values widen the view. Cutscenes are not changed. Applies immediately.",
+  "FOVFactor.description": "Multiplies the ordinary gameplay field of view. 1.0 keeps the intended framing and larger values widen the view. Cutscenes, sniper scopes and binoculars keep their original framing. Applies immediately.",
   "SkipIntro": "Skip intro",
   "SkipIntro.description": "Skips the logo movies and the copyright notice at start-up; the game opens at the title menu. Needs a restart.",
   "PauseOnFocusLoss": "Pause in background",

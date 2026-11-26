@@ -382,7 +382,82 @@ namespace FFileManagerLinear
     // the archive each table was mounted from, a file behind the stream is rebuilt from it (Dumper::ExtractLinearFile)
     std::mutex tablesMutex;
     std::unordered_map<void*, std::string> tableArchives;
-    std::string(*ExtractLinearFile)(const std::string& archive, uint32_t hash, const char* path) = nullptr;
+    using FileData = std::shared_ptr<const std::vector<uint8_t>>;
+    FileData(*ExtractLinearFile)(const std::string& archive, uint32_t hash) = nullptr;
+
+    // A rebuilt file is read from memory by an archive like the game's FFileManagerArc::FFileReaderArc: FArchive (12 bytes) with
+    // its own destructor, Serialize, Tell, TotalSize and Seek, every other virtual is FArchive's
+    uintptr_t ArcReaderVTable = 0;
+
+    struct MemoryReader
+    {
+        uintptr_t* vtable;
+        uint8_t archive[8];
+        FileData data;
+        int32_t position = 0;
+
+        static void* __fastcall Destroy(MemoryReader* reader, void*, uint8_t flags)
+        {
+            if (flags & 1)
+                delete reader;
+            else
+                reader->~MemoryReader();
+            return reader;
+        }
+
+        static void __fastcall Serialize(MemoryReader* reader, void*, void* out, int32_t size)
+        {
+            if (size <= 0)
+                return;
+            const auto total = static_cast<int32_t>(reader->data->size());
+            const auto from = std::clamp(reader->position, 0, total);
+            const auto count = std::min(size, total - from);
+            std::memcpy(out, reader->data->data() + from, count);
+            std::memset(static_cast<uint8_t*>(out) + count, 0, size - count);
+            reader->position += size;
+        }
+
+        static int32_t __fastcall Tell(MemoryReader* reader, void*)
+        {
+            return reader->position;
+        }
+
+        static int32_t __fastcall TotalSize(MemoryReader* reader, void*)
+        {
+            return static_cast<int32_t>(reader->data->size());
+        }
+
+        static int32_t __fastcall Seek(MemoryReader* reader, void*, int32_t position)
+        {
+            reader->position = position;
+            return position;
+        }
+
+        static uintptr_t* VTable()
+        {
+            static uintptr_t entries[32];
+            static std::once_flag once;
+            std::call_once(once, []()
+            {
+                std::copy_n(reinterpret_cast<uintptr_t*>(ArcReaderVTable), 32, entries);
+                entries[0x04 / 4] = reinterpret_cast<uintptr_t*>(LinearReaderVTable)[0x04 / 4]; // FArchive's, the arc reader returns a field
+                entries[0x00 / 4] = reinterpret_cast<uintptr_t>(&Destroy);
+                entries[0x0C / 4] = reinterpret_cast<uintptr_t>(&Serialize);
+                entries[0x44 / 4] = reinterpret_cast<uintptr_t>(&Tell);
+                entries[0x48 / 4] = reinterpret_cast<uintptr_t>(&TotalSize);
+                entries[0x50 / 4] = reinterpret_cast<uintptr_t>(&Seek);
+            });
+            return entries;
+        }
+
+        // with the archive state (versions, loading flags) of the reader it replaces
+        static FArchive* Create(FArchive* replaced, FileData data)
+        {
+            auto reader = new MemoryReader{ VTable(), {}, std::move(data) };
+            std::memcpy(reader->archive, reinterpret_cast<uint8_t*>(replaced) + 4, sizeof(reader->archive));
+            return reinterpret_cast<FArchive*>(reader);
+        }
+    };
 
     void* ActiveTable(void* fileManager)
     {
@@ -443,8 +518,13 @@ namespace FFileManagerLinear
             if (auto it = tableArchives.find(ActiveTable(fileManager)); it != tableArchives.end())
                 archive = it->second;
         }
-        auto rebuilt = !archive.empty() && ExtractLinearFile ? ExtractLinearFile(archive, hash, path) : std::string();
-        auto diskReader = CallInner<0x10, FArchive*>(fileManager, rebuilt.empty() ? path : rebuilt.c_str(), flags, error, bufferSize);
+        if (auto rebuilt = !archive.empty() && ExtractLinearFile ? ExtractLinearFile(archive, hash) : nullptr)
+        {
+            auto memoryReader = MemoryReader::Create(reader, std::move(rebuilt));
+            reader->Release();
+            return memoryReader;
+        }
+        auto diskReader = CallInner<0x10, FArchive*>(fileManager, path, flags, error, bufferSize);
         if (!diskReader)
             return reader;
         reader->Release();
@@ -871,12 +951,12 @@ namespace Dumper
         return true;
     }
 
-    // A file of a linear archive rebuilt from its recorded reads (the format DumpLinearArchive reads) into a cache file, for a read the
-    // archive's stream already passed. Returns the cache file's path, or an empty string.
-    std::string ExtractLinearFile(const std::string& archive, uint32_t hash, const char* path)
+    // A file of a linear archive rebuilt in memory from its recorded reads (the format DumpLinearArchive reads), for a read the
+    // archive's stream already passed. Null when the archive doesn't hold all of it.
+    FFileManagerLinear::FileData ExtractLinearFile(const std::string& archive, uint32_t hash)
     {
         static std::mutex mutex;
-        static std::unordered_map<uint64_t, std::string> extracted;
+        static std::unordered_map<uint64_t, FFileManagerLinear::FileData> extracted;
         std::lock_guard lock(mutex);
 
         auto key = (static_cast<uint64_t>(std::hash<std::string>{}(archive)) << 32) ^ hash;
@@ -952,17 +1032,9 @@ namespace Dumper
         reader->Release();
 
         // only a complete file (the archive may hold just the parts that were read when it was recorded)
-        std::string result;
+        FFileManagerLinear::FileData result;
         if (found && std::all_of(filled.begin(), filled.end(), [](bool b) { return b; }))
-        {
-            std::error_code ec;
-            auto cachePath = std::filesystem::temp_directory_path(ec) / "BlacklistFusionFix";
-            std::filesystem::create_directories(cachePath, ec);
-            cachePath /= std::format("{:08X}{}", hash, std::filesystem::path(path ? path : "").extension().string());
-            std::ofstream file(cachePath, std::ios::binary | std::ios::trunc);
-            if (file.write(reinterpret_cast<const char*>(data.data()), data.size()))
-                result = cachePath.string();
-        }
+            result = std::make_shared<const std::vector<uint8_t>>(std::move(data));
         extracted[key] = result;
         return result;
     }
@@ -1191,6 +1263,9 @@ export void InitFileManager()
         // linear archive file reader constructor
         pattern = hook::pattern("89 4E 0C 8B 4D 14 89 56 10 8B 55 0C C7 06 ? ? ? ? 89 4E 14");
         FFileManagerLinear::LinearReaderVTable = *pattern.get_first<uintptr_t>(14);
+        // FFileManagerArc::FFileReaderArc constructor
+        pattern = hook::pattern("89 4E 0C 8B 4D 10 89 56 10 8B 55 14 C7 06 ? ? ? ? 89 4E 14");
+        FFileManagerLinear::ArcReaderVTable = *pattern.get_first<uintptr_t>(14);
         FFileManagerLinear::shCreateFileReader = safetyhook::create_inline(linearVTable[0x10 / 4], FFileManagerLinear::CreateFileReader);
         FFileManagerLinear::shFileSize = safetyhook::create_inline(linearVTable[0x18 / 4], FFileManagerLinear::FileSize);
         FFileManagerLinear::shResolveAlias = safetyhook::create_inline(linearVTable[0x4C / 4], FFileManagerLinear::ResolveAlias);

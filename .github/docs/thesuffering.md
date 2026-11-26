@@ -44,8 +44,6 @@ In The Suffering, open **Options → Graphics** for field of view and cutscene b
 
 Presets: Vanilla keeps the original letterbox bars and shows the intro; Recommended and Enhanced use both border types and skip the intro. Every preset limits the game to 60 FPS. The field of view factor is 1.0 and the HUD Auto in every preset.
 
-Ctrl+F10 opens the developer overlay for supporters.
-
 ## Known limits
 
 - Hold Shift while starting the game to open its setup dialog. If the desktop resolution is unavailable on a first run, the dialog remains open for a manual choice.

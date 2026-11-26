@@ -12,8 +12,26 @@ import ComVars;
 // MISC.QuicksaveKey: saves the game outside missions
 export namespace GTA2Quicksave
 {
-    uint16_t oldState = 0;
-    uint16_t curState = 0;
+    int sampledKey = -1;
+    bool held = false;
+    bool ignoreUntilRelease = false;
+
+    bool Released(int key, bool down)
+    {
+        if (key != sampledKey)
+        {
+            sampledKey = key;
+            ignoreUntilRelease = down;
+            held = false;
+        }
+        if (ignoreUntilRelease)
+        {
+            ignoreUntilRelease = down;
+            return false;
+        }
+        return std::exchange(held, down) && !down;
+    }
+
     std::atomic<bool> PadRequest = false;       // Back + Start on a pad
 
     uint32_t dword_45E510 = 0;                  // the save
@@ -29,10 +47,14 @@ export namespace GTA2Quicksave
             regs.edi = 0;
 
             const bool padRequest = PadRequest.exchange(false);
-            if (!InputDevices::Focused()) { oldState = 0; return; }
-            curState = nQuicksaveKey ? GetAsyncKeyState(nQuicksaveKey) & 0x8000 : 0;
-
-            if ((!curState && oldState) || padRequest)
+            if (!InputDevices::Focused())
+            {
+                Released(-1, false);
+                return;
+            }
+            const int key = nQuicksaveKey;
+            const bool down = key && (GetAsyncKeyState(key) & 0x8000);
+            if (Released(key, down) || padRequest)
             {
                 uint32_t missionFlag = **(uint32_t**)(dword_6644BC + 0x344);
                 uint32_t isMP = nMultiplayer;
@@ -47,7 +69,6 @@ export namespace GTA2Quicksave
                 }
             }
 
-            oldState = curState;
         }
     };
 

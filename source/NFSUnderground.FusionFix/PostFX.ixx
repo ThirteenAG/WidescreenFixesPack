@@ -102,7 +102,11 @@ public:
 
             WFP::onEndScene() += []()
             {
-                CPostFX::bConsoleGammaEnabled = *pConsoleGamma != 0;
+                const bool gamma = *pConsoleGamma != 0;
+                // Off, nothing of the gamma pass is kept: its copy of the picture is released
+                if (CPostFX::bConsoleGammaEnabled && !gamma && !CPostFX::bSmaaEnabled)
+                    CPostFX::Shutdown();
+                CPostFX::bConsoleGammaEnabled = gamma;
                 if (CPostFX::bSmaaEnabled != (AntiAliasing::IsSMAA()))
                 {
                     // The SMAA textures are made when it's on: start over
@@ -111,7 +115,8 @@ public:
                 }
                 CPostFX::RenderGamma(Direct3DDevice);
                 asi_automation_frames::Fire(ASI_AUTOMATION_STAGE_AFTER_UI, Direct3DDevice.get());
-                Overlay.Present(Direct3DDevice.get(), ThisModule());
+                if constexpr (WFP::DeveloperOverlay)
+                    Overlay.Present(Direct3DDevice.get(), ThisModule());
             };
 
             WFP::onShutdownEvent() += []() { Overlay.ShutdownRenderer(); };

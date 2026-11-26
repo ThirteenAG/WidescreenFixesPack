@@ -17,7 +17,7 @@ import ComVars;
 //   - interface, text, menus, items, map markers: a centred 4:3 area,
 //   - effects positioned from the 3D view (particles, blood, lens flares, light haze, screen noise) and
 //     full-screen fades and backdrops: the whole screen,
-//   - full-screen pictures (notes, pictures, the pause background): as released, or filling the screen.
+//   - full-screen notes and pictures: as released, or filling the screen.
 // Movies keep their intended 14:9 shape (the PC files are anamorphic 512x384), fitted whole into the game's 4:3 area or
 // the whole screen; HD replacement movies use their own shape. Cutscenes preserve their authored framing with borders, or fill the screen Hor+.
 
@@ -31,10 +31,147 @@ namespace
         float Scale = 1.0f;     // aspect / (4:3)
     } Screen;
 
-    const int* CinematicBars = nullptr;
-    const float* FOVFactor = nullptr;
+    Size2D RenderOverride{};
+    std::optional<Size2D> PendingSize;
+    float HudScale = 1.0f;
+    float MouseOffset = 0.0f;
+    int32_t MouseBound = 0;
+    float LogoRight = 0.0f;
+    std::array<void*, 4> LogoLeftEdges{};
+    struct DisplayMode
+    {
+        int32_t width, height;
+        D3DFORMAT format;
+    };
+    struct DisplayModes
+    {
+        DisplayMode* modes;
+        int32_t count;
+        DisplayMode current, pending;
+        int32_t selection;
+        char label[64];
+    };
+    static_assert(sizeof(DisplayMode) == 12 && offsetof(DisplayModes, label) == 0x24);
+    DisplayModes* NativeModes = nullptr;
+    IDirect3D8* (__cdecl* GetDirect3D)() = nullptr;
+    void* (__cdecl* GameAllocate)(size_t) = nullptr;
+    void(__cdecl* GameFree)(void*) = nullptr;
+    int(__cdecl* NativeSetSize)(int, int) = nullptr;
+    uint8_t* ModesReady = nullptr;
+
+    void __cdecl FillDisplayModes(DisplayModes* list, int)
+    {
+        NativeModes = list;
+        std::vector<DisplayMode> modes{ list->current };
+        auto add = [&](DWORD width, DWORD height)
+        {
+            if (width >= 640 && width <= 16384 && height >= 480 && height <= 16384)
+                modes.push_back({ static_cast<int32_t>(width), static_cast<int32_t>(height), list->current.format });
+        };
+        const auto& display = SHDisplay::Get();
+        if (display.mode == SHDisplay::Mode::Windowed)
+        {
+            MONITORINFOEXW monitor{};
+            monitor.cbSize = sizeof(monitor);
+            const auto device = GetMonitorInfoW(MonitorFromWindow(display.window, MONITOR_DEFAULTTOPRIMARY), &monitor) ? monitor.szDevice : nullptr;
+            for (DWORD index = 0;; ++index)
+            {
+                DEVMODEW mode{};
+                mode.dmSize = sizeof(mode);
+                if (!EnumDisplaySettingsW(device, index, &mode))
+                    break;
+                if (mode.dmBitsPerPel >= 16)
+                    add(mode.dmPelsWidth, mode.dmPelsHeight);
+            }
+        }
+        else if (display.mode == SHDisplay::Mode::Fullscreen)
+        {
+            auto d3d = GetDirect3D();
+            const auto count = d3d->GetAdapterModeCount(D3DADAPTER_DEFAULT);
+            for (UINT index = 0; index < count; ++index)
+            {
+                D3DDISPLAYMODE mode{};
+                if (SUCCEEDED(d3d->EnumAdapterModes(D3DADAPTER_DEFAULT, index, &mode)) &&
+                    SUCCEEDED(d3d->CheckDeviceType(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, mode.Format, list->current.format, FALSE)))
+                    add(mode.Width, mode.Height);
+            }
+        }
+        auto dimensions = [](const DisplayMode& mode) { return std::tie(mode.width, mode.height); };
+        std::ranges::sort(modes, {}, dimensions);
+        modes.erase(std::unique(modes.begin(), modes.end(), [&](const auto& a, const auto& b)
+        {
+            return dimensions(a) == dimensions(b);
+        }), modes.end());
+        auto replacement = static_cast<DisplayMode*>(GameAllocate(modes.size() * sizeof(DisplayMode)));
+        if (!replacement)
+            return;
+        std::copy(modes.begin(), modes.end(), replacement);
+        GameFree(list->modes);
+        list->modes = replacement;
+        list->count = static_cast<int32_t>(modes.size());
+        auto selected = std::ranges::find(modes, dimensions(list->pending), dimensions);
+        if (selected == modes.end())
+            selected = std::ranges::find(modes, dimensions(list->current), dimensions);
+        list->selection = static_cast<int32_t>(std::distance(modes.begin(), selected));
+        list->pending = *selected;
+        list->label[0] = '\0';
+        *ModesReady = 1;
+    }
+
+    void SelectAppliedMode()
+    {
+        if (!NativeModes || !NativeModes->modes)
+            return;
+        const auto first = NativeModes->modes;
+        const auto last = first + NativeModes->count;
+        const auto applied = std::find_if(first, last, [](const DisplayMode& mode)
+        {
+            return mode.width == Screen.Width && mode.height == Screen.Height;
+        });
+        if (applied != last)
+        {
+            NativeModes->selection = static_cast<int32_t>(std::distance(first, applied));
+            NativeModes->pending = *applied;
+        }
+    }
+
+    int __cdecl SelectDisplaySize(int width, int height)
+    {
+        if (SHDisplay::Get().mode != SHDisplay::Mode::Borderless &&
+            (width != Screen.Width || height != Screen.Height))
+            PendingSize = Size2D{ width, height };
+        return NativeSetSize(width, height);
+    }
+
+    void RefreshGeometry()
+    {
+        Screen.Aspect = float(Screen.Width) / float(Screen.Height);
+        Screen.Scale = Screen.Aspect / (4.0f / 3.0f);
+        HudScale = std::min(1.0f, 1.0f / Screen.Scale);
+        MouseOffset = (512.0f / HudScale - 512.0f) * 0.5f;
+        MouseBound = int32_t(std::floor(float(Screen.Width) * HudScale));
+        const float left = (float(Screen.RenderWidth) - float(Screen.RenderHeight) * 4.0f / 3.0f) * 0.5f;
+        LogoRight = float(Screen.RenderWidth) - left;
+        for (const auto edge : LogoLeftEdges)
+        {
+            if (edge)
+                injector::WriteMemory<float>(edge, left - 0.5f, true);
+        }
+    }
+
+    int CinematicBars = 3;
+    float FOVFactor = 1.0f;
     std::optional<float> HudAspectRatioConstraint;
-    const int* FullscreenImages = nullptr;
+    bool FillFullscreenImages = false;
+
+    void RefreshLiveFraming()
+    {
+        CinematicBars = FixSettingNumber("MAIN.CutsceneBorders", 3);
+        FOVFactor = FixSettingNumber("MAIN.FOVFactor", 1.0f);
+        FillFullscreenImages = FixSettingNumber("MAIN.FullscreenImages", 0) == 1;
+        const auto hud = FixSettings().Get("MAIN.HudAspectRatioConstraint");
+        HudAspectRatioConstraint = ParseWidescreenHudOffset(hud);
+    }
 
     // Cutscenes: the cutscene player asks for its bars every frame
     uint32_t FrameCounter = 0;
@@ -56,7 +193,7 @@ namespace
         y = 1.0f;
         if (InCutscene())
         {
-            if (*CinematicBars && Screen.Scale < 1.0f)
+            if (CinematicBars && Screen.Scale < 1.0f)
             {
                 x = 1.0f;
                 y = Screen.Scale;
@@ -71,15 +208,17 @@ namespace
         if (InCutscene() || !pPlayer || bAiming || nEventId != -1 || nCameraMode != 0 || (nCameraFlags & 3) ||
             nRenderMode == 2 || bPauseActive)
             return 1.0f;
-        const float factor = std::isfinite(*FOVFactor) ? std::clamp(*FOVFactor, 0.5f, 2.0f) : 1.0f;
+        const float factor = std::isfinite(FOVFactor) ? std::clamp(FOVFactor, 0.5f, 2.0f) : 1.0f;
         if (factor == 1.0f)
             return factor;
         // Native projection: width = 512 / base / scaleX, m00 = 2 * distance / width.
         const float horizontal = fProjectionDistance * fProjectionBase * nativeX / (256.0f * Screen.Scale);
         if (!std::isfinite(horizontal) || horizontal <= 0.0f)
             return 1.0f;
-        constexpr float tan75 = 3.7320508075688772f;
-        return std::min(factor, std::max(1.0f, horizontal * tan75));
+        constexpr float halfLimit = 1.3089969389957472f;
+        const float halfAngle = std::atan(1.0f / horizontal);
+        const float scaled = std::min(halfAngle * factor, std::max(halfAngle, halfLimit));
+        return std::tan(scaled) * horizontal;
     }
 
     float __cdecl ScaleX()
@@ -104,11 +243,12 @@ namespace
     }
 
     // 2D: PS2 screen coordinates (1/16 px, centre at 2048) to render target pixels
-    enum class Layout2D { Interface, Stretch, Fill };
+    enum class Layout2D { Interface, Stretch, Fill, FillWidePicture };
     Layout2D CurrentLayout = Layout2D::Interface;
+    bool DrawingMemoPicture = false;
     int(__cdecl* RenderWidth)() = nullptr;
     int(__cdecl* RenderHeight)() = nullptr;
-    SafetyHookInline GsXHook, GsYHook, SpriteHook;
+    SafetyHookInline GsXHook, GsYHook, SpriteHook, MemoPictureHook;
 
     void Box(Layout2D layout, float w, float h, float& boxW, float& boxH)
     {
@@ -120,8 +260,9 @@ namespace
             boxH = h;
             break;
         case Layout2D::Fill:
-            boxW = wider ? w : h * 4.0f / 3.0f;
-            boxH = wider ? w * 0.75f : h;
+        case Layout2D::FillWidePicture:
+            boxW = std::max(w, h * (layout == Layout2D::FillWidePicture ? 14.0f / 9.0f : 4.0f / 3.0f));
+            boxH = boxW * 0.75f;
             break;
         default:
             boxW = wider ? h * 4.0f / 3.0f : w;
@@ -167,16 +308,29 @@ namespace
         bool textured = (flags & 1) != 0 && !(flags & 0x200);
         constexpr int Tolerance = 4 * 16;
         bool covers = x0 <= -256 * 16 + Tolerance && x1 >= 256 * 16 - Tolerance && y0 <= -224 * 16 + Tolerance && y1 >= 224 * 16 - Tolerance;
-        bool exact = std::abs(x0 + 256 * 16) <= Tolerance && std::abs(x1 - 256 * 16) <= Tolerance &&
-            std::abs(y0 + 224 * 16) <= Tolerance && std::abs(y1 - 224 * 16) <= Tolerance;
+        const auto centredSpan = [](int low, int high, int halfPixels)
+        {
+            return std::abs(low + halfPixels * 16) <= Tolerance && std::abs(high - halfPixels * 16) <= Tolerance;
+        };
+        const bool fullWidth = centredSpan(x0, x1, 256);
+        const bool memoPicture = DrawingMemoPicture && centredSpan(y0, y1, 256);
 
         auto saved = CurrentLayout;
         if (covers && !textured)
             CurrentLayout = Layout2D::Stretch;                  // fades, flashes, black backdrops
-        else if (exact && textured && *FullscreenImages)
-            CurrentLayout = Layout2D::Fill;                     // notes, pictures, the pause background
+        else if (textured && FillFullscreenImages && fullWidth && (memoPicture || centredSpan(y0, y1, 224)))
+            CurrentLayout = memoPicture ? Layout2D::FillWidePicture : Layout2D::Fill;
         auto result = SpriteHook.ccall<float*>(sprite);
         CurrentLayout = saved;
+        return result;
+    }
+
+    int __cdecl DrawMemoPicture(int picture, int nextPicture)
+    {
+        // The memo sprite is square, with 384 lines of artwork between its black bands.
+        const auto saved = std::exchange(DrawingMemoPicture, true);
+        const auto result = MemoPictureHook.ccall<int>(picture, nextPicture);
+        DrawingMemoPicture = saved;
         return result;
     }
 
@@ -193,7 +347,7 @@ namespace
         if (videoW > 0 && videoH > 0 && std::abs(videoW * 3.0f - videoH * 4.0f) > 1.0f)
             content = videoW / videoH;
         float screen = float(Screen.Width) / float(Screen.Height);
-        static const auto& mode = FixSettings().Int("MAIN.FMVWidescreenMode");
+        const auto mode = FixSettingNumber("MAIN.FMVWidescreenMode", 1);
         const float area = mode == 0 ? 4.0f / 3.0f : screen;
         float wn = std::min(1.0f, area / screen) * std::min(1.0f, content / area);
         float hn = wn * screen / content;
@@ -204,12 +358,37 @@ namespace
     // Resolution of the window, the render target and the back buffer
     void ApplyResolution()
     {
-        RenderTargetSize->w = Screen.RenderWidth;
-        RenderTargetSize->h = Screen.RenderHeight;
-        PresentSize->w = Screen.Width;
-        PresentSize->h = Screen.Height;
-        DisplaySize->mode = { Screen.Width, Screen.Height };
-        DisplaySize->target = { Screen.Width, Screen.Height };
+        const auto size = PendingSize.value_or(Size2D{ Screen.Width, Screen.Height });
+        *RenderTargetSize = RenderOverride.w ? RenderOverride : size;
+        *PresentSize = size;
+        DisplaySize->mode = DisplaySize->target = size;
+    }
+
+    void ConfirmResolution(IDirect3DDevice8* device)
+    {
+        IDirect3DSurface8* buffer = nullptr;
+        if (FAILED(device->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &buffer)))
+            return;
+        D3DSURFACE_DESC desc{};
+        const auto result = buffer->GetDesc(&desc);
+        buffer->Release();
+        if (FAILED(result) || !desc.Width || !desc.Height)
+            return;
+
+        const auto request = std::exchange(PendingSize, std::nullopt);
+        Screen.Width = static_cast<int32_t>(desc.Width);
+        Screen.Height = static_cast<int32_t>(desc.Height);
+        Screen.RenderWidth = RenderOverride.w ? RenderOverride.w : Screen.Width;
+        Screen.RenderHeight = RenderOverride.h ? RenderOverride.h : Screen.Height;
+        ApplyResolution();
+        RefreshGeometry();
+        if (request)
+            SelectAppliedMode();
+        if (request && request->w == Screen.Width && request->h == Screen.Height)
+        {
+            FixSettings().Set("MAIN.ResX", std::to_string(Screen.Width));
+            FixSettings().Set("MAIN.ResY", std::to_string(Screen.Height));
+        }
     }
 
     struct SetResolution
@@ -217,6 +396,19 @@ namespace
         void operator()(injector::reg_pack&)
         {
             ApplyResolution();
+        }
+    };
+
+    struct RestoreResolution
+    {
+        void operator()(injector::reg_pack&)
+        {
+            PendingSize.reset();
+            auto& display = SHDisplay::Get();
+            display.backBufferWidth = Screen.Width;
+            display.backBufferHeight = Screen.Height;
+            ApplyResolution();
+            SelectAppliedMode();
         }
     };
 
@@ -254,15 +446,14 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            CinematicBars = &FixSettings().Int("MAIN.CutsceneBorders");
-            FOVFactor = &FixSettings().Float("MAIN.FOVFactor");
+            RefreshLiveFraming();
             // The player, aiming, event, camera mode/flags, render mode, pause and projection variables are bound in Init
             // Borders: 1 letterbox (the native bars), 2 pillarbox (the 4:3 picture), 3 both. Screens narrower than 4:3
             // show the whole 4:3 picture with bars above and below whenever there are borders.
             SHDisplay::OnPresent().push_back([]()
             {
                 auto device = SHDisplay::Get().device;
-                const int mode = std::clamp(*CinematicBars, 0, 3);
+                const int mode = std::clamp(CinematicBars, 0, 3);
                 if (!device || !InCutscene() || !mode)
                     return;
                 const auto& display = SHDisplay::Get();
@@ -286,14 +477,6 @@ public:
                     device->SetViewport(&previous);
                 }
             });
-            FullscreenImages = &FixSettings().Int("MAIN.FullscreenImages");
-            auto updateHUD = []()
-            {
-                HudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
-            };
-            updateHUD();
-            FixSettings().OnChange("MAIN.HudAspectRatioConstraint", updateHUD);
-
             Screen.Width = FixSettings().Int("MAIN.ResX");
             Screen.Height = FixSettings().Int("MAIN.ResY");
             if (FixSettings().Int("MAIN.WindowMode") == 2 || Screen.Width <= 0 || Screen.Height <= 0 || Screen.Width > 16384 || Screen.Height > 16384)
@@ -302,13 +485,14 @@ public:
                 std::tie(Screen.Width, Screen.Height) = std::make_tuple(640, 480);
             Screen.RenderWidth = FixSettings().Int("MAIN.RenderResX");
             Screen.RenderHeight = FixSettings().Int("MAIN.RenderResY");
-            if (Screen.RenderWidth <= 0 || Screen.RenderHeight <= 0 || Screen.RenderWidth > 16384 || Screen.RenderHeight > 16384)
+            if (Screen.RenderWidth > 0 && Screen.RenderHeight > 0 && Screen.RenderWidth <= 16384 && Screen.RenderHeight <= 16384)
+                RenderOverride = { Screen.RenderWidth, Screen.RenderHeight };
+            else
             {
                 Screen.RenderWidth = Screen.Width;
                 Screen.RenderHeight = Screen.Height;
             }
-            Screen.Aspect = float(Screen.Width) / float(Screen.Height);
-            Screen.Scale = Screen.Aspect / (4.0f / 3.0f);
+            RefreshGeometry();
 
             SHDisplay::OnPresent().push_back([]() { ++FrameCounter; });
 
@@ -330,10 +514,23 @@ public:
 
             Hook("89 15 ? ? ? ? 8B 10 50 FF 52 3C 85 C0", 6);                                                   // CreateDevice
             Hook("89 0D ? ? ? ? 89 15 ? ? ? ? E8 ? ? ? ? B8 ? ? ? ? E8 ? ? ? ? 84 C0 75", 12);                   // Reset
-            Hook("89 35 ? ? ? ? 5E 33 C0 5B 83 C4 10", 6);                                                      // Reset failed
-            Hook("A3 ? ? ? ? 89 0D ? ? ? ? A3 ? ? ? ? 89 0D ? ? ? ? C6 05 ? ? ? ? 01", 22);                     // display mode
+            auto failed = hook::pattern("89 35 ? ? ? ? 5E 33 C0 5B 83 C4 10");
+            injector::MakeInline<RestoreResolution>(failed.get_first(), failed.get_first(6));
             Hook("A3 ? ? ? ? 89 0D ? ? ? ? A3 ? ? ? ? C7 05 ? ? ? ? 3C 00", 16);                                // defaults
             ApplyResolution();
+            SHDisplay::OnDeviceReady().push_back(&ConfirmResolution);
+
+            auto enumerate = hook::pattern("81 EC D8 00 00 00 55 8B AC 24 E0 00 00 00 56 57 E8");
+            GetDirect3D = reinterpret_cast<decltype(GetDirect3D)>(injector::GetBranchDestination(enumerate.get_first(0x3C)).as_int());
+            GameFree = reinterpret_cast<decltype(GameFree)>(injector::GetBranchDestination(enumerate.get_first(0x27)).as_int());
+            GameAllocate = reinterpret_cast<decltype(GameAllocate)>(injector::GetBranchDestination(enumerate.get_first(0x5F)).as_int());
+            ModesReady = *enumerate.get_first<uint8_t*>(0x34);
+            injector::MakeJMP(enumerate.get_first(), &FillDisplayModes, true);
+            auto applyMode = hook::pattern("8B 56 04 8B 06 52 50 E8 ? ? ? ? E8 ? ? ? ? 8B 0D");
+            auto retryMode = hook::pattern("8B 44 3E 04 8B 0C 3E 50 51 E8 ? ? ? ? E8 ? ? ? ? 8B 15");
+            NativeSetSize = reinterpret_cast<decltype(NativeSetSize)>(injector::GetBranchDestination(applyMode.get_first(7)).as_int());
+            injector::MakeCALL(applyMode.get_first(7), &SelectDisplaySize, true);
+            injector::MakeCALL(retryMode.get_first(9), &SelectDisplaySize, true);
 
             // 3D view: Hor+, keeping the game's zoom effects; cutscene framing
             auto scale = hook::pattern("6A 02 E8 ? ? ? ? 83 C4 04 85 C0 74 07 D9 05 ? ? ? ? C3 D9 05 ? ? ? ? D8 0D ? ? ? ? C3");
@@ -356,9 +553,13 @@ public:
             auto bars = hook::pattern("D9 05 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00 D8 C9");
             BorderHalf = **bars.get_first<float*>(2);
             static float Native = BorderHalf;
-            static float Current = (*CinematicBars & 1) ? Native : 0.0f;
+            static float Current = (CinematicBars & 1) ? Native : 0.0f;
             injector::WriteMemory(bars.get_first(2), &Current, true);
-            SHDisplay::OnPresent().push_back([]() { Current = (*CinematicBars & 1) ? Native : 0.0f; });
+            SHDisplay::OnPresent().push_back([]()
+            {
+                RefreshLiveFraming();
+                Current = (CinematicBars & 1) ? Native : 0.0f;
+            });
             for (auto signature : { "D8 0D ? ? ? ? A3 ? ? ? ? A1 ? ? ? ? 6A 00 D9 5C 24 14", "D8 0D ? ? ? ? DC C0 D9 54 24 0C D9 5C 24 04 E8" })
             {
                 auto side = hook::pattern(signature);
@@ -398,14 +599,13 @@ public:
                 GsXHook = safetyhook::create_inline(gsx, &GsX);
                 GsYHook = safetyhook::create_inline(gsy, &GsY);
                 SpriteHook = safetyhook::create_inline(FunctionAt("83 EC 20 53 55 56 8B 74 24 30 66 8B 4E 42"), &DrawSprite);
+                MemoPictureHook = safetyhook::create_inline(FunctionAt("51 56 E8 ? ? ? ? 33 F6 E8 ? ? ? ? 83 F8 0B 0F 87 ? ? ? ? FF 24 85 ? ? ? ? 8B 44 24 0C 50 E8"), &DrawMemoPicture);
             }
 
             // Mouse in the 4:3 interface area
-            float hudScale = std::min(1.0f, 1.0f / Screen.Scale);
             auto cursorWidth = hook::pattern("D8 05 ? ? ? ? D9 5C 24 04 E8 ? ? ? ? D8 0D ? ? ? ? 8B 4C 24 04 68 80 00 00 00 6A 01");
             auto cursorStore = hook::pattern("DB 44 24 00 D9 1D ? ? ? ? E8 ? ? ? ? 89 44 24 00 DB 44 24 00 D9 1D ? ? ? ? 83 C4 14 C3");
             fCursorX.SetAddress(*cursorWidth.get_first<float*>(2));
-            static float HudScale = hudScale;
             struct CursorWidth
             {
                 void operator()(injector::reg_pack&)
@@ -426,24 +626,19 @@ public:
             injector::MakeInline<CursorStore>(cursorStore.get_first(0), cursorStore.get_first(10));
             auto mouseX = hook::pattern("E8 ? ? ? ? 8B F0 E8 ? ? ? ? 8B 0D ? ? ? ? 85 C9");
             static injector::hook_back<int32_t(*)()> GetMouseX;
-            static float Offset = ((512.0f / hudScale) - 512.0f) / 2.0f;
             GetMouseX.fun = injector::MakeCALL(mouseX.get_first(), static_cast<int32_t(*)()>([]() -> int32_t
             {
-                return int32_t(float(GetMouseX.fun()) - Offset);
+                return int32_t(float(GetMouseX.fun()) - MouseOffset);
             }), true).get();
-            if (Screen.Scale < 1.0f)
+            static SafetyHookInline MouseYHook;
+            auto mouseY = injector::GetBranchDestination(mouseX.get_first(7)).get<void>();
+            MouseYHook = safetyhook::create_inline(mouseY, static_cast<int32_t(__cdecl*)()>([]() -> int32_t
             {
-                static SafetyHookInline MouseYHook;
-                static float HeightScale = Screen.Scale;
-                auto mouseY = injector::GetBranchDestination(mouseX.get_first(7)).get<void>();
-                MouseYHook = safetyhook::create_inline(mouseY, static_cast<int32_t(__cdecl*)()>([]() -> int32_t
-                {
-                    return int32_t((MouseYHook.ccall<int32_t>() - 224.0f) / HeightScale + 224.0f);
-                }));
-            }
+                const int32_t y = MouseYHook.ccall<int32_t>();
+                return Screen.Scale < 1.0f ? int32_t((y - 224.0f) / Screen.Scale + 224.0f) : y;
+            }));
             auto mouseBounds = hook::pattern("E8 ? ? ? ? 8B C8 8B C6 C1 E0 09 99");
-            static int32_t Bound = int32_t(std::floor(float(Screen.Width) * hudScale));
-            injector::MakeCALL(mouseBounds.get_first(), static_cast<int32_t(*)()>([]() -> int32_t { return Bound; }), true);
+            injector::MakeCALL(mouseBounds.get_first(), static_cast<int32_t(*)()>([]() -> int32_t { return MouseBound; }), true);
 
             // Low health cross in the lower right corner of the screen
             auto health = hook::pattern("D9 59 E8 D9 C0 D8 48 F8 D9 59 EC 7C DE 6A 01");
@@ -469,22 +664,18 @@ public:
 
             // Logos and credits pictures in the 4:3 area
             {
-                static float Left = (float(Screen.RenderWidth) - float(Screen.RenderHeight) * 4.0f / 3.0f) / 2.0f;
-                static float Right = float(Screen.RenderWidth) - Left;
                 auto logoLeft = hook::pattern("A1 ? ? ? ? 6A 05 C7 44 24 18");
                 auto logoLeft2 = hook::pattern("C7 44 24 50 ? ? ? ? C7 44 24 58 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 64");
                 auto logoRight = hook::pattern("D8 25 ? ? ? ? 8D 54 24 0C 52 6A 02");
-                injector::WriteMemory<float>(logoLeft.get_first(11), Left - 0.5f, true);
-                injector::WriteMemory<float>(logoLeft2.get_first(4), Left - 0.5f, true);
                 injector::WriteMemory<uint16_t>(logoRight.get_first(0), 0x05D9, true);   // fsub -> fld
-                injector::WriteMemory(logoRight.get_first(2), &Right, true);
+                injector::WriteMemory(logoRight.get_first(2), &LogoRight, true);
                 auto creditsLeft = hook::pattern("6A 05 C7 44 24 1C");
                 auto creditsLeft2 = hook::pattern("C7 44 24 54 ? ? ? ? C7 44 24 5C ? ? ? ? C7 44 24 60 ? ? ? ? C7 44 24 68");
                 auto creditsRight = hook::pattern("D8 25 ? ? ? ? 8D 4C 24 10 51 6A 02 D9 54 24 34");
-                injector::WriteMemory<float>(creditsLeft.get_first(6), Left - 0.5f, true);
-                injector::WriteMemory<float>(creditsLeft2.get_first(4), Left - 0.5f, true);
                 injector::WriteMemory<uint16_t>(creditsRight.get_first(0), 0x05D9, true);
-                injector::WriteMemory(creditsRight.get_first(2), &Right, true);
+                injector::WriteMemory(creditsRight.get_first(2), &LogoRight, true);
+                LogoLeftEdges = { logoLeft.get_first(11), logoLeft2.get_first(4), creditsLeft.get_first(6), creditsLeft2.get_first(4) };
+                RefreshGeometry();
             }
 
             // Movies

@@ -24,7 +24,7 @@ export namespace Driv3rFocus
             if (*inactive && !wasInactive && onDeactivate) onDeactivate();
             wasInactive = *inactive;
         }
-        if (inactive && !FixSettings().Bool("MAIN.PauseOnFocusLoss")) *inactive = false;
+        if (inactive && !Driv3rSettings::PauseOnFocusLoss.load()) *inactive = false;
         return result;
     }
     void Install()

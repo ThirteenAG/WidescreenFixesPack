@@ -6,6 +6,7 @@ module;
 #include <atomic>
 #include <charconv>
 #include <cmath>
+#include <mutex>
 #include <string_view>
 #include <unordered_map>
 #include <array>
@@ -158,7 +159,7 @@ namespace
         pGameSystem.SetAddress(*pattern.get_first<uintptr_t*>(2));
     }
 
-    const int* pDisableDamageOverlay = nullptr;
+    std::atomic<bool> disableDamageOverlay{ false };
 
     // GUI objects are drawn on several threads at once: the class being drawn is kept per thread.
     thread_local Mode nCurrentMode = Mode::Center;
@@ -205,7 +206,7 @@ namespace
     void __fastcall DrawGUI(void* object, void* edx, void* context)
     {
         auto mode = GetClassMode(object);
-        if (mode == Mode::Vanilla && *pDisableDamageOverlay && IsDamageOverlay(object))
+        if (mode == Mode::Vanilla && disableDamageOverlay.load(std::memory_order_relaxed) && IsDamageOverlay(object))
             return;
         const auto previous = nCurrentMode;
         nCurrentMode = mode;
@@ -239,12 +240,16 @@ public:
         WFP::onInitEvent() += []()
         {
             auto& settings = FixSettings();
-            pDisableDamageOverlay = &settings.Int("MAIN.DisableDamageOverlay");
-            RevHudLayout::SetAspect(settings.String("MAIN.HudAspectRatioConstraint"));
-            settings.OnChange("MAIN.HudAspectRatioConstraint", []()
+            const auto update = []()
             {
-                RevHudLayout::SetAspect(FixSettings().String("MAIN.HudAspectRatioConstraint"));
-            });
+                static std::mutex writers;
+                const std::lock_guard lock(writers);
+                RevHudLayout::SetAspect(FixSettings().Get("MAIN.HudAspectRatioConstraint"));
+                disableDamageOverlay.store(FixSettings().Get("MAIN.DisableDamageOverlay") == "1", std::memory_order_relaxed);
+            };
+            settings.OnChange("MAIN.HudAspectRatioConstraint", update);
+            settings.OnChange("MAIN.DisableDamageOverlay", update);
+            update();
             InitializeMapContext();
 
             auto pattern = hook::pattern("83 EC 34 8B 44 24 38 53 55 56 8B 70 04");
@@ -254,8 +259,11 @@ public:
             pattern = hook::pattern("83 66 4C FD 4D 74 17 4D 74 0B");
             static auto TransformHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
+                // Full-screen layers draw several quads (the blurred picture, then its dark tint): all of them
+                // keep the whole screen. Other objects use their class mode for their first transform only.
                 const auto mode = nCurrentMode;
-                nCurrentMode = Mode::Center;
+                if (mode != Mode::Vanilla)
+                    nCurrentMode = Mode::Center;
                 AdjustTransform((float*)regs.eax, mode);
             });
 

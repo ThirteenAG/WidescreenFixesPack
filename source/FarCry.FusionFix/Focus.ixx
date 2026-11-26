@@ -14,7 +14,8 @@ export namespace FarCryFocus
     inline SafetyHookInline PauseHook;
     inline SafetyHookMid UpdateHook;
     inline void* Owner = nullptr;
-    inline bool TimerWasPaused = false, Ready = false;
+    inline bool TimerWasPaused = false;
+    inline std::atomic<bool> Ready = false;
 
 #ifdef _WIN64
     constexpr size_t systemOffset = 0x40, timersOffset = 0x778, timerPauseOffset = 0x54, entitiesOffset = 0x40;
@@ -49,7 +50,7 @@ export namespace FarCryFocus
         if (Owner && (Owner != game || native))
             Owner = nullptr;
         const auto window = FarCryWindow::Window;
-        const bool wanted = window && GetForegroundWindow() != window && FixSettings().Bool("MAIN.PauseOnFocusLoss") &&
+        const bool wanted = window && GetForegroundWindow() != window && FarCryLive::Read().pauseOnFocusLoss &&
             !FarCryMenu::Virtual<bool>(game, 57);
         if (!wanted || native)
         {
@@ -90,10 +91,11 @@ export namespace FarCryFocus
 #endif
 #ifdef _WIN64
         UpdateHook = safetyhook::create_mid(site.get_first(), Update);
-        Ready = true;
+        Ready = bool(UpdateHook);
 #else
         PauseHook = safetyhook::create_inline(site.get_first(), Pause);
-        Ready = true;
+        Ready = bool(PauseHook);
 #endif
+        FixSettings().Refresh("MAIN.PauseOnFocusLoss");
     }
 }

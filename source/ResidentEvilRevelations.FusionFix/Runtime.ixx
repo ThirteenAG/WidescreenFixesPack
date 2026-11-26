@@ -20,46 +20,28 @@ import ControllerIcons;
 
 namespace
 {
-    const int* pCutsceneBorders = nullptr;
-
     void CutsceneBorders(IDirect3DDevice9* device)
     {
-        if (!pCutsceneBorders || !(*pCutsceneBorders & 2) || !IsCutsceneCamera())
+        if (!ShouldPillarboxCutscene())
             return;
         IDirect3DSurface9* backBuffer = nullptr;
         if (FAILED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backBuffer)) || !backBuffer)
             return;
         D3DSURFACE_DESC desc{};
-        backBuffer->GetDesc(&desc);
-        const auto width = static_cast<LONG>(desc.Width), height = static_cast<LONG>(desc.Height);
-        const auto picture = static_cast<LONG>(std::lround(height * defaultAspectRatio));
-        if (picture + 1 >= width)
+        if (SUCCEEDED(backBuffer->GetDesc(&desc)))
         {
-            backBuffer->Release();
-            return;
+            const auto width = static_cast<LONG>(desc.Width), height = static_cast<LONG>(desc.Height);
+            const auto picture = static_cast<LONG>(std::lround(height * defaultAspectRatio));
+            const auto left = (width - picture) / 2;
+            if (left > 0)
+            {
+                const RECT leftBar{ 0, 0, left, height };
+                const RECT rightBar{ left + picture, 0, width, height };
+                // Draw directly to the backbuffer without changing the game's active targets or state.
+                if (SUCCEEDED(device->ColorFill(backBuffer, &leftBar, D3DCOLOR_XRGB(0, 0, 0))))
+                    device->ColorFill(backBuffer, &rightBar, D3DCOLOR_XRGB(0, 0, 0));
+            }
         }
-        IDirect3DSurface9* target = nullptr;
-        D3DVIEWPORT9 viewport{};
-        DWORD scissor = FALSE;
-        device->GetRenderTarget(0, &target);
-        device->GetViewport(&viewport);
-        device->GetRenderState(D3DRS_SCISSORTESTENABLE, &scissor);
-
-        device->SetRenderTarget(0, backBuffer);
-        const D3DVIEWPORT9 full{ 0, 0, desc.Width, desc.Height, 0.0f, 1.0f };
-        device->SetViewport(&full);
-        device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
-        const auto left = (width - picture) / 2;
-        const D3DRECT bars[2]{ { 0, 0, left, height }, { left + picture, 0, width, height } };
-        device->Clear(2, bars, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-
-        device->SetRenderState(D3DRS_SCISSORTESTENABLE, scissor);
-        if (target)
-        {
-            device->SetRenderTarget(0, target);
-            target->Release();
-        }
-        device->SetViewport(&viewport);
         backBuffer->Release();
     }
 
@@ -72,7 +54,6 @@ namespace
         GetWindowThreadProcessId(parameters.hFocusWindow, &process);
         if (process != GetCurrentProcessId())
             return;
-        RevFrameRate::Frame(parameters.hFocusWindow);
         RevIcons::Frame(device);
         RevOverlay::AttachWindow(parameters.hFocusWindow);
         if (RevOverlay::cursorWindow.load() != parameters.hFocusWindow)
@@ -81,6 +62,7 @@ namespace
         CutsceneBorders(device);
         RevOverlay::Keyboard(parameters.hFocusWindow);
         RevOverlay::Draw(device);
+        RevFrameRate::Frame(parameters.hFocusWindow);
     }
 }
 
@@ -92,7 +74,6 @@ public:
         WFP::onInitEvent() += []()
         {
             WindowCursor::Initialize(FixSettings());
-            pCutsceneBorders = &FixSettings().Int("MAIN.CutsceneBorders");
             D3D9Options::frame = Frame;
             D3D9Options::beforeReset = [](IDirect3DDevice9* device)
             {

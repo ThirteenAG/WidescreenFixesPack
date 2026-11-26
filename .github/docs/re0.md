@@ -18,9 +18,9 @@
 
 - **Skip intro** — Go straight to the title without the logos. Save and load notices that only need OK close by themselves.
 - **Skip title prompt** — Continue automatically past the opening Start Game prompt.
-- **Confine cursor** — Keep the pointer inside the focused game window. Turning it off, changing focus or opening the developer overlay releases it.
+- **Confine cursor** — Keep the pointer inside the focused game window. Turning it off or changing focus releases it.
 - **Movie framing** — Original shows movies inside the picture frame chosen by the game’s Display option (Wide or Original). Fill uses the whole screen, so with Display set to Original a widescreen movie is no longer boxed in a 4:3 frame. Both keep the whole picture at its own shape, with black bars where needed. Changes apply during playback.
-- **Mouse cursor** — Hide the mouse pointer, including the menus’ own pointer, after an idle interval while the game is focused. Moving the mouse shows it again at the same place. 0 keeps the pointer visible.
+- **Mouse cursor** — Hide the mouse pointer, including the menus’ own pointer, after an idle interval while the game is focused. Moving the mouse shows it again at the same place. The menus’ pointer is also kept off the movies, where the game would otherwise draw it. 0 keeps the pointer visible.
 - **Door animations** — Skip door transitions. Off by default; the Enhanced preset turns it on.
 - **Resolutions** — The native video settings use a sorted list of distinct display sizes, keeping the highest refresh rate for each. The list accepts non-multiple-of-eight widths such as 1366 and modes through 8K.
 - **Window mode** — Choose Fullscreen, Windowed or Borderless. Changes require a restart. Windowed mode accepts any size saved in the game’s settings, is sharp at high display scaling, and follows resolution changes made in the game’s Video menu.
@@ -54,8 +54,6 @@ restart notice while any startup setting differs from the running configuration.
 
 Frame rate, movie framing, cursor confinement, background pause, cursor timeout, classic key links and update checks apply while playing. Window mode, visual filters, depth of field,
 logo and title-prompt skipping, door skipping, and RGB lighting require a restart.
-
-**Ctrl+F10** opens the developer overlay when available. Its supporter access uses the normal Fusion Fix account check.
 
 ## Known limits
 

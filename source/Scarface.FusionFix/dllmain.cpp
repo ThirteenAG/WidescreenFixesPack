@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "FixSettings.hpp"
 #include "Frame.hpp"
-#include "Shared/D3D9Options.hpp"
 
 import Video;
 import DisplayModes;
@@ -32,21 +31,31 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime([]()
         {
             WindowedModeWrapper::EnableDpiAwareness();
-            D3D9Options::presentParameters = [](D3DPRESENT_PARAMETERS* parameters, HWND)
+            auto& settings = FixSettings();
+            auto publish = []()
             {
-                // The presentation limiter owns pacing, including rates above the monitor refresh rate.
-                parameters->PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+                static std::mutex mutex;
+                std::lock_guard lock(mutex);
+                auto& settings = FixSettings();
+                const auto text = settings.Get("MAIN.FOVFactor");
+                float factor = 1.0f;
+                std::from_chars(text.data(), text.data() + text.size(), factor);
+                ScarfaceCamera::Factor.store(std::isfinite(factor) ? std::clamp(factor, 0.5f, 2.0f) : 1.0f);
+                ScarfaceCutscene::Borders.store(std::clamp(std::atoi(settings.Get("MAIN.CutsceneBorders").c_str()), 0, 3));
+                ScarfaceVideo::Mode.store(std::atoi(settings.Get("MAIN.FMVWidescreenMode").c_str()));
+                ScarfaceFocus::Pause.store(settings.Get("MAIN.PauseOnFocusLoss") == "1");
             };
-            D3D9Options::HookCreation();
-            FixSettings();
+            for (const char* key : { "MAIN.FOVFactor", "MAIN.CutsceneBorders", "MAIN.FMVWidescreenMode", "MAIN.PauseOnFocusLoss" })
+                settings.OnChange(key, publish);
+            publish();
             asi_settings::LiveLink::Start();
-            ScarfaceCamera::Install(FixSettings().Float("MAIN.FOVFactor"));
+            ScarfaceCamera::Install();
             ScarfaceDisplayModes::Install();
             ScarfaceFrame::Install();
-            ScarfacePacing::Install(FixSettings().Int("MAIN.FPSLimit"));
-            ScarfaceCutscene::Install(FixSettings().Int("MAIN.CutsceneBorders"));
-            ScarfaceVideo::Install(FixSettings().Int("MAIN.FMVWidescreenMode"));
-            ScarfaceFocus::Install(FixSettings().Int("MAIN.PauseOnFocusLoss"));
+            ScarfacePacing::Install();
+            ScarfaceCutscene::Install();
+            ScarfaceVideo::Install();
+            ScarfaceFocus::Install();
             ScarfaceIntro::Install();
             ScarfaceMenu::Install();
             ScarfaceFrame::Handlers.push_back([](void*) { ScarfaceMenu::Tick(); });

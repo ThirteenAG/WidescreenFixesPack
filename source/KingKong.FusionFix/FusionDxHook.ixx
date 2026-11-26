@@ -598,47 +598,38 @@ public:
                             && PrimitiveCount != tallGrassPrimitiveCount && PrimitiveCount != smallGrassPrimitiveCount
                             && PrimitiveCount != tallGrass2PrimitiveCount && PrimitiveCount != tallGrass3PrimitiveCount)
                         {
-                            void* pData = NULL;
-                            UINT numVerts;
-                            if (PrimitiveType == D3DPT_TRIANGLESTRIP)
+                            // The buffer bound now, from the device: a pointer kept from SetStreamSource can be stale after
+                            // the game recreates its buffers (minimise/restore, device recreation)
+                            IDirect3DVertexBuffer9* vb = nullptr;
+                            UINT offset = 0;
+                            UINT stride = 0;
+                            if (SUCCEEDED(pDevice->GetStreamSource(0, &vb, &offset, &stride)) && vb)
                             {
-                                numVerts = PrimitiveCount + 2;
-                            }
-                            else // D3DPT_TRIANGLELIST
-                            {
-                                numVerts = PrimitiveCount * 3;
-                            }
-                            UINT lockOffset = g_CurrentOffset + StartVertex * g_CurrentStride;
-                            UINT lockSize = numVerts * g_CurrentStride;
-
-                            if (SUCCEEDED(g_pCurrentVB->Lock(lockOffset, lockSize, &pData, D3DLOCK_READONLY)))
-                            {
-                                if (pData) // Extra safety check
+                                bool skip = false;
+                                const UINT numVerts = PrimitiveType == D3DPT_TRIANGLESTRIP ? PrimitiveCount + 2 : PrimitiveCount * 3;
+                                void* pData = nullptr;
+                                if (stride >= 12 && SUCCEEDED(vb->Lock(offset, numVerts * stride, &pData, D3DLOCK_READONLY)))
                                 {
-                                    D3DXVECTOR3* verts = (D3DXVECTOR3*)((BYTE*)pData + 0);
-                                    D3DXVECTOR3 minV = verts[0];
-                                    D3DXVECTOR3 maxV = verts[0];
-
-                                    for (UINT i = 1; i < numVerts; ++i)
+                                    if (pData)
                                     {
-                                        D3DXVec3Minimize(&minV, &minV, &verts[i]);
-                                        D3DXVec3Maximize(&maxV, &maxV, &verts[i]);
+                                        auto vertex = [&](UINT i) { return static_cast<const D3DXVECTOR3*>(pData) + i; };
+                                        D3DXVECTOR3 minV = *vertex(0);
+                                        D3DXVECTOR3 maxV = minV;
+                                        for (UINT i = 1; i < numVerts; ++i)
+                                        {
+                                            D3DXVec3Minimize(&minV, &minV, vertex(i));
+                                            D3DXVec3Maximize(&maxV, &maxV, vertex(i));
+                                        }
+                                        D3DXVECTOR3 extent;
+                                        D3DXVec3Subtract(&extent, &maxV, &minV);
+                                        const float length = D3DXVec3Length(&extent);
+                                        skip = std::isinf(length) || std::isnan(length) || length > fMaxObjectLength;
                                     }
-
-                                    D3DXVECTOR3 extent;
-                                    D3DXVec3Subtract(&extent, &maxV, &minV);
-                                    float length = D3DXVec3Length(&extent);
-                                    g_pCurrentVB->Unlock();
-
-                                    if (std::isinf(length) || std::isnan(length) || length > fMaxObjectLength)
-                                    {
-                                        return D3D_OK;
-                                    }
+                                    vb->Unlock();
                                 }
-                                else
-                                {
-                                    g_pCurrentVB->Unlock();
-                                }
+                                vb->Release();
+                                if (skip)
+                                    return D3D_OK;
                             }
                         }
 

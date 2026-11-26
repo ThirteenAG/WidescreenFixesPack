@@ -33,7 +33,8 @@ namespace
     float WholeMsStep = 0.0f;                       // read as the time step by the millisecond timers
     float MsCarry = 0.0f;
     uint32_t Frames30 = 0;                          // frames of 30 per second
-    uint32_t Frames30Gated = UINT32_MAX;            // Frames30 on the frame it changed, else all bits set
+    uint32_t Every16Gate = UINT32_MAX;
+    uint32_t Every32Gate = UINT32_MAX;
     uint32_t Frames30Passed = 0;
     float Carry30 = 0.0f;
     float StepScale = 1.0f;                         // this frame's time step / a 30 fps frame's
@@ -41,8 +42,6 @@ namespace
     float CloudsTurn = 0.0f, CloudsTurnBase = 0.0f;
     float TurnDamping = 0.99f, TurnDampingBase = 0.99f;
     float CloudsSpin = 0.3f, CloudsSpinBase = 0.3f;
-    float HandbrakeBrake = 20000.0f, HandbrakeBrakeBase = 20000.0f;
-    float BikeHandbrakeBrake = 20000.0f, BikeHandbrakeBrakeBase = 20000.0f;
     float WheelFriction = 0.0f;
     float* WheelFrictionBase = nullptr;
 
@@ -64,15 +63,14 @@ namespace
         Carry30 += ms;
         Frames30Passed = uint32_t(Carry30 / (1000.0f / 30.0f));
         Carry30 -= Frames30Passed * (1000.0f / 30.0f);
+        Every16Gate = Frames30Passed >= 16 - (Frames30 & 15) ? 0 : UINT32_MAX;
+        Every32Gate = Frames30Passed >= 32 - (Frames30 & 31) ? 0 : UINT32_MAX;
         Frames30 += Frames30Passed;
-        Frames30Gated = Frames30Passed ? Frames30 : UINT32_MAX;
 
         StepScale = step / FrameStep30;
         CloudsTurn = CloudsTurnBase * StepScale;
         TurnDamping = std::pow(TurnDampingBase, StepScale);
         CloudsSpin = CloudsSpinBase * StepScale;
-        HandbrakeBrake = HandbrakeBrakeBase * StepScale;
-        BikeHandbrakeBrake = BikeHandbrakeBrakeBase * StepScale;
         if (WheelFrictionBase)
             WheelFriction = *WheelFrictionBase * StepScale;
     }
@@ -145,12 +143,15 @@ namespace
     // CParticle::Update at 30 per second, with the time that passed
     injector::hook_back<void(__cdecl*)()> hbParticleUpdate;
     float ParticleStep = 0.0f;
+    float ParticlePhase = 0.0f;
     void __cdecl ParticleUpdate()
     {
         float step = CTimer::ms_fTimeStep;
         ParticleStep += step;
-        if (step >= FrameStep30 || ParticleStep >= FrameStep30)
+        ParticlePhase += step;
+        if (ParticlePhase >= FrameStep30)
         {
+            ParticlePhase = std::fmod(ParticlePhase, FrameStep30);
             CTimer::ms_fTimeStep = ParticleStep;
             hbParticleUpdate.fun();
             CTimer::ms_fTimeStep = step;
@@ -170,8 +171,8 @@ public:
             auto every16 = hook::pattern("A1 ? ? ? ? 83 E0 0F 75");
             auto every32 = hook::pattern("A1 ? ? ? ? 83 E0 1F D9 EE 0F 85");
             FrameCounter.SetAddress(*every32.get_first<uint32_t*>(1));
-            injector::WriteMemory(every32.get_first(1), &Frames30Gated, true);
-            injector::WriteMemory(every16.get_first(1), &Frames30Gated, true);
+            injector::WriteMemory(every32.get_first(1), &Every32Gate, true);
+            injector::WriteMemory(every16.get_first(1), &Every16Gate, true);
 
             RedirectMillisecondTimers();
 
@@ -228,12 +229,16 @@ public:
             injector::WriteMemory(cloudsSpin.get_first(2), &CloudsSpin, true);
 
             // CAutomobile::ProcessControl and CBike::ProcessControl: the handbrake's brake force, per frame
-            auto handbrake = hook::pattern("24 01 74 ? D9 05 ? ? ? ? D9 9C 24 AC 00 00 00");
-            HandbrakeBrakeBase = HandbrakeBrake = **handbrake.get_first<float*>(6);
-            injector::WriteMemory(handbrake.get_first(6), &HandbrakeBrake, true);
-            auto bikeHandbrake = hook::pattern("74 1E D9 05 ? ? ? ? D9 9C 24 A8 00 00 00");
-            BikeHandbrakeBrakeBase = BikeHandbrakeBrake = **bikeHandbrake.get_first<float*>(4);
-            injector::WriteMemory(bikeHandbrake.get_first(4), &BikeHandbrakeBrake, true);
+            auto handbrake = hook::pattern("D9 84 24 F0 02 00 00 D8 1D ? ? ? ? DF E0 F6 C4 45 0F 85 ? ? ? ? 8B B5 20 01 00 00 8B 86 CC 00 00 00");
+            static auto scaleHandbrake = safetyhook::create_mid(handbrake.get_first(), [](SafetyHookContext& regs)
+            {
+                *reinterpret_cast<float*>(regs.esp + 0xAC) *= StepScale;
+            });
+            auto bikeHandbrake = hook::pattern("C7 85 88 04 00 00 00 00 80 3F E9 ? ? ? ? 89 C0 66 83 BD 86 04 00 00 00");
+            static auto scaleBikeHandbrake = safetyhook::create_mid(bikeHandbrake.get_first(), [](SafetyHookContext& regs)
+            {
+                *reinterpret_cast<float*>(regs.esp + 0xA8) *= StepScale;
+            });
 
             // CVehicle::ProcessWheel and ProcessBikeWheel: the rolling resistance off the throttle (the handling's
             // wheel friction, read nowhere else), per frame

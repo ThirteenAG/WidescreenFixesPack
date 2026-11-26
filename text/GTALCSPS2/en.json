@@ -15,7 +15,7 @@
   "controls.pccontrolscheme": "Keyboard and mouse controls",
   "controls.pccontrolscheme.description": "Use the PC control scheme; native controller input remains available when disabled.",
   "controls.mousesensitivity": "Mouse sensitivity",
-  "controls.mousesensitivity.description": "Mouse camera speed. 1.0 turns the camera 0.002 radians per pixel at the default zoom.",
+  "controls.mousesensitivity.description": "Higher values turn the camera farther for the same mouse movement.",
   "controls.invertmousey": "Invert mouse Y",
   "controls.invertmousey.description": "Invert vertical mouse camera movement.",
   "hud.hudscale": "HUD size",
@@ -124,5 +124,7 @@
   "controls.gamepadcameraspeed": "Gamepad camera speed",
   "controls.gamepadcameraspeed.description": "Speed of the right stick camera on foot and in vehicles. 1.0 is the original speed.",
   "controls.invertgamepady": "Invert gamepad Y",
-  "controls.invertgamepady.description": "Reverses the vertical right stick camera direction."
+  "controls.invertgamepady.description": "Reverses the vertical right stick camera direction.",
+  "controls.holdvehiclecamera": "Hold vehicle camera",
+  "controls.holdvehiclecamera.description": "When you turn the camera with the right stick in a vehicle, it stays there, so you can look back while driving. It swings back behind the vehicle two seconds after you let go. Off keeps the original camera, which swings back behind the vehicle as you drive."
 }

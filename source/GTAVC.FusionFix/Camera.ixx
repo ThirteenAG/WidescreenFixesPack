@@ -386,7 +386,7 @@ public:
 
     float CamFrontXNorm;
     float CamFrontYNorm;
-    int32_t CarZoomIndicator;
+    float CarZoomIndicator;
     float CarZoomValue;
     float CarZoomValueSmooth;
 
@@ -422,7 +422,7 @@ public:
     float m_ScreenReductionSpeed;
     float m_AlphaForPlayerAnim1rstPerson;
     float Orientation;
-    int32_t PedZoomIndicator;
+    float PedZoomIndicator;
     float PlayerExhaustion;
     float SoundDistUp;
     float SoundDistUpAsRead;

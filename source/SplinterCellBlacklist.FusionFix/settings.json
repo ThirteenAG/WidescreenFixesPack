@@ -204,6 +204,11 @@
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "label": "@HudAspectRatioConstraint",
       "description": "@HudAspectRatioConstraint.description",
       "page": "display",
@@ -269,12 +274,7 @@
       "description": "@MAIN.DisablePerfectionistChecks.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
+      "visibility": "menu"
     },
     {
       "id": "MAIN.DefaultMissionFilter",
@@ -360,12 +360,7 @@
       "description": "@UNLOCKS.UnlockAllNonCampaignMissions.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
+      "visibility": "menu"
     },
     {
       "id": "UNLOCKS.UnlockAllCampaignMissions",
@@ -375,12 +370,7 @@
       "description": "@UNLOCKS.UnlockAllCampaignMissions.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "visibility": "menu"
     },
     {
       "id": "EXTRACTION.ExtractionWaveConfigs",
@@ -543,12 +533,7 @@
       "description": "@GHOST.DisableMissionFailOnDetection.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "visibility": "menu"
     },
     {
       "id": "COOP.ReinforcementsNumber",
@@ -612,12 +597,7 @@
       "description": "@COOP.DisableMissionFailOnDetection.description",
       "page": "coop",
       "apply": "restart",
-      "visibility": "menu",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "visibility": "menu"
     },
     {
       "id": "CAMPAIGN.DisableMissionFailOnDetection",
@@ -627,12 +607,7 @@
       "description": "@CAMPAIGN.DisableMissionFailOnDetection.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 0
-      }
+      "visibility": "menu"
     },
     {
       "id": "CAMPAIGN.EnableRunDuringForcedWalk",
@@ -642,12 +617,7 @@
       "description": "@CAMPAIGN.EnableRunDuringForcedWalk.description",
       "page": "gameplay",
       "apply": "restart",
-      "visibility": "menu",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
+      "visibility": "menu"
     },
     {
       "id": "MAIN.LightSyncRGB",
@@ -676,27 +646,36 @@
     },
     {
       "id": "SPLITSCREEN.GamepadPlayer1",
-      "type": "int",
+      "type": "choice",
       "default": 0,
       "label": "@SPLITSCREEN.GamepadPlayer1",
       "description": "@SPLITSCREEN.GamepadPlayer1.description",
       "page": "controls",
       "apply": "restart",
       "visibility": "menu",
-      "min": 0,
-      "max": 4
+      "choices": [
+        { "value": 0, "label": "@SPLITSCREEN.GamepadPlayer1.0" },
+        { "value": 1, "label": "@pad.controller1" },
+        { "value": 2, "label": "@pad.controller2" },
+        { "value": 3, "label": "@pad.controller3" },
+        { "value": 4, "label": "@pad.controller4" }
+      ]
     },
     {
       "id": "SPLITSCREEN.GamepadPlayer2",
-      "type": "int",
+      "type": "choice",
       "default": 1,
       "label": "@SPLITSCREEN.GamepadPlayer2",
       "description": "@SPLITSCREEN.GamepadPlayer2.description",
       "page": "controls",
       "apply": "restart",
       "visibility": "menu",
-      "min": 1,
-      "max": 4
+      "choices": [
+        { "value": 1, "label": "@pad.controller1" },
+        { "value": 2, "label": "@pad.controller2" },
+        { "value": 3, "label": "@pad.controller3" },
+        { "value": 4, "label": "@pad.controller4" }
+      ]
     },
     {
       "id": "FILELOADER.DumpPackedFiles",

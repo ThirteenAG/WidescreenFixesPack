@@ -15,7 +15,7 @@
   "controls.pccontrolscheme": "Tastatur- und Maussteuerung",
   "controls.pccontrolscheme.description": "Nutzt die PC-Steuerung; ist sie aus, bleibt die native Controller-Eingabe verfügbar.",
   "controls.mousesensitivity": "Mausempfindlichkeit",
-  "controls.mousesensitivity.description": "Geschwindigkeit der Mauskamera. 1.0 dreht die Kamera beim Standardzoom um 0.002 Radiant pro Pixel.",
+  "controls.mousesensitivity.description": "Höhere Werte drehen die Kamera bei gleicher Mausbewegung weiter.",
   "controls.invertmousey": "Maus-Y umkehren",
   "controls.invertmousey.description": "Kehrt die vertikale Kamerabewegung mit der Maus um.",
   "hud.hudscale": "HUD-Größe",
@@ -124,5 +124,7 @@
   "controls.gamepadcameraspeed": "Gamepad-Kameratempo",
   "controls.gamepadcameraspeed.description": "Tempo der Kamera mit dem rechten Stick, zu Fuß und in Fahrzeugen. 1.0 ist das Originaltempo.",
   "controls.invertgamepady": "Gamepad Y umkehren",
-  "controls.invertgamepady.description": "Kehrt die vertikale Kamerarichtung des rechten Sticks um."
+  "controls.invertgamepady.description": "Kehrt die vertikale Kamerarichtung des rechten Sticks um.",
+  "controls.holdvehiclecamera": "Fahrzeugkamera halten",
+  "controls.holdvehiclecamera.description": "Wenn du die Kamera in einem Fahrzeug mit dem rechten Stick drehst, bleibt sie dort, sodass du während der Fahrt nach hinten schauen kannst. Zwei Sekunden nach dem Loslassen schwenkt sie wieder hinter das Fahrzeug. Aus behält die Originalkamera, die beim Fahren wieder hinter das Fahrzeug schwenkt."
 }

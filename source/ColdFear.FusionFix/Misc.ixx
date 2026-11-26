@@ -543,7 +543,6 @@ void __cdecl sub_42B610(float a1, float a2, float a3, float a4, int a5, int a6, 
     if (((n_offsetX1 == 21) && (n_offsetX2 >= 0 && n_offsetX2 <= 166) && (n_offsetY1 >= 315 && n_offsetY1 <= 448) && (a6 == 0 && a7 == 0))) //health, resistance bar etc
     {
         a1 -= fWidescreenHudOffset;
-        //a3 -= fWidescreenHudOffset;
     }
 
     return _sub_42B610(a1, a2, a3, a4, a5, a6, a7);
@@ -597,7 +596,6 @@ void __cdecl sub_42B740(float a1, float a2, float a3, float a4, int a5, int a6, 
         || ((n_offsetX1 >= 20 && n_offsetX1 <= 166) && (Color.R == 0xff && Color.G == 0x24 && Color.B == 0x08)))
     {
         a1 -= fWidescreenHudOffset;
-        //a3 -= fWidescreenHudOffset;
     }
 
     return _sub_42B740(a1, a2, a3, a4, a5, a6, a7);
@@ -608,7 +606,6 @@ void __cdecl sub_42BA20(float a1, float a2, int a3, int a4, int a5)
     auto _sub_42BA20 = (void(__cdecl*)(float, float, int, int, int)) sub_42BA20_addr;
 
     a1 = (a1 / Screen.fHudScaleX) + Screen.fHudOffset;
-    //a3 = (a3 / Screen.fHudScaleX) + Screen.fHudOffset;
 
     return _sub_42BA20(a1, a2, a3, a4, a5);
 }

@@ -10,6 +10,7 @@ export module OverlayRuntime;
 import InputDrain;
 import DeveloperOverlay;
 import Video;
+import LightSync;
 import IconBindings;
 import ButtonIcons;
 
@@ -23,7 +24,7 @@ export namespace RE0OverlayRuntime
 
     inline void Frame(IDirect3DDevice9* device)
     {
-        RE0Video::Frame(device);
+        RE0Video::Frame();
         RE0Icons::Frame(device);
         D3DDEVICE_CREATION_PARAMETERS parameters{};
         if (!device || FAILED(device->GetCreationParameters(&parameters))) return;
@@ -31,13 +32,8 @@ export namespace RE0OverlayRuntime
         GetWindowThreadProcessId(parameters.hFocusWindow, &process);
         if (process != GetCurrentProcessId()) return;
         RE0Overlay::AttachWindow(parameters.hFocusWindow);
-        if (GetWindowThreadProcessId(parameters.hFocusWindow, nullptr) == GetCurrentThreadId())
-            WindowCursor::Attach(parameters.hFocusWindow);
-        else if (WindowCursor::Window != parameters.hFocusWindow)
-            PostMessageW(parameters.hFocusWindow, WM_NULL, 0, 0);
+        WindowCursor::Follow(parameters.hFocusWindow);
         CursorConfinement::Suspend(RE0Overlay::BlocksInput());
-        if (WindowCursor::Window == parameters.hFocusWindow)
-            CursorConfinement::Frame(parameters.hFocusWindow);
         if (!RE0Input::ready) return;
         RE0Overlay::Keyboard(parameters.hFocusWindow);
         RE0Overlay::Draw(device);
@@ -52,6 +48,12 @@ export namespace RE0OverlayRuntime
 
     inline void Install()
     {
+        auto update = hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? 8B 07 8B CF FF 50 18 8B 0D ? ? ? ? 80 B9 ? 26 00 00 00");
+        static auto gameUpdate = safetyhook::create_mid(update.get_first(18), [](SafetyHookContext&)
+        {
+            RE0LightSync::Sample();
+            RE0Video::Scene();
+        });
         WindowCursor::Initialize(FixSettings());
         RE0Input::Install();
         RE0Input::overlayBlocksInput = []() { return RE0Overlay::BlocksInput(); };

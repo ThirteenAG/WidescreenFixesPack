@@ -13,8 +13,6 @@
   "CAMERA.CameraReturnTimeout.description": "Segundos sin entrada antes de que la cámara vuelva detrás del coche.",
   "CAMERA.CameraReturnSpeed": "Velocidad de retorno de la cámara",
   "CAMERA.CameraReturnSpeed.description": "Velocidad de retorno detrás del coche. 0: sin retorno.",
-  "MAIN.PortableSettings": "Guardar ajustes",
-  "MAIN.PortableSettings.description": "Guarda los ajustes del registro en savegame\\settings.bin.",
   "MAIN.LeftStickDeadzone": "Zona muerta del stick izquierdo",
   "MAIN.LeftStickDeadzone.description": "Zona muerta del stick izquierdo en porcentaje.",
   "MAIN.RightStickDeadzone": "Zona muerta del stick derecho",

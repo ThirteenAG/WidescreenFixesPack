@@ -1,6 +1,9 @@
 {
   "plugin.name": "Burnout 3 PCSX2F Fusion Fix",
   "page.display": "Pantalla",
+  "page.compatibility": "Compatibilidad",
+  "TextLanguage": "Idioma del menú",
+  "TextLanguage.description": "Elige el idioma del menú de Fusion Fix. El modo automático sigue el idioma del juego.",
   "auto": "Automático",
   "FOVFactor": "Campo de visión al conducir",
   "FOVFactor.description": "Ajusta el campo de visión horizontal de la cámara de conducción. Los valores más altos muestran más carretera. Los cambios se aplican durante la partida.",

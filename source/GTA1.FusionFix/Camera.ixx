@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include <atomic>
+#include <charconv>
 #include "FixSettings.hpp"
 
 export module Camera;
@@ -41,8 +43,28 @@ export namespace GTA1Camera
         value = goal + (offset + change) * decay;
     }
 
+    std::atomic_bool settingsPending{ true };
+
+    void RefreshSettings()
+    {
+        if (!settingsPending.exchange(false))
+            return;
+        const auto number = [](const char* id, double fallback)
+        {
+            const auto text = FixSettings().Get(id);
+            double value{};
+            const auto parsed = std::from_chars(text.data(), text.data() + text.size(), value);
+            return parsed.ec == std::errc{} && std::isfinite(value) ? value : fallback;
+        };
+        Enabled = number("CAMERA.SmoothFollow", 1.0) != 0.0;
+        FollowSeconds = std::clamp(number("CAMERA.FollowTime", 0.25), 0.0, 2.0);
+        HeightSeconds = std::clamp(number("CAMERA.HeightTime", 0.35), 0.0, 3.0);
+        Zoom = std::clamp(number("MAIN.FOVFactor", 1.0), 0.5, 2.0);
+    }
+
     void Update(SafetyHookContext& context, const Site& site)
     {
+        RefreshSettings();
         const int player = int(Value(context, site.player));
         if (!Enabled && Zoom == 1.0) { if (player >= 0 && player < int(Players.size())) Players[player].time = 0; return; }
         if (player < 0 || player >= int(Players.size()) || !Control) return;
@@ -85,19 +107,9 @@ export namespace GTA1Camera
 
     void Install()
     {
-        // Field of View: the visible area's multiplier. Changes from FusionFixHub or a preset apply at once, as from
-        // the in-game options
-        static auto read = []
-        {
-            SettingsReader ini("");
-            Enabled = ini.ReadBoolean("CAMERA", "SmoothFollow", true);
-            FollowSeconds = std::clamp(double(ini.ReadFloat("CAMERA", "FollowTime", 0.25f)), 0.0, 2.0);
-            HeightSeconds = std::clamp(double(ini.ReadFloat("CAMERA", "HeightTime", 0.35f)), 0.0, 3.0);
-            Zoom = std::clamp(double(ini.ReadFloat("MAIN", "FOVFactor", 1.0f)), 0.5, 2.0);
-        };
-        read();
         for (auto id : { "CAMERA.SmoothFollow", "CAMERA.FollowTime", "CAMERA.HeightTime", "MAIN.FOVFactor" })
-            FixSettings().OnChange(id, read);
+            FixSettings().OnChange(id, [] { settingsPending.store(true); });
+        RefreshSettings();
         // After the native camera constraints, before projection and visibility bounds.
         // Classics and Retail inline this in two camera functions, London calls it.
         using GTA1Build::Kind;

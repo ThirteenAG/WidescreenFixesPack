@@ -49,17 +49,6 @@
   ],
   "settings": [
     {
-      "id": "MAIN.OverlayHotkey",
-      "type": "int",
-      "default": 121,
-      "min": 1,
-      "max": 255,
-      "label": "@ui.settingsoverlayhotkey",
-      "description": "@ui.settingsoverlayhotkey.description",
-      "page": "controls",
-      "visibility": "editor"
-    },
-    {
       "id": "MAIN.TextLanguage",
       "type": "choice",
       "default": "auto",
@@ -205,6 +194,11 @@
       "id": "MAIN.HudAspectRatioConstraint",
       "type": "string",
       "default": "Auto",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "special": [
         {
           "value": "Auto",

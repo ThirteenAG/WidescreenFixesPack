@@ -5,9 +5,11 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 PCSX2F_CFG_SETTINGS()
 PCSX2F_CFG_PEER_SETTINGS()
 PCSX2F_STATE_LOAD_GENERATION()
+PCSX2F_EFFECTIVE_ASPECT()
 
 extern "C"
 {
@@ -23,12 +25,24 @@ extern "C"
 namespace
 {
     using namespace tcny;
-    console::ps2settings::Value options[] = {
+    constexpr console::ps2settings::Value defaults[] = {
         {"MAIN", "SkipIntro", "1"},          {"MAIN", "ForceAspectRatio", "Auto"},
         {"MAIN", "HudAspectRatioConstraint", "Auto"}, {"MAIN", "FOVFactor", "1.0"},
         {"MAIN", "CutsceneBorders", "3"},    {"MAIN", "AnimatedCutsceneBorders", "1"},
         {"MAIN", "FPSLimit", "60"},          {"MAIN", "UnthrottleEmuDuringLoading", "1"}};
-    console::ps2settings::StateLoads stateLoads;
+    console::ps2settings::Value options[sizeof(defaults) / sizeof(*defaults)];
+
+    bool ReadOptions(bool startup)
+    {
+        decltype(options) next;
+        std::memcpy(next, defaults, sizeof(next));
+        if (!(startup ? console::ps2settings::load(next) : console::ps2settings::read(next)))
+        {
+            return false;
+        }
+        std::memcpy(options, next, sizeof(options));
+        return true;
+    }
 
     void ApplySettings()
     {
@@ -65,26 +79,27 @@ namespace tcny
     void PollSettings()
     {
         static uint32_t frames;
-        auto refresh = []
+        static uint32_t lastAttemptGeneration;
+        const uint32_t generation = *reinterpret_cast<volatile uint32_t*>(&PCSX2FStateLoadGeneration);
+        if (generation == lastAttemptGeneration && ++frames < 30)
         {
-            if (console::ps2settings::read(options))
-            {
-                ApplySettings();
-            }
-        };
-        stateLoads.poll(refresh);
-        if (++frames >= 30)
+            return;
+        }
+        // A new restore tries immediately. If the CFG is busy, the next poll
+        // interval retries from defaults even with no additional state load.
+        lastAttemptGeneration = generation;
+        frames = 0;
+        if (ReadOptions(false))
         {
-            frames = 0;
-            refresh();
+            ApplySettings();
         }
     }
 } // namespace tcny
 
 extern "C" void init()
 {
-    static constexpr console::ps2conflict::OldPlugin oldPlugins[] = {
-        {"TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.elf", "MAIN", "ForceAspectRatio"},
+    static constexpr const char* oldPlugins[] = {
+        "TrueCrimeNewYorkCity.PCSX2F.WidescreenFix.elf",
     };
     if (console::ps2conflict::Found(oldPlugins, OSDText))
         return;
@@ -92,7 +107,8 @@ extern "C" void init()
     {
         return;
     }
-    if (!console::ps2settings::load(options))
+    std::memcpy(options, defaults, sizeof(options));
+    if (!ReadOptions(true))
     {
         std::snprintf(OSDText[0], OSDStringSize, "CFG settings unavailable: update the plugin injector for CFG support.");
     }
@@ -161,8 +177,9 @@ extern "C" void init()
     loading = reinterpret_cast<int*>(Absolute(load));
     mapCallers[0] = menuBlips + 8;
     mapCallers[1] = radarBlips + 8;
-    // Cinematic start: sw v0, flag(s0) with s0 = the world; the bars reset reads the world pointer.
+    // Cinematic start stores the world flag and passes the world's bars to the reset call.
     cinemaOffset = injector::ReadMemory<uint16_t>(cinemaStart + 8);
+    cinemaBarsOffset = injector::ReadMemory<uint16_t>(cinemaStart + 0x10);
     worldPointer = Absolute(barsReset + 0x18);
     // Game camera constructor: lui v1, hi ... addiu v1, v1, lo (its update function).
     gameCamera = (uintptr_t(injector::ReadMemory<uint16_t>(cameraConstructor + 0xC)) << 16) +

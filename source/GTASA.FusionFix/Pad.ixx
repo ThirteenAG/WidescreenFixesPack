@@ -4,7 +4,10 @@ module;
 
 #include "common.h"
 #include "FixSettings.hpp"
+#include "Shared/RWGTA/PadOptions.hpp"
 #include "Shared/PadInput.hpp"
+#include "Shared/RWGTA/PadCheats.hpp"
+#include "Shared/RWGTA/MenuPadButtons.hpp"
 
 export module Pad;
 
@@ -144,6 +147,7 @@ namespace
 
     int ActiveSlot = -1;                // the pad last used, -1 = none connected
     bool PadIsLastDevice = false;
+    std::atomic_bool mouseActivity = false;
     bool Installed = false;
     bool GInputLoaded = false;
     bool ModernAiming = false;
@@ -199,14 +203,22 @@ namespace
     {
         if (now.wButtons != before.wButtons)
             return true;
-        if (now.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD || now.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
-            return true;
-        float x, y;
-        Stick(now.sThumbLX, now.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, x, y);
-        if (x || y)
-            return true;
-        Stick(now.sThumbRX, now.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, x, y);
-        return x || y;
+        auto triggerChanged = [](BYTE current, BYTE previous)
+        {
+            bool down = current > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+            return down != (previous > XINPUT_GAMEPAD_TRIGGER_THRESHOLD) ||
+                (down && std::abs(int(current) - int(previous)) >= 4);
+        };
+        auto stickChanged = [](SHORT x, SHORT y, SHORT oldX, SHORT oldY, SHORT deadzone)
+        {
+            float nx, ny, px, py;
+            Stick(x, y, deadzone, nx, ny);
+            Stick(oldX, oldY, deadzone, px, py);
+            return std::abs(ToAxis(nx) - ToAxis(px)) >= 2 || std::abs(ToAxis(ny) - ToAxis(py)) >= 2;
+        };
+        return triggerChanged(now.bLeftTrigger, before.bLeftTrigger) || triggerChanged(now.bRightTrigger, before.bRightTrigger) ||
+            stickChanged(now.sThumbLX, now.sThumbLY, before.sThumbLX, before.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE) ||
+            stickChanged(now.sThumbRX, now.sThumbRY, before.sThumbRX, before.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
     }
 
     // Reads every pad; returns whether the active one was used this frame
@@ -242,8 +254,8 @@ namespace
             {
                 ActiveSlot = int(i);
                 used = true;
+                slot.previous = state.Gamepad;
             }
-            slot.previous = state.Gamepad;
             if (ActiveSlot == int(i))
                 Current = state.Gamepad;
         }
@@ -254,23 +266,23 @@ namespace
 
     bool KeyboardOrMouseUsed(const CPad& pad)
     {
-        auto any = [](const CControllerState& s)
-        {
-            auto p = reinterpret_cast<const int16_t*>(&s);
-            for (size_t i = 0; i < sizeof(s) / sizeof(int16_t); ++i)
-                if (p[i])
-                    return true;
-            return false;
-        };
-        if (any(pad.PCTempKeyState) || any(pad.PCTempMouseState))
-            return true;
+        static CControllerState previousKeys{};
+        static CControllerState previousMouse{};
+        static unsigned previousButtons = 0;
+        bool changed = mouseActivity.exchange(false, std::memory_order_relaxed) ||
+                       std::memcmp(&previousKeys, &pad.PCTempKeyState, sizeof(previousKeys)) != 0 ||
+                       std::memcmp(&previousMouse, &pad.PCTempMouseState, sizeof(previousMouse)) != 0;
+        previousKeys = pad.PCTempKeyState;
+        previousMouse = pad.PCTempMouseState;
         if (NewMouseState.is_initialized())
         {
             const auto& mouse = *NewMouseState;
-            if (std::abs(mouse.X) + std::abs(mouse.Y) > 2.0f || mouse.LMB || mouse.RMB || mouse.MMB || mouse.WheelUp || mouse.WheelDown)
-                return true;
+            unsigned buttons = (mouse.LMB != 0) | ((mouse.RMB != 0) << 1) | ((mouse.MMB != 0) << 2);
+            changed |= previousButtons != buttons;
+            previousButtons = buttons;
+            return changed || mouse.X != 0 || mouse.Y != 0 || mouse.WheelUp || mouse.WheelDown;
         }
-        return false;
+        return changed;
     }
 
     CEntity* PlayerVehicle()
@@ -358,7 +370,7 @@ namespace
     {
         if (MenuActive())
             return Context::Frontend;
-        static auto& modern = FixSettings().Int("MAIN.ModernControls");
+        const auto modern = RWGTA::PadOptions::ModernControls.load(std::memory_order_relaxed);
         if (!modern)
             return Context::Classic;
         if (auto vehicle = PlayerVehicle())
@@ -380,8 +392,8 @@ namespace
         float lx, ly, rx, ry;
         Stick(g.sThumbLX, g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, lx, ly);
         Stick(g.sThumbRX, g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
-        static auto& invert = FixSettings().Int("MAIN.InvertGamepadY");
-        static auto& speed = FixSettings().Float("MAIN.GamepadCameraSpeed");
+        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
+        const auto speed = RWGTA::PadOptions::CameraSpeed.load(std::memory_order_relaxed);
         // The PlayStation 2 sticks: down is positive. The camera's stick turns faster or slower by the camera speed.
         float look = context == Context::Frontend ? 1.0f : speed;
         s.LeftStickX = ToAxis(lx);
@@ -453,7 +465,7 @@ namespace
             return;
 
         // The PC game sets the shake but never runs it down
-        static auto& vibration = FixSettings().Int("MAIN.Vibration");
+        const auto vibration = RWGTA::PadOptions::Vibration.load(std::memory_order_relaxed);
         WORD motor = 0;
         if (pad.ShakeDur > 0)
         {
@@ -483,8 +495,8 @@ namespace
 
         float rx, ry;
         Stick(Current.sThumbRX, Current.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
-        static auto& speed = FixSettings().Float("MAIN.GamepadCameraSpeed");
-        static auto& invert = FixSettings().Int("MAIN.InvertGamepadY");
+        const auto speed = RWGTA::PadOptions::CameraSpeed.load(std::memory_order_relaxed);
+        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
         // Degrees per second at full tilt, eased near the center for fine aiming
         constexpr float TurnRate = 160.0f, PitchRate = 100.0f;
         float dt = CTimer::ms_fTimeStep / 50.0f;
@@ -522,27 +534,155 @@ namespace
     }
 
     // Start is Escape: it opens the pause menu and goes back (and out) in the menus
-    bool StartWasDown = false;
     bool EscapeSet = false;
     void UpdateStartButton()
     {
         if (EscapeSet && TempEscape.is_initialized())
             *TempEscape = 0;
         EscapeSet = false;
-        bool down = ActiveSlot >= 0 && (Current.wButtons & XINPUT_GAMEPAD_START);
-        bool pressed = down && !StartWasDown;
-        StartWasDown = down;
-        if (pressed && TempEscape.is_initialized() && !*TempEscape)
+        static RWGTA::MenuPadButtons buttons;
+        const bool active = FrontendMenuManager->m_bMenuActive;
+        const WORD pressed = buttons.Update(Current, active);
+        const bool back = active && !FrontendMenuManager->m_bMainMenuSwitch &&
+            FrontendMenuManager->GetCurrentScreen() == SCREEN_PAUSE_MENU && (pressed & XINPUT_GAMEPAD_B);
+        if (((pressed & XINPUT_GAMEPAD_START) || back) && TempEscape.is_initialized() && !*TempEscape)
         {
             *TempEscape = 1;
             EscapeSet = true;
         }
     }
 
+    void ActivatePadCheat(unsigned int index)
+    {
+        // PC keyboard and controller cheats share the localized message, statistics and save flag.
+        static auto accepted = hook::pattern("38 9E ? ? ? ? 53 53 B9 ? ? ? ? 6A 01 74 07 68 ? ? ? ? EB 05 68 ? ? ? ? E8");
+        static const auto active = *accepted.get_first<bool*>(2);
+        static const auto text = *accepted.get_first<void*>(9);
+        static const auto getText = reinterpret_cast<const char*(__thiscall*)(void*, const char*)>(injector::GetBranchDestination(accepted.get_first(29)).as_int());
+        static const auto showHelp = reinterpret_cast<void(__cdecl*)(const char*, bool, bool, bool)>(injector::GetBranchDestination(accepted.get_first(35)).as_int());
+        static const auto incrementStat = reinterpret_cast<void(__cdecl*)(unsigned short, float)>(injector::GetBranchDestination(accepted.get_first(53)).as_int());
+        static const auto hasCheated = *accepted.get_first<bool*>(72);
+        static const auto keyboardHistory = *accepted.get_first<char*>(85);
+        static const auto apply = reinterpret_cast<void(__cdecl*)(unsigned int)>(hook::pattern("8B 44 24 04 8B 0C 85 ? ? ? ? 85 C9 74 02 FF E1 8A 88").get_first());
+
+        showHelp(getText(text, active[index] ? "CHEAT8" : "CHEAT1"), true, false, false);
+        incrementStat(137, 1.0f);
+        *hasCheated = true;
+        apply(index);
+        *keyboardHistory = '\0';
+    }
+
+    void UpdatePadCheats(CPad& pad)
+    {
+        struct Cheat
+        {
+            std::string_view buttons;
+            unsigned int index;
+        };
+        static constexpr Cheat cheats[] =
+        {
+            { "3414LDRULDRU", 0 }, // LXGIWYL
+            { "3414LDRULDDL", 1 }, // KJKSZPJ
+            { "3414LDRULDDD", 2 }, // UZUMYMW
+            { "341XLDRULDRU", 3 }, // HESOYAM
+            { "33C4LRLRLR", 4 }, // OSRBLHH
+            { "33C4UDUDUD", 5 }, // ASNAEB
+            { "4X11222S", 6 }, // AFZLLQLL
+            { "4X11222D", 7 }, // ICIKPYH
+            { "2DDLSL4SX311", 8 }, // ALNSFMZO
+            { "4X11222C", 9 }, // AUIFRVQS
+            { "4X11222X", 10 }, // CFVFGMJ
+            { "CC1S1SSS1TCT", 11 }, // YSOHNUL
+            { "TURD21S", 12 }, // PPGWJHT
+            { "TURDS43", 13 }, // LIYOAAY
+            { "DLULX4321", 14 }, // AJLOJYQY
+            { "DUUUX4322", 15 }, // BAGOWPG
+            { "43XTXTUD", 16 }, // FOOOXFT
+            { "CC1CCC123TCT", 17 }, // TIMETOKICKASS
+            { "D3C22X31LL", 18 }, // CQZIJMB
+            { "URR1RUS2", 19 }, // JQNTDMH
+            { "3C4R12XXS3", 20 }, // VROCKPOKEY
+            { "41CR13RUC4", 21 }, // VPJTQWV
+            { "D4D32L31LR", 22 }, // AQTBCODX
+            { "4U2LL31CR", 23 }, // KRIJEBR
+            { "C3C3LL31CR", 24 }, // UBHYZHQ
+            { "C1U32X31CX", 25 }, // RZHSUEW
+            { "423124STCT21", 26 }, // CPKTNWT
+            { "T1T4S11", 27 }, // XICWMD
+            { "T33L3141", 28 }, // PGGOMOY
+            { "R2D3LL3121", 29 }, // SZCMAWO
+            { "R3U22L3133", 30 }, // ZEIIVG
+            { "4C32L3142", 31 }, // YLTEICZ
+            { "C1D2LX31RC", 32 }, // LLQPFBN
+            { "C2U3LX31LC", 33 }, // IOWDLAC
+            { "R4C32S34", 34 }, // Drive on water
+            { "4CU1R3RUST", 35 }, // AFSNMSMW
+            { "TUULRSCD", 36 }, // BTCDBCB
+            { "TUULRSCL", 37 }, // JYSDSOD
+            { "TUULRSCR", 38 }, // KVGYZQK
+            { "1CT11S2UDL", 39 }, // BLUESUEDESHOES
+            { "X1USDX2TD311", 40 }, // BGLUAWML
+            { "UUDDSC13TD", 41 }, // CIKGCGX
+            { "2U33L334RD", 42 }, // ONLYHOMIESALLOWED
+            { "DR31TSSCC", 43 }, // BIFBUZZ
+            { "TXXX12LLUU", 44 }, // AFPHULTL
+            { "RLTCC3444", 45 }, // BEKKNQV
+            { "2R1UX1243111", 46 }, // KKZRPKW
+            { "U13URUX2X1", 47 }, // GUSNHDE
+            { "UD131RL1L", 48 }, // RIPAZHA
+            { "TSCCSCC12234", 49 }, // JHJOECW
+            { "TTSCX11DU", 50 }, // JUMPJET
+            { "TTSCX12DD", 51 }, // KGGGDKP
+            { "122UDDU344", 52 }, // JCNRUAD
+            { "LT31USTDC211", 53 }, // COXEFGU
+            { "2341XXCCSS", 54 }, // BSXSGGC
+            { "4X11222T", 55 }, // XJVSNAJ
+            { "LL23RSS12X", 56 }, // OFVIAC
+            { "4T4TCCLRUU", 57 }, // MGHXYRM
+            { "UD11221234", 58 }, // CWJXUOC
+            { "UUTTUULRS44", 60 }, // KANGAROO
+            { "TXXCCS1423", 61 }, // BAGUVIX
+            { "DL1DD4D2D", 62 }, // CVWKXAM
+            { "LR12344UDR1", 63 }, // AIYPWZQP
+            { "1234UDLR1234UDLR", 64 }, // YECGAA
+            { "CRCRLSTU", 65 }, // AEZAKMI
+            { "CRCRLSXD", 66 }, // LJSPQK
+            { "ULXT3CCC2", 67 }, // IAVENJQ
+            { "UDDLR112334", 68 }, // AEDUWNV
+            { "2R1TRR31R111", 69 }, // IOJUFZN
+            { "TT1SSCSDC", 70 }, // PRIEBJ
+            { "TRD12SS34", 71 }, // MUNASEF
+            { "13S3L43LSD11", 72 }, // WANRLTW
+            { "XDU4DT1TL", 74 }, // THGLOJ
+            { "TLS4U2D1X111", 75 }, // FVTMNBZ
+            { "DSU44URRU", 76 }, // SJMAHPE
+            { "344344LLRLLR", 77 }, // BMTPWHR
+            { "344344LLRRRL", 78 }, // ZSOXFSQ
+            { "13TD4X1U2211", 79 }, // OGXSDAG
+            { "CTTUC32UT111", 80 }, // EHIBXQS
+            { "ULLDCS11234", 81 }, // VKYPQCF
+            { "DSXL34LDD111", 82 }, // NCSGDAG
+            { "S2X322L3R111", 83 }, // VQIMAHA
+            { "CX1CC1C34211", 84 }, // OHDUDE
+            { "LLDDUUSCT34", 85 }, // AKJJYGLC
+            { "3ULR4URSR211", 86 }, // AMOMHRER
+            { "411RRUUX1L", 87 }, // EEGCYXT
+            { "CU12D311LLXT", 88 }, // URKQSRK
+            { "RU333DTTXC11", 89 }, // AGBDLCID
+            { "R22D2UU24", 90 }, // Prostitutes pay you
+            { "UXTXTXS4R", 91 }, // Taxi nitro
+        };
+        static RWGTA::PadCheats sequence;
+        const bool blocked = MenuActive() || pad.DisablePlayerControls || CCutsceneMgr::IsRunning();
+        if (const auto match = sequence.Find(Current, blocked ? -1 : ActiveSlot, std::span<const Cheat>(cheats)))
+            ActivatePadCheat(match->index);
+    }
+
     // Before CPad::Update of the first pad: the keyboard, mouse and DirectInput states are in place
     void BeforePadUpdate(CPad& pad)
     {
         bool padUsed = PollPads();
+        UpdatePadCheats(pad);
         UpdateStartButton();
         bool kbmUsed = KeyboardOrMouseUsed(pad);
         if (padUsed)
@@ -562,6 +702,11 @@ namespace
 
 export namespace Pad
 {
+    void ObserveMouseActivity()
+    {
+        mouseActivity.store(true, std::memory_order_relaxed);
+    }
+
     // Whether the fix handles pads at all (not with a controller mod)
     bool IsInstalled()
     {
@@ -581,13 +726,13 @@ export namespace Pad
 
     bool IsModernLayout()
     {
-        static auto& modern = FixSettings().Int("MAIN.ModernControls");
+        const auto modern = RWGTA::PadOptions::ModernControls.load(std::memory_order_relaxed);
         return Installed && modern != 0;
     }
 
     IconStyle Style()
     {
-        static auto& icons = FixSettings().Int("MAIN.GamepadIcons");
+        const auto icons = RWGTA::PadOptions::GamepadIcons.load(std::memory_order_relaxed);
         if (icons >= 1 && icons <= 3)
             return IconStyle(icons);
         if (ActiveSlot >= 0)
@@ -615,6 +760,7 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
+            RWGTA::PadOptions::Install(FixSettings(), false);
             GInputLoaded = GetModuleHandleW(L"GInputSA.asi") != nullptr;
             if (GInputLoaded)
                 return;

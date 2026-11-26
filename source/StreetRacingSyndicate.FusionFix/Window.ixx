@@ -2,39 +2,45 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <commctrl.h>
 #include <d3d9.h>
 #include "Shared/D3D9Options.hpp"
 #include "Shared/CursorConfinement.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
 
+#pragma comment(lib, "comctl32.lib")
 
 export module Window;
 
 import ComVars;
 import DeveloperOverlay;
+import OptionsMenu;
 import States;
 
 export namespace SRSWindow
 {
     inline int Mode = 0;
     inline int Width = 0, Height = 0;
-    inline HWND Window = nullptr;
-    inline WNDPROC PreviousProcedure = nullptr;
+    inline std::atomic<HWND> Window{};
+    inline std::atomic<bool> PauseWhenUnfocused{ true };
+    inline thread_local HWND DispatchWindow = nullptr;
     inline SafetyHookInline ActivateHook;
     inline void(__fastcall* SetActive)(void*, void*, char) = nullptr;
     inline LRESULT(__fastcall* Default)(void*, void*) = nullptr;
     inline bool CursorShown = false;
     inline std::function<void()> FrameCallback;
+    inline void (*InputMessage)(UINT, LPARAM) = nullptr;
+    inline void (__cdecl* NativeExit)(int) = nullptr;
 
-    inline void WINAPI Exit(UINT code)
+    inline void __cdecl Exit(int code)
     {
         RWGTA::UpdateCheck::OnExit();
-        ExitProcess(code);
+        NativeExit(code);
     }
 
     inline bool PauseOnFocusLoss()
     {
-        return FixSettings().Bool("MAIN.PauseOnFocusLoss");
+        return PauseWhenUnfocused.load(std::memory_order_relaxed);
     }
 
     // The game loop runs while the application's active flag (+173) is set and waits for messages otherwise
@@ -49,6 +55,11 @@ export namespace SRSWindow
     // as it is; the loop stops only with MAIN.PauseOnFocusLoss.
     inline void __fastcall Activate(uint8_t* frame, void* edx, BOOL active, DWORD thread)
     {
+        if (DispatchWindow && DispatchWindow != Window.load())
+        {
+            Default(frame, nullptr);
+            return;
+        }
         if (!Mode)
             return ActivateHook.thiscall<void>(frame, active, thread);
         if (active || PauseOnFocusLoss())
@@ -62,9 +73,29 @@ export namespace SRSWindow
         Default(frame, nullptr);
     }
 
-    inline LRESULT CALLBACK Procedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    inline LRESULT CALLBACK Procedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR id, DWORD_PTR)
     {
+        const auto forward = [&]()
+        {
+            const auto previous = std::exchange(DispatchWindow, window);
+            const auto result = DefSubclassProc(window, message, wParam, lParam);
+            DispatchWindow = previous;
+            return result;
+        };
+        if (message == WM_NCDESTROY)
+        {
+            RemoveWindowSubclass(window, Procedure, id);
+            auto expected = window;
+            if (Window.compare_exchange_strong(expected, nullptr))
+                CursorConfinement::Suspend(true);
+            return forward();
+        }
+        if (window != Window.load())
+            return forward();
+
         CursorConfinement::Message(message, wParam);
+        if (InputMessage)
+            InputMessage(message, lParam);
         LRESULT result = 0;
         if (SRSOverlay::Message(window, message, wParam, lParam, result))
             return result;
@@ -78,12 +109,23 @@ export namespace SRSWindow
         }
         if (Mode && message == WM_SYSCOMMAND && (wParam & 0xFFF0) == SC_MAXIMIZE)
             return 0;
-        return CallWindowProcA(PreviousProcedure, window, message, wParam, lParam);
+        return forward();
     }
 
-    inline void PresentParameters(D3DPRESENT_PARAMETERS* params, HWND)
+    inline bool IsGameDevice(IDirect3DDevice9* device);
+
+    // Set by BeforeReset for the Reset that follows on the same thread
+    inline thread_local bool ResettingOtherDevice = false;
+
+    inline void BeforeReset(IDirect3DDevice9* device)
     {
-        if (!Mode)
+        ResettingOtherDevice = !IsGameDevice(device);
+        SRSOverlay::BeforeReset(device);
+    }
+
+    inline void PresentParameters(D3DPRESENT_PARAMETERS* params, HWND window)
+    {
+        if (!Mode || (!window && std::exchange(ResettingOtherDevice, false)))
             return;
         params->Windowed = TRUE;
         params->FullScreen_RefreshRateInHz = 0;
@@ -111,6 +153,7 @@ export namespace SRSWindow
         // Centred client area; a client as big as the monitor covers it exactly with the frame outside
         const int x = bounds.left + (bounds.right - bounds.left - Width) / 2 + frame.left;
         const int y = bounds.top + (bounds.bottom - bounds.top - Height) / 2 + frame.top;
+        WindowStyle::detail::AllowSize(window, frame.right - frame.left, frame.bottom - frame.top);
         SetWindowPos(window, HWND_NOTOPMOST, x, y, frame.right - frame.left, frame.bottom - frame.top, SWP_NOACTIVATE | SWP_FRAMECHANGED);
         using Attribute = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
         static const auto setAttribute = []()
@@ -123,16 +166,29 @@ export namespace SRSWindow
             setAttribute(window, 33, &square, sizeof(square));
     }
 
+    inline bool IsGameDevice(IDirect3DDevice9* device)
+    {
+        auto* renderer = WindowRenderer.is_initialized() ? WindowRenderer.get() : nullptr;
+        if (!renderer)
+            return false;
+        // The renderer's D3D wrapper holds the current device used by its native Reset.
+        auto* d3d = *reinterpret_cast<uint8_t**>(renderer + 0x0C);
+        return device && d3d && device == *reinterpret_cast<IDirect3DDevice9**>(d3d + 0x1C);
+    }
+
     inline void Frame(IDirect3DDevice9* device)
     {
+        if (!IsGameDevice(device))
+            return;
         D3DDEVICE_CREATION_PARAMETERS creation{};
         if (FAILED(device->GetCreationParameters(&creation)) || !creation.hFocusWindow)
             return;
         const auto window = creation.hFocusWindow;
-        if (window != Window)
+        if (window != Window.load())
         {
-            Window = window;
-            PreviousProcedure = reinterpret_cast<WNDPROC>(SetWindowLongPtrA(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(Procedure)));
+            if (!SetWindowSubclass(window, Procedure, 1, 0))
+                return;
+            Window.store(window);
             if (Mode)
                 Place(window);
         }
@@ -154,9 +210,14 @@ export namespace SRSWindow
         Width = width;
         Height = height;
 
-        const auto updateCursor = []() { CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor")); };
-        updateCursor();
+        const auto updateCursor = []()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            CursorConfinement::SetEnabled(FixSettings().Get("MAIN.ConfineCursor") == "1");
+        };
         FixSettings().OnChange("MAIN.ConfineCursor", updateCursor);
+        updateCursor();
 
         auto activate = hook::pattern("8B 44 24 04 85 C0 56 8B F1 8D 4C 24 08 74");
         Default = reinterpret_cast<decltype(Default)>(injector::GetBranchDestination(activate.get_first(0x4E)).as_int());
@@ -168,7 +229,17 @@ export namespace SRSWindow
         auto app = hook::pattern("53 33 DB 53 B9 ? ? ? ? E8 ? ? ? ? 68 ? ? ? ? C7 05");
         App.SetAddress(*app.get_first<uint8_t*>(5));
         // Wakes the waiting game loop, which then follows the new setting
-        FixSettings().OnChange("MAIN.PauseOnFocusLoss", []() { if (Window) PostMessageW(Window, WM_NULL, 0, 0); });
+        const auto updatePause = []()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            const auto pause = FixSettings().Get("MAIN.PauseOnFocusLoss");
+            PauseWhenUnfocused.store(pause == "1", std::memory_order_relaxed);
+            if (const auto window = Window.load())
+                PostMessageW(window, WM_NULL, 0, 0);
+        };
+        FixSettings().OnChange("MAIN.PauseOnFocusLoss", updatePause);
+        updatePause();
 
         SRSStates::Init();
         SRSOverlay::Init();
@@ -177,17 +248,33 @@ export namespace SRSWindow
         update.pluginId = "StreetRacingSyndicate.FusionFix";
         update.fileVersion = rsc_FileVersion;
         update.settings = &FixSettings();
-        update.playable = []() { return Window && GetForegroundWindow() == Window && SRSStates::Active("MainMenuState"); };
-        update.show = [](const std::wstring& line)
+        update.playable = []()
         {
-            MessageBoxW(Window, line.c_str(), L"Street Racing Syndicate Fusion Fix", MB_OK | MB_ICONINFORMATION);
+            const auto window = Window.load();
+            return window && GetForegroundWindow() == window && SRSMenu::NoticeReady();
+        };
+        update.show = SRSMenu::ShowNotice;
+        update.format = [](const std::string& latest, bool hub)
+        {
+            auto texts = FixSettings().GetTexts();
+            texts.Select(SRSMenu::Language());
+            auto line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
+            line = RWGTA::UpdateCheck::detail::Replace(line, "{name}", texts.Resolve(FixSettings().GetDescription().name));
+            line = RWGTA::UpdateCheck::detail::Replace(line, "{version}", latest);
+            return asi_settings::text::Widen(line);
         };
         RWGTA::UpdateCheck::Init(std::move(update));
-        IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", Exit));
+        // The game's normal WinMain return goes through the MSVC 7 runtime.
+        if (const auto runtime = GetModuleHandleW(L"MSVCR71.dll"))
+        {
+            NativeExit = reinterpret_cast<decltype(NativeExit)>(GetProcAddress(runtime, "exit"));
+            if (NativeExit)
+                IATHook::Replace(GetModuleHandleW(nullptr), "MSVCR71.dll", std::forward_as_tuple("exit", Exit));
+        }
 
         D3D9Options::presentParameters = PresentParameters;
         D3D9Options::frame = Frame;
-        D3D9Options::beforeReset = SRSOverlay::BeforeReset;
+        D3D9Options::beforeReset = BeforeReset;
         D3D9Options::HookCreation();
     }
 }

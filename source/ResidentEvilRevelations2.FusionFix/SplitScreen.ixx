@@ -2,6 +2,9 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <atomic>
+#include <cstdlib>
+#include <mutex>
 
 export module SplitScreen;
 
@@ -15,20 +18,32 @@ import ComVars;
 
 namespace
 {
-    const int* pLayout = nullptr;
-    const int* pSwap = nullptr;
+    struct Options
+    {
+        SplitScreen::Layout layout{ SplitScreen::Layout::TopBottom };
+        bool swap{};
+    };
+
+    std::atomic<Options> requested{ Options{} };
+    thread_local SplitScreen::ViewPair buildingPair;
+
+    void UpdateOptions()
+    {
+        static std::mutex writers;
+        const std::lock_guard lock(writers);
+        const auto layout = std::atoi(FixSettings().Get("MAIN.SplitScreenLayout").c_str());
+        const bool swap = FixSettings().Get("MAIN.SplitScreenSwapTopBottom") == "1";
+        requested.store({ static_cast<SplitScreen::Layout>(std::clamp(layout, 0, 2)), swap }, std::memory_order_relaxed);
+    }
 
     void(__stdcall* VirtualToScreenRect)(void* out, int32_t* rect) = nullptr;
 
-    void SetHalf(int32_t* rect, int32_t half)
+    void SetHalf(int32_t* rect, int32_t half, const SplitScreen::ViewPair& pair)
     {
-        // HUD transforms must use the layout actually installed for this session.
-        const auto layout = (SplitScreen::Layout)std::clamp(*pLayout, 0, 2);
-        SplitScreen::SetLayout(layout);
-        if (*pSwap)
+        if (pair.swap)
             half = 1 - half;
-        const int32_t w = (int32_t)(720.0f * GetAspectRatio());
-        if (layout == SplitScreen::Layout::Original)
+        const int32_t w = (int32_t)(720.0f * pair.screen.Aspect());
+        if (pair.layout == SplitScreen::Layout::Original)
         {
             const int32_t offset = std::max(0, (w - 1280) / 2);
             rect[0] = offset + (half == 0 ? 136 : 344);
@@ -36,7 +51,7 @@ namespace
             rect[2] = rect[0] + SplitScreen::NativeResX;
             rect[3] = rect[1] + SplitScreen::NativeResY;
         }
-        else if (layout == SplitScreen::Layout::SideBySide)
+        else if (pair.layout == SplitScreen::Layout::SideBySide)
         {
             rect[0] = half == 0 ? 0 : w / 2;
             rect[1] = 0;
@@ -54,14 +69,37 @@ namespace
 
     void __stdcall SplitScreenSetupTop(void* out, int32_t* rect)
     {
-        SetHalf(rect, 0);
-        VirtualToScreenRect(out, rect);
+        const auto options = requested.load(std::memory_order_relaxed);
+        buildingPair = { options.layout, options.swap, GetRenderSize() };
+        // The native camera setup holds its lock throughout both conversions and assignments.
+        for (int half = 0; half < 2; ++half)
+        {
+            SetHalf(rect, half, buildingPair);
+            VirtualToScreenRect(&buildingPair.viewports[half], rect);
+        }
+        std::memcpy(out, &buildingPair.viewports[0], sizeof(RECT));
     }
 
-    void __stdcall SplitScreenSetupBottom(void* out, int32_t* rect)
+    void __stdcall SplitScreenSetupBottom(void* out, int32_t*)
     {
-        SetHalf(rect, 1);
-        VirtualToScreenRect(out, rect);
+        std::memcpy(out, &buildingPair.viewports[1], sizeof(RECT));
+    }
+
+    void Refresh(SafetyHookContext& context)
+    {
+        if (!IsSplitScreenActive()) return;
+        const auto pair = SplitScreen::InstalledPair();
+        const auto options = requested.load(std::memory_order_relaxed);
+        if (pair.layout != options.layout || pair.swap != options.swap || pair.screen != GetRenderSize())
+        {
+            // Ask the camera manager to rebuild both viewports through its native setup path.
+            *reinterpret_cast<uint8_t*>(context.esi + 0xD0C) = 1;
+        }
+    }
+
+    void Publish(SafetyHookContext&)
+    {
+        SplitScreen::PublishPair(buildingPair);
     }
 }
 
@@ -73,8 +111,9 @@ public:
         WFP::onInitEvent() += []()
         {
             auto& settings = FixSettings();
-            pLayout = &settings.Int("MAIN.SplitScreenLayout");
-            pSwap = &settings.Int("MAIN.SplitScreenSwapTopBottom");
+            settings.OnChange("MAIN.SplitScreenLayout", UpdateOptions);
+            settings.OnChange("MAIN.SplitScreenSwapTopBottom", UpdateOptions);
+            UpdateOptions();
 
             auto top = hook::pattern("E8 ? ? ? ? 6A 01 6A 00 8B CE E8 ? ? ? ? 8D 44 24 30");
             auto bottom = hook::pattern("E8 ? ? ? ? 6A 01 6A 01 8B CE E8 ? ? ? ? 8D 44 24 30");
@@ -82,6 +121,10 @@ public:
             VirtualToScreenRect = (decltype(VirtualToScreenRect))injector::GetBranchDestination(top.get_first()).as_int();
             injector::MakeCALL(top.get_first(), SplitScreenSetupTop, true);
             injector::MakeCALL(bottom.get_first(), SplitScreenSetupBottom, true);
+            auto dirty = hook::pattern("8A 9E 0C 0D 00 00 84 DB 75 ? 8B 0D");
+            auto assigned = hook::pattern("C7 86 10 0D 00 00 02 00 00 00 C7 86 1C 0D 00 00 01 00 00 00");
+            static auto refresh = safetyhook::create_mid(dirty.get_first(), Refresh);
+            static auto publish = safetyhook::create_mid(assigned.get_first(), Publish);
         };
     }
 } SplitScreenFix;

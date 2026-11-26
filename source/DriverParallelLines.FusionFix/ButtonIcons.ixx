@@ -4,6 +4,7 @@ module;
 #include <d3d9.h>
 #include "FixSettings.hpp"
 #include <fstream>
+#include <unordered_set>
 
 
 export module ButtonIcons;
@@ -35,9 +36,11 @@ export namespace DPLIcons
     std::unordered_map<void*, Font> fonts;
     std::unordered_map<IDirect3DTexture9*, Texture> textures;
     std::vector<IDirect3DBaseTexture9*> fontTextures;
+    std::unordered_set<IDirect3DBaseTexture9*> failedTextures;
     std::vector<uint8_t> artwork;
     bool ready = false;
-    bool textureFailed = false;
+    std::atomic<bool> textureReady{ false }, textureFailed{ false };
+    std::atomic<int> iconFamily{ 0 };
 
     template<class T> T& At(void* pointer, size_t offset)
     {
@@ -45,7 +48,7 @@ export namespace DPLIcons
     }
     int Family()
     {
-        const int family = FixSettings().Int("MAIN.GamepadIcons");
+        const int family = iconFamily.load(std::memory_order_relaxed);
         return family == 2 ? 1 : family == 3 ? 2 : 0;
     }
     bool PatchFont(void* pointer)
@@ -209,16 +212,28 @@ export namespace DPLIcons
     {
         return std::find(fontTextures.begin(), fontTextures.end(), texture) != fontTextures.end();
     }
+    void PublishTextureStatus()
+    {
+        const bool hasFailures = !failedTextures.empty();
+        if (textureFailed.exchange(hasFailures) != hasFailures)
+            FixSettings().Refresh("MAIN.GamepadIcons");
+    }
+    void PatchTexture(IDirect3DTexture9* texture)
+    {
+        if (Apply(texture))
+        {
+            if (failedTextures.erase(texture)) PublishTextureStatus();
+        }
+        else if (failedTextures.insert(texture).second)
+        {
+            OutputDebugStringA("DriverParallelLines: native controller font texture could not be updated.\n");
+            PublishTextureStatus();
+        }
+    }
     HRESULT WINAPI SetTexture(IDirect3DDevice9* device, DWORD stage, IDirect3DBaseTexture9* texture)
     {
         if (ready && !stage && texture && OwnsTexture(texture) && texture->GetType() == D3DRTYPE_TEXTURE)
-        {
-            if (!Apply(static_cast<IDirect3DTexture9*>(texture)) && !textureFailed)
-            {
-                textureFailed = true;
-                OutputDebugStringA("DriverParallelLines: native controller font texture could not be updated.\n");
-            }
-        }
+            PatchTexture(static_cast<IDirect3DTexture9*>(texture));
         return textureHook.stdcall<HRESULT>(device, stage, texture);
     }
     const wchar_t* __fastcall Name(void* self, void*, int bank, int id)
@@ -245,7 +260,8 @@ export namespace DPLIcons
         }
         textures.clear();
         fontTextures.clear();
-        textureFailed = false;
+        failedTextures.clear();
+        PublishTextureStatus();
     }
     void Frame()
     {
@@ -261,16 +277,34 @@ export namespace DPLIcons
             }
         }
         RefreshTextureOwners();
-        for (auto& [texture, saved] : textures) Apply(texture);
+        if (std::erase_if(failedTextures, [](auto* texture) { return !OwnsTexture(texture); }))
+            PublishTextureStatus();
+        for (auto& [texture, saved] : textures)
+            if (OwnsTexture(texture)) PatchTexture(texture);
     }
     void Attach(IDirect3DDevice9* device)
     {
         if (!ready || textureHook || !device) return;
         textureHook = safetyhook::create_inline((*reinterpret_cast<void***>(device))[65], SetTexture);
+        textureReady.store(static_cast<bool>(textureHook), std::memory_order_release);
+        if (textureReady.load(std::memory_order_relaxed))
+            FixSettings().Refresh("MAIN.GamepadIcons");
     }
     void Install()
     {
-        FixSettings().Availability("MAIN.GamepadIcons", [](std::string_view) { return ready && textureHook && !textureFailed; });
+        FixSettings().Availability("MAIN.GamepadIcons", [](std::string_view)
+        {
+            return textureReady.load(std::memory_order_acquire) && !textureFailed.load(std::memory_order_relaxed);
+        });
+        FixSettings().OnChange("MAIN.GamepadIcons", []()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            if (textureFailed.load(std::memory_order_acquire)) return;
+            int family = 0;
+            if (asi_settings::detail::ParseInt(FixSettings().Get("MAIN.GamepadIcons"), family))
+                iconFamily.store(family, std::memory_order_relaxed);
+        });
         auto names = hook::pattern("A1 ? ? ? ? 8B 10 56 8B 74 24 08 FF 74 24 0C 46 69 F6 08 01 00 00 FF 34 0E 8B C8 FF 52 10");
         auto load = hook::pattern("56 FF 74 24 10 8B F1 8B 4C 24 10 E8 ? ? ? ? 81 38 3F 8F 21 40 0F 85");
         auto release = hook::pattern("33 C0 88 41 08 89 41 14 89 41 18 C3 56 8B F1 33 C0 38 46 08");

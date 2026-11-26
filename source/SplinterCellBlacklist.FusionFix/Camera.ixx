@@ -41,13 +41,13 @@ namespace
     uintptr_t(__thiscall* GetActorCamera)(uintptr_t) = nullptr;
     SafetyHookInline SceneOne, SceneTwo, SceneTwoNearFar, SceneOneNearFar;
     SafetyHookMid TargetHook;
-    const float* Factor = nullptr;
+    std::atomic<float> Factor{ 1.0f };
     CameraDebugState LastSample;
     uint64_t TargetCalls = 0;
 
     float Multiplier()
     {
-        return std::isfinite(*Factor) ? std::clamp(*Factor, 0.5f, 2.0f) : 1.0f;
+        return Factor.load();
     }
 
     // Only the views drawn to the window: the first one and the split screen view (engine +25Ch). The client also lists render
@@ -207,7 +207,7 @@ export CameraDebugState GetCameraDebugState()
 {
     CameraDebugState state;
     state.available = bool(TargetHook) && bool(SceneOne) && bool(SceneTwo) && bool(SceneTwoNearFar) && bool(SceneOneNearFar);
-    state.factor = Factor ? Multiplier() : 1.0f;
+    state.factor = Multiplier();
     std::lock_guard lock(ContextMutex);
     state.sampled = LastSample.sampled;
     state.calls = LastSample.calls;
@@ -252,7 +252,17 @@ export void InitCamera()
     GetEngine = reinterpret_cast<decltype(GetEngine)>(engine.get_first());
     GetActorCamera = reinterpret_cast<decltype(GetActorCamera)>(actorCamera.get_first());
     Cinematics::SetEngine(GetEngine);
-    Factor = &FixSettings().Float("MAIN.FOVFactor");
+    auto publish = []()
+    {
+        static std::mutex mutex;
+        std::lock_guard lock(mutex);
+        const auto text = FixSettings().Get("MAIN.FOVFactor");
+        float value = 1.0f;
+        std::from_chars(text.data(), text.data() + text.size(), value);
+        Factor.store(std::isfinite(value) ? std::clamp(value, 0.5f, 2.0f) : 1.0f);
+    };
+    FixSettings().OnChange("MAIN.FOVFactor", publish);
+    publish();
     SceneOne = safetyhook::create_inline(constructors[0], One);
     SceneTwo = safetyhook::create_inline(constructors[1], Two);
     SceneTwoNearFar = safetyhook::create_inline(constructors[2], TwoNearFar);

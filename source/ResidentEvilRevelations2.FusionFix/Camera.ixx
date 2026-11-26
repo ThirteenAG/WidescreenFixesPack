@@ -3,6 +3,8 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include <algorithm>
+#include <atomic>
+#include <charconv>
 #include <cmath>
 
 export module Camera;
@@ -23,14 +25,18 @@ namespace Rev2CameraFOV
 
 namespace
 {
-    const float* pFOVFactor{};
-    const int* pCutsceneBorders{};
+    std::atomic<float> fovFactor{ 1.0f };
+    std::atomic<int> cutsceneBorders{ 3 };
+    enum class Cutscene { None, SinglePlayer, SplitScreen };
+    std::atomic<Cutscene> cutscene{ Cutscene::None };
+    GameRef<void*> demoManager;
+    using DemoCheck = bool (__thiscall*)(const void*, int);
+    DemoCheck isDemoPlaying = nullptr;
     SafetyHookInline shSetPerspective;
     SafetyHookInline shEventProjection;
     SafetyHookInline shCinemaScope;
     SafetyHookMid shGameplayFOV;
     SafetyHookMid shGameplayNear;
-    thread_local bool bFittingEventProjection{};
 
     template<typename T>
     const T& Field(const void* object, size_t offset)
@@ -88,19 +94,16 @@ namespace
         const bool fit = !IsSplitScreenActive() && IsActiveCamera(camera) &&
             std::isfinite(physical) && physical > 0.0f && physical < defaultAspectRatio &&
             std::abs(original - defaultAspectRatio) < 0.001f;
-        const auto previous = bFittingEventProjection;
         if (fit)
             aspect = physical;
-        bFittingEventProjection = fit;
         auto result = shEventProjection.unsafe_thiscall<float*>(camera, matrix);
-        bFittingEventProjection = previous;
         aspect = original;
         return result;
     }
 
     int __fastcall DrawCinemaScope(void* scope, void*, void* context)
     {
-        if (pCutsceneBorders && !(std::clamp(*pCutsceneBorders, 0, 3) & 1) && IsEventActive())
+        if (!(cutsceneBorders.load(std::memory_order_relaxed) & 1) && cutscene.load(std::memory_order_relaxed) != Cutscene::None)
             return 0;
         return shCinemaScope.unsafe_thiscall<int>(scope, context);
     }
@@ -179,9 +182,9 @@ namespace
             if (std::isfinite(aspect) && aspect > 0.0f && aspect < defaultAspectRatio && cameraAspect > aspect)
                 cameraAspect = aspect;
         }
-        if (pFOVFactor && *pFOVFactor != 1.0f && std::isfinite(*pFOVFactor) && *pFOVFactor > 0.0f &&
-            IsGameplayController(controller, fov))
-            fov = Rev2CameraFOV::Scale(fov, *pFOVFactor);
+        const auto factor = fovFactor.load(std::memory_order_relaxed);
+        if (factor != 1.0f && IsGameplayController(controller, fov))
+            fov = Rev2CameraFOV::Scale(fov, factor);
     }
 
     void ApplyGameplayNear(SafetyHookContext& regs)
@@ -201,11 +204,11 @@ namespace
             if (std::isfinite(aspect) && aspect > 0.0f && aspect < defaultAspectRatio && projectionAspect > aspect)
                 projectionAspect = aspect;
         }
-        if (!pFOVFactor || *pFOVFactor == 1.0f || !std::isfinite(*pFOVFactor) || *pFOVFactor <= 0.0f ||
-            !IsGameplayController(controller, originalFOV))
+        const auto factor = fovFactor.load(std::memory_order_relaxed);
+        if (factor == 1.0f || !IsGameplayController(controller, originalFOV))
             return;
         auto fov = Field<float>(controller, 60);
-        auto expected = Rev2CameraFOV::Scale(originalFOV, *pFOVFactor);
+        auto expected = Rev2CameraFOV::Scale(originalFOV, factor);
         if (fov == originalFOV || !std::isfinite(fov) || std::abs(fov - expected) > 0.001f)
             return;
         auto nearClip = regs.xmm0.f32[0] / (fov / originalFOV);
@@ -215,12 +218,6 @@ namespace
 
     void __fastcall SetPerspective(float* matrix, void* edx, float zNear, float zFar, float fov, float aspect)
     {
-        // At narrow aspects, fit the original 16:9 camera vertically inside
-        // the screen when its framing is requested. The side-border mode
-        // covers the added vertical area at the end of the frame.
-        if (bFittingEventProjection && pCutsceneBorders && (std::clamp(*pCutsceneBorders, 0, 3) & 2) &&
-            std::isfinite(aspect) && aspect > 0.0f && fov > 0.0f && fov < 3.14f)
-            fov = 2.0f * std::atan(std::tan(fov * 0.5f) * defaultAspectRatio / aspect);
         if (std::isfinite(aspect) && std::abs(aspect - 1.0f) > 0.01f)
         {
             auto diff = GetDiff();
@@ -233,11 +230,21 @@ namespace
     }
 }
 
-// Scripted scenes publish the event camera directly in the camera system's
-// active slots; the ordinary player camera is a uCameraCtrl instead.
-export bool IsCutsceneCamera()
+export namespace Rev2Camera
 {
-    return IsEventActive();
+    void SampleCutscene()
+    {
+        const auto demo = demoManager.is_initialized() ? demoManager.get() : nullptr;
+        // Scripted playback can keep a regular camera controller instead of installing an event camera.
+        const bool playing = (demo && isDemoPlaying(demo, -1)) || IsEventActive();
+        cutscene.store(playing ? (IsSplitScreenActive() ? Cutscene::SplitScreen : Cutscene::SinglePlayer) : Cutscene::None,
+            std::memory_order_relaxed);
+    }
+
+    bool ShowPillarbox()
+    {
+        return (cutsceneBorders.load(std::memory_order_relaxed) & 2) && cutscene.load(std::memory_order_relaxed) == Cutscene::SinglePlayer;
+    }
 }
 
 class Camera
@@ -247,8 +254,22 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            pFOVFactor = &FixSettings().Float("MAIN.FOVFactor");
-            pCutsceneBorders = &FixSettings().Int("MAIN.CutsceneBorders");
+            BindLiveSetting("MAIN.FOVFactor", [](const std::string& value)
+            {
+                float factor = 1.0f;
+                const auto end = value.data() + value.size();
+                const auto parsed = std::from_chars(value.data(), end, factor);
+                if (parsed.ec != std::errc() || parsed.ptr != end)
+                    factor = 1.0f;
+                fovFactor.store(factor, std::memory_order_relaxed);
+            });
+            BindLiveInt("MAIN.CutsceneBorders", [](int value)
+            {
+                cutsceneBorders.store(std::clamp(value, 0, 3), std::memory_order_relaxed);
+            });
+            auto demo = hook::pattern("8B 0D ? ? ? ? 6A FF E8 ? ? ? ? 84 C0 0F 84 ? ? ? ? 8A 4E 06 8A 46 04");
+            isDemoPlaying = reinterpret_cast<DemoCheck>(injector::GetBranchDestination(demo.get_first(8)).as_int());
+            demoManager.SetAddress(*demo.get_first<void**>(2));
             auto eventProjection = hook::pattern("83 EC 10 56 8B F1 57 80 BE BC 01 00 00 00 F3 0F 10 86 C0 00 00 00");
             shEventProjection = safetyhook::create_inline(eventProjection.get_first(), EventProjection);
             auto cinemaScope = hook::pattern("55 8B EC 83 E4 F0 81 EC 58 01 00 00 8B 55 08 56 0F B7 82 5A 01 00 00");

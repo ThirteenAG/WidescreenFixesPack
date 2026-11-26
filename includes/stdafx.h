@@ -876,14 +876,28 @@ public:
     }
 };
 
+// The game's settings key under HKCU (HKLM is redirected there). Nothing is written for the game: a key that doesn't
+// exist opens as a pseudo handle, a missing value reads as its registered default, and the real key is only made when
+// the game itself writes to it.
 class RegistryFallback
 {
-private:
-    static std::string s_MainPath;
-    static std::string s_FallbackPath;
-    static std::map<std::string, std::string> s_Defaults;
-
 public:
+    // The real registry functions; the trampolines when the game's calls are hooked inline
+    struct Api
+    {
+        decltype(&::RegCloseKey) CloseKey = ::RegCloseKey;
+        decltype(&::RegCreateKeyA) CreateKeyA = ::RegCreateKeyA;
+        decltype(&::RegOpenKeyA) OpenKeyA = ::RegOpenKeyA;
+        decltype(&::RegOpenKeyExA) OpenKeyExA = ::RegOpenKeyExA;
+        decltype(&::RegCreateKeyExA) CreateKeyExA = ::RegCreateKeyExA;
+        decltype(&::RegQueryValueExA) QueryValueExA = ::RegQueryValueExA;
+        decltype(&::RegSetValueExA) SetValueExA = ::RegSetValueExA;
+        decltype(&::RegQueryValueA) QueryValueA = ::RegQueryValueA;
+        decltype(&::RegDeleteKeyA) DeleteKeyA = ::RegDeleteKeyA;
+        decltype(&::RegEnumKeyA) EnumKeyA = ::RegEnumKeyA;
+    };
+    static inline Api Real;
+
     static void Init(std::string_view mainPath, std::string_view fallbackPath = {})
     {
         s_MainPath = mainPath;
@@ -897,154 +911,342 @@ public:
             s_Defaults.emplace(key, value);
     }
 
-    static void EnsureDefaults()
+    static LSTATUS WINAPI RegCloseKey(HKEY hKey)
     {
-        if (s_MainPath.empty())
-            return;
-
-        std::vector<std::string> paths = { s_MainPath };
-        if (!s_FallbackPath.empty())
-            paths.push_back(s_FallbackPath);
-
-        for (const auto& path : paths)
+        std::lock_guard lock(s_Mutex);
+        if (auto it = s_Pseudo.find(hKey); it != s_Pseudo.end())
         {
-            HKEY hKey = nullptr;
-            DWORD dwDisposition = 0;
-
-            LSTATUS status = ::RegCreateKeyExA(
-                HKEY_CURRENT_USER,
-                path.c_str(),
-                0, nullptr,
-                REG_OPTION_NON_VOLATILE,
-                KEY_READ | KEY_WRITE,
-                nullptr,
-                &hKey,
-                &dwDisposition);
-
-            if (status != ERROR_SUCCESS)
-                continue;
-
-            for (const auto& [key, valueStr] : s_Defaults)
-            {
-                char* end = nullptr;
-                DWORD dwordVal = strtoul(valueStr.c_str(), &end, 10);
-                if (end && *end == '\0')
-                    SetDwordIfMissing(hKey, key.c_str(), dwordVal);
-                else
-                    SetStringIfMissing(hKey, key.c_str(), valueStr);
-            }
-
-            ::RegCloseKey(hKey);
+            if (it->second.real)
+                Real.CloseKey(it->second.real);
+            CloseHandle(reinterpret_cast<HANDLE>(hKey));
+            s_Pseudo.erase(it);
+            return ERROR_SUCCESS;
         }
+        s_GameKeys.erase(hKey);
+        return Real.CloseKey(hKey);
     }
 
-    static LSTATUS WINAPI RegCreateKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
+    static LSTATUS WINAPI RegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REGSAM samDesired, PHKEY phkResult)
     {
-        if (hKey == HKEY_LOCAL_MACHINE)
-            hKey = HKEY_CURRENT_USER;
+        std::lock_guard lock(s_Mutex);
+        if (auto p = Pseudo(hKey))
+        {
+            if (auto real = RealKey(*p, false))
+                return Track(Real.OpenKeyExA(real, lpSubKey, ulOptions, samDesired, phkResult), IsEmpty(lpSubKey), phkResult);
+            return OpenMissing(p->path, lpSubKey, phkResult);
+        }
 
-        return ::RegCreateKeyA(hKey, lpSubKey, phkResult);
-    }
-
-    static LSTATUS WINAPI RegQueryValueA(HKEY hKey, LPCSTR lpSubKey, LPSTR lpData, PLONG lpcbData)
-    {
-        if (hKey == HKEY_LOCAL_MACHINE)
-            hKey = HKEY_CURRENT_USER;
-
-        return ::RegQueryValueA(hKey, lpSubKey, lpData, lpcbData);
-    }
-
-    static LSTATUS WINAPI RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey)
-    {
-        if (hKey == HKEY_LOCAL_MACHINE)
-            hKey = HKEY_CURRENT_USER;
-
-        return ::RegDeleteKeyA(hKey, lpSubKey);
-    }
-
-    static LSTATUS WINAPI RegEnumKeyA(HKEY hKey, DWORD dwIndex, LPSTR lpName, DWORD cchName)
-    {
-        if (hKey == HKEY_LOCAL_MACHINE)
-            hKey = HKEY_CURRENT_USER;
-
-        return ::RegEnumKeyA(hKey, dwIndex, lpName, cchName);
-    }
-
-    static LSTATUS WINAPI RegCreateKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved,
-                                               LPSTR lpClass, DWORD dwOptions, REGSAM samDesired,
-                                               CONST LPSECURITY_ATTRIBUTES lpSecurityAttributes,
-                                               PHKEY phkResult, LPDWORD lpdwDisposition)
-    {
-        if (hKey == HKEY_LOCAL_MACHINE)
-            hKey = HKEY_CURRENT_USER;
-
-        return ::RegCreateKeyExA(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired,
-                                 lpSecurityAttributes, phkResult, lpdwDisposition);
-    }
-
-    static LSTATUS WINAPI RegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions,
-                                             REGSAM samDesired, PHKEY phkResult)
-    {
-        if (hKey == HKEY_LOCAL_MACHINE)
-            hKey = HKEY_CURRENT_USER;
-
-        return ::RegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
+        hKey = Root(hKey);
+        std::string path;
+        LSTATUS status = Real.OpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
+        if (!IsGameKey(hKey, lpSubKey, path))
+            return status;
+        if (status == ERROR_FILE_NOT_FOUND)
+            return OpenMissing(path, nullptr, phkResult);
+        return Track(status, true, phkResult);
     }
 
     static LSTATUS WINAPI RegOpenKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
     {
-        if (hKey == HKEY_LOCAL_MACHINE)
-            hKey = HKEY_CURRENT_USER;
+        std::lock_guard lock(s_Mutex);
+        if (auto p = Pseudo(hKey))
+        {
+            // An empty subkey hands back the handle passed in, as the real function does
+            if (IsEmpty(lpSubKey) && phkResult)
+            {
+                *phkResult = hKey;
+                return ERROR_SUCCESS;
+            }
+            if (auto real = RealKey(*p, false))
+                return Real.OpenKeyA(real, lpSubKey, phkResult);
+            return OpenMissing(p->path, lpSubKey, phkResult);
+        }
 
-        return ::RegOpenKeyA(hKey, lpSubKey, phkResult);
+        hKey = Root(hKey);
+        std::string path;
+        LSTATUS status = Real.OpenKeyA(hKey, lpSubKey, phkResult);
+        if (!IsGameKey(hKey, lpSubKey, path))
+            return status;
+        if (status == ERROR_FILE_NOT_FOUND)
+            return OpenMissing(path, nullptr, phkResult);
+        return Track(status, true, phkResult);
     }
 
-    static LSTATUS WINAPI RegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved,
-                                              DWORD dwType, const BYTE* lpData, DWORD cbData)
+    // Creating a key is the game's write: a pseudo key becomes the real one first
+    static LSTATUS WINAPI RegCreateKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD Reserved, LPSTR lpClass, DWORD dwOptions,
+                                          REGSAM samDesired, CONST LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+                                          PHKEY phkResult, LPDWORD lpdwDisposition)
     {
-        return ::RegSetValueExA(hKey, lpValueName, Reserved, dwType, lpData, cbData);
+        std::lock_guard lock(s_Mutex);
+        bool gameKey = false;
+        if (auto p = Pseudo(hKey))
+        {
+            hKey = RealKey(*p, true);
+            if (!hKey)
+                return ERROR_ACCESS_DENIED;
+            gameKey = IsEmpty(lpSubKey);
+        }
+        else
+        {
+            hKey = Root(hKey);
+            std::string path;
+            gameKey = IsGameKey(hKey, lpSubKey, path);
+        }
+        return Track(Real.CreateKeyExA(hKey, lpSubKey, Reserved, lpClass, dwOptions, samDesired, lpSecurityAttributes,
+                                       phkResult, lpdwDisposition), gameKey, phkResult);
     }
 
-    static LSTATUS WINAPI RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved,
-                                                LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+    static LSTATUS WINAPI RegCreateKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
     {
-        return ::RegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+        std::lock_guard lock(s_Mutex);
+        if (auto p = Pseudo(hKey))
+        {
+            HKEY real = RealKey(*p, true);
+            if (!real)
+                return ERROR_ACCESS_DENIED;
+            // An empty subkey hands back the handle passed in, as the real function does
+            if (IsEmpty(lpSubKey) && phkResult)
+            {
+                *phkResult = hKey;
+                return ERROR_SUCCESS;
+            }
+            return Real.CreateKeyA(real, lpSubKey, phkResult);
+        }
+
+        hKey = Root(hKey);
+        std::string path;
+        bool gameKey = IsGameKey(hKey, lpSubKey, path);
+        return Track(Real.CreateKeyA(hKey, lpSubKey, phkResult), gameKey, phkResult);
     }
 
-    static LSTATUS WINAPI RegCloseKey(HKEY hKey)
+    static LSTATUS WINAPI RegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData)
     {
-        return ::RegCloseKey(hKey);
+        std::lock_guard lock(s_Mutex);
+        auto p = Pseudo(hKey);
+        if (!p)
+            return Real.SetValueExA(hKey, lpValueName, Reserved, dwType, lpData, cbData);
+
+        // A write that fails (the games pass Reserved = 1 for "FirstTime") leaves no key behind
+        bool created = false;
+        hKey = RealKey(*p, true, &created);
+        if (!hKey)
+            return ERROR_ACCESS_DENIED;
+        LSTATUS status = Real.SetValueExA(hKey, lpValueName, Reserved, dwType, lpData, cbData);
+        if (status != ERROR_SUCCESS && created)
+        {
+            Real.CloseKey(p->real);
+            p->real = nullptr;
+            Real.DeleteKeyA(HKEY_CURRENT_USER, p->path.c_str());
+        }
+        return status;
+    }
+
+    static LSTATUS WINAPI RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData)
+    {
+        std::lock_guard lock(s_Mutex);
+        bool gameKey = s_GameKeys.contains(hKey);
+        if (auto p = Pseudo(hKey))
+        {
+            gameKey = true;
+            hKey = RealKey(*p, false);
+        }
+        if (hKey)
+        {
+            LSTATUS status = Real.QueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
+            if (!gameKey || status != ERROR_FILE_NOT_FOUND)
+                return status;
+        }
+        return QueryDefault(lpValueName, lpType, lpData, lpcbData);
+    }
+
+    static LSTATUS WINAPI RegQueryValueA(HKEY hKey, LPCSTR lpSubKey, LPSTR lpData, PLONG lpcbData)
+    {
+        std::lock_guard lock(s_Mutex);
+        bool gameKey = s_GameKeys.contains(hKey);
+        if (auto p = Pseudo(hKey))
+        {
+            gameKey = true;
+            hKey = RealKey(*p, false);
+            if (!hKey && !IsEmpty(lpSubKey))
+                return ERROR_FILE_NOT_FOUND;
+        }
+        else
+        {
+            hKey = Root(hKey);
+        }
+        if (hKey)
+        {
+            LSTATUS status = Real.QueryValueA(hKey, lpSubKey, lpData, lpcbData);
+            if (!gameKey || !IsEmpty(lpSubKey) || status != ERROR_FILE_NOT_FOUND)
+                return status;
+        }
+        if (lpData && !lpcbData)
+            return ERROR_INVALID_PARAMETER;
+        DWORD cbData = lpcbData ? static_cast<DWORD>(*lpcbData) : 0;
+        LSTATUS status = QueryDefault(nullptr, nullptr, reinterpret_cast<LPBYTE>(lpData), lpcbData ? &cbData : nullptr, true);
+        if (lpcbData)
+            *lpcbData = static_cast<LONG>(cbData);
+        return status;
+    }
+
+    static LSTATUS WINAPI RegDeleteKeyA(HKEY hKey, LPCSTR lpSubKey)
+    {
+        std::lock_guard lock(s_Mutex);
+        if (auto p = Pseudo(hKey))
+        {
+            hKey = RealKey(*p, false);
+            if (!hKey)
+                return ERROR_FILE_NOT_FOUND;
+            return Real.DeleteKeyA(hKey, lpSubKey);
+        }
+        return Real.DeleteKeyA(Root(hKey), lpSubKey);
+    }
+
+    static LSTATUS WINAPI RegEnumKeyA(HKEY hKey, DWORD dwIndex, LPSTR lpName, DWORD cchName)
+    {
+        std::lock_guard lock(s_Mutex);
+        if (auto p = Pseudo(hKey))
+        {
+            hKey = RealKey(*p, false);
+            if (!hKey)
+                return ERROR_NO_MORE_ITEMS;
+            return Real.EnumKeyA(hKey, dwIndex, lpName, cchName);
+        }
+        return Real.EnumKeyA(Root(hKey), dwIndex, lpName, cchName);
     }
 
 private:
-    static void SetDwordIfMissing(HKEY hKey, const char* valueName, DWORD defaultValue)
+    struct PseudoKey
     {
-        DWORD type = 0, data = 0, cb = sizeof(DWORD);
-        LSTATUS query = RegQueryValueExA(hKey, valueName, nullptr, &type, (LPBYTE)&data, &cb);
+        std::string path;
+        HKEY real = nullptr;
+    };
 
-        if (query != ERROR_SUCCESS || type != REG_DWORD || cb != sizeof(DWORD))
-        {
-            LSTATUS set = RegSetValueExA(hKey, valueName, 0, REG_DWORD,
-                                              reinterpret_cast<const BYTE*>(&defaultValue), sizeof(DWORD));
-        }
+    static inline std::string s_MainPath;
+    static inline std::string s_FallbackPath;
+    static inline std::map<std::string, std::string> s_Defaults;
+    static inline std::recursive_mutex s_Mutex;
+    static inline std::map<HKEY, PseudoKey> s_Pseudo;
+    static inline std::set<HKEY> s_GameKeys;
+
+    static HKEY Root(HKEY hKey)
+    {
+        return hKey == HKEY_LOCAL_MACHINE ? HKEY_CURRENT_USER : hKey;
     }
 
-    static void SetStringIfMissing(HKEY hKey, const char* valueName, std::string_view defaultValue)
+    static bool IsEmpty(LPCSTR s)
     {
-        const char* lpValue = (valueName && strcmp(valueName, "@") == 0) ? nullptr : valueName;
+        return s == nullptr || *s == '\0';
+    }
 
-        DWORD type = 0, cb = 0;
-        LSTATUS query = RegQueryValueExA(hKey, lpValue, nullptr, &type, nullptr, &cb);
-
-        if (query != ERROR_SUCCESS || type != REG_SZ)
+    static bool IsGameKey(HKEY root, LPCSTR lpSubKey, std::string& path)
+    {
+        if (root != HKEY_CURRENT_USER || IsEmpty(lpSubKey))
+            return false;
+        std::string_view sub(lpSubKey);
+        while (!sub.empty() && sub.front() == '\\')
+            sub.remove_prefix(1);
+        while (!sub.empty() && sub.back() == '\\')
+            sub.remove_suffix(1);
+        for (const auto* candidate : { &s_MainPath, &s_FallbackPath })
         {
-            std::string val(defaultValue);
-            if (val.empty()) val = " ";
-
-            LSTATUS set = RegSetValueExA(hKey, lpValue, 0, REG_SZ,
-                                              reinterpret_cast<const BYTE*>(val.c_str()),
-                                              static_cast<DWORD>(val.length() + 1));
+            if (!candidate->empty() && candidate->size() == sub.size() && _strnicmp(candidate->data(), sub.data(), sub.size()) == 0)
+            {
+                path = *candidate;
+                return true;
+            }
         }
+        return false;
+    }
+
+    static PseudoKey* Pseudo(HKEY hKey)
+    {
+        auto it = s_Pseudo.find(hKey);
+        return it != s_Pseudo.end() ? &it->second : nullptr;
+    }
+
+    // The real key behind a pseudo handle: opened once it exists (the game may have written it through another
+    // handle), created only for the game's own write
+    static HKEY RealKey(PseudoKey& p, bool create, bool* created = nullptr)
+    {
+        if (!p.real)
+        {
+            HKEY real = nullptr;
+            if (Real.OpenKeyExA(HKEY_CURRENT_USER, p.path.c_str(), 0, KEY_READ | KEY_WRITE, &real) != ERROR_SUCCESS)
+            {
+                real = nullptr;
+                DWORD disposition = 0;
+                if (create && Real.CreateKeyExA(HKEY_CURRENT_USER, p.path.c_str(), 0, nullptr, REG_OPTION_NON_VOLATILE,
+                                                KEY_READ | KEY_WRITE, nullptr, &real, &disposition) != ERROR_SUCCESS)
+                    real = nullptr;
+                if (real && created)
+                    *created = disposition == REG_CREATED_NEW_KEY;
+            }
+            p.real = real;
+        }
+        return p.real;
+    }
+
+    // Opening the missing game key (subKey empty) gives a pseudo handle; anything below it doesn't exist
+    static LSTATUS OpenMissing(const std::string& path, LPCSTR lpSubKey, PHKEY phkResult)
+    {
+        if (!phkResult)
+            return ERROR_INVALID_PARAMETER;
+        *phkResult = nullptr;
+        if (!IsEmpty(lpSubKey))
+            return ERROR_FILE_NOT_FOUND;
+
+        // An event handle: a value no real key handle can have
+        HANDLE handle = CreateEventA(nullptr, TRUE, FALSE, nullptr);
+        if (!handle)
+            return ERROR_OUTOFMEMORY;
+        s_Pseudo.emplace(reinterpret_cast<HKEY>(handle), PseudoKey{ path });
+        *phkResult = reinterpret_cast<HKEY>(handle);
+        return ERROR_SUCCESS;
+    }
+
+    static LSTATUS Track(LSTATUS status, bool gameKey, PHKEY phkResult)
+    {
+        if (status == ERROR_SUCCESS && gameKey && phkResult && *phkResult)
+            s_GameKeys.insert(*phkResult);
+        return status;
+    }
+
+    // A registered default as the real API answers it: REG_DWORD for numbers, REG_SZ otherwise
+    static LSTATUS QueryDefault(LPCSTR lpValueName, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData, bool asString = false)
+    {
+        auto it = s_Defaults.find(IsEmpty(lpValueName) ? "@" : lpValueName);
+        if (it == s_Defaults.end())
+            return ERROR_FILE_NOT_FOUND;
+        if (lpData && !lpcbData)
+            return ERROR_INVALID_PARAMETER;
+
+        const std::string& value = it->second;
+        char* end = nullptr;
+        DWORD number = strtoul(value.c_str(), &end, 10);
+        bool isDword = !asString && !value.empty() && end && *end == '\0';
+
+        DWORD type = isDword ? REG_DWORD : REG_SZ;
+        DWORD size = isDword ? sizeof(DWORD) : static_cast<DWORD>(value.size() + 1);
+        if (lpType)
+            *lpType = type;
+        if (!lpData)
+        {
+            if (lpcbData)
+                *lpcbData = size;
+            return ERROR_SUCCESS;
+        }
+        if (*lpcbData < size)
+        {
+            *lpcbData = size;
+            return ERROR_MORE_DATA;
+        }
+        if (isDword)
+            memcpy(lpData, &number, sizeof(number));
+        else
+            memcpy(lpData, value.c_str(), size);
+        *lpcbData = size;
+        return ERROR_SUCCESS;
     }
 };
 
@@ -1116,6 +1318,14 @@ std::optional<T> PtrWalkthrough(auto addr, std::convertible_to<ptrdiff_t> auto&&
 class WFP
 {
 public:
+    // The developer overlay (Ctrl+F10, Back + Start) exists only in Debug builds: Release builds never draw it,
+    // so it never initializes and its hotkey, pad combo and input blocking stay inert
+#ifdef DEBUG
+    static constexpr bool DeveloperOverlay = true;
+#else
+    static constexpr bool DeveloperOverlay = false;
+#endif
+
     template<typename... Args>
     class Event : public std::function<void(Args...)>
     {

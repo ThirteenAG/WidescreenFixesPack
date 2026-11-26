@@ -22,6 +22,8 @@
   "WFP_GAMEPADICONS": "Knapikoner",
   "WFP_ICONS_AUTO": "Automatisk",
   "WFP_SKIPINTRO": "Spring intro over",
+  "WFP_SKIPPRESSSTART": "Spring »Tryk på Start« over",
+  "WFP_DESC_SKIPPRESSSTART": "Titelskærmen fortsætter automatisk uden at vente på, at du trykker på Start.",
   "WFP_U2SAVEBONUS": "Bonus for Underground 2-gemning",
   "WFP_FPSLIMIT": "Billedhastighed",
   "WFP_FPS_CUSTOM": "Brugerdefineret",

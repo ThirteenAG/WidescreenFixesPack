@@ -52,30 +52,34 @@ export void InitUnlocks()
 
     if (bUnlockAllNonCampaignMissions || bUnlockAllCampaignMissions)
     {
-        auto pattern = find_pattern("89 86 ? ? ? ? 8B 8E ? ? ? ? 6A 00");
-        injector::MakeNOP(pattern.get_first(), 6, true);
-        static auto SC6Mission__SerializeProfile = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
+        static auto unlock = [](uintptr_t mission, uint32_t status)
         {
-            auto& MissionEnum = *(uint8_t*)(regs.esi + 0xA4);
-            auto& MissionStatusEnum = *(uint32_t*)(regs.esi + 0xB4);
-            MissionStatusEnum = regs.eax;
+            if (status != 0)
+                return status;
 
-            if (!MissionStatusEnum)
-            {
-                if (bUnlockAllNonCampaignMissions && MissionEnum >= 13 && MissionEnum <= 16) // briggs
-                    MissionStatusEnum = 1;
-                if (bUnlockAllNonCampaignMissions && MissionEnum >= 13 && MissionEnum <= 28) // grim
-                    MissionStatusEnum = 1;
+            const auto id = *reinterpret_cast<const uint8_t*>(mission + 0xA4);
+            const bool fourthEchelon = id >= 13 && id <= 28;
+            const bool campaign = (id >= 1 && id <= 12) || id == 37 || id == 38;
+            return static_cast<uint32_t>((fourthEchelon && bUnlockAllNonCampaignMissions) ||
+                                         (campaign && bUnlockAllCampaignMissions));
+        };
 
-                if (bUnlockAllCampaignMissions)
-                {
-                    if (MissionEnum && MissionEnum <= 12)
-                        MissionStatusEnum = 1;
-
-                    if (MissionEnum == 21 || MissionEnum == 37 || MissionEnum == 38)
-                        MissionStatusEnum = 1;
-                }
-            }
+        // Profile deserialization and the three compiled forms of mission reset.
+        static auto deserialize = safetyhook::create_mid(find_pattern("89 86 B4 00 00 00 8B 8E BC 00 00 00 6A 00").get_first(), [](SafetyHookContext& regs)
+        {
+            regs.eax = unlock(regs.esi, regs.eax);
+        });
+        static auto reset = safetyhook::create_mid(find_pattern("89 81 B4 00 00 00 33 C0 B2 FF").get_first(), [](SafetyHookContext& regs)
+        {
+            regs.eax = unlock(regs.ecx, regs.eax);
+        });
+        static auto resetProfile = safetyhook::create_mid(find_pattern("89 90 B4 00 00 00 B2 FF 88 98").get_first(), [](SafetyHookContext& regs)
+        {
+            regs.edx = unlock(regs.eax, regs.edx);
+        });
+        static auto resetAll = safetyhook::create_mid(find_pattern("89 B0 B4 00 00 00 88 98 B8 00 00 00").get_first(), [](SafetyHookContext& regs)
+        {
+            regs.esi = unlock(regs.eax, regs.esi);
         });
     }
 }

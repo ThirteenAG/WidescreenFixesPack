@@ -7,6 +7,7 @@ module;
 #include <dbt.h>
 #include "FixSettings.hpp"
 #include "RawMouse.hpp"
+#include "Shared/PadInput.hpp"
 #include "Shared/NFS/StickDeadzone.hpp"
 
 export module Input;
@@ -205,43 +206,6 @@ namespace
     {
         return LastPadInput > LastKeyboardMouseInput;
     }
-
-    struct PadSnapshot
-    {
-        LONG axes[6] = {};
-        DWORD pov = 0xFFFFFFFF;
-        BYTE buttons[PadButtonCount] = {};
-        bool valid = false;
-    } PreviousPad[MaxJoysticks];
-
-    void TrackPadActivity(int index, const DIJOYSTATE2& state)
-    {
-        constexpr LONG AxisActivity = 2500;
-        PadSnapshot now;
-        now.valid = true;
-        memcpy(now.axes, &state.lX, sizeof(now.axes));
-        now.pov = state.rgdwPOV[0];
-        memcpy(now.buttons, state.rgbButtons, sizeof(now.buttons));
-
-        auto& before = PreviousPad[index];
-        if (!before.valid)
-        {
-            // The first state is the reference, not input
-            before = now;
-            before.valid = true;
-            return;
-        }
-
-        bool active = now.pov != before.pov || memcmp(now.buttons, before.buttons, sizeof(now.buttons)) != 0;
-        for (int i = 0; i < 6 && !active; ++i)
-            active = std::abs(now.axes[i] - before.axes[i]) > AxisActivity;
-
-        if (active)
-        {
-            before = now;
-            LastPadInput = SteadyClock::now();
-        }
-    }
 }
 
 // Right stick and mouse, used by the camera
@@ -278,18 +242,14 @@ export namespace Input
     };
 
     LookInput Look;
-    std::chrono::steady_clock::time_point LastStickUpdate = {};
 
-    // Called once per camera update; mouse deltas accumulate between calls. The stick only counts while its pad
-    // is read: a pad that is unplugged or switched to the controls menu's setup doesn't leave the camera turning.
+    // Called once per camera update; mouse deltas accumulate between calls.
     LookInput ConsumeLook()
     {
         LookInput result = Look;
         result.rawMouse = RawMouse::Consume(result.mouseX, result.mouseY);
         if (result.rawMouse && (result.mouseX || result.mouseY))
             LastKeyboardMouseInput = SteadyClock::now();
-        if (std::chrono::steady_clock::now() - LastStickUpdate > std::chrono::milliseconds(100))
-            result.stickX = result.stickY = 0.0f;
         Look.mouseX = 0;
         Look.mouseY = 0;
         if (DeveloperOverlay::BlocksInput())
@@ -638,10 +598,74 @@ namespace
 // Per-frame processing of a joystick channel, after the game built its action mask and analog bytes
 namespace
 {
-    SteadyClock::time_point LastOverlayPadUpdate{};
-    bool OverlayPadActive = false;
     bool bSeenAtRest[MaxJoysticks] = {};
     IDirectInputDevice8A* LastDevice[MaxJoysticks] = {};
+
+    void UpdatePad()
+    {
+        static std::array<XINPUT_GAMEPAD, XUSER_MAX_COUNT> previous{};
+        static DWORD owner = XUSER_MAX_COUNT;
+        std::array<XINPUT_GAMEPAD, XUSER_MAX_COUNT> pads{};
+        DWORD firstConnected = XUSER_MAX_COUNT;
+        DWORD moved = XUSER_MAX_COUNT;
+        bool ownerConnected = false;
+        const auto getState = PadInput::XInput().getState;
+        for (DWORD slot = 0; getState && slot < XUSER_MAX_COUNT; ++slot)
+        {
+            XINPUT_STATE state{};
+            auto& before = previous[slot];
+            if (getState(slot, &state) != ERROR_SUCCESS)
+            {
+                before = {};
+                continue;
+            }
+            const auto& pad = pads[slot] = state.Gamepad;
+            firstConnected = std::min(firstConnected, slot);
+            ownerConnected |= slot == owner;
+
+            const auto axisMoved = [](auto value, auto& last, int threshold)
+            {
+                if (std::abs(value) <= threshold)
+                {
+                    last = 0;
+                    return false;
+                }
+                if (std::abs(value - last) <= threshold)
+                    return false;
+                last = value;
+                return true;
+            };
+            bool changed = (pad.wButtons & ~before.wButtons) != 0;
+            before.wButtons = pad.wButtons;
+            changed |= axisMoved(pad.bLeftTrigger, before.bLeftTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+            changed |= axisMoved(pad.bRightTrigger, before.bRightTrigger, XINPUT_GAMEPAD_TRIGGER_THRESHOLD);
+            changed |= axisMoved(pad.sThumbLX, before.sThumbLX, 2500);
+            changed |= axisMoved(pad.sThumbLY, before.sThumbLY, 2500);
+            changed |= axisMoved(pad.sThumbRX, before.sThumbRX, 2500);
+            changed |= axisMoved(pad.sThumbRY, before.sThumbRY, 2500);
+            if (changed && (moved == XUSER_MAX_COUNT || slot == owner))
+                moved = slot;
+        }
+        if (moved < XUSER_MAX_COUNT)
+            owner = moved;
+        else if (!ownerConnected)
+            owner = firstConnected;
+
+        const XINPUT_GAMEPAD pad = owner < XUSER_MAX_COUNT ? pads[owner] : XINPUT_GAMEPAD{};
+        DeveloperOverlay::Gamepad(PadInput::OverlayButtons(pad.wButtons),
+            PadInput::OverlayAxis(pad.sThumbLX), PadInput::OverlayAxis(-int(pad.sThumbLY)));
+        if (moved < XUSER_MAX_COUNT && !DeveloperOverlay::BlocksInput())
+            LastPadInput = SteadyClock::now();
+
+        const float x = pad.sThumbRX / 32768.0f;
+        const float y = -pad.sThumbRY / 32768.0f;
+        const float magnitude = std::hypot(x, y);
+        static const float& rightDeadzone = FixSettings().Float("GAMEPAD.RightStickDeadzone");
+        const float deadzone = WFPStickDeadzone::Property(rightDeadzone) / 10000.0f;
+        const float scale = magnitude <= deadzone ? 0.0f : std::min((magnitude - deadzone) / (1.0f - deadzone), 1.0f) / magnitude;
+        Input::Look.stickX = x * scale;
+        Input::Look.stickY = y * scale;
+    }
 
     uint8_t AxisToByte(LONG value)
     {
@@ -724,7 +748,6 @@ namespace
         {
             LastDevice[index] = device;
             bSeenAtRest[index] = false;
-            PreviousPad[index].valid = false;
         }
 
         if (!IsGamepad(device))
@@ -749,33 +772,8 @@ namespace
 
         ReadTriggerPedals(channel, state);
 
-        uint16_t overlayButtons = 0;
-        constexpr uint16_t overlayMapping[] = { 0x4000, 0x2000, 0x8000, 0x1000, 0x400, 0x800, 0x1, 0x8, 0x2, 0x4 };
-        for (int button = 0; button < PadButtonCount; ++button)
-        {
-            if (state->rgbButtons[button] & 0x80)
-                overlayButtons |= overlayMapping[button];
-        }
-        auto pov = state->rgdwPOV[0];
-        if (pov != DWORD(-1))
-        {
-            if (pov >= 31500 || pov <= 4500) overlayButtons |= 0x10;
-            if (pov >= 4500 && pov <= 13500) overlayButtons |= 0x20;
-            if (pov >= 13500 && pov <= 22500) overlayButtons |= 0x40;
-            if (pov >= 22500 && pov <= 31500) overlayButtons |= 0x80;
-        }
-        LastOverlayPadUpdate = SteadyClock::now();
-        OverlayPadActive = true;
-        DeveloperOverlay::Gamepad(overlayButtons, int8_t(std::clamp(state->lX / 79, -127L, 127L)),
-            int8_t(std::clamp(state->lY / 79, -127L, 127L)));
         if (DeveloperOverlay::BlocksInput())
             return;
-        TrackPadActivity(index, *state);
-
-        // The right stick of the pad in use drives the camera
-        Input::Look.stickX = std::clamp(state->lRx / 10000.0f, -1.0f, 1.0f);
-        Input::Look.stickY = std::clamp(state->lRy / 10000.0f, -1.0f, 1.0f);
-        Input::LastStickUpdate = SteadyClock::now();
 
         if (IsFrontEnd())
         {
@@ -840,13 +838,8 @@ public:
             WFP::onGameProcessEvent() += []()
             {
                 RawMouse::Update(hWnd.get());
-                if (OverlayPadActive && SteadyClock::now() - LastOverlayPadUpdate > std::chrono::milliseconds(100))
-                {
-                    DeveloperOverlay::Gamepad(0, 0, 0);
-                    OverlayPadActive = false;
-                }
+                UpdatePad();
             };
-            WFP::onShutdownEvent() += []() { RawMouse::Release(); };
             onWindowMessage() += RawMouse::Message;
             pGamepadIcons = &FixSettings().Int("MAIN.GamepadIcons");
             CurrentIconStyle = DetectIconStyle();

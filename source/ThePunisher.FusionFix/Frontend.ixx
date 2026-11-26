@@ -1,11 +1,109 @@
 module;
 
 #include <stdafx.h>
+#include <bcrypt.h>
+#include <fstream>
+#include "FixSettings.hpp"
+
+#pragma comment(lib, "bcrypt.lib")
 
 export module Frontend;
 
 import ComVars;
 import MenuLayout;
+
+namespace
+{
+    std::atomic_bool FillMovies{ true };
+    const uint32_t* TheatricalVideo{};
+    const uint32_t* (WINAPI* OpenBink)(const char*, unsigned){};
+
+    bool IsVerifiedTheatricalFile(const char* filename)
+    {
+        const std::string_view path(filename);
+        const auto basename = path.substr(path.find_last_of("\\/") + 1);
+        if (basename.size() != sizeof("punmovie.bik") - 1 || _stricmp(basename.data(), "punmovie.bik") != 0)
+            return false;
+
+        constexpr int64_t fileSize = 18392720;
+        std::ifstream stream(filename, std::ios::binary | std::ios::ate);
+        if (!stream || stream.tellg() != fileSize)
+            return false;
+        stream.seekg(0);
+
+        // Every frame of this asset has sixteen completely black lines at each edge.
+        constexpr std::array<UCHAR, 32> expected{
+            0x48, 0xE3, 0x4D, 0x63, 0x6F, 0xEB, 0x8A, 0x12, 0xC9, 0xB4, 0x9B, 0xB8, 0x9C, 0xD8, 0x90, 0x7D,
+            0xF6, 0xE2, 0x6F, 0x60, 0x9E, 0x56, 0x50, 0x42, 0xE0, 0xB7, 0xFF, 0x77, 0x15, 0xDF, 0x5E, 0xF8
+        };
+        BCRYPT_ALG_HANDLE algorithm{};
+        if (BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_SHA256_ALGORITHM, nullptr, 0) < 0)
+            return false;
+        BCRYPT_HASH_HANDLE hash{};
+        bool valid = BCryptCreateHash(algorithm, &hash, nullptr, 0, nullptr, 0, 0) >= 0;
+        std::array<UCHAR, 65536> bytes;
+        while (valid && stream)
+        {
+            stream.read(reinterpret_cast<char*>(bytes.data()), bytes.size());
+            if (const auto count = stream.gcount())
+                valid = BCryptHashData(hash, bytes.data(), static_cast<ULONG>(count), 0) >= 0;
+        }
+        std::array<UCHAR, 32> actual{};
+        valid = valid && stream.eof() && BCryptFinishHash(hash, actual.data(), static_cast<ULONG>(actual.size()), 0) >= 0;
+        if (hash)
+            BCryptDestroyHash(hash);
+        BCryptCloseAlgorithmProvider(algorithm, 0);
+        return valid && actual == expected;
+    }
+
+    const uint32_t* WINAPI OpenMovie(const char* filename, unsigned flags)
+    {
+        const auto* video = OpenBink(filename, flags);
+        TheatricalVideo = video && filename && video[0] == 640 && video[1] == 480 && video[2] == 2754 && IsVerifiedTheatricalFile(filename)
+            ? video : nullptr;
+        return video;
+    }
+}
+
+// Loading screens are drawn from a timer thread while the game thread can draw too. Each 2D draw function locks
+// the one shared vertex buffer, fills it and draws it, so two threads at once crash on its emptied pointer:
+// these functions (and the buffer's re-creation) run one at a time.
+namespace DrawSerialization
+{
+    std::recursive_mutex mutex;
+    std::array<SafetyHookInline, 7> hooks;
+
+    template<size_t I>
+    int __cdecl Draw(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9, int a10, int a11, int a12, int a13, int a14)
+    {
+        const std::lock_guard lock(mutex);
+        return hooks[I].ccall<int>(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14);
+    }
+
+    template<size_t... I>
+    void Install(const std::array<const char*, sizeof...(I)>& patterns, std::index_sequence<I...>)
+    {
+        ((hooks[I] = safetyhook::create_inline(hook::pattern(patterns[I]).get_first(), Draw<I>)), ...);
+    }
+
+    void Install()
+    {
+        // Both threads also call the Direct3D device: let the runtime serialize those calls
+        auto create = hook::pattern("68 ? ? ? ? 8D 74 24 30 56 6A 40 51 8B 4C 24 24 6A 01 51 50 FF 52 3C");
+        injector::WriteMemory<uint8_t>(create.get_first(11), 0x40 | 0x04, true); // hardware vertex processing | multithreaded
+
+        // The callers clean the stack, so the extra arguments passed on are never read
+        Install({
+            "53 8B 5C 24 1C F6 C3 08 55 75 1D 8B 44 24 0C 8B 4C 24 1C 8B 54 24 18 6A",
+            "8B 4C 24 10 B8 01 00 00 00 83 EC 18 3B C8 0F 8C B8 02 00 00 39 44 24 2C",
+            "83 EC 08 53 55 56 8B 74 24 18 57 8D 44 24 10 50 8D 4C 24 18 51 56 E8",
+            "51 8B 44 24 08 8B 4C 24 18 8B 54 24 14 53 56 6A FF 6A FF 6A FF 50 51 52",
+            "56 8B 74 24 10 85 F6 75 08 89 35 ? ? ? ? 5E C3 F6 44 24 1C 08 75 1D",
+            "51 A1 ? ? ? ? 55 8B 6C 24 0C 56 03 C5 33 F6 3D 28 23 00 00 7C 31 E8",
+            "A1 ? ? ? ? 8B 08 53 33 DB 68 ? ? ? ? 53 53 68 08 02 00 00 68 00",
+        }, std::make_index_sequence<7>{});
+    }
+}
 
 char* memstr(char* block, const char* pattern, size_t bsize)
 {
@@ -20,6 +118,14 @@ char* memstr(char* block, const char* pattern, size_t bsize)
 
 export void InitFrontend()
 {
+    DrawSerialization::Install();
+    ObservePunisherSetting("MAIN.FMVWidescreenMode", []()
+    {
+        FillMovies.store(PunisherNumericSetting("MAIN.FMVWidescreenMode", 1) != 0, std::memory_order_relaxed);
+    });
+    auto imports = IATHook::Replace(GetModuleHandleW(nullptr), "binkw32.dll", std::forward_as_tuple("_BinkOpen@8", OpenMovie));
+    OpenBink = reinterpret_cast<decltype(OpenBink)>(imports.at("_BinkOpen@8").get());
+
     static injector::hook_back<void(__cdecl*)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int8_t, int8_t, int32_t, int8_t, int8_t)> hb_519CA0;
     hook::pattern pattern;
     //Menu
@@ -67,44 +173,40 @@ export void InitFrontend()
 
     auto DrawHook = [](int32_t texID, int32_t x, int32_t y, int32_t w, int32_t h, int32_t a6, int32_t a7, int32_t a8, int32_t a9, int8_t a10, int8_t a11, int32_t a12, int8_t a13, int8_t a14)
     {
+        const int left = std::max(0, static_cast<int>(Screen.fHudOffsetReal));
+        const auto drawBorder = [&](int bx, int by, int bw, int bh, int sourceWidth, int sourceHeight)
+        {
+            if (bw > 0 && bh > 0)
+                hb_519CA0.fun(texID, bx, by, bw, bh, a6, a7, sourceWidth, sourceHeight, a10, a11, a12, a13, a14);
+        };
         if (x == 0 && y == 0 && w == Screen.Width && h == Screen.Height)
         {
-            x = static_cast<int32_t>(Screen.fHudOffsetReal);
-            //y = top;
-            w = static_cast<int32_t>(Screen.fWidth - Screen.fHudOffsetReal - Screen.fHudOffsetReal);
-            //h = Screen.PresetHeight;
-
-            auto og = GetTexColor();
+            w = std::min(Screen.Width, Screen.Width43);
+            h = std::min(Screen.Height, static_cast<int>(std::lround(Screen.Width * 0.75f)));
+            x = (Screen.Width - w) / 2;
+            y = (Screen.Height - h) / 2;
+            const auto originalColour = GetTexColor();
             SetTexColor(0xFF000000);
-            hb_519CA0.fun(texID, 0, 0, (int)Screen.fHudOffsetReal, Screen.Height, a6, a7, a8, a9, a10, a11, a12, a13, a14);
-            hb_519CA0.fun(texID, Screen.Width - (int32_t)Screen.fHudOffsetReal, 0, Screen.Width, Screen.Height, a6, a7, a8, a9, a10, a11, a12, a13, a14);
-            SetTexColor(og);
+            drawBorder(0, 0, x, Screen.Height, a8, a9);
+            drawBorder(x + w, 0, Screen.Width - x - w, Screen.Height, a8, a9);
+            drawBorder(0, 0, Screen.Width, y, a8, a9);
+            drawBorder(0, y + h, Screen.Width, Screen.Height - y - h, a8, a9);
+            SetTexColor(originalColour);
         }
-        else
+        else if (left > 0)
         {
-            if ((x == 0 && y == 0 && w == 640 && h == 360) || (x == 0 && y == 0 && w == 960 && h == 540) || (x == 0 && y == 540 && w == 960 && h == 540))
+            const bool leftTile = x == 0 && ((y == 0 && w == 640 && h == 360) || ((y == 0 || y == 540) && w == 960 && h == 540));
+            const bool rightTile = x == 960 && (y == 0 || y == 540) && w == 960 && h == 540;
+            if (leftTile || rightTile)
             {
-                x += static_cast<int32_t>(Screen.fHudOffsetReal);
-                w -= static_cast<int32_t>(Screen.fHudOffsetReal);
-
-                auto og = GetTexColor();
+                if (leftTile)
+                    x += left;
+                w = std::max(0, w - left);
+                const auto originalColour = GetTexColor();
                 SetTexColor(0xFF000000);
-                hb_519CA0.fun(texID, 0, 0, (int)Screen.fHudOffsetReal, Screen.Height, a6, a7, a8, a9, a10, a11, a12, a13, a14);
-                hb_519CA0.fun(texID, Screen.Width - (int32_t)Screen.fHudOffsetReal, 0, Screen.Width, Screen.Height, a6, a7, a8, a9, a10, a11, a12, a13, a14);
-                SetTexColor(og);
-            }
-            else
-            {
-                if ((x == 960 && y == 0 && w == 960 && h == 540) || (x == 960 && y == 540 && w == 960 && h == 540))
-                {
-                    w -= static_cast<int32_t>(Screen.fHudOffsetReal);
-
-                    auto og = GetTexColor();
-                    SetTexColor(0xFF000000);
-                    hb_519CA0.fun(texID, 0, 0, (int)Screen.fHudOffsetReal, Screen.Height, a6, a7, 1, 1, a10, a11, a12, a13, a14);
-                    hb_519CA0.fun(texID, Screen.Width - (int32_t)Screen.fHudOffsetReal, 0, Screen.Width, Screen.Height, a6, a7, 1, 1, a10, a11, a12, a13, a14);
-                    SetTexColor(og);
-                }
+                drawBorder(0, 0, left, Screen.Height, rightTile ? 1 : a8, rightTile ? 1 : a9);
+                drawBorder(Screen.Width - left, 0, left, Screen.Height, rightTile ? 1 : a8, rightTile ? 1 : a9);
+                SetTexColor(originalColour);
             }
         }
         return hb_519CA0.fun(texID, x, y, w, h, a6, a7, a8, a9, a10, a11, a12, a13, a14);
@@ -133,12 +235,18 @@ export void InitFrontend()
             return draw(texture, x, y, width, height, sourceX, sourceY,
                 sourceWidth, sourceHeight, flipX, flipY, stage, flags, 0);
 
-        // Both modes show the whole movie at its own aspect
-        float scaleX = Screen.fWidth / static_cast<float>(video[0]);
-        float scaleY = Screen.fHeight / static_cast<float>(video[1]);
-        scaleX = scaleY = std::min(scaleX, scaleY);
-        width = std::max(1, static_cast<int>(std::lround(video[0] * scaleX)));
-        height = std::max(1, static_cast<int>(std::lround(video[1] * scaleY)));
+        const bool fill = FillMovies.load(std::memory_order_relaxed);
+        const bool crop = fill && video == TheatricalVideo && sourceY == 0 && sourceHeight == static_cast<int>(video[1]);
+        if (crop)
+        {
+            sourceY += 16;
+            sourceHeight -= 32;
+        }
+        const float areaWidth = fill ? Screen.fWidth : std::min(Screen.fWidth, Screen.fHeight * (4.0f / 3.0f));
+        const float movieHeight = static_cast<float>(video[1]) - (crop ? 32.0f : 0.0f);
+        const float scale = std::min(areaWidth / static_cast<float>(video[0]), Screen.fHeight / movieHeight);
+        width = std::max(1, static_cast<int>(std::lround(video[0] * scale)));
+        height = std::max(1, static_cast<int>(std::lround(movieHeight * scale)));
         x = (Screen.Width - width) / 2;
         y = (Screen.Height - height) / 2;
 

@@ -25,6 +25,7 @@ export namespace GunDevice
     inline std::atomic<bool> UsingPad{ false };
     inline IDirect3D9*(WINAPI* NativeCreate9)(UINT) = nullptr;
     inline std::function<void()> Frame;
+    inline std::atomic<int> IconFamily{ 0 };
     inline LONG HotkeyDown = 0, HotkeyRequested = 0;
 
     inline HMODULE ThisModule()
@@ -58,6 +59,8 @@ export namespace GunDevice
 
     inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
         {
@@ -74,6 +77,8 @@ export namespace GunDevice
 
     inline void Keyboard(HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         const bool down = window && GetForegroundWindow() == window &&
             (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
         if (down)
@@ -109,10 +114,11 @@ export namespace GunDevice
             return true;
         }();
         CurrentDevice = device;
-        Keyboard(GunDisplay::window);
+        Keyboard(GunDisplay::window.load());
         GunCutscene::Draw(device);
-        Overlay.Present(device, ThisModule());
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !BlocksInput());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
+        CursorConfinement::SetEnabled(GunDisplay::ConfineCursor.load(std::memory_order_relaxed) && !BlocksInput());
         if (Frame)
             Frame();
         return PresentHook.stdcall<HRESULT>(device, source, destination, window, dirty);
@@ -131,7 +137,8 @@ export namespace GunDevice
         if (SUCCEEDED(result) && device && *device && !PresentHook)
         {
             auto table = *reinterpret_cast<void***>(*device);
-            ResetHook = safetyhook::create_inline(table[16], Reset);
+            if constexpr (WFP::DeveloperOverlay)
+                ResetHook = safetyhook::create_inline(table[16], Reset);
             PresentHook = safetyhook::create_inline(table[17], Present);
             GunMovie::InstallDraw(table[83]);
         }
@@ -151,7 +158,7 @@ export namespace GunDevice
     inline void Track(DWORD size, const uint8_t* data)
     {
         static uint8_t keys[256]{}, buttons[8]{}, pad[272]{};
-        if (!data || GetForegroundWindow() != GunDisplay::window)
+        if (!data || GetForegroundWindow() != GunDisplay::window.load())
             return;
         if (size == 256)
         {
@@ -351,8 +358,7 @@ export namespace GunDevice
             }
             else
                 device->Release();
-            static const auto& setting = FixSettings().Int("MAIN.GamepadIcons");
-            const int family = std::clamp(setting, 0, 3);
+            const int family = std::clamp(IconFamily.load(std::memory_order_relaxed), 0, 3);
             const int index = family == 0 ? 0 : family - 1;
             auto*& result = Atlas[index][icon];
             if (result)
@@ -441,6 +447,7 @@ export namespace GunDevice
 
     inline void Init()
     {
+        BindLiveSetting("MAIN.GamepadIcons", IconFamily);
         GunMovie::Init();
         Prompts::Install();
 

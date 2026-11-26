@@ -38,7 +38,7 @@
 
 The fix creates `scripts/SecondSight.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it, also while the game runs. Vanilla shows the intro, keeps the game's own cutscene bars, runs at the game's own frame rate and plays the logo videos with black bars; Recommended and Enhanced skip the intro, add side bars in cutscenes, fit the logo videos to the screen and limit the frame rate to the monitor's. Window, resolution and input settings aren't changed by presets. Texts are available in English, French, German, Italian and Spanish.
 
-The settings-language choice in FusionFixHub or the settings file selects the language of the update notice and the developer overlay; Automatic follows the language of Windows.
+The settings-language choice in FusionFixHub or the settings file selects the language of the update notice; Automatic follows the language of Windows.
 
 ## Known limits
 

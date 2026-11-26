@@ -1,10 +1,41 @@
 #include "Draw.hpp"
+#include <string_view>
 
 namespace kr::movie
 {
 namespace
 {
-SafetyMipsMid movieUpload, movieDraw, videoCreate, videoUpdate;
+SafetyMipsMid movieUpload, movieDraw, decoderOpen, decoderDraw, videoCreate, videoUpdate;
+uintptr_t letterboxedDecoder;
+bool letterboxedFrame;
+
+void DecoderOpen(SafetyMipsContext& regs)
+{
+    // The decoder appends .pss after receiving the game's native path string.
+    const auto string = Read<uintptr_t>(regs.a1);
+    std::string_view name{reinterpret_cast<const char*>(string + 6), Read<uint16_t>(string + 2)};
+    const auto separator = name.find_last_of("/\\");
+    if (separator != name.npos)
+    {
+        name.remove_prefix(separator + 1);
+    }
+    auto sameName = [&](std::string_view asset)
+    {
+        return name.size() == asset.size() && std::equal(name.begin(), name.end(), asset.begin(), [](char l, char r)
+        {
+            return ('A' <= l && l <= 'Z' ? l + ('a' - 'A') : l) == r;
+        });
+    };
+    const bool letterboxed = sameName("intro") || sameName("outro") || sameName("scenea") ||
+        sameName("sceneb") || sameName("scenee") || sameName("scenef") || sameName("sceneg") ||
+        sameName("sceneh") || sameName("scenej");
+    letterboxedDecoder = letterboxed ? uintptr_t(regs.a0) : 0;
+}
+
+void DecoderDraw(SafetyMipsContext& regs)
+{
+    letterboxedFrame = regs.a0 == letterboxedDecoder;
+}
 
 // FMV: NiPS2Renderer::UploadMovieFrame (0x363340: renderer, image, columns,
 // rows of 16 px) sends the decoded frame in 16-px columns straight into the
@@ -14,14 +45,15 @@ SafetyMipsMid movieUpload, movieDraw, videoCreate, videoUpdate;
 // context 2 itself before each of its own uses).
 struct
 {
-    bool active;
+    bool active, crop;
     uintptr_t renderer;
     uint32_t width, height;
 } movie;
 void MovieUpload(SafetyMipsContext& regs)
 {
     movie.active = false;
-    if ((!fmvFill && Fit() == 1 && VerticalFit() == 1) || !draw::packetBegin)
+    const bool crop = fmvFill && letterboxedFrame;
+    if ((!crop && Fit() == 1 && VerticalFit() == 1) || !draw::packetBegin)
     {
         return;
     }
@@ -42,7 +74,7 @@ void MovieUpload(SafetyMipsContext& regs)
     }
     auto& dbp = regs.raw().gpr[30].word[1]; // fp = BITBLTBUF, DBP in bits 32-45
     dbp = (dbp & ~0x3FFFu) | (zbp * 32);
-    movie = {true, r, width, height};
+    movie = {true, crop, r, width, height};
 }
 uint32_t Log2(uint32_t v)
 {
@@ -76,7 +108,7 @@ void MovieDraw(SafetyMipsContext& regs)
     // into rows 76-436 of their 4:3 frame; Fill shows the picture between them as large as the screen allows.
     float frameWidth = Fit(), frameHeight = VerticalFit();
     uint32_t v0 = 0, v1 = height * 16;
-    if (fmvFill)
+    if (movie.crop)
     {
         constexpr float top = 76.0f / 512.0f, bottom = 436.0f / 512.0f;
         const float picture = (4.0f / 3.0f) / (bottom - top), aspect = Aspect();
@@ -166,6 +198,8 @@ void Install()
 {
     if (draw::Bind())
     {
+        decoderOpen = safetymips::create_mid<&DecoderOpen>(0x2571D0);
+        decoderDraw = safetymips::create_mid<&DecoderDraw>(0x256E70);
         movieUpload = safetymips::create_mid<&MovieUpload>(0x3633B0);
         movieDraw = safetymips::create_mid<&MovieDraw>(0x36AA50);
     }

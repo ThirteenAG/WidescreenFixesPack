@@ -1,11 +1,12 @@
 #include "Controls.hpp"
 #include "ButtonIcons.hpp"
-#include "../Shared/Console/Text.hpp"
+#include "Shared/Console/Text.hpp"
+#include <algorithm>
 #include <cstring>
 #include "Settings.hpp"
-#include "../Shared/Console/PS2Settings.hpp"
+#include "Shared/Console/PS2Settings.hpp"
 extern "C" {
-#include "../../external/injector/include/ps2/plugin_settings.h"
+#include "ps2/plugin_settings.h"
 }
 
 // Native frontend rows for GTA LCS PS2.
@@ -37,7 +38,7 @@ constexpr uintptr_t screenOffset = 0x588, rowOffset = 0x58C, editOffset = 0x590,
 enum Option : int16_t {
     FrameRate = 0x60, MoreOptions, HudSize, CutsceneBorders, FastLoading, PcMenu, PcControls,
     MouseSensitivity, InvertMouse, BindingsMenu, NextPage, ResetBindings, Back, Blur, Preset, ApplyPreset,
-    FieldOfView, HudAspect, SkipIntro, GamepadIcons, ModernControls, PadCameraSpeed, InvertPad, OptionEnd,
+    FieldOfView, HudAspect, SkipIntro, GamepadIcons, ModernControls, PadCameraSpeed, InvertPad, HoldCamera, OptionEnd,
     BindingRow = 0x78, BindingEnd = 0x82,
     // Rows of the plugin list and the fix's page.
     FixOptions = 0x88, FixDefaults, VehicleLights, PluginEnd
@@ -47,11 +48,11 @@ constexpr unsigned optionCount = OptionEnd - FrameRate;
 static_assert(OptionEnd <= BindingRow && BindingEnd <= FixOptions);
 constexpr char keys[optionCount][8] = {"WF_FPS", "WF_MORE", "WF_HUD", "WF_CBOR", "WF_LOAD", "WF_PCM",
     "WF_PC", "WF_SENS", "WF_INV", "WF_BIND", "WF_NEXT", "WF_RST", "WF_BACK", "WF_BLUR", "WF_PRE", "WF_APLY",
-    "WF_FOV", "WF_HUDA", "WF_SKIP", "WF_ICON", "WF_MOD", "WF_PCAM", "WF_PINV"};
+    "WF_FOV", "WF_HUDA", "WF_SKIP", "WF_ICON", "WF_MOD", "WF_PCAM", "WF_PINV", "WF_HOLD"};
 constexpr char captions[optionCount][28] = {"FRAME RATE:", "PLUGINS", "HUD SIZE", "CUTSCENE BORDERS",
     "FAST LOADING", "CONTROLS", "KEYBOARD AND MOUSE", "MOUSE SENSITIVITY", "INVERT MOUSE Y", "KEY BINDINGS",
     "NEXT PAGE", "RESET TO DEFAULTS", "", "BLUR EFFECT", "PRESET", "APPLY PRESET", "FIELD OF VIEW", "HUD ASPECT RATIO",
-    "SKIP INTRO", "BUTTON ICONS", "MODERN CONTROLS", "PAD CAMERA SPEED", "INVERT PAD Y"};
+    "SKIP INTRO", "BUTTON ICONS", "MODERN CONTROLS", "PAD CAMERA SPEED", "INVERT PAD Y", "HOLD VEHICLE CAMERA"};
 constexpr unsigned pluginRowCount = PluginEnd - FixOptions;
 constexpr char pluginKeys[pluginRowCount][8] = {"WF_FIX", "WF_FDEF", "WF_VLIT"};
 constexpr char pluginCaptions[pluginRowCount][28] = {"FUSION FIX", "RESTORE DEFAULTS", "VEHICLE LIGHTS"};
@@ -80,6 +81,7 @@ constexpr const char* optionHelp[optionCount] = {
     "Drive, aim and shoot with the triggers.",
     "Speed of the right stick camera.",
     "Inverts the vertical right stick camera.",
+    "The vehicle camera stays where the right stick turned it.",
 };
 constexpr const char* pluginHelp[pluginRowCount] = {
     "Widescreen, HUD, camera, frame rate, lights and controls.",
@@ -102,7 +104,7 @@ struct MenuCatalog {
 };
 const MenuCatalog english{captions, pluginCaptions, {"VANILLA", "RECOMMENDED", "ENHANCED"},
     {"OFF", "LETTERBOX", "PILLARBOX", "BOTH"},
-    "BACK", "ON", "OFF", "CUSTOM", "UNAVAILABLE", "SAVE FAILED", "PRESS AGAIN", "CFG MATCH", "IN USE", "PRESS X", "PRESS A KEY (ESC CANCELS)",
+    "BACK", "ON", "OFF", "CUSTOM", "UNAVAILABLE", "SAVE FAILED", "SELECT AGAIN", "CFG MATCH", "IN USE", "SELECT", "PRESS A KEY (ESC CANCELS)",
     optionHelp, pluginHelp, "Restart the game to apply all settings."};
 const MenuCatalog& ResolveCatalog(MenuLanguage language) {
     // Only English is supplied; an undetected native locale falls back to it.
@@ -164,7 +166,10 @@ Extension display{displayScreen}, controls{controlsScreen};
 unsigned bindingPage = 0, bindingSlot = 0, captureFrames = 0;
 Act captureAction = Act::Forward;
 unsigned captureSlot = 0;
-bool dirty = false, menuWasActive = false;
+uint64_t dirtyOptions = 0;
+bool menuWasActive = false;
+constexpr uint64_t OptionBit(int option) { return 1ull << (option - FrameRate); }
+static_assert(PluginEnd - FrameRate <= 64);
 int shownPreset = -1;
 bool confirmPreset = false, confirmDefaults = false;
 uint16_t valueText[16][48]{};
@@ -237,7 +242,7 @@ void Write(Extension& extension) {
                            SkipIntro, VehicleLights, GamepadIcons, PcMenu, FixDefaults, Back}) { add(Row(option, y, displayScreen)); y += 13; }
     } else if (extension.mode == 1 || extension.mode == 3) {
         int16_t y = 30;
-        for (int option : {ModernControls, PadCameraSpeed, InvertPad, PcControls, MouseSensitivity, InvertMouse, BindingsMenu, Back}) {
+        for (int option : {ModernControls, PadCameraSpeed, InvertPad, HoldCamera, PcControls, MouseSensitivity, InvertMouse, BindingsMenu, Back}) {
             add(Row(option, y, extension.index));
             y += 18;
         }
@@ -309,6 +314,11 @@ void Attach(Extension& extension, const char* name, int16_t first) {
     Write(extension);
 }
 
+constexpr int mouseSensitivityMinimum = 5;
+constexpr int mouseSensitivityMaximum = 1000;
+constexpr int mouseSensitivityStep = 25;
+constexpr float mouseSensitivityPerPercent = 0.002f / 100.0f;
+
 int Value(int option) {
     switch (option) {
     case FrameRate: return settings.sixtyFPS;
@@ -316,7 +326,7 @@ int Value(int option) {
     case CutsceneBorders: return settings.cutsceneBorders;
     case FastLoading: return settings.unthrottle;
     case PcControls: return settings.pcControls;
-    case MouseSensitivity: return int(settings.mouseSensitivity * 2000.0f + 0.5f); // 0.0005 steps
+    case MouseSensitivity: return int(settings.mouseSensitivity / mouseSensitivityPerPercent + 0.5f);
     case InvertMouse: return settings.invertMouse;
     case Blur: return !settings.disableBlur;
     case FieldOfView: return int(settings.fovFactor * 100.0f + 0.5f);
@@ -325,37 +335,96 @@ int Value(int option) {
     case ModernControls: return settings.modernControls;
     case PadCameraSpeed: return int(settings.padCameraSpeed * 100.0f + 0.5f);
     case InvertPad: return settings.invertPad;
+    case HoldCamera: return settings.holdVehicleCamera;
     default: return 0;
     }
 }
-// The descriptor's presets: 0 vanilla, 1 recommended (the defaults), 2 enhanced. Only the
-// settings whose values differ between them; the others (FOV, HUD size and shape, PC
-// controls, sensitivity, bindings) keep the player's choice.
-struct PresetValues { bool unthrottle, disableBlur, skipIntro, vehicleLights, sixtyFPS, modernControls; int cutsceneBorders, gamepadIcons; };
-constexpr PresetValues presetValues[3] = {{false, false, false, false, false, false, 1, 2},
-    {true, true, true, true, false, true, 3, 0}, {true, true, true, true, true, true, 3, 0}};
+// The HUD box is Auto in all three presets.
+struct PresetValues { bool unthrottle, disableBlur, skipIntro, vehicleLights, sixtyFPS, modernControls, holdVehicleCamera; int cutsceneBorders, gamepadIcons; };
+constexpr PresetValues presetValues[3] = {{false, false, false, false, false, false, false, 1, 2},
+    {true, true, true, true, false, true, false, 3, 0}, {true, true, true, true, true, true, true, 3, 0}};
 constexpr int recommendedPreset = 1;
-bool PresetMatches(int preset) {
-    if (preset < 0 || preset > 2) return false;
-    const auto& p = presetValues[preset];
-    return settings.unthrottle == p.unthrottle && settings.disableBlur == p.disableBlur &&
-        settings.skipIntro == p.skipIntro && settings.vehicleLights == p.vehicleLights && settings.sixtyFPS == p.sixtyFPS &&
-        settings.modernControls == p.modernControls && settings.cutsceneBorders == p.cutsceneBorders && settings.gamepadIcons == p.gamepadIcons;
+bool PageMatches(const PresetValues& preset)
+{
+    return settings.unthrottle == preset.unthrottle && settings.disableBlur == preset.disableBlur &&
+        settings.skipIntro == preset.skipIntro && settings.vehicleLights == preset.vehicleLights &&
+        settings.sixtyFPS == preset.sixtyFPS && settings.cutsceneBorders == preset.cutsceneBorders &&
+        settings.gamepadIcons == preset.gamepadIcons;
+}
+bool PresetMatches(int preset)
+{
+    return preset >= 0 && preset < 3 && PageMatches(presetValues[preset]) &&
+        settings.modernControls == presetValues[preset].modernControls &&
+        settings.holdVehicleCamera == presetValues[preset].holdVehicleCamera;
 }
 int MatchingPreset() { return PresetMatches(1) ? 1 : PresetMatches(0) ? 0 : PresetMatches(2) ? 2 : -1; }
-// Press once to arm, again to apply; nothing happens when the values already match.
-void ApplyPresetValues(int preset, bool& confirm) {
-    if (preset < 0 || preset > 2 || PresetMatches(preset)) { confirm = false; return; }
-    if (!confirm) { confirm = true; return; }
-    // The descriptor's preset values; controls, editor-only aspect and
-    // compatibility settings stay intact.
-    const auto& p = presetValues[preset];
-    settings.unthrottle = p.unthrottle; settings.disableBlur = p.disableBlur;
-    settings.skipIntro = p.skipIntro; settings.vehicleLights = p.vehicleLights; settings.cutsceneBorders = p.cutsceneBorders; settings.gamepadIcons = p.gamepadIcons;
-    if (settings.sixtyFPS != p.sixtyFPS) { settings.sixtyFPS = p.sixtyFPS; ApplyFrameRate(); }
-    if (settings.modernControls != p.modernControls) { settings.modernControls = p.modernControls; ApplyControls(); }
-    ApplyBlur(); dirty = true; confirm = false;
+void TrackChanges(const Settings& previous)
+{
+    if (settings.sixtyFPS != previous.sixtyFPS) dirtyOptions |= OptionBit(FrameRate);
+    if (settings.unthrottle != previous.unthrottle) dirtyOptions |= OptionBit(FastLoading);
+    if (settings.hudScale != previous.hudScale) dirtyOptions |= OptionBit(HudSize);
+    if (settings.cutsceneBorders != previous.cutsceneBorders) dirtyOptions |= OptionBit(CutsceneBorders);
+    if (settings.pcControls != previous.pcControls) dirtyOptions |= OptionBit(PcControls);
+    if (settings.mouseSensitivity != previous.mouseSensitivity) dirtyOptions |= OptionBit(MouseSensitivity);
+    if (settings.invertMouse != previous.invertMouse) dirtyOptions |= OptionBit(InvertMouse);
+    if (settings.disableBlur != previous.disableBlur) dirtyOptions |= OptionBit(Blur);
+    if (settings.fovFactor != previous.fovFactor) dirtyOptions |= OptionBit(FieldOfView);
+    if (settings.hudAspect != previous.hudAspect) dirtyOptions |= OptionBit(HudAspect);
+    if (settings.skipIntro != previous.skipIntro) dirtyOptions |= OptionBit(SkipIntro);
+    if (settings.gamepadIcons != previous.gamepadIcons) dirtyOptions |= OptionBit(GamepadIcons);
+    if (settings.vehicleLights != previous.vehicleLights) dirtyOptions |= OptionBit(VehicleLights);
+    if (settings.modernControls != previous.modernControls) dirtyOptions |= OptionBit(ModernControls);
+    if (settings.padCameraSpeed != previous.padCameraSpeed) dirtyOptions |= OptionBit(PadCameraSpeed);
+    if (settings.invertPad != previous.invertPad) dirtyOptions |= OptionBit(InvertPad);
+    if (settings.holdVehicleCamera != previous.holdVehicleCamera) dirtyOptions |= OptionBit(HoldCamera);
+}
+void SetPageValues(const PresetValues& preset)
+{
+    settings.unthrottle = preset.unthrottle;
+    settings.disableBlur = preset.disableBlur;
+    settings.skipIntro = preset.skipIntro;
+    settings.vehicleLights = preset.vehicleLights;
+    settings.cutsceneBorders = preset.cutsceneBorders;
+    settings.gamepadIcons = preset.gamepadIcons;
+    if (settings.sixtyFPS != preset.sixtyFPS)
+    {
+        settings.sixtyFPS = preset.sixtyFPS;
+        ApplyFrameRate();
+    }
+    ApplyBlur();
+}
+void ApplyPresetValues(int preset)
+{
+    if (preset < 0 || preset > 2 || PresetMatches(preset)) { confirmPreset = false; return; }
+    if (!confirmPreset) { confirmPreset = true; return; }
+    const Settings previous = settings;
+    const auto& values = presetValues[preset];
+    SetPageValues(values);
+    settings.modernControls = values.modernControls;
+    settings.holdVehicleCamera = values.holdVehicleCamera;
+    TrackChanges(previous);
     shownPreset = preset;
+    confirmPreset = false;
+}
+bool DefaultsMatch()
+{
+    constexpr Settings defaults{};
+    return PageMatches(presetValues[recommendedPreset]) && settings.fovFactor == defaults.fovFactor &&
+        settings.hudScale == defaults.hudScale && settings.hudAspect == defaults.hudAspect;
+}
+void RestoreDefaults()
+{
+    if (DefaultsMatch()) { confirmDefaults = false; return; }
+    if (!confirmDefaults) { confirmDefaults = true; return; }
+    constexpr Settings defaults{};
+    const Settings previous = settings;
+    settings.fovFactor = defaults.fovFactor;
+    settings.hudScale = defaults.hudScale;
+    settings.hudAspect = defaults.hudAspect;
+    SetPageValues(presetValues[recommendedPreset]);
+    TrackChanges(previous);
+    shownPreset = MatchingPreset();
+    confirmDefaults = false;
 }
 int HudAspectIndex() {
     for (unsigned i = 0; i < sizeof(hudAspectValues) / sizeof(*hudAspectValues); ++i)
@@ -367,6 +436,7 @@ void Adjust(int option, int direction) {
     confirmDefaults = false;
     if (option == Preset) { shownPreset = shownPreset < 0 ? (direction < 0 ? 2 : 0) : (shownPreset + (direction < 0 ? 2 : 1)) % 3; return; }
     if (option == ApplyPreset) return;
+    const Settings previous = settings;
     switch (option) {
     case FrameRate: settings.sixtyFPS = !settings.sixtyFPS; ApplyFrameRate(); break;
     case HudSize: {
@@ -377,11 +447,13 @@ void Adjust(int option, int direction) {
     }
     case CutsceneBorders: settings.cutsceneBorders = (settings.cutsceneBorders + (direction < 0 ? 3 : 1)) % 4; break;
     case FastLoading: settings.unthrottle = !settings.unthrottle; break;
-    case PcControls: settings.pcControls = !settings.pcControls; ApplyControls(); break;
+    case PcControls: settings.pcControls = !settings.pcControls; break;
     case MouseSensitivity: {
-        int step = Value(MouseSensitivity) + (direction > 0 ? 1 : -1);
-        step = step < 1 ? 1 : step > 40 ? 40 : step;
-        settings.mouseSensitivity = step * 0.0005f;
+        const int value = Value(MouseSensitivity);
+        const int step = mouseSensitivityStep;
+        const int next = direction > 0 ? (value / step + 1) * step : (value - 1) / step * step;
+        const int percent = std::clamp(next, mouseSensitivityMinimum, mouseSensitivityMaximum);
+        settings.mouseSensitivity = percent * mouseSensitivityPerPercent;
         break;
     }
     case InvertMouse: settings.invertMouse = !settings.invertMouse; break;
@@ -410,7 +482,7 @@ void Adjust(int option, int direction) {
     case GamepadIcons:
         settings.gamepadIcons = (settings.gamepadIcons + (direction < 0 ? 3 : 1)) % 4;
         break;
-    case ModernControls: settings.modernControls = !settings.modernControls; ApplyControls(); break;
+    case ModernControls: settings.modernControls = !settings.modernControls; break;
     case PadCameraSpeed: {
         int percent = Value(PadCameraSpeed) + (direction > 0 ? 25 : -25);
         percent = (percent + 12) / 25 * 25;
@@ -418,9 +490,10 @@ void Adjust(int option, int direction) {
         break;
     }
     case InvertPad: settings.invertPad = !settings.invertPad; break;
+    case HoldCamera: settings.holdVehicleCamera = !settings.holdVehicleCamera; break;
     default: return;
     }
-    dirty = true;
+    TrackChanges(previous);
 }
 // Menu captions in capitals, like the native rows. (Spaces that vanished on
 // wide screens came from the compressed glyph advance; see Hud.cpp.)
@@ -445,9 +518,8 @@ const uint16_t* GetText(void* text, const char* key) {
         }
         return emptyText;
     }
-    if (const auto* rewritten = ButtonText(key)) return rewritten;
     if (const char* modern = ModernTextKey(key)) return getText.call(text, modern);
-    return getText.call(text, key);
+    return ButtonText(key, getText.call(text, key));
 }
 const uint16_t* Ascii(unsigned slot, const char* text) { return Upper(text, valueText[slot % 16]); }
 // Text form of a binding row: "W / UP", with the slot Enter rebinds marked.
@@ -513,7 +585,7 @@ void DrawValue(SafetyMipsContext& regs) {
     const bool focused = Field<int>(rowOffset) == int(row) && Field<uint8_t>(inPageOffset);
     const uint16_t* text = emptyText;
     if (action == FixDefaults) {
-        text = Ascii(row, confirmDefaults ? Catalog().confirm : PresetMatches(recommendedPreset) ? Catalog().inUse : Catalog().press);
+        text = Ascii(row, confirmDefaults ? Catalog().confirm : DefaultsMatch() ? Catalog().inUse : Catalog().press);
     } else if (action >= BindingRow && action < BindingEnd) {
         const int bound = RowAction(unsigned(action - BindingRow));
         if (bound < 0) return;
@@ -532,7 +604,8 @@ void DrawValue(SafetyMipsContext& regs) {
         if (pass) {
             const float value = action == HudSize ? (Value(HudSize) - 50) * 0.01f
                 : action == FieldOfView ? (Value(FieldOfView) - 50) / 150.0f
-                : action == PadCameraSpeed ? (Value(PadCameraSpeed) - 25) / 375.0f : Value(MouseSensitivity) / 40.0f;
+                : action == PadCameraSpeed ? (Value(PadCameraSpeed) - 25) / 375.0f : (Value(MouseSensitivity) - mouseSensitivityMinimum) /
+                    float(mouseSensitivityMaximum - mouseSensitivityMinimum);
             DrawBars(Menu(), focused, float(entry.x + 12), float(entry.y - 1), console::bounded(value, 0.0f, 1.0f, 0.5f));
         }
     } else if (action == FrameRate) {
@@ -570,11 +643,11 @@ void Select(SafetyMipsContext& regs) {
     case MoreOptions: Show(display, 1); break;
     case FixOptions: if (extension == &display) Show(display, 5); break;
     case PcMenu: Show(*extension, extension == &display ? 3 : 1); break;
-    case FixDefaults: ApplyPresetValues(recommendedPreset, confirmDefaults); break;
+    case FixDefaults: RestoreDefaults(); break;
     case BindingsMenu: bindingPage = 0; Show(*extension, 2); break;
     case NextPage: bindingPage = (bindingPage + 1) % BindingPages(); Show(*extension, 2, NextPage); break;
     case ResetBindings: bindings.Reset(); break;
-    case ApplyPreset: ApplyPresetValues(shownPreset, confirmPreset); break;
+    case ApplyPreset: ApplyPresetValues(shownPreset); break;
     case Back: ShowParent(*extension); break;
     default:
         if (action >= BindingRow && action < BindingEnd) {
@@ -677,43 +750,54 @@ uint64_t ControllerPicture(uintptr_t menu) { return PlainControls() ? controller
 uint64_t ControllerCallouts(uintptr_t menu, int flag) { return PlainControls() ? controllerCallouts.call(menu, flag) : 0; }
 void Save() {
     const bool bindingsSaved = SaveBindings();
-    if (!dirty && bindingsSaved) return;
+    if (!dirtyOptions && bindingsSaved) return;
     static PCSX2FIniRequest request;
     char number[16];
+    uint64_t batch = 0;
     unsigned status = PCSX2F_SETTINGS_OK;
     request = {};
-    const auto set = [&](const char* section, const char* key, const char* value) {
-        if (request.count == PCSX2F_SETTINGS_MAX_ENTRIES) {
-            const auto result = console::ps2settings::request(request);
-            if (result != PCSX2F_SETTINGS_OK) status = result;
-            request.count = 0;
-        }
+    const auto flush = [&] {
+        const auto result = console::ps2settings::request(request);
+        if (result == PCSX2F_SETTINGS_OK) dirtyOptions &= ~batch;
+        else status = result;
+        request.count = 0;
+        batch = 0;
+    };
+    const auto set = [&](int option, const char* section, const char* key, const char* value) {
+        const auto bit = OptionBit(option);
+        if (!(dirtyOptions & bit)) return;
+        if (request.count == PCSX2F_SETTINGS_MAX_ENTRIES) flush();
         auto& e = request.entries[request.count++];
         std::strcpy(e.section, section); std::strcpy(e.key, key); std::strcpy(e.value, value);
+        batch |= bit;
     };
     request.size = sizeof(request); request.version = 1; request.operation = PCSX2F_SETTINGS_WRITE;
-    set("MAIN", "FPSLimit", settings.sixtyFPS ? "60" : "30");
-    set("MAIN", "UnthrottleEmuDuringLoading", settings.unthrottle ? "1" : "0");
-    console::decimal(number, settings.hudScale, 2); set("MAIN", "HudScale", number);
-    number[0] = char('0' + (settings.cutsceneBorders & 3)); number[1] = 0; set("MAIN", "CutsceneBorders", number);
-    set("CONTROLS", "PCControlScheme", settings.pcControls ? "1" : "0");
-    console::decimal(number, settings.mouseSensitivity / 0.002f, 2); set("MAIN", "MouseSensitivity", number);
-    set("MAIN", "InvertMouseY", settings.invertMouse ? "1" : "0");
-    set("MAIN", "DisableBlur", settings.disableBlur ? "1" : "0");
-    console::decimal(number, settings.fovFactor, 2); set("MAIN", "FOVFactor", number);
+    set(FrameRate, "MAIN", "FPSLimit", settings.sixtyFPS ? "60" : "30");
+    set(FastLoading, "MAIN", "UnthrottleEmuDuringLoading", settings.unthrottle ? "1" : "0");
+    console::decimal(number, settings.hudScale, 2);
+    set(HudSize, "MAIN", "HudScale", number);
+    number[0] = char('0' + (settings.cutsceneBorders & 3)); number[1] = 0;
+    set(CutsceneBorders, "MAIN", "CutsceneBorders", number);
+    set(PcControls, "CONTROLS", "PCControlScheme", settings.pcControls ? "1" : "0");
+    console::decimal(number, settings.mouseSensitivity / 0.002f, 2);
+    set(MouseSensitivity, "MAIN", "MouseSensitivity", number);
+    set(InvertMouse, "MAIN", "InvertMouseY", settings.invertMouse ? "1" : "0");
+    set(Blur, "MAIN", "DisableBlur", settings.disableBlur ? "1" : "0");
+    console::decimal(number, settings.fovFactor, 2);
+    set(FieldOfView, "MAIN", "FOVFactor", number);
     const int aspect = HudAspectIndex();
-    set("MAIN", "HudAspectRatioConstraint", aspect == 0 ? "Auto" : aspect > 0 ? hudAspectNames[aspect] : config::values[11].value);
-    set("MAIN", "SkipIntro", settings.skipIntro ? "1" : "0");
-    number[0] = char('0' + (settings.gamepadIcons & 3)); number[1] = 0; set("MAIN", "GamepadIcons", number);
-    set("MAIN", "VehicleLights", settings.vehicleLights ? "1" : "0");
-    set("CONTROLS", "ModernControlScheme", settings.modernControls ? "1" : "0");
-    console::decimal(number, settings.padCameraSpeed, 2); set("MAIN", "GamepadCameraSpeed", number);
-    set("MAIN", "InvertGamepadY", settings.invertPad ? "1" : "0");
-    if (request.count) {
-        const auto result = console::ps2settings::request(request);
-        if (result != PCSX2F_SETTINGS_OK) status = result;
-    }
-    if (status == PCSX2F_SETTINGS_OK && bindingsSaved) { dirty = false; OSDText[1][0] = 0; }
+    if (aspect >= 0) set(HudAspect, "MAIN", "HudAspectRatioConstraint", aspect == 0 ? "Auto" : hudAspectNames[aspect]);
+    set(SkipIntro, "MAIN", "SkipIntro", settings.skipIntro ? "1" : "0");
+    number[0] = char('0' + (settings.gamepadIcons & 3)); number[1] = 0;
+    set(GamepadIcons, "MAIN", "GamepadIcons", number);
+    set(VehicleLights, "MAIN", "VehicleLights", settings.vehicleLights ? "1" : "0");
+    set(ModernControls, "CONTROLS", "ModernControlScheme", settings.modernControls ? "1" : "0");
+    console::decimal(number, settings.padCameraSpeed, 2);
+    set(PadCameraSpeed, "MAIN", "GamepadCameraSpeed", number);
+    set(InvertPad, "MAIN", "InvertGamepadY", settings.invertPad ? "1" : "0");
+    set(HoldCamera, "CONTROLS", "HoldVehicleCamera", settings.holdVehicleCamera ? "1" : "0");
+    if (request.count) flush();
+    if (status == PCSX2F_SETTINGS_OK && bindingsSaved) { OSDText[1][0] = 0; }
     else std::strcpy(OSDText[1], status == PCSX2F_SETTINGS_UNSUPPORTED
         ? "Menu settings apply this session. Update the fork and injector to save them to the CFG."
         : "Could not save plugin settings to the CFG. Changes still apply this session.");

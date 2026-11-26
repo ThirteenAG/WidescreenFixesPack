@@ -53,7 +53,6 @@ export GameRef<uint8_t> bVerticalText;
 export GameRef<int32_t> nFrontendFont;
 
 // Cameras
-export GameRef<int32_t> bNativeWidescreen;
 export GameRef<void*> pCameraList;
 export GameRef<CameraViewport> MainCamera;
 export GameRef<ViewportFn> pfnSetCameraViewport;

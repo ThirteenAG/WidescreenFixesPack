@@ -111,7 +111,8 @@ public:
                     CPostFX::bSmaaEnabled = AntiAliasing::IsSMAA();
                 }
                 CPostFX::RenderGamma(Direct3DDevice);
-                Overlay.Present(Direct3DDevice.get(), ThisModule());
+                if constexpr (WFP::DeveloperOverlay)
+                    Overlay.Present(Direct3DDevice.get(), ThisModule());
             };
 
             WFP::onShutdownEvent() += []() { Overlay.ShutdownRenderer(); };

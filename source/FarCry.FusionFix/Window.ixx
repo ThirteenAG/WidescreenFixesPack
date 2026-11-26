@@ -30,7 +30,7 @@ export namespace FarCryWindow
     inline std::atomic<int> Mode{ 0 }, Pending{ -1 };
     inline int LastWindowMode = 1, Transition = -1, PreviousMode = 0;
     inline HWND Window = nullptr;
-    inline WNDPROC OriginalProc = nullptr;
+    inline std::map<HWND, WNDPROC> OriginalProcs;
     inline void* Renderer = nullptr;
     inline bool Created = false, Initializing = false, Applying = false, Changing = false;
     inline HMONITOR TargetMonitor = nullptr;
@@ -188,9 +188,22 @@ export namespace FarCryWindow
 
     inline LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
+        const auto found = OriginalProcs.find(window);
+        const auto original = found != OriginalProcs.end() ? found->second : nullptr;
+        const auto forward = [&]()
+        {
+            return original ? CallWindowProcW(original, window, message, wParam, lParam) : DefWindowProcW(window, message, wParam, lParam);
+        };
+        if (window != Window)
+        {
+            const auto result = forward();
+            if (message == WM_NCDESTROY)
+                OriginalProcs.erase(window);
+            return result;
+        }
         CursorConfinement::Message(message, wParam);
         LRESULT result = 0;
-        if (OnMessage && OnMessage(window, message, wParam, lParam, result))
+        if (message != WM_NCDESTROY && OnMessage && OnMessage(window, message, wParam, lParam, result))
             return result;
         if ((message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) && wParam == VK_RETURN)
         {
@@ -208,11 +221,11 @@ export namespace FarCryWindow
             else if (Mode.load() == 0)
                 Desktops.erase(MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY));
         }
-        const auto original = OriginalProc;
         if (message == WM_NCDESTROY)
         {
             Window = nullptr;
-            OriginalProc = nullptr;
+            if (WindowedModeWrapper::GameHWND == window)
+                WindowedModeWrapper::GameHWND = nullptr;
             if (!Initializing)
             {
                 Renderer = nullptr;
@@ -220,8 +233,11 @@ export namespace FarCryWindow
             }
             Pending.store(-1);
             Transition = -1;
+            const auto result = forward();
+            OriginalProcs.erase(window);
+            return result;
         }
-        return original ? CallWindowProcW(original, window, message, wParam, lParam) : DefWindowProcW(window, message, wParam, lParam);
+        return forward();
     }
 
     inline void BeforeCreate(void* renderer, int& width, int& height, char& fullscreen, HWND parent)
@@ -273,12 +289,18 @@ export namespace FarCryWindow
     {
         if (parent)
             return;
-        Created = true;
-        Window = Field<HWND>(renderer, Fields.window);
-        if (!Window || !IsWindow(Window))
+        const auto window = Field<HWND>(renderer, Fields.window);
+        if (!window || !IsWindow(window))
             return;
-        if (reinterpret_cast<WNDPROC>(GetWindowLongPtrW(Window, GWLP_WNDPROC)) != WindowProc)
-            OriginalProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(Window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
+        if (reinterpret_cast<WNDPROC>(GetWindowLongPtrW(window, GWLP_WNDPROC)) != WindowProc)
+        {
+            const auto original = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
+            if (!original)
+                return;
+            OriginalProcs.insert_or_assign(window, original);
+        }
+        Window = window;
+        Created = true;
         ApplyWindow(renderer);
     }
 
@@ -467,10 +489,12 @@ export namespace FarCryWindow
     inline void ResetHooks()
     {
         CursorConfinement::Shutdown();
-        if (Window && IsWindow(Window) && OriginalProc &&
-            reinterpret_cast<WNDPROC>(GetWindowLongPtrW(Window, GWLP_WNDPROC)) == WindowProc)
-            SetWindowLongPtrW(Window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(OriginalProc));
-        OriginalProc = nullptr;
+        for (const auto& [window, original] : OriginalProcs)
+        {
+            if (IsWindow(window) && reinterpret_cast<WNDPROC>(GetWindowLongPtrW(window, GWLP_WNDPROC)) == WindowProc)
+                SetWindowLongPtrW(window, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(original));
+        }
+        OriginalProcs.clear();
         CreateHook.reset();
         ChangeHook.reset();
         FrameHook.reset();

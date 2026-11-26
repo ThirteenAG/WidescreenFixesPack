@@ -32,9 +32,10 @@ On first launch the fix writes `scripts/DriverParallelLines.FusionFix.cfg`. The 
 SMAA requires the game's MSAA setting to be disabled.
 
 - **Skip Intro** - bypass startup logos and notices while preserving story movies
-- **Window Mode** - fullscreen, a centered framed window at the selected resolution, or borderless at the monitor resolution. Alt+Enter switches between fullscreen and the last window mode.
-- **Frame Rate Limit** - choose 30–1000 FPS, Monitor or Unlimited. The default, Recommended and Enhanced use 60; Vanilla leaves the original uncapped rate. Higher rates can affect gameplay.
+- **Window Mode** - fullscreen, a centered framed window at the selected resolution, or borderless at the monitor resolution. For a custom framed size, set equal minimum and maximum widths and equal minimum and maximum heights in FusionFixHub, then restart. Alt+Enter switches between fullscreen and the last window mode when the selected size supports fullscreen.
+- **Frame Rate Limit** - choose any whole number from 30 to 1000 FPS, Monitor or Unlimited. The default, Recommended and Enhanced use 60 FPS. Vanilla leaves the original uncapped rate. Higher rates can affect gameplay.
 - **Videos** - Movies keep their intended proportions, including anamorphic videos. Original shows them as the game does, whole inside its centred 4:3 frame with black bars around them; Fill fits the whole movie to the screen. Nothing is cut off or stretched. Default/Recommended/Enhanced use Fill; Vanilla uses Original aspect.
+- **Cutscene Borders** - Pillarbox preserves the 16:9 framing of in-engine cutscenes on wider screens. Choose Off for a wider view that fills the screen.
 - **HUD Aspect Ratio Constraint** - Auto uses the screen width. Choose an aspect ratio to keep side HUD elements inside a centered box.
 - **Pause When Unfocused** - choose whether play pauses while another window is active.
 - **Mouse Look Sensitivity** - multiply mouse camera movement while keeping the profile sensitivity as the base; applies live.
@@ -67,6 +68,8 @@ SMAA requires the game's MSAA setting to be disabled.
 
 **Turn indicators** activate automatically when making a turn. Manual controls are available in Options → Plugins, on fusionfix.io or in FusionFixHub.
 
+With manual controls enabled, tap LB or RB to signal left or right. Tap both together for hazard lights. Repeat the tap to switch the signal off.
+
 </div>
 
 ---
@@ -95,7 +98,6 @@ SMAA requires the game's MSAA setting to be disabled.
 
 ## Known limits
 
-- Story cinematics use prerecorded movies; there is no separate in-engine cutscene-border setting.
 - Borderless uses the monitor resolution; the native Video page can continue to show the profile’s selected resolution.
 
 ---

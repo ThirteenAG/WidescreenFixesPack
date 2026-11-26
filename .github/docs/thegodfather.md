@@ -14,7 +14,7 @@ Adds widescreen resolution selection, correct menu proportions, native Plugins s
 
 Extract the release beside the game executable, preserving its folders. The fix uses `scripts/TheGodfather.FusionFix.cfg`. Configure it in the game, on fusionfix.io or in FusionFixHub.
 
-Open **Options → Video → Plugins → The Godfather Fusion Fix**. F1 opens the complete help for the selected option. Escape returns to the same page and selection. Vanilla, Recommended and Enhanced presets retain essential corrections; a restart notice identifies options that need a new game session.
+Open **Options → Video → Plugins → The Godfather Fusion Fix**. On the Video page, press Y on an Xbox-layout controller to open Plugins. F1 opens the complete help for the selected option. Escape returns to the same page and selection. Vanilla, Recommended and Enhanced presets retain essential corrections. A restart notice identifies options that need a new game session.
 
 The native Video Resolution list includes all supported 32-bit display modes, sorted by width and height. Duplicate dimensions use the highest supported refresh rate. Select a mode and use the game's own OK button to apply it. A framed window follows the selected startup render size, including on a scaled desktop. Resizing the window by dragging its border changes the render size at once, in menus and in gameplay.
 
@@ -24,18 +24,18 @@ Menus retain a centered 4:3 layout on wider displays and fit inside narrower win
 
 HUD Aspect Ratio places the complete health, cash, weapon and radar groups at the screen edges with Auto, or inside a centered box with 4:3, 16:9, 21:9 or 32:9. Their sizes and proportions stay unchanged, including the 3D weapon picture beside the weapon name. Field of View Factor changes the normal gameplay view immediately; 1.0 is neutral, and larger values widen the view.
 
-Cutscene Borders offers Off, Letterbox, Pillarbox and Both. Both preserves the original framed view; Off fills the screen with a wider view. The change applies immediately during a cinematic.
+Cutscene Borders offers Off, Letterbox, Pillarbox and Both. Both shows the original 16:9 cinematic picture as large as the screen allows, with bars only where the screen is wider or narrower; Letterbox keeps the original bars above and below; Pillarbox limits the picture to its 4:3 frame; Off fills the screen with a wider view. The change applies immediately during a cinematic.
 
 Movie Framing offers Original Aspect, which shows the whole movie inside the game's centred 4:3 frame, and Fill, which fits the whole movie to the screen. Skip Intro controls the startup logo sequence.
 
 Controller Icons offers Automatic (Xbox), Xbox, PlayStation and Nintendo artwork. Keyboard and mouse keep their own prompts. Controller Camera Speed scales right-stick camera turning (1.0 is the original speed), Invert Controller Y Axis reverses vertical right-stick camera motion, and Vibration turns controller rumble on or off; rumble stops while the game is paused or in the background.
 
-Pause When Unfocused stops simulation while the game is inactive. Ctrl+F10 opens or closes the settings overlay at the title screen or during gameplay. Its Info page shows the version, build time, renderer and render size.
+Pause When Unfocused stops simulation while the game is inactive.
 
 ## Known limits
 
 - Restart after changing Window Mode.
-- On some NVIDIA drivers, resizing the window during gameplay can crash the game inside the driver, most often right after switching weapons. Resizing in the menus is not affected; choose the window size there or in the Video options.
+- Right after the window is resized during gameplay, some ground decals can show noise for a moment.
 - A small part of the original tab border remains visible on Plugins pages.
 
 The game keeps its native multisampling.

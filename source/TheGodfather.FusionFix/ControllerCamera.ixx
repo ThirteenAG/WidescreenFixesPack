@@ -120,13 +120,7 @@ export namespace GodfatherControllerCamera
         (void)updateHook.enable();
         (void)axesHook.enable();
         (void)curveHook.enable();
-        const auto refresh = []()
-        {
-            speed.store(FixSettings().Float("MAIN.GamepadCameraSpeed"), std::memory_order_relaxed);
-            invertY.store(FixSettings().Bool("MAIN.InvertGamepadY"), std::memory_order_relaxed);
-        };
-        refresh();
-        FixSettings().OnChange("MAIN.GamepadCameraSpeed", refresh);
-        FixSettings().OnChange("MAIN.InvertGamepadY", refresh);
+        BindLiveSetting("MAIN.GamepadCameraSpeed", speed);
+        BindLiveSetting("MAIN.InvertGamepadY", invertY);
     }
 }

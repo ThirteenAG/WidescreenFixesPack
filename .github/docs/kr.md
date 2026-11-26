@@ -25,7 +25,7 @@
 - **Resolution width / height** — 0 selects the desktop resolution; restart required.
 - **Window mode** — Fullscreen, Windowed or Borderless; restart required. Borderless uses the desktop resolution.
 - **HUD aspect ratio constraint** — Auto uses the screen edges; 4:3, 16:9, 21:9 or 32:9 limits the HUD to a centered box. Applies live.
-- **Frame rate limit** — 0 is unlimited, −1 follows the display refresh rate; a positive value selects the cap. Default 60; applies live.
+- **Frame rate limit** — Choose Monitor, Unlimited or a cap from 30 to 1000 FPS. Default 60 FPS. Applies live.
 - **Cutscene borders** — Off or Both; applies live. Both keeps the original 4:3 story framing with black bars at the sides (above and below on screens narrower than 4:3).
 - **Pause when unfocused** — Pauses gameplay while another window is active; applies live.
 - **Confine cursor** — Keeps the cursor inside the focused game window; applies live.
@@ -51,7 +51,7 @@ The PC engine has fixed camera positions and no free-look camera or force-feedba
 2. Start the game once to create `scripts/KnightRider.FusionFix.cfg`.
 3. Change settings in FusionFixHub or on fusionfix.io.
 
-The original options pages use fixed scene assets and have no extensible Plugins page. The fix's settings are available through FusionFixHub. Supporters can also press Ctrl+F10 for the developer overlay.
+The original options pages use fixed scene assets. Configure the fix through FusionFixHub.
 
 ## PCSX2F: Knight Rider Fusion Fix
 

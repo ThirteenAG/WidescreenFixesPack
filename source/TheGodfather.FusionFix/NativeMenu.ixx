@@ -554,7 +554,7 @@ export namespace GodfatherMenu
     }
     void Joined()
     {
-        auto language = FixSettings().String("MAIN.TextLanguage");
+        auto language = FixSettings().Get("MAIN.TextLanguage");
         if (language.empty() || language == "auto")
             language = state.autoLanguage;
         if (language != state.language)
@@ -572,7 +572,10 @@ export namespace GodfatherMenu
     {
         DWORD foreground{};
         GetWindowThreadProcessId(GetForegroundWindow(), &foreground);
-        if (GodfatherInput::Blocked() || foreground != GetCurrentProcessId() || !state.root || !Number(state.root, "_visible"))
+        const bool acceptsInput = !GodfatherInput::Blocked() && foreground == GetCurrentProcessId() &&
+            state.root && Number(state.root, "_visible");
+        const auto padPresses = GodfatherInput::MenuPresses(acceptsInput);
+        if (!acceptsInput)
         {
             state.inputMask = 0;
             return;
@@ -582,8 +585,7 @@ export namespace GodfatherMenu
         for (size_t i = 0; i < std::size(keys); ++i)
             if (GetAsyncKeyState(keys[i]) < 0)
                 mask |= 1u << i;
-        mask |= GodfatherInput::MenuMask();
-        const auto pressed = mask & ~std::exchange(state.inputMask, mask);
+        const auto pressed = (mask & ~std::exchange(state.inputMask, mask)) | padPresses;
         if (!state.open)
         {
             if (pressed & (1u << 6))
@@ -656,6 +658,7 @@ export namespace GodfatherMenu
         }
         state.root = root;
         Reference(root, true);
+        GodfatherInput::MenuPresses(false);
         auto screen = Get(root, "_global.screen");
         if (auto language = Call(screen, "GetLanguageCode"))
         {
@@ -668,7 +671,7 @@ export namespace GodfatherMenu
             }
             Reference(language, false);
         }
-        state.language = FixSettings().String("MAIN.TextLanguage");
+        state.language = FixSettings().Get("MAIN.TextLanguage");
         if (state.language.empty() || state.language == "auto")
             state.language = state.autoLanguage;
         state.model.OpenPlugins(state.module, state.language, 32, {}, true);

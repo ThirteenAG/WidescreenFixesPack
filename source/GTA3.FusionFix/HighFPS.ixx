@@ -34,7 +34,8 @@ namespace
     float WholeMsStep = 0.0f;                       // read as the time step by the millisecond timers
     float MsCarry = 0.0f;
     uint32_t Frames30 = 0;                          // frames of 30 per second
-    uint32_t Frames30Gated = UINT32_MAX;            // Frames30 on the frame it changed, else all bits set
+    uint32_t Every16Gate = UINT32_MAX;
+    uint32_t Every32Gate = UINT32_MAX;
     uint32_t Frames30Passed = 0;
     float Carry30 = 0.0f;
     float StepScale = 1.0f;                         // this frame's time step / a 30 fps frame's
@@ -42,7 +43,6 @@ namespace
     float CloudsTurn = 0.0f, CloudsTurnBase = 0.0f;
     float TurnDamping = 0.99f, TurnDampingBase = 0.99f;
     float CloudsSpin = 0.3f, CloudsSpinBase = 0.3f;
-    float HandbrakeBrake = 20000.0f, HandbrakeBrakeBase = 20000.0f;
     float WheelFriction = 0.0f;
     float* WheelFrictionBase = nullptr;
 
@@ -64,14 +64,14 @@ namespace
         Carry30 += ms;
         Frames30Passed = uint32_t(Carry30 / (1000.0f / 30.0f));
         Carry30 -= Frames30Passed * (1000.0f / 30.0f);
+        Every16Gate = Frames30Passed >= 16 - (Frames30 & 15) ? 0 : UINT32_MAX;
+        Every32Gate = Frames30Passed >= 32 - (Frames30 & 31) ? 0 : UINT32_MAX;
         Frames30 += Frames30Passed;
-        Frames30Gated = Frames30Passed ? Frames30 : UINT32_MAX;
 
         StepScale = step / FrameStep30;
         CloudsTurn = CloudsTurnBase * StepScale;
         TurnDamping = std::pow(TurnDampingBase, StepScale);
         CloudsSpin = CloudsSpinBase * StepScale;
-        HandbrakeBrake = HandbrakeBrakeBase * StepScale;
         if (WheelFrictionBase)
             WheelFriction = *WheelFrictionBase * StepScale;
     }
@@ -144,12 +144,15 @@ namespace
     // CParticle::Update at 30 per second, with the time that passed
     injector::hook_back<void(__cdecl*)()> hbParticleUpdate;
     float ParticleStep = 0.0f;
+    float ParticlePhase = 0.0f;
     void __cdecl ParticleUpdate()
     {
         float step = CTimer::ms_fTimeStep;
         ParticleStep += step;
-        if (step >= FrameStep30 || ParticleStep >= FrameStep30)
+        ParticlePhase += step;
+        if (ParticlePhase >= FrameStep30)
         {
+            ParticlePhase = std::fmod(ParticlePhase, FrameStep30);
             CTimer::ms_fTimeStep = ParticleStep;
             hbParticleUpdate.fun();
             CTimer::ms_fTimeStep = step;
@@ -169,8 +172,8 @@ public:
             auto every16 = hook::pattern("A1 ? ? ? ? 83 E0 0F 75");
             auto every32 = hook::pattern("88 50 50 A1 ? ? ? ? 83 E0 1F 0F 85");
             FrameCounter.SetAddress(*every32.get_first<uint32_t*>(4));
-            injector::WriteMemory(every32.get_first(4), &Frames30Gated, true);
-            injector::WriteMemory(every16.get_first(1), &Frames30Gated, true);
+            injector::WriteMemory(every32.get_first(4), &Every32Gate, true);
+            injector::WriteMemory(every16.get_first(1), &Every16Gate, true);
 
             RedirectMillisecondTimers();
 
@@ -227,9 +230,12 @@ public:
             injector::WriteMemory(cloudsSpin.get_first(2), &CloudsSpin, true);
 
             // CAutomobile::ProcessControl: the handbrake's brake force on the rear wheels, per frame
-            auto handbrake = hook::pattern("74 0A D9 05 ? ? ? ? D9 5C 24 ? D9 85 90 04 00 00");
-            HandbrakeBrakeBase = HandbrakeBrake = **handbrake.get_first<float*>(4);
-            injector::WriteMemory(handbrake.get_first(4), &HandbrakeBrake, true);
+            auto handbrake = hook::pattern("D8 1D ? ? ? ? DF E0 F6 C4 45 0F 85 ? ? ? ? 8B 8D 28 01 00 00 0F B6 01");
+            static auto scaleHandbrake = safetyhook::create_mid(handbrake.get_first(), [](SafetyHookContext& regs)
+            {
+                if (*reinterpret_cast<uint8_t*>(regs.ebp + 0x1F5) & 0x20)
+                    *reinterpret_cast<float*>(regs.esp + 0x58) *= StepScale;
+            });
 
             // CVehicle::ProcessWheel: the rolling resistance off the throttle (the wheel friction), per frame
             auto rolling = hook::pattern("3D 83 00 00 00 75 19 D9 05 ? ? ? ? D8 0D ? ? ? ? 8B 83 28 01 00 00 EB 11 ? ? ? ? ? D9 05 ? ? ? ? 8B 83 28 01 00 00 D8 70 04");

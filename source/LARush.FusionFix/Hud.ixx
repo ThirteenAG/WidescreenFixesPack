@@ -212,12 +212,15 @@ export namespace LARushHud
     {
         const auto update = []()
         {
-            const auto ratio = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            const auto value = FixSettings().Get("MAIN.HudAspectRatioConstraint");
+            const auto ratio = ParseWidescreenHudOffset(value);
             Constraint.store(ratio ? std::clamp(*ratio, 4.0f / 3.0f, 32.0f / 9.0f) : 0.0f,
                 std::memory_order_relaxed);
         };
-        update();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", update);
+        update();
         auto index = hook::pattern("A1 ? ? ? ? 50 E8 ? ? ? ? 83 C4 04 E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 85 C0");
         MinimapCamera.SetAddress(*index.get_first<int32_t*>(1));
         auto draw = hook::pattern("A1 ? ? ? ? 81 EC 88 00 00 00 85 C0 0F 85 ? ? ? ? A1 ? ? ? ? 69 C0 68 03 00 00");

@@ -17,15 +17,29 @@ export namespace TCCinema
     using Rectangle = int(__thiscall*)(void*, float, float, float, float, uint32_t, float);
     Rectangle DrawRectangle = nullptr;
     uint8_t* Bars = nullptr;          // the bars' object while it draws: state at +20
-    std::atomic<ULONGLONG> LastDrawn{ 0 };
-    std::atomic<float> Picture{ 640.0f / 344.0f };
+    std::atomic<int> Borders{ 0 };
+    std::atomic_bool Animated{ true };
 
     constexpr float FullHeight = 68.0f;
     constexpr float NarrowHeight = 16.0f;
 
     bool Active()
     {
-        return GetTickCount64() - LastDrawn.load(std::memory_order_relaxed) < 250;
+        if (bCutscene) return true;
+        if (!pGameSettings) return false;
+        // The game links the cinematic bars into its draw list when a scripted view starts. State 2 is the exit.
+        const auto* bars = *reinterpret_cast<uint8_t* const*>(pGameSettings.get() + 0x2A4C);
+        return bars && *reinterpret_cast<const uintptr_t*>(bars) && *reinterpret_cast<const int*>(bars + 20) != 2;
+    }
+
+    float BarHeight()
+    {
+        return pGameSettings && pGameSettings[0x1010] ? NarrowHeight : FullHeight;
+    }
+
+    float PictureAspect(float barHeight)
+    {
+        return (4.0f / 3.0f) * 480.0f / (480.0f - 2.0f * barHeight);
     }
 
     // The world camera's horizontal projection scale: Hor+, or in Both the original horizontal view across the
@@ -34,9 +48,9 @@ export namespace TCCinema
     {
         if (width <= 0.0f || height <= 0.0f)
             return scale;
-        if (!Active() || FixSettings().Int("MAIN.CutsceneBorders") != 3)
+        if (Borders.load(std::memory_order_relaxed) != 3 || !Active())
             return scale * height * (4.0f / 3.0f) / width;
-        const float picture = std::min(width, height * Picture.load(std::memory_order_relaxed));
+        const float picture = std::min(width, height * PictureAspect(BarHeight()));
         return scale * picture / width;
     }
 
@@ -44,19 +58,16 @@ export namespace TCCinema
     // is drawn here
     int __fastcall Draw(void* batch, void*, float left, float top, float right, float bottom, uint32_t color, float depth)
     {
-        LastDrawn.store(GetTickCount64(), std::memory_order_relaxed);
-        const bool narrow = pGameSettings && pGameSettings[0x1010];
-        const float full = narrow ? NarrowHeight : FullHeight;
-        const float aspect = (4.0f / 3.0f) * 480.0f / (480.0f - 2.0f * full);
-        Picture.store(aspect, std::memory_order_relaxed);
+        const float full = BarHeight();
+        const float aspect = PictureAspect(full);
 
         float progress = std::clamp(bottom / full, 0.0f, 1.0f);
-        if (!FixSettings().Bool("MAIN.AnimatedCutsceneBorders"))
+        if (!Animated.load(std::memory_order_relaxed))
             progress = Bars && *reinterpret_cast<int*>(Bars + 20) == 2 ? 0.0f : 1.0f;
 
         const float width = right, height = float(nResolutionHeight);
         float bar = 0.0f, side = 0.0f;
-        switch (FixSettings().Int("MAIN.CutsceneBorders"))
+        switch (Borders.load(std::memory_order_relaxed))
         {
             case 1:
                 bar = height * full / 480.0f;
@@ -95,6 +106,17 @@ export namespace TCCinema
 
     void Install()
     {
+        auto& settings = FixSettings();
+        const auto publish = []()
+        {
+            static std::mutex mutex;
+            const std::lock_guard lock(mutex);
+            Borders.store(ReadNumericSetting("MAIN.CutsceneBorders", 3), std::memory_order_relaxed);
+            Animated.store(FixSettings().Get("MAIN.AnimatedCutsceneBorders") == "1", std::memory_order_relaxed);
+        };
+        settings.OnChange("MAIN.CutsceneBorders", publish);
+        settings.OnChange("MAIN.AnimatedCutsceneBorders", publish);
+        publish();
         static auto object = safetyhook::create_mid(hook::get_pattern("56 8B F1 8B 46 14 83 E8 01 57 74 45", 3),
             [](SafetyHookContext& regs) { Bars = reinterpret_cast<uint8_t*>(regs.esi); });
         pGameSettings.SetAddress(*hook::pattern("8B 0D ? ? ? ? 80 B9 10 10 00 00 00 F3 0F 10 46 18").get_first<uint8_t**>(2));

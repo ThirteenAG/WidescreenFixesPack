@@ -6,7 +6,7 @@
 #include <functional>
 #include <mutex>
 #include <string>
-#include <thread>
+#include <memory>
 #include <vector>
 #include <ctime>
 #include "Shared/AsiSettings/asi_settings.hpp"
@@ -34,20 +34,28 @@ namespace RWGTA::UpdateCheck
         std::function<void(const std::wstring&)> show;      // shows one notice line
         std::function<std::wstring(const std::string& latest, bool hub)> format; // optional: the notice line in the
                                                             // game's own text language (default: the fix's texts)
+        std::function<bool(const std::wstring&)> tryShow;   // keeps the notice pending when the native UI rejects it
     };
 
     namespace detail
     {
-        enum class State { Idle, Checking, Available, Shown };
+        enum class State { Idle, Checking, Available, Shown, ShownWithHub };
 
-        struct Data
+        struct CheckResult
         {
-            Config config;
+            std::atomic<bool> stopping{ false };
             std::atomic<State> state{ State::Idle };
             std::mutex lock;
             std::string latest;
             std::string page = "fusionfix.io";
-            bool hubAtExit = false;
+        };
+
+        struct Data
+        {
+            Config config;
+            std::atomic<std::shared_ptr<CheckResult>> result;
+            std::mutex cycleLock;
+            bool exiting = false;
             bool installed = false;
         };
 
@@ -60,12 +68,13 @@ namespace RWGTA::UpdateCheck
         inline bool Enabled()
         {
             auto& d = Get();
-            return d.config.settings && d.config.settings->Int(d.config.settingId) != 0;
+            return d.config.settings && d.config.settings->Get(d.config.settingId) != "0";
         }
 
         // https://fusionfix.io/api/versions; FUSIONFIX_VERSIONS_URL in the environment points it elsewhere (tests)
-        inline std::string Fetch(const std::string& userAgent)
+        inline std::string Fetch(const std::string& userAgent, const CheckResult& result)
         {
+            const auto deadline = GetTickCount64() + 30000;
             std::string body;
             std::wstring url = L"https://fusionfix.io/api/versions";
             wchar_t env[512] = {};
@@ -94,15 +103,23 @@ namespace RWGTA::UpdateCheck
                         WinHttpQueryHeaders(request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_HEADER_NAME_BY_INDEX, &status, &size, WINHTTP_NO_HEADER_INDEX) &&
                         status == 200)
                     {
-                        DWORD available = 0;
-                        while (WinHttpQueryDataAvailable(request, &available) && available && body.size() < (1u << 20))
+                        char chunk[8192];
+                        constexpr size_t maxSize = 1u << 20;
+                        bool complete = false;
+                        while (!result.stopping && GetTickCount64() < deadline)
                         {
-                            std::string chunk(available, '\0');
                             DWORD read = 0;
-                            if (!WinHttpReadData(request, chunk.data(), available, &read) || !read)
+                            if (!WinHttpReadData(request, chunk, sizeof(chunk), &read) || body.size() + read > maxSize)
                                 break;
-                            body.append(chunk.data(), read);
+                            if (!read)
+                            {
+                                complete = true;
+                                break;
+                            }
+                            body.append(chunk, read);
                         }
+                        if (!complete)
+                            body.clear();
                     }
                     WinHttpCloseHandle(request);
                 }
@@ -180,23 +197,34 @@ namespace RWGTA::UpdateCheck
             return std::filesystem::exists(GameFolder() / L"FusionFixHub.exe", ec);
         }
 
-        inline void Check()
+        struct Request
         {
-            auto& d = Get();
-            State expected = State::Idle;
-            if (!d.state.compare_exchange_strong(expected, State::Checking))
+            std::shared_ptr<CheckResult> result;
+            std::string pluginId;
+            std::string userAgent;
+            HMODULE module;
+        };
+
+        // A template: as a plain inline function, its body crashes MSVC's Debug compiler in module builds that import
+        // a module including this header
+        template <class = void>
+        void CALLBACK RunCheck(PTP_CALLBACK_INSTANCE callback, void* context)
+        {
+            std::unique_ptr<Request> request(static_cast<Request*>(context));
+            FreeLibraryWhenCallbackReturns(callback, request->module);
+            auto& result = *request->result;
+            if (result.stopping)
                 return;
-            std::thread([]()
+            try
             {
-                auto& d = Get();
                 // Newer = the release was uploaded more than 30 minutes after this build was made (a release's own
                 // build is made just before its upload). The version text is only shown.
                 asi_settings::json::Value data;
                 std::string version, uploaded, game;
-                if (auto body = Fetch(d.config.pluginId + "/" + d.config.fileVersion); !body.empty() && asi_settings::json::Parse(body, data))
+                if (auto body = Fetch(request->userAgent, result); !body.empty() && asi_settings::json::Parse(body, data))
                 {
                     if (auto fixes = data.Find("fixes"))
-                        if (auto own = fixes->Find(d.config.pluginId))
+                        if (auto own = fixes->Find(request->pluginId))
                         {
                             version = std::string(own->Str("version"));
                             game = std::string(own->Str("game"));
@@ -209,15 +237,48 @@ namespace RWGTA::UpdateCheck
                 int64_t built = BuildTime(), released = ParseUtc(uploaded);
                 if (built >= 0 && released >= 0 && released > built + 30 * 60)
                 {
-                    std::lock_guard guard(d.lock);
-                    d.latest = version.empty() ? uploaded.substr(0, 10) : version;
+                    std::lock_guard guard(result.lock);
+                    result.latest = version.empty() ? uploaded.substr(0, 10) : version;
                     if (!game.empty())
-                        d.page = "fusionfix.io/games/" + game;
-                    d.state = State::Available;
+                        result.page = "fusionfix.io/games/" + game;
+                    result.state = State::Available;
                 }
                 else
-                    d.state = State::Idle;
-            }).detach();
+                    result.state = State::Idle;
+            }
+            catch (...)
+            {
+                result.state = State::Idle;
+            }
+        }
+
+        inline void UpdateEnabled()
+        {
+            auto& d = Get();
+            std::lock_guard guard(d.cycleLock);
+            if (d.exiting)
+                return;
+            if (!Enabled())
+            {
+                if (auto previous = d.result.exchange(nullptr))
+                    previous->stopping = true;
+                return;
+            }
+            if (d.result.load())
+                return;
+            auto result = std::make_shared<CheckResult>();
+            result->state = State::Checking;
+            d.result.store(result);
+            auto request = std::make_unique<Request>(Request{ result, d.config.pluginId, d.config.pluginId + "/" + d.config.fileVersion, nullptr });
+            if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, reinterpret_cast<LPCWSTR>(&Get), &request->module))
+            {
+                auto context = request.release();
+                if (TrySubmitThreadpoolCallback(RunCheck<>, context, nullptr))
+                    return;
+                request.reset(context);
+                FreeLibrary(request->module);
+            }
+            result->state = State::Idle;
         }
 
         inline std::string Replace(std::string text, std::string_view key, std::string_view value)
@@ -231,9 +292,11 @@ namespace RWGTA::UpdateCheck
     // The fix's game page for the notice without the hub, e.g. "fusionfix.io/games/gta3" (known after the check)
     inline std::string Page()
     {
-        auto& d = detail::Get();
-        std::lock_guard guard(d.lock);
-        return d.page;
+        auto result = detail::Get().result.load();
+        if (!result)
+            return "fusionfix.io";
+        std::lock_guard guard(result->lock);
+        return result->page;
     }
 
     // {page} in a notice line from Config::format
@@ -254,15 +317,8 @@ namespace RWGTA::UpdateCheck
             return;
         d.installed = true;
         d.config = std::move(config);
-        if (detail::Enabled())
-            detail::Check();
-        d.config.settings->OnChange(d.config.settingId, []()
-        {
-            if (detail::Enabled())
-                detail::Check();
-            else
-                detail::Get().hubAtExit = false;
-        });
+        d.config.settings->OnChange(d.config.settingId, []() { detail::UpdateEnabled(); });
+        detail::UpdateEnabled();
     }
 
     // Every game frame, on the game's thread: the notice, once the game is playable
@@ -271,6 +327,13 @@ namespace RWGTA::UpdateCheck
         auto& d = detail::Get();
         // Shown after the game has been playable for a few seconds (not into a loading screen's fade)
         static ULONGLONG playableSince = 0;
+        // Nothing to show (update checks off, no answer yet, or up to date): the game state isn't looked at
+        const auto result = d.result.load();
+        if (!result || result->state != detail::State::Available || result->stopping || (!d.config.show && !d.config.tryShow))
+        {
+            playableSince = 0;
+            return;
+        }
         if (d.config.playable && !d.config.playable())
         {
             playableSince = 0;
@@ -278,16 +341,17 @@ namespace RWGTA::UpdateCheck
         }
         if (!playableSince)
             playableSince = GetTickCount64();
-        if (d.state != detail::State::Available || !detail::Enabled() || !d.config.show || GetTickCount64() - playableSince < 4000)
+        if (GetTickCount64() - playableSince < 4000)
             return;
         std::string latest;
         {
-            std::lock_guard guard(d.lock);
-            latest = d.latest;
+            std::lock_guard guard(result->lock);
+            latest = result->latest;
         }
         bool hub = detail::HubPresent();
+        std::wstring message;
         if (d.config.format)
-            d.config.show(ReplacePage(d.config.format(latest, hub)));
+            message = ReplacePage(d.config.format(latest, hub));
         else
         {
             auto& texts = d.config.settings->GetTexts();
@@ -295,19 +359,33 @@ namespace RWGTA::UpdateCheck
             line = detail::Replace(line, "{name}", texts.Resolve(d.config.settings->GetDescription().name));
             line = detail::Replace(line, "{version}", latest);
             line = detail::Replace(line, "{page}", Page());
-            d.config.show(asi_settings::text::Widen(line));
+            message = asi_settings::text::Widen(line);
         }
-        d.hubAtExit = hub;
-        d.state = detail::State::Shown;
+        if (d.config.tryShow)
+        {
+            if (!d.config.tryShow(message))
+                return;
+        }
+        else
+            d.config.show(message);
+        result->state = hub ? detail::State::ShownWithHub : detail::State::Shown;
     }
 
     // When the game exits: the hub on the fix's update page, after the game has closed
     inline void OnExit()
     {
         auto& d = detail::Get();
-        if (!d.hubAtExit || !detail::Enabled() || !detail::HubPresent())
+        std::shared_ptr<detail::CheckResult> result;
+        {
+            std::lock_guard guard(d.cycleLock);
+            d.exiting = true;
+            result = d.result.exchange(nullptr);
+        }
+        if (!result)
             return;
-        d.hubAtExit = false;
+        result->stopping = true;
+        if (result->state != detail::State::ShownWithHub || !detail::HubPresent())
+            return;
         auto hub = detail::GameFolder() / L"FusionFixHub.exe";
         std::wstring command = L"\"" + hub.wstring() + L"\" --show-update " + asi_settings::text::Widen(d.config.pluginId) + L" --wait-pid " + std::to_wstring(GetCurrentProcessId());
         STARTUPINFOW si{ sizeof(si) };

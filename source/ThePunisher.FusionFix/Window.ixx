@@ -9,18 +9,31 @@ export module Window;
 export namespace PunisherWindow
 {
     inline SafetyHookInline CreateHook;
-    inline HWND Window{};
-    inline WNDPROC OriginalProc{};
+    inline std::atomic<HWND> Window{};
     inline decltype(&CreateWindowExA) NativeCreateWindow{};
     inline thread_local bool Creating = false;
     inline int Mode{}, Width{}, Height{};
     inline bool(__cdecl* NativeActive)(){};
     inline std::atomic_bool PauseOnFocusLoss{ true };
+    inline std::atomic_int MonitorRefreshRate{ 60 };
     inline bool (*Message)(HWND, UINT, WPARAM, LPARAM, LRESULT&){};
+    inline void (*WindowChanged)(HWND){};
 
     inline bool __cdecl RenderActive()
     {
         return !PauseOnFocusLoss.load(std::memory_order_relaxed) || NativeActive();
+    }
+
+    inline void UpdateMonitorRefreshRate(HWND window)
+    {
+        MONITORINFOEXW monitor{};
+        monitor.cbSize = sizeof(monitor);
+        DEVMODEW mode{};
+        mode.dmSize = sizeof(mode);
+        const auto display = MonitorFromWindow(window, MONITOR_DEFAULTTOPRIMARY);
+        const bool valid = GetMonitorInfoW(display, &monitor) &&
+            EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1;
+        MonitorRefreshRate.store(valid ? static_cast<int>(mode.dmDisplayFrequency) : 60, std::memory_order_relaxed);
     }
 
     inline RECT Placement(HWND window, DWORD style, DWORD extended)
@@ -62,8 +75,18 @@ export namespace PunisherWindow
             setAttribute(window, 33, &preference, sizeof(preference));
     }
 
-    inline LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
+    inline LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR subclass, DWORD_PTR)
     {
+        if (message == WM_NCDESTROY)
+        {
+            auto owner = window;
+            if (Window.compare_exchange_strong(owner, nullptr) && WindowChanged)
+                WindowChanged(nullptr);
+            RemoveWindowSubclass(window, WindowProc, subclass);
+            return DefSubclassProc(window, message, wParam, lParam);
+        }
+        if (window != Window.load())
+            return DefSubclassProc(window, message, wParam, lParam);
         LRESULT handled{};
         if (Message && Message(window, message, wParam, lParam, handled))
             return handled;
@@ -89,10 +112,11 @@ export namespace PunisherWindow
                 position.flags &= ~SWP_NOMOVE;
             }
         }
-        const auto native = OriginalProc;
+        if ((message == WM_WINDOWPOSCHANGED || message == WM_DISPLAYCHANGE) && !IsIconic(window))
+            UpdateMonitorRefreshRate(window);
         if (message == WM_GETMINMAXINFO && Mode)
         {
-            const auto result = native ? CallWindowProcA(native, window, message, wParam, lParam) : 0;
+            const auto result = DefSubclassProc(window, message, wParam, lParam);
             const auto rectangle = Placement(window, DWORD(GetWindowLongPtrW(window, GWL_STYLE)),
                 DWORD(GetWindowLongPtrW(window, GWL_EXSTYLE)));
             auto& limits = *reinterpret_cast<MINMAXINFO*>(lParam);
@@ -102,13 +126,7 @@ export namespace PunisherWindow
             limits.ptMaxTrackSize.y = std::max(limits.ptMaxTrackSize.y, rectangle.bottom - rectangle.top);
             return result;
         }
-        if (message == WM_NCDESTROY)
-        {
-            Window = nullptr;
-            OriginalProc = nullptr;
-        }
-        return native ? CallWindowProcA(native, window, message, wParam, lParam)
-            : DefWindowProcA(window, message, wParam, lParam);
+        return DefSubclassProc(window, message, wParam, lParam);
     }
 
     inline HWND WINAPI CreateEngineWindow(DWORD extended, LPCSTR name, LPCSTR title, DWORD style,
@@ -129,10 +147,11 @@ export namespace PunisherWindow
             parent, menu, instance, parameter);
         if (game && result)
         {
-            Window = result;
-            OriginalProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(result, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(WindowProc)));
-            if (!OriginalProc)
-                std::terminate();
+            SetWindowSubclass(result, WindowProc, 0, 0);
+            Window.store(result);
+            UpdateMonitorRefreshRate(result);
+            if (WindowChanged)
+                WindowChanged(result);
             Corners(result);
             WindowCursor::Attach(result);
             if (Mode)
@@ -158,15 +177,13 @@ export namespace PunisherWindow
 
     inline void Init(int width, int height)
     {
-        PauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
-        FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+        ObservePunisherSetting("MAIN.PauseOnFocusLoss", []()
         {
-            PauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
+            PauseOnFocusLoss.store(FixSettings().Get("MAIN.PauseOnFocusLoss") != "0", std::memory_order_relaxed);
         });
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
-        FixSettings().OnChange("MAIN.ConfineCursor", []()
+        ObservePunisherSetting("MAIN.ConfineCursor", []()
         {
-            CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+            CursorConfinement::SetEnabled(FixSettings().Get("MAIN.ConfineCursor") != "0");
         });
         auto focusOff = hook::pattern("E8 ? ? ? ? 8A D8 F6 DB 1A DB 6A 00").get_first();
         auto focusOn = hook::pattern("E8 ? ? ? ? 8A D8 F6 DB 1A DB 6A 01").get_first();
@@ -178,7 +195,7 @@ export namespace PunisherWindow
         auto window = hook::pattern("57 56 50 51 52 68 ? ? ? ? 68 ? ? ? ? 53 FF 15 ? ? ? ? 55");
         Width = width;
         Height = height;
-        Mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
+        Mode = std::clamp(PunisherNumericSetting("MAIN.WindowMode", 0), 0, 2);
         auto slot = *window.get_first<decltype(NativeCreateWindow)*>(18);
         NativeCreateWindow = *slot;
         CreateHook = safetyhook::create_inline(create.get_first(), Create);

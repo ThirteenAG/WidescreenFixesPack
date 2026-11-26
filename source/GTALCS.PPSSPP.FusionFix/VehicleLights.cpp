@@ -2,7 +2,7 @@
 #include "LightRects.hpp"
 #include "Game.hpp"
 #include "Shared/Console/PatchNotice.hpp"
-#include "../Shared/Console/PortableCfg.hpp"
+#include "Shared/Console/PortableCfg.hpp"
 namespace vehicle {
 namespace {
 using namespace console::portable;
@@ -10,7 +10,7 @@ using namespace console::portable;
 // resolution (256x256 8-bit, 5.6 MB), 16 more at native size (2.9 MB).
 VehicleLights<CacheCount, 16, 23008, 8, 88576> lights;
 const decltype(lights)::Profile profile{models, sizeof(models) / sizeof(*models), FirstModel, lightRects, lightSets,
-                                        {88, 597, 588, 592, 864}, true};
+                                        {0x58, 0x255, 0x24C, 0x250, 0x360, 0x344}, true};
 // Converted hand-painted variants (tools/vehicle-lights/pack.py), read per texture.
 // Native size (when the HD pool is full) and full resolution 8-bit.
 LightPackFile packFile, hdFile;

@@ -2,7 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "Shared/PadInput.hpp"
+#include "Shared/ActivePad.hpp"
 #include <dinput.h>
 #include <algorithm>
 #include <array>
@@ -122,8 +122,11 @@ namespace FarCryPadState
     };
 
     bool (*InputBlocked)() = nullptr;
+    void (*OverlayPad)(const XINPUT_GAMEPAD&) = nullptr;
+    PadInput::ActivePad ActivePad;
     Pad Current, Previous;
     uint32_t BlockedButtons = 0;
+    bool WaitForPadNeutral = false;
     std::array<ButtonState, 18> Buttons{};
     bool SprintLatch = false;
     float LookBoostTime = 0;
@@ -160,6 +163,7 @@ namespace FarCryPadState
         double until = 0;
     };
     std::array<Rumble, 4> Rumbles{};
+    DWORD MotorSlot = XUSER_MAX_COUNT;
     WORD MotorLow = 0, MotorHigh = 0;
 
     SafetyHookInline CreateInputHook, UpdateHook, ManagerHook, ManagerUpdateHook, SetMapHook, ShakeHook, ShakeLHook;
@@ -217,13 +221,32 @@ namespace FarCryPadState
     {
         Previous = Current;
         Current = {};
-        XINPUT_STATE state{};
-        DWORD slot = 0;
-        if (!focus || !PadInput::Read(state, slot))
+        if (!focus)
+        {
+            ActivePad.Reset();
             return;
+        }
+        XINPUT_STATE state{};
+        const auto connected = ActivePad.Read(state, SHORT(32767 * 0.24f), SHORT(32767 * 0.20f));
         const auto& pad = state.Gamepad;
+        if (OverlayPad)
+            OverlayPad(pad);
+        if (InputBlocked && InputBlocked())
+            WaitForPadNeutral = true;
+        else if (WaitForPadNeutral)
+        {
+            WaitForPadNeutral = pad.wButtons || pad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD ||
+                pad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD ||
+                std::hypot(Axis(pad.sThumbLX), Axis(pad.sThumbLY)) > 0.24f ||
+                std::hypot(Axis(pad.sThumbRX), Axis(pad.sThumbRY)) > 0.20f;
+            return;
+        }
+        if (!connected || WaitForPadNeutral)
+            return;
         Current.connected = true;
-        Current.slot = slot;
+        Current.slot = ActivePad.Slot();
+        if (Previous.connected && Current.slot != Previous.slot)
+            Previous.buttons = 0;
         Current.buttons = pad.wButtons;
         if (pad.bLeftTrigger > 60)
             Current.buttons |= LeftTrigger;
@@ -352,8 +375,9 @@ namespace FarCryPadState
         LookBoostTime = lookMagnitude > 0.95f ? LookBoostTime + dt : 0.0f;
         const float boost = 1.0f + 0.75f * std::clamp((LookBoostTime - 0.2f) / 0.35f, 0.0f, 1.0f);
         const float response = lookMagnitude * boost;
-        const float speed = std::clamp(FixSettings().Float("MAIN.GamepadCameraSpeed"), 0.25f, 3.0f);
-        const bool invert = FixSettings().Bool("MAIN.InvertGamepadY") != Field<bool>(Manager, managerInvertOffset);
+        const auto settings = FarCryLive::Read();
+        const float speed = settings.padSpeed;
+        const bool invert = settings.invertPad != Field<bool>(Manager, managerInvertOffset);
         const float yaw = lx * response * 200.0f * speed * dt;
         const float pitch = -ly * response * 135.0f * speed * dt * (invert ? -1.0f : 1.0f);
         if (yaw != 0)
@@ -406,7 +430,8 @@ namespace FarCryPadState
     void UpdateRumble(double now)
     {
         float low = 0, high = 0;
-        if (Current.connected && Gameplay && FixSettings().Bool("MAIN.Vibration"))
+        const auto slot = Current.connected && Gameplay && FarCryLive::Read().vibration ? Current.slot : XUSER_MAX_COUNT;
+        if (slot < XUSER_MAX_COUNT)
         {
             for (const auto& rumble : Rumbles)
             {
@@ -419,13 +444,20 @@ namespace FarCryPadState
         }
         const auto motorLow = WORD(std::clamp(low, 0.0f, 1.0f) * 65535.0f);
         const auto motorHigh = WORD(std::clamp(high, 0.0f, 1.0f) * 65535.0f);
-        if (motorLow == MotorLow && motorHigh == MotorHigh)
-            return;
         auto setState = PadInput::XInput().setState;
         if (!setState)
             return;
+        if (slot != MotorSlot && MotorSlot < XUSER_MAX_COUNT && (MotorLow || MotorHigh))
+        {
+            XINPUT_VIBRATION stop{};
+            setState(MotorSlot, &stop);
+        }
+        if (slot == MotorSlot && motorLow == MotorLow && motorHigh == MotorHigh)
+            return;
         XINPUT_VIBRATION vibration{ motorLow, motorHigh };
-        setState(Current.connected ? Current.slot : Previous.slot, &vibration);
+        if (slot < XUSER_MAX_COUNT)
+            setState(slot, &vibration);
+        MotorSlot = slot;
         MotorLow = motorLow;
         MotorHigh = motorHigh;
     }
@@ -440,7 +472,16 @@ namespace FarCryPadState
     void Frame()
     {
         ++InputFrame;
-        Poll(Focused() && !(InputBlocked && InputBlocked()));
+        Poll(Focused());
+        if (!Current.connected || (Previous.connected && Previous.slot != Current.slot))
+        {
+            Buttons = {};
+            BlockedButtons = 0;
+            SprintLatch = false;
+            LookBoostTime = 0;
+            LastMove = {};
+            MouseWheel = 0;
+        }
         const bool gameplay = ManagerEnabled && InputFrame - ManagerFrame <= 2;
         SwitchMode(gameplay);
         // A blocked button stays blocked through the frame it is released in
@@ -674,9 +715,10 @@ export namespace FarCryPad
     }
 
     // Input the developer overlay takes for itself
-    inline void SetBlocked(bool (*blocked)())
+    inline void SetOverlayInput(bool (*blocked)(), void (*gamepad)(const XINPUT_GAMEPAD&))
     {
         FarCryPadState::InputBlocked = blocked;
+        FarCryPadState::OverlayPad = gamepad;
     }
 
     inline void InitInput()
@@ -748,16 +790,17 @@ export namespace FarCryPad
         FarCryPadState::KeysReported = FarCryPadState::Keys;
     }
 
-    inline void Append(void* data, DWORD stride, DWORD* count, DWORD capacity, DWORD offset, DWORD value)
+    inline bool Append(void* data, DWORD stride, DWORD* count, DWORD capacity, DWORD offset, DWORD value)
     {
         if (!data || !count || *count >= capacity || stride < sizeof(DIDEVICEOBJECTDATA))
-            return;
+            return false;
         auto entry = reinterpret_cast<DIDEVICEOBJECTDATA*>(static_cast<uint8_t*>(data) + size_t(*count) * stride);
         std::memset(entry, 0, stride);
         entry->dwOfs = offset;
         entry->dwData = value;
         entry->dwTimeStamp = GetTickCount();
         ++*count;
+        return true;
     }
 
     // Real keyboard or mouse input in the device data, before the pad's own presses are added
@@ -785,16 +828,11 @@ export namespace FarCryPad
             return;
         if (Used(data, stride, *count, true))
             FarCryPadState::PadInUse = false;
-        if (FarCryPadState::MouseButton != FarCryPadState::MouseReported)
-        {
-            Append(data, stride, count, capacity, DIMOFS_BUTTON0, FarCryPadState::MouseButton ? 0x80 : 0);
+        if (FarCryPadState::MouseButton != FarCryPadState::MouseReported &&
+            Append(data, stride, count, capacity, DIMOFS_BUTTON0, FarCryPadState::MouseButton ? 0x80 : 0))
             FarCryPadState::MouseReported = FarCryPadState::MouseButton;
-        }
-        if (FarCryPadState::MouseWheel)
-        {
-            Append(data, stride, count, capacity, DIMOFS_Z, DWORD(FarCryPadState::MouseWheel));
+        if (FarCryPadState::MouseWheel && Append(data, stride, count, capacity, DIMOFS_Z, DWORD(FarCryPadState::MouseWheel)))
             FarCryPadState::MouseWheel = 0;
-        }
     }
 
     inline void KeyboardData(void* data, DWORD stride, DWORD* count, DWORD capacity, bool peek)
@@ -805,11 +843,9 @@ export namespace FarCryPad
             FarCryPadState::PadInUse = false;
         for (size_t i = 0; i < FarCryPadState::Keys.size(); ++i)
         {
-            if (FarCryPadState::Keys[i] != FarCryPadState::KeysReported[i])
-            {
-                Append(data, stride, count, capacity, DWORD(i), FarCryPadState::Keys[i] ? 0x80 : 0);
+            if (FarCryPadState::Keys[i] != FarCryPadState::KeysReported[i] &&
+                Append(data, stride, count, capacity, DWORD(i), FarCryPadState::Keys[i] ? 0x80 : 0))
                 FarCryPadState::KeysReported[i] = FarCryPadState::Keys[i];
-            }
         }
     }
 }

@@ -4,10 +4,10 @@ module;
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
-#include "Shared/SilentHill/Display.hpp"
-#include "Shared/SilentHill/Gamepad.hpp"
 
 export module Menu;
+
+import ComVars;
 
 // The fourth Options page lists plugins with settings, with this fix first. Each plugin opens its own
 // scrolling settings page, per-plugin Preset and Restore Defaults. Native text, colours and navigation
@@ -20,7 +20,6 @@ namespace
 {
     uint8_t* Options = nullptr;     // the options object: +252 page, +248 page change request, +176 the options block
 
-    int(__cdecl* PadHeld)(int) = nullptr;
     int(__cdecl* PadTrigger)(int) = nullptr;
     int(__cdecl* PadRepeat)(int) = nullptr;
     int(__cdecl* PadAction)(int, int) = nullptr;
@@ -49,9 +48,11 @@ namespace
 
     // Our page: the list of pages (View = -1) or one of them
     bool PageActive = false;
-    bool HelpActive = false, HelpRequested = false, OptionsSeen = false, OptionsActive = false;
+    bool HelpActive = false, HelpRequested = false;
     int HelpScroll = 0;
     std::string HelpText, UpdateNotice;
+    std::string DisplayLanguage, UpdateLanguage, UpdateVersion;
+    bool UpdateViaHub = false;
     RWGTAMenu::Model Model;
     std::map<std::pair<uintptr_t, std::string>, std::string> RestartValues;
     int View = -1;
@@ -65,7 +66,6 @@ namespace
     constexpr int BarSegments = 10; // the volume bar
     constexpr int SoundMove = 40000, SoundCancel = 40002, SoundChange = 40003, SoundSlider = 40005, SoundPage = 40089, SoundEnter = 42001;
     constexpr uint32_t ColourNormal = 0x80606060, ColourSelected = 0x80404060;
-    constexpr uintptr_t MsgOn = 0x31, MsgOff = 0x32, MsgExit = 0x30;     // the game's own words
 
     int RowCount()
     {
@@ -82,12 +82,29 @@ namespace
     // The language of the texts: MAIN.TextLanguage, or the game's (the options block)
     std::string LanguageTag()
     {
-        auto& chosen = FixSettings().String("MAIN.TextLanguage");
+        auto chosen = FixSettings().Get("MAIN.TextLanguage");
         if (!chosen.empty() && chosen != "auto")
             return chosen;
         static const char* tags[] = { "en", "en", "fr", "de", "it", "es", "en" };
         int language = Options ? Options[176 + 17] : 1;
         return tags[std::clamp(language, 0, 6)];
+    }
+
+    std::string FormatNotice(const std::string& version, bool hub, const std::string& language)
+    {
+        auto texts = FixSettings().GetTexts();
+        texts.Select(language);
+        auto line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
+        const auto replace = [&line](const char* key, const std::string& value)
+        {
+            const auto at = line.find(key);
+            if (at != std::string::npos)
+                line.replace(at, strlen(key), value);
+        };
+        replace("{name}", texts.Resolve(FixSettings().GetDescription().name));
+        replace("{version}", version);
+        replace("{page}", RWGTA::UpdateCheck::Page());
+        return line;
     }
 
     // UTF-8 to the game's text: one 16-bit code per Latin-1 character (256 - c, space = 0), ended by FFFF 8000
@@ -115,13 +132,13 @@ namespace
         return entry.data();
     }
 
-    // Text with the native drop shadow; bank -1 = our own text, 0 = a message of the game's common bank
-    void Text(const uint16_t* text, int x, int y, int preset, int bank = -1)
+    // Render the selected language with the native drop shadow.
+    void Text(const uint16_t* text, int x, int y, int preset)
     {
         ColorPreset(8);
-        DrawMessage(bank, text, x + 2, y + 2);
+        DrawMessage(-1, text, x + 2, y + 2);
         ColorPreset(preset);
-        DrawMessage(bank, text, x, y);
+        DrawMessage(-1, text, x, y);
     }
 
     void DrawBar(int x, int filled, int y, uint32_t colour)
@@ -300,7 +317,8 @@ namespace
     {
         HMODULE self = nullptr;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&OpenList), &self);
-        Model.OpenPlugins(self, LanguageTag(), VisibleRows, {}, true);
+        DisplayLanguage = LanguageTag();
+        Model.OpenPlugins(self, DisplayLanguage, VisibleRows, {}, true);
         for (auto& page : Model.Pages())
         {
             if (page.plugin)
@@ -382,10 +400,27 @@ namespace
         DrawFooter();
     }
 
-    int PageFrame()
+    int PageFrame(bool languageChanged)
     {
+        bool rowsChanged = false;
         if (View >= 0)
-            ShowRows();
+        {
+            auto visible = Model.VisibleRows(size_t(View));
+            rowsChanged = visible != Rows;
+            if (rowsChanged)
+            {
+                const auto selected = Row >= 0 && Row < int(Rows.size()) ? Rows[Row] : nullptr;
+                const auto found = std::find(visible.begin(), visible.end(), selected);
+                if (found != visible.end())
+                    Select(int(found - visible.begin()));
+                else if (selected)
+                    HelpActive = false;
+                else if (!languageChanged)
+                    Select(int(visible.size()));
+                Rows = std::move(visible);
+            }
+        }
+        const bool freshLayout = !rowsChanged && !languageChanged;
         int rows = RowCount();
         int result = 0;
         int trigger = PadTrigger(0);
@@ -397,13 +432,13 @@ namespace
         };
         clamp();
 
-        if (HelpRequested && !HelpActive)
+        if ((freshLayout && HelpRequested) || HelpActive)
         {
             if (View >= 0 && Row < rows - 1)
                 HelpText = Label(*Rows[Row]) + ": " + Help(*Rows[Row]);
             else
                 HelpText = UpdateNotice;
-            if (!HelpText.empty())
+            if (!HelpActive && !HelpText.empty())
             {
                 HelpActive = true;
                 HelpScroll = 0;
@@ -453,7 +488,7 @@ namespace
             Select((Row + 1) % rows);
             PlaySound(SoundMove);
         }
-        else
+        else if (freshLayout)
         {
             // Mouse: the row under the cursor, and its value or arrows
             int shown = std::min(rows - Scroll, VisibleRows);
@@ -537,10 +572,7 @@ namespace
             int y = RowY(slot);
             if (row == rows - 1)
             {
-                if (View < 0)
-                    Text(reinterpret_cast<const uint16_t*>(MsgExit), 40, y, preset, 0);
-                else
-                    Text(GameText(Model.Text("menu.back")), 40, y, preset);
+                Text(GameText(Model.Text(View < 0 ? "menu.exit" : "menu.back")), 40, y, preset);
                 continue;
             }
             if (View < 0)
@@ -552,8 +584,6 @@ namespace
             Text(GameText(FitLine(Label(entry), 22)), 40, y, preset);
             if (BarPositions(entry))
                 DrawBar(364, BarFilled(entry), y + 8, colour);
-            else if (entry.kind == RowKind::Setting && entry.setting->type == asi_settings::Type::Bool)
-                Text(reinterpret_cast<const uint16_t*>(OtherPlugins::Get(*entry.plugin, *entry.setting) == "1" ? MsgOn : MsgOff), 364, y, preset, 0);
             else
             {
                 const auto value = Model.Value(entry);
@@ -600,15 +630,30 @@ namespace
     // The native page frame takes the options object in eax
     int __cdecl Frame(uint8_t* options)
     {
-        OptionsSeen = OptionsActive = true;
+        Options = options;
+        const auto language = LanguageTag();
+        if (FixSettings().Get("MAIN.CheckForUpdates") == "0")
+        {
+            UpdateVersion.clear();
+            UpdateNotice.clear();
+        }
+        else if (!UpdateVersion.empty() && language != UpdateLanguage)
+        {
+            UpdateLanguage = language;
+            UpdateNotice = FormatNotice(UpdateVersion, UpdateViaHub, language);
+        }
+        const bool languageChanged = PageActive && language != DisplayLanguage && Model.SelectLanguage(language);
+        if (languageChanged)
+        {
+            DisplayLanguage = language;
+            Rows.clear();
+        }
         DWORD process = 0;
         GetWindowThreadProcessId(GetForegroundWindow(), &process);
-        const bool held = process == GetCurrentProcessId() &&
-            ((GetAsyncKeyState(VK_F1) & 0x8000) || (SHPad::Get().pressed & SHPad::Back));
+        const bool held = process == GetCurrentProcessId() && (GetAsyncKeyState(VK_F1) & 0x8000);
         static bool previousHelp = false;
-        HelpRequested = held && !previousHelp;
+        HelpRequested = (held && !previousHelp) || GameplayPad.mapPressed;
         previousHelp = held;
-        Options = options;
         auto page = *reinterpret_cast<int32_t*>(options + 252);
         auto request = *reinterpret_cast<int32_t*>(options + 248);
         if (!PageActive && request == 0)
@@ -624,11 +669,12 @@ namespace
         }
         if (PageActive)
         {
-            int result = PageFrame();
+            int result = PageFrame(languageChanged);
             if (result)
             {
                 PageActive = false;
                 Model.Close();
+                Rows.clear();
             }
             return result;
         }
@@ -640,10 +686,18 @@ namespace
             call original
             mov result, eax
         }
+        if (result != 0)
+            return result;
+
+        // Deliver the response where its notice can be drawn on this frame.
+        RWGTA::UpdateCheck::Tick();
         if (!UpdateNotice.empty())
         {
             TextFont(1);
-            Text(GameText(FitLine(UpdateNotice, 50)), 40, 425, 0);
+            const auto lines = Wrap(UpdateNotice, 44);
+            const int top = 425 - (static_cast<int>(lines.size()) - 1) * 20;
+            for (size_t row = 0; row < lines.size(); ++row)
+                Text(GameText(lines[row]), 40, top + static_cast<int>(row) * 20, 0);
             TextFont(0);
         }
         return result;
@@ -681,27 +735,25 @@ public:
 
             auto frame = hook::pattern("83 EC 18 53 55 56 8B F0 8B 86 FC 00 00 00");
             auto input = hook::pattern("83 EC 74 53 56 33 F6 57 56 8B D8 89 74 24 10");
+            const bool alternate = input.size() == 0;
+            auto in = alternate ?
+                hook::pattern("83 EC 74 53 55 8B AC 24 80 00 00 00 56 57 33 FF 57 8B D8 89 7C 24 14").get_first<uint8_t>() :
+                input.get_first<uint8_t>();
             auto drawMessage = hook::pattern("8B 44 24 10 8B 4C 24 0C 8B 54 24 08 50 8B 44 24 08 51 52 50");
             auto preset = hook::pattern("A1 ? ? ? ? 8B 4C 24 04 C1 E0 18");
             auto alpha = hook::pattern("8B 44 24 04 8B 0D ? ? ? ? 8B 15 ? ? ? ?");
             auto font = hook::pattern("8B 44 24 04 A3 ? ? ? ? C3 90 90 90 90 90 90 A1 ? ? ? ? 8B 4C 24 04");
             auto arrow = hook::pattern("51 A0 ? ? ? ? 84 C0 75 3E 6A 01");
             auto moved = hook::pattern("A1 ? ? ? ? 85 C0 75 0C A1 ? ? ? ? 85 C0 75 03 33 C0 C3 B8 01 00 00 00 C3 90 90 90 90 90 A1 ? ? ? ? C3");
-            // Not every build has this Options input code
-            if (input.empty())
-                return;
-
-            auto in = input.get_first<uint8_t>();
-            Call(PadHeld, in + 0x0F);
-            Call(PadTrigger, in + 0x19);
-            Call(PadRepeat, in + 0x21);
-            Call(MouseRightClick, in + 0x8E);
-            Call(PadAction, in + 0xA2);
-            Call(MouseLeftClick, in + 0xB2);
-            Call(MousePreviousPage, in + 0xBB);
-            Call(MouseNextPage, in + 0xC4);
-            Call(MouseHitRect, in + 0x301);
-            Call(PlaySound, in + 0x4BD);
+            Call(PadTrigger, in + (alternate ? 0x21 : 0x19));
+            Call(PadRepeat, in + (alternate ? 0x29 : 0x21));
+            Call(MouseRightClick, in + (alternate ? 0x8F : 0x8E));
+            Call(PadAction, in + (alternate ? 0xA3 : 0xA2));
+            Call(MouseLeftClick, in + (alternate ? 0xB3 : 0xB2));
+            Call(MousePreviousPage, in + (alternate ? 0xBC : 0xBB));
+            Call(MouseNextPage, in + (alternate ? 0xC5 : 0xC4));
+            Call(MouseHitRect, in + (alternate ? 0x360 : 0x301));
+            Call(PlaySound, in + (alternate ? 0x51C : 0x4BD));
             auto fr = frame.get_first<uint8_t>();
             Call(Fps, fr + 0xFF);
             Prim = *reinterpret_cast<void**>(fr + 0x24D);
@@ -721,29 +773,15 @@ public:
             updates.pluginId = "SilentHill4.FusionFix";
             updates.fileVersion = rsc_FileVersion;
             updates.settings = &FixSettings();
-            updates.playable = []() { return OptionsSeen && OptionsActive; };
             updates.show = [](const std::wstring& notice) { UpdateNotice = asi_settings::text::Narrow(notice); };
             updates.format = [](const std::string& version, bool hub)
             {
-                auto texts = FixSettings().GetTexts();
-                texts.Select(LanguageTag());
-                auto line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
-                auto replace = [&line](const char* key, const std::string& value)
-                {
-                    const auto at = line.find(key);
-                    if (at != std::string::npos)
-                        line.replace(at, strlen(key), value);
-                };
-                replace("{name}", texts.Resolve(FixSettings().GetDescription().name));
-                replace("{version}", version);
-                return asi_settings::text::Widen(line);
+                UpdateVersion = version;
+                UpdateViaHub = hub;
+                UpdateLanguage = LanguageTag();
+                return asi_settings::text::Widen(FormatNotice(version, hub, UpdateLanguage));
             };
             RWGTA::UpdateCheck::Init(std::move(updates));
-            SHDisplay::OnPresent().push_back([]()
-            {
-                RWGTA::UpdateCheck::Tick();
-                OptionsActive = false;
-            });
 
             FrameHook = safetyhook::create_inline(frame.get_first(), &FrameThunk);
         };

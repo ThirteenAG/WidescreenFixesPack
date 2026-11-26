@@ -2,6 +2,7 @@ module;
 
 #include "stdafx.h"
 #include <d3d9.h>
+#include <mutex>
 #include "FixSettings.hpp"
 #include "overlay/OverlayD3D9.hpp"
 
@@ -12,6 +13,7 @@ export module DeveloperOverlay;
 
 import ComVars;
 import FrameRate;
+import Rendering;
 
 export namespace DPLOverlay
 {
@@ -19,7 +21,9 @@ export namespace DPLOverlay
     IDirect3DDevice9* CurrentDevice = nullptr;
     SafetyHookInline ResetHook, PresentHook, SwapChainHook;
     thread_local bool Presenting = false;
-    LONG HotkeyDown = 0, HotkeyRequested = 0;
+    std::mutex HotkeyMutex;
+    HWND HotkeyWindow = nullptr;
+    bool HotkeyFocused = false, HotkeyDown = false, HotkeyRequested = false;
 
     HMODULE ThisModule()
     {
@@ -52,34 +56,72 @@ export namespace DPLOverlay
         return ResetHook.unsafe_stdcall<HRESULT>(device, parameters);
     }
 
+    bool ChordDown()
+    {
+        return (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
+    }
+
+    void HotkeyFocus(bool focused)
+    {
+        HotkeyFocused = focused;
+        HotkeyDown = focused && ChordDown();
+        HotkeyRequested = false;
+    }
+
     bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
-        if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
-            wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         {
-            if (message == WM_KEYUP || message == WM_SYSKEYUP)
-                InterlockedExchange(&HotkeyDown, 0);
-            else if (!(lParam & (1u << 30)) && GetForegroundWindow() == window &&
-                !InterlockedCompareExchange(&HotkeyDown, 1, 0))
-                InterlockedExchange(&HotkeyRequested, 1);
-            result = 0;
-            return true;
+            const std::lock_guard lock(HotkeyMutex);
+            if (window == HotkeyWindow)
+            {
+                if (message == WM_KILLFOCUS || (message == WM_ACTIVATEAPP && !wParam) ||
+                    (message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE) || message == WM_NCDESTROY)
+                {
+                    HotkeyFocus(false);
+                    if (message == WM_NCDESTROY)
+                        HotkeyWindow = nullptr;
+                }
+                else if (!HotkeyFocused && (message == WM_SETFOCUS || message == WM_ACTIVATEAPP || message == WM_ACTIVATE))
+                    HotkeyFocus(true);
+                const bool pressed = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
+                const bool released = message == WM_KEYUP || message == WM_SYSKEYUP;
+                if (HotkeyFocused && GetForegroundWindow() == window && wParam == VK_F10 && (pressed || released) &&
+                    ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
+                {
+                    if (released)
+                        HotkeyDown = false;
+                    else if (!(lParam & (1u << 30)) && !std::exchange(HotkeyDown, true))
+                        HotkeyRequested = true;
+                    result = 0;
+                    return true;
+                }
+            }
         }
         return Overlay.Message(window, message, wParam, lParam, result);
     }
 
     void Keyboard(HWND window)
     {
-        const bool down = window && GetForegroundWindow() == window &&
-            (GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(VK_F10) & 0x8000);
-        if (down)
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
+        bool toggle;
         {
-            if (!InterlockedCompareExchange(&HotkeyDown, 1, 0))
-                InterlockedExchange(&HotkeyRequested, 1);
+            const std::lock_guard lock(HotkeyMutex);
+            const bool focused = window && GetForegroundWindow() == window;
+            if (window != HotkeyWindow || focused != HotkeyFocused)
+            {
+                HotkeyWindow = window;
+                HotkeyFocus(focused);
+            }
+            const bool down = focused && ChordDown();
+            if (down && !HotkeyDown)
+                HotkeyRequested = true;
+            HotkeyDown = down;
+            toggle = std::exchange(HotkeyRequested, false) && focused;
         }
-        else
-            InterlockedExchange(&HotkeyDown, 0);
-        if (InterlockedExchange(&HotkeyRequested, 0) && window && GetForegroundWindow() == window)
+        if (toggle)
             Overlay.SetOpen(!Overlay.IsOpen());
     }
 
@@ -95,6 +137,8 @@ export namespace DPLOverlay
     }
     void AttachWindow(HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         if (!window || GetPropW(window, WindowProperty)) return;
         auto original = GetWindowLongPtrW(window, GWLP_WNDPROC);
         if (!original || !SetPropW(window, WindowProperty, reinterpret_cast<HANDLE>(original))) return;
@@ -133,7 +177,8 @@ export namespace DPLOverlay
             return true;
         }();
         CurrentDevice = device;
-        Overlay.Present(device, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(device, ThisModule());
     }
 
     HRESULT WINAPI Present(IDirect3DDevice9* device, const RECT* source, const RECT* destination, HWND window, const RGNDATA* dirty)
@@ -141,6 +186,7 @@ export namespace DPLOverlay
         if (device == CurrentDevice)
         {
             DPLFrameRate::Frame(hWnd.get());
+            DrawCutsceneBorders(device);
             Draw(device);
         }
         const bool previous = std::exchange(Presenting, true);
@@ -158,6 +204,7 @@ export namespace DPLOverlay
             if (device == CurrentDevice)
             {
                 DPLFrameRate::Frame(hWnd.get());
+                DrawCutsceneBorders(device);
                 Draw(device);
             }
             device->Release();
@@ -179,7 +226,8 @@ export namespace DPLOverlay
         if (FAILED(device->GetSwapChain(0, &chain)))
             return;
         auto chainTable = *reinterpret_cast<void***>(chain);
-        ResetHook = safetyhook::create_inline(table[16], Reset);
+        if constexpr (WFP::DeveloperOverlay)
+            ResetHook = safetyhook::create_inline(table[16], Reset);
         PresentHook = safetyhook::create_inline(table[17], Present);
         SwapChainHook = safetyhook::create_inline(chainTable[3], SwapChainPresent);
         chain->Release();

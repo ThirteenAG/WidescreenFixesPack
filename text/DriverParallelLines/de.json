@@ -1,4 +1,8 @@
 {
+  "MAIN.CutsceneBorders": "Balken in Zwischensequenzen",
+  "MAIN.CutsceneBorders.description": "Seitenbalken erhalten den 16:9-Bildausschnitt gerenderter Zwischensequenzen auf breiteren Bildschirmen. Aus nutzt die volle Breite.",
+  "MAIN.CutsceneBorders.0": "Aus",
+  "MAIN.CutsceneBorders.2": "Seitenbalken",
   "plugin.name": "Driver Parallel Lines Fusion Fix",
   "page.display": "Anzeige",
   "page.graphics": "Grafik",
@@ -96,7 +100,8 @@
   "MAIN.GamepadDeadzone.description": "Totzone der Controller-Sticks. Wird einmal auf Bewegung und Kamera angewendet. Niedrige Werte reagieren früher; bei Stick-Drift erhöhen.",
   "MAIN.GamepadIcons": "Controller-Symbole",
   "MAIN.GamepadIcons.description": "Native Controller-Tastensymbole: Xbox, PlayStation oder Nintendo. Automatisch verwendet Xbox. Tastatur- und Mausbezeichnungen bleiben unverändert.",
-  "menu.help.controls": "F1 / Esc    Auf / Ab",
+  "menu.help.controls": "F1 / Esc / {toggle}    Auf / Ab {scroll}",
+  "menu.help.padScroll": "(Steuerkreuz)",
   "MAIN.CheckForUpdates": "Nach Updates suchen",
   "MAIN.CheckForUpdates.description": "Fragt einmal pro Start bei fusionfix.io, ob eine neuere Version des Fixes erschienen ist, und sagt es im Spiel. Aus stellt keine Netzwerkanfrage.",
   "update.availablehub": "{name} {version} ist verfügbar. FusionFixHub öffnet sich, wenn du das Spiel beendest.",

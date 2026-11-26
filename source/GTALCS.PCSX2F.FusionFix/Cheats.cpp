@@ -1,10 +1,9 @@
 #include "Controls.hpp"
-#include <cstring>
+#include "Shared/Console/Ps2TypedCheats.hpp"
 
-// Typed cheats for the PC control scheme. The emulator collects the letters
-// typed in game (CheatString, newest first); a match enters the PS2 button
-// sequence of that cheat through CPad::AddToCheatString, so the game runs its
-// own cheat with its message and statistics.
+extern "C" console::CheatEvents CheatStringV2;
+
+// Typed aliases use the game's own button sequences, messages and statistics.
 namespace lcs {
 namespace {
 struct Cheat { const char* word; const char* sequence; };
@@ -39,22 +38,21 @@ constexpr Cheat cheats[] = {
     {"MIAMITRAFFIC", "SS2XX1CC"},
     {"ICANTTAKEITANYMORE", "1DL2XCUT"},
 };
-bool Matches(const char* word) {
-    const size_t length = std::strlen(word);
-    if (length > CheatStringLen) return false;
-    for (size_t i = 0; i < length; ++i)
-        if (CheatString[i] != word[length - 1 - i]) return false;
-    return true;
+console::TypedCheats typedCheats;
 }
-}
-void UpdateCheats() {
-    if (!playerPad || MenuActive()) return;
-    for (const auto& cheat : cheats) {
-        if (!Matches(cheat.word)) continue;
-        const auto add = reinterpret_cast<void (*)(Pad*, char)>(0x16F030); // CPad::AddToCheatString
-        for (const char* button = cheat.sequence; *button; ++button) add(playerPad, *button);
-        CheatString[0] = 0;
-        break;
-    }
+void UpdateCheats()
+{
+    const bool gameplay = settings.pcControls && playerPad && !playerPad->disabled && !MenuActive();
+    typedCheats.tick(gameplay, CheatString, CheatStringV2, [](const char* history)
+    {
+        for (const auto& cheat : cheats)
+        {
+            if (!console::TypedCheats::matches(history, cheat.word)) continue;
+            const auto add = reinterpret_cast<void (*)(Pad*, char)>(0x16F030);
+            for (const char* button = cheat.sequence; *button; ++button) add(playerPad, *button);
+            return true;
+        }
+        return false;
+    });
 }
 }

@@ -83,9 +83,9 @@
   "SPLITSCREEN.Enable": "Geteilten Bildschirm aktivieren",
   "SPLITSCREEN.Enable.description": "Stellt lokalen Koop im geteilten Bildschirm wieder her. Spieler 2 benötigt einen Controller. Spieler 2 öffnet das Pausenmenü mit START und bedient es mit seinem Controller.",
   "SPLITSCREEN.GamepadPlayer1": "Controller für Spieler 1",
-  "SPLITSCREEN.GamepadPlayer1.description": "Controller für Spieler 1 (1–4). 0 nutzt nur Maus und Tastatur, wenn Spieler 2 dabei ist; Einzelspieler bleibt gleich.",
+  "SPLITSCREEN.GamepadPlayer1.description": "Controller für Spieler 1 oder nur Tastatur und Maus, solange Spieler 2 dabei ist; Einzelspieler bleibt gleich. Neustart erforderlich.",
   "SPLITSCREEN.GamepadPlayer2": "Controller für Spieler 2",
-  "SPLITSCREEN.GamepadPlayer2.description": "Controller für Spieler 2 (1–4).",
+  "SPLITSCREEN.GamepadPlayer2.description": "Controller für Spieler 2. Neustart erforderlich.",
   "FILELOADER.DumpPackedFiles": "Archive entpacken",
   "FILELOADER.DumpPackedFiles.description": "Entpackt .umd-Archive nach unpacked neben dem Programm; siehe _dump.log. Dateien zum Laden entpackter Versionen nach update verschieben.",
   "STARTUP.DedicatedServerExePath": "Dedicated-Server-Programm",
@@ -145,5 +145,10 @@
   "ui.pillarbox": "Balken seitlich",
   "ui.both": "Beide",
   "HudAspectRatioConstraint": "HUD-Seitenverhältnis",
-  "HudAspectRatioConstraint.description": "Auto platziert seitliche HUD-Elemente an den Bildschirmrändern. Mit 4:3, 16:9, 21:9 oder einem eigenen Verhältnis (B:H oder Dezimalzahl, 4:3 bis 32:9) bleiben sie in einem zentrierten Bereich. Vollbildeffekte und Weltmarkierungen bleiben unverändert. Gilt sofort."
+  "HudAspectRatioConstraint.description": "Auto platziert seitliche HUD-Elemente an den Bildschirmrändern. Mit 4:3, 16:9, 21:9 oder einem eigenen Verhältnis (B:H oder Dezimalzahl, 4:3 bis 32:9) bleiben sie in einem zentrierten Bereich. Vollbildeffekte und Weltmarkierungen bleiben unverändert. Gilt sofort.",
+  "SPLITSCREEN.GamepadPlayer1.0": "Tastatur und Maus",
+  "pad.controller1": "Controller 1",
+  "pad.controller2": "Controller 2",
+  "pad.controller3": "Controller 3",
+  "pad.controller4": "Controller 4"
 }

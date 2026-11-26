@@ -2,6 +2,8 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/SplinterCell/ViewportMouse.hpp"
+#include "Shared/SplinterCell/AxisCommands.hpp"
 #include <queue>
 #include <functional>
 #include <stdexcept>
@@ -20,6 +22,12 @@ import WidescreenHUD;
 import Gamepad;
 import CutsceneFrame;
 import GameplayCamera;
+
+namespace
+{
+    std::atomic<float> GameplayFovFactor{ 1.0f };
+    std::atomic<bool> PauseOnFocusLoss{ true };
+}
 
 // Forward declaration for the softbody fixed timestep update
 // Implemented later in the AESoftBodyActor namespace
@@ -141,26 +149,62 @@ namespace UInput
     uint8_t(__fastcall* GetKey)(void* uInput, void* edx, const wchar_t* a2, int a3) = nullptr;
 
     void* gUInput = nullptr;
-    void(__fastcall* SetKey)(void* uInput, void* edx, const wchar_t* keyAndBinding, const wchar_t* keyName) = nullptr;
+    int(__fastcall* FindKeyName)(void*, void*, const wchar_t*, int*) = nullptr;
+    int joyZ = -1, joyV = -1;
+    thread_local float lookSpeed = 1.0f;
 
-    // The pad's look axes after their settings changed
-    void RefreshPadBindings()
+    struct LookAxisScope
     {
-        if (!gUInput || !SetKey || !Gamepad::TakeBindingsChanged())
-            return;
-        const std::pair<const wchar_t*, std::string> axes[] = { { L"JoyZ", Gamepad::TurnBinding() }, { L"JoyV", Gamepad::LookUpBinding() } };
-        for (const auto& [key, binding] : axes)
+        explicit LookAxisScope(int key)
+            : previous(std::exchange(lookSpeed, 1.0f))
         {
-            auto command = std::wstring(key) + L" \"" + std::wstring(binding.begin(), binding.end()) + L"\"";
-            SetKey(gUInput, nullptr, command.c_str(), key);
+            if (key >= 0 && (key == joyZ || key == joyV))
+            {
+                lookSpeed = std::clamp(FixSettings().Float("MAIN.GamepadCameraSpeed"), 0.25f, 3.0f);
+                if (key == joyV && FixSettings().Bool("MAIN.InvertGamepadY"))
+                    lookSpeed = -lookSpeed;
+            }
         }
+
+        ~LookAxisScope()
+        {
+            lookSpeed = previous;
+        }
+
+        float previous;
+    };
+
+    SafetyHookInline shProcess, shDirectAxis, shExecInputCommands;
+
+    int __fastcall Process(void* input, void* edx, void* output, int key, int action, int flags, float value)
+    {
+        constexpr int axisAction = 4;
+        const LookAxisScope scope(action == axisAction ? key : -1);
+        return shProcess.unsafe_fastcall<int>(input, edx, output, key, action, flags, value);
+    }
+
+    void __fastcall DirectAxis(void* input, void* edx, int key, float value, float deltaTime)
+    {
+        const LookAxisScope scope(key);
+        shDirectAxis.unsafe_fastcall(input, edx, key, value, deltaTime);
+    }
+
+    void __fastcall ExecInputCommands(void* input, void* edx, const wchar_t* commands, void* output)
+    {
+        if (!commands || lookSpeed == 1.0f)
+            return shExecInputCommands.unsafe_fastcall(input, edx, commands, output);
+        // The engine applies Speed after its deadzone. Scale the command without changing the saved binding.
+        const auto scaled = SCPadAxis::ScaleCommands(commands, lookSpeed);
+        shExecInputCommands.unsafe_fastcall(input, edx, scaled.c_str(), output);
     }
 
     SafetyHookInline shInit = {};
     void __fastcall Init(void* uInput, void* edx, void* uViewport)
     {
         gUInput = uInput;
-        return shInit.unsafe_fastcall(uInput, edx, uViewport);
+        shInit.unsafe_fastcall(uInput, edx, uViewport);
+        FindKeyName(uInput, nullptr, L"JoyZ", &joyZ);
+        FindKeyName(uInput, nullptr, L"JoyV", &joyV);
     }
 }
 
@@ -280,16 +324,14 @@ namespace UGameEngine
     void __fastcall Tick(void* UGameEngine, void* edx, float deltaTime)
     {
         RefreshHudConstraint();
-        UInput::RefreshPadBindings();
         WFP::onGameProcessEvent().executeAll();
         if (hGameWindow)
             CursorConfinement::Frame(hGameWindow);
 
         // MAIN.PauseOnFocusLoss: while another application is active (WM_ACTIVATEAPP, or minimized) the engine skips its
         // tick and pauses the sound. Off keeps the windowed game running; a minimized fullscreen game still pauses.
-        static const auto& nPauseOnFocusLoss = FixSettings().Int("MAIN.PauseOnFocusLoss");
         auto& bInactive = *reinterpret_cast<int32_t*>(reinterpret_cast<uintptr_t>(UGameEngine) + 0x160);
-        if (bInactive && !nPauseOnFocusLoss && hGameWindow && !IsIconic(hGameWindow))
+        if (bInactive && !PauseOnFocusLoss.load() && hGameWindow && !IsIconic(hGameWindow))
             bInactive = 0;
 
         // Update the shared softbody fixed timestep once per frame
@@ -302,13 +344,15 @@ namespace UGameEngine
             UWindowsViewport::deferredCauseInputEvent.pop();
         }
 
-        // All raw mouse movement since the last tick, once per tick
-        if (Screen.bRawInputMouse && UWindowsViewport::RawMouseFeed)
+        if (Screen.bRawInputMouse)
         {
-            const auto dx = RawInputHandler<int32_t>::RawMouseDeltaX.exchange(0);
-            const auto dy = RawInputHandler<int32_t>::RawMouseDeltaY.exchange(0);
-            if (dx || dy)
-                UWindowsViewport::RawMouseFeed(dx, dy);
+            const HWND active = UWindowsViewport::RawMouseFeed && GetForegroundWindow() == hGameWindow ? hGameWindow : nullptr;
+            ViewportMouse::Bind(active);
+            const auto move = ViewportMouse::movement.Take();
+            if (active && !ViewportMouse::nativeFrame && (move.x || move.y))
+                UWindowsViewport::RawMouseFeed(static_cast<int>(std::clamp<int64_t>(move.x, INT_MIN, INT_MAX)),
+                    static_cast<int>(std::clamp<int64_t>(move.y, INT_MIN, INT_MAX)));
+            ViewportMouse::nativeFrame = false;
         }
 
         return shTick.unsafe_fastcall(UGameEngine, edx, deltaTime);
@@ -833,6 +877,21 @@ namespace SuitLights
 
 export void InitEngine()
 {
+    auto publish = []()
+    {
+        static std::mutex mutex;
+        std::lock_guard lock(mutex);
+        auto& settings = FixSettings();
+        const auto text = settings.Get("MAIN.FOVFactor");
+        float factor = 1.0f;
+        std::from_chars(text.data(), text.data() + text.size(), factor);
+        GameplayFovFactor.store(std::isfinite(factor) ? factor : 1.0f);
+        PauseOnFocusLoss.store(settings.Get("MAIN.PauseOnFocusLoss") == "1");
+    };
+    for (const char* key : { "MAIN.FOVFactor", "MAIN.PauseOnFocusLoss" })
+        FixSettings().OnChange(key, publish);
+    publish();
+
     auto digitalHealth = hook::module_pattern(GetModuleHandle(L"Engine"), "6A 0A 6A 00 6A 01 8D 85 ? ? ? ? 50 57 E8 ? ? ? ? 8B 35 ? ? ? ? 83 C4 20");
     auto retailShadow = hook::module_pattern(GetModuleHandle(L"Engine"), "68 00 00 80 3F 68 6F 12 83 C6");
 
@@ -906,8 +965,7 @@ export void InitEngine()
             fov = PTCutscene::FOV(fov, Screen.fAspectRatio);
             return;
         }
-        static const auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
-        const float factor = PTGameplayCamera::Factor(node, returnAddress, fFOVFactor);
+        const float factor = PTGameplayCamera::Factor(node, returnAddress, GameplayFovFactor.load());
         // The factor widens up to 150 degrees across: on very wide screens anything wider breaks the picture up
         constexpr float kMaxFactorFOV = 150.0f;
         const float base = std::clamp(AdjustFOV(fov, Screen.fAspectRatio), 1.0f, 179.0f);
@@ -1005,7 +1063,14 @@ export void InitEngine()
     }
 
     UInput::GetKey = (decltype(UInput::GetKey))FindProcAddress(GetModuleHandle(L"Engine"), "?GetKey@UInput@@UAEEPB_WH@Z", "?GetKey@UInput@@UAEEPBGH@Z");
-    UInput::SetKey = reinterpret_cast<decltype(UInput::SetKey)>(FindProcAddress(GetModuleHandle(L"Engine"), "?SetKey@UInput@@UAEXPB_W0@Z", "?SetKey@UInput@@UAEXPBG0@Z"));
+    UInput::FindKeyName = reinterpret_cast<decltype(UInput::FindKeyName)>(FindProcAddress(GetModuleHandle(L"Engine"),
+        "?FindKeyName@UInput@@UBEHPB_WAAW4EInputKey@@@Z", "?FindKeyName@UInput@@UBEHPBGAAW4EInputKey@@@Z"));
+    UInput::shProcess = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"),
+        "?Process@UInput@@UAEHAAVFOutputDevice@@W4EInputKey@@W4EInputAction@@HM@Z"), UInput::Process);
+    UInput::shDirectAxis = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"),
+        "?DirectAxis@UInput@@UAEXW4EInputKey@@MM@Z"), UInput::DirectAxis);
+    UInput::shExecInputCommands = safetyhook::create_inline(FindProcAddress(GetModuleHandle(L"Engine"),
+        "?ExecInputCommands@UInput@@MAEXPB_WAAVFOutputDevice@@@Z", "?ExecInputCommands@UInput@@MAEXPBGAAVFOutputDevice@@@Z"), UInput::ExecInputCommands);
     UEngine::shInputEvent = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?InputEvent@UEngine@@UAEHPAVUViewport@@W4EInputKey@@W4EInputAction@@M@Z"), UEngine::InputEvent);
     UInput::shInit = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Engine"), "?Init@UInput@@UAEXPAVUViewport@@@Z"), UInput::Init);
 

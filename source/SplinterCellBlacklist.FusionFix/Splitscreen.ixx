@@ -1003,11 +1003,20 @@ namespace Splitscreen
 export void InitSplitscreen()
 {
     auto& settings = FixSettings();
+    static constexpr auto first = "SPLITSCREEN.GamepadPlayer1";
+    static constexpr auto second = "SPLITSCREEN.GamepadPlayer2";
+    const int& firstPad = settings.Int(first);
+    const int& secondPad = settings.Int(second);
+    settings.Availability(first, [&secondPad](std::string_view value) { return value != std::to_string(secondPad); });
+    settings.Availability(second, [&firstPad](std::string_view value) { return value != std::to_string(firstPad); });
+    settings.OnChange(first, []() { FixSettings().Refresh(second); });
+    settings.OnChange(second, []() { FixSettings().Refresh(first); });
+
     if (settings.Int("SPLITSCREEN.Enable") == 0)
         return;
 
-    Splitscreen::padPlayer1 = std::clamp(settings.Int("SPLITSCREEN.GamepadPlayer1"), 0, XUSER_MAX_COUNT);
-    Splitscreen::padPlayer2 = std::clamp(settings.Int("SPLITSCREEN.GamepadPlayer2"), 1, XUSER_MAX_COUNT);
+    Splitscreen::padPlayer1 = firstPad;
+    Splitscreen::padPlayer2 = secondPad;
 
     auto xinput = GetModuleHandleW(L"xinput1_3.dll"); // imported by the game
     auto getState = GetProcAddress(xinput, "XInputGetState");

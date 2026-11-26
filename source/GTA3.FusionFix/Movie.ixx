@@ -2,10 +2,6 @@ module;
 
 #include <stdafx.h>
 #include <dshow.h>
-#include <commctrl.h>
-#include "FixSettings.hpp"
-
-#pragma comment(lib, "comctl32.lib")
 
 export module Movie;
 
@@ -15,9 +11,6 @@ namespace Movie
     using GetClientRectFn = BOOL(WINAPI*)(HWND, LPRECT);
     GetClientRectFn* GetClientRectImport = nullptr;
     IUnknown** VideoWindow = nullptr;
-    HWND Owner = nullptr;                                   // the game's window, which the movies play in
-    constexpr UINT_PTR SubclassId = 0x4D4F56;
-    constexpr UINT RepositionMessage = WM_APP + 0x57F;      // the movie mode changed while a movie plays
 
     bool GetVideoAspectRatio(LONG& width, LONG& height)
     {
@@ -41,17 +34,11 @@ namespace Movie
         return false;
     }
 
-    LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR);
-
     BOOL WINAPI GetMovieRect(HWND window, LPRECT rect)
     {
-        // Videos are never cut off: the whole movie at its own aspect with black bars, fitted into the game's 4:3
-        // picture (Original) or into the whole screen (Fill)
+        // Videos are never cut off: the whole movie at its own aspect, fitted into the window with black bars
         const BOOL result = (*GetClientRectImport)(window, rect);
         if (!result) return result;
-
-        if (window && window != Owner && SetWindowSubclass(window, WindowProc, SubclassId, 0))
-            Owner = window;
 
         const LONG width = rect->right - rect->left;
         const LONG height = rect->bottom - rect->top;
@@ -70,22 +57,12 @@ namespace Movie
             ReleaseDC(window, dc);
         }
 
-        LONG frameWidth = width;
-        LONG frameHeight = height;
-        static auto& mode = FixSettings().Int("MAIN.FMVWidescreenMode");
-        if (mode == 0)
-        {
-            if (int64_t(frameWidth) * 3 > int64_t(frameHeight) * 4)
-                frameWidth = std::max<LONG>(1, static_cast<LONG>(int64_t(frameHeight) * 4 / 3));
-            else
-                frameHeight = std::max<LONG>(1, static_cast<LONG>(int64_t(frameWidth) * 3 / 4));
-        }
-        LONG movieWidth = frameWidth;
-        LONG movieHeight = frameHeight;
-        if (int64_t(frameWidth) * aspectHeight > int64_t(frameHeight) * aspectWidth)
-            movieWidth = std::max<LONG>(1, static_cast<LONG>(int64_t(frameHeight) * aspectWidth / aspectHeight));
+        LONG movieWidth = width;
+        LONG movieHeight = height;
+        if (int64_t(width) * aspectHeight > int64_t(height) * aspectWidth)
+            movieWidth = std::max<LONG>(1, static_cast<LONG>(int64_t(height) * aspectWidth / aspectHeight));
         else
-            movieHeight = std::max<LONG>(1, static_cast<LONG>(int64_t(frameWidth) * aspectHeight / aspectWidth));
+            movieHeight = std::max<LONG>(1, static_cast<LONG>(int64_t(width) * aspectHeight / aspectWidth));
 
         rect->left += (width - movieWidth) / 2;
         rect->top += (height - movieHeight) / 2;
@@ -94,26 +71,6 @@ namespace Movie
         rect->right = movieWidth;
         rect->bottom = movieHeight;
         return result;
-    }
-
-    // A changed movie mode places the playing movie again, on the window's own thread
-    LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR)
-    {
-        if (message == WM_NCDESTROY)
-        {
-            RemoveWindowSubclass(window, WindowProc, SubclassId);
-            if (Owner == window)
-                Owner = nullptr;
-        }
-        else if (message == RepositionMessage)
-        {
-            auto video = VideoWindow ? static_cast<IVideoWindow*>(static_cast<void*>(*VideoWindow)) : nullptr;
-            RECT rect{};
-            if (video && GetMovieRect(window, &rect))
-                video->SetWindowPosition(rect.left, rect.top, rect.right, rect.bottom);
-            return 0;
-        }
-        return DefSubclassProc(window, message, wParam, lParam);
     }
 
     export void Init(std::initializer_list<const char*> signatures)
@@ -143,10 +100,5 @@ namespace Movie
             injector::MakeCALL(call, GetMovieRect, true);
             injector::MakeNOP(call + 5, 1, true); // six-byte indirect call
         }
-        FixSettings().OnChange("MAIN.FMVWidescreenMode", []()
-        {
-            if (auto window = Owner)
-                PostMessageW(window, RepositionMessage, 0, 0);
-        });
     }
 }

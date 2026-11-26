@@ -1,5 +1,8 @@
 #pragma once
+#include <atomic>
 #include <d3d9.h>
+#include <mutex>
+#include "Shared/AsiSettings/asi_settings.hpp"
 #include "Video.hpp"
 
 namespace TonyBink9
@@ -9,7 +12,7 @@ namespace TonyBink9
     inline const float* FrameHeight = nullptr;
     inline const float* MovieWidth = nullptr;
     inline const float* MovieHeight = nullptr;
-    inline const int32_t* Mode = nullptr;
+    inline std::atomic<int> Mode{ 1 };
 
     inline int __cdecl Draw(IDirect3DTexture9* texture, float x, float y, float width, float height, float alpha)
     {
@@ -19,6 +22,7 @@ namespace TonyBink9
         {
             return DrawHook.ccall<int>(texture, x, y, width, height, alpha);
         }
+        const int mode = Mode.load(std::memory_order_relaxed);
         float targetWidth = *FrameWidth, targetHeight = *FrameHeight;
         IDirect3DDevice9* device = nullptr;
         D3DVIEWPORT9 previous{};
@@ -44,7 +48,7 @@ namespace TonyBink9
                     device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
             }
         }
-        const auto box = TonyVideo::Layout(targetWidth, targetHeight, *MovieWidth, *MovieHeight, Mode ? std::clamp(*Mode, 0, 1) : 1);
+        const auto box = TonyVideo::Layout(targetWidth, targetHeight, *MovieWidth, *MovieHeight, mode);
         const auto result = DrawHook.ccall<int>(texture, box.x, box.y, box.width / *FrameWidth, box.height / *FrameHeight, alpha);
         if (device)
         {
@@ -55,10 +59,17 @@ namespace TonyBink9
         return result;
     }
 
-    inline void Install(const int32_t* mode, const char* drawSignature, const char* dimensionsSignature,
+    inline void Install(asi_settings::Plugin& settings, const char* drawSignature, const char* dimensionsSignature,
         const std::array<int, 4>& offsets, HMODULE module = GetModuleHandleW(nullptr))
     {
-        Mode = mode;
+        const auto refresh = [&settings]()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            Mode.store(settings.Get("MAIN.FMVWidescreenMode") == "0" ? 0 : 1, std::memory_order_relaxed);
+        };
+        settings.OnChange("MAIN.FMVWidescreenMode", refresh);
+        refresh();
         auto draw = hook::module_pattern(module, drawSignature);
         auto dimensions = hook::module_pattern(module, dimensionsSignature);
         MovieWidth = *dimensions.get_first<const float*>(offsets[0]);

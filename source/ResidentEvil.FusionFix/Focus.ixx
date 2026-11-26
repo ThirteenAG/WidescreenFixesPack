@@ -20,10 +20,9 @@ export namespace REFocus
 
     inline void Install()
     {
-        pause.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
-        FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+        BindLiveInt("MAIN.PauseOnFocusLoss", [](int value)
         {
-            pause.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
+            pause.store(value != 0, std::memory_order_relaxed);
         });
         auto current = hook::pattern("80 78 20 00 75 0F 80 B8 51 25 00 00 00 75 06 6A 01 FF D6");
         auto original = hook::pattern("80 79 20 00 75 0F 80 B9 51 25 00 00 00 75 06 6A 01 FF D6");

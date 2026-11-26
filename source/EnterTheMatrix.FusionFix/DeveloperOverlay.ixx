@@ -2,6 +2,8 @@ module;
 
 #include <stdafx.h>
 #include <d3d9.h>
+#include <dinput.h>
+#include <float.h>
 #include "FixSettings.hpp"
 #include "Shared/PadInput.hpp"
 #include "overlay/OverlayD3D9.hpp"
@@ -10,14 +12,42 @@ module;
 
 export module DeveloperOverlay;
 
+namespace
+{
+    // The game leaves x87 and SSE rounding out of sync. The overlay's CRT conversions require both to agree.
+    class OverlayRounding
+    {
+    public:
+        OverlayRounding()
+        {
+            __control87_2(0, 0, &X87, &Sse);
+            unsigned int x87{}, sse{};
+            __control87_2(_RC_NEAR, _MCW_RC, &x87, &sse);
+        }
+
+        ~OverlayRounding()
+        {
+            unsigned int control{};
+            __control87_2(X87, _MCW_RC, &control, nullptr);
+            __control87_2(Sse, _MCW_RC, nullptr, &control);
+        }
+
+    private:
+        unsigned int X87{}, Sse{};
+    };
+}
+
 // Ctrl+F10 overlay
 export namespace MatrixOverlay
 {
     asi_overlay::D3D9Overlay Overlay;
     IDirect3DDevice9* CurrentDevice = nullptr;
     bool HotkeyDown = false;
-    SafetyHookInline KeyboardHook, MouseHook;
+    SafetyHookInline KeyboardHook, MouseHook, ControllerHook;
     uint32_t KeyboardState = 0, MouseState = 0;
+    uint32_t ControllerState = 24, ControllerCount = 1, ControllerButtons = 588;
+    DWORD OverlayPadSlot = XUSER_MAX_COUNT;
+    bool ControllerSuppressed = false;
 
     // The game reads the keyboard and mouse through DirectInput; while the overlay has them, the game sees nothing
     int __fastcall Keyboard(uint8_t* self)
@@ -36,14 +66,93 @@ export namespace MatrixOverlay
         return result;
     }
 
+    bool OverlayChord(const XINPUT_GAMEPAD& pad)
+    {
+        constexpr WORD chord = XINPUT_GAMEPAD_BACK | XINPUT_GAMEPAD_START;
+        return (pad.wButtons & chord) == chord;
+    }
+
+    bool Held(const XINPUT_GAMEPAD& pad)
+    {
+        return pad.wButtons != 0 || std::abs(int(pad.sThumbLX)) > XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE ||
+            std::abs(int(pad.sThumbLY)) > XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE ||
+            std::abs(int(pad.sThumbRX)) > XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE ||
+            std::abs(int(pad.sThumbRY)) > XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE ||
+            pad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD || pad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+    }
+
+    XINPUT_GAMEPAD ReadOverlayPad()
+    {
+        const auto getState = PadInput::XInput().getState;
+        if (!getState)
+            return {};
+        XINPUT_STATE state{};
+        if (OverlayPadSlot < XUSER_MAX_COUNT && getState(OverlayPadSlot, &state) == ERROR_SUCCESS)
+            return state.Gamepad;
+        OverlayPadSlot = XUSER_MAX_COUNT;
+
+        for (DWORD slot = 0; slot < XUSER_MAX_COUNT; ++slot)
+        {
+            if (getState(slot, &state) == ERROR_SUCCESS &&
+                (OverlayChord(state.Gamepad) || (Overlay.IsOpen() && Held(state.Gamepad))))
+            {
+                OverlayPadSlot = slot;
+                return state.Gamepad;
+            }
+        }
+        return {};
+    }
+
+    bool BlocksController()
+    {
+        const auto pad = ReadOverlayPad();
+        ControllerSuppressed = Overlay.BlocksInput() || OverlayChord(pad) || (ControllerSuppressed && Held(pad));
+        return ControllerSuppressed;
+    }
+
+    void UpdateOverlayPad()
+    {
+        const auto pad = ReadOverlayPad();
+        PadInput::ToOverlay(Overlay, pad);
+        if (!Overlay.BlocksInput() && !Held(pad))
+            OverlayPadSlot = XUSER_MAX_COUNT;
+    }
+
+    int __fastcall Controller(uint8_t* self)
+    {
+        const int result = ControllerHook.thiscall<int>(self);
+        if (BlocksController())
+        {
+            DIJOYSTATE2 neutral{};
+            std::fill(std::begin(neutral.rgdwPOV), std::end(neutral.rgdwPOV), DWORD(-1));
+            for (uint32_t i = 0; i < ControllerCount; ++i)
+                std::memcpy(self + ControllerState + i * sizeof(neutral), &neutral, sizeof(neutral));
+            std::memset(self + ControllerButtons, 0, sizeof(neutral.rgdwPOV));
+        }
+        return result;
+    }
+
     void Init()
     {
+        // The overlay's input hooks exist only in Debug builds
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         auto keyboard = hook::pattern("55 8B EC 83 EC 08 89 4D F8 8B 45 F8 05 ? ? 00 00 50 68 00 01 00 00");
         KeyboardState = *keyboard.get_first<uint32_t>(13);
         KeyboardHook = safetyhook::create_inline(keyboard.get_first(), Keyboard);
         auto mouse = hook::pattern("55 8B EC 83 EC 08 89 4D F8 8B 45 F8 05 ? ? 00 00 50 6A 14");
         MouseState = *mouse.get_first<uint32_t>(13);
         MouseHook = safetyhook::create_inline(mouse.get_first(), Mouse);
+        auto controller = hook::pattern("55 8B EC 83 EC 10 89 4D F0 C7 45 FC 00 00 00 00 8B 45 F0 83 78 08 00 0F 84 ? ? 00 00 8B 4D F0 8B 51 08");
+        if (controller.empty())
+        {
+            // The updated input object adds a second controller state and shifts the cached buttons.
+            controller = hook::pattern("55 8B EC 83 EC 18 89 4D E8 C7 45 FC 00 00 00 00 8B 45 E8 83 78 08 00 0F 84 ? ? 00 00 8B 4D E8 8B 51 08");
+            ControllerState = 28;
+            ControllerCount = 2;
+            ControllerButtons = 592;
+        }
+        ControllerHook = safetyhook::create_inline(controller.get_first(), Controller);
     }
 
     HMODULE ThisModule()
@@ -72,6 +181,8 @@ export namespace MatrixOverlay
 
     bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return false;
         // The hotkey itself is read at the frame boundary: the game's DirectInput keyboard can take the key messages
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP) &&
             wParam == VK_F10 && ((GetAsyncKeyState(VK_CONTROL) & 0x8000) || HotkeyDown))
@@ -99,6 +210,9 @@ export namespace MatrixOverlay
 
     void Present(IDirect3DDevice9* device, HWND window)
     {
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
+        const OverlayRounding rounding;
         static const bool page = []()
         {
             asi_overlay::Overlay::AddPage("Debug", "Info", [](asi_overlay::OverlayUI& ui)
@@ -122,28 +236,6 @@ export namespace MatrixOverlay
         Hotkey(window);
         CurrentDevice = device;
         Overlay.Present(device, ThisModule());
-        XINPUT_STATE state{};
-        DWORD slot = 0;
-        const bool present = PadInput::Read(state, slot);
-        uint16_t mapped = 0;
-        if (present)
-        {
-            const auto buttons = state.Gamepad.wButtons;
-            const auto map = [&](WORD source, uint16_t target) { if (buttons & source) mapped |= target; };
-            map(XINPUT_GAMEPAD_BACK, 0x1);
-            map(XINPUT_GAMEPAD_START, 0x8);
-            map(XINPUT_GAMEPAD_DPAD_UP, 0x10);
-            map(XINPUT_GAMEPAD_DPAD_RIGHT, 0x20);
-            map(XINPUT_GAMEPAD_DPAD_DOWN, 0x40);
-            map(XINPUT_GAMEPAD_DPAD_LEFT, 0x80);
-            map(XINPUT_GAMEPAD_LEFT_SHOULDER, 0x400);
-            map(XINPUT_GAMEPAD_RIGHT_SHOULDER, 0x800);
-            map(XINPUT_GAMEPAD_Y, 0x1000);
-            map(XINPUT_GAMEPAD_B, 0x2000);
-            map(XINPUT_GAMEPAD_A, 0x4000);
-            map(XINPUT_GAMEPAD_X, 0x8000);
-        }
-        Overlay.Gamepad(mapped, present ? static_cast<int8_t>(state.Gamepad.sThumbLX / 256) : 0,
-            present ? static_cast<int8_t>(-state.Gamepad.sThumbLY / 256) : 0);
+        UpdateOverlayPad();
     }
 }

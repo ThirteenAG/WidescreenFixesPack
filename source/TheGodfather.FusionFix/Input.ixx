@@ -4,6 +4,7 @@ module;
 #include <array>
 #include <dinput.h>
 #include <stdexcept>
+#include "Shared/PadInput.hpp"
 
 export module Input;
 
@@ -44,9 +45,6 @@ export namespace GodfatherInput
                 *reinterpret_cast<uint32_t*>(records + 132 * slot + offset) = 0;
     }
 
-    bool(__thiscall* button)(void*, int, uint32_t, int){};
-    void*(__thiscall* record)(void*, int){};
-
     void MutePc(void* input)
     {
         Mute(input);
@@ -72,36 +70,51 @@ export namespace GodfatherInput
         bytes[2352] = 0;
     }
 
-    uint32_t MenuMask()
+    uint32_t MenuButtons(const XINPUT_GAMEPAD& pad)
     {
-        if (Blocked() || !GodfatherInputSlot.is_initialized() || !button || !record)
-            return 0;
-        auto input = GodfatherInputSlot.get();
-        if (!input)
-            return 0;
-        const auto bytes = static_cast<const uint8_t*>(input);
-        if (bytes[56] && bytes[988] >= 5)
-            return 0;
-        auto pad = static_cast<const uint8_t*>(record(input, 0));
-        if (!pad)
-            return 0;
-        constexpr uint32_t buttons[]{ 0x1000, 0x2000, 0x0200, 0x0100, 0x0400, 0x0008, 0x0800 };
-        uint32_t mask = 0;
+        constexpr WORD buttons[]{ XINPUT_GAMEPAD_DPAD_UP, XINPUT_GAMEPAD_DPAD_DOWN,
+            XINPUT_GAMEPAD_DPAD_LEFT, XINPUT_GAMEPAD_DPAD_RIGHT, XINPUT_GAMEPAD_A,
+            XINPUT_GAMEPAD_B, XINPUT_GAMEPAD_Y };
+        uint32_t mask{};
         for (size_t i = 0; i < std::size(buttons); ++i)
-            if (button(input, 0, buttons[i], 1))
+            if (pad.wButtons & buttons[i])
                 mask |= 1u << i;
-        const auto axes = reinterpret_cast<const float*>(pad);
-        if (std::isfinite(axes[0]))
-        {
-            if (axes[0] < -0.5f) mask |= 1u << 2;
-            if (axes[0] > 0.5f) mask |= 1u << 3;
-        }
-        if (std::isfinite(axes[1]))
-        {
-            if (axes[1] < -0.5f) mask |= 1u << 0;
-            if (axes[1] > 0.5f) mask |= 1u << 1;
-        }
+        constexpr int half = 16384;
+        if (pad.sThumbLY > half) mask |= 1u << 0;
+        if (pad.sThumbLY < -half) mask |= 1u << 1;
+        if (pad.sThumbLX < -half) mask |= 1u << 2;
+        if (pad.sThumbLX > half) mask |= 1u << 3;
         return mask;
+    }
+
+    uint32_t MenuPresses(bool acceptInput)
+    {
+        static std::array<uint32_t, XUSER_MAX_COUNT> previous{};
+        static DWORD owner = XUSER_MAX_COUNT;
+        const auto getState = PadInput::XInput().getState;
+        if (!getState)
+            return 0;
+
+        DWORD nextOwner = XUSER_MAX_COUNT;
+        uint32_t nextPresses{};
+        for (DWORD slot = 0; slot < XUSER_MAX_COUNT; ++slot)
+        {
+            XINPUT_STATE state{};
+            const bool connected = getState(slot, &state) == ERROR_SUCCESS;
+            if (slot == owner && !connected)
+                owner = XUSER_MAX_COUNT;
+            const auto mask = connected ? MenuButtons(state.Gamepad) : 0;
+            const auto presses = mask & ~std::exchange(previous[slot], mask);
+            if (presses && (nextOwner == XUSER_MAX_COUNT || slot == owner))
+            {
+                nextOwner = slot;
+                nextPresses = presses;
+            }
+        }
+        if (!acceptInput || !nextPresses)
+            return 0;
+        owner = nextOwner;
+        return nextPresses;
     }
 
     void Init()
@@ -109,10 +122,6 @@ export namespace GodfatherInput
         auto cooperative = hook::pattern("8B 86 64 04 00 00 8B 48 08 85 C9 74 28 8B 07 8B 10 6A 05 51 50 FF 52 34 85 C0 74 19");
         cooperativeHook = safetyhook::create_mid(cooperative.get_first(19), Cooperative);
         auto root = hook::pattern("56 8B F1 8B 0D ? ? ? ? 6A 00 E8 ? ? ? ? 85 C0 74 ? 8B 48 30 85 C9");
-        auto query = hook::pattern("8B 44 24 04 53 50 32 DB E8 ? ? ? ? 85 C0 74 ? 8B 4C 24 0C 33 D2 66 8B 50 38 "
-            "66 F7 D2 23 CA 0F B6 54 24 10 83 FA 03 77 ? FF 24 95 ? ? ? ? 8B 50 30 0F B7 C9 85 D1 0F 95 C3");
         GodfatherInputSlot.SetAddress(*root.get_first<void**>(5));
-        button = reinterpret_cast<decltype(button)>(query.get_first());
-        record = reinterpret_cast<decltype(record)>(injector::GetBranchDestination(query.get_first<uint8_t>(8)).as_int());
     }
 }

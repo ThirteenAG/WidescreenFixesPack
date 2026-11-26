@@ -83,9 +83,9 @@
   "SPLITSCREEN.Enable": "Attiva schermo condiviso",
   "SPLITSCREEN.Enable.description": "Ripristina la coop locale a schermo condiviso. Il giocatore 2 richiede un controller. Il giocatore 2 apre il menu di pausa con START e lo usa con il proprio controller.",
   "SPLITSCREEN.GamepadPlayer1": "Controller giocatore 1",
-  "SPLITSCREEN.GamepadPlayer1.description": "Controller giocatore 1 (1–4). 0 usa solo mouse e tastiera quando è presente il giocatore 2; non cambia il gioco singolo.",
+  "SPLITSCREEN.GamepadPlayer1.description": "Controller del giocatore 1, o solo tastiera e mouse quando è presente il giocatore 2; non cambia il gioco singolo. Riavvio richiesto.",
   "SPLITSCREEN.GamepadPlayer2": "Controller giocatore 2",
-  "SPLITSCREEN.GamepadPlayer2.description": "Controller giocatore 2 (1–4).",
+  "SPLITSCREEN.GamepadPlayer2.description": "Controller del giocatore 2. Riavvio richiesto.",
   "FILELOADER.DumpPackedFiles": "Estrai file dagli archivi",
   "FILELOADER.DumpPackedFiles.description": "Estrae gli archivi .umd in unpacked accanto all'eseguibile; vedi _dump.log. Sposta i file in update per caricare le versioni estratte.",
   "STARTUP.DedicatedServerExePath": "Eseguibile server dedicato",
@@ -145,5 +145,10 @@
   "ui.pillarbox": "Bande verticali",
   "ui.both": "Entrambe",
   "HudAspectRatioConstraint": "Proporzioni HUD",
-  "HudAspectRatioConstraint.description": "Auto posiziona gli elementi laterali dell’HUD ai bordi dello schermo. Scegli 4:3, 16:9, 21:9 o un rapporto personalizzato L:H o decimale, da 4:3 a 32:9, per mantenerli in un’area centrata. Effetti a schermo intero e indicatori nel mondo restano invariati. Effetto immediato."
+  "HudAspectRatioConstraint.description": "Auto posiziona gli elementi laterali dell’HUD ai bordi dello schermo. Scegli 4:3, 16:9, 21:9 o un rapporto personalizzato L:H o decimale, da 4:3 a 32:9, per mantenerli in un’area centrata. Effetti a schermo intero e indicatori nel mondo restano invariati. Effetto immediato.",
+  "SPLITSCREEN.GamepadPlayer1.0": "Tastiera e mouse",
+  "pad.controller1": "Controller 1",
+  "pad.controller2": "Controller 2",
+  "pad.controller3": "Controller 3",
+  "pad.controller4": "Controller 4"
 }

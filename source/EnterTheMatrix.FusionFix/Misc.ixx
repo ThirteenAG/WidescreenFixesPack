@@ -83,7 +83,7 @@ namespace UpdateNotice
         config.playable = []() { return Intro::Done.load(); };
         config.format = [](const std::string& latest, bool hub)
         {
-            auto language = FixSettings().String("MAIN.TextLanguage");
+            auto language = FixSettings().Get("MAIN.TextLanguage");
             if (language.empty() || _stricmp(language.c_str(), "auto") == 0)
             {
                 switch (PRIMARYLANGID(GetUserDefaultUILanguage()))

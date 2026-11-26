@@ -9,6 +9,8 @@ export module PostFX;
 import ComVars;
 import PostFXCore;
 
+static std::atomic<bool> consoleGamma{ false }, useSmaa{ true };
+
 class PostFX
 {
 public:
@@ -16,9 +18,10 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            auto& settings = FixSettings();
-            CPostFX::bConsoleGammaEnabled = settings.Int("GRAPHICS.ConsoleGamma") != 0;
-            CPostFX::bSmaaEnabled = settings.Int("GRAPHICS.AntiAliasing") != 0;
+            BindLiveSetting("GRAPHICS.ConsoleGamma", consoleGamma);
+            BindLiveSetting("GRAPHICS.AntiAliasing", useSmaa);
+            CPostFX::bConsoleGammaEnabled = consoleGamma.load(std::memory_order_relaxed);
+            CPostFX::bSmaaEnabled = useSmaa.load(std::memory_order_relaxed);
 
             auto pattern = hook::pattern("8B 88 ? ? ? ? ? ? ? ? ? ? 8B 45");
             static auto SMAAHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
@@ -26,15 +29,16 @@ public:
                 if (!Direct3DDevice || *(uint32_t*)(regs.ebp - 4) != 3)
                     return;
 
-                const bool gamma = FixSettings().Bool("GRAPHICS.ConsoleGamma");
-                const bool smaa = FixSettings().Int("GRAPHICS.AntiAliasing") != 0;
-                if (gamma != CPostFX::bConsoleGammaEnabled || smaa != CPostFX::bSmaaEnabled)
+                const bool gamma = consoleGamma.load(std::memory_order_relaxed);
+                const bool smaa = useSmaa.load(std::memory_order_relaxed);
+                // SMAA needs extra targets that might be missing after a gamma-only pass.
+                if (smaa && !CPostFX::bSmaaEnabled)
                 {
                     CPostFX::Shutdown();
                     CPostFX::OnDeviceReset();
-                    CPostFX::bConsoleGammaEnabled = gamma;
-                    CPostFX::bSmaaEnabled = smaa;
                 }
+                CPostFX::bConsoleGammaEnabled = gamma;
+                CPostFX::bSmaaEnabled = smaa;
                 if (!gamma && !smaa)
                     return;
 

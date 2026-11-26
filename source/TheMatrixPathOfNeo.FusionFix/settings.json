@@ -77,6 +77,11 @@
       "description": "@HudAspectRatioConstraint.description",
       "page": "display",
       "apply": "live",
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      },
       "suggestions": [
         {
           "value": "Auto"

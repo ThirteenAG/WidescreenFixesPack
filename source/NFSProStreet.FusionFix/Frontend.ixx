@@ -120,6 +120,19 @@ namespace cFEng
         return shDestroyGroup.unsafe_thiscall<int>(object);
     }
 
+    void ApplyHudGroup(FEObject* object, bool right)
+    {
+        HudPositions.Apply(object, { object->pData, object->GUID }, right, fWidescreenHudOffset,
+            [](void* group, float& x, float& y)
+            {
+                FE::Object::GetCenter(group, &x, &y);
+                return true;
+            }, [](void* group, float x, float y)
+            {
+                FE::Object::SetCenter(group, x, y);
+            });
+    }
+
     bool ApplyHudPackage(const char* packageName)
     {
         if (!packageName || !*packageName)
@@ -133,15 +146,7 @@ namespace cFEng
             found = true;
             auto& current = right ? s_currentRightGroup : s_currentLeftGroup;
             current = object;
-            HudPositions.Apply(object, { object->pData, object->GUID }, right, fWidescreenHudOffset,
-                [](void* group, float& x, float& y)
-                {
-                    FE::Object::GetCenter(group, &x, &y);
-                    return true;
-                }, [](void* group, float x, float y)
-                {
-                    FE::Object::SetCenter(group, x, y);
-                });
+            ApplyHudGroup(object, right);
         }
         return found;
     }
@@ -156,7 +161,15 @@ namespace cFEng
         auto previous = fWidescreenHudOffset;
         updateWidescreenOffset();
         if (!changed && previous == fWidescreenHudOffset)
+        {
+            // The shown HUD groups stay where the fix put them when the game's scripts move them
+            for (bool right : { false, true })
+            {
+                if (auto group = static_cast<FEObject*>(right ? s_currentRightGroup : s_currentLeftGroup); group && group->pData)
+                    ApplyHudGroup(group, right);
+            }
             return;
+        }
         for (auto package = HudPackages.begin(); package != HudPackages.end();)
         {
             if (ApplyHudPackage(package->c_str()))

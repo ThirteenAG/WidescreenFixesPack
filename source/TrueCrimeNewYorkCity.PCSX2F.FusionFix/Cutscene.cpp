@@ -16,18 +16,24 @@ namespace tcny
         constexpr uintptr_t barState = 0x14, barHeight = 0x18;
         float fullHeight = 68.0f;
         uint32_t projectionReturn;
+        bool cinematicDraw;
 
         void BarsBegin(SafetyMipsContext& regs)
         {
-            if (animatedBorders || !Cinema())
-            {
-                return;
-            }
             const auto bars = uintptr_t(regs.s1);
             const auto state = Read<int32_t>(bars + barState);
             const auto height = Read<float>(bars + barHeight);
+            const auto world = Read<uintptr_t>(worldPointer);
+            // The world's bars can still be sliding out after the cinematic flag clears.
+            cinematicDraw = world && Read<uintptr_t>(world + cinemaBarsOffset) == bars &&
+                ((state == 2 && height > 0.0f) || Read<int32_t>(world + cinemaOffset) != 0);
+            if (animatedBorders || !cinematicDraw)
+            {
+                return;
+            }
             if (state == 1 || (state == 0 && height > fullHeight))
             {
+                Write<int32_t>(bars + barState, 0);
                 Write<float>(bars + barHeight, fullHeight);
             }
             else if (state == 2)
@@ -38,7 +44,7 @@ namespace tcny
         // f0 = bar height about to be converted for drawing.
         void BarsHeight(SafetyMipsContext& regs)
         {
-            if (!(cutsceneBorders & 1) && Cinema())
+            if (!(cutsceneBorders & 1) && cinematicDraw)
             {
                 regs.f0 = 0.0f;
             }
@@ -47,7 +53,7 @@ namespace tcny
         // sp + 0x34 = screen width.
         void BarsEnd(SafetyMipsContext& regs)
         {
-            if (!(cutsceneBorders & 2) || display.scale >= 1.0f || !Cinema())
+            if (!(cutsceneBorders & 2) || display.scale >= 1.0f || !cinematicDraw)
             {
                 return;
             }

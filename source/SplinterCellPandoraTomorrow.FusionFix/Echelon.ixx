@@ -542,6 +542,20 @@ namespace AETextureManager
 // EPlayerCam FPS fixes
 namespace AEPlayerCam
 {
+    SafetyHookInline shLoadCamMode;
+    int __fastcall LoadCamMode(void* camera, void* edx, int mode)
+    {
+        const auto loaded = shLoadCamMode.unsafe_fastcall<int>(camera, edx, mode);
+        if (loaded && static_cast<unsigned>(mode) <= 0x34)
+        {
+            constexpr size_t modeSize = 160;
+            constexpr size_t useAimTuningOffset = 1028;
+            auto* useAimTuning = reinterpret_cast<int*>(static_cast<char*>(camera) + useAimTuningOffset + modeSize * mode);
+            *useAimTuning = 0;
+        }
+        return loaded;
+    }
+
     constexpr float kStep     = 1.0f / 30.0f;
     constexpr int   kMaxSteps = 8;
 
@@ -647,6 +661,7 @@ export void InitEchelon()
         AEPlayerControllerCheckpoint::Init();
 
     // EPlayerCam FPS fixes
+    AEPlayerCam::shLoadCamMode = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Echelon"), "?LoadCamMode@AEPlayerCam@@QAEHW4ECamMode@@@Z"), AEPlayerCam::LoadCamMode);
     AEPlayerCam::shUpdateView = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"Echelon"), "?UpdateView@AEPlayerCam@@QAEXVFRotator@@H@Z"), AEPlayerCam::UpdateView);
 
     // Letterboxing

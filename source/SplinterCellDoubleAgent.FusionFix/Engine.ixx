@@ -2,6 +2,7 @@ module;
 
 #include "stdafx.h"
 #include "FixSettings.hpp"
+#include "Shared/SplinterCell/ViewportMouse.hpp"
 #include <stdexcept>
 
 
@@ -46,13 +47,15 @@ namespace UGameEngine
             }
         }
 
-        // All raw mouse movement since the last tick, once per tick
-        if (Screen.bRawInputMouse && UWindowsViewport::RawMouseFeed)
+        if (Screen.bRawInputMouse)
         {
-            const auto dx = RawInputHandler<>::RawMouseDeltaX.exchange(0);
-            const auto dy = RawInputHandler<>::RawMouseDeltaY.exchange(0);
-            if (dx || dy)
-                UWindowsViewport::RawMouseFeed(dx, dy);
+            const HWND active = UWindowsViewport::RawMouseFeed && GetForegroundWindow() == hGameWindow ? hGameWindow : nullptr;
+            ViewportMouse::Bind(active);
+            const auto move = ViewportMouse::movement.Take();
+            if (active && !ViewportMouse::nativeFrame && (move.x || move.y))
+                UWindowsViewport::RawMouseFeed(static_cast<int>(std::clamp<int64_t>(move.x, INT_MIN, INT_MAX)),
+                    static_cast<int>(std::clamp<int64_t>(move.y, INT_MIN, INT_MAX)));
+            ViewportMouse::nativeFrame = false;
         }
 
         return shTick.unsafe_fastcall(UGameEngine, edx, deltaTime);
@@ -98,6 +101,9 @@ namespace AActor
 
 export void InitEngine()
 {
+    static std::atomic<float> fovFactor{ 1.0f };
+    ObserveFixSetting("MAIN.FOVFactor", asi_settings::detail::ParseFloat, [](float value) { fovFactor.store(value); });
+    Cinematics::Init();
     Focus::Init();
     const auto core = GetModuleHandleW(L"Core.dll");
     auto language = reinterpret_cast<const wchar_t* (__cdecl*)()>(FindProcAddress(core, "?GetLanguage@UObject@@SAPBGXZ"));
@@ -320,8 +326,7 @@ export void InitEngine()
             *(float*)(regs.ebx + 0x268) = AdjustFOV(*(float*)(regs.ebx + 0x268), Screen.fAspectRatio, 4.0f / 3.0f);
             return;
         }
-        static const auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
-        float factor = DAGameplayCamera::Factor(reinterpret_cast<void*>(regs.ebx), *reinterpret_cast<uintptr_t*>(regs.ebp + 4), fFOVFactor);
+        float factor = DAGameplayCamera::Factor(reinterpret_cast<void*>(regs.ebx), *reinterpret_cast<uintptr_t*>(regs.ebp + 4), fovFactor.load());
         if (!gCurrentCameraShotName.empty())
             factor = 1.0f;
         const auto base = std::clamp(AdjustFOV(*(float*)(regs.ebx + 0x268), Screen.fAspectRatio, Screen.fDefaultARforFOV), 1.0f, 179.0f);
@@ -341,7 +346,7 @@ export void InitEngine()
     pattern = find_module_pattern(GetModuleHandle(L"Engine"), "83 83 20 02 00 00 01");
     static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        UObject::objectStates.clear();
+        UObject::controllerState = {};
         UIntOverrides::ClearCache();
         UFloatOverrides::ClearCache();
         UByteOverrides::ClearCache();
@@ -387,7 +392,7 @@ export void InitEngine()
     pattern = hook::module_pattern(GetModuleHandle(L"Engine"), "F3 0F 59 85 ? ? ? ? F3 0F 11 85 ? ? ? ? 85 DB");
     static auto UInputExecMouseWheelScrollHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        auto ECoopPlayerControllerState = UObject::GetState(L"ECoopPlayerController");
+        const auto& ECoopPlayerControllerState = UObject::controllerState.name;
 
         if (ECoopPlayerControllerState == L"s_CrackSafe" || ECoopPlayerControllerState == L"s_Ledge")
             regs.xmm0.f32[0] = 1.0f;

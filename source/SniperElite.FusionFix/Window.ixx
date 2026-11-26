@@ -53,11 +53,13 @@ export namespace SniperWindow
         RECT client{}, outer{};
         if (Mode != 1 || !GetClientRect(window, &client) || !GetWindowRect(window, &outer))
             return;
-        const auto monitor = Monitor(window);
-        const int fullWidth = (outer.right - outer.left) + Width - client.right;
-        const int fullHeight = (outer.bottom - outer.top) + Height - client.bottom;
-        NativeMoveWindow(window, monitor.left + (monitor.right - monitor.left - fullWidth) / 2,
-            monitor.top + (monitor.bottom - monitor.top - fullHeight) / 2, fullWidth, fullHeight, TRUE);
+        POINT origin{};
+        ClientToScreen(window, &origin);
+        const WindowStyle::Frame frame{ outer.left - origin.x, outer.top - origin.y,
+            outer.right - origin.x - client.right, outer.bottom - origin.y - client.bottom };
+        const auto rect = WindowStyle::WindowRect(Monitor(window), Width, Height, frame);
+        WindowStyle::detail::AllowSize(window, rect.right - rect.left, rect.bottom - rect.top);
+        NativeMoveWindow(window, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, TRUE);
     }
 
     // The game sizes its window with a frame measured at 100% scaling, which shrinks the picture on scaled displays

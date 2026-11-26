@@ -145,7 +145,12 @@ public:
             boundsHook = safetyhook::create_mid(bounds, PlaceBounds);
             parseWidgetHook = safetyhook::create_inline(parser, ParseWidgetPositionLineFromFile);
             ReadHudAspect();
-            FixSettings().OnChange("MAIN.HudAspectRatioConstraint", ReadHudAspect);
+            // Widget positions are placed when the layout files load, so a new box reloads them.
+            FixSettings().OnChange("MAIN.HudAspectRatioConstraint", []()
+            {
+                ReadHudAspect();
+                reloadLayout = true;
+            });
             for (const auto id : { "MAIN.HudScale", "MAIN.RadarScale" })
                 FixSettings().OnChange(id, []() { reloadLayout = true; });
             WFP::onGameProcessEvent() += []()

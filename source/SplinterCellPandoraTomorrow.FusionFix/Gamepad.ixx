@@ -250,35 +250,6 @@ namespace
         WrappedPrintScaleHook.unsafe_ccall(canvas, style, width, height, font, prompt.empty() ? text : prompt.c_str(), scaleX, scaleY, flags);
     }
 
-    // "Axis aTurn DeadZone=0.3" with its speed multiplied
-    std::string ScaledAxis(const std::string& binding, float factor)
-    {
-        if (binding.rfind("Axis ", 0) != 0)
-            return binding;
-        auto result = binding;
-        float speed = 1.0f;
-        auto at = result.find("Speed=");
-        if (at != std::string::npos)
-        {
-            size_t end = at + 6;
-            while (end < result.size() && result[end] != ' ')
-                ++end;
-            speed = static_cast<float>(atof(result.substr(at + 6, end - at - 6).c_str()));
-            result.erase(at, end - at);
-            while (at < result.size() && result[at] == ' ')
-                result.erase(at, 1);
-            if (!result.empty() && result.back() == ' ')
-                result.pop_back();
-        }
-        auto name = result.find(' ', 5);
-        if (name == std::string::npos)
-            name = result.size();
-        result.insert(name, std::format(" Speed={:.3f}", speed * factor));
-        return result;
-    }
-
-    // Starts set so the first input tick applies the camera speed and invert to the stick axes
-    std::atomic<bool> BindingsChanged = true;
 }
 
 export namespace Gamepad
@@ -322,32 +293,11 @@ export namespace Gamepad
         return PadIsLastDevice;
     }
 
-    // The pad's look bindings with MAIN.GamepadCameraSpeed and MAIN.InvertGamepadY
-    std::string TurnBinding()
-    {
-        return ScaledAxis(FixSettings().String("INPUT.JoyZ"), std::clamp(FixSettings().Float("MAIN.GamepadCameraSpeed"), 0.25f, 3.0f));
-    }
-
-    std::string LookUpBinding()
-    {
-        const float invert = FixSettings().Bool("MAIN.InvertGamepadY") ? -1.0f : 1.0f;
-        return ScaledAxis(FixSettings().String("INPUT.JoyV"), invert * std::clamp(FixSettings().Float("MAIN.GamepadCameraSpeed"), 0.25f, 3.0f));
-    }
-
-    // True once after the look settings changed
-    bool TakeBindingsChanged()
-    {
-        return BindingsChanged.exchange(false);
-    }
-
     void Init()
     {
         for (const auto& setting : FixSettings().GetDescription().settings)
             if (setting.id == "MAIN.GamepadIcons" || setting.id == "MAIN.TextLanguage" || setting.id.starts_with("INPUT.Joy"))
                 FixSettings().OnChange(setting.id, []() { PromptRevision.fetch_add(1, std::memory_order_release); });
-
-        for (auto id : { "MAIN.GamepadCameraSpeed", "MAIN.InvertGamepadY", "INPUT.JoyZ", "INPUT.JoyV" })
-            FixSettings().OnChange(id, []() { BindingsChanged = true; });
     }
 
     // The HUD's text drawing (training prompts)

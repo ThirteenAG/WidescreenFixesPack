@@ -1,11 +1,11 @@
 #include "Controls.hpp"
-#include "../../external/injector/include/ps2/patches.hpp"
 #include <cstring>
+#include <cstdlib>
 #include <cstdio>
 #include <utility>
 #include "Settings.hpp"
 extern "C" {
-#include "../../external/injector/include/ps2/plugin_settings.h"
+#include "ps2/plugin_settings.h"
 }
 
 // Keyboard and mouse control scheme and the modern pad scheme for GTA LCS PS2.
@@ -23,12 +23,47 @@ extern "C" {
 // with the triggers: R2 accelerates and fires, L2 brakes and targets, Cross is
 // the handbrake, the d-pad switches weapons, targets and radio stations, and
 // the right stick aims. L1 and R1 take over looking left, right and behind.
+extern "C" console::MouseMotion MouseStateV2;
+extern "C" console::MouseTransitions MouseStateV3;
+
 namespace lcs {
 namespace {
 safetymips::GameInline<uint64_t(Pad*, int16_t)> updatePad;
 Controller keyboardController{};
+Controller previousPhysicalController{};
+constexpr uintptr_t directionalSwap = 0x3D08F8;
 unsigned zoomInFrames = 0, zoomOutFrames = 0;
-console::ps2settings::StateLoads stateLoads;
+struct SettingsRefresh
+{
+    uint32_t appliedGeneration = 0;
+    uint32_t attemptedGeneration = 0;
+    unsigned retryDelay = 0;
+
+    void Poll()
+    {
+        const auto generation = *reinterpret_cast<const volatile uint32_t*>(&PCSX2FStateLoadGeneration);
+        if (generation == appliedGeneration)
+            return;
+        if (generation == attemptedGeneration && retryDelay)
+        {
+            --retryDelay;
+            return;
+        }
+
+        attemptedGeneration = generation;
+        if (RefreshSettings())
+        {
+            appliedGeneration = generation;
+            retryDelay = 0;
+        }
+        else
+        {
+            // Retry on the 60th subsequent pad update without waiting for another load.
+            retryDelay = 59;
+        }
+    }
+};
+SettingsRefresh stateLoads;
 
 enum class Query {
     SteeringX, SteeringY, CarGunY, CarGunX, WalkX, WalkY, LookBehindCar,
@@ -127,9 +162,26 @@ template<uintptr_t Address, Query Which> struct Hook {
             // Entering vehicles keeps the native blocking flags.
             return PCQuery(Which, pad);
         }
-        int16_t value;
-        if (settings.modernControls && ModernQuery(Which, pad, value))
-            return !pad->disabled && (!WeaponQuery(Which) || pad->mode < 4) ? value : 0;
+        if (settings.modernControls)
+        {
+            if constexpr (Which == Query::WalkX || Which == Query::WalkY)
+            {
+                // Hide the D-pad only for movement queries. The game's
+                // directional swap selects the alternate button bank.
+                const bool swapped = *reinterpret_cast<const int32_t*>(directionalSwap) != 0;
+                const auto offset = swapped ? offsetof(Controller, alternateDpad) : offsetof(Controller, up);
+                auto* directions = reinterpret_cast<unsigned char*>(&pad->current) + offset;
+                unsigned char saved[sizeof(Controller::alternateDpad)];
+                std::memcpy(saved, directions, sizeof(saved));
+                std::memset(directions, 0, sizeof(saved));
+                const auto result = original.call(pad);
+                std::memcpy(directions, saved, sizeof(saved));
+                return result;
+            }
+            int16_t value;
+            if (ModernQuery(Which, pad, value))
+                return !pad->disabled && (!WeaponQuery(Which) || pad->mode < 4) ? value : 0;
+        }
         return original.call(pad);
     }
     static void Install() { original = safetymips::create_inline_game(Address, Read); }
@@ -166,18 +218,49 @@ template<uintptr_t Address, bool Vertical> struct PadlessLook {
     }
     static void Install() { original = safetymips::create_inline_game(Address, Read); }
 };
-// D-pad walking is off in the modern scheme (the d-pad switches weapons):
-// GetPedWalkLeftRight/UpDown read the d-pad through these calls, which then
-// return 0 (daddu v0, zero, zero).
-constexpr uintptr_t dpadSites[4] = {0x170FC0, 0x170FCC, 0x1711A0, 0x1711AC};
-pcsx2::Patch dpadPatches[4];
 int16_t Button(bool held) { return held ? 255 : 0; }
-bool PadTouched(const Controller& state) {
-    const auto moved = [](int16_t value) { return value > 40 || value < -40; };
-    if (moved(state.leftX) || moved(state.leftY) || moved(state.rightX) || moved(state.rightY)) return true;
-    for (int16_t value : {state.l1, state.l2, state.r1, state.r2, state.up, state.down, state.left, state.right,
-                          state.start, state.select, state.square, state.triangle, state.cross, state.circle, state.l3, state.r3})
-        if (value) return true;
+bool PadTouched(const Controller& current, const Controller& previous, bool swapped)
+{
+    static int16_t stickBaseline[4]{};
+    const int16_t axes[] = {current.leftX, current.leftY, current.rightX, current.rightY};
+    bool touched = false;
+    for (unsigned i = 0; i < 4; ++i)
+    {
+        constexpr int deadzone = 40;
+        constexpr int minimumChange = 8;
+        const int value = axes[i];
+        auto& baseline = stickBaseline[i];
+        if (std::abs(value) <= deadzone)
+            baseline = axes[i];
+        else if (std::abs(int(baseline)) <= deadzone || std::abs(value - baseline) >= minimumChange)
+        {
+            baseline = axes[i];
+            touched = true;
+        }
+    }
+    if (touched)
+        return true;
+
+    const int16_t directions[] = {current.up, current.down, current.left, current.right};
+    const int16_t oldDirections[] = {previous.up, previous.down, previous.left, previous.right};
+    const auto* active = swapped ? current.alternateDpad : directions;
+    const auto* oldActive = swapped ? previous.alternateDpad : oldDirections;
+    for (unsigned i = 0; i < 4; ++i)
+    {
+        if (active[i] && !oldActive[i])
+            return true;
+    }
+
+    static constexpr int16_t Controller::* buttons[] = {
+        &Controller::l1, &Controller::l2, &Controller::r1, &Controller::r2,
+        &Controller::start, &Controller::select, &Controller::square, &Controller::triangle,
+        &Controller::cross, &Controller::circle, &Controller::l3, &Controller::r3
+    };
+    for (const auto button : buttons)
+    {
+        if (current.*button && !(previous.*button))
+            return true;
+    }
     return false;
 }
 
@@ -187,13 +270,17 @@ uint64_t Update(Pad* pad, int16_t number) {
     // The pads update once per game frame, never inside the blocking loading
     // loop: loading-screen drawing enables unthrottling, gameplay ends it.
     FrameLimitUnthrottle = false;
-    stateLoads.poll(RefreshSettings);
+    stateLoads.Poll();
     playerPad = pad;
     static_assert(sizeof(CMouseControllerState) == sizeof(console::Mouse));
     // Sampled for both schemes: the bindings page captures keys either way.
-    input.sample(KeyboardState[0], reinterpret_cast<console::Mouse&>(MouseState[0]));
+    input.sample(KeyboardState[0], reinterpret_cast<console::Mouse&>(MouseState[0]), MouseStateV2, MouseStateV3);
     mouseMotion.sample(input.mouse.x, input.mouse.y);
+    const bool swapped = *reinterpret_cast<const int32_t*>(directionalSwap) != 0;
+    const bool padTouched = PadTouched(pad->current, previousPhysicalController, swapped);
+    previousPhysicalController = pad->current;
     TickMenu();
+    UpdateCheats();
     if (!settings.pcControls) {
         // A key capture on the bindings page owns the input.
         if (capture.active()) pad->current = {};
@@ -213,11 +300,8 @@ uint64_t Update(Pad* pad, int16_t number) {
         return result;
     }
     // The native update read the pad into the current state.
-    const bool wasKeyboard = keyboardInUse;
     if (input.touched()) keyboardInUse = true;
-    else if (PadTouched(pad->current)) keyboardInUse = false;
-    if (keyboardInUse != wasKeyboard) ApplyControls();
-    if (keyboardInUse) UpdateCheats();
+    else if (padTouched) keyboardInUse = false;
     if (!keyboardInUse && !capture.active()) {
         keyboardController = pad->current;
         return result;
@@ -245,6 +329,9 @@ uint64_t Update(Pad* pad, int16_t number) {
         // Esc always leaves the menus, whatever Pause is bound to.
         now.start = Button(b.held(input, Act::Pause) || (menu && input.held(escape)));
         now.select = Button(b.held(input, Act::Camera));                               // camera mode
+        // Native Select checks both pad samples. A new tap can follow a pulse
+        // on the very next frame, so use the binding edge as well as the level.
+        if (b.pressed(input, Act::Camera)) pad->previous.select = 0;
         now.square = Button(b.held(input, Act::Jump));                                 // jump
         now.triangle = Button(b.held(input, Act::EnterVehicle) || (menu && input.held(back))); // vehicle, menu back
         now.cross = Button(input.held(enter));                                         // menu select, skip
@@ -270,11 +357,6 @@ const char* ModernTextKey(const char* key) {
     for (const auto& entry : moved) if (!std::strcmp(key + 2, entry.action)) return entry.text;
     return nullptr;
 }
-void ApplyControls() {
-    for (auto& patch : dpadPatches)
-        if (patch) (void)(settings.modernControls && !KeyboardActive() ? patch.enable() : patch.disable());
-    (void)injector::FlushCaches();
-}
 void InstallControls() {
     updatePad = safetymips::create_inline_game(0x16F8D8, Update);
     Bind<0x170C00, Query::SteeringX>(); Bind<0x170D18, Query::SteeringY>();
@@ -295,22 +377,11 @@ void InstallControls() {
     Bind<0x172408, Query::LookX>(); Bind<0x172498, Query::LookY>();
     PadlessLook<0x172568, false>::Install(); PadlessLook<0x172588, true>::Install();
     Bind<0x172730, Query::Oddjob>(); Bind<0x1727A8, Query::FreeAim>();
-    static constexpr uint32_t noDpad = 0x0000102D; // daddu v0, zero, zero
-    for (unsigned i = 0; i < 4; ++i)
-    {
-        const auto status = dpadPatches[i].create(injector::detail::backend, dpadSites[i], &noDpad, 1);
-        if (status != PCSX2_HOOK_OK)
-        {
-            std::snprintf(OSDText[0], OSDStringSize, "LCS d-pad patch failed (%u)", unsigned(status));
-            break;
-        }
-    }
     InstallMouseCamera();
     InstallButtonIcons();
-    ApplyControls();
 }
 namespace {
-console::ps2settings::Value bindingValues[] = {
+constexpr console::ps2settings::Value bindingDefaults[] = {
     {"BINDINGS", "Forward", "W"},
     {"BINDINGS", "Backward", "S"},
     {"BINDINGS", "Left", "A"},
@@ -350,6 +421,7 @@ console::ps2settings::Value bindingValues[] = {
     {"BINDINGS", "TurretDown", "NUM5"},
     {"BINDINGS", "Pause", "ESC, BACKTICK"},
 };
+console::ps2settings::Value bindingValues[sizeof(bindingDefaults) / sizeof(*bindingDefaults)];
 void ParseBindings() {
     for (const auto& value : bindingValues) {
         for (unsigned i = 0; i < console::stories::ActionCount; ++i) {
@@ -361,11 +433,17 @@ void ParseBindings() {
 }
 }
 void LoadBindings() {
+    std::memcpy(bindingValues, bindingDefaults, sizeof(bindingValues));
     (void)console::ps2settings::load(bindingValues);
     ParseBindings();
 }
-void ReloadBindings() {
-    if (console::ps2settings::read(bindingValues)) ParseBindings();
+bool ReloadBindings()
+{
+    std::memcpy(bindingValues, bindingDefaults, sizeof(bindingValues));
+    if (!console::ps2settings::read(bindingValues))
+        return false;
+    ParseBindings();
+    return true;
 }
 bool SaveBindings() {
     if (!bindings.dirty) return true;

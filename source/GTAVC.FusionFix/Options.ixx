@@ -98,6 +98,8 @@ namespace
     bool LabelShown = false;                // the page starts with the restart line
     const RWGTAMenu::Row* HelpRow = nullptr;    // the row whose description is in WFPHELP
     GameRef<float> RightJustifyWrap;        // CFont::Details.rightJustifyWrap
+    uint8_t* FontDetails = nullptr;         // CFont::Details: scaleX +4, scaleY +8, wrapX +0x2C
+    ValuePrintFn LabelPrintPrevious = nullptr;
     std::map<std::string, std::u16string, std::less<>> Texts;   // the rows' and titles' text by key, in the game's font
 
     int32_t& Screen(uint8_t* manager) { return *reinterpret_cast<int32_t*>(manager + CurrentScreen); }
@@ -110,7 +112,7 @@ namespace
     // translations of the game that replaced one of its languages), or the game's language
     std::string LanguageTag()
     {
-        auto& chosen = FixSettings().String("MAIN.TextLanguage");
+        const auto chosen = FixSettings().Get("MAIN.TextLanguage");
         if (!chosen.empty() && chosen != "auto")
             return chosen;
         static const char* tags[] = { "en", "fr", "de", "it", "es" };
@@ -288,6 +290,15 @@ namespace
         {
             Close();
             return;
+        }
+        // The menu's language changed while the pages are open (an editor): their texts follow at once
+        if (Model.SelectLanguage(LanguageTag()))
+        {
+            ShownRows.clear();
+            HelpRow = nullptr;
+            SetText("WFPT0", Model.Text("menu.plugins"));
+            if (State == Mode::Root)
+                FillRoot();
         }
         if (State == Mode::Page)
             FillPage(manager);
@@ -495,6 +506,33 @@ namespace
         reinterpret_cast<HelperFn>(HelperTextPrevious)(manager, edx, key);
     }
 
+    // CFont::PrintString of the label line in CMenuManager::Draw: the game wraps it at its right margin, and a second
+    // line would cover the first row. A narrow menu or a long translation gets a smaller font that fits one line.
+    void __cdecl LabelPrint(float x, float y, const wchar_t* text)
+    {
+        auto restart = LabelShown && State == Mode::Page ? Answer("WFPWARN") : nullptr;
+        if (FontDetails && restart && text && wcscmp(text, restart) == 0)
+        {
+            auto& scaleX = *reinterpret_cast<float*>(FontDetails + 0x4);
+            auto& scaleY = *reinterpret_cast<float*>(FontDetails + 0x8);
+            const float wrapX = *reinterpret_cast<float*>(FontDetails + 0x2C);
+            const float width = ValueStringWidth(text, true);
+            const float room = (wrapX - x) * 0.98f;
+            if (width > room && room > 0.0f)
+            {
+                const float savedX = scaleX, savedY = scaleY;
+                const float factor = room / width;
+                scaleX *= factor;
+                scaleY *= factor;
+                LabelPrintPrevious(x, y, text);
+                scaleX = savedX;
+                scaleY = savedY;
+                return;
+            }
+        }
+        LabelPrintPrevious(x, y, text);
+    }
+
     // "Plugins" before the Options screen's Back row, when the screen is as the game shipped it
     bool AddOptionsEntry()
     {
@@ -580,6 +618,7 @@ class OptionsInit
 public:
     OptionsInit()
     {
+        WFP::onInitEvent() += []() { Model.RememberRunningSettings(FixSettings()); };
         WFP::onGameInitEvent() += []()
         {
             // Menu.ixx may have hooked the code right after the call already
@@ -649,6 +688,12 @@ public:
                     RightJustifyWrap.SetAddress(reinterpret_cast<float*>(*details.get_first<uint8_t*>(2) + 0x34));
                 }
             }
+
+            // The label line's print (CMenuManager::Draw: ... call CFont::PrintString; mov eax, RsGlobal.width;
+            // add esp, 0Ch; add eax, -10 for the next SetWrapx)
+            FontDetails = *details.get_first<uint8_t*>(2);
+            auto labelPrint = hook::pattern("D9 C1 D9 1C 24 DE D9 E8 ? ? ? ? A1 ? ? ? ? 83 C4 0C 83 C0 F6");
+            LabelPrintPrevious = reinterpret_cast<ValuePrintFn>(injector::MakeCALL(labelPrint.get_first(7), LabelPrint, true).as_int());
 
             auto navigationSound = hook::pattern("B9 ? ? ? ? 6A 00 68 C3 00 00 00 E8 ? ? ? ? FF 45 30");
             Audio = *navigationSound.get_first<void*>(1);

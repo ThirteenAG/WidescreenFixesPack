@@ -114,6 +114,57 @@ namespace WindowedModeWrapper
             return { screen.left + (screenWidth - width) / 2, screen.top + (screenHeight - height) / 2, width, height };
         }
 
+        // A framed window as large as its monitor plus the frame keeps its client area exactly on the monitor, the
+        // caption above it. Moves that put the caption back on screen (restoring from the taskbar, wrappers that keep
+        // captions visible) are undone after the window procedures had the move.
+        inline LRESULT CALLBACK KeepDesktopClient(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR)
+        {
+            using DefSubclassProcFn = LRESULT(WINAPI*)(HWND, UINT, WPARAM, LPARAM);
+            static const auto defSubclassProc = reinterpret_cast<DefSubclassProcFn>(GetProcAddress(WindowStyle::detail::System(L"comctl32.dll"), "DefSubclassProc"));
+            const LRESULT result = defSubclassProc(window, message, wParam, lParam);
+            if (message != WM_WINDOWPOSCHANGING || bBorderlessWindowed)
+                return result;
+
+            auto pos = reinterpret_cast<WINDOWPOS*>(lParam);
+            if (pos->flags & SWP_NOMOVE)
+                return result;
+            RECT rect{ pos->x, pos->y, pos->x + pos->cx, pos->y + pos->cy };
+            if (pos->flags & SWP_NOSIZE)
+            {
+                RECT current{};
+                GetWindowRect(window, &current);
+                rect.right = rect.left + (current.right - current.left);
+                rect.bottom = rect.top + (current.bottom - current.top);
+            }
+            const auto frame = WindowStyle::FrameOf(window);
+            MONITORINFO info{ sizeof(info) };
+            if (frame.Height() <= 0 || !GetMonitorInfo(MonitorFromRect(&rect, MONITOR_DEFAULTTONEAREST), &info))
+                return result;
+            const RECT& monitor = info.rcMonitor;
+            if (rect.right - rect.left == monitor.right - monitor.left + frame.Width() &&
+                rect.bottom - rect.top == monitor.bottom - monitor.top + frame.Height())
+            {
+                pos->x = monitor.left + frame.left;
+                pos->y = monitor.top + frame.top;
+            }
+            return result;
+        }
+
+        // Windows limits a window to about the screen plus its side borders, so a framed window with a desktop-size
+        // client area loses the caption's height; this raises the limit to the screen (or the client size) plus a frame
+        inline void AllowFramedSize(LONG style, LONG exStyle)
+        {
+            const auto frame = WindowStyle::FrameOf(DWORD(style | FrameStyle), DWORD(exStyle), WindowStyle::DpiOf(GameHWND));
+            const LONG width = (std::max)(GetSystemMetrics(SM_CXVIRTUALSCREEN), desiredClientWidth) + frame.Width();
+            const LONG height = (std::max)(GetSystemMetrics(SM_CYVIRTUALSCREEN), desiredClientHeight) + frame.Height();
+            WindowStyle::detail::AllowSize(GameHWND, width, height);
+
+            using SetWindowSubclassFn = BOOL(WINAPI*)(HWND, SUBCLASSPROC, UINT_PTR, DWORD_PTR);
+            static const auto setWindowSubclass = reinterpret_cast<SetWindowSubclassFn>(GetProcAddress(WindowStyle::detail::System(L"comctl32.dll"), "SetWindowSubclass"));
+            if (setWindowSubclass && GetWindowThreadProcessId(GameHWND, nullptr) == GetCurrentThreadId())
+                setWindowSubclass(GameHWND, &KeepDesktopClient, 0x46464443, 0);
+        }
+
         // Puts the game's window in the middle of its monitor at its current client size
         inline void Recenter(HWND window)
         {
@@ -142,6 +193,9 @@ namespace WindowedModeWrapper
     {
         const LONG style = detail::ModeStyle(GetWindowLong(GameHWND, GWL_STYLE));
         SetWindowLong(GameHWND, GWL_STYLE, style);
+
+        if (!bBorderlessWindowed && GameHWND)
+            detail::AllowFramedSize(style, GetWindowLong(GameHWND, GWL_EXSTYLE));
 
         if (!bBorderlessWindowed && desiredClientWidth > 0 && desiredClientHeight > 0)
         {
@@ -177,6 +231,8 @@ namespace WindowedModeWrapper
             {
                 desiredClientWidth = rect->right - rect->left;
                 desiredClientHeight = rect->bottom - rect->top;
+                if (GameHWND)
+                    AllowFramedSize(GetWindowLong(GameHWND, GWL_STYLE), exStyle);
                 return AdjustFrame(rect, WS_CAPTION, menu, exStyle);
             }
             afterCreateWindow();

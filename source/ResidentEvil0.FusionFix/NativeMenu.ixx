@@ -135,7 +135,7 @@ export namespace RE0Menu
 
     inline std::string Language()
     {
-        auto language = FixSettings().String("MAIN.TextLanguage");
+        auto language = FixSettings().Get("MAIN.TextLanguage");
         if (!language.empty() && language != "auto")
             return language;
         // The game shows the language Steam runs it in
@@ -233,7 +233,7 @@ export namespace RE0Menu
             }
         }
         RE0Text::Show(host->entry.node, visible);
-        const bool hasUpdate = !updateNotice.empty() && FixSettings().Bool("MAIN.CheckForUpdates");
+        const bool hasUpdate = !updateNotice.empty() && FixSettings().Get("MAIN.CheckForUpdates") == "1";
         auto texts = FixSettings().GetTexts();
         texts.Select(Language());
         host->notice.Fit(hasUpdate ? texts.Resolve("@update.short") : "", 280, 610, 18, 760, 0xFFFFFFFF);
@@ -265,12 +265,13 @@ export namespace RE0Menu
     {
         if (!Current(host) || !host->open) return;
         auto& model = host->model;
+        model.SelectLanguage(Language());
         const auto pages = model.Pages();
         std::vector<Item> items;
         std::string title = model.Text("menu.plugins");
         if (!host->page)
         {
-            const auto pageRows = !updateNotice.empty() && FixSettings().Bool("MAIN.CheckForUpdates") ? 4u : 5u;
+            const auto pageRows = !updateNotice.empty() && FixSettings().Get("MAIN.CheckForUpdates") == "1" ? 4u : 5u;
             if (host->rowStart >= pages.size()) host->rowStart = 0;
             for (size_t i = host->rowStart; i < pages.size() && i < host->rowStart + pageRows; ++i)
                 items.push_back({ pages[i].title, "", {}, static_cast<int>(i + 1) });
@@ -344,7 +345,7 @@ export namespace RE0Menu
         {
             if (item.link == -4) { Back(host); return; }
             if (item.link == -5) { Help(host); return; }
-            const auto pageRows = !host->page && !updateNotice.empty() && FixSettings().Bool("MAIN.CheckForUpdates") ? 4u : 5u;
+            const auto pageRows = !host->page && !updateNotice.empty() && FixSettings().Get("MAIN.CheckForUpdates") == "1" ? 4u : 5u;
             if (item.link == -2) host->rowStart = host->rowStart >= pageRows ? host->rowStart - pageRows : 0;
             else if (item.link == -3) host->rowStart += pageRows;
             else if (item.link > 0)

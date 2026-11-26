@@ -1,5 +1,9 @@
 #pragma once
 
+#include <atomic>
+#include <mutex>
+#include "Shared/AsiSettings/asi_settings.hpp"
+
 namespace TonyCamera
 {
     struct Bindings
@@ -28,7 +32,7 @@ namespace TonyCamera
 
     inline Bindings Native{};
     inline std::map<uintptr_t, Owner> Cameras;
-    inline const float* Factor = nullptr;
+    inline std::atomic<float> Factor{ 1.0f };
     inline const float* NativeZoomScale = nullptr;
     inline SafetyHookMid RegisterHook, ConstructHook, UpdateHook, DestroyHook;
 
@@ -41,17 +45,27 @@ namespace TonyCamera
             const bool zoomed = Native.cameraZoomOffset &&
                 std::abs(*reinterpret_cast<float*>(camera + Native.cameraZoomOffset) - 1.0f) >= 0.001f;
             if (std::abs(nativeFov - it->second.nativeFov) < 0.001f && !zoomed &&
-                NativeZoomScale && std::abs(*NativeZoomScale - 1.0f) < 0.001f && Factor && std::isfinite(*Factor))
-                factor = std::clamp(*Factor, 0.5f, 2.0f);
+                NativeZoomScale && std::abs(*NativeZoomScale - 1.0f) < 0.001f)
+                factor = Factor.load(std::memory_order_relaxed);
         }
         // The factor scales the 4:3 angle, so wide screens widen it Hor+ from there
         return std::clamp(AdjustFOV(std::clamp(fov * factor, 1.0f, 179.0f), aspect), 1.0f, 179.0f);
     }
 
-    inline void Install(const Bindings& bindings, const float* factor, HMODULE module = GetModuleHandleW(nullptr))
+    inline void Install(const Bindings& bindings, asi_settings::Plugin& settings, HMODULE module = GetModuleHandleW(nullptr))
     {
         Native = bindings;
-        Factor = factor;
+        const auto refresh = [&settings]()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            float factor = 1.0f;
+            if (!asi_settings::detail::ParseFloat(settings.Get("MAIN.FOVFactor"), factor) || !std::isfinite(factor))
+                factor = 1.0f;
+            Factor.store(std::clamp(factor, 0.5f, 2.0f), std::memory_order_relaxed);
+        };
+        settings.OnChange("MAIN.FOVFactor", refresh);
+        refresh();
         auto registration = hook::module_pattern(module, Native.registration);
         auto construction = hook::module_pattern(module, Native.construction);
         auto update = hook::module_pattern(module, Native.update);

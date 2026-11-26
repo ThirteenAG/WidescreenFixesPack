@@ -13,8 +13,6 @@
   "CAMERA.CameraReturnTimeout.description": "Seconds without input before the camera returns behind the car.",
   "CAMERA.CameraReturnSpeed": "Camera Return Speed",
   "CAMERA.CameraReturnSpeed.description": "How fast the camera returns behind the car. 0 = never.",
-  "MAIN.PortableSettings": "Write Settings To File",
-  "MAIN.PortableSettings.description": "Keeps the game's registry settings in savegame\\settings.bin.",
   "MAIN.LeftStickDeadzone": "Left Stick Deadzone",
   "MAIN.LeftStickDeadzone.description": "Left stick deadzone in percent.",
   "MAIN.RightStickDeadzone": "Right Stick Deadzone",

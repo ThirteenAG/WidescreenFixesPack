@@ -593,6 +593,7 @@ void __cdecl ListAddQuad(const NGLQuad* quad)
 }
 
 uint32_t MovieWidth = 4, MovieHeight = 3;
+std::atomic_bool OriginalMovieFraming{ false };
 
 void __cdecl ListAddMovieQuad(const NGLQuad* quad)
 {
@@ -602,7 +603,7 @@ void __cdecl ListAddMovieQuad(const NGLQuad* quad)
     // The whole movie at its own aspect: Original inside the game's centred 4:3 area, Fill inside the whole screen
     const auto sourceAspect = static_cast<double>(MovieWidth) / MovieHeight;
     const double screen = Screen.fAspectRatio;
-    const double area = FixSettings().Int("MAIN.FMVWidescreenMode") == 0 ? 4.0 / 3.0 : screen;
+    const double area = OriginalMovieFraming.load(std::memory_order_relaxed) ? 4.0 / 3.0 : screen;
     double scaleX = std::min(1.0, area / screen) * std::min(1.0, sourceAspect / area);
     double scaleY = std::min(1.0, screen / area) * std::min(1.0, area / sourceAspect);
     // The movie matrix already contains the UI canvas fit. Replace that fit
@@ -643,6 +644,14 @@ public:
         {
 
             auto& settings = FixSettings();
+            const auto refreshMovieFraming = []()
+            {
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                OriginalMovieFraming.store(FixSettings().Get("MAIN.FMVWidescreenMode") == "0", std::memory_order_relaxed);
+            };
+            settings.OnChange("MAIN.FMVWidescreenMode", refreshMovieFraming);
+            refreshMovieFraming();
             // Developer diagnostic, compiled in only on request
 #ifdef USM_DEBUG_TRACE_SCREEN_EFFECTS
             bTraceScreenEffects = true;

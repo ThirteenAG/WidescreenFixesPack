@@ -2,12 +2,14 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <atomic>
 #include <cmath>
 #include <numbers>
 
 export module Water;
 
 import ComVars;
+import LS3DF;
 import WaterCommon;
 import WaterD3D8;
 import WaterD3D9;
@@ -53,7 +55,8 @@ namespace Water
     GameRef<uint32_t> nTexturedDeclaration;
     GameRef<uint32_t> nTextured2Declaration;
 
-    const int* mode = nullptr;
+    std::atomic<bool> modeChanged{ true };
+    int mode = 0;
     bool reflecting = false;
     bool reflectionReady = false;
     bool direct3D9 = false;
@@ -80,8 +83,8 @@ namespace Water
     // The water meshes seen, with their vertices; some missions move and tilt the water to rock it
     struct Mesh
     {
-        uintptr_t buffer;
-        uint32_t minIndex, count;
+        uint64_t buffer;
+        uint32_t first, count, stride;
         std::vector<float> positions;
         float world[16];
         std::optional<Surface> surface;
@@ -168,20 +171,35 @@ namespace Water
     // The water plane of a mesh drawn with the given world matrix: the median height of its vertices, if they are
     // close to one plane (the 10th to 90th percentile within 4 m, or a slope under 1 %) at least 8 m across. Small
     // water, like a glass or a bucket, keeps the game's look.
-    std::optional<Surface> SurfaceOf(uint32_t minIndex, uint32_t count, const float world[16], uintptr_t buffer)
+    std::optional<Surface> SurfaceOf(uint32_t minIndex, uint32_t count, const float world[16], uint64_t buffer, uint32_t stride)
     {
-        auto mesh = std::find_if(meshes.begin(), meshes.end(), [&](const Mesh& m) { return m.buffer == buffer && m.minIndex == minIndex && m.count == count; });
-        if (mesh == meshes.end())
+        UINT base = 0;
+        if (!WaterD3D8::VertexBase(device, base) || minIndex > UINT_MAX - base)
+            return std::nullopt;
+        const auto first = base + minIndex;
+        auto entry = std::find_if(meshes.begin(), meshes.end(), [&](const Mesh& m)
         {
-            if (meshes.size() >= 64)
-                meshes.erase(meshes.begin());
-            Mesh created{ buffer, minIndex, count };
-            if (!WaterD3D8::Positions(device, minIndex, count, created.positions))
-                created.positions.clear();
-            mesh = meshes.insert(meshes.end(), std::move(created));
+            return m.buffer == buffer && m.first == first && m.count == count && m.stride == stride;
+        });
+        Mesh transient{ buffer, first, count, stride };
+        Mesh* mesh = &transient;
+        if (entry == meshes.end())
+        {
+            if (!WaterD3D8::Positions(device, first, count, transient.positions))
+                return std::nullopt;
+            if (buffer)
+            {
+                if (meshes.size() >= 64)
+                    meshes.erase(meshes.begin());
+                mesh = &meshes.emplace_back(std::move(transient));
+            }
         }
-        else if (!memcmp(mesh->world, world, sizeof(mesh->world)))
-            return mesh->surface;
+        else
+        {
+            mesh = &*entry;
+            if (!memcmp(mesh->world, world, sizeof(mesh->world)))
+                return mesh->surface;
+        }
         memcpy(mesh->world, world, sizeof(mesh->world));
         mesh->surface.reset();
         const size_t vertices = mesh->positions.size() / 3;
@@ -314,18 +332,18 @@ namespace Water
     // The engine's indexed draws: the water's are replaced, and skipped while the reflection is rendered
     HRESULT Draw(void* d, uint32_t minIndex, uint32_t count, const std::function<HRESULT()>& draw)
     {
-        if (!stage0Water || !mode || !*mode || d != device)
+        if (!stage0Water || !mode || d != device)
             return draw();
         if (reflecting)
             return S_OK;
         const uintptr_t scene = pRenderedScene;
         WaterLayout layout;
-        uintptr_t buffer = 0;
+        uint64_t buffer = 0;
         if (!scene || !WaterD3D8::Layout(d, layout, buffer, nTexturedDeclaration, nTextured2Declaration))
             return draw();
         float world[16], view[16], projection[16];
         WaterD3D8::Transforms(d, world, view, projection);
-        const auto surface = SurfaceOf(minIndex, count, world, buffer);
+        const auto surface = SurfaceOf(minIndex, count, world, buffer, layout.stride);
         if (!surface)
             return draw();
         const uintptr_t camera = pRenderedCamera;
@@ -380,10 +398,11 @@ namespace Water
         {
             if (device)
             {
-                // A new device: the old one's objects went with it
-                WaterD3D8::Forget();
-                WaterD3D9::Forget();
+                WaterD3D8::ReleaseDevice();
+                WaterD3D9::ReleaseDevice();
                 meshes.clear();
+                seen.clear();
+                reflectionReady = false;
             }
             device = current;
         }
@@ -439,7 +458,9 @@ namespace Water
     void Reflect(uintptr_t driver, uintptr_t scene)
     {
         reflectionReady = false;
-        if (!mode || !*mode || !scene)
+        if (modeChanged.exchange(false))
+            mode = std::clamp(std::atoi(FixSettings().Get("GRAPHICS.Water").c_str()), 0, 2);
+        if (!mode || !scene)
             return;
         AttachDevice();
         const uintptr_t camera = Field<uintptr_t>(scene, SceneCamera);
@@ -482,27 +503,30 @@ namespace Water
         Multiply(view, &Field<float>(reflected, CameraNearProjection), &Field<float>(reflected, CameraNearViewProjection));
         memcpy(reflectionMatrix, &Field<float>(reflected, CameraViewProjection), sizeof(reflectionMatrix));
 
-        // The size of the frame, from the viewport the engine set
-        const auto viewport = RenderViewport.get();
-        const auto* size = reinterpret_cast<const uint32_t*>(viewport.data());
-        const float scale = *mode >= 2 ? 1.0f : 0.5f;
-        reflectionWidth = std::max(16u, static_cast<uint32_t>(size[2] * scale));
-        reflectionHeightPixels = std::max(16u, static_cast<uint32_t>(size[3] * scale));
+        const auto rect = Field<RECT>(scene, SceneRect);
+        if (rect.right <= rect.left || rect.bottom <= rect.top)
+            return;
+        const auto engineViewport = RenderViewport.get();
+        alignas(uint32_t) std::array<uint8_t, 24> viewport{};
+        if (!WaterD3D8::CurrentViewport(device, viewport.data()))
+            return;
+        const float scale = mode >= 2 ? 1.0f : 0.5f;
+        reflectionWidth = std::max(16u, static_cast<uint32_t>((rect.right - rect.left) * scale));
+        reflectionHeightPixels = std::max(16u, static_cast<uint32_t>((rect.bottom - rect.top) * scale));
 
         const auto& clear = Field<std::array<float, 3>>(scene, SceneClearColor);
         const auto channel = [](float value) { return static_cast<uint32_t>(std::clamp(value, 0.0f, 1.0f) * 255.0f); };
         const uint32_t color = 0xFF000000u | (channel(clear[0]) << 16) | (channel(clear[1]) << 8) | channel(clear[2]);
-        const bool begun = direct3D9 ? WaterD3D9::BeginReflection(device9, reflectionWidth, reflectionHeightPixels, color)
-            : WaterD3D8::BeginReflection(device, reflectionWidth, reflectionHeightPixels, color);
+        const bool begun = direct3D9 ? WaterD3D9::BeginReflection(device9, reflectionWidth, reflectionHeightPixels, color, viewport.data())
+            : WaterD3D8::BeginReflection(device, reflectionWidth, reflectionHeightPixels, color, viewport.data());
         if (!begun)
             return;
 
-        const auto rect = Field<std::array<int32_t, 4>>(scene, SceneRect);
         const uint8_t callbacks = Field<uint8_t>(scene, SceneCallbacks);
         const uint32_t fading = Field<uint32_t>(scene, SceneFadingCount);
         const uint32_t frame = Field<uint32_t>(scene, SceneFrame);
         const uint32_t current = nRenderFrame, previous = nPreviousRenderFrame;
-        Field<std::array<int32_t, 4>>(scene, SceneRect) = { 0, 0, static_cast<int32_t>(reflectionWidth), static_cast<int32_t>(reflectionHeightPixels) };
+        SetSceneViewport(scene, { 0, 0, static_cast<LONG>(reflectionWidth), static_cast<LONG>(reflectionHeightPixels) });
         Field<uint8_t>(scene, SceneCallbacks) = callbacks & ~2;
         Field<uint32_t>(scene, SceneFadingCount) = 0;
         Field<uint32_t>(scene, SceneFrame) = reflectionFrame;
@@ -519,12 +543,12 @@ namespace Water
         Field<uint32_t>(scene, SceneFrame) = frame;
         Field<uint32_t>(scene, SceneFadingCount) = fading;
         Field<uint8_t>(scene, SceneCallbacks) = callbacks;
-        Field<std::array<int32_t, 4>>(scene, SceneRect) = rect;
+        SetSceneViewport(scene, rect);
         nRenderFrame = current;
         nPreviousRenderFrame = previous;
         pRenderedCamera = camera;
         pRenderedScene = scene;
-        RenderViewport = viewport;
+        RenderViewport = engineViewport;
         if (direct3D9)
             WaterD3D9::EndReflection(device9, viewport.data());
         else
@@ -543,7 +567,7 @@ namespace Water
 export void InitWater()
 {
     using namespace Water;
-    mode = &FixSettings().Int("GRAPHICS.Water");
+    FixSettings().OnChange("GRAPHICS.Water", []() { modeChanged.store(true); });
     auto module = GetLS3DF();
 
     auto render = find_module_pattern(module, "55 8B EC 83 EC 3C 56 8B 75 0C 85 F6 57 75");
@@ -600,7 +624,14 @@ export void InitWater()
     WFP::onBeforeReset() += []()
     {
         reflectionReady = false;
+        meshes.clear();
+        seen.clear();
         WaterD3D8::Release();
         WaterD3D9::Release();
+    };
+    WFP::onShutdownEvent() += []()
+    {
+        WaterD3D8::ReleaseDevice();
+        WaterD3D9::ReleaseDevice();
     };
 }

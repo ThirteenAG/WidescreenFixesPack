@@ -14,6 +14,7 @@ export namespace GodfatherFocus
     int(__cdecl* pause)(int) = nullptr;
     int(__cdecl* resume)(int) = nullptr;
     bool owned = false;
+    std::atomic<bool> pauseOnFocusLoss{ true };
     constexpr uint32_t reason = 8;
 
     void Service(bool focused, bool enabled)
@@ -55,6 +56,7 @@ export namespace GodfatherFocus
 
     void Init()
     {
+        BindLiveSetting("MAIN.PauseOnFocusLoss", pauseOnFocusLoss);
         auto add = hook::pattern("8B 0D ? ? ? ? 8B 44 24 04 0B C8 C7 05 ? ? ? ? 01 00 00 00 89 0D ? ? ? ? C3");
         auto remove = hook::pattern("8B 44 24 04 8B 0D ? ? ? ? F7 D0 23 C8 89 0D ? ? ? ? 75 0A C7 05 ? ? ? ? 02 00 00 00 C3");
         auto inactive = hook::pattern("84 C0 A0 ? ? ? ? 74 29 84 C0 75 47 C6 05 ? ? ? ? 01 E8 ? ? ? ? C6 05");
@@ -72,7 +74,7 @@ export namespace GodfatherFocus
         GodfatherWindow::frame = [frame](IDirect3DDevice9* device)
         {
             Service(GodfatherWindow::window && GetForegroundWindow() == GodfatherWindow::window,
-                FixSettings().Bool("MAIN.PauseOnFocusLoss"));
+                pauseOnFocusLoss.load(std::memory_order_relaxed));
             if (frame)
                 frame(device);
         };

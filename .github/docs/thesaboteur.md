@@ -34,4 +34,4 @@ Controller icons offer Auto, Xbox, PlayStation and Nintendo artwork using the ga
 
 The existing SMAA, console gamma, map marker, high-resolution interface/font/cursor and shutdown audio fixes are retained. Recommended and Enhanced add SMAA, Enhanced also console gamma; every preset uses the game's own 60 FPS limit. Vanilla keeps the corrections active while retaining intros.
 
-**Ctrl+F10** opens the developer overlay where available. After closing it, gameplay input resumes once held movement inputs return to neutral. **Debug → Info** shows the fix version, UTC build time, graphics API and actual backbuffer size. Native option help, full Details, per-plugin presets and restart notices are also available in the Plugins menu.
+Native option help, full Details, per-plugin presets and restart notices are also available in the Plugins menu.

@@ -306,7 +306,7 @@ namespace FarCryPromptsState
         if (found == Lookup.end())
             return nullptr;
         const int language = GameLanguage(table);
-        const auto family = PadInput::ResolveFamily(FixSettings().Int("MAIN.GamepadIcons"));
+        const auto family = PadInput::ResolveFamily(FarCryLive::Read().padIcons);
         if (language != CacheLanguage || int(family) != CacheFamily)
         {
             for (int i = 0; i < PhraseCount; ++i)

@@ -126,7 +126,12 @@
         {
           "value": "32:9"
         }
-      ]
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.ModernControls",

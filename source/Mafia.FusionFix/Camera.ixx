@@ -2,7 +2,9 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include <atomic>
 #include <cmath>
+#include <mutex>
 #include <numbers>
 
 export module Camera;
@@ -19,9 +21,8 @@ namespace Camera
     float lookX, lookY;
     bool stickX, stickY;
     float dt, yaw, pitch, idleTimer;
-    const int* FreeCamera = nullptr;
-    const float* CameraReturnTimeout = nullptr;
-    const float* CameraReturnSpeed = nullptr;
+    std::atomic<bool> FreeCamera{ false }, RawMouse{ false };
+    std::atomic<float> CameraReturnTimeout{ 3.0f }, CameraReturnSpeed{ 2.0f };
     bool engaged;
     constexpr float pi = std::numbers::pi_v<float>;
 
@@ -51,7 +52,7 @@ namespace Camera
         if (bindings && bindingsEnd >= bindings + (action + 1) * 12)
             stick = Field<uint16_t>(bindings + action * 12, 4) == 3;
         stick |= action >= 0 && static_cast<size_t>(action) < ModernPadActions.size() && ModernPadActions[action];
-        if (stick || !FixSettings().Bool("MAIN.RawInputMouse"))
+        if (stick || !RawMouse.load(std::memory_order_relaxed))
             value = std::clamp(value, -1.0f, 1.0f);
     }
 
@@ -90,7 +91,7 @@ namespace Camera
 
     int __fastcall UpdateCamera(uintptr_t _this, void*, uint32_t elapsed)
     {
-        if (!*FreeCamera)
+        if (!FreeCamera.load(std::memory_order_relaxed))
         {
             if (owner) Reset();
         }
@@ -157,8 +158,8 @@ namespace Camera
             idleTimer += dt;
             // Keep the view while stationary or aiming/firing. Once driving
             // again, return along the shortest arc, independently of FPS.
-            const float timeout = std::isfinite(*CameraReturnTimeout) ? std::max(*CameraReturnTimeout, 0.0f) : 0.0f;
-            const float speed = std::isfinite(*CameraReturnSpeed) ? std::max(*CameraReturnSpeed, 0.0f) : 0.0f;
+            const float timeout = CameraReturnTimeout.load(std::memory_order_relaxed);
+            const float speed = CameraReturnSpeed.load(std::memory_order_relaxed);
             if (engaged && idleTimer > timeout &&
                 !Field<uint8_t>(camera, 148) && std::abs(Field<float>(vehicle, 1548)) > 0.5f)
             {
@@ -190,9 +191,14 @@ namespace Camera
     }
 }
 
+export bool RawMouseEnabled()
+{
+    return Camera::RawMouse.load(std::memory_order_relaxed);
+}
+
 export void CaptureCameraInput(uintptr_t object)
 {
-    if (Camera::FreeCamera && *Camera::FreeCamera)
+    if (Camera::FreeCamera.load(std::memory_order_relaxed))
         Camera::CaptureInput(object);
 }
 
@@ -204,9 +210,25 @@ export void InitCamera()
         "81 EC ? ? ? ? 53 55 56 8B F1 33 ED 57 8B 46 04 8B 7E 1C 3B C5"); // 1.1 and 1.2
     auto aim = find_pattern("A0 ? ? ? ? 83 EC 24 A8 01 56 57 8B F9 0F 85");
     nControlFlags.SetAddress(*aim.get_first<uint8_t*>(1));
-    FreeCamera = &FixSettings().Int("CAMERA.FreeCamera");
-    CameraReturnTimeout = &FixSettings().Float("CAMERA.CameraReturnTimeout");
-    CameraReturnSpeed = &FixSettings().Float("CAMERA.CameraReturnSpeed");
+    const auto updateSettings = []()
+    {
+        static std::mutex mutex;
+        const std::lock_guard lock(mutex);
+        auto& settings = FixSettings();
+        const auto number = [&](const char* id, float fallback)
+        {
+            float value;
+            return asi_settings::detail::ParseFloat(settings.Get(id), value) && std::isfinite(value)
+                ? std::max(value, 0.0f) : fallback;
+        };
+        RawMouse.store(settings.Get("MAIN.RawInputMouse") == "1", std::memory_order_relaxed);
+        CameraReturnTimeout.store(number("CAMERA.CameraReturnTimeout", 3.0f), std::memory_order_relaxed);
+        CameraReturnSpeed.store(number("CAMERA.CameraReturnSpeed", 2.0f), std::memory_order_relaxed);
+        FreeCamera.store(settings.Get("CAMERA.FreeCamera") == "1", std::memory_order_relaxed);
+    };
+    for (const auto id : { "CAMERA.FreeCamera", "CAMERA.CameraReturnTimeout", "CAMERA.CameraReturnSpeed", "MAIN.RawInputMouse" })
+        FixSettings().OnChange(id, updateSettings);
+    updateSettings();
     shUpdate = safetyhook::create_inline(update.get_first(), UpdateCamera);
 
     auto place = find_pattern("83 EC 3C 8B 44 24 44 56 8B F1 8B 08 89 4C 24 04 8B 50 04 89 54 24 08");

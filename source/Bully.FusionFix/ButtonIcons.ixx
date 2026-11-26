@@ -9,7 +9,7 @@ export module ButtonIcons;
 export namespace BullyIcons
 {
     SafetyHookInline HudLoadHook;
-    const int* Selected = nullptr;
+    std::atomic<int> Selected{ 0 };
     std::array<std::array<uintptr_t, 29>, 3> Textures{};
     std::array<std::array<std::array<uint32_t, 14>, 29>, 3> Rasters{};
     std::unordered_map<uintptr_t, std::pair<const char*, int>> Classes;
@@ -66,7 +66,7 @@ export namespace BullyIcons
 
     uintptr_t Texture(uintptr_t original)
     {
-        if (!Loaded || !original || !Selected)
+        if (!Loaded || !original)
             return original;
         const auto source = *reinterpret_cast<uintptr_t*>(original + 52);
         if (!source)
@@ -81,7 +81,7 @@ export namespace BullyIcons
         }
         if (found->second.second < 0)
             return original;
-        const auto family = size_t(PadInput::ResolveFamily(*Selected)) - 1;
+        const auto family = size_t(PadInput::ResolveFamily(Selected.load(std::memory_order_relaxed))) - 1;
         const auto replacement = Textures[family][found->second.second];
         return replacement ? reinterpret_cast<uintptr_t>(Rasters[family][found->second.second].data()) : original;
     }
@@ -139,7 +139,7 @@ export namespace BullyIcons
         return result;
     }
 
-    void Install(const int& selected)
+    void Install()
     {
         auto hud = hook::pattern("53 56 57 6A 17 E8 ? ? ? ? 68 ? ? ? ? E8 ? ? ? ? 8B D8 68 ? ? ? ? 53 E8 ? ? ? ? 53 E8 ? ? ? ? E8");
         auto stream = hook::pattern("8B 44 24 08 81 EC 0C 04 00 00 56 50 E8 ? ? ? ? 83 C4 04 8D 4C 24 04 8B F0 E8 ? ? ? ? 56 8D 4C 24 08 E8");
@@ -153,7 +153,6 @@ export namespace BullyIcons
         DestroyStream = reinterpret_cast<decltype(DestroyStream)>(branch(start + 49));
         LoadStore = reinterpret_cast<decltype(LoadStore)>(branch(start + 75));
         LoadTexture = reinterpret_cast<decltype(LoadTexture)>(texture.get_first());
-        Selected = &selected;
         HudLoadHook = safetyhook::create_inline(hud.get_first(), HudLoad);
     }
 }

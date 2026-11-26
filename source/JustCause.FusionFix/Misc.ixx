@@ -39,6 +39,12 @@ Dimensions_t NativeHiddenHudDimensions = nullptr;
 
 HRESULT __stdcall CreateDevice(IDirect3D9* d3ddev, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pPresentationParameters, IDirect3DDevice9** ppReturnedDeviceInterface)
 {
+    // The game also creates a tiny helper device after the main one; only the main device is the game's screen
+    if (pPresentationParameters && JCWindow::currentDevice &&
+        ((pPresentationParameters->BackBufferWidth && pPresentationParameters->BackBufferWidth < 256) ||
+        (pPresentationParameters->BackBufferHeight && pPresentationParameters->BackBufferHeight < 256)))
+        return RealD3D9CreateDevice(d3ddev, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
+
     JCWindow::Parameters(pPresentationParameters, hFocusWindow, false);
     HRESULT retval = RealD3D9CreateDevice(d3ddev, Adapter, DeviceType, hFocusWindow, BehaviorFlags, pPresentationParameters, ppReturnedDeviceInterface);
     if (FAILED(retval) || !ppReturnedDeviceInterface || !*ppReturnedDeviceInterface)
@@ -84,21 +90,20 @@ void __fastcall DrawBordersHook(void* _this, void* edx, testParam* a2)
     hbDrawBorders.fun(_this, edx, a2);
 }
 
-// Startup logo videos: opening them fails, which the game treats as a finished video.
 SafetyHookInline shBinkOpen, shBinkClose;
+bool SkipLogoMovies = false;
+
 void __stdcall BinkCloseHook(void* handle)
 {
-    JCVideo::activeSprite.store(nullptr);
-    if (JCVideo::handle.load() == handle)
-    {
-        JCVideo::handle.store(nullptr);
-    }
+    JCVideo::Closed(handle);
     shBinkClose.stdcall<void>(handle);
 }
 void* __stdcall BinkOpenHook(const char* name, uint32_t flags)
 {
     constexpr uint32_t BINKFILEHANDLE = 0x00800000;
-    if (FixSettings().Bool("MAIN.SkipIntro") && name && !(flags & BINKFILEHANDLE))
+    const auto result = shBinkOpen.stdcall<void*>(name, flags);
+    bool skipLogo = false;
+    if (result && SkipLogoMovies && name && !(flags & BINKFILEHANDLE))
     {
         std::string_view file{ name };
         if (auto slash = file.find_last_of("\\/"); slash != file.npos)
@@ -107,24 +112,21 @@ void* __stdcall BinkOpenHook(const char* name, uint32_t flags)
         for (auto logo : { "AvalancheVideo", "EidosVideo" })
         {
             if (file.size() == std::strlen(logo) && std::equal(file.begin(), file.end(), logo, [](char a, char b) { return std::tolower((unsigned char)a) == std::tolower((unsigned char)b); }))
-                return nullptr;
+            {
+                skipLogo = true;
+                break;
+            }
         }
     }
-    const auto result = shBinkOpen.stdcall<void*>(name, flags);
     if (result)
     {
         const auto dimensions = static_cast<const uint32_t*>(result);
-        if (dimensions[0] > 0 && dimensions[0] <= 16384 && dimensions[1] > 0 && dimensions[1] <= 16384)
-        {
-            JCVideo::handle.store(result);
-            JCVideo::width.store(dimensions[0]);
-            JCVideo::height.store(dimensions[1]);
-        }
+        JCVideo::Opened(result, dimensions[0], dimensions[1], skipLogo);
     }
     return result;
 }
 
-void InstallLogoSkip()
+void InstallVideoHooks()
 {
     if (shBinkOpen)
         return;
@@ -136,13 +138,24 @@ void InstallLogoSkip()
             shBinkClose = safetyhook::create_inline(close, BinkCloseHook);
         JCVideo::decoderReady = shBinkOpen && shBinkClose;
     }
+
+    // Let the player open a valid stream and show its first frame, then take its own end-of-movie branch.
+    auto movie = hook::pattern("E8 ? ? ? ? 8B 8D ? ? ? ? 0F B6 51 40 85 D2 75 ? A1 ? ? ? ? 8B 0D ? ? ? ? 8B 50 0C 3B 51 08 72 ? 8B 85 ? ? ? ? C7 40 28 05 00 00 00");
+    JCVideo::nativeDecoder = *movie.get_first<void**>(20);
+    static auto finished = reinterpret_cast<uintptr_t>(movie.get_first(38));
+    static auto movieFrameHook = safetyhook::create_mid(movie.get_first(), [](SafetyHookContext& regs)
+    {
+        JCVideo::Playing(reinterpret_cast<void*>(regs.ecx));
+        if (JCVideo::EndLogo(*JCVideo::nativeDecoder))
+            regs.eip = finished;
+    });
 }
 
 void InitializeGame()
 {
     hook::pattern pattern;
-    asi_settings::LiveLink::Start();
-    InstallLogoSkip();
+    SkipLogoMovies = GetFixNumber("MAIN.SkipIntro", 0) != 0;
+    InstallVideoHooks();
     JCHud::Install();
     JCWindow::Install();
     JCCamera::Install();
@@ -344,6 +357,7 @@ void InitializeGame()
     pattern = hook::pattern("85 C9 ? 1F 6A 10");
     injector::WriteMemory<uint8_t>(pattern.get_first<uint8_t>(2), 0xEB, true); //jmp
 
+    asi_settings::LiveLink::Start();
 }
 
 

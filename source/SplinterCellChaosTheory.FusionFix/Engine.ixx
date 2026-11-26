@@ -2,11 +2,13 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/SplinterCell/ViewportMouse.hpp"
 
 
 export module Engine;
 
 import ComVars;
+import Echelon;
 import WidescreenHUD;
 import GUI;
 import Focus;
@@ -25,10 +27,10 @@ namespace UESoftBody
 
     void Advance(float deltaTime)
     {
-        if (!(deltaTime > 0.0f))
+        stepsThisFrame = 0;
+        if (!(deltaTime > 0.0f) || !std::isfinite(deltaTime))
             return;
         accumulator += deltaTime;
-        stepsThisFrame = 0;
         while (accumulator >= kStep)
         {
             accumulator -= kStep;
@@ -94,13 +96,15 @@ namespace UGameEngine
             UWindowsViewport::deferredCauseInputEvent.pop();
         }
 
-        // All raw mouse movement since the last tick, once per tick
-        if (Screen.bRawInputMouse && UWindowsViewport::RawMouseFeed)
+        if (Screen.bRawInputMouse)
         {
-            const auto dx = RawInputHandler<>::RawMouseDeltaX.exchange(0);
-            const auto dy = RawInputHandler<>::RawMouseDeltaY.exchange(0);
-            if (dx || dy)
-                UWindowsViewport::RawMouseFeed(dx, dy);
+            const HWND active = UWindowsViewport::RawMouseFeed && GetForegroundWindow() == hGameWindow ? hGameWindow : nullptr;
+            ViewportMouse::Bind(active);
+            const auto move = ViewportMouse::movement.Take();
+            if (active && !ViewportMouse::nativeFrame && (move.x || move.y))
+                UWindowsViewport::RawMouseFeed(static_cast<int>(std::clamp<int64_t>(move.x, INT_MIN, INT_MAX)),
+                    static_cast<int>(std::clamp<int64_t>(move.y, INT_MIN, INT_MAX)));
+            ViewportMouse::nativeFrame = false;
         }
 
         UESoftBody::Advance(deltaTime);
@@ -155,6 +159,9 @@ void __fastcall DrawLoadingBar(void* _this, void* edx, float a2, char a3)
 
 export void InitEngine()
 {
+    static std::atomic<float> fovFactor{ 1.0f };
+    ObserveFixSetting("MAIN.FOVFactor", asi_settings::detail::ParseFloat, [](float value) { fovFactor.store(value); });
+
     //HUD
     auto pattern = hook::pattern("FF 91 ? ? ? ? 8A 86 39 4D 00 00");
     static auto MenuCheckHook = safetyhook::create_mid(pattern.get_first(0), [](SafetyHookContext& regs)
@@ -297,8 +304,7 @@ export void InitEngine()
 
     static auto FCameraSceneNodeCtorHook = safetyhook::create_mid(cameraProjection, [](SafetyHookContext& regs)
     {
-        static const auto& fFOVFactor = FixSettings().Float("MAIN.FOVFactor");
-        float factor = CTGameplayCamera::Factor(reinterpret_cast<void*>(regs.ebx), *reinterpret_cast<uintptr_t*>(regs.esp + 0x7C), fFOVFactor);
+        float factor = CTGameplayCamera::Factor(reinterpret_cast<void*>(regs.ebx), *reinterpret_cast<uintptr_t*>(regs.esp + 0x7C), fovFactor.load());
         const float base = std::clamp(AdjustFOV(*(float*)(regs.ebx + 0x248), Screen.fAspectRatio), 1.0f, 179.0f);
         *(float*)(regs.ebx + 0x248) = std::clamp(base * factor, 1.0f, std::max(base, 150.0f));
     });
@@ -306,6 +312,7 @@ export void InitEngine()
     pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 33 DB");
     static auto UGameEngineLoadGameHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
+        ResetPlayerControllerState();
         UObject::objectStates.clear();
         CTGameplayCamera::Reset();
         UIntOverrides::ClearCache();

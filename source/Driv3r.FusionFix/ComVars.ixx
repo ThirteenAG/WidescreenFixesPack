@@ -9,6 +9,7 @@ export float fTimeStep = 0.0f;
 export bool bPaused = false;
 export bool RawMouseEnabled = true;
 export bool BlockGameInput = false;
+export std::atomic<uint32_t> InputFocusGeneration{ 0 };
 
 export GameRef<HWND> hWnd;
 export GameRef<void*> GuiService;

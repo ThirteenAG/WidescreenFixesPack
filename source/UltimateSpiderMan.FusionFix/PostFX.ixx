@@ -15,6 +15,17 @@ namespace
     void (__cdecl* pEndScene)() = nullptr;
     void (__cdecl* pSetClearFlags)(int) = nullptr;
     void (__cdecl* pAddCustomNode)(void(__cdecl*)(void*), void*, const uint32_t*) = nullptr;
+    constexpr uint8_t Gamma = 1, Smaa = 2;
+    std::atomic<uint8_t> Effects{ 0 };
+
+    void UpdateEffects()
+    {
+        static std::mutex mutex;
+        const std::lock_guard lock(mutex);
+        auto& settings = FixSettings();
+        Effects.store((settings.Get("GRAPHICS.ConsoleGamma") == "1" ? Gamma : 0) |
+            (settings.Get("GRAPHICS.AntiAliasing") == "1" ? Smaa : 0), std::memory_order_relaxed);
+    }
 
     void __cdecl RenderPostFX(void*)
     {
@@ -22,9 +33,10 @@ namespace
         if (!device)
             return;
 
-        CPostFX::bConsoleGammaEnabled = FixSettings().Bool("GRAPHICS.ConsoleGamma");
-        CPostFX::bSmaaEnabled = FixSettings().Int("GRAPHICS.AntiAliasing");
-        if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
+        const auto effects = Effects.load(std::memory_order_relaxed);
+        CPostFX::bConsoleGammaEnabled = (effects & Gamma) != 0;
+        CPostFX::bSmaaEnabled = (effects & Smaa) != 0;
+        if (!effects)
             return;
 
         // NGL executes this pass after the world, before the UI scenes.
@@ -63,8 +75,9 @@ public:
         {
 
             auto& settings = FixSettings();
-            CPostFX::bConsoleGammaEnabled = FixSettings().Bool("GRAPHICS.ConsoleGamma") != 0;
-            CPostFX::bSmaaEnabled = FixSettings().Int("GRAPHICS.AntiAliasing") != 0;
+            settings.OnChange("GRAPHICS.ConsoleGamma", UpdateEffects);
+            settings.OnChange("GRAPHICS.AntiAliasing", UpdateEffects);
+            UpdateEffects();
 
             CPostFX::bRenderToBackBuffer = false;
             auto pattern = hook::pattern("6A 01 E8 ? ? ? ? 8A 15 ? ? ? ? 33 C0"); //0x52B284 + 2
@@ -79,7 +92,7 @@ public:
             pattern = hook::pattern("81 EC 88 01 00 00 56 6A 01 8B F1"); //0x52B265
             static auto BeforeUIHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext&)
             {
-                if (!FixSettings().Bool("GRAPHICS.ConsoleGamma") && !FixSettings().Int("GRAPHICS.AntiAliasing"))
+                if (!Effects.load(std::memory_order_relaxed))
                     return;
                 pBeginScene(1);
                 pSetClearFlags(0);

@@ -62,7 +62,6 @@
 
 - **Plugins** - one new entry in the game's Settings menu, in the main menu and in the race's pause menu. It lists the Fusion Fix first and then every other loaded plugin with in-game settings. Each opens its page: a **Preset** row first (Vanilla, Recommended or Enhanced, applied when picked), then the settings by section (Display, Camera, Controls, Graphics, Game). Left and right change a setting at once; the help line at the bottom describes the highlighted row. All settings are stored in `plugins/NFSTheRun.FusionFix.cfg` and can also be changed on fusionfix.io or in FusionFixHub.
 - The main menu takes its menus when it first appears, so after picking a preset, or a change made outside the game, the main menu's pages show the earlier values until the game is started again; the race's pause menu always shows the current values. When a changed setting applies after a restart, or a newer version of the fix is out (**Check for Updates**, off by default; asks fusionfix.io once per start), the help line of the Plugins entry says so.
-- **Developer overlay** - Ctrl+F10 opens the Fusion Fix overlay for supporters, with every setting and a Debug > Info page.
 
 ---
 

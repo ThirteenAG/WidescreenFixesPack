@@ -14,6 +14,7 @@ module;
 export module NativeMenu;
 
 import ComVars;
+import Menu;
 
 // The fix's settings as a native page behind the game's Options (Mafia 1.1 and 1.2)
 export namespace MafiaMenu
@@ -465,11 +466,11 @@ export namespace MafiaMenu
         while (rows > minRows && RowsHeight(rowHeight, rows) + 72 * scaleY > 540 * scaleY) --rows;
         return rows;
     }
-    bool PrepareItems(const std::shared_ptr<Context>& owner)
+    template<class CurrentPage>
+    bool PrepareItems(const std::shared_ptr<Context>& owner, CurrentPage current)
     {
-        if (!ReadScope(owner) || !owner->model.IsOpen()) return false;
-        const auto serial = owner->serial;
-        auto current = [&] { return ReadScope(owner) && owner->serial == serial; };
+        if (!current() || !owner->model.IsOpen()) return false;
+        RWGTAMenu::Model::Changed().exchange(false);
         std::deque<Item> next;
         std::string title = owner->model.Text("menu.plugins");
         const auto links = owner->rowCount - 3;
@@ -478,7 +479,8 @@ export namespace MafiaMenu
             // The plugins (the fix first), plus Previous/Next/Back.
             const auto count = owner->model.Pages().size();
             if (owner->rootOffset > count) owner->rootOffset = 0;
-            if (owner->rootOffset) next.push_back({ ItemKind::Previous, 0, owner->model.Text("menu.previous") });
+            if (owner->rootOffset)
+                next.push_back({ ItemKind::Previous, owner->rootOffset > links ? owner->rootOffset - links : 0, owner->model.Text("menu.previous") });
             const auto limit = std::min(count, owner->rootOffset + links);
             for (size_t index = owner->rootOffset; index < limit; ++index)
             {
@@ -550,6 +552,11 @@ export namespace MafiaMenu
         owner->preparedTitle = std::move(*nativeTitle);
         return true;
     }
+    bool PrepareItems(const std::shared_ptr<Context>& owner)
+    {
+        const auto serial = owner->serial;
+        return PrepareItems(owner, [&] { return ReadScope(owner) && owner->serial == serial; });
+    }
     int __fastcall SourceCommand(Page* page, void*, int command);
     void InstallSource(Page* page)
     {
@@ -610,7 +617,7 @@ export namespace MafiaMenu
         source->prototype = control;
         source->pause = pause;
         source->serial = ++generation;
-        auto language = FixSettings().String("MAIN.TextLanguage");
+        auto language = FixSettings().Get("MAIN.TextLanguage");
         if (language.empty() || language == "auto")
             language = Language();
         FixSettings().GetTexts().Select(language);
@@ -801,7 +808,6 @@ export namespace MafiaMenu
             value->flags |= item.enabled ? 0x30u : 0x10u;
         }
         owner->rebuildPending = false;
-        RWGTAMenu::Model::Changed() = false;
         if (selected < firstRowId || selected >= firstRowId + owner->items.size()) selected = firstRowId;
         Select(owner->page, selected);
         if (!Current(owner) || !Contains(owner->page, owner->page->selected)) return false;
@@ -838,9 +844,10 @@ export namespace MafiaMenu
     bool Help(const std::shared_ptr<Context>& owner, int scroll = 0,
         const std::string* content = nullptr, const std::string* title = nullptr);
 
+    namespace LegacyPage { bool CanShowNotice(); }
     bool NoticeReady()
     {
-        return ready && context && Current(context) && !context->help;
+        return (ready && context && Current(context) && !context->help) || LegacyPage::CanShowNotice();
     }
     void ShowNotice(const std::wstring& text)
     {
@@ -849,7 +856,7 @@ export namespace MafiaMenu
     void Notice()
     {
         auto owner = context;
-        if (noticeText.empty() || !NoticeReady() || !Contains(owner->page, owner->description)) return;
+        if (!owner || noticeText.empty() || !Current(owner) || owner->help || !Contains(owner->page, owner->description)) return;
         const auto title = NativeText(FixSettings().GetTexts().Resolve("@plugin.name")).value_or("Mafia Fusion Fix");
         if (Help(owner, 0, &noticeText, &title)) noticeText.clear();
     }
@@ -944,7 +951,7 @@ export namespace MafiaMenu
         owner->source = source;
         owner->serial = ++generation;
         context = owner;
-        auto language = FixSettings().String("MAIN.TextLanguage");
+        auto language = FixSettings().Get("MAIN.TextLanguage");
         if (language.empty() || language == "auto")
             language = Language();
         owner->rowCount = FittingRows(std::min(source->prototype->height, 24 * fMenuScaleY));
@@ -1066,7 +1073,7 @@ export namespace MafiaMenu
                     break;
                 case ItemKind::Previous:
                     if (owner->category >= 0) owner->rowOffset = item.index;
-                    else owner->rootOffset = owner->rootOffset >= 4 ? owner->rootOffset - 4 : 0;
+                    else owner->rootOffset = item.index;
                     break;
                 case ItemKind::Next:
                     if (owner->category >= 0) owner->rowOffset = item.index;
@@ -1359,13 +1366,353 @@ export namespace MafiaMenu
         }
         return closeHook.thiscall<int>(page, result);
     }
+    // Version 1.0 stores controls in a flat page-owned array and destroys a closed page immediately.
+    namespace LegacyPage
+    {
+        struct Template
+        {
+            uint32_t id, kind;
+            float x, y, width, height;
+            uint32_t text, flags, argument;
+        };
+        static_assert(sizeof(Template) == 36);
+        constexpr uint32_t panel = 0x77696E74, item = 0x6974656D, stop = 0x73746F70;
+        constexpr uint32_t helpId = firstRowId + 64;
+        using Load = int(__thiscall*)(uintptr_t, Template*, int, int);
+        using Process = int(__thiscall*)(uintptr_t, int, uint8_t, int, int, int, int, int);
+        using Construct = uintptr_t(__thiscall*)(void*, uintptr_t, int);
+        Load load;
+        Process process;
+        Construct construct;
+        void* (__cdecl* allocate)(size_t);
+        uintptr_t* stack;
+        uintptr_t opening, page;
+        uint32_t command;
+        int direction;
+        bool back, showHelp;
+        unsigned int depth;
+        SafetyHookInline destroy;
+        std::shared_ptr<Context> session;
+        std::unordered_set<std::string> captions;
+
+        uintptr_t ControlById(uintptr_t menu, uint32_t id)
+        {
+            const auto end = Field<uintptr_t*>(menu, 0x24);
+            for (auto p = Field<uintptr_t*>(menu, 0x20); p != end; ++p)
+                if (*p && Field<uint32_t>(*p, 4) == id) return *p;
+            return 0;
+        }
+        void SelectControl(uintptr_t control)
+        {
+            auto& selected = Field<uintptr_t>(page, 0x2C);
+            if (selected) Field<uint32_t>(selected, 8) &= ~0x10u;
+            selected = control;
+            if (selected) Field<uint32_t>(selected, 8) |= 0x10u;
+        }
+        int __fastcall LoadOptions(uintptr_t menu, void*, Template* original, int group, int flags)
+        {
+            std::vector<Template> records;
+            if (Field<int>(menu, 0x44) == entryId && session)
+            {
+                records.push_back({ 2, panel, 30, 40, 740, 505, 200, 1 });
+                for (size_t i = 0; i < session->rowCount; ++i)
+                    records.push_back({ firstRowId + static_cast<uint32_t>(i), item, 16,
+                        20.0f + i * 33.0f, 708, 25, 201 });
+                records.push_back({ helpId, item, 16, 425, 708, 18, 201 });
+                records.push_back({ 0, stop });
+            }
+            else
+            {
+                for (int i = 0; i < group; ++i)
+                {
+                    while (original->kind != stop) ++original;
+                    ++original;
+                }
+                for (; original->kind != stop; ++original)
+                {
+                    if (original->id == 400)
+                    {
+                        auto link = *original;
+                        link.id = entryId;
+                        link.y -= link.height;
+                        records.push_back(link);
+                    }
+                    records.push_back(*original);
+                }
+                records.push_back(*original);
+            }
+            const auto result = load(menu, records.data(), 0, flags);
+            if (auto root = ControlById(menu, 2)) CenterLegacyMenuRoot(root);
+            if (auto link = ControlById(menu, entryId))
+            {
+                auto caption = NativeText(FixSettings().GetTexts().Resolve("@menu.plugins")).value_or("Plugins");
+                Field<const char*>(link, 0x30) = captions.insert(std::move(caption)).first->c_str();
+            }
+            return result;
+        }
+        int __fastcall Handle(uintptr_t menu, void*, int modifiers, uint8_t key, int x, int y, int wheel, int buttons, int dt)
+        {
+            const bool owned = menu == page && session;
+            const int step = owned && key == 203 ? -1 : owned && key == 205 ? 1 : 0;
+            const int id = step ? 0 : process(menu, modifiers, key, x, y, wheel, buttons, dt);
+            if (!owned)
+            {
+                if (id != entryId) return id;
+                opening = menu;
+            }
+            else if (step || id || key == 1 || key == 59)
+            {
+                const auto selected = Field<uintptr_t>(menu, 0x2C);
+                if (!command && !back && selected)
+                {
+                    command = step ? Field<uint32_t>(selected, 4) : id;
+                    direction = step;
+                    back = key == 1;
+                    showHelp = key == 59;
+                }
+            }
+            // The Options dispatcher handles Escape itself when its base returns zero.
+            return consumedId;
+        }
+        uintptr_t __fastcall Destroy(uintptr_t menu, void*, int flags)
+        {
+            if (opening == menu) opening = 0;
+            if (page && page != menu && Field<uintptr_t>(page, 0x18) == menu)
+            {
+                Field<uintptr_t>(page, 0x18) = Field<uintptr_t>(menu, 0x18);
+                session->returnPending = true;
+            }
+            if (page == menu)
+            {
+                page = 0;
+                command = 0;
+                back = showHelp = false;
+            }
+            return destroy.thiscall<uintptr_t>(menu, flags);
+        }
+        void ClosePrivate()
+        {
+            if (page && *stack == page)
+                reinterpret_cast<void(__thiscall*)(uintptr_t, int, int)>(
+                    Field<uintptr_t*>(page, 0)[4])(page, 0, 0);
+        }
+        bool CanShowNotice()
+        {
+            return page && stack && *stack == page && session && !session->returnPending && !session->help;
+        }
+        bool Display(const std::shared_ptr<Context>& owner)
+        {
+            const auto title = ControlById(page, 2);
+            const auto help = ControlById(page, helpId);
+            if (!title || !help) return false;
+            Field<const char*>(title, 0x30) = owner->titleText.c_str();
+            const auto selected = Field<uintptr_t>(page, 0x2C);
+            for (size_t i = 0; i < owner->rowCount; ++i)
+            {
+                auto control = ControlById(page, firstRowId + static_cast<uint32_t>(i));
+                if (!control) return false;
+                auto& flags = Field<uint32_t>(control, 8);
+                if (i >= owner->items.size())
+                {
+                    flags = (flags | 0x100u) & ~1u;
+                    Field<const char*>(control, 0x30) = "";
+                    continue;
+                }
+                auto& row = owner->items[i];
+                if (!row.value.empty()) row.label += "    " + row.value;
+                flags &= ~(0x100u | 1u);
+                if (row.enabled) flags |= 1;
+                Field<const char*>(control, 0x30) = row.label.c_str();
+            }
+            Field<uint32_t>(help, 8) &= ~1u;
+            Field<const char*>(help, 0x30) = "";
+            if (!selected || !(Field<uint32_t>(selected, 8) & 1))
+            {
+                for (size_t i = 0; i < owner->items.size(); ++i)
+                {
+                    auto control = ControlById(page, firstRowId + static_cast<uint32_t>(i));
+                    if (Field<uint32_t>(control, 8) & 1) { SelectControl(control); break; }
+                }
+            }
+            return true;
+        }
+        bool Publish(const std::shared_ptr<Context>& owner)
+        {
+            const auto current = [&] { return page && *stack == page && session == owner && !owner->returnPending; };
+            if (!PrepareItems(owner, current)) return false;
+            owner->items = std::move(owner->prepared);
+            owner->titleText = std::move(owner->preparedTitle);
+            return Display(owner);
+        }
+        bool DisplayHelp(const std::shared_ptr<Context>& owner)
+        {
+            const auto count = owner->rowCount - 3;
+            const auto begin = owner->helpOffset;
+            const auto end = std::min(begin + count, owner->helpLines.size());
+            owner->items.clear();
+            owner->titleText = owner->helpTitle;
+            for (size_t i = begin; i < end; ++i)
+                owner->items.push_back({ ItemKind::Setting, i, owner->helpLines[i], {}, false });
+            if (begin)
+                owner->items.push_back({ ItemKind::Previous, begin >= count ? begin - count : 0,
+                    NativeText(owner->model.Text("menu.previous")).value_or("Previous") });
+            if (end < owner->helpLines.size())
+                owner->items.push_back({ ItemKind::Next, end, NativeText(owner->model.Text("menu.next")).value_or("Next") });
+            owner->items.push_back({ ItemKind::Back, 0, NativeText(owner->model.Text("menu.back")).value_or("Back") });
+            return Display(owner);
+        }
+        void OpenHelp(const std::shared_ptr<Context>& owner, std::string title, std::string text)
+        {
+            owner->helpTitle = std::move(title);
+            owner->helpLines.clear();
+            // The 1.0 item renderer accepts one line per control.
+            while (!text.empty())
+            {
+                auto end = std::min<size_t>(text.size(), 60);
+                if (end < text.size())
+                    if (auto space = text.rfind(' ', end); space != std::string::npos && space) end = space;
+                owner->helpLines.push_back(text.substr(0, end));
+                text.erase(0, end);
+                text.erase(0, text.find_first_not_of(' '));
+            }
+            owner->helpOffset = 0;
+            owner->help = true;
+            if (!DisplayHelp(owner)) ClosePrivate();
+        }
+        void Frame()
+        {
+            if (depth) return;
+            Depth guard(depth);
+            if (!page && session)
+            {
+                auto old = std::exchange(session, {});
+                old->model.Close();
+            }
+            if (auto source = std::exchange(opening, uintptr_t{}); source && *stack == source && !page)
+            {
+                auto memory = allocate(0x48);
+                if (!memory) return;
+                session = std::make_shared<Context>();
+                auto owner = session;
+                owner->source = std::make_shared<Source>();
+                owner->source->pause = Field<int>(source, 0x44) != 990110;
+                owner->rowCount = maxRows;
+                page = construct(memory, source, entryId);
+                *stack = page;
+                auto language = FixSettings().Get("MAIN.TextLanguage");
+                owner->model.OpenPlugins(module, language, 4096, {}, true);
+                if (!Publish(owner)) ClosePrivate();
+            }
+            auto owner = session;
+            if (!owner || !page || *stack != page) return;
+            if (owner->returnPending) { ClosePrivate(); return; }
+            const auto id = std::exchange(command, 0u);
+            const auto step = std::exchange(direction, 0);
+            bool goBack = std::exchange(back, false);
+            const bool help = std::exchange(showHelp, false);
+            const auto selected = Field<uintptr_t>(page, 0x2C);
+            if (!selected) return;
+            auto slot = Field<uint32_t>(selected, 4) - firstRowId;
+            if (slot >= owner->items.size()) return;
+            if (owner->help)
+            {
+                const auto& row = owner->items[slot];
+                if (goBack || (id == firstRowId + slot && row.kind == ItemKind::Back))
+                {
+                    owner->help = false;
+                    if (!Publish(owner)) ClosePrivate();
+                }
+                else if (id == firstRowId + slot && (row.kind == ItemKind::Previous || row.kind == ItemKind::Next))
+                {
+                    owner->helpOffset = row.index;
+                    if (!DisplayHelp(owner)) ClosePrivate();
+                }
+                return;
+            }
+            if (!noticeText.empty())
+            {
+                OpenHelp(owner, NativeText(FixSettings().GetTexts().Resolve("@plugin.name")).value_or("Mafia Fusion Fix"),
+                    std::exchange(noticeText, {}));
+                return;
+            }
+            if (help && !owner->items[slot].description.empty())
+            {
+                OpenHelp(owner, owner->items[slot].label, owner->items[slot].description);
+                return;
+            }
+            bool refresh = false;
+            if (id == firstRowId + slot)
+            {
+                auto row = owner->items[slot];
+                if (!step || row.kind == ItemKind::Setting)
+                {
+                    refresh = true;
+                    switch (row.kind)
+                    {
+                        case ItemKind::Page:
+                            owner->category = static_cast<int>(row.index);
+                            owner->rowOffset = 0;
+                            owner->model.PageShown(row.index);
+                            break;
+                        case ItemKind::Previous:
+                        case ItemKind::Next:
+                            (owner->category < 0 ? owner->rootOffset : owner->rowOffset) = row.index;
+                            break;
+                        case ItemKind::Setting:
+                            if (row.enabled && row.row && owner->model.Enabled(*row.row, owner->source->pause) &&
+                                page && page == *stack && session == owner)
+                                owner->model.Change(*row.row, step, owner->source->pause);
+                            break;
+                        case ItemKind::Back:
+                            goBack = true;
+                            break;
+                    }
+                }
+            }
+            if (!page || page != *stack || session != owner) return;
+            if (goBack)
+            {
+                if (owner->category < 0) { ClosePrivate(); return; }
+                owner->category = -1;
+                refresh = true;
+            }
+            if ((refresh || RWGTAMenu::Model::Changed()) && !Publish(owner))
+            {
+                ClosePrivate();
+                return;
+            }
+            slot = Field<uint32_t>(Field<uintptr_t>(page, 0x2C), 4) - firstRowId;
+            Field<const char*>(ControlById(page, helpId), 0x30) =
+                slot < owner->items.size() ? owner->items[slot].description.c_str() : "";
+        }
+        void Install()
+        {
+            stack = LegacyMenuStack();
+            auto build = hook::pattern("6A 00 6A 09 68 ? ? ? ? 8B CE C7 44 24 ? 00 00 00 00 C7 06 ? ? ? ? E8 ? ? ? ? 8B 56");
+            auto loadCall = build.get_first(25);
+            load = reinterpret_cast<Load>(injector::GetBranchDestination(loadCall).as_int());
+            auto table = *build.get_first<uintptr_t**>(21);
+            destroy = safetyhook::create_inline(reinterpret_cast<void*>(table[0]), Destroy);
+            injector::MakeCALL(loadCall, LoadOptions, true);
+            auto handleCall = hook::pattern("50 51 57 52 8B CE E8 ? ? ? ? 8B D8 85 DB 75 ? 81 E7 FF 00 00 00 4F 75 ? 8B 06 53 53 8B CE FF 50 10 8B C3 83 E8 64").get_first(6);
+            process = reinterpret_cast<Process>(injector::GetBranchDestination(handleCall).as_int());
+            injector::MakeCALL(handleCall, Handle, true);
+            auto create = hook::pattern("6A 48 E8 ? ? ? ? 83 C4 04 89 44 24 ? 85 C0 C7 44 24 ? 02 00 00 00 0F 84 ? ? ? ? 8B 0D ? ? ? ? 57 51 8B C8 E8");
+            allocate = reinterpret_cast<decltype(allocate)>(injector::GetBranchDestination(create.get_first(2)).as_int());
+            construct = reinterpret_cast<Construct>(injector::GetBranchDestination(create.get_first(40)).as_int());
+            WFP::onGameProcessEvent() += &Frame;
+        }
+    }
     void Init()
     {
-        if (ready) return;
+        if (ready || LegacyPage::stack) return;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<LPCWSTR>(&Init), &module);
-        // The native menu is built on the 1.1/1.2 menu code (recognised by its page stack pop); 1.0's menus differ
-        if (hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00").empty()) return;
+        if (hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00").empty())
+        {
+            LegacyPage::Install();
+            return;
+        }
         Resolve();
         if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
             reinterpret_cast<LPCWSTR>(&Init), &module)) { Log("process lifetime pin refused"); return; }

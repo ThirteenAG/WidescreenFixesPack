@@ -1,5 +1,6 @@
 #pragma once
 #include <d3d9.h>
+#include <memory>
 
 namespace D3D8Compatibility
 {
@@ -33,7 +34,9 @@ namespace D3D8Compatibility
             return value;
         }();
         // Sleep(1) waits a whole 15.6 ms scheduler tick, which makes the frame pacing uneven
-        static HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+        static thread_local std::unique_ptr<void, decltype(&CloseHandle)> timer{
+            CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS), CloseHandle
+        };
         static thread_local LONGLONG next = 0;
         static thread_local int previous = 0;
         if (limit > 0 && frequency.QuadPart > 0)
@@ -51,8 +54,11 @@ namespace D3D8Compatibility
                 if (timer && left > spin)
                 {
                     LARGE_INTEGER due{ .QuadPart = -((left - spin) * 10000000 / frequency.QuadPart) };
-                    if (SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
-                        WaitForSingleObject(timer, INFINITE);
+                    if (SetWaitableTimer(timer.get(), &due, 0, nullptr, nullptr, FALSE))
+                    {
+                        const auto timeout = static_cast<DWORD>((left * 1000 + frequency.QuadPart - 1) / frequency.QuadPart) + 2;
+                        WaitForSingleObject(timer.get(), timeout);
+                    }
                 }
                 else
                     YieldProcessor();

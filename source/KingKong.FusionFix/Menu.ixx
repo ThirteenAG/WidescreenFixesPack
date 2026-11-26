@@ -997,6 +997,22 @@ namespace KongMenu
                 event.serial != serial || event.page != view.page ||
                 event.physical != view.physical || event.selected != selected) return false;
             auto current = Snapshot(true);
+            if (event.item.kind == Kind::Row)
+            {
+                Foreign foreign(*this);
+                const auto rows = model.VisibleRows(size_t(view.page));
+                if (!current()) return false;
+                const auto visible = std::any_of(rows.begin(), rows.end(), [&](const auto* row)
+                {
+                    return row->kind == event.item.row.kind && row->plugin == event.item.row.plugin &&
+                        row->setting == event.item.row.setting;
+                });
+                if (!visible)
+                {
+                    repaint = true;
+                    return true;
+                }
+            }
             View candidate = view;
             if ((event.help || (event.direction == 0 && event.item.row.kind == RWGTAMenu::RowKind::Setting)) &&
                 event.item.kind == Kind::Row)
@@ -1157,12 +1173,12 @@ namespace KongMenu
 
     std::string MenuLanguage()
     {
-        auto chosen = FixSettings().String("MAIN.TextLanguage");
+        auto chosen = FixSettings().Get("MAIN.TextLanguage");
         for (auto tag : { "en", "fr", "de", "it", "es" })
             if (chosen == tag) return chosen;
         // 8FD260 returns this exact native locale field. Only the established
         // English enum has a known tag; other enums use the resource fallback.
-        if (nLocale != 1)
+        if (!Screen.bSignatureEdition && nLocale != 1)
             Log("native locale tag unproved; using English menu resources");
         return "en";
     }
@@ -1459,9 +1475,9 @@ namespace KongMenu
     {
         FixSettings().Availability("MAIN.CheckForUpdates", [](std::string_view value)
         {
-            return value == "0" || installed.load();
+            return value == "0" || Screen.bSignatureEdition || installed.load();
         });
-        if (!installed) return;
+        if (!Screen.bSignatureEdition && !installed) return;
         IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", Exit));
         RWGTA::UpdateCheck::Config config;
         config.pluginId = "KingKong.FusionFix";
@@ -1478,10 +1494,24 @@ namespace KongMenu
         };
         config.playable = []()
         {
+            if (Screen.bSignatureEdition)
+            {
+                const auto window = WindowedModeWrapper::GameHWND;
+                return IsWindowVisible(window) && GetForegroundWindow() == window;
+            }
             return host && host->Current() && host->open && host->ready && !host->view.details;
         };
         config.show = [](const std::wstring& message)
         {
+            if (Screen.bSignatureEdition)
+            {
+                const auto window = WindowedModeWrapper::GameHWND;
+                auto texts = FixSettings().GetTexts();
+                texts.Select(MenuLanguage());
+                const auto title = asi_settings::text::Widen(texts.Resolve("@menu.updatetitle"));
+                MessageBoxW(window, message.c_str(), title.c_str(), MB_OK | MB_ICONINFORMATION);
+                return;
+            }
             auto owner = host;
             if (!owner || !owner->Current() || !owner->open) return;
             auto view = owner->view;
@@ -1492,6 +1522,17 @@ namespace KongMenu
             if (!owner->Populate(std::move(view), 0) && owner->Current()) owner->Close();
         };
         RWGTA::UpdateCheck::Init(std::move(config));
+        if (Screen.bSignatureEdition)
+        {
+            SignatureUpdateTick = []()
+            {
+                static bool ticking = false;
+                if (ticking) return;
+                ticking = true;
+                RWGTA::UpdateCheck::Tick();
+                ticking = false;
+            };
+        }
     }
 
     void Init()

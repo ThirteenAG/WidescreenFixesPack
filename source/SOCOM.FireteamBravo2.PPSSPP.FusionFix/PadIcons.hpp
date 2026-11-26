@@ -255,10 +255,6 @@ inline int Draw(uintptr_t definition, uintptr_t clip, uintptr_t slots, uintptr_t
         }
     return draw.fun(definition, clip, slots, movie, depth, matrix, color, frame);
 }
-inline void ReadOptions()
-{
-    style = std::clamp(inireader.ReadInteger("MAIN", "GamepadIcons", 0), 0, 3);
-}
 inline void Install()
 {
     const auto site = sites::Required("60 FE BD 27 7C 01 B4 AF 50 0C E2 8C FF FF 74 31 FF FF 08 31 02 00 8B 94 24 01 A8 AF 00 00 03 34");

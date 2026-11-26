@@ -21,7 +21,7 @@ export void InstallCameraFix()
             "8B F1 8B 86 84 01 00 00 85 C0 0F 84 ? ? ? ? 8B 86 8C 01 00 00 85 C0 74 ? 8B 40 2C",
             "E8 ? ? ? ? D9 44 24 04 8B CE D9 F2 DD D8 D9 54 24 04 D8 B6 D4 00 00 00 DE C9",
             0xc0, 0xd4, 0x184, 0xd8, 0x18c, 0x130
-        }, &FixSettings().Float("MAIN.FOVFactor"));
+        }, FixSettings());
     pattern = hook::pattern("D9 9E C4 00 00 00 E8 ? ? ? ? D9 86 C4 00 00 00 5E 59 C3");
     struct FovHook
     {

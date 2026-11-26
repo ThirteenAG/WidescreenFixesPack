@@ -107,8 +107,40 @@ namespace RWGTAMenu
         void OpenPlugins(HMODULE hostModule, const std::string& language, size_t pageRows, const std::set<std::string>& joined = {}, bool scrolling = false)
         {
             Open(hostModule, language, pageRows, Layout::Plugins, joined);
-            if (!scrolling)
+            splitPages = !scrolling;
+            if (splitPages)
                 SplitPluginPages(pageRows);
+        }
+
+        // The open pages in another language (an editor changed the menu's language): their texts are selected again
+        // and the pages built again, keeping their scroll. True when it changed; rows taken before are then invalid.
+        bool SelectLanguage(const std::string& tag)
+        {
+            auto snapshot = plugins;
+            if (!snapshot || tag == textLanguage)
+                return false;
+            textLanguage = tag;
+            for (auto& plugin : *snapshot)
+                plugin.file.texts.Select(tag);
+            std::vector<size_t> scroll;
+            for (auto& page : pages)
+                scroll.push_back(page.scroll);
+            if (layout == Layout::Plugins)
+            {
+                BuildPlugins(openRows);
+                if (splitPages)
+                    SplitPluginPages(openRows);
+            }
+            else
+            {
+                Build(openRows);
+            }
+            if (pages.size() == scroll.size())
+            {
+                for (size_t i = 0; i < pages.size(); ++i)
+                    pages[i].scroll = scroll[i];
+            }
+            return true;
         }
 
         // Finds the plugins and builds the pages; host: the fix's module, language: the game's language tag
@@ -122,8 +154,28 @@ namespace RWGTAMenu
         // The rows of the fix's settings passed to OpenPlugins, in their order (Plugins layout)
         const std::vector<Row>& JoinedRows() const { return joinedRows; }
 
-        // A changed setting applies at the next start (Plugins layout: shown once, in the game's style)
-        bool RestartRequired() const { return restartRequired; }
+        // Snapshot the host's values while it initializes its restart-only features.
+        void RememberRunningSettings(asi_settings::Plugin& plugin)
+        {
+            for (const auto& setting : plugin.GetDescription().settings)
+            {
+                if (setting.HasValue() && setting.apply == "restart")
+                    runningValues.try_emplace({ plugin.Id(), setting.id }, plugin.Get(setting.id));
+            }
+        }
+
+        // The warning stays visible until all restart-only rows match their running values.
+        bool RestartRequired() const
+        {
+            const auto snapshot = plugins;
+            if (snapshot)
+            {
+                const bool pending = HasRestartChanges(snapshot);
+                if (snapshot == plugins)
+                    restartRequired = pending;
+            }
+            return restartRequired;
+        }
 
         // The row's help text: the setting's description, or the model's own for its rows
         std::string Help(const Row& row) const
@@ -148,6 +200,9 @@ namespace RWGTAMenu
             Close();
             layout = chosen;
             windowSize = std::max(size_t(1), pageRows + 1);
+            openRows = pageRows;
+            textLanguage = language;
+            splitPages = false;
             joinedIds = joined;
             plugins = std::make_shared<std::vector<LoadedPlugin>>();
             auto snapshot = plugins;
@@ -172,6 +227,18 @@ namespace RWGTAMenu
                 }
                 if (snapshot != plugins)
                     return;
+                for (const auto& setting : plugin.file.description.settings)
+                {
+                    if (!setting.HasValue() || setting.apply != "restart")
+                        continue;
+                    RestartKey key{ plugin.file.id, setting.id };
+                    if (runningValues.contains(key))
+                        continue;
+                    auto value = OtherPlugins::Get(plugin, setting);
+                    if (snapshot != plugins)
+                        return;
+                    runningValues.try_emplace(std::move(key), std::move(value));
+                }
                 snapshot->push_back(std::move(plugin));
             }
             host = nullptr;
@@ -338,7 +405,7 @@ namespace RWGTAMenu
                     {
                         if (confirmActive && confirm == row.plugin)
                             return Text("menu.confirm");
-                        if (restartActive && restartNeeded == row.plugin)
+                        if (restartActive && restartNeeded == row.plugin && HasRestartChanges(snapshot, row.plugin))
                             return Text("menu.restartneeded");
                         int shown = PresetShown(row.plugin);
                         if (shown < 0)
@@ -403,12 +470,12 @@ namespace RWGTAMenu
                     if (!current())
                         return false;
                     bool changed = OtherPlugins::Set(*row.plugin, *row.setting, value) == ASI_SETTINGS_OK;
-                    if (changed && row.setting->apply == "restart")
-                        restartRequired = true;
                     if (!current())
                         return changed;
                     restartNeeded = nullptr;
                     restartActive = false;
+                    if (changed && row.setting->apply == "restart")
+                        RestartRequired();
                     return changed;
                 }
                 case RowKind::Action:
@@ -473,9 +540,11 @@ namespace RWGTAMenu
                         auto value = asi_settings::FormatValue(slot);
                         if (asi_settings::text::IEquals(OtherPlugins::Get(*row.plugin, *setting), value))
                             continue;
-                        if (OtherPlugins::Set(*row.plugin, *setting, value) == ASI_SETTINGS_OK && setting->apply == "restart")
-                            restartRequired = true;
+                        if (!current())
+                            return true;
+                        OtherPlugins::Set(*row.plugin, *setting, value);
                     }
+                    RestartRequired();
                     return true;
                 }
             }
@@ -505,15 +574,43 @@ namespace RWGTAMenu
         std::vector<Page> pages;
         Layout layout = Layout::Pages;
         size_t windowSize{ 1 };
+        size_t openRows{ 0 };
+        bool splitPages = false;
+        std::string textLanguage;                       // the language tag of the texts
         std::set<std::string> joinedIds;
         std::vector<Row> joinedRows;
         const LoadedPlugin* restoreConfirm = nullptr;   // the plugin whose Restore defaults row asks to confirm
-        bool restartRequired = false;
+        using RestartKey = std::pair<std::string, std::string>;
+        std::map<RestartKey, std::string> runningValues;
+        mutable bool restartRequired = false;
         std::map<const LoadedPlugin*, int> presetShown;
         const LoadedPlugin* confirm = nullptr;          // the plugin whose apply row asks to confirm
         const LoadedPlugin* restartNeeded = nullptr;    // the plugin whose last preset needs a restart
         bool confirmActive = false, restartActive = false; // nullptr scopes the game-wide preset
         static inline std::map<HMODULE, int32_t> subscriptions;
+
+        bool HasRestartChanges(const std::shared_ptr<std::vector<LoadedPlugin>>& snapshot, const LoadedPlugin* scope = nullptr) const
+        {
+            for (const auto& plugin : *snapshot)
+            {
+                if (scope && scope != &plugin)
+                    continue;
+                for (const auto& setting : plugin.file.description.settings)
+                {
+                    if (!setting.HasValue() || setting.apply != "restart")
+                        continue;
+                    const auto running = runningValues.find({ plugin.file.id, setting.id });
+                    if (running == runningValues.end())
+                        continue;
+                    const auto value = OtherPlugins::Get(plugin, setting);
+                    if (snapshot != plugins)
+                        return false;
+                    if (value != running->second)
+                        return true;
+                }
+            }
+            return false;
+        }
 
         static void __cdecl OnChanged(void*, const char*)
         {
@@ -552,11 +649,11 @@ namespace RWGTAMenu
                         return true;
                 }
             }
-            restartRequired |= restart;
             if (!current())
                 return true;
             restartActive = restart;
             restartNeeded = plugin;
+            RestartRequired();
             return true;
         }
 

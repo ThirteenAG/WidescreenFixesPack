@@ -83,9 +83,9 @@
   "SPLITSCREEN.Enable": "Activar pantalla dividida",
   "SPLITSCREEN.Enable.description": "Restaura cooperativo local en pantalla dividida. El jugador 2 requiere mando. El jugador 2 abre el menú de pausa con START y lo maneja con su mando.",
   "SPLITSCREEN.GamepadPlayer1": "Mando del jugador 1",
-  "SPLITSCREEN.GamepadPlayer1.description": "Mando del jugador 1 (1–4). 0 usa solo teclado y ratón mientras está el jugador 2; no afecta al modo individual.",
+  "SPLITSCREEN.GamepadPlayer1.description": "Mando del jugador 1, o solo teclado y ratón mientras está el jugador 2; no afecta al modo individual. Requiere reiniciar.",
   "SPLITSCREEN.GamepadPlayer2": "Mando del jugador 2",
-  "SPLITSCREEN.GamepadPlayer2.description": "Mando del jugador 2 (1–4).",
+  "SPLITSCREEN.GamepadPlayer2.description": "Mando del jugador 2. Requiere reiniciar.",
   "FILELOADER.DumpPackedFiles": "Extraer archivos empaquetados",
   "FILELOADER.DumpPackedFiles.description": "Extrae archivos .umd en unpacked junto al ejecutable; consulta _dump.log. Mueve los archivos a update para cargar las versiones extraídas.",
   "STARTUP.DedicatedServerExePath": "Ejecutable del servidor dedicado",
@@ -145,5 +145,10 @@
   "ui.pillarbox": "Bandas verticales",
   "ui.both": "Ambas",
   "HudAspectRatioConstraint": "Relación de aspecto del HUD",
-  "HudAspectRatioConstraint.description": "Auto coloca los elementos laterales del HUD en los bordes de la pantalla. Elige 4:3, 16:9, 21:9 o una proporción personalizada A:H o decimal, entre 4:3 y 32:9, para mantenerlos en una zona centrada. Los efectos de pantalla completa y los marcadores del mundo no cambian. Efecto inmediato."
+  "HudAspectRatioConstraint.description": "Auto coloca los elementos laterales del HUD en los bordes de la pantalla. Elige 4:3, 16:9, 21:9 o una proporción personalizada A:H o decimal, entre 4:3 y 32:9, para mantenerlos en una zona centrada. Los efectos de pantalla completa y los marcadores del mundo no cambian. Efecto inmediato.",
+  "SPLITSCREEN.GamepadPlayer1.0": "Teclado y ratón",
+  "pad.controller1": "Mando 1",
+  "pad.controller2": "Mando 2",
+  "pad.controller3": "Mando 3",
+  "pad.controller4": "Mando 4"
 }

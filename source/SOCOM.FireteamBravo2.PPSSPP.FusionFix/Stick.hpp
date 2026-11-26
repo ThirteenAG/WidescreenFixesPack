@@ -2,6 +2,8 @@
 
 namespace Stick
 {
+inline PspRightStick host;
+
 inline uint8_t Byte(float value)
 {
     if (!std::isfinite(value))
@@ -10,7 +12,7 @@ inline uint8_t Byte(float value)
 }
 inline void Sample(Input* input)
 {
-    if (!input || input->pad.Rsrv[0] != 128 || input->pad.Rsrv[1] != 128)
+    if (!input || host.Mapped())
         return;
     float x{}, y{};
     // Stock PPSSPP exposes the host XInput right stick as Z and RZ.

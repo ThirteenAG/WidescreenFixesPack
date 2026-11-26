@@ -39,7 +39,6 @@ Vanilla shows the logos and the intro movie; Recommended and Enhanced skip them.
 - **Movies** are never cut off or stretched. All of the game's movies are 4:3 pictures, shown at full height with black bars at the sides.
 - **Window modes** at any Windows display scaling, without rounded corners: Windowed opens a centered window with exactly the chosen client size, also for sizes the monitor doesn't list. The window is not minimized when another window becomes active.
 - **Soundtrack:** the random song order works.
-- **Ctrl+F10** opens the in-game settings overlay.
 
 Controllers: the game reads gamepads through DirectInput; the bundled Xidi presents an Xbox controller to it. Without a controller chosen in the game's launcher, the first controller is player 1's and a second one player 2's, with the console layout: A ollie, X flip, B grab, Y grind, Start pause, shoulder buttons for spins and revert. **Options → Control Setup** still changes the bindings. While the controller is in use, the button help and other prompts show its buttons (pick the set under **Gamepad icons**); a key press brings the keyboard keys back.
 

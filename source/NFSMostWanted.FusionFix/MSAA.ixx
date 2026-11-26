@@ -1,6 +1,8 @@
 module;
 
 #include <stdafx.h>
+#include <atomic>
+#include <mutex>
 #include "FixSettings.hpp"
 #include "d3d9.h"
 
@@ -10,38 +12,6 @@ import ComVars;
 
 class MSAA
 {
-    static bool IsMSAAEnabled(IDirect3DDevice9* device)
-    {
-        if (!device)
-            return false;
-
-        IDirect3DSurface9* pRT = nullptr;
-        if (SUCCEEDED(device->GetRenderTarget(0, &pRT)) && pRT)
-        {
-            D3DSURFACE_DESC desc = {};
-            HRESULT hr = pRT->GetDesc(&desc);
-            pRT->Release();
-            if (SUCCEEDED(hr) && desc.MultiSampleType != D3DMULTISAMPLE_NONE)
-                return true;
-        }
-
-        IDirect3DSwapChain9* pSwapChain = nullptr;
-        if (SUCCEEDED(device->GetSwapChain(0, &pSwapChain)) && pSwapChain)
-        {
-            D3DPRESENT_PARAMETERS d3dpp = {};
-            HRESULT hr = pSwapChain->GetPresentParameters(&d3dpp);
-            pSwapChain->Release();
-            if (SUCCEEDED(hr) && d3dpp.MultiSampleType != D3DMULTISAMPLE_NONE)
-                return true;
-        }
-
-        DWORD dwMSAA = 0;
-        if (SUCCEEDED(device->GetRenderState(D3DRS_MULTISAMPLEANTIALIAS, &dwMSAA)))
-            return dwMSAA != 0;
-
-        return false;
-    }
-
 public:
     MSAA()
     {
@@ -58,19 +28,19 @@ public:
                     *pFSAALevel = (std::max)(*pMaxFSAALevel, 0);
             });
 
-            static const int* pHideAABug = &FixSettings().Int("GRAPHICS.HideAABug");   // also changed in the options menu
-            static bool bMSAAEnabled = false;
-            static bool bMSAAChecked = false;
-
-            WFP::onBeforeReset() += []()
+            static std::atomic<int> hideAABug{ 0 };
+            const auto refresh = []()
             {
-                bMSAAEnabled = false;
-                bMSAAChecked = false;
+                static std::mutex mutex;
+                const std::lock_guard lock(mutex);
+                const auto value = FixSettings().Get("GRAPHICS.HideAABug");
+                hideAABug.store(value == "2" ? 2 : value == "1" ? 1 : 0);
             };
-
+            FixSettings().OnChange("GRAPHICS.HideAABug", refresh);
+            refresh();
             WFP::onEndScene() += []()
             {
-                int nHideAABug = std::clamp(*pHideAABug, 0, 2);
+                const auto nHideAABug = hideAABug.load();
                 if (!nHideAABug)
                     return;
 
@@ -78,46 +48,27 @@ public:
                 if (!device)
                     return;
 
-                if (!bMSAAChecked)
-                {
-                    bMSAAEnabled = IsMSAAEnabled(device);
-                    bMSAAChecked = true;
-                }
-
-                if (!bMSAAEnabled)
-                    return;
-
-                IDirect3DSurface9* pBackBuffer = nullptr;
-                if (FAILED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &pBackBuffer)) || !pBackBuffer)
+                IDirect3DSurface9* target = nullptr;
+                if (FAILED(device->GetRenderTarget(0, &target)) || !target)
                     return;
 
                 D3DSURFACE_DESC desc = {};
-                HRESULT hr = pBackBuffer->GetDesc(&desc);
-                pBackBuffer->Release();
+                HRESULT hr = target->GetDesc(&desc);
+                target->Release();
 
-                if (FAILED(hr) || !desc.Width || !desc.Height)
+                if (FAILED(hr) || desc.MultiSampleType == D3DMULTISAMPLE_NONE || !desc.Width || !desc.Height)
                     return;
 
-                D3DCOLOR black = D3DCOLOR_ARGB(255, 0, 0, 0);
-
-                // Top 1px
-                D3DRECT topRect = { 0, -5, static_cast<LONG>(desc.Width), 1 };
-                device->Clear(1, &topRect, D3DCLEAR_TARGET, black, 1.0f, 0);
-
-                // Left 1px
-                D3DRECT leftRect = { -5, 0, 1, static_cast<LONG>(desc.Height) };
-                device->Clear(1, &leftRect, D3DCLEAR_TARGET, black, 1.0f, 0);
-
-                if (nHideAABug > 1)
+                const auto width = static_cast<LONG>(desc.Width);
+                const auto height = static_cast<LONG>(desc.Height);
+                const D3DRECT edges[]
                 {
-                    // Bottom 1px
-                    D3DRECT bottomRect = { 0, static_cast<LONG>(desc.Height) - 1, static_cast<LONG>(desc.Width), static_cast<LONG>(desc.Height) + 5 };
-                    device->Clear(1, &bottomRect, D3DCLEAR_TARGET, black, 1.0f, 0);
-
-                    // Right 1px
-                    D3DRECT rightRect = { static_cast<LONG>(desc.Width) - 1, 0, static_cast<LONG>(desc.Width) + 5, static_cast<LONG>(desc.Height) + 5 };
-                    device->Clear(1, &rightRect, D3DCLEAR_TARGET, black, 1.0f, 0);
-                }
+                    { 0, 0, width, 1 },
+                    { 0, 0, 1, height },
+                    { 0, height - 1, width, height },
+                    { width - 1, 0, width, height },
+                };
+                device->Clear(nHideAABug == 2 ? 4 : 2, edges, D3DCLEAR_TARGET, D3DCOLOR_ARGB(255, 0, 0, 0), 1.0f, 0);
             };
         };
     }

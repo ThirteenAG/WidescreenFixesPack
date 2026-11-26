@@ -3,7 +3,10 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include <algorithm>
+#include <atomic>
+#include <charconv>
 #include <cmath>
+#include <mutex>
 
 export module Camera;
 
@@ -34,17 +37,54 @@ namespace RevCameraFOV
 
 namespace
 {
-    const float* pFOVFactor{};
+    std::atomic<float> fovFactor{ 1.0f };
+    std::atomic<bool> pillarboxRequested{ true };
     SafetyHookMid shGameplayFOV;
     SafetyHookInline shMotionCamera;
-    std::atomic<ULONGLONG> nMotionCameraTick{ 0 };
+    SafetyHookInline shReleaseMotionCamera;
+    SafetyHookInline shDestroyMotionCamera;
+    std::mutex motionCameraMutex;
+    uintptr_t activeMotionCamera{};
+    std::atomic<ULONGLONG> motionCameraFrame{ 0 };
+
+    void ClearMotionCamera(uintptr_t id)
+    {
+        const std::lock_guard lock(motionCameraMutex);
+        if (activeMotionCamera == id)
+        {
+            activeMotionCamera = 0;
+            motionCameraFrame.store(0, std::memory_order_relaxed);
+        }
+    }
 
     // uMotionCamera::move: +0xC0 = its keyframe data, +0x0C flag 0x4000 = playing
     void __fastcall MotionCamera(uint8_t* camera, void* edx)
     {
         shMotionCamera.unsafe_fastcall(camera, edx);
-        if (*reinterpret_cast<uintptr_t*>(camera + 0xC0) && (*reinterpret_cast<uint32_t*>(camera + 0x0C) & 0x4000))
-            nMotionCameraTick = GetTickCount64();
+        const auto id = reinterpret_cast<uintptr_t>(camera);
+        if (!*reinterpret_cast<uintptr_t*>(camera + 0xC0) || !(*reinterpret_cast<uint32_t*>(camera + 0x0C) & 0x4000))
+        {
+            ClearMotionCamera(id);
+            return;
+        }
+
+        const std::lock_guard lock(motionCameraMutex);
+        activeMotionCamera = id;
+        // Present uses the border decision from this camera update.
+        const auto mask = static_cast<ULONGLONG>(pillarboxRequested.load(std::memory_order_relaxed));
+        motionCameraFrame.store((GetTickCount64() << 1) | mask, std::memory_order_relaxed);
+    }
+
+    int __fastcall ReleaseMotionCamera(uint8_t* camera, void*)
+    {
+        ClearMotionCamera(reinterpret_cast<uintptr_t>(camera));
+        return shReleaseMotionCamera.unsafe_thiscall<int>(camera);
+    }
+
+    uint8_t* __fastcall DestroyMotionCamera(uint8_t* camera, void*, uint32_t flags)
+    {
+        ClearMotionCamera(reinterpret_cast<uintptr_t>(camera));
+        return shDestroyMotionCamera.unsafe_thiscall<uint8_t*>(camera, flags);
     }
 
     template<typename T>
@@ -129,13 +169,12 @@ namespace
 
     void ApplyGameplayFOV(SafetyHookContext& regs)
     {
-        if (!pFOVFactor)
-            return;
         auto manager = reinterpret_cast<uint8_t*>(regs.esi);
         if (!IsGameplayManager(manager))
             return;
         auto fov = Field<float>(manager, 0x3C);
-        if (RevCameraFOV::Scale(fov, Field<float>(manager, 0x34), Field<float>(manager, 0x30), *pFOVFactor, Field<float>(manager, 0x38)))
+        if (RevCameraFOV::Scale(fov, Field<float>(manager, 0x34), Field<float>(manager, 0x30),
+            fovFactor.load(std::memory_order_relaxed), Field<float>(manager, 0x38)))
         {
             // Change the published camera output, retaining the controller's unscaled state.
             *reinterpret_cast<float*>(manager + 0x3C) = fov;
@@ -143,10 +182,10 @@ namespace
     }
 }
 
-// A cutscene is playing: a cutscene camera (uMotionCamera) plays its keyframes. It updates every frame while it plays.
-export bool IsCutsceneCamera()
+export bool ShouldPillarboxCutscene()
 {
-    return GetTickCount64() - nMotionCameraTick.load() < 250;
+    const auto frame = motionCameraFrame.load(std::memory_order_relaxed);
+    return (frame & 1) && GetTickCount64() - (frame >> 1) < 250;
 }
 
 class Camera
@@ -156,10 +195,32 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            pFOVFactor = &FixSettings().Float("MAIN.FOVFactor");
+            auto& settings = FixSettings();
+            const auto update = []()
+            {
+                static std::mutex writers;
+                const std::lock_guard lock(writers);
+                const auto value = FixSettings().Get("MAIN.FOVFactor");
+                float factor = 1.0f;
+                const auto end = value.data() + value.size();
+                const auto parsed = std::from_chars(value.data(), end, factor);
+                if (parsed.ec != std::errc() || parsed.ptr != end)
+                    factor = 1.0f;
+                fovFactor.store(factor, std::memory_order_relaxed);
+                pillarboxRequested.store(FixSettings().Get("MAIN.CutsceneBorders") == "2", std::memory_order_relaxed);
+            };
+            settings.OnChange("MAIN.FOVFactor", update);
+            settings.OnChange("MAIN.CutsceneBorders", update);
+            update();
 
             auto motion = hook::pattern("83 EC 18 53 56 8B F1 8B 86 C4 00 00 00 57 85 C0 74 1A 8B 40 0C 83 E0 07 83 F8 02 74 0F 83 F8 01 74 0A C7 86 C4 00 00 00 00 00 00 00 8B 86 C0 00 00 00");
             shMotionCamera = safetyhook::create_inline(motion.get_first(), MotionCamera);
+            // uMotionCamera can be destroyed directly or through its scalar deleting destructor.
+            auto release = hook::pattern("56 8B F1 8B 8E C0 00 00 00 C7 06 ? ? ? ? 85 C9 74 0F E8 ? ? ? ? C7 86 C0 00 00 00 00 00 00 00 C7 06 ? ? ? ? 8B CE 5E E9 ? ? ? ? 83 B9 C4 00 00 00 00");
+            shReleaseMotionCamera = safetyhook::create_inline(release.get_first(), ReleaseMotionCamera);
+            auto construct = hook::pattern("F3 0F 10 0D ? ? ? ? C7 06 ? ? ? ? F3 0F 11 46 7C F3 0F 11 86 8C 00 00 00 F3 0F 11 86 9C 00 00 00 F3 0F 11 86 AC 00 00 00 F3 0F 11 8E B0 00 00 00");
+            const auto vtable = *construct.get_first<uint8_t**>(10);
+            shDestroyMotionCamera = safetyhook::create_inline(vtable[0], DestroyMotionCamera);
             auto output = hook::pattern("D9 5E 34 8B 03 8B 50 48 8B CB FF D2 D9 5E 30 D9 86 8C 00 00 00 0F 57 C0 D9 5E 3C 8B CB D9 86 90 00 00 00");
             auto root = hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? 8B 0D ? ? ? ? 66 89 5C 24 0C 88 5C 24 0E 8B 44 24 0C");
             pGameCamera.SetAddress(*root.get_first<uint8_t**>(2));

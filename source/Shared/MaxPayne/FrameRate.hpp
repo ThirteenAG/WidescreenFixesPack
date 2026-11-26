@@ -8,8 +8,8 @@
 // The frame rate limit of both Max Payne games (MAIN.FPSLimit): 0 = unlimited (the games' own behaviour, they run on
 // variable frame times without a cap), -1 = the monitor's refresh rate, else frames per second, 30 to 1000. nMaxFPS caps
 // the refresh rate and the number.
-// Called once a frame before the frame is shown. Each frame gets its time slot after the one before, so the pace
-// doesn't drift; a frame that came late (loading, a hitch) starts the count anew instead of rushing the next ones.
+// Called once a frame before the frame is shown. Schedule from the previous frame's actual time and carry the
+// fractional counter tick so delays cannot bunch up subsequent frames.
 namespace MaxPayneFrameRate
 {
     inline LONGLONG Frequency()
@@ -46,36 +46,71 @@ namespace MaxPayneFrameRate
             YieldProcessor();
     }
 
-    inline void Limit(int32_t nFPSLimit, int32_t nMaxFPS = 1000)
+    inline uint32_t MonitorRate(HWND window)
     {
-        static LONGLONG next = 0;
+        static HMONITOR previousMonitor = nullptr;
+        static uint32_t refresh = 60;
+        static ULONGLONG queryAfter = 0;
+        const auto monitor = window ? MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST) : nullptr;
+        const auto now = GetTickCount64();
+        if (monitor != previousMonitor || now >= queryAfter)
+        {
+            previousMonitor = monitor;
+            queryAfter = now + 500;
+            MONITORINFOEXW info{};
+            info.cbSize = sizeof(info);
+            DEVMODEW mode{};
+            mode.dmSize = sizeof(mode);
+            if (monitor && GetMonitorInfoW(monitor, &info) &&
+                EnumDisplaySettingsW(info.szDevice, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1)
+            {
+                refresh = mode.dmDisplayFrequency;
+            }
+            else
+            {
+                const auto desktop = GetDesktopRefreshRate();
+                refresh = desktop > 1 ? desktop : 60;
+            }
+        }
+        return refresh;
+    }
+
+    inline void Limit(int32_t nFPSLimit, int32_t nMaxFPS = 1000, HWND window = nullptr)
+    {
+        static LONGLONG previousPresent = 0;
+        static LONGLONG remainder = 0;
+        static int32_t previousFPS = 0;
+
         if (nFPSLimit == 0)
         {
-            next = 0;
+            previousFPS = 0;
             return;
         }
 
-        // the refresh rate is looked up again now and then, it changes with the video mode
-        static uint32_t nRefreshRate = 60;
-        static ULONGLONG nRefreshRateTime = 0;
-        if (nFPSLimit < 0 && GetTickCount64() - nRefreshRateTime > 2000)
+        const auto requested = nFPSLimit < 0 ? int32_t(MonitorRate(window)) : std::clamp(nFPSLimit, 30, 1000);
+        const int32_t nFPS = std::clamp(requested, 1, std::max<int32_t>(nMaxFPS, 1));
+        auto now = Now();
+        if (!previousFPS)
         {
-            nRefreshRate = GetDesktopRefreshRate();
-            if (nRefreshRate < 30)
-                nRefreshRate = 60;
-            nRefreshRateTime = GetTickCount64();
-        }
-
-        int32_t nFPS = std::min(nFPSLimit < 0 ? int32_t(nRefreshRate) : std::clamp(nFPSLimit, 30, 1000), nMaxFPS);
-        LONGLONG period = Frequency() / nFPS;
-        LONGLONG now = Now();
-        if (next == 0 || now - next > period * 4)
-        {
-            next = now + period;
+            previousFPS = nFPS;
+            previousPresent = now;
+            remainder = 0;
             return;
         }
+        if (nFPS != previousFPS)
+        {
+            previousFPS = nFPS;
+            remainder = 0;
+        }
 
-        WaitUntil(next);
-        next += period;
+        const auto ticks = Frequency() + remainder;
+        const auto target = previousPresent + ticks / nFPS;
+        remainder = ticks % nFPS;
+        if (now < target)
+        {
+            WaitUntil(target);
+            now = Now();
+        }
+        previousPresent = now;
     }
 }

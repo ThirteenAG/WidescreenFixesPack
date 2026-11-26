@@ -38,20 +38,38 @@ export namespace DisplayModes
             auto reference = hook::module_pattern(module, signature);
             References.push_back(reference.get_first<int32_t*>(sites[i].second));
         }
-        // The Video screen copies the list into its own 128 entries and reads the count right after the native
-        // table (+0x400). Give it a copy in the native layout: the 640x480 entry and the largest 127 modes.
+        // The native Video screen has space for 128 width/height pairs followed by the count.
         auto screen = hook::module_pattern(module, "E8 ? ? ? ? 8B 88 00 04 00 00 89 8E 18 04 00 00 33 C9 39 88 00 04 00 00");
         NativeDisplayModeCount.SetAddress(original + 256);
         ScreenListHook = safetyhook::create_mid(screen.get_first(5), [](SafetyHookContext& regs)
         {
             static int32_t list[257] = {};
             int32_t count = std::clamp(NativeDisplayModeCount.get(), 0, int32_t(Modes.size() / 2));
-            int32_t shown = std::min(count, 128);
-            for (int32_t i = 0; i < shown; ++i)
+            using Size = std::pair<int32_t, int32_t>;
+            MONITORINFO monitor{ sizeof(monitor) };
+            GetMonitorInfo(MonitorFromWindow(hGameWindow.get(), MONITOR_DEFAULTTOPRIMARY), &monitor);
+            const Size desktop{ monitor.rcMonitor.right - monitor.rcMonitor.left, monitor.rcMonitor.bottom - monitor.rcMonitor.top };
+            const Size active{ DisplayWidth.get(), DisplayHeight.get() };
+            std::vector<Size> choices;
+            choices.reserve(count);
+            for (int32_t i = 0; i < count; ++i)
             {
-                int32_t from = i == 0 ? 0 : count - shown + i;
-                list[i * 2] = Modes[from * 2];
-                list[i * 2 + 1] = Modes[from * 2 + 1];
+                const Size size{ Modes[i * 2], Modes[i * 2 + 1] };
+                if (std::find(choices.begin(), choices.end(), size) == choices.end())
+                    choices.push_back(size);
+            }
+            size_t skip = choices.size() > 128 ? choices.size() - 128 : 0;
+            int32_t shown = 0;
+            for (const auto& size : choices)
+            {
+                if (skip && size != choices.front() && size != active && size != desktop)
+                {
+                    --skip;
+                    continue;
+                }
+                list[shown * 2] = size.first;
+                list[shown * 2 + 1] = size.second;
+                ++shown;
             }
             list[256] = shown;
             regs.eax = reinterpret_cast<uintptr_t>(list);

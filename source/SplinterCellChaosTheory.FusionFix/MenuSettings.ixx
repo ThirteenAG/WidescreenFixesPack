@@ -192,7 +192,8 @@ export namespace CTSettings
                 int16_t(HIWORD(positions[i])) < 56 || int16_t(HIWORD(positions[i])) > 59)
                 return false;
         std::copy(positions.begin(), positions.end(), output.begin());
-        output[3] = LOWORD(positions[0]) | (uint32_t(HIWORD(positions[0]) + 24) << 16);
+        // The header has room above Sounds. The joystick page starts directly below the stock tabs.
+        output[3] = MAKELONG(LOWORD(positions[2]), HIWORD(positions[2]) - 22);
         return true;
     }
     inline void* AuthoredPoint(void* item, uint32_t position)
@@ -471,12 +472,12 @@ export namespace CTSettings
             }
         } rollback;
         auto initialize = hook::pattern(game, "56 8B F1 8A 46 3C 84 C0 0F 85 84 00 00 00 8B 44 24 08 85 C0 89 46 34 74 09 8B 06 FF 50 44 84 C0");
-        auto destroy = hook::pattern(game, "56 8B F1 8A 4E 3C 33 C0 3A C8 C7 06 ? ? ? ? C7 46 08 ? ? ? ? C7 46 10 ? ? ? ? 74 06 89 46 34 89 46 38 8D 4E 18 E8 82 01 00 00 8B CE 5E E9 2A 4B FC FF");
+        auto destroy = hook::pattern(game, "56 8B F1 8A 4E 3C 33 C0 3A C8 C7 06 ? ? ? ? C7 46 08 ? ? ? ? C7 46 10 ? ? ? ? 74 06 89 46 34 89 46 38 8D 4E 18 E8 ? ? ? ? 8B CE 5E E9 ? ? ? ?");
         auto lookup = hook::pattern(game, "8B 41 08 8B 49 0C 3B C1 56 74 13 8B 54 24 08 90 8B 30 39 56 04 74 0D 83 C0 04 3B C1 75 F2 33 C0");
-        auto text = hook::pattern(game, "56 57 8B 7C 24 0C 57 8B F1 E8 72 9A 45 00 83 C4 04 50 57 8D 4E 28 E8 45 F5 FF FF 5F 5E C2 04 00");
+        auto text = hook::pattern(game, "56 57 8B 7C 24 0C 57 8B F1 E8 ? ? ? ? 83 C4 04 50 57 8D 4E 28 E8 ? ? ? ? 5F 5E C2 04 00");
         auto callback = hook::pattern(game, "8D 44 24 04 50 83 C1 2C E8 43 FE FF FF 8B 4C 24 04 85 C9 74 18 8B 41 04 83 F8 01 77 0C 8B 11 C7");
         auto focus = hook::pattern(game, "56 57 8B F9 8B 4F 24 85 C9 74 05 8B 01 FF 50 10 8B 74 24 0C 85 F6 74 07 8B 16 8B CE FF 52 0C 89");
-        auto tick = hook::pattern(game, "56 8B 71 40 85 F6 74 2A D9 44 24 08 D8 0D ? ? ? ? E8 5D 3B 52 00 50 8B CE E8 71 6C 0C 00 8B C8 E8 AA 5E 31 00 8B 4C 24 08 8B 06 51 8B CE FF 50 20 5E C2 04 00");
+        auto tick = hook::pattern(game, "56 8B 71 40 85 F6 74 2A D9 44 24 08 D8 0D ? ? ? ? E8 ? ? ? ? 50 8B CE E8 ? ? ? ? 8B C8 E8 ? ? ? ? 8B 4C 24 08 8B 06 51 8B CE FF 50 20 5E C2 04 00");
         // Point constructor: base vtable, then the point vtable
         auto point = hook::pattern(game, "C7 00 ? ? ? ? 8B 0D ? ? ? ? 89 48 04 33 C9 C7 00 ? ? ? ? 66 89 48 08 66 89 48 0A");
         if (!makeItem || !bindStyle || !addChild || !getStack || !caption || !stockFits || !current || !open)

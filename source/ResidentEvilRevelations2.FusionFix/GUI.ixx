@@ -54,6 +54,8 @@ namespace Rev2HudLayout
 // from the object's 1280x720 layout to the screen in a vertex shader constant (scale x, scale y, offset x, offset y).
 // The game scales the layout by the screen height, starting at the left edge; the fix moves it per class:
 // - Most objects: the layout centered (in split screen, in the player's viewport).
+// - HUD groups at the sides (equipment, map, objective, item notices, the Raid player panel): moved to
+//   their edge of the MAIN.HudAspectRatioConstraint box.
 // - Full-screen layers (fades, damage): stretched over the whole screen.
 // - Subtitles: centered, with the text narrowed back to the layout's width.
 // - Markers that follow 3D positions (commands, enemy/partner vitality, damage numbers): as the game places them;
@@ -65,6 +67,7 @@ namespace
     enum class Mode
     {
         Center,     // the 16:9 layout centered (the game draws it at the left edge)
+        Left,       // a left-anchored HUD group
         Right,      // a right-anchored HUD group
         Stretch,    // over the whole screen
         Subtitles,  // centered, narrowed back to 16:9
@@ -74,14 +77,12 @@ namespace
         Hidden,     // not drawn
     };
 
-    const int* pDisableDamageOverlay = nullptr;
-    const int* pDisableFade = nullptr;
-    const int* pDisableGUICommandFar = nullptr;
+    std::atomic<bool> disableDamageOverlay{}, disableFade{}, disableGUICommandFar{};
     std::atomic<float> fHudAspect{ 0.0f };
 
     thread_local Mode nCurrentMode = Mode::Center;
 
-    // A horizontal shift in layout units for the draw being issued, added after the class transform.
+    // A horizontal shift in clip space for the draw being issued, added after the class transform.
     thread_local float fGroupShift = 0.0f;
 
     // The Raid vitality unit (player panel at the left, mission counter at the right) is one GUI tree under one
@@ -93,7 +94,7 @@ namespace
         uint8_t* first = nullptr;
         std::vector<uint8_t*> nodes;      // the group's children in their native order
         std::vector<uint8_t*> next;       // their native sibling links
-        float displacement = 0.0f;        // layout units from the 16:9 layout edge to the box edge
+        float displacement = 0.0f;        // clip space from the 16:9 layout edge to the box edge
 
         static uint8_t*& Child(uint8_t* node) { return *reinterpret_cast<uint8_t**>(node + 96); }
         static uint8_t*& Sibling(uint8_t* node) { return *reinterpret_cast<uint8_t**>(node + 100); }
@@ -115,16 +116,15 @@ namespace
                     return;
                 const auto width = *reinterpret_cast<int32_t*>(viewport + 196) - *reinterpret_cast<int32_t*>(viewport + 188);
                 const auto height = *reinterpret_cast<int32_t*>(viewport + 200) - *reinterpret_cast<int32_t*>(viewport + 192);
-                if (!SplitScreen::IsPlayerViewport(width, height))
+                const auto pair = SplitScreen::InstalledPair();
+                if (!pair.IsPlayerViewport(width, height))
                     return;
-                viewportAspect = SplitScreen::GetViewportAspect();
+                viewportAspect = pair.ViewportAspect();
                 layoutAspect = SplitScreen::NativeAspect;
             }
             const auto constraint = fHudAspect.load(std::memory_order_relaxed);
-            const auto box = constraint > 0.0f ? std::min(viewportAspect, constraint) : viewportAspect;
-            displacement = viewportAspect < layoutAspect
-                ? 360.0f * layoutAspect * (box / viewportAspect - 1.0f)
-                : 360.0f * (box - layoutAspect);
+            // as the right-anchored groups move (see AdjustClassTransform)
+            displacement = Rev2HudLayout::EdgeShift(viewportAspect, std::min(viewportAspect, layoutAspect), constraint);
             if (std::abs(displacement) < 0.001f)
                 return;
             first = Child(group);
@@ -186,8 +186,11 @@ namespace
                 mode = Mode::Cursor;
             else if (n == "uGUIEquip" || n == "uGUIEquipShortcut" || n == "uGUIEquipShortcutRaid" || n == "uGUIRaidEquip" ||
                      n == "uGUIHealNum" || n == "uGUIPurpose" || n == "uGUIFlash" ||
-                     n == "uGUIMap" || n == "uGUIMapIcon" || n.starts_with("uGUIMapDetail"))
+                     n == "uGUIMap" || n == "uGUIMapIcon" || n.starts_with("uGUIMapDetail") ||
+                     n == "uGUIRaidBreakIn")
                 mode = Mode::Right;
+            else if (n == "uGUIGetItem")
+                mode = Mode::Left;
             else if (n == "uGUIFade" || n == "uGUIDamage" || n == "uGUIDamage2")
                 mode = Mode::Stretch;
             else if (n == "uGUICommandBase" || n == "uGUICommandNear" || n == "uGUIIndicatorNear" || n == "uGUIVitalityPartner" ||
@@ -206,10 +209,10 @@ namespace
         if (mode == Mode::Stretch)
         {
             if (auto name = GetClassName(object); name && std::string_view(name) == "uGUIFade")
-                return *pDisableFade ? Mode::Hidden : mode;
-            return *pDisableDamageOverlay ? Mode::Hidden : mode;
+                return disableFade.load(std::memory_order_relaxed) ? Mode::Hidden : mode;
+            return disableDamageOverlay.load(std::memory_order_relaxed) ? Mode::Hidden : mode;
         }
-        if (mode == Mode::Offset && *pDisableGUICommandFar)
+        if (mode == Mode::Offset && disableGUICommandFar.load(std::memory_order_relaxed))
             return Mode::Hidden;
         return mode;
     }
@@ -248,8 +251,13 @@ namespace
     void AdjustTransform(float* c, int32_t width, int32_t height)
     {
         AdjustClassTransform(c, width, height);
-        // c[0] is the clip-space size of one layout unit
-        c[2] += fGroupShift * c[0];
+        c[2] += fGroupShift;
+    }
+
+    // The direction a HUD group moves to its edge of the box
+    float Side(Mode mode)
+    {
+        return mode == Mode::Left ? -1.0f : 1.0f;
     }
 
     void AdjustClassTransform(float* c, int32_t width, int32_t height)
@@ -258,22 +266,30 @@ namespace
         nCurrentMode = Mode::Center;
         if (mode == Mode::Vanilla)
             return;
+        const bool split = IsSplitScreenActive();
 
         if (mode == Mode::Stretch)
         {
             // The layer is laid out 1280 wide and scaled by the viewport height: widen it to the viewport's width.
+            // In split screen a player's layer is laid out for the game's 800x360 viewport instead.
             c[2] = -1.0f;
-            if (!IsSplitScreenActive() && width > 0 && height > 0)
+            if (width > 0 && height > 0)
             {
-                const float wider = (float(width) / float(height)) / defaultAspectRatio;
-                if (wider > 1.0f)
-                    c[0] *= wider;
+                const auto layout = split ? SplitScreen::InstalledPair() : SplitScreen::ViewPair{};
+                if (!split || layout.IsPlayerViewport(width, height))
+                {
+                    const float wider = (float(width) / float(height)) / (split ? SplitScreen::NativeAspect : defaultAspectRatio);
+                    if (wider > 1.0f)
+                        c[0] *= wider;
+                }
             }
             return;
         }
 
-        const auto screenAspect = GetAspectRatio();
-        if (!IsSplitScreenActive() && screenAspect < defaultAspectRatio && width > 0 && height > 0)
+        const auto pair = split ? SplitScreen::InstalledPair() : SplitScreen::ViewPair{};
+        const auto screen = split ? pair.screen : GetRenderSize();
+        const auto screenAspect = screen.Aspect();
+        if (!split && screenAspect < defaultAspectRatio && width > 0 && height > 0)
         {
             if (mode == Mode::Offset)
                 return;
@@ -292,16 +308,16 @@ namespace
             return;
         }
 
-        float diff = GetDiff();
+        float diff = split ? pair.WidthScale() : screenAspect / defaultAspectRatio;
         float shift = 1.0f - 1.0f / diff;   // centered
-        float viewportAspect = GetAspectRatio();
+        float viewportAspect = screenAspect;
         float layoutAspect = defaultAspectRatio;
-        if (IsSplitScreenActive())
+        if (split)
         {
-            if (SplitScreen::IsPlayerViewport(width, height))
+            if (pair.IsPlayerViewport(width, height))
             {
                 // The game's split HUD is laid out for its 800x360 viewport
-                viewportAspect = SplitScreen::GetViewportAspect();
+                viewportAspect = pair.ViewportAspect();
                 layoutAspect = SplitScreen::NativeAspect;
                 diff = viewportAspect / layoutAspect;
                 if (diff < 1.0f)
@@ -311,33 +327,35 @@ namespace
                     c[1] *= diff;
                     c[2] = (c[2] + 1.0f) * diff - 1.0f;
                     c[3] = (c[3] - 1.0f) * diff + diff;
-                    if (mode == Mode::Right)
-                        c[2] += Rev2HudLayout::EdgeShift(viewportAspect, viewportAspect, fHudAspect.load(std::memory_order_relaxed));
+                    if (mode == Mode::Right || mode == Mode::Left)
+                        c[2] += Side(mode) * Rev2HudLayout::EdgeShift(viewportAspect, viewportAspect, fHudAspect.load(std::memory_order_relaxed));
                     return;
                 }
                 shift = 1.0f - 1.0f / diff;
             }
-            else if (height == GetResY())
-                shift = 1.0f - 1.0f / (GetAspectRatio() / defaultAspectRatio);
+            else if (height == screen.height)
+                shift = 1.0f - defaultAspectRatio / screenAspect;
             else
                 return;
         }
-        else if (mode == Mode::Offset && height != GetResY())
+        else if (mode == Mode::Offset && height != screen.height)
             return;
 
-        if (!IsSplitScreenActive())
+        if (!split)
         {
             // The game may render either a fitted logical viewport or the full
             // backbuffer. Convert its x scale to the physical viewport once.
-            const auto physicalWidth = GetResX();
+            const auto physicalWidth = screen.width;
             if (width > 0 && physicalWidth > 0)
                 c[0] *= float(width) / float(physicalWidth);
         }
         else if (mode == Mode::Subtitles)
             c[0] /= diff;
-        c[2] += shift;
-        if (mode == Mode::Right)
-            c[2] += Rev2HudLayout::EdgeShift(viewportAspect, layoutAspect, fHudAspect.load(std::memory_order_relaxed));
+        // Subtitles are already centred on the whole screen by the game (movie subtitles were a quarter screen right)
+        if (mode != Mode::Subtitles || split)
+            c[2] += shift;
+        if (mode == Mode::Right || mode == Mode::Left)
+            c[2] += Side(mode) * Rev2HudLayout::EdgeShift(viewportAspect, layoutAspect, fHudAspect.load(std::memory_order_relaxed));
     }
 
     // Inventory: the 3D item views, placed in the layout
@@ -347,8 +365,9 @@ namespace
         if (IsSplitScreenActive())
         {
             // The game's own viewports already fit the split layout
-            if (SplitScreen::GetLayout() != SplitScreen::Layout::Original)
-                x += (int32_t)((720.0f * GetAspectRatio()) - (float)SplitScreen::NativeResX);
+            const auto pair = SplitScreen::InstalledPair();
+            if (pair.layout != SplitScreen::Layout::Original)
+                x += (int32_t)((720.0f * pair.screen.Aspect()) - (float)SplitScreen::NativeResX);
         }
         else if (const auto aspect = GetAspectRatio(); aspect < defaultAspectRatio)
         {
@@ -377,16 +396,22 @@ public:
     {
         WFP::onInitEvent() += []()
         {
-            auto& settings = FixSettings();
-            const auto updateHudAspect = []()
+            BindLiveSetting("MAIN.HudAspectRatioConstraint", [](const std::string& value)
             {
-                fHudAspect.store(Rev2HudLayout::ParseAspect(FixSettings().String("MAIN.HudAspectRatioConstraint")), std::memory_order_relaxed);
-            };
-            updateHudAspect();
-            settings.OnChange("MAIN.HudAspectRatioConstraint", updateHudAspect);
-            pDisableDamageOverlay = &settings.Int("MAIN.DisableDamageOverlay");
-            pDisableFade = &settings.Int("MAIN.DisableFade");
-            pDisableGUICommandFar = &settings.Int("MAIN.DisableGUICommandFar");
+                fHudAspect.store(Rev2HudLayout::ParseAspect(value), std::memory_order_relaxed);
+            });
+            BindLiveInt("MAIN.DisableDamageOverlay", [](int value)
+            {
+                disableDamageOverlay.store(value != 0, std::memory_order_relaxed);
+            });
+            BindLiveInt("MAIN.DisableFade", [](int value)
+            {
+                disableFade.store(value != 0, std::memory_order_relaxed);
+            });
+            BindLiveInt("MAIN.DisableGUICommandFar", [](int value)
+            {
+                disableGUICommandFar.store(value != 0, std::memory_order_relaxed);
+            });
 
             auto pattern = hook::pattern("55 8B EC 83 E4 F8 83 EC 40 8B 45 08");
             shDrawGUI = safetyhook::create_inline(pattern.get_first(), DrawGUI);

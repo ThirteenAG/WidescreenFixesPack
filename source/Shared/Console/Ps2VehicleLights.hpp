@@ -17,7 +17,7 @@ static_assert(sizeof(Texture) == 80 && sizeof(Raster) == 16);
 static_assert(sizeof(Material) == 16 && sizeof(Geometry) == 28);
 static_assert(offsetof(Element, geometry) == 20 && offsetof(Element, link) == 28);
 struct Model { const char* texture; int16_t cache; };
-struct Layout { unsigned model, flags, accelerator, brake, damage; };
+struct Layout { unsigned model, flags, accelerator, brake, damage, type; };
 
 template<class T> T field(const void* object, size_t offset) {
     T value;
@@ -119,7 +119,7 @@ struct VehicleLights {
         const VehicleLightState state{
             (flags & 0x10) != 0, (flags & 0x40) != 0, (flags & 0x20) != 0,
             field<float>(vehicle, profile.layout.accelerator), field<float>(vehicle, profile.layout.brake),
-            field<uint32_t>(vehicle, profile.layout.damage)
+            AutomobileLampDamage(vehicle, profile.layout.type, profile.layout.damage)
         };
         const unsigned variant = state.texture();
         Texture* source = nullptr;

@@ -8,6 +8,7 @@ export module Resolution;
 
 import ComVars;
 import PostFX;
+import Registry;
 
 struct Res
 {
@@ -102,9 +103,10 @@ std::string GetResolutionConfigPath()
 {
     char basePath[MAX_PATH] = {};
 
-    if (FAILED(SHGetFolderPathA(nullptr, CSIDL_COMMON_APPDATA | CSIDL_FLAG_CREATE, nullptr, 0, basePath)))
+    // Where the game keeps its profiles (the custom folder in the game's folder when one is set)
+    if (FAILED(GameFolderPath(CSIDL_COMMON_APPDATA | CSIDL_FLAG_CREATE, basePath)))
     {
-        SHGetFolderPathA(nullptr, CSIDL_MYDOCUMENTS, nullptr, 0, basePath);
+        GameFolderPath(CSIDL_MYDOCUMENTS, basePath);
     }
 
     std::string path = basePath;
@@ -412,6 +414,26 @@ public:
 
             g_RacingResolution = unpackRes(GetSavedResolution());
             SetResolutionByIndex(g_RacingResolution);
+
+            // The game's detail detection after the device is made (and on a new profile) sets the racing resolution
+            // to its own index 0 or 1 (640x480 or 800x600). Here the index is a place in the fix's list, which made
+            // it 640x480 or 720x480 and saved that as the resolution: the fix's resolution stays.
+            pattern = hook::pattern("53 B9 ? ? ? ? E8 ? ? ? ? D9 1D ? ? ? ? 81 3D ? ? ? ? 00 04 00 00");
+            static SafetyHookInline shDetectDetail = safetyhook::create_inline(pattern.get_first(), static_cast<int(__cdecl*)()>([]() -> int
+            {
+                const int index = g_RacingResolution;
+                const int result = shDetectDetail.unsafe_ccall<int>();
+                g_RacingResolution = index;
+                return result;
+            }));
+
+            // The game resets the device to 800x600 for each loading screen and the front end, and back to the racing
+            // resolution when a race starts, unless the racing resolution is its 800x600. All of them are the chosen
+            // resolution here, so these resets change nothing: they are skipped.
+            pattern = hook::pattern("8B 0D ? ? ? ? 83 F9 01 0F 84 ? ? ? ? 8B 04 8D");
+            injector::WriteMemory<uint16_t>(pattern.get_first(9), 0xE990, true); // je -> nop, jmp
+            pattern = hook::pattern("83 3D ? ? ? ? 01 74 1A 68 ? ? ? ? BE");
+            injector::WriteMemory<uint8_t>(pattern.get_first(7), 0xEB, true);   // jz -> jmp
 
             auto focus = hook::pattern("A0 ? ? ? ? 84 C0 75 09 A1 ? ? ? ? 85 C0 74 11 6A 01 6A 00 6A 00 6A 00");
             static const auto* pauseOnFocusLoss = &FixSettings().Int("MAIN.PauseOnFocusLoss");

@@ -24,6 +24,13 @@ std::vector<int> dwSupportedResolutionsArray;
 std::vector<int> dwSupportedRefreshRateArray;
 int cachedWidth = 0, cachedHeight = 0;
 
+// Resizable window: the back buffer follows the window's client size until a resolution is picked in the menu
+int WindowWidth = 0, WindowHeight = 0;      // 0: the racing resolution
+int BufferWidth = 0, BufferHeight = 0;      // the size of the last device reset
+bool InSizeMove = false;
+bool WindowResetRequested = false;         // a reset to the window's size waits for the next frame
+uint8_t* ResetPending = nullptr;            // the game resets the device with the racing resolution at the next frame
+
 namespace DALOptions
 {
     SafetyHookInline shIncScreenRes = {};
@@ -84,7 +91,12 @@ void __stdcall GetResolution(int* outWidth, int* outHeight)
     if (!outWidth || !outHeight)
         return;
 
-    if (g_RacingResolution < 0 || g_RacingResolution >= (int)ResList.size())
+    if (WindowWidth > 0 && WindowHeight > 0)
+    {
+        *outWidth = WindowWidth;
+        *outHeight = WindowHeight;
+    }
+    else if (g_RacingResolution < 0 || g_RacingResolution >= (int)ResList.size())
     {
         auto desktopRes = GetDesktopRes();
         *outWidth = std::get<0>(desktopRes);
@@ -101,6 +113,8 @@ SafetyHookInline shsub_6C27D0 = {};
 void __stdcall GetRacingResolution(int* outWidth, int* outHeight)
 {
     GetResolution(outWidth, outHeight);
+    BufferWidth = *outWidth;
+    BufferHeight = *outHeight;
     cachedWidth = *outWidth;
     cachedHeight = *outHeight;
     onResChange().executeAll(*outWidth, *outHeight);
@@ -155,6 +169,13 @@ void __cdecl sub_6DB0D0()
         GetRacingResolution(&Width, &Height);
 
         WindowedModeWrapper::GameHWND = hWnd;
+        // The buffer took the window's size: the window stays where the player put it
+        if (WindowWidth > 0)
+        {
+            GetWindowRect(hWnd, WindowRect.get_ptr());
+            return;
+        }
+
         auto monitor = WindowedModeWrapper::WindowMonitor();
         int deskW = monitor.rcMonitor.right - monitor.rcMonitor.left;
         int deskH = monitor.rcMonitor.bottom - monitor.rcMonitor.top;
@@ -190,6 +211,21 @@ void __cdecl sub_6DB0D0()
 
         SetWindowPos(hWnd, HWND_NOTOPMOST, WindowRect->left, WindowRect->top, WindowRect->right - WindowRect->left, WindowRect->bottom - WindowRect->top, SWP_SHOWWINDOW);
     }
+}
+
+// A resized resizable window: the device is reset to its client size
+void FollowWindow(HWND window)
+{
+    if (!WindowedModeWrapper::bEnableWindowResize || !ResetPending || !Direct3DDevice.get() || IsIconic(window))
+        return;
+    RECT client{};
+    if (!GetClientRect(window, &client) || client.right <= 0 || client.bottom <= 0)
+        return;
+    if (client.right == BufferWidth && client.bottom == BufferHeight)
+        return;
+    WindowWidth = client.right;
+    WindowHeight = client.bottom;
+    WindowResetRequested = true;
 }
 
 SafetyHookInline shWndProc = {};
@@ -229,9 +265,19 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
                 cachedWidth = LOWORD(lParam);
                 cachedHeight = HIWORD(lParam);
                 onResChange().executeAll(cachedWidth, cachedHeight);
+                // Maximize and restore; dragging the border waits for its end
+                if (!InSizeMove)
+                    FollowWindow(hWnd);
             }
         }
         break;
+        case WM_ENTERSIZEMOVE:
+            InSizeMove = true;
+            break;
+        case WM_EXITSIZEMOVE:
+            InSizeMove = false;
+            FollowWindow(hWnd);
+            break;
     }
 
     return shWndProc.unsafe_stdcall<LRESULT>(hWnd, Msg, wParam, lParam);
@@ -385,6 +431,22 @@ public:
             });
 
             pattern = hook::pattern("E8 ? ? ? ? C6 05 ? ? ? ? ? 39 2D ? ? ? ? 89 2D");
+            ResetPending = *pattern.get_first<uint8_t*>(7);
+            // A reset the game asked for (a resolution picked in the menu) ends following the window. The window's
+            // reset waits while the device is lost (a display mode change), which the game resets itself.
+            static auto ResetRequestHook = safetyhook::create_mid(hook::pattern("A0 ? ? ? ? 84 C0 74 59 E8").get_first(), [](SafetyHookContext& regs)
+            {
+                if (*ResetPending)
+                {
+                    WindowWidth = WindowHeight = 0;
+                    WindowResetRequested = false;
+                }
+                else if (auto device = Direct3DDevice.get(); WindowResetRequested && device && SUCCEEDED(device->TestCooperativeLevel()))
+                {
+                    WindowResetRequested = false;
+                    *ResetPending = 1;
+                }
+            });
             shsub_6DB0D0 = safetyhook::create_inline(injector::GetBranchDestination(pattern.get_first()).as_int(), sub_6DB0D0);
 
             // The message loop waits for messages (the game stops) while the window isn't active and nothing loads.

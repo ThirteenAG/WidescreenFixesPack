@@ -7,6 +7,7 @@ module;
 #include <commctrl.h>
 #include <atomic>
 #include <functional>
+#include <optional>
 
 export module Display;
 
@@ -18,28 +19,34 @@ import ComVars;
 export namespace GunDisplay
 {
     inline SafetyHookInline createHook, parametersHook, resetHook;
-    inline HWND window = nullptr;
+    inline std::atomic<HWND> window{ nullptr };
     inline int mode = 0, lastWindowMode = 1;
     inline int requestedWidth = 0, requestedHeight = 0;
     inline std::atomic<int> pending{ -1 };
+    inline int keyboardPending = -1;
     inline std::function<void(int, int)> resolution;
-    inline std::atomic_bool changing{ false };
+    inline bool changing = false;
+    inline thread_local std::optional<int> writingNativeMode;
+    inline std::atomic<bool> PauseOnFocusLoss{ true };
+    inline std::atomic<bool> ConfineCursor{ true };
     inline bool styled = false;
     inline constexpr UINT ChangeMessage = WM_APP + 0x475;
+    inline constexpr UINT FocusSettingsMessage = WM_APP + 0x476;
     inline decltype(&ShowWindow) nativeShow = nullptr;
     inline decltype(&SetWindowPos) nativePosition = nullptr;
     inline void(__cdecl* pauseGame)() = nullptr;
     inline void(__cdecl* resumeGame)() = nullptr;
     inline bool (*messageHook)(HWND, UINT, WPARAM, LPARAM, LRESULT&) = nullptr;
 
-    inline void Request(int wanted)
+    inline void WakeReset()
     {
-        pending.store(wanted, std::memory_order_release);
-        if (ResetRequested.is_initialized()) ResetRequested = 1;
+        if (ResetRequested.is_initialized())
+            ResetRequested = 1;
     }
 
     inline void Place()
     {
+        const auto window = GunDisplay::window.load();
         if (!window) return;
         WindowedModeWrapper::GameHWND = window;
         WindowedModeWrapper::bEnableWindowResize = false;
@@ -73,8 +80,24 @@ export namespace GunDisplay
         styled = true;
     }
 
-    inline LRESULT CALLBACK Messages(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR)
+    inline LRESULT CALLBACK Messages(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR id, DWORD_PTR)
     {
+        if (message == WM_NCDESTROY)
+        {
+            RemoveWindowSubclass(hwnd, Messages, id);
+            auto expected = hwnd;
+            if (window.compare_exchange_strong(expected, nullptr))
+            {
+                keyboardPending = -1;
+                styled = false;
+            }
+            return DefSubclassProc(hwnd, message, wParam, lParam);
+        }
+        if (hwnd != window.load())
+            return DefSubclassProc(hwnd, message, wParam, lParam);
+        if ((message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE) ||
+            (message == WM_ACTIVATEAPP && !wParam) || message == WM_KILLFOCUS)
+            keyboardPending = -1;
         LRESULT handled{};
         if (messageHook && messageHook(hwnd, message, wParam, lParam, handled))
             return handled;
@@ -86,34 +109,45 @@ export namespace GunDisplay
             else
             {
                 pauseGame();
-                if (!FixSettings().Bool("MAIN.PauseOnFocusLoss"))
+                if (!PauseOnFocusLoss.load(std::memory_order_relaxed))
                     GameActive = 1;
             }
             return 0;
         }
         if (message == WM_SYSKEYDOWN && wParam == VK_RETURN && !(lParam & (1L << 30)))
         {
-            Request(mode ? 0 : lastWindowMode);
+            if (GetForegroundWindow() == hwnd)
+            {
+                keyboardPending = mode ? 0 : lastWindowMode;
+                WakeReset();
+            }
             return 0;
         }
         if (message == ChangeMessage)
         {
-            Request(std::clamp(static_cast<int>(wParam), 0, 2));
+            if (pending.load(std::memory_order_acquire) >= 0)
+                WakeReset();
+            return 0;
+        }
+        if (message == FocusSettingsMessage)
+        {
+            if (mode && pauseGame && resumeGame && GameActive.is_initialized() &&
+                GetForegroundWindow() != hwnd)
+            {
+                if (PauseOnFocusLoss.load(std::memory_order_relaxed))
+                    pauseGame();
+                else
+                    GameActive = 1;
+            }
             return 0;
         }
         if (message == WM_SYSCHAR && wParam == VK_RETURN) return 0;
-        if (message == WM_NCDESTROY)
-        {
-            RemoveWindowSubclass(hwnd, Messages, 1);
-            window = nullptr;
-            styled = false;
-        }
         return DefSubclassProc(hwnd, message, wParam, lParam);
     }
 
     inline BOOL WINAPI Show(HWND hwnd, int command)
     {
-        if (hwnd && hwnd == window && mode && (command == SW_MAXIMIZE || command == SW_MINIMIZE))
+        if (hwnd && hwnd == window.load() && mode && (command == SW_MAXIMIZE || command == SW_MINIMIZE))
             return TRUE;
         return nativeShow(hwnd, command);
     }
@@ -121,7 +155,7 @@ export namespace GunDisplay
     inline BOOL WINAPI Position(HWND hwnd, HWND after, int x, int y, int width, int height, UINT flags)
     {
         // The game sizes the outer window to the back buffer; window modes keep the exact client placement.
-        if (hwnd && hwnd == window && mode && !(flags & SWP_NOSIZE))
+        if (hwnd && hwnd == window.load() && mode && !(flags & SWP_NOSIZE))
         {
             Place();
             return TRUE;
@@ -135,10 +169,16 @@ export namespace GunDisplay
             width, height, mode ? 0u : fullscreen);
         if (result)
         {
-            window = result;
-            SetWindowSubclass(window, Messages, 1, 0);
-            WindowCursor::Attach(window);
+            if (window.exchange(result) != result)
+            {
+                styled = false;
+                keyboardPending = -1;
+            }
+            SetWindowSubclass(result, Messages, 1, 0);
+            WindowCursor::Attach(result);
             Place();
+            if (pending.load(std::memory_order_acquire) >= 0)
+                WakeReset();
         }
         return result;
     }
@@ -148,7 +188,7 @@ export namespace GunDisplay
         int width = requestedWidth, height = requestedHeight;
         if (mode == 2)
         {
-            WindowedModeWrapper::GameHWND = window;
+            WindowedModeWrapper::GameHWND = window.load();
             const auto monitor = WindowedModeWrapper::WindowMonitor();
             width = monitor.rcMonitor.right - monitor.rcMonitor.left;
             height = monitor.rcMonitor.bottom - monitor.rcMonitor.top;
@@ -180,9 +220,16 @@ export namespace GunDisplay
 
     inline char __cdecl Reset()
     {
-        const auto wanted = pending.exchange(-1, std::memory_order_acquire);
+        if (changing)
+            return resetHook.ccall<char>();
+        auto wanted = pending.exchange(-1, std::memory_order_acquire);
+        const auto keyboard = std::exchange(keyboardPending, -1);
+        const auto target = window.load();
+        const bool keyboardChoice = wanted < 0 && keyboard >= 0 && target && GetForegroundWindow() == target;
+        if (keyboardChoice)
+            wanted = keyboard;
         const auto previous = mode;
-        const bool transition = wanted >= 0 && wanted <= 2 && wanted != mode && !changing;
+        const bool transition = wanted >= 0 && wanted <= 2 && wanted != mode;
         if (transition)
         {
             changing = true;
@@ -193,6 +240,14 @@ export namespace GunDisplay
         auto result = resetHook.ccall<char>();
         if (transition)
         {
+            const auto persist = [target](int expected)
+            {
+                if (window.load() != target || pending.load(std::memory_order_acquire) >= 0)
+                    return;
+                writingNativeMode = mode;
+                FixSettings().SetIfWanted("MAIN.WindowMode", std::to_string(expected), std::to_string(mode));
+                writingNativeMode.reset();
+            };
             if (ResetRequested != 0)
             {
                 // The native reset keeps its lost-resource state on failure;
@@ -200,14 +255,36 @@ export namespace GunDisplay
                 mode = previous;
                 Place();
                 result = resetHook.ccall<char>();
+                if (!keyboardChoice)
+                    persist(wanted);
             }
-            else if (mode)
-                lastWindowMode = mode;
-            FixSettings().Set("MAIN.WindowMode", std::to_string(mode));
+            else
+            {
+                if (mode)
+                    lastWindowMode = mode;
+                if (keyboardChoice)
+                    persist(previous);
+            }
             Place();
             changing = false;
         }
+        if (pending.load(std::memory_order_acquire) >= 0 || keyboardPending >= 0)
+            WakeReset();
         return result;
+    }
+
+    inline void PublishEditorMode()
+    {
+        static std::mutex mutex;
+        std::lock_guard lock(mutex);
+        int wanted = 0;
+        if (!asi_settings::detail::ParseInt(FixSettings().Get("MAIN.WindowMode"), wanted))
+            return;
+        if (writingNativeMode == wanted)
+            return;
+        pending.store(std::clamp(wanted, 0, 2), std::memory_order_release);
+        if (const auto target = window.load())
+            PostMessageW(target, ChangeMessage, 0, 0);
     }
 
     inline void Init(int width, int height, std::function<void(int, int)> update)
@@ -236,15 +313,17 @@ export namespace GunDisplay
         nativePosition = GunImports::Replace("USER32.dll", "SetWindowPos", &Position);
         if (!nativeShow) nativeShow = ShowWindow;
         if (!nativePosition) nativePosition = SetWindowPos;
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
-        FixSettings().OnChange("MAIN.ConfineCursor", []()
+        BindLiveSetting("MAIN.ConfineCursor", ConfineCursor);
+        const auto updatePause = []()
         {
-            CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
-        });
-        FixSettings().OnChange("MAIN.WindowMode", []()
-        {
-            if (!changing)
-                PostMessageW(window, ChangeMessage, std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2), 0);
-        });
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            PauseOnFocusLoss.store(FixSettings().Get("MAIN.PauseOnFocusLoss") == "1", std::memory_order_relaxed);
+            if (const auto target = window.load())
+                PostMessageW(target, FocusSettingsMessage, 0, 0);
+        };
+        FixSettings().OnChange("MAIN.PauseOnFocusLoss", updatePause);
+        updatePause();
+        FixSettings().OnChange("MAIN.WindowMode", PublishEditorMode);
     }
 }

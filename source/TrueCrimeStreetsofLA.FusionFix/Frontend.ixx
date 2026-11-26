@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include <d3d9.h>
+#include <wrl/client.h>
 #include <atomic>
 #include <optional>
 
@@ -124,9 +125,12 @@ export namespace TrueCrimeFrontend
 
     inline int __fastcall Draw(uintptr_t manager, void*, char flags)
     {
-        Active.store(manager && *reinterpret_cast<uintptr_t*>(manager), std::memory_order_relaxed);
+        const bool active = manager && *reinterpret_cast<uintptr_t*>(manager);
+        Active.store(active, std::memory_order_relaxed);
         const auto fit = Fit();
-        auto device = Active.load(std::memory_order_relaxed) ? TrueCrimeDevice::Device : nullptr;
+        Microsoft::WRL::ComPtr<IDirect3DDevice9> device;
+        if (active)
+            device = TrueCrimeDevice::RenderDevice();
         RECT scissor{};
         DWORD scissorTest = FALSE;
         if (device)

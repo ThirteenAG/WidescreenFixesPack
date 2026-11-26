@@ -51,41 +51,6 @@ namespace
         return (angle < 0.0f ? angle + 360.0f : angle) - 180.0f;
     }
 
-    // Under Proton/Gamescope (Steam Deck) the mouse cursor can't be warped back to the window centre,
-    // so DirectInput keeps reporting the same offset every frame and the camera spins on its own.
-    // A hand never moves a mouse by exactly the same amount for this many frames in a row.
-    class MouseSanity
-    {
-        int lastX = 0, lastY = 0, repeats = 0;
-        bool broken = false;
-
-    public:
-        bool Accept(int dx, int dy)
-        {
-            if (dx == 0 && dy == 0)
-            {
-                repeats = 0;
-                broken = false;
-                return true;
-            }
-
-            if (dx == lastX && dy == lastY)
-            {
-                if (++repeats >= 30)
-                    broken = true;
-            }
-            else
-            {
-                repeats = 0;
-                broken = false;
-            }
-
-            lastX = dx;
-            lastY = dy;
-            return !broken;
-        }
-    } MouseFilter;
-
     void ResetLook()
     {
         bFreeHeading = false;
@@ -104,6 +69,12 @@ namespace
     injector::hook_back<void(__cdecl*)(bMatrix4*, bVector3*, bVector3*, bVector3*)> hb_eCreateLookAtMatrix;
     void __cdecl eCreateLookAtMatrix(bMatrix4* out, bVector3* from, bVector3* to, bVector3* up)
     {
+        if (!*pFreeLook)
+        {
+            ResetLook();
+            return hb_eCreateLookAtMatrix.fun(out, from, to, up);
+        }
+
         auto look = Input::ConsumeLook();
 
         // A new race, or the chase camera back after another view: the look starts behind the car, and
@@ -152,11 +123,8 @@ namespace
         float yawInput = -look.stickX * StickDegreesPerSecond * (*pStickSensitivity) * dt;
         float pitchInput = (*pOnlyHorizontalStick != 0) ? 0.0f : look.stickY * StickDegreesPerSecond * (*pStickSensitivity) * dt;
 
-        if (look.rawMouse || MouseFilter.Accept(look.mouseX, look.mouseY))
-        {
-            yawInput -= look.mouseX * MouseDegreesPerCount * (*pMouseSensitivity);
-            pitchInput += look.mouseY * MouseDegreesPerCount * (*pMouseSensitivity);
-        }
+        yawInput -= look.mouseX * MouseDegreesPerCount * (*pMouseSensitivity);
+        pitchInput += look.mouseY * MouseDegreesPerCount * (*pMouseSensitivity);
 
         if ((*pInvertLook != 0))
             pitchInput = -pitchInput;

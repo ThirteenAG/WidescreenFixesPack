@@ -1,9 +1,9 @@
 #include "Models.hpp"
 #include "LightRects.hpp"
 #include "LightPack.hpp"
-#include "../../external/injector/include/ps2/runtime.hpp"
-#include "../../external/injector/include/ps2/game_abi.hpp"
-#include "../../external/injector/include/ps2/safetymips.hpp"
+#include "ps2/runtime.hpp"
+#include "ps2/game_abi.hpp"
+#include "ps2/safetymips.hpp"
 #include "Game.hpp"
 
 namespace imvehlm {
@@ -14,7 +14,7 @@ namespace {
 // Full resolution (256x256 8-bit, one level): 8 textures, 4.3 MB.
 console::ps2lights::VehicleLights<CacheCount, 20, 8256, 8, 66560> lights;
 const decltype(lights)::Profile profile{models, sizeof(models) / sizeof(*models), FirstModel,
-    vehicle::lightRects, vehicle::lightSets, {0x56, 0x265, 0x25C, 0x260, 0x3C0}};
+    vehicle::lightRects, vehicle::lightSets, {0x56, 0x265, 0x25C, 0x260, 0x3C0, 0x358}};
 // Converted hand-painted variants (tools/vehicle-lights/pack.py), embedded.
 const uint8_t* Pack(unsigned cache, uint32_t* size) {
     return console::LightPack::Load(vehicle::lightPack(), vehicle::lightPackSize, cache, size);

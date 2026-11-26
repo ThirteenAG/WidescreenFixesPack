@@ -13,7 +13,7 @@
   "HudAspectRatioConstraint": "HUD aspect ratio",
   "HudAspectRatioConstraint.description": "Auto puts the HUD in the screen corners. A ratio such as 4:3 or 16:9 keeps it in a centred box of that shape. Menus keep their 4:3 layout. Applies immediately.",
   "CutsceneBorders": "Cutscene borders",
-  "CutsceneBorders.description": "Letterbox keeps the bars above and below cutscenes on screens narrower than 16:9; Pillarbox keeps the 16:9 picture between side bars on wider screens; Both does both and always shows the original framing; Off fills the screen. Applies immediately.",
+  "CutsceneBorders.description": "Letterbox adds bars above and below when the screen is narrower than the scene's original picture. Pillarbox adds side bars when the screen is wider. Both preserves each scene's framing, including 16:9 and approximately 2.35:1. Off fills the screen. Applies immediately.",
   "CutsceneBorders.off": "Off",
   "CutsceneBorders.letterbox": "Letterbox",
   "CutsceneBorders.pillarbox": "Pillarbox",

@@ -46,7 +46,6 @@ The archive includes Xidi for the game's DirectInput controls. Connect an XInput
 ## Known limits
 
 - The game's options screens are fixed scenes from its data files, so there is no in-game Plugins page; the fix's settings are in FusionFixHub and on fusionfix.io.
-- No Ctrl+F10 developer overlay: the game draws with Direct3D 8, which the overlay doesn't support.
 - Two-player split screen keeps the game's own per-player HUD layout.
 - Some menu decorations (the title's sliding background, the scrolling "SONIC HEROES" banner, the game data cards) reach past the 4:3 menu area on wider screens; nothing is stretched.
 - The game keeps running in the background, as the original does.

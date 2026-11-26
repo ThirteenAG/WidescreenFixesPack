@@ -22,6 +22,7 @@ export namespace REFrameRate
     uint32_t statisticsFrames = 0;
     float actualFPS = 0.0f;
     std::atomic<bool> variable{ false };
+    std::atomic<int> requestedLimit{ 60 };
     bool updatedRelease = false;
     int MonitorRate()
     {
@@ -80,7 +81,10 @@ export namespace REFrameRate
             else
                 YieldProcessor();
         }
-        deadline = std::max(deadline + interval, static_cast<double>(Counter()) + interval);
+        deadline += interval;
+        const auto wake = Counter();
+        if (deadline <= wake)
+            deadline = wake + interval;
     }
 
 
@@ -98,11 +102,13 @@ export namespace REFrameRate
         // The clock sets the flag again on every update while Variable mode runs
         if (variable.exchange(false, std::memory_order_relaxed))
         {
-            const int requested = FixSettings().Int("MAIN.FPSLimit");
-            Pace(requested == -1 || requested == 0 ? requested : std::clamp(requested, 30, 1000));
+            Pace(requestedLimit.load(std::memory_order_relaxed));
         }
         else
             deadline = 0.0;
+        // The measured rate is shown only by the developer overlay
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         const auto now = Counter();
         ++statisticsFrames;
         if (!statisticsStart) { statisticsStart = now; statisticsFrames = 0; }
@@ -114,6 +120,11 @@ export namespace REFrameRate
     }
     void Install()
     {
+        BindLiveInt("MAIN.FPSLimit", [](int limit)
+        {
+            requestedLimit.store(limit == -1 || limit == 0 ? limit : std::clamp(limit, 30, 1000), std::memory_order_relaxed);
+        });
+
         auto current = hook::pattern("F3 0F 10 4D 38 F3 0F 5E 4D 3C F2 0F 59 44 24 ? 0F 28 D1");
         auto original = hook::pattern("F3 0F 10 4B 38 F3 0F 5E 4B 3C 66 0F 5A C0 F3 0F 11 4C 24 ? F3 0F 5C C8");
         updatedRelease = current.size() == 1;

@@ -14,6 +14,7 @@ import TransparentMenuDX9;
 
 export bool gTransparentMenuCanRender = false;
 export bool gTransparentMenuWaitForGameplay = false;
+static bool gTransparentMenuRestorePending = false;
 
 injector::hook_back<void(__cdecl*)(CRect*, uint8_t*, uint8_t*, uint8_t*, uint8_t*)> hbDrawRect1;
 void __cdecl CSprite2d__DrawRect1(CRect* a1, uint8_t* a2, uint8_t* a3, uint8_t* a4, uint8_t* a5)
@@ -111,6 +112,27 @@ public:
                 {
                     if (isMenuActive)
                     {
+                        // A reset while the menu was open (window mode or resolution change):
+                        // bring back the picture captured when the menu opened.
+                        if (gTransparentMenuRestorePending)
+                        {
+                            gTransparentMenuCanRender = pD3D9Device ? TransparentMenuDX9::RestoreFrame() : TransparentMenuDX8::RestoreFrame();
+                            if (gTransparentMenuCanRender)
+                            {
+                                gTransparentMenuRestorePending = false;
+                                gTransparentMenuWaitForGameplay = false;
+                                wasMenuActive = true;
+                                if (bTransparentMenu > 1)
+                                {
+                                    if (pD3D9Device)
+                                        TransparentMenuDX9::RenderBlur();
+                                    else
+                                        TransparentMenuDX8::RenderBlur();
+                                }
+                                return;
+                            }
+                        }
+
                         gTransparentMenuCanRender = false;
                         wasMenuActive = true; // keep transition stable
                         return;
@@ -118,6 +140,7 @@ public:
 
                     // First gameplay frame after reset
                     gTransparentMenuCanRender = false;
+                    gTransparentMenuRestorePending = false;
                     wasMenuActive = false;
                     gTransparentMenuWaitForGameplay = false;
                     return;
@@ -154,6 +177,8 @@ public:
 
             WFP::onBeforeReset() += []()
             {
+                // Several reset paths can fire for one reset; remember a picture from the first
+                gTransparentMenuRestorePending = gTransparentMenuRestorePending || gTransparentMenuCanRender;
                 gTransparentMenuCanRender = false;
                 gTransparentMenuWaitForGameplay = true;
 

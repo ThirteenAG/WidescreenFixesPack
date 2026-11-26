@@ -18,8 +18,23 @@ void (__cdecl* Tick)() = nullptr;
 HANDLE hTickEvent = nullptr;
 // Read by the game in place of its own frame interval, which stays as saved in its preferences
 int32_t nFrameInterval = 2;
+std::atomic<int> nFPSLimit{ 60 };
 uint32_t nSteppedTick = 0;
 int32_t nFrameSteps = 2;
+
+void WaitForTick(HANDLE timer, LONGLONG units)
+{
+    const auto milliseconds = DWORD((units + 9999) / 10000);
+    LARGE_INTEGER due{};
+    due.QuadPart = -units;
+    if (timer && SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
+    {
+        const auto result = WaitForSingleObject(timer, milliseconds + 2);
+        if (result == WAIT_OBJECT_0 || result == WAIT_TIMEOUT)
+            return;
+    }
+    Sleep(milliseconds);
+}
 
 // Replaces the game's tick thread, which measured its 17 ms with a millisecond timer and ran slow and unevenly
 DWORD WINAPI TickThread(LPVOID)
@@ -46,15 +61,14 @@ DWORD WINAPI TickThread(LPVOID)
 
         while (double(now.QuadPart) < next)
         {
-            LARGE_INTEGER due;
-            due.QuadPart = -std::max(1LL, LONGLONG((next - double(now.QuadPart)) * 10000000.0 / double(frequency.QuadPart)));
-            SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE);
-            WaitForSingleObject(timer, INFINITE);
+            const auto units = std::max(1LL, LONGLONG((next - double(now.QuadPart)) * 10000000.0 / double(frequency.QuadPart)));
+            WaitForTick(timer, units);
             QueryPerformanceCounter(&now);
         }
 
         Tick();
-        SetEvent(hTickEvent);
+        if (hTickEvent)
+            SetEvent(hTickEvent);
     }
 }
 
@@ -88,7 +102,8 @@ void __cdecl FrameWait(int ticks)
         if (quit || int32_t(nTickCount - nLastWaitTick) >= ticks)
             break;
 
-        MsgWaitForMultipleObjects(1, &hTickEvent, FALSE, 100, QS_ALLINPUT & ~QS_MOUSEMOVE);
+        MsgWaitForMultipleObjects(hTickEvent ? 1 : 0, hTickEvent ? &hTickEvent : nullptr, FALSE,
+            hTickEvent ? 100 : 1, QS_ALLINPUT & ~QS_MOUSEMOVE);
     }
     return shFrameWait.unsafe_ccall(ticks);
 }
@@ -111,6 +126,15 @@ bool GameNeeds30FPS()
 
 void InitFrameLimiter()
 {
+    auto publishLimit = []()
+    {
+        static std::mutex mutex;
+        const std::lock_guard lock(mutex);
+        nFPSLimit.store(ReadNumericSetting("MAIN.FPSLimit", 60), std::memory_order_relaxed);
+    };
+    FixSettings().OnChange("MAIN.FPSLimit", publishLimit);
+    publishLimit();
+
     timeBeginPeriod(1);
     hTickEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
 
@@ -139,8 +163,7 @@ void InitFrameLimiter()
     pattern = hook::pattern("E8 ? ? ? ? 89 44 24 ? E8 ? ? ? ? 80 3D");
     static auto MainLoopHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        static const int& nFPSLimit = FixSettings().Int("MAIN.FPSLimit");
-        nFrameInterval = (nFPSLimit == 60 && !GameNeeds30FPS()) ? 1 : 2;
+        nFrameInterval = (nFPSLimit.load(std::memory_order_relaxed) == 60 && !GameNeeds30FPS()) ? 1 : 2;
 
         const uint32_t tick = nTickCount;
         int32_t steps = int32_t(tick - nSteppedTick);
@@ -157,7 +180,8 @@ void InitFrameLimiter()
         nFrameSteps = steps;
     });
 
-    pattern = hook::pattern("8A 0D ? ? ? ? 8A 5C 24 ? 88 0D ? ? ? ?");
+    // The protected retail exe runs the first instruction through its own stub
+    pattern = find_pattern("8A 0D ? ? ? ? 8A 5C 24 ? 88 0D ? ? ? ?", "FF 25 ? ? ? ? 8A 5C 24 ? 88 0D ? ? ? ?");
     static auto pStepsDone = (uintptr_t)pattern.get_first();
 
     pattern = hook::pattern("F3 0F 10 44 24 ? F3 0F 10 4C 24 ? F3 0F 5C C8 F3 0F 5E 44 24 ? BE 02 00 00 00");

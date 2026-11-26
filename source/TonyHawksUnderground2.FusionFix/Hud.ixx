@@ -4,6 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include "Shared/Console/Viewport.hpp"
 #include "Shared/TonyHawk/PadPrompts.hpp"
+#include <atomic>
 
 export module Hud;
 
@@ -13,7 +14,13 @@ export namespace THUG2Hud
 {
     inline SafetyHookInline TextHook, SpriteHook;
     inline float Width = 640.0f, Height = 480.0f;
-    inline const std::string* Constraint = nullptr;
+    inline std::atomic<float> Constraint{};
+
+    inline void UpdateConstraint()
+    {
+        const auto value = FixSettings().Get("MAIN.HudAspectRatioConstraint");
+        Constraint.store(console::parse_hud_aspect(value.c_str()), std::memory_order_relaxed);
+    }
 
     constexpr uint32_t Checksum(const char* name)
     {
@@ -117,7 +124,7 @@ export namespace THUG2Hud
     {
         if (!NativeScaleX.is_initialized() || !std::isfinite(NativeScaleX.get()) || NativeScaleX <= 0.0f)
             return 0.0f;
-        const float aspect = Constraint ? console::parse_hud_aspect(Constraint->c_str()) : 0.0f;
+        const float aspect = Constraint.load(std::memory_order_relaxed);
         // The 640x480 frame: full height on wider screens, full width (letterboxed) on narrower ones
         const float frameWidth = std::min(Width, Height * (4.0f / 3.0f));
         if (Split())
@@ -182,14 +189,40 @@ export namespace THUG2Hud
 
     inline int __fastcall DrawSprite(uintptr_t element, void*)
     {
+        if (*reinterpret_cast<const uint32_t*>(element + 20) == Checksum("pause_gradient"))
+        {
+            // The pause tint follows the render target while the native menu keeps its 4:3 layout.
+            const float stretchX = Width / std::min(Width, Height * (4.0f / 3.0f));
+            const float stretchY = Height / std::min(Height, Width * 0.75f);
+            auto& x = *reinterpret_cast<float*>(element + 0x128);
+            auto& y = *reinterpret_cast<float*>(element + 0x12c);
+            auto& scaleX = *reinterpret_cast<float*>(element + 0x13c);
+            auto& scaleY = *reinterpret_cast<float*>(element + 0x140);
+            auto& flags = *reinterpret_cast<uint32_t*>(element + 8);
+            const float savedX = x, savedY = y, savedScaleX = scaleX, savedScaleY = scaleY;
+            const uint32_t savedFlags = flags;
+            x = 320.0f + (savedX - 320.0f) * stretchX;
+            y = 240.0f + (savedY - 240.0f) * stretchY;
+            scaleX *= stretchX;
+            scaleY *= stretchY;
+            flags |= 0x800u;
+            const auto result = SpriteHook.thiscall<int>(element);
+            x = savedX;
+            y = savedY;
+            scaleX = savedScaleX;
+            scaleY = savedScaleY;
+            flags = savedFlags;
+            return result;
+        }
         return Draw(element, true);
     }
 
-    inline void Install(float width, float height, const std::string* constraint, HMODULE module = GetModuleHandleW(nullptr))
+    inline void Install(float width, float height, HMODULE module = GetModuleHandleW(nullptr))
     {
         Width = width;
         Height = height;
-        Constraint = constraint;
+        FixSettings().OnChange("MAIN.HudAspectRatioConstraint", UpdateConstraint);
+        UpdateConstraint();
         auto text = hook::module_pattern(module, "83 EC 28 56 8B F1 8B 86 78 01 00 00 85 C0 0F 84 ? ? ? ? D9 86 38 01 00 00");
         auto sprite = hook::module_pattern(module, "83 EC 0C 53 56 8B F1 D9 86 38 01 00 00 32 DB D8 1D ? ? ? ? DF E0 F6 C4 05");
         auto layout = hook::module_pattern(module, "8B 44 24 08 8B 48 14 8B 15 ? ? ? ? 33 C0 83 FA 05 77 ? FF 24 95");
@@ -205,7 +238,7 @@ export void InstallHud()
 {
     hook::pattern pattern("");
     //HUD
-    THUG2Hud::Install(Screen.fWidth, Screen.fHeight, &FixSettings().String("MAIN.HudAspectRatioConstraint"));
+    THUG2Hud::Install(Screen.fWidth, Screen.fHeight);
     static int32_t nHudOffset = static_cast<int32_t>(Screen.fHudOffsetReal);
     struct SetOffsetHook
     {

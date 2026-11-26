@@ -101,14 +101,13 @@ export namespace TrueCrimeResolution
         }
     }
 
-    // Startup: the fix's resolution settings, else the game's own choice from TrueCrime.INI, else the desktop. 640x480
-    // is the game's default for a missing entry and starts at the desktop resolution.
+    // Startup: the fix's resolution settings, else the game's saved choice, else the desktop.
     inline std::tuple<int, int> Startup()
     {
         if (TrueCrimeWindow::Mode == 2)
             return Desktop();
-        const int width = FixSettings().Int("MAIN.ResX");
-        const int height = FixSettings().Int("MAIN.ResY");
+        const int width = ReadNumericSetting("MAIN.ResX", 0);
+        const int height = ReadNumericSetting("MAIN.ResY", 0);
         if (width >= 640 && height >= 480 && width <= 16384 && height <= 16384)
             return { width, height };
         wchar_t path[MAX_PATH]{};
@@ -117,7 +116,7 @@ export namespace TrueCrimeResolution
         const int iniWidth = GetPrivateProfileIntW(L"Renderer", L"ScreenWidth", 0, ini.c_str());
         const int iniHeight = GetPrivateProfileIntW(L"Renderer", L"ScreenHeight", 0, ini.c_str());
         const auto [desktopWidth, desktopHeight] = Desktop();
-        if (iniWidth >= 640 && iniHeight >= 480 && !(iniWidth == 640 && iniHeight == 480) &&
+        if (iniWidth >= 640 && iniHeight >= 480 &&
             iniWidth <= desktopWidth && iniHeight <= desktopHeight)
             return { iniWidth, iniHeight };
         return { desktopWidth, desktopHeight };

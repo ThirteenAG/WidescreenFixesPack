@@ -18,7 +18,7 @@ export namespace ScarfaceCutscene
     };
 
     inline SafetyHookInline UpdateHook, DestroyHook;
-    inline const int* Borders = nullptr;
+    inline std::atomic<int> Borders{ 3 };
     inline uint8_t* Effects = nullptr;
     inline bool Ready = false, DrawReady = false, Active = false;
     inline Framing Current;
@@ -55,7 +55,7 @@ export namespace ScarfaceCutscene
     {
         Active = false;
         const auto display = cutsceneDisplay.is_initialized() ? cutsceneDisplay.get() : nullptr;
-        if (!Ready || !DrawReady || !Borders || !Effects || !display || !manager || !source || manager[254] ||
+        if (!Ready || !DrawReady || !Effects || !display || !manager || !source || manager[254] ||
             !std::isfinite(fov) || fov <= 0.0f || fov >= 3.141592654f)
             return fov;
         const int state = *reinterpret_cast<const int*>(manager + 232);
@@ -84,7 +84,7 @@ export namespace ScarfaceCutscene
             if (!std::isfinite(visible) || visible <= 0.0f || visible > 1.0f)
                 return fov;
         }
-        Current = Layout(width, height, visible, std::clamp(*Borders, 0, 3));
+        Current = Layout(width, height, visible, Borders.load());
         Active = true;
         return Current.projection == 1.0f ? fov : 2.0f * std::atan(std::tan(fov * 0.5f) * Current.projection);
     }
@@ -169,9 +169,8 @@ export namespace ScarfaceCutscene
         }
     };
 
-    inline void Install(const int& borders, HMODULE module = GetModuleHandle(nullptr))
+    inline void Install(HMODULE module = GetModuleHandle(nullptr))
     {
-        Borders = &borders;
         if (Ready)
             return;
         const auto tables = ScarfaceRTTI::ScanVtables(module);

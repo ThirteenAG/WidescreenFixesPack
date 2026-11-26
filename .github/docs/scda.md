@@ -55,15 +55,13 @@
 
 Open Options > Plugins > Splinter Cell Double Agent Fusion Fix in the single-player menu, including from Pause > Options. On/off options show On or Off, while indicator and color choices use names. More Pages reaches the remaining settings; F1 opens the selected option’s full help, and Back returns. FusionFixHub and fusionfix.io also configure the fix. HUD width changes apply to the HUD after the next loading screen: Auto puts the HUD at the screen edges, 4:3 keeps the original layout. The gameplay FOV multiplier changes the normal following camera; aiming, cinematic and minimap views keep their own framing.
 
-Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets. The live frame rate limit defaults to 60 FPS; -1 follows the monitor refresh rate up to 60. Higher rates are not offered because AI and physics misbehave above 60 FPS.
+Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets. The live frame rate limit defaults to 60 FPS; Monitor follows the display refresh rate up to 60. Higher rates are not offered because AI and physics misbehave above 60 FPS.
 
 The fix never changes the game's own ini files. Native Graphics Overrides (off by default, in the configuration file) uses the graphics values from the fix's configuration instead of the game's Video menu; leave an individual value empty to keep the game's choice. Controller bindings from the fix are used only for buttons that have no binding in the game's settings, so bindings changed in the game's menu are kept. A custom loading image can be placed beside the plugin with the same filename and a `.png` extension.
 
 Window Mode selects fullscreen, a framed window or borderless and applies on restart. A framed window uses the chosen client resolution; borderless renders at the target monitor’s resolution. Pause on Focus Loss and Confine Cursor apply immediately. Check for Updates is off by default; enabling it shows an available update in the game’s own menu.
 
 Gamepad Icons uses Xbox labels in Auto; PlayStation and Nintendo labels are selected manually. Gamepad Camera Speed scales the right stick live, with 1.00 preserving the game’s speed and deadzone. Use the game’s own Invert Look Up/Down option for vertical inversion. Vibration can be disabled independently. Controller input stays with the game and the bundled Xidi.
-
-Ctrl+F10 opens the developer overlay when available. Debug > Info reports the build, graphics API and back-buffer resolution.
 
 The fix covers the single-player game only; the multiplayer game (SCDA-Online) is not changed.
 

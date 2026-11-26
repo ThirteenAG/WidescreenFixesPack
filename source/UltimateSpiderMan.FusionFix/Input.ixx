@@ -509,22 +509,24 @@ public:
             pattern = hook::pattern("E8 ? ? ? ? 8A 45 ? 84 C0 0F 84 ? ? ? ? 8A 45"); //0x4B54F3
             injector::MakeCALL(pattern.get_first(), UpdateLookaroundAxis, true);
 
-            auto& settings = FixSettings();
-            MouseSensitivity.store(settings.Float("MAIN.MouseSensitivity"), std::memory_order_relaxed);
-            settings.OnChange("MAIN.MouseSensitivity", []()
+            static std::atomic<bool> cameraSettingsPending{ false };
+            const auto readCameraSettings = []()
             {
-                MouseSensitivity.store(FixSettings().Float("MAIN.MouseSensitivity"), std::memory_order_relaxed);
-            });
-            InvertMouseY.store(settings.Bool("MAIN.InvertMouseY"), std::memory_order_relaxed);
-            settings.OnChange("MAIN.InvertMouseY", []()
+                MouseSensitivity.store(ReadNumericSetting("MAIN.MouseSensitivity", 1.0f), std::memory_order_relaxed);
+                InvertMouseY.store(FixSettings().Get("MAIN.InvertMouseY") == "1", std::memory_order_relaxed);
+                GamepadCameraSpeed.store(ReadNumericSetting("MAIN.GamepadCameraSpeed", 1.0f), std::memory_order_relaxed);
+                CameraAutoCenter.store(ReadNumericSetting("MAIN.CameraAutoCenter", 1), std::memory_order_relaxed);
+                CameraRecenterSeconds.store(ReadNumericSetting("MAIN.CameraRecenterDelay", 1.0f), std::memory_order_relaxed);
+            };
+            for (const auto id : { "MAIN.MouseSensitivity", "MAIN.InvertMouseY", "MAIN.GamepadCameraSpeed",
+                "MAIN.CameraAutoCenter", "MAIN.CameraRecenterDelay" })
+                FixSettings().OnChange(id, []() { cameraSettingsPending.store(true); });
+            readCameraSettings();
+            WFP::onGameProcessEvent() += [readCameraSettings]()
             {
-                InvertMouseY.store(FixSettings().Bool("MAIN.InvertMouseY"), std::memory_order_relaxed);
-            });
-            GamepadCameraSpeed.store(settings.Float("MAIN.GamepadCameraSpeed"));
-            settings.OnChange("MAIN.GamepadCameraSpeed", []()
-            {
-                GamepadCameraSpeed.store(FixSettings().Float("MAIN.GamepadCameraSpeed"));
-            });
+                if (cameraSettingsPending.exchange(false))
+                    readCameraSettings();
+            };
             auto cameraSpeed = hook::pattern("D9 44 24 30 D8 4C 24 60 D9 5C 24 18 D9 44 24 34 D8 4C 24 60 D9 5C 24 24");
             static auto cameraSpeedHook = safetyhook::create_mid(cameraSpeed.get_first(), [](SafetyHookContext& regs)
             {
@@ -538,16 +540,6 @@ public:
                     if (std::isfinite(adjusted) && adjusted != *value)
                         WriteGameValue(value, adjusted);
                 }
-            });
-            CameraAutoCenter.store(settings.Int("MAIN.CameraAutoCenter"));
-            CameraRecenterSeconds.store(settings.Float("MAIN.CameraRecenterDelay"));
-            settings.OnChange("MAIN.CameraAutoCenter", []()
-            {
-                CameraAutoCenter.store(FixSettings().Int("MAIN.CameraAutoCenter"));
-            });
-            settings.OnChange("MAIN.CameraRecenterDelay", []()
-            {
-                CameraRecenterSeconds.store(FixSettings().Float("MAIN.CameraRecenterDelay"));
             });
             auto recenter = hook::pattern("83 EC 4C 53 8B 5C 24 5C 55 8B E9 8B 45 04 8A 88 BC 01 00 00");
             shCameraRecenter = safetyhook::create_inline(recenter.get_first(), UpdateRecenterCamera);

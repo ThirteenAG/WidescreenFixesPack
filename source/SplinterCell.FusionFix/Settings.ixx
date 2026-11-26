@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/SplinterCell/ViewportMouse.hpp"
 
 export module Settings;
 
@@ -10,45 +11,171 @@ import Gamepad;
 
 namespace
 {
-    void CreateInitialIni(const std::filesystem::path& source, const std::filesystem::path& target, const char* requiredSection)
+    SafetyHookInline configStringHook, setConfigStringHook, saveConfigHook, appInitHook;
+    void** globalConfig = nullptr;
+    thread_local bool savingConfig = false;
+
+    const wchar_t* ConfigFileName(const wchar_t* filename)
     {
-        std::error_code ec;
-        if (std::filesystem::exists(target, ec) || ec)
-            return;
-        mINI::INIStructure defaults;
-        if (!mINI::INIFile(source).read(defaults) || !defaults.has(requiredSection))
-            return;
-        const auto input = CreateFileW(source.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (input == INVALID_HANDLE_VALUE)
-            return;
-        const auto output = CreateFileW(target.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (output == INVALID_HANDLE_VALUE)
+        const std::wstring_view path{ filename ? filename : L"" };
+        return path.substr(path.find_last_of(L"\\/") + 1).data();
+    }
+
+    bool IsUserConfig(const wchar_t* name)
+    {
+        return !_wcsicmp(name, L"User") || !_wcsicmp(name, L"User.ini") || !_wcsicmp(name, L"SplinterCellUser.ini");
+    }
+
+    bool IsSystemConfig(const wchar_t* name)
+    {
+        return !*name || !_wcsicmp(name, L"System") || !_wcsicmp(name, L"System.ini") || !_wcsicmp(name, L"SplinterCell.ini");
+    }
+
+    std::optional<std::wstring> ConfigOverride(const wchar_t* section, const wchar_t* key, const wchar_t* name)
+    {
+        const bool system = IsSystemConfig(name);
+        if (system && !_wcsicmp(section, L"WinDrv.WindowsClient"))
         {
-            CloseHandle(input);
-            return;
-        }
-        std::array<char, 4096> buffer{};
-        DWORD read = 0;
-        bool success = true;
-        while (success)
-        {
-            if (!ReadFile(input, buffer.data(), static_cast<DWORD>(buffer.size()), &read, nullptr))
-                success = false;
-            else if (!read)
-                break;
-            else
+            if (!RequestedNativeResolution)
             {
-                DWORD written = 0;
-                success = WriteFile(output, buffer.data(), read, &written, nullptr) && written == read;
+                if (!_wcsicmp(key, L"WindowedViewportX"))
+                    return std::to_wstring(Screen.Width);
+                if (!_wcsicmp(key, L"WindowedViewportY"))
+                    return std::to_wstring(Screen.Height);
+            }
+            if (!_wcsicmp(key, L"UseJoystick"))
+                return L"True";
+        }
+        if (system && !_wcsicmp(section, L"D3DDrv.D3DRenderDevice"))
+        {
+            if (!_wcsicmp(key, L"FullScreenVideo"))
+                return L"True";
+            if (!_wcsicmp(key, L"ForceShadowMode"))
+                return FixSettings().Bool("MAIN.ForceShadowBufferMode") ? L"1" : L"0";
+            if (!_wcsicmp(key, L"EmulateGF2Mode") && FixSettings().Bool("MAIN.ForceShadowBufferMode"))
+                return L"0";
+        }
+        if (system && !_wcsicmp(section, L"Engine.GameInfo") && !_wcsicmp(key, L"UseRumble"))
+            return L"True";
+        if (!RequestedNativeResolution && !_wcsicmp(section, L"Engine.EPCGameOptions") && !_wcsicmp(key, L"Resolution") && IsUserConfig(name))
+            return std::format(L"{}x{}", Screen.Width, Screen.Height);
+        return std::nullopt;
+    }
+
+    int __fastcall GetConfigString(void* config, void* edx, const wchar_t* section, const wchar_t* key, wchar_t* value, int size, const wchar_t* filename)
+    {
+        const auto readNative = [&]()
+        {
+            return configStringHook.unsafe_fastcall<int>(config, edx, section, key, value, size, filename);
+        };
+        if (section && key && value && size > 0)
+        {
+            const auto* name = ConfigFileName(filename);
+            const auto set = [&](const wchar_t* answer)
+            {
+                wcsncpy_s(value, static_cast<size_t>(size), answer, _TRUNCATE);
+                return 1;
+            };
+
+            if (const auto answer = ConfigOverride(section, key, name))
+                return set(answer->c_str());
+            if (!_wcsicmp(section, L"Engine.Input") && IsUserConfig(name))
+            {
+                const auto result = readNative();
+                if (result && *value)
+                    return result;
+
+                constexpr const wchar_t* padKeys[] =
+                {
+                    L"Joy1", L"Joy2", L"Joy3", L"Joy4", L"Joy5", L"Joy6", L"Joy7", L"Joy8",
+                    L"Joy9", L"Joy10", L"Joy11", L"Joy12", L"Joy13", L"Joy14", L"Joy15", L"Joy16",
+                    L"JoyX", L"JoyY", L"JoyZ", L"JoyV"
+                };
+                for (const auto* padKey : padKeys)
+                {
+                    if (!_wcsicmp(key, padKey))
+                    {
+                        auto id = std::string("INPUT.");
+                        for (const auto c : std::wstring_view(padKey))
+                            id += static_cast<char>(c);
+                        const auto binding = FixSettings().Get(id);
+                        const int bytes = static_cast<int>(binding.size());
+                        const int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, binding.data(), bytes, nullptr, 0);
+                        if (count > 0)
+                        {
+                            std::wstring text(count, L'\0');
+                            MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, binding.data(), bytes, text.data(), count);
+                            return set(text.c_str());
+                        }
+                        break;
+                    }
+                }
+                return result;
             }
         }
-        CloseHandle(output);
-        CloseHandle(input);
-        if (!success)
-            DeleteFileW(target.c_str());
+        return readNative();
+    }
+
+    void __fastcall SetConfigString(void* config, void* edx, const wchar_t* section, const wchar_t* key, const wchar_t* value, const wchar_t* filename)
+    {
+        // SaveConfig serializes runtime properties, including values supplied by the read hook.
+        if (savingConfig && section && key && value)
+        {
+            const auto* name = ConfigFileName(filename);
+            // ResizeViewport saves the applied size before the renderer publishes it.
+            if (!RequestedNativeResolution && IsSystemConfig(name) && !_wcsicmp(section, L"WinDrv.WindowsClient") &&
+                (!_wcsicmp(key, L"WindowedViewportX") || !_wcsicmp(key, L"WindowedViewportY")))
+                return;
+            const auto answer = ConfigOverride(section, key, name);
+            if (answer && !_wcsicmp(value, answer->c_str()))
+                return;
+        }
+        setConfigStringHook.unsafe_fastcall(config, edx, section, key, value, filename);
+    }
+
+    void __fastcall SaveConfig(void* object, void* edx, unsigned flags, const wchar_t* filename)
+    {
+        struct Restore
+        {
+            bool previous;
+            ~Restore() { savingConfig = previous; }
+        } restore{ std::exchange(savingConfig, true) };
+        saveConfigHook.unsafe_fastcall(object, edx, flags, filename);
+    }
+
+    void InstallConfigHooks()
+    {
+        if (!configStringHook)
+        {
+            constexpr size_t getStringSlot = 4;
+            constexpr size_t setStringSlot = 12;
+            const auto table = *reinterpret_cast<void***>(*globalConfig);
+            configStringHook = safetyhook::create_inline(table[getStringSlot], GetConfigString);
+            setConfigStringHook = safetyhook::create_inline(table[setStringSlot], SetConfigString);
+        }
+    }
+
+    using ConfigFactory = void* (__cdecl*)();
+
+    void __cdecl AppInit(const wchar_t* name, const wchar_t* command, void* allocator, void* log, void* error,
+        void* feedback, void* files, ConfigFactory config, int requireConfig)
+    {
+        appInitHook.unsafe_ccall(name, command, allocator, log, error, feedback, files, config, requireConfig);
+        InstallConfigHooks();
     }
 }
 
+export void InitConfigReads()
+{
+    const auto core = GetModuleHandleW(L"Core.dll");
+    globalConfig = reinterpret_cast<void**>(GetProcAddress(core, "?GConfig@@3PAVFConfigCache@@A"));
+    saveConfigHook = safetyhook::create_inline(GetProcAddress(core, "?SaveConfig@UObject@@QAEXKPBG@Z"), SaveConfig);
+    if (*globalConfig)
+        InstallConfigHooks();
+    else
+        appInitHook = safetyhook::create_inline(GetProcAddress(core,
+            "?appInit@@YAXPBG0PAVFMalloc@@PAVFOutputDevice@@PAVFOutputDeviceError@@PAVFFeedbackContext@@PAVFFileManager@@P6APAVFConfigCache@@XZH@Z"), AppInit);
+}
 class Settings
 {
 public:
@@ -60,11 +187,10 @@ public:
             Screen.Height = FixSettings().Int("MAIN.ResY");
             Screen.nShadowBufferResolution = FixSettings().Int("MAIN.ShadowBufferResolution");
             Screen.bRawInputMouse = FixSettings().Bool("MAIN.RawInputMouse");
-            FixSettings().OnChange("MAIN.MouseSensitivity", []
-            {
-                RawInputHandler<int32_t>::SetSensitivity(FixSettings().Float("MAIN.MouseSensitivity"));
-            });
+            ViewportMouse::ReadSensitivity();
+            FixSettings().OnChange("MAIN.MouseSensitivity", ViewportMouse::ReadSensitivity);
             Screen.bRawInputMouseRawData = FixSettings().Bool("MAIN.RawInputMouseRawData");
+            ViewportMouse::rawData.store(Screen.bRawInputMouseRawData);
             Screen.fHudAspectRatioConstraint = ParseWidescreenHudOffset(FixSettings().String("MAIN.HudAspectRatioConstraint"));
             Screen.fGrainScale = std::clamp(FixSettings().Float("MAIN.GrainScale"), 0.0f, 1.0f);
             bSkipIntro = FixSettings().Bool("MAIN.SkipIntro");
@@ -80,57 +206,18 @@ public:
                 bSkipIntro = false;
             }
 
-            auto exePath = GetExeModulePath();
-
-            auto userIniPath = exePath / "SplinterCellUser.ini";
-
-            // Start with the engine's defaults so the pad bindings also apply on the first launch.
-            CreateInitialIni(exePath / "DefUser.ini", userIniPath, "Engine.Input");
+            const auto exePath = GetExeModulePath();
             mINI::INIStructure userIni;
-            mINI::INIFile userIniFile(userIniPath);
-            if (userIniFile.read(userIni) && userIni.has("Engine.Input"))
+            if (!mINI::INIFile(exePath / "SplinterCellUser.ini").read(userIni))
+                mINI::INIFile(exePath / "DefUser.ini").read(userIni);
+            const auto& input = userIni["Engine.Input"];
+            constexpr const char* axes[] = { "JoyX", "JoyY", "JoyZ", "JoyV" };
+            for (int button = 1; button <= 20; ++button)
             {
-                // The pad layout fills only unbound pad keys, so a binding changed in the user ini stays. The look
-                // axes carry the camera speed and invert settings and are always written.
-                auto& input = userIni["Engine.Input"];
-                for (int button = 1; button <= 18; ++button)
-                {
-                    const auto key = button <= 16 ? "Joy" + std::to_string(button) : std::string(button == 17 ? "JoyX" : "JoyY");
-                    if (input.get(key).empty())
-                        input.setAll(key, FixSettings().String("INPUT." + key));
-                    Gamepad::SetBinding(button, input.get(key));
-                }
-                input.setAll("JoyZ", Gamepad::TurnBinding());
-                input.setAll("JoyV", Gamepad::LookUpBinding());
-                userIni["Engine.EPCGameOptions"]["Resolution"] = std::to_string(Screen.Width) + "x" + std::to_string(Screen.Height);
-                userIniFile.generate(userIni);
+                const auto key = button <= 16 ? "Joy" + std::to_string(button) : std::string(axes[button - 17]);
+                const auto binding = input.get(key);
+                Gamepad::SetBinding(button, binding.empty() ? FixSettings().String("INPUT." + key) : binding);
             }
-            else
-            {
-                for (int button = 1; button <= 18; ++button)
-                    Gamepad::SetBinding(button, FixSettings().String(button <= 16 ? "INPUT.Joy" + std::to_string(button) : std::string(button == 17 ? "INPUT.JoyX" : "INPUT.JoyY")));
-            }
-
-            auto gameIniPath = exePath / "SplinterCell.ini";
-            // Preserve the engine defaults and skip files without window settings.
-            CreateInitialIni(exePath / "Default.ini", gameIniPath, "WinDrv.WindowsClient");
-            mINI::INIStructure gameIni;
-            if (mINI::INIFile(gameIniPath).read(gameIni) && gameIni.has("WinDrv.WindowsClient"))
-            {
-                CIniReader iniWriter(gameIniPath);
-                iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportX", Screen.Width);
-                iniWriter.WriteInteger("WinDrv.WindowsClient", "WindowedViewportY", Screen.Height);
-                iniWriter.WriteString("WinDrv.WindowsClient", "UseJoystick", "True");
-                iniWriter.WriteString("D3DDrv.D3DRenderDevice", "FullScreenVideo", "True");
-
-                auto shadowMode = FixSettings().Bool("MAIN.ForceShadowBufferMode");
-                iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "ForceShadowMode", shadowMode);
-                if (shadowMode == 1) // GF2 mode must be off to render shadow buffers
-                    iniWriter.WriteInteger("D3DDrv.D3DRenderDevice", "EmulateGF2Mode", 0);
-
-                iniWriter.WriteString("Engine.GameInfo", "UseRumble", "True");
-            }
-
             std::vector<std::string> list;
             GetResolutionsList(list);
 

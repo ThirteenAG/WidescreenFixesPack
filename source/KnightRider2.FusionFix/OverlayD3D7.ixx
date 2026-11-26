@@ -10,6 +10,17 @@ export module OverlayD3D7;
 
 export namespace KnightRider2Overlay
 {
+#ifndef ASI_OVERLAY
+    class D3D7Overlay : public asi_overlay::Overlay
+    {
+    public:
+        bool CharacterMessage(wchar_t) { return false; }
+        void Keyboard(const uint8_t*, const uint8_t*) {}
+        bool Available() const { return false; }
+        void ShutdownRenderer() {}
+        void Present(IDirect3DDevice7*, HWND, HMODULE) {}
+    };
+#else
     class D3D7Overlay : public asi_overlay::Overlay
     {
         IDirect3DDevice7* Device = nullptr;
@@ -345,4 +356,5 @@ export namespace KnightRider2Overlay
             device->SetViewport(&previousViewport);
         }
     };
+#endif
 }

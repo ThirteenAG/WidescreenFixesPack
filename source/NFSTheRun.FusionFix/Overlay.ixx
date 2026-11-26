@@ -2,7 +2,6 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
-#include "RawMouse.hpp"
 #include <d3d11.h>
 #include "Shared/PadInput.hpp"
 #include "overlay/OverlayD3D11.hpp"
@@ -52,7 +51,6 @@ namespace
         LRESULT result = 0;
         if (Overlay.Message(window, message, wParam, lParam, result))
             return result;
-        RawMouse::Message(window, message, wParam, lParam);
         return CallWindowProcA(GameWindowProc, window, message, wParam, lParam);
     }
 
@@ -73,22 +71,7 @@ namespace
         if (result != ERROR_SUCCESS || !state || userIndex != 0)
             return result;
         auto& pad = state->Gamepad;
-        // A B X Y, LB RB, Back Start, LS RS and the d-pad in the overlay's bits
-        static const std::pair<WORD, uint16_t> mapping[] =
-        {
-            { XINPUT_GAMEPAD_A, 0x4000 }, { XINPUT_GAMEPAD_B, 0x2000 }, { XINPUT_GAMEPAD_X, 0x8000 }, { XINPUT_GAMEPAD_Y, 0x1000 },
-            { XINPUT_GAMEPAD_LEFT_SHOULDER, 0x400 }, { XINPUT_GAMEPAD_RIGHT_SHOULDER, 0x800 }, { XINPUT_GAMEPAD_BACK, 0x1 },
-            { XINPUT_GAMEPAD_START, 0x8 }, { XINPUT_GAMEPAD_LEFT_THUMB, 0x2 }, { XINPUT_GAMEPAD_RIGHT_THUMB, 0x4 },
-            { XINPUT_GAMEPAD_DPAD_UP, 0x10 }, { XINPUT_GAMEPAD_DPAD_RIGHT, 0x20 }, { XINPUT_GAMEPAD_DPAD_DOWN, 0x40 },
-            { XINPUT_GAMEPAD_DPAD_LEFT, 0x80 },
-        };
-        uint16_t buttons = 0;
-        for (auto& [button, bit] : mapping)
-        {
-            if (pad.wButtons & button)
-                buttons |= bit;
-        }
-        Overlay.Gamepad(buttons, int8_t(std::clamp(pad.sThumbLX / 258, -127, 127)), int8_t(std::clamp(-pad.sThumbLY / 258, -127, 127)));
+        PadInput::ToOverlay(Overlay, pad);
         if (Overlay.BlocksInput())
             pad = {};
         return result;
@@ -105,7 +88,8 @@ export namespace DeveloperOverlay
     // After the game's frame, before it's presented
     void Present(IDXGISwapChain* swapChain)
     {
-        Overlay.Present(swapChain, ThisModule());
+        if constexpr (WFP::DeveloperOverlay)
+            Overlay.Present(swapChain, ThisModule());
     }
 }
 
@@ -127,13 +111,17 @@ public:
                     ui.Value("Resolution", std::to_string(client.right) + " x " + std::to_string(client.bottom));
             });
 
-            auto originals = IATHook::Replace(GetModuleHandleA(NULL), "xinput9_1_0.dll", std::forward_as_tuple("XInputGetState", XInputGetStateHook));
-            GameXInputGetState = reinterpret_cast<decltype(GameXInputGetState)>(originals.at("XInputGetState").get());
-
-            WFP::onGameProcessEvent() += []()
+            // The overlay's pad and its input block exist only in Debug builds
+            if constexpr (WFP::DeveloperOverlay)
             {
-                Subclass(hWnd.get());
-            };
+                auto originals = IATHook::Replace(GetModuleHandleA(NULL), "xinput9_1_0.dll", std::forward_as_tuple("XInputGetState", XInputGetStateHook));
+                GameXInputGetState = reinterpret_cast<decltype(GameXInputGetState)>(originals.at("XInputGetState").get());
+
+                WFP::onGameProcessEvent() += []()
+                {
+                    Subclass(hWnd.get());
+                };
+            }
 
             WFP::onShutdownEvent() += []()
             {

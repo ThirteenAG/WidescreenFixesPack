@@ -24,9 +24,19 @@ export namespace USMMenu
     inline std::vector<std::pair<uintptr_t, bool>> Hidden, SavedVisibility;
     inline bool Opened = false, Details = false;
     inline int Page = -1, Selected = 0, HelpOffset = 0, HelpLines = 0;
+    inline constexpr int VisibleSlots = 7;
+    inline int PluginSelection = 0, PluginOffset = 0, VisibleRows = 0;
+    inline std::array<std::optional<RWGTAMenu::Row>, VisibleSlots> RenderedRows;
     inline std::array<int, 24> MenuKeys{};
     inline bool PadShortcutsEnabled = false;
-    inline std::string Language, Notice;
+    inline std::string Language;
+    struct UpdateNotice
+    {
+        std::string version;
+        std::string page;
+        bool hub;
+    };
+    inline std::optional<UpdateNotice> Notice;
     inline std::function<std::string()> GameLanguage;
     inline std::map<std::string, std::string> RestartValues;
     inline std::map<HMODULE, std::map<std::string, std::string>> OtherRestartValues;
@@ -51,7 +61,7 @@ export namespace USMMenu
 
     inline std::string CurrentLanguage()
     {
-        const auto language = FixSettings().String("MAIN.TextLanguage");
+        const auto language = FixSettings().Get("MAIN.TextLanguage");
         return language == "auto" ? (GameLanguage ? GameLanguage() : "en") : language;
     }
 
@@ -145,6 +155,7 @@ export namespace USMMenu
                 Opened = true;
                 Page = -1;
                 Selected = 0;
+                PluginSelection = PluginOffset = 0;
             }
             Refresh();
             return;
@@ -155,7 +166,13 @@ export namespace USMMenu
         const auto index = static_cast<int>(found - Widgets.begin());
         if (index < 7 || (index >= 10 && index < 17))
         {
-            Selected = index < 7 ? index : index - 10;
+            const auto slot = index < 7 ? index : index - 10;
+            if (slot >= VisibleRows)
+                return;
+            if (Page < 0)
+                PluginSelection = PluginOffset + slot;
+            else
+                Selected = slot;
             Activate(0);
         }
         else if (index == 7)
@@ -210,10 +227,19 @@ export namespace USMMenu
         return false;
     }
 
+    inline std::string NoticeText(const UpdateNotice& notice)
+    {
+        auto text = Words(notice.hub ? "update.availablehub" : "update.availablesite");
+        for (const auto& [key, value] : { std::pair{ "{version}", &notice.version }, std::pair{ "{page}", &notice.page } })
+            if (const auto at = text.find(key); at != std::string::npos)
+                text.replace(at, std::char_traits<char>::length(key), *value);
+        return text;
+    }
+
     inline std::string Help()
     {
-        if (!Notice.empty())
-            return Notice;
+        if (Notice)
+            return NoticeText(*Notice);
         if (Page < 0)
             return Words("menu.pluginshelp");
         const auto rows = Rows();
@@ -229,14 +255,27 @@ export namespace USMMenu
         for (const auto widget : Widgets)
             Call(widget, 6, 0);
         const auto rows = Rows();
-        const auto count = Page < 0 ? static_cast<int>(Model.Pages().size()) : static_cast<int>(rows.size());
-        Selected = std::clamp(Selected, 0, std::max(0, count - 1));
-        for (int i = 0; i < std::min(7, count) && !Details && Notice.empty(); ++i)
+        const auto pluginCount = static_cast<int>(Model.Pages().size());
+        PluginSelection = std::clamp(PluginSelection, 0, std::max(0, pluginCount - 1));
+        PluginOffset = std::clamp(PluginOffset, std::max(0, PluginSelection - VisibleSlots + 1),
+            std::min(PluginSelection, std::max(0, pluginCount - VisibleSlots)));
+        Selected = std::clamp(Selected, 0, std::max(0, static_cast<int>(rows.size()) - 1));
+        const auto count = Page < 0 ? pluginCount - PluginOffset : static_cast<int>(rows.size());
+        RenderedRows.fill(std::nullopt);
+        VisibleRows = Details || Notice ? 0 : std::min(VisibleSlots, count);
+        if (Page >= 0)
         {
-            auto label = Page < 0 ? Model.Pages()[i].title : rows[i] ? Model.Label(*rows[i]) : Words("menu.back");
-            auto value = Page >= 0 && rows[i] ? Model.Value(*rows[i]) : "";
+            for (int i = 0; i < VisibleRows; ++i)
+                if (rows[i])
+                    RenderedRows[i] = *rows[i];
+        }
+        for (int i = 0; i < VisibleRows; ++i)
+        {
+            const auto& row = RenderedRows[i];
+            auto label = Page < 0 ? Model.Pages()[PluginOffset + i].title : row ? Model.Label(*row) : Words("menu.back");
+            auto value = row ? Model.Value(*row) : "";
             Caption(Widgets[i], label);
-            Call(Widgets[i], 24, i == Selected ? 1 : 0);
+            Call(Widgets[i], 24, i == (Page < 0 ? PluginSelection - PluginOffset : Selected) ? 1 : 0);
             Call(Widgets[i], 6, 1);
             Caption(Widgets[10 + i], value);
             Call(Widgets[10 + i], 6, value.empty() ? 0 : 1);
@@ -244,14 +283,14 @@ export namespace USMMenu
         Caption(Widgets[7], Words("menu.back"));
         Call(Widgets[7], 6, 1);
         Caption(Widgets[8], Words(Details ? "menu.back" : "menu.details"));
-        Call(Widgets[8], 6, Notice.empty() ? 1 : 0);
+        Call(Widgets[8], 6, Notice ? 0 : 1);
         Caption(Widgets[9], Page < 0 ? Words("menu.plugins") : Model.Pages()[Page].title);
         Call(Widgets[9], 6, 1);
         auto help = Help();
         std::istringstream words(help);
         std::string word, wrapped, line;
         std::vector<std::string> helpLines;
-        const bool full = Details || !Notice.empty();
+        const bool full = Details || Notice;
         const size_t columns = full ? 85 : 90;
         while (words >> word)
         {
@@ -284,9 +323,9 @@ export namespace USMMenu
     inline void Back()
     {
         HelpOffset = 0;
-        if (!Notice.empty())
+        if (Notice)
         {
-            Notice.clear();
+            Notice.reset();
             Details = false;
             Page = -1;
         }
@@ -295,7 +334,6 @@ export namespace USMMenu
         else if (Page >= 0)
         {
             Page = -1;
-            Selected = 0;
         }
         else
         {
@@ -313,25 +351,44 @@ export namespace USMMenu
 
     inline void Activate(int direction)
     {
-        if (Details || !Notice.empty())
+        if (Details || Notice)
             return;
         if (Page < 0)
         {
-            if (Selected < static_cast<int>(Model.Pages().size()))
+            if (!direction && PluginSelection < static_cast<int>(Model.Pages().size()))
             {
-                Page = Selected;
+                Page = PluginSelection;
                 Selected = 0;
             }
         }
         else
         {
             const auto rows = Rows();
-            if (Selected < static_cast<int>(rows.size()))
+            if (Selected < VisibleRows && Selected < static_cast<int>(rows.size()))
             {
-                if (rows[Selected]) Model.Change(*rows[Selected], direction, true);
-                else Back();
+                const auto current = rows[Selected];
+                const auto rendered = RenderedRows[Selected];
+                if (current && rendered && current->kind == rendered->kind && current->plugin == rendered->plugin &&
+                    current->setting == rendered->setting)
+                    Model.Change(*rendered, direction, true);
+                else if (!current && !rendered && !direction)
+                {
+                    Back();
+                    return;
+                }
             }
         }
+        Refresh();
+    }
+
+    inline void Navigate(int direction)
+    {
+        if (Details || Notice)
+            HelpOffset += direction;
+        else if (Page >= 0)
+            Selected = Model.Move(Page, Selected, direction);
+        else if (const auto count = static_cast<int>(Model.Pages().size()))
+            PluginSelection = (PluginSelection + direction + count) % count;
         Refresh();
     }
 
@@ -354,23 +411,11 @@ export namespace USMMenu
             if (Opened)
             {
                 if (key == VK_ESCAPE) Back();
-                else if (key == VK_F1 && Notice.empty()) { Details = !Details; HelpOffset = 0; Refresh(); }
+                else if (key == VK_F1 && !Notice) { Details = !Details; HelpOffset = 0; Refresh(); }
                 else if (key == VK_RETURN || key == VK_SPACE) Activate(0);
                 else if (key == VK_LEFT || key == VK_RIGHT) Activate(key == VK_LEFT ? -1 : 1);
                 else if (key == VK_UP || key == VK_DOWN)
-                {
-                    const auto direction = key == VK_UP ? -1 : 1;
-                    if (Details || !Notice.empty())
-                    {
-                        HelpOffset += direction;
-                        Refresh();
-                        return;
-                    }
-                    const auto count = static_cast<int>(Model.Pages().size());
-                    if (Page >= 0) Selected = Model.Move(Page, Selected, direction);
-                    else if (count) Selected = (Selected + direction + count) % count;
-                    Refresh();
-                }
+                    Navigate(key == VK_UP ? -1 : 1);
                 return;
             }
         }
@@ -400,6 +445,11 @@ export namespace USMMenu
 
     inline bool Message(UINT message, WPARAM key, LPARAM parameter)
     {
+        if (Opened && message == WM_MOUSEWHEEL && IsOptionsManager(Manager) && !USMOverlayBlocksInput())
+        {
+            Navigate(GET_WHEEL_DELTA_WPARAM(key) > 0 ? -1 : 1);
+            return true;
+        }
         // The native input loop synthesizes navigation keys only.
         if ((message != WM_KEYDOWN && message != WM_KEYUP) || (key != 'P' && key != VK_F1) ||
             !IsOptionsManager(Manager) || USMOverlayBlocksInput())
@@ -415,7 +465,7 @@ export namespace USMMenu
         {
             Manager = manager;
             Opened = Details = false;
-            Notice.clear();
+            Notice.reset();
             Widgets.clear();
             Hidden.clear();
             SavedVisibility.clear();
@@ -473,7 +523,7 @@ export namespace USMMenu
             Model.Close();
             Manager = Tab = 0;
             Opened = Details = false;
-            Notice.clear();
+            Notice.reset();
             Widgets.clear();
             Hidden.clear();
             SavedVisibility.clear();

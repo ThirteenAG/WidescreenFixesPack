@@ -10,7 +10,7 @@
   "HudAspectRatioConstraint": "Format de l’interface",
   "HudAspectRatioConstraint.description": "Auto place les panneaux latéraux de l’interface aux bords de l’écran. Un format les garde aux bords d’un cadre centré de ce format. La vue cockpit garde toujours son interface sur le tableau de bord 4:3. Les changements s’appliquent en jeu.",
   "FMVWidescreenMode": "Affichage des vidéos",
-  "FMVWidescreenMode.description": "Original montre les vidéos comme le jeu, une image 4:3 avec des bandes noires. Adapter montre toute l’image large aussi grande que l’écran le permet. Les changements s’appliquent en jeu.",
+  "FMVWidescreenMode.description": "Original adapte l’image vidéo 4:3 complète. Adapter agrandit l’image des vidéos contenant des bandes noires. Les vidéos plein cadre conservent toute l’image. Les changements s’appliquent en jeu.",
   "fmv.original": "Original",
   "fmv.fill": "Adapter",
   "CutsceneBorders": "Bandes des scènes",

@@ -33,12 +33,15 @@ export namespace Graphics
 
         // GRAPHICS.ShadowResolution: the shadow map size the game picks for its High shadow quality (1024); Low and
         // Medium keep their sizes
-        pattern = hook::pattern("8B 44 24 08 83 C0 ? 56 8B F1 83 E0");
-        static auto ShadowSizeHook = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& regs)
+        static const int shadowSize = std::min(FixSettings().Int("GRAPHICS.ShadowResolution"), 8192);
+        if (shadowSize > 1024)
         {
-            const int size = FixSettings().Int("GRAPHICS.ShadowResolution");
-            if (size > 1024 && static_cast<int>(regs.eax) >= 1024)
-                regs.eax = static_cast<uint32_t>(std::min(size, 8192));
-        });
+            pattern = hook::pattern("8B 44 24 08 83 C0 ? 56 8B F1 83 E0");
+            static auto ShadowSizeHook = safetyhook::create_mid(pattern.get_first(4), [](SafetyHookContext& regs)
+            {
+                if (static_cast<int>(regs.eax) >= 1024)
+                    regs.eax = static_cast<uint32_t>(shadowSize);
+            });
+        }
     }
 }

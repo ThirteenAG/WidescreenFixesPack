@@ -5,6 +5,7 @@
 import ComVars;
 import Controller;
 import Frontend;
+import LS3DF;
 import Misc;
 import Mouse;
 import PostFX;
@@ -29,6 +30,7 @@ void InitLS3DF()
 {
     WindowedModeWrapper::EnableDpiAwareness();
     InitDevicePointer();
+    InitSceneViewports();
     RestoredFeatures::InitProjectorOpacity();
     InitWindowMode();
     InitShadowZBias();

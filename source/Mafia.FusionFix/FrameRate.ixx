@@ -13,7 +13,8 @@ import ComVars;
 namespace FrameRate
 {
     SafetyHookInline timerHook;
-    std::atomic<int> requested{ 60 };
+    std::atomic<bool> limitChanged{ true };
+    int requested = 60;
     std::array<uintptr_t, 2> frameCallers{};
     LARGE_INTEGER frequency{};
     HANDLE timer = nullptr;
@@ -39,8 +40,9 @@ namespace FrameRate
             DEVMODEW mode{};
             mode.dmSize = sizeof(mode);
             refreshRate = GetMonitorInfoW(monitor, &info) &&
-                EnumDisplaySettingsW(info.szDevice, ENUM_CURRENT_SETTINGS, &mode) && mode.dmDisplayFrequency > 1 ?
-                std::clamp<int>(mode.dmDisplayFrequency, 30, 1000) : 60;
+                EnumDisplaySettingsW(info.szDevice, ENUM_CURRENT_SETTINGS, &mode) &&
+                mode.dmDisplayFrequency > 1 && mode.dmDisplayFrequency <= INT_MAX ?
+                static_cast<int>(mode.dmDisplayFrequency) : 60;
         }
         return refreshRate;
     }
@@ -90,7 +92,12 @@ namespace FrameRate
         const auto caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
         if (caller != frameCallers[0] && caller != frameCallers[1])
             return timerHook.unsafe_stdcall<uint32_t>(graph, minimum, maximum);
-        Pace(requested.load(std::memory_order_relaxed));
+        if (limitChanged.exchange(false))
+        {
+            const int value = std::atoi(FixSettings().Get("MAIN.FPSLimit").c_str());
+            requested = value == -1 || value == 0 ? value : std::clamp(value, 30, 1000);
+        }
+        Pace(requested);
         const auto now = Counter();
         ++statisticsFrames;
         if (!statisticsStart)
@@ -131,13 +138,7 @@ export void InitFrameRate()
     timerHook = safetyhook::create_inline(table[offset / sizeof(uintptr_t)], Update);
     timer = CreateWaitableTimerExW(nullptr, nullptr, 0x2, TIMER_ALL_ACCESS);
     if (!timer) timer = CreateWaitableTimerW(nullptr, FALSE, nullptr);
-    const auto changed = []()
-    {
-        int value = FixSettings().Int("MAIN.FPSLimit");
-        FrameRate::requested.store(value == -1 || value == 0 ? value : std::clamp(value, 30, 1000), std::memory_order_relaxed);
-    };
-    changed();
-    FixSettings().OnChange("MAIN.FPSLimit", changed);
+    FixSettings().OnChange("MAIN.FPSLimit", []() { limitChanged.store(true); });
 }
 
 export float GetFrameRate()

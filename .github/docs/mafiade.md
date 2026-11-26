@@ -10,7 +10,7 @@
 
 ## Fixes
 
-- **High polling rate mice** — with a 4000 or 8000 Hz mouse the game stuttered heavily while the mouse moved, with single frames taking half a second. The game's message loop now handles the mouse moves of one frame at once instead of chasing every new one. Mouse look keeps exactly the same movement and sensitivity. Always on.
+- **High polling rate mice** — with a 4000 or 8000 Hz mouse the game stuttered heavily while the mouse moved, with single frames taking half a second. A dedicated input thread reads mouse reports in batches. Each frame, the game receives the accumulated movement, wheel input and button state through its usual DirectInput poll. The message loop also limits mouse-move processing so that a stream of reports cannot keep the frame waiting. Always on.
 - **Menu cursor** — the game moved its menu cursor by the raw mouse movement through its own speed curve, and counted every move twice, so the cursor never matched the Windows pointer and felt sluggish on slow moves and too fast on quick ones. In menus, the pause menu and the map, the cursor now sits exactly where the Windows pointer is, with the pointer speed and acceleration set in Windows; hovering, clicking and dragging the map follow it. Controller cursor movement is unchanged. Always on.
 
 ## Options
@@ -22,13 +22,13 @@
 
 ## Settings and hub
 
-The fix creates `plugins/MafiaDefinitiveEdition.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it. Vanilla shows the startup screens and the "Press Enter" screen; Recommended and Enhanced skip them. Texts are available in English, French, German, Italian and Spanish. The text language can be selected in the settings editor.
+The fix creates `plugins/MafiaDefinitiveEdition.FusionFix.cfg` on first start. Open FusionFixHub to edit these settings. Vanilla shows the startup screens and the "Press Enter" screen; Recommended and Enhanced skip them. Texts are available in English, French, German, Italian and Spanish. The text language can be selected in the settings editor.
 
 ## Known limits
 
 - The game already has widescreen, its own window modes, resolution list, field of view slider and controller support, so the fix adds nothing there.
 - First-time settings and 2K account screens that need a choice are not skipped.
-- The fix has no page in the game's own settings menu: change it in FusionFixHub or on fusionfix.io.
+- The fix has no page in the game's own settings menu: open FusionFixHub to change its settings.
 
 ## Installation
 

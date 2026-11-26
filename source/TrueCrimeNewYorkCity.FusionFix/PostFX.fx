@@ -452,6 +452,7 @@ technique SMAAEdgeDetection
     {
         VertexShader = compile vs_3_0 SMAA_EdgeDetectionVS();
         PixelShader = compile ps_3_0 SMAA_EdgeDetectionPS();
+        CullMode = None;
         ZEnable = false;
         SRGBWriteEnable = false;
         AlphaBlendEnable = false;
@@ -466,6 +467,7 @@ technique SMAABlendWeightCalculation
     {
         VertexShader = compile vs_3_0 SMAA_BlendingWeightCalculationVS();
         PixelShader = compile ps_3_0 SMAA_BlendingWeightCalculationPS();
+        CullMode = None;
         ZEnable = false;
         SRGBWriteEnable = false;
         AlphaBlendEnable = false;
@@ -480,6 +482,7 @@ technique SMAAOutputPass
     {
         VertexShader = compile vs_3_0 SMAA_NeighborhoodBlendingVS();
         PixelShader = compile ps_3_0 SMAA_NeighborhoodBlendingPS();
+        CullMode = None;
         ZEnable = false;
         SRGBWriteEnable = true;
         AlphaBlendEnable = false;

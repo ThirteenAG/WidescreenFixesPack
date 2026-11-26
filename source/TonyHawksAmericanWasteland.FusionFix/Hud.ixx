@@ -1,18 +1,19 @@
 module;
 
 #include <stdafx.h>
+#include "FixSettings.hpp"
 #include "Shared/Console/Viewport.hpp"
 
 export module Hud;
 
 import ComVars;
+import Cinema;
 
 export namespace THAWHud
 {
     inline SafetyHookInline TextHook, SpriteHook, FontDrawHook;
     inline float Width = 640.0f, Height = 480.0f;
-    inline const std::string* Constraint = nullptr;
-    inline const int32_t* CinemaMode = nullptr;
+    inline std::atomic<float> Constraint{ 0.0f };
     inline uintptr_t (*SetTextContext)(uintptr_t) = nullptr;
 
     constexpr uint32_t Checksum(const char* name)
@@ -94,7 +95,7 @@ export namespace THAWHud
     {
         if (!HudNativeScaleX.is_initialized() || !std::isfinite(HudNativeScaleX.get()) || HudNativeScaleX.get() <= 0.0f)
             return 0.0f;
-        const float aspect = Constraint ? console::parse_hud_aspect(Constraint->c_str()) : 0.0f;
+        const float aspect = Constraint.load(std::memory_order_relaxed);
         // The native 2D frame: 4:3, pillarboxed on wider screens, letterboxed on narrower ones
         const float frameWidth = std::min(Width, Height * (4.0f / 3.0f));
         if (HudLayout.get() == 1 || HudLayout.get() == 2)
@@ -131,7 +132,7 @@ export namespace THAWHud
         const auto placement = Classify(element);
         // The cutscene bars, without top and bottom borders; Cinema.hpp clears the screen outside the picture, and the
         // bars stay over the scene's own 2D elements
-        if (sprite && placement.letterbox && CinemaMode && (std::clamp(*CinemaMode, 0, 3) & 1) == 0)
+        if (sprite && placement.letterbox && (THAWCinema::Borders() & 1) == 0)
         {
             auto* y = reinterpret_cast<int16_t*>(element + 322);
             const int16_t savedY = *y;
@@ -182,13 +183,20 @@ export namespace THAWHud
             FontDrawHook.thiscall<void>(element);
     }
 
-    inline void Install(float width, float height, const std::string* constraint, const int32_t* cinemaMode,
+    inline void Install(float width, float height, asi_settings::Plugin& settings,
                         HMODULE module = GetModuleHandleW(nullptr))
     {
         Width = width;
         Height = height;
-        Constraint = constraint;
-        CinemaMode = cinemaMode;
+        auto updateConstraint = [&settings]()
+        {
+            static std::mutex mutex;
+            std::lock_guard lock(mutex);
+            const auto value = settings.Get("MAIN.HudAspectRatioConstraint");
+            Constraint.store(console::parse_hud_aspect(value.c_str()), std::memory_order_relaxed);
+        };
+        settings.OnChange("MAIN.HudAspectRatioConstraint", updateConstraint);
+        updateConstraint();
         auto font = hook::module_pattern(module, "81 EC 80 00 00 00 53 55 56 57 8B F9 D9 47 40 F3 0F 10 1D ? ? ? ? D9 FF F3 0F 10 4F 28");
         FontDrawHook = safetyhook::create_inline(font.get_first(), DrawFont);
         auto text = hook::module_pattern(module, "83 EC 28 56 8B F1 8B 86 84 01 00 00 85 C0 0F 84 ? ? ? ? 0F BF 86 42 01 00 00");

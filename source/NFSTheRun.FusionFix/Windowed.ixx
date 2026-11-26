@@ -13,6 +13,35 @@ bool bBorderlessWindowed = true;
 bool bEnableWindowResize = false;
 HWND GameHWND = NULL;
 
+namespace
+{
+    RECT NativeBounds{};
+    LONG NativeStyle = 0;
+    bool HaveNativeBounds = false;
+
+    void RememberNativeWindow()
+    {
+        HaveNativeBounds = GameHWND && GetWindowRect(GameHWND, &NativeBounds);
+        if (HaveNativeBounds)
+            NativeStyle = GetWindowLongW(GameHWND, GWL_STYLE);
+    }
+
+    void RestoreNativeWindow()
+    {
+        if (!GameHWND || !HaveNativeBounds)
+            return;
+
+        constexpr DWORD transient = WS_VISIBLE | WS_MINIMIZE | WS_MAXIMIZE;
+        const LONG current = GetWindowLongW(GameHWND, GWL_STYLE);
+        SetWindowLongW(GameHWND, GWL_STYLE, (NativeStyle & ~transient) | (current & transient));
+        const int width = NativeBounds.right - NativeBounds.left;
+        const int height = NativeBounds.bottom - NativeBounds.top;
+        WindowStyle::detail::AllowSize(GameHWND, width, height);
+        SetWindowPos(GameHWND, nullptr, NativeBounds.left, NativeBounds.top, width, height,
+            SWP_NOACTIVATE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    }
+}
+
 void ReadWindowMode()
 {
     const int mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
@@ -143,6 +172,7 @@ void ApplyWindowStyle()
 
         int posX = monitor.left + (desktopX - resW) / 2 + rect.left;
         int posY = monitor.top + (desktopY - resH) / 2 + rect.top;
+        WindowStyle::detail::AllowSize(GameHWND, outerW, outerH);
         SetWindowPos(GameHWND, 0, posX, posY, outerW, outerH, SWP_NOZORDER | SWP_FRAMECHANGED);
     }
 }
@@ -203,19 +233,8 @@ HWND WINAPI CreateWindowExA_Hook(DWORD dwExStyle, LPCSTR lpClassName, LPCSTR lpW
 {
     if (hWndParent && hWndParent != GetDesktopWindow())
         return CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-    if (bOwnWindow)
-        return GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-
-    auto [resW, resH] = GetRes();
-
-    const RECT monitor = GetMonitorBounds();
-    const int desktopX = monitor.right - monitor.left;
-    const int desktopY = monitor.bottom - monitor.top;
-
-    int windowPosX = monitor.left + (desktopX - resW) / 2;
-    int windowPosY = monitor.top + (desktopY - resH) / 2;
-
-    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, windowPosX, windowPosY, resW, resH, hWndParent, hMenu, hInstance, lpParam);
+    GameHWND = CreateWindowExA(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    RememberNativeWindow();
     ApplyWindowStyle();
     return GameHWND;
 }
@@ -225,57 +244,10 @@ HWND WINAPI CreateWindowExW_Hook(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR l
 {
     if (hWndParent && hWndParent != GetDesktopWindow())
         return CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-    if (bOwnWindow)
-        return GameHWND = CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
-
-    auto [resW, resH] = GetRes();
-
-    const RECT monitor = GetMonitorBounds();
-    const int desktopX = monitor.right - monitor.left;
-    const int desktopY = monitor.bottom - monitor.top;
-
-    int windowPosX = monitor.left + (desktopX - resW) / 2;
-    int windowPosY = monitor.top + (desktopY - resH) / 2;
-
-    GameHWND = CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, windowPosX, windowPosY, resW, resH, hWndParent, hMenu, hInstance, lpParam);
+    GameHWND = CreateWindowExW(dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    RememberNativeWindow();
     ApplyWindowStyle();
     return GameHWND;
-}
-
-LONG WINAPI SetWindowLongA_Hook(HWND hWnd, int nIndex, LONG dwNewLong)
-{
-    if (bBorderlessWindowed)
-    {
-        ApplyWindowStyle();
-        CenterWindowPosition();
-        return dwNewLong;
-    }
-    else
-    {
-        dwNewLong |= (WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-        if (bEnableWindowResize)
-            dwNewLong |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
-    }
-
-    return SetWindowLongA(hWnd, GWL_STYLE, dwNewLong);
-}
-
-LONG WINAPI SetWindowLongW_Hook(HWND hWnd, int nIndex, LONG dwNewLong)
-{
-    if (bBorderlessWindowed)
-    {
-        ApplyWindowStyle();
-        CenterWindowPosition();
-        return dwNewLong;
-    }
-    else
-    {
-        dwNewLong |= (WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU);
-        if (bEnableWindowResize)
-            dwNewLong |= (WS_MAXIMIZEBOX | WS_THICKFRAME);
-    }
-
-    return SetWindowLongW(hWnd, GWL_STYLE, dwNewLong);
 }
 
 BOOL WINAPI AdjustWindowRectEx_Hook(LPRECT lpRect, DWORD dwStyle, BOOL bMenu, DWORD dwExStyle)
@@ -345,9 +317,13 @@ public:
                 {
                     if (bModeChanged.exchange(false))
                     {
-                        // Window and Borderless restyle the window at once; the game's own frame comes back on the next start
+                        const bool wasOwnWindow = bOwnWindow;
+                        if (wasOwnWindow)
+                            RememberNativeWindow();
                         ReadWindowMode();
-                        if (!bOwnWindow)
+                        if (bOwnWindow && !wasOwnWindow)
+                            RestoreNativeWindow();
+                        else if (!bOwnWindow)
                             ApplyWindowStyle();
                     }
 
@@ -387,8 +363,6 @@ public:
                 IATHook::Replace(GetModuleHandleA(NULL), "USER32.DLL",
                         std::forward_as_tuple("CreateWindowExA", CreateWindowExA_Hook),
                         std::forward_as_tuple("CreateWindowExW", CreateWindowExW_Hook),
-                        //std::forward_as_tuple("SetWindowLongA", SetWindowLongA_Hook),
-                        //std::forward_as_tuple("SetWindowLongW", SetWindowLongW_Hook),
                         std::forward_as_tuple("AdjustWindowRectEx", AdjustWindowRectEx_Hook),
                         std::forward_as_tuple("SetWindowPos", SetWindowPos_Hook)
                 );

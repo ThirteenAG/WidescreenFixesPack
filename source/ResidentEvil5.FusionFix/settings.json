@@ -85,7 +85,12 @@
         {
           "value": "32:9"
         }
-      ]
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.SplitScreenLayout",
@@ -108,12 +113,7 @@
       "apply": "live",
       "control": [
         "cycler"
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 0,
-        "enhanced": 1
-      }
+      ]
     },
     {
       "id": "MAIN.SkipIntro",
@@ -121,6 +121,21 @@
       "default": 1,
       "label": "@SkipIntro",
       "description": "@SkipIntro.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "restart",
+      "presets": {
+        "vanilla": 0,
+        "recommended": 1,
+        "enhanced": 1
+      }
+    },
+    {
+      "id": "MAIN.SkipPressStart",
+      "type": "bool",
+      "default": 1,
+      "label": "@SkipPressStart",
+      "description": "@SkipPressStart.description",
       "page": "display",
       "visibility": "menu",
       "apply": "restart",
@@ -352,7 +367,7 @@
       "default": 0,
       "label": "@checkupdates",
       "description": "@checkupdates.description",
-      "page": "gameplay",
+      "page": "compatibility",
       "visibility": "menu",
       "apply": "live"
     }

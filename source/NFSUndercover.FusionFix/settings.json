@@ -743,7 +743,12 @@
       "control": [
         "cycler",
         "dropdown"
-      ]
+      ],
+      "presets": {
+        "vanilla": "Auto",
+        "recommended": "Auto",
+        "enhanced": "Auto"
+      }
     },
     {
       "id": "MAIN.CutsceneBorders",

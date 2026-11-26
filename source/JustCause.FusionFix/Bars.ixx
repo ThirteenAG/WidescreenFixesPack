@@ -35,19 +35,26 @@ export namespace JCBars
             IDirect3DSurface9* depth = nullptr;
             D3DVIEWPORT9 viewport{};
             RECT scissorRect{};
-            DWORD scissor = FALSE, targetCount = 0;
-            bool changed = false;
+            DWORD scissor = FALSE, detachedTargets = 0;
+            bool changedTarget = false, detachedDepth = false, changedScissor = false;
             ~State()
             {
-                if (changed)
-                {
+                if (changedTarget)
                     device->SetRenderTarget(0, targets[0]);
-                    for (DWORD i = 1; i < targetCount; ++i) device->SetRenderTarget(i, targets[i]);
+                for (DWORD i = 1; i < targets.size(); ++i)
+                {
+                    if (detachedTargets & (1u << i))
+                        device->SetRenderTarget(i, targets[i]);
+                }
+                if (detachedDepth)
                     device->SetDepthStencilSurface(depth);
+                if (changedTarget)
+                {
                     device->SetViewport(&viewport);
                     device->SetScissorRect(&scissorRect);
-                    device->SetRenderState(D3DRS_SCISSORTESTENABLE, scissor);
                 }
+                if (changedScissor)
+                    device->SetRenderState(D3DRS_SCISSORTESTENABLE, scissor);
                 if (backbuffer) backbuffer->Release();
                 if (depth) depth->Release();
                 for (auto target : targets) if (target) target->Release();
@@ -59,15 +66,49 @@ export namespace JCBars
             FAILED(device->GetViewport(&state.viewport)) || FAILED(device->GetScissorRect(&state.scissorRect)) ||
             FAILED(device->GetRenderState(D3DRS_SCISSORTESTENABLE, &state.scissor)))
             return false;
-        state.targetCount = std::min<DWORD>(caps.NumSimultaneousRTs, static_cast<DWORD>(state.targets.size()));
-        for (DWORD i = 1; i < state.targetCount; ++i) device->GetRenderTarget(i, &state.targets[i]);
-        device->GetDepthStencilSurface(&state.depth);
-        state.changed = true;
-        for (DWORD i = 1; i < state.targetCount; ++i) device->SetRenderTarget(i, nullptr);
-        device->SetDepthStencilSurface(nullptr);
+        const auto targetCount = std::min<DWORD>(caps.NumSimultaneousRTs, static_cast<DWORD>(state.targets.size()));
+        for (DWORD i = 1; i < targetCount; ++i)
+        {
+            IDirect3DSurface9* target = nullptr;
+            const auto result = device->GetRenderTarget(i, &target);
+            if (SUCCEEDED(result))
+                state.targets[i] = target;
+            else if (result != D3DERR_NOTFOUND)
+                return false;
+        }
+        IDirect3DSurface9* depth = nullptr;
+        const auto depthResult = device->GetDepthStencilSurface(&depth);
+        if (SUCCEEDED(depthResult))
+            state.depth = depth;
+        else if (depthResult != D3DERR_NOTFOUND)
+            return false;
+
+        for (DWORD i = 1; i < targetCount; ++i)
+        {
+            if (!state.targets[i])
+                continue;
+            if (FAILED(device->SetRenderTarget(i, nullptr)))
+                return false;
+            state.detachedTargets |= 1u << i;
+        }
+        if (state.depth)
+        {
+            if (FAILED(device->SetDepthStencilSurface(nullptr)))
+                return false;
+            state.detachedDepth = true;
+        }
         const D3DVIEWPORT9 output{ 0, 0, static_cast<DWORD>(width), static_cast<DWORD>(height), 0.0f, 1.0f };
-        if (FAILED(device->SetRenderTarget(0, state.backbuffer)) || FAILED(device->SetViewport(&output)) ||
-            FAILED(device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE))) return false;
+        if (FAILED(device->SetRenderTarget(0, state.backbuffer)))
+            return false;
+        state.changedTarget = true;
+        if (FAILED(device->SetViewport(&output)))
+            return false;
+        if (state.scissor)
+        {
+            if (FAILED(device->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE)))
+                return false;
+            state.changedScissor = true;
+        }
         return SUCCEEDED(device->Clear(count, rectangles.data(), D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0));
     }
 }

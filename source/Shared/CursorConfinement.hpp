@@ -7,7 +7,8 @@
 namespace CursorConfinement
 {
     inline std::mutex Mutex;
-    inline bool Enabled = true, Suspended = false, Owned = false;
+    inline std::atomic<bool> Enabled = true;
+    inline bool Suspended = false, Owned = false;
     inline RECT OwnedRect{};
     using Clip = BOOL(WINAPI*)(const RECT*);
     inline std::atomic<HWND> Window{ nullptr };
@@ -27,10 +28,11 @@ namespace CursorConfinement
 
     inline void ReleaseLocked()
     {
+        if (!Owned)
+            return;
         RECT current{};
-        if (Owned && GetClipCursor(&current) && Equal(current, OwnedRect))
-            ClipCursor(nullptr);
-        Owned = false;
+        if (GetClipCursor(&current) && (!Equal(current, OwnedRect) || ClipCursor(nullptr)))
+            Owned = false;
     }
 
     inline void Release()
@@ -102,7 +104,7 @@ namespace CursorConfinement
             Owned = true;
         }
         else
-            Owned = false;
+            Owned = Owned && Equal(current, OwnedRect);
     }
 
     inline BOOL WINAPI NativeClip(const RECT* rect)
@@ -289,6 +291,16 @@ namespace CursorConfinement
 
     inline void Frame(HWND window)
     {
+        // Off: no subclass, no hooked ClipCursor and no per-frame checks (Attach again once it is switched on)
+        if (!Enabled)
+        {
+            if (AttachedWindow)
+            {
+                Release();
+                Detach();
+            }
+            return;
+        }
         if (!Attach(window))
         {
             Update(nullptr);

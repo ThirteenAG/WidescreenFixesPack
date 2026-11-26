@@ -7,6 +7,12 @@ module;
 
 export module WaterCommon;
 
+export template<typename T> void ReleaseWaterObject(T*& object)
+{
+    if (auto* owned = std::exchange(object, nullptr))
+        owned->Release();
+}
+
 // What the water renderers need for one draw; matrices are stored as shader constant rows
 export struct WaterDraw
 {

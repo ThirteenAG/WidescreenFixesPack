@@ -2,7 +2,7 @@
 
 <img src="https://thirteenag.github.io/screens/bully/main2.jpg" width="760" alt="Bully: Scholarship Edition Fusion Fix">
 
-**Bully: Scholarship Edition Fusion Fix** corrects ultrawide HUD scaling and field of view, expands the display resolution list, and preserves the selected resolution on startup. Videos are shown whole at their own aspect.
+**Bully: Scholarship Edition Fusion Fix** adds Hor+ widescreen with a field of view option, keeps the HUD at the screen edges, frames cutscenes, and adds window modes, raw mouse input, modern controller support and in-game settings.
 
 [Website](https://thirteenag.github.io/wfp#bully) · [Source Code](https://github.com/ThirteenAG/WidescreenFixesPack/blob/master/source/Bully.FusionFix/dllmain.cpp)
 
@@ -12,62 +12,49 @@
 
 ## Fixes
 
-- **Resolution** — Support ultrawide resolutions.
-- **Aspect ratio** — Correct scaling on ultrawide displays.
-- **HUD** — Correct HUD scaling on ultrawide displays.
-- **Field of view** — Adjust the field of view for ultrawide displays.
-- **Resolution list** — Use display resolutions reported by the OS, within the Video menu’s 128-entry limit.
-- **Saved resolution** — Keep the last selected resolution on startup.
+- **Field of view** — Hor+: the picture keeps the camera height and vertical framing of the original 4:3 game and shows more at the sides. The game's own widescreen mode moved the follow camera lower; the fix keeps it where 4:3 has it. The FOV multiplier affects normal on-foot and vehicle views and stops at 150 degrees across; first-person, cutscene, conversation and shop cameras keep their original framing.
+- **HUD** — Auto uses the whole screen width; a HUD aspect ratio moves the side elements into a centered box. Centered text, character health bars and the full map keep their place.
+- **Cutscenes** — Cutscenes keep the height of the original letterboxed 4:3 picture; screens up to 16:9 show more at the sides, wider screens get side borders. Off removes the borders and widens the view to fill the screen. Normal gameplay framing returns after the cutscene.
+- **Videos** — the 16:9 videos are shown whole at their own aspect, with black bars where the screen is wider or narrower.
+- **Resolution** — ultrawide resolutions are supported and kept between launches. The Video menu lists the display modes your adapter reports; it has room for 128 entries, and if there are more it keeps 640×480, your desktop and current sizes and the largest modes.
+- **Window modes** — fullscreen, a framed window or desktop borderless. Alt+Enter switches between fullscreen and the last window mode and remembers the framed position. Switching to another application leaves the game window open.
+- **Cursor** — Confine Cursor keeps the cursor inside the active game window and lets it go when you switch applications or move the window.
+- **Focus** — Pause When Unfocused (on by default) pauses the game while another window is active. Turned off, the game keeps running in the background and ignores controls while another application has focus.
+- **Mouse** — Raw Mouse Input uses raw relative mouse movement and removes the game's horizontal movement bias; the game's sensitivity and bindings stay.
+- **Controller** — XInput controllers connected during play are picked up; bindings and button prompts follow your latest input, and disconnecting returns to keyboard and mouse. Gamepad Deadzone (15% by default) and Gamepad Camera Speed apply immediately. The game's invert-Y and vibration options stay. Gamepad Icons selects Xbox, PlayStation or Nintendo pictures; Auto uses Xbox.
+- **Shadows** — Shadow Resolution sets the shadow map size: 1024 (the original), 2048 or 4096. Higher sizes give sharper shadows and use more video memory. It applies at the next start and needs Shadows turned on in the game's Video menu.
+- **Skip intro** — skips the Rockstar and Mad Doc logos; story and attract-mode movies stay.
+- **Updates** — Check for Updates is off by default. When enabled, a notice appears in the game's menus if a newer fix is available. If FusionFixHub is installed beside the game, it opens after the game closes; otherwise the notice points to fusionfix.io.
 
 ## Options
 
-- **Field of view** — Adjust the FOV multiplier on fusionfix.io, in FusionFixHub or in the game's menu. Changes apply to the next camera update. The default is 1.0, with a range of 0.5–2.0. Wider gameplay views stop at 150 degrees across.
+Open **Display Settings → Plugins** from the title menu, or **Options → Display → Plugins** while paused. It lists this fix first, then other loaded plugins with settings; each has its own preset and Restore Defaults, applied with confirmation. Keyboard, controller and mouse navigation work. F1, the Help button or Y on an Xbox controller (Triangle on PlayStation, X on Nintendo) opens the full option help; Up and Down scroll it. The settings can also be changed on fusionfix.io and in FusionFixHub, also while the game runs.
 
-FusionFixHub can change the settings while the game runs. The fix adds **Plugins** to title Display Settings and pause Options → Display. It lists this fix first, followed by other loaded plugins with settings. Each plugin has its own settings and presets. FusionFixHub and fusionfix.io remain available.
+| Setting | Values | Default |
+|---|---|---|
+| Field of view | 0.5–2.0, live | 1.0 |
+| HUD aspect ratio | Auto (whole screen width), 4:3, 16:9, 21:9, 32:9 or any width:height, live | Auto |
+| Cutscene borders | Off, Letterbox, Pillarbox, Both, live | Both |
+| Animated cutscene borders | On or off | On |
+| Window mode | Fullscreen, Windowed, Borderless (restart; Alt+Enter while playing) | Fullscreen |
+| Shadow resolution | 1024, 2048, 4096 (restart) | 1024 |
+| Skip intro | On or off (restart) | On |
+| Raw mouse input | On or off | On |
+| Gamepad camera speed | 0.1–5.0 | 1.0 |
+| Gamepad deadzone | 0–50% | 15% |
+| Gamepad icons | Auto (Xbox), Xbox, PlayStation, Nintendo | Auto |
+| Pause when unfocused | On or off | On |
+| Confine cursor | On or off | On |
+| Check for updates | On or off | Off |
 
-Skip Intro skips the Rockstar and Mad Doc logos while preserving story and attract-mode movies. The resolution list uses display modes reported by your adapter. The Video menu can show up to 128 entries; if more are available, it keeps 640×480 and the largest 127 modes. The FOV multiplier affects normal on-foot and vehicle views; first-person, cutscene, conversation and shop cameras keep their original framing.
+## Known limits
 
-Window Mode selects fullscreen, a framed window or desktop borderless. Alt+Enter switches modes and remembers the last framed position. Switching to another application leaves the game window open. The framed window keeps the selected game resolution.
-
-HUD Aspect Ratio applies immediately. Auto uses the full screen width; choosing a ratio moves the side HUD elements into a centered area. Centered text, character health bars and the full map keep their original placement.
-
-Widescreen keeps the camera height and vertical framing of the original 4:3 game and shows more at the sides. The game's own widescreen mode moved the follow camera lower; the fix keeps it where 4:3 has it.
-
-Cutscene Borders offers Off, Letterbox, Pillarbox and Both, with optional animated transitions. Cutscenes keep the height of the original letterboxed 4:3 picture; screens up to 16:9 show more at the sides, and Pillarbox adds side bars beyond 16:9. Off removes the borders and widens the cutscene view to fill the screen. Normal gameplay framing returns after the cutscene.
-
-Shadow Resolution sets the size of the shadow maps: 1024 (the original), 2048 or 4096. Higher sizes give sharper shadows and use more video memory. It applies at the next start and needs Shadows turned on in the game's Video menu.
-
-The game remembers supported ultrawide resolutions between launches.
-
-Open full option help with F1, the Help button, or Y on an Xbox controller (Triangle on PlayStation, X on Nintendo). Up and Down scroll long descriptions. Back returns to the settings page.
-
-Pause on Focus Loss applies immediately and is enabled by default. Disable it to let the game continue running in the background. The game ignores controls while another application has focus.
-
-The fix detects XInput controllers connected during play and switches bindings and button prompts to match your latest input. Disconnecting returns control to the keyboard and mouse. Gamepad Deadzone adjusts both sticks immediately (default 15%). Gamepad Camera Speed adjusts both axes. The game's invert-Y and vibration options remain available. Gamepad Icons selects Xbox, PlayStation or Nintendo pictures; Auto uses Xbox. Keep `plugins/Bully.FusionFix/buttons.nft` with the fix, since it contains the button artwork.
-
-Raw Mouse Input uses Windows raw relative mouse movement and removes the game's horizontal movement bias. It applies immediately and keeps the game's sensitivity and bindings.
-
-Check for Updates is off by default. When enabled, a notice appears in the game's menus if a newer fix is available. If FusionFixHub is installed beside the game, it opens after the game closes; otherwise the notice points to fusionfix.io.
-
-Ctrl+F10 opens the developer overlay. The overlay requires a valid Supporter token; the normal Plugins menu remains available to everyone.
-
-## Limitations
-
-- **Videos** — The 16:9 videos are shown whole at their own aspect, with black bars where the screen is wider or narrower; nothing is cut off or stretched.
-- **Frame rate** — The fix keeps the game’s 30 FPS limit. It does not promise that missions, minigames or physics work correctly at higher frame rates.
-- **Display modes** — The native Video screen has 128 entries. If the adapter reports more, it retains 640×480 and the largest 127 sizes.
+- The game keeps its 30 FPS limit.
 
 ---
 
-**Confine cursor** is available in the Plugins menu, on fusionfix.io and in FusionFixHub and is enabled by default. It keeps the cursor inside the active game window and releases it when you switch applications, move the window or disable the option.
-
 ## Installation
 
-1. Download the fix archive from this release.
-2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
-3. Launch the game once to create `plugins/Bully.FusionFix.cfg`.
-4. Configure the fix on fusionfix.io, in FusionFixHub or in the game's menu.
-
-## Notes
-
-Open Display Settings → Plugins from the title menu, or Options → Display → Plugins while paused. Each plugin has its own preset and Restore Defaults, applied with confirmation. Keyboard, controller and mouse navigation are available.
+1. Extract the archive into the game folder, beside `Bully.exe`, keeping its folders. Keep `plugins/Bully.FusionFix/buttons.nft` with the fix: it holds the button artwork.
+2. The fix creates `plugins/Bully.FusionFix.cfg` on the first start.
+3. Change the settings in the game's Plugins menu, on fusionfix.io or in FusionFixHub.

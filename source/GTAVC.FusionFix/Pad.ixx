@@ -3,7 +3,10 @@ module;
 #include <stdafx.h>
 #include "common.h"
 #include "FixSettings.hpp"
+#include "Shared/RWGTA/PadOptions.hpp"
 #include "Shared/PadInput.hpp"
+#include "Shared/RWGTA/PadCheats.hpp"
+#include "Shared/RWGTA/MenuPadButtons.hpp"
 
 export module Pad;
 
@@ -132,7 +135,7 @@ namespace
     }
 
     // The vehicles whose turret the right stick turns
-    constexpr int16_t MI_FIRETRUCK = 137, MI_RHINO = 162;
+    constexpr int16_t MI_FIRETRUCK = 137, MI_VOODOO = 142, MI_RHINO = 162;
 
     // The flyable aircraft (automobiles with a flying model)
     bool IsAircraftModel(int model)
@@ -269,14 +272,22 @@ namespace
     {
         if (now.wButtons != before.wButtons)
             return true;
-        if (now.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD || now.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD)
-            return true;
-        float x, y;
-        Stick(now.sThumbLX, now.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, x, y);
-        if (x || y)
-            return true;
-        Stick(now.sThumbRX, now.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, x, y);
-        return x || y;
+        auto triggerChanged = [](BYTE current, BYTE previous)
+        {
+            bool down = current > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+            return down != (previous > XINPUT_GAMEPAD_TRIGGER_THRESHOLD) ||
+                (down && std::abs(int(current) - int(previous)) >= 4);
+        };
+        auto stickChanged = [](SHORT x, SHORT y, SHORT oldX, SHORT oldY, SHORT deadzone)
+        {
+            float nx, ny, px, py;
+            Stick(x, y, deadzone, nx, ny);
+            Stick(oldX, oldY, deadzone, px, py);
+            return std::abs(ToAxis(nx) - ToAxis(px)) >= 2 || std::abs(ToAxis(ny) - ToAxis(py)) >= 2;
+        };
+        return triggerChanged(now.bLeftTrigger, before.bLeftTrigger) || triggerChanged(now.bRightTrigger, before.bRightTrigger) ||
+            stickChanged(now.sThumbLX, now.sThumbLY, before.sThumbLX, before.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE) ||
+            stickChanged(now.sThumbRX, now.sThumbRY, before.sThumbRX, before.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
     }
 
     // Reads every pad; returns whether the active one was used this frame
@@ -302,7 +313,7 @@ namespace
             if (!slot.connected)
             {
                 slot.connected = true;
-                slot.previous = state.Gamepad;
+                slot.previous = {};
                 slot.style = DetectStyle(i);
                 slot.motors[0] = slot.motors[1] = 0;
                 if (ActiveSlot < 0)
@@ -310,10 +321,10 @@ namespace
             }
             if (HasInput(state.Gamepad, slot.previous))
             {
+                slot.previous = state.Gamepad;
                 ActiveSlot = int(i);
                 used = true;
             }
-            slot.previous = state.Gamepad;
             if (ActiveSlot == int(i))
                 Current = state.Gamepad;
         }
@@ -324,23 +335,22 @@ namespace
 
     bool KeyboardOrMouseUsed(const CPad& pad)
     {
-        auto any = [](const CControllerState& s)
-        {
-            auto p = reinterpret_cast<const int16_t*>(&s);
-            for (size_t i = 0; i < sizeof(s) / sizeof(int16_t); ++i)
-                if (p[i])
-                    return true;
-            return false;
-        };
-        if (any(pad.PCTempKeyState) || any(pad.PCTempMouseState))
-            return true;
+        static CControllerState previousKeys{};
+        static CControllerState previousMouse{};
+        static unsigned previousButtons = 0;
+        bool changed = std::memcmp(&previousKeys, &pad.PCTempKeyState, sizeof(previousKeys)) != 0 ||
+                       std::memcmp(&previousMouse, &pad.PCTempMouseState, sizeof(previousMouse)) != 0;
+        previousKeys = pad.PCTempKeyState;
+        previousMouse = pad.PCTempMouseState;
         if (NewMouseState.get_ptr())
         {
             const auto& mouse = *NewMouseState.get_ptr();
-            if (std::abs(mouse.x) + std::abs(mouse.y) > 2.0f || mouse.LMB || mouse.RMB || mouse.MMB || mouse.WHEELUP || mouse.WHEELDN)
-                return true;
+            unsigned buttons = (mouse.LMB != 0) | ((mouse.RMB != 0) << 1) | ((mouse.MMB != 0) << 2);
+            changed |= previousButtons != buttons;
+            previousButtons = buttons;
+            return changed || mouse.x != 0 || mouse.y != 0 || mouse.WHEELUP || mouse.WHEELDN;
         }
-        return false;
+        return changed;
     }
 
     int CurrentWeapon()
@@ -428,7 +438,7 @@ namespace
     {
         if (MenuActive())
             return Context::Frontend;
-        static auto& modern = FixSettings().Int("MAIN.ModernControls");
+        const auto modern = RWGTA::PadOptions::ModernControls.load(std::memory_order_relaxed);
         if (!modern)
             return Context::Classic;
         if (auto vehicle = PlayerVehicle())
@@ -440,12 +450,12 @@ namespace
 
     // The free camera turns with the right stick: the game mustn't take it as its own look or lean, nor as the tank's
     // and the fire truck's turret (which follow the free camera)
-    bool FreeCameraTakesRightStick(Context context)
+    bool FreeCameraTakesRightStick(Context context, CEntity* vehicle)
     {
-        static auto& freeCamera = FixSettings().Int("MAIN.FreeCamera");
+        const auto freeCamera = RWGTA::PadOptions::FreeCamera.load(std::memory_order_relaxed);
         if (!freeCamera || context == Context::Frontend || context == Context::ModernScope)
             return false;
-        if (PlayerVehicle())
+        if (vehicle)
         {
             auto mode = ActiveCameraMode();
             return mode == CCam::MODE_CAM_ON_A_STRING || mode == CCam::MODE_BEHINDBOAT;
@@ -458,9 +468,10 @@ namespace
     // turns with the camera, the crosshair shows and the shots go to it
     void UpdateMouseAim(const CPad& pad)
     {
-        static auto& freeCamera = FixSettings().Int("MAIN.FreeCamera");
+        const auto freeCamera = RWGTA::PadOptions::FreeCamera.load(std::memory_order_relaxed);
+        const auto modern = RWGTA::PadOptions::ModernControls.load(std::memory_order_relaxed);
         bool aim = false;
-        if (freeCamera && !PadIsLastDevice && FrontendMenuManager->m_ControlMethod == 0 && !MenuActive() && !PlayerVehicle() &&
+        if ((freeCamera || modern) && !PadIsLastDevice && FrontendMenuManager->m_ControlMethod == 0 && !MenuActive() && !PlayerVehicle() &&
             !pad.DisablePlayerControls && !CCutsceneMgr::IsRunning())
         {
             auto weapon = CurrentWeapon();
@@ -473,18 +484,58 @@ namespace
         MouseAiming = aim;
     }
 
+    SafetyHookInline processPlayerWeapon;
+    uint8_t* (__cdecl* weaponInfo)(int) = nullptr;
+    void (__thiscall* setPointGunAt)(void*, CEntity*) = nullptr;
+    void (__thiscall* clearPointGunAt)(void*) = nullptr;
+    void (__thiscall* setAimDirection)(void*, float) = nullptr;
+    void (__thiscall* setLookDirection)(void*, float, bool, bool) = nullptr;
+    float (__thiscall* quickAimPitch)(CCamera*) = nullptr;
+
+    void __fastcall ProcessAimedWeapon(uint8_t* player, void*, CPad* pad)
+    {
+        processPlayerWeapon.unsafe_thiscall(player, pad);
+        constexpr int sniping = 12, attacking = 16, pointing = 22, sprinting = 5;
+        constexpr uint8_t canAim = 0x40;
+        const int state = *reinterpret_cast<int*>(player + 0x244);
+        const auto slot = player[0x504];
+        static uint8_t* posingPlayer = nullptr;
+        const bool target = ModernAiming || (MouseAiming && pad->NewState.RightShoulder1);
+        if (target && state != sniping && !IsScopeMode(ActiveCameraMode()) && slot == player[0x60C] &&
+            *reinterpret_cast<int*>(player + 0x24C) != sprinting && !*reinterpret_cast<CEntity**>(player + 0x508))
+        {
+            const auto type = *reinterpret_cast<int*>(player + 0x408 + slot * 0x18);
+            if (!IsScopeWeapon(type) && (weaponInfo(type)[0x5C] & canAim))
+            {
+                float direction = -TheCamera->Orientation;
+                setLookDirection(player, direction, true, true);
+                setAimDirection(player, direction);
+                *reinterpret_cast<float*>(player + 0x6C0) = quickAimPitch(TheCamera.get_ptr());
+                if (state != attacking && state != pointing)
+                    setPointGunAt(player, nullptr);
+                posingPlayer = player;
+                return;
+            }
+        }
+        if (posingPlayer == player && state == pointing && !*reinterpret_cast<CEntity**>(player + 0x508))
+            clearPointGunAt(player);
+        posingPlayer = nullptr;
+    }
+
     CControllerState Compose(Context context, const XINPUT_GAMEPAD& g)
     {
         CControllerState s{};
         float lx, ly, rx, ry;
         Stick(g.sThumbLX, g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, lx, ly);
         Stick(g.sThumbRX, g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
-        static auto& invert = FixSettings().Int("MAIN.InvertGamepadY");
+        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
+        auto vehicle = PlayerVehicle();
+        bool hydraulics = vehicle && vehicle->GetModelIndex() == MI_VOODOO;
         // The PlayStation 2 sticks: down is positive
         s.LeftStickX = ToAxis(lx);
         s.LeftStickY = ToAxis(-ly);
         s.RightStickX = ToAxis(rx);
-        s.RightStickY = ToAxis(invert && context != Context::Frontend ? ry : -ry);
+        s.RightStickY = ToAxis(invert && context != Context::Frontend && !hydraulics ? ry : -ry);
 
         const To* layout = LayoutClassic;
         switch (context)
@@ -502,7 +553,7 @@ namespace
                 Press(s, layout[i]);
         }
 
-        if (FreeCameraTakesRightStick(context) || ModernAiming)
+        if ((!hydraulics && FreeCameraTakesRightStick(context, vehicle)) || ModernAiming)
             s.RightStickX = s.RightStickY = 0;
 
         switch (context)
@@ -547,26 +598,28 @@ namespace
         auto elapsed = LastShakeTick ? now - LastShakeTick : 0;
         LastShakeTick = now;
         // The game shakes the pad only with its vibration preference on, which the PC menus don't show: the setting's
-        static auto& vibration = FixSettings().Int("MAIN.Vibration");
+        const auto vibration = RWGTA::PadOptions::Vibration.load(std::memory_order_relaxed);
         FrontendMenuManager->m_PrefsUseVibration = vibration != 0;
-        if (ActiveSlot < 0 || !XInput().setState)
-            return;
-
         WORD motor = 0;
         if (pad.ShakeDur > 0)
         {
-            if (vibration && PadIsLastDevice && !MenuActive())
-                motor = WORD(pad.ShakeFreq * 257);
             pad.ShakeDur = int16_t(std::max<int64_t>(0, pad.ShakeDur - int64_t(elapsed)));
             if (pad.ShakeDur == 0)
                 pad.ShakeFreq = 0;
+            else if (vibration && PadIsLastDevice && !MenuActive())
+                motor = WORD(pad.ShakeFreq * 257);
         }
-        auto& slot = Slots[ActiveSlot];
-        if (slot.motors[0] != motor || slot.motors[1] != motor)
+        if (!XInput().setState)
+            return;
+        for (DWORD i = 0; i < XUSER_MAX_COUNT; ++i)
         {
-            XINPUT_VIBRATION vibration{ motor, motor };
-            XInput().setState(DWORD(ActiveSlot), &vibration);
-            slot.motors[0] = slot.motors[1] = motor;
+            auto& slot = Slots[i];
+            WORD target = int(i) == ActiveSlot ? motor : 0;
+            if (!slot.connected || (slot.motors[0] == target && slot.motors[1] == target))
+                continue;
+            XINPUT_VIBRATION output{ target, target };
+            if (XInput().setState(i, &output) == ERROR_SUCCESS)
+                slot.motors[0] = slot.motors[1] = target;
         }
     }
 
@@ -574,7 +627,7 @@ namespace
     void UpdateModernAim(CPad& pad, Context context)
     {
         bool aim = false;
-        if (context == Context::ModernFoot && Down(Current, LT) && !pad.DisablePlayerControls && !CCutsceneMgr::IsRunning())
+        if (PadIsLastDevice && context == Context::ModernFoot && Down(Current, LT) && !pad.DisablePlayerControls && !CCutsceneMgr::IsRunning())
         {
             auto weapon = CurrentWeapon();
             aim = !IsScopeWeapon(weapon) && weapon != WEAPON_DETONATOR;
@@ -585,8 +638,8 @@ namespace
 
         float rx, ry;
         Stick(Current.sThumbRX, Current.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
-        static auto& speed = FixSettings().Float("MAIN.GamepadCameraSpeed");
-        static auto& invert = FixSettings().Int("MAIN.InvertGamepadY");
+        const auto speed = RWGTA::PadOptions::CameraSpeed.load(std::memory_order_relaxed);
+        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
         // Degrees per second at full tilt, eased near the center for fine aiming
         constexpr float TurnRate = 160.0f, PitchRate = 100.0f;
         float dt = CTimer::ms_fTimeStep / 50.0f;
@@ -609,16 +662,31 @@ namespace
             UseMouse3rdPerson = standard;
             return;
         }
-        if (!PadIsLastDevice)
+        const auto freeCamera = RWGTA::PadOptions::FreeCamera.load(std::memory_order_relaxed);
+        bool orbit = freeCamera && !PlayerVehicle() && ActiveCameraMode() == CCam::MODE_FOLLOWPED;
+        bool mouseView = PadIsLastDevice ? ModernAiming : standard && (!orbit || MouseAiming);
+        if (orbit && mouseView && !*UseMouse3rdPerson.get_ptr())
         {
-            // With the free camera on foot the console's camera and movement, and the mouse's aiming while aiming
-            static auto& freeCamera = FixSettings().Int("MAIN.FreeCamera");
-            bool onFoot = !PlayerVehicle() && ActiveCameraMode() == CCam::MODE_FOLLOWPED;
-            UseMouse3rdPerson = standard && (!freeCamera || !onFoot || MouseAiming);
-            return;
+            // The native mouse camera measures its horizontal angle towards the camera, opposite to the orbit view.
+            auto& cam = TheCamera->Cams[TheCamera->ActiveCam];
+            cam.Beta = std::atan2(-cam.Front.y, -cam.Front.x);
+            cam.Alpha = std::asin(std::clamp(cam.Front.z, -1.0f, 1.0f));
         }
-        // On a pad the console's camera, and the mouse's aiming only while the modern layout aims
-        UseMouse3rdPerson = ModernAiming;
+        UseMouse3rdPerson = mouseView;
+    }
+
+    void SmoothAimHeading(SafetyHookContext& regs)
+    {
+        if (!MouseAiming && !ModernAiming)
+            return;
+
+        const auto* player = reinterpret_cast<const uint8_t*>(TheCamera->pTargetEntity);
+        const auto current = *reinterpret_cast<const float*>(player + 0x374);
+        const auto headingRate = *reinterpret_cast<const float*>(player + 0x37C);
+        auto& heading = *reinterpret_cast<float*>(regs.esp + 0x38);
+        const auto step = DEGTORAD(headingRate) * CTimer::ms_fTimeStep;
+        const auto delta = std::remainder(heading - current, TWOPI);
+        heading = step > 0.0f ? current + std::clamp(delta, -step, step) : current;
     }
 
     void UpdateMode(CPad& pad, Context context)
@@ -639,27 +707,98 @@ namespace
     }
 
     // Start opens and closes the pause menu, which the PC game opens with Escape only: the menu's own requests
-    bool StartWasDown = false;
-    void UpdateStartButton()
+    void UpdateMenuButtons()
     {
-        bool down = ActiveSlot >= 0 && (Current.wButtons & XINPUT_GAMEPAD_START);
-        bool pressed = down && !StartWasDown;
-        StartWasDown = down;
-        if (!pressed || !FrontendMenuManager.get_ptr())
-            return;
+        static RWGTA::MenuPadButtons buttons;
         auto& menu = *FrontendMenuManager.get_ptr();
-        // As Escape: not while the screen fades or a cutscene's borders are on
-        if (!menu.m_bMenuActive && TheCamera->m_fFLOATingFade == 0.0f && !TheCamera->m_WideScreenOn)
-            menu.m_bStartUpFrontEndRequested = true;
-        else if (!menu.m_bGameNotLoaded)
+        const WORD pressed = buttons.Update(Current, menu.m_bMenuActive);
+        if (!menu.m_bMenuActive)
+        {
+            if ((pressed & XINPUT_GAMEPAD_START) && TheCamera->m_fFLOATingFade == 0.0f && !TheCamera->m_WideScreenOn)
+                menu.m_bStartUpFrontEndRequested = true;
+        }
+        else if (!menu.m_bGameNotLoaded && ((pressed & XINPUT_GAMEPAD_START) ||
+            ((pressed & XINPUT_GAMEPAD_B) && menu.m_nCurrScreen == 32)))
+        {
             menu.m_bShutDownFrontEndRequested = true;
+        }
+    }
+
+    void UpdatePadCheats(CPad& pad)
+    {
+        static constexpr RWGTA::PadCheat cheats[] =
+        {
+            { "3414LDRULDRU", "THUGSTOOLS" },
+            { "3414LDRULDDL", "PROFESSIONALTOOLS" },
+            { "3414LDRULDDD", "NUTTERTOOLS" },
+            { "341CLDRULDRU", "ASPIRINE" },
+            { "341XLDRULDRU", "PRECIOUSPROTECTION" },
+            { "33C4LRLRLR", "YOUWONTTAKEMEALIVE" },
+            { "33C4UDUDUD", "LEAVEMEALONE" },
+            { "R2D3LL3121", "ICANTTAKEITANYMORE" },
+            { "TURDS43", "BOOOOOORING" },
+            { "TURD21S", "ONSPEED" },
+            { "CC1CCC123TCT", "PANZER" },
+            { "R2D22X31CL", "GETTHEREFAST" },
+            { "D4D32L31LR", "THELASTRIDE" },
+            { "4U2LL31CR", "ROCKANDROLLCAR" },
+            { "C3C3LL31CR", "RUBBISHCAR" },
+            { "C1U32X31CX", "BETTERTHANWALKING" },
+            { "423124STCT21", "BIGBANG" },
+            { "C1D2LX31RC", "AHAIRDRESSERSCAR" },
+            { "C2U3LX31LC", "IWANTITPAINTEDBLACK" },
+            { "R3U22L3133", "GREENLIGHT" },
+            { "4X11222D", "ALOVELYDAY" },
+            { "4X11222T", "APLEASANTDAY" },
+            { "4X11222S", "ABITDRIEG" },
+            { "4X11222X", "CANTSEEATHING" },
+            { "4X11222C", "CATSANDDOGS" },
+            { "43XTXTUD", "OURGODGIVENRIGHTTOBEARARMS" },
+            { "URR1RUS2", "TRAVELINSTYLE" },
+            { "D3C22X31LL", "GETTHEREQUICKLY" },
+            { "DUUUX4322", "NOBODYLIKESME" },
+            { "CX114XXCT", "FANNYMAGNET" },
+            { "DLULX4321", "FIGHTFIGHTFIGHT" },
+            { "T33L3141", "GRIPISEVERYTHING" },
+            { "R4C32D13", "COMEFLYWITHME" },
+            { "CC1S1SSS1TCT", "LIFEISPASSINGMEBY" },
+            { "RRLU12LUDR", "STILLLIKEDRESSINGUP" },
+            { "4CU1R3UST", "AIRSHIP" },
+            { "4C32L3142", "MIAMITRAFFIC" },
+            { "C2LX31X1", "LOOKLIKELANCE" },
+            { "R1U21R31X3", "MYSONISALAWYER" },
+            { "3C41R31X4", "ILOOKLIKEHILARY" },
+            { "D1D2LX31XX", "ROCKANDROLLMAN" },
+            { "3241R4LXS1", "WELOVEOURDICK" },
+            { "R3U41R31RC", "ONEARMEDBANDIT" },
+            { "C1C2LX31XX", "IDONTHAVETHEMONEYSONNY" },
+            { "41U1R3RUCT", "FOXYLITTLETHING" },
+            { "C4D3LR31X2", "IWANTBIGTITS" },
+            { "1234D142", "CHEATSHAVEBEENCRACKED" },
+            { "R4C32S34", "SEAWAYS" },
+            { "R1C2LX311X", "CHICKSWITHGUNS" },
+            { "3XTR4SUDS", "LOADSOFLITTLETHINGS" },
+            { "3C4R12XXS3", "GETTHEREVERYFASTINDEED" },
+            { "41CR13RUC4", "GETTHEREAMAZINGLYFAST" },
+            { "4CU1R3RUST", "CHASESTAT" },
+            { "T1T4S11", "WHEELSAREALLINEED" },
+        };
+        static RWGTA::PadCheats sequence;
+        const bool blocked = MenuActive() || pad.DisablePlayerControls || CCutsceneMgr::IsRunning();
+        const auto keyword = sequence.Update(Current, blocked ? -1 : ActiveSlot, cheats);
+        if (keyword.empty())
+            return;
+        static auto appendKey = reinterpret_cast<void(__thiscall*)(CPad*, char)>(hook::pattern("53 56 57 55 83 EC 10 89 4C 24 0C BE 1C 00 00 00 8A 86").get_first());
+        for (const char key : keyword)
+            appendKey(&pad, key);
     }
 
     // Before CPad::Update of the first pad: the keyboard, mouse and DirectInput states are in place
     void BeforePadUpdate(CPad& pad)
     {
         bool padUsed = PollPads();
-        UpdateStartButton();
+        UpdatePadCheats(pad);
+        UpdateMenuButtons();
         bool kbmUsed = KeyboardOrMouseUsed(pad);
         if (padUsed)
             PadIsLastDevice = true;
@@ -698,13 +837,13 @@ export namespace Pad
 
     bool IsModernLayout()
     {
-        static auto& modern = FixSettings().Int("MAIN.ModernControls");
+        const auto modern = RWGTA::PadOptions::ModernControls.load(std::memory_order_relaxed);
         return Installed && modern != 0;
     }
 
     IconStyle Style()
     {
-        static auto& icons = FixSettings().Int("MAIN.GamepadIcons");
+        const auto icons = RWGTA::PadOptions::GamepadIcons.load(std::memory_order_relaxed);
         if (icons >= 1 && icons <= 3)
             return IconStyle(icons);
         if (ActiveSlot >= 0)
@@ -712,14 +851,19 @@ export namespace Pad
         return IconStyle::Xbox;
     }
 
+    const CPad& Player()
+    {
+        return *Pads.get_ptr();
+    }
+
     // The right stick, -1..1 (up positive, after the invert setting), when the pad drives the game
     void RightStick(float& x, float& y)
     {
         x = y = 0.0f;
-        if (!IsPadLastDevice() || MenuActive())
+        if (!IsPadLastDevice() || MenuActive() || Player().DisablePlayerControls)
             return;
         Stick(Current.sThumbRX, Current.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, x, y);
-        static auto& invert = FixSettings().Int("MAIN.InvertGamepadY");
+        const auto invert = RWGTA::PadOptions::InvertGamepadY.load(std::memory_order_relaxed);
         if (invert)
             y = -y;
     }
@@ -757,10 +901,7 @@ export namespace Pad
     }
 
     // The game's actions on the player's pad as its CPad functions read them: the configuration decides the button
-    const CPad& Player()
-    {
-        return *Pads.get_ptr();
-    }
+
 
     bool ControlsDisabled()
     {
@@ -855,11 +996,27 @@ public:
     {
         WFP::onGameInitEvent() += []()
         {
+            RWGTA::PadOptions::Install(FixSettings(), true);
             GInputLoaded = GetModuleHandleW(L"GInputVC.asi") != nullptr;
             if (GInputLoaded)
                 return;
             if (!XInput().getState)
                 return;
+
+            auto weapon = hook::pattern("53 56 89 CB 57 55 83 EC 50 8B 6C 24 64 0F BE 93 04 05 00 00 8D 14 52 8B 84 D3 08 04 00 00 50 E8");
+            weaponInfo = reinterpret_cast<decltype(weaponInfo)>(injector::GetBranchDestination(weapon.get_first(31)).as_int());
+            setPointGunAt = reinterpret_cast<decltype(setPointGunAt)>(hook::pattern("53 89 CB 0F BE 93 04 05 00 00 56 55 8B 74 24 10 8D 14 52").get_first());
+            clearPointGunAt = reinterpret_cast<decltype(clearPointGunAt)>(hook::pattern("53 56 55 89 CB E8 ? ? ? ? 89 D9 E8 ? ? ? ? 8A 83 4C 01 00 00 24 F7").get_first());
+            setAimDirection = reinterpret_cast<decltype(setAimDirection)>(hook::pattern("53 89 CB 8A 83 4C 01 00 00 24 7F 0C 80 88 83 4C 01 00 00").get_first());
+            setLookDirection = reinterpret_cast<decltype(setLookDirection)>(hook::pattern("A1 ? ? ? ? 8B 91 3C 05 00 00 39 C2 72 ? 80 7C 24 0C 00").get_first());
+            quickAimPitch = reinterpret_cast<decltype(quickAimPitch)>(hook::pattern("83 EC 08 0F B6 41 76 D9 EE D9 EE D9 EE").get_first());
+            processPlayerWeapon = safetyhook::create_inline(weapon.get_first(), ProcessAimedWeapon);
+
+            // FollowPedWithMouse normally assigns the camera angle directly to the player.
+            // Keep the camera on target while the player turns at their native heading rate.
+            auto heading = hook::pattern("D9 83 68 01 00 00 D9 E0 D9 83 6C 01 00 00 D9 F3 "
+                "D9 5C 24 38 D9 44 24 38 A1 ? ? ? ? DD D9 D9 90 74 03 00 00");
+            static auto smoothHeading = safetyhook::create_mid(heading.get_first(20), SmoothAimHeading);
 
             // CPad::UpdatePads: Pads[0].Update(0)
             auto pattern = hook::pattern("B9 ? ? ? ? 6A 00 E8 ? ? ? ? BA ? ? ? ? 89 D0");

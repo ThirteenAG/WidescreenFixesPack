@@ -127,7 +127,7 @@ export namespace RevMenu
 
     inline std::string Language()
     {
-        auto language = FixSettings().String("MAIN.TextLanguage");
+        auto language = FixSettings().Get("MAIN.TextLanguage");
         if (!language.empty() && language != "auto")
             return language;
         switch (PRIMARYLANGID(GetUserDefaultUILanguage()))
@@ -236,8 +236,9 @@ export namespace RevMenu
 
     inline void OpenModel(Host& host)
     {
-        host.model.OpenPlugins(module, Language(), host.slots - 5, {}, true);
         host.language = languageGeneration.load();
+        // The pages scroll here (Populate), so the model's own window size doesn't limit them; it needs at least 3.
+        host.model.OpenPlugins(module, Language(), (std::max)(host.slots - 5, size_t{ 3 }), {}, true);
         Remember(host.model);
         if (host.page > host.model.Pages().size())
             host.page = host.first = 0;

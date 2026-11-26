@@ -54,6 +54,24 @@ CreateDevice_t RealD3D8CreateDevice = nullptr;
 CreatePixelShader_t RealCreatePixelShader = nullptr;
 CreateVertexShader_t RealCreateVertexShader = nullptr;
 
+std::vector<DWORD> ReadShaderOverride(const std::string& name)
+{
+    std::ifstream in(GetShadersPath() / name, std::ios::binary | std::ios::ate);
+    if (!in)
+        return {};
+
+    const auto size = static_cast<std::streamsize>(in.tellg());
+    if (size < 2 * static_cast<std::streamsize>(sizeof(DWORD)) || size % sizeof(DWORD))
+        return {};
+
+    std::vector<DWORD> bytecode(static_cast<size_t>(size) / sizeof(DWORD));
+    in.seekg(0);
+    if (!in.read(reinterpret_cast<char*>(bytecode.data()), size) || bytecode.back() != 0x0000FFFF)
+        return {};
+
+    return bytecode;
+}
+
 HRESULT WINAPI Hook_CreatePixelShader(LPDIRECT3DDEVICE8 pDevice, CONST DWORD* pFunction, DWORD* pHandle)
 {
     if (!pFunction)
@@ -81,26 +99,14 @@ HRESULT WINAPI Hook_CreatePixelShader(LPDIRECT3DDEVICE8 pDevice, CONST DWORD* pF
         name = oss.str() + ".pso";
     }
 
-    auto path = GetShadersPath() / name;
-
-    if (!std::filesystem::exists(path))
+    const auto bytecode = ReadShaderOverride(name);
+    if (!bytecode.empty())
     {
-        std::ofstream out(path, std::ios::binary);
-        if (out)
-        {
-            out.write(reinterpret_cast<const char*>(pFunction), byte_length);
-            out.close();
-        }
+        const auto hr = RealCreatePixelShader(pDevice, bytecode.data(), pHandle);
+        if (SUCCEEDED(hr))
+            return hr;
     }
-
-    std::ifstream in(path, std::ios::binary);
-    std::vector<char> pNewFunction{ std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>() };
-
-    HRESULT hr = RealCreatePixelShader(pDevice, reinterpret_cast<const DWORD*>(pNewFunction.data()), pHandle);
-    if (FAILED(hr))
-        return RealCreatePixelShader(pDevice, pFunction, pHandle);
-
-    return hr;
+    return RealCreatePixelShader(pDevice, pFunction, pHandle);
 }
 
 HRESULT WINAPI Hook_CreateVertexShader(LPDIRECT3DDEVICE8 pDevice, CONST DWORD* pDeclaration, CONST DWORD* pFunction, DWORD* pHandle, DWORD Usage)
@@ -125,26 +131,14 @@ HRESULT WINAPI Hook_CreateVertexShader(LPDIRECT3DDEVICE8 pDevice, CONST DWORD* p
     oss << std::hex << std::setw(8) << std::setfill('0') << std::uppercase << crc;
     std::string name = oss.str() + ".vso";
 
-    auto path = GetShadersPath() / name;
-
-    if (!std::filesystem::exists(path))
+    const auto bytecode = ReadShaderOverride(name);
+    if (!bytecode.empty())
     {
-        std::ofstream out(path, std::ios::binary);
-        if (out)
-        {
-            out.write(reinterpret_cast<const char*>(pFunction), byte_length);
-            out.close();
-        }
+        const auto hr = RealCreateVertexShader(pDevice, pDeclaration, bytecode.data(), pHandle, Usage);
+        if (SUCCEEDED(hr))
+            return hr;
     }
-
-    std::ifstream in(path, std::ios::binary);
-    std::vector<char> pNewFunction{ std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>() };
-
-    HRESULT hr = RealCreateVertexShader(pDevice, pDeclaration, reinterpret_cast<const DWORD*>(pNewFunction.data()), pHandle, Usage);
-    if (FAILED(hr))
-        return RealCreateVertexShader(pDevice, pDeclaration, pFunction, pHandle, Usage);
-
-    return hr;
+    return RealCreateVertexShader(pDevice, pDeclaration, pFunction, pHandle, Usage);
 }
 
 HRESULT WINAPI Hook_CreateDevice(IDirect3D8* d3ddev, UINT Adapter, D3DDEVTYPE DeviceType, HWND hFocusWindow, DWORD BehaviorFlags, D3DPRESENT_PARAMETERS* pPresentationParameters, IDirect3DDevice8** ppReturnedDeviceInterface)

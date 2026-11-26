@@ -73,11 +73,24 @@ export namespace SH3Icons
         {
             if (!source)
                 return;
+            constexpr size_t limit = 2048;
+            size_t first = limit;
+            size_t end = 0;
+            while (end < limit && source[end] != 0xFFFF)
+            {
+                if (first == limit && (IsIcon(source, end, limit) || (end + 2 < limit && ShoulderAt(source, end) >= 0)))
+                    first = end;
+                ++end;
+            }
+            if (first == limit || end == limit)
+                return;
+
+            value.reserve(end + 1);
             const bool pad = SHPad::LastInputWasPad();
-            for (size_t i = 0; i < 2048; ++i)
+            for (size_t i = 0; i < end; ++i)
             {
                 uint16_t code = source[i];
-                if (code != 0xFFFF && i + 2 < 2048)
+                if (i >= first && i + 2 <= end)
                 {
                     if (int shoulder = ShoulderAt(source, i); shoulder >= 0)
                     {
@@ -93,16 +106,14 @@ export namespace SH3Icons
                             for (auto c = name; *c; ++c)
                                 value.push_back(*c == ' ' ? 0 : Letter(*c));
                         }
-                        changed = true;
                         ++i;
                         continue;
                     }
                 }
-                if (code == Marker && i + 1 < 2048 && source[i + 1] >= FirstIcon && source[i + 1] < FirstIcon + IconCount)
+                if (i >= first && IsIcon(source, i, end))
                 {
                     icons.push_back(source[++i] - FirstIcon);
                     value.push_back(0xFE00 + IconWidth);
-                    changed = true;
                 }
                 else
                 {
@@ -110,12 +121,16 @@ export namespace SH3Icons
                         icons.push_back(-1);
                     value.push_back(code);
                 }
-                if (code == 0xFFFF)
-                    return;
             }
-            value.clear();
-            icons.clear();
-            changed = false;
+            value.push_back(0xFFFF);
+            changed = true;
+        }
+
+    private:
+        static bool IsIcon(const uint16_t* source, size_t index, size_t end)
+        {
+            return source[index] == Marker && index + 1 < end &&
+                source[index + 1] >= FirstIcon && source[index + 1] < FirstIcon + IconCount;
         }
     };
 
@@ -218,7 +233,7 @@ export namespace SH3Icons
         const float width = float(surface.Width), height = float(surface.Height);
         const float boxWidth = std::min(width, height * (4.0f / 3.0f));
         const float sx = boxWidth / 512.0f, sy = boxWidth * 0.75f / 448.0f;
-        const int chosen = FixSettings().Int("MAIN.GamepadIcons");
+        const int chosen = FixSettingNumber("MAIN.GamepadIcons", 0);
         const int family = chosen == 0 ? 0 : std::clamp(chosen - 1, 0, 2);
         struct Vertex { float x, y, z, w; DWORD colour; float u, v; };
         for (auto icon : icons)

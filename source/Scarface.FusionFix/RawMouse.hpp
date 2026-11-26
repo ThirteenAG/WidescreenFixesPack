@@ -7,8 +7,8 @@ namespace ScarfaceRawMouse
     using ReadData = UINT(WINAPI*)(HRAWINPUT, UINT, LPVOID, PUINT, UINT);
     inline std::atomic<ReadData> Original{ nullptr };
     inline ReadData* NativeSlot = nullptr;
-    inline const int* Enabled = nullptr;
-    inline const float* Sensitivity = nullptr;
+    inline std::atomic<bool> Enabled{ false };
+    inline std::atomic<float> Sensitivity{ 1.0f };
     inline GameRef<HWND>* Window = nullptr;
     inline std::atomic<uint64_t> Pending{ 0 };
     inline std::atomic<bool> HaveRaw{ false };
@@ -40,7 +40,7 @@ namespace ScarfaceRawMouse
 
     inline void Capture(const RAWINPUT& input)
     {
-        if (!Enabled || !*Enabled || !Focused() || input.header.dwType != RIM_TYPEMOUSE)
+        if (!Enabled.load() || !Focused() || input.header.dwType != RIM_TYPEMOUSE)
             return;
         if (input.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)
         {
@@ -48,8 +48,10 @@ namespace ScarfaceRawMouse
             Pending.exchange(0, std::memory_order_acquire);
             return;
         }
-        HaveRaw.store(true, std::memory_order_release);
+        if (!input.data.mouse.lLastX && !input.data.mouse.lLastY)
+            return;
         Accumulate(input.data.mouse.lLastX, input.data.mouse.lLastY);
+        HaveRaw.store(true, std::memory_order_release);
     }
 
     inline UINT WINAPI Read(HRAWINPUT input, UINT command, LPVOID data, PUINT size, UINT headerSize)
@@ -136,7 +138,7 @@ namespace ScarfaceRawMouse
 
     inline void Bind()
     {
-        if (NativeSlot || !FrameReady || !Enabled || !*Enabled)
+        if (NativeSlot || !FrameReady || !Enabled.load())
             return;
         const auto now = GetTickCount64();
         if (now < NextProbe)
@@ -190,6 +192,14 @@ namespace ScarfaceRawMouse
         }
     }
 
+    inline HWND CursorWindow = nullptr;
+
+    inline void UnbindCursor(HWND window)
+    {
+        if (CursorWindow == window)
+            CursorWindow = nullptr;
+    }
+
     inline void Clear()
     {
         Pending.exchange(0, std::memory_order_acquire);
@@ -202,7 +212,7 @@ namespace ScarfaceRawMouse
 
     inline void EndFrame()
     {
-        if (!Sampled || !Enabled || !*Enabled || !Focused())
+        if (!Sampled || !Enabled.load() || !Focused())
             Pending.exchange(0, std::memory_order_acquire);
         Motion = {};
         Consumed = 0;
@@ -212,7 +222,7 @@ namespace ScarfaceRawMouse
 
     inline bool Active()
     {
-        return FrameReady && Enabled && *Enabled && HaveRaw.load(std::memory_order_acquire);
+        return FrameReady && Enabled.load() && HaveRaw.load(std::memory_order_acquire);
     }
 
     inline bool HasMotion(unsigned axes)
@@ -231,10 +241,11 @@ namespace ScarfaceRawMouse
             Sampled = false;
         if (!Sampled)
         {
-            const float multiplier = Sensitivity && std::isfinite(*Sensitivity) ? std::clamp(*Sensitivity, 0.1f, 5.0f) : 1.0f;
+            const float multiplier = Sensitivity.load();
             const float scale = nativeScale * multiplier;
-            if (FrameReady && Enabled && *Enabled && HaveRaw.load(std::memory_order_acquire))
+            if (FrameReady && Enabled.load() && HaveRaw.load(std::memory_order_acquire))
             {
+                CursorWindow = nullptr;
                 const auto counts = Pending.exchange(0, std::memory_order_acquire);
                 Motion = { static_cast<int32_t>(counts) * scale, -static_cast<float>(static_cast<int32_t>(counts >> 32)) * scale };
                 RECT client{};
@@ -247,6 +258,17 @@ namespace ScarfaceRawMouse
             }
             else
             {
+                if (!Focused())
+                    return {};
+                const auto window = Window->get();
+                if (CursorWindow != window)
+                {
+                    RawCursorHandler<float>::Initialize(window, scale);
+                    CursorWindow = window;
+                    Motion = {};
+                    RawCursorHandler<float>::MouseDeltaX = RawCursorHandler<float>::MouseDeltaY = 0.0f;
+                    return {};
+                }
                 RawCursorHandler<float>::SetSensitivity(scale);
                 RawCursorHandler<float>::UpdateMouseInput(false);
                 Motion = { RawCursorHandler<float>::MouseDeltaX, RawCursorHandler<float>::MouseDeltaY };
@@ -262,10 +284,22 @@ namespace ScarfaceRawMouse
         return result;
     }
 
-    inline void Install(const int& enabled, const float& sensitivity, GameRef<HWND>* window)
+    inline void Install(GameRef<HWND>* window)
     {
-        Enabled = &enabled;
-        Sensitivity = &sensitivity;
+        auto refresh = []()
+        {
+            static std::mutex settingsMutex;
+            std::lock_guard lock(settingsMutex);
+            auto& settings = FixSettings();
+            const auto sensitivity = settings.Get("MAIN.MouseSensitivity");
+            float value = 1.0f;
+            std::from_chars(sensitivity.data(), sensitivity.data() + sensitivity.size(), value);
+            Sensitivity.store(std::clamp(value, 0.1f, 5.0f));
+            Enabled.store(settings.Get("MAIN.RawInputMouse") == "1");
+        };
+        FixSettings().OnChange("MAIN.RawInputMouse", refresh);
+        FixSettings().OnChange("MAIN.MouseSensitivity", refresh);
+        refresh();
         Window = window;
         FrameReady = true;
         Bind();

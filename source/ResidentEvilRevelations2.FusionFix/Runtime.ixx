@@ -17,6 +17,7 @@ import Camera;
 import DeveloperOverlay;
 import NativeMenu;
 import ControllerIcons;
+import LightSync;
 
 namespace Rev2Runtime
 {
@@ -24,6 +25,42 @@ namespace Rev2Runtime
     {
         SafetyHookInline inputDeviceHook, activationHook;
         std::atomic<int> windowedState{ -1 };
+
+        void InstallResetRecovery()
+        {
+            auto uiReset = hook::pattern("8B 93 88 26 00 00 8B 35 ? ? ? ? 8B 02 68 ? ? ? ? FF B3 90 26 00 00 52 FF 50 40 50 8B CE E8 ? ? ? ? EB ?");
+            using CheckResult = void (__thiscall*)(void*, HRESULT, const char*);
+            static const auto checkResult = reinterpret_cast<CheckResult>(injector::GetBranchDestination(uiReset.get_first(32)).as_int());
+            static const auto resetLabel = *uiReset.get_first<const char*>(15);
+            static const auto complete = injector::ReadRelativeOffset(uiReset.get_first(38), 1).as_int();
+            static const auto pending = complete + 10; // Skip clearing the UI thread's reset request.
+            static auto hook = safetyhook::create_mid(uiReset.get_first(12), [](SafetyHookContext& regs)
+            {
+                static thread_local ULONGLONG retryAt{};
+                const auto now = GetTickCount64();
+                regs.eip = pending;
+                if (now < retryAt)
+                    return;
+
+                const auto device = reinterpret_cast<IDirect3DDevice9*>(regs.edx);
+                if (device->TestCooperativeLevel() == D3DERR_DEVICELOST)
+                {
+                    retryAt = now + 32;
+                    return;
+                }
+
+                const auto parameters = *reinterpret_cast<D3DPRESENT_PARAMETERS**>(regs.ebx + 0x2690);
+                const auto result = device->Reset(parameters);
+                if (result == D3DERR_DEVICELOST)
+                {
+                    retryAt = now + 32;
+                    return;
+                }
+                retryAt = 0;
+                checkResult(reinterpret_cast<void*>(regs.esi), result, resetLabel);
+                regs.eip = complete;
+            });
+        }
 
         BOOL __stdcall Activation(bool active)
         {
@@ -114,7 +151,6 @@ namespace Rev2Runtime
         GetWindowThreadProcessId(parameters.hFocusWindow, &process);
         if (process != GetCurrentProcessId())
             return;
-        Rev2FrameRate::Frame(parameters.hFocusWindow);
         if (windowedState.load() < 0)
         {
             IDirect3DSwapChain9* chain = nullptr;
@@ -133,25 +169,16 @@ namespace Rev2Runtime
             if (SUCCEEDED(backBuffer->GetDesc(&desc)))
             {
                 SetBackBufferSize(desc.Width, desc.Height);
-                const auto borders = std::clamp(FixSettings().Int("MAIN.CutsceneBorders"), 0, 3);
-                if ((borders & 2) && !IsSplitScreenActive() && IsCutsceneCamera() && desc.Width && desc.Height)
+                const LONG width = static_cast<LONG>(desc.Width), height = static_cast<LONG>(desc.Height);
+                const LONG side = (width - height * 16 / 9) / 2;
+                if (side > 0 && height > 0 && Rev2Camera::ShowPillarbox())
                 {
-                    const auto aspect = float(desc.Width) / float(desc.Height);
-                    D3DRECT bars[2]{};
-                    if (aspect > defaultAspectRatio)
-                    {
-                        const LONG side = LONG((float(desc.Width) - float(desc.Height) * defaultAspectRatio) * 0.5f);
-                        bars[0] = { 0, 0, side, LONG(desc.Height) };
-                        bars[1] = { LONG(desc.Width) - side, 0, LONG(desc.Width), LONG(desc.Height) };
-                    }
-                    else if (aspect < defaultAspectRatio)
-                    {
-                        const LONG top = LONG((float(desc.Height) - float(desc.Width) / defaultAspectRatio) * 0.5f);
-                        bars[0] = { 0, 0, LONG(desc.Width), top };
-                        bars[1] = { 0, LONG(desc.Height) - top, LONG(desc.Width), LONG(desc.Height) };
-                    }
-                    if (bars[0].x2 > bars[0].x1 && bars[0].y2 > bars[0].y1)
-                        device->Clear(2, bars, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+                    const RECT bars[] = {
+                        { 0, 0, side, height },
+                        { width - side, 0, width, height }
+                    };
+                    for (const auto& bar : bars)
+                        device->ColorFill(backBuffer, &bar, D3DCOLOR_XRGB(0, 0, 0));
                 }
             }
             backBuffer->Release();
@@ -163,6 +190,7 @@ namespace Rev2Runtime
         CursorConfinement::Suspend(Rev2Overlay::BlocksInput());
         Rev2Overlay::Keyboard(parameters.hFocusWindow);
         Rev2Overlay::Draw(device);
+        Rev2FrameRate::Frame(parameters.hFocusWindow);
     }
 
     void BeforeReset(IDirect3DDevice9* device)
@@ -183,17 +211,25 @@ namespace Rev2Runtime
 
     export void Init()
     {
-        WindowCursor::Initialize(FixSettings());
-        WFP::onShutdownEvent() += []() { WindowCursor::Shutdown(); };
-        const auto updatePause = []()
+        InstallResetRecovery();
+        auto update = hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? 8B 07 8B CF FF 50 18 8B 0D ? ? ? ? 80 B9 ? 26 00 00 00");
+        static auto gameUpdate = safetyhook::create_mid(update.get_first(18), [](SafetyHookContext&)
         {
-            Rev2Overlay::PauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"));
+            Rev2Camera::SampleCutscene();
+            Rev2LightSync::Sample();
+        });
+        BindLiveInt("MAIN.ConfineCursor", [](int value)
+        {
+            CursorConfinement::SetEnabled(value != 0);
+        });
+        WFP::onShutdownEvent() += []() { WindowCursor::Shutdown(); };
+        BindLiveInt("MAIN.PauseOnFocusLoss", [](int value)
+        {
+            Rev2Overlay::PauseOnFocusLoss.store(value != 0);
             const auto message = Rev2Overlay::FocusSettingMessage();
             if (const auto window = Rev2Overlay::cursorWindow.load(); window && message)
                 PostMessageW(window, message, 0, 0);
-        };
-        updatePause();
-        FixSettings().OnChange("MAIN.PauseOnFocusLoss", updatePause);
+        });
         auto activation = hook::pattern("80 7C 24 04 00 A1 ? ? ? ? 74 ? C6 80 51 25 00 00 01");
         activationHook = safetyhook::create_inline(activation.get_first(), Activation);
         Rev2Overlay::FocusSettingChanged = [](HWND window)

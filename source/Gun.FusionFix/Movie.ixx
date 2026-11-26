@@ -30,6 +30,7 @@ namespace
     uint32_t** MovieHandle = nullptr;
     void*(__stdcall* NativeOpen)(const char*, uint32_t) = nullptr;
     const Picture* CurrentPicture = nullptr;
+    std::atomic<int> MovieMode{ 1 };
     thread_local bool DrawingMovie = false;
 
     void* __stdcall OpenMovie(const char* path, uint32_t flags)
@@ -84,7 +85,7 @@ namespace
         const float width = v[7], height = v[15];
         if (width <= 0.0f || height <= 0.0f)
             return DrawHook.stdcall<HRESULT>(device, type, count, data, stride);
-        static const auto& mode = FixSettings().Int("MAIN.FMVWidescreenMode");
+        const auto mode = MovieMode.load(std::memory_order_relaxed);
         const auto picture = CurrentPicture;
         if (mode != 0 && picture && video[0] == picture->width && video[1] == picture->height)
             FitPicture(v, width, height, *picture);
@@ -110,6 +111,7 @@ export namespace GunMovie
 
     void Init()
     {
+        BindLiveSetting("MAIN.FMVWidescreenMode", MovieMode);
         auto movie = hook::pattern("83 EC 70 56 8B 74 24 78 85 F6 0F 84 ? ? ? ? 57 6A 00 E8 ? ? ? ? 68 01 00 01 00 6A 04 E8");
         auto open = hook::pattern("E8 ? ? ? ? 3B C3 A3 ? ? ? ? 0F 84 ? ? ? ? 8B 48 04 8B 10");
         MovieHandle = *open.get_first<uint32_t**>(8);

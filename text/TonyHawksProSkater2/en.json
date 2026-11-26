@@ -2,7 +2,7 @@
   "plugin.name": "Tony Hawk Pro Skater 2 Fusion Fix",
   "page.display": "Display",
   "FPSLimit": "Frame rate limit",
-  "FPSLimit.description": "Limits the frame rate (30–60 fps). The game's physics, animation and timers are made for 60 fps, so higher rates are not offered. Changes apply immediately.",
+  "FPSLimit.description": "Limits the frame rate to 30–60 fps. Vanilla uses the original 30 fps cap. Changes apply immediately.",
   "page.advanced": "Advanced",
   "MAIN.ResX": "Resolution width",
   "MAIN.ResX.description": "Width of the game picture in pixels. 0 uses the desktop resolution. Any size works, also sizes the monitor does not list. Takes effect after a restart.",
@@ -35,6 +35,10 @@
   "menu.previous": "Previous pages",
   "menu.gamepreset": "Game-wide preset",
   "menu.auto": "Automatic",
+  "MAIN.FMVWidescreenMode": "Video aspect",
+  "MAIN.FMVWidescreenMode.description": "Original aspect shows the whole movie within the centered 4:3 frame. Fill fits the picture to the screen and removes black bars built into the opening movie and Neversoft logo. Applies immediately.",
+  "MAIN.FMVWidescreenMode.0": "Original aspect",
+  "MAIN.FMVWidescreenMode.1": "Fill",
   "SkipIntro": "Skip Startup Movies",
   "SkipIntro.description": "Skips the publisher and studio logos and the opening skating movie at start. Every movie can still be watched in Options, Movies. Takes effect after a restart.",
   "page.gameplay": "Gameplay",
@@ -56,7 +60,7 @@
   "MAIN.WindowMode.2": "Borderless",
   "menu.details": "Details",
   "checkupdates": "Check for updates",
-  "checkupdates.description": "Checks once at start whether a newer version of the fix exists. A notice appears in Plugins, and FusionFixHub opens after the game exits if it is installed. Off makes no network request.",
+  "checkupdates.description": "Checks for a newer version at startup or when you turn this on in game. If an update is available, a notice appears in Plugins and FusionFixHub opens after you exit if it is installed. Off makes no network request.",
   "update.availablehub": "An update for Tony Hawk Pro Skater 2 Fusion Fix is available. FusionFixHub will open after you exit the game.",
   "update.availablesite": "An update for Tony Hawk Pro Skater 2 Fusion Fix is available at {page}"
 }
