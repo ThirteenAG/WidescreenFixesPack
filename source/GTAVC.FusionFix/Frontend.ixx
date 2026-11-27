@@ -168,11 +168,28 @@ export namespace CFont
 
     SafetyHookInline shPrintOutlinedString = {};
 
+    // The text's own colour while its shadow or outline passes are buffered
+    const CRGBA* PassTextColor = nullptr;
+
+    // The renderer applies the colour tokens of the buffered text only while the current colour isn't black. The
+    // buffer can fill up during the shadow or outline passes, which set the black drop colour, so the text's colour
+    // is current while it is drawn; otherwise the earlier lines of a wrapped string lose their colour token.
+    void DrawBufferedFonts()
+    {
+        if (!PassTextColor)
+            return CFont::DrawFonts();
+
+        const CRGBA passColor = Details->color;
+        Details->color = *PassTextColor;
+        CFont::DrawFonts();
+        Details->color = passColor;
+    }
+
     void __cdecl PrintOutlinedString(float x, float y, uint32_t, wchar_t* start, wchar_t* end, float spwidth)
     {
         if (RenderState->style != Details->style)
         {
-            CFont::DrawFonts();
+            DrawBufferedFonts();
             RenderState->style = Details->style;
         }
 
@@ -184,6 +201,7 @@ export namespace CFont
 
             // Disable original shadow recursion for all custom passes
             Details->dropShadowPosition = 0;
+            PassTextColor = &color;
 
             if (ReplaceTextShadowWithOutline)
             {
@@ -293,6 +311,7 @@ export namespace CFont
                 }
             }
 
+            PassTextColor = nullptr;
             Details->color = color;
             Details->dropShadowPosition = static_cast<int16_t>(dropShadowPosition);
             Details->bIsShadow = originalIsShadow;
@@ -301,7 +320,7 @@ export namespace CFont
         // Reserve 27 wchars: 24 for the block header, 1 for the trailing space below, 1 for the
         // terminator and 1 for Align().
         if (FontRenderStatePointer->pStr >= (wchar_t*)(FontRenderStateBuf + FontRenderStateBufSize) - (end - start + 27))
-            CFont::DrawFonts();
+            DrawBufferedFonts();
 
         CFontRenderState* pRenderState = FontRenderStatePointer->pRenderState;
         pRenderState->fTextPosX = x;
